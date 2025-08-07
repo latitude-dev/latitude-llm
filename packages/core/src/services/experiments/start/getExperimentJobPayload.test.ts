@@ -8,8 +8,8 @@ import {
   Workspace,
 } from '../../../browser'
 import * as factories from '../../../tests/factories'
-import { createExperiment } from '../create'
 import { getExperimentJobPayload } from './getExperimentJobPayload'
+import { createExperiment } from '../create'
 
 describe('getExperimentJobPayload', () => {
   let workspace: Workspace

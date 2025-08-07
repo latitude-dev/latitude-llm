@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { CheckoutOptions } from '../types'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { CheckoutCommand } from './checkout'
+import { CheckoutOptions } from '../types'
 
 vi.mock('chalk', () => ({
   default: {

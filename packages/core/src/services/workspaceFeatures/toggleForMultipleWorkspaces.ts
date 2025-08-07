@@ -1,8 +1,8 @@
 import { and, eq, inArray } from 'drizzle-orm'
 
 import { Result } from '../../lib/Result'
-import Transaction from '../../lib/Transaction'
 import { workspaceFeatures } from '../../schema'
+import Transaction from '../../lib/Transaction'
 
 export async function toggleWorkspaceFeatureForMultipleWorkspaces(
   featureId: number,

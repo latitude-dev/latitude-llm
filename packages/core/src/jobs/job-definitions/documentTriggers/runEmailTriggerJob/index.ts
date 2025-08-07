@@ -1,5 +1,4 @@
 import { EMAIL_TRIGGER_DOMAIN } from '@latitude-data/constants'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { Job } from 'bullmq'
 import { PromptLFile } from 'promptl-ai'
 import { DocumentTrigger, HEAD_COMMIT, Workspace } from '../../../../browser'
@@ -11,6 +10,7 @@ import {
   DocumentTriggersRepository,
   DocumentVersionsRepository,
 } from '../../../../repositories'
+import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { getEmailResponse } from './getResponse'
 
 export type RunEmailTriggerJobData = {

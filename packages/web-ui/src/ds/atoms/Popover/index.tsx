@@ -1,14 +1,15 @@
 'use client'
-import * as RadixPopover from '@radix-ui/react-popover'
 import { forwardRef, ReactNode, Ref } from 'react'
+import * as RadixPopover from '@radix-ui/react-popover'
 
-import { isString } from 'lodash-es'
 import { cn } from '../../../lib/utils'
-import { TextColor } from '../../tokens'
-import { zIndex } from '../../tokens/zIndex'
 import { Button, ButtonProps } from '../Button'
-import { Icon, IconProps } from '../Icons'
+import { Icon } from '../Icons'
+import { IconProps } from '../Icons'
 import { Text } from '../Text'
+import { TextColor } from '../../tokens'
+import { isString } from 'lodash-es'
+import { zIndex } from '../../tokens/zIndex'
 
 export type PopoverContentProps = RadixPopover.PopoverContentProps & {
   inPortal?: boolean

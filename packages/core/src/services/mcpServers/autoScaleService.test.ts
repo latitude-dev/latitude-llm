@@ -1,12 +1,12 @@
-import { eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { database } from '../../client'
-import { maintenanceQueue } from '../../jobs/queues'
-import { SubscriptionPlan } from '../../plans'
-import { workspaces } from '../../schema'
 import { subscriptions } from '../../schema/models/subscriptions'
-import { createMcpServer, createWorkspace } from '../../tests/factories'
+import { eq } from 'drizzle-orm'
+import { SubscriptionPlan } from '../../plans'
 import { autoScaleInactiveServers } from './autoScaleService'
+import { createWorkspace, createMcpServer } from '../../tests/factories'
+import { workspaces } from '../../schema'
+import { maintenanceQueue } from '../../jobs/queues'
 
 const mocks = vi.hoisted(() => ({
   maintenanceQueue: vi.fn(),

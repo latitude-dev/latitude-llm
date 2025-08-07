@@ -1,4 +1,3 @@
-import { faker } from '@faker-js/faker'
 import { eq } from 'drizzle-orm'
 import {
   Commit,
@@ -14,6 +13,7 @@ import {
 import { database } from '../../client'
 import { evaluationVersions } from '../../schema'
 import { createEvaluationV2 as createEvaluationSvc } from '../../services/evaluationsV2/create'
+import { faker } from '@faker-js/faker'
 
 type CreateEvaluationV2Args<
   T extends EvaluationType = EvaluationType,

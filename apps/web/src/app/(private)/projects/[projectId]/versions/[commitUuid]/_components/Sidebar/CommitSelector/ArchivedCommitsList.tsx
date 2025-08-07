@@ -2,13 +2,13 @@
 
 import { useMemo } from 'react'
 
-import { useCommits } from '$/stores/commitsStore'
 import {
   Commit,
   CommitStatus,
   DocumentVersion,
 } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useCommits } from '$/stores/commitsStore'
 
 import { CommitItem, CommitItemSkeleton, SimpleUser } from './CommitItem'
 import { CommitItemsWrapper } from './CommitItemsWrapper'

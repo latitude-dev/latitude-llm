@@ -1,12 +1,12 @@
-import { LatteLayout } from '$/components/LatteLayout'
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { DocumentTriggerType } from '@latitude-data/constants'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import { LatteLayout } from '$/components/LatteLayout'
+import { TriggersList } from './_components/TriggersList'
 import {
   DocumentTriggersRepository,
   IntegrationsRepository,
 } from '@latitude-data/core/repositories'
 import { TriggersBlankSlate } from './_components/TriggersBlankSlate'
-import { TriggersList } from './_components/TriggersList'
 
 export default async function PreviewPage({
   params,

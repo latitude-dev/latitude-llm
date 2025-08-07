@@ -1,14 +1,14 @@
-import { getChangesToResetCommitAction } from '$/actions/history/resetCommitVersion/getChangesToResetCommitAction'
-import { resetCommitVersionAction } from '$/actions/history/resetCommitVersion/resetCommitVersionAction'
-import { getChangesToRevertCommitAction } from '$/actions/history/revertCommitVersion/getChangesToRevertCommitAction'
-import { revertCommitChangesAction } from '$/actions/history/revertCommitVersion/revertCommitAction'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { ROUTES } from '$/services/routes'
 import { Commit } from '@latitude-data/core/browser'
 import { useCurrentCommit } from '@latitude-data/web-ui/browser'
 import { useRouter } from 'next/navigation'
-import { useCallback } from 'react'
+import { ROUTES } from '$/services/routes'
 import { useHistoryActionModalContext } from '../ActionModal'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { useCallback } from 'react'
+import { getChangesToRevertCommitAction } from '$/actions/history/revertCommitVersion/getChangesToRevertCommitAction'
+import { revertCommitChangesAction } from '$/actions/history/revertCommitVersion/revertCommitAction'
+import { getChangesToResetCommitAction } from '$/actions/history/resetCommitVersion/getChangesToResetCommitAction'
+import { resetCommitVersionAction } from '$/actions/history/resetCommitVersion/resetCommitVersionAction'
 
 export function useCommitActions({ commit }: { commit: Commit }) {
   const router = useRouter()

@@ -1,8 +1,8 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import {
-  internalInfoSchema,
   legacyChainEventDtoSchema,
+  internalInfoSchema,
   runSyncAPIResponseSchema,
 } from '$/openApi/schemas'
 import { ROUTES } from '$/routes'

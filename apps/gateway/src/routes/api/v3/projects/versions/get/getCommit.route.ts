@@ -1,7 +1,7 @@
+import { createRoute as createOpenAPIRoute, z } from '@hono/zod-openapi'
 import { API_ROUTES } from '$/api.routes'
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
-import { createRoute as createOpenAPIRoute, z } from '@hono/zod-openapi'
 
 export const VersionSchema = z.object({
   id: z.number(),

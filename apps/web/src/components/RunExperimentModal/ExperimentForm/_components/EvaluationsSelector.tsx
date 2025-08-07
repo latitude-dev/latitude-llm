@@ -1,9 +1,9 @@
-import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { ExperimentFormPayload } from '../useExperimentFormPayload'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
-import { ExperimentFormPayload } from '../useExperimentFormPayload'
 
 export function EvaluationsSelector({
   project,

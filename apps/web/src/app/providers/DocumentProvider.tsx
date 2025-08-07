@@ -2,8 +2,8 @@
 
 import { createContext, ReactNode, useContext, useMemo } from 'react'
 
-import useDocumentVersions from '$/stores/documentVersions'
 import { DocumentVersion } from '@latitude-data/core/browser'
+import useDocumentVersions from '$/stores/documentVersions'
 
 type DocumentVersionContext = {
   document: DocumentVersion

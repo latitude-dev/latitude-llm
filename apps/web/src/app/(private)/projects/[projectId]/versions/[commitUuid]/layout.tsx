@@ -3,6 +3,16 @@
 import { ReactNode } from 'react'
 
 import {
+  HEAD_COMMIT,
+  type Commit,
+  type Project,
+} from '@latitude-data/core/browser'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
+import {
+  CommitProvider,
+  ProjectProvider,
+} from '@latitude-data/web-ui/providers'
+import {
   findCommitsByProjectCached,
   findProjectCached,
   getHeadCommitCached,
@@ -13,16 +23,6 @@ import {
   getCurrentUserOrRedirect,
 } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import {
-  HEAD_COMMIT,
-  type Commit,
-  type Project,
-} from '@latitude-data/core/browser'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
-import {
-  CommitProvider,
-  ProjectProvider,
-} from '@latitude-data/web-ui/providers'
 import { notFound, redirect } from 'next/navigation'
 import { LatteRealtimeUpdatesProvider } from './providers/LatteRealtimeUpdatesProvider'
 

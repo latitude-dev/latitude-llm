@@ -1,9 +1,9 @@
 import { createRouter } from '$/openApi/createApp'
-import { createCommitHandler } from './create/createCommit.handler'
-import { createVersionRoute } from './create/createCommit.route'
-import { documentsRouter } from './documents'
-import { getVersionHandler } from './get/getCommit.handler'
 import { getVersionRoute } from './get/getCommit.route'
+import { getVersionHandler } from './get/getCommit.handler'
+import { createVersionRoute } from './create/createCommit.route'
+import { createCommitHandler } from './create/createCommit.handler'
+import { documentsRouter } from './documents'
 
 export const versionsRouter = createRouter()
   .openapi(getVersionRoute, getVersionHandler)

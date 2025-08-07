@@ -1,10 +1,10 @@
 import { faker } from '@faker-js/faker'
 
 import { database } from '../../client'
-import type { oauthAccounts as OauthAccountsTable } from '../../schema'
 import { oauthAccounts, OAuthProvider } from '../../schema'
-import type { ICreateUser } from './users'
+import type { oauthAccounts as OauthAccountsTable } from '../../schema'
 import { createUser } from './users'
+import type { ICreateUser } from './users'
 
 type OauthAccountsInsert = typeof OauthAccountsTable.$inferInsert
 

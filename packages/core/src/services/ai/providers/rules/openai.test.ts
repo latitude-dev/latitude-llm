@@ -4,9 +4,9 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 import { describe, expect, it } from 'vitest'
 
-import { applyProviderRules } from '.'
 import { Providers } from '../models'
 import { AppliedRules, ProviderRules } from './types'
+import { applyProviderRules } from '.'
 
 let model = 'o1-mini'
 let config = { model } as AppliedRules['config']

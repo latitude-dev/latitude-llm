@@ -1,21 +1,21 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  DocumentLog,
-  ProviderApiKey,
-  Providers,
-  Workspace,
-} from '../../browser'
-import * as cacheModule from '../../cache'
-import { generateUUIDIdentifier } from '../../lib/generateUUID'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
+import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
+import { ProviderLogCreatedEvent } from '../events'
 import * as providerApiKeyService from '../../services/providerApiKeys/touch'
+import * as cacheModule from '../../cache'
 import {
   createDocumentLog,
   createProject,
   helpers,
 } from '../../tests/factories'
 import { createProviderLog } from '../../tests/factories/providerLogs'
-import { ProviderLogCreatedEvent } from '../events'
-import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
+import {
+  DocumentLog,
+  ProviderApiKey,
+  Providers,
+  Workspace,
+} from '../../browser'
+import { generateUUIDIdentifier } from '../../lib/generateUUID'
 
 vi.mock('../../services/providerApiKeys/touch', () => ({
   touchProviderApiKey: vi.fn(),

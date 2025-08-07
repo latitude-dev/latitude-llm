@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
 
 import { database } from '../../client'
-import { Result, type TypedResult } from '../../lib/Result'
 import { webhookDeliveries } from '../../schema/models/webhooks'
+import { Result, type TypedResult } from '../../lib/Result'
 import { type WebhookDelivery } from './types'
 
 export async function listWebhookDeliveries(

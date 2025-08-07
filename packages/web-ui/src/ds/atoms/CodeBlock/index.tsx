@@ -1,7 +1,7 @@
 'use client'
 
+import React, { memo, ReactNode } from 'react'
 import { useTheme } from 'next-themes'
-import { memo, ReactNode } from 'react'
 
 import { CurrentTheme } from '../../../constants'
 import { cn } from '../../../lib/utils'

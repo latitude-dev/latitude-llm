@@ -1,12 +1,12 @@
-import { stopExperimentAction } from '$/actions/experiments'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ExperimentDto } from '@latitude-data/core/browser'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { getStatus } from './shared'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useCallback, useState } from 'react'
-import { getStatus } from './shared'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { stopExperimentAction } from '$/actions/experiments'
 
 export function ExperimentStatus({
   projectId,

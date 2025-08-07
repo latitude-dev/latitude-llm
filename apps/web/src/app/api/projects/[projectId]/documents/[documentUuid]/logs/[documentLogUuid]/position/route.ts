@@ -1,9 +1,9 @@
-import { authHandler } from '$/middlewares/authHandler'
-import { errorHandler } from '$/middlewares/errorHandler'
 import { Workspace } from '@latitude-data/core/browser'
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
-import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
+import { authHandler } from '$/middlewares/authHandler'
+import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
+import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 
 export const GET = errorHandler(
   authHandler(

@@ -26,7 +26,6 @@
     "glob": "^11.0.1",
     "mintlify": "4.1.98",
     "prettier": "^3.5.3",
-    "prettier-plugin-organize-imports": "^4.2.0",
     "recast": "^0.23.11",
     "tsx": "^4.16.2",
     "turbo": "^2.5.5",

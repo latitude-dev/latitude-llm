@@ -1,9 +1,9 @@
 import { ReactNode } from 'react'
 
+import { SessionProvider } from '@latitude-data/web-ui/providers'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import { SessionProvider } from '@latitude-data/web-ui/providers'
 import { redirect } from 'next/navigation'
 
 import { BackofficeTabs } from './_components/BackofficeTabs'

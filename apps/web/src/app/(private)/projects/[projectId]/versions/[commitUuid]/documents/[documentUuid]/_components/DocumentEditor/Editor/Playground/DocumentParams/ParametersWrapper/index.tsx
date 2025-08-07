@@ -1,9 +1,9 @@
+import { ReactNode } from 'react'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
-import { ReactNode } from 'react'
 
 export function ParametersWrapper({
   document,

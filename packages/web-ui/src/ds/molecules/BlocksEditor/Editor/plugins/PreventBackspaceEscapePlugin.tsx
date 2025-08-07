@@ -7,8 +7,8 @@ import {
   LexicalNode,
 } from 'lexical'
 import { useEffect } from 'react'
-import { MessageBlockNode } from '../nodes/MessageBlock'
 import { StepBlockNode } from '../nodes/StepBlock'
+import { MessageBlockNode } from '../nodes/MessageBlock'
 
 function isBackspacePreventedForNode(
   node: LexicalNode | null,

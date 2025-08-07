@@ -1,9 +1,9 @@
 import { Job } from 'bullmq'
-import { eq } from 'drizzle-orm'
 import { database } from '../../../client'
-import { Result } from '../../../lib/Result'
 import { mcpServers } from '../../../schema/models/mcpServers'
+import { eq } from 'drizzle-orm'
 import { scaleMcpServer } from '../../../services/mcpServers/scaleService'
+import { Result } from '../../../lib/Result'
 
 export type ScaleDownMcpServerJobData = {
   mcpServerId: number

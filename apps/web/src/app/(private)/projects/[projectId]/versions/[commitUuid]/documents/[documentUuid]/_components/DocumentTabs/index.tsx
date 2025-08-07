@@ -4,11 +4,11 @@ import { ReactNode, useContext } from 'react'
 
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 
-import { DocumentVersion } from '@latitude-data/core/browser'
 import { DocumentationContext } from '../DocumentationModal'
 import { DocumentTriggersButton } from './DocumentTriggers'
-import { PublishDocumentButton } from './PublishDocument'
 import { DocumentTabSelector } from './tabs'
+import { DocumentVersion } from '@latitude-data/core/browser'
+import { PublishDocumentButton } from './PublishDocument'
 
 export default function DocumentTabs({
   params,

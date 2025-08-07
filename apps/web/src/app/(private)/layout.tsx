@@ -1,24 +1,24 @@
 import { ReactNode } from 'react'
 
-import { createSupportUserIdentity } from '$/app/(private)/_lib/createSupportUserIdentity'
+import { SessionProvider } from '@latitude-data/web-ui/browser'
 import buildMetatags from '$/app/_lib/buildMetatags'
+import { createSupportUserIdentity } from '$/app/(private)/_lib/createSupportUserIdentity'
 import { IntercomProvider } from '$/components/IntercomSupportChat'
 import { AppLayout } from '$/components/layouts'
 import {
   LatitudeWebsocketsProvider,
   SocketIOProvider,
 } from '$/components/Providers/WebsocketsProvider'
-import { isOnboardingCompleted } from '$/data-access/workspaceOnboarding'
+import { env } from '@latitude-data/env'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import { env } from '@latitude-data/env'
-import { SessionProvider } from '@latitude-data/web-ui/browser'
 import { redirect } from 'next/navigation'
+import { isOnboardingCompleted } from '$/data-access/workspaceOnboarding'
 
-import { FeatureFlagProvider } from '$/components/Providers/FeatureFlags'
-import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
 import { CSPostHogProvider, IdentifyUser } from '../providers'
 import { NAV_LINKS } from './_lib/constants'
+import { FeatureFlagProvider } from '$/components/Providers/FeatureFlags'
+import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
 
 export const metadata = buildMetatags({
   title: 'Home',

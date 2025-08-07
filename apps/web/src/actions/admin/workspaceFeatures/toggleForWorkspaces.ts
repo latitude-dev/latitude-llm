@@ -1,8 +1,8 @@
 'use server'
 
-import { toggleWorkspaceFeatureForMultipleWorkspaces } from '@latitude-data/core/services/workspaceFeatures/toggleForMultipleWorkspaces'
 import { z } from 'zod'
 import { withAdmin } from '../../procedures'
+import { toggleWorkspaceFeatureForMultipleWorkspaces } from '@latitude-data/core/services/workspaceFeatures/toggleForMultipleWorkspaces'
 
 export const toggleFeatureForWorkspacesAction = withAdmin
   .createServerAction()

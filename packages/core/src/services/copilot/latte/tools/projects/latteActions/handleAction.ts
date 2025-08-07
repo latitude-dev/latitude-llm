@@ -1,9 +1,9 @@
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
+import { Result } from '../../../../../../lib/Result'
 import { LatteChange, LatteEditAction } from '@latitude-data/constants/latte'
 import { Commit, DocumentVersion, Workspace } from '../../../../../../browser'
-import { Result } from '../../../../../../lib/Result'
-import Transaction, { PromisedResult } from '../../../../../../lib/Transaction'
 import { createNewDocument, updateDocument } from '../../../../../documents'
+import Transaction, { PromisedResult } from '../../../../../../lib/Transaction'
 
 export async function executeEditAction(
   {

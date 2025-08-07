@@ -1,10 +1,10 @@
-import { InputSource } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { InputSource } from '@latitude-data/core/browser'
 import { type UseSelectDataset } from '../useSelectDataset'
 
 type SelectValueType = string

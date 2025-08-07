@@ -1,8 +1,8 @@
-import { Providers } from '@latitude-data/constants'
 import { describe, expect, it } from 'vitest'
-import { DocumentVersionsRepository } from '../../repositories'
-import { mergeCommit } from '../commits'
 import { getChangesToRevertCommit, revertCommit } from './revertCommit'
+import { Providers } from '@latitude-data/constants'
+import { mergeCommit } from '../commits'
+import { DocumentVersionsRepository } from '../../repositories'
 
 describe('getChangesToRevertCommit', () => {
   it('fetches and computes changes for a commit reversion', async (ctx) => {

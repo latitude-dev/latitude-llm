@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 
-import { formatCostInMillicents } from '$/app/_lib/formatUtils'
-import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { BarChart, ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
+import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
+import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 
 type ModelStats = {
   runsPerModel: Record<string, number>

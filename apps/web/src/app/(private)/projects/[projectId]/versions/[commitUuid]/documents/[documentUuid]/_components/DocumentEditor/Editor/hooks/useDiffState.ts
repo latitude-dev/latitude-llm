@@ -1,5 +1,5 @@
-import { type DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import { useState } from 'react'
+import { type DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 
 export function useDiffState(
   initialDiff?: string,

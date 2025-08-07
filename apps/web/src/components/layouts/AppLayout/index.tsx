@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 
-import { SessionUser } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
+import { SessionUser } from '@latitude-data/web-ui/providers'
 
 import AppHeader, { AppHeaderProps } from './Header'
 import RightSidebarLayout from './RightSidebarLayout'

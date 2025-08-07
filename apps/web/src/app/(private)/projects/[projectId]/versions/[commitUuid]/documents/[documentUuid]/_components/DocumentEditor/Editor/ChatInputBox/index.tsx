@@ -1,6 +1,6 @@
 import { StatusIndicator } from '$/components/PlaygroundCommon/StatusIndicator'
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { ChatTextArea } from './ChatTextArea'
+import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 
 export function ChatInputBox({
   canChat,

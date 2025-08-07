@@ -1,11 +1,11 @@
 import { ChangeEvent, useCallback, useMemo, useRef, useState } from 'react'
 
 import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
-import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper, {
   IndentType,
   NodeHeaderWrapperProps,
 } from '../NodeHeaderWrapper'
+import { useFileTreeContext } from '../FilesProvider'
 import { useOpenPaths } from '../useOpenPaths'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'

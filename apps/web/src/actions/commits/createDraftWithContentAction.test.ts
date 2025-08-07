@@ -1,4 +1,3 @@
-import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
 import {
   Providers,
   type DocumentVersion,
@@ -10,6 +9,7 @@ import * as factories from '@latitude-data/core/factories'
 import { helpers } from '@latitude-data/core/factories'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
+import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => {

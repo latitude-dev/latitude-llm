@@ -1,9 +1,10 @@
-import { useFormAction } from '$/hooks/useFormAction'
-import useUsers from '$/stores/users'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
+import { useFormAction } from '$/hooks/useFormAction'
+import useUsers from '$/stores/users'
 
 export default function NewUser({
   open,

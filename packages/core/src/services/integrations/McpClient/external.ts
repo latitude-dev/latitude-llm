@@ -1,14 +1,15 @@
-import { IntegrationType } from '@latitude-data/constants'
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { IntegrationDto } from '../../../browser'
-import { Result, TypedResult } from '../../../lib/Result'
 import {
-  McpClientConnection,
   McpConnectionError,
+  McpClientConnection,
   normalizeMcpUrl,
   retryWithBackoff,
 } from './utils'
+import { Result } from '../../../lib/Result'
+import { TypedResult } from '../../../lib/Result'
+import { IntegrationType } from '@latitude-data/constants'
 
 export async function createAndConnectExternalMcpClient(
   integration: IntegrationDto,

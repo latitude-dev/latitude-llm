@@ -78,8 +78,8 @@ const InternalServerErrorSchema = BaseErrorSchema.extend({
 })
 
 export {
-  BadRequestErrorSchema,
   HTTPExceptionErrorSchema,
-  InternalServerErrorSchema,
   UnprocessableEntityErrorSchema,
+  BadRequestErrorSchema,
+  InternalServerErrorSchema,
 }

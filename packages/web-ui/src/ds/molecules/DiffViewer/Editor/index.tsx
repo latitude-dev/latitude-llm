@@ -1,8 +1,8 @@
 'use client'
 
-import { DiffValue } from '@latitude-data/core/browser'
-import { type editor } from 'monaco-editor'
 import { useRef } from 'react'
+import { type editor } from 'monaco-editor'
+import { DiffValue } from '@latitude-data/core/browser'
 import { MonacoDiffEditor } from '../../DocumentTextEditor/Editor/DiffEditor'
 
 export function DiffViewer({ newValue, oldValue }: DiffValue) {

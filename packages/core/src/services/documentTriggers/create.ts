@@ -3,13 +3,7 @@ import {
   DocumentVersion,
   IntegrationType,
 } from '@latitude-data/constants'
-import {
-  DocumentTriggerConfiguration,
-  InsertDocumentTriggerWithConfiguration,
-  IntegrationTriggerConfiguration,
-} from '@latitude-data/constants/documentTriggers'
 import { DocumentTrigger, Project, Workspace } from '../../browser'
-import { database } from '../../client'
 import { BadRequestError, LatitudeError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
@@ -18,6 +12,12 @@ import { IntegrationsRepository } from '../../repositories'
 import { documentTriggers } from '../../schema'
 import { deployPipedreamTrigger } from '../integrations/pipedream/triggers'
 import { buildConfiguration } from './helpers/buildConfiguration'
+import {
+  DocumentTriggerConfiguration,
+  InsertDocumentTriggerWithConfiguration,
+  IntegrationTriggerConfiguration,
+} from '@latitude-data/constants/documentTriggers'
+import { database } from '../../client'
 
 async function completeIntegrationTriggerConfig(
   {

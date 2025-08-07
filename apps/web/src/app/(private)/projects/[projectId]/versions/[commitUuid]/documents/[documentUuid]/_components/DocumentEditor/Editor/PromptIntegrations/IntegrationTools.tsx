@@ -1,19 +1,19 @@
+import { ReactNode, useCallback, useState } from 'react'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useIntegrationTools, { McpToolDto } from '$/stores/integrationTools'
 import { IntegrationDto } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
+import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
-import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
+import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
-import { ReactNode, useCallback, useState } from 'react'
 
 export function ItemWrapper({
   children,

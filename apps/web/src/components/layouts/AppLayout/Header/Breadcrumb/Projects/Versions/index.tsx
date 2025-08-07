@@ -1,15 +1,15 @@
 import { useMemo } from 'react'
 
-import { useCommitsFromProject } from '$/stores/commitsStore'
 import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   BreadcrumbItem,
-  BreadcrumbItemSkeleton,
   BreadcrumbSeparator,
 } from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { BreadcrumbItemSkeleton } from '@latitude-data/web-ui/molecules/Breadcrumb'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
+import { useCommitsFromProject } from '$/stores/commitsStore'
 
 export function CommitBreadcrumbItems({
   segments,

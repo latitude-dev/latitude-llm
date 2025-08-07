@@ -2,9 +2,9 @@ import type { OpenAPIHono } from '@hono/zod-openapi'
 
 import { swaggerUI } from '@hono/swagger-ui'
 
+import packageJson from '../../package.json'
 import { tags } from '$/openApi/tags'
 import { env } from '@latitude-data/env'
-import packageJson from '../../package.json'
 
 const port = env.GATEWAY_PORT
 const url = port

@@ -1,10 +1,10 @@
 'use client'
 import { useCallback, useRef, useState } from 'react'
 
+import { cn } from '@latitude-data/web-ui/utils'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
-import { cn } from '@latitude-data/web-ui/utils'
 
 export enum DelimiterEnum {
   Comma = 'comma',

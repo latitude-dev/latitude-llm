@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   Commit,
   DocumentVersion,
@@ -13,6 +12,7 @@ import {
   computeDocumentLogs,
   computeDocumentLogsCount,
 } from './computeDocumentLogs'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 describe('computeDocumentLogs', () => {
   let doc: DocumentVersion

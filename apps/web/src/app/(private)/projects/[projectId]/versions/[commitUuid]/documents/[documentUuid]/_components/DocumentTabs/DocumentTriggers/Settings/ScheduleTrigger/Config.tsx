@@ -1,20 +1,20 @@
-import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { useState } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
-import { useState } from 'react'
+import { SimpleScheduleForm } from './SimpleScheduleForm'
+import { SpecificScheduleForm } from './SpecificScheduleForm'
 import { CustomScheduleForm } from './CustomScheduleForm'
 import {
-  DEFAULT_CONFIG,
-  SavedConfig,
   ScheduleConfig,
+  SavedConfig,
   ScheduleType,
+  DEFAULT_CONFIG,
   convertToCronExpression,
   getScheduleDescription,
 } from './scheduleUtils'
-import { SimpleScheduleForm } from './SimpleScheduleForm'
-import { SpecificScheduleForm } from './SpecificScheduleForm'
+import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 
 // Convert ScheduledTriggerConfiguration to ScheduleConfig
 function convertToScheduleConfig(

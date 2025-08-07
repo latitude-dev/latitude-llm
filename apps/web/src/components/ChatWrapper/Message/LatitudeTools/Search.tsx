@@ -1,15 +1,15 @@
-import { ToolContent } from '@latitude-data/constants/legacyCompiler'
 import type {
   SearchToolArgs,
   SearchToolResult,
 } from '@latitude-data/core/services/latitudeTools/webSearch/types'
+import { ContentCard, ContentCardContainer } from '../ContentCard'
+import { ToolContent } from '@latitude-data/constants/legacyCompiler'
+import { ToolResultContent, ToolResultFooter } from '../ToolResult'
+import { CollapsibleContent } from './CollapsibleContent'
+import { memo, useMemo } from 'react'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
-import { memo, useMemo } from 'react'
-import { ContentCard, ContentCardContainer } from '../ContentCard'
-import { ToolResultContent, ToolResultFooter } from '../ToolResult'
-import { CollapsibleContent } from './CollapsibleContent'
 
 function TopicPill({
   topic,

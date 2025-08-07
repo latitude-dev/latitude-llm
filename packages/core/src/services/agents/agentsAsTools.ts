@@ -10,12 +10,12 @@ import { scan } from 'promptl-ai'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { StreamManager } from '../../lib/streamManager'
 import { PromisedResult } from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { telemetry, TelemetryContext } from '../../telemetry'
 import { runDocumentAtCommit } from '../commits'
 import { getAgentToolName } from './helpers'
+import { StreamManager } from '../../lib/streamManager'
 
 const JSON_SCHEMA_TYPES = {
   string: 'string',

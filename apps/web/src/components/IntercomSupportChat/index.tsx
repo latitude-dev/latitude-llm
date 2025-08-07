@@ -1,15 +1,15 @@
 'use client'
 
-import { type SupportUserIdentity } from '$/app/(private)/_lib/createSupportUserIdentity'
-import Intercom, { onUnreadCountChange, show } from '@intercom/messenger-js-sdk'
-import {
+import React, {
   createContext,
-  ReactNode,
-  useCallback,
   useContext,
   useEffect,
   useState,
+  ReactNode,
+  useCallback,
 } from 'react'
+import Intercom, { show, onUnreadCountChange } from '@intercom/messenger-js-sdk'
+import { type SupportUserIdentity } from '$/app/(private)/_lib/createSupportUserIdentity'
 
 interface IntercomContextValue {
   open: () => void

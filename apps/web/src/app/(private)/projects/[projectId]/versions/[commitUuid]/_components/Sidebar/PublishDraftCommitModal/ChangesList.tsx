@@ -1,18 +1,16 @@
+import { Commit } from '@latitude-data/core/browser'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
+import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
+import { DocumentChangeSkeleton } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { useCurrentTheme } from '$/hooks/useCurrentTheme'
 import { ROUTES } from '$/services/routes'
+import Link from 'next/link'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
-import { Commit } from '@latitude-data/core/browser'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import {
-  DocumentChange,
-  DocumentChangeSkeleton,
-} from '@latitude-data/web-ui/molecules/DocumentChange'
-import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
-import { cn } from '@latitude-data/web-ui/utils'
-import Link from 'next/link'
 
 function ChangeWithErrors({
   change,

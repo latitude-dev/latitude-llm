@@ -1,40 +1,40 @@
-import {
-  ChainEvent,
-  ChainEventTypes,
-  StreamEventTypes,
-} from '@latitude-data/constants'
-import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 import { env } from '@latitude-data/env'
-import path from 'path'
+import { ErrorResult, Result, TypedResult } from '../../../lib/Result'
+import { LatitudeError, NotImplementedError } from '../../../lib/errors'
 import {
-  scan,
-  type ConversationMetadata,
-  type Document as RefDocument,
-} from 'promptl-ai'
-import {
-  Commit,
-  DocumentVersion,
-  LatteThreadUpdateArgs,
   Project,
   Workspace,
+  DocumentVersion,
+  Commit,
+  LatteThreadUpdateArgs,
 } from '../../../browser'
-import { database } from '../../../client'
 import {
   unsafelyFindProject,
   unsafelyFindWorkspace,
 } from '../../../data-access'
-import { ErrorResult, Result, TypedResult } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
-import { LatitudeError, NotImplementedError } from '../../../lib/errors'
-import { streamToGenerator } from '../../../lib/streamToGenerator'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
   IntegrationsRepository,
   ProviderApiKeysRepository,
 } from '../../../repositories'
+import {
+  ChainEvent,
+  ChainEventTypes,
+  StreamEventTypes,
+} from '@latitude-data/constants'
+import { streamToGenerator } from '../../../lib/streamToGenerator'
 import { WebsocketClient } from '../../../websockets/workers'
+import {
+  type ConversationMetadata,
+  scan,
+  type Document as RefDocument,
+} from 'promptl-ai'
+import { database } from '../../../client'
 import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
+import path from 'path'
+import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 
 function missingKeyError(key: string): ErrorResult<LatitudeError> {
   return Result.error(

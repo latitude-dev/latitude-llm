@@ -1,7 +1,7 @@
 'use client'
 
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { FeaturesManager } from './_components'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export default function AdminFeatures() {
   return (

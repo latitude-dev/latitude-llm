@@ -10,10 +10,10 @@ import { DocumentError } from '../types'
 import { registerActions } from './actions'
 import { registerAutocompleteParameters } from './autocompleParamaters'
 import { EditorWrapper } from './EditorWrapper'
-import { useAutoClosingTags } from './useAutoClosingTags'
 import { useEditorOptions } from './useEditorOptions'
-import { useHighlightedCursor } from './useHighlightedCursor'
 import { useMonacoSetup } from './useMonacoSetup'
+import { useAutoClosingTags } from './useAutoClosingTags'
+import { useHighlightedCursor } from './useHighlightedCursor'
 
 function getEditorLine({ model }: { model: editor.ITextModel }): number {
   const lastLine = model.getLineCount()

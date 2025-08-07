@@ -1,6 +1,5 @@
 'use client'
 
-import usePipedreamApps from '$/stores/pipedreamApps'
 import { App } from '@pipedream/sdk/browser'
 import {
   createContext,
@@ -9,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import usePipedreamApps from '$/stores/pipedreamApps'
 
 type Column1ContextType = {
   isLoading: boolean

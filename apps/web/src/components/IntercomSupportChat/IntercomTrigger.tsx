@@ -1,8 +1,8 @@
 'use client'
 
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { ButtonWithBadge } from '@latitude-data/web-ui/molecules/ButtonWithBadge'
 import { useIntercom } from '.'
+import { ButtonWithBadge } from '@latitude-data/web-ui/molecules/ButtonWithBadge'
 
 export function IntercomTrigger() {
   const { open, unreadCount } = useIntercom()

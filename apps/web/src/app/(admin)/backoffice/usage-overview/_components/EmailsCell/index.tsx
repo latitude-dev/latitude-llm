@@ -1,7 +1,8 @@
 'use client'
 import { CopyButton } from '@latitude-data/web-ui/atoms/CopyButton'
-import { ButtonTrigger, Popover } from '@latitude-data/web-ui/atoms/Popover'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ButtonTrigger } from '@latitude-data/web-ui/atoms/Popover'
 
 export function EmailsCell({
   firstEmail,

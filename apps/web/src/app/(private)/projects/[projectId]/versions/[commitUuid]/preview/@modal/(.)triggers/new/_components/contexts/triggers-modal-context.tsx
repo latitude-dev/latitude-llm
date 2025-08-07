@@ -1,8 +1,5 @@
 'use client'
 
-import { usePipedreamApp } from '$/stores/pipedreamApp'
-import { IntegrationType } from '@latitude-data/constants'
-import { AppDto } from '@latitude-data/core/browser'
 import React, {
   createContext,
   useContext,
@@ -10,6 +7,9 @@ import React, {
   useState,
   type ReactNode,
 } from 'react'
+import { IntegrationType } from '@latitude-data/constants'
+import { AppDto } from '@latitude-data/core/browser'
+import { usePipedreamApp } from '$/stores/pipedreamApp'
 
 type SelectedIntegration = {
   id?: number

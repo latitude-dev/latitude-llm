@@ -1,9 +1,9 @@
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
 import {
   DynamicBot,
   type BotEmotion,
 } from '@latitude-data/web-ui/molecules/DynamicBot'
-import { cn } from '@latitude-data/web-ui/utils'
 import { forwardRef, useCallback } from 'react'
 
 const LatteButton = forwardRef<

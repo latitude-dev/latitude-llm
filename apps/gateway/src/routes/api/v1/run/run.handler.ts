@@ -6,13 +6,13 @@ import {
 import { captureException } from '$/common/sentry'
 import { AppRouteHandler } from '$/openApi/types'
 import { RunRoute } from '$/routes/api/v1/run/run.route'
-import { convertToLegacyChainStream } from '@latitude-data/core/__deprecated/lib/chainStreamManager/index'
 import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runDocumentAtCommitLegacy } from '@latitude-data/core/services/__deprecated/commits/runDocumentAtCommit'
 import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
+import { convertToLegacyChainStream } from '@latitude-data/core/__deprecated/lib/chainStreamManager/index'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 export const runHandler: AppRouteHandler<RunRoute> = async (c) => {

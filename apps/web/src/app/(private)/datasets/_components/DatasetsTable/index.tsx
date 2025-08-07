@@ -1,11 +1,8 @@
 'use client'
-import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
-import { useToggleModal } from '$/hooks/useToogleModal'
-import { ROUTES } from '$/services/routes'
-import useDatasets from '$/stores/datasets'
+import { useState } from 'react'
 import { Dataset } from '@latitude-data/core/browser'
-import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { dateFormatter } from '@latitude-data/web-ui/dateUtils'
 import {
   Table,
   TableBody,
@@ -14,16 +11,19 @@ import {
   TableHeader,
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { dateFormatter } from '@latitude-data/web-ui/dateUtils'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import useDatasets from '$/stores/datasets'
+import { useToggleModal } from '$/hooks/useToogleModal'
 import { useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { ROUTES } from '$/services/routes'
+import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 
-import { useNavigate } from '$/hooks/useNavigate'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import DeleteDatasetModal from '../DeleteDatasetModal'
 import { NewDatasetModal } from '../RootHeader/NewDatasetModal'
+import { useNavigate } from '$/hooks/useNavigate'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 
 export const DATASET_TABLE_PAGE_SIZE = '25'
 export function DatasetsTable({

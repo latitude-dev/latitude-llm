@@ -1,8 +1,8 @@
 'use server'
 
-import { toggleWorkspaceFeature } from '@latitude-data/core/services/workspaceFeatures/toggle'
 import { z } from 'zod'
 import { withAdmin } from '../../procedures'
+import { toggleWorkspaceFeature } from '@latitude-data/core/services/workspaceFeatures/toggle'
 
 export const toggleWorkspaceFeatureAction = withAdmin
   .createServerAction()

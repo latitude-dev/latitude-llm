@@ -1,5 +1,7 @@
 'use client'
 
+import type { IntegrationDto } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createIntegrationAction } from '$/actions/integrations/create'
 import { destroyIntegrationAction } from '$/actions/integrations/destroy'
 import { scaleDownMcpServerAction } from '$/actions/integrations/scaleDown'
@@ -7,11 +9,9 @@ import { scaleUpMcpServerAction } from '$/actions/integrations/scaleUp'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { IntegrationType } from '@latitude-data/constants'
-import type { IntegrationDto } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { IntegrationType } from '@latitude-data/constants'
+import { useMemo } from 'react'
 
 const EMPTY_ARRAY: IntegrationDto[] = []
 

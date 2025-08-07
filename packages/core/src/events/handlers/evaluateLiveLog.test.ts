@@ -1,9 +1,9 @@
-import { NotFoundError } from '@latitude-data/constants/errors'
-import { describe, expect, it, vi } from 'vitest'
-import * as dataAccess from '../../data-access'
+import { describe, it, expect, vi } from 'vitest'
+import { evaluateLiveLogJob } from './evaluateLiveLog'
 import { DocumentLogsRepository } from '../../repositories'
 import { DocumentLogCreatedEvent } from '../events'
-import { evaluateLiveLogJob } from './evaluateLiveLog'
+import * as dataAccess from '../../data-access'
+import { NotFoundError } from '@latitude-data/constants/errors'
 
 const findWorkspaceFromDocumentLog = vi.spyOn(
   dataAccess,

@@ -1,10 +1,10 @@
 'use client'
 
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import React, { useCallback } from 'react'
-import { useDebouncedCallback } from 'use-debounce'
 import { useColumn1Context } from '../contexts/column-1-context'
+import { useDebouncedCallback } from 'use-debounce'
+import React, { useCallback } from 'react'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 
 export function SearchBox() {
   const { searchQuery, setSearchQuery } = useColumn1Context()

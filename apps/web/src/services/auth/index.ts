@@ -1,10 +1,10 @@
-import { AUTH_COOKIE_NAME } from '$/services/auth/constants'
 import { database } from '@latitude-data/core/client'
 import { sessions, users } from '@latitude-data/core/schema'
-import { env } from '@latitude-data/env'
 import { DrizzlePostgreSQLAdapter } from '@lucia-auth/adapter-drizzle'
-import { Google } from 'arctic'
+import { AUTH_COOKIE_NAME } from '$/services/auth/constants'
 import { Lucia } from 'lucia'
+import { env } from '@latitude-data/env'
+import { Google } from 'arctic'
 
 // @ts-ignore
 const adapter = new DrizzlePostgreSQLAdapter(database, sessions, users)

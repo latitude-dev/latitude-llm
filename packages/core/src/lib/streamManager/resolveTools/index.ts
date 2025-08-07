@@ -1,14 +1,14 @@
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { StreamManager } from '..'
-import { Result } from '../../Result'
 import { PromisedResult } from '../../Transaction'
-import { LatitudeError } from '../../errors'
-import { resolveAgentsAsTools } from './agentsAsTools'
 import { resolveClientTools } from './clientTools'
-import { resolveIntegrationTools } from './integrationTools'
 import { resolveLatitudeTools } from './latitudeTools'
-import { resolveProviderTools } from './resolveProviderTools'
+import { resolveAgentsAsTools } from './agentsAsTools'
+import { resolveIntegrationTools } from './integrationTools'
+import { Result } from '../../Result'
+import { LatitudeError } from '../../errors'
 import { ResolvedTools } from './types'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { resolveProviderTools } from './resolveProviderTools'
+import { StreamManager } from '..'
 
 export async function resolveToolsFromConfig({
   config,

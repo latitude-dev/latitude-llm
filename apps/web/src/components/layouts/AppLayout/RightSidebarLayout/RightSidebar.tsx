@@ -1,12 +1,12 @@
-import { IntercomTrigger } from '$/components/IntercomSupportChat/IntercomTrigger'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { TripleThemeToggle } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
-import { cn } from '@latitude-data/web-ui/utils'
-import { forwardRef, useCallback } from 'react'
 import { RightSidebarItem, RightSidebarTabs } from './types'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { TripleThemeToggle } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
+import { forwardRef, useCallback } from 'react'
+import { IntercomTrigger } from '$/components/IntercomSupportChat/IntercomTrigger'
 
 const SidebarButton = forwardRef<
   HTMLButtonElement,

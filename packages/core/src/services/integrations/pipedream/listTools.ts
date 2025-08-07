@@ -1,11 +1,11 @@
-import { McpTool } from '@latitude-data/constants'
-import { ConfigurableProp } from '@pipedream/sdk'
 import { JSONSchema7 } from 'json-schema'
-import { PipedreamIntegration } from '../../../browser'
+import { ConfigurableProp } from '@pipedream/sdk'
 import { PipedreamComponent, PipedreamComponentType } from '../../../constants'
+import { McpTool } from '@latitude-data/constants'
+import { PipedreamIntegration } from '../../../browser'
+import { getApp } from './apps'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
-import { getApp } from './apps'
 
 const getOptions = <T>(prop: ConfigurableProp): T[] | undefined => {
   if (!('options' in prop) || !prop.options) return

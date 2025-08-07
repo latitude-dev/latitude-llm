@@ -1,9 +1,9 @@
 import { asc, eq, getTableColumns } from 'drizzle-orm'
 
-import { database } from '../client'
 import { Result } from '../lib/Result'
 import { NotFoundError } from '../lib/errors'
 import { features } from '../schema'
+import { database } from '../client'
 
 const tt = getTableColumns(features)
 

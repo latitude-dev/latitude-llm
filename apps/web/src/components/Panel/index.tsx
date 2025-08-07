@@ -1,11 +1,11 @@
 'use client'
 import { ReactNode, useCallback, useState } from 'react'
 
+import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { cn } from '@latitude-data/web-ui/utils'
 
 export default function Panel({
   label,

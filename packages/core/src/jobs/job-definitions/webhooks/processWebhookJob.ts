@@ -1,8 +1,8 @@
-import { and, eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 
 import { database } from '../../../client'
-import { Events, LatitudeEvent } from '../../../events/events'
 import { webhooks } from '../../../schema/models/webhooks'
+import { Events, LatitudeEvent } from '../../../events/events'
 import { webhooksQueue } from '../../queues'
 
 export const WEBHOOK_EVENTS: Array<Events> = [

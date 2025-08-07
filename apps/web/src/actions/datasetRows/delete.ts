@@ -1,12 +1,12 @@
 'use server'
 
-import { authProcedure } from '$/actions/procedures'
+import { z } from 'zod'
+import { deleteManyRows } from '@latitude-data/core/services/datasetRows/deleteManyRows'
 import {
   DatasetRowsRepository,
   DatasetsRepository,
 } from '@latitude-data/core/repositories'
-import { deleteManyRows } from '@latitude-data/core/services/datasetRows/deleteManyRows'
-import { z } from 'zod'
+import { authProcedure } from '$/actions/procedures'
 
 export const deleteRowsAction = authProcedure
   .createServerAction()

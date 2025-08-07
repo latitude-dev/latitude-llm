@@ -1,9 +1,9 @@
-import { beforeAll, describe, expect, it } from 'vitest'
-import { DatasetRowsRepository } from '../../repositories'
+import { describe, it, expect, beforeAll } from 'vitest'
+import { createDatasetFromJson } from './createFromJson'
+import { identityHashAlgorithm } from '../datasets/utils'
 import * as factories from '../../tests/factories'
 import { type CreateWorkspaceResult } from '../../tests/factories/workspaces'
-import { identityHashAlgorithm } from '../datasets/utils'
-import { createDatasetFromJson } from './createFromJson'
+import { DatasetRowsRepository } from '../../repositories'
 
 const validJsonArray = JSON.stringify([
   { name: 'Alice', age: 30 },

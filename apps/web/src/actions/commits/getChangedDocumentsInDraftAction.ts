@@ -3,8 +3,8 @@
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { z } from 'zod'
 
-import { getCommitChanges } from '@latitude-data/core/services/commits/getChanges'
 import { withProject } from '../procedures'
+import { getCommitChanges } from '@latitude-data/core/services/commits/getChanges'
 
 export const getChangedDocumentsInDraftAction = withProject
   .createServerAction()

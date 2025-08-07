@@ -1,14 +1,14 @@
 'use client'
 
-import { LatteChange } from '@latitude-data/constants/latte'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { useTypeWriterValue } from '@latitude-data/web-ui/browser'
-import { cn } from '@latitude-data/web-ui/utils'
 import React, { KeyboardEvent, useCallback, useState } from 'react'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { cn } from '@latitude-data/web-ui/utils'
 import { ChangeList } from './_components/ChangesList'
+import { LatteChange } from '@latitude-data/constants/latte'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
 
 const INPUT_PLACEHOLDERS = [
   'How can I see the logs of my agent?',

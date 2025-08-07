@@ -1,8 +1,8 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { ErrorableEntity, RunError } from '../../../browser'
-import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 import { createRunError } from '../../../services/runErrors/create'
+import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 
 export async function createChainRunError({
   error,

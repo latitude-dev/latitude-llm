@@ -118,4 +118,4 @@ const CardFooter = forwardRef<HTMLDivElement, CardFooterProps>(
   },
 )
 
-export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }

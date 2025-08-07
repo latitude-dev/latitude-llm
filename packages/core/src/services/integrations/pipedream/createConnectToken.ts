@@ -1,10 +1,10 @@
-import { UnauthorizedError } from '@latitude-data/constants/errors'
-import { env } from '@latitude-data/env'
 import { createBackendClient } from '@pipedream/sdk/server'
+import { PromisedResult } from '../../../lib/Transaction'
+import { env } from '@latitude-data/env'
+import { Result } from '../../../lib/Result'
+import { UnauthorizedError } from '@latitude-data/constants/errors'
 import { Workspace } from '../../../browser'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
-import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
 
 export async function createConnectToken({
   workspace,

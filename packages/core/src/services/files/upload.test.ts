@@ -3,14 +3,15 @@ import { join } from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Workspace } from '../../browser'
 import * as constants from '../../constants'
-import { diskFactory } from '../../lib/disk'
 import * as lib from '../../lib/generateUUID'
+import { diskFactory } from '../../lib/disk'
 import * as factories from '../../tests/factories'
 
-import { isPromptLFile } from 'promptl-ai'
-import { BadRequestError, UnprocessableEntityError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
 import { uploadFile } from './upload'
+import { isPromptLFile } from 'promptl-ai'
+import { BadRequestError } from './../../lib/errors'
+import { Result } from './../../lib/Result'
+import { UnprocessableEntityError } from './../../lib/errors'
 
 describe('uploadFile', () => {
   const DOCUMENTS_PATH = join(__dirname, '../../tests/fixtures/files/documents')

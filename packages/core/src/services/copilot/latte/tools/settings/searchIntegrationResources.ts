@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import { searchComponents } from '../../../../integrations/pipedream/apps'
 import { defineLatteTool } from '../types'
+import { searchComponents } from '../../../../integrations/pipedream/apps'
 
 const searchIntegrationResources = defineLatteTool(
   async ({ app, query, type }) => {

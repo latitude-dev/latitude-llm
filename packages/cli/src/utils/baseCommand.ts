@@ -1,14 +1,14 @@
+import * as path from 'path'
 import { Latitude } from '@latitude-data/sdk'
 import chalk from 'chalk'
 import inquirer from 'inquirer'
-import * as path from 'path'
 import { CommonOptions } from '../types'
-import { DiffResult } from './computePromptDiff'
-import { ConfigManager } from './configManager'
 import { validateEnvironment } from './environmentValidator'
+import { ConfigManager } from './configManager'
 import { LockFileManager } from './lockFileManager'
-import { ProjectManager } from './projectManager'
 import { PromptManager } from './promptManager'
+import { ProjectManager } from './projectManager'
+import { DiffResult } from './computePromptDiff'
 
 /**
  * Base class for all Latitude CLI commands

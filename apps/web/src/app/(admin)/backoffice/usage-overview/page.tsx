@@ -1,7 +1,6 @@
-import { EmailsCell } from '$/app/(admin)/backoffice/usage-overview/_components/EmailsCell'
-import { buildUsageInformation } from '$/app/(admin)/backoffice/usage-overview/buildUsageInformation'
+import { Suspense } from 'react'
+import { formatDistanceToNow, format } from 'date-fns'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
-import { SubscriptionBadge } from '$/components/UsageIndicatorPopover'
 import { ROUTES } from '$/services/routes'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import {
@@ -9,7 +8,6 @@ import {
   GetUsageOverviewRow,
 } from '@latitude-data/core/services/workspaces/index'
 import {
-  ServerSideTableCell,
   Table,
   TableBody,
   TableHead,
@@ -19,10 +17,12 @@ import {
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
-import { format, formatDistanceToNow } from 'date-fns'
-import { Suspense } from 'react'
+import { ServerSideTableCell } from '@latitude-data/web-ui/atoms/Table'
+import { SubscriptionBadge } from '$/components/UsageIndicatorPopover'
+import { buildUsageInformation } from '$/app/(admin)/backoffice/usage-overview/buildUsageInformation'
 import { TrendCell } from './_components/TrendCell'
 import { UsageCell } from './_components/UsageCell'
+import { EmailsCell } from '$/app/(admin)/backoffice/usage-overview/_components/EmailsCell'
 
 /**
  * All workspaces should have subscription

@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EvaluationResultableType } from '../../constants'
 import { findEvaluationTemplateCategoryById } from '../../data-access/evaluationTemplateCategories'
 import * as evaluationTemplateCategoriesService from '../evaluationTemplateCategories/create'
+import { createEvaluationTemplate } from './create'
 import { NotFoundError } from './../../lib/errors'
 import { Result } from './../../lib/Result'
-import { createEvaluationTemplate } from './create'
 
 describe('createEvaluationTemplate', () => {
   beforeEach(async () => {

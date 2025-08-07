@@ -1,4 +1,3 @@
-import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
 import {
   type Commit,
   type Project,
@@ -8,6 +7,7 @@ import {
 } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
+import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => {

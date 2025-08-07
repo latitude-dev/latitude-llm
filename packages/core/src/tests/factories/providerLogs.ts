@@ -1,9 +1,9 @@
 import { faker } from '@faker-js/faker'
 import { v4 as uuid } from 'uuid'
 
-import type { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
 import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
 import { createProviderLog as createProviderLogService } from '../../services/providerLogs'
+import type { ToolCall, Message } from '@latitude-data/constants/legacyCompiler'
 
 export type IProviderLogData = {
   documentLogUuid: string

@@ -1,10 +1,10 @@
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { toggleFeatureForWorkspacesAction } from '$/actions/admin/workspaceFeatures/toggleForWorkspaces'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { API_ROUTES } from '$/services/routes/api'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { useMemo } from 'react'
 
 type FeatureWithWorkspaceCounts = {
   id: number

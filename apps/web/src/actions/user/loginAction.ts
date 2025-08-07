@@ -1,15 +1,15 @@
 'use server'
 
+import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
 import { getFirstWorkspace, getUserFromCredentials } from '$/data-access'
 import { ROUTES } from '$/services/routes'
-import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
-import { setSession } from '$/services/auth/setSession'
-import { NotFoundError } from '@latitude-data/constants/errors'
-import { env } from '@latitude-data/env'
 import { errorHandlingProcedure } from '../procedures'
+import { env } from '@latitude-data/env'
+import { NotFoundError } from '@latitude-data/constants/errors'
+import { setSession } from '$/services/auth/setSession'
 
 export const loginAction = errorHandlingProcedure
   .createServerAction()

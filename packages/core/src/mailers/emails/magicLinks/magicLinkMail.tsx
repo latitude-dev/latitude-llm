@@ -1,3 +1,5 @@
+import React from 'react'
+
 import { env } from '@latitude-data/env'
 import { Link, Text } from '@react-email/components'
 

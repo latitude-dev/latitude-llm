@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 
-import { cn } from '../../../lib/utils'
 import { Text } from '../../atoms/Text'
+import { cn } from '../../../lib/utils'
 
 const loadingTexts = [
   'Convincing AI to work overtime...',

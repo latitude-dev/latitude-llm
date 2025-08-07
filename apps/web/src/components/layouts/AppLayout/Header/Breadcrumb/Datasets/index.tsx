@@ -1,10 +1,10 @@
-import { useDataset } from '$/stores/dataset'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   BreadcrumbItem,
-  BreadcrumbItemSkeleton,
   BreadcrumbSeparator,
 } from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { BreadcrumbItemSkeleton } from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { useDataset } from '$/stores/dataset'
 
 export function DatasetBreadcrumbItems({ segments }: { segments: string[] }) {
   const datasetId = Number(segments[0])

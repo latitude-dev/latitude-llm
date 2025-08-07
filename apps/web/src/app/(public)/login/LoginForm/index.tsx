@@ -1,16 +1,16 @@
 'use client'
 import { ReactNode } from 'react'
 
-import { loginAction } from '$/actions/user/loginAction'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import Link from 'next/link'
+import { loginAction } from '$/actions/user/loginAction'
 import { useServerAction } from 'zsa-react'
+import Link from 'next/link'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export default function LoginForm({
   footer,

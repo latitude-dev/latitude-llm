@@ -1,8 +1,8 @@
 import { env } from '@latitude-data/env'
 import { LoopsClient } from 'loops'
 
-import { Result } from '../../lib/Result'
 import { type UserCreatedEvent } from '../events'
+import { Result } from '../../lib/Result'
 
 function getApiKey() {
   const apiKey = env.LOOPS_API_KEY

@@ -1,19 +1,19 @@
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
-import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import useFetcher from '$/hooks/useFetcher'
 import {
+  Project,
   Commit,
   DocumentVersion,
   EvaluationV2,
   ExperimentWithScores,
-  Project,
 } from '@latitude-data/core/browser'
-import { useEffect, useMemo, useState } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useEvaluationsV2 } from './evaluationsV2'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  EventArgs,
+  useSockets,
+} from '$/components/Providers/WebsocketsProvider/useSockets'
 
 const EMPTY_ARRAY: [] = []
 

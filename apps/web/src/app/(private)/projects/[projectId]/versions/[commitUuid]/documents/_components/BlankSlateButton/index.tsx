@@ -1,8 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import Link from 'next/link'
 
 function InnerButton({
   title,

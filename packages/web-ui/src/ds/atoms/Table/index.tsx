@@ -296,13 +296,13 @@ const TableCaption = forwardRef<
 TableCaption.displayName = 'TableCaption'
 
 export {
-  ServerSideTableCell,
   Table,
+  TableHeader,
   TableBody,
-  TableCaption,
-  TableCell,
   TableFooter,
   TableHead,
-  TableHeader,
   TableRow,
+  TableCell,
+  ServerSideTableCell,
+  TableCaption,
 }

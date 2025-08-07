@@ -1,10 +1,10 @@
-import { Monaco } from '@monaco-editor/react'
-import { editor, IDisposable } from 'monaco-editor'
-import { useCallback, useEffect, useRef } from 'react'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '../../../../lib/hooks/useLocalStorage'
+import { Monaco } from '@monaco-editor/react'
+import { editor, IDisposable } from 'monaco-editor'
+import { useCallback, useEffect, useRef } from 'react'
 
 const createAutoClosingTagsHandler = (
   editor: editor.IStandaloneCodeEditor,

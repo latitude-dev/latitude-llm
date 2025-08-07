@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 
-import { ParameterType } from '@latitude-data/constants'
 import {
   InputSource,
   PlaygroundInput,
   PlaygroundInputs,
 } from '@latitude-data/core/browser'
+import { ParameterType } from '@latitude-data/constants'
 
 export function buildEmptyInputsFromParameters<S extends InputSource>(
   parameters: string[],

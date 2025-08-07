@@ -1,8 +1,8 @@
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   type Message,
   MessageRole,
 } from '@latitude-data/constants/legacyCompiler'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError } from 'ai'
 import { describe, expect, it, vi } from 'vitest'
 import { ProviderApiKey, Providers } from '../../browser'

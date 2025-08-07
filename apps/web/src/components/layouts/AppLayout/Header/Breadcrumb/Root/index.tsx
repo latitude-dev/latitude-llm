@@ -3,10 +3,10 @@ import {
   BreadcrumbItem,
   BreadcrumbSeparator,
 } from '@latitude-data/web-ui/molecules/Breadcrumb'
-import { useMemo } from 'react'
-import { DatasetBreadcrumbItems } from '../Datasets'
 import { ProjectBreadcrumbItems } from '../Projects'
+import { DatasetBreadcrumbItems } from '../Datasets'
 import { BreadcrumbSelector, BreadcrumbSelectorOption } from '../Selector'
+import { useMemo } from 'react'
 import { WorkspaceSwitcher } from '../WorkspaceSwitcher'
 
 export function RootBreadcrumbItems({ segments }: { segments: string[] }) {

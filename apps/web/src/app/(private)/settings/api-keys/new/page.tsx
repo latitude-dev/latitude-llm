@@ -2,13 +2,14 @@
 
 import { FormEvent, useCallback } from 'react'
 
-import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
-import useApiKeys from '$/stores/apiKeys'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
+import useApiKeys from '$/stores/apiKeys'
 
 export default function NewApiKeyPage() {
   const navigate = useNavigate()

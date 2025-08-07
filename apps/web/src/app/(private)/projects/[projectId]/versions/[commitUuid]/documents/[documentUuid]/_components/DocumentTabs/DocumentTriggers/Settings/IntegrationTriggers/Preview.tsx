@@ -4,9 +4,9 @@ import useIntegrations from '$/stores/integrations'
 import { IntegrationType } from '@latitude-data/constants'
 import type { PipedreamIntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { LatitudeLogo } from '@latitude-data/web-ui/atoms/Icons/custom-icons'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
+import { LatitudeLogo } from '@latitude-data/web-ui/atoms/Icons/custom-icons'
 import { ReactNode, useEffect, useMemo, useState } from 'react'
 
 type ImagePreview = {

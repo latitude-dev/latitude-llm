@@ -1,18 +1,20 @@
 'use client'
-import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 import {
   ComponentPropsWithoutRef,
   ElementRef,
   forwardRef,
   ReactNode,
 } from 'react'
+import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 
 import { cn } from '../../../lib/utils'
-import { TextColor } from '../../tokens'
-import { zIndex } from '../../tokens/zIndex'
-import { Badge, BadgeProps } from '../Badge'
-import { Icon, IconProps } from '../Icons'
 import { Text } from '../Text'
+import { TextColor } from '../../tokens'
+import { Icon } from '../Icons'
+import { IconProps } from '../Icons'
+import { Badge } from '../Badge'
+import { BadgeProps } from '../Badge'
+import { zIndex } from '../../tokens/zIndex'
 
 const TooltipProvider = TooltipPrimitive.Provider
 

@@ -1,6 +1,6 @@
+import { notFound } from 'next/navigation'
 import { findSharedDocumentCached } from '$/app/(public)/_data_access'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { notFound } from 'next/navigation'
 import { ForkDocument } from './_components/ForkDocument'
 
 export default async function ForkedDocumentPage({

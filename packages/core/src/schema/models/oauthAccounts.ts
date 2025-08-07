@@ -1,6 +1,6 @@
-import { index, primaryKey, text } from 'drizzle-orm/pg-core'
-import { latitudeSchema } from '../db-schema' // Import latitudeSchema
 import { users } from './users'
+import { text, primaryKey, index } from 'drizzle-orm/pg-core'
+import { latitudeSchema } from '../db-schema' // Import latitudeSchema
 
 export enum OAuthProvider {
   GOOGLE = 'google',

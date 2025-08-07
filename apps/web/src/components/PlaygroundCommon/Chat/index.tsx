@@ -1,26 +1,26 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import {
-  ChatTextArea,
-  ErrorMessage,
-  MessageList,
-} from '$/components/ChatWrapper'
-import { StatusIndicator } from '$/components/PlaygroundCommon/StatusIndicator'
 import {
   AddMessagesFn,
   RunPromptFn,
   usePlaygroundChat,
 } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
-import { AgentToolsMap } from '@latitude-data/constants'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import Actions, { ActionsState } from '../Actions'
+import { StatusIndicator } from '$/components/PlaygroundCommon/StatusIndicator'
+import { AgentToolsMap } from '@latitude-data/constants'
+import {
+  ChatTextArea,
+  ErrorMessage,
+  MessageList,
+} from '$/components/ChatWrapper'
 
 export default function Chat({
   canChat,

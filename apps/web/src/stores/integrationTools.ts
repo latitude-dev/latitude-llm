@@ -1,9 +1,9 @@
+import { AppDto, type IntegrationDto } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { IntegrationType, McpTool } from '@latitude-data/constants'
-import { AppDto, type IntegrationDto } from '@latitude-data/core/browser'
-import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { IntegrationType, McpTool } from '@latitude-data/constants'
+import { useMemo } from 'react'
 
 const EMPTY_ARRAY: McpTool[] = []
 

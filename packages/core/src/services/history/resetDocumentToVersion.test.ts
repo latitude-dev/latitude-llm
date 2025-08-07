@@ -1,11 +1,11 @@
-import { Providers } from '@latitude-data/constants'
 import { describe, expect, it } from 'vitest'
-import { DocumentVersionsRepository } from '../../repositories'
-import { mergeCommit } from '../commits'
 import {
   getChangesToResetDocumentToVersion,
   resetDocumentToVersion,
 } from './resetDocumentToVersion'
+import { Providers } from '@latitude-data/constants'
+import { mergeCommit } from '../commits'
+import { DocumentVersionsRepository } from '../../repositories'
 
 describe('getChangesToResetDocumentToVersion', () => {
   it('fetches and computes changes for a document between versions', async (ctx) => {

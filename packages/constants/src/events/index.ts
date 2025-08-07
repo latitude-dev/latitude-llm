@@ -1,2 +1,2 @@
-export * from './events'
 export * from './legacy'
+export * from './events'

@@ -1,12 +1,12 @@
-import useProviderApiKeys from '$/stores/providerApiKeys'
-import { ResolvedMetadata } from '$/workers/readMetadata'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Conversation,
   Message as ConversationMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { AppliedRules, applyProviderRules } from '@latitude-data/core/browser'
 import { Adapters, Chain as PromptlChain } from 'promptl-ai'
-import { useEffect, useMemo, useState } from 'react'
+import { ResolvedMetadata } from '$/workers/readMetadata'
+import { AppliedRules, applyProviderRules } from '@latitude-data/core/browser'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 
 export function usePreviewConversation({
   promptlVersion,

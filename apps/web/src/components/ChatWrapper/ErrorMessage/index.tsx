@@ -1,5 +1,5 @@
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import * as Sentry from '@sentry/nextjs'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { useEffect } from 'react'
 
 export function ErrorMessage({ error }: { error: Error }) {

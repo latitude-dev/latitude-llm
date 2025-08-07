@@ -1,5 +1,5 @@
-import { env } from '@latitude-data/env'
 import crypto from 'crypto'
+import { env } from '@latitude-data/env'
 
 // Get encryption key from environment or use a default for development
 const ENCRYPTION_KEY =

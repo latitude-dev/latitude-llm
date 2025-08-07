@@ -2,14 +2,13 @@
 
 import {
   ReactNode,
-  UIEvent,
   useCallback,
+  useState,
+  useRef,
+  UIEvent,
   useEffect,
   useMemo,
-  useRef,
-  useState,
 } from 'react'
-import { useDebouncedCallback } from 'use-debounce'
 import { cn } from '../../../lib/utils'
 import {
   Command,
@@ -19,20 +18,21 @@ import {
   CommandItem,
   CommandList,
 } from '../../atoms/Command'
+import { zIndex } from '../../tokens/zIndex'
 import { FormField, type FormFieldProps } from '../../atoms/FormField'
 import { Icon, IconName } from '../../atoms/Icons'
+import { Skeleton } from '../../atoms/Skeleton'
+import { Text } from '../../atoms/Text'
 import {
-  Options,
   SelectContent,
   SelectGroup,
-  SelectOption,
   SelectRoot,
   SelectTrigger,
   SelectValue,
+  Options,
+  SelectOption,
 } from '../../atoms/Select'
-import { Skeleton } from '../../atoms/Skeleton'
-import { Text } from '../../atoms/Text'
-import { zIndex } from '../../tokens/zIndex'
+import { useDebouncedCallback } from 'use-debounce'
 
 export type PaginatedSelectProps<V extends unknown = unknown> = Omit<
   FormFieldProps,

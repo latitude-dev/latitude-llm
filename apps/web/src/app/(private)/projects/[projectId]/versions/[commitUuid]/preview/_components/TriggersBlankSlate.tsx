@@ -1,14 +1,12 @@
 'use client'
 
-import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
-import Link from 'next/link'
 import { TriggersPreview } from '../../documents/[documentUuid]/_components/DocumentTabs/DocumentTriggers/Settings/IntegrationTriggers/Preview'
+import Link from 'next/link'
+import { ROUTES } from '$/services/routes'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 
 export function TriggersBlankSlate() {
   const { project } = useCurrentProject()

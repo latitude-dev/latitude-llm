@@ -1,4 +1,3 @@
-import { NotFoundError } from '@latitude-data/constants/errors'
 import {
   ComponentId,
   ConfigurableProps,
@@ -6,8 +5,9 @@ import {
   createBackendClient,
 } from '@pipedream/sdk/server'
 import { PipedreamIntegration } from '../../../../browser'
-import { Result } from '../../../../lib/Result'
 import { PipedreamIntegrationConfiguration } from '../../helpers/schema'
+import { Result } from '../../../../lib/Result'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { getPipedreamEnvironment } from '../apps'
 import { fillConfiguredProps } from './fillConfiguredProps'
 

@@ -1,11 +1,11 @@
-import { BadRequestError } from '@latitude-data/constants/errors'
-import { LatteTool } from '@latitude-data/constants/latte'
-import { ToolExecutionOptions } from 'ai'
 import { z } from 'zod'
 import { User, Workspace } from '../../../../browser'
-import { Result } from '../../../../lib/Result'
 import { PromisedResult } from '../../../../lib/Transaction'
+import { BadRequestError } from '@latitude-data/constants/errors'
+import { Result } from '../../../../lib/Result'
 import { TelemetryContext } from '../../../../telemetry'
+import { ToolExecutionOptions } from 'ai'
+import { LatteTool } from '@latitude-data/constants/latte'
 
 export type LatteToolContext = {
   context: TelemetryContext

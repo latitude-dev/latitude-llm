@@ -1,10 +1,10 @@
+import { merge } from 'lodash-es'
 import {
   COMMON_PROVIDER_INPUT_FIELDS_KEYS,
   CommonProviderInputKey,
   ProviderInputSchema,
 } from '$/actions/providerApiKeys/inputSchema'
 import { Providers } from '@latitude-data/constants'
-import { merge } from 'lodash-es'
 
 const CONFIG_PARAM_REGX = /\[([^\]]+)\]/g
 

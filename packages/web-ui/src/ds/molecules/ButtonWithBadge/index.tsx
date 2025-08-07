@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
-import { cn } from '../../../lib/utils'
 import { Button, ButtonProps } from '../../atoms/Button'
+import { cn } from '../../../lib/utils'
 
 export function ButtonWithBadge({
   badge,

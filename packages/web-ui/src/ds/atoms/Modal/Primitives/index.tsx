@@ -1,7 +1,5 @@
 'use client'
 
-import * as DialogPrimitive from '@radix-ui/react-dialog'
-import { X } from 'lucide-react'
 import {
   ComponentPropsWithoutRef,
   ElementRef,
@@ -9,6 +7,8 @@ import {
   HTMLAttributes,
   useCallback,
 } from 'react'
+import { X } from 'lucide-react'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
 
 import { cn } from '../../../../lib/utils'
 import { Text } from '../../Text'
@@ -166,13 +166,13 @@ DialogDescription.displayName = DialogPrimitive.Description.displayName
 
 export {
   Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogOverlay,
   DialogPortal,
-  DialogTitle,
+  DialogOverlay,
+  DialogClose,
   DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
 }

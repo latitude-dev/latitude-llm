@@ -1,21 +1,21 @@
 import {
   bigint,
   bigserial,
-  boolean,
   index,
-  jsonb,
   timestamp,
   unique,
   varchar,
+  jsonb,
+  boolean,
 } from 'drizzle-orm/pg-core'
 
-import { IntegrationType } from '@latitude-data/constants'
-import { IntegrationConfiguration } from '../../services/integrations/helpers/schema'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { mcpServers } from './mcpServers'
 import { users } from './users'
 import { workspaces } from './workspaces'
+import { mcpServers } from './mcpServers'
+import { IntegrationType } from '@latitude-data/constants'
+import { IntegrationConfiguration } from '../../services/integrations/helpers/schema'
 
 export const integrationTypesEnum = latitudeSchema.enum('integration_types', [
   IntegrationType.ExternalMCP,

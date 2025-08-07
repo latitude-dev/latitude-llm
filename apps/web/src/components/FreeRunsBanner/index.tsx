@@ -1,8 +1,8 @@
-import { ROUTES } from '$/services/routes'
+import Link from 'next/link'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import Link from 'next/link'
+import { ROUTES } from '$/services/routes'
 
 const NewProviderLink = () => (
   <Link

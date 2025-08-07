@@ -15,11 +15,11 @@ import { createMistral, MistralProvider } from '@ai-sdk/mistral'
 import { createOpenAI, type OpenAIProvider } from '@ai-sdk/openai'
 import { createPerplexity, PerplexityProvider } from '@ai-sdk/perplexity'
 import { createXai, XaiProvider } from '@ai-sdk/xai'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   type Message,
   MessageRole,
 } from '@latitude-data/constants/legacyCompiler'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { TelemetryContext } from '../../telemetry'
 
 import { Providers } from '../../constants'

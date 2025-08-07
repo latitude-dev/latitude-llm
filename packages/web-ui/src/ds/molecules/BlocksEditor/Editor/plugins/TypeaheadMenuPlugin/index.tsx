@@ -1,22 +1,22 @@
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useCallback, useMemo, useState, JSX } from 'react'
+import { createPortal } from 'react-dom'
 import {
   LexicalTypeaheadMenuPlugin,
   useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin'
+import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import {
   $getSelection,
   $isRangeSelection,
-  BaseSelection,
-  ElementNode,
   LexicalEditor,
   TextNode,
+  BaseSelection,
+  ElementNode,
 } from 'lexical'
-import { JSX, useCallback, useMemo, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { cn } from '../../../../../../lib/utils'
 import { Text } from '../../../../../atoms/Text'
-import { $isMessageBlockNode } from '../../nodes/MessageBlock'
 import { $isStepBlockNode } from '../../nodes/StepBlock'
+import { $isMessageBlockNode } from '../../nodes/MessageBlock'
 import { ComponentPickerMenuItem, filterGroups, flattenGroups } from './Item'
 import {
   ComponentPickerOption,

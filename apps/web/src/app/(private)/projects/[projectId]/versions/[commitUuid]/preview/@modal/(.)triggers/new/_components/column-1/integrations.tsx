@@ -1,7 +1,6 @@
 'use client'
 
-import { IntegrationType } from '@latitude-data/constants'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import {
   Table,
   TableBody,
@@ -9,11 +8,12 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { useColumn1Context } from '../contexts/column-1-context'
 import { useTriggersModalContext } from '../contexts/triggers-modal-context'
+import { IntegrationType } from '@latitude-data/constants'
+import { cn } from '@latitude-data/web-ui/utils'
 
 export function Integrations() {
   const { pipedreamApps, isLoading } = useColumn1Context()

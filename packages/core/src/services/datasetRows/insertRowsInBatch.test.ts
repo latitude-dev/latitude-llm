@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { Dataset, User, Workspace } from '../../browser'
-import { DatasetRowsRepository } from '../../repositories'
-import { DatasetRowData } from '../../schema'
+import { Workspace, Dataset, User } from '../../browser'
 import * as factories from '../../tests/factories'
 import { insertRowsInBatch } from './insertRowsInBatch'
+import { DatasetRowsRepository } from '../../repositories'
+import { DatasetRowData } from '../../schema'
 
 let workspace: Workspace
 let author: User

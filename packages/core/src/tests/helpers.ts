@@ -1,9 +1,9 @@
 import { Providers } from '@latitude-data/constants'
-import { env } from '@latitude-data/env'
 import { vi } from 'vitest'
 import { Result } from '../lib/Result'
 import { mergeCommit } from '../services/commits'
 import * as factories from './factories'
+import { env } from '@latitude-data/env'
 
 export async function testConsumeStream(stream: ReadableStream) {
   const reader = stream.getReader()

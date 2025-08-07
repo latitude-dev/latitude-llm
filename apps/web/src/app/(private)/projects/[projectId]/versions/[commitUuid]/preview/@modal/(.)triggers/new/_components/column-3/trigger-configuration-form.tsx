@@ -1,15 +1,7 @@
 'use client'
 
-import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
-import useDocumentTriggers from '$/stores/documentTriggers'
-import useDocumentVersions from '$/stores/documentVersions'
-import { DocumentTriggerType, DocumentType } from '@latitude-data/constants'
-import {
-  IntegrationDto,
-  PipedreamComponent,
-  PipedreamComponentType,
-} from '@latitude-data/core/browser'
+import React, { useCallback, useMemo, useState } from 'react'
+import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
@@ -17,9 +9,17 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
-import React, { useCallback, useMemo, useState } from 'react'
+import useDocumentVersions from '$/stores/documentVersions'
+import useDocumentTriggers from '$/stores/documentTriggers'
+import { DocumentTriggerType, DocumentType } from '@latitude-data/constants'
+import {
+  IntegrationDto,
+  PipedreamComponent,
+  PipedreamComponentType,
+} from '@latitude-data/core/browser'
 import { IntegrationTriggerConfig } from '../../../../../../documents/[documentUuid]/_components/DocumentTabs/DocumentTriggers/Modal/IntegrationTriggerConfig'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
 
 interface TriggerConfigurationFormProps {
   integration: IntegrationDto

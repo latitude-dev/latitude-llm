@@ -1,4 +1,3 @@
-import { publishDraftCommitAction } from '$/actions/commits/publishDraftCommitAction'
 import {
   Providers,
   type Commit,
@@ -10,6 +9,7 @@ import {
 import * as factories from '@latitude-data/core/factories'
 import { helpers } from '@latitude-data/core/factories'
 import { updateDocument } from '@latitude-data/core/services/documents/update'
+import { publishDraftCommitAction } from '$/actions/commits/publishDraftCommitAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => {

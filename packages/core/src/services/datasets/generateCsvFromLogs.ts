@@ -4,11 +4,11 @@
  * but we need to change the we we do the download in the web api.
  */
 import { stringify } from 'csv-stringify/sync'
-import { Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
-import { Column, DatasetRowData } from '../../schema'
+import { Workspace } from '../../browser'
 import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
 import { nanoidHashAlgorithm } from './utils'
+import { Column, DatasetRowData } from '../../schema'
 
 function stringifyData({
   columns,

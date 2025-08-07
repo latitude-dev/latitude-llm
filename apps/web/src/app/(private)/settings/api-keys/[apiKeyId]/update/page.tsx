@@ -1,13 +1,13 @@
 'use client'
 
-import { useFormAction } from '$/hooks/useFormAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useApiKeys from '$/stores/apiKeys'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { use, useCallback, useMemo } from 'react'
+import { useFormAction } from '$/hooks/useFormAction'
 
 export default function UpdateApiKeyPage({
   params,

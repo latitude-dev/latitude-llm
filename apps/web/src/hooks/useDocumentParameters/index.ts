@@ -1,8 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react'
 
 import { useDatasetUtils } from '$/hooks/useDocumentParameters/datasetUtils'
-import { useEvents } from '$/lib/events'
-import { type ResolvedMetadata } from '$/workers/readMetadata'
 import {
   DocumentLog,
   DocumentVersion,
@@ -28,6 +26,8 @@ import {
   recalculateAllInputs,
   updateInputsState,
 } from './utils'
+import { type ResolvedMetadata } from '$/workers/readMetadata'
+import { useEvents } from '$/lib/events'
 
 function convertToParams(inputs: Inputs<InputSource>) {
   return Object.fromEntries(

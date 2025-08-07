@@ -1,7 +1,7 @@
-import * as fs from 'fs/promises'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { PushOptions } from '../types'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { PushCommand } from './push'
+import { PushOptions } from '../types'
+import * as fs from 'fs/promises'
 
 vi.mock('fs/promises')
 vi.mock('chalk', () => ({

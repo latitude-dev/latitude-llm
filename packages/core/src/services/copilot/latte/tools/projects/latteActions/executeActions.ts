@@ -1,16 +1,16 @@
-import { ConversationMetadata } from '@latitude-data/compiler'
+import { Commit, Workspace, DocumentVersion } from '../../../../../../browser'
 import { LatteChange, LatteEditAction } from '@latitude-data/constants/latte'
-import { Commit, DocumentVersion, Workspace } from '../../../../../../browser'
-import { Result } from '../../../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../../../lib/Transaction'
+import { executeEditAction } from './handleAction'
+import { Result } from '../../../../../../lib/Result'
+import { WebsocketClient } from '../../../../../../websockets/workers'
+import { createLatteThreadCheckpoints } from '../../../threads/checkpoints/createCheckpoint'
 import {
   DocumentVersionsRepository,
   LatteThreadsRepository,
 } from '../../../../../../repositories'
-import { WebsocketClient } from '../../../../../../websockets/workers'
 import { scanDocuments } from '../../../helpers'
-import { createLatteThreadCheckpoints } from '../../../threads/checkpoints/createCheckpoint'
-import { executeEditAction } from './handleAction'
+import { ConversationMetadata } from '@latitude-data/compiler'
 
 export async function executeLatteActions({
   workspace,

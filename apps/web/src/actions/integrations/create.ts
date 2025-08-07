@@ -3,15 +3,15 @@
 import { createIntegration } from '@latitude-data/core/services/integrations/create'
 import { z } from 'zod'
 
+import { authProcedure } from '../procedures'
 import { IntegrationType } from '@latitude-data/constants'
-import { Workspace } from '@latitude-data/core/browser'
-import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import {
   externalMcpIntegrationConfigurationSchema,
   hostedMcpIntegrationConfigurationFormSchema,
   pipedreamIntegrationConfigurationSchema,
 } from '@latitude-data/core/services/integrations/helpers/schema'
-import { authProcedure } from '../procedures'
+import { Workspace } from '@latitude-data/core/browser'
+import { IntegrationsRepository } from '@latitude-data/core/repositories'
 
 const nameSchema = (workspace: Workspace) =>
   z

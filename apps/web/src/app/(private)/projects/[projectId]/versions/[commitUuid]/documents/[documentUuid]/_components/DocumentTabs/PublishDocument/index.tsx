@@ -1,4 +1,3 @@
-import { ROUTES } from '$/services/routes'
 import usePublishedDocument from '$/stores/publishedDocument'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -10,10 +9,11 @@ import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
-import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
-import { NotEditableBanner } from '../_components/NotEditableBanner'
 import { PublishedDocumentPreview } from './Preview'
+import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
+import { ROUTES } from '$/services/routes'
+import { NotEditableBanner } from '../_components/NotEditableBanner'
 
 function UnpublishedDocumentSettings({
   document,

@@ -1,12 +1,13 @@
-import { cva, type VariantProps } from 'class-variance-authority'
 import { forwardRef, TextareaHTMLAttributes } from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
 
 import TextareaAutosize, {
   type TextareaAutosizeProps,
 } from 'react-textarea-autosize'
 
 import { cn } from '../../../lib/utils'
-import { FormField, type FormFieldProps } from '../FormField'
+import { FormField } from '../FormField'
+import { type FormFieldProps } from '../FormField'
 import { INPUT_BASE_CLASSES, INPUT_VARIANT_SIZE } from '../Input'
 
 const inputVariants = cva(cn(INPUT_BASE_CLASSES), {

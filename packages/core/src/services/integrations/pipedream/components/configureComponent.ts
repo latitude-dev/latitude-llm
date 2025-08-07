@@ -1,5 +1,3 @@
-import { IntegrationType } from '@latitude-data/constants'
-import { NotFoundError } from '@latitude-data/constants/errors'
 import {
   ComponentId,
   ConfigurableProps,
@@ -7,10 +5,12 @@ import {
   createBackendClient,
 } from '@pipedream/sdk/server'
 import { IntegrationDto } from '../../../../browser'
+import { IntegrationType } from '@latitude-data/constants'
 import { Result } from '../../../../lib/Result'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { getPipedreamEnvironment } from '../apps'
-import { fillConfiguredProps } from './fillConfiguredProps'
 import { isIntegrationConfigured } from './reloadComponentProps'
+import { fillConfiguredProps } from './fillConfiguredProps'
 
 export async function configureComponent({
   integration,

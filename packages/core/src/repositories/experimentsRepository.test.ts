@@ -12,8 +12,8 @@ import {
   Workspace,
 } from '../browser'
 import { NotFoundError } from '../lib/errors'
-import { createExperiment } from '../services/experiments'
 import * as factories from '../tests/factories'
+import { createExperiment } from '../services/experiments'
 import { ExperimentsRepository } from './experimentsRepository'
 
 describe('ExperimentsRepository', () => {

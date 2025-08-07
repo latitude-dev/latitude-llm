@@ -1,20 +1,13 @@
 import type { ExperimentVariant } from '@latitude-data/constants/experiments'
-import { scan } from 'promptl-ai'
-import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  EvaluationV2,
-  Experiment,
-  User,
-  Workspace,
-} from '../../browser'
-import { publisher } from '../../events/publisher'
-import { Result } from '../../lib/Result'
-import Transaction from '../../lib/Transaction'
-import { NotFoundError } from '../../lib/errors'
+import { Dataset, Experiment, User } from '../../browser'
+import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
 import { ProviderApiKeysRepository } from '../../repositories'
+import Transaction from '../../lib/Transaction'
+import { Result } from '../../lib/Result'
+import { NotFoundError } from '../../lib/errors'
+import { scan } from 'promptl-ai'
 import { createExperiment } from './create'
+import { publisher } from '../../events/publisher'
 
 export async function createExperimentVariants(
   {

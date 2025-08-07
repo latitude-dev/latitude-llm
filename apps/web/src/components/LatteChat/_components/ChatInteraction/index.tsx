@@ -3,9 +3,9 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useState } from 'react'
-import { CollapsedInteractionSteps } from './CollapsedInteractionSteps'
-import { InteractionStep } from './InteractionStep'
 import { MarkdownResponse } from './MarkdownText'
+import { InteractionStep } from './InteractionStep'
+import { CollapsedInteractionSteps } from './CollapsedInteractionSteps'
 
 export function ChatInteraction({
   interaction,

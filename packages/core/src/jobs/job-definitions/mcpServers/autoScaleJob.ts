@@ -1,6 +1,6 @@
 import { Job } from 'bullmq'
-import { Result } from '../../../lib/Result'
 import { autoScaleInactiveServers } from '../../../services/mcpServers/autoScaleService'
+import { Result } from '../../../lib/Result'
 
 export type AutoScaleJobData = unknown
 

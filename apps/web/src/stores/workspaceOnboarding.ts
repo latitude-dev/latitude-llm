@@ -1,8 +1,8 @@
-import useFetcher from '$/hooks/useFetcher'
-import { ROUTES } from '$/services/routes'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback } from 'react'
 import useSWR from 'swr'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
 
 export type OnboardingStatus = {
   id?: number

@@ -1,17 +1,17 @@
-import { createDocumentTriggerAction } from '$/actions/documents/triggers/createDocumentTriggerAction'
-import { deleteDocumentTriggerAction } from '$/actions/documents/triggers/deleteDocumentTriggerAction'
-import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/triggers/updateDocumentTriggerConfigurationAction'
+import { DocumentTrigger, HEAD_COMMIT } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
+import useSWR, { SWRConfiguration } from 'swr'
+import { createDocumentTriggerAction } from '$/actions/documents/triggers/createDocumentTriggerAction'
+import { deleteDocumentTriggerAction } from '$/actions/documents/triggers/deleteDocumentTriggerAction'
 import {
   DocumentTriggerConfiguration,
   InsertDocumentTriggerWithConfiguration,
 } from '@latitude-data/constants/documentTriggers'
-import { DocumentTrigger, HEAD_COMMIT } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/triggers/updateDocumentTriggerConfigurationAction'
 
 const EMPTY_ARRAY = [] as const
 export default function useDocumentTriggers(

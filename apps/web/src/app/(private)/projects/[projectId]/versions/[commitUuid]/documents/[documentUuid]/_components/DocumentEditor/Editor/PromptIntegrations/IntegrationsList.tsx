@@ -1,16 +1,16 @@
-import { useNavigate } from '$/hooks/useNavigate'
-import { integrationOptions } from '$/lib/integrationTypeOptions'
-import { ROUTES } from '$/services/routes'
+import { useMemo, useState, useCallback } from 'react'
 import { IntegrationDto } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
 import {
   TwoColumnSelect,
   TwoColumnSelectOption,
 } from '@latitude-data/web-ui/molecules/TwoColumnSelect'
-import { useCallback, useMemo, useState } from 'react'
-import { IntegrationToolsList } from './IntegrationTools'
 import { ActiveIntegrations } from './useActiveIntegrations'
+import { ROUTES } from '$/services/routes'
+import { IntegrationToolsList } from './IntegrationTools'
+import { integrationOptions } from '$/lib/integrationTypeOptions'
+import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
+import { useNavigate } from '$/hooks/useNavigate'
 
 export function IntegrationsList({
   disabled,

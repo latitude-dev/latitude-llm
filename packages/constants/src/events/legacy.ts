@@ -1,6 +1,6 @@
 import { Message } from '@latitude-data/constants/legacyCompiler'
-import { FinishReason } from 'ai'
 import { ChainEventDtoResponse } from '..'
+import { FinishReason } from 'ai'
 import { LatitudePromptConfig } from '../latitudePromptSchema'
 
 export enum LegacyChainEventTypes {

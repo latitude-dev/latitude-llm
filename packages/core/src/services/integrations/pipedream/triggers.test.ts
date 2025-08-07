@@ -1,19 +1,19 @@
-import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
-import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
 import {
-  DocumentTrigger,
-  PipedreamIntegration,
   Workspace,
+  PipedreamIntegration,
+  DocumentTrigger,
 } from '../../../browser'
+import { updatePipedreamTrigger } from './triggers'
 import { Result } from '../../../lib/Result'
-import * as factories from '../../../tests/factories'
-import { PipedreamIntegrationConfiguration } from '../helpers/schema'
+import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import * as appsModule from './apps'
 import * as componentsModule from './components/fillConfiguredProps'
 import * as triggersModule from './triggers'
-import { updatePipedreamTrigger } from './triggers'
+import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
+import * as factories from '../../../tests/factories'
+import { PipedreamIntegrationConfiguration } from '../helpers/schema'
 
 const mockPipedreamClient = {
   updateTrigger: vi.fn(),

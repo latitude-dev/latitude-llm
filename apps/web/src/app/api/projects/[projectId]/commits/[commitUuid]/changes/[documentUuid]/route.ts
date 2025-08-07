@@ -1,7 +1,5 @@
 'use server'
 
-import { authHandler } from '$/middlewares/authHandler'
-import { errorHandler } from '$/middlewares/errorHandler'
 import {
   DiffValue,
   DocumentVersion,
@@ -11,6 +9,8 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
+import { authHandler } from '$/middlewares/authHandler'
+import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
 function documentContent(document?: DocumentVersion) {

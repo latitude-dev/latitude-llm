@@ -1,8 +1,8 @@
-import { faker } from '@faker-js/faker'
 import { stringify as stringifyObjectToYaml } from 'yaml'
+import { faker } from '@faker-js/faker'
 
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ProviderApiKey } from '../../browser'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 const randomSentence = () => {
   const randomSentenceGenerators = [

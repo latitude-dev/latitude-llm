@@ -1,7 +1,7 @@
 'use server'
 
-import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
 import { markWorkspaceOnboardingComplete } from '@latitude-data/core/services/workspaceOnboarding/update'
+import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
 import { authProcedure } from '../procedures'
 
 /**

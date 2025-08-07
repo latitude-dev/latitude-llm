@@ -1,4 +1,3 @@
-import { NotImplementedError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import { ProviderLogDto } from '../../../../browser'
 import { database } from '../../../../client'
@@ -9,6 +8,7 @@ import {
 } from '../../../../repositories'
 import { annotateEvaluationV2 } from '../../../evaluationsV2/annotate'
 import { getCopilotDocument } from '../helpers'
+import { NotImplementedError } from '@latitude-data/constants/errors'
 
 export async function evaluateLatteThreadChanges(
   {

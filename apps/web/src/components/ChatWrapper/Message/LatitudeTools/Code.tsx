@@ -1,9 +1,9 @@
-import { ToolContent } from '@latitude-data/constants/legacyCompiler'
 import { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
-import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { ToolContent } from '@latitude-data/constants/legacyCompiler'
+import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 import { useMemo } from 'react'
 import { ContentCard } from '../ContentCard'
-import { ToolResultContent, ToolResultFooter } from '../ToolResult'
+import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 
 function runCodeContent(args: CodeToolArgs): string {
   if (!args.dependencies) return args.code

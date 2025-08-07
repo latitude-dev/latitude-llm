@@ -1,6 +1,6 @@
 import { AppRouteHandler } from '$/openApi/types'
-import { handleIntegrationTrigger } from '@latitude-data/core/services/documentTriggers/handlers/index'
 import { IntegrationWebhookRoute } from './webhook.route'
+import { handleIntegrationTrigger } from '@latitude-data/core/services/documentTriggers/handlers/index'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735

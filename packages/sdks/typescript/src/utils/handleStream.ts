@@ -1,5 +1,6 @@
 import { Readable } from 'stream'
 
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
   ApiErrorCodes,
   LatitudeApiError,
@@ -9,13 +10,12 @@ import { nodeFetchResponseToReadableStream } from '$sdk/utils/nodeFetchResponseT
 import { StreamResponseCallbacks } from '$sdk/utils/types'
 import {
   ChainCallResponseDto,
-  ChainEvent,
-  ChainEventTypes,
-  LatitudeEventData,
   ProviderData,
   StreamEventTypes,
+  ChainEventTypes,
+  LatitudeEventData,
+  ChainEvent,
 } from '@latitude-data/constants'
-import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { ParsedEvent, ReconnectInterval } from 'eventsource-parser'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
 

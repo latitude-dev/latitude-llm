@@ -1,13 +1,13 @@
 'use client'
 
+import { Project } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createProjectAction } from '$/actions/projects/create'
 import { destroyProjectAction } from '$/actions/projects/destroy'
 import { updateProjectAction } from '$/actions/projects/update'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { Project } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useSWR from 'swr'
 
 export default function useProjects() {

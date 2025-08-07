@@ -1,16 +1,16 @@
-import useAvailableWorkspaces from '$/stores/availableWorkspaces'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
 } from '@latitude-data/web-ui/atoms/DropdownMenu'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
+import useAvailableWorkspaces from '$/stores/availableWorkspaces'
 import {
   BreadcrumbItem,
   BreadcrumbSeparator,
 } from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 
 export function WorkspaceSwitcher() {
   const { data: currentWorkspace } = useCurrentWorkspace()

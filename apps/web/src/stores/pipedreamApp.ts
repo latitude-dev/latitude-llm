@@ -1,10 +1,10 @@
 'use client'
 
 import { ROUTES } from '$/services/routes'
-import { AppDto } from '@latitude-data/core/browser'
-import { useMemo } from 'react'
 import useSWR from 'swr'
 import useFetcher from '../hooks/useFetcher'
+import { AppDto } from '@latitude-data/core/browser'
+import { useMemo } from 'react'
 
 type AppResponse =
   | { data: AppDto; ok: true }

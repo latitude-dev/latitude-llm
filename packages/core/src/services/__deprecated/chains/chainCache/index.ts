@@ -1,7 +1,7 @@
 import {
-  Message,
   Chain as PromptlChain,
   type SerializedChain,
+  Message,
 } from 'promptl-ai'
 
 import { Workspace } from '../../../../browser'

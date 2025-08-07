@@ -1,5 +1,5 @@
-import { cn } from '@latitude-data/web-ui/utils'
 import { ReactNode } from 'react'
+import { cn } from '@latitude-data/web-ui/utils'
 
 export function FloatingElement({
   isScrolledToBottom,

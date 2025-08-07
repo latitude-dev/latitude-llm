@@ -1,5 +1,5 @@
 import { Latitude } from '$sdk/index'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeAll } from 'vitest'
 
 describe.skip('SDK Integration Tests (E2E)', () => {
   const apiKey = process.env.TEST_LATITUDE_API_KEY!

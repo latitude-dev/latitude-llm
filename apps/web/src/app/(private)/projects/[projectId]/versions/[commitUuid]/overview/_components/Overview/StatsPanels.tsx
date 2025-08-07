@@ -2,10 +2,10 @@ import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { ProjectStats } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
-import Panel from '$/components/Panel'
 import { EvaluationStats } from './EvaluationStats'
 import { LogsOverTime } from './LogsOverTime'
 import { ModelCharts } from './ModelCharts'
+import Panel from '$/components/Panel'
 
 export function StatsPanels({
   stats,

@@ -1,23 +1,21 @@
-import { DraftChange, ModifiedDocumentType } from '@latitude-data/core/browser'
+import { ModifiedDocumentType, DraftChange } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { DiffViewer } from '@latitude-data/web-ui/molecules/DiffViewer'
-import {
-  DocumentChange,
-  DocumentChangeSkeleton,
-} from '@latitude-data/web-ui/molecules/DocumentChange'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { DiffViewer } from '@latitude-data/web-ui/molecules/DiffViewer'
+import { DocumentChangeSkeleton } from '@latitude-data/web-ui/molecules/DocumentChange'
 import {
   createContext,
-  Dispatch,
-  ReactNode,
-  SetStateAction,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
   useState,
+  useContext,
+  ReactNode,
+  Dispatch,
+  SetStateAction,
+  useMemo,
+  useEffect,
+  useCallback,
 } from 'react'
 
 interface HistoryActionModalContextProps {

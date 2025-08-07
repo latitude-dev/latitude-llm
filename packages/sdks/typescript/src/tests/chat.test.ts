@@ -1,7 +1,7 @@
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { Latitude, LogSources } from '$sdk/index'
 import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
 import { parseSSE } from '$sdk/utils/parseSSE'
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { setupServer } from 'msw/node'
 import {
   afterAll,

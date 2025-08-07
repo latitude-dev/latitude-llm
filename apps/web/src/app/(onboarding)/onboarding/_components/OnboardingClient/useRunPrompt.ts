@@ -1,11 +1,11 @@
-import { OnboardingStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient'
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
-import { ROUTES } from '$/services/routes'
+import { useMemo, useCallback } from 'react'
+import { DocumentVersion, Project, Commit } from '@latitude-data/core/browser'
 import { OnboardingParameters } from '@latitude-data/constants/onboarding'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
+import { ROUTES } from '$/services/routes'
+import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
+import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { useCallback, useMemo } from 'react'
+import { OnboardingStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient'
 
 const SECONDS_BEFORE_HIDING_PROMPT_IN_SECONDS = 2000
 export const DOCUMENT_PARAMETERS: OnboardingParameters = {

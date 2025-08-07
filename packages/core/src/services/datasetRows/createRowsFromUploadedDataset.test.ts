@@ -1,11 +1,11 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { Dataset, User, Workspace } from '../../browser'
-import { DatasetV2CreatedEvent } from '../../events/events'
-import { DatasetRowsRepository, DatasetsRepository } from '../../repositories'
-import * as factories from '../../tests/factories'
+import { beforeAll, expect, describe, it, vi } from 'vitest'
 import getTestDisk from '../../tests/testDrive'
 import { createDatasetFromFile } from '../datasets/createFromFile'
+import * as factories from '../../tests/factories'
+import { Dataset, User, Workspace } from '../../browser'
 import { createRowsFromUploadedDataset } from './createRowsFromUploadedDataset'
+import { DatasetV2CreatedEvent } from '../../events/events'
+import { DatasetRowsRepository, DatasetsRepository } from '../../repositories'
 import { createTestCsvFile } from './testHelper'
 
 const testDrive = getTestDisk()

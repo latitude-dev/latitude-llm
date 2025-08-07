@@ -1,8 +1,8 @@
 import { ColumnsSelection, eq, inArray } from 'drizzle-orm'
 import { PgSelect, SubqueryWithSelection } from 'drizzle-orm/pg-core'
 
-import { NotFoundError } from '@latitude-data/constants/errors'
 import { database } from '../client'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '../lib/Result'
 
 export type QueryOptions = {

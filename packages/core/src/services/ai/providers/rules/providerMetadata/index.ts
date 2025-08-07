@@ -1,7 +1,7 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 
-import { toCamelCaseDeep } from '../../../../../lib/camelCaseRecursive'
 import { Providers } from '../../models'
+import { toCamelCaseDeep } from '../../../../../lib/camelCaseRecursive'
 
 export const PROVIDER_TO_METADATA_KEY: Record<Providers, string> = {
   [Providers.OpenAI]: 'openai',

@@ -1,15 +1,15 @@
 import { LogSources } from '@latitude-data/constants'
-import { LatitudeError } from '@latitude-data/constants/errors'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { Commit, DocumentVersion, User, Workspace } from '../../../browser'
-import { ErrorResult, Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
 import { BACKGROUND, TelemetryContext } from '../../../telemetry'
-import { WebsocketClient } from '../../../websockets/workers'
+import { PromisedResult } from '../../../lib/Transaction'
 import { runDocumentAtCommit } from '../../commits'
 import { addMessages } from '../../documentLogs/addMessages/index'
-import { sendWebsockets } from './helpers'
+import { ErrorResult, Result } from '../../../lib/Result'
+import { LatitudeError } from '@latitude-data/constants/errors'
 import { buildToolHandlers } from './tools'
+import { WebsocketClient } from '../../../websockets/workers'
+import { sendWebsockets } from './helpers'
 
 export async function runNewLatte({
   copilotWorkspace,

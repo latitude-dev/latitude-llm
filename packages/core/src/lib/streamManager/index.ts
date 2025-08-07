@@ -1,4 +1,15 @@
 import {
+  IntegrationDto,
+  LogSources,
+  PromptSource,
+  Workspace,
+} from '../../browser'
+import {
+  Message as LegacyMessage,
+  ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
+import { FinishReason, LanguageModelUsage } from 'ai'
+import {
   ChainEvent,
   ChainEventTypes,
   ChainStepResponse,
@@ -8,28 +19,17 @@ import {
   VercelConfig,
 } from '@latitude-data/constants'
 import {
-  Message as LegacyMessage,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
-import { FinishReason, LanguageModelUsage } from 'ai'
-import { omit } from 'lodash-es'
-import {
-  IntegrationDto,
-  LogSources,
-  PromptSource,
-  Workspace,
-} from '../../browser'
-import { ValidatedChainStep } from '../../services/chains/ChainValidator'
-import {
   createMcpClientManager,
   McpClientManager,
 } from '../../services/integrations/McpClient/McpClientManager'
-import { telemetry, TelemetryContext } from '../../telemetry'
 import { ChainError, RunErrorCodes } from '../errors'
 import { generateUUIDIdentifier } from '../generateUUID'
-import { ToolHandler } from './clientTools/handlers'
-import { ResolvedTools } from './resolveTools/types'
 import { createPromiseWithResolver } from './utils/createPromiseResolver'
+import { ValidatedChainStep } from '../../services/chains/ChainValidator'
+import { omit } from 'lodash-es'
+import { ResolvedTools } from './resolveTools/types'
+import { telemetry, TelemetryContext } from '../../telemetry'
+import { ToolHandler } from './clientTools/handlers'
 
 export type StreamManagerProps = {
   workspace: Workspace

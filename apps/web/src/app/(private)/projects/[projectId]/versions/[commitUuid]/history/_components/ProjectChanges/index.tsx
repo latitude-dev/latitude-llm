@@ -13,10 +13,10 @@ import {
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { HistoryActionModal, HistoryActionModalProvider } from '../ActionModal'
-import { ChangeDiffViewer } from '../ChangeDiffViewer'
-import { CommitChangesList } from '../CommitChangesList'
 import { CommitsList } from '../CommitsList'
+import { CommitChangesList } from '../CommitChangesList'
+import { ChangeDiffViewer } from '../ChangeDiffViewer'
+import { HistoryActionModal, HistoryActionModalProvider } from '../ActionModal'
 
 function DocumentFilterBanner({
   documentUuid,

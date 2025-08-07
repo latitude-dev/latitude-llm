@@ -1,9 +1,9 @@
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainEvent,
   ChainEventTypes,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 
 export const TOOLS_DOCUMENT_UUID = '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b'
 type ToolsEventsObject<T> = {

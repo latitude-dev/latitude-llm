@@ -1,10 +1,10 @@
+import { merge } from 'lodash-es'
+import { IntegrationType } from '@latitude-data/constants'
 import {
   COMMON_INTEGRATION_INPUT_FIELDS_KEYS,
   CommonIntegrationInputKey,
   IntegrationInputSchema,
 } from '$/actions/integrations/inputSchema'
-import { IntegrationType } from '@latitude-data/constants'
-import { merge } from 'lodash-es'
 
 const CONFIG_PARAM_REGX = /\[([^\]]+)\]/g
 

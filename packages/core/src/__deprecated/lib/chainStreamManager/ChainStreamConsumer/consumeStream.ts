@@ -1,17 +1,17 @@
 import { capitalize } from 'lodash-es'
 
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError, FinishReason, RetryError } from 'ai'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
-import { ProviderData } from '@latitude-data/constants'
 import {
   LegacyChainEvent,
   Providers,
   StreamEventTypes,
   StreamType,
 } from '../../../../constants'
-import { streamToGenerator } from '../../../../lib/streamToGenerator'
 import { AIReturn } from '../../../../services/ai'
+import { ProviderData } from '@latitude-data/constants'
+import { streamToGenerator } from '../../../../lib/streamToGenerator'
 
 interface ConsumeStreamParams {
   result: AIReturn<StreamType>

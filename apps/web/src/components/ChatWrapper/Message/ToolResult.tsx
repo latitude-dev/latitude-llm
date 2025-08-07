@@ -1,12 +1,12 @@
 import { ToolContent } from '@latitude-data/constants/legacyCompiler'
-import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { CardTextContent, ContentCard } from './ContentCard'
+import { ReactNode, useMemo } from 'react'
+import { CollapsibleContent } from './LatitudeTools/CollapsibleContent'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
-import { ReactNode, useMemo } from 'react'
-import { CardTextContent, ContentCard } from './ContentCard'
-import { CollapsibleContent } from './LatitudeTools/CollapsibleContent'
+import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 
 // If the JSON is too long we don't parse it with CodeBlock component in order to avoid performance issues
 const MAX_LENGTH_JSON_PREVIEW = 10000

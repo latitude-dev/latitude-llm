@@ -1,9 +1,10 @@
 import { env } from 'process'
+import React from 'react'
 
 import { Link, Text } from '@react-email/components'
 
-import { User } from '../../../browser'
 import ContainerLayout from '../_components/ContainerLayout'
+import { User } from '../../../browser'
 
 type Props = {
   invited: User

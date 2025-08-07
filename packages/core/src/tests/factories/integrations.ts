@@ -1,11 +1,11 @@
 import { faker } from '@faker-js/faker'
 
-import { DatabaseError } from 'pg'
 import { IntegrationDto, Workspace } from '../../browser'
 import { database } from '../../client'
-import { IntegrationsRepository } from '../../repositories'
-import { integrations } from '../../schema'
 import { IntegrationConfiguration } from '../../services/integrations/helpers/schema'
+import { integrations } from '../../schema'
+import { IntegrationsRepository } from '../../repositories'
+import { DatabaseError } from 'pg'
 
 export type ICreateIntegration = {
   workspace: Workspace

@@ -1,5 +1,4 @@
 import { DOCUMENT_PATH_REGEXP } from '@latitude-data/core/browser'
-import { useOnClickOutside } from '@latitude-data/web-ui/hooks/useOnClickOutside'
 import {
   ChangeEventHandler,
   KeyboardEvent,
@@ -7,6 +6,7 @@ import {
   useCallback,
   useState,
 } from 'react'
+import { useOnClickOutside } from '@latitude-data/web-ui/hooks/useOnClickOutside'
 
 const INVALID_MSG =
   "Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'"

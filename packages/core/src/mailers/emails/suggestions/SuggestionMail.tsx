@@ -1,3 +1,5 @@
+import React from 'react'
+
 import { Link, Text } from '@react-email/components'
 import ContainerLayout from '../_components/ContainerLayout'
 

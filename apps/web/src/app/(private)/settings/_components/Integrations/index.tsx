@@ -1,12 +1,4 @@
 'use client'
-import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
-import { DocsRoute } from '$/components/Documentation/routes'
-import { integrationOptions } from '$/lib/integrationTypeOptions'
-import { relativeTime } from '$/lib/relativeTime'
-import { ROUTES } from '$/services/routes'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
-import useIntegrations from '$/stores/integrations'
-import { IntegrationType } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -18,12 +10,20 @@ import {
   TableHeader,
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { relativeTime } from '$/lib/relativeTime'
+import { ROUTES } from '$/services/routes'
+import useIntegrations from '$/stores/integrations'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { integrationOptions } from '$/lib/integrationTypeOptions'
+import { IntegrationType } from '@latitude-data/constants'
 import { McpServerStatus } from '../../integrations/[integrationId]/details/_components/McpServerStatus'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 
 export default function Integrations() {
   const { data: integrations, isLoading: isLoading } = useIntegrations()

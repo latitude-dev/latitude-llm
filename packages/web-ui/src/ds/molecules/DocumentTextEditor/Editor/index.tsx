@@ -2,8 +2,8 @@
 import { CheckCircle2, LoaderCircle } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
-import { AstError } from '@latitude-data/constants/promptl'
 import { MarkerSeverity, type editor } from 'monaco-editor'
+import { AstError } from '@latitude-data/constants/promptl'
 
 import {
   AppLocalStorage,
@@ -12,11 +12,11 @@ import {
 import { cn } from '../../../../lib/utils'
 import { Button } from '../../../atoms/Button'
 import { Text } from '../../../atoms/Text'
-import { EditorReadOnlyBanner } from '../ReadOnlyMessage'
 import { type DocumentError, type DocumentTextEditorProps } from '../types'
 import { CopilotSection } from './CopilotSection'
 import { MonacoDiffEditor } from './DiffEditor'
 import { RegularMonacoEditor } from './RegularEditor'
+import { EditorReadOnlyBanner } from '../ReadOnlyMessage'
 
 const NO_ERRORS: AstError[] = []
 export function DocumentTextEditor({

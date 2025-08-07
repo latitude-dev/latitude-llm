@@ -1,10 +1,4 @@
 'use client'
-import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
-import { DocsRoute } from '$/components/Documentation/routes'
-import { relativeTime } from '$/lib/relativeTime'
-import { ROUTES } from '$/services/routes'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
-import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
   Providers,
   Workspace,
@@ -21,12 +15,18 @@ import {
   TableHeader,
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { relativeTime } from '$/lib/relativeTime'
+import { ROUTES } from '$/services/routes'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 
 export default function ProviderApiKeys() {
   const { data: providerApiKeys, isLoading: isProviderApiKeysLoading } =

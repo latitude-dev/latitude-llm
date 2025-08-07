@@ -1,7 +1,7 @@
-import { User, Workspace } from '@latitude-data/core/browser'
-import * as factories from '@latitude-data/core/factories'
+import { Workspace, User } from '@latitude-data/core/browser'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import * as factories from '@latitude-data/core/factories'
 
 import { Result } from '@latitude-data/core/lib/Result'
 

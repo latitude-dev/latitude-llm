@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, Mock, vi } from 'vitest'
-import { createRowsFromUploadedDataset } from '../../services/datasetRows/createRowsFromUploadedDataset'
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import { WebsocketClient } from '../../websockets/workers'
-import { DatasetV2CreatedEvent } from '../events'
+import { createRowsFromUploadedDataset } from '../../services/datasetRows/createRowsFromUploadedDataset'
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
+import { DatasetV2CreatedEvent } from '../events'
 
 vi.mock('../../services/datasetRows/createRowsFromUploadedDataset', () => ({
   createRowsFromUploadedDataset: vi.fn(),

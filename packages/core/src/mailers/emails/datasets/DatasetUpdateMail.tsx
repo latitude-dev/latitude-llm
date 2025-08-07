@@ -1,9 +1,10 @@
 import { env } from 'process'
+import React from 'react'
 
 import { Link, Text } from '@react-email/components'
 
-import { Dataset, User } from '../../../browser'
 import ContainerLayout from '../_components/ContainerLayout'
+import { Dataset, User } from '../../../browser'
 
 type Props = {
   user: User

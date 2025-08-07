@@ -4,7 +4,6 @@ import { ChainEventTypes } from '@latitude-data/constants'
 import { APICallError, RetryError } from 'ai'
 import { LogSources, Providers, StreamEventTypes } from '../../browser'
 import { publisher } from '../../events/publisher'
-import * as createChainRunErrorMod from '../../lib/streamManager/ChainErrors'
 import { ProviderLogsRepository } from '../../repositories'
 import {
   createDocumentVersion,
@@ -17,6 +16,7 @@ import { testConsumeStream } from '../../tests/helpers'
 import { Ok, Result } from './../../lib/Result'
 import { UnprocessableEntityError } from './../../lib/errors'
 import { runDocumentAtCommit } from './index'
+import * as createChainRunErrorMod from '../../lib/streamManager/ChainErrors'
 
 const mocks = {
   publish: vi.fn(),

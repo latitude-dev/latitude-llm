@@ -14,11 +14,11 @@ import {
   CommandList,
 } from '../../atoms/Command'
 import { FormField } from '../../atoms/FormField'
-import { Icon, IconName } from '../../atoms/Icons'
 import { Popover } from '../../atoms/Popover'
 import { Separator } from '../../atoms/Separator'
-import { Skeleton } from '../../atoms/Skeleton'
 import { Text } from '../../atoms/Text'
+import { Icon, IconName } from '../../atoms/Icons'
+import { Skeleton } from '../../atoms/Skeleton'
 
 interface MultiSelectProps extends Omit<typeof FormField, 'children'> {
   options: {

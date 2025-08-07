@@ -1,10 +1,10 @@
 'use client'
 
+import React, { useState, useCallback } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { MultipleInput } from '@latitude-data/web-ui/molecules/MultipleInput'
-import { useCallback, useState } from 'react'
 
 type WorkspaceSelectionModalProps = {
   isOpen: boolean

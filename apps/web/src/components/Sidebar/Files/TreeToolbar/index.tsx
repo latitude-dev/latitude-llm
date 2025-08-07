@@ -1,15 +1,15 @@
 'use client'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useCallback } from 'react'
 import { create } from 'zustand'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 
 export enum EntityType {
   Prompt = 'prompt',

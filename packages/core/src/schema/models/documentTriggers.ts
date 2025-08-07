@@ -1,12 +1,12 @@
 import { bigint, bigserial, index, jsonb, uuid } from 'drizzle-orm/pg-core'
 
-import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import { sql } from 'drizzle-orm'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { projects } from './projects'
 import { workspaces } from './workspaces'
+import { DocumentTriggerType } from '@latitude-data/constants'
+import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { sql } from 'drizzle-orm'
 
 export const documentTriggerTypeEnum = latitudeSchema.enum(
   'document_trigger_types',

@@ -1,20 +1,18 @@
 'use client'
-import {
-  FREE_PLANS,
-  SubscriptionPlan,
-  WorkspaceUsage,
-} from '@latitude-data/core/browser'
+import { ReactNode, useMemo } from 'react'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import {
-  CircularProgress,
-  CircularProgressProps,
-} from '@latitude-data/web-ui/atoms/CircularProgress'
+import { CircularProgress } from '@latitude-data/web-ui/atoms/CircularProgress'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ReactNode, useMemo } from 'react'
+import { CircularProgressProps } from '@latitude-data/web-ui/atoms/CircularProgress'
+import {
+  SubscriptionPlan,
+  FREE_PLANS,
+  WorkspaceUsage,
+} from '@latitude-data/core/browser'
 
 export function SubscriptionBadge({
   subscription: { name, plan },

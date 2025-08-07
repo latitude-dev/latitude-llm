@@ -5,9 +5,9 @@ import {
 } from '@latitude-data/core/repositories'
 import { createNewDocument } from '@latitude-data/core/services/documents/create'
 
+import type { CreateDocumentRoute } from './create.route'
 import { AppRouteHandler } from '$/openApi/types'
 import { HEAD_COMMIT } from '@latitude-data/constants'
-import type { CreateDocumentRoute } from './create.route'
 
 // @ts-expect-error: Types are not working as expected
 export const createDocumentHandler: AppRouteHandler<

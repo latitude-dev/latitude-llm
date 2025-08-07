@@ -1,8 +1,8 @@
-import { authHandler } from '$/middlewares/authHandler'
-import { errorHandler } from '$/middlewares/errorHandler'
 import { Workspace } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { generateCsvFromLogs } from '@latitude-data/core/services/datasets/generateCsvFromLogs'
+import { authHandler } from '$/middlewares/authHandler'
+import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const POST = errorHandler(

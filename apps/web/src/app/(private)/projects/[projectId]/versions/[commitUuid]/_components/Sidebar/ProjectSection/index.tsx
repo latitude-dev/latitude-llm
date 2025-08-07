@@ -1,13 +1,13 @@
 'use client'
 
-import { ROUTES } from '$/services/routes'
-import useFeature from '$/stores/useFeature'
 import { Commit, Project } from '@latitude-data/core/browser'
+import { cn } from '@latitude-data/web-ui/utils'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { cn } from '@latitude-data/web-ui/utils'
+import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import useFeature from '$/stores/useFeature'
 
 type ProjectRoute = { label: string; route: string; iconName: IconName }
 

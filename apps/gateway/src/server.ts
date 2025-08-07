@@ -1,13 +1,13 @@
 import './common/sentry'
 import './common/tracer'
 
-import app from '$/routes/app'
 import { serve, ServerType } from '@hono/node-server'
+import app from '$/routes/app'
 import cluster from 'cluster'
 import os from 'os'
 
-import { env } from '@latitude-data/env'
 import { captureException, captureMessage } from './common/sentry'
+import { env } from '@latitude-data/env'
 
 const HOSTNAME = env.GATEWAY_BIND_ADDRESS
 const PORT = env.GATEWAY_BIND_PORT

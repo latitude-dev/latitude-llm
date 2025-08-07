@@ -1,5 +1,5 @@
+import { useCallback, useRef, useEffect } from 'react'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
-import { useCallback, useEffect, useRef } from 'react'
 
 export function useStreamHandler() {
   const abortControllerRef = useRef<AbortController | null>(null)

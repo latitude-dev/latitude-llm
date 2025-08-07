@@ -1,5 +1,5 @@
-import { findSharedDocumentCached } from '$/app/(public)/_data_access'
 import buildMetatags from '$/app/_lib/buildMetatags'
+import { findSharedDocumentCached } from '$/app/(public)/_data_access'
 import { ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 

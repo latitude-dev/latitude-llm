@@ -1,8 +1,8 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { InitCommand } from './init'
+import { InitOptions } from '../types'
 import * as fs from 'fs/promises'
 import inquirer from 'inquirer'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { InitOptions } from '../types'
-import { InitCommand } from './init'
 
 vi.mock('fs/promises')
 vi.mock('inquirer')

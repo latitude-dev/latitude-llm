@@ -1,16 +1,16 @@
-import { EmptyInputs } from '$/hooks/useDocumentParameters/metadataParametersStore'
+import { uniq } from 'lodash-es'
 import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
-  DocumentLog,
   INPUT_SOURCE,
-  Inputs,
-  InputSource,
   LinkedDataset,
   LinkedDatasetRow,
+  Inputs,
+  InputSource,
+  DocumentLog,
   PlaygroundInputs,
 } from '@latitude-data/core/browser'
-import { uniq } from 'lodash-es'
 import { recalculateInputs } from './recalculateInputs'
+import { EmptyInputs } from '$/hooks/useDocumentParameters/metadataParametersStore'
 
 export type InputsByDocument = Record<string, PlaygroundInputs<InputSource>>
 const EMPTY_LINKED_DATASET = {

@@ -3,12 +3,12 @@ import { useCallback, useEffect, useRef } from 'react'
 import { type Monaco } from '@monaco-editor/react'
 import { type languages } from 'monaco-editor'
 
+import { DocumentError } from '../types'
 import {
   themeRules,
   tokenizer,
   useThemeColors,
 } from '../../../../lib/monacoEditor/language'
-import { DocumentError } from '../types'
 
 export function useMonacoSetup({
   errorFixFn,

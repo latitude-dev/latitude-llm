@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 
-import { MessageList } from '$/components/ChatWrapper'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -8,6 +7,7 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { MessageList } from '$/components/ChatWrapper'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 
 export function DocumentLogMessages({

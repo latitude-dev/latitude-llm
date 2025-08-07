@@ -1,11 +1,11 @@
 'use client'
-import { DocumentRoutes, ROUTES } from '$/services/routes'
-import { ModifiedDocumentType } from '@latitude-data/constants'
-import { LatteChange } from '@latitude-data/constants/latte'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { ModifiedDocumentType } from '@latitude-data/constants'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
 import Link from 'next/link'
+import { DocumentRoutes, ROUTES } from '$/services/routes'
+import { LatteChange } from '@latitude-data/constants/latte'
 
 function ChangeListItem({ change }: { change: LatteChange }) {
   const path = change.current.path

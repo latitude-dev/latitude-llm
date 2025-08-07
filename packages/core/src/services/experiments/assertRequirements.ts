@@ -1,7 +1,7 @@
 import { EvaluationV2 } from '@latitude-data/constants'
-import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { getEvaluationMetricSpecification } from '../evaluationsV2/specifications'
+import { BadRequestError } from '../../lib/errors'
 
 export function assertEvaluationRequirements({
   evaluations,

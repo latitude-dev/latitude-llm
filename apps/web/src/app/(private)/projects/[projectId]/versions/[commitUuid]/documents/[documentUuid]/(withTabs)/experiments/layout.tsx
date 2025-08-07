@@ -1,7 +1,7 @@
-import buildMetatags from '$/app/_lib/buildMetatags'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ExperimentsRepository } from '@latitude-data/core/repositories'
 import { ExperimentsPageContent } from './_components/ExperimentsPage'
+import buildMetatags from '$/app/_lib/buildMetatags'
 
 export const metadata = buildMetatags({
   locationDescription: 'Prompt Experiments Page',

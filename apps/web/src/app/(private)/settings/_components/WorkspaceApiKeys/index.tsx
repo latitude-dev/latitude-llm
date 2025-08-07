@@ -1,9 +1,5 @@
 'use client'
 
-import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
-import { DocsRoute } from '$/components/Documentation/routes'
-import { ROUTES } from '$/services/routes'
-import useApiKeys from '$/stores/apiKeys'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import {
@@ -14,12 +10,16 @@ import {
   TableHeader,
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import useApiKeys from '$/stores/apiKeys'
+import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
+import { DocsRoute } from '$/components/Documentation/routes'
 import Link from 'next/link'
+import { ROUTES } from '$/services/routes'
 import { useRouter } from 'next/navigation'
 
 export default function WorkspaceApiKeys() {

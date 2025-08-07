@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
-import { OAuthProvider } from '../../schema' // Import OAuthProvider type
-import { createOAuthAccount, createProject } from '../../tests/factories'
+import { describe, it, expect } from 'vitest'
 import { findOrCreateUserFromOAuth } from './findOrCreateUserFromOAuth'
+import { OAuthProvider } from '../../schema' // Import OAuthProvider type
+import { createProject, createOAuthAccount } from '../../tests/factories'
 
 describe('Auth Service: findOrCreateUserFromOAuth', () => {
   const testProviderId: OAuthProvider = OAuthProvider.GOOGLE

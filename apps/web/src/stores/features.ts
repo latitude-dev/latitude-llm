@@ -1,11 +1,11 @@
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createFeatureAction } from '$/actions/admin/features/create'
 import { destroyFeatureAction } from '$/actions/admin/features/destroy'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { useMemo } from 'react'
 
 type Feature = {
   id: number

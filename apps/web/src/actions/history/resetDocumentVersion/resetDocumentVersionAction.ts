@@ -2,8 +2,8 @@
 
 import { z } from 'zod'
 
-import { resetDocumentToVersion } from '@latitude-data/core/services/history/resetDocumentToVersion'
 import { withProject } from '../../procedures'
+import { resetDocumentToVersion } from '@latitude-data/core/services/history/resetDocumentToVersion'
 
 export const resetDocumentVersionAction = withProject
   .createServerAction()

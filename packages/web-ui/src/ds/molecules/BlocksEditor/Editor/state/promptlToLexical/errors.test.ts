@@ -1,15 +1,15 @@
-import { AstError } from '@latitude-data/constants/promptl'
+import { describe, it, expect } from 'vitest'
 import { parse } from 'promptl-ai'
-import { describe, expect, it } from 'vitest'
 import { fromAstToBlocks } from './fromAstToBlocks'
+import { AstError } from '@latitude-data/constants/promptl'
 import {
+  StepBlock,
+  MessageBlock,
+  ReferenceLink,
+  ToolCallBlock,
   FileBlock,
   ImageBlock,
-  MessageBlock,
   ParagraphBlock,
-  ReferenceLink,
-  StepBlock,
-  ToolCallBlock,
 } from './types'
 
 describe('astToSimpleBlocks with errors', () => {

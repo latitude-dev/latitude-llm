@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import { checkout, init, pull, push, status } from './commands'
+import { init, pull, push, checkout, status } from './commands'
 import { help } from './commands/help'
 
 // Version constant that gets replaced at build time

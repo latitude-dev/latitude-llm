@@ -1,4 +1,5 @@
-import { usePipedreamApp } from '$/stores/pipedreamApp'
+import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { IntegrationType } from '@latitude-data/constants'
 import {
   IntegrationDto,
@@ -9,8 +10,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import Image from 'next/image'
-import React, { useEffect, useState } from 'react'
+import { usePipedreamApp } from '$/stores/pipedreamApp'
 
 const SKELETON_COUNT = 3
 

@@ -1,10 +1,10 @@
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { useState } from 'react'
-import { BehaviourSettings } from './BehaviourSettings'
 import { GenerationSettings } from './GenerationSettings'
-import { LimitSettings } from './LimitSettings'
+import { BehaviourSettings } from './BehaviourSettings'
 import { PromptConfigurationProps, useReactiveConfig } from './utils'
+import { LimitSettings } from './LimitSettings'
 
 export function PromptConfiguration({
   disabled,

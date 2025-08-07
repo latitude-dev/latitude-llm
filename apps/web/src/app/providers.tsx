@@ -2,8 +2,8 @@
 
 import { ReactNode, useEffect } from 'react'
 
-import { envClient } from '$/envClient'
 import { User, Workspace } from '@latitude-data/core/browser'
+import { envClient } from '$/envClient'
 import posthog from 'posthog-js'
 import { PostHogProvider, usePostHog } from 'posthog-js/react'
 

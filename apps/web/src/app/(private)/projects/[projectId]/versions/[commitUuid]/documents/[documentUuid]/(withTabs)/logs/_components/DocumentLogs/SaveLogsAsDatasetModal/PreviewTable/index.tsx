@@ -1,6 +1,3 @@
-import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
-import { useDatasetRole } from '$/hooks/useDatasetRoles'
-import { Column } from '@latitude-data/core/schema'
 import {
   Table,
   TableBody,
@@ -13,6 +10,9 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import { cn } from '@latitude-data/web-ui/utils'
 import { type OutputItem } from '../useSelectedLogs'
+import { Column } from '@latitude-data/core/schema'
+import { useDatasetRole } from '$/hooks/useDatasetRoles'
+import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
 
 function PreviewCell({
   cell,

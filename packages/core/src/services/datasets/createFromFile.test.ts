@@ -1,16 +1,17 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, afterAll, describe, expect, it, vi } from 'vitest'
 
 import { User, Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
 import * as syncReadCsv from '../../lib/readCsv'
-import * as factories from '../../tests/factories'
 import getTestDisk from '../../tests/testDrive'
 import { createTestCsvFile } from '../datasetRows/testHelper'
-import { diskFactory, DiskWrapper } from './../../lib/disk'
-import { BadRequestError } from './../../lib/errors'
-import { Result } from './../../lib/Result'
+import * as factories from '../../tests/factories'
 import { createDatasetFromFile } from './createFromFile'
 import { hashAlgorithmArgs } from './utils'
+import { BadRequestError } from './../../lib/errors'
+import { diskFactory } from './../../lib/disk'
+import { DiskWrapper } from './../../lib/disk'
+import { Result } from './../../lib/Result'
 
 // @ts-expect-error - Mock
 vi.spyOn(publisher, 'publishLater').mockImplementation(() => {})

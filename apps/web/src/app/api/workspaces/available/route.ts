@@ -1,6 +1,6 @@
+import { unsafelyFindWorkspacesFromUser } from '@latitude-data/core/data-access'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { unsafelyFindWorkspacesFromUser } from '@latitude-data/core/data-access'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(

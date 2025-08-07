@@ -1,6 +1,6 @@
-import { ROUTES } from '$/services/routes'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Breadcrumb } from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { useSelectedLayoutSegments } from 'next/navigation'
 

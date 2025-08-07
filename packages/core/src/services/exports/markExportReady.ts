@@ -1,6 +1,6 @@
-import { Export } from '../../browser'
-import { publisher } from '../../events/publisher'
 import { updateExport } from './update'
+import { publisher } from '../../events/publisher'
+import { Export } from '../../browser'
 
 export async function markExportReady({
   export: exportRecord,

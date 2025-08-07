@@ -1,18 +1,16 @@
 import { useMemo } from 'react'
 
-import { ParameterType } from '@latitude-data/constants'
 import {
   Inputs,
   InputSource,
   PlaygroundInput,
 } from '@latitude-data/core/browser'
-import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import {
-  Select,
-  SelectTriggerPrimitive,
-} from '@latitude-data/web-ui/atoms/Select'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { SelectTriggerPrimitive } from '@latitude-data/web-ui/atoms/Select'
+import { ParameterType } from '@latitude-data/constants'
+import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 
 const ParameterTypes = Object.values(ParameterType) as string[]
 

@@ -1,4 +1,3 @@
-import { type Column } from '@latitude-data/core/schema'
 import {
   Table,
   TableBody,
@@ -8,6 +7,7 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { type Column } from '@latitude-data/core/schema'
 
 export function PreviewTable({
   rows,

@@ -1,4 +1,4 @@
-import { EVALUATION_EMPTY_INPUTS, EvaluationInputsByDocument } from './types'
+import { EvaluationInputsByDocument, EVALUATION_EMPTY_INPUTS } from './types'
 
 export function getDocState(
   oldState: EvaluationInputsByDocument | null,

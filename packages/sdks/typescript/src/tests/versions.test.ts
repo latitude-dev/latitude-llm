@@ -3,10 +3,10 @@ import { setupServer } from 'msw/node'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 
 import {
-  mockCreateVersionAuthHeader,
-  mockCreateVersionBody,
   mockGetVersionAuthHeader,
   mockGetVersionBody,
+  mockCreateVersionAuthHeader,
+  mockCreateVersionBody,
   mockVersionsError,
 } from './helpers/versions'
 

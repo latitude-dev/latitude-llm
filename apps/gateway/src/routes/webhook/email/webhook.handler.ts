@@ -1,11 +1,11 @@
 import { AppRouteHandler } from '$/openApi/types'
-import { UnauthorizedError } from '@latitude-data/constants/errors'
-import { extractEmailSender } from '@latitude-data/core/services/documentTriggers/helpers/extractEmailSender'
-import { verifyWebhookSignature } from '@latitude-data/core/services/documentTriggers/helpers/verifySignature'
-import { env } from '@latitude-data/env'
 import { handleEmailTrigger } from '../../../../../../packages/core/src/services/documentTriggers/handlers/email'
-import { EmailWebhookBodySchema } from './bodySchema'
+import { verifyWebhookSignature } from '@latitude-data/core/services/documentTriggers/helpers/verifySignature'
+import { extractEmailSender } from '@latitude-data/core/services/documentTriggers/helpers/extractEmailSender'
 import { EmailWebhookRoute } from './webhook.route'
+import { env } from '@latitude-data/env'
+import { UnauthorizedError } from '@latitude-data/constants/errors'
+import { EmailWebhookBodySchema } from './bodySchema'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735

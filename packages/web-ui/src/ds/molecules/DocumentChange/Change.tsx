@@ -1,13 +1,13 @@
 'use client'
 import { ModifiedDocumentType } from '@latitude-data/core/browser'
-import { RefObject, useState } from 'react'
-import { useHover } from '../../../browser'
-import { cn } from '../../../lib/utils'
 import { Button } from '../../atoms/Button'
 import { DropdownMenu, MenuOption } from '../../atoms/DropdownMenu'
 import { Icon } from '../../atoms/Icons'
 import { Text } from '../../atoms/Text'
 import { colors } from '../../tokens'
+import { useHover } from '../../../browser'
+import { RefObject, useState } from 'react'
+import { cn } from '../../../lib/utils'
 import { TruncatedTooltip } from '../TruncatedTooltip'
 import {
   MODIFICATION_BACKGROUNDS,

@@ -3,9 +3,9 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
 import { Node } from '../useTree'
 import { useTempNodes } from './index'
+import { ModifiedDocumentType } from '@latitude-data/core/browser'
 
 describe('useTempNodes', () => {
   afterEach(() => {

@@ -1,11 +1,8 @@
 'use client'
 
-import useAdminFeatures from '$/stores/adminFeatures'
-import useFeatures from '$/stores/features'
+import React, { useState } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
-import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   Table,
   TableBody,
@@ -14,10 +11,13 @@ import {
   TableHeader,
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import React, { useState } from 'react'
+import useFeatures from '$/stores/features'
+import useAdminFeatures from '$/stores/adminFeatures'
 import { WorkspaceSelectionModal } from './WorkspaceSelectionModal'
 
 export function FeaturesManager() {

@@ -1,8 +1,8 @@
-import { ROUTES } from '$/services/routes'
 import {
   LATITUDE_DOCS_URL,
   LATITUDE_HELP_URL,
 } from '@latitude-data/core/browser'
+import { ROUTES } from '$/services/routes'
 
 export const NAV_LINKS = [
   { label: 'Docs', href: LATITUDE_DOCS_URL },

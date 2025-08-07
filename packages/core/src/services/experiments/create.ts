@@ -1,19 +1,13 @@
-import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  EvaluationV2,
-  Experiment,
-  Workspace,
-} from '../../browser'
-import { database } from '../../client'
-import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
-import { BadRequestError, LatitudeError } from '../../lib/errors'
-import { DatasetRowsRepository } from '../../repositories'
-import { experiments } from '../../schema'
+import { Dataset, Experiment } from '../../browser'
+import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
 import { scanDocumentContent } from '../documents'
+import { experiments } from '../../schema'
+import { DatasetRowsRepository } from '../../repositories'
 import { assertEvaluationRequirements } from './assertRequirements'
+import Transaction, { PromisedResult } from '../../lib/Transaction'
+import { Result } from '../../lib/Result'
+import { BadRequestError, LatitudeError } from '../../lib/errors'
+import { database } from '../../client'
 
 function calculateSelectedRangeCount({
   firstIndex,

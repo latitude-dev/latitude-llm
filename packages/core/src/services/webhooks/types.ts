@@ -7,7 +7,7 @@ export interface WebhookTestResponse {
 }
 import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
 
-import { webhookDeliveries, webhooks } from '../../schema/models/webhooks'
+import { webhooks, webhookDeliveries } from '../../schema/models/webhooks'
 
 export type Webhook = InferSelectModel<typeof webhooks>
 export type NewWebhook = InferInsertModel<typeof webhooks>

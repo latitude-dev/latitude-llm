@@ -91,16 +91,16 @@ export function latitudePromptConfigSchema({
 
 export const azureConfig = azureConfigSchema
 export type { AzureConfig } from './providers/azure'
+export { AI_PROVIDERS_WITH_BUILTIN_TOOLS } from './toolsSchema'
 export {
-  ComputerCallSchema,
-  FileSearchToolSchema,
-  openAIToolsList,
   WebSearchToolSchema,
-  type OpenAIFilesSearchTool,
+  FileSearchToolSchema,
+  ComputerCallSchema,
+  openAIToolsList,
   type OpenAIWebSearchTool,
+  type OpenAIFilesSearchTool,
 } from './providers/openai'
 export type { OpenAIToolList } from './providers/openai'
-export { AI_PROVIDERS_WITH_BUILTIN_TOOLS } from './toolsSchema'
 type InferredSchema = z.infer<
   Omit<ReturnType<typeof latitudePromptConfigSchema>, 'schema'>
 >

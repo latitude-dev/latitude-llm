@@ -1,8 +1,8 @@
 'use server'
 
-import { createFeature } from '@latitude-data/core/services/features/create'
 import { z } from 'zod'
 import { withAdmin } from '../../procedures'
+import { createFeature } from '@latitude-data/core/services/features/create'
 
 export const createFeatureAction = withAdmin
   .createServerAction()

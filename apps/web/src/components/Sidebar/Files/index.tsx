@@ -1,19 +1,19 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { cn } from '@latitude-data/web-ui/utils'
+import { useDraggable, useDroppable } from '@latitude-data/web-ui/hooks/useDnD'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
-import { useDraggable, useDroppable } from '@latitude-data/web-ui/hooks/useDnD'
-import { cn } from '@latitude-data/web-ui/utils'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { type ParamValue } from 'next/dist/server/request/params'
-import { useParams } from 'next/navigation'
+import { type IndentType } from './NodeHeaderWrapper'
 import DocumentHeader from './DocumentHeader'
 import { FileTreeProvider, useFileTreeContext } from './FilesProvider'
 import FolderHeader from './FolderHeader'
-import { type IndentType } from './NodeHeaderWrapper'
 import { TreeToolbar } from './TreeToolbar'
 import { useOpenPaths } from './useOpenPaths'
 import { useTempNodes } from './useTempNodes'
 import { Node, SidebarDocument, useTree } from './useTree'
+import { useParams } from 'next/navigation'
+import { type ParamValue } from 'next/dist/server/request/params'
 
 function NodeHeader({
   selected,

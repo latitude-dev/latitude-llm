@@ -1,13 +1,13 @@
+import type { ApiKey } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createApiKeyAction } from '$/actions/apiKeys/create'
 import { destroyApiKeyAction } from '$/actions/apiKeys/destroy'
 import { updateApiKeyAction } from '$/actions/apiKeys/update'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import type { ApiKey } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { useMemo } from 'react'
 
 export default function useApiKeys(opts?: SWRConfiguration) {
   const { toast } = useToast()

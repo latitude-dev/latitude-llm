@@ -1,6 +1,6 @@
 import { createRouter } from '$/openApi/createApp'
-import { clientToolResultHandler } from './handler'
 import { clientToolResultRoute } from './route'
+import { clientToolResultHandler } from './handler'
 
 export const toolResultsRouter = createRouter().openapi(
   clientToolResultRoute,

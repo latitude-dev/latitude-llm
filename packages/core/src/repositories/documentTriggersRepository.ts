@@ -1,9 +1,9 @@
 import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 
-import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTrigger } from '../browser'
 import { documentTriggers } from '../schema'
 import Repository from './repositoryV2'
+import { DocumentTriggerType } from '@latitude-data/constants'
 
 const tt = getTableColumns(documentTriggers)
 

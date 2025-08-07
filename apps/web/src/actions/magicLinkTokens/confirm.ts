@@ -1,14 +1,14 @@
 'use server'
 
-import { getFirstWorkspace } from '$/data-access'
-import { setSession } from '$/services/auth/setSession'
-import { ROUTES } from '$/services/routes'
-import { NotFoundError } from '@latitude-data/constants/errors'
 import {
   unsafelyFindMagicLinkByToken,
   unsafelyGetUser,
 } from '@latitude-data/core/data-access'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
+import { getFirstWorkspace } from '$/data-access'
+import { setSession } from '$/services/auth/setSession'
+import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createServerAction } from 'zsa'

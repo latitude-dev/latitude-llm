@@ -1,8 +1,8 @@
-import { useUpdateEditorHeight } from '@latitude-data/web-ui/atoms/DataGrid'
-import { useMonacoSetup } from '@latitude-data/web-ui/hooks/useMonacoSetup'
+import { useCallback, useRef } from 'react'
 import Editor, { Monaco } from '@monaco-editor/react'
 import { type editor } from 'monaco-editor'
-import { useCallback, useRef } from 'react'
+import { useMonacoSetup } from '@latitude-data/web-ui/hooks/useMonacoSetup'
+import { useUpdateEditorHeight } from '@latitude-data/web-ui/atoms/DataGrid'
 
 type TextEditorProps = {
   value?: string

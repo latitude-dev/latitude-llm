@@ -1,6 +1,6 @@
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import { Dataset, DatasetRow, Workspace } from '@latitude-data/core/browser'
+import { DatasetRow, Dataset, Workspace } from '@latitude-data/core/browser'
 import { Result, TypedResult } from '@latitude-data/core/lib/Result'
 import {
   DatasetRowsRepository,

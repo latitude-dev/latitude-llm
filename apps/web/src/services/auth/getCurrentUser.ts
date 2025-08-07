@@ -1,12 +1,12 @@
 import { cache } from 'react'
 
-import { getDataFromSession } from '$/data-access'
 import { Workspace } from '@latitude-data/core/browser'
+import { getDataFromSession } from '$/data-access'
 import { Session } from 'lucia'
 
+import { getSession } from './getSession'
 import { redirect } from 'next/navigation'
 import { ROUTES } from '../routes'
-import { getSession } from './getSession'
 
 export type SessionData = {
   session: Session

@@ -1,4 +1,3 @@
-import { ChainEvent } from '@latitude-data/constants'
 import {
   Message,
   MessageContent,
@@ -6,6 +5,7 @@ import {
   ToolCall,
   ToolRequestContent,
 } from '@latitude-data/constants/legacyCompiler'
+import { ChainEvent } from '@latitude-data/constants'
 import { StreamEventTypes } from '@latitude-data/core/browser'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import React, { useCallback } from 'react'

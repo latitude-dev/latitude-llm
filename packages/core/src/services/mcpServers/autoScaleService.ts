@@ -1,11 +1,11 @@
-import { and, eq, gt, inArray, lt } from 'drizzle-orm'
-import { database } from '../../client'
-import { maintenanceQueue } from '../../jobs/queues'
 import { Result } from '../../lib/Result'
-import { SubscriptionPlan } from '../../plans'
-import { workspaces } from '../../schema'
 import { mcpServers } from '../../schema/models/mcpServers'
 import { subscriptions } from '../../schema/models/subscriptions'
+import { database } from '../../client'
+import { and, eq, lt, inArray, gt } from 'drizzle-orm'
+import { SubscriptionPlan } from '../../plans'
+import { workspaces } from '../../schema'
+import { maintenanceQueue } from '../../jobs/queues'
 
 const INACTIVITY_THRESHOLD_MINUTES = 10
 const SCALE_DOWN_REPLICAS = 0

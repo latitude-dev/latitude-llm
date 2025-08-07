@@ -1,11 +1,11 @@
+import { beforeEach, describe, expect, vi, it } from 'vitest'
+import { IntegrationDto } from '../../../../browser'
 import { IntegrationType } from '@latitude-data/constants'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { IntegrationDto } from '../../../../browser'
-import { Result } from '../../../../lib/Result'
-import { PipedreamIntegrationConfiguration } from '../../helpers/schema'
 import * as appsModule from '../apps' // adjust the path if needed
 import { configureComponent } from './configureComponent'
+import { Result } from '../../../../lib/Result'
+import { PipedreamIntegrationConfiguration } from '../../helpers/schema'
 
 const configureComponentSpy = vi.fn().mockResolvedValue({})
 

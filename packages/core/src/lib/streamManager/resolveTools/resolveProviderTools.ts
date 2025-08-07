@@ -1,17 +1,17 @@
-import { openai } from '@ai-sdk/openai'
-import { Providers } from '@latitude-data/constants'
 import {
   LatitudePromptConfig,
   OpenAIToolList,
   openAIToolsList,
 } from '@latitude-data/constants/latitudePromptSchema'
+import { Result, TypedResult } from '../../Result'
+import { ResolvedProviderTool, ResolvedTools, ToolSource } from './types'
 import {
   LatitudeError,
   NotFoundError,
   UnprocessableEntityError,
 } from '../../errors'
-import { Result, TypedResult } from '../../Result'
-import { ResolvedProviderTool, ResolvedTools, ToolSource } from './types'
+import { openai } from '@ai-sdk/openai'
+import { Providers } from '@latitude-data/constants'
 
 function resolveOpenAITools(openAITools: OpenAIToolList) {
   const result = openAIToolsList.safeParse(openAITools)

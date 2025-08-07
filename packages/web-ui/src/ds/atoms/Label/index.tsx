@@ -1,8 +1,8 @@
 'use client'
 
-import * as LabelPrimitive from '@radix-ui/react-label'
-import { cva, type VariantProps } from 'class-variance-authority'
 import { CustomComponentPropsWithRef, ElementRef, forwardRef } from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
+import * as LabelPrimitive from '@radix-ui/react-label'
 
 import { cn } from '../../../lib/utils'
 import { font } from '../../tokens'
@@ -101,4 +101,4 @@ export function TooltipLabel({
   )
 }
 
-export { BatchLabel, Label }
+export { Label, BatchLabel }

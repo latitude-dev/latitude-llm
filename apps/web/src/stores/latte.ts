@@ -1,13 +1,13 @@
 'use client'
 
+import { create } from 'zustand'
 import { LatteInteraction } from '$/hooks/latte/types'
 import { LatteChange } from '@latitude-data/constants/latte'
+import { useCallback, useMemo } from 'react'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { useCallback, useMemo } from 'react'
-import { create } from 'zustand'
 
 interface LatteState {
   // Chat state

@@ -1,9 +1,9 @@
 'use client'
 
-import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useFeature from '$/stores/useFeature'
-import { DocumentEditor } from './DocumentEditor'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { DocumentEditorProps, OldDocumentEditor } from './OldDocumentEditor'
+import { DocumentEditor } from './DocumentEditor'
 
 export default function DocumentEditorWrapper(props: DocumentEditorProps) {
   const { data: workspace, isLoading } = useCurrentWorkspace()

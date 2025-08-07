@@ -1,7 +1,9 @@
 'use client'
+import React from 'react'
 
 import { Button } from '../Button'
-import { Icon, IconProps } from '../Icons'
+import { Icon } from '../Icons'
+import { IconProps } from '../Icons'
 import { useToast } from '../Toast'
 
 type CopyButtonProps = Omit<IconProps, 'name'> & {

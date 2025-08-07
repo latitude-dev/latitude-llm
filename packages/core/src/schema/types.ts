@@ -6,7 +6,6 @@ import {
   ExperimentScores,
   IntegrationType,
 } from '@latitude-data/constants'
-import { DocumentTriggerWithConfiguration } from '@latitude-data/constants/documentTriggers'
 import {
   EvaluationMetadataType,
   EvaluationMetric,
@@ -15,6 +14,7 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '../constants'
+import { DocumentTriggerWithConfiguration } from '@latitude-data/constants/documentTriggers'
 import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
 import { connectedEvaluations } from './legacyModels/connectedEvaluations'
 import { evaluationAdvancedTemplates } from './legacyModels/evaluationAdvancedTemplates'
@@ -36,10 +36,7 @@ import { documentTriggers } from './models/documentTriggers'
 import { documentVersions } from './models/documentVersions'
 import { experiments } from './models/experiments'
 import { latitudeExports } from './models/exports'
-import { features } from './models/features'
 import { integrations } from './models/integrations'
-import { latteThreadCheckpoints } from './models/latteThreadCheckpoints'
-import { latteThreads } from './models/latteThreads'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { mcpServers } from './models/mcpServers'
 import { memberships } from './models/memberships'
@@ -51,8 +48,11 @@ import { runErrors } from './models/runErrors'
 import { sessions } from './models/sessions'
 import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
-import { workspaceFeatures } from './models/workspaceFeatures'
 import { workspaces } from './models/workspaces'
+import { latteThreads } from './models/latteThreads'
+import { latteThreadCheckpoints } from './models/latteThreadCheckpoints'
+import { features } from './models/features'
+import { workspaceFeatures } from './models/workspaceFeatures'
 
 export type {
   DocumentLog,

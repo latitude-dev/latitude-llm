@@ -1,9 +1,9 @@
 'use client'
 
+import React from 'react'
+import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { LatteChat } from '$/components/LatteChat'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
-import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
-import React from 'react'
 
 export function LatteLayout({ children }: { children: React.ReactNode }) {
   return (

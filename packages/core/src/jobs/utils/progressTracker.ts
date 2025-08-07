@@ -1,5 +1,5 @@
-import { env } from '@latitude-data/env'
 import { Redis } from 'ioredis'
+import { env } from '@latitude-data/env'
 import { buildRedisConnection } from '../../redis'
 
 export type TrackedProgress = {

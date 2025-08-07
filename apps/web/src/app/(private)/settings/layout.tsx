@@ -1,16 +1,16 @@
 import { ReactNode } from 'react'
 
-import { AppTabs } from '$/app/(private)/AppTabs'
-import buildMetatags from '$/app/_lib/buildMetatags'
 import { Container } from '@latitude-data/web-ui/atoms/Container'
 import { TitleWithActions } from '@latitude-data/web-ui/molecules/TitleWithActions'
+import buildMetatags from '$/app/_lib/buildMetatags'
+import { AppTabs } from '$/app/(private)/AppTabs'
 
-import Integrations from './_components/Integrations'
 import Memberships from './_components/Memberships'
 import ProviderApiKeys from './_components/ProviderApiKeys'
-import Webhooks from './_components/Webhooks'
 import WorkspaceApiKeys from './_components/WorkspaceApiKeys'
 import WorkspaceName from './_components/WorkspaceName'
+import Integrations from './_components/Integrations'
+import Webhooks from './_components/Webhooks'
 
 export const metadata = buildMetatags({
   title: 'Settings',

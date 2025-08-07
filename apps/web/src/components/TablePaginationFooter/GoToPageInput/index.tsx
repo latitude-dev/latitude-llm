@@ -2,9 +2,9 @@
 
 import { FormEvent, useCallback } from 'react'
 
-import { useNavigate } from '$/hooks/useNavigate'
 import { buildPaginatedUrl } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { useNavigate } from '$/hooks/useNavigate'
 
 export function GoToPageInput({
   page,

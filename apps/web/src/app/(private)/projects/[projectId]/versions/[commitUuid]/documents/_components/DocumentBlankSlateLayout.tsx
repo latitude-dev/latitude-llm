@@ -1,5 +1,5 @@
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ReactNode } from 'react'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export function DocumentBlankSlateLayout({
   children,

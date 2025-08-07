@@ -1,5 +1,5 @@
-export * from './buildResponse'
 export * from './create'
-export * from './documentVersionPresenter'
+export * from './buildResponse'
 export * from './serialize'
 export * from './serializeForEvaluation'
+export * from './documentVersionPresenter'

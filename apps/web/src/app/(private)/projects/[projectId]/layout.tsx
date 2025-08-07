@@ -1,9 +1,9 @@
 import { ReactNode } from 'react'
 
-import { findProjectCached } from '$/app/(private)/_data-access'
-import buildMetatags from '$/app/_lib/buildMetatags'
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import buildMetatags from '$/app/_lib/buildMetatags'
+import { findProjectCached } from '$/app/(private)/_data-access'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import type { ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 

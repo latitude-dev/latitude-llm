@@ -1,15 +1,12 @@
-import {
-  ErrorMessage,
-  Message,
-  MessageItem,
-  MessageItemContent,
-} from '$/components/ChatWrapper'
+import { LastMessage } from '../../SharedDocument/RunPrompt/usePrompt'
 import { Message as ConversationMessage } from '@latitude-data/constants/legacyCompiler'
+import { ExpandMessages } from '../ExpandMessages'
+import { ErrorMessage, Message } from '$/components/ChatWrapper'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
+import { MessageItem } from '$/components/ChatWrapper'
+import { MessageItemContent } from '$/components/ChatWrapper'
 import { useEffect, useState } from 'react'
-import { LastMessage } from '../../SharedDocument/RunPrompt/usePrompt'
-import { ExpandMessages } from '../ExpandMessages'
 
 const streamBuilder = (chunks: string[]) => {
   return async function* () {

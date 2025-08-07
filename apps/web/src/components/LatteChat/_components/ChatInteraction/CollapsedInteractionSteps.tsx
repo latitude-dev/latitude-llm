@@ -1,5 +1,5 @@
+import { useState, useEffect } from 'react'
 import { LatteInteractionStep } from '$/hooks/latte/types'
-import { useEffect, useState } from 'react'
 import { InteractionStep } from './InteractionStep'
 
 const STEP_LINE_HEIGHT = 1.25 // rem

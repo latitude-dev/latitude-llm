@@ -1,10 +1,10 @@
-import useIntegrations from '$/stores/integrations'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { ButtonWithBadge } from '@latitude-data/web-ui/molecules/ButtonWithBadge'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { useState } from 'react'
-import { IntegrationsList } from './IntegrationsList'
 import { useActiveIntegrations } from './useActiveIntegrations'
+import useIntegrations from '$/stores/integrations'
+import { IntegrationsList } from './IntegrationsList'
 
 export function PromptIntegrations({
   prompt,

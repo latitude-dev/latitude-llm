@@ -3,9 +3,9 @@ import { Workspace } from '@latitude-data/core/browser'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { captureException } from '$/helpers/captureException'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
+import { captureException } from '$/helpers/captureException'
 import {
   ChainEventTypes,
   EvaluationType,
@@ -13,12 +13,12 @@ import {
   LlmEvaluationMetric,
   LlmEvaluationMetricAnyCustom,
 } from '@latitude-data/constants'
+import { EvaluationsV2Repository } from '@latitude-data/core/repositories'
+import { buildStreamEvaluationRun } from '@latitude-data/core/services/evaluationsV2/llm/buildStreamEvaluationRun'
 import {
   NotFoundError,
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
-import { EvaluationsV2Repository } from '@latitude-data/core/repositories'
-import { buildStreamEvaluationRun } from '@latitude-data/core/services/evaluationsV2/llm/buildStreamEvaluationRun'
 
 function isCustomLlmEvaluation(
   evaluation: EvaluationV2,

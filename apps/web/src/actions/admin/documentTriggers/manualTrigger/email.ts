@@ -2,8 +2,8 @@
 
 import { z } from 'zod'
 
-import { handleEmailTrigger } from '../../../../../../../packages/core/src/services/documentTriggers/handlers/email'
 import { withAdmin } from '../../../procedures'
+import { handleEmailTrigger } from '../../../../../../../packages/core/src/services/documentTriggers/handlers/email'
 
 export const manualEmailTriggerAction = withAdmin
   .createServerAction()

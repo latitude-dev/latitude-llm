@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { EyeDirection } from '../types'
 import { wait } from '../utils'
+import { EyeDirection } from '../types'
 
 export type EyeBehaviourSettings = {
   minTimeBetweenBlinks?: number

@@ -1,8 +1,8 @@
 import { Job } from 'bullmq'
-import { HEAD_COMMIT } from '../../../constants'
 import { findScheduledTriggersDueToRun } from '../../../services/documentTriggers/handlers/scheduled'
-import { defaultQueue } from '../../queues'
 import { ProcessScheduledTriggerJobData } from './processScheduledTriggerJob'
+import { HEAD_COMMIT } from '../../../constants'
+import { defaultQueue } from '../../queues'
 
 export type CheckScheduledDocumentTriggersJobData = unknown
 

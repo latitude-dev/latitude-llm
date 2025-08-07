@@ -8,14 +8,14 @@ import {
   ValueType,
 } from 'recharts/types/component/DefaultTooltipContent'
 
-import { useMeasure } from '../../../../browser'
+import { Text } from '../../../atoms/Text'
+import { BarChartConfig, CartesianDataItem } from '../types'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from '../../../atoms/Charts'
-import { Text } from '../../../atoms/Text'
-import { BarChartConfig, CartesianDataItem } from '../types'
+import { useMeasure } from '../../../../browser'
 import { useTruncatedTick } from './useTruncatedTick'
 
 const CustomTick = ({

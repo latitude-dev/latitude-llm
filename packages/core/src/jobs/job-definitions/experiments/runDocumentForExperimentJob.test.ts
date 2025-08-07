@@ -1,12 +1,12 @@
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import * as factories from '../../../tests/factories'
+import { DocumentVersion, Experiment, Providers, User } from '../../../browser'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DocumentVersion, Experiment, Providers, User } from '../../../browser'
-import { completeExperiment } from '../../../services/experiments/complete'
-import * as factories from '../../../tests/factories'
-import * as runDocumentAtCommitWithAutoToolResponsesModule from '../documents/runDocumentAtCommitWithAutoToolResponses'
 import { runDocumentForExperimentJob } from './runDocumentForExperimentJob'
+import * as runDocumentAtCommitWithAutoToolResponsesModule from '../documents/runDocumentAtCommitWithAutoToolResponses'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import * as shared from './shared'
+import { completeExperiment } from '../../../services/experiments/complete'
 
 describe('runDocumentForExperimentJob', () => {
   let user: User

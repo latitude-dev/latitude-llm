@@ -6,12 +6,12 @@ import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
-import useDocumentTriggers from '$/stores/documentTriggers'
-import { DocumentTriggerType } from '@latitude-data/constants'
-import { useCallback, useState } from 'react'
-import { NotEditableBanner } from '../_components/NotEditableBanner'
-import { TriggerConfigModal } from './Modal'
 import { TriggerSettings } from './Settings'
+import useDocumentTriggers from '$/stores/documentTriggers'
+import { NotEditableBanner } from '../_components/NotEditableBanner'
+import { useCallback, useState } from 'react'
+import { TriggerConfigModal } from './Modal'
+import { DocumentTriggerType } from '@latitude-data/constants'
 
 export function DocumentTriggersButton({
   document,

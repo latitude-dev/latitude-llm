@@ -1,7 +1,7 @@
 'use client'
-import useProjects from '$/stores/projects'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { EditableText } from '@latitude-data/web-ui/molecules/EditableText'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import useProjects from '$/stores/projects'
 import { useDebouncedCallback } from 'use-debounce'
 
 export default function BreadcrumbInput({
