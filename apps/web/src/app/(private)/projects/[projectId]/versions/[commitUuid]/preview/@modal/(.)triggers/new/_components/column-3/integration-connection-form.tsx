@@ -7,7 +7,6 @@ import { useConnectToPipedreamApp } from '$/hooks/useConnectToPipedreamApp'
 import { IntegrationType } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import useIntegrations from '$/stores/integrations'
-import { useTriggersModalContext } from '../contexts/triggers-modal-context'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 
 interface IntegrationConnectionFormProps {
@@ -18,7 +17,6 @@ export function IntegrationConnectionForm({
   app,
 }: IntegrationConnectionFormProps) {
   const { toast } = useToast()
-  const { setSelectedIntegration } = useTriggersModalContext()
   const { connect, externalUserId } = useConnectToPipedreamApp(app)
   const { create } = useIntegrations()
 
@@ -63,19 +61,20 @@ export function IntegrationConnectionForm({
       }
       if (!integration) return
 
-      setSelectedIntegration((prev) => ({
-        id: integration.id,
-        name: integration.name,
-        type: IntegrationType.Pipedream,
-        pipedream: {
-          app: {
-            name: app.name,
-          },
-          trigger: prev?.pipedream?.trigger,
-        },
-      }))
+      // TODO: CHeck if needs to do something here
+      // setSelectedIntegration((prev) => ({
+      //   id: integration.id,
+      //   name: integration.name,
+      //   type: IntegrationType.Pipedream,
+      //   pipedream: {
+      //     app: {
+      //       name: app.name,
+      //     },
+      //     trigger: prev?.pipedream?.trigger,
+      //   },
+      // }))
     },
-    [app, connect, externalUserId, create, setSelectedIntegration, toast],
+    [app, connect, externalUserId, create, toast],
   )
 
   return (

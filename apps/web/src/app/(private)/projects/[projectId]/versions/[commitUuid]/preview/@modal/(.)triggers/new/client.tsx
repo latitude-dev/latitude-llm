@@ -8,7 +8,6 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { TriggersModalProvider } from './_components/contexts/triggers-modal-context'
 import { IntegrationsList } from './_components/IntegrationsList'
 import { TriggersList } from './_components/TriggersList'
 import { IntegrationType } from '@latitude-data/constants'
@@ -37,7 +36,8 @@ function IntegrationDetail({
     return null
   }
 
-  return <TriggersList pipedreamSlug={selectedIntegration.slug} />
+  const slug = selectedIntegration.slug
+  return <TriggersList key={slug} pipedreamSlug={slug} />
 }
 
 export function NewTrigger() {
@@ -63,14 +63,12 @@ export function NewTrigger() {
         )
       }}
     >
-      <TriggersModalProvider>
-        <div className='grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-6 w-full h-full min-h-0 pb-6'>
-          <IntegrationsList onSelectIntegration={setSelected} />
-          <div className='border border-border rounded-lg min-h-0 bg-secondary overflow-hidden'>
-            <IntegrationDetail selectedIntegration={selected} />
-          </div>
+      <div className='grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-6 w-full h-full min-h-0 pb-6'>
+        <IntegrationsList onSelectIntegration={setSelected} />
+        <div className='border border-border rounded-lg min-h-0 bg-secondary overflow-hidden'>
+          <IntegrationDetail selectedIntegration={selected} />
         </div>
-      </TriggersModalProvider>
+      </div>
     </Modal>
   )
 }

@@ -37,7 +37,6 @@ export function TriggersList({ pipedreamSlug }: { pipedreamSlug: string }) {
       const foundTrigger = triggers.find((t) => t.key === triggerKey)
       if (!foundTrigger) return
 
-      console.log('FOUND_TRIGGER', foundTrigger)
       setTrigger(foundTrigger)
     },
     [triggers],
