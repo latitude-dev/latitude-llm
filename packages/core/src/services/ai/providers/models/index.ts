@@ -71,7 +71,6 @@ export function findFirstModelForProvider({
   defaultProviderName?: string
 }) {
   if (!provider) return undefined
-
   if (provider.provider === Providers.Custom) {
     return provider.defaultModel || undefined
   }

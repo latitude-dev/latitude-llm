@@ -172,6 +172,8 @@ export async function defaultDocumentContent(
   if (model) metadata += `\nmodel: ${model}`
   if (agent) metadata += `\ntype: agent`
 
+  metadata += '\ntemperature: 1'
+
   const content = ''
 
   return {
