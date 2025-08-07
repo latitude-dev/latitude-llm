@@ -44,7 +44,7 @@ export function TriggersList({ pipedreamSlug }: { pipedreamSlug: string }) {
 
   return (
     <div className='h-full grid grid-cols-2'>
-      <div className='bg-background border-r border-border'>
+      <div className='bg-background border-r border-border overflow-y-auto custom-scrollbar pb-6'>
         <SearchableList
           listStyle={{ listWrapper: 'onlySeparators', size: 'small' }}
           multiGroup={false}
