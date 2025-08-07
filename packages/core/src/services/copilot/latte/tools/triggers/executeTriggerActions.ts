@@ -1,18 +1,12 @@
-import { DocumentVersion } from '@latitude-data/constants'
-import { Commit, Workspace } from '../../../../../browser'
-import { InsertDocumentTriggerWithConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { DocumentVersion } from '@latitude-data/constants'
+import type { Commit, Workspace } from '../../../../../browser'
+import type { InsertDocumentTriggerWithConfiguration } from '@latitude-data/constants/documentTriggers'
 import { Result } from '../../../../../lib/Result'
 import { createDocumentTrigger } from '../../../../documentTriggers'
-import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
-import {
-  LatteTriggerAction,
-  LatteTriggerChanges,
-} from '@latitude-data/constants/latte'
+import Transaction, { type PromisedResult } from '../../../../../lib/Transaction'
+import type { LatteTriggerAction, LatteTriggerChanges } from '@latitude-data/constants/latte'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import {
-  DocumentTriggersRepository,
-  ProjectsRepository,
-} from '../../../../../repositories'
+import { DocumentTriggersRepository, ProjectsRepository } from '../../../../../repositories'
 import { deleteDocumentTrigger } from '../../../../documentTriggers/delete'
 import { updateDocumentTriggerConfiguration } from '../../../../documentTriggers/update'
 
@@ -31,14 +25,10 @@ async function executeTriggerActions(
   transaction = new Transaction(),
 ): PromisedResult<LatteTriggerChanges> {
   if (action.operation === 'create') {
-    const document = documents.find(
-      (doc) => doc.documentUuid === action.promptUuid,
-    )
+    const document = documents.find((doc) => doc.documentUuid === action.promptUuid)
 
     const projectRepository = new ProjectsRepository(workspace.id)
-    const project = await projectRepository
-      .getProjectById(commit.projectId)
-      .then((r) => r.unwrap())
+    const project = await projectRepository.getProjectById(commit.projectId).then((r) => r.unwrap())
 
     if (!document) {
       return Result.error(
@@ -74,24 +64,18 @@ async function executeTriggerActions(
   }
 
   if (action.operation === 'delete') {
-    const documentTriggersRepository = new DocumentTriggersRepository(
-      workspace.id,
-    )
+    const documentTriggersRepository = new DocumentTriggersRepository(workspace.id)
     const documentTrigger = await documentTriggersRepository
       .findByDocumentUuid(action.promptUuid)
       // Assuming there can only be one trigger of the specified type per document
       // TODO - change this when adding integrations, as they have the same type
       .then((documentTriggers) =>
-        documentTriggers.find(
-          (trigger) => trigger.triggerType === action.triggerType,
-        ),
+        documentTriggers.find((trigger) => trigger.triggerType === action.triggerType),
       )
 
     if (!documentTrigger) {
       return Result.error(
-        new NotFoundError(
-          `Document with UUID ${action.promptUuid} has no document triggers.`,
-        ),
+        new NotFoundError(`Document with UUID ${action.promptUuid} has no document triggers.`),
       )
     }
 
@@ -116,24 +100,18 @@ async function executeTriggerActions(
   }
 
   if (action.operation === 'update') {
-    const documentTriggersRepository = new DocumentTriggersRepository(
-      workspace.id,
-    )
+    const documentTriggersRepository = new DocumentTriggersRepository(workspace.id)
     const documentTrigger = await documentTriggersRepository
       .findByDocumentUuid(action.promptUuid)
       // Assuming there can only be one trigger of the specified type per document
       // TODO - change this when adding integrations, as they have the same type
       .then((documentTriggers) =>
-        documentTriggers.find(
-          (trigger) => trigger.triggerType === action.triggerType,
-        ),
+        documentTriggers.find((trigger) => trigger.triggerType === action.triggerType),
       )
 
     if (!documentTrigger) {
       return Result.error(
-        new NotFoundError(
-          `Document with UUID ${action.promptUuid} has no document triggers.`,
-        ),
+        new NotFoundError(`Document with UUID ${action.promptUuid} has no document triggers.`),
       )
     }
 

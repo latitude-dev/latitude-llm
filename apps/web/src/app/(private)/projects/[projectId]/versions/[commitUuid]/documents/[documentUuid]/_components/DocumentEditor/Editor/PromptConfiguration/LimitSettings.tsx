@@ -1,17 +1,13 @@
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { ConfigElement, ConfigSection } from './_components/ConfigSection'
-import { PromptConfigurationProps, useConfigValue } from './utils'
+import { type PromptConfigurationProps, useConfigValue } from './utils'
 import {
   ABSOLUTE_MAX_STEPS,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
 } from '@latitude-data/constants'
 
-export function LimitSettings({
-  config,
-  setConfig,
-  disabled,
-}: PromptConfigurationProps) {
+export function LimitSettings({ config, setConfig, disabled }: PromptConfigurationProps) {
   const { value: maxSteps, setValue: setMaxSteps } = useConfigValue<number>({
     config,
     setConfig,
@@ -46,10 +42,7 @@ export function LimitSettings({
               setMaxSteps(
                 e.target.value === ''
                   ? undefined
-                  : Math.min(
-                      ABSOLUTE_MAX_STEPS,
-                      Math.max(1, parseInt(e.target.value, 10)),
-                    ),
+                  : Math.min(ABSOLUTE_MAX_STEPS, Math.max(1, parseInt(e.target.value, 10))),
               )
             }
           />
@@ -69,8 +62,7 @@ export function LimitSettings({
             value={maxTokens}
             min={0}
             onChange={(e) => {
-              const newValue =
-                e.target.value === '' ? 0 : parseInt(e.target.value, 10)
+              const newValue = e.target.value === '' ? 0 : parseInt(e.target.value, 10)
               setMaxTokens(newValue ? newValue : undefined)
             }}
           />

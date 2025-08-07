@@ -1,11 +1,8 @@
 import { useMemo } from 'react'
 
-import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
+import { type Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import {
-  BreadcrumbItem,
-  BreadcrumbSeparator,
-} from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { BreadcrumbItem, BreadcrumbSeparator } from '@latitude-data/web-ui/molecules/Breadcrumb'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { BreadcrumbItemSkeleton } from '@latitude-data/web-ui/molecules/Breadcrumb'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
@@ -55,10 +52,7 @@ export function CommitBreadcrumbItems({
               copyValue={currentCommit?.uuid ?? commitUuid}
               tooltipContent='Click to copy the version UUID'
             >
-              <Badge
-                variant={currentCommit?.mergedAt ? 'accent' : 'muted'}
-                className='ml-2'
-              >
+              <Badge variant={currentCommit?.mergedAt ? 'accent' : 'muted'} className='ml-2'>
                 {commitUuid === HEAD_COMMIT
                   ? 'Live'
                   : currentCommit?.mergedAt

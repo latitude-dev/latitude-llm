@@ -1,11 +1,11 @@
 import { NumeredList } from '@latitude-data/web-ui/molecules/NumeredList'
-import { ExperimentFormPayload } from './useExperimentFormPayload'
+import type { ExperimentFormPayload } from './useExperimentFormPayload'
 import { DatasetSelector } from './_components/DatasetSelector'
 import { DatasetRowsInput } from './_components/DatasetRowsInput'
 import { ParametersSelection } from './_components/ParametersSelection'
 import { EvaluationsSelector } from './_components/EvaluationsSelector'
 import { ExperimentVariantsInput } from './_components/VariantsInput'
-import { EvaluationV2 } from '@latitude-data/constants'
+import type { EvaluationV2 } from '@latitude-data/constants'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { NoDatasetRangeInput } from './_components/NoDatasetRangeInput'
@@ -40,10 +40,7 @@ export default function ExperimentModalForm(payload: ExperimentFormPayload) {
 
   return (
     <NumeredList>
-      <NumeredList.Item
-        title='Define the experiment variants'
-        className='gap-y-0'
-      >
+      <NumeredList.Item title='Define the experiment variants' className='gap-y-0'>
         <ExperimentVariantsInput {...payload} />
       </NumeredList.Item>
 

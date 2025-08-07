@@ -1,14 +1,14 @@
 import {
   buildConversation,
-  Commit,
+  type Commit,
   EVALUATION_SCORE_SCALE,
-  EvaluationMetric,
-  EvaluationResultMetadata,
-  EvaluationResultValue,
-  EvaluationType,
-  EvaluationV2,
-  ProviderLogDto,
-  Workspace,
+  type EvaluationMetric,
+  type EvaluationResultMetadata,
+  type EvaluationResultValue,
+  type EvaluationType,
+  type EvaluationV2,
+  type ProviderLogDto,
+  type Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
@@ -26,10 +26,7 @@ import { createEvaluationResultV2 } from './results/create'
 import { updateEvaluationResultV2 } from './results/update'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
 
-export async function annotateEvaluationV2<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->(
+export async function annotateEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
   {
     resultScore,
     resultMetadata,
@@ -48,15 +45,12 @@ export async function annotateEvaluationV2<
   db = database,
 ) {
   const resultsRepository = new EvaluationResultsV2Repository(workspace.id, db)
-  const existingResult =
-    await resultsRepository.findByEvaluatedLogAndEvaluation({
-      evaluatedLogId: providerLog.id,
-      evaluationUuid: evaluation.uuid,
-    })
+  const existingResult = await resultsRepository.findByEvaluatedLogAndEvaluation({
+    evaluatedLogId: providerLog.id,
+    evaluationUuid: evaluation.uuid,
+  })
 
-  const resultUuid = existingResult.ok
-    ? existingResult.unwrap().uuid
-    : generateUUIDIdentifier()
+  const resultUuid = existingResult.ok ? existingResult.unwrap().uuid : generateUUIDIdentifier()
 
   const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
   const document = await documentsRepository
@@ -67,9 +61,7 @@ export async function annotateEvaluationV2<
     .then((r) => r.unwrap())
 
   if (!providerLog.documentLogUuid) {
-    return Result.error(
-      new BadRequestError('Provider log is not attached to a document log'),
-    )
+    return Result.error(new BadRequestError('Provider log is not attached to a document log'))
   }
 
   const documentLogsRepository = new DocumentLogsRepository(workspace.id, db)
@@ -79,9 +71,7 @@ export async function annotateEvaluationV2<
 
   if (documentLog.documentUuid !== document.documentUuid) {
     return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that is from a different document',
-      ),
+      new UnprocessableEntityError('Cannot evaluate a log that is from a different document'),
     )
   }
 
@@ -91,9 +81,7 @@ export async function annotateEvaluationV2<
   }
 
   if (!typeSpecification.annotate) {
-    return Result.error(
-      new BadRequestError('Annotating is not supported for this evaluation'),
-    )
+    return Result.error(new BadRequestError('Annotating is not supported for this evaluation'))
   }
 
   const metricSpecification = typeSpecification.metrics[evaluation.metric]
@@ -102,7 +90,7 @@ export async function annotateEvaluationV2<
   }
 
   const conversation = buildConversation(providerLog)
-  if (conversation.at(-1)?.role != 'assistant') {
+  if (conversation.at(-1)?.role !== 'assistant') {
     return Result.error(
       new UnprocessableEntityError(
         'Cannot evaluate a log that does not end with an assistant message',
@@ -141,8 +129,7 @@ export async function annotateEvaluationV2<
 
     if (
       !value.error &&
-      (value.normalizedScore < 0 ||
-        value.normalizedScore > EVALUATION_SCORE_SCALE)
+      (value.normalizedScore < 0 || value.normalizedScore > EVALUATION_SCORE_SCALE)
     ) {
       throw new UnprocessableEntityError(
         `Normalized metric score must be between 0 and ${EVALUATION_SCORE_SCALE}`,

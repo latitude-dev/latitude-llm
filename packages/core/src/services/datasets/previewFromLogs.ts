@@ -1,14 +1,10 @@
 import { Result } from '../../lib/Result'
-import { Dataset, Workspace } from '../../browser'
+import type { Dataset, Workspace } from '../../browser'
 import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
 import { DatasetRowsRepository, DatasetsRepository } from '../../repositories'
-import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
+import { type HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 
-async function getFirstRowsFromDataset({
-  dataset,
-}: {
-  dataset: Dataset | undefined
-}) {
+async function getFirstRowsFromDataset({ dataset }: { dataset: Dataset | undefined }) {
   if (!dataset) return []
 
   const repo = new DatasetRowsRepository(dataset.workspaceId)

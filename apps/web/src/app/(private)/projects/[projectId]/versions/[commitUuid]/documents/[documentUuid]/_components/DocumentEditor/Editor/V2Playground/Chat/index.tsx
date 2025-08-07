@@ -1,16 +1,14 @@
-import React, { useEffect, useMemo, useRef } from 'react'
+import type React from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import type { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
-import Actions, { ActionsState } from './Actions'
-import { AgentToolsMap } from '@latitude-data/constants'
+import Actions, { type ActionsState } from './Actions'
+import type { AgentToolsMap } from '@latitude-data/constants'
 import { ErrorMessage, MessageList } from '$/components/ChatWrapper'
 
 export default function Chat({
@@ -36,10 +34,7 @@ export default function Chat({
     startAtBottom: true,
   })
   const toolContentMap = useToolContentMap(playground.messages)
-  const parameterKeys = useMemo(
-    () => Object.keys(parameters ?? {}),
-    [parameters],
-  )
+  const parameterKeys = useMemo(() => Object.keys(parameters ?? {}), [parameters])
 
   // FIXME: Do not run side effects on useEffect. Move to event handler.
   useEffect(() => {
@@ -47,16 +42,12 @@ export default function Chat({
       runOnce.current = true
       playground.start()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playground.start])
 
   return (
     <div className='flex flex-col flex-1 h-full overflow-hidden'>
       {showHeader && (
-        <Header
-          expandParameters={expandParameters}
-          setExpandParameters={setExpandParameters}
-        />
+        <Header expandParameters={expandParameters} setExpandParameters={setExpandParameters} />
       )}
 
       <Messages
@@ -75,10 +66,7 @@ function Header({ expandParameters, setExpandParameters }: ActionsState) {
   return (
     <div className='flex flex-row items-center justify-between w-full pb-3'>
       <Text.H6M>Prompt</Text.H6M>
-      <Actions
-        expandParameters={expandParameters}
-        setExpandParameters={setExpandParameters}
-      />
+      <Actions expandParameters={expandParameters} setExpandParameters={setExpandParameters} />
     </div>
   )
 }

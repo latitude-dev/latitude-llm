@@ -1,26 +1,17 @@
-import {
-  DocumentLog,
-  DocumentTriggerParameters,
-  LogSources,
-} from '@latitude-data/constants'
-import { type AssistantMessage } from '@latitude-data/constants/legacyCompiler'
-import { type PromptLFile } from 'promptl-ai'
-import { DocumentTrigger, Workspace } from '../../../../browser'
+import { DocumentTriggerParameters, LogSources } from '@latitude-data/constants'
+import type { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
+import type { PromptLFile } from 'promptl-ai'
+import type { DocumentTrigger, Workspace } from '../../../../browser'
 import { database } from '../../../../client'
 import { unsafelyFindWorkspace } from '../../../../data-access'
 import { BadRequestError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'
-import { PromisedResult } from '../../../../lib/Transaction'
-import {
-  CommitsRepository,
-  DocumentLogsRepository,
-  DocumentVersionsRepository,
-} from '../../../../repositories'
+import type { PromisedResult } from '../../../../lib/Transaction'
+import { CommitsRepository, DocumentVersionsRepository } from '../../../../repositories'
 import { runDocumentAtCommit } from '../../../../services/commits'
 
-import { uploadFile } from '../../../../services/files'
 import { BACKGROUND } from '../../../../telemetry'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 
 async function getNewTriggerResponse(
   {
@@ -53,11 +44,9 @@ async function getNewTriggerResponse(
     return Result.error(new BadRequestError('No head commit found'))
   }
 
-  const documentsScope = new DocumentVersionsRepository(
-    trigger.workspaceId,
-    db,
-    { includeDeleted: true },
-  )
+  const documentsScope = new DocumentVersionsRepository(trigger.workspaceId, db, {
+    includeDeleted: true,
+  })
   const docResult = await documentsScope.getDocumentAtCommit({
     documentUuid: trigger.documentUuid,
     commitUuid: headCommit.uuid,
@@ -70,26 +59,26 @@ async function getNewTriggerResponse(
   }
 
   const parameters = Object.fromEntries(
-    Object.entries(
-      (trigger.configuration as EmailTriggerConfiguration).parameters ?? {},
-    ).map(([key, value]: [string, DocumentTriggerParameters]) => {
-      if (value === DocumentTriggerParameters.SenderName) {
-        return [key, senderName]
-      }
-      if (value === DocumentTriggerParameters.SenderEmail) {
-        return [key, senderEmail]
-      }
-      if (value === DocumentTriggerParameters.Subject) {
-        return [key, subject]
-      }
-      if (value === DocumentTriggerParameters.Body) {
-        return [key, body]
-      }
-      if (value === DocumentTriggerParameters.Attachments) {
-        return [key, attachments ?? []]
-      }
-      return [key, undefined]
-    }),
+    Object.entries((trigger.configuration as EmailTriggerConfiguration).parameters ?? {}).map(
+      ([key, value]: [string, DocumentTriggerParameters]) => {
+        if (value === DocumentTriggerParameters.SenderName) {
+          return [key, senderName]
+        }
+        if (value === DocumentTriggerParameters.SenderEmail) {
+          return [key, senderEmail]
+        }
+        if (value === DocumentTriggerParameters.Subject) {
+          return [key, subject]
+        }
+        if (value === DocumentTriggerParameters.Body) {
+          return [key, body]
+        }
+        if (value === DocumentTriggerParameters.Attachments) {
+          return [key, attachments ?? []]
+        }
+        return [key, undefined]
+      },
+    ),
   )
 
   const runResult = await runDocumentAtCommit({
@@ -111,56 +100,6 @@ async function getNewTriggerResponse(
   const messages = await run.messages
 
   return Result.ok(messages.at(-1) as AssistantMessage)
-}
-
-export async function findReferencedLog(
-  {
-    workspace,
-    documentUuid,
-    parentMessageIds,
-  }: {
-    workspace: Workspace
-    documentUuid: string
-    parentMessageIds?: string[]
-  },
-  db = database,
-): PromisedResult<DocumentLog | undefined, Error> {
-  const conversationIdentifier = parentMessageIds?.[0]
-  if (!conversationIdentifier) return Result.nil()
-
-  const documentLogScope = new DocumentLogsRepository(workspace.id, db)
-  const logResults = await documentLogScope.findByFields({
-    documentUuid,
-    source: LogSources.EmailTrigger,
-    customIdentifier: conversationIdentifier,
-  })
-
-  if (logResults.length) {
-    return Result.ok(logResults[0]!)
-  }
-
-  return Result.nil()
-}
-
-export async function uploadAttachments({
-  workspace,
-  attachments,
-}: {
-  workspace: Workspace
-  attachments: File[]
-}): PromisedResult<PromptLFile[], Error> {
-  const results = await Promise.all(
-    attachments.map(async (file) => {
-      return await uploadFile({ file, workspace })
-    }),
-  )
-
-  const errors = results.filter((result) => result.error)
-  if (errors.length) {
-    return Result.error(errors[0]!.error!)
-  }
-
-  return Result.ok(results.map((result) => result.unwrap()))
 }
 
 export async function getEmailResponse(
@@ -185,10 +124,7 @@ export async function getEmailResponse(
   },
   db = database,
 ): PromisedResult<AssistantMessage, Error> {
-  const workspace = (await unsafelyFindWorkspace(
-    trigger.workspaceId,
-    db,
-  )) as Workspace
+  const workspace = (await unsafelyFindWorkspace(trigger.workspaceId, db)) as Workspace
 
   // TODO: Re-enable "follow-up" when we successfully include the References header into the response email.
   // Until then, it does not work for conversation threads, and it is working unexpectedly for

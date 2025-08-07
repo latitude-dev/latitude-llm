@@ -1,7 +1,7 @@
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ToolBarWrapper } from '$/components/ChatWrapper/ChatTextArea/ToolBar'
-import { ResolvedMetadata } from '$/workers/readMetadata'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
 import { memo } from 'react'
 
 export const RunButton = memo(
@@ -29,11 +29,7 @@ export const RunButton = memo(
             There are errors in your prompt. Please fix them before running.
           </Tooltip>
         ) : (
-          <Button
-            iconProps={{ name: 'play' }}
-            fancy
-            onClick={runPromptButtonHandler}
-          >
+          <Button iconProps={{ name: 'play' }} fancy onClick={runPromptButtonHandler}>
             Run
           </Button>
         )}

@@ -1,16 +1,10 @@
 'use client'
 
-import { ReactNode, useCallback } from 'react'
+import { type ReactNode, useCallback } from 'react'
 
 import { SplitPane } from '../../ds/atoms/SplitPane'
 
-export function buildResizableCookie({
-  key,
-  width,
-}: {
-  key: string
-  width: number
-}): string {
+export function buildResizableCookie({ key, width }: { key: string; width: number }): string {
   const base = 'react-resizable-panels'
   const keyName = `${base}:${key}`
 

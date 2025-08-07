@@ -17,16 +17,14 @@ export function TriggersBlankSlate() {
       <div className='flex flex-col gap-2 max-w-[75%]'>
         <Text.H4M centered>{project.name}</Text.H4M>
         <Text.H5 centered color='foregroundMuted'>
-          Add triggers to run this project from a chat box, an event, a
-          schedule…
+          Add triggers to run this project from a chat box, an event, a schedule…
         </Text.H5>
       </div>
       <TriggersPreview />
       <Link
         href={
-          ROUTES.projects
-            .detail({ id: project.id })
-            .commits.detail({ uuid: commit.uuid }).preview.triggers.new.root
+          ROUTES.projects.detail({ id: project.id }).commits.detail({ uuid: commit.uuid }).preview
+            .triggers.new.root
         }
       >
         <Button variant='outline' fancy>

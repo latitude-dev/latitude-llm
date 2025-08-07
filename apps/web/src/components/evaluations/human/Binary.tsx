@@ -1,13 +1,13 @@
 import {
-  EvaluationType,
+  type EvaluationType,
   HumanEvaluationBinarySpecification,
-  HumanEvaluationMetric,
+  type HumanEvaluationMetric,
 } from '@latitude-data/constants'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
 import { useMemo } from 'react'
-import {
+import type {
   AnnotationFormProps,
   ChartConfigurationArgs,
   ConfigurationFormProps,
@@ -102,15 +102,11 @@ function AnnotationForm({
     const description = []
 
     if (evaluation.configuration.passDescription) {
-      description.push(
-        `The response should pass when: ${evaluation.configuration.passDescription}`,
-      )
+      description.push(`The response should pass when: ${evaluation.configuration.passDescription}`)
     }
 
     if (evaluation.configuration.failDescription) {
-      description.push(
-        `The response should fail when: ${evaluation.configuration.failDescription}`,
-      )
+      description.push(`The response should fail when: ${evaluation.configuration.failDescription}`)
     }
 
     return description.join('. ')

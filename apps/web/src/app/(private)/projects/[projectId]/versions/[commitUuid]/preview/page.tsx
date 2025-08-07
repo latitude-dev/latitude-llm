@@ -18,9 +18,7 @@ export default async function PreviewPage({
   const scope = new DocumentTriggersRepository(workspace.id)
   const integrationTriggers = await scope
     .findByProjectId(Number(projectId))
-    .then((triggers) =>
-      triggers.filter((t) => t.triggerType === DocumentTriggerType.Integration),
-    )
+    .then((triggers) => triggers.filter((t) => t.triggerType === DocumentTriggerType.Integration))
   const integrationsScope = new IntegrationsRepository(workspace.id)
   const integrations = await integrationsScope
     .findAll()

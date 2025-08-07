@@ -1,9 +1,8 @@
 'use server'
 
-import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
+import { LogSources, type StreamEventTypes } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
-import { type ChainEventDto } from '@latitude-data/sdk'
-import { RunDocumentResponse } from '$/actions/sdk/runDocumentAction'
+import type { ChainEventDto } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { findSharedDocumentCached } from '$/app/(public)/_data_access'
 import { createStreamableValue } from 'ai/rsc'
@@ -13,18 +12,11 @@ type RunSharedPromptActionProps = {
   parameters: Record<string, unknown>
 }
 
-export type RunDocumentActionFn = (
-  _: RunSharedPromptActionProps,
-) => RunDocumentResponse
-
 export async function runSharedPromptAction({
   publishedDocumentUuid,
   parameters,
 }: RunSharedPromptActionProps) {
-  const stream = createStreamableValue<
-    { event: StreamEventTypes; data: ChainEventDto },
-    Error
-  >()
+  const stream = createStreamableValue<{ event: StreamEventTypes; data: ChainEventDto }, Error>()
   const result = await findSharedDocumentCached(publishedDocumentUuid)
 
   if (result.error) {

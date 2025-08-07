@@ -2,8 +2,8 @@ import { sum } from 'lodash-es'
 import { describe, beforeAll, it, expect } from 'vitest'
 import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
-import { type FactoryCreateProjectReturn } from '../../tests/factories'
-import { DocumentLog } from '../../browser'
+import type { FactoryCreateProjectReturn } from '../../tests/factories'
+import type { DocumentLog } from '../../browser'
 import { generateCsvFromLogs } from './generateCsvFromLogs'
 import { ProviderLogsRepository } from '../../repositories'
 
@@ -56,8 +56,7 @@ describe('buildDocumentLogDatasetRows', async () => {
     const repo = new ProviderLogsRepository(setup.workspace.id)
     const providers = await repo.findManyByDocumentLogUuid([documentLog.uuid])
     const tokens = sum(providers.map((p) => p.tokens ?? 0))
-    expect(result.value)
-      .toEqual(`age,location,simpleJson,listOfThings,output,document_log_id,tokens
+    expect(result.value).toEqual(`age,location,simpleJson,listOfThings,output,document_log_id,tokens
 25,San Francisco,"{""thing"":""thing1""}","[{""thing"":""thing1""},{""thing"":""thing2""}]",Last provider response. Hello!,${documentLog.id},${tokens}\n`)
   })
 })

@@ -1,16 +1,12 @@
-import {
-  SEGMENT_SPECIFICATIONS,
-  SegmentType,
-  StepSegmentMetadata,
-} from '../../../browser'
+import { SEGMENT_SPECIFICATIONS, SegmentType, type StepSegmentMetadata } from '../../../browser'
 import { database } from '../../../client'
-import { Result, TypedResult } from '../../../lib/Result'
+import { Result, type TypedResult } from '../../../lib/Result'
 import {
-  CompletionPart,
+  type CompletionPart,
   isCompletionPart,
   isFirst,
   isLast,
-  SegmentProcessArgs,
+  type SegmentProcessArgs,
 } from './shared'
 
 const specification = SEGMENT_SPECIFICATIONS[SegmentType.Step]
@@ -19,10 +15,7 @@ export const StepSegmentSpecification = {
   process: process,
 }
 
-async function process(
-  state: SegmentProcessArgs<SegmentType.Step>,
-  _ = database,
-) {
+async function process(state: SegmentProcessArgs<SegmentType.Step>, _ = database) {
   const computingcg = computeConfiguration(state)
   if (computingcg.error) return Result.error(computingcg.error)
   const configuration = computingcg.value
@@ -45,9 +38,7 @@ async function process(
 function computeConfiguration({
   child,
   current,
-}: SegmentProcessArgs<SegmentType.Step>): TypedResult<
-  StepSegmentMetadata['configuration']
-> {
+}: SegmentProcessArgs<SegmentType.Step>): TypedResult<StepSegmentMetadata['configuration']> {
   let configuration = current?.metadata?.configuration
   if (isFirst(current, child, 'completions')) {
     if (isCompletionPart(child)) {
@@ -63,9 +54,7 @@ function computeConfiguration({
 function computeInput({
   child,
   current,
-}: SegmentProcessArgs<SegmentType.Step>): TypedResult<
-  StepSegmentMetadata['input']
-> {
+}: SegmentProcessArgs<SegmentType.Step>): TypedResult<StepSegmentMetadata['input']> {
   let input = current?.metadata?.input
   if (isFirst(current, child, 'completions')) {
     if (isCompletionPart(child)) {
@@ -81,9 +70,7 @@ function computeInput({
 function computeOutput({
   child,
   current,
-}: SegmentProcessArgs<SegmentType.Step>): TypedResult<
-  StepSegmentMetadata['output']
-> {
+}: SegmentProcessArgs<SegmentType.Step>): TypedResult<StepSegmentMetadata['output']> {
   let output = current?.metadata?.output
   if (isLast(current, child, 'completions')) {
     if (isCompletionPart(child)) {

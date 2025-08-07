@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 
-import { ProviderApiKey, Providers, User, Workspace } from '../../browser'
-import { ProviderConfiguration } from '../../schema'
+import { type ProviderApiKey, Providers, type User, type Workspace } from '../../browser'
+import type { ProviderConfiguration } from '../../schema'
 import {
   createProviderApiKey as createFn,
   destroyProviderApiKey,
@@ -51,17 +51,12 @@ export async function createProviderApiKey({
   }).then((r) => r.unwrap())
 
   if (deletedAt) {
-    providerApiKey = await destroyProviderApiKey(providerApiKey).then((r) =>
-      r.unwrap(),
-    )
+    providerApiKey = await destroyProviderApiKey(providerApiKey).then((r) => r.unwrap())
   }
 
   return providerApiKey
 }
 
-export async function setProviderAsDefault(
-  workspace: Workspace,
-  provider: ProviderApiKey,
-) {
+export async function setProviderAsDefault(workspace: Workspace, provider: ProviderApiKey) {
   return await updateWorkspace(workspace, { defaultProviderId: provider.id })
 }

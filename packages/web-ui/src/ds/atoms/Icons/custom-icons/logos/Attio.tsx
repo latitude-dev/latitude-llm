@@ -1,4 +1,4 @@
-import { type LucideProps } from 'lucide-react'
+import type { LucideProps } from 'lucide-react'
 
 export default function Attio(props: LucideProps) {
   return (

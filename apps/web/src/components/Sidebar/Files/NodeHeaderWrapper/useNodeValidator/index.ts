@@ -1,15 +1,14 @@
 import { DOCUMENT_PATH_REGEXP } from '@latitude-data/core/browser'
 import {
-  ChangeEventHandler,
-  KeyboardEvent,
-  RefObject,
+  type ChangeEventHandler,
+  type KeyboardEvent,
+  type RefObject,
   useCallback,
   useState,
 } from 'react'
 import { useOnClickOutside } from '@latitude-data/web-ui/hooks/useOnClickOutside'
 
-const INVALID_MSG =
-  "Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'"
+const INVALID_MSG = "Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'"
 
 export function useNodeValidator({
   name,
@@ -30,22 +29,20 @@ export function useNodeValidator({
 }) {
   const [validationError, setError] = useState<string>()
   const [inputValue, setInputValue] = useState(name)
-  const onInputChange: ChangeEventHandler<HTMLInputElement> = useCallback(
-    (event) => {
-      const value = event.target.value
-      const isValid = DOCUMENT_PATH_REGEXP.test(value)
+  const onInputChange: ChangeEventHandler<HTMLInputElement> = useCallback((event) => {
+    const value = event.target.value
+    const isValid = DOCUMENT_PATH_REGEXP.test(value)
 
-      let error = undefined
+    // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
+    let error
 
-      if (!isValid) {
-        error = INVALID_MSG
-      }
+    if (!isValid) {
+      error = INVALID_MSG
+    }
 
-      setError(error)
-      setInputValue(value)
-    },
-    [setError, setInputValue],
-  )
+    setError(error)
+    setInputValue(value)
+  }, [])
   const onClickOutside = useCallback(async () => {
     const val = inputRef.current?.value ?? ''
     const value = val.trim()

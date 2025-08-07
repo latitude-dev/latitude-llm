@@ -1,4 +1,4 @@
-import { LanguageModelUsage } from 'ai'
+import type { LanguageModelUsage } from 'ai'
 import { AnimatedDots } from '@latitude-data/web-ui/molecules/AnimatedDots'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -29,14 +29,9 @@ export function StatusIndicator({
     return (
       <FloatingElement {...floatingProps}>
         <div className='flex flex-row gap-2 p-1'>
-          <Icon
-            name='loader'
-            color='foregroundMuted'
-            className='animate-spin'
-          />
+          <Icon name='loader' color='foregroundMuted' className='animate-spin' />
           <Text.H6 color='foregroundMuted'>
-            Waking up <Text.H6B color='primary'>{wakingUpIntegration}</Text.H6B>{' '}
-            integration...
+            Waking up <Text.H6B color='primary'>{wakingUpIntegration}</Text.H6B> integration...
           </Text.H6>
         </div>
       </FloatingElement>
@@ -47,11 +42,7 @@ export function StatusIndicator({
     return (
       <FloatingElement {...floatingProps}>
         <div className='flex flex-row gap-2 p-1'>
-          <Icon
-            name='loader'
-            color='foregroundMuted'
-            className='animate-spin'
-          />
+          <Icon name='loader' color='foregroundMuted' className='animate-spin' />
           <Text.H6 color='foregroundMuted'>
             Running <Text.H6B color='primary'>{runningLatitudeTools}</Text.H6B>{' '}
             {runningLatitudeTools === 1 ? 'tool' : 'tools'}...

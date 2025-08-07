@@ -1,6 +1,6 @@
 import { getAllDocumentsAtCommitWithMetadata } from '$/common/documents/getData'
-import { AppRouteHandler } from '$/openApi/types'
-import { GetRoute } from './getAll.route'
+import type { AppRouteHandler } from '$/openApi/types'
+import type { GetRoute } from './getAll.route'
 
 // @ts-expect-error: broken types
 export const getAllHandler: AppRouteHandler<GetRoute> = async (c) => {

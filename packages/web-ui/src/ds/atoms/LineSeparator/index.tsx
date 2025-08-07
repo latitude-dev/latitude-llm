@@ -1,6 +1,6 @@
 import { Text } from '../Text'
 import { Icon } from '../Icons'
-import { IconProps } from '../Icons'
+import type { IconProps } from '../Icons'
 import { cn } from '../../../lib/utils'
 
 function Line({ clickable }: { clickable: boolean }) {
@@ -32,13 +32,10 @@ export function LineSeparator({
   return (
     <button
       disabled={disabled}
-      className={cn(
-        'group/separator w-full flex flex-row items-center select-none',
-        {
-          'cursor-pointer': onClick,
-          'cursor-default': !onClick || disabled,
-        },
-      )}
+      className={cn('group/separator w-full flex flex-row items-center select-none', {
+        'cursor-pointer': onClick,
+        'cursor-default': !onClick || disabled,
+      })}
       onClick={onClick}
     >
       <Line clickable={clickable} />

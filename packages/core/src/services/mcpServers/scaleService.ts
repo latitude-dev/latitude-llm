@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
-import { McpServer } from '../../browser'
+import type { McpServer } from '../../browser'
 import { publisher } from '../../events/publisher'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { mcpServers } from '../../schema/models/mcpServers'
 import { getK8sClient } from '../k8s/k8sClient'
@@ -72,8 +72,6 @@ export async function scaleMcpServer(
       return Result.ok(updatedRecords[0])
     })
   } catch (error) {
-    return Result.error(
-      error instanceof Error ? error : new Error(String(error)),
-    )
+    return Result.error(error instanceof Error ? error : new Error(String(error)))
   }
 }

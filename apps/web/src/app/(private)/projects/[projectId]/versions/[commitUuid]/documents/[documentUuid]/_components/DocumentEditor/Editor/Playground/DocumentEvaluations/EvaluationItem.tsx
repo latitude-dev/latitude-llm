@@ -3,9 +3,9 @@ import EvaluateLiveLogsSwitch from '$/components/evaluations/EvaluateLiveLogsSwi
 import ResultBadge from '$/components/evaluations/ResultBadge'
 import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
 import {
-  EvaluationResultV2,
+  type EvaluationResultV2,
   EvaluationType,
-  EvaluationV2,
+  type EvaluationV2,
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -13,7 +13,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useMemo } from 'react'
-import { Props } from './shared'
+import type { Props } from './shared'
 
 function EvaluationItemContent({
   result,
@@ -58,25 +58,18 @@ function EvaluationItemContent({
     )
   }
 
-  if (
-    evaluation.type === EvaluationType.Llm ||
-    evaluation.type === EvaluationType.Human
-  ) {
+  if (evaluation.type === EvaluationType.Llm || evaluation.type === EvaluationType.Human) {
     return (
       <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
-        {(
-          result as EvaluationResultV2<
-            EvaluationType.Llm | EvaluationType.Human
-          >
-        ).metadata!.reason || 'No reason reported'}
+        {(result as EvaluationResultV2<EvaluationType.Llm | EvaluationType.Human>).metadata!
+          .reason || 'No reason reported'}
       </Text.H6>
     )
   }
 
   return (
     <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
-      {EVALUATION_SPECIFICATIONS[evaluation.type].name} evaluations do not
-      report a reason
+      {EVALUATION_SPECIFICATIONS[evaluation.type].name} evaluations do not report a reason
     </Text.H6>
   )
 }
@@ -98,23 +91,14 @@ export default function EvaluationItem({
     projectId: project.id,
     commitUuid: commit.uuid,
     documentUuid: document.documentUuid,
-  }) /* eslint-disable react-hooks/exhaustive-deps */
+  })
   const route = useMemo(() => {
     const documentLogUuid = documentLog?.uuid
     return goToEvaluationsV2Editor({
       evaluationUuid: evaluation.uuid,
       documentLogUuid,
     })
-  }, [
-    project,
-    commit,
-    document,
-    result,
-    evaluation,
-    isWaiting,
-    documentLog,
-    goToEvaluationsV2Editor,
-  ])
+  }, [evaluation, documentLog, goToEvaluationsV2Editor])
 
   return (
     <div
@@ -135,10 +119,7 @@ export default function EvaluationItem({
           )}
         </span>
         <div className='flex flex-row items-center gap-2 flex-shrink-0'>
-          <EvaluateLiveLogsSwitch
-            evaluation={evaluation}
-            disabled={isWaiting}
-          />
+          <EvaluateLiveLogsSwitch evaluation={evaluation} disabled={isWaiting} />
           <Link href={route}>
             <Button
               variant='ghost'

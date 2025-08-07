@@ -3,7 +3,7 @@ import type {
   SearchToolResult,
 } from '@latitude-data/core/services/latitudeTools/webSearch/types'
 import { ContentCard, ContentCardContainer } from '../ContentCard'
-import { ToolContent } from '@latitude-data/constants/legacyCompiler'
+import type { ToolContent } from '@latitude-data/constants/legacyCompiler'
 import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 import { CollapsibleContent } from './CollapsibleContent'
 import { memo, useMemo } from 'react'
@@ -11,13 +11,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
 
-function TopicPill({
-  topic,
-  days,
-}: {
-  topic: SearchToolArgs['topic']
-  days?: number
-}) {
+function TopicPill({ topic, days }: { topic: SearchToolArgs['topic']; days?: number }) {
   if (!topic) return null
   if (topic === 'general') return null
 
@@ -39,11 +33,7 @@ function TopicPill({
   )
 }
 
-function WebSearchResult({
-  result,
-}: {
-  result: SearchToolResult['results'][number]
-}) {
+function WebSearchResult({ result }: { result: SearchToolResult['results'][number] }) {
   return (
     <div className='w-full flex flex-col overflow-hidden'>
       <div className='flex flex-col'>
@@ -79,9 +69,7 @@ const WebSearchLatitudeToolResponseContent = memo(
     const response = toolResponse.result as SearchToolResult
     return (
       <div className='w-full flex flex-col gap-4 p-4'>
-        {response.answer && (
-          <Text.H6M color='primary'>{response.answer}</Text.H6M>
-        )}
+        {response.answer && <Text.H6M color='primary'>{response.answer}</Text.H6M>}
 
         <CollapsibleContent>
           <div className='flex flex-col gap-4'>
@@ -111,17 +99,11 @@ export function WebSearchLatitudeToolCallContent({
       bgColor='bg-success'
       fgColor='successForeground'
       info={toolCallId}
-      separatorColor={
-        toolResponse?.isError ? 'destructiveMutedForeground' : undefined
-      }
+      separatorColor={toolResponse?.isError ? 'destructiveMutedForeground' : undefined}
       resultFooter={useMemo(
         () => (
           <ToolResultFooter loadingMessage='Searching the web...'>
-            {toolResponse && (
-              <WebSearchLatitudeToolResponseContent
-                toolResponse={toolResponse}
-              />
-            )}
+            {toolResponse && <WebSearchLatitudeToolResponseContent toolResponse={toolResponse} />}
           </ToolResultFooter>
         ),
         [toolResponse],

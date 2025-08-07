@@ -1,11 +1,8 @@
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import useDocumentVersions from '$/stores/documentVersions'
 import useProviderApiKeys from '$/stores/providerApiKeys'
-import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import type { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useMemo } from 'react'
 import { useOldEditorHeaderActions } from './hooks/useOldEditorHeaderActions'
 import { useMetadata } from '$/hooks/useMetadata'
@@ -20,10 +17,7 @@ import { PlaygroundBlocksEditor } from './BlocksEditor'
 import { Playground } from './Playground'
 import { EvaluationEditorHeader } from '../../../(withTabs)/evaluations/[evaluationUuid]/editor/_components/EvaluationEditor/EditorHeader'
 import DocumentTabs from '../../DocumentTabs'
-import {
-  DocumentValueProvider,
-  useDocumentValue,
-} from './context/DocumentValueContext'
+import { DocumentValueProvider, useDocumentValue } from './context/DocumentValueContext'
 import { DevModeProvider, useDevMode } from './hooks/useDevMode'
 import { MetadataProvider } from '$/components/MetadataProvider'
 
@@ -75,9 +69,7 @@ function OldDocumentEditorContent({
   )
 
   const document = useMemo(
-    () =>
-      documents?.find((d) => d.documentUuid === _document.documentUuid) ??
-      _document,
+    () => documents?.find((d) => d.documentUuid === _document.documentUuid) ?? _document,
     [documents, _document],
   )
   const oldHeaderEditorActions = useOldEditorHeaderActions({
@@ -100,9 +92,7 @@ function OldDocumentEditorContent({
   })
   const { diff, setDiff } = useDiffState(initialDiff, updateDocumentContent)
   const name = document.path.split('/').pop() ?? document.path
-  const readOnlyMessage = isMerged
-    ? 'Create a draft to edit documents.'
-    : customReadOnlyMessage
+  const readOnlyMessage = isMerged ? 'Create a draft to edit documents.' : customReadOnlyMessage
 
   return (
     <DocumentTabs

@@ -1,13 +1,8 @@
-import { LucideProps } from 'lucide-react'
+import type { LucideProps } from 'lucide-react'
 
 export default function Figma(props: LucideProps) {
   return (
-    <svg
-      {...props}
-      viewBox='0 0 1024 1280'
-      fill='none'
-      xmlns='http://www.w3.org/2000/svg'
-    >
+    <svg {...props} viewBox='0 0 1024 1280' fill='none' xmlns='http://www.w3.org/2000/svg'>
       <rect rx='80' fill='white' />
       <path
         d='M512 640C512 614.805 522.009 590.641 539.825 572.825C557.641 555.009 581.804 545 607 545C632.196 545 656.359 555.009 674.175 572.825C691.991 590.641 702 614.805 702 640C702 665.196 691.991 689.359 674.175 707.175C656.359 724.991 632.196 735 607 735C581.804 735 557.641 724.991 539.825 707.175C522.009 689.359 512 665.196 512 640V640Z'

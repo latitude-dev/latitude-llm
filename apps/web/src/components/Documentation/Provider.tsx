@@ -3,13 +3,13 @@
 import { envClient } from '$/envClient'
 import {
   createContext,
-  ReactNode,
-  RefObject,
+  type ReactNode,
+  type RefObject,
   useCallback,
   useContext,
   useRef,
 } from 'react'
-import { DocsRoute } from './routes'
+import type { DocsRoute } from './routes'
 
 type DocumentationContextProps = {
   open: (route: DocsRoute) => void
@@ -19,9 +19,7 @@ type DocumentationContextProps = {
 
 const DOCS_DOMAIN = envClient.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.latitude.so'
 
-const DocumentationContext = createContext<
-  DocumentationContextProps | undefined
->(undefined)
+const DocumentationContext = createContext<DocumentationContextProps | undefined>(undefined)
 
 export const useDocs = (): DocumentationContextProps => {
   const context = useContext(DocumentationContext)

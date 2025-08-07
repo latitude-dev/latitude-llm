@@ -38,8 +38,7 @@ export const API_ROUTES = {
         get: '/api/v3/projects/:projectId/versions/:versionUuid/documents/:documentPath{.+}',
         getAll: '/api/v3/projects/:projectId/versions/:versionUuid/documents',
         create: '/api/v3/projects/:projectId/versions/:versionUuid/documents',
-        getOrCreate:
-          '/api/v3/projects/:projectId/versions/:versionUuid/documents/get-or-create',
+        getOrCreate: '/api/v3/projects/:projectId/versions/:versionUuid/documents/get-or-create',
         logs: '/api/v3/projects/:projectId/versions/:versionUuid/documents/logs',
         run: '/api/v3/projects/:projectId/versions/:versionUuid/documents/run',
       },
@@ -49,8 +48,7 @@ export const API_ROUTES = {
       evaluate: '/api/v3/conversations/:conversationUuid/evaluate',
       createEvaluationResult:
         '/api/v3/conversations/:conversationUuid/evaluations/:evaluationUuid/evaluation-results',
-      annotate:
-        '/api/v3/conversations/:conversationUuid/evaluations/:evaluationUuid/annotate',
+      annotate: '/api/v3/conversations/:conversationUuid/evaluations/:evaluationUuid/annotate',
     },
     traces: {
       ingest: '/api/v3/traces',

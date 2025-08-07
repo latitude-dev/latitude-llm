@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
 
-import { McpServer, Workspace } from '../../browser'
+import type { McpServer, Workspace } from '../../browser'
 import { database } from '../../client'
 import { mcpServers } from '../../schema/models/mcpServers'
 

@@ -1,19 +1,19 @@
 import { relativeTime } from '$/lib/relativeTime'
-import { EvaluationMetric, EvaluationType } from '@latitude-data/constants'
+import type { EvaluationMetric, EvaluationType } from '@latitude-data/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { TableCell, TableHead } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   EVALUATION_SPECIFICATIONS,
-  ResultRowCellsProps,
-  ResultRowHeadersProps,
+  type ResultRowCellsProps,
+  type ResultRowHeadersProps,
 } from './index'
 import ResultBadge from './ResultBadge'
 
-export function ResultRowHeaders<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({ evaluation, ...rest }: ResultRowHeadersProps<T, M>) {
+export function ResultRowHeaders<T extends EvaluationType, M extends EvaluationMetric<T>>({
+  evaluation,
+  ...rest
+}: ResultRowHeadersProps<T, M>) {
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) return null
 
@@ -33,10 +33,13 @@ export function ResultRowHeaders<
   )
 }
 
-export function ResultRowCells<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({ evaluation, result, commit, color, ...rest }: ResultRowCellsProps<T, M>) {
+export function ResultRowCells<T extends EvaluationType, M extends EvaluationMetric<T>>({
+  evaluation,
+  result,
+  commit,
+  color,
+  ...rest
+}: ResultRowCellsProps<T, M>) {
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) return null
 
@@ -51,13 +54,8 @@ export function ResultRowCells<
       </TableCell>
       <TableCell>
         <span className='flex flex-row gap-2 items-center truncate'>
-          <Badge
-            variant={commit.version ? 'accent' : 'muted'}
-            className='flex-shrink-0'
-          >
-            <Text.H6 noWrap>
-              {commit.version ? `v${commit.version}` : 'Draft'}
-            </Text.H6>
+          <Badge variant={commit.version ? 'accent' : 'muted'} className='flex-shrink-0'>
+            <Text.H6 noWrap>{commit.version ? `v${commit.version}` : 'Draft'}</Text.H6>
           </Badge>
           <Text.H5 color={color} noWrap ellipsis>
             {commit.title}

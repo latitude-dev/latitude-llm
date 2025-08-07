@@ -1,14 +1,14 @@
 'use client'
 import { useState } from 'react'
 
-import { ApiKey, DocumentVersion } from '@latitude-data/core/browser'
+import type { ApiKey, DocumentVersion } from '@latitude-data/core/browser'
 import { Tabs } from '@latitude-data/web-ui/molecules/Tabs'
-import { TabItem } from '@latitude-data/web-ui/molecules/Tabs'
+import type { TabItem } from '@latitude-data/web-ui/molecules/Tabs'
 
 import { APIUsage } from './APIUsage'
 import { JavascriptUsage } from './JavascriptUsage'
 import { PythonUsage } from './PythonUsage'
-import { UsedToolsDoc } from '../index'
+import type { UsedToolsDoc } from '../index'
 
 const tabs: TabItem[] = [
   { id: 'javascript', label: 'Javascript' },
@@ -34,11 +34,7 @@ export function SettingsTabs({
   const [activeTab, setActiveTab] = useState(tabs[0]!.id)
 
   return (
-    <Tabs
-      tabs={tabs}
-      activeTab={activeTab}
-      onChange={(tabId) => setActiveTab(tabId)}
-    >
+    <Tabs tabs={tabs} activeTab={activeTab} onChange={(tabId) => setActiveTab(tabId)}>
       {(activeTab) => (
         <div className='p-6'>
           {activeTab === 'javascript' && (

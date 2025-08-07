@@ -5,7 +5,4 @@ export type OnboardingDocumentParameterKeys =
   | 'tone'
   | 'word_count'
 
-export type OnboardingParameters = Record<
-  OnboardingDocumentParameterKeys,
-  string | number
->
+export type OnboardingParameters = Record<OnboardingDocumentParameterKeys, string | number>

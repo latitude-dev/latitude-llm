@@ -1,8 +1,4 @@
-import {
-  DocumentLogFilterOptions,
-  LogSources,
-  Providers,
-} from '@latitude-data/core/browser'
+import { type DocumentLogFilterOptions, LogSources, Providers } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { defaultQueue } from '@latitude-data/core/queues'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -193,19 +189,16 @@ describe('createDatasetFromLogsAction', () => {
       expect(mocks.updateDatasetFromLogs).not.toHaveBeenCalled()
 
       // Verify queue was used with correct params
-      expect(defaultQueue.add).toHaveBeenCalledWith(
-        'createDatasetFromLogsJob',
-        {
-          name: 'Test Dataset',
-          userId: user.id,
-          workspaceId: workspace.id,
-          documentVersionId: document.id,
-          selectionMode: 'PARTIAL',
-          selectedDocumentLogIds: manyIds,
-          excludedDocumentLogIds: [],
-          filterOptions,
-        },
-      )
+      expect(defaultQueue.add).toHaveBeenCalledWith('createDatasetFromLogsJob', {
+        name: 'Test Dataset',
+        userId: user.id,
+        workspaceId: workspace.id,
+        documentVersionId: document.id,
+        selectionMode: 'PARTIAL',
+        selectedDocumentLogIds: manyIds,
+        excludedDocumentLogIds: [],
+        filterOptions,
+      })
     })
 
     it('processes logs asynchronously when in ALL mode', async () => {
@@ -224,19 +217,16 @@ describe('createDatasetFromLogsAction', () => {
       expect(result).toEqual({ mode: 'async' })
 
       // Verify queue was used with correct params
-      expect(defaultQueue.add).toHaveBeenCalledWith(
-        'createDatasetFromLogsJob',
-        {
-          name: 'Test Dataset',
-          userId: user.id,
-          workspaceId: workspace.id,
-          documentVersionId: document.id,
-          selectionMode: 'ALL',
-          selectedDocumentLogIds: [],
-          excludedDocumentLogIds: [],
-          filterOptions,
-        },
-      )
+      expect(defaultQueue.add).toHaveBeenCalledWith('createDatasetFromLogsJob', {
+        name: 'Test Dataset',
+        userId: user.id,
+        workspaceId: workspace.id,
+        documentVersionId: document.id,
+        selectionMode: 'ALL',
+        selectedDocumentLogIds: [],
+        excludedDocumentLogIds: [],
+        filterOptions,
+      })
     })
 
     it('processes logs asynchronously when in ALL_EXCEPT mode', async () => {
@@ -255,19 +245,16 @@ describe('createDatasetFromLogsAction', () => {
       expect(result).toEqual({ mode: 'async' })
 
       // Verify queue was used with correct params
-      expect(defaultQueue.add).toHaveBeenCalledWith(
-        'createDatasetFromLogsJob',
-        {
-          name: 'Test Dataset',
-          userId: user.id,
-          workspaceId: workspace.id,
-          documentVersionId: document.id,
-          selectionMode: 'ALL_EXCEPT',
-          selectedDocumentLogIds: [],
-          excludedDocumentLogIds: [1, 2],
-          filterOptions,
-        },
-      )
+      expect(defaultQueue.add).toHaveBeenCalledWith('createDatasetFromLogsJob', {
+        name: 'Test Dataset',
+        userId: user.id,
+        workspaceId: workspace.id,
+        documentVersionId: document.id,
+        selectionMode: 'ALL_EXCEPT',
+        selectedDocumentLogIds: [],
+        excludedDocumentLogIds: [1, 2],
+        filterOptions,
+      })
     })
   })
 })

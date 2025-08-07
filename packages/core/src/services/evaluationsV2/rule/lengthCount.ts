@@ -1,14 +1,14 @@
 import {
-  EvaluationType,
-  RuleEvaluationMetric,
+  type EvaluationType,
+  type RuleEvaluationMetric,
   RuleEvaluationLengthCountSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {
-  EvaluationMetricRunArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricRunArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 
@@ -21,22 +21,15 @@ export const RuleEvaluationLengthCountSpecification = {
 async function validate(
   {
     configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LengthCount
-  >,
+  }: EvaluationMetricValidateArgs<EvaluationType.Rule, RuleEvaluationMetric.LengthCount>,
   _ = database,
 ) {
   if (configuration.minLength !== undefined && configuration.minLength < 0) {
-    return Result.error(
-      new BadRequestError('Minimum length must be a positive number'),
-    )
+    return Result.error(new BadRequestError('Minimum length must be a positive number'))
   }
 
   if (configuration.maxLength !== undefined && configuration.maxLength < 0) {
-    return Result.error(
-      new BadRequestError('Maximum length must be a positive number'),
-    )
+    return Result.error(new BadRequestError('Maximum length must be a positive number'))
   }
 
   if (
@@ -44,9 +37,7 @@ async function validate(
     configuration.maxLength !== undefined &&
     configuration.minLength >= configuration.maxLength
   ) {
-    return Result.error(
-      new BadRequestError('Minimum length must be less than maximum length'),
-    )
+    return Result.error(new BadRequestError('Minimum length must be less than maximum length'))
   }
 
   // Note: all settings are explicitly returned to ensure we don't
@@ -65,10 +56,7 @@ async function run(
   {
     evaluation,
     actualOutput,
-  }: EvaluationMetricRunArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LengthCount
-  >,
+  }: EvaluationMetricRunArgs<EvaluationType.Rule, RuleEvaluationMetric.LengthCount>,
   _ = database,
 ) {
   const metadata = {

@@ -1,13 +1,9 @@
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
-import {
-  createWebhookAction,
-  updateWebhookAction,
-  deleteWebhookAction,
-} from '$/actions/webhooks'
+import { createWebhookAction, updateWebhookAction, deleteWebhookAction } from '$/actions/webhooks'
 
 export interface Webhook {
   id: number
@@ -25,11 +21,7 @@ export default function useWebhooks(opts?: SWRConfiguration) {
   const fetcher = useFetcher<Webhook[], Webhook[]>(ROUTES.api.webhooks.root, {
     serializer: (rows) => rows.map(deserialize),
   })
-  const {
-    data = [],
-    mutate,
-    ...rest
-  } = useSWR<Webhook[]>('api/webhooks', fetcher, opts)
+  const { data = [], mutate, ...rest } = useSWR<Webhook[]>('api/webhooks', fetcher, opts)
 
   const { execute: create } = useLatitudeAction(createWebhookAction, {
     onSuccess: ({ data: webhook }) => {
@@ -41,31 +33,25 @@ export default function useWebhooks(opts?: SWRConfiguration) {
     },
   })
 
-  const { execute: update, isPending: isUpdating } = useLatitudeAction(
-    updateWebhookAction,
-    {
-      onSuccess: ({ data: webhook }) => {
-        toast({
-          title: 'Success',
-          description: 'Webhook updated successfully',
-        })
-        mutate(data.map((w) => (w.id === webhook.id ? webhook : w)))
-      },
+  const { execute: update, isPending: isUpdating } = useLatitudeAction(updateWebhookAction, {
+    onSuccess: ({ data: webhook }) => {
+      toast({
+        title: 'Success',
+        description: 'Webhook updated successfully',
+      })
+      mutate(data.map((w) => (w.id === webhook.id ? webhook : w)))
     },
-  )
+  })
 
-  const { execute: destroy, isPending: isDestroying } = useLatitudeAction(
-    deleteWebhookAction,
-    {
-      onSuccess: ({ data: webhook }) => {
-        toast({
-          title: 'Success',
-          description: 'Webhook deleted successfully',
-        })
-        mutate(data.filter((w) => w.id !== webhook.id))
-      },
+  const { execute: destroy, isPending: isDestroying } = useLatitudeAction(deleteWebhookAction, {
+    onSuccess: ({ data: webhook }) => {
+      toast({
+        title: 'Success',
+        description: 'Webhook deleted successfully',
+      })
+      mutate(data.filter((w) => w.id !== webhook.id))
     },
-  )
+  })
 
   return {
     data,

@@ -1,11 +1,4 @@
-import {
-  AnyPgColumn,
-  bigint,
-  bigserial,
-  text,
-  uuid,
-  varchar,
-} from 'drizzle-orm/pg-core'
+import { type AnyPgColumn, bigint, bigserial, text, uuid, varchar } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { users } from '../models/users'

@@ -1,4 +1,4 @@
-import { Providers, User, Workspace } from '@latitude-data/core/browser'
+import { Providers, type User, type Workspace } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { createProviderApiKey } from '@latitude-data/core/services/providerApiKeys/create'
 import { NextRequest } from 'next/server'

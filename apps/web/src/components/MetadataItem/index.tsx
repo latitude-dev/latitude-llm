@@ -2,8 +2,8 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { TextColor } from '@latitude-data/web-ui/tokens'
-import { ReactNode } from 'react'
+import type { TextColor } from '@latitude-data/web-ui/tokens'
+import type { ReactNode } from 'react'
 
 type MetadataItemProps = {
   stacked?: boolean
@@ -61,12 +61,7 @@ export function MetadataItem({
         ) : (
           <>
             {value && (
-              <Text.H5
-                align='right'
-                color={color}
-                whiteSpace='preWrap'
-                wordBreak='breakWord'
-              >
+              <Text.H5 align='right' color={color} whiteSpace='preWrap' wordBreak='breakWord'>
                 {value}
               </Text.H5>
             )}

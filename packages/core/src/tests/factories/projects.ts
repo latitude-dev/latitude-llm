@@ -2,11 +2,11 @@ import { faker } from '@faker-js/faker'
 import { eq } from 'drizzle-orm'
 
 import { IntegrationType } from '@latitude-data/constants'
-import { Providers, User, Workspace, WorkspaceDto } from '../../browser'
+import type { Providers, User, Workspace, WorkspaceDto } from '../../browser'
 import { database } from '../../client'
 import { unsafelyGetUser } from '../../data-access'
 import { DocumentVersionsRepository } from '../../repositories'
-import { projects, ProviderConfiguration } from '../../schema'
+import { projects, type ProviderConfiguration } from '../../schema'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
 import { createIntegration } from '../../services/integrations'
@@ -14,10 +14,7 @@ import { updateProject } from '../../services/projects'
 import { createProject as createProjectFn } from '../../services/projects/create'
 import { createApiKey } from './apiKeys'
 import { createDraft } from './commits'
-import {
-  createProviderApiKey,
-  defaultProviderFakeData,
-} from './providerApiKeys'
+import { createProviderApiKey, defaultProviderFakeData } from './providerApiKeys'
 import { createWorkspace, type ICreateWorkspace } from './workspaces'
 
 export type IDocumentStructure = { [key: string]: string | IDocumentStructure }
@@ -118,14 +115,10 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     .then((p) => p[0]!)
 
   if (projectData.deletedAt)
-    await updateProject(project, { deletedAt: projectData.deletedAt }).then(
-      (r) => r.unwrap(),
-    )
+    await updateProject(project, { deletedAt: projectData.deletedAt }).then((r) => r.unwrap())
 
   const providersToCreate =
-    projectData.providers == undefined
-      ? [defaultProviderFakeData()]
-      : projectData.providers
+    projectData.providers === undefined ? [defaultProviderFakeData()] : projectData.providers
   const providers = await Promise.all(
     providersToCreate.map(({ type, name, defaultModel, configuration }) =>
       createProviderApiKey({
@@ -158,17 +151,13 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
       })
     }
 
-    commit = skipMerge
-      ? draft
-      : await mergeCommit(draft).then((r) => r.unwrap())
+    commit = skipMerge ? draft : await mergeCommit(draft).then((r) => r.unwrap())
   }
 
   const docRepo = new DocumentVersionsRepository(workspace.id)
 
   // Fresh documents after merge
-  const documents = await docRepo
-    .getDocumentsAtCommit(commit)
-    .then((r) => r.unwrap())
+  const documents = await docRepo.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
   return {
     project,
@@ -180,6 +169,4 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
   }
 }
 
-export type FactoryCreateProjectReturn = Awaited<
-  ReturnType<typeof createProject>
->
+export type FactoryCreateProjectReturn = Awaited<ReturnType<typeof createProject>>

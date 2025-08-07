@@ -1,10 +1,8 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { findScheduledTriggersDueToRun } from '../../../services/documentTriggers/handlers/scheduled'
-import { ProcessScheduledTriggerJobData } from './processScheduledTriggerJob'
+import type { ProcessScheduledTriggerJobData } from './processScheduledTriggerJob'
 import { HEAD_COMMIT } from '../../../constants'
 import { defaultQueue } from '../../queues'
-
-export type CheckScheduledDocumentTriggersJobData = unknown
 
 /**
  * Job that runs every minute to check for scheduled document triggers that need to be executed.
@@ -13,9 +11,7 @@ export type CheckScheduledDocumentTriggersJobData = unknown
  * 1. Uses an optimized query to find all triggers due to run
  * 2. For each trigger, enqueues a separate job to handle the actual document execution
  */
-export const checkScheduledDocumentTriggersJob = async (
-  _: Job<CheckScheduledDocumentTriggersJobData>,
-) => {
+export const checkScheduledDocumentTriggersJob = async (_: Job<unknown>) => {
   // Find scheduled triggers that are due to run
   const triggersResult = await findScheduledTriggersDueToRun()
 

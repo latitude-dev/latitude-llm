@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { useNavigate } from '$/hooks/useNavigate'

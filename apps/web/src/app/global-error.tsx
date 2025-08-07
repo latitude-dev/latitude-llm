@@ -9,11 +9,7 @@ import { fontMono, fontSans } from '$/helpers/fonts'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
-export default function GlobalError({
-  error,
-}: {
-  error: Error & { digest?: string }
-}) {
+export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
   useEffect(() => {
     Sentry.captureException(error)
   }, [error])

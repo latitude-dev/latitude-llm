@@ -71,19 +71,12 @@ export type Events =
   | 'segmentCreated'
   | 'segmentUpdated'
 
-export type LatitudeEventGeneric<
-  U extends Events,
-  T extends Record<string, unknown>,
-> = {
+export type LatitudeEventGeneric<U extends Events, T extends Record<string, unknown>> = {
   type: U
   data: T
 }
 
-export type EventHandler<E extends LatitudeEvent> = ({
-  data,
-}: {
-  data: E
-}) => void
+export type EventHandler<E extends LatitudeEvent> = ({ data }: { data: E }) => void
 
 export type MagicLinkTokenCreated = LatitudeEventGeneric<
   'magicLinkTokenCreated',

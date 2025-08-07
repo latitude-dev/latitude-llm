@@ -1,16 +1,12 @@
 import { LatitudeTool } from '@latitude-data/constants'
-import {
-  BadRequestError,
-  LatitudeError,
-  NotFoundError,
-} from '../../../../lib/errors'
-import { Result, TypedResult } from '../../../../lib/Result'
-import { ResolvedTools, ToolSource } from './types'
+import { BadRequestError, type LatitudeError, NotFoundError } from '../../../../lib/errors'
+import { Result, type TypedResult } from '../../../../lib/Result'
+import { type ResolvedTools, ToolSource } from './types'
 import {
   getLatitudeToolDefinition,
   getLatitudeToolInternalName,
 } from '../../../../services/latitudeTools/helpers'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 const ALL_LATITUDE_RESOLVED_TOOLS = Object.fromEntries(
   Object.values(LatitudeTool).map((latitudeToolName) => [
@@ -48,9 +44,7 @@ function resolveLatitudeToolsFromNewSchema(config: LatitudePromptConfig) {
   for (const latitudeToolName of latitudeToolNames) {
     if (latitudeToolName === '') {
       // 'latitude' was used as the whole toolId, without any '/' separator
-      return Result.error(
-        new BadRequestError(`You must specify a tool name after 'latitude/'`),
-      )
+      return Result.error(new BadRequestError(`You must specify a tool name after 'latitude/'`))
     }
 
     if (latitudeToolName === '*') {
@@ -58,19 +52,13 @@ function resolveLatitudeToolsFromNewSchema(config: LatitudePromptConfig) {
       continue
     }
 
-    if (
-      !Object.values(LatitudeTool).includes(latitudeToolName as LatitudeTool)
-    ) {
+    if (!Object.values(LatitudeTool).includes(latitudeToolName as LatitudeTool)) {
       return Result.error(
-        new NotFoundError(
-          `There is no Latitude tool with the name '${latitudeToolName}'`,
-        ),
+        new NotFoundError(`There is no Latitude tool with the name '${latitudeToolName}'`),
       )
     }
 
-    resolvedTools[
-      getLatitudeToolInternalName(latitudeToolName as LatitudeTool)
-    ] = {
+    resolvedTools[getLatitudeToolInternalName(latitudeToolName as LatitudeTool)] = {
       // TODO(compiler): fix types
       // @ts-expect-error - TODO: fix types
       definition: getLatitudeToolDefinition(latitudeToolName as LatitudeTool)!,

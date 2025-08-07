@@ -1,7 +1,7 @@
 import { $nodesOfType, DecoratorNode } from 'lexical'
-import { JSX } from 'react'
+import type { JSX } from 'react'
 import { Badge } from '../../../../../atoms/Badge'
-import { BLOCK_EDITOR_TYPE, Variable } from '../../state/promptlToLexical/types'
+import { BLOCK_EDITOR_TYPE, type Variable } from '../../state/promptlToLexical/types'
 
 export class VariableNode extends DecoratorNode<JSX.Element> {
   __name: string

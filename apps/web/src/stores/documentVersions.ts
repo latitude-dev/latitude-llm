@@ -21,17 +21,16 @@ import {
 } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useRouter } from 'next/navigation'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
-import { inferServerActionReturnData } from 'zsa'
+import type { inferServerActionReturnData } from 'zsa'
 import { useEvents } from '$/lib/events'
 
 const EMPTY_DATA = [] as DocumentVersion[]
 export default function useDocumentVersions(
-  {
-    commitUuid = HEAD_COMMIT,
-    projectId,
-  }: { commitUuid?: string; projectId?: number } = { commitUuid: HEAD_COMMIT },
+  { commitUuid = HEAD_COMMIT, projectId }: { commitUuid?: string; projectId?: number } = {
+    commitUuid: HEAD_COMMIT,
+  },
   opts: SWRConfiguration & {
     onSuccessCreate?: (document: DocumentVersion) => void
   } = {},
@@ -40,9 +39,7 @@ export default function useDocumentVersions(
   const { onSuccessCreate } = opts
   const enabled = !!projectId && !!commitUuid
   const fetcher = useFetcher<DocumentVersion[]>(
-    enabled
-      ? ROUTES.api.projects.detail(projectId).commits.detail(commitUuid).root
-      : undefined,
+    enabled ? ROUTES.api.projects.detail(projectId).commits.detail(commitUuid).root : undefined,
     {
       fallback: EMPTY_DATA,
     },
@@ -60,40 +57,24 @@ export default function useDocumentVersions(
   )
 
   const router = useRouter()
-  const { execute: executeCreateDocument } = useServerAction(
-    createDocumentVersionAction,
-    {
-      onSuccess: ({ data: document }) => {
-        onSuccessCreate?.(document)
-      },
+  const { execute: executeCreateDocument } = useServerAction(createDocumentVersionAction, {
+    onSuccess: ({ data: document }) => {
+      onSuccessCreate?.(document)
     },
-  )
-  const { execute: executeUploadDocument } = useServerAction(
-    uploadDocumentAction,
-    {
-      onSuccess: ({ data: document }) => {
-        onSuccessCreate?.(document)
-      },
+  })
+  const { execute: executeUploadDocument } = useServerAction(uploadDocumentAction, {
+    onSuccess: ({ data: document }) => {
+      onSuccessCreate?.(document)
     },
-  )
-  const { execute: executeRenamePaths } = useServerAction(
-    renameDocumentPathsAction,
-  )
+  })
+  const { execute: executeRenamePaths } = useServerAction(renameDocumentPathsAction)
   const { execute: executeDestroyDocument, isPending: isDestroyingFile } =
     useServerAction(destroyDocumentAction)
   const { execute: executeDestroyFolder, isPending: isDestroyingFolder } =
     useServerAction(destroyFolderAction)
 
   const createFile = useCallback(
-    async ({
-      path,
-      agent,
-      content,
-    }: {
-      path: string
-      agent?: boolean
-      content?: string
-    }) => {
+    async ({ path, agent, content }: { path: string; agent?: boolean; content?: string }) => {
       if (!projectId) return
 
       const [document, error] = await executeCreateDocument({
@@ -226,21 +207,12 @@ export default function useDocumentVersions(
           description: 'Document deleted',
         })
         router.push(
-          ROUTES.projects
-            .detail({ id: projectId })
-            .commits.detail({ uuid: commitUuid }).documents.root,
+          ROUTES.projects.detail({ id: projectId }).commits.detail({ uuid: commitUuid }).documents
+            .root,
         )
       }
     },
-    [
-      executeDestroyDocument,
-      mutate,
-      data,
-      commitUuid,
-      projectId,
-      router,
-      toast,
-    ],
+    [executeDestroyDocument, mutate, data, commitUuid, projectId, router, toast],
   )
 
   const destroyFolder = useCallback(
@@ -267,17 +239,17 @@ export default function useDocumentVersions(
           description: 'Folder deleted',
         })
         router.push(
-          ROUTES.projects
-            .detail({ id: projectId })
-            .commits.detail({ uuid: commitUuid }).documents.root,
+          ROUTES.projects.detail({ id: projectId }).commits.detail({ uuid: commitUuid }).documents
+            .root,
         )
       }
     },
     [executeDestroyFolder, mutate, commitUuid, projectId, router, toast],
   )
 
-  const { execute: updateContent, isPending: isUpdatingContent } =
-    useLatitudeAction(updateDocumentContentAction, {
+  const { execute: updateContent, isPending: isUpdatingContent } = useLatitudeAction(
+    updateDocumentContentAction,
+    {
       onSuccess: useCallback(
         ({
           data: document,
@@ -289,38 +261,34 @@ export default function useDocumentVersions(
           const prevDocuments = data || []
 
           mutate(
-            prevDocuments.map((d) =>
-              d.documentUuid === document.documentUuid ? document : d,
-            ),
+            prevDocuments.map((d) => (d.documentUuid === document.documentUuid ? document : d)),
           )
         },
         [data, mutate],
       ),
-    })
+    },
+  )
 
-  const { execute: assignDataset, isPending: isAssigningDataset } =
-    useLatitudeAction(assignDatasetAction, {
+  const { execute: assignDataset, isPending: isAssigningDataset } = useLatitudeAction(
+    assignDatasetAction,
+    {
       onSuccess: useCallback(
-        ({
-          data: document,
-        }: {
-          data: inferServerActionReturnData<typeof assignDatasetAction>
-        }) => {
+        ({ data: document }: { data: inferServerActionReturnData<typeof assignDatasetAction> }) => {
           if (!document) return
 
           const prevDocuments = data || []
           mutate(
-            prevDocuments.map((d) =>
-              d.documentUuid === document.documentUuid ? document : d,
-            ),
+            prevDocuments.map((d) => (d.documentUuid === document.documentUuid ? document : d)),
           )
         },
         [data, mutate],
       ),
-    })
+    },
+  )
 
-  const { execute: saveLinkedDataset, isPending: isLinkingDataset } =
-    useLatitudeAction(saveLinkedDatasetAction, {
+  const { execute: saveLinkedDataset, isPending: isLinkingDataset } = useLatitudeAction(
+    saveLinkedDatasetAction,
+    {
       onSuccess: useCallback(
         ({
           data: document,
@@ -331,14 +299,13 @@ export default function useDocumentVersions(
 
           const prevDocuments = data || []
           mutate(
-            prevDocuments.map((d) =>
-              d.documentUuid === document.documentUuid ? document : d,
-            ),
+            prevDocuments.map((d) => (d.documentUuid === document.documentUuid ? document : d)),
           )
         },
         [data, mutate],
       ),
-    })
+    },
+  )
 
   useEvents({
     onLatteProjectChanges: ({ changes }) => {
@@ -350,9 +317,7 @@ export default function useDocumentVersions(
 
         changes.forEach((change) => {
           if (change.previous) {
-            const index = prev.findIndex(
-              (d) => d.documentUuid === change.previous!.documentUuid,
-            )
+            const index = prev.findIndex((d) => d.documentUuid === change.previous!.documentUuid)
             if (index === -1) return
 
             if (change.current.deletedAt) {

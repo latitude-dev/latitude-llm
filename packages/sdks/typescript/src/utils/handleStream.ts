@@ -1,28 +1,24 @@
-import { Readable } from 'stream'
+import type { Readable } from 'stream'
 
 import type { Message } from '@latitude-data/constants/legacyCompiler'
-import {
-  ApiErrorCodes,
-  LatitudeApiError,
-  RunErrorCodes,
-} from '$sdk/utils/errors'
+import { ApiErrorCodes, LatitudeApiError, RunErrorCodes } from '$sdk/utils/errors'
 import { nodeFetchResponseToReadableStream } from '$sdk/utils/nodeFetchResponseToReadableStream'
-import { StreamResponseCallbacks } from '$sdk/utils/types'
+import type { StreamResponseCallbacks } from '$sdk/utils/types'
 import {
-  ChainCallResponseDto,
-  ProviderData,
+  type ChainCallResponseDto,
+  type ProviderData,
   StreamEventTypes,
   ChainEventTypes,
-  LatitudeEventData,
-  ChainEvent,
+  type LatitudeEventData,
+  type ChainEvent,
 } from '@latitude-data/constants'
-import { ParsedEvent, ReconnectInterval } from 'eventsource-parser'
+import type { ParsedEvent, ReconnectInterval } from 'eventsource-parser'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
 
 function parseJSON(line: string) {
   try {
     return JSON.parse(line) as ProviderData | LatitudeEventData
-  } catch (e) {
+  } catch (_e) {
     // do nothing
   }
 }
@@ -42,9 +38,7 @@ export async function handleStream({
 
   const parser = new EventSourceParserStream()
   const stream = nodeFetchResponseToReadableStream(body, onError)
-  const eventStream = stream
-    .pipeThrough(new TextDecoderStream())
-    .pipeThrough(parser)
+  const eventStream = stream.pipeThrough(new TextDecoderStream()).pipeThrough(parser)
 
   const reader = eventStream.getReader()
   try {

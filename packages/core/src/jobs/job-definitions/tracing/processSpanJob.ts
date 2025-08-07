@@ -1,8 +1,5 @@
-import { Job } from 'bullmq'
-import {
-  SPAN_PROCESSING_STORAGE_KEY,
-  SpanProcessingData,
-} from '../../../browser'
+import type { Job } from 'bullmq'
+import { SPAN_PROCESSING_STORAGE_KEY, type SpanProcessingData } from '../../../browser'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { diskFactory } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'

@@ -1,11 +1,11 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { and, eq, sql } from 'drizzle-orm'
-import { DocumentTrigger } from '../../../../browser'
+import type { DocumentTrigger } from '../../../../browser'
 import { Result } from '../../../../lib/Result'
-import Transaction, { PromisedResult } from '../../../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../../../lib/Transaction'
 import { documentTriggers } from '../../../../schema'
 import { checkCronExpression, getNextRunTime } from '../../helpers/cronHelper'
-import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { database } from '../../../../client'
 
 /**
@@ -23,11 +23,7 @@ export function isScheduledTriggerDue(trigger: DocumentTrigger): boolean {
   }
 
   // Fallback to checking the cron expression
-  return checkCronExpression(
-    config.cronExpression,
-    'UTC',
-    config.lastRun || trigger.createdAt,
-  )
+  return checkCronExpression(config.cronExpression, 'UTC', config.lastRun || trigger.createdAt)
 }
 
 /**
@@ -55,23 +51,16 @@ export async function updateScheduledTriggerLastRun(
         .then((rows) => rows[0] as DocumentTrigger | undefined)
 
       if (!fullTrigger) {
-        return Result.error(
-          new Error(`Trigger with id ${trigger.id} not found`),
-        )
+        return Result.error(new Error(`Trigger with id ${trigger.id} not found`))
       }
 
       config = fullTrigger.configuration as ScheduledTriggerConfiguration
     } else {
-      config = (trigger as DocumentTrigger)
-        .configuration as ScheduledTriggerConfiguration
+      config = (trigger as DocumentTrigger).configuration as ScheduledTriggerConfiguration
     }
 
     // Calculate the next run time
-    const nextRunTime = getNextRunTime(
-      config.cronExpression,
-      'UTC',
-      lastRunTime,
-    )
+    const nextRunTime = getNextRunTime(config.cronExpression, 'UTC', lastRunTime)
 
     // Update the trigger configuration with the new last run time and next run time
     const updateResult = await trx
@@ -87,9 +76,7 @@ export async function updateScheduledTriggerLastRun(
       .returning()
 
     if (!updateResult.length) {
-      return Result.error(
-        new Error(`Failed to update document trigger ${trigger.uuid}`),
-      )
+      return Result.error(new Error(`Failed to update document trigger ${trigger.uuid}`))
     }
 
     return Result.ok(updateResult[0] as DocumentTrigger)
@@ -102,9 +89,7 @@ export async function updateScheduledTriggerLastRun(
  * @param db The database instance to use
  * @returns A promise that resolves to an array of scheduled triggers
  */
-export async function findAllScheduledTriggers(
-  db = database,
-): PromisedResult<DocumentTrigger[]> {
+export async function findAllScheduledTriggers(db = database): PromisedResult<DocumentTrigger[]> {
   try {
     const triggers = await db
       .select()
@@ -117,10 +102,7 @@ export async function findAllScheduledTriggers(
   }
 }
 
-type ScheduledTrigger = Extract<
-  DocumentTrigger,
-  { triggerType: DocumentTriggerType.Scheduled }
->
+type ScheduledTrigger = Extract<DocumentTrigger, { triggerType: DocumentTriggerType.Scheduled }>
 
 /**
  * Finds all scheduled triggers that are due to run based on nextRunTime
@@ -165,11 +147,7 @@ export async function findScheduledTriggersDueToRun(
     const dueTriggers = triggersWithoutNextRunTime.filter((trigger) => {
       const config = trigger.configuration as ScheduledTriggerConfiguration
 
-      return checkCronExpression(
-        config.cronExpression,
-        'UTC',
-        config.lastRun || trigger.createdAt,
-      )
+      return checkCronExpression(config.cronExpression, 'UTC', config.lastRun || trigger.createdAt)
     })
 
     // Combine and return all due triggers

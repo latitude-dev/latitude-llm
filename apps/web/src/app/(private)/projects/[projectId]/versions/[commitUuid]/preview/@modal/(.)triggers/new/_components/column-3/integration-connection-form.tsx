@@ -1,5 +1,5 @@
-import { FormEvent, useCallback } from 'react'
-import { App } from '@pipedream/sdk/browser'
+import { type FormEvent, useCallback } from 'react'
+import type { App } from '@pipedream/sdk/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
@@ -14,9 +14,7 @@ interface IntegrationConnectionFormProps {
   app: App
 }
 
-export function IntegrationConnectionForm({
-  app,
-}: IntegrationConnectionFormProps) {
+export function IntegrationConnectionForm({ app }: IntegrationConnectionFormProps) {
   const { toast } = useToast()
   const { setSelectedIntegration } = useTriggersModalContext()
   const { connect, externalUserId } = useConnectToPipedreamApp(app)
@@ -26,8 +24,7 @@ export function IntegrationConnectionForm({
     async (e: FormEvent) => {
       e.preventDefault()
 
-      const integrationName = (e.target as HTMLFormElement).integrationName
-        .value
+      const integrationName = (e.target as HTMLFormElement).integrationName.value
 
       if (!externalUserId) {
         throw new Error(

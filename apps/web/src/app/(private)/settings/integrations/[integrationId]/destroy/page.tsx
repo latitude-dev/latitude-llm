@@ -10,7 +10,7 @@ import useIntegrationReferences from '$/stores/integrationReferences'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import Link from 'next/link'
-import { HEAD_COMMIT, IntegrationReference } from '@latitude-data/constants'
+import { HEAD_COMMIT, type IntegrationReference } from '@latitude-data/constants'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import useProjects from '$/stores/projects'
@@ -86,17 +86,14 @@ export default function DestroyIntegration({
       {references.length > 0 && (
         <div className='flex flex-col gap-4'>
           <Text.H5>
-            This integration is currently being used in {references.length}{' '}
-            prompts:
+            This integration is currently being used in {references.length} prompts:
           </Text.H5>
           <div className='flex flex-col gap-2'>
             {references.map((reference, idx) => (
               <ReferenceItem key={idx} reference={reference} />
             ))}
           </div>
-          <Text.H5>
-            You must remove them all before deleting the integration.
-          </Text.H5>
+          <Text.H5>You must remove them all before deleting the integration.</Text.H5>
         </div>
       )}
     </DestroyModal>

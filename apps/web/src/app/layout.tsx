@@ -7,7 +7,7 @@ import { THEMES } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
 import { ThemeProvider } from '@latitude-data/web-ui/providers'
 import '@latitude-data/web-ui/styles.css'
 import NextTopLoader from 'nextjs-toploader'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import 'react-data-grid/lib/styles.css'
 
 export const metadata = buildMetatags({

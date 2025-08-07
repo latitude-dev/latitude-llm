@@ -7,29 +7,23 @@ import {
   isNotNull,
   isNull,
   or,
-  SQL,
+  type SQL,
   sql,
   sum,
 } from 'drizzle-orm'
 
 import {
-  Commit,
-  Cursor,
+  type Commit,
+  type Cursor,
   DEFAULT_PAGINATION_SIZE,
-  DocumentLogFilterOptions,
-  DocumentVersion,
+  type DocumentLogFilterOptions,
+  type DocumentVersion,
   ErrorableEntity,
-  Workspace,
+  type Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
-import {
-  commits,
-  documentLogs,
-  projects,
-  providerLogs,
-  runErrors,
-} from '../../schema'
+import { commits, documentLogs, projects, providerLogs, runErrors } from '../../schema'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export function getCommitFilter(draft?: Commit) {
@@ -60,9 +54,7 @@ export async function computeDocumentLogsWithMetadata(
   const offset = calculateOffset(page, pageSize)
   const ordering = [
     filterOptions?.customIdentifier
-      ? desc(
-          sql`similarity(${documentLogs.customIdentifier}, ${filterOptions.customIdentifier})`,
-        )
+      ? desc(sql`similarity(${documentLogs.customIdentifier}, ${filterOptions.customIdentifier})`)
       : undefined,
     desc(documentLogs.createdAt),
   ].filter(Boolean) as SQL<unknown>[]
@@ -83,9 +75,7 @@ export async function computeDocumentLogsWithMetadata(
       documentLogUuid: providerLogs.documentLogUuid,
       tokens: sum(providerLogs.tokens).mapWith(Number).as('tokens'),
       duration: sum(providerLogs.duration).mapWith(Number).as('duration_in_ms'),
-      costInMillicents: sum(providerLogs.costInMillicents)
-        .mapWith(Number)
-        .as('cost_in_millicents'),
+      costInMillicents: sum(providerLogs.costInMillicents).mapWith(Number).as('cost_in_millicents'),
     })
     .from(providerLogs)
     .where(
@@ -118,15 +108,10 @@ export async function computeDocumentLogsWithMetadata(
   return logs.map((log) => {
     return {
       ...log,
-      tokens:
-        providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)
-          ?.tokens ?? 0,
-      duration:
-        providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)
-          ?.duration ?? 0,
+      tokens: providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)?.tokens ?? 0,
+      duration: providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)?.duration ?? 0,
       costInMillicents:
-        providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)
-          ?.costInMillicents ?? 0,
+        providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)?.costInMillicents ?? 0,
       error: errors.find((e) => e.documentLogUuid === log.uuid) || {
         code: null,
         message: null,
@@ -199,9 +184,7 @@ export async function computeDocumentLogsLimited(
       documentLogUuid: providerLogs.documentLogUuid,
       tokens: sum(providerLogs.tokens).mapWith(Number).as('tokens'),
       duration: sum(providerLogs.duration).mapWith(Number).as('duration_in_ms'),
-      costInMillicents: sum(providerLogs.costInMillicents)
-        .mapWith(Number)
-        .as('cost_in_millicents'),
+      costInMillicents: sum(providerLogs.costInMillicents).mapWith(Number).as('cost_in_millicents'),
     })
     .from(providerLogs)
     .where(
@@ -235,15 +218,10 @@ export async function computeDocumentLogsLimited(
   const items = logs.map((log) => {
     return {
       ...log,
-      tokens:
-        providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)
-          ?.tokens ?? 0,
-      duration:
-        providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)
-          ?.duration ?? 0,
+      tokens: providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)?.tokens ?? 0,
+      duration: providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)?.duration ?? 0,
       costInMillicents:
-        providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)
-          ?.costInMillicents ?? 0,
+        providerLogAggregations.find((a) => a.documentLogUuid === log.uuid)?.costInMillicents ?? 0,
       error: errors.find((e) => e.documentLogUuid === log.uuid) || {
         code: null,
         message: null,

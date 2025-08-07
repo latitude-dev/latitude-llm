@@ -20,32 +20,22 @@ describe('getRouteFromPathname', () => {
   })
 
   it('handles project/version/document segments', () => {
-    expect(getRouteFromPathname('/projects/1/versions/2/documents/3')).toBe(
-      DocsRoute.Editor,
-    )
-    expect(getRouteFromPathname('/projects/1/versions/2/documents/3/')).toBe(
-      DocsRoute.Editor,
-    )
+    expect(getRouteFromPathname('/projects/1/versions/2/documents/3')).toBe(DocsRoute.Editor)
+    expect(getRouteFromPathname('/projects/1/versions/2/documents/3/')).toBe(DocsRoute.Editor)
   })
 
   it('handles evaluations and logs', () => {
-    expect(
-      getRouteFromPathname('/projects/1/versions/2/documents/3/evaluations'),
-    ).toBe(DocsRoute.Evaluations)
-    expect(
-      getRouteFromPathname('/projects/1/versions/2/documents/3/logs'),
-    ).toBe(DocsRoute.Logs)
-    expect(
-      getRouteFromPathname('/projects/1/versions/2/documents/3/logs/extra'),
-    ).toBe(DocsRoute.Logs)
+    expect(getRouteFromPathname('/projects/1/versions/2/documents/3/evaluations')).toBe(
+      DocsRoute.Evaluations,
+    )
+    expect(getRouteFromPathname('/projects/1/versions/2/documents/3/logs')).toBe(DocsRoute.Logs)
+    expect(getRouteFromPathname('/projects/1/versions/2/documents/3/logs/extra')).toBe(
+      DocsRoute.Logs,
+    )
   })
 
   it('handles overview and history under versions', () => {
-    expect(getRouteFromPathname('/projects/1/versions/2/overview')).toBe(
-      DocsRoute.CoreConcepts,
-    )
-    expect(getRouteFromPathname('/projects/1/versions/2/history')).toBe(
-      DocsRoute.VersionControl,
-    )
+    expect(getRouteFromPathname('/projects/1/versions/2/overview')).toBe(DocsRoute.CoreConcepts)
+    expect(getRouteFromPathname('/projects/1/versions/2/history')).toBe(DocsRoute.VersionControl)
   })
 })

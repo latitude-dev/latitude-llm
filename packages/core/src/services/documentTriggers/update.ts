@@ -1,11 +1,11 @@
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { and, eq } from 'drizzle-orm'
-import { DocumentTrigger, Workspace } from '../../browser'
+import type { DocumentTrigger, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
 import { documentTriggers } from '../../schema'
 import { buildConfiguration } from './helpers/buildConfiguration'
-import {
+import type {
   InsertDocumentTriggerWithConfiguration,
   InsertIntegrationTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
@@ -53,9 +53,7 @@ export async function updateDocumentTriggerConfiguration(
       .returning()
 
     if (!result.length) {
-      return Result.error(
-        new LatitudeError('Failed to update document trigger configuration'),
-      )
+      return Result.error(new LatitudeError('Failed to update document trigger configuration'))
     }
 
     return Result.ok(result[0]! as DocumentTrigger)

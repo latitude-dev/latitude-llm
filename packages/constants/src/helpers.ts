@@ -42,9 +42,7 @@ export function createRelativePath(refPath: string, from?: string): string {
     commonSegments.push(refSegments[i])
   }
 
-  const upSegments = currentSegments
-    .slice(commonSegments.length)
-    .map(() => '..')
+  const upSegments = currentSegments.slice(commonSegments.length).map(() => '..')
   const downSegments = refSegments.slice(commonSegments.length)
 
   const fullRefPath = [...upSegments, ...downSegments].join('/')
@@ -52,9 +50,7 @@ export function createRelativePath(refPath: string, from?: string): string {
   return refPath.length < fullRefPath.length ? '/' + refPath : fullRefPath
 }
 
-export function simplifyDocument(
-  document: DocumentVersion,
-): SimplifiedDocumentVersion {
+export function simplifyDocument(document: DocumentVersion): SimplifiedDocumentVersion {
   return {
     documentUuid: document.documentUuid,
     path: document.path,

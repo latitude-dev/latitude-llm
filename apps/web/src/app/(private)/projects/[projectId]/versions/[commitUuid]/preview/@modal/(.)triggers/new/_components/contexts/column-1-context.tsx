@@ -1,13 +1,7 @@
 'use client'
 
-import { App } from '@pipedream/sdk/browser'
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
+import type { App } from '@pipedream/sdk/browser'
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 import usePipedreamApps from '$/stores/pipedreamApps'
 
 type Column1ContextType = {
@@ -36,12 +30,10 @@ export function Column1Provider({ children }: Column1ProviderProps) {
       searchQuery,
       setSearchQuery,
     }),
-    [isLoading, pipedreamApps, searchQuery, setSearchQuery],
+    [isLoading, pipedreamApps, searchQuery],
   )
 
-  return (
-    <Column1Context.Provider value={value}>{children}</Column1Context.Provider>
-  )
+  return <Column1Context.Provider value={value}>{children}</Column1Context.Provider>
 }
 
 export function useColumn1Context() {

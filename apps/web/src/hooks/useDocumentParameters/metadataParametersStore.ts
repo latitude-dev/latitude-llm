@@ -1,13 +1,9 @@
 import { create } from 'zustand'
 
-import {
-  InputSource,
-  PlaygroundInput,
-  PlaygroundInputs,
-} from '@latitude-data/core/browser'
+import type { InputSource, PlaygroundInput, PlaygroundInputs } from '@latitude-data/core/browser'
 import { ParameterType } from '@latitude-data/constants'
 
-export function buildEmptyInputsFromParameters<S extends InputSource>(
+function buildEmptyInputsFromParameters<S extends InputSource>(
   parameters: string[],
 ): Record<string, PlaygroundInput<S>> {
   return Object.fromEntries(
@@ -29,7 +25,7 @@ export type EmptyInputs = {
   datasetV2: Record<string, PlaygroundInput<'datasetV2'>>
   history: Record<string, PlaygroundInput<'history'>>
 }
-export type MetadataParameterState = {
+type MetadataParameterState = {
   metadataParameters: string[] | undefined
   prevInputs: PlaygroundInputs<InputSource> | null
   emptyInputs: EmptyInputs

@@ -1,7 +1,7 @@
-import { ExperimentWithScores, Workspace } from '@latitude-data/core/browser'
+import type { ExperimentWithScores, Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { ExperimentsRepository } from '@latitude-data/core/repositories'
 
 export const GET = errorHandler(
@@ -28,9 +28,7 @@ export const GET = errorHandler(
           await Promise.all([experimentResult, scoresResult])
           const experiment = await experimentResult.then((r) => r.unwrap())
           const scores = await scoresResult.then((r) => r.unwrap())
-          const logsMetadata = await scope
-            .getLogsMetadata(uuid)
-            .then((r) => r.unwrap())
+          const logsMetadata = await scope.getLogsMetadata(uuid).then((r) => r.unwrap())
 
           return {
             ...experiment,

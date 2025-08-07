@@ -1,22 +1,15 @@
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { ChainError, LatitudeError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
-  ChainError,
-  LatitudeError,
-  RunErrorCodes,
-} from '@latitude-data/constants/errors'
-import {
-  ChainStepResponse,
+  type ChainStepResponse,
   LegacyChainEventTypes,
   LogSources,
-  ProviderLog,
+  type ProviderLog,
   StreamEventTypes,
-  Workspace,
+  type Workspace,
 } from '@latitude-data/core/browser'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
-import {
-  createProject,
-  createTelemetryTrace,
-} from '@latitude-data/core/factories'
+import { createProject, createTelemetryTrace } from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -35,17 +28,14 @@ const mocks = vi.hoisted(() => ({
   },
 }))
 
-vi.mock(
-  '@latitude-data/core/services/documentLogs/addMessages/index',
-  async (importOriginal) => {
-    const original = (await importOriginal()) as typeof importOriginal
+vi.mock('@latitude-data/core/services/documentLogs/addMessages/index', async (importOriginal) => {
+  const original = (await importOriginal()) as typeof importOriginal
 
-    return {
-      ...original,
-      addMessages: mocks.addMessages,
-    }
-  },
-)
+  return {
+    ...original,
+    addMessages: mocks.addMessages,
+  }
+})
 
 vi.mock(
   '@latitude-data/core/services/__deprecated/documentLogs/addMessages/index',
@@ -94,21 +84,18 @@ const step: ChainStepResponse<'text'> = {
 describe('POST /chat', () => {
   describe('unauthorized', () => {
     it('fails', async () => {
-      const res = await app.request(
-        `/api/v3/conversations/${step.documentLogUuid}/chat`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            stream: true,
-            messages: [
-              {
-                role: MessageRole.user,
-                content: 'fake-user-content',
-              },
-            ],
-          }),
-        },
-      )
+      const res = await app.request(`/api/v3/conversations/${step.documentLogUuid}/chat`, {
+        method: 'POST',
+        body: JSON.stringify({
+          stream: true,
+          messages: [
+            {
+              role: MessageRole.user,
+              content: 'fake-user-content',
+            },
+          ],
+        }),
+      })
 
       expect(res.status).toBe(401)
     })
@@ -188,7 +175,7 @@ describe('POST /chat', () => {
         headers,
       })
 
-      let { done, value } = await testConsumeStream(res.body as ReadableStream)
+      const { done, value } = await testConsumeStream(res.body as ReadableStream)
       const event = parseSSEvent(value!)
 
       expect(mocks.queues)
@@ -400,7 +387,7 @@ describe('POST /chat', () => {
         headers,
       })
 
-      let { done, value } = await testConsumeStream(res.body as ReadableStream)
+      const { done, value } = await testConsumeStream(res.body as ReadableStream)
       const event = parseSSEvent(value!)
 
       expect(mocks.queues)

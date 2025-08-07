@@ -19,13 +19,7 @@ const documentLogSchema = z.object({
   updatedAt: z.date(),
 })
 
-function createLogRouteFactory({
-  path,
-  tags,
-}: {
-  path: string
-  tags: string[]
-}) {
+function createLogRouteFactory({ path, tags }: { path: string; tags: string[] }) {
   return createRoute({
     path,
     operationId: 'createDocumentLog',

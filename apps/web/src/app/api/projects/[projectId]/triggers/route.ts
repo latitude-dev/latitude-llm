@@ -1,7 +1,7 @@
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { DocumentTriggersRepository } from '@latitude-data/core/repositories'
 
 export const GET = errorHandler(
@@ -21,6 +21,7 @@ export const GET = errorHandler(
 
       const scope = new DocumentTriggersRepository(workspace.id)
 
+      // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
       let rows
       if (documentUuid) {
         rows = await scope.findByDocumentUuid(documentUuid)

@@ -3,10 +3,7 @@
 import { useMemo } from 'react'
 import { create } from 'zustand'
 
-import type {
-  ReadMetadataWorkerProps,
-  ResolvedMetadata,
-} from '../workers/readMetadata'
+import type { ReadMetadataWorkerProps, ResolvedMetadata } from '../workers/readMetadata'
 import { debounce } from 'lodash-es'
 
 type MetadataState = {
@@ -37,8 +34,5 @@ export const useMetadataStore = create<MetadataState>((set, get) => ({
 export function useMetadata() {
   const { metadata, updateMetadata } = useMetadataStore()
 
-  return useMemo(
-    () => ({ metadata, updateMetadata }),
-    [metadata, updateMetadata],
-  )
+  return useMemo(() => ({ metadata, updateMetadata }), [metadata, updateMetadata])
 }

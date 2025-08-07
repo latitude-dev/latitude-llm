@@ -1,7 +1,7 @@
-import { DocumentTriggerType } from '@latitude-data/constants'
+import type { DocumentTriggerType } from '@latitude-data/constants'
 import { LatitudeError } from '../../../lib/errors'
 import { getNextRunTime } from './cronHelper'
-import {
+import type {
   DocumentTriggerConfiguration,
   EmailTriggerConfiguration,
   InsertDocumentTriggerWithConfiguration,

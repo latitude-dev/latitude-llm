@@ -2,10 +2,10 @@ import { MetadataItem } from '$/components/MetadataItem'
 import { SPAN_SPECIFICATIONS, SpanType } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import { DetailsPanelProps, SPAN_COLORS } from './shared'
+import { type DetailsPanelProps, SPAN_COLORS } from './shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Http]
 export default {
@@ -45,17 +45,11 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Http>) {
     <>
       {!!span.metadata && (
         <>
-          <MetadataItem
-            label='Request'
-            contentClassName='pt-3 flex flex-col gap-y-3'
-            stacked
-          >
+          <MetadataItem label='Request' contentClassName='pt-3 flex flex-col gap-y-3' stacked>
             <div className='w-full flex flex-col gap-y-1 whitespace-pre-wrap'>
               <Text.H6M>Endpoint</Text.H6M>
               <Text.H5 color='foregroundMuted' wordBreak='breakAll'>
-                <Badge variant='outlineMuted'>
-                  {span.metadata.request.method}
-                </Badge>{' '}
+                <Badge variant='outlineMuted'>{span.metadata.request.method}</Badge>{' '}
                 {span.metadata.request.url}
               </Text.H5>
             </div>
@@ -87,17 +81,11 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Http>) {
           </MetadataItem>
           {!!span.metadata.response && (
             <>
-              <MetadataItem
-                label='Response'
-                contentClassName='pt-3 flex flex-col gap-y-3'
-                stacked
-              >
+              <MetadataItem label='Response' contentClassName='pt-3 flex flex-col gap-y-3' stacked>
                 <div className='w-full flex flex-col gap-y-1 whitespace-pre-wrap'>
                   <Text.H6M>Status</Text.H6M>
                   <Text.H5 color='foregroundMuted' wordBreak='breakAll'>
-                    <Badge variant='outlineMuted'>
-                      {span.metadata.response.status.toString()}
-                    </Badge>{' '}
+                    <Badge variant='outlineMuted'>{span.metadata.response.status.toString()}</Badge>{' '}
                     {statusMessage(span.metadata.response.status)}
                   </Text.H5>
                 </div>

@@ -76,8 +76,7 @@ describe('publishDraftCommitAction', () => {
     })
 
     it('returns error when commit does not belongs to project', async () => {
-      const { user: unrelatedUser, project: urelatedProject } =
-        await factories.createProject()
+      const { user: unrelatedUser, project: urelatedProject } = await factories.createProject()
       const { commit: unrelatedCommit } = await factories.createDraft({
         project: urelatedProject,
         user: unrelatedUser,

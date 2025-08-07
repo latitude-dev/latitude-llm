@@ -1,7 +1,7 @@
 import './common/sentry'
 import './common/tracer'
 
-import { serve, ServerType } from '@hono/node-server'
+import { serve, type ServerType } from '@hono/node-server'
 import app from '$/routes/app'
 import cluster from 'cluster'
 import os from 'os'
@@ -61,16 +61,14 @@ if (cluster.isPrimary) {
       },
     },
     () => {
-      console.log(
-        `Worker ${process.pid} listening on http://${HOSTNAME}:${PORT}`,
-      )
+      console.log(`Worker ${process.pid} listening on http://${HOSTNAME}:${PORT}`)
     },
   )
 
   process.on('SIGTERM', () => gracefulShutdown(server))
   process.on('SIGINT', () => gracefulShutdown(server))
 
-  process.on('uncaughtException', function (err) {
+  process.on('uncaughtException', (err) => {
     captureException(err)
   })
 
@@ -86,9 +84,7 @@ function gracefulShutdown(server: ServerType) {
   })
 
   setTimeout(() => {
-    console.error(
-      `Worker ${process.pid} forcing shutdown due to pending connections.`,
-    )
+    console.error(`Worker ${process.pid} forcing shutdown due to pending connections.`)
     process.exit(1)
   }, SHUTDOWN_TIMEOUT)
 }

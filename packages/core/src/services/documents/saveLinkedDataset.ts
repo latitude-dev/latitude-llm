@@ -1,12 +1,7 @@
 import { eq } from 'drizzle-orm'
 
-import {
-  Dataset,
-  DocumentVersion,
-  LinkedDataset,
-  LinkedDatasetRow,
-} from '../../browser'
-import { Result, TypedResult } from '../../lib/Result'
+import type { Dataset, DocumentVersion, LinkedDataset, LinkedDatasetRow } from '../../browser'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { documentVersions } from '../../schema'
 
@@ -22,11 +17,7 @@ function getLinkedData({
   return { inputs, mappedInputs, datasetRowId }
 }
 
-function getCurrentDatasetLinkedData({
-  document,
-}: {
-  document: DocumentVersion
-}) {
+function getCurrentDatasetLinkedData({ document }: { document: DocumentVersion }) {
   return document.linkedDatasetAndRow ?? {}
 }
 

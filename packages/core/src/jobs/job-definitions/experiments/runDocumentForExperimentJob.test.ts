@@ -1,6 +1,6 @@
 import * as factories from '../../../tests/factories'
-import { DocumentVersion, Experiment, Providers, User } from '../../../browser'
-import { Job } from 'bullmq'
+import { type DocumentVersion, type Experiment, Providers, type User } from '../../../browser'
+import type { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { runDocumentForExperimentJob } from './runDocumentForExperimentJob'
 import * as runDocumentAtCommitWithAutoToolResponsesModule from '../documents/runDocumentAtCommitWithAutoToolResponses'
@@ -31,9 +31,7 @@ describe('runDocumentForExperimentJob', () => {
       runDocumentAtCommitWithAutoToolResponsesModule,
       'runDocumentAtCommitWithAutoToolResponses',
     ).mockImplementation(mocks.runDocumentAtCommitWithAutoToolResponses)
-    vi.spyOn(shared, 'updateExperimentStatus').mockImplementation(
-      mocks.updateExperimentStatus,
-    )
+    vi.spyOn(shared, 'updateExperimentStatus').mockImplementation(mocks.updateExperimentStatus)
 
     const setup = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'Latitude' }],
@@ -85,9 +83,7 @@ describe('runDocumentForExperimentJob', () => {
       }),
     )
 
-    await expect(runDocumentForExperimentJob(mockJob)).rejects.toThrow(
-      'rate limited!',
-    )
+    await expect(runDocumentForExperimentJob(mockJob)).rejects.toThrow('rate limited!')
 
     expect(mocks.updateExperimentStatus).not.toHaveBeenCalled()
   })
@@ -98,8 +94,6 @@ describe('runDocumentForExperimentJob', () => {
 
     await runDocumentForExperimentJob(mockJob)
 
-    expect(
-      mocks.runDocumentAtCommitWithAutoToolResponses,
-    ).not.toHaveBeenCalled()
+    expect(mocks.runDocumentAtCommitWithAutoToolResponses).not.toHaveBeenCalled()
   })
 })

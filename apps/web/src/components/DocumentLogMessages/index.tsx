@@ -1,12 +1,9 @@
 import { useMemo } from 'react'
 
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { MessageList } from '$/components/ChatWrapper'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 
@@ -25,11 +22,10 @@ export function DocumentLogMessages({
     })
   }, [messages])
 
-  const { value: expandParameters, setValue: setExpandParameters } =
-    useLocalStorage({
-      key: AppLocalStorage.expandParameters,
-      defaultValue: false,
-    })
+  const { value: expandParameters, setValue: setExpandParameters } = useLocalStorage({
+    key: AppLocalStorage.expandParameters,
+    defaultValue: false,
+  })
 
   if (!messages.length) {
     return (
@@ -48,10 +44,7 @@ export function DocumentLogMessages({
         {sourceMapAvailable && (
           <div className='flex flex-row gap-2 items-center'>
             <Text.H6M>Expand parameters</Text.H6M>
-            <SwitchToggle
-              checked={expandParameters}
-              onCheckedChange={setExpandParameters}
-            />
+            <SwitchToggle checked={expandParameters} onCheckedChange={setExpandParameters} />
           </div>
         )}
       </div>

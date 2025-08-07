@@ -152,9 +152,7 @@ describe('promptCache', async () => {
             streamType: 'invalid',
           },
         }),
-      ).rejects.toThrowError(
-        'Invalid "streamType" response, it should be "text" or "object"',
-      )
+      ).rejects.toThrowError('Invalid "streamType" response, it should be "text" or "object"')
     })
 
     it('silently fails when cache throws error', async () => {

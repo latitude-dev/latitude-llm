@@ -1,55 +1,47 @@
 import {
-  DocumentLog,
+  type DocumentLog,
   Providers,
-  PublicManualEvaluationResultV2,
-  ToolRequest,
+  type PublicManualEvaluationResultV2,
+  type ToolRequest,
   type ChainEventDto,
   type ToolCallResponse,
 } from '@latitude-data/constants'
-import {
-  type Message,
-  type MessageRole,
-  type ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
+import type { Message, MessageRole, ToolCall } from '@latitude-data/constants/legacyCompiler'
 
 import env from '$sdk/env'
-import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
-import {
-  ApiErrorCodes,
-  ApiErrorJsonResponse,
-  LatitudeApiError,
-} from '$sdk/utils/errors'
+import { type GatewayApiConfig, RouteResolver } from '$sdk/utils'
+import { ApiErrorCodes, type ApiErrorJsonResponse, LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
 import { streamChat } from '$sdk/utils/streamChat'
 import { streamRun } from '$sdk/utils/streamRun'
 import { syncChat } from '$sdk/utils/syncChat'
 import { syncRun } from '$sdk/utils/syncRun'
 import {
-  ChatOptions,
-  GetOrCreatePromptOptions,
-  GetPromptOptions,
+  type ChatOptions,
+  type GetOrCreatePromptOptions,
+  type GetPromptOptions,
   HandlerType,
   LogSources,
-  Project,
-  Prompt,
-  RenderChainOptions,
-  RenderPromptOptions,
-  RenderToolCallDetails,
-  RenderToolCalledFn,
-  RunPromptOptions,
-  SDKOptions,
-  StreamChainResponse,
-  ToolHandler,
-  ToolSpec,
-  Version,
+  type Project,
+  type Prompt,
+  type RenderChainOptions,
+  type RenderPromptOptions,
+  type RenderToolCallDetails,
+  type RenderToolCalledFn,
+  type RunPromptOptions,
+  type SDKOptions,
+  type StreamChainResponse,
+  type ToolHandler,
+  type ToolSpec,
+  type Version,
 } from '$sdk/utils/types'
 import {
-  AdapterMessageType,
+  type AdapterMessageType,
   Chain,
-  Config,
+  type Config,
   ContentType,
   MessageRole as PromptlMessageRole,
-  ProviderAdapter,
+  type ProviderAdapter,
   render,
   type Message as PromptlMessage,
   type ToolCallContent,
@@ -119,10 +111,7 @@ class Latitude {
     get: (path: string, args?: GetPromptOptions) => Promise<Prompt>
     getAll: (args?: GetPromptOptions) => Promise<Prompt[]>
     create: (path: string, args?: GetOrCreatePromptOptions) => Promise<Prompt>
-    getOrCreate: (
-      path: string,
-      args?: GetOrCreatePromptOptions,
-    ) => Promise<Prompt>
+    getOrCreate: (path: string, args?: GetOrCreatePromptOptions) => Promise<Prompt>
     run: <Tools extends ToolSpec = {}>(
       path: string,
       args: RunPromptOptions<Tools>,
@@ -246,14 +235,9 @@ class Latitude {
     }) as typeof _renderStep
 
     const _renderCompletion = this.renderCompletion.bind(this)
-    this.renderCompletion = ((
-      ...args: Parameters<typeof _renderCompletion>
-    ) => {
+    this.renderCompletion = ((...args: Parameters<typeof _renderCompletion>) => {
       if (!Latitude.instrumentation) return _renderCompletion(...args)
-      return Latitude.instrumentation.wrapRenderCompletion(
-        _renderCompletion,
-        ...args,
-      )
+      return Latitude.instrumentation.wrapRenderCompletion(_renderCompletion, ...args)
     }) as typeof _renderCompletion
 
     const _renderTool = this.renderTool.bind(this)
@@ -263,10 +247,7 @@ class Latitude {
     }) as typeof _renderTool
   }
 
-  private async getPrompt(
-    path: string,
-    { projectId, versionUuid }: GetPromptOptions = {},
-  ) {
+  private async getPrompt(path: string, { projectId, versionUuid }: GetPromptOptions = {}) {
     projectId = projectId ?? this.options.projectId
     if (!projectId) throw new Error('Project ID is required')
 
@@ -294,10 +275,7 @@ class Latitude {
     return (await response.json()) as Prompt
   }
 
-  private async getAllPrompts({
-    projectId,
-    versionUuid,
-  }: GetPromptOptions = {}) {
+  private async getAllPrompts({ projectId, versionUuid }: GetPromptOptions = {}) {
     projectId = projectId ?? this.options.projectId
     if (!projectId) throw new Error('Project ID is required')
 
@@ -376,10 +354,7 @@ class Latitude {
     return (await response.json()) as Prompt
   }
 
-  private async runPrompt<Tools extends ToolSpec>(
-    path: string,
-    options: RunPromptOptions<Tools>,
-  ) {
+  private async runPrompt<Tools extends ToolSpec>(path: string, options: RunPromptOptions<Tools>) {
     const _options = {
       ...options,
       options: {
@@ -469,9 +444,7 @@ class Latitude {
     return (await httpResponse.json()) as DocumentLog
   }
 
-  protected async renderCompletion<
-    M extends AdapterMessageType = PromptlMessage,
-  >({
+  protected async renderCompletion<M extends AdapterMessageType = PromptlMessage>({
     messages,
     config,
     onStep,
@@ -512,9 +485,7 @@ class Latitude {
       config: {},
     }).messages[0]!
 
-    const toolRequests = promptlMessage.content.filter(
-      (c) => c.type === 'tool-call',
-    )
+    const toolRequests = promptlMessage.content.filter((c) => c.type === 'tool-call')
 
     return {
       messages: [message],
@@ -588,8 +559,7 @@ class Latitude {
 
       const result = await this.renderStep({
         step: index,
-        provider:
-          (step.config.provider as string) || prompt.provider || 'unknown',
+        provider: (step.config.provider as string) || prompt.provider || 'unknown',
         config,
         prompt: prompt.content,
         parameters,
@@ -631,9 +601,7 @@ class Latitude {
     }
   }
 
-  private async handleToolRequests<
-    M extends AdapterMessageType = PromptlMessage,
-  >({
+  private async handleToolRequests<M extends AdapterMessageType = PromptlMessage>({
     toolRequests,
     tools,
     adapter,
@@ -772,10 +740,7 @@ class Latitude {
     return (await response.json()) as Version
   }
 
-  private async getVersion(
-    projectId: number,
-    versionUuid: string,
-  ): Promise<Version> {
+  private async getVersion(projectId: number, versionUuid: string): Promise<Version> {
     const response = await makeRequest<HandlerType.GetVersion>({
       handler: HandlerType.GetVersion,
       params: { projectId, versionUuid },

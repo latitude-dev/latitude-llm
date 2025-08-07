@@ -4,23 +4,11 @@ import { useCallback } from 'react'
 
 import { useNavigate } from './useNavigate'
 
-type ISearchParams =
-  | Record<string, string>
-  | string[][]
-  | string
-  | URLSearchParams
-  | undefined
+type ISearchParams = Record<string, string> | string[][] | string | URLSearchParams | undefined
 
-type ConditionalResponse<
-  R extends unknown,
-  Raw extends boolean,
-> = Raw extends true ? Response | void : R | void
+type ConditionalResponse<R, Raw extends boolean> = Raw extends true ? Response | void : R | void
 
-export async function handleResponse<
-  R extends unknown = unknown,
-  I extends unknown = unknown,
-  Raw extends boolean = false,
->({
+export async function handleResponse<R = unknown, I = unknown, Raw extends boolean = false>({
   response,
   toast,
   serializer,
@@ -81,11 +69,7 @@ export async function handleResponse<
   }
 }
 
-export async function executeFetch<
-  R extends unknown = unknown,
-  I extends unknown = unknown,
-  Raw extends boolean = false,
->({
+export async function executeFetch<R = unknown, I = unknown, Raw extends boolean = false>({
   route,
   searchParams,
   toast,
@@ -115,11 +99,7 @@ export async function executeFetch<
   })
 }
 
-export default function useFetcher<
-  R extends unknown = unknown,
-  I extends unknown = unknown,
-  Raw extends boolean = false,
->(
+export default function useFetcher<R = unknown, I = unknown, Raw extends boolean = false>(
   route?: string,
   {
     fallback = [],
@@ -151,16 +131,7 @@ export default function useFetcher<
       onFail,
     })
     return response as R
-  }, [
-    route,
-    searchParams,
-    toast,
-    serializer,
-    onFail,
-    onSuccess,
-    navigate,
-    fallback,
-  ])
+  }, [route, searchParams, toast, serializer, onFail, onSuccess, navigate, fallback])
 }
 
 function buildRoute(route: string, searchParams?: ISearchParams) {
@@ -169,5 +140,3 @@ function buildRoute(route: string, searchParams?: ISearchParams) {
   const params = new URLSearchParams(searchParams)
   return route.toString() + '?' + params.toString()
 }
-
-export type UseFetcherArgs = Parameters<typeof useFetcher>

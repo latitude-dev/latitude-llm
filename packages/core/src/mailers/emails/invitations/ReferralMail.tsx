@@ -4,7 +4,7 @@ import React from 'react'
 import { Link, Text } from '@react-email/components'
 
 import ContainerLayout from '../_components/ContainerLayout'
-import { User } from '../../../browser'
+import type { User } from '../../../browser'
 
 type Props = {
   invitee: User
@@ -14,8 +14,8 @@ export default function InvitationMail({ invitee }: Props) {
     <ContainerLayout previewText={`You've been invited to join Latitude!`}>
       <Text>Hi!</Text>
       <Text>
-        {invitee.name} has invited you to join Latitude. Click the link below to
-        set up an account for free.
+        {invitee.name} has invited you to join Latitude. Click the link below to set up an account
+        for free.
       </Text>
       <Link
         href={`${env.APP_URL}/setup`}

@@ -1,4 +1,4 @@
-import { ProviderApiKey } from '../../browser'
+import type { ProviderApiKey } from '../../browser'
 import { database } from '../../client'
 import { ProviderApiKeysRepository } from '../../repositories'
 

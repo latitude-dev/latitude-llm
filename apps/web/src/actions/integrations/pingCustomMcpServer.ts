@@ -12,7 +12,4 @@ export const pingCustomMcpAction = authProcedure
       url: z.string(),
     }),
   )
-  .handler(
-    async ({ input }) =>
-      await pingCustomMCPServer(input.url).then((r) => r.unwrap()),
-  )
+  .handler(async ({ input }) => await pingCustomMCPServer(input.url).then((r) => r.unwrap()))

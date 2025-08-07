@@ -1,7 +1,7 @@
-import { ComponentType, EventHandler, MouseEvent, ReactNode } from 'react'
+import type { ComponentType, EventHandler, MouseEvent, ReactNode } from 'react'
 import type { UrlObject } from 'url'
-import { ConversationMetadata } from 'promptl-ai'
-import { BlockRootNode } from './Editor/state/promptlToLexical/types'
+import type { ConversationMetadata } from 'promptl-ai'
+import type { BlockRootNode } from './Editor/state/promptlToLexical/types'
 
 export type IncludedPrompt = {
   url: string
@@ -25,9 +25,7 @@ export type BlocksEditorProps = {
     onClick?: EventHandler<MouseEvent<HTMLAnchorElement>>
   }>
   prompts: Record<string, IncludedPrompt>
-  onRequestPromptMetadata: (
-    prompt: IncludedPrompt,
-  ) => Promise<ConversationMetadata>
+  onRequestPromptMetadata: (prompt: IncludedPrompt) => Promise<ConversationMetadata>
   onChange: (value: string) => void
   className?: string
   readOnlyMessage?: string

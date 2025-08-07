@@ -1,10 +1,10 @@
-import { AppRouteHandler } from '$/openApi/types'
+import type { AppRouteHandler } from '$/openApi/types'
 import {
   CommitsRepository,
   DocumentLogsRepository,
   EvaluationsV2Repository,
 } from '@latitude-data/core/repositories'
-import { AnnotateRoute } from './annotate.route'
+import type { AnnotateRoute } from './annotate.route'
 import { annotateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/annotate'
 import serializeProviderLog from '@latitude-data/core/services/providerLogs/serialize'
 import {
@@ -23,19 +23,13 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
   const workspace = c.get('workspace')
   const evaluationsRepo = new EvaluationsV2Repository(workspace.id)
   const providerLogsRepo = new DocumentLogsRepository(workspace.id)
-  const documentLog = await providerLogsRepo
-    .findByUuid(conversationUuid)
-    .then((r) => r.unwrap())
+  const documentLog = await providerLogsRepo.findByUuid(conversationUuid).then((r) => r.unwrap())
   if (!documentLog) {
     throw new NotFoundError('Could not find log with uuid ${conversationUuid}')
   }
-  const providerLog = await findLastProviderLogFromDocumentLogUuid(
-    documentLog.uuid,
-  )
+  const providerLog = await findLastProviderLogFromDocumentLogUuid(documentLog.uuid)
   if (!providerLog) {
-    throw new NotFoundError(
-      `Could not find provider log for log ${documentLog.uuid}`,
-    )
+    throw new NotFoundError(`Could not find provider log for log ${documentLog.uuid}`)
   }
 
   const document = await findDocumentFromLog(documentLog)
@@ -56,9 +50,7 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
     })
     .then((r) => r.unwrap())
   if (!commit) {
-    throw new NotFoundError(
-      `Could not find version ${versionUuid} in project ${project.name}`,
-    )
+    throw new NotFoundError(`Could not find version ${versionUuid} in project ${project.name}`)
   }
 
   const evaluation = await evaluationsRepo

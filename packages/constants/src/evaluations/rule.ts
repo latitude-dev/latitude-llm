@@ -11,14 +11,12 @@ const ruleEvaluationResultError = baseEvaluationResultError.extend({})
 
 // EXACT MATCH
 
-const ruleEvaluationExactMatchConfiguration =
-  ruleEvaluationConfiguration.extend({
-    caseInsensitive: z.boolean(),
-  })
-const ruleEvaluationExactMatchResultMetadata =
-  ruleEvaluationResultMetadata.extend({
-    configuration: ruleEvaluationExactMatchConfiguration,
-  })
+const ruleEvaluationExactMatchConfiguration = ruleEvaluationConfiguration.extend({
+  caseInsensitive: z.boolean(),
+})
+const ruleEvaluationExactMatchResultMetadata = ruleEvaluationResultMetadata.extend({
+  configuration: ruleEvaluationExactMatchConfiguration,
+})
 const ruleEvaluationExactMatchResultError = ruleEvaluationResultError.extend({})
 export const RuleEvaluationExactMatchSpecification = {
   name: 'Exact Match',
@@ -44,16 +42,13 @@ export type RuleEvaluationExactMatchResultError = z.infer<
 
 // REGULAR EXPRESSION
 
-const ruleEvaluationRegularExpressionConfiguration =
-  ruleEvaluationConfiguration.extend({
-    pattern: z.string(),
-  })
-const ruleEvaluationRegularExpressionResultMetadata =
-  ruleEvaluationResultMetadata.extend({
-    configuration: ruleEvaluationRegularExpressionConfiguration,
-  })
-const ruleEvaluationRegularExpressionResultError =
-  ruleEvaluationResultError.extend({})
+const ruleEvaluationRegularExpressionConfiguration = ruleEvaluationConfiguration.extend({
+  pattern: z.string(),
+})
+const ruleEvaluationRegularExpressionResultMetadata = ruleEvaluationResultMetadata.extend({
+  configuration: ruleEvaluationRegularExpressionConfiguration,
+})
+const ruleEvaluationRegularExpressionResultError = ruleEvaluationResultError.extend({})
 export const RuleEvaluationRegularExpressionSpecification = {
   name: 'Regular Expression',
   description:
@@ -78,17 +73,14 @@ export type RuleEvaluationRegularExpressionResultError = z.infer<
 
 // SCHEMA VALIDATION
 
-const ruleEvaluationSchemaValidationConfiguration =
-  ruleEvaluationConfiguration.extend({
-    format: z.enum(['json']),
-    schema: z.string(),
-  })
-const ruleEvaluationSchemaValidationResultMetadata =
-  ruleEvaluationResultMetadata.extend({
-    configuration: ruleEvaluationSchemaValidationConfiguration,
-  })
-const ruleEvaluationSchemaValidationResultError =
-  ruleEvaluationResultError.extend({})
+const ruleEvaluationSchemaValidationConfiguration = ruleEvaluationConfiguration.extend({
+  format: z.enum(['json']),
+  schema: z.string(),
+})
+const ruleEvaluationSchemaValidationResultMetadata = ruleEvaluationResultMetadata.extend({
+  configuration: ruleEvaluationSchemaValidationConfiguration,
+})
+const ruleEvaluationSchemaValidationResultError = ruleEvaluationResultError.extend({})
 export const RuleEvaluationSchemaValidationSpecification = {
   name: 'Schema Validation',
   description:
@@ -113,19 +105,15 @@ export type RuleEvaluationSchemaValidationResultError = z.infer<
 
 // LENGTH COUNT
 
-const ruleEvaluationLengthCountConfiguration =
-  ruleEvaluationConfiguration.extend({
-    algorithm: z.enum(['character', 'word', 'sentence']),
-    minLength: z.number().optional(),
-    maxLength: z.number().optional(),
-  })
-const ruleEvaluationLengthCountResultMetadata =
-  ruleEvaluationResultMetadata.extend({
-    configuration: ruleEvaluationLengthCountConfiguration,
-  })
-const ruleEvaluationLengthCountResultError = ruleEvaluationResultError.extend(
-  {},
-)
+const ruleEvaluationLengthCountConfiguration = ruleEvaluationConfiguration.extend({
+  algorithm: z.enum(['character', 'word', 'sentence']),
+  minLength: z.number().optional(),
+  maxLength: z.number().optional(),
+})
+const ruleEvaluationLengthCountResultMetadata = ruleEvaluationResultMetadata.extend({
+  configuration: ruleEvaluationLengthCountConfiguration,
+})
+const ruleEvaluationLengthCountResultError = ruleEvaluationResultError.extend({})
 export const RuleEvaluationLengthCountSpecification = {
   name: 'Length Count',
   description:
@@ -150,18 +138,15 @@ export type RuleEvaluationLengthCountResultError = z.infer<
 
 // LEXICAL OVERLAP
 
-const ruleEvaluationLexicalOverlapConfiguration =
-  ruleEvaluationConfiguration.extend({
-    algorithm: z.enum(['substring', 'levenshtein_distance', 'rouge']),
-    minOverlap: z.number().optional(), // Percentage of overlap
-    maxOverlap: z.number().optional(), // Percentage of overlap
-  })
-const ruleEvaluationLexicalOverlapResultMetadata =
-  ruleEvaluationResultMetadata.extend({
-    configuration: ruleEvaluationLexicalOverlapConfiguration,
-  })
-const ruleEvaluationLexicalOverlapResultError =
-  ruleEvaluationResultError.extend({})
+const ruleEvaluationLexicalOverlapConfiguration = ruleEvaluationConfiguration.extend({
+  algorithm: z.enum(['substring', 'levenshtein_distance', 'rouge']),
+  minOverlap: z.number().optional(), // Percentage of overlap
+  maxOverlap: z.number().optional(), // Percentage of overlap
+})
+const ruleEvaluationLexicalOverlapResultMetadata = ruleEvaluationResultMetadata.extend({
+  configuration: ruleEvaluationLexicalOverlapConfiguration,
+})
+const ruleEvaluationLexicalOverlapResultError = ruleEvaluationResultError.extend({})
 export const RuleEvaluationLexicalOverlapSpecification = {
   name: 'Lexical Overlap',
   description:
@@ -186,18 +171,15 @@ export type RuleEvaluationLexicalOverlapResultError = z.infer<
 
 // SEMANTIC SIMILARITY
 
-const ruleEvaluationSemanticSimilarityConfiguration =
-  ruleEvaluationConfiguration.extend({
-    algorithm: z.enum(['cosine_distance']),
-    minSimilarity: z.number().optional(), // Percentage of similarity
-    maxSimilarity: z.number().optional(), // Percentage of similarity
-  })
-const ruleEvaluationSemanticSimilarityResultMetadata =
-  ruleEvaluationResultMetadata.extend({
-    configuration: ruleEvaluationSemanticSimilarityConfiguration,
-  })
-const ruleEvaluationSemanticSimilarityResultError =
-  ruleEvaluationResultError.extend({})
+const ruleEvaluationSemanticSimilarityConfiguration = ruleEvaluationConfiguration.extend({
+  algorithm: z.enum(['cosine_distance']),
+  minSimilarity: z.number().optional(), // Percentage of similarity
+  maxSimilarity: z.number().optional(), // Percentage of similarity
+})
+const ruleEvaluationSemanticSimilarityResultMetadata = ruleEvaluationResultMetadata.extend({
+  configuration: ruleEvaluationSemanticSimilarityConfiguration,
+})
+const ruleEvaluationSemanticSimilarityResultError = ruleEvaluationResultError.extend({})
 export const RuleEvaluationSemanticSimilaritySpecification = {
   name: 'Semantic Similarity',
   description:
@@ -222,18 +204,15 @@ export type RuleEvaluationSemanticSimilarityResultError = z.infer<
 
 // NUMERIC SIMILARITY
 
-const ruleEvaluationNumericSimilarityConfiguration =
-  ruleEvaluationConfiguration.extend({
-    algorithm: z.enum(['relative_difference']),
-    minSimilarity: z.number().optional(), // Percentage of similarity
-    maxSimilarity: z.number().optional(), // Percentage of similarity
-  })
-const ruleEvaluationNumericSimilarityResultMetadata =
-  ruleEvaluationResultMetadata.extend({
-    configuration: ruleEvaluationNumericSimilarityConfiguration,
-  })
-const ruleEvaluationNumericSimilarityResultError =
-  ruleEvaluationResultError.extend({})
+const ruleEvaluationNumericSimilarityConfiguration = ruleEvaluationConfiguration.extend({
+  algorithm: z.enum(['relative_difference']),
+  minSimilarity: z.number().optional(), // Percentage of similarity
+  maxSimilarity: z.number().optional(), // Percentage of similarity
+})
+const ruleEvaluationNumericSimilarityResultMetadata = ruleEvaluationResultMetadata.extend({
+  configuration: ruleEvaluationNumericSimilarityConfiguration,
+})
+const ruleEvaluationNumericSimilarityResultError = ruleEvaluationResultError.extend({})
 export const RuleEvaluationNumericSimilaritySpecification = {
   name: 'Numeric Similarity',
   description:
@@ -268,38 +247,56 @@ export enum RuleEvaluationMetric {
   NumericSimilarity = 'numeric_similarity',
 }
 
-// prettier-ignore
-export type RuleEvaluationConfiguration<M extends RuleEvaluationMetric = RuleEvaluationMetric> = 
-  M extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchConfiguration :
-  M extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionConfiguration :
-  M extends RuleEvaluationMetric.SchemaValidation ? RuleEvaluationSchemaValidationConfiguration :
-  M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountConfiguration :
-  M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapConfiguration :
-  M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityConfiguration :
-  M extends RuleEvaluationMetric.NumericSimilarity ? RuleEvaluationNumericSimilarityConfiguration :
-  never;
+export type RuleEvaluationConfiguration<M extends RuleEvaluationMetric = RuleEvaluationMetric> =
+  M extends RuleEvaluationMetric.ExactMatch
+    ? RuleEvaluationExactMatchConfiguration
+    : M extends RuleEvaluationMetric.RegularExpression
+      ? RuleEvaluationRegularExpressionConfiguration
+      : M extends RuleEvaluationMetric.SchemaValidation
+        ? RuleEvaluationSchemaValidationConfiguration
+        : M extends RuleEvaluationMetric.LengthCount
+          ? RuleEvaluationLengthCountConfiguration
+          : M extends RuleEvaluationMetric.LexicalOverlap
+            ? RuleEvaluationLexicalOverlapConfiguration
+            : M extends RuleEvaluationMetric.SemanticSimilarity
+              ? RuleEvaluationSemanticSimilarityConfiguration
+              : M extends RuleEvaluationMetric.NumericSimilarity
+                ? RuleEvaluationNumericSimilarityConfiguration
+                : never
 
-// prettier-ignore
-export type RuleEvaluationResultMetadata<M extends RuleEvaluationMetric = RuleEvaluationMetric> = 
-  M extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchResultMetadata :
-  M extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionResultMetadata :
-  M extends RuleEvaluationMetric.SchemaValidation ? RuleEvaluationSchemaValidationResultMetadata :
-  M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountResultMetadata :
-  M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapResultMetadata :
-  M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityResultMetadata :
-  M extends RuleEvaluationMetric.NumericSimilarity ? RuleEvaluationNumericSimilarityResultMetadata :
-  never;
+export type RuleEvaluationResultMetadata<M extends RuleEvaluationMetric = RuleEvaluationMetric> =
+  M extends RuleEvaluationMetric.ExactMatch
+    ? RuleEvaluationExactMatchResultMetadata
+    : M extends RuleEvaluationMetric.RegularExpression
+      ? RuleEvaluationRegularExpressionResultMetadata
+      : M extends RuleEvaluationMetric.SchemaValidation
+        ? RuleEvaluationSchemaValidationResultMetadata
+        : M extends RuleEvaluationMetric.LengthCount
+          ? RuleEvaluationLengthCountResultMetadata
+          : M extends RuleEvaluationMetric.LexicalOverlap
+            ? RuleEvaluationLexicalOverlapResultMetadata
+            : M extends RuleEvaluationMetric.SemanticSimilarity
+              ? RuleEvaluationSemanticSimilarityResultMetadata
+              : M extends RuleEvaluationMetric.NumericSimilarity
+                ? RuleEvaluationNumericSimilarityResultMetadata
+                : never
 
-// prettier-ignore
-export type RuleEvaluationResultError<M extends RuleEvaluationMetric = RuleEvaluationMetric> = 
-  M extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchResultError :
-  M extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionResultError :
-  M extends RuleEvaluationMetric.SchemaValidation ? RuleEvaluationSchemaValidationResultError :
-  M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountResultError :
-  M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapResultError :
-  M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityResultError :
-  M extends RuleEvaluationMetric.NumericSimilarity ? RuleEvaluationNumericSimilarityResultError :
-  never;
+export type RuleEvaluationResultError<M extends RuleEvaluationMetric = RuleEvaluationMetric> =
+  M extends RuleEvaluationMetric.ExactMatch
+    ? RuleEvaluationExactMatchResultError
+    : M extends RuleEvaluationMetric.RegularExpression
+      ? RuleEvaluationRegularExpressionResultError
+      : M extends RuleEvaluationMetric.SchemaValidation
+        ? RuleEvaluationSchemaValidationResultError
+        : M extends RuleEvaluationMetric.LengthCount
+          ? RuleEvaluationLengthCountResultError
+          : M extends RuleEvaluationMetric.LexicalOverlap
+            ? RuleEvaluationLexicalOverlapResultError
+            : M extends RuleEvaluationMetric.SemanticSimilarity
+              ? RuleEvaluationSemanticSimilarityResultError
+              : M extends RuleEvaluationMetric.NumericSimilarity
+                ? RuleEvaluationNumericSimilarityResultError
+                : never
 
 export const RuleEvaluationSpecification = {
   name: 'Programmatic Rule',
@@ -307,7 +304,7 @@ export const RuleEvaluationSpecification = {
   configuration: ruleEvaluationConfiguration,
   resultMetadata: ruleEvaluationResultMetadata,
   resultError: ruleEvaluationResultError,
-  // prettier-ignore
+
   metrics: {
     [RuleEvaluationMetric.ExactMatch]: RuleEvaluationExactMatchSpecification,
     [RuleEvaluationMetric.RegularExpression]: RuleEvaluationRegularExpressionSpecification,

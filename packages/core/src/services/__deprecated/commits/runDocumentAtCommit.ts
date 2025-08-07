@@ -1,18 +1,18 @@
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import {
-  ChainStepResponse,
-  Commit,
+  type ChainStepResponse,
+  type Commit,
   DocumentType,
   ErrorableEntity,
-  Experiment,
-  LogSources,
-  StreamType,
+  type Experiment,
+  type LogSources,
+  type StreamType,
   type DocumentVersion,
   type Workspace,
 } from '../../../browser'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { Result } from '../../../lib/Result'
-import { telemetry, TelemetryContext } from '../../../telemetry'
+import { telemetry, type TelemetryContext } from '../../../telemetry'
 import { RunDocumentChecker } from '../../commits/RunDocumentChecker'
 import { createDocumentLog } from '../../documentLogs/create'
 import { getResolvedContent } from '../../documents'
@@ -157,8 +157,7 @@ export async function runDocumentAtCommitLegacy({
     },
   }
 
-  const runFn =
-    document.documentType === DocumentType.Agent ? runAgent : runChain
+  const runFn = document.documentType === DocumentType.Agent ? runAgent : runChain
   const runResult = runFn(runArgs)
 
   return Result.ok({

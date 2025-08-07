@@ -2,19 +2,19 @@
 
 import * as SelectPrimitive from '@radix-ui/react-select'
 import {
-  ComponentPropsWithoutRef,
-  ElementRef,
+  type ComponentPropsWithoutRef,
+  type ElementRef,
   forwardRef,
-  ReactNode,
+  type ReactNode,
   useEffect,
   useMemo,
   useState,
 } from 'react'
 
-import { SelectOption, SelectOptionGroup } from '..'
+import type { SelectOption, SelectOptionGroup } from '..'
 import { cn } from '../../../../lib/utils'
-import { Icon, IconName } from '../../Icons'
-import { type SelectProps } from '../index'
+import { Icon, type IconName } from '../../Icons'
+import type { SelectProps } from '../index'
 
 const SelectRoot = SelectPrimitive.Root
 
@@ -48,11 +48,7 @@ function SelectValueWithDescription({
 }) {
   return (
     <div className='w-full flex flex-col items-start gap-x-2 min-w-0 truncate'>
-      {typeof description === 'string' ? (
-        <span>{description}</span>
-      ) : (
-        description
-      )}
+      {typeof description === 'string' ? <span>{description}</span> : description}
       {children}
     </div>
   )
@@ -61,12 +57,10 @@ function SelectValueWithDescription({
 function findSelected(options: SelectOption[], selected: unknown) {
   // Performing a non-strict comparison to avoid problems with different
   // types between the options values and the selected value
-  return options.find((option) => option.value == selected)
+  return options.find((option) => option.value === selected)
 }
 
-export function flattenOption(
-  optionGroups: SelectOptionGroup[] | SelectOption[],
-): SelectOption[] {
+export function flattenOption(optionGroups: SelectOptionGroup[] | SelectOption[]): SelectOption[] {
   return optionGroups.reduce<SelectOption[]>((acc, option) => {
     if ('options' in option) {
       return [...acc, ...flattenOption(option.options)]
@@ -97,9 +91,7 @@ const SelectValue = ({
       </SelectValuePrimitive>
     )
 
-  return (
-    <SelectValueWithIcon icon={option.icon}>{option.label}</SelectValueWithIcon>
-  )
+  return <SelectValueWithIcon icon={option.icon}>{option.label}</SelectValueWithIcon>
 }
 
 type TriggerProps = ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
@@ -108,10 +100,7 @@ type TriggerProps = ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
   onRemove?: () => void
   size?: SelectProps['size']
 }
-const SelectTrigger = forwardRef<
-  ElementRef<typeof SelectPrimitive.Trigger>,
-  TriggerProps
->(
+const SelectTrigger = forwardRef<ElementRef<typeof SelectPrimitive.Trigger>, TriggerProps>(
   (
     {
       fullWidth = true,
@@ -149,12 +138,7 @@ const SelectTrigger = forwardRef<
         >
           {children}
           <SelectPrimitive.Icon asChild>
-            {!removable && (
-              <Icon
-                name='chevronsUpDown'
-                className='min-w-0 flex-none opacity-50'
-              />
-            )}
+            {!removable && <Icon name='chevronsUpDown' className='min-w-0 flex-none opacity-50' />}
           </SelectPrimitive.Icon>
         </SelectPrimitive.Trigger>
         {removable && (
@@ -179,10 +163,7 @@ const SelectScrollUpButton = forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollUpButton
     ref={ref}
-    className={cn(
-      'flex cursor-default items-center justify-center py-1',
-      className,
-    )}
+    className={cn('flex cursor-default items-center justify-center py-1', className)}
     {...props}
   >
     <Icon name='chevronUp' />
@@ -196,17 +177,13 @@ const SelectScrollDownButton = forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollDownButton
     ref={ref}
-    className={cn(
-      'flex cursor-default items-center justify-center py-1',
-      className,
-    )}
+    className={cn('flex cursor-default items-center justify-center py-1', className)}
     {...props}
   >
     <Icon name='chevronDown' />
   </SelectPrimitive.ScrollDownButton>
 ))
-SelectScrollDownButton.displayName =
-  SelectPrimitive.ScrollDownButton.displayName
+SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 
 const SelectContent = forwardRef<
   ElementRef<typeof SelectPrimitive.Content>,
@@ -280,31 +257,30 @@ type SelectItemProps = ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & {
   icon?: ReactNode | IconName
   description?: string
 }
-const SelectItem = forwardRef<
-  ElementRef<typeof SelectPrimitive.Item>,
-  SelectItemProps
->(({ className, icon, children, description, ...props }, ref) => (
-  <SelectPrimitive.Item
-    ref={ref}
-    className={cn(
-      'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-      className,
-    )}
-    {...props}
-  >
-    <span className='absolute right-2 flex h-3.5 w-3.5 items-center justify-center'>
-      <SelectPrimitive.ItemIndicator>
-        <Icon name='checkClean' />
-      </SelectPrimitive.ItemIndicator>
-    </span>
+const SelectItem = forwardRef<ElementRef<typeof SelectPrimitive.Item>, SelectItemProps>(
+  ({ className, icon, children, description, ...props }, ref) => (
+    <SelectPrimitive.Item
+      ref={ref}
+      className={cn(
+        'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        className,
+      )}
+      {...props}
+    >
+      <span className='absolute right-2 flex h-3.5 w-3.5 items-center justify-center'>
+        <SelectPrimitive.ItemIndicator>
+          <Icon name='checkClean' />
+        </SelectPrimitive.ItemIndicator>
+      </span>
 
-    <SelectValueWithIcon icon={icon}>
-      <SelectValueWithDescription description={description}>
-        <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-      </SelectValueWithDescription>
-    </SelectValueWithIcon>
-  </SelectPrimitive.Item>
-))
+      <SelectValueWithIcon icon={icon}>
+        <SelectValueWithDescription description={description}>
+          <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+        </SelectValueWithDescription>
+      </SelectValueWithIcon>
+    </SelectPrimitive.Item>
+  ),
+)
 SelectItem.displayName = SelectPrimitive.Item.displayName
 
 const SelectSeparator = forwardRef<

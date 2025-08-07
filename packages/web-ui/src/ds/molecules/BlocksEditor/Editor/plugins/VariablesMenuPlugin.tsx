@@ -1,4 +1,5 @@
-import React, { useCallback, useState, useEffect } from 'react'
+import type React from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   LexicalTypeaheadMenuPlugin,
@@ -6,7 +7,7 @@ import {
   useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodes, LexicalEditor, TextNode } from 'lexical'
+import { $insertNodes, type LexicalEditor, TextNode } from 'lexical'
 import { cn } from '../../../../../lib/utils'
 import { Text } from '../../../../atoms/Text'
 import { $getVariableNames, VariableNode } from '../nodes/VariableNode'
@@ -47,7 +48,6 @@ function ComponentPickerMenuItem({
         },
       )}
       ref={option.setRefElement}
-      role='option'
       aria-selected={isSelected}
       id={`typeahead-item-${index}`}
       onMouseEnter={onMouseEnter}
@@ -61,9 +61,7 @@ function ComponentPickerMenuItem({
 export function getAllVariables(editor: LexicalEditor): string[] {
   let variables: string[] = []
   editor.getEditorState().read(() => {
-    variables = Array.from(
-      new Set([...$getVariableNames(), ...$getStepNames()]),
-    )
+    variables = Array.from(new Set([...$getVariableNames(), ...$getStepNames()]))
   })
   return variables
 }
@@ -84,13 +82,10 @@ export function VariableMenuPlugin(): React.JSX.Element {
 
   const allVariables = getVariableOptions(editor)
   const filteredOptions = queryString
-    ? allVariables.filter((option) =>
-        option.name.toLowerCase().includes(queryString.toLowerCase()),
-      )
+    ? allVariables.filter((option) => option.name.toLowerCase().includes(queryString.toLowerCase()))
     : allVariables
 
-  const [options, setOptions] =
-    useState<ComponentPickerOption[]>(filteredOptions)
+  const [options, setOptions] = useState<ComponentPickerOption[]>(filteredOptions)
 
   useEffect(() => {
     const allVariables = getVariableOptions(editor)

@@ -3,7 +3,7 @@
 import { useCommitsFromProject } from '$/stores/commitsStore'
 import useDocumentVersions from '$/stores/documentVersions'
 import useProjects from '$/stores/projects'
-import { Commit, Project, DocumentVersion } from '@latitude-data/core/browser'
+import type { Commit, Project, DocumentVersion } from '@latitude-data/core/browser'
 import { useParams, usePathname } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 
@@ -38,9 +38,7 @@ export function useLatteContext() {
   }, [documentVersions, documentUuid])
 
   return useCallback(() => {
-    const meta = document.querySelector<HTMLMetaElement>(
-      `meta[name="location-description"]`,
-    )
+    const meta = document.querySelector<HTMLMetaElement>(`meta[name="location-description"]`)
     const locationDescription = meta?.content || 'The Latitude Platform'
 
     const items = contextItems({
@@ -70,15 +68,11 @@ function contextItems({
   commit?: Commit
   document?: DocumentVersion
 }): { name: string; value: string }[] {
-  const items: { name: string; value: string }[] = [
-    { name: 'path', value: pathname },
-  ]
+  const items: { name: string; value: string }[] = [{ name: 'path', value: pathname }]
 
   items.push({
     name: 'project',
-    value: project
-      ? JSON.stringify({ id: project.id, name: project.name })
-      : 'No project',
+    value: project ? JSON.stringify({ id: project.id, name: project.name }) : 'No project',
   })
   if (!project) return items
 

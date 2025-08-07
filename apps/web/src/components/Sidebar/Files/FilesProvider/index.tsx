@@ -9,16 +9,13 @@ import {
   restrictToFirstScrollableAncestor,
 } from '@latitude-data/web-ui/hooks/useDnD'
 
-import { createContext, ReactNode, useCallback, useContext } from 'react'
+import { createContext, type ReactNode, useCallback, useContext } from 'react'
 
-import { Node } from '../useTree'
-import {
-  DraggableAndDroppableData,
-  DraggableOverlayNode,
-} from './DragOverlayNode'
+import type { Node } from '../useTree'
+import { type DraggableAndDroppableData, DraggableOverlayNode } from './DragOverlayNode'
 import { useOpenPaths } from '../useOpenPaths'
 import { useDragEndFile } from './useDragEndFile'
-import { type SidebarLinkContext } from '../index'
+import type { SidebarLinkContext } from '../index'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 
 type IFilesContext = {

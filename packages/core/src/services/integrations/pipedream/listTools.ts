@@ -1,27 +1,23 @@
-import { JSONSchema7 } from 'json-schema'
-import { ConfigurableProp } from '@pipedream/sdk'
-import { PipedreamComponent, PipedreamComponentType } from '../../../constants'
-import { McpTool } from '@latitude-data/constants'
-import { PipedreamIntegration } from '../../../browser'
+import type { JSONSchema7 } from 'json-schema'
+import type { ConfigurableProp } from '@pipedream/sdk'
+import type { PipedreamComponent, PipedreamComponentType } from '../../../constants'
+import type { McpTool } from '@latitude-data/constants'
+import type { PipedreamIntegration } from '../../../browser'
 import { getApp } from './apps'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
+import type { PromisedResult } from '../../../lib/Transaction'
 
 const getOptions = <T>(prop: ConfigurableProp): T[] | undefined => {
   if (!('options' in prop) || !prop.options) return
 
   // If options are label/value objects, take .value
   if (typeof prop.options[0] === 'object' && 'value' in prop.options[0]) {
-    return (prop.options as Array<{ label: string; value: T }>).map(
-      (o) => o.value,
-    )
+    return (prop.options as Array<{ label: string; value: T }>).map((o) => o.value)
   }
   return prop.options as T[]
 }
 
-export function propToJSONSchema(
-  prop: ConfigurableProp,
-): JSONSchema7 | undefined {
+export function propToJSONSchema(prop: ConfigurableProp): JSONSchema7 | undefined {
   const base: Partial<JSONSchema7> = {
     title: prop.name,
     description: prop.description,

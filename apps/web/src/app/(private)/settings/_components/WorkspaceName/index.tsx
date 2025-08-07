@@ -1,5 +1,5 @@
 'use client'
-import React from 'react'
+import type React from 'react'
 
 import { FormField } from '@latitude-data/web-ui/atoms/FormField'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -28,11 +28,7 @@ export default function WorkspaceName() {
         </FormField>
       )}
       {!isLoading && workspace && (
-        <Input
-          defaultValue={workspace.name}
-          label='Workspace name'
-          onChange={debouncedChange}
-        />
+        <Input defaultValue={workspace.name} label='Workspace name' onChange={debouncedChange} />
       )}
     </div>
   )

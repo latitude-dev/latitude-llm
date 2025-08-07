@@ -1,14 +1,14 @@
 import {
-  AssistantMessage,
-  MessageContent,
-  ToolCall,
-  ToolRequestContent,
-  ToolContent,
+  type AssistantMessage,
+  type MessageContent,
+  type ToolCall,
+  type ToolRequestContent,
+  type ToolContent,
   MessageRole,
-  ToolMessage,
+  type ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { ToolCallContent as ToolRequest } from 'promptl-ai'
-import { StreamType, ToolCallResponse } from './index'
+import type { ToolCallContent as ToolRequest } from 'promptl-ai'
+import type { StreamType, ToolCallResponse } from './index'
 
 type BuildMessageParams<T extends StreamType> = T extends 'object'
   ? {
@@ -31,7 +31,7 @@ type BuildMessageParams<T extends StreamType> = T extends 'object'
 function parseToolResponseResult(result: string) {
   try {
     return JSON.parse(result)
-  } catch (error) {
+  } catch (_error) {
     return { result }
   }
 }
@@ -39,29 +39,19 @@ function parseToolResponseResult(result: string) {
 const DEFAULT_OBJECT_TO_STRING_MESSAGE =
   'Error: Provider returned an object that could not be stringified'
 
-export function objectToString(
-  object: any,
-  message = DEFAULT_OBJECT_TO_STRING_MESSAGE,
-) {
+export function objectToString(object: any, message = DEFAULT_OBJECT_TO_STRING_MESSAGE) {
   try {
     if (!object) return ''
 
     return JSON.stringify(object, null, 2)
-  } catch (error) {
+  } catch (_error) {
     return message
   }
 }
 
-export function buildResponseMessage<T extends StreamType>({
-  type,
-  data,
-}: BuildMessageParams<T>) {
+export function buildResponseMessage<T extends StreamType>({ type, data }: BuildMessageParams<T>) {
   if (!data) return undefined
-  if (
-    'toolCallResponses' in data &&
-    data.toolCallResponses &&
-    data.toolCallResponses.length > 0
-  ) {
+  if ('toolCallResponses' in data && data.toolCallResponses && data.toolCallResponses.length > 0) {
     return buildToolResultMessage(data.toolCallResponses)
   }
 
@@ -69,10 +59,7 @@ export function buildResponseMessage<T extends StreamType>({
   return buildAssistantMessage<T>({ type, data })
 }
 
-function buildAssistantMessage<T extends StreamType>({
-  type,
-  data,
-}: BuildMessageParams<T>) {
+function buildAssistantMessage<T extends StreamType>({ type, data }: BuildMessageParams<T>) {
   const text = data!.text
   const object = type === 'object' ? data!.object : undefined
   const reasoning = type === 'text' ? data!.reasoning : undefined
@@ -110,10 +97,7 @@ function addToolCallContents(toolCalls: ToolCall[], content: MessageContent[]) {
   return [...content, ...toolCallContents]
 }
 
-function addObjectContent(
-  object: any,
-  content: MessageContent[],
-): MessageContent[] {
+function addObjectContent(object: any, content: MessageContent[]): MessageContent[] {
   return [
     ...content,
     {
@@ -123,10 +107,7 @@ function addObjectContent(
   ]
 }
 
-function addReasoningContent(
-  reasoning: string,
-  content: MessageContent[],
-): MessageContent[] {
+function addReasoningContent(reasoning: string, content: MessageContent[]): MessageContent[] {
   return [
     ...content,
     {
@@ -136,10 +117,7 @@ function addReasoningContent(
   ]
 }
 
-function addTextContent(
-  text: string,
-  content: MessageContent[],
-): MessageContent[] {
+function addTextContent(text: string, content: MessageContent[]): MessageContent[] {
   return [
     ...content,
     {

@@ -1,6 +1,6 @@
 import { buildConfigFieldName } from '$/app/(private)/settings/_components/ProviderApiKeys/New/buildProviderPayload'
 import { OPENAI_PROVIDER_ENDPOINTS } from '@latitude-data/constants'
-import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
 
 const ENDPOINT_OPTIONS = OPENAI_PROVIDER_ENDPOINTS.reduce((acc, endpoint) => {
   acc.push({

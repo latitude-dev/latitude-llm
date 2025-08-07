@@ -1,7 +1,7 @@
-import { LatitudeEvent } from '../../../../events/events'
-import { WebhookPayload } from '../../../../services/webhooks/types'
+import type { LatitudeEvent } from '../../../../events/events'
+import type { WebhookPayload } from '../../../../services/webhooks/types'
 import { findDocumentFromLog } from '../../../../data-access/documentLogs'
-import { Result, TypedResult } from '../../../../lib/Result'
+import { Result, type TypedResult } from '../../../../lib/Result'
 import { findLastProviderLogFromDocumentLogUuid } from '../../../../data-access'
 import { buildProviderLogResponse } from '../../../../services/providerLogs'
 import { DocumentLogsRepository } from '../../../../repositories'
@@ -15,9 +15,7 @@ export async function processWebhookPayload(
         const { id, workspaceId } = event.data
         const repo = new DocumentLogsRepository(workspaceId)
         const log = await repo.find(id).then((r) => r.unwrap())
-        const providerLog = await findLastProviderLogFromDocumentLogUuid(
-          log.uuid,
-        )
+        const providerLog = await findLastProviderLogFromDocumentLogUuid(log.uuid)
 
         return Result.ok({
           eventType: event.type,
@@ -31,9 +29,7 @@ export async function processWebhookPayload(
             commitId: log.commitId,
             messages: providerLog?.messages,
             toolCalls: providerLog?.toolCalls,
-            response: providerLog
-              ? buildProviderLogResponse(providerLog)
-              : undefined,
+            response: providerLog ? buildProviderLogResponse(providerLog) : undefined,
           },
         })
       }

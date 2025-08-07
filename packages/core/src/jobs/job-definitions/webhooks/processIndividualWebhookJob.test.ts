@@ -1,15 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { processIndividualWebhookJob } from './processIndividualWebhookJob'
 import * as factories from '../../../tests/factories'
-import { Commit } from '../../../browser'
-import { CommitPublishedEvent } from '../../../events/events'
-import {
-  createWebhookDelivery,
-  sendSignedWebhook,
-} from '../../../services/webhooks'
+import type { Commit } from '../../../browser'
+import type { CommitPublishedEvent } from '../../../events/events'
+import { createWebhookDelivery, sendSignedWebhook } from '../../../services/webhooks'
 import { Result } from './../../../lib/Result'
-import { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { type Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { Providers } from '@latitude-data/constants'
 
 // Mock the services
@@ -433,9 +430,7 @@ describe('processIndividualWebhookJob', () => {
     }
 
     // Mock the sendSignedWebhook function to return an error
-    vi.mocked(sendSignedWebhook).mockResolvedValue(
-      Result.error(new Error('Network error')),
-    )
+    vi.mocked(sendSignedWebhook).mockResolvedValue(Result.error(new Error('Network error')))
 
     // Create a mock job
     const mockJob = {

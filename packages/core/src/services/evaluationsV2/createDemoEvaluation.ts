@@ -1,11 +1,11 @@
 import { env } from '@latitude-data/env'
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   EvaluationType,
   findFirstModelForProvider,
   LlmEvaluationMetric,
-  Workspace,
+  type Workspace,
 } from '../../browser'
 import { Result } from '../../lib/Result'
 import { findDefaultEvaluationProvider } from '../providerApiKeys/findDefaultProvider'
@@ -56,14 +56,11 @@ export async function createDemoEvaluation(
             },
             provider: provider.name,
             model: model,
-            criteria:
-              'Assess how well the response follows the given instructions.',
+            criteria: 'Assess how well the response follows the given instructions.',
             minRating: 1,
-            minRatingDescription:
-              "Not faithful, doesn't follow the instructions.",
+            minRatingDescription: "Not faithful, doesn't follow the instructions.",
             maxRating: 5,
-            maxRatingDescription:
-              'Very faithful, does follow the instructions.',
+            maxRatingDescription: 'Very faithful, does follow the instructions.',
             minThreshold: 4,
           },
         },

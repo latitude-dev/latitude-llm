@@ -1,17 +1,13 @@
 import { desc } from 'drizzle-orm'
-import {
-  Dataset,
-  DocumentLogWithMetadataAndError,
-  Workspace,
-} from '../../../browser'
+import type { Dataset, DocumentLogWithMetadataAndError, Workspace } from '../../../browser'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { ProviderLogsRepository } from '../../../repositories'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../../repositories/documentLogsWithMetadataAndErrorsRepository'
-import { Column, DatasetRowData, documentLogs } from '../../../schema'
-import { HashAlgorithmFn, nanoidHashAlgorithm } from '../../datasets/utils'
+import { type Column, type DatasetRowData, documentLogs } from '../../../schema'
+import { type HashAlgorithmFn, nanoidHashAlgorithm } from '../../datasets/utils'
 import { buildProviderLogResponse } from '../../providerLogs'
-import { buildColumns, FixedColumnsByName } from './buildColumns'
+import { buildColumns, type FixedColumnsByName } from './buildColumns'
 
 export type ExportedDocumentLogs = {
   columns: Column[]
@@ -43,9 +39,7 @@ async function findExpectedOutputs({
   logs: DocumentLogWithMetadataAndError[]
 }) {
   const repo = new ProviderLogsRepository(workspace.id)
-  const providers = await repo.findManyByDocumentLogUuid(
-    logs.map((log) => log.uuid),
-  )
+  const providers = await repo.findManyByDocumentLogUuid(logs.map((log) => log.uuid))
 
   return providers.reduce(
     (acc, provider) => {

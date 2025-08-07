@@ -1,5 +1,5 @@
 import { env } from '@latitude-data/env'
-import { WorkerOptions } from 'bullmq'
+import type { WorkerOptions } from 'bullmq'
 
 export const WORKER_CONNECTION_CONFIG = {
   host: env.QUEUE_HOST,

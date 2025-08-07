@@ -1,4 +1,4 @@
-import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
+import type { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
 import { database } from '../../client'
 import { documentSuggestions } from '../../schema'
 

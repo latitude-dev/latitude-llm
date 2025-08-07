@@ -1,13 +1,11 @@
-import { forwardRef, TextareaHTMLAttributes } from 'react'
+import { forwardRef, type TextareaHTMLAttributes } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 
-import TextareaAutosize, {
-  type TextareaAutosizeProps,
-} from 'react-textarea-autosize'
+import TextareaAutosize, { type TextareaAutosizeProps } from 'react-textarea-autosize'
 
 import { cn } from '../../../lib/utils'
 import { FormField } from '../FormField'
-import { type FormFieldProps } from '../FormField'
+import type { FormFieldProps } from '../FormField'
 import { INPUT_BASE_CLASSES, INPUT_VARIANT_SIZE } from '../Input'
 
 const inputVariants = cva(cn(INPUT_BASE_CLASSES), {
@@ -28,51 +26,44 @@ export type TextAreaProps = TextareaAutosizeProps &
   Omit<FormFieldProps, 'children' | 'onKeyDown' | 'onFocus'> & {
     autoGrow?: boolean
   }
-const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  function TextArea(
-    {
-      className,
-      label,
-      errors,
-      errorStyle,
-      description,
-      size,
-      minRows = 5,
-      maxRows,
-      placeholder,
-      autoGrow = false,
-      ...props
-    },
-    ref,
-  ) {
-    return (
-      <FormField
-        label={label}
-        description={description}
-        errors={errors}
-        errorStyle={errorStyle}
-        autoGrow={autoGrow}
-      >
-        <TextareaAutosize
-          ref={ref}
-          minRows={minRows}
-          maxRows={maxRows}
-          placeholder={placeholder}
-          className={cn(
-            inputVariants({ size }),
-            className,
-            'custom-scrollbar',
-            {
-              'border-red-500 focus-visible:ring-red-500': errors,
-              // Account for inner textara padding
-              '!min-h-[calc(100%-theme(spacing.6))]': autoGrow,
-            },
-          )}
-          {...props}
-        />
-      </FormField>
-    )
+const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextArea(
+  {
+    className,
+    label,
+    errors,
+    errorStyle,
+    description,
+    size,
+    minRows = 5,
+    maxRows,
+    placeholder,
+    autoGrow = false,
+    ...props
   },
-)
+  ref,
+) {
+  return (
+    <FormField
+      label={label}
+      description={description}
+      errors={errors}
+      errorStyle={errorStyle}
+      autoGrow={autoGrow}
+    >
+      <TextareaAutosize
+        ref={ref}
+        minRows={minRows}
+        maxRows={maxRows}
+        placeholder={placeholder}
+        className={cn(inputVariants({ size }), className, 'custom-scrollbar', {
+          'border-red-500 focus-visible:ring-red-500': errors,
+          // Account for inner textara padding
+          '!min-h-[calc(100%-theme(spacing.6))]': autoGrow,
+        })}
+        {...props}
+      />
+    </FormField>
+  )
+})
 
 export { TextArea }

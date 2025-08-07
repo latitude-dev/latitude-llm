@@ -10,11 +10,3 @@ export const captureException = (error: Error) => {
     }
   }
 }
-
-export const captureMessage = (message: string) => {
-  if (env.SENTRY_WEB_DSN) {
-    Sentry.captureMessage(message)
-  } else {
-    console.log(message)
-  }
-}

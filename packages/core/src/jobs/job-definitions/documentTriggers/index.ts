@@ -2,8 +2,4 @@ import { checkScheduledDocumentTriggersJob } from './checkScheduledDocumentTrigg
 import { processScheduledTriggerJob } from './processScheduledTriggerJob'
 import { runEmailTriggerJob } from './runEmailTriggerJob'
 
-export {
-  checkScheduledDocumentTriggersJob,
-  processScheduledTriggerJob,
-  runEmailTriggerJob,
-}
+export { checkScheduledDocumentTriggersJob, processScheduledTriggerJob, runEmailTriggerJob }

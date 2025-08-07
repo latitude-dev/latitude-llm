@@ -1,12 +1,7 @@
 'use client'
 
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from '@latitude-data/web-ui/atoms/Table'
+import { Table, TableBody, TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import useIntegrations from '$/stores/integrations'
@@ -15,7 +10,7 @@ import { useColumn1Context } from '../contexts/column-1-context'
 import type { IntegrationDto } from '@latitude-data/core/browser'
 import { useTriggersModalContext } from '../contexts/triggers-modal-context'
 import Image from 'next/image'
-import { PipedreamIntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
+import type { PipedreamIntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
 import { cn } from '@latitude-data/web-ui/utils'
 
 export function ConnectedIntegrations() {
@@ -25,18 +20,16 @@ export function ConnectedIntegrations() {
   const { searchQuery } = useColumn1Context()
 
   // Filter only Pipedream integrations and apply search query filter
-  const pipedreamIntegrations = integrations.filter(
-    (integration: IntegrationDto) => {
-      if (integration.type !== IntegrationType.Pipedream) return false
-      if (!searchQuery) return true
+  const pipedreamIntegrations = integrations.filter((integration: IntegrationDto) => {
+    if (integration.type !== IntegrationType.Pipedream) return false
+    if (!searchQuery) return true
 
-      const query = searchQuery.toLowerCase()
-      return (
-        integration.name.toLowerCase().includes(query) ||
-        integration.configuration!.appName.toLowerCase().includes(query)
-      )
-    },
-  )
+    const query = searchQuery.toLowerCase()
+    return (
+      integration.name.toLowerCase().includes(query) ||
+      integration.configuration!.appName.toLowerCase().includes(query)
+    )
+  })
 
   if (isLoading) {
     return (
@@ -55,10 +48,7 @@ export function ConnectedIntegrations() {
         <Table className='w-full table-fixed'>
           <TableBody>
             {pipedreamIntegrations.map((integration: IntegrationDto) => (
-              <ConnectedIntegration
-                key={integration.id}
-                integration={integration}
-              />
+              <ConnectedIntegration key={integration.id} integration={integration} />
             ))}
           </TableBody>
         </Table>
@@ -67,15 +57,9 @@ export function ConnectedIntegrations() {
   )
 }
 
-function ConnectedIntegration({
-  integration,
-}: {
-  integration: IntegrationDto
-}) {
-  const { setSelectedIntegration, selectedIntegration } =
-    useTriggersModalContext()
-  const configuration =
-    integration.configuration as PipedreamIntegrationConfiguration
+function ConnectedIntegration({ integration }: { integration: IntegrationDto }) {
+  const { setSelectedIntegration, selectedIntegration } = useTriggersModalContext()
+  const configuration = integration.configuration as PipedreamIntegrationConfiguration
 
   return (
     <TableRow

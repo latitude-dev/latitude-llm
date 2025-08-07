@@ -13,7 +13,7 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 import { workspaces } from './workspaces'
-import { type DatasetColumnRole } from '../../constants'
+import type { DatasetColumnRole } from '../../constants'
 import { sql } from 'drizzle-orm'
 
 export type Column = {
@@ -33,18 +33,13 @@ export const datasets = latitudeSchema.table(
     authorId: text('author_id').references(() => users.id, {
       onDelete: 'set null',
     }),
-    tags: varchar('tags', { length: 255 })
-      .array()
-      .notNull()
-      .default(sql`'{}'::varchar[]`),
+    tags: varchar('tags', { length: 255 }).array().notNull().default(sql`'{}'::varchar[]`),
     columns: jsonb('columns').$type<Column[]>().notNull(),
     deletedAt: timestamp('deleted_at'),
     ...timestamps(),
   },
   (table) => ({
-    datasetWorkspaceIdx: index('datasets_table_workspace_idx').on(
-      table.workspaceId,
-    ),
+    datasetWorkspaceIdx: index('datasets_table_workspace_idx').on(table.workspaceId),
     authorIdx: index('datasets_table_author_idx').on(table.authorId),
     uniqueDatasetNameInWorkspace: unique()
       .on(table.workspaceId, table.name, table.deletedAt)

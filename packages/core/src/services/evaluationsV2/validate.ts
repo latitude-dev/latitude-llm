@@ -1,15 +1,15 @@
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
-  ActualOutputConfiguration,
-  Commit,
-  DocumentVersion,
-  EvaluationMetric,
-  EvaluationOptions,
-  EvaluationSettings,
-  EvaluationType,
-  EvaluationV2,
-  ExpectedOutputConfiguration,
-  Workspace,
+  type ActualOutputConfiguration,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationMetric,
+  type EvaluationOptions,
+  type EvaluationSettings,
+  type EvaluationType,
+  type EvaluationV2,
+  type ExpectedOutputConfiguration,
+  type Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
@@ -17,10 +17,7 @@ import { Result } from '../../lib/Result'
 import { EvaluationsV2Repository } from '../../repositories'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
 
-export async function validateEvaluationV2<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->(
+export async function validateEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
   {
     mode,
     evaluation,
@@ -41,9 +38,7 @@ export async function validateEvaluationV2<
   db = database,
 ) {
   if (mode === 'update' && !evaluation) {
-    return Result.error(
-      new BadRequestError('Evaluation is required to update from'),
-    )
+    return Result.error(new BadRequestError('Evaluation is required to update from'))
   }
 
   settings.name = settings.name.trim()
@@ -63,9 +58,7 @@ export async function validateEvaluationV2<
     return Result.error(new BadRequestError('Invalid metric'))
   }
 
-  const parsing = typeSpecification.configuration.safeParse(
-    settings.configuration,
-  )
+  const parsing = typeSpecification.configuration.safeParse(settings.configuration)
   if (parsing.error) {
     return Result.error(parsing.error)
   }
@@ -119,22 +112,14 @@ export async function validateEvaluationV2<
   }
   const evaluations = listing.value
 
-  if (
-    evaluations.find(
-      (e) => e.name === settings.name && e.uuid !== evaluation?.uuid,
-    )
-  ) {
+  if (evaluations.find((e) => e.name === settings.name && e.uuid !== evaluation?.uuid)) {
     return Result.error(
-      new BadRequestError(
-        'An evaluation with this name already exists for this document',
-      ),
+      new BadRequestError('An evaluation with this name already exists for this document'),
     )
   }
 
   if (options.evaluateLiveLogs && !metricSpecification.supportsLiveEvaluation) {
-    return Result.error(
-      new BadRequestError('This metric does not support live evaluation'),
-    )
+    return Result.error(new BadRequestError('This metric does not support live evaluation'))
   }
 
   // Note: all settings and options are explicitly returned to ensure we don't
@@ -185,9 +170,7 @@ async function validateActualOutput({
       return Result.error(new BadRequestError('Field accessor is too complex'))
     }
   } else if (configuration.fieldAccessor) {
-    return Result.error(
-      new BadRequestError('Field accessor is not supported for this format'),
-    )
+    return Result.error(new BadRequestError('Field accessor is not supported for this format'))
   }
 
   // Note: all settings are explicitly returned to ensure we don't
@@ -227,9 +210,7 @@ async function validateExpectedOutput({
       return Result.error(new BadRequestError('Field accessor is too complex'))
     }
   } else if (configuration.fieldAccessor) {
-    return Result.error(
-      new BadRequestError('Field accessor is not supported for this format'),
-    )
+    return Result.error(new BadRequestError('Field accessor is not supported for this format'))
   }
 
   // Note: all settings are explicitly returned to ensure we don't

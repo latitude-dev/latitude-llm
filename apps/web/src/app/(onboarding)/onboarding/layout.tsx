@@ -1,17 +1,13 @@
 'use server'
 
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { CSPostHogProvider, IdentifyUser } from '$/app/providers'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { redirect } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
 
-export default async function OnboardingLayout({
-  children,
-}: {
-  children: ReactNode
-}) {
+export default async function OnboardingLayout({ children }: { children: ReactNode }) {
   const { workspace, user } = await getCurrentUserOrRedirect()
 
   if (!user) return redirect(ROUTES.auth.login)

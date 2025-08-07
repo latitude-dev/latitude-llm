@@ -1,7 +1,7 @@
-import { Job } from 'bullmq'
-import { DocumentTrigger, HEAD_COMMIT } from '../../../browser'
+import type { Job } from 'bullmq'
+import { type DocumentTrigger, HEAD_COMMIT } from '../../../browser'
 import { updateScheduledTriggerLastRun } from '../../../services/documentTriggers/handlers/scheduled'
-import { RunDocumentJobData } from '../documents/runDocumentJob'
+import type { RunDocumentJobData } from '../documents/runDocumentJob'
 import { documentsQueue } from '../../queues'
 
 export type ProcessScheduledTriggerJobData = {
@@ -21,9 +21,7 @@ export type ProcessScheduledTriggerJobData = {
  * 1. Running the document associated with the trigger by enqueueing a runDocumentJob
  * 2. Updating the trigger's last run time and calculating next run time
  */
-export const processScheduledTriggerJob = async (
-  job: Job<ProcessScheduledTriggerJobData>,
-) => {
+export const processScheduledTriggerJob = async (job: Job<ProcessScheduledTriggerJobData>) => {
   const {
     documentTriggerId,
     documentTriggerUuid,

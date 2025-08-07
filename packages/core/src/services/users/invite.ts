@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { User, Workspace } from '../../browser'
+import type { User, Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -32,9 +32,7 @@ export async function inviteUser(
         user = result.unwrap()
       }
 
-      await createMembership({ author, user, workspace }, transaction).then(
-        (r) => r.unwrap(),
-      )
+      await createMembership({ author, user, workspace }, transaction).then((r) => r.unwrap())
 
       return Result.ok(user)
     },

@@ -1,4 +1,4 @@
-import {
+import type {
   Commit,
   EvaluationMetric,
   EvaluationType,
@@ -8,17 +8,11 @@ import {
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import {
-  DocumentVersionsRepository,
-  EvaluationsV2Repository,
-} from '../../repositories'
+import { DocumentVersionsRepository, EvaluationsV2Repository } from '../../repositories'
 import { createEvaluationV2 } from './create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
 
-export async function cloneEvaluationV2<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->(
+export async function cloneEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
   {
     evaluation,
     commit,
@@ -45,9 +39,7 @@ export async function cloneEvaluationV2<
     }
 
     if (!typeSpecification.clone) {
-      return Result.error(
-        new BadRequestError('Cloning is not supported for this evaluation'),
-      )
+      return Result.error(new BadRequestError('Cloning is not supported for this evaluation'))
     }
 
     const settings = await typeSpecification
@@ -71,9 +63,7 @@ export async function cloneEvaluationV2<
       })
       .then((r) => r.unwrap())
 
-    const existing = evaluations.filter(({ name }) =>
-      name.startsWith(evaluation.name),
-    ).length
+    const existing = evaluations.filter(({ name }) => name.startsWith(evaluation.name)).length
 
     const { evaluation: clonedEvaluation } = await createEvaluationV2(
       {

@@ -2,11 +2,11 @@ import { eq } from 'drizzle-orm'
 import { v4 as uuid } from 'uuid'
 
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   LogSources,
-  ProviderLog,
-  Workspace,
+  type ProviderLog,
+  type Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
@@ -17,8 +17,8 @@ import { getResolvedContent } from '../../services/documents'
 import { createProviderLog } from '../../services/providerLogs'
 import { helpers } from './helpers'
 import { createChain } from 'promptl-ai'
-import { PartialConfig } from '../../services/ai'
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import type { PartialConfig } from '../../services/ai'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 
 export type IDocumentLogData = {
   document: DocumentVersion
@@ -51,7 +51,7 @@ async function generateProviderLogs({
     prompt: documentContent,
     parameters: parameters ?? {},
   })
-  let mockedResponse = undefined
+  let mockedResponse
   const providerScope = new ProviderApiKeysRepository(workspace.id)
 
   while (true) {
@@ -65,9 +65,7 @@ async function generateProviderLogs({
       const content =
         typeof message.content === 'string'
           ? message.content
-          : message.content
-              .map((c) => (c.type === 'text' ? c.text : ''))
-              .join('')
+          : message.content.map((c) => (c.type === 'text' ? c.text : '')).join('')
       return acc + content.length
     }, 0)
     const completionTokens = mockedResponse.length

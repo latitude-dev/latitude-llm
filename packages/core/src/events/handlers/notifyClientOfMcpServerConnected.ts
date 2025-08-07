@@ -1,7 +1,7 @@
 import { unsafelyFindWorkspace } from '../../data-access'
 import { NotFoundError } from '../../lib/errors'
 import { WebsocketClient } from '../../websockets/workers'
-import { McpServerConnectedEvent } from '../events'
+import type { McpServerConnectedEvent } from '../events'
 
 export const notifyClientOfMcpServerConnected = async ({
   data: event,

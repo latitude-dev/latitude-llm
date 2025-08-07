@@ -1,12 +1,6 @@
-import {
-  Commit,
-  Dataset,
-  EvaluationV2,
-  Experiment,
-  Workspace,
-} from '../../../browser'
+import type { Commit, Dataset, EvaluationV2, Experiment, Workspace } from '../../../browser'
 import { database } from '../../../client'
-import { PromisedResult } from '../../../lib/Transaction'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'
 import { NotFoundError } from '../../../lib/errors'
 import {
@@ -76,20 +70,18 @@ export async function getExperimentJobPayload(
   evaluations: EvaluationV2[]
   rows: (ExperimentRow | undefined)[]
 }> {
-  const commitResult = await new CommitsRepository(
-    workspace.id,
-    db,
-  ).getCommitById(experiment.commitId)
+  const commitResult = await new CommitsRepository(workspace.id, db).getCommitById(
+    experiment.commitId,
+  )
   if (commitResult.error) return commitResult
   const commit = commitResult.unwrap()
 
   const evaluationScope = new EvaluationsV2Repository(workspace.id, db)
-  const documentEvaluationsResult =
-    await evaluationScope.listAtCommitByDocument({
-      projectId: commit.projectId,
-      commitUuid: commit.uuid,
-      documentUuid: experiment.documentUuid,
-    })
+  const documentEvaluationsResult = await evaluationScope.listAtCommitByDocument({
+    projectId: commit.projectId,
+    commitUuid: commit.uuid,
+    documentUuid: experiment.documentUuid,
+  })
   if (documentEvaluationsResult.error) {
     return Result.error(documentEvaluationsResult.error as Error)
   }
@@ -103,9 +95,7 @@ export async function getExperimentJobPayload(
   if (missingEvalIndex !== -1) {
     const missingEvalUuid = experiment.evaluationUuids[missingEvalIndex]!
     return Result.error(
-      new NotFoundError(
-        `Evaluation '${missingEvalUuid}' not found in commit '${commit.uuid}'`,
-      ),
+      new NotFoundError(`Evaluation '${missingEvalUuid}' not found in commit '${commit.uuid}'`),
     )
   }
 
@@ -121,9 +111,7 @@ export async function getExperimentJobPayload(
     const to = experiment.metadata.toRow
 
     if (from === undefined || to === undefined) {
-      return Result.error(
-        new Error('Experiments without a dataset must have a range defined'),
-      )
+      return Result.error(new Error('Experiments without a dataset must have a range defined'))
     }
 
     return Result.ok({

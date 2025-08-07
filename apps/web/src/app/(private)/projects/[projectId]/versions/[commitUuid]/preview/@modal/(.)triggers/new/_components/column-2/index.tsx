@@ -1,12 +1,7 @@
 'use client'
 
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from '@latitude-data/web-ui/atoms/Table'
+import { Table, TableBody, TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { useTriggersModalContext } from '../contexts/triggers-modal-context'
@@ -32,9 +27,7 @@ export function Column2() {
   if (!selectedPipedreamApp?.triggers.length) {
     return (
       <div className='flex flex-col items-center p-4 pt-8 h-full gap-4 rounded-lg border'>
-        <Text.H5 color='foregroundMuted'>
-          This integration has no triggers
-        </Text.H5>
+        <Text.H5 color='foregroundMuted'>This integration has no triggers</Text.H5>
       </div>
     )
   }
@@ -47,8 +40,7 @@ export function Column2() {
             <TableRow
               key={trigger.key}
               className={cn('cursor-pointer', {
-                'bg-accent':
-                  selectedIntegration?.pipedream?.trigger?.key === trigger.key,
+                'bg-accent': selectedIntegration?.pipedream?.trigger?.key === trigger.key,
               })}
               onClick={() =>
                 setSelectedIntegration({

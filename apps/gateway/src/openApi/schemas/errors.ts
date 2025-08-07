@@ -1,10 +1,7 @@
 import { z } from '@hono/zod-openapi'
 
 const ChainErrorDetailSchema = z.object({
-  entityUuid: z
-    .string()
-    .uuid()
-    .openapi({ description: 'UUID of the related entity' }),
+  entityUuid: z.string().uuid().openapi({ description: 'UUID of the related entity' }),
   entityType: z.string().openapi({ description: 'Type of the related entity' }),
 })
 

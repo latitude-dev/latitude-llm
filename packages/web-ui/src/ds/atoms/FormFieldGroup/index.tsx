@@ -1,4 +1,4 @@
-import { ReactNode, useId } from 'react'
+import { type ReactNode, useId } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { FormDescription } from '../FormField'
@@ -28,11 +28,7 @@ export function FormFieldGroup({
     <div className='space-y-2 w-full'>
       {label ? (
         <span className='w-full flex flex-row items-center gap-2'>
-          <Label
-            variant='default'
-            className='w-full'
-            htmlFor={`form-field-group-label-${id}`}
-          >
+          <Label variant='default' className='w-full' htmlFor={`form-field-group-label-${id}`}>
             {label}
           </Label>
           {tooltip && (

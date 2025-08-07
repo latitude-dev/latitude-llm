@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { MaybeSessionProvider } from '@latitude-data/web-ui/browser'
 import { getDataFromSession } from '$/data-access'
@@ -15,7 +15,5 @@ export default async function PublicLayout({
 }>) {
   const { user } = await getDataFromSession()
 
-  return (
-    <MaybeSessionProvider currentUser={user}>{children}</MaybeSessionProvider>
-  )
+  return <MaybeSessionProvider currentUser={user}>{children}</MaybeSessionProvider>
 }

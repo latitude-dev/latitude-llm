@@ -1,5 +1,5 @@
 import app from '$/routes/app'
-import { Project } from '@latitude-data/core/browser'
+import type { Project } from '@latitude-data/core/browser'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import { createProject } from '@latitude-data/core/factories'
 import { ProjectsRepository } from '@latitude-data/core/repositories'
@@ -51,13 +51,9 @@ describe('GET /projects', () => {
       const expectedProjects = projects.map((project) => ({
         ...project,
         createdAt:
-          project.createdAt instanceof Date
-            ? project.createdAt.toISOString()
-            : project.createdAt,
+          project.createdAt instanceof Date ? project.createdAt.toISOString() : project.createdAt,
         updatedAt:
-          project.updatedAt instanceof Date
-            ? project.updatedAt.toISOString()
-            : project.updatedAt,
+          project.updatedAt instanceof Date ? project.updatedAt.toISOString() : project.updatedAt,
         lastEditedAt:
           project.lastEditedAt instanceof Date
             ? project.lastEditedAt.toISOString()

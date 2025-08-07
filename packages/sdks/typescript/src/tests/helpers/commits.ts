@@ -1,7 +1,7 @@
 import { ApiErrorCodes } from '@latitude-data/constants/errors'
-import { SdkApiVersion } from '$sdk/utils/types'
+import type { SdkApiVersion } from '$sdk/utils/types'
 import { http, HttpResponse } from 'msw'
-import { setupServer } from 'msw/node'
+import type { setupServer } from 'msw/node'
 import { vi } from 'vitest'
 
 type Server = ReturnType<typeof setupServer>

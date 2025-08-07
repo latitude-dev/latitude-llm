@@ -1,10 +1,6 @@
 import { useMemo } from 'react'
 
-import {
-  Inputs,
-  InputSource,
-  PlaygroundInput,
-} from '@latitude-data/core/browser'
+import type { Inputs, InputSource, PlaygroundInput } from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -60,9 +56,7 @@ export function ParameterTypeSelector({
   )
   const selectedType = useMemo(
     () =>
-      ParameterTypes.includes(input.metadata.type || '')
-        ? input.metadata.type
-        : ParameterType.Text,
+      ParameterTypes.includes(input.metadata.type || '') ? input.metadata.type : ParameterType.Text,
     [input.metadata.type],
   )!
 

@@ -1,11 +1,11 @@
 import { and, eq, getTableColumns, inArray, isNull } from 'drizzle-orm'
 import { omit } from 'lodash-es'
 
-import { EvaluationDto } from '../browser'
+import type { EvaluationDto } from '../browser'
 import { EvaluationMetadataType, EvaluationResultableType } from '../constants'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import { PromisedResult } from '../lib/Transaction'
+import type { PromisedResult } from '../lib/Transaction'
 import {
   connectedEvaluations,
   evaluationConfigurationBoolean,
@@ -23,10 +23,8 @@ const tt = {
   ...getTableColumns(evaluations),
   metadata: omit(
     getSharedTableColumns(evaluations.metadataType, {
-      [EvaluationMetadataType.LlmAsJudgeAdvanced]:
-        evaluationMetadataLlmAsJudgeAdvanced,
-      [EvaluationMetadataType.LlmAsJudgeSimple]:
-        evaluationMetadataLlmAsJudgeSimple,
+      [EvaluationMetadataType.LlmAsJudgeAdvanced]: evaluationMetadataLlmAsJudgeAdvanced,
+      [EvaluationMetadataType.LlmAsJudgeSimple]: evaluationMetadataLlmAsJudgeSimple,
       [EvaluationMetadataType.Manual]: evaluationMetadataManual,
     }),
     ['id', 'createdAt', 'updatedAt'],
@@ -41,10 +39,7 @@ const tt = {
   ),
 }
 
-export class EvaluationsRepository extends RepositoryLegacy<
-  typeof tt,
-  EvaluationDto
-> {
+export class EvaluationsRepository extends RepositoryLegacy<typeof tt, EvaluationDto> {
   get scope() {
     return this.db
       .select(tt)
@@ -53,10 +48,7 @@ export class EvaluationsRepository extends RepositoryLegacy<
         evaluationMetadataLlmAsJudgeAdvanced,
         and(
           eq(evaluations.metadataId, evaluationMetadataLlmAsJudgeAdvanced.id),
-          eq(
-            evaluations.metadataType,
-            EvaluationMetadataType.LlmAsJudgeAdvanced,
-          ),
+          eq(evaluations.metadataType, EvaluationMetadataType.LlmAsJudgeAdvanced),
         ),
       )
       .leftJoin(
@@ -76,20 +68,14 @@ export class EvaluationsRepository extends RepositoryLegacy<
       .leftJoin(
         evaluationConfigurationBoolean,
         and(
-          eq(
-            evaluations.resultConfigurationId,
-            evaluationConfigurationBoolean.id,
-          ),
+          eq(evaluations.resultConfigurationId, evaluationConfigurationBoolean.id),
           eq(evaluations.resultType, EvaluationResultableType.Boolean),
         ),
       )
       .leftJoin(
         evaluationConfigurationNumerical,
         and(
-          eq(
-            evaluations.resultConfigurationId,
-            evaluationConfigurationNumerical.id,
-          ),
+          eq(evaluations.resultConfigurationId, evaluationConfigurationNumerical.id),
           eq(evaluations.resultType, EvaluationResultableType.Number),
         ),
       )
@@ -100,21 +86,12 @@ export class EvaluationsRepository extends RepositoryLegacy<
           eq(evaluations.resultType, EvaluationResultableType.Text),
         ),
       )
-      .where(
-        and(
-          isNull(evaluations.deletedAt),
-          eq(evaluations.workspaceId, this.workspaceId),
-        ),
-      )
+      .where(and(isNull(evaluations.deletedAt), eq(evaluations.workspaceId, this.workspaceId)))
       .as('evaluations_scope')
   }
 
   async findByName(name: string) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.name, name))
-      .limit(1)
+    const result = await this.db.select().from(this.scope).where(eq(this.scope.name, name)).limit(1)
 
     if (!result.length) {
       return Result.error(new NotFoundError(`Evaluation ${name} not found`))
@@ -124,15 +101,10 @@ export class EvaluationsRepository extends RepositoryLegacy<
   }
 
   async findByUuid(uuid: string) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.uuid, uuid))
+    const result = await this.db.select().from(this.scope).where(eq(this.scope.uuid, uuid))
 
     if (!result.length) {
-      return Result.error(
-        new NotFoundError(`Evaluation with UUID ${uuid} not found`),
-      )
+      return Result.error(new NotFoundError(`Evaluation with UUID ${uuid} not found`))
     }
 
     return Result.ok(result[0]! as EvaluationDto)
@@ -145,29 +117,20 @@ export class EvaluationsRepository extends RepositoryLegacy<
         live: connectedEvaluations.live,
       })
       .from(this.scope)
-      .innerJoin(
-        connectedEvaluations,
-        eq(connectedEvaluations.evaluationId, this.scope.id),
-      )
+      .innerJoin(connectedEvaluations, eq(connectedEvaluations.evaluationId, this.scope.id))
       .where(eq(connectedEvaluations.documentUuid, documentUuid))
 
     return Result.ok(result as (EvaluationDto & { live: boolean })[])
   }
 
   async filterByUuids(uuids: string[]): PromisedResult<EvaluationDto[], Error> {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(inArray(this.scope.uuid, uuids))
+    const result = await this.db.select().from(this.scope).where(inArray(this.scope.uuid, uuids))
 
     return Result.ok(result as EvaluationDto[])
   }
 
   async filterById(ids: number[]) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(inArray(this.scope.id, ids))
+    const result = await this.db.select().from(this.scope).where(inArray(this.scope.id, ids))
 
     return Result.ok(result as EvaluationDto[])
   }

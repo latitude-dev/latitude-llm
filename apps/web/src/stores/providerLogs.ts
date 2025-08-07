@@ -2,10 +2,10 @@
 
 import { compact } from 'lodash-es'
 
-import { ProviderLogDto } from '@latitude-data/core/browser'
+import type { ProviderLogDto } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 export default function useProviderLogs(
   {
@@ -42,10 +42,7 @@ export default function useProviderLogs(
   }
 }
 
-export function useProviderLog(
-  providerLogId?: number | null,
-  opts?: SWRConfiguration,
-) {
+export function useProviderLog(providerLogId?: number | null, opts?: SWRConfiguration) {
   const fetcher = useFetcher<ProviderLogDto | undefined>(
     providerLogId ? `/api/providerLogs/${providerLogId}` : undefined,
     {
@@ -56,11 +53,7 @@ export function useProviderLog(
     data = undefined,
     isLoading,
     error: swrError,
-  } = useSWR<ProviderLogDto | undefined>(
-    compact(['providerLog', providerLogId]),
-    fetcher,
-    opts,
-  )
+  } = useSWR<ProviderLogDto | undefined>(compact(['providerLog', providerLogId]), fetcher, opts)
 
   return {
     data,
@@ -115,11 +108,7 @@ function deserialize(item: ProviderLogDto) {
   }
 }
 
-function buildKey(
-  documentUuid?: string,
-  documentLogUuid?: string,
-  documentLogId?: number,
-) {
+function buildKey(documentUuid?: string, documentLogUuid?: string, documentLogId?: number) {
   if (!documentUuid && !documentLogUuid && !documentLogId) return undefined
 
   return compact(['providerLogs', documentUuid, documentLogUuid, documentLogId])

@@ -3,17 +3,13 @@ import { eq } from 'drizzle-orm'
 import { users } from '../../schema'
 import { WorkspacesRepository } from '../../repositories'
 import { database } from '../../client'
-import { LatitudeEvent } from '../../events/events'
+import type { LatitudeEvent } from '../../events/events'
 import debug from '../debug'
-import {
-  CollectorInput,
-  DataCollector,
-  ProductEdition,
-} from './collectors/DataCollector'
+import type { CollectorInput, DataCollector, ProductEdition } from './collectors/DataCollector'
 import { CloudCollector } from './collectors/Cloud'
-import { AnalyticsEnvironment } from './types'
+import type { AnalyticsEnvironment } from './types'
 import { OpenSourceCollector } from './collectors/OpenSource'
-import { AnalyticsProvider } from './providers/AnalyticsProvider'
+import type { AnalyticsProvider } from './providers/AnalyticsProvider'
 
 type CollectorEntities = {
   user: CollectorInput['user']
@@ -38,9 +34,7 @@ export class AnalyticsClient {
     this.env = env
     this.event = event
     this.provider = provider
-    this.collector = env.isCloud
-      ? new CloudCollector()
-      : new OpenSourceCollector()
+    this.collector = env.isCloud ? new CloudCollector() : new OpenSourceCollector()
   }
 
   async capture() {
@@ -105,15 +99,11 @@ export class AnalyticsClient {
   }
 
   private get userEmail() {
-    return 'userEmail' in this.event.data
-      ? this.event.data.userEmail
-      : undefined
+    return 'userEmail' in this.event.data ? this.event.data.userEmail : undefined
   }
 
   private get workspaceId() {
-    return 'workspaceId' in this.event.data
-      ? this.event.data.workspaceId
-      : undefined
+    return 'workspaceId' in this.event.data ? this.event.data.workspaceId : undefined
   }
 
   private get skipAnalytics() {

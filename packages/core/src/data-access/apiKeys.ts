@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 
-import { ApiKey } from '../browser'
+import type { ApiKey } from '../browser'
 import { database } from '../client'
 import { NotFoundError } from '../lib/errors'
-import { Result, TypedResult } from '../lib/Result'
+import { Result, type TypedResult } from '../lib/Result'
 import { apiKeys } from '../schema'
 
 export async function unsafelyGetApiKeyByToken(

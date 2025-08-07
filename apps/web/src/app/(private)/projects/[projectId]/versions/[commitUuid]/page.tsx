@@ -9,8 +9,7 @@ export default async function CommitRoot({
   const { projectId, commitUuid } = await params
 
   redirect(
-    ROUTES.projects
-      .detail({ id: Number(projectId) })
-      .commits.detail({ uuid: commitUuid }).overview.root,
+    ROUTES.projects.detail({ id: Number(projectId) }).commits.detail({ uuid: commitUuid }).overview
+      .root,
   )
 }

@@ -1,20 +1,20 @@
-import { Readable } from 'stream'
+import type { Readable } from 'stream'
 
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { handleStream } from '$sdk/utils/handleStream'
 import { makeRequest } from '$sdk/utils/request'
 import {
   HandlerType,
-  RunPromptOptions,
-  SDKOptions,
-  ToolSpec,
+  type RunPromptOptions,
+  type SDKOptions,
+  type ToolSpec,
 } from '$sdk/utils/types'
 import {
   ApiErrorCodes,
-  ApiErrorJsonResponse,
+  type ApiErrorJsonResponse,
   LatitudeErrorCodes,
 } from '@latitude-data/constants/errors'
-import { ProviderData } from '@latitude-data/constants/ai'
+import type { ProviderData } from '@latitude-data/constants/ai'
 
 export async function streamRun<Tools extends ToolSpec>(
   path: string,

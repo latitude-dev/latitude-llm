@@ -1,9 +1,9 @@
-import { ReactNode } from 'react'
-import { type LlmEvaluationPromptParameter } from '@latitude-data/constants'
+import type { ReactNode } from 'react'
+import type { LlmEvaluationPromptParameter } from '@latitude-data/constants'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { type LogInput } from '../../../../hooks/useEvaluationParamaters/logInputParamaters'
+import type { LogInput } from '../../../../hooks/useEvaluationParamaters/logInputParamaters'
 
 export function InputWrapper({
   children,

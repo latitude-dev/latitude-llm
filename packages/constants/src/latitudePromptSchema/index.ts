@@ -1,7 +1,7 @@
-import { JSONSchema7, JSONSchema7TypeName } from 'json-schema'
+import type { JSONSchema7, JSONSchema7TypeName } from 'json-schema'
 import { z } from 'zod'
 import { MAX_STEPS_CONFIG_NAME, ParameterType } from '../config'
-import { AgentToolsMap, resolveRelativePath } from '../index'
+import { type AgentToolsMap, resolveRelativePath } from '../index'
 import { azureConfig as azureConfigSchema } from './providers/azure'
 import { buildToolsSchema } from './toolsSchema'
 import { zodJsonSchema } from './zodJsonSchema'
@@ -42,10 +42,7 @@ export function latitudePromptConfigSchema({
       ? z.array(
           z.string().refine(
             (relativeAgentPath) => {
-              const fullAgentPath = resolveRelativePath(
-                relativeAgentPath,
-                fullPath,
-              )
+              const fullAgentPath = resolveRelativePath(relativeAgentPath, fullPath)
 
               return Object.values(agentToolsMap).includes(fullAgentPath)
             },
@@ -101,9 +98,7 @@ export {
   type OpenAIFilesSearchTool,
 } from './providers/openai'
 export type { OpenAIToolList } from './providers/openai'
-type InferredSchema = z.infer<
-  Omit<ReturnType<typeof latitudePromptConfigSchema>, 'schema'>
->
+type InferredSchema = z.infer<Omit<ReturnType<typeof latitudePromptConfigSchema>, 'schema'>>
 export type LatitudePromptConfig = Omit<InferredSchema, 'schema'> & {
   schema?: JSONSchema7
 }

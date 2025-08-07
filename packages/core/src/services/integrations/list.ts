@@ -1,4 +1,4 @@
-import { IntegrationDto, Workspace } from '@latitude-data/core/browser'
+import type { IntegrationDto, Workspace } from '@latitude-data/core/browser'
 import { IntegrationType } from '@latitude-data/constants'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { Result } from '@latitude-data/core/lib/Result'

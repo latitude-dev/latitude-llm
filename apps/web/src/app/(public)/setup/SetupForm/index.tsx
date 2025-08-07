@@ -1,5 +1,5 @@
 'use client'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
@@ -89,10 +89,7 @@ export default function SetupForm({
           </div>
 
           <Button variant='outline' fullWidth asChild>
-            <Link
-              href='/api/auth/google/start'
-              className='flex items-center gap-2'
-            >
+            <Link href='/api/auth/google/start' className='flex items-center gap-2'>
               <Icon name='googleWorkspace' />
               <Text.H5>Continue with Google</Text.H5>
             </Link>

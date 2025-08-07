@@ -1,18 +1,15 @@
 import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
 import useDocumentLogWithPaginationPosition, {
-  LogWithPosition,
+  type LogWithPosition,
 } from '$/stores/documentLogWithPaginationPosition'
 import useEvaluatedDocumentLogs from '$/stores/evaluatedDocumentLogs'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-import {
+import type {
   ActualOutputConfiguration,
   DocumentVersion,
   EvaluatedDocumentLog,
 } from '@latitude-data/core/browser'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useMemo, useState } from 'react'
 
 const ONLY_ONE_PAGE = '1'
@@ -32,32 +29,29 @@ export function useSerializedLogs({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const filterOptions = useDefaultLogFilterOptions()
-  const { data: pagination, isLoading: isLoadingCounter } =
-    useDocumentLogsPagination({
-      projectId: project.id,
-      commitUuid: commit.uuid,
-      documentUuid: document.documentUuid,
-      filterOptions,
-      page: '1', // Not used really. This is only for the counter.
-      pageSize: ONLY_ONE_PAGE,
-      excludeErrors: true,
-    })
+  const { data: pagination, isLoading: isLoadingCounter } = useDocumentLogsPagination({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+    filterOptions,
+    page: '1', // Not used really. This is only for the counter.
+    pageSize: ONLY_ONE_PAGE,
+    excludeErrors: true,
+  })
   const [position, setPosition] = useState<LogWithPosition | undefined>(
     logUuid ? undefined : { position: 1, page: 1 },
   )
   const onFetchCurrentLog = useCallback((data: LogWithPosition) => {
     setPosition(data)
   }, [])
-  const { isLoading: isLoadingPosition } = useDocumentLogWithPaginationPosition(
-    {
-      documentLogUuid: logUuid,
-      document,
-      projectId: project.id,
-      filterOptions,
-      onFetched: onFetchCurrentLog,
-      excludeErrors: true,
-    },
-  )
+  const { isLoading: isLoadingPosition } = useDocumentLogWithPaginationPosition({
+    documentLogUuid: logUuid,
+    document,
+    projectId: project.id,
+    filterOptions,
+    onFetched: onFetchCurrentLog,
+    excludeErrors: true,
+  })
 
   const {
     data: logs,
@@ -82,9 +76,7 @@ export function useSerializedLogs({
     (position: number) => {
       if (isLoadingLog) return
 
-      setPosition((prev) =>
-        prev ? { ...prev, position } : { position, page: 1 },
-      )
+      setPosition((prev) => (prev ? { ...prev, position } : { position, page: 1 }))
     },
     [isLoadingLog],
   )

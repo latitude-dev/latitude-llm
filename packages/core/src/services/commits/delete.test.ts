@@ -14,9 +14,7 @@ describe('deleteCommitDraft', () => {
     const result = await deleteCommitDraft(commit)
 
     expect(result.ok).toBe(false)
-    expect(result.error?.message).toBe(
-      'Cannot delete the only version in a project',
-    )
+    expect(result.error?.message).toBe('Cannot delete the only version in a project')
   })
 
   it('fails when trying to remove a merged commit', async () => {
@@ -29,8 +27,9 @@ describe('deleteCommitDraft', () => {
   })
 
   it('removes a draft with content', async () => {
-    const { workspace, project, user, providers } =
-      await factories.createProject({ skipMerge: true })
+    const { workspace, project, user, providers } = await factories.createProject({
+      skipMerge: true,
+    })
 
     const provider = providers[0]!
     const { commit: draft } = await factories.createDraft({

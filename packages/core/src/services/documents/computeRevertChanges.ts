@@ -1,7 +1,7 @@
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import type { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
 import { BadRequestError, ConflictError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import { DocumentVersionsRepository } from '../../repositories'
 import { getChangesToRevertDocuments } from '../commits/computeRevertChanges'
 
@@ -23,7 +23,7 @@ export async function computeDocumentRevertChanges(
     if (originalDocument.documentUuid !== changedDocument.documentUuid) {
       return Result.error(new BadRequestError('Document UUIDs do not match'))
     }
-    if (originalDocument.commitId == changedDocument.commitId) {
+    if (originalDocument.commitId === changedDocument.commitId) {
       return Result.error(new BadRequestError('Document versions are the same'))
     }
   }
@@ -32,12 +32,11 @@ export async function computeDocumentRevertChanges(
   const documentsInDraft = await docsRepo.getDocumentsAtCommit(draft)
   if (documentsInDraft.error) return Result.error(documentsInDraft.error)
 
-  const changesToRevert: Partial<DocumentVersion>[] =
-    getChangesToRevertDocuments({
-      originalDocuments: originalDocument ? [originalDocument] : [],
-      changedDocuments: changedDocument ? [changedDocument] : [],
-      targetDraftDocuments: documentsInDraft.value,
-    })
+  const changesToRevert: Partial<DocumentVersion>[] = getChangesToRevertDocuments({
+    originalDocuments: originalDocument ? [originalDocument] : [],
+    changedDocuments: changedDocument ? [changedDocument] : [],
+    targetDraftDocuments: documentsInDraft.value,
+  })
 
   if (Object.keys(changesToRevert).length === 0) {
     return Result.error(new ConflictError('No changes to revert'))

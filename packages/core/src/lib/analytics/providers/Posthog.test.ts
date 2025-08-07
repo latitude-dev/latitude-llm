@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-import { User, Workspace } from '../../../browser'
-import { ProductEdition } from '../collectors/DataCollector'
+import type { User, Workspace } from '../../../browser'
+import type { ProductEdition } from '../collectors/DataCollector'
 
 describe('PosthogProvider', () => {
   beforeEach(() => {

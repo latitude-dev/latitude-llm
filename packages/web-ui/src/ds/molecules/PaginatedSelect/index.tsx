@@ -1,11 +1,11 @@
 'use client'
 
 import {
-  ReactNode,
+  type ReactNode,
   useCallback,
   useState,
   useRef,
-  UIEvent,
+  type UIEvent,
   useEffect,
   useMemo,
 } from 'react'
@@ -20,7 +20,7 @@ import {
 } from '../../atoms/Command'
 import { zIndex } from '../../tokens/zIndex'
 import { FormField, type FormFieldProps } from '../../atoms/FormField'
-import { Icon, IconName } from '../../atoms/Icons'
+import { Icon, type IconName } from '../../atoms/Icons'
 import { Skeleton } from '../../atoms/Skeleton'
 import { Text } from '../../atoms/Text'
 import {
@@ -30,14 +30,11 @@ import {
   SelectTrigger,
   SelectValue,
   Options,
-  SelectOption,
+  type SelectOption,
 } from '../../atoms/Select'
 import { useDebouncedCallback } from 'use-debounce'
 
-export type PaginatedSelectProps<V extends unknown = unknown> = Omit<
-  FormFieldProps,
-  'children'
-> & {
+export type PaginatedSelectProps<V = unknown> = Omit<FormFieldProps, 'children'> & {
   name: string
   value?: V
   defaultValue?: V
@@ -69,7 +66,7 @@ function OptionSkeleton() {
 
 // TODO: review this component, it should receive the cursor and items state
 // from its parent component and simply handle the frontend interactions.
-export function PaginatedSelect<V extends unknown = unknown>({
+export function PaginatedSelect<V = unknown>({
   name,
   label,
   description,
@@ -99,9 +96,7 @@ export function PaginatedSelect<V extends unknown = unknown>({
     return items.map(serialize)
   }, [items, serialize])
 
-  const [selectedValue, setSelectedValue] = useState<V | undefined>(
-    value ?? defaultValue,
-  )
+  const [selectedValue, setSelectedValue] = useState<V | undefined>(value ?? defaultValue)
 
   const selectedOption = useMemo(
     () => (selectedValue ? serialize(selectedValue) : undefined),
@@ -139,37 +134,34 @@ export function PaginatedSelect<V extends unknown = unknown>({
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const requestIdRef = useRef(0)
 
-  const executeFetch = useDebouncedCallback(
-    async (query: string, cursor: string | undefined) => {
-      requestIdRef.current += 1
-      const currentRequest = requestIdRef.current
+  const executeFetch = useDebouncedCallback(async (query: string, cursor: string | undefined) => {
+    requestIdRef.current += 1
+    const currentRequest = requestIdRef.current
 
+    if (cursor === undefined) {
+      setItems([])
+      setIsLoading(true)
+    } else {
+      setIsLoadingMore(true)
+    }
+
+    const result = await fetch({ query, cursor })
+    if (currentRequest !== requestIdRef.current) return
+
+    setIsLoading(false)
+    setIsLoadingMore(false)
+
+    setItems((prev) => {
       if (cursor === undefined) {
-        setItems([])
-        setIsLoading(true)
+        return result.items
       } else {
-        setIsLoadingMore(true)
+        return [...prev, ...result.items]
       }
+    })
 
-      const result = await fetch({ query, cursor })
-      if (currentRequest !== requestIdRef.current) return
-
-      setIsLoading(false)
-      setIsLoadingMore(false)
-
-      setItems((prev) => {
-        if (cursor === undefined) {
-          return result.items
-        } else {
-          return [...prev, ...result.items]
-        }
-      })
-
-      setTotalCount(result.totalCount)
-      setCursor(result.cursor)
-    },
-    debounce,
-  )
+    setTotalCount(result.totalCount)
+    setCursor(result.cursor)
+  }, debounce)
 
   const onSearchChange = useCallback(
     (query: string) => {
@@ -183,15 +175,7 @@ export function PaginatedSelect<V extends unknown = unknown>({
     if (isLoading || isLoadingMore) return
     if (options.length >= totalCount) return
     executeFetch(searchQuery, cursor)
-  }, [
-    isLoading,
-    isLoadingMore,
-    options.length,
-    totalCount,
-    cursor,
-    searchQuery,
-    executeFetch,
-  ])
+  }, [isLoading, isLoadingMore, options.length, totalCount, cursor, searchQuery, executeFetch])
 
   useEffect(() => {
     executeFetch('', undefined)
@@ -245,8 +229,7 @@ export function PaginatedSelect<V extends unknown = unknown>({
                 />
                 <CommandList
                   onScroll={(e: UIEvent<HTMLDivElement>) => {
-                    const { scrollTop, scrollHeight, clientHeight } =
-                      e.currentTarget
+                    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
                     if (
                       !isLoadingMore &&
                       items.length < totalCount &&
@@ -289,12 +272,11 @@ export function PaginatedSelect<V extends unknown = unknown>({
                         <OptionSkeleton />
                       </>
                     )}
-                    {!(isLoading || isLoadingMore) &&
-                      options.length < totalCount && (
-                        <CommandItem disabled>
-                          <Text.H6 color='foregroundMuted'>Load more</Text.H6>
-                        </CommandItem>
-                      )}
+                    {!(isLoading || isLoadingMore) && options.length < totalCount && (
+                      <CommandItem disabled>
+                        <Text.H6 color='foregroundMuted'>Load more</Text.H6>
+                      </CommandItem>
+                    )}
                   </CommandGroup>
                 </CommandList>
               </Command>

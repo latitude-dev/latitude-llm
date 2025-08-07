@@ -127,16 +127,11 @@ import {
   Youtube,
   Zap,
 } from 'lucide-react'
-import { MouseEvent } from 'react'
+import type { MouseEvent } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { colors, DarkTextColor, type TextColor } from '../../tokens'
-import {
-  GridVertical,
-  LatitudeLogo,
-  LatitudeLogoMonochrome,
-  MCP,
-} from './custom-icons'
+import { colors, type DarkTextColor, type TextColor } from '../../tokens'
+import { GridVertical, LatitudeLogo, LatitudeLogoMonochrome, MCP } from './custom-icons'
 import AmazonBedrock from './custom-icons/llmProviders/amazoBedrock'
 import Anthropic from './custom-icons/llmProviders/anthropic'
 import Azure from './custom-icons/llmProviders/azure'
@@ -378,15 +373,7 @@ export type IconProps = {
   onClick?: (event: MouseEvent<SVGSVGElement>) => void
 }
 
-type Size =
-  | 'xsmall'
-  | 'small'
-  | 'xnormal'
-  | 'normal'
-  | 'medium'
-  | 'large'
-  | 'xlarge'
-  | 'xxxlarge'
+type Size = 'xsmall' | 'small' | 'xnormal' | 'normal' | 'medium' | 'large' | 'xlarge' | 'xxxlarge'
 
 export function Icon({
   name,

@@ -32,11 +32,7 @@ interface CustomDiffDelete extends ICustomDiffAction {
   length: number
 }
 
-export type CustomDiffAction =
-  | CustomDiffEqual
-  | CustomDiffInsert
-  | CustomDiffDelete
-  | CustomDiffReplace
+type CustomDiffAction = CustomDiffEqual | CustomDiffInsert | CustomDiffDelete | CustomDiffReplace
 
 const dmp = new DiffMatchPatch()
 
@@ -70,10 +66,7 @@ function combineDeleteAndInsert(
   return actions
 }
 
-export function customDiff(
-  oldValue: string,
-  newValue: string,
-): CustomDiffAction[] {
+export function customDiff(oldValue: string, newValue: string): CustomDiffAction[] {
   const diffs = dmp.diff_main(oldValue, newValue)
   dmp.diff_cleanupEfficiency(diffs)
 

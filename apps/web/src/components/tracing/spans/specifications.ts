@@ -1,4 +1,4 @@
-import { Span, SpanType } from '@latitude-data/core/browser'
+import { SpanType } from '@latitude-data/core/browser'
 import CompletionSpanSpecification from './Completion'
 import EmbeddingSpanSpecification from './Embedding'
 import HttpSpanSpecification from './Http'
@@ -7,9 +7,8 @@ import RetrievalSpanSpecification from './Retrieval'
 import SegmentSpanSpecification from './Segment'
 import ToolSpanSpecification from './Tool'
 import UnknownSpanSpecification from './Unknown'
-import { SpanFrontendSpecification } from './shared'
+import type { SpanFrontendSpecification } from './shared'
 
-// prettier-ignore
 export const SPAN_SPECIFICATIONS: {
   [T in SpanType]: SpanFrontendSpecification<T>
 } = {
@@ -21,10 +20,4 @@ export const SPAN_SPECIFICATIONS: {
   [SpanType.Http]: HttpSpanSpecification,
   [SpanType.Segment]: SegmentSpanSpecification,
   [SpanType.Unknown]: UnknownSpanSpecification,
-}
-
-export function getSpanSpecification<T extends SpanType = SpanType>(
-  span: Span<T>,
-) {
-  return SPAN_SPECIFICATIONS[span.type]
 }

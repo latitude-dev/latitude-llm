@@ -10,20 +10,11 @@ export function uvxCommand({
   const fromRepo = repository
     ? `--from "git+${repository}${repository.endsWith('.git') ? '' : '.git'}"`
     : ''
-  const command = [
-    'uvx',
-    ...(repository ? [fromRepo] : []),
-    name,
-    ...(args ? [args] : []),
-  ].join(' ')
+  const command = ['uvx', ...(repository ? [fromRepo] : []), name, ...(args ? [args] : [])].join(
+    ' ',
+  )
   return command.trim()
 }
-export function npxCommand({
-  package: pkg,
-  args,
-}: {
-  package: string
-  args?: string
-}): string {
+export function npxCommand({ package: pkg, args }: { package: string; args?: string }): string {
   return `npx -y ${pkg} ${args ?? ''}`.trim()
 }

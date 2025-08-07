@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { SessionProvider } from '@latitude-data/web-ui/browser'
 import buildMetatags from '$/app/_lib/buildMetatags'
@@ -56,11 +56,7 @@ export default async function PrivateLayout({
                   workspace={workspace}
                   socketServer={env.WEBSOCKETS_SERVER}
                 >
-                  <AppLayout
-                    currentUser={user}
-                    navigationLinks={NAV_LINKS}
-                    cloudInfo={cloudInfo}
-                  >
+                  <AppLayout currentUser={user} navigationLinks={NAV_LINKS} cloudInfo={cloudInfo}>
                     {children}
                   </AppLayout>
                 </LatitudeWebsocketsProvider>

@@ -99,8 +99,4 @@ export type ToolMessage = {
   [key: string]: unknown
 }
 
-export type Message =
-  | SystemMessage
-  | UserMessage
-  | AssistantMessage
-  | ToolMessage
+export type Message = SystemMessage | UserMessage | AssistantMessage | ToolMessage

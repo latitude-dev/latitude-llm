@@ -1,16 +1,12 @@
-import { ClientTool, ToolInputMap } from '$sdk/utils/adapters/types'
+import type { ClientTool, ToolInputMap } from '$sdk/utils/adapters/types'
 import {
   ComputerCallSchema,
   FileSearchToolSchema,
-  OpenAIToolList,
+  type OpenAIToolList,
   WebSearchToolSchema,
 } from '@latitude-data/constants/latitudePromptSchema'
 
-export function getOpenAIResponsesBuiltinTools({
-  tools,
-}: {
-  tools: ToolInputMap
-}) {
+export function getOpenAIResponsesBuiltinTools({ tools }: { tools: ToolInputMap }) {
   return Object.entries(tools).reduce(
     (acc, [name, definition]) => {
       if (name === 'openai') {

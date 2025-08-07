@@ -1,5 +1,5 @@
 import { usePipedreamComponentProps } from '$/hooks/pipedreamProps/usePipedreamComponentProps'
-import {
+import type {
   IntegrationDto,
   PipedreamComponent,
   PipedreamComponentType,
@@ -7,7 +7,7 @@ import {
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import {
+import type {
   ConfigurableProp,
   ConfigurablePropBoolean,
   ConfigurableProps,
@@ -16,14 +16,12 @@ import {
 import DynamicPipedreamProp, { isDynamicProp } from './Props/DynamicProp'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { AlertProps } from '@latitude-data/web-ui/atoms/Alert/Primitives'
+import type { AlertProps } from '@latitude-data/web-ui/atoms/Alert/Primitives'
 import PipedreamTimerProp from './Props/TimerProp'
 import ArrayPipedreamProp from './Props/ArrayProp'
 
 type Defined<T> = Exclude<T, undefined | null>
-type AlertType = Defined<
-  Extract<ConfigurableProp, { type: 'alert' }>['alertType']
->
+type AlertType = Defined<Extract<ConfigurableProp, { type: 'alert' }>['alertType']>
 type AlertVariant = Defined<AlertProps['variant']>
 const ALERT_VARIANTS: Record<AlertType, AlertVariant> = {
   info: 'default',
@@ -85,9 +83,7 @@ function UnknownPipedreamProp({
   return (
     <div className='flex flex-col gap-1 w-full'>
       <Text.H6>{prop.label ?? prop.name}</Text.H6>
-      {prop.description && (
-        <Text.H6 color='foregroundMuted'>{prop.description}</Text.H6>
-      )}
+      {prop.description && <Text.H6 color='foregroundMuted'>{prop.description}</Text.H6>}
       <Text.H6 whiteSpace='preWrap'>{JSON.stringify(prop, null, 2)}</Text.H6>
     </div>
   )
@@ -116,9 +112,7 @@ function BooleanPipedreamProp({
           onCheckedChange={setValue}
         />
       </div>
-      {prop.description && (
-        <Text.H6 color='foregroundMuted'>{prop.description}</Text.H6>
-      )}
+      {prop.description && <Text.H6 color='foregroundMuted'>{prop.description}</Text.H6>}
     </div>
   )
 }
@@ -158,12 +152,7 @@ function PipedreamPropsForm({
 
   if (prop.type === 'boolean') {
     return (
-      <BooleanPipedreamProp
-        prop={prop}
-        value={value}
-        setValue={setValue}
-        disabled={disabled}
-      />
+      <BooleanPipedreamProp prop={prop} value={value} setValue={setValue} disabled={disabled} />
     )
   }
 
@@ -197,12 +186,7 @@ function PipedreamPropsForm({
   }
 
   if (prop.type === 'alert') {
-    return (
-      <Alert
-        variant={ALERT_VARIANTS[prop.alertType ?? 'info']}
-        description={prop.content}
-      />
-    )
+    return <Alert variant={ALERT_VARIANTS[prop.alertType ?? 'info']} description={prop.content} />
   }
 
   if (prop.type === '$.interface.timer') {
@@ -219,12 +203,5 @@ function PipedreamPropsForm({
     )
   }
 
-  return (
-    <UnknownPipedreamProp
-      prop={prop}
-      value={value}
-      setValue={setValue}
-      disabled={disabled}
-    />
-  )
+  return <UnknownPipedreamProp prop={prop} value={value} setValue={setValue} disabled={disabled} />
 }

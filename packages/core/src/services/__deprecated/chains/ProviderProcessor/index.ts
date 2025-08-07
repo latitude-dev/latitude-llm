@@ -1,5 +1,5 @@
-import { ChainStepResponse, StreamType } from '../../../../browser'
-import { AIReturn } from '../../../ai'
+import type { ChainStepResponse, StreamType } from '../../../../browser'
+import type { AIReturn } from '../../../ai'
 
 function parseObject(text: string) {
   const parsed = text

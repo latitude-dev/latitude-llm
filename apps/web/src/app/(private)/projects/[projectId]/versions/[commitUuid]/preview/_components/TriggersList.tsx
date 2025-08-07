@@ -4,7 +4,7 @@ import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
+import type {
   DocumentTrigger,
   IntegrationDto,
   PipedreamIntegration,
@@ -21,10 +21,7 @@ import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 
-type IntegrationTrigger = Extract<
-  DocumentTrigger,
-  { triggerType: DocumentTriggerType.Integration }
->
+type IntegrationTrigger = Extract<DocumentTrigger, { triggerType: DocumentTriggerType.Integration }>
 
 export function TriggersList({
   triggers: fallbackData,
@@ -45,8 +42,7 @@ export function TriggersList({
     },
   )
   const integrationTriggers = useMemo(
-    () =>
-      triggers.filter((t) => t.triggerType === DocumentTriggerType.Integration),
+    () => triggers.filter((t) => t.triggerType === DocumentTriggerType.Integration),
     [triggers],
   )
   const { data: integrations } = useIntegrations({
@@ -64,18 +60,13 @@ export function TriggersList({
         </div>
         <div className='flex flex-col gap-4'>
           {integrationTriggers.map((trigger) => (
-            <TriggersCard
-              key={trigger.uuid}
-              trigger={trigger}
-              integrations={integrations}
-            />
+            <TriggersCard key={trigger.uuid} trigger={trigger} integrations={integrations} />
           ))}
         </div>
         <Link
           href={
-            ROUTES.projects
-              .detail({ id: project.id })
-              .commits.detail({ uuid: commit.uuid }).preview.triggers.new.root
+            ROUTES.projects.detail({ id: project.id }).commits.detail({ uuid: commit.uuid }).preview
+              .triggers.new.root
           }
         >
           <Button variant='outline' fancy>
@@ -120,11 +111,8 @@ function DeleteTriggerButton({ trigger }: { trigger: IntegrationTrigger }) {
         title='Delete Trigger'
         description='Are you sure you want to delete this trigger? This action cannot be undone.'
         type='destructive'
-        onConfirm={useCallback(
-          () => deleteTrigger(trigger),
-          [deleteTrigger, trigger],
-        )}
-        onCancel={useCallback(() => setIsModalOpen(false), [setIsModalOpen])}
+        onConfirm={useCallback(() => deleteTrigger(trigger), [deleteTrigger, trigger])}
+        onCancel={useCallback(() => setIsModalOpen(false), [])}
         confirm={{
           label: 'Delete Trigger',
           disabled: isDeleting,
@@ -156,9 +144,9 @@ function TriggersCard({
 
   const integration = useMemo(() => {
     if (!integrations) return undefined
-    return integrations.find(
-      (i) => i.id === trigger.configuration.integrationId,
-    ) as PipedreamIntegration | undefined
+    return integrations.find((i) => i.id === trigger.configuration.integrationId) as
+      | PipedreamIntegration
+      | undefined
   }, [integrations, trigger.configuration.integrationId])
 
   const { data: app } = usePipedreamApp(integration?.configuration.appName)

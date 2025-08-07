@@ -1,9 +1,8 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 import { npxCommand } from '../utils'
 
 export default {
-  description:
-    'This integration enables read only access to a Postgres/Supabase database.',
+  description: 'This integration enables read only access to a Postgres/Supabase database.',
   command: npxCommand({
     package: '@modelcontextprotocol/server-postgres',
     args: '$DATABASE_URL',

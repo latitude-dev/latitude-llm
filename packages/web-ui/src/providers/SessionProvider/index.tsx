@@ -1,10 +1,7 @@
 'use client'
 
-import {
-  SubscriptionPlanContent,
-  WorkspaceDto,
-} from '@latitude-data/core/browser'
-import { createContext, ReactNode, useContext } from 'react'
+import type { SubscriptionPlanContent, WorkspaceDto } from '@latitude-data/core/browser'
+import { createContext, type ReactNode, useContext } from 'react'
 
 export type SessionUser = {
   id: string
@@ -26,11 +23,7 @@ const SessionProvider = ({
 }: {
   children: ReactNode
 } & ISessionContext) => {
-  return (
-    <SessionContext.Provider value={context}>
-      {children}
-    </SessionContext.Provider>
-  )
+  return <SessionContext.Provider value={context}>{children}</SessionContext.Provider>
 }
 
 const useSession = () => {

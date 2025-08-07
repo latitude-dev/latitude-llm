@@ -1,5 +1,5 @@
-import { DocumentTriggerType } from '..'
-import {
+import type { DocumentTriggerType } from '..'
+import type {
   EmailTriggerConfiguration,
   InsertScheduledTriggerConfiguration,
 } from '../documentTriggers/schema'

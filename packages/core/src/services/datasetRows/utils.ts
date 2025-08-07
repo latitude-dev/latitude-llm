@@ -1,13 +1,9 @@
-import { type DatasetRowDataContent } from '../../schema'
+import type { DatasetRowDataContent } from '../../schema'
 
 export function parseRowCell({ cell }: { cell: DatasetRowDataContent }) {
   if (cell === null || cell === undefined) return ''
 
-  if (
-    typeof cell === 'string' ||
-    typeof cell === 'number' ||
-    typeof cell === 'boolean'
-  ) {
+  if (typeof cell === 'string' || typeof cell === 'number' || typeof cell === 'boolean') {
     return String(cell)
   }
 

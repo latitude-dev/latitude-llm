@@ -1,4 +1,4 @@
-import { AstError } from '@latitude-data/constants/promptl'
+import type { AstError } from '@latitude-data/constants/promptl'
 import {
   createTextNode,
   extractTextContent,
@@ -17,23 +17,23 @@ import {
 import { createCodeBlock } from './createCodeBlock'
 import {
   BLOCK_EDITOR_TYPE,
-  BlockAttributes,
-  BlockRootNode,
-  CodeBlock,
+  type BlockAttributes,
+  type BlockRootNode,
+  type CodeBlock,
   type ContentBlock,
   type ElementTag,
-  FileBlock,
-  Fragment,
-  ImageBlock,
-  InlineBlock,
-  MessageBlock,
-  MessageBlockType,
-  ParagraphBlock,
-  ReferenceLink,
-  StepBlock,
-  TemplateNode,
-  ToolCallBlock,
-  Variable,
+  type FileBlock,
+  type Fragment,
+  type ImageBlock,
+  type InlineBlock,
+  type MessageBlock,
+  type MessageBlockType,
+  type ParagraphBlock,
+  type ReferenceLink,
+  type StepBlock,
+  type TemplateNode,
+  type ToolCallBlock,
+  type Variable,
 } from './types'
 
 function findErrorsForNode({
@@ -66,11 +66,7 @@ function findErrorsForNode({
     }))
 }
 
-function createParagraph({
-  children,
-}: {
-  children: ParagraphBlock['children']
-}): ParagraphBlock {
+function createParagraph({ children }: { children: ParagraphBlock['children'] }): ParagraphBlock {
   return {
     type: BLOCK_EDITOR_TYPE.PARAGRAPH,
     children,
@@ -83,11 +79,7 @@ function createParagraph({
   }
 }
 
-function createEmptyParagraph({
-  content,
-}: {
-  content: string
-}): ParagraphBlock {
+function createEmptyParagraph({ content }: { content: string }): ParagraphBlock {
   return createParagraph({ children: [createTextNode({ text: content })] })
 }
 
@@ -122,13 +114,7 @@ function createReferenceLink({
   } as ReferenceLink
 }
 
-function createVariable({
-  node,
-  errors,
-}: {
-  node: TemplateNode
-  errors?: AstError[]
-}): Variable {
+function createVariable({ node, errors }: { node: TemplateNode; errors?: AstError[] }): Variable {
   const nodeErrors = errors ? findErrorsForNode({ node, errors }) : []
   return {
     type: BLOCK_EDITOR_TYPE.VARIABLE,
@@ -227,8 +213,7 @@ function proccesInlineNodes({
 
       const nextNode = nodes[idx + 1]
       const nextIsBlock = isContentBlock(nextNode)
-      const removeTrailingNewline =
-        (previousWasBlock || nextIsBlock) && previousNode !== undefined
+      const removeTrailingNewline = (previousWasBlock || nextIsBlock) && previousNode !== undefined
       if (removeTrailingNewline && lines.length > 1 && lines[0] === '') {
         lines = lines.slice(1)
       }
@@ -248,9 +233,7 @@ function proccesInlineNodes({
           (!previousWasInlineBlock || previousWasBlock)
         ) {
           flushChildren()
-          blocks.push(
-            createParagraph({ children: [createTextNode({ text: '' })] }),
-          )
+          blocks.push(createParagraph({ children: [createTextNode({ text: '' })] }))
           endsWithEmptyLine = false
         } else if (isLastLine) {
           // Only set the flag, do NOT flush yet
@@ -415,7 +398,7 @@ function processNodes({
         endIdx++
 
       const inlineNodes = nodes.slice(startIdx, endIdx)
-      let previousWasBlockWithChildren = isBlockWithChildren(previousNode)
+      const previousWasBlockWithChildren = isBlockWithChildren(previousNode)
       const processedInlineBlocks = proccesInlineNodes({
         prompt,
         nodes: inlineNodes,
@@ -477,13 +460,11 @@ function childrenWithoutConfig(children: TemplateNode[]): TemplateNode[] {
   return children.filter((node) => !isConfigNode(node))
 }
 
-function trimLeadingTexts(
-  blocks: ParagraphBlock['children'],
-): ParagraphBlock['children'] {
+function trimLeadingTexts(blocks: ParagraphBlock['children']): ParagraphBlock['children'] {
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]!
 
-    if (block.type != 'text') {
+    if (block.type !== 'text') {
       return blocks.slice(i)
     }
 
@@ -497,13 +478,11 @@ function trimLeadingTexts(
   return []
 }
 
-function trimTrailingTexts(
-  blocks: ParagraphBlock['children'],
-): ParagraphBlock['children'] {
+function trimTrailingTexts(blocks: ParagraphBlock['children']): ParagraphBlock['children'] {
   for (let i = blocks.length - 1; i >= 0; i--) {
     const block = blocks[i]!
 
-    if (block.type != 'text') {
+    if (block.type !== 'text') {
       return blocks.slice(0, i + 1)
     }
 
@@ -517,13 +496,11 @@ function trimTrailingTexts(
   return []
 }
 
-function trimLeadingParagraphs(
-  blocks: BlockRootNode['children'],
-): BlockRootNode['children'] {
+function trimLeadingParagraphs(blocks: BlockRootNode['children']): BlockRootNode['children'] {
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]!
 
-    if (block.type != 'paragraph') {
+    if (block.type !== 'paragraph') {
       return blocks.slice(i)
     }
 
@@ -537,13 +514,11 @@ function trimLeadingParagraphs(
   return []
 }
 
-function trimTrailingParagraphs(
-  blocks: BlockRootNode['children'],
-): BlockRootNode['children'] {
+function trimTrailingParagraphs(blocks: BlockRootNode['children']): BlockRootNode['children'] {
   for (let i = blocks.length - 1; i >= 0; i--) {
     const block = blocks[i]!
 
-    if (block.type != 'paragraph') {
+    if (block.type !== 'paragraph') {
       return blocks.slice(0, i + 1)
     }
 
@@ -557,9 +532,7 @@ function trimTrailingParagraphs(
   return []
 }
 
-function trimEmptyBlocks(
-  blocks: BlockRootNode['children'],
-): BlockRootNode['children'] {
+function trimEmptyBlocks(blocks: BlockRootNode['children']): BlockRootNode['children'] {
   return trimTrailingParagraphs(trimLeadingParagraphs(blocks))
 }
 

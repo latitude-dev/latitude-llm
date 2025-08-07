@@ -1,14 +1,14 @@
-import { ChangeEvent, useCallback, useMemo, useRef, useState } from 'react'
+import { type ChangeEvent, useCallback, useMemo, useRef, useState } from 'react'
 
-import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import type { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import NodeHeaderWrapper, {
-  IndentType,
-  NodeHeaderWrapperProps,
+  type IndentType,
+  type NodeHeaderWrapperProps,
 } from '../NodeHeaderWrapper'
 import { useFileTreeContext } from '../FilesProvider'
 import { useOpenPaths } from '../useOpenPaths'
 import { useTempNodes } from '../useTempNodes'
-import { Node } from '../useTree'
+import type { Node } from '../useTree'
 
 export default function FolderHeader({
   node,
@@ -25,25 +25,20 @@ export default function FolderHeader({
   canDrag: boolean
   draggble: NodeHeaderWrapperProps['draggble']
 }) {
-  const {
-    isLoading,
-    isMerged,
-    onMergeCommitClick,
-    onUploadFile,
-    onDeleteFolder,
-    onRenameFile,
-  } = useFileTreeContext()
+  const { isLoading, isMerged, onMergeCommitClick, onUploadFile, onDeleteFolder, onRenameFile } =
+    useFileTreeContext()
   const { togglePath } = useOpenPaths((state) => ({
     togglePath: state.togglePath,
     openPaths: state.openPaths,
   }))
-  const { addFolder, updateFolder, updateFolderAndAddOther, deleteTmpFolder } =
-    useTempNodes((state) => ({
+  const { addFolder, updateFolder, updateFolderAndAddOther, deleteTmpFolder } = useTempNodes(
+    (state) => ({
       addFolder: state.addFolder,
       updateFolder: state.updateFolder,
       updateFolderAndAddOther: state.updateFolderAndAddOther,
       deleteTmpFolder: state.deleteTmpFolder,
-    }))
+    }),
+  )
   const onUpdateFolderAndAddOther = useCallback(
     ({ path, id }: { path: string; id: string }) => {
       updateFolderAndAddOther({
@@ -70,15 +65,7 @@ export default function FolderHeader({
         }
         addFolder({ parentPath: node.path, parentId: node.id, isFile })
       },
-    [
-      node.path,
-      node.id,
-      togglePath,
-      open,
-      isMerged,
-      onMergeCommitClick,
-      addFolder,
-    ],
+    [node.path, node.id, togglePath, open, isMerged, onMergeCommitClick, addFolder],
   )
 
   const onSaveValue = useCallback(
@@ -185,7 +172,6 @@ export default function FolderHeader({
       onClickFileUploadInput,
       onDeleteFolder,
       deleteTmpFolder,
-      setIsEditing,
       onAddNode,
     ],
   )
@@ -208,16 +194,12 @@ export default function FolderHeader({
         hasChildren={node.children.length > 0}
         onClick={onToggleOpen}
         onSaveValue={({ path }) => onSaveValue({ path })}
-        onSaveValueAndTab={({ path }) =>
-          onUpdateFolderAndAddOther({ id: node.id, path })
-        }
+        onSaveValueAndTab={({ path }) => onUpdateFolderAndAddOther({ id: node.id, path })}
         onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
         open={open}
         actions={actions}
         indentation={indentation}
-        icons={
-          open ? ['chevronDown', 'folderOpen'] : ['chevronRight', 'folderClose']
-        }
+        icons={open ? ['chevronDown', 'folderOpen'] : ['chevronRight', 'folderClose']}
         changeType={node.changeType}
       />
     </>

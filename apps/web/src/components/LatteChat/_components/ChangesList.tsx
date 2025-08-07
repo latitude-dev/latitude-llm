@@ -5,14 +5,11 @@ import { ModifiedDocumentType } from '@latitude-data/constants'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
 import Link from 'next/link'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
-import { LatteChange } from '@latitude-data/constants/latte'
+import type { LatteChange } from '@latitude-data/constants/latte'
 
 function ChangeListItem({ change }: { change: LatteChange }) {
   const path = change.current.path
-  const oldPath =
-    change.previous?.path !== change.current.path
-      ? change.previous?.path
-      : undefined
+  const oldPath = change.previous?.path !== change.current.path ? change.previous?.path : undefined
 
   const changeType: ModifiedDocumentType =
     change.previous === null
@@ -41,9 +38,7 @@ function ChangeListItem({ change }: { change: LatteChange }) {
         ROUTES.projects
           .detail({ id: change.projectId })
           .commits.detail({ uuid: change.draftUuid })
-          .documents.detail({ uuid: change.current.documentUuid })[
-          DocumentRoutes.editor
-        ].root
+          .documents.detail({ uuid: change.current.documentUuid })[DocumentRoutes.editor].root
       }
       className='w-full'
     >

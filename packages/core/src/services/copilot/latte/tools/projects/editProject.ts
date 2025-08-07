@@ -1,13 +1,10 @@
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../lib/Result'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../../../../repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '../../../../../repositories'
 import { defineLatteTool } from '../types'
 import { z } from 'zod'
 import { executeLatteActions } from './latteActions/executeActions'
-import { CompileError } from '@latitude-data/compiler'
+import type { CompileError } from '@latitude-data/compiler'
 
 const editProject = defineLatteTool(
   async ({ projectId, draftUuid, actions }, { workspace, threadUuid }) => {
@@ -28,9 +25,7 @@ const editProject = defineLatteTool(
     }
 
     const documentsScope = new DocumentVersionsRepository(workspace.id)
-    const documents = await documentsScope
-      .getDocumentsAtCommit(commit)
-      .then((r) => r.unwrap())
+    const documents = await documentsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
     const { changes, metadatas } = await executeLatteActions({
       workspace,

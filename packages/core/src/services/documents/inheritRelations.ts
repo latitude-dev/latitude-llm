@@ -1,4 +1,4 @@
-import { DocumentVersion, Workspace } from '../../browser'
+import type { DocumentVersion, Workspace } from '../../browser'
 import { ConflictError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -56,22 +56,15 @@ export async function inheritDocumentRelations(
   },
   transaction = new Transaction(),
 ) {
-  if (
-    fromVersion.id === toVersion.id ||
-    fromVersion.commitId === toVersion.commitId
-  ) {
+  if (fromVersion.id === toVersion.id || fromVersion.commitId === toVersion.commitId) {
     return Result.nil()
   }
   if (fromVersion.documentUuid !== toVersion.documentUuid) {
-    return Result.error(
-      new ConflictError('Cannot inherit relations between different documents'),
-    )
+    return Result.error(new ConflictError('Cannot inherit relations between different documents'))
   }
 
   await Promise.all([
-    inheritSuggestions({ fromVersion, toVersion, workspace }, transaction).then(
-      (r) => r.unwrap(),
-    ),
+    inheritSuggestions({ fromVersion, toVersion, workspace }, transaction).then((r) => r.unwrap()),
   ])
 
   return Result.nil()

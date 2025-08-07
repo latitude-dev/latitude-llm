@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as factories from '../../tests/factories'
 
-import { ProviderApiKey, Workspace } from '../../browser'
+import type { ProviderApiKey, Workspace } from '../../browser'
 import { LogSources, Providers } from '../../constants'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { createProviderLog, type CreateProviderLogProps } from './create'
@@ -46,9 +46,7 @@ describe('create provider', () => {
   })
 
   it('creates provider log', async () => {
-    const providerLog = await createProviderLog(providerProps).then((r) =>
-      r.unwrap(),
-    )
+    const providerLog = await createProviderLog(providerProps).then((r) => r.unwrap())
     expect(providerLog).toEqual(
       expect.objectContaining({
         id: expect.any(Number),
@@ -68,9 +66,7 @@ describe('create provider', () => {
   })
 
   it('publish event', async () => {
-    const providerLog = await createProviderLog(providerProps).then((r) =>
-      r.unwrap(),
-    )
+    const providerLog = await createProviderLog(providerProps).then((r) => r.unwrap())
     expect(publisherSpy).toHaveBeenCalledWith({
       type: 'providerLogCreated',
       data: {

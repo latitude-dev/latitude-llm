@@ -20,10 +20,7 @@ export default async function LoginPage() {
   if (user && workspace) return redirect(ROUTES.dashboard.root)
 
   return (
-    <FocusLayout
-      header={<FocusHeader title='Welcome to Latitude' />}
-      footer={<LoginFooter />}
-    >
+    <FocusLayout header={<FocusHeader title='Welcome to Latitude' />} footer={<LoginFooter />}>
       <Card background='light'>
         <CardContent standalone>
           <LoginForm footer={<AuthFooter />} />

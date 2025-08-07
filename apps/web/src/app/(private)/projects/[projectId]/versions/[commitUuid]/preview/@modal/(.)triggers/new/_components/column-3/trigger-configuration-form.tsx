@@ -1,18 +1,16 @@
 'use client'
 
-import React, { useCallback, useMemo, useState } from 'react'
-import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
+import type React from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import type { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import useDocumentVersions from '$/stores/documentVersions'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerType, DocumentType } from '@latitude-data/constants'
-import {
+import type {
   IntegrationDto,
   PipedreamComponent,
   PipedreamComponentType,
@@ -30,9 +28,7 @@ export function TriggerConfigurationForm({
   integration,
   triggerComponent,
 }: TriggerConfigurationFormProps) {
-  const [configuredProps, setConfiguredProps] = useState<
-    ConfiguredProps<ConfigurableProps>
-  >({})
+  const [configuredProps, setConfiguredProps] = useState<ConfiguredProps<ConfigurableProps>>({})
   const [payloadParameters, setPayloadParameters] = useState<string[]>([])
   const [selectedDocumentUuid, setSelectedDocumentUuid] = useState<string>('')
   const navigate = useNavigate()
@@ -65,9 +61,8 @@ export function TriggerConfigurationForm({
       if (error) return
 
       navigate.push(
-        ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid }).preview.root,
+        ROUTES.projects.detail({ id: project.id }).commits.detail({ uuid: commit.uuid }).preview
+          .root,
       )
     },
     [
@@ -102,12 +97,7 @@ export function TriggerConfigurationForm({
             disabled={isCreating}
           />
         )}
-        <Button
-          fullWidth
-          fancy
-          type='submit'
-          disabled={isCreating || !selectedDocumentUuid}
-        >
+        <Button fullWidth fancy type='submit' disabled={isCreating || !selectedDocumentUuid}>
           Create trigger
         </Button>
       </FormWrapper>

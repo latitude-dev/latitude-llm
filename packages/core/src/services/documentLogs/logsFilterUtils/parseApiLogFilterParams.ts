@@ -1,5 +1,5 @@
-import { Cursor } from '../../../browser'
-import { DEFAULT_PAGINATION_SIZE, LogSources } from '../../../constants'
+import type { Cursor } from '../../../browser'
+import { DEFAULT_PAGINATION_SIZE, type LogSources } from '../../../constants'
 import {
   parseSafeCreatedAtRange,
   parseSafeCustomIdentifier,
@@ -32,9 +32,7 @@ function parseLogSources(logSources: string | undefined) {
   return (logSources?.split?.(',') as LogSources[]) ?? []
 }
 
-export function parseSafeFrom(
-  from: string | null,
-): Cursor<string, number> | null {
+export function parseSafeFrom(from: string | null): Cursor<string, number> | null {
   if (!from) return null
 
   try {
@@ -44,11 +42,7 @@ export function parseSafeFrom(
   }
 }
 
-export function parseApiDocumentLogParams({
-  searchParams,
-}: {
-  searchParams: URLSearchParams
-}) {
+export function parseApiDocumentLogParams({ searchParams }: { searchParams: URLSearchParams }) {
   const params = Object.fromEntries(searchParams.entries())
   const commitIds = parseCommitIds(params.commitIds)
   const logSources = parseLogSources(params.logSources)
@@ -68,8 +62,7 @@ export function parseApiDocumentLogParams({
   }
 
   const isEmptyResponse =
-    filterOptions.commitIds.length === 0 ||
-    filterOptions.logSources.length === 0
+    filterOptions.commitIds.length === 0 || filterOptions.logSources.length === 0
 
   return {
     excludeErrors,

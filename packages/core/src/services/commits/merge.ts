@@ -1,22 +1,15 @@
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 
-import { Commit } from '../../browser'
+import type { Commit } from '../../browser'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import {
-  LatitudeError,
-  NotFoundError,
-  UnprocessableEntityError,
-} from '../../lib/errors'
+import { LatitudeError, NotFoundError, UnprocessableEntityError } from '../../lib/errors'
 import { commits } from '../../schema'
 import { recomputeChanges } from '../documents'
 import { pingProjectUpdate } from '../projects'
 
-export async function mergeCommit(
-  commit: Commit,
-  transaction = new Transaction(),
-) {
+export async function mergeCommit(commit: Commit, transaction = new Transaction()) {
   return transaction.call<Commit>(async (tx) => {
     const mergedAt = new Date()
     const otherCommits = await tx
@@ -30,11 +23,7 @@ export async function mergeCommit(
         ),
       )
     if (otherCommits.length > 0) {
-      return Result.error(
-        new LatitudeError(
-          'Commit publish the version time conflict, try again',
-        ),
-      )
+      return Result.error(new LatitudeError('Commit publish the version time conflict, try again'))
     }
 
     const workspace = await findWorkspaceFromCommit(commit, tx)
@@ -43,41 +32,27 @@ export async function mergeCommit(
       return Result.error(new NotFoundError('Workspace not found'))
     }
 
-    const recomputedResults = await recomputeChanges(
-      { draft: commit, workspace },
-      transaction,
-    )
+    const recomputedResults = await recomputeChanges({ draft: commit, workspace }, transaction)
 
     if (recomputedResults.error) return recomputedResults
     if (Object.keys(recomputedResults.value.errors).length > 0) {
       return Result.error(
-        new UnprocessableEntityError(
-          'There are errors in the updated documents in this version',
-          {
-            [commit.id]: [
-              'There are errors in the updated documents in this version',
-            ],
-          },
-        ),
+        new UnprocessableEntityError('There are errors in the updated documents in this version', {
+          [commit.id]: ['There are errors in the updated documents in this version'],
+        }),
       )
     }
 
     if (Object.keys(recomputedResults.value.changedDocuments).length === 0) {
       return Result.error(
-        new UnprocessableEntityError(
-          'Cannot publish a version with no changes.',
-          {
-            [commit.id]: ['Cannot publish a version with no changes.'],
-          },
-        ),
+        new UnprocessableEntityError('Cannot publish a version with no changes.', {
+          [commit.id]: ['Cannot publish a version with no changes.'],
+        }),
       )
     }
 
     const lastMergedCommit = await tx.query.commits.findFirst({
-      where: and(
-        isNotNull(commits.version),
-        eq(commits.projectId, commit.projectId),
-      ),
+      where: and(isNotNull(commits.version), eq(commits.projectId, commit.projectId)),
       orderBy: desc(commits.version),
     })
     const version = (lastMergedCommit?.version ?? 0) + 1

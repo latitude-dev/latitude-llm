@@ -1,9 +1,9 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { and, eq } from 'drizzle-orm'
-import { DocumentTrigger, Workspace } from '../../browser'
+import type { DocumentTrigger, Workspace } from '../../browser'
 import { LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
 import { documentTriggers } from '../../schema'
 import { destroyPipedreamTrigger } from '../integrations/pipedream/triggers'
 
@@ -40,9 +40,7 @@ export async function deleteDocumentTrigger(
       .returning()
 
     if (!result.length) {
-      return Result.error(
-        new LatitudeError('Failed to delete document trigger'),
-      )
+      return Result.error(new LatitudeError('Failed to delete document trigger'))
     }
 
     return Result.ok(result[0]! as DocumentTrigger)

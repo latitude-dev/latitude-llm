@@ -1,14 +1,14 @@
-import { FormEvent, useCallback, useMemo, useState } from 'react'
+import { type FormEvent, useCallback, useMemo, useState } from 'react'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { RadioButtonsInput } from '@latitude-data/web-ui/atoms/RadioButtonsInput'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
-import { type PreviewLogsState as Props } from './useSelectedLogs'
+import type { PreviewLogsState as Props } from './useSelectedLogs'
 import { PreviewTable } from './PreviewTable'
 import useDatasets from '$/stores/datasets'
-import { Dataset } from '@latitude-data/core/browser'
+import type { Dataset } from '@latitude-data/core/browser'
 
 function ExistingDatasetSelector({
   selectedDataset,
@@ -70,7 +70,7 @@ export function SaveLogsAsDatasetModal({
       setShowDatasetSelector(value === 'existing_dataset')
       if (value !== 'existing_dataset') setSelectedDataset(undefined)
     },
-    [setSelectedDataset, setShowDatasetSelector],
+    [setSelectedDataset],
   )
   const datasetOrNotOptions = useMemo(
     () => [
@@ -87,7 +87,7 @@ export function SaveLogsAsDatasetModal({
         setShowDatasetSelector(false)
       }
     },
-    [previewModalState, setSelectedDataset, setShowDatasetSelector],
+    [previewModalState, setSelectedDataset],
   )
   const onSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -110,24 +110,14 @@ export function SaveLogsAsDatasetModal({
       footer={
         <>
           <CloseTrigger />
-          <Button
-            form='dataset-name'
-            type='submit'
-            fancy
-            variant='default'
-            disabled={isSaving}
-          >
+          <Button form='dataset-name' type='submit' fancy variant='default' disabled={isSaving}>
             {isSaving ? 'Saving...' : 'Add to Dataset'}
           </Button>
         </>
       }
     >
       <div className='flex flex-col gap-y-4'>
-        <form
-          id='dataset-name'
-          className='w-1/3 flex flex-col gap-y-4'
-          onSubmit={onSubmit}
-        >
+        <form id='dataset-name' className='w-1/3 flex flex-col gap-y-4' onSubmit={onSubmit}>
           <RadioButtonsInput
             label='Dataset type'
             name='datasetType'

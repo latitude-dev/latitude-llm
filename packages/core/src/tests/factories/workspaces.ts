@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
 
-import { SubscriptionPlan, type User } from '../../browser'
+import type { SubscriptionPlan, User } from '../../browser'
 import { createMembership } from '../../services/memberships/create'
 import { createWorkspace as createWorkspaceFn } from '../../services/workspaces/create'
 import { createUser, type ICreateUser } from './users'
@@ -11,9 +11,7 @@ export type ICreateWorkspace = {
   createdAt?: Date
   subscriptionPlan?: SubscriptionPlan
 }
-export async function createWorkspace(
-  workspaceData: Partial<ICreateWorkspace> = {},
-) {
+export async function createWorkspace(workspaceData: Partial<ICreateWorkspace> = {}) {
   let userData = workspaceData.creator ?? {}
   if (!('id' in userData)) {
     userData = await createUser(userData)

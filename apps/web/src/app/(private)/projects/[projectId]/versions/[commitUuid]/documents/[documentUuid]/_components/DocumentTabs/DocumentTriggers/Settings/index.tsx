@@ -1,4 +1,4 @@
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -33,10 +33,7 @@ export function TriggerSettings({
   document: DocumentVersion
   projectId: number
   openTriggerModal: (
-    trigger?: Extract<
-      DocumentTrigger,
-      { triggerType: DocumentTriggerType.Integration }
-    >,
+    trigger?: Extract<DocumentTrigger, { triggerType: DocumentTriggerType.Integration }>,
   ) => void
 }) {
   const { data: triggers } = useDocumentTriggers({
@@ -49,9 +46,7 @@ export function TriggerSettings({
   })
 
   const [selectedTab, setSelectedTab] = useState<ShareSettingsTabs>(
-    integrationTriggersEnabled
-      ? ShareSettingsTabs.Integrations
-      : ShareSettingsTabs.Email,
+    integrationTriggersEnabled ? ShareSettingsTabs.Integrations : ShareSettingsTabs.Email,
   )
 
   return (
@@ -66,8 +61,7 @@ export function TriggerSettings({
                     <TabLabel
                       text='Integrations'
                       isActive={triggers?.some(
-                        (t) =>
-                          t.triggerType === DocumentTriggerType.Integration,
+                        (t) => t.triggerType === DocumentTriggerType.Integration,
                       )}
                     />
                   ),
@@ -79,9 +73,7 @@ export function TriggerSettings({
             label: (
               <TabLabel
                 text='Email'
-                isActive={triggers?.some(
-                  (t) => t.triggerType === DocumentTriggerType.Email,
-                )}
+                isActive={triggers?.some((t) => t.triggerType === DocumentTriggerType.Email)}
               />
             ),
           },
@@ -90,9 +82,7 @@ export function TriggerSettings({
             label: (
               <TabLabel
                 text='Schedule'
-                isActive={triggers?.some(
-                  (t) => t.triggerType === DocumentTriggerType.Scheduled,
-                )}
+                isActive={triggers?.some((t) => t.triggerType === DocumentTriggerType.Scheduled)}
               />
             ),
           },

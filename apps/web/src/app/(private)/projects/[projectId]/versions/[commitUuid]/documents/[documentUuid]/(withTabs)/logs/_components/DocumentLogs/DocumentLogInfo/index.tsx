@@ -2,28 +2,18 @@
 
 import { DocumentLogMessages } from '$/components/DocumentLogMessages'
 import { MetadataItem } from '$/components/MetadataItem'
-import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
+import { type StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import {
   buildConversation,
-  DocumentLogWithMetadataAndError,
-  ProviderLogDto,
-  ResultWithEvaluationV2,
-  SpanWithDetails,
+  type DocumentLogWithMetadataAndError,
+  type ProviderLogDto,
+  type ResultWithEvaluationV2,
+  type SpanWithDetails,
 } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { usePanelDomRef } from '@latitude-data/web-ui/atoms/SplitPane'
-import {
-  ReactNode,
-  RefObject,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
-import {
-  DEFAULT_TABS,
-  MetadataInfoTabs,
-} from '../../../../../_components/MetadataInfoTabs'
+import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from 'react'
+import { DEFAULT_TABS, MetadataInfoTabs } from '../../../../../_components/MetadataInfoTabs'
 import { DocumentLogEvaluations } from './Evaluations'
 import { DocumentLogMetadata } from './Metadata'
 
@@ -136,11 +126,7 @@ export function DocumentLogInfo({
                 {children}
               </>
             ) : (
-              <Alert
-                variant='destructive'
-                title='Error loading'
-                description={error.message}
-              />
+              <Alert variant='destructive' title='Error loading' description={error.message} />
             )}
           </>
         )

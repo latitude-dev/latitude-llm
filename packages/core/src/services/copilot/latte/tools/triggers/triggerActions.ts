@@ -1,8 +1,5 @@
 import { z } from 'zod'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../../../../repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '../../../../../repositories'
 import { defineLatteTool } from '../types'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../lib/Result'
@@ -18,11 +15,9 @@ const triggerActions = defineLatteTool(
   async ({ projectId, versionUuid, actions }, { workspace }) => {
     const commitsScope = new CommitsRepository(workspace.id)
 
-    const headCommit = await commitsScope
-      .getHeadCommit(projectId)
-      .then((r) => r.unwrap())
+    const headCommit = await commitsScope.getHeadCommit(projectId).then((r) => r.unwrap())
 
-    if (headCommit == undefined || versionUuid === headCommit.uuid) {
+    if (headCommit === undefined || versionUuid === headCommit.uuid) {
       return Result.error(
         new BadRequestError(
           `Cannot modify/add/delete triggers on a draft commit. Select a previous live commit or publish the draft.`,
@@ -31,9 +26,7 @@ const triggerActions = defineLatteTool(
     }
 
     const documentsScope = new DocumentVersionsRepository(workspace.id)
-    const documents = await documentsScope
-      .getDocumentsAtCommit(headCommit)
-      .then((r) => r.unwrap())
+    const documents = await documentsScope.getDocumentsAtCommit(headCommit).then((r) => r.unwrap())
     const transaction = new Transaction()
 
     return await transaction.call(async () => {

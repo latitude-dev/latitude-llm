@@ -1,22 +1,22 @@
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
+import { beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 import {
-  Commit,
-  Dataset,
-  DatasetRow,
+  type Commit,
+  type Dataset,
+  type DatasetRow,
   DEFAULT_DATASET_LABEL,
-  DocumentVersion,
+  type DocumentVersion,
   EvaluationType,
-  EvaluationV2,
-  Experiment,
+  type EvaluationV2,
+  type Experiment,
   HumanEvaluationMetric,
-  Project,
-  ProviderLogDto,
+  type Project,
+  type ProviderLogDto,
   Providers,
   RuleEvaluationMetric,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
 import * as helpers from '../../helpers'
@@ -38,10 +38,7 @@ describe('runEvaluationV2', () => {
   let user: User
   let commit: Commit
   let document: DocumentVersion
-  let evaluation: EvaluationV2<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.ExactMatch
-  >
+  let evaluation: EvaluationV2<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>
   let providerLog: ProviderLogDto
   let experiment: Experiment
   let dataset: Dataset
@@ -81,7 +78,7 @@ describe('runEvaluationV2', () => {
       workspace: workspace,
     })
 
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
+    const { providerLogs } = await factories.createDocumentLog({
       document: document,
       commit: commit,
     })
@@ -116,9 +113,7 @@ value1,value2,value3
     experiment = e
 
     mocks = {
-      publisher: vi
-        .spyOn(publisher, 'publishLater')
-        .mockImplementation(async () => {}),
+      publisher: vi.spyOn(publisher, 'publishLater').mockImplementation(async () => {}),
     }
   })
 
@@ -157,15 +152,14 @@ value1,value2,value3
 
   it('fails when evaluating a log that is from a different document', async () => {
     const { commit: draft } = await factories.createDraft({ project, user })
-    const { documentVersion: differentDocument } =
-      await factories.createDocumentVersion({
-        commit: draft,
-        path: 'other',
-        content: factories.helpers.createPrompt({ provider: 'openai' }),
-        user: user,
-        workspace: workspace,
-      })
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
+    const { documentVersion: differentDocument } = await factories.createDocumentVersion({
+      commit: draft,
+      path: 'other',
+      content: factories.helpers.createPrompt({ provider: 'openai' }),
+      user: user,
+      workspace: workspace,
+    })
+    const { providerLogs } = await factories.createDocumentLog({
       document: differentDocument,
       commit: draft,
     })
@@ -184,9 +178,7 @@ value1,value2,value3
         workspace: workspace,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that is from a different document',
-      ),
+      new UnprocessableEntityError('Cannot evaluate a log that is from a different document'),
     )
 
     expect(mocks.publisher).not.toHaveBeenCalled()
@@ -230,9 +222,7 @@ value1,value2,value3
         commit: commit,
         workspace: workspace,
       }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new BadRequestError('Running is not supported for this evaluation'),
-    )
+    ).rejects.toThrowError(new BadRequestError('Running is not supported for this evaluation'))
 
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
@@ -289,9 +279,7 @@ value1,value2,value3
         workspace: workspace,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        'Cannot evaluate a row that is from a different dataset',
-      ),
+      new UnprocessableEntityError('Cannot evaluate a row that is from a different dataset'),
     )
 
     expect(mocks.publisher).not.toHaveBeenCalled()
@@ -348,9 +336,7 @@ value1,value2,value3
 
   it('succeeds when extract actual output fails', async () => {
     vi.spyOn(outputs, 'extractActualOutput').mockRejectedValue(
-      new UnprocessableEntityError(
-        "Field 'arguments' is not present in the actual output",
-      ),
+      new UnprocessableEntityError("Field 'arguments' is not present in the actual output"),
     )
     mocks.publisher.mockClear()
 
@@ -679,10 +665,7 @@ value1,value2,value3
         pattern: 'pattern',
       },
     })
-    vi.spyOn(
-      RuleEvaluationRegularExpressionSpecification,
-      'run',
-    ).mockResolvedValue({
+    vi.spyOn(RuleEvaluationRegularExpressionSpecification, 'run').mockResolvedValue({
       score: 1,
       normalizedScore: 100,
       metadata: {

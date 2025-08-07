@@ -1,4 +1,4 @@
-import { DocumentLog } from '@latitude-data/constants'
+import type { DocumentLog } from '@latitude-data/constants'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { ErrorableEntity } from '../../../constants'
@@ -87,21 +87,14 @@ describe('getUsageOverview', () => {
   })
 
   it('filter evaluation results with errors', async () => {
-    const evaluationResultV21 =
-      data.workspaces.workspaceB.info.evaluationResultsV2[0]
-    const evaluationResultV22 =
-      data.workspaces.workspaceB.info.evaluationResultsV2[1]
+    const evaluationResultV21 = data.workspaces.workspaceB.info.evaluationResultsV2[0]
+    const evaluationResultV22 = data.workspaces.workspaceB.info.evaluationResultsV2[1]
     await database
       .update(evaluationResultsV2)
       .set({
         error: { message: 'Error message' },
       })
-      .where(
-        inArray(evaluationResultsV2.id, [
-          evaluationResultV21.id,
-          evaluationResultV22.id,
-        ]),
-      )
+      .where(inArray(evaluationResultsV2.id, [evaluationResultV21.id, evaluationResultV22.id]))
 
     const result = await getUsageOverview({
       page: 1,

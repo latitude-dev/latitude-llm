@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { calculateUnitVector } from './utils'
-import { Position } from './types'
-import { EyeBehaviourSettings, useEyeBehaviour } from './hooks/eyeBehaviour'
+import type { Position } from './types'
+import { type EyeBehaviourSettings, useEyeBehaviour } from './hooks/eyeBehaviour'
 import { INNER_STROKE_WIDTH } from './constants'
 
 const LEFT_EYE_X = 9
@@ -9,32 +9,16 @@ const RIGHT_EYE_X = 15
 const EYE_Y = 12.5
 const EYE_HEIGHT = 2
 
-function buildEyePath({
-  x,
-  topY,
-  bottomY,
-}: {
-  x: number
-  topY: number
-  bottomY: number
-}) {
+function buildEyePath({ x, topY, bottomY }: { x: number; topY: number; bottomY: number }) {
   return `M${x} ${topY}v${bottomY - topY}`
 }
 
-function calculateLookAtPath({
-  lookAt,
-  position,
-}: {
-  lookAt: Position
-  position: Position
-}) {
+function calculateLookAtPath({ lookAt, position }: { lookAt: Position; position: Position }) {
   const targetVector = {
     x: lookAt.x - position.x,
     y: lookAt.y - position.y,
   }
-  const magnitude = Math.sqrt(
-    (lookAt.x - position.x) ** 2 + (lookAt.y - position.y) ** 2,
-  )
+  const magnitude = Math.sqrt((lookAt.x - position.x) ** 2 + (lookAt.y - position.y) ** 2)
 
   const unitVector = calculateUnitVector({
     ...targetVector,
@@ -42,16 +26,10 @@ function calculateLookAtPath({
   })
 
   const topY =
-    EYE_Y -
-    (unitVector.y <= 0
-      ? EYE_HEIGHT / 2
-      : EYE_HEIGHT / 2 - unitVector.y * (EYE_HEIGHT / 2))
+    EYE_Y - (unitVector.y <= 0 ? EYE_HEIGHT / 2 : EYE_HEIGHT / 2 - unitVector.y * (EYE_HEIGHT / 2))
 
   const bottomY =
-    EYE_Y +
-    (unitVector.y >= 0
-      ? EYE_HEIGHT / 2
-      : EYE_HEIGHT / 2 + unitVector.y * (EYE_HEIGHT / 2))
+    EYE_Y + (unitVector.y >= 0 ? EYE_HEIGHT / 2 : EYE_HEIGHT / 2 + unitVector.y * (EYE_HEIGHT / 2))
 
   return [
     buildEyePath({ x: LEFT_EYE_X + unitVector.x, topY, bottomY }),

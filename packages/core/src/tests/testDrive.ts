@@ -4,7 +4,7 @@ import { promises as fs } from 'fs'
 import os from 'os'
 import { DiskWrapper } from '../lib/disk'
 
-let testDisk: DiskWrapper | undefined = undefined
+let testDisk: DiskWrapper | undefined
 
 export const TEST_DISK_LOCATION = `${os.tmpdir()}/test-disk-${process.pid}-${Date.now()}`
 

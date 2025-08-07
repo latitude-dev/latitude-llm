@@ -1,11 +1,5 @@
-import {
-  resolveLogicNode,
-  updateScopeContextForNode,
-} from '$compiler/compiler/logic'
-import type {
-  ResolveNodeProps,
-  UpdateScopeContextProps,
-} from '$compiler/compiler/logic/types'
+import { resolveLogicNode, updateScopeContextForNode } from '$compiler/compiler/logic'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '$compiler/compiler/logic/types'
 import { isIterable } from '$compiler/compiler/utils'
 import errors from '$compiler/error/errors'
 import type { ArrayExpression } from 'estree'
@@ -15,10 +9,7 @@ import type { ArrayExpression } from 'estree'
  * Returns an array of values
  */
 
-export async function resolve({
-  node,
-  ...props
-}: ResolveNodeProps<ArrayExpression>) {
+export async function resolve({ node, ...props }: ResolveNodeProps<ArrayExpression>) {
   const { raiseError } = props
   const resolvedArray = []
   for (const element of node.elements) {
@@ -49,10 +40,7 @@ export async function resolve({
   return resolvedArray
 }
 
-export function updateScopeContext({
-  node,
-  ...props
-}: UpdateScopeContextProps<ArrayExpression>) {
+export function updateScopeContext({ node, ...props }: UpdateScopeContextProps<ArrayExpression>) {
   for (const element of node.elements) {
     if (!element) continue
 

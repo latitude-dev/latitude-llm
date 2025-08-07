@@ -77,14 +77,9 @@ export default function WorkspaceApiKeys() {
                             >
                               <div className='flex flex-row items-center gap-2'>
                                 <Text.H5 color='foregroundMuted'>
-                                  {apiKey.token.slice(0, 3) +
-                                    '********' +
-                                    apiKey.token.slice(-4)}
+                                  {apiKey.token.slice(0, 3) + '********' + apiKey.token.slice(-4)}
                                 </Text.H5>
-                                <Icon
-                                  name='clipboard'
-                                  color='foregroundMuted'
-                                />
+                                <Icon name='clipboard' color='foregroundMuted' />
                               </div>
                             </Button>
                           }
@@ -101,9 +96,7 @@ export default function WorkspaceApiKeys() {
                                 <Button
                                   variant='ghost'
                                   onClick={() =>
-                                    router.push(
-                                      ROUTES.settings.apiKeys.update(apiKey.id),
-                                    )
+                                    router.push(ROUTES.settings.apiKeys.update(apiKey.id))
                                   }
                                 >
                                   <Icon name='pencil' />
@@ -121,11 +114,7 @@ export default function WorkspaceApiKeys() {
                                   disabled={apiKeys.length === 1}
                                   variant='ghost'
                                   onClick={() =>
-                                    router.push(
-                                      ROUTES.settings.apiKeys.destroy(
-                                        apiKey.id,
-                                      ),
-                                    )
+                                    router.push(ROUTES.settings.apiKeys.destroy(apiKey.id))
                                   }
                                 >
                                   <Icon name='trash' />

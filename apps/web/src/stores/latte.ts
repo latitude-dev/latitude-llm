@@ -1,13 +1,10 @@
 'use client'
 
 import { create } from 'zustand'
-import { LatteInteraction } from '$/hooks/latte/types'
-import { LatteChange } from '@latitude-data/constants/latte'
+import type { LatteInteraction } from '$/hooks/latte/types'
+import type { LatteChange } from '@latitude-data/constants/latte'
 import { useCallback, useMemo } from 'react'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
 
 interface LatteState {
   // Chat state
@@ -25,18 +22,12 @@ interface LatteState {
   setIsLoading: (loading: boolean) => void
   addInteractions: (interactions: LatteInteraction[]) => void
   setInteractions: (
-    interactions:
-      | LatteInteraction[]
-      | ((prev: LatteInteraction[]) => LatteInteraction[]),
+    interactions: LatteInteraction[] | ((prev: LatteInteraction[]) => LatteInteraction[]),
   ) => void
   addInteraction: (interaction: LatteInteraction) => void
-  updateLastInteraction: (
-    updater: (interaction: LatteInteraction) => LatteInteraction,
-  ) => void
+  updateLastInteraction: (updater: (interaction: LatteInteraction) => LatteInteraction) => void
   setError: (error: string | undefined) => void
-  setChanges: (
-    changes: LatteChange[] | ((prev: LatteChange[]) => LatteChange[]),
-  ) => void
+  setChanges: (changes: LatteChange[] | ((prev: LatteChange[]) => LatteChange[])) => void
   addChange: (change: LatteChange) => void
   updateChange: (
     draftUuid: string,
@@ -70,15 +61,11 @@ const useStore = create<LatteState>((set) => ({
     })),
 
   setInteractions: (
-    interactions:
-      | LatteInteraction[]
-      | ((prev: LatteInteraction[]) => LatteInteraction[]),
+    interactions: LatteInteraction[] | ((prev: LatteInteraction[]) => LatteInteraction[]),
   ) =>
     set((state) => ({
       interactions:
-        typeof interactions === 'function'
-          ? interactions(state.interactions)
-          : interactions,
+        typeof interactions === 'function' ? interactions(state.interactions) : interactions,
     })),
 
   addInteraction: (interaction: LatteInteraction) =>
@@ -86,9 +73,7 @@ const useStore = create<LatteState>((set) => ({
       interactions: [...state.interactions, interaction],
     })),
 
-  updateLastInteraction: (
-    updater: (interaction: LatteInteraction) => LatteInteraction,
-  ) =>
+  updateLastInteraction: (updater: (interaction: LatteInteraction) => LatteInteraction) =>
     set((state) => {
       if (state.interactions.length === 0) return state
 
@@ -102,9 +87,7 @@ const useStore = create<LatteState>((set) => ({
   setError: (error: string | undefined) => set({ error }),
 
   // Changes actions
-  setChanges: (
-    changes: LatteChange[] | ((prev: LatteChange[]) => LatteChange[]),
-  ) =>
+  setChanges: (changes: LatteChange[] | ((prev: LatteChange[]) => LatteChange[])) =>
     set((state) => ({
       changes: typeof changes === 'function' ? changes(state.changes) : changes,
     })),
@@ -121,9 +104,7 @@ const useStore = create<LatteState>((set) => ({
   ) =>
     set((state) => {
       const index = state.changes.findIndex(
-        (change) =>
-          change.draftUuid === draftUuid &&
-          change.current.documentUuid === documentUuid,
+        (change) => change.draftUuid === draftUuid && change.current.documentUuid === documentUuid,
       )
 
       if (index === -1) return state
@@ -138,10 +119,7 @@ const useStore = create<LatteState>((set) => ({
     set((state) => ({
       changes: state.changes.filter(
         (change) =>
-          !(
-            change.draftUuid === draftUuid &&
-            change.current.documentUuid === documentUuid
-          ),
+          !(change.draftUuid === draftUuid && change.current.documentUuid === documentUuid),
       ),
     })),
 
@@ -176,12 +154,10 @@ const useStore = create<LatteState>((set) => ({
 
 export const useLatteStore = () => {
   const store = useStore()
-  const { setValue: setStoredThreadUuid } = useLocalStorage<string | undefined>(
-    {
-      key: AppLocalStorage.latteThreadUuid,
-      defaultValue: undefined,
-    },
-  )
+  const { setValue: setStoredThreadUuid } = useLocalStorage<string | undefined>({
+    key: AppLocalStorage.latteThreadUuid,
+    defaultValue: undefined,
+  })
 
   const setThreadUuid = useCallback(
     (uuid: string | undefined) => {

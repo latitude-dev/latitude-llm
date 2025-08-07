@@ -130,19 +130,14 @@ export const OPENAI_MODELS = createModelSpec({
     if (model.startsWith('o1-pro')) return 'o1-pro'
     if (model.startsWith('o1')) return 'o1'
 
-    if (model.startsWith('gpt-4o-mini-search-preview'))
-      return 'gpt-4o-mini-search-preview'
-    if (model.startsWith('gpt-4o-mini-audio-preview'))
-      return 'gpt-4o-mini-audio-preview'
-    if (model.startsWith('gpt-4o-mini-realtime-preview'))
-      return 'gpt-4o-mini-realtime-preview'
+    if (model.startsWith('gpt-4o-mini-search-preview')) return 'gpt-4o-mini-search-preview'
+    if (model.startsWith('gpt-4o-mini-audio-preview')) return 'gpt-4o-mini-audio-preview'
+    if (model.startsWith('gpt-4o-mini-realtime-preview')) return 'gpt-4o-mini-realtime-preview'
     if (model.startsWith('gpt-4o-mini')) return 'gpt-4o-mini'
 
-    if (model.startsWith('gpt-4o-search-preview'))
-      return 'gpt-4o-search-preview'
+    if (model.startsWith('gpt-4o-search-preview')) return 'gpt-4o-search-preview'
     if (model.startsWith('gpt-4o-audio-preview')) return 'gpt-4o-audio-preview'
-    if (model.startsWith('gpt-4o-realtime-preview'))
-      return 'gpt-4o-realtime-preview'
+    if (model.startsWith('gpt-4o-realtime-preview')) return 'gpt-4o-realtime-preview'
     if (model.startsWith('gpt-4o')) return 'gpt-4o'
 
     if (model.startsWith('computer-use-preview')) return 'computer-use-preview'

@@ -1,11 +1,8 @@
-import { DEFAULT_PAGINATION_SIZE, Workspace } from '@latitude-data/core/browser'
+import { DEFAULT_PAGINATION_SIZE, type Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
-import {
-  DatasetRowsRepository,
-  DatasetsRepository,
-} from '@latitude-data/core/repositories'
+import { type NextRequest, NextResponse } from 'next/server'
+import { DatasetRowsRepository, DatasetsRepository } from '@latitude-data/core/repositories'
 import { parsePage } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 
 export const GET = errorHandler(
@@ -32,8 +29,7 @@ export const GET = errorHandler(
 
       const dataset = result.value
       const page = parsePage(searchParams.get('page'))
-      const pageSize =
-        searchParams.get('pageSize') ?? String(DEFAULT_PAGINATION_SIZE)
+      const pageSize = searchParams.get('pageSize') ?? String(DEFAULT_PAGINATION_SIZE)
 
       const repo = new DatasetRowsRepository(workspace.id)
       const rows = await repo.findByDatasetPaginated({

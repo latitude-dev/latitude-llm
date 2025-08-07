@@ -20,9 +20,7 @@ export const impersonateAction = authProcedure
     const { user } = ctx
     if (!user.admin) throw new ForbiddenError('You are not an admin')
 
-    const { user: userToImpersonate } = await getUserFromCredentials(
-      input,
-    ).then((r) => r.unwrap())
+    const { user: userToImpersonate } = await getUserFromCredentials(input).then((r) => r.unwrap())
     const workspaceToImpersonate = await getFirstWorkspace({
       userId: user.id,
     }).then((r) => r.unwrap())

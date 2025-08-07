@@ -49,6 +49,7 @@ export default async function DocumentPage({
   const projectId = Number(pjid)
   const { workspace } = await getCurrentUserOrRedirect()
 
+  // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
   let commit
   try {
     commit = await findCommitCached({ projectId, uuid: commitUuid })

@@ -1,8 +1,8 @@
 import { render } from '@react-email/components'
-import Mail from 'nodemailer/lib/mailer'
-import SMTPTransport from 'nodemailer/lib/smtp-transport'
+import type Mail from 'nodemailer/lib/mailer'
+import type SMTPTransport from 'nodemailer/lib/smtp-transport'
 
-import { TypedResult } from '../../../../lib/Result'
+import type { TypedResult } from '../../../../lib/Result'
 import SuggestionMail from '../../../emails/suggestions/SuggestionMail'
 import Mailer from '../../Mailer'
 

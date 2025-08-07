@@ -1,4 +1,4 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 
 export default {
   description: 'Integrates the Browserbase API, a headless web browser.',
@@ -17,6 +17,5 @@ export default {
       required: true,
     },
   },
-  envSource:
-    'https://docs.browserbase.com/introduction/getting-started#overview-dashboard',
+  envSource: 'https://docs.browserbase.com/introduction/getting-started#overview-dashboard',
 } as HostedIntegrationConfig

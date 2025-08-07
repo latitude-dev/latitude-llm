@@ -1,4 +1,4 @@
-import { RunError, RunErrorInsert } from '../../browser'
+import type { RunError, RunErrorInsert } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { runErrors } from '../../schema'

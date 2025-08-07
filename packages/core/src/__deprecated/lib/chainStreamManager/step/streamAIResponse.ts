@@ -1,25 +1,22 @@
-import { Conversation } from '@latitude-data/compiler'
-import { VercelConfig } from '@latitude-data/constants'
-import { LanguageModelUsage } from 'ai'
-import { JSONSchema7 } from 'json-schema'
+import type { Conversation } from '@latitude-data/compiler'
+import type { VercelConfig } from '@latitude-data/constants'
+import type { LanguageModelUsage } from 'ai'
+import type { JSONSchema7 } from 'json-schema'
 import {
   buildMessagesFromResponse,
-  LogSources,
-  ProviderApiKey,
-  Workspace,
+  type LogSources,
+  type ProviderApiKey,
+  type Workspace,
 } from '../../../../browser'
-import { ChainStepResponse, StreamType } from '../../../../constants'
+import type { ChainStepResponse, StreamType } from '../../../../constants'
 import { ai } from '../../../../services/ai'
 import { processResponse } from '../../../../services/chains/ProviderProcessor'
 import {
   buildProviderLogDto,
   saveOrPublishProviderLogs,
 } from '../../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
-import {
-  getCachedResponse,
-  setCachedResponse,
-} from '../../../../services/commits/promptCache'
-import { telemetry, TelemetryContext } from '../../../../telemetry'
+import { getCachedResponse, setCachedResponse } from '../../../../services/commits/promptCache'
+import { telemetry, type TelemetryContext } from '../../../../telemetry'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
 import { performAgentMessagesOptimization } from './agentOptimization'

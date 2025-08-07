@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 
-import { EvaluationTemplateCategory } from '../browser'
+import type { EvaluationTemplateCategory } from '../browser'
 import { database } from '../client'
 import { NotFoundError } from '../lib/errors'
-import { Result, TypedResult } from '../lib/Result'
+import { Result, type TypedResult } from '../lib/Result'
 import { evaluationTemplateCategories } from '../schema'
 
 export async function findEvaluationTemplateCategoryById(
@@ -15,9 +15,7 @@ export async function findEvaluationTemplateCategoryById(
   })
 
   if (!result) {
-    return Result.error(
-      new NotFoundError('Evaluation template category not found'),
-    )
+    return Result.error(new NotFoundError('Evaluation template category not found'))
   }
 
   return Result.ok(result)

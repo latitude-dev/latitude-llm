@@ -1,16 +1,13 @@
 import { EMAIL_TRIGGER_DOMAIN } from '@latitude-data/constants'
-import { Job } from 'bullmq'
-import { PromptLFile } from 'promptl-ai'
-import { DocumentTrigger, HEAD_COMMIT, Workspace } from '../../../../browser'
+import type { Job } from 'bullmq'
+import type { PromptLFile } from 'promptl-ai'
+import { type DocumentTrigger, HEAD_COMMIT, type Workspace } from '../../../../browser'
 import { unsafelyFindWorkspace } from '../../../../data-access'
 import { Result } from '../../../../lib/Result'
-import { PromisedResult } from '../../../../lib/Transaction'
+import type { PromisedResult } from '../../../../lib/Transaction'
 import { DocumentTriggerMailer } from '../../../../mailers'
-import {
-  DocumentTriggersRepository,
-  DocumentVersionsRepository,
-} from '../../../../repositories'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { DocumentTriggersRepository, DocumentVersionsRepository } from '../../../../repositories'
+import type { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { getEmailResponse } from './getResponse'
 
 export type RunEmailTriggerJobData = {
@@ -26,12 +23,8 @@ export type RunEmailTriggerJobData = {
   attachments: PromptLFile[]
 }
 
-async function getTriggerName(
-  trigger: DocumentTrigger,
-): PromisedResult<string, Error> {
-  const configName = (
-    trigger.configuration as EmailTriggerConfiguration
-  ).name?.trim()
+async function getTriggerName(trigger: DocumentTrigger): PromisedResult<string, Error> {
+  const configName = (trigger.configuration as EmailTriggerConfiguration).name?.trim()
   if (configName?.length) {
     return Result.ok(configName)
   }
@@ -90,10 +83,7 @@ export const runEmailTriggerJob = async (job: Job<RunEmailTriggerJobData>) => {
 
   const from = `${JSON.stringify(name)} <${trigger.documentUuid}@${EMAIL_TRIGGER_DOMAIN}>`
 
-  const references = [
-    ...(parentMessageIds ?? []),
-    ...(messageId ? [messageId] : []),
-  ].join(' ')
+  const references = [...(parentMessageIds ?? []), ...(messageId ? [messageId] : [])].join(' ')
 
   const headers = messageId
     ? {

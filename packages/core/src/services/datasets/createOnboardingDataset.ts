@@ -1,8 +1,8 @@
-import { User, Workspace } from '../../browser'
+import type { User, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import { nanoidHashAlgorithm } from './utils'
-import { Column, DatasetRowData, DatasetRowDataContent } from '../../schema'
-import { OnboardingParameters } from '@latitude-data/constants/onboarding'
+import type { Column, DatasetRowData, DatasetRowDataContent } from '../../schema'
+import type { OnboardingParameters } from '@latitude-data/constants/onboarding'
 import { DATASET_COLUMN_ROLES } from '../../constants'
 import Transaction from '../../lib/Transaction'
 import { createDataset } from './create'
@@ -40,8 +40,7 @@ const ONBOARDING_DATASET_COLUMNS: Column[] = [
 const ONBOARDING_DATASET_ROWS: OnboardingParameters[] = [
   {
     product_name: 'Smart Home Assistant',
-    features:
-      'Voice control, Smart home integration, AI-powered recommendations',
+    features: 'Voice control, Smart home integration, AI-powered recommendations',
     target_audience: 'Tech-savvy homeowners',
     tone: 'Professional but friendly',
     word_count: 150,
@@ -76,8 +75,7 @@ const ONBOARDING_DATASET_ROWS: OnboardingParameters[] = [
   },
   {
     product_name: 'Sustainable Fashion Marketplace',
-    features:
-      'Ethical sourcing, Carbon footprint tracking, Style recommendations',
+    features: 'Ethical sourcing, Carbon footprint tracking, Style recommendations',
     target_audience: 'Eco-conscious fashion lovers',
     tone: 'Authentic and passionate',
     word_count: 220,

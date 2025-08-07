@@ -1,4 +1,4 @@
-import {
+import type {
   AssistantMessage,
   Conversation,
   Message,
@@ -6,34 +6,31 @@ import {
   ToolMessage,
 } from '@latitude-data/compiler'
 import {
-  ChainEvent,
+  type ChainEvent,
   ChainEventTypes,
-  ChainStepResponse,
-  LogSources,
-  OmittedLatitudeEventData,
+  type ChainStepResponse,
+  type LogSources,
+  type OmittedLatitudeEventData,
   StreamEventTypes,
-  StreamType,
-  TraceContext,
+  type StreamType,
+  type TraceContext,
 } from '@latitude-data/constants'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { FinishReason, LanguageModelUsage } from 'ai'
-import { JSONSchema7 } from 'json-schema'
+import type { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { FinishReason, LanguageModelUsage } from 'ai'
+import type { JSONSchema7 } from 'json-schema'
 import { omit } from 'lodash-es'
-import { IntegrationDto, ProviderApiKey, Workspace } from '../../../browser'
+import type { IntegrationDto, ProviderApiKey, Workspace } from '../../../browser'
 import type { PromptSource } from '../../../constants'
 import { buildMessagesFromResponse } from '../../../helpers'
 import { createMcpClientManager } from '../../../services/integrations/McpClient/McpClientManager'
-import { TelemetryContext } from '../../../telemetry'
+import type { TelemetryContext } from '../../../telemetry'
 import { resolveToolsFromConfig } from './resolveTools'
 import { ToolSource } from './resolveTools/types'
 import { streamAIResponse } from './step/streamAIResponse'
 import { getBuiltInToolCallResponses } from './step/toolExecution'
 
-const createPromiseWithResolver = <T>(): readonly [
-  Promise<T>,
-  (value: T) => void,
-] => {
+const createPromiseWithResolver = <T>(): readonly [Promise<T>, (value: T) => void] => {
   let resolveValue: (value: T) => void
 
   const promisedValue = new Promise<T>((res) => {
@@ -62,9 +59,7 @@ export class ChainStreamManager {
   private resolveMessages?: (messages: Message[]) => void
   private resolveToolCalls?: (toolCalls: ToolCall[]) => void
   private resolveError?: (error: ChainError<RunErrorCodes> | undefined) => void
-  private resolveLastResponse?: (
-    response: ChainStepResponse<StreamType> | undefined,
-  ) => void
+  private resolveLastResponse?: (response: ChainStepResponse<StreamType> | undefined) => void
   private controller?: ReadableStreamDefaultController<ChainEvent>
   private finishReason?: FinishReason
   private mcpClientManager: ReturnType<typeof createMcpClientManager>
@@ -115,11 +110,8 @@ export class ChainStreamManager {
     if (this.finished) throw new Error('Chain already finished')
 
     const [messages, resolveMessages] = createPromiseWithResolver<Message[]>()
-    const [error, resolveError] = createPromiseWithResolver<
-      ChainError<RunErrorCodes> | undefined
-    >()
-    const [toolCalls, resolveToolCalls] =
-      createPromiseWithResolver<ToolCall[]>()
+    const [error, resolveError] = createPromiseWithResolver<ChainError<RunErrorCodes> | undefined>()
+    const [toolCalls, resolveToolCalls] = createPromiseWithResolver<ToolCall[]>()
     const [lastResponse, resolveLastResponse] = createPromiseWithResolver<
       ChainStepResponse<StreamType> | undefined
     >()
@@ -206,10 +198,7 @@ export class ChainStreamManager {
     }).then((r) => r.unwrap())
 
     const tools = Object.fromEntries(
-      Object.entries(resolvedTools).map(([name, { definition }]) => [
-        name,
-        definition,
-      ]),
+      Object.entries(resolvedTools).map(([name, { definition }]) => [name, definition]),
     )
 
     const resolvedConfig = {
@@ -243,8 +232,7 @@ export class ChainStreamManager {
     this.finishReason = response.finishReason
     this.tokenUsage = {
       promptTokens: this.tokenUsage.promptTokens + tokenUsage.promptTokens,
-      completionTokens:
-        this.tokenUsage.completionTokens + tokenUsage.completionTokens,
+      completionTokens: this.tokenUsage.completionTokens + tokenUsage.completionTokens,
       totalTokens: this.tokenUsage.totalTokens + tokenUsage.totalTokens,
     }
     this.setLastResponse(response)
@@ -328,9 +316,7 @@ export class ChainStreamManager {
   startStep() {
     if (!this.controller) throw new Error('Stream not started')
     if (this.inStep)
-      throw new Error(
-        'Tried to start a new step without completing the previous one',
-      )
+      throw new Error('Tried to start a new step without completing the previous one')
 
     this.inStep = true
     this.sendEvent({
@@ -340,8 +326,7 @@ export class ChainStreamManager {
 
   completeStep() {
     if (!this.controller) throw new Error('Stream not started')
-    if (!this.inStep)
-      throw new Error('Tried to complete step without starting it')
+    if (!this.inStep) throw new Error('Tried to complete step without starting it')
 
     this.inStep = false
     this.sendEvent({

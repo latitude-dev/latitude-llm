@@ -1,8 +1,8 @@
 import { hasContent, isIterable } from '$compiler/compiler/utils'
 import errors from '$compiler/error/errors'
-import { EachBlock } from '$compiler/parser/interfaces'
+import type { EachBlock } from '$compiler/parser/interfaces'
 
-import { CompileNodeContext, TemplateNodeWithStatus } from '../types'
+import type { CompileNodeContext, TemplateNodeWithStatus } from '../types'
 
 type EachNodeWithStatus = TemplateNodeWithStatus & {
   status: TemplateNodeWithStatus['status'] & {
@@ -42,17 +42,11 @@ export async function compile({
   const contextVarName = node.context.name
   const indexVarName = node.index?.name
   if (scope.exists(contextVarName)) {
-    throw expressionError(
-      errors.variableAlreadyDeclared(contextVarName),
-      node.context,
-    )
+    throw expressionError(errors.variableAlreadyDeclared(contextVarName), node.context)
   }
 
   if (indexVarName && scope.exists(indexVarName)) {
-    throw expressionError(
-      errors.variableAlreadyDeclared(indexVarName),
-      node.index!,
-    )
+    throw expressionError(errors.variableAlreadyDeclared(indexVarName), node.index!)
   }
 
   let i = 0

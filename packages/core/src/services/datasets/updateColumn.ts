@@ -1,5 +1,5 @@
-import { Dataset, DatasetColumnRole } from '../../browser'
-import { Result, TypedResult } from '../../lib/Result'
+import type { Dataset, DatasetColumnRole } from '../../browser'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { updateDataset } from './update'
 
@@ -29,10 +29,7 @@ export async function updateDatasetColumn(
     return { ...c, name: data.name, role: data.role }
   })
 
-  const updatedDatasetResult = await updateDataset(
-    { dataset, data: { columns } },
-    transaction,
-  )
+  const updatedDatasetResult = await updateDataset({ dataset, data: { columns } }, transaction)
   if (updatedDatasetResult.error) return updatedDatasetResult
 
   return Result.ok(updatedDatasetResult.value as Dataset)

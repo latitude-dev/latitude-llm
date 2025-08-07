@@ -3,7 +3,7 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { handleResponse } from '$/hooks/useFetcher'
 import { useNavigate } from '$/hooks/useNavigate'
-import { SelectableRowsHook } from '$/hooks/useSelectableRows'
+import type { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
@@ -12,11 +12,8 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useState } from 'react'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { downloadLogsAsyncAction } from '$/actions/documentLogs/downloadLogs'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
+import type { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 
 const MAX_IMMEDIATE_DOWNLOAD = 25
 
@@ -35,18 +32,14 @@ export function DownloadLogsButton({
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
 
-  const { execute: executeAsyncDownload } = useLatitudeAction(
-    downloadLogsAsyncAction,
-    {
-      onSuccess: () => {
-        toast({
-          title: 'Download Started',
-          description:
-            'You will receive an email with the download link once the file is ready.',
-        })
-      },
+  const { execute: executeAsyncDownload } = useLatitudeAction(downloadLogsAsyncAction, {
+    onSuccess: () => {
+      toast({
+        title: 'Download Started',
+        description: 'You will receive an email with the download link once the file is ready.',
+      })
     },
-  )
+  })
 
   const handleImmediateDownload = useCallback(async () => {
     const formData = new FormData()
@@ -93,9 +86,7 @@ export function DownloadLogsButton({
           projectId: project.id,
           filterOptions,
           selectionMode: selectableState.selectionMode,
-          excludedDocumentLogIds: Array.from(
-            selectableState.excludedIds,
-          ) as number[],
+          excludedDocumentLogIds: Array.from(selectableState.excludedIds) as number[],
         })
       }
     } finally {
@@ -128,9 +119,7 @@ export function DownloadLogsButton({
         variant='outline'
         onClick={() => setIsModalOpen(true)}
       >
-        {isDownloading
-          ? 'Processing...'
-          : `Download ${selectableState.selectedCount} logs`}
+        {isDownloading ? 'Processing...' : `Download ${selectableState.selectedCount} logs`}
       </Button>
 
       <ConfirmModal

@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTrigger, Workspace } from '../../browser'
+import type { DocumentTrigger, Workspace } from '../../browser'
 import { updateDocumentTriggerConfiguration } from './update'
 import * as buildConfigurationModule from './helpers/buildConfiguration'
 import { documentTriggers } from '../../schema'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { and, eq } from 'drizzle-orm'
 import { LatitudeError } from './../../lib/errors'
 
@@ -39,11 +39,9 @@ describe('updateDocumentTriggerConfiguration', () => {
     mockSet = vi.fn().mockReturnValue({ where: mockWhere })
     mockUpdate = vi.fn().mockReturnValue({ set: mockSet })
     mockTx = { update: mockUpdate }
-    mocks.transactionMock.prototype.call = vi.fn(
-      async (fn: (tx: any) => Promise<any>) => {
-        return await fn(mockTx)
-      },
-    )
+    mocks.transactionMock.prototype.call = vi.fn(async (fn: (tx: any) => Promise<any>) => {
+      return await fn(mockTx)
+    })
 
     vi.mock('./../../lib/Transaction', async (importOriginal) => ({
       ...(await importOriginal()),
@@ -90,9 +88,7 @@ describe('updateDocumentTriggerConfiguration', () => {
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
-    )
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(expect.any(Function))
     expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
     expect(mockSet).toHaveBeenCalledWith({
       configuration: newEmailConfiguration,
@@ -153,9 +149,7 @@ describe('updateDocumentTriggerConfiguration', () => {
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
-    )
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(expect.any(Function))
     expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
     expect(mockSet).toHaveBeenCalledWith({
       configuration: expectedConfiguration,
@@ -195,12 +189,8 @@ describe('updateDocumentTriggerConfiguration', () => {
     // Assert
     expect(result.ok).toBeFalsy()
     expect(result.error).toBeInstanceOf(LatitudeError)
-    expect(result.error?.message).toBe(
-      'Failed to update document trigger configuration',
-    )
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
-    )
+    expect(result.error?.message).toBe('Failed to update document trigger configuration')
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(expect.any(Function))
     expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
     expect(mockSet).toHaveBeenCalledWith({
       configuration: newEmailConfiguration,

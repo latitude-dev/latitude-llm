@@ -2,8 +2,7 @@ import crypto from 'crypto'
 import { env } from '@latitude-data/env'
 
 // Get encryption key from environment or use a default for development
-const ENCRYPTION_KEY =
-  env.ENCRYPTION_KEY || 'latitude-default-encryption-key-32chars'
+const ENCRYPTION_KEY = env.ENCRYPTION_KEY || 'latitude-default-encryption-key-32chars'
 
 /**
  * Encrypts a string using AES-256-CBC
@@ -15,11 +14,7 @@ export function encrypt(text: string): string {
   const iv = crypto.randomBytes(16)
 
   // Create cipher with key and iv
-  const cipher = crypto.createCipheriv(
-    'aes-256-cbc',
-    Buffer.from(ENCRYPTION_KEY.slice(0, 32)),
-    iv,
-  )
+  const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY.slice(0, 32)), iv)
 
   // Encrypt the string
   let encrypted = cipher.update(text, 'utf8', 'base64')

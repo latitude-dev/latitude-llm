@@ -1,36 +1,25 @@
 import { env } from '@latitude-data/env'
-import { ErrorResult, Result, TypedResult } from '../../../lib/Result'
-import { LatitudeError, NotImplementedError } from '../../../lib/errors'
-import {
+import { type ErrorResult, Result, type TypedResult } from '../../../lib/Result'
+import { type LatitudeError, NotImplementedError } from '../../../lib/errors'
+import type {
   Project,
   Workspace,
   DocumentVersion,
   Commit,
   LatteThreadUpdateArgs,
 } from '../../../browser'
-import {
-  unsafelyFindProject,
-  unsafelyFindWorkspace,
-} from '../../../data-access'
-import { PromisedResult } from '../../../lib/Transaction'
+import { unsafelyFindProject, unsafelyFindWorkspace } from '../../../data-access'
+import type { PromisedResult } from '../../../lib/Transaction'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
   IntegrationsRepository,
   ProviderApiKeysRepository,
 } from '../../../repositories'
-import {
-  ChainEvent,
-  ChainEventTypes,
-  StreamEventTypes,
-} from '@latitude-data/constants'
+import { type ChainEvent, ChainEventTypes, StreamEventTypes } from '@latitude-data/constants'
 import { streamToGenerator } from '../../../lib/streamToGenerator'
 import { WebsocketClient } from '../../../websockets/workers'
-import {
-  type ConversationMetadata,
-  scan,
-  type Document as RefDocument,
-} from 'promptl-ai'
+import { type ConversationMetadata, scan, type Document as RefDocument } from 'promptl-ai'
 import { database } from '../../../client'
 import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
 import path from 'path'
@@ -44,10 +33,7 @@ function missingKeyError(key: string): ErrorResult<LatitudeError> {
   )
 }
 
-export function assertCopilotIsSupported(): TypedResult<
-  undefined,
-  LatitudeError
-> {
+export function assertCopilotIsSupported(): TypedResult<undefined, LatitudeError> {
   if (!env.COPILOT_PROJECT_ID) return missingKeyError('COPILOT_PROJECT_ID')
   if (!env.COPILOT_LATTE_PROMPT_PATH) {
     return missingKeyError('COPILOT_LATTE_PROMPT_PATH')
@@ -76,9 +62,7 @@ export async function getCopilotDocument(): PromisedResult<
       ),
     )
   }
-  const workspace = await unsafelyFindWorkspace(project.workspaceId).then(
-    (w) => w!,
-  )
+  const workspace = await unsafelyFindWorkspace(project.workspaceId).then((w) => w!)
 
   const commitScope = new CommitsRepository(workspace.id)
   const commitResult = await commitScope.getHeadCommit(project.id)
@@ -216,13 +200,8 @@ export async function scanDocuments(
   }
   const agentToolsMap = agentsToolMapResult.unwrap()
 
-  const referenceFn = async (
-    refPath: string,
-    from?: string,
-  ): Promise<RefDocument | undefined> => {
-    const fullPath = path
-      .resolve(path.dirname(`/${from ?? ''}`), refPath)
-      .replace(/^\//, '')
+  const referenceFn = async (refPath: string, from?: string): Promise<RefDocument | undefined> => {
+    const fullPath = path.resolve(path.dirname(`/${from ?? ''}`), refPath).replace(/^\//, '')
 
     const doc = documents.find((doc) => doc.path === fullPath)
     if (!doc) return undefined

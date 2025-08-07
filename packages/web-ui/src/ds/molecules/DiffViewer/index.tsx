@@ -1,9 +1,10 @@
 'use client'
 
-import React, { lazy, useEffect, useState } from 'react'
+import type React from 'react'
+import { lazy, useEffect, useState } from 'react'
 
 import { TextEditorPlaceholder } from '../TextEditorPlaceholder'
-import { DiffValue } from '@latitude-data/core/browser'
+import type { DiffValue } from '@latitude-data/core/browser'
 
 const DiffViewer = lazy(() =>
   import('./Editor/index').then(

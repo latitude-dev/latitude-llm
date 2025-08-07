@@ -10,8 +10,7 @@ import { mergeCommit } from './merge'
 
 describe('mergeCommit', () => {
   it('merges a commit', async (ctx) => {
-    const { project, workspace, user, providers } =
-      await ctx.factories.createProject()
+    const { project, workspace, user, providers } = await ctx.factories.createProject()
     const { commit } = await ctx.factories.createDraft({ project, user })
 
     await createNewDocument({
@@ -26,9 +25,7 @@ describe('mergeCommit', () => {
     expect(mergedCommit.mergedAt).toBeTruthy()
     expect(mergedCommit.version).toBe(1)
 
-    const headCommit = await findHeadCommit({ projectId: project.id }).then(
-      (r) => r.unwrap(),
-    )
+    const headCommit = await findHeadCommit({ projectId: project.id }).then((r) => r.unwrap())
     expect(headCommit.id).toBe(mergedCommit.id)
   })
 
@@ -39,8 +36,7 @@ describe('mergeCommit', () => {
   })
 
   it('recomputes all changes in the commit', async (ctx) => {
-    const { project, user, workspace, providers } =
-      await ctx.factories.createProject()
+    const { project, user, workspace, providers } = await ctx.factories.createProject()
     const { commit } = await ctx.factories.createDraft({ project, user })
 
     await createNewDocument({
@@ -71,8 +67,7 @@ describe('mergeCommit', () => {
   })
 
   it('fails when trying to merge a commit with syntax errors', async (ctx) => {
-    const { project, user, workspace, providers } =
-      await ctx.factories.createProject()
+    const { project, user, workspace, providers } = await ctx.factories.createProject()
     const { commit } = await ctx.factories.createDraft({ project, user })
 
     await createNewDocument({
@@ -131,8 +126,7 @@ describe('mergeCommit', () => {
   })
 
   it('increases the version number of the commit', async (ctx) => {
-    const { project, user, workspace, providers } =
-      await ctx.factories.createProject()
+    const { project, user, workspace, providers } = await ctx.factories.createProject()
     const { commit: commit1 } = await ctx.factories.createDraft({
       project,
       user,

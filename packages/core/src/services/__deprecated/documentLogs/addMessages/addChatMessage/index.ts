@@ -1,26 +1,22 @@
 import type { Message } from '@latitude-data/compiler'
-import {
-  ChainError,
-  NotFoundError,
-  RunErrorCodes,
-} from '@latitude-data/constants/errors'
+import { type ChainError, NotFoundError, type RunErrorCodes } from '@latitude-data/constants/errors'
 
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ChainStreamManager } from '../../../../../__deprecated/lib/chainStreamManager'
 import {
   buildConversation,
-  ChainStepResponse,
-  DocumentRunPromptSource,
-  LogSources,
-  PromptSource,
-  ProviderLog,
-  StreamType,
-  TraceContext,
-  Workspace,
+  type ChainStepResponse,
+  type DocumentRunPromptSource,
+  type LogSources,
+  type PromptSource,
+  type ProviderLog,
+  type StreamType,
+  type TraceContext,
+  type Workspace,
 } from '../../../../../browser'
 import { unsafelyFindProviderApiKey } from '../../../../../data-access'
-import { Result, TypedResult } from '../../../../../lib/Result'
-import { telemetry, TelemetryContext } from '../../../../../telemetry'
+import { Result, type TypedResult } from '../../../../../lib/Result'
+import { telemetry, type TelemetryContext } from '../../../../../telemetry'
 import serializeProviderLog from '../../../../providerLogs/serialize'
 import { getInputSchema, getOutputType } from '../../../chains/ChainValidator'
 import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
@@ -56,18 +52,14 @@ export async function addChatMessage({
 }) {
   if (!providerLog.providerId) {
     return Result.error(
-      new NotFoundError(
-        `Cannot add messages to a conversation that has no associated provider`,
-      ),
+      new NotFoundError(`Cannot add messages to a conversation that has no associated provider`),
     )
   }
 
   const provider = await unsafelyFindProviderApiKey(providerLog.providerId)
   if (!provider) {
     return Result.error(
-      new NotFoundError(
-        `Could not find provider API key with id ${providerLog.providerId}`,
-      ),
+      new NotFoundError(`Could not find provider API key with id ${providerLog.providerId}`),
     )
   }
 

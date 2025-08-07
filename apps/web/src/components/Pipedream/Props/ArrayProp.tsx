@@ -1,4 +1,4 @@
-import {
+import type {
   ConfigurablePropIntegerArray,
   ConfigurablePropStringArray,
 } from '@pipedream/sdk/browser'

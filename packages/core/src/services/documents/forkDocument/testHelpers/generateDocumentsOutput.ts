@@ -1,15 +1,11 @@
 import { eq } from 'drizzle-orm'
 
-import { Project } from '../../../../browser'
+import type { Project } from '../../../../browser'
 import { database } from '../../../../client'
 import { commits, documentVersions } from '../../../../schema'
 import { getDocumentMetadata } from '../../scan'
 
-export async function generateDocumentsOutput({
-  project,
-}: {
-  project: Project
-}) {
+export async function generateDocumentsOutput({ project }: { project: Project }) {
   const allCommits = await database.query.commits.findMany({
     where: eq(commits.projectId, project.id),
   })

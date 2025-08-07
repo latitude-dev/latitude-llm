@@ -1,12 +1,8 @@
-import { ExperimentFormPayload } from '../useExperimentFormPayload'
+import type { ExperimentFormPayload } from '../useExperimentFormPayload'
 import { useEffect } from 'react'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 
-export function NoDatasetRangeInput({
-  setFromLine,
-  setToLine,
-  toLine,
-}: ExperimentFormPayload) {
+export function NoDatasetRangeInput({ setFromLine, setToLine, toLine }: ExperimentFormPayload) {
   useEffect(() => {
     setFromLine(0)
     setToLine(9)

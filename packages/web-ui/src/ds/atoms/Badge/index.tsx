@@ -1,9 +1,9 @@
 import { cva, type VariantProps } from 'class-variance-authority'
-import * as React from 'react'
+import type * as React from 'react'
 
 import { cn } from '../../../lib/utils'
 import { font } from '../../tokens'
-import { Icon, IconProps } from '../Icons'
+import { Icon, type IconProps } from '../Icons'
 
 const badgeVariants = cva(
   'inline-flex items-center rounded-md border font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
@@ -14,14 +14,10 @@ const badgeVariants = cva(
           'border-primary-foreground/10 bg-primary text-primary-foreground hover:bg-primary/80',
         secondary:
           'border-secondary-foreground/10 bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        yellow:
-          'border-transparent bg-yellow text-foreground hover:bg-yellow/80',
-        purple:
-          'border-purple-foreground/10 bg-purple text-purple-foreground hover:bg-purple/80',
-        accent:
-          'border-accent-foreground/10 bg-accent text-accent-foreground hover:bg-accent/80',
-        success:
-          'border-transparent bg-green-500 text-success-foreground hover:bg-green-500/80',
+        yellow: 'border-transparent bg-yellow text-foreground hover:bg-yellow/80',
+        purple: 'border-purple-foreground/10 bg-purple text-purple-foreground hover:bg-purple/80',
+        accent: 'border-accent-foreground/10 bg-accent text-accent-foreground hover:bg-accent/80',
+        success: 'border-transparent bg-green-500 text-success-foreground hover:bg-green-500/80',
         successMuted:
           'border-success-muted-foreground/10 bg-success-muted text-success-muted-foreground hover:bg-success-muted/80',
         destructive:
@@ -30,18 +26,15 @@ const badgeVariants = cva(
           'border-destructive-muted-foreground/10 bg-destructive-muted text-destructive-muted-foreground hover:bg-destructive-muted/80',
         warningMuted:
           'border-warning-muted-foreground/10 bg-warning-muted text-warning-muted-foreground hover:bg-warning-muted/80',
-        muted:
-          'border-muted-foreground/10 bg-muted text-muted-foreground hover:bg-muted/80',
+        muted: 'border-muted-foreground/10 bg-muted text-muted-foreground hover:bg-muted/80',
         outline: 'text-foreground',
         outlineMuted: 'border-muted-foreground/30 text-muted-foreground',
         outlineAccent: 'border-accent-foreground/30 text-accent-foreground',
         outlinePurple: 'border-purple-foreground/30 text-purple-foreground',
-        outlineSuccessMuted:
-          'border-success-muted-foreground/30 text-success-muted-foreground',
+        outlineSuccessMuted: 'border-success-muted-foreground/30 text-success-muted-foreground',
         outlineDestructiveMuted:
           'border-destructive-muted-foreground/30 text-destructive-muted-foreground',
-        outlineWarningMuted:
-          'border-warning-muted-foreground/30 text-warning-muted-foreground',
+        outlineWarningMuted: 'border-warning-muted-foreground/30 text-warning-muted-foreground',
       },
       shape: {
         default: 'max-h-5 ',
@@ -89,22 +82,15 @@ function Badge({
 }: BadgeProps) {
   return (
     <div
-      className={cn(
-        'min-w-0',
-        badgeVariants({ variant, shape, size }),
-        className,
-        {
-          'opacity-50': disabled,
-          'flex-row max-h-none gap-x-1 py-px': !!iconProps,
-          'justify-center': centered,
-          'select-none': !userSelect,
-        },
-      )}
+      className={cn('min-w-0', badgeVariants({ variant, shape, size }), className, {
+        'opacity-50': disabled,
+        'flex-row max-h-none gap-x-1 py-px': !!iconProps,
+        'justify-center': centered,
+        'select-none': !userSelect,
+      })}
       {...props}
     >
-      {iconProps && iconProps.placement === 'start' ? (
-        <Icon {...iconProps} size='xsmall' />
-      ) : null}
+      {iconProps && iconProps.placement === 'start' ? <Icon {...iconProps} size='xsmall' /> : null}
       <span
         className={cn('max-w-full', {
           truncate: ellipsis,
@@ -113,9 +99,7 @@ function Badge({
       >
         {children}
       </span>
-      {iconProps && iconProps.placement === 'end' ? (
-        <Icon {...iconProps} size='xsmall' />
-      ) : null}
+      {iconProps && iconProps.placement === 'end' ? <Icon {...iconProps} size='xsmall' /> : null}
     </div>
   )
 }

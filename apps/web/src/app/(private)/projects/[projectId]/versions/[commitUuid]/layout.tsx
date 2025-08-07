@@ -1,27 +1,17 @@
 'use server'
 
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
-import {
-  HEAD_COMMIT,
-  type Commit,
-  type Project,
-} from '@latitude-data/core/browser'
+import { HEAD_COMMIT, type Commit, type Project } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
-import {
-  CommitProvider,
-  ProjectProvider,
-} from '@latitude-data/web-ui/providers'
+import { CommitProvider, ProjectProvider } from '@latitude-data/web-ui/providers'
 import {
   findCommitsByProjectCached,
   findProjectCached,
   getHeadCommitCached,
 } from '$/app/(private)/_data-access'
-import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
-import {
-  SessionData,
-  getCurrentUserOrRedirect,
-} from '$/services/auth/getCurrentUser'
+import type { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
+import { type SessionData, getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { notFound, redirect } from 'next/navigation'
 import { LatteRealtimeUpdatesProvider } from './providers/LatteRealtimeUpdatesProvider'
@@ -31,10 +21,7 @@ export type CommitPageParams = {
   params: Promise<Awaited<ProjectPageParams['params']> & { commitUuid: string }>
 }
 
-export default async function CommitLayout({
-  children,
-  params,
-}: CommitPageParams) {
+export default async function CommitLayout({ children, params }: CommitPageParams) {
   let session: SessionData
   let project: Project
   let commit: Commit | undefined

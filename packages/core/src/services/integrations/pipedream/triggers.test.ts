@@ -1,19 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
-import {
-  Workspace,
-  PipedreamIntegration,
-  DocumentTrigger,
-} from '../../../browser'
+import type { Workspace, PipedreamIntegration, DocumentTrigger } from '../../../browser'
 import { updatePipedreamTrigger } from './triggers'
 import { Result } from '../../../lib/Result'
-import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import * as appsModule from './apps'
 import * as componentsModule from './components/fillConfiguredProps'
 import * as triggersModule from './triggers'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import * as factories from '../../../tests/factories'
-import { PipedreamIntegrationConfiguration } from '../helpers/schema'
+import type { PipedreamIntegrationConfiguration } from '../helpers/schema'
 
 const mockPipedreamClient = {
   updateTrigger: vi.fn(),
@@ -223,9 +219,7 @@ describe('updatePipedreamTrigger', () => {
 
     it('returns error when getPipedreamEnvironment fails', async () => {
       const envError = new Error('Environment not configured')
-      vi.spyOn(appsModule, 'getPipedreamEnvironment').mockReturnValue(
-        Result.error(envError as any),
-      )
+      vi.spyOn(appsModule, 'getPipedreamEnvironment').mockReturnValue(Result.error(envError as any))
 
       const result = await updatePipedreamTrigger({
         workspace,
@@ -358,18 +352,16 @@ describe('updatePipedreamTrigger', () => {
     })
 
     it('returns error when trying to change to a different unconfigured integration', async () => {
-      const anotherUnconfiguredIntegration = (await factories.createIntegration(
-        {
-          workspace,
-          type: IntegrationType.Pipedream,
-          configuration: {
-            appName: 'another-unconfigured-app',
-            metadata: {
-              displayName: 'Another Unconfigured App',
-            },
+      const anotherUnconfiguredIntegration = (await factories.createIntegration({
+        workspace,
+        type: IntegrationType.Pipedream,
+        configuration: {
+          appName: 'another-unconfigured-app',
+          metadata: {
+            displayName: 'Another Unconfigured App',
           },
         },
-      )) as PipedreamIntegration
+      })) as PipedreamIntegration
 
       const configWithDifferentUnconfiguredIntegration = {
         ...originalConfig,

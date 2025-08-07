@@ -1,16 +1,12 @@
 import {
-  Commit,
-  DocumentVersion,
-  Project,
+  type Commit,
+  type DocumentVersion,
+  type Project,
   Providers,
-  User,
+  type User,
 } from '@latitude-data/core/browser'
 import { database } from '@latitude-data/core/client'
-import {
-  createDraft,
-  createProject,
-  helpers,
-} from '@latitude-data/core/factories'
+import { createDraft, createProject, helpers } from '@latitude-data/core/factories'
 import { documentVersions } from '@latitude-data/core/schema'
 import { and, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -118,9 +114,7 @@ describe('destroyDocumentAction', async () => {
         where: and(eq(documentVersions.documentUuid, document.documentUuid)),
       })
 
-      const drafDocument = documents.find(
-        (d: DocumentVersion) => d.commitId === draft.id,
-      )
+      const drafDocument = documents.find((d: DocumentVersion) => d.commitId === draft.id)
       expect(documents.length).toBe(2)
       expect(drafDocument!.deletedAt).not.toBe(null)
     })

@@ -1,12 +1,9 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ExperimentItem } from './ExperimentItem/index'
 import { useExperimentComparison } from '$/stores/experimentComparison'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { Commit, Project } from '@latitude-data/core/browser'
+import type { Commit, Project } from '@latitude-data/core/browser'
 
 export function ExperimentComparison({
   selectedExperimentUuids,
@@ -19,24 +16,22 @@ export function ExperimentComparison({
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
-  const { experiments, evaluations, bestLogsMetadata } =
-    useExperimentComparison(
-      {
-        project: project as Project,
-        commit: commit as Commit,
-        document,
-        experimentUuids: selectedExperimentUuids,
-      },
-      {
-        refreshInterval: 5000, // Refresh every 5 seconds
-      },
-    )
+  const { experiments, evaluations, bestLogsMetadata } = useExperimentComparison(
+    {
+      project: project as Project,
+      commit: commit as Commit,
+      document,
+      experimentUuids: selectedExperimentUuids,
+    },
+    {
+      refreshInterval: 5000, // Refresh every 5 seconds
+    },
+  )
 
   return (
     <div className='flex flex-shrink-0 flex-row w-full max-w-full relative border border-border rounded-lg overflow-auto custom-scrollbar'>
       {Object.values(experiments).map((experiment, index) => {
-        const isLast =
-          experiments.length > 2 && index === experiments.length - 1
+        const isLast = experiments.length > 2 && index === experiments.length - 1
 
         return (
           <ExperimentItem
@@ -44,11 +39,7 @@ export function ExperimentComparison({
             experiment={experiment}
             evaluations={evaluations}
             isLast={isLast}
-            onUnselect={
-              experiment
-                ? () => onUnselectExperiment(experiment.uuid)
-                : undefined
-            }
+            onUnselect={experiment ? () => onUnselectExperiment(experiment.uuid) : undefined}
             bestLogsMetadata={bestLogsMetadata}
           />
         )

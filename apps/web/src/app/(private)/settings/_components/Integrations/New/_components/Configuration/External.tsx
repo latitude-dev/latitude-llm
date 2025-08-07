@@ -4,7 +4,7 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { forwardRef, useImperativeHandle, useState } from 'react'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { pingCustomMcpAction } from '$/actions/integrations/pingCustomMcpServer'
-import { IntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
+import type { IntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 

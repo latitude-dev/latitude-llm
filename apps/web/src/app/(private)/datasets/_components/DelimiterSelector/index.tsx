@@ -6,7 +6,7 @@ import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 
-export enum DelimiterEnum {
+enum DelimiterEnum {
   Comma = 'comma',
   Semicolon = 'semicolon',
   Tab = 'tab',
@@ -33,7 +33,6 @@ const DELIMITERS = [
   },
   { value: DelimiterEnum.Custom, label: 'Custom' },
 ]
-export const DELIMITER_KEYS = DELIMITERS.map(({ value }) => value)
 
 export default function DelimiterSelector({
   delimiterInputName,

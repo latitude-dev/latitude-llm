@@ -2,19 +2,11 @@
 import { useCallback, useMemo } from 'react'
 
 import { Bar, BarChart as RechartsBarChart, XAxis, YAxis } from 'recharts'
-import {
-  NameType,
-  Payload,
-  ValueType,
-} from 'recharts/types/component/DefaultTooltipContent'
+import type { NameType, Payload, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 
 import { Text } from '../../../atoms/Text'
-import { BarChartConfig, CartesianDataItem } from '../types'
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '../../../atoms/Charts'
+import type { BarChartConfig, CartesianDataItem } from '../types'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../../../atoms/Charts'
 import { useMeasure } from '../../../../browser'
 import { useTruncatedTick } from './useTruncatedTick'
 
@@ -44,13 +36,9 @@ const CustomTick = ({
 
 export function BarChart({ config }: { config: BarChartConfig }) {
   const [containerRef, dimensions] = useMeasure<HTMLDivElement>()
-  const perTickWidth =
-    config.data.length > 0 ? dimensions.width / config.data.length : 0
+  const perTickWidth = config.data.length > 0 ? dimensions.width / config.data.length : 0
 
-  const color = useMemo(
-    () => config.color ?? 'hsl(var(--primary))',
-    [config.color],
-  )
+  const color = useMemo(() => config.color ?? 'hsl(var(--primary))', [config.color])
 
   const labelFormatter = useCallback(
     (_: string, payload: Payload<ValueType, NameType>[]) => {
@@ -65,11 +53,7 @@ export function BarChart({ config }: { config: BarChartConfig }) {
   )
 
   const tooltipFormatter = useCallback(
-    (
-      _value: ValueType,
-      name: NameType,
-      payload: Payload<ValueType, NameType>,
-    ) => {
+    (_value: ValueType, name: NameType, payload: Payload<ValueType, NameType>) => {
       if (name !== 'y') return null // Used to display a single content
 
       const item = payload.payload as CartesianDataItem
@@ -132,9 +116,7 @@ export function BarChart({ config }: { config: BarChartConfig }) {
               y={tick.y}
               x={tick.x}
               value={
-                tick.tickFormatter
-                  ? tick.tickFormatter(tick.payload.value)
-                  : tick.payload.value
+                tick.tickFormatter ? tick.tickFormatter(tick.payload.value) : tick.payload.value
               }
               availableWidth={perTickWidth}
             />

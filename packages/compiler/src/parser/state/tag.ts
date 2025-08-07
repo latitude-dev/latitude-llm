@@ -1,13 +1,8 @@
 import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
-import CompileError from '$compiler/error/error'
+import type CompileError from '$compiler/error/error'
 import PARSER_ERRORS from '$compiler/error/errors'
-import { type Parser } from '$compiler/parser'
-import {
-  Attribute,
-  ElementTag,
-  TemplateNode,
-  Text,
-} from '$compiler/parser/interfaces'
+import type { Parser } from '$compiler/parser'
+import type { Attribute, ElementTag, TemplateNode, Text } from '$compiler/parser/interfaces'
 import read_expression from '$compiler/parser/read/expression'
 import { decode_character_references } from '$compiler/parser/utils/html'
 
@@ -56,10 +51,7 @@ export function tag(parser: Parser) {
     }
     parent.end = parser.index
     parser.stack.pop()
-    if (
-      parser.lastAutoClosedTag &&
-      parser.stack.length < parser.lastAutoClosedTag.depth
-    ) {
+    if (parser.lastAutoClosedTag && parser.stack.length < parser.lastAutoClosedTag.depth) {
       parser.lastAutoClosedTag = null
     }
     return
@@ -91,14 +83,11 @@ function readTagName(parser: Parser) {
   }
   return name
 }
-// eslint-disable-next-line no-useless-escape
-const regex_token_ending_character = /[\s=\/>"']/
+ 
+const regex_token_ending_character = /[\s=/>"']/
 const regex_starts_with_quote_characters = /^["']/
 
-function readAttribute(
-  parser: Parser,
-  uniqueNames: Set<string>,
-): Attribute | null {
+function readAttribute(parser: Parser, uniqueNames: Set<string>): Attribute | null {
   const start = parser.index
 
   function checkUnique(name: string) {
@@ -162,9 +151,7 @@ function readAttributeValue(parser: Parser) {
       // acorn may throw a `Unterminated regular expression` because of `/>`
       if (parser.template.slice(error.pos! - 1, error.pos! + 1) === '/>') {
         parser.index = error.pos!
-        parser.error(
-          PARSER_ERRORS.unclosedAttributeValue(quoteMark || CUSTOM_TAG_END),
-        )
+        parser.error(PARSER_ERRORS.unclosedAttributeValue(quoteMark || CUSTOM_TAG_END))
       }
     }
     throw error
@@ -176,11 +163,7 @@ function readAttributeValue(parser: Parser) {
   return value
 }
 
-function readSequence(
-  parser: Parser,
-  done: () => boolean,
-  location: string,
-): TemplateNode[] {
+function readSequence(parser: Parser, done: () => boolean, location: string): TemplateNode[] {
   let currentChunk: Text = {
     start: parser.index,
     end: null,
@@ -208,10 +191,7 @@ function readSequence(
         const index = parser.index - 1
         parser.eat('#')
         const name = parser.readUntil(/[^a-z]/)
-        parser.error(
-          PARSER_ERRORS.invalidLogicBlockPlacement(location, name),
-          index,
-        )
+        parser.error(PARSER_ERRORS.invalidLogicBlockPlacement(location, name), index)
       }
       flush(parser.index - 1)
       parser.allowWhitespace()

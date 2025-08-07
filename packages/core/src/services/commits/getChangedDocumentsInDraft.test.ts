@@ -1,21 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   ModifiedDocumentType,
-  Project,
+  type Project,
   Providers,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '../../browser'
 import { destroyDocument, updateDocument } from '../documents'
-import {
-  createDocumentVersion,
-  createDraft,
-  createProject,
-  helpers,
-} from '../../tests/factories'
+import { createDocumentVersion, createDraft, createProject, helpers } from '../../tests/factories'
 import { getCommitChanges } from './getChanges'
 import { mergeCommit } from './merge'
 

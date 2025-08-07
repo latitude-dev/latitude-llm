@@ -1,19 +1,13 @@
 import { ROUTES } from '$/services/routes'
-import useDocumentSuggestions from '$/stores/documentSuggestions'
-import {
-  DocumentSuggestionWithDetails,
-  DocumentVersion,
-} from '@latitude-data/core/browser'
+import type useDocumentSuggestions from '$/stores/documentSuggestions'
+import type { DocumentSuggestionWithDetails, DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType, IProjectContextType } from '@latitude-data/web-ui/providers'
 import DiffMatchPatch from 'diff-match-patch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
+import type { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import { useCallback, useMemo } from 'react'
 
 const dmp = new DiffMatchPatch()
@@ -39,9 +33,7 @@ export function SuggestionItem({
   setDiff: (value?: DiffOptions) => void
   setPrompt: (prompt: string) => void
   apply: ReturnType<typeof useDocumentSuggestions>['applyDocumentSuggestion']
-  discard: ReturnType<
-    typeof useDocumentSuggestions
-  >['discardDocumentSuggestion']
+  discard: ReturnType<typeof useDocumentSuggestions>['discardDocumentSuggestion']
   close: () => void
   isLoading: boolean
 }) {
@@ -97,22 +89,12 @@ export function SuggestionItem({
             <Text.H5>{suggestion.evaluation.name}</Text.H5>
           </Button>
         </Link>
-        <Text.H6
-          color='foregroundMuted'
-          wordBreak='breakAll'
-          ellipsis
-          lineClamp={3}
-        >
+        <Text.H6 color='foregroundMuted' wordBreak='breakAll' ellipsis lineClamp={3}>
           {suggestion.summary}
         </Text.H6>
       </div>
       <div className='w-full flex items-center justify-start gap-x-4'>
-        <Button
-          variant='link'
-          size='none'
-          onClick={onApply}
-          disabled={isLoading}
-        >
+        <Button variant='link' size='none' onClick={onApply} disabled={isLoading}>
           View
         </Button>
         <Button

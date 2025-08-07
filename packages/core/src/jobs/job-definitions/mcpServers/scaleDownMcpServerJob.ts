@@ -1,4 +1,4 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { database } from '../../../client'
 import { mcpServers } from '../../../schema/models/mcpServers'
 import { eq } from 'drizzle-orm'
@@ -16,9 +16,7 @@ export type ScaleDownMcpServerJobData = {
  * 1. Fetches the MCP server from the database
  * 2. Scales it down to 0 replicas
  */
-export const scaleDownMcpServerJob = async (
-  job: Job<ScaleDownMcpServerJobData>,
-) => {
+export const scaleDownMcpServerJob = async (job: Job<ScaleDownMcpServerJobData>) => {
   const { mcpServerId } = job.data
 
   try {

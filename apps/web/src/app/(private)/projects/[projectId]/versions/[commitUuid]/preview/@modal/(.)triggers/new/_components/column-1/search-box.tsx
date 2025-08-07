@@ -3,7 +3,8 @@
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { useColumn1Context } from '../contexts/column-1-context'
 import { useDebouncedCallback } from 'use-debounce'
-import React, { useCallback } from 'react'
+import type React from 'react'
+import { useCallback } from 'react'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 
 export function SearchBox() {

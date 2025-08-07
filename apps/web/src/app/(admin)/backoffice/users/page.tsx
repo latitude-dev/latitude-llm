@@ -15,8 +15,7 @@ export default function AdminUsers() {
       <section className='flex flex-col gap-y-4'>
         <Text.H1>Impersonate User</Text.H1>
         <Text.H4>
-          This will allow you to access the application as the specified user.
-          Use with caution.
+          This will allow you to access the application as the specified user. Use with caution.
         </Text.H4>
         <ImpersonateUser />
       </section>

@@ -1,12 +1,12 @@
-import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
+import { type ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 import {
-  Message,
+  type Message,
   MessageRole,
-  ToolCall,
-  ToolMessage,
+  type ToolCall,
+  type ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { LanguageModelUsage } from 'ai'
-import { ParsedEvent } from 'eventsource-parser/stream'
+import type { LanguageModelUsage } from 'ai'
+import type { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useProviderEventHandler } from './useProviderEventHandler'
 
@@ -56,23 +56,17 @@ export function usePlaygroundChat({
   const [runningLatitudeTools, setRunningLatitudeTools] = useState<number>(0)
   const [wakingUpIntegration, setWakingUpIntegration] = useState<string>()
 
-  const addMessages = useCallback(
-    (m: Message[]) => {
-      setMessages((prev) => [...prev, ...m])
-    },
-    [setMessages],
-  )
+  const addMessages = useCallback((m: Message[]) => {
+    setMessages((prev) => [...prev, ...m])
+  }, [])
 
-  const handleIntegrationEvent = useCallback(
-    (data: ChainEvent['data']) => {
-      if (data.type === ChainEventTypes.IntegrationWakingUp) {
-        setWakingUpIntegration(data.integrationName)
-      } else {
-        setWakingUpIntegration(undefined)
-      }
-    },
-    [setWakingUpIntegration],
-  )
+  const handleIntegrationEvent = useCallback((data: ChainEvent['data']) => {
+    if (data.type === ChainEventTypes.IntegrationWakingUp) {
+      setWakingUpIntegration(data.integrationName)
+    } else {
+      setWakingUpIntegration(undefined)
+    }
+  }, [])
 
   // Use the provider event handler hook
   const { handleProviderEvent } = useProviderEventHandler({
@@ -82,38 +76,32 @@ export function usePlaygroundChat({
     addMessages,
   })
 
-  const handleLatitudeEvent = useCallback(
-    (data: ChainEvent['data']) => {
-      if (data.type === ChainEventTypes.StepStarted) {
-        setMessages(data.messages)
-      }
-      if (data.type === ChainEventTypes.ProviderCompleted) {
-        setUsage(data.tokenUsage)
-      }
+  const handleLatitudeEvent = useCallback((data: ChainEvent['data']) => {
+    if (data.type === ChainEventTypes.StepStarted) {
+      setMessages(data.messages)
+    }
+    if (data.type === ChainEventTypes.ProviderCompleted) {
+      setUsage(data.tokenUsage)
+    }
 
-      if (data.type === ChainEventTypes.ToolsStarted) {
-        setRunningLatitudeTools(data.tools.length)
-      }
+    if (data.type === ChainEventTypes.ToolsStarted) {
+      setRunningLatitudeTools(data.tools.length)
+    }
 
-      if (data.type === ChainEventTypes.StepCompleted) {
-        setRunningLatitudeTools(0)
-      }
+    if (data.type === ChainEventTypes.StepCompleted) {
+      setRunningLatitudeTools(0)
+    }
 
-      if (data.type === ChainEventTypes.ChainError) {
-        throw data.error
-      }
-    },
-    [setUsage, setRunningLatitudeTools],
-  )
+    if (data.type === ChainEventTypes.ChainError) {
+      throw data.error
+    }
+  }, [])
 
-  const handleGenericStreamError = useCallback(
-    (parsedEvent: ParsedEvent, data: Error) => {
-      if (parsedEvent.event !== 'error') return
+  const handleGenericStreamError = useCallback((parsedEvent: ParsedEvent, data: Error) => {
+    if (parsedEvent.event !== 'error') return
 
-      setError(data)
-    },
-    [setError],
-  )
+    setError(data)
+  }, [])
 
   const parseEvent = useCallback((value: ParsedEvent) => {
     const parsedEvent = value as ParsedEvent
@@ -124,15 +112,12 @@ export function usePlaygroundChat({
     return { parsedEvent, data }
   }, [])
 
-  const setDocumentLogUuidd = useCallback(
-    (data: ChainEvent['data']) => {
-      if ('uuid' in data) {
-        setDocumentLogUuid(data.uuid)
-        return data.uuid
-      }
-    },
-    [setDocumentLogUuid],
-  )
+  const setDocumentLogUuidd = useCallback((data: ChainEvent['data']) => {
+    if ('uuid' in data) {
+      setDocumentLogUuid(data.uuid)
+      return data.uuid
+    }
+  }, [])
 
   const handleStream = useCallback(
     async (
@@ -177,8 +162,6 @@ export function usePlaygroundChat({
       handleProviderEvent,
       handleGenericStreamError,
       parseEvent,
-      setError,
-      setIsLoading,
     ],
   )
 
@@ -187,9 +170,7 @@ export function usePlaygroundChat({
       if (!addMessagesFn) return
       if (!documentLogUuid) {
         // This should not happen
-        setError(
-          new Error('Tried to chat over a conversation that has not started'),
-        )
+        setError(new Error('Tried to chat over a conversation that has not started'))
         return
       }
 
@@ -204,9 +185,7 @@ export function usePlaygroundChat({
         // Remove unresponded tool calls
         const respondedToolCallIds = newMessages.reduce((acc, message) => {
           if (message.role !== MessageRole.tool) return acc
-          const toolResponseContents = message.content.filter(
-            (c) => c.type === 'tool-result',
-          )
+          const toolResponseContents = message.content.filter((c) => c.type === 'tool-result')
           return [...acc, ...toolResponseContents.map((c) => c.toolCallId)]
         }, [] as string[])
         respondedToolCalls = unresponedToolCalls.filter((toolCall) => {
@@ -234,13 +213,7 @@ export function usePlaygroundChat({
         setError(error as Error)
       }
     },
-    [
-      addMessagesFn,
-      documentLogUuid,
-      unresponedToolCalls,
-      handleStream,
-      addMessages,
-    ],
+    [addMessagesFn, documentLogUuid, unresponedToolCalls, handleStream, addMessages],
   )
 
   const start = useCallback(async () => {
@@ -267,15 +240,7 @@ export function usePlaygroundChat({
     setError(undefined)
     setIsLoading(false)
     setWakingUpIntegration(undefined)
-  }, [
-    setMessages,
-    setUnresponedToolCalls,
-    setUsage,
-    setDocumentLogUuid,
-    setError,
-    setIsLoading,
-    setWakingUpIntegration,
-  ])
+  }, [])
 
   return useMemo(
     () => ({

@@ -1,19 +1,15 @@
 import { formatCount } from '$/lib/formatCount'
 import {
-  EvaluationType,
-  LlmEvaluationMetric,
+  type EvaluationType,
+  type LlmEvaluationMetric,
   LlmEvaluationRatingSpecification,
 } from '@latitude-data/constants'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 
 const specification = LlmEvaluationRatingSpecification
 export default {
@@ -41,9 +37,7 @@ function ConfigurationSimpleForm({
         placeholder='Judge the engagement of the response'
         minRows={2}
         maxRows={4}
-        onChange={(e) =>
-          setConfiguration({ ...configuration, criteria: e.target.value })
-        }
+        onChange={(e) => setConfiguration({ ...configuration, criteria: e.target.value })}
         errors={errors?.['criteria']}
         className='w-full'
         disabled={disabled}
@@ -144,9 +138,7 @@ function ConfigurationAdvancedForm({
           placeholder='No minimum'
           min={configuration.minRating}
           max={configuration.maxRating}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minThreshold: value })
-          }
+          onChange={(value) => setConfiguration({ ...configuration, minThreshold: value })}
           errors={errors?.['minThreshold']}
           defaultAppearance
           className='w-full'
@@ -160,9 +152,7 @@ function ConfigurationAdvancedForm({
           placeholder='No maximum'
           min={configuration.minRating}
           max={configuration.maxRating}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxThreshold: value })
-          }
+          onChange={(value) => setConfiguration({ ...configuration, maxThreshold: value })}
           errors={errors?.['maxThreshold']}
           defaultAppearance
           className='w-full'
@@ -174,9 +164,7 @@ function ConfigurationAdvancedForm({
   )
 }
 
-function ResultBadge({
-  result,
-}: ResultBadgeProps<EvaluationType.Llm, LlmEvaluationMetric.Rating>) {
+function ResultBadge({ result }: ResultBadgeProps<EvaluationType.Llm, LlmEvaluationMetric.Rating>) {
   return <>{formatCount(result.score!)}</>
 }
 

@@ -2,23 +2,20 @@ import { createDatasetFromLogsAction } from '$/actions/datasets/createFromLogs'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { SelectableRowsHook } from '$/hooks/useSelectableRows'
+import type { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
 import {
-  Dataset,
-  DocumentLogFilterOptions,
+  type Dataset,
+  type DocumentLogFilterOptions,
   parseRowCell,
 } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
-import { DatasetRowData } from '@latitude-data/core/schema'
+import type { DatasetRowData } from '@latitude-data/core/schema'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useMemo, useState } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 type InputItem = {
   columns: Dataset['columns']
@@ -56,10 +53,7 @@ const EMPTY_DATA = {
 }
 
 function usePreviewRowsStore(
-  {
-    dataset,
-    documentLogIds,
-  }: { dataset?: Dataset; documentLogIds: (string | number)[] },
+  { dataset, documentLogIds }: { dataset?: Dataset; documentLogIds: (string | number)[] },
   opts?: SWRConfiguration,
 ) {
   const fetcher = useFetcher(ROUTES.api.datasets.previewLogs.root, {
@@ -69,11 +63,7 @@ function usePreviewRowsStore(
       documentLogIds,
     }) as Record<string, string>,
   })
-  const cacheKey = [
-    'previewLogsForDataset',
-    dataset?.id ?? 'no_dataset',
-    documentLogIds,
-  ]
+  const cacheKey = ['previewLogsForDataset', dataset?.id ?? 'no_dataset', documentLogIds]
   const {
     data = EMPTY_DATA,
     mutate: fetchPreview,
@@ -101,9 +91,7 @@ export function useSelectedLogs({
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const previewModalState = useToggleModal()
-  const [selectedLogsIds, setSelectedLogsIds] = useState<(string | number)[]>(
-    [],
-  )
+  const [selectedLogsIds, setSelectedLogsIds] = useState<(string | number)[]>([])
   const [selectedCount, setSelectedCount] = useState(0)
   const [selectedDataset, setSelectedDataset] = useState<Dataset>()
   const { previewData, fetchPreview, isLoading } = usePreviewRowsStore({
@@ -118,7 +106,6 @@ export function useSelectedLogs({
   }, [
     previewModalState,
     fetchPreview,
-    setSelectedLogsIds,
     selectableState.selectedRowIds,
     selectableState.selectedCount,
   ])
@@ -137,9 +124,7 @@ export function useSelectedLogs({
         })
       } else {
         toast({
-          title: selectedDataset
-            ? 'Updating dataset...'
-            : 'Creating dataset...',
+          title: selectedDataset ? 'Updating dataset...' : 'Creating dataset...',
           description: selectedDataset
             ? 'The selected logs are being added to the selected dataset. You will be notified by email when the dataset is ready.'
             : 'The selected logs are being added to a new dataset. You will be notified by email when the dataset is ready.',
@@ -206,7 +191,6 @@ export function useSelectedLogs({
       saveDataset,
       isLoading,
       previewModalState,
-      setSelectedDataset,
       selectedDataset,
       isSaving,
       fetchPreview,

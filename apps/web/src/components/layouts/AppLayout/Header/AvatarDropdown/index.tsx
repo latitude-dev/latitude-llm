@@ -2,17 +2,13 @@ import { useCallback } from 'react'
 
 import { Avatar } from '@latitude-data/web-ui/atoms/Avatar'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
-import { SessionUser } from '@latitude-data/web-ui/providers'
+import type { SessionUser } from '@latitude-data/web-ui/providers'
 import { getUserInfoFromSession } from '@latitude-data/web-ui/getUserInfoFromSession'
 import { DropdownMenuTrigger } from '@latitude-data/web-ui/atoms/DropdownMenu'
-import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import type { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { logoutAction } from '$/actions/user/logoutAction'
 
-export default function AvatarDropdown({
-  currentUser,
-}: {
-  currentUser: SessionUser | undefined
-}) {
+export default function AvatarDropdown({ currentUser }: { currentUser: SessionUser | undefined }) {
   const onClickLogout = useCallback(async () => {
     await logoutAction()
   }, [])
@@ -41,11 +37,7 @@ export default function AvatarDropdown({
     <DropdownMenu
       trigger={() => (
         <DropdownMenuTrigger>
-          <Avatar
-            alt={info.name}
-            fallback={info.fallback}
-            className='w-6 h-6'
-          />
+          <Avatar alt={info.name} fallback={info.fallback} className='w-6 h-6' />
         </DropdownMenuTrigger>
       )}
       options={options}

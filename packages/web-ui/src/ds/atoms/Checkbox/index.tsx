@@ -1,6 +1,6 @@
 import { FormField } from '../FormField'
-import { FormFieldProps } from '../FormField'
-import { CheckboxAtom, CheckedState, type CheckboxAtomProps } from './Primitive'
+import type { FormFieldProps } from '../FormField'
+import { CheckboxAtom, type CheckedState, type CheckboxAtomProps } from './Primitive'
 
 export type CheckboxProps = CheckboxAtomProps & Omit<FormFieldProps, 'children'>
 export function Checkbox({
@@ -27,4 +27,4 @@ export function Checkbox({
   )
 }
 
-export { type CheckedState }
+export type { CheckedState }

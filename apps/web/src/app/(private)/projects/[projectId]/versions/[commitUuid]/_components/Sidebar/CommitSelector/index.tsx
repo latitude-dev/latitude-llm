@@ -1,20 +1,9 @@
 'use client'
-import {
-  RefObject,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import {
-  DocumentVersion,
-  HELP_CENTER,
-  type Commit,
-} from '@latitude-data/core/browser'
+import { type DocumentVersion, HELP_CENTER, type Commit } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
@@ -28,7 +17,7 @@ import useUsers from '$/stores/users'
 import CreateDraftCommitModal from '../CreateDraftCommitModal'
 import PublishDraftCommitModal from '../PublishDraftCommitModal'
 import { ArchivedCommitsList } from './ArchivedCommitsList'
-import { BadgeCommit, BadgeType, SimpleUser } from './CommitItem'
+import { BadgeCommit, BadgeType, type SimpleUser } from './CommitItem'
 import { CurrentCommitsList } from './CurrentCommitsList'
 import DeleteDraftCommitModal from './DeleteDraftCommitModal'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
@@ -42,9 +31,7 @@ function useObserveSelectWidth(ref: RefObject<HTMLButtonElement>) {
   useEffect(() => {
     const resizeObserver = new ResizeObserver((entries) => {
       const { width: triggerWidth } = entries[0]?.contentRect ?? { width: 0 }
-      setWidth(
-        Math.max(triggerWidth + TRIGGER_X_PADDING_PX, MIN_WIDTH_SELECTOR_PX),
-      )
+      setWidth(Math.max(triggerWidth + TRIGGER_X_PADDING_PX, MIN_WIDTH_SELECTOR_PX))
     })
     if (ref.current) {
       resizeObserver.observe(ref.current)
@@ -63,31 +50,24 @@ function useCalculateMaxHeight() {
   const ref = useRef<HTMLButtonElement>(null)
   const [maxHeight, setMaxHeight] = useState<string | number>('auto')
 
-  const calculateMaxHeight = useCallback(
-    (open: boolean) => {
-      const target = ref.current
+  const calculateMaxHeight = useCallback((open: boolean) => {
+    const target = ref.current
 
-      if (!target || !open) {
-        setMaxHeight('auto')
-        return
-      }
+    if (!target || !open) {
+      setMaxHeight('auto')
+      return
+    }
 
-      const { top, height } = target.getBoundingClientRect()
-      const windowHeight = window.innerHeight
-      const maxH = windowHeight - (top + height + BOTTOM_PADDING_PX)
-      setMaxHeight(maxH)
-    },
-    [ref],
-  )
+    const { top, height } = target.getBoundingClientRect()
+    const windowHeight = window.innerHeight
+    const maxH = windowHeight - (top + height + BOTTOM_PADDING_PX)
+    setMaxHeight(maxH)
+  }, [])
 
   return { calculateMaxHeight, maxHeight, ref }
 }
 
-function CommitSelectorHeader({
-  setOpen,
-}: {
-  setOpen: ReactStateDispatch<boolean>
-}) {
+function CommitSelectorHeader({ setOpen }: { setOpen: ReactStateDispatch<boolean> }) {
   return (
     <>
       <div className='flex flex-col gap-y-4'>
@@ -158,23 +138,15 @@ export default function CommitSelector({
   const canPublish = !currentCommit.mergedAt
   const isHead = currentCommit.id === headCommit?.id
   const [selectedTab, setSelectedTab] = useState<'current' | 'archived'>(
-    !currentCommit.mergedAt || currentCommit.id == headCommit?.id
-      ? 'current'
-      : 'archived',
+    !currentCommit.mergedAt || currentCommit.id === headCommit?.id ? 'current' : 'archived',
   )
   return (
     <div className='flex flex-col gap-y-2'>
-      <SelectRoot
-        value={String(currentCommit.id)}
-        onOpenChange={calculateMaxHeight}
-      >
+      <SelectRoot value={String(currentCommit.id)} onOpenChange={calculateMaxHeight}>
         <SelectTrigger ref={ref}>
           <SelectValueWithIcon
             icon={
-              <BadgeCommit
-                commit={currentCommit}
-                isLive={currentCommit.id == headCommit?.id}
-              />
+              <BadgeCommit commit={currentCommit} isLive={currentCommit.id === headCommit?.id} />
             }
           >
             <Text.H5M ellipsis noWrap userSelect={false}>
@@ -220,11 +192,7 @@ export default function CommitSelector({
         </SelectContent>
       </SelectRoot>
       {canPublish ? (
-        <Button
-          fancy
-          fullWidth
-          onClick={() => setPublishCommit(currentCommit.id)}
-        >
+        <Button fancy fullWidth onClick={() => setPublishCommit(currentCommit.id)}>
           Publish
         </Button>
       ) : null}
@@ -234,14 +202,8 @@ export default function CommitSelector({
         </Button>
       ) : null}
       <CreateDraftCommitModal open={open} setOpen={setOpen} />
-      <DeleteDraftCommitModal
-        commitId={deleteCommit}
-        onClose={setDeleteCommit}
-      />
-      <PublishDraftCommitModal
-        commitId={publishCommit}
-        onClose={setPublishCommit}
-      />
+      <DeleteDraftCommitModal commitId={deleteCommit} onClose={setDeleteCommit} />
+      <PublishDraftCommitModal commitId={publishCommit} onClose={setPublishCommit} />
     </div>
   )
 }

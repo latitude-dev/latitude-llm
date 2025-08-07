@@ -1,12 +1,12 @@
 import {
-  DocumentVersion,
-  EvaluationType,
-  EvaluationV2,
+  type DocumentVersion,
+  type EvaluationType,
+  type EvaluationV2,
   LLM_EVALUATION_PROMPT_PARAMETERS,
-  LlmEvaluationMetricAnyCustom,
-  LlmEvaluationPromptParameter,
+  type LlmEvaluationMetricAnyCustom,
+  type LlmEvaluationPromptParameter,
 } from '@latitude-data/core/browser'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '@latitude-data/web-ui/providers'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { useEvaluationParameters } from '../../../../hooks/useEvaluationParamaters'
 import { PlainTextParameterInput } from '../PlainTextParameterInput'

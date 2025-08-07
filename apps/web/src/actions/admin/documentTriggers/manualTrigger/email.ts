@@ -27,9 +27,7 @@ export const manualEmailTriggerAction = withAdmin
       senderEmail: input.senderEmail,
       senderName: input.senderName,
       messageId: input.messageId?.length ? input.messageId : undefined,
-      parentMessageIds: input.references?.length
-        ? input.references.split(' ')
-        : undefined,
+      parentMessageIds: input.references?.length ? input.references.split(' ') : undefined,
       attachments: input.files,
     })
 

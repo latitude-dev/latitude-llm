@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTrigger, Workspace } from '../../browser'
+import type { DocumentTrigger, Workspace } from '../../browser'
 import { deleteDocumentTrigger } from './delete'
 import { documentTriggers } from '../../schema'
 import { and, eq } from 'drizzle-orm'
@@ -35,11 +35,9 @@ describe('deleteDocumentTrigger', () => {
     mockWhere = vi.fn().mockReturnValue({ returning: mockReturning })
     mockDelete = vi.fn().mockReturnValue({ where: mockWhere })
     mockTx = { delete: mockDelete }
-    mocks.transactionMock.prototype.call = vi.fn(
-      async (fn: (tx: any) => Promise<any>) => {
-        return await fn(mockTx)
-      },
-    )
+    mocks.transactionMock.prototype.call = vi.fn(async (fn: (tx: any) => Promise<any>) => {
+      return await fn(mockTx)
+    })
 
     vi.mock('./../../lib/Transaction', async (importOriginal) => ({
       ...(await importOriginal()),
@@ -60,9 +58,7 @@ describe('deleteDocumentTrigger', () => {
     // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
-    )
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(expect.any(Function))
     expect(mockTx.delete).toHaveBeenCalledWith(documentTriggers)
     expect(mockWhere).toHaveBeenCalledWith(
       and(
@@ -87,9 +83,7 @@ describe('deleteDocumentTrigger', () => {
     expect(result.ok).toBeFalsy()
     expect(result.error).toBeInstanceOf(LatitudeError)
     expect(result.error?.message).toBe('Failed to delete document trigger')
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
-    )
+    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(expect.any(Function))
     expect(mockTx.delete).toHaveBeenCalledWith(documentTriggers)
     expect(mockWhere).toHaveBeenCalledWith(
       and(

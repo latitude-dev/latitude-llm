@@ -1,7 +1,7 @@
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { ResultPanel } from '$/components/evaluations/ResultPanel'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
-import {
+import type {
   EvaluationMetric,
   EvaluationResultsV2Search,
   EvaluationResultV2WithDetails,

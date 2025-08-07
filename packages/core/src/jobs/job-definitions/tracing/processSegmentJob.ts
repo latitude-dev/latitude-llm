@@ -1,8 +1,8 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import {
-  SegmentBaggage,
-  SegmentWithDetails,
-  SpanWithDetails,
+  type SegmentBaggage,
+  type SegmentWithDetails,
+  type SpanWithDetails,
   TRACING_JOBS_DELAY_BETWEEN_CONFLICTS,
   TRACING_JOBS_MAX_ATTEMPTS,
 } from '../../../browser'
@@ -33,8 +33,7 @@ export function processSegmentJobKey(
 }
 
 export const processSegmentJob = async (job: Job<ProcessSegmentJobData>) => {
-  const { segment, chain, childId, childType, traceId, apiKeyId, workspaceId } =
-    job.data
+  const { segment, chain, childId, childType, traceId, apiKeyId, workspaceId } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) {

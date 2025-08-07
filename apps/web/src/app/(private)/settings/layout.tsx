@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { Container } from '@latitude-data/web-ui/atoms/Container'
 import { TitleWithActions } from '@latitude-data/web-ui/molecules/TitleWithActions'

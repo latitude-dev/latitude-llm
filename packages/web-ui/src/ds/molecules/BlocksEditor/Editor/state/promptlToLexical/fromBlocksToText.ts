@@ -1,13 +1,13 @@
 import { attributesToString } from './astParsingUtils'
 import {
-  StepChild,
-  ContentBlock,
-  BlockAttributes,
+  type StepChild,
+  type ContentBlock,
+  type BlockAttributes,
   BLOCK_EDITOR_TYPE,
-  BlockRootNode,
-  InlineBlock,
-  ParagraphBlock,
-  CodeBlock,
+  type BlockRootNode,
+  type InlineBlock,
+  type ParagraphBlock,
+  type CodeBlock,
 } from './types'
 
 function contentBlockToText(child: ContentBlock): string {
@@ -131,9 +131,7 @@ export function fromBlocksToText(rootNode: BlockRootNode): string {
             },
             shouldKebabCase: ['as', 'isolated'],
           })
-          const stepContent = children
-            .map((child: any) => stepChildToText(child))
-            .join('\n')
+          const stepContent = children.map((child: any) => stepChildToText(child)).join('\n')
 
           return `<step${attr}>${stepContent}</step>`
         }

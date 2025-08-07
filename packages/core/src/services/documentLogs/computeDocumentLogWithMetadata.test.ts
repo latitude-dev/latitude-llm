@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import {
-  DocumentLog,
-  ProviderApiKey,
-  ProviderLog,
-  Workspace,
-} from '../../browser'
+import type { DocumentLog, ProviderApiKey, ProviderLog, Workspace } from '../../browser'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 import { NotFoundError } from './../../lib/errors'
@@ -30,11 +25,10 @@ describe('computeDocumentLogWithMetadata', () => {
       path: 'folder1/doc1',
       content: factories.helpers.createPrompt({ provider, content: 'Doc 1' }),
     })
-    const { documentLog: dl, providerLogs: _providerLogs } =
-      await factories.createDocumentLog({
-        document: documentVersion,
-        commit,
-      })
+    const { documentLog: dl, providerLogs: _providerLogs } = await factories.createDocumentLog({
+      document: documentVersion,
+      commit,
+    })
 
     workspace = setup.workspace
     documentLog = dl
@@ -68,18 +62,9 @@ describe('computeDocumentLogWithMetadata', () => {
       id: documentLog.id,
       uuid: documentLog.uuid,
       documentUuid: documentLog.documentUuid,
-      tokens: totalProviderLogs.reduce(
-        (acc, log) => acc + (log?.tokens ?? 0),
-        0,
-      ),
-      duration: totalProviderLogs.reduce(
-        (acc, log) => acc + (log?.duration ?? 0),
-        0,
-      ),
-      costInMillicents: totalProviderLogs.reduce(
-        (acc, log) => acc + log.costInMillicents,
-        0,
-      ),
+      tokens: totalProviderLogs.reduce((acc, log) => acc + (log?.tokens ?? 0), 0),
+      duration: totalProviderLogs.reduce((acc, log) => acc + (log?.duration ?? 0), 0),
+      costInMillicents: totalProviderLogs.reduce((acc, log) => acc + log.costInMillicents, 0),
     })
   })
 

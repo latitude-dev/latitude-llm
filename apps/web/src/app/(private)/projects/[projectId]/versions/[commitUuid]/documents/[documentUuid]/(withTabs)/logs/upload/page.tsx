@@ -11,10 +11,6 @@ export default async function UploadLogModalPage({
 }) {
   const { documentUuid, projectId, commitUuid } = await params
   return (
-    <UploadLogModal
-      documentUuid={documentUuid}
-      commitUuid={commitUuid}
-      projectId={projectId}
-    />
+    <UploadLogModal documentUuid={documentUuid} commitUuid={commitUuid} projectId={projectId} />
   )
 }

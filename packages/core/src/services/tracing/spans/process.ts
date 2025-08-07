@@ -19,12 +19,12 @@ import {
   AI_OPERATION_ID_VALUE_STREAM_OBJECT,
   AI_OPERATION_ID_VALUE_STREAM_TEXT,
   AI_OPERATION_ID_VALUE_TOOL,
-  ApiKey,
+  type ApiKey,
   ATTR_AI_OPERATION_ID,
   ATTR_LATITUDE_SEGMENTS,
   ATTR_LATITUDE_TYPE,
   ATTR_LLM_REQUEST_TYPE,
-  BaseSpanMetadata,
+  type BaseSpanMetadata,
   GEN_AI_OPERATION_NAME_VALUE_COMPLETION,
   GEN_AI_OPERATION_NAME_VALUE_EMBEDDING,
   GEN_AI_OPERATION_NAME_VALUE_RERANKING,
@@ -35,32 +35,32 @@ import {
   LLM_REQUEST_TYPE_VALUE_EMBEDDING,
   LLM_REQUEST_TYPE_VALUE_RERANK,
   Otlp,
-  SegmentBaggage,
+  type SegmentBaggage,
   segmentBaggageSchema,
-  Span,
+  type Span,
   SPAN_METADATA_STORAGE_KEY,
-  SpanAttribute,
-  SpanEvent,
+  type SpanAttribute,
+  type SpanEvent,
   SpanKind,
-  SpanLink,
-  SpanMetadata,
+  type SpanLink,
+  type SpanMetadata,
   SpanStatus,
   SpanType,
-  SpanWithDetails,
+  type SpanWithDetails,
   TRACING_JOBS_MAX_ATTEMPTS,
-  Workspace,
+  type Workspace,
 } from '../../../browser'
 import { cache as redis } from '../../../cache'
 import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import {
-  ProcessSegmentJobData,
+  type ProcessSegmentJobData,
   processSegmentJobKey,
 } from '../../../jobs/job-definitions/tracing/processSegmentJob'
 import { tracingQueue } from '../../../jobs/queues'
-import { diskFactory, DiskWrapper } from '../../../lib/disk'
+import { diskFactory, type DiskWrapper } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'
-import { Result, TypedResult } from '../../../lib/Result'
+import { Result, type TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import { SpanMetadatasRepository, SpansRepository } from '../../../repositories'
 import { spans } from '../../../schema'
@@ -148,7 +148,7 @@ export async function processSpan(
 
   const extractingse = extractSpanError(attributes, events)
   if (extractingse.error) return Result.error(extractingse.error)
-  if (extractingse.value != undefined) {
+  if (extractingse.value !== undefined) {
     status = SpanStatus.Error
     message = extractingse.value?.slice(0, 256) || undefined
   }
@@ -256,7 +256,11 @@ async function getExisting(
   if (!span) return Result.nil()
 
   const metadatasRepository = new SpanMetadatasRepository(workspace.id)
-  const getting = await metadatasRepository.get({ spanId, traceId, fresh: true }) // prettier-ignore
+  const getting = await metadatasRepository.get({
+    spanId,
+    traceId,
+    fresh: true,
+  })
   if (getting.error) return Result.error(getting.error)
 
   const metadata = getting.value
@@ -264,22 +268,20 @@ async function getExisting(
   return Result.ok({ ...span, metadata } as SpanWithDetails)
 }
 
-function convertSpanAttribute(
-  attribute: Otlp.AttributeValue,
-): TypedResult<SpanAttribute> {
-  if (attribute.stringValue != undefined) {
+function convertSpanAttribute(attribute: Otlp.AttributeValue): TypedResult<SpanAttribute> {
+  if (attribute.stringValue !== undefined) {
     return Result.ok(attribute.stringValue)
   }
 
-  if (attribute.intValue != undefined) {
+  if (attribute.intValue !== undefined) {
     return Result.ok(attribute.intValue)
   }
 
-  if (attribute.boolValue != undefined) {
+  if (attribute.boolValue !== undefined) {
     return Result.ok(attribute.boolValue)
   }
 
-  if (attribute.arrayValue != undefined) {
+  if (attribute.arrayValue !== undefined) {
     const values = attribute.arrayValue.values.map(convertSpanAttribute)
     if (values.some((v) => v.error)) return Result.error(values[0]!.error!)
 
@@ -314,16 +316,12 @@ function extractSegmentsBaggage(
     const baggage = z.array(segmentBaggageSchema).parse(payload)
 
     return Result.ok(baggage)
-  } catch (error) {
-    return Result.error(
-      new UnprocessableEntityError('Invalid segments baggage'),
-    )
+  } catch (_error) {
+    return Result.error(new UnprocessableEntityError('Invalid segments baggage'))
   }
 }
 
-export function extractSpanType(
-  attributes: Record<string, SpanAttribute>,
-): TypedResult<SpanType> {
+export function extractSpanType(attributes: Record<string, SpanAttribute>): TypedResult<SpanType> {
   const type = String(attributes[ATTR_LATITUDE_TYPE] ?? '')
   switch (type) {
     case SpanType.Tool:
@@ -388,9 +386,7 @@ export function extractSpanType(
   return Result.ok(SpanType.Unknown)
 }
 
-export function convertSpanStatus(
-  status: Otlp.Status,
-): TypedResult<SpanStatus> {
+export function convertSpanStatus(status: Otlp.Status): TypedResult<SpanStatus> {
   switch (status.code) {
     case Otlp.StatusCode.Ok:
       return Result.ok(SpanStatus.Ok)
@@ -492,11 +488,7 @@ async function saveMetadata(
   },
   disk: DiskWrapper,
 ): Promise<TypedResult> {
-  const key = SPAN_METADATA_STORAGE_KEY(
-    workspace.id,
-    metadata.traceId,
-    metadata.spanId,
-  )
+  const key = SPAN_METADATA_STORAGE_KEY(workspace.id, metadata.traceId, metadata.spanId)
   const cache = await redis()
 
   try {

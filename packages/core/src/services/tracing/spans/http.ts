@@ -10,16 +10,16 @@ import {
   ATTR_HTTP_RESPONSE_BODY,
   ATTR_HTTP_RESPONSE_HEADER,
   ATTR_HTTP_RESPONSE_HEADERS,
-  HttpSpanMetadata,
+  type HttpSpanMetadata,
   SPAN_SPECIFICATIONS,
-  SpanAttribute,
+  type SpanAttribute,
   SpanStatus,
   SpanType,
 } from '../../../browser'
 import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
-import { Result, TypedResult } from '../../../lib/Result'
-import { SpanProcessArgs, toCamelCase } from './shared'
+import { Result, type TypedResult } from '../../../lib/Result'
+import { type SpanProcessArgs, toCamelCase } from './shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Http]
 export const HttpSpanSpecification = {
@@ -27,10 +27,7 @@ export const HttpSpanSpecification = {
   process: process,
 }
 
-async function process(
-  { attributes, status }: SpanProcessArgs<SpanType.Http>,
-  _ = database,
-) {
+async function process({ attributes, status }: SpanProcessArgs<SpanType.Http>, _ = database) {
   const extractingqm = extractRequestMethod(attributes)
   if (extractingqm.error) return Result.error(extractingqm.error)
   const requestMethod = extractingqm.value
@@ -91,9 +88,7 @@ function extractRequestMethod(
   const method = String(attributes[ATTR_HTTP_REQUEST_METHOD] ?? '')
   if (method) return Result.ok(method.toUpperCase())
 
-  return Result.error(
-    new UnprocessableEntityError('Request method is required'),
-  )
+  return Result.error(new UnprocessableEntityError('Request method is required'))
 }
 
 function extractRequestUrl(
@@ -111,13 +106,9 @@ function extractRequestHeaders(
   const attribute = String(attributes[ATTR_HTTP_REQUEST_HEADERS] ?? '')
   if (attribute) {
     try {
-      return Result.ok(
-        toCamelCase(JSON.parse(attribute) as Record<string, string>),
-      )
-    } catch (error) {
-      return Result.error(
-        new UnprocessableEntityError('Invalid request headers'),
-      )
+      return Result.ok(toCamelCase(JSON.parse(attribute) as Record<string, string>))
+    } catch (_error) {
+      return Result.error(new UnprocessableEntityError('Invalid request headers'))
     }
   }
 
@@ -139,7 +130,7 @@ function extractRequestBody(
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))
-    } catch (error) {
+    } catch (_error) {
       return Result.ok(attribute || {})
     }
   }
@@ -153,9 +144,7 @@ function extractResponseStatus(
   const status = Number(attributes[ATTR_HTTP_RESPONSE_STATUS_CODE] ?? NaN)
   if (!isNaN(status)) return Result.ok(status)
 
-  return Result.error(
-    new UnprocessableEntityError('Response status is required'),
-  )
+  return Result.error(new UnprocessableEntityError('Response status is required'))
 }
 
 function extractResponseHeaders(
@@ -164,13 +153,9 @@ function extractResponseHeaders(
   const attribute = String(attributes[ATTR_HTTP_RESPONSE_HEADERS] ?? '')
   if (attribute) {
     try {
-      return Result.ok(
-        toCamelCase(JSON.parse(attribute) as Record<string, string>),
-      )
-    } catch (error) {
-      return Result.error(
-        new UnprocessableEntityError('Invalid response headers'),
-      )
+      return Result.ok(toCamelCase(JSON.parse(attribute) as Record<string, string>))
+    } catch (_error) {
+      return Result.error(new UnprocessableEntityError('Invalid response headers'))
     }
   }
 
@@ -192,7 +177,7 @@ function extractResponseBody(
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))
-    } catch (error) {
+    } catch (_error) {
       return Result.ok(attribute || {})
     }
   }

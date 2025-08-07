@@ -1,11 +1,8 @@
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { EvaluationV2 } from '@latitude-data/constants'
+import type { EvaluationV2 } from '@latitude-data/constants'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useMemo } from 'react'
 import { ROUTES } from '$/services/routes'
 import {
@@ -13,13 +10,13 @@ import {
   getEvaluationTypeSpecification,
 } from '$/components/evaluations'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { TextColor } from '@latitude-data/web-ui/tokens'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import type { TextColor } from '@latitude-data/web-ui/tokens'
+import type { ModifiedDocumentType } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
 import { IndentationLine } from '$/components/Sidebar/Files/IndentationBar'
-import { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
-import { type ParamValue } from 'next/dist/server/request/params'
+import type { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
+import type { ParamValue } from 'next/dist/server/request/params'
 
 const INDENTATION_UNIT_PX = 24
 function IndentationBar({
@@ -31,10 +28,7 @@ function IndentationBar({
 }) {
   return (
     <div className='flex flex-row'>
-      <div
-        style={{ width: promptIndentationSize * INDENTATION_UNIT_PX }}
-        className='h-6'
-      />
+      <div style={{ width: promptIndentationSize * INDENTATION_UNIT_PX }} className='h-6' />
       <div className='flex justify-center min-w-6 h-6'>
         <IndentationLine showCurve={isLast} />
       </div>
@@ -84,10 +78,7 @@ function EvaluationItem({
         [`${selectedBackgroundColorHover} cursor-pointer`]: !isSelected,
       })}
     >
-      <IndentationBar
-        promptIndentationSize={indentation?.length ?? 0}
-        isLast={isLast}
-      />
+      <IndentationBar promptIndentationSize={indentation?.length ?? 0} isLast={isLast} />
       <div className='flex-none relative w-6 h-6 -ml-2'>
         <div
           className={cn('sidebar-icon-mask absolute inset-0 z-50', {
@@ -95,11 +86,7 @@ function EvaluationItem({
             'opacity-70': !isSelected,
           })}
         >
-          <Icon
-            name={spec.icon}
-            color={color}
-            className='absolute top-1 left-0'
-          />
+          <Icon name={spec.icon} color={color} className='absolute top-1 left-0' />
         </div>
         <div className='z-10 absolute bottom-1 right-0.5'>
           <Icon name={metricSpec.icon} color={color} size='xsmall' />
@@ -131,14 +118,10 @@ export function EvaluationList({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const document = useMemo(
-    () => ({ documentUuid, commitId: commit.id }),
-    [documentUuid, commit.id],
-  )
-  const { color, selectedBackgroundColor, selectedBackgroundColorHover } =
-    useModifiedColors({
-      changeType,
-    })
+  const document = useMemo(() => ({ documentUuid, commitId: commit.id }), [documentUuid, commit.id])
+  const { color, selectedBackgroundColor, selectedBackgroundColorHover } = useModifiedColors({
+    changeType,
+  })
   const { data } = useEvaluationsV2({
     project,
     commit,

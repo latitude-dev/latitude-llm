@@ -4,7 +4,7 @@ import { database } from '../../client'
 import { webhooks } from '../../schema/models/webhooks'
 import { NotFoundError } from '../../lib/errors'
 import { Result, type TypedResult } from '../../lib/Result'
-import { type Webhook } from './types'
+import type { Webhook } from './types'
 
 export async function deleteWebhook(
   {
@@ -16,12 +16,7 @@ export async function deleteWebhook(
 ): Promise<TypedResult<Webhook, NotFoundError>> {
   const [deletedWebhook] = await db
     .delete(webhooks)
-    .where(
-      and(
-        eq(webhooks.id, webhook.id),
-        eq(webhooks.workspaceId, webhook.workspaceId),
-      ),
-    )
+    .where(and(eq(webhooks.id, webhook.id), eq(webhooks.workspaceId, webhook.workspaceId)))
     .returning()
 
   if (!deletedWebhook) {

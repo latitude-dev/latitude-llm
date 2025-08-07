@@ -1,19 +1,15 @@
 'use client'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import type { ModifiedDocumentType } from '@latitude-data/core/browser'
 import { Button } from '../../atoms/Button'
-import { DropdownMenu, MenuOption } from '../../atoms/DropdownMenu'
+import { DropdownMenu, type MenuOption } from '../../atoms/DropdownMenu'
 import { Icon } from '../../atoms/Icons'
 import { Text } from '../../atoms/Text'
 import { colors } from '../../tokens'
 import { useHover } from '../../../browser'
-import { RefObject, useState } from 'react'
+import { type RefObject, useState } from 'react'
 import { cn } from '../../../lib/utils'
 import { TruncatedTooltip } from '../TruncatedTooltip'
-import {
-  MODIFICATION_BACKGROUNDS,
-  MODIFICATION_COLORS,
-  MODIFICATION_ICONS,
-} from './colors'
+import { MODIFICATION_BACKGROUNDS, MODIFICATION_COLORS, MODIFICATION_ICONS } from './colors'
 
 export function DocumentChange({
   path,
@@ -56,11 +52,7 @@ export function DocumentChange({
       <div className='flex-grow overflow-hidden flex flex-row items-center justify-start gap-x-1'>
         <Icon
           name='file'
-          className={cn(
-            'flex-shrink-0 w-4 h-4',
-            colors.textColors[color],
-            dimmedClass,
-          )}
+          className={cn('flex-shrink-0 w-4 h-4', colors.textColors[color], dimmedClass)}
         />
         <div className='flex flex-row flex-grow truncate items-center justify-start gap-1'>
           {oldPath && (
@@ -70,11 +62,7 @@ export function DocumentChange({
                   {oldPath}
                 </Text.H5M>
               </TruncatedTooltip>
-              <Icon
-                name='arrowRight'
-                className={cn('min-w-4 h-4', dimmedClass)}
-                color={color}
-              />
+              <Icon name='arrowRight' className={cn('min-w-4 h-4', dimmedClass)} color={color} />
             </>
           )}
           <TruncatedTooltip content={path} className={dimmedClass}>
@@ -103,11 +91,7 @@ export function DocumentChange({
         )}
         <Icon
           name={icon}
-          className={cn(
-            'flex-shrink-0 w-4 h-4',
-            colors.textColors[color],
-            dimmedClass,
-          )}
+          className={cn('flex-shrink-0 w-4 h-4', colors.textColors[color], dimmedClass)}
         />
       </div>
     </Button>

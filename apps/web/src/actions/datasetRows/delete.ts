@@ -2,10 +2,7 @@
 
 import { z } from 'zod'
 import { deleteManyRows } from '@latitude-data/core/services/datasetRows/deleteManyRows'
-import {
-  DatasetRowsRepository,
-  DatasetsRepository,
-} from '@latitude-data/core/repositories'
+import { DatasetRowsRepository, DatasetsRepository } from '@latitude-data/core/repositories'
 import { authProcedure } from '$/actions/procedures'
 
 export const deleteRowsAction = authProcedure
@@ -19,9 +16,7 @@ export const deleteRowsAction = authProcedure
   )
   .handler(async ({ ctx, input }) => {
     const datasetRepo = new DatasetsRepository(ctx.workspace.id)
-    const dataset = await datasetRepo
-      .find(input.datasetId)
-      .then((r) => r.unwrap())
+    const dataset = await datasetRepo.find(input.datasetId).then((r) => r.unwrap())
     const scope = new DatasetRowsRepository(ctx.workspace.id)
     const rows = await scope.findManyByDataset({
       dataset,

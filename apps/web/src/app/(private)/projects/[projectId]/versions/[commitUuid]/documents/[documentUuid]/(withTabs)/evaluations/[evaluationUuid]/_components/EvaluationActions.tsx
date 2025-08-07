@@ -6,29 +6,29 @@ import {
 } from '$/components/evaluations'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
-import { ActionErrors } from '$/hooks/useLatitudeAction'
+import type { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
-  Commit,
-  DocumentVersion,
-  EvaluationMetric,
-  EvaluationOptions,
-  EvaluationSettings,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationMetric,
+  type EvaluationOptions,
+  type EvaluationSettings,
   EvaluationType,
-  EvaluationV2,
+  type EvaluationV2,
   LlmEvaluationCustomSpecification,
   LlmEvaluationMetric,
-  Project,
+  type Project,
 } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import {
-  ICommitContextType,
-  IProjectContextType,
+  type ICommitContextType,
+  type IProjectContextType,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
@@ -46,12 +46,8 @@ export function EvaluationActions<
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   const metricSpecification = typeSpecification.metrics[evaluation.metric]
 
-  const {
-    updateEvaluation,
-    isUpdatingEvaluation,
-    cloneEvaluation,
-    isCloningEvaluation,
-  } = useEvaluationsV2({ project, commit, document })
+  const { updateEvaluation, isUpdatingEvaluation, cloneEvaluation, isCloningEvaluation } =
+    useEvaluationsV2({ project, commit, document })
 
   return (
     <div className='flex flex-row items-center gap-4'>
@@ -60,9 +56,7 @@ export function EvaluationActions<
           project={project}
           commit={commit}
           document={document}
-          evaluation={
-            evaluation as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric>
-          }
+          evaluation={evaluation as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric>}
           cloneEvaluation={cloneEvaluation}
           isCloningEvaluation={isCloningEvaluation}
         />
@@ -117,19 +111,11 @@ function EditPrompt<M extends LlmEvaluationMetric>({
 
   const onClickEditPrompt = useCallback(() => {
     if (evaluation.metric.startsWith(LlmEvaluationMetric.Custom)) {
-      return navigate.push(
-        baseEvaluationRoute({ evaluationUuid: evaluation.uuid }).editor.root,
-      )
+      return navigate.push(baseEvaluationRoute({ evaluationUuid: evaluation.uuid }).editor.root)
     }
 
     return cloneModal.onOpen()
-  }, [
-    evaluation.metric,
-    baseEvaluationRoute,
-    cloneModal,
-    navigate,
-    evaluation.uuid,
-  ])
+  }, [evaluation.metric, baseEvaluationRoute, cloneModal, navigate, evaluation.uuid])
 
   const onClone = useCallback(async () => {
     if (isCloningEvaluation) return
@@ -144,14 +130,7 @@ function EditPrompt<M extends LlmEvaluationMetric>({
       evaluationUuid: result.evaluation.uuid,
     }).editor.root
     navigate.push(newEvaluationUrl)
-  }, [
-    isCloningEvaluation,
-    cloneEvaluation,
-    evaluation,
-    navigate,
-    baseEvaluationRoute,
-    cloneModal,
-  ])
+  }, [isCloningEvaluation, cloneEvaluation, evaluation, navigate, baseEvaluationRoute, cloneModal])
 
   return (
     <>
@@ -207,8 +186,7 @@ function EditEvaluation<
   const [openUpdateModal, setOpenUpdateModal] = useState(false)
   const [settings, setSettings] = useState<EvaluationSettings<T, M>>(evaluation)
   const [options, setOptions] = useState<EvaluationOptions>(evaluation)
-  const [errors, setErrors] =
-    useState<ActionErrors<typeof useEvaluationsV2, 'updateEvaluation'>>()
+  const [errors, setErrors] = useState<ActionErrors<typeof useEvaluationsV2, 'updateEvaluation'>>()
 
   const onUpdate = useCallback(async () => {
     if (isUpdatingEvaluation) return
@@ -222,15 +200,7 @@ function EditEvaluation<
       setErrors(undefined)
       setOpenUpdateModal(false)
     }
-  }, [
-    isUpdatingEvaluation,
-    evaluation,
-    settings,
-    options,
-    updateEvaluation,
-    setErrors,
-    setOpenUpdateModal,
-  ])
+  }, [isUpdatingEvaluation, evaluation, settings, options, updateEvaluation])
 
   return (
     <>

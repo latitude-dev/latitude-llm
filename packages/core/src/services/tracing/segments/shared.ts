@@ -1,22 +1,22 @@
 import { isAfter, isBefore, isEqual } from 'date-fns'
 import {
-  ApiKey,
-  BaseSegmentMetadata,
-  Commit,
-  DocumentVersion,
-  EvaluationType,
-  EvaluationV2,
-  SegmentBaggage,
-  SegmentMetadata,
-  SegmentSpecification,
+  type ApiKey,
+  type BaseSegmentMetadata,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationType,
+  type EvaluationV2,
+  type SegmentBaggage,
+  type SegmentMetadata,
+  type SegmentSpecification,
   SegmentType,
-  SegmentWithDetails,
+  type SegmentWithDetails,
   SpanType,
-  SpanWithDetails,
-  Workspace,
+  type SpanWithDetails,
+  type Workspace,
 } from '../../../browser'
-import { Database } from '../../../client'
-import { TypedResult } from '../../../lib/Result'
+import type { Database } from '../../../client'
+import type { TypedResult } from '../../../lib/Result'
 import { hashContent as hash } from '../../../lib/hashContent'
 
 type Timestamps = { first: Date; last: Date }
@@ -47,9 +47,7 @@ export type SegmentBackendSpecification<T extends SegmentType = SegmentType> =
     process: (
       args: SegmentProcessArgs<T>,
       db?: Database,
-    ) => Promise<
-      TypedResult<Omit<SegmentMetadata<T>, keyof BaseSegmentMetadata<T>>>
-    >
+    ) => Promise<TypedResult<Omit<SegmentMetadata<T>, keyof BaseSegmentMetadata<T>>>>
   }
 
 export function inheritField<T = unknown>(

@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react'
 import { Input } from '../../atoms/Input'
 import { Select } from '../../atoms/Select'
 import { Text } from '../../atoms/Text'
-import { CronValue } from './utils'
+import type { CronValue } from './utils'
 
 function getInitialValue(value: CronValue): number {
   if (value.minutes.startsWith('*/')) return Number(value.minutes.slice(2))
   if (value.hours.startsWith('*/')) return Number(value.hours.slice(2))
-  if (value.dayOfMonth.startsWith('*/'))
-    return Number(value.dayOfMonth.slice(2))
+  if (value.dayOfMonth.startsWith('*/')) return Number(value.dayOfMonth.slice(2))
   return 1
 }
 
@@ -26,12 +25,10 @@ export function IntervalCronInput({
   value: CronValue
   onChange: (value: CronValue) => void
 }) {
-  const [intervalValue, setIntervalValue] = useState(() =>
-    getInitialValue(value),
+  const [intervalValue, setIntervalValue] = useState(() => getInitialValue(value))
+  const [intervalType, setIntervalType] = useState<'minutes' | 'hours' | 'days'>(() =>
+    getInitialType(value),
   )
-  const [intervalType, setIntervalType] = useState<
-    'minutes' | 'hours' | 'days'
-  >(() => getInitialType(value))
 
   useEffect(() => {
     const cronPart = intervalValue > 1 ? `*/${intervalValue}` : '*'

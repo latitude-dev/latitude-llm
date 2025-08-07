@@ -2,13 +2,13 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   ErrorableEntity,
   LOG_SOURCES,
-  Project,
+  type Project,
   Providers,
-  User,
+  type User,
 } from '../../browser'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogsDailyCount } from './computeDocumentLogsDailyCount'
@@ -102,17 +102,9 @@ describe('computeDocumentLogsDailyCount', () => {
     }).then((r) => r.unwrap())
 
     expect(result).toHaveLength(3)
-    expect(
-      result.find((r) => r.date === twoDaysAgo.toISOString().split('T')[0])
-        ?.count,
-    ).toBe(3)
-    expect(
-      result.find((r) => r.date === yesterday.toISOString().split('T')[0])
-        ?.count,
-    ).toBe(1)
-    expect(
-      result.find((r) => r.date === today.toISOString().split('T')[0])?.count,
-    ).toBe(2)
+    expect(result.find((r) => r.date === twoDaysAgo.toISOString().split('T')[0])?.count).toBe(3)
+    expect(result.find((r) => r.date === yesterday.toISOString().split('T')[0])?.count).toBe(1)
+    expect(result.find((r) => r.date === today.toISOString().split('T')[0])?.count).toBe(2)
   })
 
   it('only includes logs from specified draft', async () => {

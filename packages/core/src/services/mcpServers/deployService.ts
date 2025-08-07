@@ -24,13 +24,7 @@ type K8sDeploymentParams = {
  * Secrets are handled separately for security.
  */
 export async function deployMcpServer(
-  {
-    appName,
-    environmentVariables = {},
-    workspaceId,
-    authorId,
-    command,
-  }: K8sDeploymentParams,
+  { appName, environmentVariables = {}, workspaceId, authorId, command }: K8sDeploymentParams,
   transaction = new Transaction(),
 ) {
   try {
@@ -61,9 +55,7 @@ export async function deployMcpServer(
         // Namespace already exists, continuing deployment,
       } else {
         // For other errors, fail the deployment
-        return Result.error(
-          new Error(`Failed to create namespace: ${namespaceError.message}`),
-        )
+        return Result.error(new Error(`Failed to create namespace: ${namespaceError.message}`))
       }
     }
 
@@ -87,9 +79,7 @@ export async function deployMcpServer(
           await k8sObjectApi.create(secret)
         }
       } catch (secretError: any) {
-        return Result.error(
-          new Error(`Failed to create Secret: ${secretError.message}`),
-        )
+        return Result.error(new Error(`Failed to create Secret: ${secretError.message}`))
       }
     }
 
@@ -114,9 +104,7 @@ export async function deployMcpServer(
             // For other errors, rethrow with resource info
             const kind = resource.kind || 'unknown'
             const name = resource.metadata?.name || 'unnamed'
-            throw new Error(
-              `Failed to create ${kind}/${name}: ${createError.message}`,
-            )
+            throw new Error(`Failed to create ${kind}/${name}: ${createError.message}`)
           }
         }
       })
@@ -126,16 +114,11 @@ export async function deployMcpServer(
         await Promise.all(applyPromises)
       } catch (error: unknown) {
         // Rethrow with more context
-        const errorMessage =
-          error instanceof Error ? error.message : String(error)
-        throw new Error(
-          `Failed to apply one or more resources: ${errorMessage}`,
-        )
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        throw new Error(`Failed to apply one or more resources: ${errorMessage}`)
       }
     } catch (manifestError: any) {
-      return Result.error(
-        new Error(`Failed to apply manifest: ${manifestError.message}`),
-      )
+      return Result.error(new Error(`Failed to apply manifest: ${manifestError.message}`))
     }
 
     // Store the manifest in the database
@@ -161,8 +144,6 @@ export async function deployMcpServer(
       return Result.ok(mcpServerResult[0]!)
     })
   } catch (error) {
-    return Result.error(
-      error instanceof Error ? error : new Error(String(error)),
-    )
+    return Result.error(error instanceof Error ? error : new Error(String(error)))
   }
 }

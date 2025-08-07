@@ -1,19 +1,15 @@
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
+import { ChainError, LatitudeError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
-  ChainError,
-  LatitudeError,
-  RunErrorCodes,
-} from '@latitude-data/constants/errors'
-import {
-  Commit,
+  type Commit,
   LegacyChainEventTypes,
   LogSources,
-  Project,
-  ProviderLog,
+  type Project,
+  type ProviderLog,
   StreamEventTypes,
-  Workspace,
+  type Workspace,
 } from '@latitude-data/core/browser'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import {
@@ -52,17 +48,14 @@ vi.mock('$/common/sentry', async (importOriginal) => {
   }
 })
 
-vi.mock(
-  '@latitude-data/core/services/commits/runDocumentAtCommit',
-  async (importOriginal) => {
-    const original = (await importOriginal()) as typeof importOriginal
+vi.mock('@latitude-data/core/services/commits/runDocumentAtCommit', async (importOriginal) => {
+  const original = (await importOriginal()) as typeof importOriginal
 
-    return {
-      ...original,
-      runDocumentAtCommit: mocks.runDocumentAtCommit,
-    }
-  },
-)
+  return {
+    ...original,
+    runDocumentAtCommit: mocks.runDocumentAtCommit,
+  }
+})
 
 vi.mock(
   '@latitude-data/core/services/__deprecated/commits/runDocumentAtCommit',
@@ -91,15 +84,12 @@ let commit: Commit
 describe('POST /run', () => {
   describe('unauthorized', () => {
     it('fails', async () => {
-      const res = await app.request(
-        '/api/v3/projects/1/versions/asldkfjhsadl/documents/run',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            documentPath: 'path/to/document',
-          }),
-        },
-      )
+      const res = await app.request('/api/v3/projects/1/versions/asldkfjhsadl/documents/run', {
+        method: 'POST',
+        body: JSON.stringify({
+          documentPath: 'path/to/document',
+        }),
+      })
 
       expect(res.status).toBe(401)
     })
@@ -107,12 +97,7 @@ describe('POST /run', () => {
 
   describe('authorized with stream', () => {
     beforeEach(async () => {
-      const {
-        workspace: wsp,
-        user,
-        project: prj,
-        providers,
-      } = await createProject()
+      const { workspace: wsp, user, project: prj, providers } = await createProject()
       project = prj
       workspace = wsp
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
@@ -254,7 +239,7 @@ describe('POST /run', () => {
         headers,
       })
 
-      let { done, value } = await testConsumeStream(res.body as ReadableStream)
+      const { done, value } = await testConsumeStream(res.body as ReadableStream)
       const event = parseSSEvent(value)
       expect(mocks.queues)
       expect(res.status).toBe(200)
@@ -279,15 +264,13 @@ describe('POST /run', () => {
               config: {
                 tools: {
                   get_the_weather: {
-                    description:
-                      'Retrieves the current weather for a specified location.',
+                    description: 'Retrieves the current weather for a specified location.',
                     parameters: {
                       type: 'object',
                       properties: {
                         location: {
                           type: 'string',
-                          description:
-                            "The city and country, e.g., 'Valencia, Spain'.",
+                          description: "The city and country, e.g., 'Valencia, Spain'.",
                         },
                       },
                       required: ['location'],
@@ -382,12 +365,7 @@ describe('POST /run', () => {
 
   describe('authorized without stream', () => {
     beforeEach(async () => {
-      const {
-        workspace: wsp,
-        user,
-        project: prj,
-        providers,
-      } = await createProject()
+      const { workspace: wsp, user, project: prj, providers } = await createProject()
       project = prj
       workspace = wsp
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
@@ -686,12 +664,7 @@ describe('POST /run', () => {
 
   describe('version-based routing', () => {
     beforeEach(async () => {
-      const {
-        workspace: wsp,
-        user,
-        project: prj,
-        providers,
-      } = await createProject()
+      const { workspace: wsp, user, project: prj, providers } = await createProject()
       project = prj
       workspace = wsp
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({

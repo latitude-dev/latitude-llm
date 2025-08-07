@@ -44,10 +44,7 @@ export const GROQ_MODELS = createModelSpec({
     if (model.includes('llama-4-scout') || model.includes('llama4-scout')) {
       return 'meta-llama/llama-4-scout-17b-16e-instruct'
     }
-    if (
-      model.includes('llama-4-maverick') ||
-      model.includes('llama4-maverick')
-    ) {
+    if (model.includes('llama-4-maverick') || model.includes('llama4-maverick')) {
       return 'meta-llama/llama-4-maverick-17b-128e-instruct'
     }
 

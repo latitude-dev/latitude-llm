@@ -9,8 +9,8 @@ export default function AdminFeatures() {
       <section className='flex flex-col gap-y-4'>
         <Text.H1>Feature Toggles</Text.H1>
         <Text.H4 color='foregroundMuted'>
-          Manage feature toggles for workspaces. Create new features and toggle
-          them on/off for specific workspaces.
+          Manage feature toggles for workspaces. Create new features and toggle them on/off for
+          specific workspaces.
         </Text.H4>
         <FeaturesManager />
       </section>

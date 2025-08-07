@@ -1,6 +1,6 @@
 import { Result } from '../../../../../lib/Result'
 import { defineLatteTool } from '../types'
-import { Trigger } from '@latitude-data/constants/trigger'
+import type { Trigger } from '@latitude-data/constants/trigger'
 
 const listIntegrationTriggers = defineLatteTool(async () => {
   const latitudeTriggers: Trigger[] = [

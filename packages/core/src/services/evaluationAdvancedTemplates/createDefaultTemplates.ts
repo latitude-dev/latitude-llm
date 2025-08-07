@@ -4,9 +4,7 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { createEvaluationTemplate } from './create'
 
-export async function createDefaultEvaluationTemplates(
-  transaction = new Transaction(),
-) {
+export async function createDefaultEvaluationTemplates(transaction = new Transaction()) {
   const mapTypes = {
     boolean: EvaluationResultableType.Boolean,
     number: EvaluationResultableType.Number,
@@ -14,13 +12,9 @@ export async function createDefaultEvaluationTemplates(
   }
 
   const promises = evaluationAdvancedTemplates.map((template) => {
-    const type = mapTypes[
-      template.type as keyof typeof mapTypes
-    ] as EvaluationResultableType
+    const type = mapTypes[template.type as keyof typeof mapTypes] as EvaluationResultableType
     const detail =
-      type === EvaluationResultableType.Number
-        ? { range: { from: 1, to: 5 } }
-        : undefined
+      type === EvaluationResultableType.Number ? { range: { from: 1, to: 5 } } : undefined
 
     return createEvaluationTemplate(
       {

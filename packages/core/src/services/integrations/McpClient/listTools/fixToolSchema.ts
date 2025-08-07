@@ -1,4 +1,4 @@
-import { JSONSchema7 } from 'json-schema'
+import type { JSONSchema7 } from 'json-schema'
 
 export function fixToolSchema(schema: JSONSchema7): JSONSchema7 {
   if (schema.type === 'object') {
@@ -17,9 +17,7 @@ export function fixToolSchema(schema: JSONSchema7): JSONSchema7 {
   if (schema.type === 'array') {
     if (schema.items) {
       if (Array.isArray(schema.items)) {
-        schema.items = schema.items.map((item) =>
-          fixToolSchema(item as JSONSchema7),
-        )
+        schema.items = schema.items.map((item) => fixToolSchema(item as JSONSchema7))
       } else {
         schema.items = fixToolSchema(schema.items as JSONSchema7)
       }

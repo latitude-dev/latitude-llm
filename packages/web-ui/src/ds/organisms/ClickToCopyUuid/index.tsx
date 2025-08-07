@@ -1,4 +1,4 @@
-import { Badge, BadgeProps } from '../../atoms/Badge'
+import { Badge, type BadgeProps } from '../../atoms/Badge'
 import { ClickToCopy } from '../../molecules/ClickToCopy'
 
 export function ClickToCopyUuid({

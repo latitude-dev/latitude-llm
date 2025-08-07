@@ -1,4 +1,4 @@
-import { ExperimentDto } from '@latitude-data/core/browser'
+import type { ExperimentDto } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -18,10 +18,7 @@ export function ResultsCell({
     <div className='flex items-center gap-1'>
       <Tooltip
         trigger={
-          <Badge
-            variant='successMuted'
-            className={isLoading ? 'animate-pulse' : ''}
-          >
+          <Badge variant='successMuted' className={isLoading ? 'animate-pulse' : ''}>
             {experiment.results.passed}
           </Badge>
         }
@@ -33,10 +30,7 @@ export function ResultsCell({
       </Text.H5>
       <Tooltip
         trigger={
-          <Badge
-            variant='warningMuted'
-            className={isLoading ? 'animate-pulse' : ''}
-          >
+          <Badge variant='warningMuted' className={isLoading ? 'animate-pulse' : ''}>
             {experiment.results.failed}
           </Badge>
         }
@@ -48,10 +42,7 @@ export function ResultsCell({
       </Text.H5>
       <Tooltip
         trigger={
-          <Badge
-            variant='destructiveMuted'
-            className={isLoading ? 'animate-pulse' : ''}
-          >
+          <Badge variant='destructiveMuted' className={isLoading ? 'animate-pulse' : ''}>
             {experiment.results.errors}
           </Badge>
         }

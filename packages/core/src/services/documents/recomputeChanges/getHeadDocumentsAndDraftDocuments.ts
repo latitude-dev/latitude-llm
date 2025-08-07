@@ -1,4 +1,4 @@
-import { Commit } from '../../../browser'
+import type { Commit } from '../../../browser'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { ProjectsRepository } from '../../../repositories'
@@ -57,18 +57,12 @@ export async function getHeadDocumentsAndDraftDocumentsForCommit(
   },
   tx = database,
 ) {
-  const headDocumentsResult = await getDocumentsAtCommit(
-    { commit, workspaceId },
-    tx,
-  )
+  const headDocumentsResult = await getDocumentsAtCommit({ commit, workspaceId }, tx)
   if (headDocumentsResult.error) return headDocumentsResult
 
   const headDocuments = headDocumentsResult.value
 
-  const draftDocumentsResult = await getDraftDocuments(
-    { commit, workspaceId },
-    tx,
-  )
+  const draftDocumentsResult = await getDraftDocuments({ commit, workspaceId }, tx)
   if (draftDocumentsResult.error) return draftDocumentsResult
 
   return Result.ok({

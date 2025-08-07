@@ -1,31 +1,23 @@
-import {
-  AssistantMessage,
-  type Conversation,
-  type Message,
-} from '@latitude-data/compiler'
+import type { AssistantMessage, Conversation, Message } from '@latitude-data/compiler'
 import {
   ABSOLUTE_MAX_STEPS,
-  ChainStepResponse,
+  type ChainStepResponse,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
-  StreamType,
-  TraceContext,
+  type StreamType,
+  type TraceContext,
 } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Chain as PromptlChain } from 'promptl-ai'
-import { ChainStreamManager } from '../../../../__deprecated/lib/chainStreamManager'
-import { buildMessagesFromResponse, Workspace } from '../../../../browser'
-import { LogSources } from '../../../../constants'
+import type { ChainStreamManager } from '../../../../__deprecated/lib/chainStreamManager'
+import { buildMessagesFromResponse, type Workspace } from '../../../../browser'
+import type { LogSources } from '../../../../constants'
 import { Result } from '../../../../lib/Result'
-import { telemetry, TelemetryContext } from '../../../../telemetry'
+import { telemetry, type TelemetryContext } from '../../../../telemetry'
 import { cacheChain } from '../chainCache'
-import {
-  ConfigOverrides,
-  validateChain,
-  ValidatedChainStep,
-} from '../ChainValidator'
-import { CachedApiKeys, SomeChain, stepLimitExceededErrorMessage } from '../run'
+import { type ConfigOverrides, validateChain, type ValidatedChainStep } from '../ChainValidator'
+import { type CachedApiKeys, type SomeChain, stepLimitExceededErrorMessage } from '../run'
 
 function assertValidStepCount({
   stepCount,
@@ -37,8 +29,7 @@ function assertValidStepCount({
   step: ValidatedChainStep
 }) {
   const maxSteps = Math.min(
-    (step.conversation.config[MAX_STEPS_CONFIG_NAME] as number | undefined) ??
-      DEFAULT_MAX_STEPS,
+    (step.conversation.config[MAX_STEPS_CONFIG_NAME] as number | undefined) ?? DEFAULT_MAX_STEPS,
     ABSOLUTE_MAX_STEPS,
   )
   const exceededMaxSteps =
@@ -107,11 +98,7 @@ export async function runStep({
         message: lastResponseMessage,
         config: previousConfig,
       })
-    newMessages = [
-      lastResponseMessage,
-      ...latitudeToolResponses,
-      ...newMessages.slice(1),
-    ]
+    newMessages = [lastResponseMessage, ...latitudeToolResponses, ...newMessages.slice(1)]
   }
 
   // Note: incoming context could be from a paused or previous
@@ -151,8 +138,7 @@ export async function runStep({
     assertValidStepCount({ stepCount, chain, step }).unwrap()
 
     const isAgent = step.conversation.config.type === 'agent'
-    const enableAgentOptimization =
-      !step.conversation.config.disableAgentOptimization
+    const enableAgentOptimization = !step.conversation.config.disableAgentOptimization
     result = await chainStreamManager.getProviderResponse({
       context,
       source,
@@ -161,8 +147,7 @@ export async function runStep({
       schema: step.schema,
       output: step.output,
       abortSignal,
-      injectFakeAgentStartTool:
-        isAgent && injectAgentFinishTool && enableAgentOptimization,
+      injectFakeAgentStartTool: isAgent && injectAgentFinishTool && enableAgentOptimization,
       injectAgentFinishTool: isAgent && injectAgentFinishTool,
     })
 

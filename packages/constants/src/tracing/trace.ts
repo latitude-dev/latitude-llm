@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import { SegmentBaggage } from './segment'
-import { Span, SpanType } from './span'
+import type { SegmentBaggage } from './segment'
+import type { Span, SpanType } from './span'
 
 // Note: Traces are unmaterialized but this context is used to propagate the trace
 // See www.w3.org/TR/trace-context and w3c.github.io/baggage

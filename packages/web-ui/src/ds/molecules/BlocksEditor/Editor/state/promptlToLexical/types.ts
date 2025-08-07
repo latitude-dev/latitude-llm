@@ -1,5 +1,5 @@
-import { AstError } from '@latitude-data/constants/promptl'
-import {
+import type { AstError } from '@latitude-data/constants/promptl'
+import type {
   SerializedElementNode,
   SerializedLexicalNode,
   SerializedParagraphNode,
@@ -31,20 +31,13 @@ export const BLOCK_EDITOR_TYPE = {
 } as const
 
 export const MESSAGE_BLOCK = ['system', 'user', 'assistant'] as const
-export const CONTENT_BLOCK = [
-  'content-image',
-  'content-file',
-  'tool-call',
-] as const
+export const CONTENT_BLOCK = ['content-image', 'content-file', 'tool-call'] as const
 export const BLOCK_WITH_CHILDREN = [...MESSAGE_BLOCK, 'step'] as const
 export type BlockWithChildren = (typeof BLOCK_WITH_CHILDREN)[number]
 export type MessageBlockType = (typeof MESSAGE_BLOCK)[number]
 export type ContentBlockType = (typeof CONTENT_BLOCK)[number]
 
-export type BlockAttributes = Record<
-  string,
-  string | boolean | null | undefined
->
+export type BlockAttributes = Record<string, string | boolean | null | undefined>
 
 interface SimpleBlock extends SerializedLexicalNode {
   errors?: AstError[]
@@ -128,19 +121,10 @@ export interface StepBlock extends SerializedElementNode {
 }
 
 type RootChild = StepBlock | StepChild
-export interface BlockRootNode
-  extends SerializedRootNode<SerializedLexicalNode> {
+export interface BlockRootNode extends SerializedRootNode<SerializedLexicalNode> {
   type: 'root'
   children: RootChild[]
   readOnly?: boolean
 }
 
-export type {
-  ElementTag,
-  ForBlock,
-  Fragment,
-  IfBlock,
-  MustacheTag,
-  TemplateNode,
-  Text,
-}
+export type { ElementTag, ForBlock, Fragment, IfBlock, MustacheTag, TemplateNode, Text }

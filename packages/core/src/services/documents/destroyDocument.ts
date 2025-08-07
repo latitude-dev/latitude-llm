@@ -1,4 +1,4 @@
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import type { Commit, DocumentVersion, Workspace } from '../../browser'
 import Transaction from '../../lib/Transaction'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'

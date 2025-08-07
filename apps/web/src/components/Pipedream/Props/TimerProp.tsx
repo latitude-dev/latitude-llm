@@ -1,6 +1,6 @@
-import { IntegrationDto, PipedreamComponent } from '@latitude-data/core/browser'
+import type { IntegrationDto, PipedreamComponent } from '@latitude-data/core/browser'
 import { CronInput } from '@latitude-data/web-ui/organisms/CronInput'
-import { ConfigurablePropTimer, TimerCron } from '@pipedream/sdk/browser'
+import type { ConfigurablePropTimer, TimerCron } from '@pipedream/sdk/browser'
 
 export default function PipedreamTimerProp({
   prop,

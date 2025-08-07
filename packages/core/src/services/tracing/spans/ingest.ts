@@ -5,33 +5,29 @@ import {
   ATTR_OTEL_STATUS_DESCRIPTION,
 } from '@opentelemetry/semantic-conventions'
 import {
-  ApiKey,
+  type ApiKey,
   ATTR_LATITUDE_INTERNAL,
-  Otlp,
+  type Otlp,
   SPAN_PROCESSING_STORAGE_KEY,
-  SpanAttribute,
-  SpanProcessingData,
+  type SpanAttribute,
+  type SpanProcessingData,
   SpanStatus,
   SpanType,
   TRACING_JOBS_MAX_ATTEMPTS,
-  Workspace,
+  type Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { processSpanJobKey } from '../../../jobs/job-definitions/tracing/processSpanJob'
 import { tracingQueue } from '../../../jobs/queues'
-import { diskFactory, DiskWrapper } from '../../../lib/disk'
+import { diskFactory, type DiskWrapper } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { hashContent as hash } from '../../../lib/hashContent'
 import { Result } from '../../../lib/Result'
 import { ApiKeysRepository } from '../../../repositories'
 import { internalBaggageSchema } from '../../../telemetry'
 import { captureException } from '../../../utils/workers/sentry'
-import {
-  convertSpanAttributes,
-  convertSpanStatus,
-  extractSpanType,
-} from './process'
+import { convertSpanAttributes, convertSpanStatus, extractSpanType } from './process'
 
 // TODO(tracing): enhance this function
 export async function ingestSpans(
@@ -113,17 +109,11 @@ export async function ingestSpans(
           captureException(enriching.error)
           continue
         }
-        span.attributes = enriching.value.filter(
-          ({ key }) => key !== ATTR_LATITUDE_INTERNAL,
-        )
+        span.attributes = enriching.value.filter(({ key }) => key !== ATTR_LATITUDE_INTERNAL)
 
-        const enqueuing = await enqueueSpan(
-          { span, scope, resource, apiKey, workspace },
-          disk,
-        )
+        const enqueuing = await enqueueSpan({ span, scope, resource, apiKey, workspace }, disk)
         if (enqueuing.error) {
           captureException(enqueuing.error)
-          continue
         }
       }
     }
@@ -135,9 +125,7 @@ export async function ingestSpans(
 function extractInternal(attributes: Record<string, SpanAttribute>) {
   const attribute = String(attributes[ATTR_LATITUDE_INTERNAL] ?? '')
   if (!attribute) {
-    return Result.error(
-      new UnprocessableEntityError('Internal baggage is required'),
-    )
+    return Result.error(new UnprocessableEntityError('Internal baggage is required'))
   }
 
   try {
@@ -145,10 +133,8 @@ function extractInternal(attributes: Record<string, SpanAttribute>) {
     const baggage = internalBaggageSchema.parse(payload)
 
     return Result.ok(baggage)
-  } catch (error) {
-    return Result.error(
-      new UnprocessableEntityError('Invalid internal baggage'),
-    )
+  } catch (_error) {
+    return Result.error(new UnprocessableEntityError('Invalid internal baggage'))
   }
 }
 

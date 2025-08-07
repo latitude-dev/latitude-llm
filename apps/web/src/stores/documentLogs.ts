@@ -1,11 +1,11 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import {
+import type {
   DocumentLog,
   DocumentLogFilterOptions,
   DocumentLogWithMetadataAndError,
 } from '@latitude-data/core/browser'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 type MaybeBoolean = boolean | undefined
 const EMPTY_ARRAY: [] = []
@@ -71,9 +71,7 @@ export default function useDocumentLogs<T extends MaybeBoolean = boolean>(
   return { data, mutate, isLoading }
 }
 
-export function documentLogPresenter<T extends MaybeBoolean = boolean>(
-  documentLog: LogResult<T>,
-) {
+export function documentLogPresenter<T extends MaybeBoolean = boolean>(documentLog: LogResult<T>) {
   return {
     ...documentLog,
     createdAt: new Date(documentLog.createdAt),

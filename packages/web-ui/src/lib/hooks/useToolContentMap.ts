@@ -1,12 +1,12 @@
 'use client'
 
-import { ToolResultPayload } from '@latitude-data/constants/ai'
+import type { ToolResultPayload } from '@latitude-data/constants/ai'
 import {
-  Message,
-  MessageContent,
+  type Message,
+  type MessageContent,
   MessageRole,
-  ToolContent,
-  ToolRequestContent,
+  type ToolContent,
+  type ToolRequestContent,
 } from '@latitude-data/constants/legacyCompiler'
 import { useMemo } from 'react'
 
@@ -19,18 +19,14 @@ export function useToolContentMap(
 
     const res = messages.reduce((acc: Record<string, ToolContent>, message) => {
       if (typeof message.content === 'string') return acc
-      if (![MessageRole.assistant, MessageRole.tool].includes(message.role))
-        return acc
+      if (![MessageRole.assistant, MessageRole.tool].includes(message.role)) return acc
 
       return Object.assign(
         acc,
         Object.fromEntries(
           (message.content as MessageContent[] | ToolRequestContent[])
             .filter((content) => content.type === 'tool-result')
-            .map((content) => [
-              content.toolCallId,
-              transformContent(content as ToolContent),
-            ]),
+            .map((content) => [content.toolCallId, transformContent(content as ToolContent)]),
         ),
       )
     }, {})
@@ -51,12 +47,7 @@ export function useToolContentMap(
  */
 function transformContent(content: ToolContent): ToolContent {
   const result = content.result
-  if (
-    result &&
-    typeof result === 'object' &&
-    'value' in result &&
-    'isError' in result
-  ) {
+  if (result && typeof result === 'object' && 'value' in result && 'isError' in result) {
     return {
       ...content,
       result: (result as ToolResultPayload).value,

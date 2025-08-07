@@ -1,8 +1,8 @@
 import { and, eq } from 'drizzle-orm'
 import { omit } from 'lodash-es'
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import type { Commit, DocumentVersion, Workspace } from '../../browser'
 import { ConflictError, LatitudeError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
@@ -27,15 +27,11 @@ export async function resetToDocumentVersion(
 
     if (
       documentsInDraft.value.some(
-        (d) =>
-          d.path === documentVersion.path &&
-          d.documentUuid !== documentVersion.documentUuid,
+        (d) => d.path === documentVersion.path && d.documentUuid !== documentVersion.documentUuid,
       )
     ) {
       return Result.error(
-        new ConflictError(
-          'Document with the same path already exists in the draft',
-        ),
+        new ConflictError('Document with the same path already exists in the draft'),
       )
     }
 

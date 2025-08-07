@@ -3,16 +3,13 @@ import { CheckCircle2, LoaderCircle } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { MarkerSeverity, type editor } from 'monaco-editor'
-import { AstError } from '@latitude-data/constants/promptl'
+import type { AstError } from '@latitude-data/constants/promptl'
 
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '../../../../lib/hooks/useLocalStorage'
+import { AppLocalStorage, useLocalStorage } from '../../../../lib/hooks/useLocalStorage'
 import { cn } from '../../../../lib/utils'
 import { Button } from '../../../atoms/Button'
 import { Text } from '../../../atoms/Text'
-import { type DocumentError, type DocumentTextEditorProps } from '../types'
+import type { DocumentError, DocumentTextEditorProps } from '../types'
 import { CopilotSection } from './CopilotSection'
 import { MonacoDiffEditor } from './DiffEditor'
 import { RegularMonacoEditor } from './RegularEditor'
@@ -113,11 +110,7 @@ export function DocumentTextEditor({
     <div className='relative h-full rounded-lg border border-border overflow-hidden flex flex-col bg-secondary'>
       <EditorReadOnlyBanner readOnlyMessage={readOnlyMessage} />
       {diff ? (
-        <MonacoDiffEditor
-          editorRef={diffEditorRef}
-          oldValue={value}
-          newValue={diff.newValue}
-        />
+        <MonacoDiffEditor editorRef={diffEditorRef} oldValue={value} newValue={diff.newValue} />
       ) : (
         <RegularMonacoEditor
           autoFocus={autoFocus}
@@ -125,8 +118,7 @@ export function DocumentTextEditor({
           value={value}
           path={path}
           readOnlyMessage={
-            readOnlyMessage ||
-            (copilot?.isLoading ? 'Copilot is thinking...' : undefined)
+            readOnlyMessage || (copilot?.isLoading ? 'Copilot is thinking...' : undefined)
           }
           className={cn('w-full h-full flex', {
             'animate-pulse': copilot?.isLoading,

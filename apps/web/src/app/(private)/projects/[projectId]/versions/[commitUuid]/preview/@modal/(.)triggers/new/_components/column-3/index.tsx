@@ -4,12 +4,9 @@ import useIntegrations from '$/stores/integrations'
 import { useTriggersModalContext } from '../contexts/triggers-modal-context'
 
 export function Column3() {
-  const { selectedIntegration, selectedPipedreamApp } =
-    useTriggersModalContext()
+  const { selectedIntegration, selectedPipedreamApp } = useTriggersModalContext()
   const { data: integrations } = useIntegrations({ withTriggers: true })
-  const integration = integrations?.find(
-    (i) => i.id === selectedIntegration?.id,
-  )
+  const integration = integrations?.find((i) => i.id === selectedIntegration?.id)
 
   if (!selectedIntegration?.pipedream?.trigger) return null
 

@@ -1,6 +1,6 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
-import { Membership } from '../browser'
+import type { Membership } from '../browser'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { memberships } from '../schema'
@@ -8,10 +8,7 @@ import RepositoryLegacy from './repository'
 
 const tt = getTableColumns(memberships)
 
-export class MembershipsRepository extends RepositoryLegacy<
-  typeof tt,
-  Membership
-> {
+export class MembershipsRepository extends RepositoryLegacy<typeof tt, Membership> {
   get scope() {
     return this.db
       .select()
@@ -21,10 +18,7 @@ export class MembershipsRepository extends RepositoryLegacy<
   }
 
   async findByUserId(userId: string) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.userId, userId))
+    const result = await this.db.select().from(this.scope).where(eq(this.scope.userId, userId))
 
     if (result.length === 0) {
       return Result.error(new NotFoundError('Membership not found'))

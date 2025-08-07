@@ -1,17 +1,17 @@
 'use client'
 
-import { ReactNode } from 'react'
-import { IconName } from '../Icons'
+import type { ReactNode } from 'react'
+import type { IconName } from '../Icons'
 import { SelectItem } from './Primitives'
 
-export type SelectOption<V extends unknown = unknown> = {
+export type SelectOption<V = unknown> = {
   label: string
   value: V
   icon?: ReactNode | IconName
   description?: string
 }
 
-export type SelectOptionGroup<V extends unknown = unknown> = {
+export type SelectOptionGroup<V = unknown> = {
   label: string
   options: SelectOption<V>[]
 }

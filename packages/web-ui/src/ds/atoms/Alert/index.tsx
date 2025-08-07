@@ -1,14 +1,9 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { TextColor } from '../../tokens'
+import type { TextColor } from '../../tokens'
 import { Icon } from '../Icons'
-import {
-  AlertDescription,
-  AlertProps,
-  AlertRoot,
-  AlertTitle,
-} from './Primitives'
+import { AlertDescription, type AlertProps, AlertRoot, AlertTitle } from './Primitives'
 
 type Props = {
   variant?: AlertProps['variant']

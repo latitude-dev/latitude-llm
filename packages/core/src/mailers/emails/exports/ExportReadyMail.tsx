@@ -4,7 +4,7 @@ import React from 'react'
 import { Link, Text } from '@react-email/components'
 
 import ContainerLayout from '../_components/ContainerLayout'
-import { User } from '../../../browser'
+import type { User } from '../../../browser'
 
 type Props = {
   user: User
@@ -14,9 +14,7 @@ export default function ExportReadyMail({ user, token }: Props) {
   return (
     <ContainerLayout previewText={`Export is ready to download.`}>
       <Text>Hi {user.name},</Text>
-      <Text>
-        Your export is ready to download. Click the link below to download.
-      </Text>
+      <Text>Your export is ready to download. Click the link below to download.</Text>
       <Link
         href={createExportLink(token)}
         target='_blank'

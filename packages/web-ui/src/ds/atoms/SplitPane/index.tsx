@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, ReactNode, useEffect, useState } from 'react'
+import { memo, type ReactNode, useEffect, useState } from 'react'
 
 import { JS_PANEL_CLASS } from './Common'
 import { HorizontalSplit } from './HorizontalSplit'
@@ -24,10 +24,7 @@ export function getGap(direction: SplitDirection, gap?: SplitGap) {
   }
 }
 
-export function getGapWrapperPadding(
-  direction: SplitDirection,
-  gap?: SplitGap,
-) {
+export function getGapWrapperPadding(direction: SplitDirection, gap?: SplitGap) {
   switch (gap) {
     case 2:
       return direction === 'horizontal' ? 'pr-2' : 'mb-2'
@@ -40,14 +37,8 @@ export function getGapWrapperPadding(
   }
 }
 
-export function usePanelDomRef({
-  selfRef,
-}: {
-  selfRef: HTMLElement | null | undefined
-}) {
-  const [panelRef, setPanelRef] = useState<HTMLDivElement | undefined | null>(
-    undefined,
-  )
+export function usePanelDomRef({ selfRef }: { selfRef: HTMLElement | null | undefined }) {
+  const [panelRef, setPanelRef] = useState<HTMLDivElement | undefined | null>(undefined)
   useEffect(() => {
     if (!selfRef) return
 

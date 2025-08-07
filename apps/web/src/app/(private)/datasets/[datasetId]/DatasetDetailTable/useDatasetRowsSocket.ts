@@ -1,9 +1,6 @@
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { type EventArgs, useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { serializeRows } from '$/stores/datasetRows/rowSerializationHelpers'
-import { DatasetRow, Dataset } from '@latitude-data/core/browser'
+import type { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useRef, useState } from 'react'
 import { useSWRConfig } from 'swr'
@@ -86,7 +83,7 @@ export function useDatasetRowsSocket({
       })
       setRowsInCache(event.rows)
     },
-    [dataset, toast, setIsProcessing, setRowsInCache, setProcessedRows],
+    [dataset, toast, setRowsInCache],
   )
 
   useSockets({ event: 'datasetRowsCreated', onMessage })

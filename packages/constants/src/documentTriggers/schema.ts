@@ -9,9 +9,7 @@ export const emailTriggerConfigurationSchema = z.object({
   parameters: z.record(z.nativeEnum(DocumentTriggerParameters)).optional(),
 })
 
-export type EmailTriggerConfiguration = z.infer<
-  typeof emailTriggerConfigurationSchema
->
+export type EmailTriggerConfiguration = z.infer<typeof emailTriggerConfigurationSchema>
 
 export const insertScheduledTriggerConfigurationSchema = z.object({
   cronExpression: z.string(),
@@ -30,10 +28,9 @@ export const integrationTriggerConfigurationSchema = z.object({
   triggerId: z.string(),
 })
 
-const insertIntegrationTriggerConfigurationSchema =
-  integrationTriggerConfigurationSchema.omit({
-    triggerId: true,
-  })
+const insertIntegrationTriggerConfigurationSchema = integrationTriggerConfigurationSchema.omit({
+  triggerId: true,
+})
 
 export type InsertIntegrationTriggerConfiguration = z.infer<
   typeof insertIntegrationTriggerConfigurationSchema
@@ -43,58 +40,46 @@ export type InsertScheduledTriggerConfiguration = z.infer<
   typeof insertScheduledTriggerConfigurationSchema
 >
 
-export type ScheduledTriggerConfiguration = z.infer<
-  typeof scheduledTriggerConfigurationSchema
->
+export type ScheduledTriggerConfiguration = z.infer<typeof scheduledTriggerConfigurationSchema>
 
-export type IntegrationTriggerConfiguration = z.infer<
-  typeof integrationTriggerConfigurationSchema
->
+export type IntegrationTriggerConfiguration = z.infer<typeof integrationTriggerConfigurationSchema>
 
-export const documentTriggerConfigurationSchema = z.discriminatedUnion(
-  'triggerType',
-  [
-    z.object({
-      triggerType: z.literal(DocumentTriggerType.Email),
-      configuration: emailTriggerConfigurationSchema,
-    }),
-    z.object({
-      triggerType: z.literal(DocumentTriggerType.Scheduled),
-      configuration: scheduledTriggerConfigurationSchema,
-    }),
-    z.object({
-      triggerType: z.literal(DocumentTriggerType.Integration),
-      configuration: integrationTriggerConfigurationSchema,
-    }),
-  ],
-)
+export const documentTriggerConfigurationSchema = z.discriminatedUnion('triggerType', [
+  z.object({
+    triggerType: z.literal(DocumentTriggerType.Email),
+    configuration: emailTriggerConfigurationSchema,
+  }),
+  z.object({
+    triggerType: z.literal(DocumentTriggerType.Scheduled),
+    configuration: scheduledTriggerConfigurationSchema,
+  }),
+  z.object({
+    triggerType: z.literal(DocumentTriggerType.Integration),
+    configuration: integrationTriggerConfigurationSchema,
+  }),
+])
 
-export const insertDocumentTriggerConfigurationSchema = z.discriminatedUnion(
-  'type',
-  [
-    z.object({
-      type: z.literal(DocumentTriggerType.Email),
-      configuration: emailTriggerConfigurationSchema,
-    }),
-    z.object({
-      type: z.literal(DocumentTriggerType.Scheduled),
-      configuration: insertScheduledTriggerConfigurationSchema,
-    }),
-    z.object({
-      type: z.literal(DocumentTriggerType.Integration),
-      configuration: insertIntegrationTriggerConfigurationSchema,
-    }),
-  ],
-)
+export const insertDocumentTriggerConfigurationSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal(DocumentTriggerType.Email),
+    configuration: emailTriggerConfigurationSchema,
+  }),
+  z.object({
+    type: z.literal(DocumentTriggerType.Scheduled),
+    configuration: insertScheduledTriggerConfigurationSchema,
+  }),
+  z.object({
+    type: z.literal(DocumentTriggerType.Integration),
+    configuration: insertIntegrationTriggerConfigurationSchema,
+  }),
+])
 
 export type DocumentTriggerConfiguration =
   | EmailTriggerConfiguration
   | ScheduledTriggerConfiguration
   | IntegrationTriggerConfiguration
 
-export type DocumentTriggerWithConfiguration = z.infer<
-  typeof documentTriggerConfigurationSchema
->
+export type DocumentTriggerWithConfiguration = z.infer<typeof documentTriggerConfigurationSchema>
 
 export type InsertDocumentTriggerWithConfiguration = z.infer<
   typeof insertDocumentTriggerConfigurationSchema

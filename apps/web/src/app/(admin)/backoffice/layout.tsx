@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { SessionProvider } from '@latitude-data/web-ui/providers'
 import buildMetatags from '$/app/_lib/buildMetatags'
@@ -12,20 +12,12 @@ export const metadata = buildMetatags({
   title: 'Backoffice',
 })
 
-export default async function AdminLayout({
-  children,
-}: {
-  children: ReactNode
-}) {
+export default async function AdminLayout({ children }: { children: ReactNode }) {
   const { user, workspace, subscriptionPlan } = await getCurrentUserOrRedirect()
   if (!user?.admin) redirect(ROUTES.root)
 
   return (
-    <SessionProvider
-      currentUser={user}
-      workspace={workspace}
-      subscriptionPlan={subscriptionPlan}
-    >
+    <SessionProvider currentUser={user} workspace={workspace} subscriptionPlan={subscriptionPlan}>
       <BackofficeTabs>{children}</BackofficeTabs>
     </SessionProvider>
   )

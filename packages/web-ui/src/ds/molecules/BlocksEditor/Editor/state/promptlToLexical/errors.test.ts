@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { parse } from 'promptl-ai'
 import { fromAstToBlocks } from './fromAstToBlocks'
-import { AstError } from '@latitude-data/constants/promptl'
-import {
+import type { AstError } from '@latitude-data/constants/promptl'
+import type {
   StepBlock,
   MessageBlock,
   ReferenceLink,
@@ -66,9 +66,7 @@ describe('astToSimpleBlocks with errors', () => {
       expect(promptBlock.type).toBe('reference_link')
       expect(promptBlock.errors).toBeDefined()
       expect(promptBlock.errors).toHaveLength(1)
-      expect(promptBlock.errors?.[0]?.message).toBe(
-        'Reference tags must have a prompt attribute',
-      )
+      expect(promptBlock.errors?.[0]?.message).toBe('Reference tags must have a prompt attribute')
       expect(promptBlock.errors?.[0]?.startIndex).toBe(0)
       expect(promptBlock.errors?.[0]?.endIndex).toBe(25)
     })
@@ -103,12 +101,8 @@ describe('astToSimpleBlocks with errors', () => {
       const paragraphBlock = blocks[0] as ParagraphBlock
       const promptBlock = paragraphBlock.children[0] as ReferenceLink
       expect(promptBlock.errors).toHaveLength(2)
-      expect(promptBlock.errors?.[0]?.message).toBe(
-        'Reference tags must have a prompt attribute',
-      )
-      expect(promptBlock.errors?.[1]?.message).toBe(
-        'Invalid location attribute',
-      )
+      expect(promptBlock.errors?.[0]?.message).toBe('Reference tags must have a prompt attribute')
+      expect(promptBlock.errors?.[1]?.message).toBe('Invalid location attribute')
     })
   })
 
@@ -137,9 +131,7 @@ describe('astToSimpleBlocks with errors', () => {
       expect(toolCallBlock.type).toBe('tool_call')
       expect(toolCallBlock.errors).toBeDefined()
       expect(toolCallBlock.errors).toHaveLength(1)
-      expect(toolCallBlock.errors?.[0]?.message).toBe(
-        'Tool call must have an id attribute',
-      )
+      expect(toolCallBlock.errors?.[0]?.message).toBe('Tool call must have an id attribute')
     })
   })
 
@@ -168,9 +160,7 @@ describe('astToSimpleBlocks with errors', () => {
       expect(fileBlock.type).toBe('content_file')
       expect(fileBlock.errors).toBeDefined()
       expect(fileBlock.errors).toHaveLength(1)
-      expect(fileBlock.errors?.[0]?.message).toBe(
-        'Content file must have a name attribute',
-      )
+      expect(fileBlock.errors?.[0]?.message).toBe('Content file must have a name attribute')
     })
   })
 
@@ -227,9 +217,7 @@ describe('astToSimpleBlocks with errors', () => {
       expect(userBlock.role).toBe('user')
       expect(userBlock.errors).toBeDefined()
       expect(userBlock.errors).toHaveLength(1)
-      expect(userBlock.errors?.[0]?.message).toBe(
-        'User message cannot be empty',
-      )
+      expect(userBlock.errors?.[0]?.message).toBe('User message cannot be empty')
     })
   })
 
@@ -259,9 +247,7 @@ describe('astToSimpleBlocks with errors', () => {
       expect(stepBlock.type).toBe('step')
       expect(stepBlock.errors).toBeDefined()
       expect(stepBlock.errors).toHaveLength(1)
-      expect(stepBlock.errors?.[0]?.message).toBe(
-        "Step must have an 'as' attribute",
-      )
+      expect(stepBlock.errors?.[0]?.message).toBe("Step must have an 'as' attribute")
     })
   })
 
@@ -305,9 +291,7 @@ describe('astToSimpleBlocks with errors', () => {
       expect(userBlock.role).toBe('user')
       expect(userBlock.errors).toBeDefined()
       expect(userBlock.errors).toHaveLength(1)
-      expect(userBlock.errors?.[0]?.message).toBe(
-        'User message validation failed',
-      )
+      expect(userBlock.errors?.[0]?.message).toBe('User message validation failed')
 
       // @ts-ignore
       const imageBlock = userBlock.children[1].children[0] as ImageBlock
@@ -363,9 +347,7 @@ Then call this tool:
       expect(fileBlock).toBeDefined()
       expect(fileBlock.errors).toBeDefined()
       expect(fileBlock.errors).toHaveLength(1)
-      expect(fileBlock.errors?.[0]?.message).toBe(
-        'Content file must have name attribute',
-      )
+      expect(fileBlock.errors?.[0]?.message).toBe('Content file must have name attribute')
 
       // @ts-ignore
       const imageBlock = userBlock.children[5].children[0] as ImageBlock
@@ -377,9 +359,7 @@ Then call this tool:
       expect(toolCallBlock).toBeDefined()
       expect(toolCallBlock.errors).toBeDefined()
       expect(toolCallBlock.errors).toHaveLength(1)
-      expect(toolCallBlock.errors?.[0]?.message).toBe(
-        'Tool call must have id attribute',
-      )
+      expect(toolCallBlock.errors?.[0]?.message).toBe('Tool call must have id attribute')
     })
   })
 

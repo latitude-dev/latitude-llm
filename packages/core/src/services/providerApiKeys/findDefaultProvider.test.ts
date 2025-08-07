@@ -1,16 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Providers, User, Workspace } from '../../browser'
+import { Providers, type User, type Workspace } from '../../browser'
 import { WorkspacesRepository } from '../../repositories'
-import {
-  createProject,
-  createProviderApiKey,
-  setProviderAsDefault,
-} from '../../tests/factories'
-import {
-  findDefaultEvaluationProvider,
-  findDefaultProvider,
-} from './findDefaultProvider'
+import { createProject, createProviderApiKey, setProviderAsDefault } from '../../tests/factories'
+import { findDefaultEvaluationProvider, findDefaultProvider } from './findDefaultProvider'
 
 vi.mock('@latitude-data/env', () => ({
   env: {

@@ -1,5 +1,5 @@
 'use client'
-import { PublishedDocument } from '@latitude-data/core/browser'
+import type { PublishedDocument } from '@latitude-data/core/browser'
 import { Avatar } from '@latitude-data/web-ui/atoms/Avatar'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -11,7 +11,7 @@ import Link from 'next/link'
 
 import { Container } from '../Container'
 import { ForkButton } from '../ForkButton'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { getUserInfoFromSession } from '@latitude-data/web-ui/getUserInfo'
 
 export function PromptHeader({
@@ -30,10 +30,7 @@ export function PromptHeader({
       <AppHeaderWrapper xPadding='none'>
         <Container>
           <div className='w-full flex flex-row items-center justify-between'>
-            <Link
-              href={ROUTES.dashboard.root}
-              className='flex flex-row items-center gap-x-2'
-            >
+            <Link href={ROUTES.dashboard.root} className='flex flex-row items-center gap-x-2'>
               <Icon name='logo' size='large' />
               <div className='hidden sm:flex flex-col'>
                 <Text.H6M>AI tools</Text.H6M>
@@ -45,11 +42,7 @@ export function PromptHeader({
               {info ? (
                 <div className='hidden sm:flex flex-row items-center gap-x-2'>
                   <Text.H6M>{info.name}</Text.H6M>
-                  <Avatar
-                    alt={info.name}
-                    fallback={info.fallback}
-                    className='w-6 h-6'
-                  />
+                  <Avatar alt={info.name} fallback={info.fallback} className='w-6 h-6' />
                 </div>
               ) : null}
               <div className='min-w-20'>
@@ -69,9 +62,7 @@ export function PromptHeader({
               <h1>{shared.title}</h1>
             </Text.H3>
             <Text.H4 asChild color='foregroundMuted'>
-              <p>
-                {shared.description ?? 'No description for this prompt. Sad'}
-              </p>
+              <p>{shared.description ?? 'No description for this prompt. Sad'}</p>
             </Text.H4>
           </div>
         </div>

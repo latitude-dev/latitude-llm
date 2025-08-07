@@ -42,10 +42,7 @@ describe('paginateQuery', () => {
       },
       prevPage: undefined,
     })
-    expect(rows.map((r) => r.email)).toEqual([
-      `${prefix}_1@example.com`,
-      `${prefix}_2@example.com`,
-    ])
+    expect(rows.map((r) => r.email)).toEqual([`${prefix}_1@example.com`, `${prefix}_2@example.com`])
   })
 
   it('returns page 3', async () => {
@@ -78,10 +75,7 @@ describe('paginateQuery', () => {
         value: 2,
       },
     })
-    expect(rows.map((r) => r.email)).toEqual([
-      `${prefix}_5@example.com`,
-      `${prefix}_6@example.com`,
-    ])
+    expect(rows.map((r) => r.email)).toEqual([`${prefix}_5@example.com`, `${prefix}_6@example.com`])
   })
 
   it('with default page size', async () => {
@@ -140,9 +134,6 @@ describe('paginateQuery', () => {
       },
       prevPage: undefined,
     })
-    expect(rows.map((r) => r.email)).toEqual([
-      `${prefix}_1@example.com`,
-      `${prefix}_2@example.com`,
-    ])
+    expect(rows.map((r) => r.email)).toEqual([`${prefix}_1@example.com`, `${prefix}_2@example.com`])
   })
 })

@@ -2,11 +2,11 @@ import {
   ATTR_LATITUDE_SEGMENT_ID,
   ATTR_LATITUDE_SEGMENT_PARENT_ID,
   ATTR_LATITUDE_SEGMENTS,
-  TraceBaggage,
-  TraceContext,
-  Workspace,
+  type TraceBaggage,
+  type TraceContext,
+  type Workspace,
 } from '../../browser'
-import { BACKGROUND, TelemetryContext } from '../../telemetry'
+import { BACKGROUND, type TelemetryContext } from '../../telemetry'
 
 const TRACEPARENT = (traceId: string, spanId: string) => {
   return `00-${traceId}-${spanId}-01`

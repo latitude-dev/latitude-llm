@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BotEmotion } from './types'
+import type { BotEmotion } from './types'
 import { INNER_STROKE_WIDTH } from './constants'
 
 export function DynamicBotMouth({ emotion }: { emotion: BotEmotion }) {

@@ -9,13 +9,11 @@ import {
 } from '$compiler/parser/utils/bracket'
 import fullCharCodeAt from '$compiler/parser/utils/full_char_code_at'
 import { isIdentifierStart } from 'acorn'
-import { Pattern } from 'estree'
+import type { Pattern } from 'estree'
 
-import { Parser } from '..'
+import type { Parser } from '..'
 
-export default function readContext(
-  parser: Parser,
-): Pattern & { start: number; end: number } {
+export default function readContext(parser: Parser): Pattern & { start: number; end: number } {
   const start = parser.index
   let i = parser.index
 
@@ -44,9 +42,7 @@ export default function readContext(
       if (!isBracketPair(bracketStack[bracketStack.length - 1]!, code)) {
         parser.error(
           PARSER_ERRORS.unexpectedToken(
-            String.fromCharCode(
-              getBracketClose(bracketStack[bracketStack.length - 1]!) ?? 0,
-            ),
+            String.fromCharCode(getBracketClose(bracketStack[bracketStack.length - 1]!) ?? 0),
           ),
         )
       }
@@ -69,18 +65,12 @@ export default function readContext(
     // so we offset it by removing 1 character in the `space_with_newline`
     // to achieve that, we remove the 1st space encountered,
     // so it will not affect the `column` of the node
-    let spaceWithNewLine = parser.template
-      .slice(0, start)
-      .replace(/[^\n]/g, ' ')
+    let spaceWithNewLine = parser.template.slice(0, start).replace(/[^\n]/g, ' ')
     const firstSpace = spaceWithNewLine.indexOf(' ')
     spaceWithNewLine =
-      spaceWithNewLine.slice(0, firstSpace) +
-      spaceWithNewLine.slice(firstSpace + 1)
+      spaceWithNewLine.slice(0, firstSpace) + spaceWithNewLine.slice(firstSpace + 1)
 
-    return parseExpressionAt(
-      `${spaceWithNewLine}(${patternString} = 1)`,
-      start - 1,
-    ).left
+    return parseExpressionAt(`${spaceWithNewLine}(${patternString} = 1)`, start - 1).left
   } catch (error) {
     parser.acornError(error as CompileError)
   }

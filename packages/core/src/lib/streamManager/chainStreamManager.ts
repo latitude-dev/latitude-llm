@@ -1,13 +1,10 @@
 import { streamAIResponse } from './step/streamAIResponse'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
-import { Chain } from 'promptl-ai'
-import {
-  renderChain,
-  ValidatedChainStep,
-} from '../../services/chains/ChainValidator'
-import { StreamManager, StreamManagerProps } from '.'
+import type { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import type { Chain } from 'promptl-ai'
+import { renderChain, type ValidatedChainStep } from '../../services/chains/ChainValidator'
+import { StreamManager, type StreamManagerProps } from '.'
 import { resolveToolsFromConfig } from './resolveTools'
-import { CachedApiKeys } from '../../services/chains/run'
+import type { CachedApiKeys } from '../../services/chains/run'
 
 /**
  * ChainStreamManager extends StreamManager to handle streaming for multi-step AI chains.
@@ -55,13 +52,8 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
       this.setMessages(chain.messages)
       this.startStep()
 
-      const toolsBySource = await this.getToolsBySource(chain).then((r) =>
-        r.unwrap(),
-      )
-      const config = this.transformPromptlToVercelToolDeclarations(
-        chain.config,
-        toolsBySource,
-      )
+      const toolsBySource = await this.getToolsBySource(chain).then((r) => r.unwrap())
+      const config = this.transformPromptlToVercelToolDeclarations(chain.config, toolsBySource)
 
       this.startProviderStep(config)
 

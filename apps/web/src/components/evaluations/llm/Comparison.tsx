@@ -1,18 +1,14 @@
 import {
-  EvaluationType,
+  type EvaluationType,
   LlmEvaluationComparisonSpecification,
-  LlmEvaluationMetric,
+  type LlmEvaluationMetric,
 } from '@latitude-data/constants'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 
 const specification = LlmEvaluationComparisonSpecification
 export default {
@@ -40,9 +36,7 @@ function ConfigurationSimpleForm({
         placeholder='Judge the similarity of the translation'
         minRows={2}
         maxRows={4}
-        onChange={(e) =>
-          setConfiguration({ ...configuration, criteria: e.target.value })
-        }
+        onChange={(e) => setConfiguration({ ...configuration, criteria: e.target.value })}
         errors={errors?.['criteria']}
         className='w-full'
         disabled={disabled}
@@ -105,9 +99,7 @@ function ConfigurationAdvancedForm({
           placeholder='No minimum'
           min={0}
           max={100}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minThreshold: value })
-          }
+          onChange={(value) => setConfiguration({ ...configuration, minThreshold: value })}
           errors={errors?.['minThreshold']}
           defaultAppearance
           className='w-full'
@@ -121,9 +113,7 @@ function ConfigurationAdvancedForm({
           placeholder='No maximum'
           min={0}
           max={100}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxThreshold: value })
-          }
+          onChange={(value) => setConfiguration({ ...configuration, maxThreshold: value })}
           errors={errors?.['maxThreshold']}
           defaultAppearance
           className='w-full'

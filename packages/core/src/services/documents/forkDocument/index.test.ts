@@ -2,12 +2,12 @@ import { eq } from 'drizzle-orm'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import {
-  Commit,
-  DocumentVersion,
-  ProviderApiKey,
+  type Commit,
+  type DocumentVersion,
+  type ProviderApiKey,
   Providers,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
 import { providerApiKeys } from '../../../schema'
@@ -32,12 +32,7 @@ let destProviders: ProviderApiKey[]
 
 describe('forkDocument', () => {
   beforeAll(async () => {
-    const {
-      workspace: wsp,
-      document: doc,
-      commit: cmt,
-      documents,
-    } = await buildProjects()
+    const { workspace: wsp, document: doc, commit: cmt, documents } = await buildProjects()
     fromWorkspace = wsp
     originDocuments = documents
     document = doc
@@ -281,9 +276,7 @@ describe('forkDocument', () => {
       })
 
       it('fork a nested document', async () => {
-        const anotherDoc = originDocuments.find(
-          (d) => d.path === 'some-folder/children/child1',
-        )!
+        const anotherDoc = originDocuments.find((d) => d.path === 'some-folder/children/child1')!
         const { project } = await forkDocument({
           title: 'Copied Prompt',
           origin: { workspace: fromWorkspace, commit, document: anotherDoc },

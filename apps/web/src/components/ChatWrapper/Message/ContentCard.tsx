@@ -1,14 +1,10 @@
-import { memo, ReactNode, useMemo } from 'react'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { memo, type ReactNode, useMemo } from 'react'
+import { Icon, type IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { cn } from '@latitude-data/web-ui/utils'
 import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import {
-  BackgroundColor,
-  colors,
-  TextColor,
-} from '@latitude-data/web-ui/tokens'
+import { type BackgroundColor, colors, type TextColor } from '@latitude-data/web-ui/tokens'
 
 export const ContentCard = memo(
   ({
@@ -36,11 +32,9 @@ export const ContentCard = memo(
       <div className='py-2 w-full'>
         <div className='overflow-hidden rounded-xl w-full flex-col bg-backgroundCode'>
           <div
-            className={cn(
-              'flex w-full px-2 py-0.5 items-center gap-2 justify-between',
-              bgColor,
-              { 'py-1': !info },
-            )}
+            className={cn('flex w-full px-2 py-0.5 items-center gap-2 justify-between', bgColor, {
+              'py-1': !info,
+            })}
           >
             <div className='flex items-center gap-1.5'>
               {icon && <Icon name={icon} color={fgColor} />}
@@ -61,12 +55,7 @@ export const ContentCard = memo(
           {children}
           {resultFooter && (
             <>
-              <div
-                className={cn(
-                  'w-full h-px opacity-25',
-                  colors.backgrounds[separatorColor],
-                )}
-              />
+              <div className={cn('w-full h-px opacity-25', colors.backgrounds[separatorColor])} />
               {resultFooter}
             </>
           )}
@@ -76,13 +65,7 @@ export const ContentCard = memo(
   },
 )
 
-export function ContentCardContainer({
-  children,
-  copy,
-}: {
-  children: ReactNode
-  copy?: string
-}) {
+export function ContentCardContainer({ children, copy }: { children: ReactNode; copy?: string }) {
   const copyToClipboard = () => {
     if (!copy) return
     navigator.clipboard.writeText(copy)
@@ -92,11 +75,7 @@ export function ContentCardContainer({
     <div className='relative w-full p-4 bg-backgroundCode flex flex-col gap-2'>
       {copy && (
         <div className='absolute top-2 right-0'>
-          <Button
-            variant='ghost'
-            iconProps={{ name: 'clipboard' }}
-            onClick={copyToClipboard}
-          />
+          <Button variant='ghost' iconProps={{ name: 'clipboard' }} onClick={copyToClipboard} />
         </div>
       )}
 
@@ -105,12 +84,10 @@ export function ContentCardContainer({
   )
 }
 
-export const CardTextContent = memo(
-  ({ value, color }: { value: string; color: TextColor }) => {
-    return (
-      <ContentCardContainer copy={value}>
-        <Text.H5 color={color}>{value}</Text.H5>
-      </ContentCardContainer>
-    )
-  },
-)
+export const CardTextContent = memo(({ value, color }: { value: string; color: TextColor }) => {
+  return (
+    <ContentCardContainer copy={value}>
+      <Text.H5 color={color}>{value}</Text.H5>
+    </ContentCardContainer>
+  )
+})

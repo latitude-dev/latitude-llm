@@ -1,15 +1,12 @@
 import {
-  Commit,
+  type Commit,
   CommitStatus,
-  DocumentVersion,
-  Project,
+  type DocumentVersion,
+  type Project,
   ULTRA_LARGE_PAGE_SIZE,
 } from '@latitude-data/core/browser'
 import { CommitsRepository } from '@latitude-data/core/repositories/index'
-import {
-  getDocumentsAtCommitCached,
-  getHeadCommitCached,
-} from '$/app/(private)/_data-access'
+import { getDocumentsAtCommitCached, getHeadCommitCached } from '$/app/(private)/_data-access'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 
 import ClientFilesTree from './ClientFilesTree'

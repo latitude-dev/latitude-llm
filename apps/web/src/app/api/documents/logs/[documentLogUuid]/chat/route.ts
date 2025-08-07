@@ -1,6 +1,6 @@
-import { LogSources, User, Workspace } from '@latitude-data/core/browser'
-import { type Message } from '@latitude-data/sdk'
-import { NextRequest, NextResponse } from 'next/server'
+import { LogSources, type User, type Workspace } from '@latitude-data/core/browser'
+import type { Message } from '@latitude-data/sdk'
+import { type NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { createSdk } from '$/app/(private)/_lib/createSdk'
@@ -79,9 +79,7 @@ export const POST = errorHandler(
           stream: true,
           onEvent: async (event) => {
             await writer.write(
-              encoder.encode(
-                `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
-              ),
+              encoder.encode(`event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`),
             )
           },
           onError: async (error) => {

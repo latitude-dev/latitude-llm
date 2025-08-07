@@ -6,14 +6,9 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
 import { useMemo } from 'react'
 import EvaluationItem from './EvaluationItem'
-import { Props } from './shared'
+import type { Props } from './shared'
 
-export function ExpandedContent({
-  results,
-  evaluations,
-  isLoading,
-  ...rest
-}: Props) {
+export function ExpandedContent({ results, evaluations, isLoading, ...rest }: Props) {
   if (isLoading) {
     return (
       <div className='w-full flex gap-4 items-center justify-center flex-wrap'>
@@ -77,8 +72,7 @@ export function CollapsedContentHeader({
       (acc, evaluation) => {
         const result = results[evaluation.uuid]
 
-        if (!evaluation.evaluateLiveLogs)
-          return { ...acc, skipped: acc.skipped + 1 }
+        if (!evaluation.evaluateLiveLogs) return { ...acc, skipped: acc.skipped + 1 }
         if (!result) return { ...acc, skipped: acc.skipped + 1 }
         if (result.hasPassed) return { ...acc, passed: acc.passed + 1 }
 
@@ -125,9 +119,7 @@ export function CollapsedContentHeader({
           {count.passed}/{evaluations.length - count.skipped} passed
         </Badge>
       )}
-      {count.skipped > 0 && (
-        <Badge variant='muted'>{count.skipped} skipped</Badge>
-      )}
+      {count.skipped > 0 && <Badge variant='muted'>{count.skipped} skipped</Badge>}
     </div>
   )
 }

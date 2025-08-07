@@ -1,12 +1,9 @@
 import { formatDuration } from '$/app/_lib/formatUtils'
-import {
-  OnSelectedSpanFn,
-  Timeline,
-} from '$/components/tracing/traces/Timeline'
+import { type OnSelectedSpanFn, Timeline } from '$/components/tracing/traces/Timeline'
 import { relativeTime } from '$/lib/relativeTime'
 import { useConversation } from '$/stores/conversations'
 import { useTrace } from '$/stores/traces'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/browser'
+import type { DocumentLogWithMetadataAndError } from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
@@ -59,8 +56,8 @@ function DocumentLogTrace({
       title={
         <div className='flex items-center gap-2 select-none'>
           <Text.H5 color={expanded ? 'foreground' : 'foregroundMuted'}>
-            {relativeTime(new Date(trace.startedAt))} •{' '}
-            {formatDuration(trace.duration)} • {trace.spans} events
+            {relativeTime(new Date(trace.startedAt))} • {formatDuration(trace.duration)} •{' '}
+            {trace.spans} events
           </Text.H5>
           <div onClick={(e) => e.stopPropagation()}>
             <ClickToCopyUuid uuid={trace.id} />

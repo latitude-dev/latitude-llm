@@ -1,10 +1,10 @@
 import {
-  EvaluationType,
+  type EvaluationType,
   RuleEvaluationMetric,
   RuleEvaluationSpecification,
 } from '@latitude-data/constants'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import {
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type {
   ChartConfigurationArgs,
   ConfigurationFormProps,
   EvaluationMetricFrontendSpecification,
@@ -18,7 +18,6 @@ import RuleEvaluationRegularExpressionSpecification from './RegularExpression'
 import RuleEvaluationSchemaValidationSpecification from './SchemaValidation'
 import RuleEvaluationSemanticSimilaritySpecification from './SemanticSimilarity'
 
-// prettier-ignore
 const METRICS: {
   [M in RuleEvaluationMetric]: EvaluationMetricFrontendSpecification<EvaluationType.Rule, M>
 } = {

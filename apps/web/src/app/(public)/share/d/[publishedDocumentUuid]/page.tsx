@@ -1,6 +1,6 @@
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { findSharedDocumentCached } from '$/app/(public)/_data_access'
-import { ResolvingMetadata } from 'next'
+import type { ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 
 import { SharedDocument } from './_components/SharedDocument'
@@ -33,16 +33,14 @@ export async function generateMetadata(
   const { publishedDocumentUuid } = await params
 
   try {
-    const data = await findSharedDocumentCached(publishedDocumentUuid).then(
-      (r) => r.unwrap(),
-    )
+    const data = await findSharedDocumentCached(publishedDocumentUuid).then((r) => r.unwrap())
 
     return buildMetatags({
       title: data.shared.title || 'Untitled Prompt',
       description: data.shared.description ?? '',
       parent: parentMetadata,
     })
-  } catch (error) {
+  } catch (_error) {
     return buildMetatags({ title: 'Not Found', parent: parentMetadata })
   }
 }
@@ -61,11 +59,5 @@ export default async function SharedDocumentPage({
 
   const queryParams = await buildQueryParams({ searchParams })
   const { shared, metadata } = result.value
-  return (
-    <SharedDocument
-      metadata={metadata}
-      shared={shared}
-      queryParams={queryParams}
-    />
-  )
+  return <SharedDocument metadata={metadata} shared={shared} queryParams={queryParams} />
 }

@@ -1,4 +1,4 @@
-import { Column, getTableColumns, sql, Table } from 'drizzle-orm'
+import { type Column, getTableColumns, sql, type Table } from 'drizzle-orm'
 import { timestamp } from 'drizzle-orm/pg-core'
 
 export function timestamps() {
@@ -51,41 +51,34 @@ export function getSharedTableColumns<
     {} as Record<string, Record<ColumnType, Column>>,
   )
 
-  return Object.entries(uniqueTablesColumns).reduce(
-    (acc, [columnName, cases]) => {
-      const columnTypes = Object.values(cases).map(
-        (c) => (c as Column).dataType,
+  return Object.entries(uniqueTablesColumns).reduce((acc, [columnName, cases]) => {
+    const columnTypes = Object.values(cases).map((c) => (c as Column).dataType)
+    if (new Set(columnTypes).size > 1) {
+      throw new Error(
+        `Columns for ${columnName} have different data types: ${columnTypes.join(', ')}`,
       )
-      if (new Set(columnTypes).size > 1) {
-        throw new Error(
-          `Columns for ${columnName} have different data types: ${columnTypes.join(
-            ', ',
-          )}`,
-        )
-      }
-      const columnType = Object.values(cases)[0]! as Column
+    }
+    const columnType = Object.values(cases)[0]! as Column
 
-      const stringCases = sql.join(
-        Object.entries(cases).map(([caseValue, caseColumn]) => {
-          return sql`WHEN ${column} = ${caseValue} THEN ${caseColumn}`
-        }),
-        sql` `,
-      )
+    const stringCases = sql.join(
+      Object.entries(cases).map(([caseValue, caseColumn]) => {
+        return sql`WHEN ${column} = ${caseValue} THEN ${caseColumn}`
+      }),
+      sql` `,
+    )
 
-      const alias = [aliasPrefix, columnName].filter(Boolean).join('_')
+    const alias = [aliasPrefix, columnName].filter(Boolean).join('_')
 
-      const columnSql =
-        Object.values(cases).length == 1
-          ? sql`${Object.values(cases)[0]}`
-          : sql`CASE ${stringCases} END`
+    const columnSql =
+      Object.values(cases).length === 1
+        ? sql`${Object.values(cases)[0]}`
+        : sql`CASE ${stringCases} END`
 
-      return {
-        ...acc,
-        [columnName]: columnSql
-          .mapWith(columnType) // Parse to the column type
-          .as(alias),
-      }
-    },
-    {},
-  ) as ExtractedColumnsFromTables<Tables>
+    return {
+      ...acc,
+      [columnName]: columnSql
+        .mapWith(columnType) // Parse to the column type
+        .as(alias),
+    }
+  }, {}) as ExtractedColumnsFromTables<Tables>
 }

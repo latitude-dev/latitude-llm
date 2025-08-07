@@ -1,4 +1,4 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { NotFoundError } from '../../../lib/errors'
 import {
@@ -10,10 +10,7 @@ import {
   ExperimentsRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
-import {
-  isErrorRetryable,
-  runEvaluationV2,
-} from '../../../services/evaluationsV2/run'
+import { isErrorRetryable, runEvaluationV2 } from '../../../services/evaluationsV2/run'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import { captureException } from '../../../utils/workers/sentry'
 import { updateExperimentStatus } from '../experiments/shared'
@@ -57,21 +54,17 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
-  let experiment = undefined
+  let experiment
   if (experimentUuid) {
     const experimentsRepository = new ExperimentsRepository(workspace.id)
-    experiment = await experimentsRepository
-      .findByUuid(experimentUuid)
-      .then((r) => r.unwrap())
+    experiment = await experimentsRepository.findByUuid(experimentUuid).then((r) => r.unwrap())
 
     if (experiment.finishedAt) return
   }
 
   try {
     const commitsRepository = new CommitsRepository(workspace.id)
-    const commit = await commitsRepository
-      .getCommitById(commitId)
-      .then((r) => r.unwrap())
+    const commit = await commitsRepository.getCommitById(commitId).then((r) => r.unwrap())
 
     const providerLogsRepository = new ProviderLogsRepository(workspace.id)
     const providerLog = await providerLogsRepository
@@ -93,18 +86,16 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
       })
       .then((r) => r.unwrap())
 
-    let dataset = undefined
+    let dataset
     if (datasetId) {
       const datasetsRepository = new DatasetsRepository(workspace.id)
       dataset = await datasetsRepository.find(datasetId).then((r) => r.unwrap())
     }
 
-    let datasetRow = undefined
+    let datasetRow
     if (datasetRowId) {
       const rowsRepository = new DatasetRowsRepository(workspace.id)
-      datasetRow = await rowsRepository
-        .find(datasetRowId)
-        .then((r) => r.unwrap())
+      datasetRow = await rowsRepository.find(datasetRowId).then((r) => r.unwrap())
     }
 
     const { result } = await runEvaluationV2({
@@ -119,16 +110,13 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     }).then((r) => r.unwrap())
 
     if (experiment) {
-      await updateExperimentStatus(
-        { workspaceId, experiment },
-        async (progressTracker) => {
-          if (result.error) return await progressTracker.incrementErrors()
-          if (result.hasPassed) {
-            await progressTracker.incrementCompleted()
-            await progressTracker.incrementTotalScore(result.normalizedScore)
-          } else await progressTracker.incrementFailed()
-        },
-      ).then((r) => r.unwrap())
+      await updateExperimentStatus({ workspaceId, experiment }, async (progressTracker) => {
+        if (result.error) return await progressTracker.incrementErrors()
+        if (result.hasPassed) {
+          await progressTracker.incrementCompleted()
+          await progressTracker.incrementTotalScore(result.normalizedScore)
+        } else await progressTracker.incrementFailed()
+      }).then((r) => r.unwrap())
     }
   } catch (error) {
     if (isErrorRetryable(error as Error)) throw error

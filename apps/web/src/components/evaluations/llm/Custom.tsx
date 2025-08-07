@@ -1,6 +1,6 @@
 import { formatCount } from '$/lib/formatCount'
 import {
-  EvaluationType,
+  type EvaluationType,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationCustomSpecification,
   LlmEvaluationMetric,
@@ -8,15 +8,11 @@ import {
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { FormField } from '@latitude-data/web-ui/atoms/FormField'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { useEffect } from 'react'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 
 const specification = LlmEvaluationCustomSpecification
 export default {
@@ -38,6 +34,7 @@ function ConfigurationSimpleForm({
   disabled,
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
   // FIXME: Do not use useEffect to set local state. Move this to an event handler.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   useEffect(() => {
     if (mode !== 'create') return
     if (!configuration.provider || !configuration.model) return
@@ -81,7 +78,6 @@ ${
 `.trim(),
       }),
     )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, configuration.provider, configuration.model, settings.metric])
 
   return (
@@ -179,9 +175,7 @@ function ConfigurationAdvancedForm({
           placeholder='No minimum'
           min={configuration.minScore}
           max={configuration.maxScore}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minThreshold: value })
-          }
+          onChange={(value) => setConfiguration({ ...configuration, minThreshold: value })}
           errors={errors?.['minThreshold']}
           defaultAppearance
           className='w-full'
@@ -195,9 +189,7 @@ function ConfigurationAdvancedForm({
           placeholder='No maximum'
           min={configuration.minScore}
           max={configuration.maxScore}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxThreshold: value })
-          }
+          onChange={(value) => setConfiguration({ ...configuration, maxThreshold: value })}
           errors={errors?.['maxThreshold']}
           defaultAppearance
           className='w-full'
@@ -209,9 +201,7 @@ function ConfigurationAdvancedForm({
   )
 }
 
-function ResultBadge({
-  result,
-}: ResultBadgeProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
+function ResultBadge({ result }: ResultBadgeProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
   return <>{formatCount(result.score!)}</>
 }
 

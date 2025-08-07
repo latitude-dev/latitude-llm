@@ -5,9 +5,9 @@ export interface WebhookTestResponse {
   statusCode: number
   message: string
 }
-import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
+import type { InferInsertModel, InferSelectModel } from 'drizzle-orm'
 
-import { webhooks, webhookDeliveries } from '../../schema/models/webhooks'
+import type { webhooks, webhookDeliveries } from '../../schema/models/webhooks'
 
 export type Webhook = InferSelectModel<typeof webhooks>
 export type NewWebhook = InferInsertModel<typeof webhooks>

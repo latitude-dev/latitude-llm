@@ -1,15 +1,11 @@
-import { Conversation } from '@latitude-data/compiler'
-import { FinishReason } from 'ai'
+import type { Conversation } from '@latitude-data/compiler'
+import type { FinishReason } from 'ai'
 
-import { ProviderApiKey, ProviderLog, Workspace } from '../../../../browser'
-import {
-  ChainStepResponse,
-  LogSources,
-  StreamType,
-} from '../../../../constants'
+import type { ProviderApiKey, ProviderLog, Workspace } from '../../../../browser'
+import type { ChainStepResponse, LogSources, StreamType } from '../../../../constants'
 import { defaultQueue } from '../../../../jobs/queues'
 import { generateUUIDIdentifier } from '../../../../lib/generateUUID'
-import { PartialConfig } from '../../../ai'
+import type { PartialConfig } from '../../../ai'
 import { createProviderLog } from '../../../providerLogs'
 
 export async function saveOrPublishProviderLogs<
@@ -33,9 +29,7 @@ export async function saveOrPublishProviderLogs<
   }
 
   if (saveSyncProviderLogs) {
-    const providerLog = await createProviderLog(providerLogsData).then((r) =>
-      r.unwrap(),
-    )
+    const providerLog = await createProviderLog(providerLogsData).then((r) => r.unwrap())
     return providerLog as P
   }
 
@@ -80,11 +74,9 @@ export function buildProviderLogDto({
     config: conversation.config as PartialConfig,
     messages: conversation.messages,
     usage: response.usage,
-    responseObject:
-      response.streamType === 'object' ? response.object : undefined,
+    responseObject: response.streamType === 'object' ? response.object : undefined,
     responseText: response.streamType === 'text' ? response.text : undefined,
-    responseReasoning:
-      response.streamType === 'text' ? response.reasoning : undefined,
+    responseReasoning: response.streamType === 'text' ? response.reasoning : undefined,
     toolCalls: response.streamType === 'text' ? response.toolCalls : [],
   }
 }

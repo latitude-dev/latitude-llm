@@ -1,19 +1,17 @@
-import { memo, ReactNode } from 'react'
+import { memo, type ReactNode } from 'react'
 
 import { PromptConfiguration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptConfiguration'
 import { PromptIntegrations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptIntegrations'
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { ProviderModelSelector } from '$/components/ProviderModelSelector'
-import { ResolvedMetadata } from '$/workers/readMetadata'
-import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
+import type { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
-
-export type IProviderByName = Record<string, ProviderApiKey>
 
 export const EvaluationEditorHeader = memo(
   ({
@@ -60,9 +58,7 @@ export const EvaluationEditorHeader = memo(
             {typeof title === 'string' ? (
               <div className='flex flex-row items-center gap-x-2'>
                 {isAgent ? (
-                  <Tooltip
-                    trigger={<Icon name='bot' color='foregroundMuted' />}
-                  >
+                  <Tooltip trigger={<Icon name='bot' color='foregroundMuted' />}>
                     This prompt is an agent
                   </Tooltip>
                 ) : null}
@@ -85,10 +81,7 @@ export const EvaluationEditorHeader = memo(
           <div className='relative flex flex-row justify-end gap-2 min-w-0'>
             {/* Badge counter needs to be on top of other buttons. For that the z-index */}
             <div className='z-10'>
-              <PromptIntegrations
-                disabled={disabledMetadataSelectors}
-                prompt={prompt}
-              />
+              <PromptIntegrations disabled={disabledMetadataSelectors} prompt={prompt} />
             </div>
             <PromptConfiguration
               disabled={disabledMetadataSelectors}
@@ -100,10 +93,7 @@ export const EvaluationEditorHeader = memo(
             />
           </div>
         </div>
-        <FreeRunsBanner
-          isLatitudeProvider={isLatitudeProvider}
-          freeRunsCount={freeRunsCount}
-        />
+        <FreeRunsBanner isLatitudeProvider={isLatitudeProvider} freeRunsCount={freeRunsCount} />
         {documentVersion?.promptlVersion === 0 && (
           <Alert
             title='Upgrade syntax'

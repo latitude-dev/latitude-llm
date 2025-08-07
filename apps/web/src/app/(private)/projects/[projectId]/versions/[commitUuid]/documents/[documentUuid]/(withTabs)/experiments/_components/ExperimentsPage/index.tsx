@@ -2,13 +2,10 @@
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useExperiments } from '$/stores/experiments'
-import { Commit, Project } from '@latitude-data/core/browser'
+import type { Commit, Project } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { ExperimentsTable } from '../ExperimentsTable'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { useCallback, useEffect, useState } from 'react'
@@ -16,11 +13,7 @@ import { ExperimentComparison } from '../ExperimentsComparison'
 import { EmptyPage } from './EmptyPage'
 import { useSearchParams } from 'next/navigation'
 
-export function ExperimentsPageContent({
-  initialCount,
-}: {
-  initialCount: number
-}) {
+export function ExperimentsPageContent({ initialCount }: { initialCount: number }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
@@ -32,36 +25,27 @@ export function ExperimentsPageContent({
 
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const [selectedExperimentUuids, _setSelectedExperimentUuids] = useState<
-    string[]
-  >([])
+  const [selectedExperimentUuids, _setSelectedExperimentUuids] = useState<string[]>([])
   const searchParams = useSearchParams()
   useEffect(() => {
     const selected = searchParams.get('selected')
     _setSelectedExperimentUuids(selected ? selected.split(',') : [])
   }, [searchParams])
 
-  const setSelectedExperimentUuids = useCallback(
-    (newSelection: string[]) => {
-      _setSelectedExperimentUuids(newSelection)
+  const setSelectedExperimentUuids = useCallback((newSelection: string[]) => {
+    _setSelectedExperimentUuids(newSelection)
 
-      if (typeof window === 'undefined') return
-      const params = new URLSearchParams(window.location.search)
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
 
-      if (newSelection.length === 0) {
-        params.delete('selected')
-      } else {
-        params.set('selected', newSelection.join(','))
-      }
+    if (newSelection.length === 0) {
+      params.delete('selected')
+    } else {
+      params.set('selected', newSelection.join(','))
+    }
 
-      window.history.replaceState(
-        {},
-        '',
-        `${window.location.pathname}?${params}`,
-      )
-    },
-    [_setSelectedExperimentUuids],
-  )
+    window.history.replaceState({}, '', `${window.location.pathname}?${params}`)
+  }, [])
 
   const handleExperimentSelect = useCallback(
     (experimentUuid: string) => {
@@ -99,10 +83,7 @@ export function ExperimentsPageContent({
       </div>
 
       {(count ?? initialCount) === 0 ? (
-        <EmptyPage
-          isCreatingExperiment={isCreatingExperiment}
-          setIsModalOpen={setIsModalOpen}
-        />
+        <EmptyPage isCreatingExperiment={isCreatingExperiment} setIsModalOpen={setIsModalOpen} />
       ) : (
         <>
           <ExperimentComparison

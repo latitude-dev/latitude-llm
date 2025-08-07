@@ -8,19 +8,10 @@ import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import useDocumentVersions from '$/stores/documentVersions'
 import useIntegrations from '$/stores/integrations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
+import type { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from 'react'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
+import { createContext, type ReactNode, useContext, useEffect, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 
 type DocumentValueContextType = {
@@ -30,19 +21,14 @@ type DocumentValueContextType = {
   isSaved: boolean
 }
 
-const DocumentValueContext = createContext<
-  DocumentValueContextType | undefined
->(undefined)
+const DocumentValueContext = createContext<DocumentValueContextType | undefined>(undefined)
 
 type DocumentValueProviderProps = {
   children: ReactNode
   document: DocumentVersion
 }
 
-export function DocumentValueProvider({
-  children,
-  document,
-}: DocumentValueProviderProps) {
+export function DocumentValueProvider({ children, document }: DocumentValueProviderProps) {
   const [value, setValue] = useState(document.content)
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -98,9 +84,7 @@ export function DocumentValueProvider({
 export function useDocumentValue() {
   const context = useContext(DocumentValueContext)
   if (context === undefined) {
-    throw new Error(
-      'useDocumentValue must be used within a DocumentValueProvider',
-    )
+    throw new Error('useDocumentValue must be used within a DocumentValueProvider')
   }
 
   return context
@@ -130,9 +114,8 @@ function useSyncLatteChanges({
 
         if (updatedDocument.deletedAt) {
           router.push(
-            ROUTES.projects
-              .detail({ id: project.id })
-              .commits.detail({ uuid: commit.uuid }).overview.root,
+            ROUTES.projects.detail({ id: project.id }).commits.detail({ uuid: commit.uuid })
+              .overview.root,
           )
           return
         }
@@ -146,7 +129,7 @@ function useSyncLatteChanges({
   )
 }
 
-export function useRefreshPromptMetadata({
+function useRefreshPromptMetadata({
   value,
   document,
   commit,

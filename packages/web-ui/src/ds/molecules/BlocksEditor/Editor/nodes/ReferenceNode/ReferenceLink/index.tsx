@@ -1,14 +1,14 @@
 import { resolveRelativePath } from '@latitude-data/constants'
-import { EventHandler, MouseEvent, useCallback, useMemo } from 'react'
+import { type EventHandler, type MouseEvent, useCallback, useMemo } from 'react'
 import { cn } from '../../../../../../../lib/utils'
-import { DropdownMenu, MenuOption } from '../../../../../../atoms/DropdownMenu'
+import { DropdownMenu, type MenuOption } from '../../../../../../atoms/DropdownMenu'
 import { Icon } from '../../../../../../atoms/Icons'
 import { Text } from '../../../../../../atoms/Text'
 import { Tooltip } from '../../../../../../atoms/Tooltip'
 import { triggerReferencePathUpdate } from '../../../plugins/ReferenceEditPlugin'
 import { triggerToggleDevEditor } from '../../../plugins/ReferencesPlugin'
 import { useBlocksEditorContext } from '../../../Provider'
-import { ReferenceLink as SerializedReferenceLink } from '../../../state/promptlToLexical/types'
+import type { ReferenceLink as SerializedReferenceLink } from '../../../state/promptlToLexical/types'
 
 function LoadingLink() {
   return (
@@ -42,11 +42,7 @@ function LinkInfo({
           color={hasErrors ? 'destructive' : 'foregroundMuted'}
           className='relative flex-none align-baseline top-[3px]'
         />
-        <Text.H5M
-          ellipsis
-          noWrap
-          color={hasErrors ? 'destructive' : 'foreground'}
-        >
+        <Text.H5M ellipsis noWrap color={hasErrors ? 'destructive' : 'foreground'}>
           {path}
         </Text.H5M>
       </div>
@@ -58,9 +54,7 @@ function LinkInfo({
 
   return (
     <Tooltip variant='destructive' align='start' asChild trigger={linkText}>
-      {errors && errors.length > 0
-        ? errors[0]?.message
-        : 'Missing values. Click to configure'}
+      {errors && errors.length > 0 ? errors[0]?.message : 'Missing values. Click to configure'}
     </Tooltip>
   )
 }
@@ -95,9 +89,7 @@ function ReferenceLinkReal({
   const path = resolveRelativePath(relativePath, currentDocument.path)
   const url = prompts[path]?.url
   const attributeKeys = Object.keys(initialAttributes).filter(
-    (k) =>
-      k !== 'path' &&
-      (initialAttributes[k] === undefined || initialAttributes[k] === null),
+    (k) => k !== 'path' && (initialAttributes[k] === undefined || initialAttributes[k] === null),
   )
   const missingValues = attributeKeys.length > 0
   const hasErrors = useMemo(() => {

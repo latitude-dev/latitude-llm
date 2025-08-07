@@ -1,5 +1,5 @@
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { LogSources, Workspace } from '@latitude-data/core/browser'
+import type { LogSources, Workspace } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { Result } from '@latitude-data/core/lib/Result'
 import { LatitudeApiKeysRepository } from '@latitude-data/core/repositories'
@@ -12,9 +12,7 @@ async function getLatitudeApiKey(workspace: Workspace) {
   const firstApiKey = await repo.findFirst().then((r) => r.unwrap())
 
   if (!firstApiKey) {
-    return Result.error(
-      new NotFoundError("Couldn't find a valid Latitude API key"),
-    )
+    return Result.error(new NotFoundError("Couldn't find a valid Latitude API key"))
   }
 
   return Result.ok(firstApiKey)

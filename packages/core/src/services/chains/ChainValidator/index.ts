@@ -1,19 +1,19 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
-import { JSONSchema7 } from 'json-schema'
-import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
+import type { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import type { JSONSchema7 } from 'json-schema'
+import type { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
 import { z } from 'zod'
 
 import {
   azureConfig,
-  LatitudePromptConfig,
+  type LatitudePromptConfig,
 } from '@latitude-data/constants/latitudePromptSchema'
 import { CompileError as PromptlCompileError } from 'promptl-ai'
-import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
-import { Result, TypedResult } from '../../../lib/Result'
-import { Output } from '../../../lib/streamManager/step/streamAIResponse'
+import { applyProviderRules, type ProviderApiKey, type Workspace } from '../../../browser'
+import { Result, type TypedResult } from '../../../lib/Result'
+import type { Output } from '../../../lib/streamManager/step/streamAIResponse'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
-import { CachedApiKeys } from '../run'
+import type { CachedApiKeys } from '../run'
 
 const DEFAULT_AGENT_MAX_STEPS = 20
 
@@ -45,9 +45,7 @@ export const getInputSchema = ({
   configOverrides?: ConfigOverrides
 }): JSONSchema7 | undefined => {
   const overrideSchema =
-    configOverrides && 'schema' in configOverrides
-      ? configOverrides.schema
-      : undefined
+    configOverrides && 'schema' in configOverrides ? configOverrides.schema : undefined
   return overrideSchema || config.schema
 }
 
@@ -72,16 +70,12 @@ export const renderChain = async ({
   chain,
   newMessages,
   configOverrides,
-}: ValidatorContext): Promise<
-  TypedResult<ValidatedChainStep, ChainError<RunErrorCodes>>
-> => {
+}: ValidatorContext): Promise<TypedResult<ValidatedChainStep, ChainError<RunErrorCodes>>> => {
   const chainResult = await safeChain({ chain, newMessages })
   if (chainResult.error) return chainResult
 
   const { chainCompleted, conversation } = chainResult.value
-  const configResult = validateConfig(
-    conversation.config as LatitudePromptConfig,
-  )
+  const configResult = validateConfig(conversation.config as LatitudePromptConfig)
   if (configResult.error) return configResult
 
   const config = applyAgentRule(configResult.unwrap())
@@ -184,12 +178,8 @@ function findProvider(name: string, providersMap: CachedApiKeys) {
 
 function validateConfig(
   config: LatitudePromptConfig,
-): TypedResult<
-  LatitudePromptConfig,
-  ChainError<RunErrorCodes.DocumentConfigError>
-> {
-  const doc =
-    'https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts'
+): TypedResult<LatitudePromptConfig, ChainError<RunErrorCodes.DocumentConfigError>> {
+  const doc = 'https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts'
   const schema = z
     .object({
       model: z.string({

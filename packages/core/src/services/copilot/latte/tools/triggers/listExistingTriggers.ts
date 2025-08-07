@@ -6,8 +6,7 @@ import { DocumentTriggersRepository } from '../../../../../repositories'
 const listExistingTriggers = defineLatteTool(
   async ({ promptUuid }, { workspace }) => {
     const documentTriggerScope = new DocumentTriggersRepository(workspace.id)
-    const existingTriggers =
-      await documentTriggerScope.findByDocumentUuid(promptUuid)
+    const existingTriggers = await documentTriggerScope.findByDocumentUuid(promptUuid)
     return Result.ok(existingTriggers)
   },
   z.object({

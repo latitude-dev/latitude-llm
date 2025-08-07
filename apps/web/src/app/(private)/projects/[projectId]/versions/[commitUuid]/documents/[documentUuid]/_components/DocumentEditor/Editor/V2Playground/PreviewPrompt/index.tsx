@@ -1,19 +1,17 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
-  AppliedRules,
+  type AppliedRules,
   LATITUDE_DOCS_URL,
-  ProviderRules,
+  type ProviderRules,
 } from '@latitude-data/core/browser'
-import { ResolvedMetadata } from '$/workers/readMetadata'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ErrorMessage, Message } from '$/components/ChatWrapper'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
 import { usePreviewConversation } from '$/hooks/playgrounds/usePreviewConversation'
-import Actions, {
-  type ActionsState,
-} from '$/components/PlaygroundCommon/Actions'
+import Actions, { type ActionsState } from '$/components/PlaygroundCommon/Actions'
 
 function WarningLink({ providerRule }: { providerRule: ProviderRules }) {
   const docPath = providerRule.startsWith('vertex') ? 'vertex' : providerRule
@@ -67,10 +65,7 @@ export default function PreviewPrompt({
       {showHeader ? (
         <div className='flex flex-row items-center justify-between w-full'>
           <Text.H6M>Preview</Text.H6M>
-          <Actions
-            expandParameters={expandParameters}
-            setExpandParameters={setExpandParameters}
-          />
+          <Actions expandParameters={expandParameters} setExpandParameters={setExpandParameters} />
         </div>
       ) : null}
       <div

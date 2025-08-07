@@ -1,8 +1,8 @@
 import { cache } from 'react'
 
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { getDataFromSession } from '$/data-access'
-import { Session } from 'lucia'
+import type { Session } from 'lucia'
 
 import { getSession } from './getSession'
 import { redirect } from 'next/navigation'
@@ -36,9 +36,7 @@ export const getCurrentUserOrRedirect = cache(async () => {
     return redirect(ROUTES.auth.login)
   }
 
-  const { user, workspace, subscriptionPlan } = await getDataFromSession(
-    sessionData.session,
-  )
+  const { user, workspace, subscriptionPlan } = await getDataFromSession(sessionData.session)
   if (!workspace) return redirect(ROUTES.auth.login)
   if (!user) return redirect(ROUTES.auth.login)
 

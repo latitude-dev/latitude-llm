@@ -1,34 +1,32 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
-/* eslint-disable */
 
 import { differenceInMilliseconds, isAfter, isBefore } from 'date-fns'
 import { scan } from 'promptl-ai'
 import {
-  ApiKey,
+  type ApiKey,
   DocumentType,
-  EvaluationType,
-  EvaluationV2,
-  Segment,
+  type EvaluationType,
+  type EvaluationV2,
+  type Segment,
   SEGMENT_METADATA_STORAGE_KEY,
-  SegmentBaggage,
-  SegmentMetadata,
+  type SegmentBaggage,
+  type SegmentMetadata,
   SegmentSource,
   SegmentType,
   SpanStatus,
   SpanType,
-  SpanWithDetails,
+  type SpanWithDetails,
   TRACING_JOBS_MAX_ATTEMPTS,
-  Workspace,
+  type Workspace,
 } from '../../../browser'
 import { cache as redis } from '../../../cache'
 import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { processSegmentJobKey } from '../../../jobs/job-definitions/tracing/processSegmentJob'
 import { tracingQueue } from '../../../jobs/queues'
-import { diskFactory, DiskWrapper } from '../../../lib/disk'
+import { diskFactory, type DiskWrapper } from '../../../lib/disk'
 import { ConflictError, UnprocessableEntityError } from '../../../lib/errors'
-import { Result, TypedResult } from '../../../lib/Result'
+import { Result, type TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import {
   CommitsRepository,
@@ -39,13 +37,7 @@ import {
   SpansRepository,
 } from '../../../repositories'
 import { segments } from '../../../schema'
-import {
-  hashContent,
-  inheritField,
-  isFirst,
-  isLast,
-  SegmentProcessArgs,
-} from './shared'
+import { hashContent, inheritField, isFirst, isLast, type SegmentProcessArgs } from './shared'
 import { SEGMENT_SPECIFICATIONS } from './specifications'
 
 export async function processSegment(
@@ -122,7 +114,7 @@ export async function processSegment(
   // const computingdc = computeDocument(state)
   // if (computingdc.error) return Result.error(computingdc.error)
   // const { commitUuid, documentUuid, documentHash,
-  //       documentType, provider, model } = computingdc.value // prettier-ignore
+  //       documentType, provider, model } = computingdc.value
 
   // const computingeu = computeExperimentUuid(state)
   // if (computingeu.error) return Result.error(computingeu.error)
@@ -143,7 +135,7 @@ export async function processSegment(
       return Result.error(new ConflictError('Segment processing data race'))
     }
 
-    // const saving = await saveMetadata({ metadata, workspace: args.workspace }, disk) // prettier-ignore
+    // const saving = await saveMetadata({ metadata, workspace: args.workspace }, disk)
     // if (saving.error) return Result.error(saving.error)
 
     // TODO(tracing): temporal segment fixing patch
@@ -242,10 +234,7 @@ export async function processSegment(
   })
 }
 
-function validateSegmentChain(
-  segment: SegmentBaggage,
-  chain: SegmentBaggage[],
-): TypedResult {
+function validateSegmentChain(segment: SegmentBaggage, chain: SegmentBaggage[]): TypedResult {
   let current = segment.id
   let parent = segment.parentId
 
@@ -280,16 +269,27 @@ async function getCurrentState(
 
   if (!segment) return Result.nil()
 
-  const gettingts = await segmentsRepository.getTimestamps({ segmentId: id, traceId }) // prettier-ignore
+  const gettingts = await segmentsRepository.getTimestamps({
+    segmentId: id,
+    traceId,
+  })
   if (gettingts.error) return Result.error(gettingts.error)
   const timestamps = gettingts.value
 
   const metadatasRepository = new SegmentMetadatasRepository(workspace.id, disk)
-  const gettingmt = await metadatasRepository.get({ segmentId: id, traceId, fresh: true }) // prettier-ignore
+  const gettingmt = await metadatasRepository.get({
+    segmentId: id,
+    traceId,
+    fresh: true,
+  })
   if (gettingmt.error) return Result.error(gettingmt.error)
   const metadata = gettingmt.value
 
-  return Result.ok({ ...segment, ...timestamps, metadata } as SegmentProcessArgs['current']) // prettier-ignore
+  return Result.ok({
+    ...segment,
+    ...timestamps,
+    metadata,
+  } as SegmentProcessArgs['current'])
 }
 
 async function getRunState(
@@ -313,7 +313,11 @@ async function getRunState(
   if (!segment) return Result.nil()
 
   const metadatasRepository = new SegmentMetadatasRepository(workspace.id, disk)
-  const getting = await metadatasRepository.get({ segmentId: id, traceId, fresh: true }) // prettier-ignore
+  const getting = await metadatasRepository.get({
+    segmentId: id,
+    traceId,
+    fresh: true,
+  })
   if (getting.error) return Result.error(getting.error)
   const metadata = getting.value
 
@@ -337,24 +341,35 @@ async function getChildState(
 ): Promise<TypedResult<SegmentProcessArgs['child']>> {
   if (childType === 'span') {
     const spansRepository = new SpansRepository(workspace.id, db)
-    const gettingsp = await spansRepository.get({ spanId: childId, traceId }) // prettier-ignore
+    const gettingsp = await spansRepository.get({ spanId: childId, traceId })
     if (gettingsp.error) return gettingsp.error
     const span = gettingsp.value
 
     const metadatasRepository = new SpanMetadatasRepository(workspace.id, disk)
-    const gettingmt = await metadatasRepository.get({ spanId: childId, traceId, fresh: true }) // prettier-ignore
+    const gettingmt = await metadatasRepository.get({
+      spanId: childId,
+      traceId,
+      fresh: true,
+    })
     if (gettingmt.error) return gettingmt.error
     const metadata = gettingmt.value
 
     return Result.ok({ ...span, metadata } as SegmentProcessArgs['child'])
   } else {
     const segmentsRepository = new SegmentsRepository(workspace.id, db)
-    const gettingse = await segmentsRepository.get({ segmentId: childId, traceId }) // prettier-ignore
+    const gettingse = await segmentsRepository.get({
+      segmentId: childId,
+      traceId,
+    })
     if (gettingse.error) return gettingse.error
     const segment = gettingse.value
 
-    const metadatasRepository = new SegmentMetadatasRepository(workspace.id, disk) // prettier-ignore
-    const gettingmt = await metadatasRepository.get({ segmentId: childId, traceId, fresh: true }) // prettier-ignore
+    const metadatasRepository = new SegmentMetadatasRepository(workspace.id, disk)
+    const gettingmt = await metadatasRepository.get({
+      segmentId: childId,
+      traceId,
+      fresh: true,
+    })
     if (gettingmt.error) return gettingmt.error
     const metadata = gettingmt.value
 
@@ -383,11 +398,7 @@ async function getState(
   disk: DiskWrapper,
   db = database,
 ): Promise<TypedResult<SegmentProcessArgs>> {
-  const gettingcs = await getCurrentState(
-    { segment, traceId, workspace },
-    db,
-    disk,
-  )
+  const gettingcs = await getCurrentState({ segment, traceId, workspace }, db, disk)
   if (gettingcs.error) return Result.error(gettingcs.error)
   const current = gettingcs.value
 
@@ -395,11 +406,7 @@ async function getState(
   if (gettingrs.error) return Result.error(gettingrs.error)
   const run = gettingrs.value
 
-  const gettinghs = await getChildState(
-    { childId, childType, traceId, workspace },
-    db,
-    disk,
-  )
+  const gettinghs = await getChildState({ childId, childType, traceId, workspace }, db, disk)
   if (gettinghs.error) return Result.error(gettinghs.error)
   const child = gettinghs.value
 
@@ -408,13 +415,11 @@ async function getState(
   if (!source) source = run?.source
   if (!source) source = current?.source
   if (!source) {
-    return Result.error(
-      new UnprocessableEntityError('Segment source is required'),
-    )
+    return Result.error(new UnprocessableEntityError('Segment source is required'))
   }
 
   let commitUuid = segment.data?.commitUuid
-  if (!commitUuid) commitUuid = inheritField<string>('commitUuid', chain) // prettier-ignore
+  if (!commitUuid) commitUuid = inheritField<string>('commitUuid', chain)
   if (!commitUuid) commitUuid = run?.commitUuid
   if (!commitUuid) commitUuid = current?.commitUuid
   if (!commitUuid) {
@@ -422,13 +427,11 @@ async function getState(
   }
 
   let documentUuid = segment.data?.documentUuid
-  if (!documentUuid) documentUuid = inheritField<string>('documentUuid', chain) // prettier-ignore
+  if (!documentUuid) documentUuid = inheritField<string>('documentUuid', chain)
   if (!documentUuid) documentUuid = run?.documentUuid
   if (!documentUuid) documentUuid = current?.documentUuid
   if (!documentUuid) {
-    return Result.error(
-      new UnprocessableEntityError('Document uuid is required'),
-    )
+    return Result.error(new UnprocessableEntityError('Document uuid is required'))
   }
 
   const commitsRepository = new CommitsRepository(workspace.id, db)
@@ -472,7 +475,7 @@ async function getState(
   })
 }
 
-function computeExternalId({
+function _computeExternalId({
   segment,
   chain,
   current,
@@ -487,11 +490,7 @@ function computeExternalId({
   return Result.ok(externalId)
 }
 
-function enrichName({
-  segment,
-  document,
-  evaluation,
-}: SegmentProcessArgs): TypedResult<string> {
+function _enrichName({ segment, document, evaluation }: SegmentProcessArgs): TypedResult<string> {
   let name = SEGMENT_SPECIFICATIONS[segment.type].name
   if (segment.type === SegmentType.Document) {
     if (document) name = document.path.split('/').pop()!
@@ -502,7 +501,7 @@ function enrichName({
   return Result.ok(name)
 }
 
-function computeSource({
+function _computeSource({
   segment,
   chain,
   current,
@@ -513,15 +512,13 @@ function computeSource({
   if (!source) source = run?.source
   if (!source) source = current?.source
   if (!source) {
-    return Result.error(
-      new UnprocessableEntityError('Segment source is required'),
-    )
+    return Result.error(new UnprocessableEntityError('Segment source is required'))
   }
 
   return Result.ok(source)
 }
 
-function computeStatus({ child, current }: SegmentProcessArgs): TypedResult<{
+function _computeStatus({ child, current }: SegmentProcessArgs): TypedResult<{
   status: SpanStatus
   message?: string
 }> {
@@ -542,9 +539,7 @@ function computeStatus({ child, current }: SegmentProcessArgs): TypedResult<{
   }
 
   if (!current?.status) {
-    return Result.error(
-      new UnprocessableEntityError('Segment status is required'),
-    )
+    return Result.error(new UnprocessableEntityError('Segment status is required'))
   }
 
   return Result.ok({ status: current.status, message: current.message })
@@ -565,7 +560,7 @@ function computeLogUuid({
   return Result.ok(logUuid)
 }
 
-function computeDocument({
+function _computeDocument({
   segment,
   chain,
   child,
@@ -598,9 +593,7 @@ function computeDocument({
   if (!documentUuid) documentUuid = evaluation?.uuid
   if (!documentUuid) documentUuid = current?.documentUuid
   if (!documentUuid) {
-    return Result.error(
-      new UnprocessableEntityError('Document uuid is required'),
-    )
+    return Result.error(new UnprocessableEntityError('Document uuid is required'))
   }
 
   let documentHash = run?.documentHash
@@ -610,21 +603,17 @@ function computeDocument({
   if (!documentHash) documentHash = current?.documentHash
   if (!documentHash) documentHash = 'TODO' // TODO(tracing): fix spans from evaluations
   if (!documentHash) {
-    return Result.error(
-      new UnprocessableEntityError('Document hash is required'),
-    )
+    return Result.error(new UnprocessableEntityError('Document hash is required'))
   }
 
   let documentType = run?.documentType
-  if (!documentType) documentType = run?.metadata?.configuration.type as DocumentType // prettier-ignore
+  if (!documentType) documentType = run?.metadata?.configuration.type as DocumentType
   if (!documentType) documentType = document?.documentType
   if (!documentType) documentType = evaluation ? DocumentType.Prompt : undefined // TODO(tracing): compute evaluation prompt
   if (!documentType) documentType = current?.documentType
   if (!documentType) documentType = DocumentType.Prompt // TODO(tracing): fix spans from evaluations
   if (!documentType) {
-    return Result.error(
-      new UnprocessableEntityError('Document type is required'),
-    )
+    return Result.error(new UnprocessableEntityError('Document type is required'))
   }
 
   let provider = current?.provider
@@ -673,7 +662,7 @@ function computeDocument({
   })
 }
 
-function computeExperimentUuid({
+function _computeExperimentUuid({
   segment,
   chain,
   current,
@@ -690,11 +679,7 @@ function computeExperimentUuid({
   return Result.ok(experimentUuid)
 }
 
-function computeStatistics({
-  child,
-  current,
-  ...rest
-}: SegmentProcessArgs): TypedResult<{
+function _computeStatistics({ child, current, ...rest }: SegmentProcessArgs): TypedResult<{
   tokens: number
   cost: number
   duration: number
@@ -729,18 +714,13 @@ function computeStatistics({
   // adding the child duration because there could be empty time between children
   duration = differenceInMilliseconds(endedAt, startedAt)
   if (duration < 0) {
-    return Result.error(
-      new UnprocessableEntityError('Invalid segment duration'),
-    )
+    return Result.error(new UnprocessableEntityError('Invalid segment duration'))
   }
 
   return Result.ok({ tokens, cost, duration })
 }
 
-function computeTimestamps({
-  child,
-  current,
-}: SegmentProcessArgs): TypedResult<{
+function computeTimestamps({ child, current }: SegmentProcessArgs): TypedResult<{
   startedAt: Date
   endedAt: Date
 }> {
@@ -757,15 +737,13 @@ function computeTimestamps({
   }
 
   if (isAfter(startedAt, endedAt)) {
-    return Result.error(
-      new UnprocessableEntityError('Invalid segment timestamps'),
-    )
+    return Result.error(new UnprocessableEntityError('Invalid segment timestamps'))
   }
 
   return Result.ok({ startedAt, endedAt })
 }
 
-async function saveMetadata(
+async function _saveMetadata(
   {
     metadata,
     workspace,
@@ -775,11 +753,7 @@ async function saveMetadata(
   },
   disk: DiskWrapper,
 ): Promise<TypedResult> {
-  const key = SEGMENT_METADATA_STORAGE_KEY(
-    workspace.id,
-    metadata.traceId,
-    metadata.segmentId,
-  )
+  const key = SEGMENT_METADATA_STORAGE_KEY(workspace.id, metadata.traceId, metadata.segmentId)
   const cache = await redis()
 
   try {

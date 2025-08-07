@@ -26,9 +26,7 @@ export const loginAction = errorHandlingProcedure
     if (env.DISABLE_EMAIL_AUTHENTICATION) {
       if (!user) throw new NotFoundError('User not found')
 
-      const workspace = await getFirstWorkspace({ userId: user.id }).then((r) =>
-        r.unwrap(),
-      )
+      const workspace = await getFirstWorkspace({ userId: user.id }).then((r) => r.unwrap())
       await setSession({
         sessionData: {
           user: {
@@ -41,9 +39,7 @@ export const loginAction = errorHandlingProcedure
 
       redirect(input.returnTo ? input.returnTo : ROUTES.root)
     } else {
-      await createMagicLinkToken({ user, returnTo: input.returnTo }).then((r) =>
-        r.unwrap(),
-      )
+      await createMagicLinkToken({ user, returnTo: input.returnTo }).then((r) => r.unwrap())
 
       redirect(ROUTES.auth.magicLinkSent(user.email))
     }

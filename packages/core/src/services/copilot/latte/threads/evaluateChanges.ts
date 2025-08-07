@@ -1,11 +1,8 @@
 import { env } from '@latitude-data/env'
-import { ProviderLogDto } from '../../../../browser'
+import type { ProviderLogDto } from '../../../../browser'
 import { database } from '../../../../client'
 import { Result } from '../../../../lib/Result'
-import {
-  EvaluationsV2Repository,
-  ProviderLogsRepository,
-} from '../../../../repositories'
+import { EvaluationsV2Repository, ProviderLogsRepository } from '../../../../repositories'
 import { annotateEvaluationV2 } from '../../../evaluationsV2/annotate'
 import { getCopilotDocument } from '../helpers'
 import { NotImplementedError } from '@latitude-data/constants/errors'
@@ -40,8 +37,7 @@ export async function evaluateLatteThreadChanges(
   } = latteData.unwrap()
 
   const providerLogScope = new ProviderLogsRepository(latteWorkspace.id, db)
-  const providerLogResult =
-    await providerLogScope.findLastByDocumentLogUuid(threadUuid)
+  const providerLogResult = await providerLogScope.findLastByDocumentLogUuid(threadUuid)
   if (!providerLogResult.ok) {
     return Result.error(providerLogResult.error!)
   }

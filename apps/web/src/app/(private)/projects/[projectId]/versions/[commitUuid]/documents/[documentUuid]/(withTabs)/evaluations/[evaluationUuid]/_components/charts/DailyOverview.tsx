@@ -3,9 +3,9 @@ import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import { formatCount } from '$/lib/formatCount'
 import {
-  EvaluationMetric,
+  type EvaluationMetric,
   EvaluationType,
-  EvaluationV2Stats,
+  type EvaluationV2Stats,
 } from '@latitude-data/core/browser'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -25,6 +25,7 @@ export default function DailyOverviewChart<
   const configuration = metricSpecification.chartConfiguration({ evaluation })
 
   // FIXME: Is configuration getting instantiated on every render?
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   const data = useMemo(() => {
     return (
       stats?.dailyOverview.map((point) => ({
@@ -33,7 +34,6 @@ export default function DailyOverviewChart<
         y: Number(configuration.scale(point.averageScore).toFixed(2)),
       })) || []
     )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stats])
 
   const minY = useMemo(() => {
@@ -71,8 +71,7 @@ export default function DailyOverviewChart<
               min: minY,
               max: maxY,
               thresholds: configuration.thresholds,
-              tickFormatter: (score) =>
-                configuration.format(Number(score), true),
+              tickFormatter: (score) => configuration.format(Number(score), true),
             },
             data: data,
             // @ts-expect-error typescript cannot infer the type from [key: string]: any
@@ -87,9 +86,7 @@ export default function DailyOverviewChart<
                     <Text.H6B>Average score</Text.H6B>
                     <Text.H6>
                       {configuration.format(
-                        Number(
-                          configuration.scale(point.averageScore).toFixed(2),
-                        ),
+                        Number(configuration.scale(point.averageScore).toFixed(2)),
                       )}
                     </Text.H6>
                   </div>
@@ -97,9 +94,7 @@ export default function DailyOverviewChart<
                     <>
                       <div className='flex w-full gap-2 justify-between'>
                         <Text.H6B>Total cost</Text.H6B>
-                        <Text.H6>
-                          {formatCostInMillicents(point.totalCost)}
-                        </Text.H6>
+                        <Text.H6>{formatCostInMillicents(point.totalCost)}</Text.H6>
                       </div>
                       <div className='flex w-full gap-2 justify-between'>
                         <Text.H6B>Total tokens</Text.H6B>

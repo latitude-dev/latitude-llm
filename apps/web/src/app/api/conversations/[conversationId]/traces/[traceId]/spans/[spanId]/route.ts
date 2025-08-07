@@ -1,12 +1,9 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { Workspace } from '@latitude-data/core/browser'
-import {
-  SpanMetadatasRepository,
-  SpansRepository,
-} from '@latitude-data/core/repositories'
+import type { Workspace } from '@latitude-data/core/browser'
+import { SpanMetadatasRepository, SpansRepository } from '@latitude-data/core/repositories'
 import { notFound } from 'next/navigation'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
   authHandler(
@@ -27,15 +24,11 @@ export const GET = errorHandler(
       const { traceId, spanId } = params
 
       const spansRepository = new SpansRepository(workspace.id)
-      const span = await spansRepository
-        .get({ traceId, spanId })
-        .then((r) => r.unwrap())
+      const span = await spansRepository.get({ traceId, spanId }).then((r) => r.unwrap())
       if (!span) return notFound()
 
       const metadatasRepository = new SpanMetadatasRepository(workspace.id)
-      const metadata = await metadatasRepository
-        .get({ spanId, traceId })
-        .then((r) => r.unwrap())
+      const metadata = await metadatasRepository.get({ spanId, traceId }).then((r) => r.unwrap())
 
       return NextResponse.json({ ...span, metadata }, { status: 200 })
     },

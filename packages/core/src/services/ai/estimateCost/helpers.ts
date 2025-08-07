@@ -9,9 +9,7 @@ type ModelSpecValue<N extends string> = ModelSpec & { name: N }
 function orderCost(cost: ModelCost | ModelCost[]): ModelCost | ModelCost[] {
   if (!Array.isArray(cost)) return cost
 
-  return cost.sort(
-    (a, b) => (a.tokensRangeStart ?? 0) - (b.tokensRangeStart ?? 0),
-  )
+  return cost.sort((a, b) => (a.tokensRangeStart ?? 0) - (b.tokensRangeStart ?? 0))
 }
 
 export const NON_IMPLEMENTED_COST = {

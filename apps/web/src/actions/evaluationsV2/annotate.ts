@@ -1,6 +1,6 @@
 'use server'
 
-import { EvaluationResultMetadata } from '@latitude-data/core/browser'
+import type { EvaluationResultMetadata } from '@latitude-data/core/browser'
 import { ProviderLogsRepository } from '@latitude-data/core/repositories'
 import { annotateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/annotate'
 import serializeProviderLog from '@latitude-data/core/services/providerLogs/serialize'

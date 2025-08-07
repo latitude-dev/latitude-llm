@@ -1,6 +1,6 @@
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
-import { EvaluationWithBestExperiment } from '$/stores/experimentComparison'
-import {
+import type { EvaluationWithBestExperiment } from '$/stores/experimentComparison'
+import type {
   EvaluationMetric,
   EvaluationType,
   EvaluationV2,
@@ -8,14 +8,11 @@ import {
 } from '@latitude-data/core/browser'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TextColor } from '@latitude-data/web-ui/tokens'
+import type { TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo } from 'react'
 
-function EvaluationScore<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({
+function EvaluationScore<T extends EvaluationType, M extends EvaluationMetric<T>>({
   evaluation,
   value,
   color,
@@ -122,11 +119,7 @@ export function ExperimentEvaluationScores({
   return (
     <div className='flex flex-col gap-2'>
       {evaluations?.map((evaluation) => (
-        <EvaluationItem
-          key={evaluation.uuid}
-          experiment={experiment}
-          evaluation={evaluation}
-        />
+        <EvaluationItem key={evaluation.uuid} experiment={experiment} evaluation={evaluation} />
       ))}
       {experiment.results.errors > 0 && (
         <div className='flex flex-row w-full gap-2 items-center justify-between min-h-8 px-2 py-1 rounded-md bg-destructive/10'>

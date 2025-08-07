@@ -1,9 +1,5 @@
 import { UnprocessableEntityError } from './latitudeError'
-import {
-  RunErrorCodes,
-  RunErrorDetails,
-  LatitudeErrorDetails,
-} from './constants'
+import type { RunErrorCodes, RunErrorDetails, LatitudeErrorDetails } from './constants'
 export class ChainError<
   T extends RunErrorCodes,
   RunError = object,
@@ -23,9 +19,7 @@ export class ChainError<
     details?: RunErrorDetails<T>
     stack?: string
   }) {
-    const detailsWithCode = details
-      ? { ...details, errorCode: code }
-      : { errorCode: code }
+    const detailsWithCode = details ? { ...details, errorCode: code } : { errorCode: code }
     super(message, detailsWithCode)
 
     this.errorCode = code

@@ -1,13 +1,8 @@
-import { type LucideProps } from 'lucide-react'
+import type { LucideProps } from 'lucide-react'
 
 export default function Exa(props: LucideProps) {
   return (
-    <svg
-      viewBox='0 0 278 100'
-      fill='none'
-      xmlns='http://www.w3.org/2000/svg'
-      {...props}
-    >
+    <svg viewBox='0 0 278 100' fill='none' xmlns='http://www.w3.org/2000/svg' {...props}>
       <path
         d='M161.632 53.2837H115.472C115.918 66.4186 125.061 72.7596 133.981 72.7596C142.9 72.7596 147.806 68.6833 150.371 62.682H160.851C158.064 73.2126 148.587 81.8182 133.981 81.8182C115.026 81.8182 104.545 68.0039 104.545 50C104.545 30.7506 117.256 18.4083 133.646 18.4083C151.931 18.4083 162.97 34.0343 161.632 53.2837ZM133.646 27.2404C124.615 27.2404 116.476 32.2226 115.584 44.4516H150.928C150.705 35.846 144.35 27.2404 133.646 27.2404Z'
         fill='currentColor'

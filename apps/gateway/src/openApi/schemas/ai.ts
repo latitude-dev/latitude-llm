@@ -6,21 +6,21 @@ import {
 } from '@latitude-data/constants'
 import { messageSchema } from '@latitude-data/core/browser'
 
-export const languageModelUsageSchema = z.object({
+const languageModelUsageSchema = z.object({
   completionTokens: z.number().optional(),
   promptTokens: z.number().optional(),
   totalTokens: z.number().optional(),
 })
 
-export const toolCallSchema = z.object({
+const toolCallSchema = z.object({
   id: z.string(),
   name: z.string(),
   arguments: z.record(z.any()),
 })
 
-export const configSchema = z.object({}).passthrough()
-export const providerLogSchema = z.object({}).passthrough()
-export const chainStepResponseSchema = z.discriminatedUnion('streamType', [
+const configSchema = z.object({}).passthrough()
+const providerLogSchema = z.object({}).passthrough()
+const chainStepResponseSchema = z.discriminatedUnion('streamType', [
   z.object({
     streamType: z.literal('text'),
     text: z.string(),
@@ -39,7 +39,7 @@ export const chainStepResponseSchema = z.discriminatedUnion('streamType', [
   }),
 ])
 
-export const chainCallResponseDtoSchema = z.discriminatedUnion('streamType', [
+const chainCallResponseDtoSchema = z.discriminatedUnion('streamType', [
   chainStepResponseSchema.options[0].omit({
     documentLogUuid: true,
     providerLog: true,
@@ -50,7 +50,7 @@ export const chainCallResponseDtoSchema = z.discriminatedUnion('streamType', [
   }),
 ])
 
-export const chainEventDtoResponseSchema = z.discriminatedUnion('streamType', [
+const chainEventDtoResponseSchema = z.discriminatedUnion('streamType', [
   chainStepResponseSchema.options[0].omit({ providerLog: true }),
   chainStepResponseSchema.options[1].omit({ providerLog: true }),
 ])

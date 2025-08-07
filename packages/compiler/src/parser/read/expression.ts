@@ -1,6 +1,6 @@
-import CompileError from '$compiler/error/error'
+import type CompileError from '$compiler/error/error'
 import PARSER_ERRORS from '$compiler/error/errors'
-import { Parser } from '$compiler/parser'
+import type { Parser } from '$compiler/parser'
 import { parseExpressionAt } from '$compiler/parser/utils/acorn'
 
 export default function readExpression(parser: Parser) {

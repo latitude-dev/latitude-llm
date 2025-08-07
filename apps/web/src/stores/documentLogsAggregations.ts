@@ -1,10 +1,10 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import {
+import type {
   DocumentLogFilterOptions,
   DocumentLogsAggregations,
 } from '@latitude-data/core/browser'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 export default function useDocumentLogsAggregations(
   {

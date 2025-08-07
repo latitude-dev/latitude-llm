@@ -1,5 +1,5 @@
-import { ApiKey, Otlp, Workspace } from '../../../browser'
-import { diskFactory, DiskWrapper } from '../../../lib/disk'
+import type { ApiKey, Otlp, Workspace } from '../../../browser'
+import { diskFactory, type DiskWrapper } from '../../../lib/disk'
 import { Result } from '../../../lib/Result'
 
 export async function enqueueSpans(

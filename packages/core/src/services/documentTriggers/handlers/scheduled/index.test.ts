@@ -7,7 +7,7 @@ import {
 } from './index'
 import * as cronHelperModule from '../../helpers/cronHelper'
 import { createScheduledDocumentTrigger } from '../../../../tests/factories/documentTriggers'
-import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 
 describe('Scheduled Document Triggers Handlers', () => {
   beforeEach(() => {
@@ -16,9 +16,7 @@ describe('Scheduled Document Triggers Handlers', () => {
 
     // Mock cronHelper functions
     vi.spyOn(cronHelperModule, 'checkCronExpression')
-    vi.spyOn(cronHelperModule, 'getNextRunTime').mockReturnValue(
-      new Date('2023-01-02'),
-    )
+    vi.spyOn(cronHelperModule, 'getNextRunTime').mockReturnValue(new Date('2023-01-02'))
 
     // Mock console.log and console.error
     vi.spyOn(console, 'log').mockImplementation(() => {})
@@ -121,20 +119,14 @@ describe('Scheduled Document Triggers Handlers', () => {
       expect(result.ok).toBe(true)
       if (result.ok) {
         expect(result.value!.id).toEqual(trigger.id)
-        expect(
-          (result.value!.configuration as ScheduledTriggerConfiguration)
-            .lastRun,
-        ).toEqual(now.toISOString())
-        expect(
-          (result.value!.configuration as ScheduledTriggerConfiguration)
-            .nextRunTime,
-        ).toEqual(new Date('2023-01-02').toISOString())
+        expect((result.value!.configuration as ScheduledTriggerConfiguration).lastRun).toEqual(
+          now.toISOString(),
+        )
+        expect((result.value!.configuration as ScheduledTriggerConfiguration).nextRunTime).toEqual(
+          new Date('2023-01-02').toISOString(),
+        )
       }
-      expect(cronHelperModule.getNextRunTime).toHaveBeenCalledWith(
-        '0 * * * *',
-        'UTC',
-        now,
-      )
+      expect(cronHelperModule.getNextRunTime).toHaveBeenCalledWith('0 * * * *', 'UTC', now)
     })
 
     it('fetches the full trigger when only partial trigger is provided', async () => {
@@ -157,14 +149,12 @@ describe('Scheduled Document Triggers Handlers', () => {
       expect(result.ok).toBe(true)
       if (result.ok) {
         expect(result.value!.id).toEqual(fullTrigger.id)
-        expect(
-          (result.value!.configuration as ScheduledTriggerConfiguration)
-            .lastRun,
-        ).toEqual(now.toISOString())
-        expect(
-          (result.value!.configuration as ScheduledTriggerConfiguration)
-            .nextRunTime,
-        ).toEqual(new Date('2023-01-02').toISOString())
+        expect((result.value!.configuration as ScheduledTriggerConfiguration).lastRun).toEqual(
+          now.toISOString(),
+        )
+        expect((result.value!.configuration as ScheduledTriggerConfiguration).nextRunTime).toEqual(
+          new Date('2023-01-02').toISOString(),
+        )
       }
     })
 

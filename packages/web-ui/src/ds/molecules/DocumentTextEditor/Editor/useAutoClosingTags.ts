@@ -1,9 +1,6 @@
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '../../../../lib/hooks/useLocalStorage'
-import { Monaco } from '@monaco-editor/react'
-import { editor, IDisposable } from 'monaco-editor'
+import { AppLocalStorage, useLocalStorage } from '../../../../lib/hooks/useLocalStorage'
+import type { Monaco } from '@monaco-editor/react'
+import type { editor, IDisposable } from 'monaco-editor'
 import { useCallback, useEffect, useRef } from 'react'
 
 const createAutoClosingTagsHandler = (
@@ -83,7 +80,7 @@ export function useAutoClosingTags() {
   useEffect(() => {
     reconfigure()
     return () => disposableRef.current?.dispose()
-  }, [enabled, reconfigure])
+  }, [reconfigure])
 
   return { registerAutoClosingTags }
 }

@@ -1,13 +1,6 @@
-import {
-  bigint,
-  bigserial,
-  index,
-  jsonb,
-  text,
-  uuid,
-} from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, jsonb, text, uuid } from 'drizzle-orm/pg-core'
 
-import { LogSources } from '@latitude-data/constants'
+import type { LogSources } from '@latitude-data/constants'
 import { sql } from 'drizzle-orm'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
@@ -33,24 +26,17 @@ export const documentLogs = latitudeSchema.table(
     customIdentifier: text('custom_identifier'),
     duration: bigint('duration', { mode: 'number' }),
     source: logSourcesEnum('source').$type<LogSources>(),
-    experimentId: bigint('experiment_id', { mode: 'number' }).references(
-      () => experiments.id,
-      {
-        onDelete: 'restrict',
-        onUpdate: 'cascade',
-      },
-    ),
+    experimentId: bigint('experiment_id', { mode: 'number' }).references(() => experiments.id, {
+      onDelete: 'restrict',
+      onUpdate: 'cascade',
+    }),
     ...timestamps(),
   },
   (table) => ({
     documentLogUuidIdx: index('document_log_uuid_idx').on(table.uuid),
-    documentLogDocumentUuidIdx: index('document_log_document_uuid_idx').on(
-      table.documentUuid,
-    ),
+    documentLogDocumentUuidIdx: index('document_log_document_uuid_idx').on(table.documentUuid),
     commitIdIdx: index('document_logs_commit_id_idx').on(table.commitId),
-    contentHashIdx: index('document_logs_content_hash_idx').on(
-      table.contentHash,
-    ),
+    contentHashIdx: index('document_logs_content_hash_idx').on(table.contentHash),
     createdAtIdx: index('document_logs_created_at_idx').on(table.createdAt),
     customIdentifierTrgmIdx: index('document_logs_custom_identifier_trgm_idx')
       .using('gin', sql`${table.customIdentifier} gin_trgm_ops`)
@@ -62,9 +48,7 @@ export const documentLogs = latitudeSchema.table(
     sourceCreatedAtIdx: index('document_logs_source_created_at_idx')
       .on(table.source, table.createdAt)
       .concurrently(),
-    experimentIdIdx: index('document_logs_experiment_id_idx').on(
-      table.experimentId,
-    ),
+    experimentIdIdx: index('document_logs_experiment_id_idx').on(table.experimentId),
     createdAtBrinIdx: index('document_logs_created_at_brin_idx')
       .using('brin', sql`${table.createdAt}`)
       .with({

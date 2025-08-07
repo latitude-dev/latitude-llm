@@ -1,5 +1,5 @@
 'use client'
-import { ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Button } from '../../atoms/Button'
@@ -68,7 +68,7 @@ export function TabSelector<T extends string>({
     resizeObserver.observe(button)
 
     return () => resizeObserver.disconnect()
-  }, [selected])
+  }, [])
 
   return (
     <div
@@ -114,9 +114,7 @@ export function TabSelector<T extends string>({
                 fullWidth={fullWidth}
               >
                 {typeof option.label === 'string' ? (
-                  <Text.H5M
-                    color={isSelected ? 'foreground' : 'foregroundMuted'}
-                  >
+                  <Text.H5M color={isSelected ? 'foreground' : 'foregroundMuted'}>
                     {option.label}
                   </Text.H5M>
                 ) : (

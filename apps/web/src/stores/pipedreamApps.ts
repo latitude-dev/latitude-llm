@@ -1,6 +1,6 @@
-import { App } from '@pipedream/sdk/browser'
+import type { App } from '@pipedream/sdk/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import { useMemo } from 'react'
 import { ROUTES } from '$/services/routes'
 
@@ -13,7 +13,7 @@ export default function usePipedreamApps(
   const {
     data = [],
     mutate,
-    ...rest
+    isLoading,
   } = useSWR<App[]>(
     ['pipedream-apps', query, cursor],
     async () => {
@@ -21,9 +21,7 @@ export default function usePipedreamApps(
       if (query) params.append('query', query)
       if (cursor) params.append('cursor', cursor)
 
-      const response = await fetch(
-        `${ROUTES.api.integrations.pipedream.apps}?${params}`,
-      )
+      const response = await fetch(`${ROUTES.api.integrations.pipedream.apps}?${params}`)
       if (!response.ok) {
         toast({
           title: 'Error',
@@ -43,8 +41,8 @@ export default function usePipedreamApps(
     () => ({
       data,
       mutate,
-      ...rest,
+      isLoading,
     }),
-    [data, mutate, rest],
+    [data, mutate, isLoading],
   )
 }

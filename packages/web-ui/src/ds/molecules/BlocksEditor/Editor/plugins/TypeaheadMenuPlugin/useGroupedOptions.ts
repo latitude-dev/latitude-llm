@@ -3,7 +3,7 @@ import { MenuOption } from '@lexical/react/LexicalTypeaheadMenuPlugin'
 import {
   $getSelection,
   $isRangeSelection,
-  LexicalEditor,
+  type LexicalEditor,
   $createParagraphNode,
   TextNode,
 } from 'lexical'
@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { $createMessageBlockNode } from '../../nodes/MessageBlock'
 import { $createStepBlockNode } from '../../nodes/StepBlock'
 import { VariableNode } from '../../nodes/VariableNode'
-import { IconName } from '../../../../../atoms/Icons'
+import type { IconName } from '../../../../../atoms/Icons'
 import { getAllVariables } from '../VariablesMenuPlugin'
 
 interface MenuItemOption {

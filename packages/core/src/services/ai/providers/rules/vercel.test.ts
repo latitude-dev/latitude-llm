@@ -2,7 +2,7 @@ import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { describe, expect, it } from 'vitest'
 
 import { Providers } from '../models'
-import { AppliedRules } from './types'
+import type { AppliedRules } from './types'
 import { vercelSdkRules } from './vercel'
 
 let messages: Message[]
@@ -25,10 +25,7 @@ describe('applyVercelSdkRules', () => {
       },
     ] as Message[]
 
-    const rules = vercelSdkRules(
-      { rules: [], messages, config },
-      Providers.Anthropic,
-    )
+    const rules = vercelSdkRules({ rules: [], messages, config }, Providers.Anthropic)
 
     expect(rules.messages).toEqual([
       ...(messages.slice(0, 1) as Message[]),
@@ -54,10 +51,7 @@ describe('applyVercelSdkRules', () => {
       },
     ] as Message[]
 
-    const rules = vercelSdkRules(
-      { rules: [], messages, config },
-      Providers.Anthropic,
-    )
+    const rules = vercelSdkRules({ rules: [], messages, config }, Providers.Anthropic)
     expect(rules.messages).toEqual([
       { role: 'system', content: 'I am a' },
       { role: 'system', content: 'system message' },
@@ -70,10 +64,7 @@ describe('applyVercelSdkRules', () => {
       { role: 'system', content: 'system message' },
     ] as unknown as Message[]
 
-    const rules = vercelSdkRules(
-      { rules: [], messages, config },
-      Providers.Anthropic,
-    )
+    const rules = vercelSdkRules({ rules: [], messages, config }, Providers.Anthropic)
     expect(rules.messages).toEqual([
       { role: 'system', content: 'I am a' },
       { role: 'system', content: 'system message' },
@@ -92,10 +83,7 @@ describe('applyVercelSdkRules', () => {
       },
     ] as Message[]
 
-    const rules = vercelSdkRules(
-      { rules: [], messages, config },
-      Providers.Anthropic,
-    )
+    const rules = vercelSdkRules({ rules: [], messages, config }, Providers.Anthropic)
     expect(rules.messages).toEqual([
       {
         role: 'system',
@@ -130,10 +118,7 @@ describe('applyVercelSdkRules', () => {
       },
     ] as Message[]
 
-    const rules = vercelSdkRules(
-      { rules: [], messages, config },
-      Providers.Anthropic,
-    )
+    const rules = vercelSdkRules({ rules: [], messages, config }, Providers.Anthropic)
     expect(rules.messages).toEqual([
       {
         role: 'user',
@@ -194,10 +179,7 @@ describe('applyVercelSdkRules', () => {
       },
     ] as Message[]
 
-    const rules = vercelSdkRules(
-      { rules: [], messages, config },
-      Providers.Anthropic,
-    )
+    const rules = vercelSdkRules({ rules: [], messages, config }, Providers.Anthropic)
     const transformedMessages = rules.messages
     expect(transformedMessages).toEqual([
       {
@@ -292,10 +274,7 @@ describe('applyVercelSdkRules', () => {
       },
     ] as Message[]
 
-    const rules = vercelSdkRules(
-      { rules: [], messages, config },
-      Providers.Anthropic,
-    )
+    const rules = vercelSdkRules({ rules: [], messages, config }, Providers.Anthropic)
     const transformedMessages = rules.messages
     expect(transformedMessages).toEqual([
       {
@@ -350,10 +329,7 @@ describe('applyVercelSdkRules', () => {
       },
     ] as Message[]
 
-    const rules = vercelSdkRules(
-      { rules: [], messages, config },
-      Providers.Anthropic,
-    )
+    const rules = vercelSdkRules({ rules: [], messages, config }, Providers.Anthropic)
 
     expect(rules.messages).toEqual([
       {
@@ -387,10 +363,7 @@ describe('applyVercelSdkRules', () => {
       },
     ] as unknown as Message[]
 
-    const rules = vercelSdkRules(
-      { rules: [], messages, config },
-      Providers.Anthropic,
-    )
+    const rules = vercelSdkRules({ rules: [], messages, config }, Providers.Anthropic)
 
     expect(rules.messages).toEqual([
       {
@@ -428,10 +401,7 @@ describe('applyVercelSdkRules', () => {
       },
     ] as unknown as Message[]
 
-    const rules = vercelSdkRules(
-      { rules: [], messages, config },
-      Providers.Anthropic,
-    )
+    const rules = vercelSdkRules({ rules: [], messages, config }, Providers.Anthropic)
 
     expect(rules.messages).toEqual([
       {
@@ -478,20 +448,14 @@ describe('applyVercelSdkRules', () => {
       },
     ] as Message[]
 
-    const rules = vercelSdkRules(
-      { rules: [], messages, config },
-      Providers.Anthropic,
-    )
+    const rules = vercelSdkRules({ rules: [], messages, config }, Providers.Anthropic)
 
     // Verify each text content only has type and text properties
     rules.messages.forEach((message) => {
       if (Array.isArray(message.content)) {
         message.content.forEach((content) => {
           if (content.type === 'text') {
-            expect(Object.keys(content).sort()).not.toContain([
-              'reasoning',
-              'isReasoning',
-            ])
+            expect(Object.keys(content).sort()).not.toContain(['reasoning', 'isReasoning'])
           }
         })
       }
@@ -542,10 +506,7 @@ describe('applyVercelSdkRules', () => {
       },
     ] as unknown as Message[]
 
-    const rules = vercelSdkRules(
-      { rules: [], messages, config },
-      Providers.OpenAI,
-    )
+    const rules = vercelSdkRules({ rules: [], messages, config }, Providers.OpenAI)
 
     expect(rules.messages).toEqual([
       {

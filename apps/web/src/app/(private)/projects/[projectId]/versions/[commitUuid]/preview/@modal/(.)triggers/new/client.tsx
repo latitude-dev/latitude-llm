@@ -3,10 +3,7 @@
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { Column1, Column2, Column3 } from './_components'
 import { TriggersModalProvider } from './_components/contexts/triggers-modal-context'
 
@@ -25,9 +22,8 @@ export function Client() {
       description='Add a new trigger to run this project automatically'
       onOpenChange={() => {
         navigate.push(
-          ROUTES.projects
-            .detail({ id: project.id })
-            .commits.detail({ uuid: commit.uuid }).preview.root,
+          ROUTES.projects.detail({ id: project.id }).commits.detail({ uuid: commit.uuid }).preview
+            .root,
         )
       }}
     >

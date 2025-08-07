@@ -1,5 +1,5 @@
 'use client'
-import { FormEvent, useCallback, useState } from 'react'
+import { type FormEvent, useCallback, useState } from 'react'
 
 import { Providers } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -52,7 +52,7 @@ export default function NewProviderApiKey() {
 
   const [provider, setProvider] = useState<Providers | undefined>()
 
-  const isCustom = provider == Providers.Custom
+  const isCustom = provider === Providers.Custom
   const MODEL_OPTIONS = useModelOptions({ provider })
 
   const defaultModelInputInfo = {
@@ -96,11 +96,7 @@ export default function NewProviderApiKey() {
           />
 
           {!isCustom && MODEL_OPTIONS.length ? (
-            <Select
-              name='defaultModel'
-              options={MODEL_OPTIONS}
-              {...defaultModelInputInfo}
-            />
+            <Select name='defaultModel' options={MODEL_OPTIONS} {...defaultModelInputInfo} />
           ) : (
             <Input
               type='text'

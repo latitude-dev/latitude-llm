@@ -22,18 +22,11 @@ export function LatteChat() {
 
   const isLoadingThread = useLoadThreadFromProviderLogs()
 
-  const {
-    isLoading,
-    resetChat,
-    interactions,
-    error,
-    changes,
-    latteActionsFeedbackUuid,
-  } = useLatteStore()
+  const { isLoading, resetChat, interactions, error, changes, latteActionsFeedbackUuid } =
+    useLatteStore()
 
   const { sendMessage } = useLatteChatActions()
-  const { acceptChanges, undoChanges, addFeedbackToLatteChange } =
-    useLatteChangeActions()
+  const { acceptChanges, undoChanges, addFeedbackToLatteChange } = useLatteChangeActions()
 
   const inConversation = interactions.length > 0
   const containerRef = useRef<HTMLDivElement>(null)
@@ -62,12 +55,7 @@ export function LatteChat() {
               (!inConversation ? (
                 <div className='flex flex-col items-center justify-center h-full gap-8 min-w-[50%]'>
                   <div className='flex flex-col items-center justify-center gap-6'>
-                    <Image
-                      src='/latte.svg'
-                      alt='Latte'
-                      width={64}
-                      height={64}
-                    />
+                    <Image src='/latte.svg' alt='Latte' width={64} height={64} />
                     <div className='flex flex-col items-center justify-center gap-2'>
                       <Text.H3M>What do you want to automate today?</Text.H3M>
                       <Text.H5 color='foregroundMuted'>

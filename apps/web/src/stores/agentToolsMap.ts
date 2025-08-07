@@ -1,10 +1,10 @@
 import { isEqual } from 'lodash-es'
 import { useEffect, useMemo, useState } from 'react'
 import { type DocumentVersion, HEAD_COMMIT } from '@latitude-data/core/browser'
-import { SWRConfiguration } from 'swr'
+import type { SWRConfiguration } from 'swr'
 import useDocumentVersions from './documentVersions'
 import { getAgentToolName } from '@latitude-data/core/services/agents/helpers'
-import { AgentToolsMap } from '@latitude-data/constants'
+import type { AgentToolsMap } from '@latitude-data/constants'
 
 function buildAgentsToolMap(data: DocumentVersion[] = []) {
   if (!data) return {}
@@ -16,16 +16,12 @@ function buildAgentsToolMap(data: DocumentVersion[] = []) {
   }, {})
 }
 export function useAgentToolsMap(
-  {
-    commitUuid = HEAD_COMMIT,
-    projectId,
-  }: { commitUuid?: string; projectId?: number } = { commitUuid: HEAD_COMMIT },
+  { commitUuid = HEAD_COMMIT, projectId }: { commitUuid?: string; projectId?: number } = {
+    commitUuid: HEAD_COMMIT,
+  },
   opts: SWRConfiguration = {},
 ) {
-  const { data, isLoading, error } = useDocumentVersions(
-    { commitUuid, projectId },
-    opts,
-  )
+  const { data, isLoading, error } = useDocumentVersions({ commitUuid, projectId }, opts)
 
   const [agentToolsMap, setAgentToolsMap] = useState<AgentToolsMap>({})
 

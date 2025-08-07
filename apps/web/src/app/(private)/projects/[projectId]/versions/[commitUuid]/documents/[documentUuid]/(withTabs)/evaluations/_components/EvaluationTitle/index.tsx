@@ -1,6 +1,6 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
-import { EvaluationV2 } from '@latitude-data/core/browser'
+import type { EvaluationV2 } from '@latitude-data/core/browser'
 import { BreadcrumbSeparator } from '@latitude-data/web-ui/molecules/Breadcrumb'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import Link from 'next/link'
@@ -19,13 +19,8 @@ export function EvaluationTitle({
   return (
     <div className='flex flex-col gap-2 min-w-0'>
       <div className='flex flex-row items-center gap-x-1 min-w-0'>
-        <Cmp
-          href={backHref ?? '#'}
-          className='flex flex-row items-center gap-x-1 min-w-0'
-        >
-          {backHref ? (
-            <Icon name='chevronLeft' color='foregroundMuted' />
-          ) : null}
+        <Cmp href={backHref ?? '#'} className='flex flex-row items-center gap-x-1 min-w-0'>
+          {backHref ? <Icon name='chevronLeft' color='foregroundMuted' /> : null}
           <Text.H4M noWrap ellipsis>
             {evaluation.name}
           </Text.H4M>

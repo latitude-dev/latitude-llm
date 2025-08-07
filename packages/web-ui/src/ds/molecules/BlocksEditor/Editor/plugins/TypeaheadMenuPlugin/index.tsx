@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, JSX } from 'react'
+import { useCallback, useMemo, useState, type JSX } from 'react'
 import { createPortal } from 'react-dom'
 import {
   LexicalTypeaheadMenuPlugin,
@@ -8,10 +8,10 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import {
   $getSelection,
   $isRangeSelection,
-  LexicalEditor,
-  TextNode,
-  BaseSelection,
-  ElementNode,
+  type LexicalEditor,
+  type TextNode,
+  type BaseSelection,
+  type ElementNode,
 } from 'lexical'
 import { cn } from '../../../../../../lib/utils'
 import { Text } from '../../../../../atoms/Text'
@@ -19,8 +19,8 @@ import { $isStepBlockNode } from '../../nodes/StepBlock'
 import { $isMessageBlockNode } from '../../nodes/MessageBlock'
 import { ComponentPickerMenuItem, filterGroups, flattenGroups } from './Item'
 import {
-  ComponentPickerOption,
-  PickerGroup,
+  type ComponentPickerOption,
+  type PickerGroup,
   useGroupedOptions,
 } from './useGroupedOptions'
 
@@ -98,7 +98,7 @@ export function TypeaheadMenuPlugin(): JSX.Element {
         })
         const { isInsideStepBlock, isInsideMessageBlock } = context
 
-        let baseOptions = allGroups.filter((option) => {
+        const baseOptions = allGroups.filter((option) => {
           if (option.key === 'steps') {
             const shouldShow = !isInsideStepBlock && !isInsideMessageBlock
             return shouldShow

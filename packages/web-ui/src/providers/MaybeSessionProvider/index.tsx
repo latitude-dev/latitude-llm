@@ -1,16 +1,14 @@
 'use client'
 
-import { createContext, ReactNode, useContext } from 'react'
+import { createContext, type ReactNode, useContext } from 'react'
 
-import { SessionUser } from '../SessionProvider'
+import type { SessionUser } from '../SessionProvider'
 
 interface ISessionContext {
   currentUser: SessionUser | undefined | null
 }
 
-const MaybeSessionContext = createContext<ISessionContext>(
-  {} as ISessionContext,
-)
+const MaybeSessionContext = createContext<ISessionContext>({} as ISessionContext)
 
 const MaybeSessionProvider = ({
   children,
@@ -18,11 +16,7 @@ const MaybeSessionProvider = ({
 }: {
   children: ReactNode
 } & ISessionContext) => {
-  return (
-    <MaybeSessionContext.Provider value={context}>
-      {children}
-    </MaybeSessionContext.Provider>
-  )
+  return <MaybeSessionContext.Provider value={context}>{children}</MaybeSessionContext.Provider>
 }
 
 const useMaybeSession = () => {

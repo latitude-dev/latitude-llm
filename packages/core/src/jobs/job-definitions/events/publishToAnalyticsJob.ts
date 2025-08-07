@@ -1,7 +1,7 @@
 import { env } from '@latitude-data/env'
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 
-import { LatitudeEvent } from '../../../events/events'
+import type { LatitudeEvent } from '../../../events/events'
 import { AnalyticsClient } from '../../../lib/analytics/AnalyticsClient'
 import { PosthogProvider } from '../../../lib/analytics/providers/Posthog'
 

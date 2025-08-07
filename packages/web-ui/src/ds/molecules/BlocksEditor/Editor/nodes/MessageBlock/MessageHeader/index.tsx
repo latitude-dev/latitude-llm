@@ -1,21 +1,13 @@
 import { useCallback } from 'react'
 import { Button } from '../../../../../../atoms/Button'
-import { Select, SelectOption } from '../../../../../../atoms/Select'
-import {
-  triggerMessageDelete,
-  triggerMessageRoleUpdate,
-} from '../../../plugins/MessageEditPlugin'
-import {
-  MESSAGE_BLOCK,
-  MessageBlockType,
-} from '../../../state/promptlToLexical/types'
+import { Select, type SelectOption } from '../../../../../../atoms/Select'
+import { triggerMessageDelete, triggerMessageRoleUpdate } from '../../../plugins/MessageEditPlugin'
+import { MESSAGE_BLOCK, type MessageBlockType } from '../../../state/promptlToLexical/types'
 
-const ROLE_OPTIONS = MESSAGE_BLOCK.map<SelectOption<MessageBlockType>>(
-  (role) => ({
-    value: role,
-    label: role.charAt(0).toUpperCase() + role.slice(1),
-  }),
-)
+const ROLE_OPTIONS = MESSAGE_BLOCK.map<SelectOption<MessageBlockType>>((role) => ({
+  value: role,
+  label: role.charAt(0).toUpperCase() + role.slice(1),
+}))
 
 export function MessageHeader({
   nodeKey,

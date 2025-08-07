@@ -1,9 +1,9 @@
 'use client'
 
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { zIndex as globalZIndex, ZIndex } from '../../tokens/zIndex'
+import { zIndex as globalZIndex, type ZIndex } from '../../tokens/zIndex'
 import { Alert } from '../Alert'
 import { Button } from '../Button'
 import { Text } from '../Text'
@@ -26,10 +26,7 @@ function StepSelector({ total, current }: { total: number; current: number }) {
       {Array.from({ length: total }, (_, i) => (
         <div
           key={i}
-          className={cn(
-            'h-1 flex-grow rounded-full',
-            i < current ? 'bg-primary' : 'bg-muted',
-          )}
+          className={cn('h-1 flex-grow rounded-full', i < current ? 'bg-primary' : 'bg-muted')}
         />
       ))}
       <Text.H6M>{`${current}/${total}`}</Text.H6M>
@@ -95,9 +92,7 @@ export function Modal({
                 <div className={cn('px-6', { 'pt-6': !steps })}>
                   <DialogHeader>
                     {title && <DialogTitle>{title}</DialogTitle>}
-                    {description && (
-                      <DialogDescription>{description}</DialogDescription>
-                    )}
+                    {description && <DialogDescription>{description}</DialogDescription>}
                   </DialogHeader>
                 </div>
               )}
@@ -108,8 +103,7 @@ export function Modal({
             <div
               className={cn('px-6', {
                 'overflow-y-auto custom-scrollbar pb-6': scrollable,
-                'overflow-y-hidden min-h-0 flex-grow flex flex-col':
-                  !scrollable,
+                'overflow-y-hidden min-h-0 flex-grow flex flex-col': !scrollable,
               })}
             >
               {children}
@@ -181,11 +175,7 @@ export function ConfirmModal({
       <div className='flex flex-col gap-y-4'>
         {children}
         {confirm.description || confirm.title ? (
-          <Alert
-            variant={type}
-            title={confirm.title}
-            description={confirm.description}
-          />
+          <Alert variant={type} title={confirm.title} description={confirm.description} />
         ) : null}
       </div>
     </Modal>

@@ -1,8 +1,8 @@
-import { LastMessage } from '../../SharedDocument/RunPrompt/usePrompt'
-import { Message as ConversationMessage } from '@latitude-data/constants/legacyCompiler'
+import type { LastMessage } from '../../SharedDocument/RunPrompt/usePrompt'
+import type { Message as ConversationMessage } from '@latitude-data/constants/legacyCompiler'
 import { ExpandMessages } from '../ExpandMessages'
 import { ErrorMessage, Message } from '$/components/ChatWrapper'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 import { MessageItem } from '$/components/ChatWrapper'
 import { MessageItemContent } from '$/components/ChatWrapper'
@@ -18,11 +18,7 @@ const streamBuilder = (chunks: string[]) => {
   }
 }
 
-export function useFakeStream({
-  lastMessage,
-}: {
-  lastMessage: LastMessage | undefined
-}) {
+export function useFakeStream({ lastMessage }: { lastMessage: LastMessage | undefined }) {
   const [fakeIsStreaming, setFakeStremaing] = useState(true)
   const [fakeResponseStream, setFakeResponse] = useState<string | undefined>()
   useEffect(() => {

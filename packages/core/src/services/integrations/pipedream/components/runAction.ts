@@ -1,10 +1,7 @@
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { PipedreamIntegration } from '../../../../browser'
-import { PromisedResult } from '../../../../lib/Transaction'
-import {
-  fillConfiguredProps,
-  isIntegrationConfigured,
-} from './fillConfiguredProps'
+import type { PipedreamIntegration } from '../../../../browser'
+import type { PromisedResult } from '../../../../lib/Transaction'
+import { fillConfiguredProps, isIntegrationConfigured } from './fillConfiguredProps'
 import { Result } from '../../../../lib/Result'
 import { getPipedreamEnvironment } from '../apps'
 import { createBackendClient } from '@pipedream/sdk'
@@ -20,9 +17,7 @@ export async function runAction({
 }): PromisedResult<unknown, Error> {
   if (!isIntegrationConfigured(integration)) {
     return Result.error(
-      new NotFoundError(
-        `Integration '${integration.name}' has not been configured.`,
-      ),
+      new NotFoundError(`Integration '${integration.name}' has not been configured.`),
     )
   }
 

@@ -1,5 +1,5 @@
-import { Message } from '@latitude-data/constants/legacyCompiler'
-import { AppliedRules } from './types'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
+import type { AppliedRules } from './types'
 
 export function applyPerplexityRules(appliedRule: AppliedRules): AppliedRules {
   // Ensure last message has role 'user'

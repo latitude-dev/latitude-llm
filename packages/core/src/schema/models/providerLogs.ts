@@ -14,7 +14,7 @@ import {
 
 import { sql } from 'drizzle-orm'
 import { LogSources } from '../../constants'
-import { PartialConfig } from '../../services/ai'
+import type { PartialConfig } from '../../services/ai'
 import { latitudeSchema } from '../db-schema'
 import { apiKeys } from '../models/apiKeys'
 import { timestamps } from '../schemaHelpers'
@@ -32,13 +32,10 @@ export const providerLogs = latitudeSchema.table(
     workspaceId: bigint('workspace_id', { mode: 'number' }),
     uuid: uuid('uuid').notNull().unique(),
     documentLogUuid: uuid('document_log_uuid'), // Note: this seems to be used for document logs and evaluation results, we should probably rename it or use two columns
-    providerId: bigint('provider_id', { mode: 'number' }).references(
-      () => providerApiKeys.id,
-      {
-        onDelete: 'restrict',
-        onUpdate: 'cascade',
-      },
-    ),
+    providerId: bigint('provider_id', { mode: 'number' }).references(() => providerApiKeys.id, {
+      onDelete: 'restrict',
+      onUpdate: 'cascade',
+    }),
     model: varchar('model'),
     finishReason: varchar('finish_reason').default('stop'),
     config: json('config').$type<PartialConfig>(),
@@ -51,13 +48,10 @@ export const providerLogs = latitudeSchema.table(
     costInMillicents: integer('cost_in_millicents').notNull().default(0),
     duration: bigint('duration', { mode: 'number' }), // in milliseconds!
     source: logSourcesEnum('source').$type<LogSources>().notNull(),
-    apiKeyId: bigint('apiKeyId', { mode: 'number' }).references(
-      () => apiKeys.id,
-      {
-        onDelete: 'restrict',
-        onUpdate: 'cascade',
-      },
-    ),
+    apiKeyId: bigint('apiKeyId', { mode: 'number' }).references(() => apiKeys.id, {
+      onDelete: 'restrict',
+      onUpdate: 'cascade',
+    }),
     generatedAt: timestamp('generated_at', { mode: 'date' }),
     ...timestamps(),
   },

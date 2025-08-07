@@ -1,4 +1,4 @@
-import { EvaluationV2 } from '@latitude-data/constants'
+import type { EvaluationV2 } from '@latitude-data/constants'
 import { Result } from '../../lib/Result'
 import { getEvaluationMetricSpecification } from '../evaluationsV2/specifications'
 import { BadRequestError } from '../../lib/errors'
@@ -14,18 +14,14 @@ export function assertEvaluationRequirements({
     const spec = getEvaluationMetricSpecification(evaluation)
     if (!spec.supportsBatchEvaluation) {
       return Result.error(
-        new BadRequestError(
-          `Evaluation ${evaluation.name} cannot be run as an experiment`,
-        ),
+        new BadRequestError(`Evaluation ${evaluation.name} cannot be run as an experiment`),
       )
     }
 
     const datasetLabel = datasetLabels[evaluation.uuid]
     if (spec.requiresExpectedOutput && !datasetLabel) {
       return Result.error(
-        new BadRequestError(
-          `Evaluation ${evaluation.name} requires an expected output column`,
-        ),
+        new BadRequestError(`Evaluation ${evaluation.name} requires an expected output column`),
       )
     }
   }

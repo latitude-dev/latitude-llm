@@ -4,7 +4,7 @@ import { updateDocumentTriggerConfiguration } from '@latitude-data/core/services
 
 import { withDocument } from '../../procedures'
 import {
-  DocumentTriggerConfiguration,
+  type DocumentTriggerConfiguration,
   emailTriggerConfigurationSchema,
   insertScheduledTriggerConfigurationSchema,
   integrationTriggerConfigurationSchema,

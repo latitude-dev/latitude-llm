@@ -1,10 +1,10 @@
 'use client'
 
-import { ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { cn } from '../../../lib/utils'
 import { zIndex } from '../../tokens/zIndex'
 import { FormField, type FormFieldProps } from '../FormField'
-import { IconName } from '../Icons'
+import type { IconName } from '../Icons'
 import { Skeleton } from '../Skeleton'
 import {
   SelectContent,
@@ -15,32 +15,25 @@ import {
   SelectValue,
 } from './Primitives'
 
-export type SelectOption<V extends unknown = unknown> = {
+export type SelectOption<V = unknown> = {
   label: string
   value: V
   icon?: ReactNode | IconName
 }
 
-export type SelectOptionGroup<V extends unknown = unknown> = {
+export type SelectOptionGroup<V = unknown> = {
   label: string
   options: SelectOption<V>[]
 }
 export function Options({ options }: { options: SelectOption[] }) {
   return options.map((option) => (
-    <SelectItem
-      key={option.label}
-      value={String(option.value)}
-      icon={option.icon}
-    >
+    <SelectItem key={option.label} value={String(option.value)} icon={option.icon}>
       {option.label}
     </SelectItem>
   ))
 }
 
-export type SelectProps<V extends unknown = unknown> = Omit<
-  FormFieldProps,
-  'children'
-> & {
+export type SelectProps<V = unknown> = Omit<FormFieldProps, 'children'> & {
   name: string
   options: SelectOption<V>[]
   defaultValue?: V
@@ -55,7 +48,7 @@ export type SelectProps<V extends unknown = unknown> = Omit<
   size?: 'small' | 'default'
   removable?: boolean
 }
-export function Select<V extends unknown = unknown>({
+export function Select<V = unknown>({
   name,
   label,
   badgeLabel,
@@ -76,9 +69,7 @@ export function Select<V extends unknown = unknown>({
   required = false,
   removable = false,
 }: SelectProps<V>) {
-  const [selectedValue, setSelected] = useState<V | undefined>(
-    value ?? defaultValue,
-  )
+  const [selectedValue, setSelected] = useState<V | undefined>(value ?? defaultValue)
   const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {

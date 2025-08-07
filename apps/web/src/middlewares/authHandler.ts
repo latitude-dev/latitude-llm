@@ -1,5 +1,5 @@
 import { getDataFromSession } from '$/data-access'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export function authHandler(handler: any) {
   return async (

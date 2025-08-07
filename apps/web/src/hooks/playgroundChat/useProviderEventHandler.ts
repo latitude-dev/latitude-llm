@@ -1,22 +1,19 @@
 import {
-  Message,
-  MessageContent,
+  type Message,
+  type MessageContent,
   MessageRole,
-  ToolCall,
-  ToolRequestContent,
+  type ToolCall,
+  type ToolRequestContent,
 } from '@latitude-data/constants/legacyCompiler'
-import { ChainEvent } from '@latitude-data/constants'
+import type { ChainEvent } from '@latitude-data/constants'
 import { StreamEventTypes } from '@latitude-data/core/browser'
-import { ParsedEvent } from 'eventsource-parser/stream'
-import React, { useCallback } from 'react'
+import type { ParsedEvent } from 'eventsource-parser/stream'
+import type React from 'react'
+import { useCallback } from 'react'
 
 type SetMessagesFunction = React.Dispatch<React.SetStateAction<Message[]>>
-type SetUnresponedToolCallsFunction = React.Dispatch<
-  React.SetStateAction<ToolCall[]>
->
-type SetRunningLatitudeToolsFunction = React.Dispatch<
-  React.SetStateAction<number>
->
+type SetUnresponedToolCallsFunction = React.Dispatch<React.SetStateAction<ToolCall[]>>
+type SetRunningLatitudeToolsFunction = React.Dispatch<React.SetStateAction<number>>
 type AddMessagesFunction = (messages: Message[]) => void
 
 export function useProviderEventHandler({
@@ -141,10 +138,7 @@ export function useProviderEventHandler({
           ...messages.slice(0, -1),
           {
             ...lastMessage,
-            content: [
-              ...((lastMessage.content as MessageContent[]) || []),
-              data,
-            ],
+            content: [...((lastMessage.content as MessageContent[]) || []), data],
             toolCalls: [
               ...(lastMessage.toolCalls || []),
               {
@@ -181,9 +175,7 @@ export function useProviderEventHandler({
             {
               ...lastMessage,
               content: [
-                ...((lastMessage.content as
-                  | MessageContent[]
-                  | ToolRequestContent[]) ?? []),
+                ...((lastMessage.content as MessageContent[] | ToolRequestContent[]) ?? []),
                 data,
               ],
             },
@@ -284,10 +276,7 @@ export function useProviderEventHandler({
               ...messages.slice(0, -1),
               {
                 ...lastMessage,
-                content: [
-                  ...((lastMessage.content as MessageContent[]) || []),
-                  data,
-                ],
+                content: [...((lastMessage.content as MessageContent[]) || []), data],
               },
             ]
           } else if (lastContent.type !== 'redacted-reasoning') {
@@ -295,10 +284,7 @@ export function useProviderEventHandler({
               ...messages.slice(0, -1),
               {
                 ...lastMessage,
-                content: [
-                  ...((lastMessage.content as MessageContent[]) || []),
-                  data,
-                ],
+                content: [...((lastMessage.content as MessageContent[]) || []), data],
               },
             ]
           } else {
@@ -322,10 +308,7 @@ export function useProviderEventHandler({
             {
               role: MessageRole.assistant,
               toolCalls: [],
-              content: [
-                ...((lastMessage.content as MessageContent[]) || []),
-                data,
-              ],
+              content: [...((lastMessage.content as MessageContent[]) || []), data],
             },
           ]
         }

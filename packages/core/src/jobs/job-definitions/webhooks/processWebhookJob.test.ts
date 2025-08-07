@@ -2,11 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { webhooksQueue } from '../../queues'
 import { processWebhookJob } from './processWebhookJob'
 import * as factories from '../../../tests/factories'
-import { Commit, Providers } from '../../../browser'
-import {
-  CommitPublishedEvent,
-  DocumentLogCreatedEvent,
-} from '../../../events/events'
+import { type Commit, Providers } from '../../../browser'
+import type { CommitPublishedEvent, DocumentLogCreatedEvent } from '../../../events/events'
 
 describe('processWebhookJob', () => {
   const mocks = vi.hoisted(() => ({
@@ -69,20 +66,14 @@ describe('processWebhookJob', () => {
 
     // Verify jobs were enqueued for all active webhooks
     expect(mocks.webhooksQueue).toHaveBeenCalledTimes(2)
-    expect(mocks.webhooksQueue).toHaveBeenCalledWith(
-      'processIndividualWebhookJob',
-      {
-        event,
-        webhookId: webhook1.id,
-      },
-    )
-    expect(mocks.webhooksQueue).toHaveBeenCalledWith(
-      'processIndividualWebhookJob',
-      {
-        event,
-        webhookId: webhook2.id,
-      },
-    )
+    expect(mocks.webhooksQueue).toHaveBeenCalledWith('processIndividualWebhookJob', {
+      event,
+      webhookId: webhook1.id,
+    })
+    expect(mocks.webhooksQueue).toHaveBeenCalledWith('processIndividualWebhookJob', {
+      event,
+      webhookId: webhook2.id,
+    })
   })
 
   it('skips events without workspaceId', async () => {
@@ -187,12 +178,9 @@ describe('processWebhookJob', () => {
 
     // Verify a job was enqueued for the webhook
     expect(mocks.webhooksQueue).toHaveBeenCalledTimes(1)
-    expect(mocks.webhooksQueue).toHaveBeenCalledWith(
-      'processIndividualWebhookJob',
-      {
-        event,
-        webhookId: webhook.id,
-      },
-    )
+    expect(mocks.webhooksQueue).toHaveBeenCalledWith('processIndividualWebhookJob', {
+      event,
+      webhookId: webhook.id,
+    })
   })
 })

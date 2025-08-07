@@ -1,4 +1,4 @@
-import { Children, ReactNode } from 'react'
+import { Children, type ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Text } from '../../atoms/Text'
@@ -32,9 +32,7 @@ NumeredList.Item = ({
   return (
     <div className={cn('flex-grow min-w-0 flex flex-col gap-y-4', className)}>
       <Text.H5>{title}</Text.H5>
-      {children ? (
-        <div className={cn(width, { 'w-full': !width })}>{children}</div>
-      ) : null}
+      {children ? <div className={cn(width, { 'w-full': !width })}>{children}</div> : null}
     </div>
   )
 }

@@ -8,7 +8,7 @@ import {
 import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
 import { ROUTES } from '$/services/routes'
 import type { ResolvedMetadata } from '$/workers/readMetadata'
-import {
+import type {
   Commit,
   DocumentVersion,
   EvaluationType,
@@ -19,10 +19,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
@@ -52,16 +49,13 @@ export const Playground = memo(
       initialExpanded: 'parameters',
     })
     const collapsed = expander.expandedSection === null
-    const forcedSize = collapsed
-      ? EVALUATION_PLAYGROUND_COLLAPSED_SIZE
-      : undefined
-    const { value: expandParameters, setValue: setExpandParameters } =
-      useLocalStorage({
-        key: AppLocalStorage.expandParameters,
-        defaultValue: false,
-      })
-    const clearChat = useCallback(() => setMode('preview'), [setMode])
-    const runPrompt = useCallback(() => setMode('chat'), [setMode])
+    const forcedSize = collapsed ? EVALUATION_PLAYGROUND_COLLAPSED_SIZE : undefined
+    const { value: expandParameters, setValue: setExpandParameters } = useLocalStorage({
+      key: AppLocalStorage.expandParameters,
+      defaultValue: false,
+    })
+    const clearChat = useCallback(() => setMode('preview'), [])
+    const runPrompt = useCallback(() => setMode('chat'), [])
     const { parameters, parametersReady } = useEvaluationParameters({
       commitVersionUuid: commit.uuid,
       document,
@@ -73,14 +67,13 @@ export const Playground = memo(
       evaluation,
       selectedDocumentLogUuid,
     })
-    const { runPromptFn, abortCurrentStream, hasActiveStream } =
-      useRunEvaluationPlaygroundPrompt({
-        projectId: project.id,
-        commit,
-        document,
-        evaluation,
-        parameters,
-      })
+    const { runPromptFn, abortCurrentStream, hasActiveStream } = useRunEvaluationPlaygroundPrompt({
+      projectId: project.id,
+      commit,
+      document,
+      evaluation,
+      parameters,
+    })
 
     const firstPane = useMemo(() => {
       return (
@@ -160,9 +153,7 @@ export const Playground = memo(
             <div className='flex flex-col items-center gap-8 max-w-3xl'>
               <div className='flex flex-col gap-4 items-center'>
                 <Text.H4M>No logs found</Text.H4M>
-                <Text.H5>
-                  Run your prompt to generate logs and test the evaluation
-                </Text.H5>
+                <Text.H5>Run your prompt to generate logs and test the evaluation</Text.H5>
               </div>
               <Link
                 href={
@@ -186,10 +177,7 @@ export const Playground = memo(
         gap={4}
         initialPercentage={50}
         forcedSize={forcedSize}
-        minSize={
-          EVALUATION_PLAYGROUND_COLLAPSED_SIZE +
-          EVALUATION_PLAYGROUND_GAP_PADDING
-        }
+        minSize={EVALUATION_PLAYGROUND_COLLAPSED_SIZE + EVALUATION_PLAYGROUND_GAP_PADDING}
         dragDisabled={collapsed}
         firstPane={firstPane}
         secondPane={secondPane}

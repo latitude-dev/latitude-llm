@@ -33,14 +33,9 @@ export class ConfigManager {
 
     try {
       const { default: keytar } = await import('keytar')
-      const apiKey = (await keytar.getPassword(
-        this.keychainService,
-        'apiKey',
-      )) as string
+      const apiKey = (await keytar.getPassword(this.keychainService, 'apiKey')) as string
       if (!apiKey) {
-        throw new Error(
-          '❌ No API key found. Please run "latitude init" first.',
-        )
+        throw new Error('❌ No API key found. Please run "latitude init" first.')
       }
 
       return apiKey

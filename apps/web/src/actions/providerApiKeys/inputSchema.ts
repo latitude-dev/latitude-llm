@@ -10,9 +10,9 @@ const WITH_CONFIG = [
   Providers.AnthropicVertex,
   Providers.AmazonBedrock,
 ]
-const NO_CONFIGURATION_PROVIDERS = (
-  Object.values(Providers) as Providers[]
-).filter((p) => !WITH_CONFIG.includes(p))
+const NO_CONFIGURATION_PROVIDERS = (Object.values(Providers) as Providers[]).filter(
+  (p) => !WITH_CONFIG.includes(p),
+)
 
 const baseSchema = z.object({
   name: z.string(),

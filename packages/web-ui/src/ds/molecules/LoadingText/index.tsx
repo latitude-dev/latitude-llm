@@ -15,11 +15,7 @@ const loadingTexts = [
   'Herding cats... I mean, data points...',
 ]
 
-export function LoadingText({
-  alignX = 'right',
-}: {
-  alignX?: 'left' | 'center' | 'right'
-}) {
+export function LoadingText({ alignX = 'right' }: { alignX?: 'left' | 'center' | 'right' }) {
   const [currentTextIndex, setCurrentTextIndex] = useState(0)
   const [isVisible, setIsVisible] = useState(true)
 
@@ -27,9 +23,7 @@ export function LoadingText({
     const intervalId = setInterval(() => {
       setIsVisible(false)
       setTimeout(() => {
-        setCurrentTextIndex(
-          (prevIndex) => (prevIndex + 1) % loadingTexts.length,
-        )
+        setCurrentTextIndex((prevIndex) => (prevIndex + 1) % loadingTexts.length)
         setIsVisible(true)
       }, 500)
     }, 3000)
@@ -39,16 +33,13 @@ export function LoadingText({
 
   return (
     <div
-      className={cn(
-        'flex flex-row justify-end transition-opacity duration-500',
-        {
-          'justify-start': alignX === 'left',
-          'justify-center': alignX === 'center',
-          'justify-end': alignX === 'right',
-          'opacity-0': !isVisible,
-          'opacity-100': isVisible,
-        },
-      )}
+      className={cn('flex flex-row justify-end transition-opacity duration-500', {
+        'justify-start': alignX === 'left',
+        'justify-center': alignX === 'center',
+        'justify-end': alignX === 'right',
+        'opacity-0': !isVisible,
+        'opacity-100': isVisible,
+      })}
     >
       <Text.H6 animate>{loadingTexts[currentTextIndex]}</Text.H6>
     </div>

@@ -1,14 +1,14 @@
-import { PromisedResult } from '../../Transaction'
+import type { PromisedResult } from '../../Transaction'
 import { resolveClientTools } from './clientTools'
 import { resolveLatitudeTools } from './latitudeTools'
 import { resolveAgentsAsTools } from './agentsAsTools'
 import { resolveIntegrationTools } from './integrationTools'
 import { Result } from '../../Result'
-import { LatitudeError } from '../../errors'
-import { ResolvedTools } from './types'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { LatitudeError } from '../../errors'
+import type { ResolvedTools } from './types'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { resolveProviderTools } from './resolveProviderTools'
-import { StreamManager } from '..'
+import type { StreamManager } from '..'
 
 export async function resolveToolsFromConfig({
   config,

@@ -1,18 +1,18 @@
 import {
-  Message,
+  type Message,
   MessageRole,
-  UserMessage,
+  type UserMessage,
 } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '@latitude-data/constants'
-import { Commit, DocumentVersion, User, Workspace } from '../../../browser'
-import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
+import type { Commit, DocumentVersion, User, Workspace } from '../../../browser'
+import type { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
 import { documentsQueue } from '../../../jobs/queues'
-import { BACKGROUND, TelemetryContext } from '../../../telemetry'
-import { PromisedResult } from '../../../lib/Transaction'
+import { BACKGROUND, type TelemetryContext } from '../../../telemetry'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { runDocumentAtCommit } from '../../commits'
 import { addMessages } from '../../documentLogs/addMessages/index'
-import { ErrorResult, Result } from '../../../lib/Result'
-import { LatitudeError } from '@latitude-data/constants/errors'
+import { type ErrorResult, Result } from '../../../lib/Result'
+import type { LatitudeError } from '@latitude-data/constants/errors'
 import { buildToolHandlers } from './tools'
 import { WebsocketClient } from '../../../websockets/workers'
 import { assertCopilotIsSupported, sendWebsockets } from './helpers'

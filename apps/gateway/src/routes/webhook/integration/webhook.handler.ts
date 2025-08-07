@@ -1,13 +1,11 @@
-import { AppRouteHandler } from '$/openApi/types'
-import { IntegrationWebhookRoute } from './webhook.route'
+import type { AppRouteHandler } from '$/openApi/types'
+import type { IntegrationWebhookRoute } from './webhook.route'
 import { handleIntegrationTrigger } from '@latitude-data/core/services/documentTriggers/handlers/index'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735
 // https://github.com/orgs/honojs/discussions/1803
-export const integrationWebhookHandler: AppRouteHandler<
-  IntegrationWebhookRoute
-> = async (c) => {
+export const integrationWebhookHandler: AppRouteHandler<IntegrationWebhookRoute> = async (c) => {
   const { triggerUuid } = c.req.valid('param')
   const payload = (await c.req.json()) as Record<string, unknown>
 

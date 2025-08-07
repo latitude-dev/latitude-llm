@@ -1,6 +1,6 @@
 import { useCommitsChanges } from '$/stores/commitChanges'
 import { useDocumentDiff } from '$/stores/documentDiff'
-import { Commit } from '@latitude-data/core/browser'
+import type { Commit } from '@latitude-data/core/browser'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import { DiffViewer } from '@latitude-data/web-ui/molecules/DiffViewer'
 
@@ -11,8 +11,7 @@ export function ChangeDiffViewer({
   commit?: Commit
   documentUuid?: string
 }) {
-  const { data: changes, isLoading: isChangeListLoading } =
-    useCommitsChanges(commit)
+  const { data: changes, isLoading: isChangeListLoading } = useCommitsChanges(commit)
   const { data: diff, isLoading: isDiffLoading } = useDocumentDiff({
     commit,
     documentUuid,

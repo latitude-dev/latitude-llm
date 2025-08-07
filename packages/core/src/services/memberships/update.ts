@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { Membership } from '../../browser'
+import type { Membership } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { memberships } from '../../schema'

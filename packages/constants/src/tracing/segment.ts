@@ -1,7 +1,7 @@
-import { Message } from 'promptl-ai'
+import type { Message } from 'promptl-ai'
 import { z } from 'zod'
-import { DocumentType } from '../index'
-import { SpanStatus } from './span'
+import type { DocumentType } from '../index'
+import type { SpanStatus } from './span'
 
 export enum SegmentSource {
   API = 'api',
@@ -54,18 +54,17 @@ export type StepSegmentMetadata = BaseSegmentMetadata<SegmentType.Step> & {
   output?: Message[] // From the last completion span/segment
 }
 
-export type DocumentSegmentMetadata =
-  BaseSegmentMetadata<SegmentType.Document> &
-    Omit<StepSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Step>> & {
-      prompt: string // From first segment span/segment or current run or document
-      parameters: Record<string, unknown> // From first segment span/segment or current run
-    }
+export type DocumentSegmentMetadata = BaseSegmentMetadata<SegmentType.Document> &
+  Omit<StepSegmentMetadata, keyof BaseSegmentMetadata<SegmentType.Step>> & {
+    prompt: string // From first segment span/segment or current run or document
+    parameters: Record<string, unknown> // From first segment span/segment or current run
+  }
 
-// prettier-ignore
-export type SegmentMetadata<T extends SegmentType = SegmentType> =
-  T extends SegmentType.Document ? DocumentSegmentMetadata :
-  T extends SegmentType.Step ? StepSegmentMetadata :
-  never;
+export type SegmentMetadata<T extends SegmentType = SegmentType> = T extends SegmentType.Document
+  ? DocumentSegmentMetadata
+  : T extends SegmentType.Step
+    ? StepSegmentMetadata
+    : never
 
 export const SEGMENT_METADATA_STORAGE_KEY = (
   workspaceId: number,
@@ -103,10 +102,9 @@ export type Segment<T extends SegmentType = SegmentType> = {
   updatedAt: Date
 }
 
-export type SegmentWithDetails<T extends SegmentType = SegmentType> =
-  Segment<T> & {
-    metadata?: SegmentMetadata<T> // Metadata is optional if the segment has not ended, had an early error or it could not be uploaded
-  }
+export type SegmentWithDetails<T extends SegmentType = SegmentType> = Segment<T> & {
+  metadata?: SegmentMetadata<T> // Metadata is optional if the segment has not ended, had an early error or it could not be uploaded
+}
 
 const baseSegmentBaggageSchema = z.object({
   id: z.string(),
@@ -130,5 +128,7 @@ export const segmentBaggageSchema = z.discriminatedUnion('type', [
   }),
 ])
 
-// prettier-ignore
-export type SegmentBaggage<T extends SegmentType = SegmentType> = Extract<z.infer<typeof segmentBaggageSchema>, { type: T }>
+export type SegmentBaggage<T extends SegmentType = SegmentType> = Extract<
+  z.infer<typeof segmentBaggageSchema>,
+  { type: T }
+>

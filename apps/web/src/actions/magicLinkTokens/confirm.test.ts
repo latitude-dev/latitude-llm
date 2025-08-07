@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
 import { createProject } from '@latitude-data/core/factories'
-import { User } from '@latitude-data/core/browser'
+import type { User } from '@latitude-data/core/browser'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 
 vi.mock('next/navigation', () => ({

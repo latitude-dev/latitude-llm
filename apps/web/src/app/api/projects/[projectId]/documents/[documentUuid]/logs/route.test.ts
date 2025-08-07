@@ -1,13 +1,13 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   ErrorableEntity,
   LOG_SOURCES,
-  Project,
+  type Project,
   Providers,
-  User,
-  WorkspaceDto,
+  type User,
+  type WorkspaceDto,
 } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { createRunError } from '@latitude-data/core/services/runErrors/create'

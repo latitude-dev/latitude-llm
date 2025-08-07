@@ -1,16 +1,6 @@
 import { differenceInMilliseconds } from 'date-fns'
-import {
-  and,
-  desc,
-  eq,
-  getTableColumns,
-  isNotNull,
-  isNull,
-  lt,
-  ne,
-  sql,
-} from 'drizzle-orm'
-import { EvaluationV2 } from '../browser'
+import { and, desc, eq, getTableColumns, isNotNull, isNull, lt, ne, sql } from 'drizzle-orm'
+import type { EvaluationV2 } from '../browser'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { commits, evaluationVersions, projects } from '../schema'
@@ -127,15 +117,12 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
       historyVersions.filter(
         (oldVersion) =>
           !currentVersions.find(
-            (newVersion) =>
-              newVersion.evaluationUuid === oldVersion.evaluationUuid,
+            (newVersion) => newVersion.evaluationUuid === oldVersion.evaluationUuid,
           ),
       ),
     )
     evaluations = evaluations.filter((e) => !e.deletedAt)
-    evaluations = evaluations.sort((a, b) =>
-      differenceInMilliseconds(b.createdAt, a.createdAt),
-    )
+    evaluations = evaluations.sort((a, b) => differenceInMilliseconds(b.createdAt, a.createdAt))
 
     return Result.ok<EvaluationV2[]>(evaluations)
   }

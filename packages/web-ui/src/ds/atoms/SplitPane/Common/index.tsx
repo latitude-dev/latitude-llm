@@ -1,16 +1,10 @@
 'use client'
 
-import {
-  ReactNode,
-  RefObject,
-  SyntheticEvent,
-  useCallback,
-  useState,
-} from 'react'
+import { type ReactNode, type RefObject, type SyntheticEvent, useCallback, useState } from 'react'
 
-import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable'
+import { ResizableBox, type ResizeCallbackData, type ResizeHandle } from 'react-resizable'
 
-import { SplitDirection } from '..'
+import type { SplitDirection } from '..'
 import { cn } from '../../../../lib/utils'
 
 export const JS_PANEL_CLASS = 'js-pane'
@@ -34,8 +28,7 @@ export const PaneWrapper = ({
         {
           'max-h-full min-h-0 custom-scrollbar': direction === 'horizontal',
           'flex-grow min-w-0': !isResizable && direction === 'horizontal',
-          'max-w-full min-w-full overflow-hidden flex':
-            direction === 'vertical',
+          'max-w-full min-w-full overflow-hidden flex': direction === 'vertical',
         },
         className,
       )}
@@ -46,10 +39,8 @@ export const PaneWrapper = ({
 }
 
 const SplitHandle =
-  (visibleHandle: boolean) =>
-  (resizeHandle: ResizeHandle, ref: RefObject<HTMLDivElement>) => {
-    const direction =
-      resizeHandle === 'e' || resizeHandle === 'w' ? 'horizontal' : 'vertical'
+  (visibleHandle: boolean) => (resizeHandle: ResizeHandle, ref: RefObject<HTMLDivElement>) => {
+    const direction = resizeHandle === 'e' || resizeHandle === 'w' ? 'horizontal' : 'vertical'
     return (
       <div
         ref={ref}
@@ -66,8 +57,7 @@ const SplitHandle =
             {
               'bg-border': visibleHandle,
               'bg-transparent': !visibleHandle,
-              'w-px h-full group-hover/handler:w-0.5':
-                direction === 'horizontal',
+              'w-px h-full group-hover/handler:w-0.5': direction === 'horizontal',
               'h-px w-full group-hover/handler:h-0.5': direction === 'vertical',
             },
           )}
@@ -131,8 +121,7 @@ export function ResizablePane({
         minConstraints={[minSize, Infinity]}
         resizeHandles={dragDisabled ? [] : reversed ? ['w'] : ['e']}
         className={cn('flex relative flex-shrink-0 flex-grow-0', {
-          [`${widthClassWhileNoPaneWidth}`]:
-            !paneSize && widthClassWhileNoPaneWidth,
+          [`${widthClassWhileNoPaneWidth}`]: !paneSize && widthClassWhileNoPaneWidth,
         })}
         handle={SplitHandle(visibleHandle)}
         onResize={onResize}

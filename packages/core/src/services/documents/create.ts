@@ -4,14 +4,14 @@ import { scan } from 'promptl-ai'
 import {
   DOCUMENT_PATH_REGEXP,
   findFirstModelForProvider,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
   type Commit,
   type DocumentVersion,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
@@ -28,7 +28,7 @@ async function hasMetadata(content: string) {
     if (!doc.config) return false
 
     return Object.keys(doc.config).length > 0
-  } catch (e) {
+  } catch (_e) {
     return false
   }
 }
@@ -82,30 +82,21 @@ export async function createNewDocument(
 
     if (!DOCUMENT_PATH_REGEXP.test(path)) {
       return Result.error(
-        new BadRequestError(
-          "Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'",
-        ),
+        new BadRequestError("Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'"),
       )
     }
 
     const docsScope = new DocumentVersionsRepository(workspace!.id, tx)
 
-    const currentDocs = await docsScope
-      .getDocumentsAtCommit(commit)
-      .then((r) => r.unwrap())
+    const currentDocs = await docsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
     if (currentDocs.find((d) => d.path === path)) {
-      return Result.error(
-        new BadRequestError('A document with the same path already exists'),
-      )
+      return Result.error(new BadRequestError('A document with the same path already exists'))
     }
 
     let docContent = content ?? ''
     if (includeDefaultContent) {
-      const defaultContent = await defaultDocumentContent(
-        { workspace, agent },
-        tx,
-      )
+      const defaultContent = await defaultDocumentContent({ workspace, agent }, tx)
       docContent = await applyContent({ content, defaultContent })
     }
 
@@ -160,9 +151,7 @@ export async function defaultDocumentContent(
 ) {
   let metadata = ''
 
-  const provider = await findDefaultProvider(workspace, db).then((r) =>
-    r.unwrap(),
-  )
+  const provider = await findDefaultProvider(workspace, db).then((r) => r.unwrap())
   if (provider) metadata += `provider: ${provider.name}`
 
   const model = findFirstModelForProvider({

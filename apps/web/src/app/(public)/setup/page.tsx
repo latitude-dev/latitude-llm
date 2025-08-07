@@ -16,9 +16,7 @@ export const metadata = buildMetatags({
 export default async function SetupPage({
   searchParams,
 }: {
-  searchParams: Promise<
-    { email: string; name: string; companyName: string } | undefined
-  >
+  searchParams: Promise<{ email: string; name: string; companyName: string } | undefined>
 }) {
   const result = await searchParams
   const { email, name, companyName } = result ?? {}
@@ -35,12 +33,7 @@ export default async function SetupPage({
     >
       <Card background='light'>
         <CardContent standalone>
-          <SetupForm
-            email={email}
-            name={name}
-            companyName={companyName}
-            footer={<AuthFooter />}
-          />
+          <SetupForm email={email} name={name} companyName={companyName} footer={<AuthFooter />} />
         </CardContent>
       </Card>
     </FocusLayout>

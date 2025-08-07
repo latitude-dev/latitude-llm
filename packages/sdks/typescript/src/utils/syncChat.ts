@@ -1,26 +1,17 @@
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
 import {
-  ChatOptionsWithSDKOptions,
-  ChatSyncAPIResponse,
+  type ChatOptionsWithSDKOptions,
+  type ChatSyncAPIResponse,
   HandlerType,
-  ToolSpec,
+  type ToolSpec,
 } from '$sdk/utils/types'
-import {
-  ApiErrorCodes,
-  ApiErrorJsonResponse,
-} from '@latitude-data/constants/errors'
+import { ApiErrorCodes, type ApiErrorJsonResponse } from '@latitude-data/constants/errors'
 import { waitForTools } from './streamRun'
 
 export async function syncChat<Tools extends ToolSpec>(
   uuid: string,
-  {
-    messages,
-    tools,
-    onFinished,
-    onError,
-    options,
-  }: ChatOptionsWithSDKOptions<Tools>,
+  { messages, tools, onFinished, onError, options }: ChatOptionsWithSDKOptions<Tools>,
 ) {
   try {
     const response = await makeRequest({

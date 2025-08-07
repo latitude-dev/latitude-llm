@@ -1,6 +1,6 @@
 'use client'
 
-import { RefObject, useEffect } from 'react'
+import { type RefObject, useEffect } from 'react'
 
 export function useAutoScroll(
   ref: RefObject<HTMLDivElement>,
@@ -21,8 +21,7 @@ export function useAutoScroll(
 
     const scrollHandler = () => {
       const newIsScrolledToBottom =
-        container.scrollHeight - container.clientHeight <=
-        container.scrollTop + 1
+        container.scrollHeight - container.clientHeight <= container.scrollTop + 1
 
       if (newIsScrolledToBottom !== isScrolledToBottom) {
         isScrolledToBottom = newIsScrolledToBottom

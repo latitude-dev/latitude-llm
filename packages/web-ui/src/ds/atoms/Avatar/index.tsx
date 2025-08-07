@@ -1,6 +1,6 @@
 'use client'
 
-import { ComponentPropsWithoutRef, ElementRef, forwardRef } from 'react'
+import { type ComponentPropsWithoutRef, type ElementRef, forwardRef } from 'react'
 import * as AvatarPrimitive from '@radix-ui/react-avatar'
 
 import { cn } from '../../../lib/utils'
@@ -12,10 +12,7 @@ const AvatarRoot = forwardRef<
   return (
     <AvatarPrimitive.Root
       ref={ref}
-      className={cn(
-        'relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full',
-        className,
-      )}
+      className={cn('relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full', className)}
       {...props}
     />
   )
@@ -65,9 +62,7 @@ function Avatar({ url, alt, fallback, className }: Props) {
     <AvatarRoot className={cn('bg-gray-100', className)}>
       {url ? <AvatarImage src={url} alt={alt} /> : null}
       {fallback && (
-        <AvatarFallback className={fallback.bgColorClass}>
-          {fallback.initials}
-        </AvatarFallback>
+        <AvatarFallback className={fallback.bgColorClass}>{fallback.initials}</AvatarFallback>
       )}
     </AvatarRoot>
   )

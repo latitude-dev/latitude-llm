@@ -1,16 +1,12 @@
 import {
-  EvaluationType,
+  type EvaluationType,
   LlmEvaluationBinarySpecification,
-  LlmEvaluationMetric,
+  type LlmEvaluationMetric,
 } from '@latitude-data/constants'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 
 const specification = LlmEvaluationBinarySpecification
 export default {
@@ -37,9 +33,7 @@ function ConfigurationSimpleForm({
         placeholder='Judge the engagement of the response'
         minRows={2}
         maxRows={4}
-        onChange={(e) =>
-          setConfiguration({ ...configuration, criteria: e.target.value })
-        }
+        onChange={(e) => setConfiguration({ ...configuration, criteria: e.target.value })}
         errors={errors?.['criteria']}
         className='w-full'
         disabled={disabled}
@@ -83,9 +77,7 @@ function ConfigurationSimpleForm({
   )
 }
 
-function ResultBadge({
-  result,
-}: ResultBadgeProps<EvaluationType.Llm, LlmEvaluationMetric.Binary>) {
+function ResultBadge({ result }: ResultBadgeProps<EvaluationType.Llm, LlmEvaluationMetric.Binary>) {
   return <>{result.score === 1 ? 'Passed' : 'Failed'}</>
 }
 

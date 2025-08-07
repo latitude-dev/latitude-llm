@@ -5,41 +5,21 @@ export function getCollapsedMargins(elem: HTMLElement): {
   marginTop: number
   marginBottom: number
 } {
-  const getMargin = (
-    element: Element | null,
-    margin: 'marginTop' | 'marginBottom',
-  ): number =>
+  const getMargin = (element: Element | null, margin: 'marginTop' | 'marginBottom'): number =>
     element ? parseFloat(window.getComputedStyle(element)[margin]) : 0
 
   const { marginTop, marginBottom } = window.getComputedStyle(elem)
-  const prevElemSiblingMarginBottom = getMargin(
-    elem.previousElementSibling,
-    'marginBottom',
-  )
-  const nextElemSiblingMarginTop = getMargin(
-    elem.nextElementSibling,
-    'marginTop',
-  )
-  const collapsedTopMargin = Math.max(
-    parseFloat(marginTop),
-    prevElemSiblingMarginBottom,
-  )
-  const collapsedBottomMargin = Math.max(
-    parseFloat(marginBottom),
-    nextElemSiblingMarginTop,
-  )
+  const prevElemSiblingMarginBottom = getMargin(elem.previousElementSibling, 'marginBottom')
+  const nextElemSiblingMarginTop = getMargin(elem.nextElementSibling, 'marginTop')
+  const collapsedTopMargin = Math.max(parseFloat(marginTop), prevElemSiblingMarginBottom)
+  const collapsedBottomMargin = Math.max(parseFloat(marginBottom), nextElemSiblingMarginTop)
 
   return { marginBottom: collapsedBottomMargin, marginTop: collapsedTopMargin }
 }
 
-function calculateLineDimensions(
-  targetBlockElem: HTMLElement,
-  anchorRect: DOMRect,
-) {
+function calculateLineDimensions(targetBlockElem: HTMLElement, anchorRect: DOMRect) {
   const targetRect = targetBlockElem.getBoundingClientRect()
-  const contentArea = targetBlockElem.querySelector(
-    '[data-content-area]',
-  ) as HTMLElement
+  const contentArea = targetBlockElem.querySelector('[data-content-area]') as HTMLElement
 
   if (contentArea) {
     const contentRect = contentArea.getBoundingClientRect()
@@ -64,13 +44,10 @@ function calculateSpacing(
   const { marginTop, marginBottom } = getCollapsedMargins(targetBlockElem)
   const isCustomBlock = targetBlockElem.hasAttribute('data-block-type')
   const isNestedParagraph =
-    targetBlockElem.tagName === 'P' &&
-    targetBlockElem.closest('[data-block-type]')
+    targetBlockElem.tagName === 'P' && targetBlockElem.closest('[data-block-type]')
 
   const baseSpacing =
-    dropMode === 'before'
-      ? Math.max(marginTop / 2, 8)
-      : Math.max(marginBottom / 2, 8)
+    dropMode === 'before' ? Math.max(marginTop / 2, 8) : Math.max(marginBottom / 2, 8)
 
   // Adjust for different contexts
   if (isCustomBlock) {
@@ -126,10 +103,7 @@ export function setTargetLine(
 ) {
   const targetRect = targetBlockElem.getBoundingClientRect()
   const anchorRect = anchorElem.getBoundingClientRect()
-  const { lineLeft, lineWidth } = calculateLineDimensions(
-    targetBlockElem,
-    anchorRect,
-  )
+  const { lineLeft, lineWidth } = calculateLineDimensions(targetBlockElem, anchorRect)
   let lineTop = targetRect.top
   const spacing = calculateSpacing(targetBlockElem, dropMode)
 

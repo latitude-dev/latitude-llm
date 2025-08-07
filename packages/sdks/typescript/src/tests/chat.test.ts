@@ -3,15 +3,7 @@ import { Latitude, LogSources } from '$sdk/index'
 import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
 import { parseSSE } from '$sdk/utils/parseSSE'
 import { setupServer } from 'msw/node'
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { RUN_TEXT_RESPONSE } from '$sdk/test/run-sync-response'
 import {
@@ -21,7 +13,7 @@ import {
   mockStreamResponse,
 } from './helpers/chat'
 
-let FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
+const FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
 let sdk: Latitude
 
 const server = setupServer()
@@ -41,12 +33,11 @@ describe('/chat', () => {
     it(
       'makes request',
       server.boundary(async () => {
-        const { mockAuthHeader, mockUrl, mockBody, conversationUuid } =
-          mockStreamResponse({
-            server,
-            apiVersion: 'v3',
-            conversationUuid: 'fake-document-log-uuid',
-          })
+        const { mockAuthHeader, mockUrl, mockBody, conversationUuid } = mockStreamResponse({
+          server,
+          apiVersion: 'v3',
+          conversationUuid: 'fake-document-log-uuid',
+        })
 
         await sdk.prompts.chat(
           conversationUuid,
@@ -262,13 +253,12 @@ describe('/chat', () => {
     it(
       'makes request',
       server.boundary(async () => {
-        const { mockAuthHeader, mockUrl, mockBody, conversationUuid } =
-          mockRequest({
-            server,
-            apiVersion: 'v3',
-            conversationUuid: 'fake-document-log-uuid',
-            fakeResponse: RUN_TEXT_RESPONSE,
-          })
+        const { mockAuthHeader, mockUrl, mockBody, conversationUuid } = mockRequest({
+          server,
+          apiVersion: 'v3',
+          conversationUuid: 'fake-document-log-uuid',
+          fakeResponse: RUN_TEXT_RESPONSE,
+        })
 
         await sdk.prompts.chat(
           conversationUuid,

@@ -1,11 +1,8 @@
 'use client'
 
 import { ROUTES } from '$/services/routes'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import type { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
+import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { omit } from 'lodash-es'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useState } from 'react'
@@ -95,15 +92,7 @@ export function usePlaygroundAction({
     setAction(undefined)
     if (clean) setPlaygroundActions(omit(playgroundActions, actionId))
     navigate.replace(route)
-  }, [
-    action,
-    actionId,
-    setAction,
-    playgroundActions,
-    setPlaygroundActions,
-    navigate,
-    route,
-  ])
+  }, [action, actionId, playgroundActions, setPlaygroundActions, navigate, route])
 
   return {
     playgroundAction: action,

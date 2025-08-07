@@ -1,9 +1,7 @@
 import { enforceAllSystemMessagesFirst } from './helpers/enforceAllSystemMessagesFirst'
-import { AppliedRules, ProviderRules } from './types'
+import { type AppliedRules, ProviderRules } from './types'
 
-export function applyVertexAnthropicRules(
-  appliedRule: AppliedRules,
-): AppliedRules {
+export function applyVertexAnthropicRules(appliedRule: AppliedRules): AppliedRules {
   const rule = enforceAllSystemMessagesFirst(appliedRule, {
     provider: ProviderRules.VertexAntropic,
     message:

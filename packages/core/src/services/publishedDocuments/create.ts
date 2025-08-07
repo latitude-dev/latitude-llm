@@ -1,9 +1,9 @@
 import {
-  DocumentVersion,
+  type DocumentVersion,
   HEAD_COMMIT,
-  Project,
-  PublishedDocument,
-  Workspace,
+  type Project,
+  type PublishedDocument,
+  type Workspace,
 } from '../../browser'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -29,9 +29,7 @@ export async function createPublishedDocument(
   transaction = new Transaction(),
 ) {
   const commitRepo = new CommitsRepository(workspace.id)
-  const liveCommit = await commitRepo
-    .getHeadCommit(project.id)
-    .then((r) => r.unwrap())
+  const liveCommit = await commitRepo.getHeadCommit(project.id).then((r) => r.unwrap())
 
   if (!liveCommit) {
     return Result.error(
@@ -54,12 +52,9 @@ export async function createPublishedDocument(
 
   if (existing) {
     return Result.error(
-      new UnprocessableEntityError(
-        'Document already has a published version.',
-        {
-          documentUuid: 'Document already has a published version.',
-        },
-      ),
+      new UnprocessableEntityError('Document already has a published version.', {
+        documentUuid: 'Document already has a published version.',
+      }),
     )
   }
 

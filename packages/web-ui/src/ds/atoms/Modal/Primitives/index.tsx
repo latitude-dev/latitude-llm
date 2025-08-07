@@ -1,10 +1,10 @@
 'use client'
 
 import {
-  ComponentPropsWithoutRef,
-  ElementRef,
+  type ComponentPropsWithoutRef,
+  type ElementRef,
   forwardRef,
-  HTMLAttributes,
+  type HTMLAttributes,
   useCallback,
 } from 'react'
 import { X } from 'lucide-react'
@@ -42,14 +42,8 @@ type DialogContentProps = Omit<
   // Pressing ESC will neither dismiss the dialog
   dismissible: boolean
 }
-const DialogContent = forwardRef<
-  ElementRef<typeof DialogPrimitive.Content>,
-  DialogContentProps
->(
-  (
-    { className: _cn, children, forceMount, dismissible = false, ...props },
-    ref,
-  ) => {
+const DialogContent = forwardRef<ElementRef<typeof DialogPrimitive.Content>, DialogContentProps>(
+  ({ className: _cn, children, forceMount, dismissible = false, ...props }, ref) => {
     const onEscapeKeyDown = useCallback(
       (event: KeyboardEvent) => {
         if (dismissible) return
@@ -103,46 +97,27 @@ const DialogContent = forwardRef<
 )
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
-const DialogHeader = ({
-  className,
-  ...props
-}: HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      'flex flex-col space-y-1.5 text-center sm:text-left',
-      className,
-    )}
-    {...props}
-  />
+const DialogHeader = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props} />
 )
 DialogHeader.displayName = 'DialogHeader'
 
-const DialogFooter = ({
-  className,
-  ...props
-}: HTMLAttributes<HTMLDivElement>) => (
+const DialogFooter = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn(
-      'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
-      className,
-    )}
+    className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)}
     {...props}
   />
 )
 DialogFooter.displayName = 'DialogFooter'
 
-type DialogTitleProps = Omit<
-  ComponentPropsWithoutRef<typeof DialogPrimitive.Title>,
-  'className'
->
-const DialogTitle = forwardRef<
-  ElementRef<typeof DialogPrimitive.Title>,
-  DialogTitleProps
->(({ children, ...props }, ref) => (
-  <DialogPrimitive.Title ref={ref} {...props}>
-    <Text.H4M>{children}</Text.H4M>
-  </DialogPrimitive.Title>
-))
+type DialogTitleProps = Omit<ComponentPropsWithoutRef<typeof DialogPrimitive.Title>, 'className'>
+const DialogTitle = forwardRef<ElementRef<typeof DialogPrimitive.Title>, DialogTitleProps>(
+  ({ children, ...props }, ref) => (
+    <DialogPrimitive.Title ref={ref} {...props}>
+      <Text.H4M>{children}</Text.H4M>
+    </DialogPrimitive.Title>
+  ),
+)
 DialogTitle.displayName = DialogPrimitive.Title.displayName
 
 type DialogDescriptionProps = Omit<
@@ -153,11 +128,7 @@ const DialogDescription = forwardRef<
   ElementRef<typeof DialogPrimitive.Description>,
   DialogDescriptionProps
 >(({ children, ...props }, ref) => (
-  <DialogPrimitive.Description
-    ref={ref}
-    className='text-sm text-muted-foreground'
-    {...props}
-  >
+  <DialogPrimitive.Description ref={ref} className='text-sm text-muted-foreground' {...props}>
     <Text.H5 color='foregroundMuted'>{children}</Text.H5>
   </DialogPrimitive.Description>
 ))

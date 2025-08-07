@@ -1,14 +1,14 @@
 import { useMemo, useCallback } from 'react'
-import { DocumentVersion, Project, Commit } from '@latitude-data/core/browser'
-import { OnboardingParameters } from '@latitude-data/constants/onboarding'
+import type { DocumentVersion, Project, Commit } from '@latitude-data/core/browser'
+import type { OnboardingParameters } from '@latitude-data/constants/onboarding'
 import { ROUTES } from '$/services/routes'
 import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient'
 
 const SECONDS_BEFORE_HIDING_PROMPT_IN_SECONDS = 2000
-export const DOCUMENT_PARAMETERS: OnboardingParameters = {
+const DOCUMENT_PARAMETERS: OnboardingParameters = {
   product_name: 'Smart Home Assistant',
   features: 'Voice control, Smart home integration, AI-powered recommendations',
   target_audience: 'Tech-savvy homeowners',
@@ -30,21 +30,18 @@ export function useRunOnboardingPrompt({
   const { createStreamHandler, hasActiveStream } = useStreamHandler()
   const runDocument = useCallback(async () => {
     try {
-      const response = await fetch(
-        ROUTES.api.documents.detail(document.documentUuid).run,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            path: document.path,
-            parameters: DOCUMENT_PARAMETERS,
-            commitUuid: commit.uuid,
-            projectId: project.id,
-            stream: true,
-          }),
-        },
-      )
+      const response = await fetch(ROUTES.api.documents.detail(document.documentUuid).run, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          path: document.path,
+          parameters: DOCUMENT_PARAMETERS,
+          commitUuid: commit.uuid,
+          projectId: project.id,
+          stream: true,
+        }),
+      })
 
       return createStreamHandler(response)
     } catch (error) {

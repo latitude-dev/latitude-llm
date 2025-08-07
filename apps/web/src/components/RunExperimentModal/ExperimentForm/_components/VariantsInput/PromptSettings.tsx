@@ -31,8 +31,7 @@ export function VariantPromptSettings({
   temperature: number
   setTemperature: (temperature: number) => void
 }) {
-  const { data: providers, isLoading: isLoadingProviders } =
-    useProviderApiKeys()
+  const { data: providers, isLoading: isLoadingProviders } = useProviderApiKeys()
 
   const selectedProvider = useMemo(() => {
     return providers.find((p) => p.name === provider)
@@ -87,11 +86,7 @@ export function VariantPromptSettings({
       <div className='flex flex-col gap-2'>
         <Text.H5M>Temperature</Text.H5M>
         <div className='flex flex-row items-center gap-2'>
-          <Text.H6
-            color={temperature === 0 ? 'accentForeground' : 'foregroundMuted'}
-          >
-            0
-          </Text.H6>
+          <Text.H6 color={temperature === 0 ? 'accentForeground' : 'foregroundMuted'}>0</Text.H6>
           <div className='relative flex-grow min-w-0'>
             <Slider
               showMiddleRange
@@ -102,11 +97,7 @@ export function VariantPromptSettings({
               onValueChange={(value) => setTemperature(value[0]!)}
             />
           </div>
-          <Text.H6
-            color={temperature === 2 ? 'accentForeground' : 'foregroundMuted'}
-          >
-            2
-          </Text.H6>
+          <Text.H6 color={temperature === 2 ? 'accentForeground' : 'foregroundMuted'}>2</Text.H6>
         </div>
       </div>
     </div>

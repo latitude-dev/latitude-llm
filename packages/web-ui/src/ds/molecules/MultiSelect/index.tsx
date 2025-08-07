@@ -17,7 +17,7 @@ import { FormField } from '../../atoms/FormField'
 import { Popover } from '../../atoms/Popover'
 import { Separator } from '../../atoms/Separator'
 import { Text } from '../../atoms/Text'
-import { Icon, IconName } from '../../atoms/Icons'
+import { Icon, type IconName } from '../../atoms/Icons'
 import { Skeleton } from '../../atoms/Skeleton'
 
 interface MultiSelectProps extends Omit<typeof FormField, 'children'> {
@@ -44,10 +44,7 @@ interface MultiSelectProps extends Omit<typeof FormField, 'children'> {
   loading?: boolean
 }
 
-export const MultiSelect = React.forwardRef<
-  HTMLButtonElement,
-  MultiSelectProps
->(
+export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
   (
     {
       options,
@@ -71,8 +68,7 @@ export const MultiSelect = React.forwardRef<
     },
     ref,
   ) => {
-    const [selectedValues, setSelectedValues] =
-      React.useState<string[]>(defaultValue)
+    const [selectedValues, setSelectedValues] = React.useState<string[]>(defaultValue)
     const [isPopoverOpen, setIsPopoverOpen] = React.useState(false)
     const [isAnimating, setIsAnimating] = React.useState(false)
 
@@ -90,9 +86,7 @@ export const MultiSelect = React.forwardRef<
       }
     }, [name, selectedValues])
 
-    const handleInputKeyDown = (
-      event: React.KeyboardEvent<HTMLInputElement>,
-    ) => {
+    const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
       if (disabled) return
       if (event.key === 'Enter') {
         setIsPopoverOpen(true)
@@ -171,11 +165,7 @@ export const MultiSelect = React.forwardRef<
             value={JSON.stringify(selectedValues)}
           />
 
-          <Popover.Root
-            open={isPopoverOpen}
-            onOpenChange={setIsPopoverOpen}
-            modal={modalPopover}
-          >
+          <Popover.Root open={isPopoverOpen} onOpenChange={setIsPopoverOpen} modal={modalPopover}>
             <Popover.Trigger asChild>
               <button
                 ref={ref}
@@ -196,9 +186,7 @@ export const MultiSelect = React.forwardRef<
                             variant='muted'
                             key={value}
                             iconProps={
-                              option?.icon
-                                ? { name: option.icon, placement: 'start' }
-                                : undefined
+                              option?.icon ? { name: option.icon, placement: 'start' } : undefined
                             }
                             onClick={(event) => {
                               event.stopPropagation()
@@ -243,22 +231,11 @@ export const MultiSelect = React.forwardRef<
                           handleClear()
                         }}
                       >
-                        <Icon
-                          name='close'
-                          size='small'
-                          color='foregroundMuted'
-                        />
+                        <Icon name='close' size='small' color='foregroundMuted' />
                       </div>
-                      <Separator
-                        orientation='vertical'
-                        className='flex min-h-6 h-full'
-                      />
+                      <Separator orientation='vertical' className='flex min-h-6 h-full' />
                       <div className='cursor-pointer text-muted-foreground'>
-                        <Icon
-                          name='chevronDown'
-                          size='normal'
-                          color='foregroundMuted'
-                        />
+                        <Icon name='chevronDown' size='normal' color='foregroundMuted' />
                       </div>
                     </div>
                   </div>
@@ -266,11 +243,7 @@ export const MultiSelect = React.forwardRef<
                   <div className='flex items-center justify-between w-full'>
                     <Text.H6 color='foregroundMuted'>{placeholder}</Text.H6>
                     <div className='cursor-pointer text-muted-foreground px-2'>
-                      <Icon
-                        name='chevronDown'
-                        size='normal'
-                        color='foregroundMuted'
-                      />
+                      <Icon name='chevronDown' size='normal' color='foregroundMuted' />
                     </div>
                   </div>
                 )}
@@ -293,11 +266,7 @@ export const MultiSelect = React.forwardRef<
                     <Text.H6>No results found.</Text.H6>
                   </CommandEmpty>
                   <CommandGroup>
-                    <CommandItem
-                      key='all'
-                      onSelect={toggleAll}
-                      className='cursor-pointer'
-                    >
+                    <CommandItem key='all' onSelect={toggleAll} className='cursor-pointer'>
                       <div>
                         <Checkbox
                           checked={selectedValues.length === options.length}

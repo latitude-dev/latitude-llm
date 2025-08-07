@@ -9,21 +9,20 @@ import { createNewDocument } from './create'
 
 describe('resetDocumentToVersion', () => {
   it('removes all the changes made to a document from in-between commits', async (ctx) => {
-    const { workspace, project, user, documents } =
-      await ctx.factories.createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-          },
-        ],
-        documents: {
-          doc1: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Doc 1 commit 1',
-          }),
+    const { workspace, project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
         },
-      })
+      ],
+      documents: {
+        doc1: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Doc 1 commit 1',
+        }),
+      },
+    })
 
     const document = documents[0]!
 
@@ -65,9 +64,7 @@ describe('resetDocumentToVersion', () => {
       })
       .then((r) => r.unwrap())
 
-    expect(
-      draftDocumentPreReset.content.includes('Doc 1 commit 3'),
-    ).toBeTruthy()
+    expect(draftDocumentPreReset.content.includes('Doc 1 commit 3')).toBeTruthy()
 
     await resetToDocumentVersion({
       workspace,
@@ -82,27 +79,24 @@ describe('resetDocumentToVersion', () => {
         documentUuid: document.documentUuid,
       })
       .then((r) => r.unwrap())
-    expect(
-      draftDocumentPostReset.content.includes('Doc 1 commit 1'),
-    ).toBeTruthy()
+    expect(draftDocumentPostReset.content.includes('Doc 1 commit 1')).toBeTruthy()
   })
 
   it('returns removed documents back to life', async (ctx) => {
-    const { workspace, project, user, documents } =
-      await ctx.factories.createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-          },
-        ],
-        documents: {
-          doc1: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Doc 1 commit 1',
-          }),
+    const { workspace, project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
         },
-      })
+      ],
+      documents: {
+        doc1: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Doc 1 commit 1',
+        }),
+      },
+    })
 
     const document = documents[0]!
 
@@ -118,9 +112,7 @@ describe('resetDocumentToVersion', () => {
     await mergeCommit(commit1).then((r) => r.unwrap())
 
     const documentRepo = new DocumentVersionsRepository(workspace.id)
-    const commit1Docs = await documentRepo
-      .getDocumentsAtCommit(commit1)
-      .then((r) => r.unwrap())
+    const commit1Docs = await documentRepo.getDocumentsAtCommit(commit1).then((r) => r.unwrap())
     expect(commit1Docs.length).toBe(0)
 
     const { commit: draft } = await ctx.factories.createDraft({ project, user })
@@ -130,32 +122,29 @@ describe('resetDocumentToVersion', () => {
       draft,
     }).then((r) => r.unwrap())
 
-    const draftDocs = await documentRepo
-      .getDocumentsAtCommit(draft)
-      .then((r) => r.unwrap())
+    const draftDocs = await documentRepo.getDocumentsAtCommit(draft).then((r) => r.unwrap())
     expect(draftDocs.length).toBe(1)
   })
 
   it('invalidates resolvedContents from the draft', async (ctx) => {
-    const { workspace, project, user, documents } =
-      await ctx.factories.createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-          },
-        ],
-        documents: {
-          doc1: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Doc 1 commit 1',
-          }),
-          doc2: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Doc 2 commit 1',
-          }),
+    const { workspace, project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
         },
-      })
+      ],
+      documents: {
+        doc1: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Doc 1 commit 1',
+        }),
+        doc2: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Doc 2 commit 1',
+        }),
+      },
+    })
 
     const [document1, document2] = documents
 
@@ -175,9 +164,7 @@ describe('resetDocumentToVersion', () => {
     await mergeCommit(commit1).then((r) => r.unwrap())
 
     const documentRepo = new DocumentVersionsRepository(workspace.id)
-    const commit1Docs = await documentRepo
-      .getDocumentsAtCommit(commit1)
-      .then((r) => r.unwrap())
+    const commit1Docs = await documentRepo.getDocumentsAtCommit(commit1).then((r) => r.unwrap())
 
     expect(commit1Docs.every((d) => d.resolvedContent !== null)).toBeTruthy()
 
@@ -196,29 +183,26 @@ describe('resetDocumentToVersion', () => {
       draft,
     }).then((r) => r.unwrap())
 
-    const draftDocs = await documentRepo
-      .getDocumentsAtCommit(draft)
-      .then((r) => r.unwrap())
+    const draftDocs = await documentRepo.getDocumentsAtCommit(draft).then((r) => r.unwrap())
 
     expect(draftDocs.every((d) => d.resolvedContent === null)).toBeTruthy()
   })
 
   it('fails if there are already files with the same path in the draft', async (ctx) => {
-    const { workspace, project, user, documents } =
-      await ctx.factories.createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-          },
-        ],
-        documents: {
-          foo: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Original foo document',
-          }),
+    const { workspace, project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
         },
-      })
+      ],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Original foo document',
+        }),
+      },
+    })
 
     const originalDocument = documents[0]!
 

@@ -58,9 +58,7 @@ describe('extractHeadersFromFirstRow', () => {
       hashAlgorithm: identityHashAlgorithm,
     })
     expect(result.error).toBeTruthy()
-    expect(result.error?.message).toBe(
-      'Invalid generated data: { invalid json } is not valid JSON',
-    )
+    expect(result.error?.message).toBe('Invalid generated data: { invalid json } is not valid JSON')
   })
 
   it('returns error for broken JSON', () => {
@@ -80,9 +78,7 @@ describe('extractHeadersFromFirstRow', () => {
       hashAlgorithm: identityHashAlgorithm,
     })
     expect(result.error).toBeTruthy()
-    expect(result.error?.message).toBe(
-      'Invalid JSON format it has to be an array',
-    )
+    expect(result.error?.message).toBe('Invalid JSON format it has to be an array')
   })
 })
 

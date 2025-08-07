@@ -5,16 +5,13 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 
 import CreateDraftCommitModal from '../CreateDraftCommitModal'
 import MergedCommitWarningModal from '../MergedCommitWarningModal'
 import { FilesTree } from '$/components/Sidebar/Files'
-import { SidebarDocument } from '$/components/Sidebar/Files/useTree'
+import type { SidebarDocument } from '$/components/Sidebar/Files/useTree'
 
 export default function ClientFilesTree({
   documents: serverDocuments,
@@ -88,7 +85,7 @@ export default function ClientFilesTree({
   )
   const onMergeCommitClick = useCallback(() => {
     setWarningOpen(true)
-  }, [setWarningOpen])
+  }, [])
 
   return (
     <>
@@ -107,10 +104,7 @@ export default function ClientFilesTree({
         isDestroying={isDestroying}
         liveDocuments={commit.mergedAt ? undefined : liveDocuments}
       />
-      <CreateDraftCommitModal
-        open={createDraftCommitModalOpen}
-        setOpen={setDraftCommitModalOpen}
-      />
+      <CreateDraftCommitModal open={createDraftCommitModalOpen} setOpen={setDraftCommitModalOpen} />
       <MergedCommitWarningModal
         open={warningOpen}
         setOpen={setWarningOpen}

@@ -1,9 +1,9 @@
 import {
   forwardRef,
-  HTMLAttributes,
-  ReactNode,
-  TdHTMLAttributes,
-  ThHTMLAttributes,
+  type HTMLAttributes,
+  type ReactNode,
+  type TdHTMLAttributes,
+  type ThHTMLAttributes,
 } from 'react'
 
 import { cn } from '../../../lib/utils'
@@ -31,10 +31,7 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
   ) => (
     <div
       style={{
-        maxHeight:
-          maxHeight && typeof maxHeight === 'number'
-            ? `${maxHeight}px`
-            : 'unset',
+        maxHeight: maxHeight && typeof maxHeight === 'number' ? `${maxHeight}px` : 'unset',
       }}
       className={cn(
         'flex flex-col relative w-full rounded-lg border overflow-hidden',
@@ -53,33 +50,25 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
         />
       </div>
       {externalFooter ? (
-        <div className='border-t bg-secondary w-full py-2 px-4'>
-          {externalFooter}
-        </div>
+        <div className='border-t bg-secondary w-full py-2 px-4'>{externalFooter}</div>
       ) : null}
     </div>
   ),
 )
 Table.displayName = 'Table'
 
-const TableHeader = forwardRef<
-  HTMLTableSectionElement,
-  HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn('[&_tr]:border-b', className)} {...props} />
-))
+const TableHeader = forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTableSectionElement>>(
+  ({ className, ...props }, ref) => (
+    <thead ref={ref} className={cn('[&_tr]:border-b', className)} {...props} />
+  ),
+)
 TableHeader.displayName = 'TableHeader'
 
-const TableBody = forwardRef<
-  HTMLTableSectionElement,
-  HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-  <tbody
-    ref={ref}
-    className={cn('[&_tr:last-child]:border-0', className)}
-    {...props}
-  />
-))
+const TableBody = forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTableSectionElement>>(
+  ({ className, ...props }, ref) => (
+    <tbody ref={ref} className={cn('[&_tr:last-child]:border-0', className)} {...props} />
+  ),
+)
 TableBody.displayName = 'TableBody'
 
 type TableFooterProps = HTMLAttributes<HTMLTableSectionElement> & {
@@ -89,13 +78,9 @@ const TableFooter = forwardRef<HTMLTableSectionElement, TableFooterProps>(
   ({ className, sticky = false, ...props }, ref) => (
     <tfoot
       ref={ref}
-      className={cn(
-        'border-t bg-secondary font-medium [&>tr]:last:border-b-0',
-        className,
-        {
-          'sticky bottom-0': sticky,
-        },
-      )}
+      className={cn('border-t bg-secondary font-medium [&>tr]:last:border-b-0', className, {
+        'sticky bottom-0': sticky,
+      })}
       {...props}
     />
   ),
@@ -109,32 +94,21 @@ const TableRow = forwardRef<
     hoverable?: boolean
     borderBottom?: boolean
   }
->(
-  (
-    {
+>(({ className, verticalPadding, borderBottom = true, hoverable = true, ...props }, ref) => (
+  <tr
+    ref={ref}
+    className={cn(
+      'transition-colors data-[state=selected]:bg-secondary',
+      {
+        '[&>td]:py-4': verticalPadding,
+        'hover:bg-secondary': hoverable,
+        'border-b': borderBottom,
+      },
       className,
-      verticalPadding,
-      borderBottom = true,
-      hoverable = true,
-      ...props
-    },
-    ref,
-  ) => (
-    <tr
-      ref={ref}
-      className={cn(
-        'transition-colors data-[state=selected]:bg-secondary',
-        {
-          '[&>td]:py-4': verticalPadding,
-          'hover:bg-secondary': hoverable,
-          'border-b': borderBottom,
-        },
-        className,
-      )}
-      {...props}
-    />
-  ),
-)
+    )}
+    {...props}
+  />
+))
 TableRow.displayName = 'TableRow'
 
 type THeadProps = ThHTMLAttributes<HTMLTableCellElement> & {
@@ -283,16 +257,11 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
 )
 TableCell.displayName = 'TableCell'
 
-const TableCaption = forwardRef<
-  HTMLTableCaptionElement,
-  HTMLAttributes<HTMLTableCaptionElement>
->(({ className, ...props }, ref) => (
-  <caption
-    ref={ref}
-    className={cn('mt-4 text-sm text-muted-foreground', className)}
-    {...props}
-  />
-))
+const TableCaption = forwardRef<HTMLTableCaptionElement, HTMLAttributes<HTMLTableCaptionElement>>(
+  ({ className, ...props }, ref) => (
+    <caption ref={ref} className={cn('mt-4 text-sm text-muted-foreground', className)} {...props} />
+  ),
+)
 TableCaption.displayName = 'TableCaption'
 
 export {

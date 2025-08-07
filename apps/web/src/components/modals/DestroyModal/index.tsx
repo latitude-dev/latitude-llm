@@ -4,13 +4,13 @@ import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { useFormAction } from '$/hooks/useFormAction'
-import {
+import type {
   inferServerActionError,
   inferServerActionInput,
   inferServerActionReturnData,
   TAnyZodSafeFunctionHandler,
 } from 'zsa'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 type Props<TServerAction extends TAnyZodSafeFunctionHandler> = {
   action: (
@@ -29,9 +29,7 @@ type Props<TServerAction extends TAnyZodSafeFunctionHandler> = {
   disabled?: boolean
   children?: ReactNode
 }
-export default function DestroyModal<
-  TServerAction extends TAnyZodSafeFunctionHandler,
->({
+export default function DestroyModal<TServerAction extends TAnyZodSafeFunctionHandler>({
   action,
   isDestroying,
   onSuccess,
@@ -75,11 +73,7 @@ export default function DestroyModal<
             form='destroyProjectForm'
             type='submit'
           >
-            {isDestroying ? (
-              <AnimatedDots color='destructiveForeground' />
-            ) : (
-              submitStr
-            )}
+            {isDestroying ? <AnimatedDots color='destructiveForeground' /> : submitStr}
           </Button>
         </>
       }

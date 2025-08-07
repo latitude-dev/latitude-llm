@@ -1,12 +1,12 @@
-import { DocumentTrigger, HEAD_COMMIT } from '@latitude-data/core/browser'
+import { type DocumentTrigger, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import { createDocumentTriggerAction } from '$/actions/documents/triggers/createDocumentTriggerAction'
 import { deleteDocumentTriggerAction } from '$/actions/documents/triggers/deleteDocumentTriggerAction'
-import {
+import type {
   DocumentTriggerConfiguration,
   InsertDocumentTriggerWithConfiguration,
 } from '@latitude-data/constants/documentTriggers'
@@ -38,11 +38,7 @@ export default function useDocumentTriggers(
     data = EMPTY_ARRAY,
     mutate,
     isLoading,
-  } = useSWR<DocumentTrigger[]>(
-    ['documentTriggers', projectId, documentUuid],
-    fetcher,
-    opts,
-  )
+  } = useSWR<DocumentTrigger[]>(['documentTriggers', projectId, documentUuid], fetcher, opts)
 
   const { execute: executeCreate, isPending: isCreating } = useLatitudeAction(
     createDocumentTriggerAction,
@@ -74,10 +70,7 @@ export default function useDocumentTriggers(
           description: 'Updated the document trigger successfully.',
         })
 
-        mutate([
-          ...data.filter((t) => t.id !== updatedTrigger.id),
-          updatedTrigger,
-        ])
+        mutate([...data.filter((t) => t.id !== updatedTrigger.id), updatedTrigger])
         onUpdated?.(updatedTrigger)
       },
     },
@@ -165,15 +158,6 @@ export default function useDocumentTriggers(
       delete: deleteFn,
       isDeleting,
     }),
-    [
-      data,
-      isLoading,
-      create,
-      isCreating,
-      update,
-      isUpdating,
-      deleteFn,
-      isDeleting,
-    ],
+    [data, isLoading, create, isCreating, update, isUpdating, deleteFn, isDeleting],
   )
 }

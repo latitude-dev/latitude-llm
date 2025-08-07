@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 export default function FocusLayout({
   header,
@@ -15,9 +15,7 @@ export default function FocusLayout({
         <div>{header}</div>
         {children}
         {footer && (
-          <div className='flex flex-col items-center justify-center gap-y-6'>
-            {footer}
-          </div>
+          <div className='flex flex-col items-center justify-center gap-y-6'>{footer}</div>
         )}
       </div>
     </div>

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useActiveIntegrations } from './useActiveIntegrations'
 import { trigger } from '$/lib/events'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 
 // TODO: fix this test, i have to properly mock useIntegrations hook
@@ -249,10 +249,7 @@ Hello world`
     })
 
     act(() => {
-      result.current.removeIntegrationTool('test-integration', 'tool1', [
-        'tool1',
-        'tool2',
-      ])
+      result.current.removeIntegrationTool('test-integration', 'tool1', ['tool1', 'tool2'])
     })
 
     expect(result.current.activeIntegrations).toEqual({
@@ -285,9 +282,7 @@ Hello world`
     })
 
     act(() => {
-      result.current.removeIntegrationTool('test-integration', 'tool1', [
-        'tool1',
-      ])
+      result.current.removeIntegrationTool('test-integration', 'tool1', ['tool1'])
     })
 
     expect(result.current.activeIntegrations).toEqual({})
@@ -313,10 +308,7 @@ Hello world`
     })
 
     act(() => {
-      result.current.removeIntegrationTool('test-integration', '*', [
-        'tool1',
-        'tool2',
-      ])
+      result.current.removeIntegrationTool('test-integration', '*', ['tool1', 'tool2'])
     })
 
     expect(result.current.activeIntegrations).toEqual({})
@@ -342,11 +334,7 @@ Hello world`
     })
 
     act(() => {
-      result.current.removeIntegrationTool('test-integration', 'tool1', [
-        'tool1',
-        'tool2',
-        'tool3',
-      ])
+      result.current.removeIntegrationTool('test-integration', 'tool1', ['tool1', 'tool2', 'tool3'])
     })
 
     expect(result.current.activeIntegrations).toEqual({
@@ -435,11 +423,7 @@ Hello world`
         // @ts-expect-error - mock
         metadata: {
           config: {
-            tools: [
-              'invalid-format',
-              'test-integration/tool1',
-              'another/invalid/format',
-            ],
+            tools: ['invalid-format', 'test-integration/tool1', 'another/invalid/format'],
           } as LatitudePromptConfig,
         },
       })
@@ -578,9 +562,7 @@ Hello world`
     })
 
     act(() => {
-      result.current.removeIntegrationTool('test-integration', 'tool1', [
-        'tool1',
-      ])
+      result.current.removeIntegrationTool('test-integration', 'tool1', ['tool1'])
     })
 
     expect(mockOnChangePrompt).toHaveBeenCalled()

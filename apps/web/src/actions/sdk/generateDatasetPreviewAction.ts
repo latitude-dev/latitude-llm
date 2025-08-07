@@ -25,9 +25,7 @@ export const generateDatasetPreviewAction = authProcedure
       throw new BadRequestError('COPILOT_PROJECT_ID is not set')
     }
     if (!env.COPILOT_PROMPT_DATASET_GENERATOR_PATH) {
-      throw new BadRequestError(
-        'COPILOT_PROMPT_DATASET_GENERATOR_PATH is not set',
-      )
+      throw new BadRequestError('COPILOT_PROMPT_DATASET_GENERATOR_PATH is not set')
     }
     if (!env.COPILOT_WORKSPACE_API_KEY) {
       throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
@@ -38,29 +36,22 @@ export const generateDatasetPreviewAction = authProcedure
       projectId: env.COPILOT_PROJECT_ID,
       __internal: { source: LogSources.Playground },
     }).then((r) => r.unwrap())
-    const result = await sdk.prompts.run(
-      env.COPILOT_PROMPT_DATASET_GENERATOR_PATH,
-      {
-        stream: false,
-        parameters: {
-          row_count: 10,
-          parameters: input.parameters,
-          user_message: input.description,
-        },
+    const result = await sdk.prompts.run(env.COPILOT_PROMPT_DATASET_GENERATOR_PATH, {
+      stream: false,
+      parameters: {
+        row_count: 10,
+        parameters: input.parameters,
+        user_message: input.description,
       },
-    )
+    })
     if (!result) {
-      throw new BadRequestError(
-        'Something went wrong generating the CSV preview',
-      )
+      throw new BadRequestError('Something went wrong generating the CSV preview')
     }
 
     const response = result.response
 
     if (response.streamType !== 'object') {
-      throw new BadRequestError(
-        'Generated AI response for CSV preview is not valid',
-      )
+      throw new BadRequestError('Generated AI response for CSV preview is not valid')
     }
 
     const parseResult = generatePreviewRowsFromJson({

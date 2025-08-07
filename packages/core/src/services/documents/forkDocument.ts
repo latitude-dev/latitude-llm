@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm'
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   findFirstModelForProvider,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
@@ -109,9 +109,7 @@ async function createDocuments({
   if (newDocs.some((r) => r.error)) {
     const result = newDocs.find((r) => r.error)
     const error = result!.error!
-    return Result.error(
-      new Error(`Failed to create documents: ${error.message}`),
-    )
+    return Result.error(new Error(`Failed to create documents: ${error.message}`))
   }
 
   const docs = newDocs.map((r) => r.value).filter((d) => d !== undefined)
@@ -120,21 +118,14 @@ async function createDocuments({
   return Result.ok({ documents: docs, copiedDocument })
 }
 
-export async function forkDocument({
-  title,
-  origin,
-  destination,
-  defaultProviderName,
-}: ForkProps) {
+export async function forkDocument({ title, origin, destination, defaultProviderName }: ForkProps) {
   const { commit, project } = await createProjectFromDocument({
     title,
     workspace: destination.workspace,
     user: destination.user,
   }).then((r) => r.unwrap())
 
-  const provider = await findDefaultProvider(destination.workspace).then((r) =>
-    r.unwrap(),
-  )
+  const provider = await findDefaultProvider(destination.workspace).then((r) => r.unwrap())
   const model = findFirstModelForProvider({
     provider,
     defaultProviderName,

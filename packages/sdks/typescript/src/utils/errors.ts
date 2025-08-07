@@ -1,8 +1,8 @@
 import {
   ApiErrorCodes,
-  ApiErrorJsonResponse,
-  ApiResponseCode,
-  DbErrorRef,
+  type ApiErrorJsonResponse,
+  type ApiResponseCode,
+  type DbErrorRef,
   LatitudeErrorCodes,
   RunErrorCodes,
 } from './errorConstants'
@@ -18,8 +18,7 @@ function getErrorMessage({
 }) {
   const httpExeception = ApiErrorCodes.HTTPException
   const internalServerError = ApiErrorCodes.InternalServerError
-  const isUnexpectedError =
-    errorCode === httpExeception || errorCode === internalServerError
+  const isUnexpectedError = errorCode === httpExeception || errorCode === internalServerError
   if (isUnexpectedError) {
     return `Unexpected API Error: ${status} ${message}`
   }

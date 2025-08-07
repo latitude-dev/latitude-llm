@@ -5,18 +5,12 @@
  */
 import { stringify } from 'csv-stringify/sync'
 import { Result } from '../../lib/Result'
-import { Workspace } from '../../browser'
+import type { Workspace } from '../../browser'
 import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
 import { nanoidHashAlgorithm } from './utils'
-import { Column, DatasetRowData } from '../../schema'
+import type { Column, DatasetRowData } from '../../schema'
 
-function stringifyData({
-  columns,
-  rows,
-}: {
-  columns: Column[]
-  rows: DatasetRowData[]
-}) {
+function stringifyData({ columns, rows }: { columns: Column[]; rows: DatasetRowData[] }) {
   const headerRow = columns.map((col) => col.name)
   const dataRows = rows.map((row) =>
     columns.map((col) => {
@@ -29,7 +23,7 @@ function stringifyData({
   try {
     csvString = stringify([headerRow, ...dataRows])
     return Result.ok(csvString)
-  } catch (error) {
+  } catch (_error) {
     return Result.error(new Error('Error generating CSV from logs'))
   }
 }

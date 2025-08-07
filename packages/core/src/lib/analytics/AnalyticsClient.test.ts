@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, vi, beforeEach } from 'vitest'
-import {
+import type {
   Commit,
   EvaluationV2,
   User,
@@ -52,9 +52,9 @@ describe('AnalyticsClient', () => {
     let workspace: Workspace
 
     beforeAll(async () => {
-      const { workspace: wsp, userData: usr } = await factories.createWorkspace(
-        { creator: { email: 'user@example.com' } },
-      )
+      const { workspace: wsp, userData: usr } = await factories.createWorkspace({
+        creator: { email: 'user@example.com' },
+      })
       user = usr
       workspace = wsp
     })

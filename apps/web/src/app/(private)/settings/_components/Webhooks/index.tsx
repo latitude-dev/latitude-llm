@@ -44,9 +44,7 @@ export default function Webhooks() {
       .filter(Boolean)
       .join(', ')
 
-    return projectNames.length > 50
-      ? `${projectNames.slice(0, 47)}...`
-      : projectNames
+    return projectNames.length > 50 ? `${projectNames.slice(0, 47)}...` : projectNames
   }
 
   const renderTable = () => {

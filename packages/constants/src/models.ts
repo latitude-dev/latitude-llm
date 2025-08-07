@@ -1,6 +1,6 @@
-import { LogSources } from '.'
-import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
-import { PartialPromptConfig } from './ai'
+import type { LogSources } from '.'
+import type { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import type { PartialPromptConfig } from './ai'
 
 export type DocumentLog = {
   id: number

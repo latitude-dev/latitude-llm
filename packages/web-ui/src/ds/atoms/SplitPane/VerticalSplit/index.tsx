@@ -1,9 +1,9 @@
-import { ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { useMeasure } from '../../../../browser'
 import { cn } from '../../../../lib/utils'
 import { PaneWrapper, ResizablePane } from '../Common'
-import { getGap, getGapWrapperPadding, SplitGap } from '../index'
+import { getGap, getGapWrapperPadding, type SplitGap } from '../index'
 
 export function VerticalSplit({
   topPane,
@@ -48,13 +48,7 @@ export function VerticalSplit({
 
     const percentage = initialPercentage / 100
     setPaneHeight(Math.max(initialHeightFromRef * percentage, minHeight))
-  }, [
-    initialHeight,
-    initialHeightFromRef,
-    initialPercentage,
-    minHeight,
-    paneHeight,
-  ])
+  }, [initialHeightFromRef, initialPercentage, minHeight, paneHeight])
 
   useEffect(() => {
     if (!autoResize) return
@@ -69,11 +63,7 @@ export function VerticalSplit({
   return (
     <div
       ref={ref}
-      className={cn(
-        'flex flex-col relative w-full h-full',
-        className,
-        getGap('vertical', gap),
-      )}
+      className={cn('flex flex-col relative w-full h-full', className, getGap('vertical', gap))}
     >
       <ResizablePane
         direction='vertical'

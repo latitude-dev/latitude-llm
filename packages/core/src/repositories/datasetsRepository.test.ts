@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { User, Workspace } from '../browser'
+import type { User, Workspace } from '../browser'
 import * as factories from '../tests/factories'
 import { DatasetsRepository } from './datasetsRepository'
 import { database } from '../client'
@@ -13,8 +13,7 @@ describe('DatasetsRepository', () => {
   let datasetsRepository: DatasetsRepository
 
   beforeEach(async () => {
-    const { workspace: createdWorkspace, user: createdUser } =
-      await factories.createProject()
+    const { workspace: createdWorkspace, user: createdUser } = await factories.createProject()
     workspace = createdWorkspace
     user = createdUser
     datasetsRepository = new DatasetsRepository(workspace.id)

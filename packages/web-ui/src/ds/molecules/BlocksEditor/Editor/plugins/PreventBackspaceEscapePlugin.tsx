@@ -4,7 +4,7 @@ import {
   $isRangeSelection,
   COMMAND_PRIORITY_HIGH,
   KEY_BACKSPACE_COMMAND,
-  LexicalNode,
+  type LexicalNode,
 } from 'lexical'
 import { useEffect } from 'react'
 import { StepBlockNode } from '../nodes/StepBlock'
@@ -44,10 +44,7 @@ export function PreventBackspaceEscapePlugin() {
             const lastChild = stepBlockChildren[stepBlockChildren.length - 1]
 
             let directChildOfStepBlock: LexicalNode | null = anchorNode
-            while (
-              directChildOfStepBlock &&
-              directChildOfStepBlock.getParent() !== maybeBlock
-            ) {
+            while (directChildOfStepBlock && directChildOfStepBlock.getParent() !== maybeBlock) {
               directChildOfStepBlock = directChildOfStepBlock.getParent()
             }
 

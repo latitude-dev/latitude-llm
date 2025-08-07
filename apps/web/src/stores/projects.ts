@@ -1,6 +1,6 @@
 'use client'
 
-import { Project } from '@latitude-data/core/browser'
+import type { Project } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createProjectAction } from '$/actions/projects/create'
 import { destroyProjectAction } from '$/actions/projects/destroy'
@@ -14,11 +14,7 @@ export default function useProjects() {
   const { toast } = useToast()
   const fetcher = useFetcher<Project[]>(ROUTES.api.projects.root)
 
-  const {
-    data = [],
-    mutate,
-    ...rest
-  } = useSWR<Project[]>('api/projects', fetcher)
+  const { data = [], mutate, ...rest } = useSWR<Project[]>('api/projects', fetcher)
   const { execute: create } = useLatitudeAction(createProjectAction, {
     onSuccess: ({ data: project }) => {
       toast({

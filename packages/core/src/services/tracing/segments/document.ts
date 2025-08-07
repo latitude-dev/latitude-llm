@@ -1,18 +1,18 @@
 import {
   ATTR_GEN_AI_REQUEST_PARAMETERS,
   ATTR_GEN_AI_REQUEST_TEMPLATE,
-  DocumentSegmentMetadata,
+  type DocumentSegmentMetadata,
   SEGMENT_SPECIFICATIONS,
   SegmentType,
-  SegmentWithDetails,
-  SpanAttribute,
+  type SegmentWithDetails,
+  type SpanAttribute,
   SpanType,
-  SpanWithDetails,
+  type SpanWithDetails,
 } from '../../../browser'
 import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
-import { Result, TypedResult } from '../../../lib/Result'
-import { isFirst, SegmentProcessArgs } from './shared'
+import { Result, type TypedResult } from '../../../lib/Result'
+import { isFirst, type SegmentProcessArgs } from './shared'
 import { StepSegmentSpecification } from './step'
 
 const specification = SEGMENT_SPECIFICATIONS[SegmentType.Document]
@@ -21,10 +21,7 @@ export const DocumentSegmentSpecification = {
   process: process,
 }
 
-async function process(
-  state: SegmentProcessArgs<SegmentType.Document>,
-  db = database,
-) {
+async function process(state: SegmentProcessArgs<SegmentType.Document>, db = database) {
   const processing = await StepSegmentSpecification.process(
     state as unknown as SegmentProcessArgs<SegmentType.Step>,
     db,
@@ -64,9 +61,7 @@ function computePrompt({
   run,
   document,
   evaluation,
-}: SegmentProcessArgs<SegmentType.Document>): TypedResult<
-  DocumentSegmentMetadata['prompt']
-> {
+}: SegmentProcessArgs<SegmentType.Document>): TypedResult<DocumentSegmentMetadata['prompt']> {
   let prompt = current?.metadata?.prompt
   if (isFirst(current, child, 'documents')) {
     if (child.type === SpanType.Segment) {
@@ -96,10 +91,8 @@ function extractParameters(
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))
-    } catch (error) {
-      return Result.error(
-        new UnprocessableEntityError('Invalid prompt parameters'),
-      )
+    } catch (_error) {
+      return Result.error(new UnprocessableEntityError('Invalid prompt parameters'))
     }
   }
 
@@ -110,9 +103,7 @@ function computeParameters({
   child,
   current,
   run,
-}: SegmentProcessArgs<SegmentType.Document>): TypedResult<
-  DocumentSegmentMetadata['parameters']
-> {
+}: SegmentProcessArgs<SegmentType.Document>): TypedResult<DocumentSegmentMetadata['parameters']> {
   let parameters = current?.metadata?.parameters
   if (isFirst(current, child, 'documents')) {
     if (child.type === SpanType.Segment) {

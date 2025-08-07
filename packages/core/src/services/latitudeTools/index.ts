@@ -1,8 +1,8 @@
-import { LatitudeTool } from '@latitude-data/constants'
-import { BadRequestError, LatitudeError } from '../../lib/errors'
+import type { LatitudeTool } from '@latitude-data/constants'
+import { BadRequestError, type LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import { PromisedResult } from '../../lib/Transaction'
-import { TelemetryContext } from '../../telemetry'
+import type { PromisedResult } from '../../lib/Transaction'
+import type { TelemetryContext } from '../../telemetry'
 import { LATITUDE_TOOLS } from './tools'
 
 export async function executeLatitudeToolCall({
@@ -13,13 +13,9 @@ export async function executeLatitudeToolCall({
   latitudeTool: LatitudeTool
   args: Record<string, unknown>
 }): PromisedResult<unknown, LatitudeError> {
-  const method = LATITUDE_TOOLS.find(
-    (tool) => tool.name === latitudeTool,
-  )?.method
+  const method = LATITUDE_TOOLS.find((tool) => tool.name === latitudeTool)?.method
   if (!method) {
-    return Result.error(
-      new BadRequestError(`Unsupported built-in tool: ${latitudeTool}`),
-    )
+    return Result.error(new BadRequestError(`Unsupported built-in tool: ${latitudeTool}`))
   }
 
   try {

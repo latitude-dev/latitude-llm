@@ -1,4 +1,4 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 import { uvxCommand } from '../utils'
 
 const DEVHUB_CMS_MCP_CONFIG: HostedIntegrationConfig = {

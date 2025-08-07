@@ -88,11 +88,7 @@ export type ToolCall = {
   arguments: Record<string, unknown>
 }
 
-export type Message =
-  | AssistantMessage
-  | SystemMessage
-  | ToolMessage
-  | UserMessage
+export type Message = AssistantMessage | SystemMessage | ToolMessage | UserMessage
 
 export type Config = Record<string, unknown>
 export type Conversation = {

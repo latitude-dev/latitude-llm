@@ -7,7 +7,7 @@ import { Text } from '../../atoms/Text'
 import { Tooltip } from '../../atoms/Tooltip'
 import { useMemo, useState } from 'react'
 import {
-  DisambiguatedFilePath,
+  type DisambiguatedFilePath,
   disambiguateFilePaths,
 } from '../../../lib/disambiguateFilePaths'
 
@@ -33,10 +33,7 @@ export function FilePathSelector({
     [filepaths, filter],
   )
 
-  const disambiguatedPaths = useMemo(
-    () => disambiguateFilePaths(filteredList),
-    [filteredList],
-  )
+  const disambiguatedPaths = useMemo(() => disambiguateFilePaths(filteredList), [filteredList])
 
   return (
     <Popover.Root onOpenChange={() => setFilter('')}>
@@ -53,64 +50,49 @@ export function FilePathSelector({
       </Popover.Trigger>
       <Popover.Content>
         <div className='flex flex-col gap-2'>
-          <Input
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder='Search'
-          />
+          <Input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder='Search' />
           <div className='flex flex-col gap-1 max-h-[300px] overflow-y-auto custom-scrollbar'>
-            {disambiguatedPaths.map(
-              (disambiguatedPath: DisambiguatedFilePath) => {
-                const isSelected = selected.includes(disambiguatedPath.path)
-                return (
-                  <Tooltip
-                    align='center'
-                    side='left'
-                    key={disambiguatedPath.path}
-                    trigger={
-                      <Button
-                        key={disambiguatedPath.path}
-                        variant='ghost'
-                        onClick={() => onSelect(disambiguatedPath.path)}
-                        className='px-2 relative max-w-full overflow-hidden hover:bg-muted'
-                        fullWidth
-                      >
-                        <div className='flex flex-row gap-2 w-full justify-start max-w-full'>
-                          <div className='min-w-4 flex items-center'>
-                            {isSelected && (
-                              <Icon
-                                name='checkClean'
-                                color='accentForeground'
-                              />
-                            )}
-                          </div>
-                          <div className='flex gap-2'>
-                            <Text.H6
-                              noWrap
-                              ellipsis
-                              color={
-                                isSelected ? 'accentForeground' : 'foreground'
-                              }
-                            >
-                              {disambiguatedPath.name}
-                            </Text.H6>
-                            {disambiguatedPath.context && (
-                              <Text.H6 color='foregroundMuted' noWrap ellipsis>
-                                {disambiguatedPath.context}
-                              </Text.H6>
-                            )}
-                          </div>
+            {disambiguatedPaths.map((disambiguatedPath: DisambiguatedFilePath) => {
+              const isSelected = selected.includes(disambiguatedPath.path)
+              return (
+                <Tooltip
+                  align='center'
+                  side='left'
+                  key={disambiguatedPath.path}
+                  trigger={
+                    <Button
+                      key={disambiguatedPath.path}
+                      variant='ghost'
+                      onClick={() => onSelect(disambiguatedPath.path)}
+                      className='px-2 relative max-w-full overflow-hidden hover:bg-muted'
+                      fullWidth
+                    >
+                      <div className='flex flex-row gap-2 w-full justify-start max-w-full'>
+                        <div className='min-w-4 flex items-center'>
+                          {isSelected && <Icon name='checkClean' color='accentForeground' />}
                         </div>
-                      </Button>
-                    }
-                  >
-                    <Text.H6 color='background'>
-                      {disambiguatedPath.path}
-                    </Text.H6>
-                  </Tooltip>
-                )
-              },
-            )}
+                        <div className='flex gap-2'>
+                          <Text.H6
+                            noWrap
+                            ellipsis
+                            color={isSelected ? 'accentForeground' : 'foreground'}
+                          >
+                            {disambiguatedPath.name}
+                          </Text.H6>
+                          {disambiguatedPath.context && (
+                            <Text.H6 color='foregroundMuted' noWrap ellipsis>
+                              {disambiguatedPath.context}
+                            </Text.H6>
+                          )}
+                        </div>
+                      </div>
+                    </Button>
+                  }
+                >
+                  <Text.H6 color='background'>{disambiguatedPath.path}</Text.H6>
+                </Tooltip>
+              )
+            })}
             {filteredList.length === 0 && (
               <Text.H5 color='foregroundMuted'>{notFoundMessage}</Text.H5>
             )}

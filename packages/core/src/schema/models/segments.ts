@@ -1,18 +1,6 @@
 import { sql } from 'drizzle-orm'
-import {
-  bigint,
-  index,
-  timestamp,
-  uniqueIndex,
-  uuid,
-  varchar,
-} from 'drizzle-orm/pg-core'
-import {
-  DocumentType,
-  SegmentSource,
-  SegmentType,
-  SpanStatus,
-} from '../../constants'
+import { bigint, index, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core'
+import type { DocumentType, SegmentSource, SegmentType, SpanStatus } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { apiKeys } from './apiKeys'
@@ -42,9 +30,7 @@ export const segments = latitudeSchema.table(
     commitUuid: uuid('commit_uuid').notNull(),
     documentUuid: uuid('document_uuid').notNull(),
     documentHash: varchar('document_hash', { length: 64 }).notNull(),
-    documentType: varchar('document_type', { length: 32 })
-      .notNull()
-      .$type<DocumentType>(),
+    documentType: varchar('document_type', { length: 32 }).notNull().$type<DocumentType>(),
     experimentUuid: uuid('experiment_uuid'),
     provider: varchar('provider', { length: 128 }).notNull(),
     model: varchar('model', { length: 128 }).notNull(),
@@ -57,10 +43,7 @@ export const segments = latitudeSchema.table(
   },
   (table) => ({
     traceIdIdx: index('segments_trace_id_idx').on(table.traceId),
-    traceIdIdIdx: uniqueIndex('segments_trace_id_id_idx').on(
-      table.traceId,
-      table.id,
-    ),
+    traceIdIdIdx: uniqueIndex('segments_trace_id_id_idx').on(table.traceId, table.id),
     parentIdIdx: index('segments_parent_id_idx').on(table.parentId),
     workspaceIdIdx: index('segments_workspace_id_idx').on(table.workspaceId),
     apiKeyIdIdx: index('segments_api_key_id_idx').on(table.apiKeyId),
@@ -69,26 +52,15 @@ export const segments = latitudeSchema.table(
       'gin',
       sql`${table.externalId} gin_trgm_ops`,
     ),
-    sourceStartedAtIdx: index('segments_source_started_at_idx').on(
-      table.source,
-      table.startedAt,
-    ),
-    typeStartedAtIdx: index('segments_type_started_at_idx').on(
-      table.type,
-      table.startedAt,
-    ),
-    statusStartedAtIdx: index('segments_status_started_at_idx').on(
-      table.status,
-      table.startedAt,
-    ),
+    sourceStartedAtIdx: index('segments_source_started_at_idx').on(table.source, table.startedAt),
+    typeStartedAtIdx: index('segments_type_started_at_idx').on(table.type, table.startedAt),
+    statusStartedAtIdx: index('segments_status_started_at_idx').on(table.status, table.startedAt),
     // TODO(tracing): temporal related log, remove when observability is ready
     logUuidIdx: index('segments_log_uuid_idx').on(table.logUuid),
     commitUuidIdx: index('segments_commit_uuid_idx').on(table.commitUuid),
     documentUuidIdx: index('segments_document_uuid_idx').on(table.documentUuid),
     documentHashIdx: index('segments_document_hash_idx').on(table.documentHash),
-    experimentUuidIdx: index('segments_experiment_uuid_idx').on(
-      table.experimentUuid,
-    ),
+    experimentUuidIdx: index('segments_experiment_uuid_idx').on(table.experimentUuid),
     providerIdx: index('segments_provider_idx').on(table.provider),
     modelIdx: index('segments_model_idx').on(table.model),
     startedAtIdx: index('segments_started_at_idx').on(table.startedAt),

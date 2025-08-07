@@ -1,16 +1,16 @@
 import { max, min, parseJSON } from 'date-fns'
-import { and, asc, desc, eq, getTableColumns, or, sql, SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns, or, sql, type SQL } from 'drizzle-orm'
 import {
-  Segment,
+  type Segment,
   SEGMENT_METADATA_CACHE_TTL,
   SEGMENT_METADATA_STORAGE_KEY,
-  SegmentMetadata,
+  type SegmentMetadata,
   SegmentType,
   SpanStatus,
   SpanType,
 } from '../browser'
 import { cache as redis } from '../cache'
-import { diskFactory, DiskWrapper } from '../lib/disk'
+import { diskFactory, type DiskWrapper } from '../lib/disk'
 import { ConflictError, databaseErrorCodes } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { segments, spans } from '../schema'
@@ -34,13 +34,7 @@ export class SegmentsRepository extends Repository<Segment> {
 
   async get({ segmentId, traceId }: { segmentId: string; traceId: string }) {
     const result = await this.scope
-      .where(
-        and(
-          this.scopeFilter,
-          eq(segments.traceId, traceId),
-          eq(segments.id, segmentId),
-        ),
-      )
+      .where(and(this.scopeFilter, eq(segments.traceId, traceId), eq(segments.id, segmentId)))
       .limit(1)
       .then((r) => r[0])
 
@@ -58,26 +52,12 @@ export class SegmentsRepository extends Repository<Segment> {
     return Result.ok<Segment[]>(result as Segment[])
   }
 
-  async lock({
-    segmentId,
-    traceId,
-    wait,
-  }: {
-    segmentId: string
-    traceId: string
-    wait?: boolean
-  }) {
+  async lock({ segmentId, traceId, wait }: { segmentId: string; traceId: string; wait?: boolean }) {
     try {
       await this.db
         .select({ id: segments.id })
         .from(segments)
-        .where(
-          and(
-            this.scopeFilter,
-            eq(segments.traceId, traceId),
-            eq(segments.id, segmentId),
-          ),
-        )
+        .where(and(this.scopeFilter, eq(segments.traceId, traceId), eq(segments.id, segmentId)))
         .limit(1)
         .for('no key update', wait ? undefined : { noWait: true })
     } catch (error: any) {
@@ -114,9 +94,7 @@ export class SegmentsRepository extends Repository<Segment> {
           ...[
             eq(table.workspaceId, this.workspaceId),
             eq(table.traceId, traceId),
-            name === 'spans'
-              ? eq(spans.segmentId, segmentId)
-              : eq(segments.parentId, segmentId),
+            name === 'spans' ? eq(spans.segmentId, segmentId) : eq(segments.parentId, segmentId),
             ...(filters ?? []),
           ],
         ),
@@ -138,22 +116,16 @@ export class SegmentsRepository extends Repository<Segment> {
 
     if (spans?.first && !segments?.first) first = spans.first
     else if (segments?.first && !spans?.first) first = segments.first
-    else if (spans?.first && segments?.first) first = min([spans.first, segments.first]) // prettier-ignore
+    else if (spans?.first && segments?.first) first = min([spans.first, segments.first])
 
     if (spans?.last && !segments?.last) last = spans.last
     else if (segments?.last && !spans?.last) last = segments.last
-    else if (spans?.last && segments?.last) last = max([spans.last, segments.last]) // prettier-ignore
+    else if (spans?.last && segments?.last) last = max([spans.last, segments.last])
 
     return { first, last }
   }
 
-  async getTimestamps({
-    segmentId,
-    traceId,
-  }: {
-    segmentId: string
-    traceId: string
-  }) {
+  async getTimestamps({ segmentId, traceId }: { segmentId: string; traceId: string }) {
     const [children, completions, documents, errors] = await Promise.all([
       (async () => {
         const spansts = await this.timestampsQuery({
@@ -180,10 +152,7 @@ export class SegmentsRepository extends Repository<Segment> {
           traceId: traceId,
           table: 'segments',
           filters: [
-            or(
-              eq(segments.type, SegmentType.Document),
-              eq(segments.type, SegmentType.Step),
-            )!,
+            or(eq(segments.type, SegmentType.Document), eq(segments.type, SegmentType.Step))!,
           ],
         }).then((r) => r[0])
         return this.compareTimestamps({ spans: spansts, segments: segmentsts })
@@ -254,9 +223,7 @@ export class SegmentsRepository extends Repository<Segment> {
       .then((r) => r.rows[0])
 
     if (!result) return Result.nil()
-    return Result.ok<Segment<SegmentType.Document>>(
-      result as Segment<SegmentType.Document>,
-    )
+    return Result.ok<Segment<SegmentType.Document>>(result as Segment<SegmentType.Document>)
   }
 
   async listTracesByLog({ logUuid }: { logUuid: string }) {
@@ -293,11 +260,7 @@ export class SegmentMetadatasRepository {
     traceId: string
     fresh?: boolean
   }) {
-    const key = SEGMENT_METADATA_STORAGE_KEY(
-      this.workspaceId,
-      traceId,
-      segmentId,
-    )
+    const key = SEGMENT_METADATA_STORAGE_KEY(this.workspaceId, traceId, segmentId)
     const cache = await redis()
 
     try {
@@ -314,18 +277,8 @@ export class SegmentMetadatasRepository {
     }
   }
 
-  async invalidate({
-    segmentId,
-    traceId,
-  }: {
-    segmentId: string
-    traceId: string
-  }) {
-    const key = SEGMENT_METADATA_STORAGE_KEY(
-      this.workspaceId,
-      traceId,
-      segmentId,
-    )
+  async invalidate({ segmentId, traceId }: { segmentId: string; traceId: string }) {
+    const key = SEGMENT_METADATA_STORAGE_KEY(this.workspaceId, traceId, segmentId)
     const cache = await redis()
 
     try {

@@ -1,5 +1,5 @@
 import useDocumentTriggers from '$/stores/documentTriggers'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useMemo } from 'react'
 import { ScheduleTriggerConfig } from './Config'
@@ -26,10 +26,7 @@ export function ScheduleTriggerSettings({
     documentUuid: document.documentUuid,
   })
   const trigger = useMemo(
-    () =>
-      documentTriggers.find(
-        (t) => t.triggerType === DocumentTriggerType.Scheduled,
-      ),
+    () => documentTriggers.find((t) => t.triggerType === DocumentTriggerType.Scheduled),
     [documentTriggers],
   )
   const onChangeConfig = useMemo(
@@ -64,8 +61,7 @@ export function ScheduleTriggerSettings({
   return (
     <div className='flex flex-col gap-4'>
       <Text.H5 color='foregroundMuted'>
-        Enables running this prompt in a fixed scheduled. For example, once per
-        day.
+        Enables running this prompt in a fixed scheduled. For example, once per day.
       </Text.H5>
       <ScheduleTriggerConfig
         canDestroy={!!trigger}

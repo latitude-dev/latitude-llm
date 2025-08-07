@@ -59,13 +59,12 @@ model: gpt-4o
 `
 
 async function buildData({ doc1Content }: { doc1Content: string }) {
-  const { workspace, project, documents, commit, user, providers } =
-    await createProject({
-      providers: [{ type: Providers.OpenAI, name: 'openai' }],
-      documents: {
-        doc1: doc1Content,
-      },
-    })
+  const { workspace, project, documents, commit, user, providers } = await createProject({
+    providers: [{ type: Providers.OpenAI, name: 'openai' }],
+    documents: {
+      doc1: doc1Content,
+    },
+  })
 
   const context = await createTelemetryContext({ workspace })
 
@@ -85,10 +84,7 @@ const publisherSpy = vi.spyOn(
   'publishLater',
 )
 const aiSpy = vi.spyOn(await import('../ai'), 'ai')
-const createDocumentLogSpy = vi.spyOn(
-  await import('../documentLogs/create'),
-  'createDocumentLog',
-)
+const createDocumentLogSpy = vi.spyOn(await import('../documentLogs/create'), 'createDocumentLog')
 
 describe('runDocumentAtCommit', () => {
   beforeEach(() => {
@@ -101,23 +97,21 @@ describe('runDocumentAtCommit', () => {
 
   describe('with an existing provider key', () => {
     it('fails if document is not found in commit', async () => {
-      const { context, workspace, project, user, commit, provider } =
-        await buildData({
-          doc1Content: dummyDoc1Content,
-        })
+      const { context, workspace, project, user, commit, provider } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
 
       const { commit: draft } = await createDraft({
         project,
         user,
       })
-      const { documentVersion: documentNotInCommit } =
-        await createDocumentVersion({
-          workspace,
-          user,
-          commit: draft,
-          path: 'path/to/document',
-          content: helpers.createPrompt({ provider }),
-        })
+      const { documentVersion: documentNotInCommit } = await createDocumentVersion({
+        workspace,
+        user,
+        commit: draft,
+        path: 'path/to/document',
+        content: helpers.createPrompt({ provider }),
+      })
       const result = await runDocumentAtCommit({
         context,
         workspace,
@@ -127,24 +121,21 @@ describe('runDocumentAtCommit', () => {
         source: LogSources.API,
       })
 
-      expect(result.error).toEqual(
-        new UnprocessableEntityError('Document not found in commit', {}),
-      )
+      expect(result.error).toEqual(new UnprocessableEntityError('Document not found in commit', {}))
     })
 
     it('returns document resolvedContent', async () => {
       const { context, workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,
       })
-      const { lastResponse, duration, resolvedContent } =
-        await runDocumentAtCommit({
-          context,
-          workspace,
-          document,
-          commit,
-          parameters: {},
-          source: LogSources.API,
-        }).then((r) => r.unwrap())
+      const { lastResponse, duration, resolvedContent } = await runDocumentAtCommit({
+        context,
+        workspace,
+        document,
+        commit,
+        parameters: {},
+        source: LogSources.API,
+      }).then((r) => r.unwrap())
 
       await lastResponse
       await duration
@@ -164,10 +155,9 @@ model: gpt-4o
     })
 
     it('pass params to AI', async () => {
-      const { context, workspace, document, commit, provider } =
-        await buildData({
-          doc1Content: dummyDoc1Content,
-        })
+      const { context, workspace, document, commit, provider } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
 
       const { lastResponse } = await runDocumentAtCommit({
         context,
@@ -321,9 +311,8 @@ model: gpt-4o
 
       expect(createDocumentLogSpy).toHaveResolvedWith(expect.any(Ok))
       expect(
-        createDocumentLogSpy.mock.calls[
-          createDocumentLogSpy.mock.calls.length - 1
-        ]![0].data.customIdentifier,
+        createDocumentLogSpy.mock.calls[createDocumentLogSpy.mock.calls.length - 1]![0].data
+          .customIdentifier,
       ).toEqual('custom-identifier')
     })
 
@@ -399,10 +388,7 @@ model: gpt-4o
           controller.close()
         },
       })
-      const createChainRunErrorSpy = vi.spyOn(
-        createChainRunErrorMod,
-        'createChainRunError',
-      )
+      const createChainRunErrorSpy = vi.spyOn(createChainRunErrorMod, 'createChainRunError')
 
       mocks.runAi.mockResolvedValueOnce(
         Result.ok({

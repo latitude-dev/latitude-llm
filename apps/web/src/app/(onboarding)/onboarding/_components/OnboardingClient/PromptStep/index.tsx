@@ -3,11 +3,11 @@ import { LATITUDE_DOCS_URL } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { OnboardingStep } from '../index'
 import { MessageList } from '$/components/ChatWrapper'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 
 export function OnboardingPromptStep({
   document,
@@ -48,9 +48,8 @@ export function OnboardingPromptStep({
             >
               PromptL
             </Link>
-            , our custom template syntax that gives superpowers to your prompts.
-            Notice the configuration frontmatter and the parameter
-            interpolations.
+            , our custom template syntax that gives superpowers to your prompts. Notice the
+            configuration frontmatter and the parameter interpolations.
           </Text.H6>
         </div>
         <div className='h-[340px]'>

@@ -1,4 +1,4 @@
-import { KeyboardEvent, useState } from 'react'
+import { type KeyboardEvent, useState } from 'react'
 
 import { cn } from '../../../../lib/utils'
 import { Button } from '../../../atoms/Button'
@@ -33,12 +33,9 @@ export function CopilotSection({
     <div className='w-full px-2 pt-2'>
       <div className='flex relative w-full rounded-md'>
         <TextArea
-          className={cn(
-            'bg-background w-full px-2 pt-2 pb-14 resize-none text-sm',
-            {
-              'animate-pulse': isLoading,
-            },
-          )}
+          className={cn('bg-background w-full px-2 pt-2 pb-14 resize-none text-sm', {
+            'animate-pulse': isLoading,
+          })}
           disabled={isLoading || !!disabledMessage}
           placeholder={disabledMessage ?? 'Ask for changes or suggestions!'}
           value={value}
@@ -65,8 +62,8 @@ export function CopilotSection({
               </Button>
             }
           >
-            Let our AI Assistant improve and fix your prompt based on
-            documentation and best practices.
+            Let our AI Assistant improve and fix your prompt based on documentation and best
+            practices.
           </Tooltip>
         </div>
       </div>

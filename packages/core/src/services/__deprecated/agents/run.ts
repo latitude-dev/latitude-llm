@@ -1,12 +1,12 @@
-import { Conversation } from '@latitude-data/compiler'
+import type { Conversation } from '@latitude-data/compiler'
 import { ChainEventTypes } from '@latitude-data/constants'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { TraceContext } from '../../../browser'
-import { ErrorableEntity } from '../../../constants'
+import { ChainError, type RunErrorCodes } from '@latitude-data/constants/errors'
+import type { TraceContext } from '../../../browser'
+import type { ErrorableEntity } from '../../../constants'
 import { ChainStreamManager } from '../../../__deprecated/lib/chainStreamManager'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { deleteCachedChain } from '../chains/chainCache'
-import { runChain, RunChainArgs, SomeChain } from '../chains/run'
+import { runChain, type RunChainArgs, type SomeChain } from '../chains/run'
 import { runAgentStep } from './runStep'
 
 export function runAgent<T extends boolean, C extends SomeChain>({

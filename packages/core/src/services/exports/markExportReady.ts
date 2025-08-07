@@ -1,12 +1,8 @@
 import { updateExport } from './update'
 import { publisher } from '../../events/publisher'
-import { Export } from '../../browser'
+import type { Export } from '../../browser'
 
-export async function markExportReady({
-  export: exportRecord,
-}: {
-  export: Export
-}) {
+export async function markExportReady({ export: exportRecord }: { export: Export }) {
   const result = await updateExport({
     export: exportRecord,
     readyAt: new Date(),

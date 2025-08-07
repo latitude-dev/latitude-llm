@@ -1,10 +1,11 @@
 'use client'
 
-import React, { lazy } from 'react'
+import type React from 'react'
+import { lazy } from 'react'
 
 import { TextEditorPlaceholder } from '../TextEditorPlaceholder'
-import { BlocksEditorProps, IncludedPrompt } from './types'
-import { BlockRootNode } from './Editor/state/promptlToLexical/types'
+import type { BlocksEditorProps, IncludedPrompt } from './types'
+import type { BlockRootNode } from './Editor/state/promptlToLexical/types'
 import { ClientOnly } from '../../atoms/ClientOnly'
 
 const LazyBlocksEditor = lazy(() =>

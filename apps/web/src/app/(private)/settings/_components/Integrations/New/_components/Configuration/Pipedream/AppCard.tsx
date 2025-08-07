@@ -6,12 +6,9 @@ import type { App } from '@pipedream/sdk/browser'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import {
-  PipedreamComponent,
-  PipedreamComponentType,
-} from '@latitude-data/core/browser'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { ReactNode } from 'react'
+import type { PipedreamComponent, PipedreamComponentType } from '@latitude-data/core/browser'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { ReactNode } from 'react'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 function AppComponent({ component }: { component: PipedreamComponent }) {
@@ -71,12 +68,8 @@ function AppComponentsCard<C extends PipedreamComponentType>({
     <CollapsibleBox
       title={title}
       icon={icon}
-      collapsedContentHeader={
-        <div className='flex w-full items-center justify-end'>{header}</div>
-      }
-      expandedContentHeader={
-        <div className='flex w-full items-center justify-end'>{header}</div>
-      }
+      collapsedContentHeader={<div className='flex w-full items-center justify-end'>{header}</div>}
+      expandedContentHeader={<div className='flex w-full items-center justify-end'>{header}</div>}
       expandedContent={
         <div className='flex flex-col gap-4'>
           {isLoading ? (
@@ -112,11 +105,7 @@ function AppComponents({ app }: { app: App }) {
         components={data?.tools}
         header={
           isLoading || data?.tools?.length ? (
-            <AppComponentsHeader
-              label='tools'
-              isLoading={isLoading}
-              count={data?.tools?.length}
-            />
+            <AppComponentsHeader label='tools' isLoading={isLoading} count={data?.tools?.length} />
           ) : (
             <Text.H5 color='foregroundMuted'>No tools available</Text.H5>
           )
@@ -151,13 +140,7 @@ export function PipedreamAppCard({ app }: { app: App | undefined }) {
   return (
     <div className='w-full flex flex-col gap-4 border border-border p-4 rounded-lg'>
       <div className='flex gap-2 items-center'>
-        <Image
-          src={app.img_src}
-          alt={app.name}
-          width={24}
-          height={24}
-          unoptimized
-        />
+        <Image src={app.img_src} alt={app.name} width={24} height={24} unoptimized />
         <Text.H4>{app.name}</Text.H4>
       </div>
       <Text.H5 color='foregroundMuted'>{app.description}</Text.H5>

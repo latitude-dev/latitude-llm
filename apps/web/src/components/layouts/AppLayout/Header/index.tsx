@@ -1,8 +1,8 @@
 'use client'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { cn } from '@latitude-data/web-ui/utils'
-import { SessionUser } from '@latitude-data/web-ui/providers'
+import type { SessionUser } from '@latitude-data/web-ui/providers'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import AvatarDropdown from './AvatarDropdown'
@@ -54,11 +54,7 @@ export type AppHeaderProps = {
   currentUser: SessionUser | undefined
   cloudInfo?: { paymentUrl: string }
 }
-export default function AppHeader({
-  navigationLinks,
-  currentUser,
-  cloudInfo,
-}: AppHeaderProps) {
+export default function AppHeader({ navigationLinks, currentUser, cloudInfo }: AppHeaderProps) {
   return (
     <AppHeaderWrapper>
       <HeaderBreadcrumb />

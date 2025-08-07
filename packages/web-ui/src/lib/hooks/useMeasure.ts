@@ -17,11 +17,7 @@ export type UseMeasureRect = Pick<
 > &
   PaddingAttributes
 export type UseMeasureRef<E extends Element = Element> = (element: E) => void
-export type UseMeasureResult<E extends Element = Element> = [
-  UseMeasureRef<E>,
-  UseMeasureRect,
-  E,
-]
+export type UseMeasureResult<E extends Element = Element> = [UseMeasureRef<E>, UseMeasureRect, E]
 
 const DEFAULT_PADDING: PaddingAttributes = {
   paddingBottom: 0,

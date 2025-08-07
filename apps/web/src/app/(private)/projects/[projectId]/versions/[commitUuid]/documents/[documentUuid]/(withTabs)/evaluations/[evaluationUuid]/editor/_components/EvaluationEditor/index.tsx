@@ -5,12 +5,12 @@ import { useMetadata } from '$/hooks/useMetadata'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
-  Commit,
-  DocumentVersion,
-  EvaluationType,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationType,
   LLM_EVALUATION_PROMPT_PARAMETERS,
-  LlmEvaluationMetricAnyCustom,
-  ProviderApiKey,
+  type LlmEvaluationMetricAnyCustom,
+  type ProviderApiKey,
 } from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
@@ -29,8 +29,7 @@ import { DocumentValueProvider } from '../../../../../../_components/DocumentEdi
 import { MetadataProvider } from '$/components/MetadataProvider'
 import { DevModeProvider } from '../../../../../../_components/DocumentEditor/Editor/hooks/useDevMode'
 
-const ALLOWED_PARAMETERS =
-  LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
+const ALLOWED_PARAMETERS = LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
 
 export function EvaluationEditor(props: {
   document: DocumentVersion
@@ -67,10 +66,7 @@ function EvaluationEditorContent({
   selectedDocumentLogUuid?: string
 }) {
   const { project } = useCurrentProject()
-  const { evaluation } = useCurrentEvaluationV2<
-    EvaluationType.Llm,
-    LlmEvaluationMetricAnyCustom
-  >()
+  const { evaluation } = useCurrentEvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>()
   const { updateEvaluation, isUpdatingEvaluation } = useEvaluationsV2({
     project: project,
     commit: commit,
@@ -84,10 +80,7 @@ function EvaluationEditorContent({
   const [value, setValue] = useState(originalPrompt)
   const providerNames = useMemo(() => providers.map((p) => p.name), [providers])
   const { data: integrations } = useIntegrations({ withTools: true })
-  const integrationNames = useMemo(
-    () => integrations?.map((i) => i.name) ?? [],
-    [integrations],
-  )
+  const integrationNames = useMemo(() => integrations?.map((i) => i.name) ?? [], [integrations])
   const buildPromptMetadata = useCallback(
     ({ promptValue }: { promptValue: string }) => {
       return {
@@ -130,7 +123,7 @@ function EvaluationEditorContent({
 
       debouncedSave(newPrompt)
     },
-    [debouncedSave, setValue],
+    [debouncedSave],
   )
 
   const { metadata, updateMetadata: runReadMetadata } = useMetadata()

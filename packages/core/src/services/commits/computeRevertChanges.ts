@@ -1,9 +1,9 @@
 import DiffMatchPatch from 'diff-match-patch'
 import { omit } from 'lodash-es'
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import type { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
 import { BadRequestError, ConflictError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import { DocumentVersionsRepository } from '../../repositories'
 
 /**
@@ -34,11 +34,9 @@ function groupDocumentVersionsByUuid({
   originalDocuments: DocumentVersion[]
   changedDocuments: DocumentVersion[]
 }): GroupedDocumentVersions {
-  const groupedDocs: GroupedDocumentVersions = originalDocuments.map(
-    (oldDoc) => ({
-      originalDocument: oldDoc,
-    }),
-  )
+  const groupedDocs: GroupedDocumentVersions = originalDocuments.map((oldDoc) => ({
+    originalDocument: oldDoc,
+  }))
 
   changedDocuments.forEach((newDoc) => {
     const idx = groupedDocs.findIndex(
@@ -83,8 +81,7 @@ function getChangesToRevertDocument({
   return omit(
     Object.fromEntries(
       Object.entries(originalDocument).filter(
-        ([key, value]) =>
-          changedDocument[key as keyof DocumentVersion] !== value,
+        ([key, value]) => changedDocument[key as keyof DocumentVersion] !== value,
       ),
     ),
     [
@@ -119,8 +116,7 @@ export function getChangesToRevertDocuments({
 
   return groupedDocs
     .map((docChanges) => {
-      const documentUuid = (docChanges.originalDocument ??
-        docChanges.changedDocument)!.documentUuid
+      const documentUuid = (docChanges.originalDocument ?? docChanges.changedDocument)!.documentUuid
 
       const changesToRevertDocument = getChangesToRevertDocument(docChanges)
 
@@ -129,9 +125,7 @@ export function getChangesToRevertDocuments({
         return null
       }
 
-      const documentInDraft = targetDraftDocuments.find(
-        (d) => d.documentUuid === documentUuid,
-      )
+      const documentInDraft = targetDraftDocuments.find((d) => d.documentUuid === documentUuid)
 
       if (!documentInDraft && changesToRevertDocument.deletedAt !== null) {
         // If the document is currently deleted and the changes to revert it do not include restoring it back, ignore it
@@ -173,7 +167,7 @@ export async function computeChangesToRevertCommit(
   db = database,
 ): Promise<TypedResult<Partial<DocumentVersion>[], Error>> {
   if (originalCommit && changedCommit) {
-    if (originalCommit.id == changedCommit.id) {
+    if (originalCommit.id === changedCommit.id) {
       return Result.error(new BadRequestError('Commits must be different'))
     }
   }
@@ -182,8 +176,7 @@ export async function computeChangesToRevertCommit(
 
   const originalDocs = await documentsScope.getDocumentsAtCommit(originalCommit)
   const changedDocs = await documentsScope.getDocumentsAtCommit(changedCommit)
-  const documentsInDraft =
-    await documentsScope.getDocumentsAtCommit(targetDraft)
+  const documentsInDraft = await documentsScope.getDocumentsAtCommit(targetDraft)
   if (originalDocs.error) return Result.error(originalDocs.error)
   if (changedDocs.error) return Result.error(changedDocs.error)
   if (documentsInDraft.error) return Result.error(documentsInDraft.error)

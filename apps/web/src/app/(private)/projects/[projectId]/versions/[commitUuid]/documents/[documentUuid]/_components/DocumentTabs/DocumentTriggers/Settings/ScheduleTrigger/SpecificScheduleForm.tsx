@@ -1,7 +1,7 @@
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Label } from '@latitude-data/web-ui/atoms/Label'
-import { ScheduleConfig, WeekDay, WEEKDAYS } from './scheduleUtils'
+import { type ScheduleConfig, type WeekDay, WEEKDAYS } from './scheduleUtils'
 
 interface SpecificScheduleFormProps {
   config: ScheduleConfig
@@ -59,11 +59,7 @@ export function SpecificScheduleForm({
           {WEEKDAYS.map((day) => (
             <Button
               key={day.value}
-              variant={
-                config.specific?.days.includes(day.value)
-                  ? 'default'
-                  : 'outline'
-              }
+              variant={config.specific?.days.includes(day.value) ? 'default' : 'outline'}
               onClick={() => handleDayToggle(day.value)}
               disabled={isLoading}
               className='px-3 py-1'
@@ -88,9 +84,7 @@ export function SpecificScheduleForm({
           type='number'
           min={1}
           value={config.specific?.interval || 1}
-          onChange={(e) =>
-            handleIntervalChange(parseInt(e.target.value, 10) || 1)
-          }
+          onChange={(e) => handleIntervalChange(parseInt(e.target.value, 10) || 1)}
           disabled={isLoading}
         />
       </div>

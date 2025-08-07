@@ -1,7 +1,7 @@
 import { googleProvider } from '$/services/auth'
 import { cookies } from 'next/headers'
-import { decodeIdToken, OAuth2RequestError, OAuth2Tokens } from 'arctic'
-import { NextRequest } from 'next/server'
+import { decodeIdToken, OAuth2RequestError, type OAuth2Tokens } from 'arctic'
+import type { NextRequest } from 'next/server'
 import { findOrCreateUserFromOAuth } from '@latitude-data/core/services/auth/findOrCreateUserFromOAuth'
 import { setSession } from '$/services/auth/setSession'
 import { ObjectParser } from '@pilcrowjs/object-parser'
@@ -18,13 +18,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   const codeVerifier = cookiesStore.get('google_code_verifier')?.value ?? null
 
   // 1. Validate state
-  if (
-    !code ||
-    !state ||
-    !storedState ||
-    state !== storedState ||
-    !codeVerifier
-  ) {
+  if (!code || !state || !storedState || state !== storedState || !codeVerifier) {
     return new Response('Invalid OAuth state or code', { status: 400 })
   }
 
@@ -32,10 +26,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     // 2. Validate code and get tokens/user info
     let tokens: OAuth2Tokens
     try {
-      tokens = await googleProvider.validateAuthorizationCode(
-        code,
-        codeVerifier,
-      )
+      tokens = await googleProvider.validateAuthorizationCode(code, codeVerifier)
     } catch {
       return new Response('Please restart the process.', {
         status: 400,
@@ -57,10 +48,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     })
 
     if (userResult.error) {
-      console.error(
-        'Failed to find or create user from OAuth:',
-        userResult.error,
-      )
+      console.error('Failed to find or create user from OAuth:', userResult.error)
       return new Response('Failed to process user information', { status: 500 })
     }
 

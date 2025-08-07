@@ -1,4 +1,4 @@
-import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import type { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -29,13 +29,7 @@ function CountLabel({
   return <Text.H5M color='foregroundMuted'>{countLabel(count)} </Text.H5M>
 }
 
-function NavLink({
-  url,
-  direction,
-}: {
-  url?: string
-  direction: 'prev' | 'next'
-}) {
+function NavLink({ url, direction }: { url?: string; direction: 'prev' | 'next' }) {
   const button = (
     <Button
       size='default'
@@ -60,11 +54,7 @@ export function LinkableTablePaginationFooter({
 
   return (
     <div className='w-full flex justify-between items-center'>
-      <CountLabel
-        count={pagination?.count}
-        isLoading={isLoading}
-        countLabel={countLabel}
-      />
+      <CountLabel count={pagination?.count} isLoading={isLoading} countLabel={countLabel} />
 
       {isLoading ? (
         <Skeleton className='w-12 my-2' height='h4' />
@@ -83,9 +73,7 @@ export function LinkableTablePaginationFooter({
               />
             </div>
             {pagination.count !== Infinity ? (
-              <Text.H5M color='foregroundMuted'>
-                of {pagination.totalPages}
-              </Text.H5M>
+              <Text.H5M color='foregroundMuted'>of {pagination.totalPages}</Text.H5M>
             ) : null}
           </div>
           <NavLink url={pagination.nextPage?.url} direction='next' />

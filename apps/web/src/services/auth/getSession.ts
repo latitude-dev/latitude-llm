@@ -20,21 +20,13 @@ export async function getSession(): Promise<
   try {
     if (result.session && result.session.fresh) {
       const sessionCookie = lucia.createSessionCookie(result.session.id)
-      await cks.set(
-        sessionCookie.name,
-        sessionCookie.value,
-        sessionCookie.attributes,
-      )
+      await cks.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes)
     }
 
     if (!result.session) {
       const sessionCookie = lucia.createBlankSessionCookie()
 
-      await cks.set(
-        sessionCookie.name,
-        sessionCookie.value,
-        sessionCookie.attributes,
-      )
+      await cks.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes)
     }
   } catch {
     // ignore

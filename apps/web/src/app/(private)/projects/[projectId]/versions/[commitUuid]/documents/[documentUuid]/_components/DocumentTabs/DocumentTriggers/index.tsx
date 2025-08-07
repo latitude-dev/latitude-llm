@@ -1,6 +1,6 @@
 'use client'
 
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
@@ -11,7 +11,7 @@ import useDocumentTriggers from '$/stores/documentTriggers'
 import { NotEditableBanner } from '../_components/NotEditableBanner'
 import { useCallback, useState } from 'react'
 import { TriggerConfigModal } from './Modal'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import type { DocumentTriggerType } from '@latitude-data/constants'
 
 export function DocumentTriggersButton({
   document,
@@ -27,16 +27,10 @@ export function DocumentTriggersButton({
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [openTrigger, setOpenTrigger] = useState<
-    | Extract<DocumentTrigger, { triggerType: DocumentTriggerType.Integration }>
-    | undefined
+    Extract<DocumentTrigger, { triggerType: DocumentTriggerType.Integration }> | undefined
   >()
   const openTriggerModal = useCallback(
-    (
-      trigger?: Extract<
-        DocumentTrigger,
-        { triggerType: DocumentTriggerType.Integration }
-      >,
-    ) => {
+    (trigger?: Extract<DocumentTrigger, { triggerType: DocumentTriggerType.Integration }>) => {
       setOpenTrigger(trigger)
       setIsModalOpen(true)
     },

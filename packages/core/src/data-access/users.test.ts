@@ -31,9 +31,7 @@ describe('findFirstUserInWorkspace', () => {
     const { workspace } = await createWorkspace()
 
     // Delete the creator's membership (simulating empty workspace)
-    await database
-      .delete(memberships)
-      .where(eq(memberships.workspaceId, workspace.id))
+    await database.delete(memberships).where(eq(memberships.workspaceId, workspace.id))
 
     const foundUser = await findFirstUserInWorkspace(workspace)
     expect(foundUser).toBeUndefined()

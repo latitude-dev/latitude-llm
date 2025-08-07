@@ -34,8 +34,7 @@ export function FakeProgress({
     let timeout: ReturnType<typeof setTimeout>
     const incrementProgress = () => {
       setProgress((prevProgress) => {
-        const increment =
-          (maxProgress - prevProgress) / progressIncrementPercentage
+        const increment = (maxProgress - prevProgress) / progressIncrementPercentage
         return prevProgress + increment
       })
 
@@ -45,13 +44,7 @@ export function FakeProgress({
 
     timeout = setTimeout(incrementProgress, incrementDelay)
     return () => clearTimeout(timeout)
-  }, [
-    completed,
-    delayIncrement,
-    maxProgress,
-    progressIncrementPercentage,
-    initialDelay,
-  ])
+  }, [completed, delayIncrement, maxProgress, progressIncrementPercentage, initialDelay])
 
   return (
     <Progress

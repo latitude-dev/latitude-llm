@@ -19,17 +19,14 @@ export default function DraftCommitModal({
   open: boolean
   setOpen: (open: boolean) => void
 }) {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const defaultPromptTitle = useMemo(() => new Date().toLocaleString(), [open])
+  const defaultPromptTitle = useMemo(() => new Date().toLocaleString(), [])
   const { createDraft, isCreating } = useCommits({
     commitStatus: CommitStatus.Draft,
     onSuccessCreate: (draft) => {
       if (!draft) return // should never happen but it does
 
       router.push(
-        ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: draft.uuid }).root,
+        ROUTES.projects.detail({ id: project.id }).commits.detail({ uuid: draft.uuid }).root,
       )
       setOpen(false)
     },
@@ -48,12 +45,7 @@ export default function DraftCommitModal({
       footer={
         <>
           <CloseTrigger />
-          <Button
-            fancy
-            form='createDraftCommitForm'
-            type='submit'
-            disabled={isCreating}
-          >
+          <Button fancy form='createDraftCommitForm' type='submit' disabled={isCreating}>
             Create version
           </Button>
         </>

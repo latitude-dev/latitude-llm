@@ -1,8 +1,8 @@
 import { Text } from '../../atoms/Text'
 import { Input } from '../../atoms/Input'
 import { Button } from '../../atoms/Button'
-import { KeyboardEvent, useCallback, useState } from 'react'
-import { Icon, IconName } from '../../atoms/Icons'
+import { type KeyboardEvent, useCallback, useState } from 'react'
+import { Icon, type IconName } from '../../atoms/Icons'
 import { TextArea } from '../../atoms/TextArea'
 import { cn } from '../../../lib/utils'
 
@@ -23,10 +23,7 @@ function InputElement({
 }) {
   return (
     <div
-      className={cn(
-        'flex gap-2 p-2 h-fit bg-accent rounded-md border border-border',
-        className,
-      )}
+      className={cn('flex gap-2 p-2 h-fit bg-accent rounded-md border border-border', className)}
     >
       <Text.H6
         color='accentForeground'
@@ -36,13 +33,7 @@ function InputElement({
       >
         {value}
       </Text.H6>
-      <Button
-        variant='ghost'
-        size='small'
-        onClick={onClick}
-        disabled={disabled}
-        className='p-0'
-      >
+      <Button variant='ghost' size='small' onClick={onClick} disabled={disabled} className='p-0'>
         <Icon name={icon} color='accentForeground' />
       </Button>
     </div>
@@ -94,14 +85,10 @@ export function MultipleInput<
     const value = type === 'number' ? Number(trimValue) : trimValue
     handleAddValue(value as V)
     setInputValue('')
-  }, [inputValue, type, handleAddValue, setInputValue])
+  }, [inputValue, type, handleAddValue])
 
   const handleInputKeyDown = useCallback(
-    (
-      event:
-        | KeyboardEvent<HTMLInputElement>
-        | KeyboardEvent<HTMLTextAreaElement>,
-    ) => {
+    (event: KeyboardEvent<HTMLInputElement> | KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === 'Enter' && !event.shiftKey) {
         acceptInputValue()
         event.preventDefault()
@@ -135,9 +122,7 @@ export function MultipleInput<
           required={required}
           description={description}
           value={inputValue}
-          onKeyDown={(event) =>
-            handleInputKeyDown(event as KeyboardEvent<HTMLInputElement>)
-          }
+          onKeyDown={(event) => handleInputKeyDown(event as KeyboardEvent<HTMLInputElement>)}
           onChange={(e) => setInputValue(e.target.value)}
         />
       )}

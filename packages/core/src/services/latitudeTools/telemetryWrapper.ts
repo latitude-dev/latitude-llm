@@ -1,20 +1,14 @@
-import { LatitudeTool } from '@latitude-data/constants'
-import { ToolExecutionOptions } from 'ai'
-import { TypedResult } from '../../lib/Result'
-import { telemetry, TelemetryContext } from '../../telemetry'
+import type { LatitudeTool } from '@latitude-data/constants'
+import type { ToolExecutionOptions } from 'ai'
+import type { TypedResult } from '../../lib/Result'
+import { telemetry, type TelemetryContext } from '../../telemetry'
 
 export interface ToolCall {
   toolCallId: string
 }
 
-export async function withTelemetryWrapper<
-  TArgs extends Record<string, unknown>,
-  TResult,
->(
-  executeFn: (
-    args: TArgs,
-    toolCall: ToolExecutionOptions,
-  ) => Promise<TypedResult<TResult, Error>>,
+export async function withTelemetryWrapper<TArgs extends Record<string, unknown>, TResult>(
+  executeFn: (args: TArgs, toolCall: ToolExecutionOptions) => Promise<TypedResult<TResult, Error>>,
   options: {
     toolName: LatitudeTool
     context?: TelemetryContext

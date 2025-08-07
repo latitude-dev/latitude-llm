@@ -1,13 +1,7 @@
-import {
-  resolveLogicNode,
-  updateScopeContextForNode,
-} from '$compiler/compiler/logic'
-import {
-  UpdateScopeContextProps,
-  type ResolveNodeProps,
-} from '$compiler/compiler/logic/types'
+import { resolveLogicNode, updateScopeContextForNode } from '$compiler/compiler/logic'
+import type { UpdateScopeContextProps, ResolveNodeProps } from '$compiler/compiler/logic/types'
 import errors from '$compiler/error/errors'
-import { type Identifier, type ObjectExpression } from 'estree'
+import type { Identifier, ObjectExpression } from 'estree'
 
 /**
  * ### ObjectExpression
@@ -52,10 +46,7 @@ export async function resolve({
   return resolvedObject
 }
 
-export function updateScopeContext({
-  node,
-  ...props
-}: UpdateScopeContextProps<ObjectExpression>) {
+export function updateScopeContext({ node, ...props }: UpdateScopeContextProps<ObjectExpression>) {
   for (const prop of node.properties) {
     if (prop.type === 'SpreadElement') {
       updateScopeContextForNode({ node: prop.argument, ...props })

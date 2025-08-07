@@ -1,18 +1,18 @@
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
-import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
+import { beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 import { z } from 'zod'
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   EVALUATION_SCORE_SCALE,
   EvaluationType,
-  EvaluationV2,
+  type EvaluationV2,
   HumanEvaluationMetric,
-  Project,
-  ProviderLogDto,
+  type Project,
+  type ProviderLogDto,
   Providers,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
 import * as helpers from '../../helpers'
@@ -33,10 +33,7 @@ describe('annotateEvaluationV2', () => {
   let user: User
   let commit: Commit
   let document: DocumentVersion
-  let evaluation: EvaluationV2<
-    EvaluationType.Human,
-    HumanEvaluationMetric.Rating
-  >
+  let evaluation: EvaluationV2<EvaluationType.Human, HumanEvaluationMetric.Rating>
   let providerLog: ProviderLogDto
 
   beforeEach(async () => {
@@ -90,33 +87,30 @@ describe('annotateEvaluationV2', () => {
       },
     })
 
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
+    const { providerLogs } = await factories.createDocumentLog({
       document: document,
       commit: commit,
     })
     providerLog = serializeProviderLog(providerLogs.at(-1)!)
 
     mocks = {
-      publisher: vi
-        .spyOn(publisher, 'publishLater')
-        .mockImplementation(async () => {}),
+      publisher: vi.spyOn(publisher, 'publishLater').mockImplementation(async () => {}),
     }
   })
 
   it('fails when evaluating a log that is from a different document', async () => {
     const { commit: draft } = await factories.createDraft({ project, user })
-    const { documentVersion: differentDocument } =
-      await factories.createDocumentVersion({
-        commit: draft,
-        path: 'other',
-        content: factories.helpers.createPrompt({
-          provider: 'openai',
-          model: 'gpt-4o',
-        }),
-        user: user,
-        workspace: workspace,
-      })
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
+    const { documentVersion: differentDocument } = await factories.createDocumentVersion({
+      commit: draft,
+      path: 'other',
+      content: factories.helpers.createPrompt({
+        provider: 'openai',
+        model: 'gpt-4o',
+      }),
+      user: user,
+      workspace: workspace,
+    })
+    const { providerLogs } = await factories.createDocumentLog({
       document: differentDocument,
       commit: draft,
     })
@@ -135,9 +129,7 @@ describe('annotateEvaluationV2', () => {
         workspace: workspace,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that is from a different document',
-      ),
+      new UnprocessableEntityError('Cannot evaluate a log that is from a different document'),
     )
 
     expect(mocks.publisher).not.toHaveBeenCalled()
@@ -160,9 +152,7 @@ describe('annotateEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
       }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new BadRequestError('Annotating is not supported for this evaluation'),
-    )
+    ).rejects.toThrowError(new BadRequestError('Annotating is not supported for this evaluation'))
 
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
@@ -198,9 +188,7 @@ describe('annotateEvaluationV2', () => {
 
   it('succeeds when extract actual output fails', async () => {
     vi.spyOn(outputs, 'extractActualOutput').mockRejectedValue(
-      new UnprocessableEntityError(
-        "Field 'arguments' is not present in the actual output",
-      ),
+      new UnprocessableEntityError("Field 'arguments' is not present in the actual output"),
     )
     mocks.publisher.mockClear()
 

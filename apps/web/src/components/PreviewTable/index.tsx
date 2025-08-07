@@ -7,15 +7,9 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { type Column } from '@latitude-data/core/schema'
+import type { Column } from '@latitude-data/core/schema'
 
-export function PreviewTable({
-  rows,
-  headers,
-}: {
-  rows: string[][]
-  headers: Column[]
-}) {
+export function PreviewTable({ rows, headers }: { rows: string[][]; headers: Column[] }) {
   return (
     <Table>
       <TableHeader>

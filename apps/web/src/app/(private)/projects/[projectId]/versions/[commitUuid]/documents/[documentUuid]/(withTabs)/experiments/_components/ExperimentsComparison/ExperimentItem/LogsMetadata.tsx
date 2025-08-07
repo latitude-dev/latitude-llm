@@ -1,6 +1,6 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
-import { BestLogsMetadata } from '$/stores/experimentComparison'
-import { ExperimentWithScores } from '@latitude-data/core/browser'
+import type { BestLogsMetadata } from '$/stores/experimentComparison'
+import type { ExperimentWithScores } from '@latitude-data/core/browser'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -19,12 +19,7 @@ function ExperimentLogMetadataItem({
   const fgColor = isBest ? 'accentForeground' : 'foregroundMuted'
 
   return (
-    <div
-      className={cn(
-        'flex flex-col w-full gap-2 items-center px-2 py-4 rounded-md',
-        bgClass,
-      )}
-    >
+    <div className={cn('flex flex-col w-full gap-2 items-center px-2 py-4 rounded-md', bgClass)}>
       <Text.H6 color={fgColor}>{label}</Text.H6>
       <Text.H5B color={fgColor}>{value}</Text.H5B>
     </div>
@@ -44,10 +39,7 @@ export function ExperimentLogsMetadata({
         label='Duration'
         value={
           experiment.logsMetadata.count > 0
-            ? formatDuration(
-                experiment.logsMetadata.totalDuration /
-                  experiment.logsMetadata.count,
-              )
+            ? formatDuration(experiment.logsMetadata.totalDuration / experiment.logsMetadata.count)
             : '—'
         }
         isBest={bestLogsMetadata.duration.includes(experiment.uuid)}
@@ -58,8 +50,7 @@ export function ExperimentLogsMetadata({
         value={
           experiment.logsMetadata.count > 0
             ? Math.floor(
-                experiment.logsMetadata.totalTokens /
-                  experiment.logsMetadata.count,
+                experiment.logsMetadata.totalTokens / experiment.logsMetadata.count,
               ).toString()
             : '—'
         }
@@ -71,8 +62,7 @@ export function ExperimentLogsMetadata({
         value={
           experiment.logsMetadata.count > 0
             ? formatCostInMillicents(
-                experiment.logsMetadata.totalCost /
-                  experiment.logsMetadata.count,
+                experiment.logsMetadata.totalCost / experiment.logsMetadata.count,
               )
             : '—'
         }

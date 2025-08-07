@@ -3,16 +3,16 @@ import { env } from '@latitude-data/env'
 import { embedMany } from 'ai'
 import similarity from 'compute-cosine-similarity'
 import {
-  EvaluationType,
-  RuleEvaluationMetric,
+  type EvaluationType,
+  type RuleEvaluationMetric,
   RuleEvaluationSemanticSimilaritySpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {
-  EvaluationMetricRunArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricRunArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 
@@ -25,10 +25,7 @@ export const RuleEvaluationSemanticSimilaritySpecification = {
 async function validate(
   {
     configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.SemanticSimilarity
-  >,
+  }: EvaluationMetricValidateArgs<EvaluationType.Rule, RuleEvaluationMetric.SemanticSimilarity>,
   _ = database,
 ) {
   if (
@@ -36,9 +33,7 @@ async function validate(
     (configuration.minSimilarity < 0 || configuration.minSimilarity > 100)
   ) {
     return Result.error(
-      new BadRequestError(
-        'Minimum similarity must be a number between 0 and 100',
-      ),
+      new BadRequestError('Minimum similarity must be a number between 0 and 100'),
     )
   }
 
@@ -47,9 +42,7 @@ async function validate(
     (configuration.maxSimilarity < 0 || configuration.maxSimilarity > 100)
   ) {
     return Result.error(
-      new BadRequestError(
-        'Maximum similarity must be a number between 0 and 100',
-      ),
+      new BadRequestError('Maximum similarity must be a number between 0 and 100'),
     )
   }
 
@@ -59,9 +52,7 @@ async function validate(
     configuration.minSimilarity >= configuration.maxSimilarity
   ) {
     return Result.error(
-      new BadRequestError(
-        'Minimum similarity must be less than maximum similarity',
-      ),
+      new BadRequestError('Minimum similarity must be less than maximum similarity'),
     )
   }
 
@@ -83,10 +74,7 @@ async function run(
     actualOutput,
     expectedOutput,
     datasetLabel,
-  }: EvaluationMetricRunArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.SemanticSimilarity
-  >,
+  }: EvaluationMetricRunArgs<EvaluationType.Rule, RuleEvaluationMetric.SemanticSimilarity>,
   _ = database,
 ) {
   const metadata = {

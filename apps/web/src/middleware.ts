@@ -1,9 +1,5 @@
-import {
-  AUTH_COOKIE_NAME,
-  isPublicPath,
-  PUBLIC_ROOT_PATHS,
-} from '$/services/auth/constants'
-import { NextRequest, NextResponse } from 'next/server'
+import { AUTH_COOKIE_NAME, isPublicPath, PUBLIC_ROOT_PATHS } from '$/services/auth/constants'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname

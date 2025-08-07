@@ -1,5 +1,5 @@
-import { Message } from '@latitude-data/constants/legacyCompiler'
-import { AppliedRules, ProviderRules } from './types'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
+import { type AppliedRules, ProviderRules } from './types'
 
 /**
  * OpenAI oficial 'o1' model supports system messages.

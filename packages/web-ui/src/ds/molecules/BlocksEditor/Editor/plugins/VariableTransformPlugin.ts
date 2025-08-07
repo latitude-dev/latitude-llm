@@ -54,8 +54,7 @@ function transformTextNode(node: TextNode) {
 
   // Check if we need to preserve cursor position
   const selection = $getSelection()
-  const shouldSetCursor =
-    $isRangeSelection(selection) && selection.focus.getNode() === node
+  const shouldSetCursor = $isRangeSelection(selection) && selection.focus.getNode() === node
 
   if (start > 0) {
     node.setTextContent(beforeText)

@@ -1,12 +1,7 @@
 'use client'
 
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from '@latitude-data/web-ui/atoms/Table'
+import { Table, TableBody, TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Image from 'next/image'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -17,8 +12,7 @@ import { cn } from '@latitude-data/web-ui/utils'
 
 export function Integrations() {
   const { pipedreamApps, isLoading } = useColumn1Context()
-  const { selectedIntegration, setSelectedIntegration } =
-    useTriggersModalContext()
+  const { selectedIntegration, setSelectedIntegration } = useTriggersModalContext()
 
   return (
     <div className='flex flex-col gap-2'>
@@ -33,9 +27,7 @@ export function Integrations() {
                 <TableRow
                   key={app.id}
                   className={cn('cursor-pointer', {
-                    'bg-accent':
-                      selectedIntegration?.name === app.name &&
-                      !selectedIntegration?.id,
+                    'bg-accent': selectedIntegration?.name === app.name && !selectedIntegration?.id,
                   })}
                   onClick={() =>
                     setSelectedIntegration({

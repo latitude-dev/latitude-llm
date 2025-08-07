@@ -318,21 +318,20 @@ describe('computeDocumentRevertChanges', () => {
   })
 
   it('fails if the document UUIDs do not match', async (ctx) => {
-    const { workspace, project, user, documents } =
-      await ctx.factories.createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-          },
-        ],
-        documents: {
-          foo: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Foo',
-          }),
+    const { workspace, project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
         },
-      })
+      ],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Foo',
+        }),
+      },
+    })
 
     const fooDocument = documents[0]!
 
@@ -365,21 +364,20 @@ describe('computeDocumentRevertChanges', () => {
   })
 
   it('fails when comparing the same document version', async (ctx) => {
-    const { workspace, project, user, documents } =
-      await ctx.factories.createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-          },
-        ],
-        documents: {
-          foo: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Foo',
-          }),
+    const { workspace, project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
         },
-      })
+      ],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Foo',
+        }),
+      },
+    })
 
     const fooDocument = documents[0]!
 

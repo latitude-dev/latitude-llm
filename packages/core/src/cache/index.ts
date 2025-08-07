@@ -1,5 +1,5 @@
 import { env } from '@latitude-data/env'
-import Redis from 'ioredis'
+import type Redis from 'ioredis'
 
 import { buildRedisConnection } from '../redis'
 

@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback, useMemo } from 'react'
+import { type ChangeEvent, useCallback, useMemo } from 'react'
 
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
@@ -9,9 +9,7 @@ import { isPromptLFile } from 'promptl-ai'
 import useFiles from '$/stores/files'
 
 export function ParameterInputSkeleton() {
-  return (
-    <Skeleton className='w-full h-[30px] rounded-md bg-muted animate-pulse' />
-  )
+  return <Skeleton className='w-full h-[30px] rounded-md bg-muted animate-pulse' />
 }
 
 export function ParameterInput({
@@ -28,25 +26,11 @@ export function ParameterInput({
   disabled?: boolean
 }) {
   if (type === ParameterType.File || type === ParameterType.Image) {
-    return (
-      <FileParameterInput
-        type={type}
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-      />
-    )
+    return <FileParameterInput type={type} value={value} onChange={onChange} disabled={disabled} />
   }
 
   if (type === ParameterType.Text) {
-    return (
-      <TextParameterInput
-        name={name}
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-      />
-    )
+    return <TextParameterInput name={name} value={value} onChange={onChange} disabled={disabled} />
   }
 
   return (

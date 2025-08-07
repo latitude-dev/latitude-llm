@@ -8,8 +8,7 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
  */
 export function getUnknownError(error: Error | unknown | undefined) {
   const isAllGood =
-    !error ||
-    (error instanceof ChainError && error.errorCode !== RunErrorCodes.Unknown)
+    !error || (error instanceof ChainError && error.errorCode !== RunErrorCodes.Unknown)
 
   if (isAllGood) return null
 

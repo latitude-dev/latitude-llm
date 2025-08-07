@@ -54,9 +54,9 @@ describe('createEvaluationTemplate', () => {
         prompt: 'Test Prompt',
       })
 
-      const category = await findEvaluationTemplateCategoryById(
-        result.value!.categoryId!,
-      ).then((r) => r.unwrap())
+      const category = await findEvaluationTemplateCategoryById(result.value!.categoryId!).then(
+        (r) => r.unwrap(),
+      )
 
       expect(category.name).toBe('New Category')
     }
@@ -78,9 +78,9 @@ describe('createEvaluationTemplate', () => {
         prompt: 'Test Prompt',
       })
 
-      const category = await findEvaluationTemplateCategoryById(
-        result.value!.categoryId!,
-      ).then((r) => r.unwrap())
+      const category = await findEvaluationTemplateCategoryById(result.value!.categoryId!).then(
+        (r) => r.unwrap(),
+      )
       expect(category.name).toBe('Default Category')
     }
   })
@@ -117,9 +117,7 @@ describe('createEvaluationTemplate', () => {
     vi.spyOn(
       evaluationTemplateCategoriesService,
       'createEvaluationTemplateCategory',
-    ).mockResolvedValue(
-      Result.error(new NotFoundError('Category creation failed')),
-    )
+    ).mockResolvedValue(Result.error(new NotFoundError('Category creation failed')))
 
     const result = await createEvaluationTemplate({
       name: 'Test Template',

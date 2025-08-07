@@ -1,8 +1,8 @@
 'use client'
 
-import { ExperimentDto } from '@latitude-data/core/browser'
+import type { ExperimentDto } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TextColor } from '@latitude-data/web-ui/tokens'
+import type { TextColor } from '@latitude-data/web-ui/tokens'
 import { useEffect, useState } from 'react'
 
 const getDuration = (start: Date | null, end: Date | null) => {

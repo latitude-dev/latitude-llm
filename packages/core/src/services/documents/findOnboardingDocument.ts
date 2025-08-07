@@ -9,10 +9,7 @@ import {
 
 export const ONBOARDING_DOCUMENT_PATH = 'onboarding'
 
-export async function findOnboardingDocument(
-  workspaceId: number,
-  db = database,
-) {
+export async function findOnboardingDocument(workspaceId: number, db = database) {
   try {
     // Get the first project in the workspace
     const projectsRepo = new ProjectsRepository(workspaceId, db)
@@ -43,9 +40,7 @@ export async function findOnboardingDocument(
 
     const document = documents.find((d) => d.path === ONBOARDING_DOCUMENT_PATH)
     if (!document) {
-      return Result.error(
-        new NotFoundError('No documents found in the first commit'),
-      )
+      return Result.error(new NotFoundError('No documents found in the first commit'))
     }
     return Result.ok({ document, commit, project })
   } catch (error) {

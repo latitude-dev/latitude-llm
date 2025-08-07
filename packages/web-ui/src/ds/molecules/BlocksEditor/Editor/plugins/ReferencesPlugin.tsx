@@ -1,4 +1,5 @@
-import React, { useCallback, useState, useMemo, useEffect } from 'react'
+import type React from 'react'
+import { useCallback, useState, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
   LexicalTypeaheadMenuPlugin,
@@ -6,13 +7,13 @@ import {
   useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodes, TextNode, LexicalEditor } from 'lexical'
+import { $insertNodes, TextNode, type LexicalEditor } from 'lexical'
 import { cn } from '../../../../../lib/utils'
 import { Text } from '../../../../atoms/Text'
 import { ReferenceNode } from '../nodes/ReferenceNode'
-import { BlocksEditorProps, IncludedPrompt } from '../../types'
+import type { BlocksEditorProps, IncludedPrompt } from '../../types'
 import { Icon } from '../../../../atoms/Icons'
-import { ConversationMetadata } from 'promptl-ai'
+import type { ConversationMetadata } from 'promptl-ai'
 
 export function buildReferencePath(path: string): string {
   return `/${path}`
@@ -50,18 +51,13 @@ export function EventListeners({
 }) {
   useEffect(() => {
     const abortController = new AbortController()
-    document.addEventListener(
-      CUSTOM_EVENTS.GO_TO_DEV_EDITOR,
-      onToggleDevEditor,
-      { signal: abortController.signal },
-    )
+    document.addEventListener(CUSTOM_EVENTS.GO_TO_DEV_EDITOR, onToggleDevEditor, {
+      signal: abortController.signal,
+    })
 
     return () => {
       abortController.abort()
-      document.removeEventListener(
-        CUSTOM_EVENTS.GO_TO_DEV_EDITOR,
-        onToggleDevEditor,
-      )
+      document.removeEventListener(CUSTOM_EVENTS.GO_TO_DEV_EDITOR, onToggleDevEditor)
     }
   }, [onToggleDevEditor])
 
@@ -87,7 +83,6 @@ function ReferencePickerMenuItem({
         },
       )}
       ref={option.setRefElement}
-      role='option'
       aria-selected={isSelected}
       id={`typeahead-item-${index}`}
       onMouseEnter={onMouseEnter}
@@ -102,9 +97,7 @@ function ReferencePickerMenuItem({
 }
 
 export function buildEmptyAttributes(metadata: ConversationMetadata) {
-  return Object.fromEntries(
-    Array.from(metadata.parameters).map((key) => [key, undefined]),
-  )
+  return Object.fromEntries(Array.from(metadata.parameters).map((key) => [key, undefined]))
 }
 
 export function ReferencesPlugin({
@@ -124,10 +117,7 @@ export function ReferencesPlugin({
   })
 
   const allOptions = useMemo(
-    () =>
-      Object.entries(prompts).map(
-        ([path, prompt]) => new ReferencePickerOption(path, prompt),
-      ),
+    () => Object.entries(prompts).map(([path, prompt]) => new ReferencePickerOption(path, prompt)),
     [prompts],
   )
 

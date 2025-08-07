@@ -1,11 +1,11 @@
-import { LatitudeEvent } from './events'
+import type { LatitudeEvent } from './events'
 import { eventsQueue, webhooksQueue } from '../jobs/queues'
 import {
   pubSubEvents,
-  PubSubListener,
+  type PubSubListener,
   pubSubProducer,
-  PubSubEvent,
-  PubSubHandler,
+  type PubSubEvent,
+  type PubSubHandler,
 } from '../pubSub'
 
 export const publisher = {
@@ -19,16 +19,10 @@ export const publisher = {
   publish: async (eventName: PubSubEvent, args: Record<string, unknown>) => {
     pubSubProducer.publishEvent({ eventName, ...args })
   },
-  subscribe: async (
-    event: PubSubEvent,
-    listener: PubSubHandler[typeof event],
-  ) => {
+  subscribe: async (event: PubSubEvent, listener: PubSubHandler[typeof event]) => {
     pubSubEvents.on<PubSubListener>(event, listener)
   },
-  unsubscribe: async (
-    event: PubSubEvent,
-    listener: PubSubHandler[typeof event],
-  ) => {
+  unsubscribe: async (event: PubSubEvent, listener: PubSubHandler[typeof event]) => {
     pubSubEvents.removeListener(event, listener)
   },
 }

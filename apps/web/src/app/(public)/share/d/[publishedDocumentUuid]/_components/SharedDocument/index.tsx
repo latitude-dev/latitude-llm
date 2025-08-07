@@ -1,9 +1,9 @@
 'use client'
 
-import { PublishedDocument } from '@latitude-data/core/browser'
+import type { PublishedDocument } from '@latitude-data/core/browser'
 
 import { PromptHeader } from '../Header'
-import { ServerClientMetadata } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/SharedDocument/types'
+import type { ServerClientMetadata } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/SharedDocument/types'
 import { RunPrompt } from './RunPrompt'
 import { DisplayPrompt } from './DisplayPrompt'
 
@@ -22,11 +22,7 @@ export function SharedDocument({
       {shared.displayPromptOnly ? (
         <DisplayPrompt prompt={metadata.resolvedPrompt} />
       ) : (
-        <RunPrompt
-          metadata={metadata}
-          shared={shared}
-          queryParams={queryParams}
-        />
+        <RunPrompt metadata={metadata} shared={shared} queryParams={queryParams} />
       )}
     </div>
   )

@@ -1,13 +1,10 @@
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { McpServerRepository } from '@latitude-data/core/repositories'
-import {
-  getLogs,
-  LogOptions,
-} from '@latitude-data/core/services/mcpServers/getLogs'
+import { getLogs, type LogOptions } from '@latitude-data/core/services/mcpServers/getLogs'
 import { Result } from '@latitude-data/core/lib/Result'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
   authHandler(
@@ -24,10 +21,7 @@ export const GET = errorHandler(
       const mcpServerId = searchParams.get('mcpServerId')
 
       if (!mcpServerId) {
-        return NextResponse.json(
-          { error: 'Missing mcpServerId parameter' },
-          { status: 400 },
-        )
+        return NextResponse.json({ error: 'Missing mcpServerId parameter' }, { status: 400 })
       }
 
       // Extract log options from query parameters
@@ -47,10 +41,7 @@ export const GET = errorHandler(
       const mcpServerResult = await repository.find(mcpServerId)
 
       if (!Result.isOk(mcpServerResult)) {
-        return NextResponse.json(
-          { error: mcpServerResult.error.message },
-          { status: 404 },
-        )
+        return NextResponse.json({ error: mcpServerResult.error.message }, { status: 404 })
       }
 
       const mcpServer = mcpServerResult.value
@@ -59,10 +50,7 @@ export const GET = errorHandler(
       const logsResult = await getLogs(mcpServer, logOptions)
 
       if (!Result.isOk(logsResult)) {
-        return NextResponse.json(
-          { error: logsResult.error.message },
-          { status: 500 },
-        )
+        return NextResponse.json({ error: logsResult.error.message }, { status: 500 })
       }
 
       return NextResponse.json({ logs: logsResult.value }, { status: 200 })

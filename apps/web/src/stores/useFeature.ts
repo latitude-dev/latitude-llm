@@ -1,7 +1,7 @@
 import useFetcher from '$/hooks/useFetcher'
 import { API_ROUTES } from '$/services/routes/api'
 import { useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 type FeatureStatus = {
   enabled: boolean
@@ -12,16 +12,13 @@ export default function useFeature(
   featureName: string,
   opts?: SWRConfiguration,
 ) {
-  const key =
-    workspaceId && featureName ? `api/workspaceFeatures/${featureName}` : null
+  const key = workspaceId && featureName ? `api/workspaceFeatures/${featureName}` : null
 
   const fetcher = useFetcher<FeatureStatus>(
-    workspaceId && featureName
-      ? API_ROUTES.workspaceFeatures.byName(featureName)
-      : '',
+    workspaceId && featureName ? API_ROUTES.workspaceFeatures.byName(featureName) : '',
   )
 
-  const { data, isLoading, ...rest } = useSWR<FeatureStatus>(key, fetcher, {
+  const { data, mutate, isValidating, isLoading } = useSWR<FeatureStatus>(key, fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
     ...opts,
@@ -31,8 +28,9 @@ export default function useFeature(
     () => ({
       isEnabled: data?.enabled ?? false,
       isLoading,
-      ...rest,
+      isValidating,
+      mutate,
     }),
-    [data, isLoading, rest],
+    [data, isLoading, isValidating, mutate],
   )
 }

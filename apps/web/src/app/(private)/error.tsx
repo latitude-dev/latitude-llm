@@ -5,7 +5,7 @@ import { useEffect } from 'react'
 import { ErrorComponent, useSession } from '@latitude-data/web-ui/browser'
 import * as Sentry from '@sentry/nextjs'
 
-export default function Error({
+export default function ErrorPage({
   error,
 }: {
   error: Error & { digest?: string }

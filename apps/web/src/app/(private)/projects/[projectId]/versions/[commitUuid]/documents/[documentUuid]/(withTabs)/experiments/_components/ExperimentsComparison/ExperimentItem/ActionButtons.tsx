@@ -1,10 +1,6 @@
 import { DocumentRoutes, ROUTES } from '$/services/routes'
-import { DocumentVersion } from '@latitude-data/constants'
-import {
-  Commit,
-  ExperimentWithScores,
-  Project,
-} from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/constants'
+import type { Commit, ExperimentWithScores, Project } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import Link from 'next/link'
@@ -79,12 +75,7 @@ export function ActionButtons({
 }) {
   return (
     <div className='flex flex-row justify-center w-full gap-2'>
-      <ApplyButton
-        project={project}
-        commit={commit}
-        document={document}
-        experiment={experiment}
-      />
+      <ApplyButton project={project} commit={commit} document={document} experiment={experiment} />
       <Link
         href={ROUTES.projects
           .detail({ id: project.id })

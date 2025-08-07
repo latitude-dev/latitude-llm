@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getRoot, LexicalNode, $isElementNode } from 'lexical'
+import { $getRoot, type LexicalNode, $isElementNode } from 'lexical'
 import { $isMessageBlockNode } from '../nodes/MessageBlock'
 import { $isStepBlockNode } from '../nodes/StepBlock'
 
@@ -16,13 +16,10 @@ function $validateAndFixHierarchy(): boolean {
     for (const child of children) {
       if ($isMessageBlockNode(node)) {
         if ($isMessageBlockNode(child) || $isStepBlockNode(child)) {
-          console.warn(
-            '🚨 Hierarchy violation: Message block contains invalid block',
-            {
-              parent: node.getType(),
-              child: child.getType(),
-            },
-          )
+          console.warn('🚨 Hierarchy violation: Message block contains invalid block', {
+            parent: node.getType(),
+            child: child.getType(),
+          })
           hasViolations = true
           // Move the child to root level
           child.remove()
@@ -31,13 +28,10 @@ function $validateAndFixHierarchy(): boolean {
       } else if ($isStepBlockNode(node)) {
         // Step blocks should not contain other step blocks
         if ($isStepBlockNode(child)) {
-          console.warn(
-            '🚨 Hierarchy violation: Step block contains step block',
-            {
-              parent: node.getType(),
-              child: child.getType(),
-            },
-          )
+          console.warn('🚨 Hierarchy violation: Step block contains step block', {
+            parent: node.getType(),
+            child: child.getType(),
+          })
           hasViolations = true
           // Move the child to root level
           child.remove()
@@ -53,9 +47,7 @@ function $validateAndFixHierarchy(): boolean {
   validateNode(root)
 
   if (hasViolations) {
-    console.log(
-      '✅ Fixed hierarchy violations - moved invalid nested blocks to root level',
-    )
+    console.log('✅ Fixed hierarchy violations - moved invalid nested blocks to root level')
   }
 
   return hasViolations

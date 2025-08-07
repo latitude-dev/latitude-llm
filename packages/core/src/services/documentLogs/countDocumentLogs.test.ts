@@ -1,13 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { countDocumentLogs } from './countDocumentLogs'
 import { LogSources, Providers } from '@latitude-data/constants'
-import {
-  createCommit,
-  createDocumentLog,
-  createProject,
-  helpers,
-} from '../../tests/factories'
-import { Commit, DocumentVersion, User } from '../../browser'
+import { createCommit, createDocumentLog, createProject, helpers } from '../../tests/factories'
+import type { Commit, DocumentVersion, User } from '../../browser'
 import { deleteCommitDraft } from '../commits'
 
 describe('countDocumentLogs', () => {

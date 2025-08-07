@@ -1,11 +1,8 @@
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType, IProjectContextType } from '@latitude-data/web-ui/providers'
 import { type DocumentVersion, DocumentType } from '@latitude-data/core/browser'
 import { useMemo } from 'react'
 import { ROUTES } from '$/services/routes'
-import { IncludedPrompt } from '@latitude-data/web-ui/molecules/BlocksEditor'
+import type { IncludedPrompt } from '@latitude-data/web-ui/molecules/BlocksEditor'
 
 const docUrl = (projectId: number, commitUuid: string, uuid: string) =>
   ROUTES.projects
@@ -34,10 +31,7 @@ export function useIncludabledPrompts({
 }) {
   return useMemo(() => {
     return documents
-      .filter(
-        (doc) =>
-          doc.id !== document.id && doc.documentType === DocumentType.Prompt,
-      )
+      .filter((doc) => doc.id !== document.id && doc.documentType === DocumentType.Prompt)
       .reduce(
         (acc, doc) => {
           acc[doc.path] = {

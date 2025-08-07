@@ -1,18 +1,18 @@
 import {
   DocumentTriggerType,
-  DocumentVersion,
+  type DocumentVersion,
   IntegrationType,
 } from '@latitude-data/constants'
-import { DocumentTrigger, Project, Workspace } from '../../browser'
+import type { DocumentTrigger, Project, Workspace } from '../../browser'
 import { BadRequestError, LatitudeError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
 import { IntegrationsRepository } from '../../repositories'
 import { documentTriggers } from '../../schema'
 import { deployPipedreamTrigger } from '../integrations/pipedream/triggers'
 import { buildConfiguration } from './helpers/buildConfiguration'
-import {
+import type {
   DocumentTriggerConfiguration,
   InsertDocumentTriggerWithConfiguration,
   IntegrationTriggerConfiguration,
@@ -32,9 +32,7 @@ async function completeIntegrationTriggerConfig(
   db = database,
 ): PromisedResult<IntegrationTriggerConfiguration> {
   const integrationsScope = new IntegrationsRepository(workspace.id, db)
-  const integrationResult = await integrationsScope.find(
-    configuration.integrationId,
-  )
+  const integrationResult = await integrationsScope.find(configuration.integrationId)
 
   if (!Result.isOk(integrationResult)) return integrationResult
 
@@ -104,9 +102,7 @@ export async function createDocumentTrigger(
       .returning()
 
     if (!result.length) {
-      return Result.error(
-        new LatitudeError('Failed to create document trigger'),
-      )
+      return Result.error(new LatitudeError('Failed to create document trigger'))
     }
 
     return Result.ok(result[0]! as DocumentTrigger)

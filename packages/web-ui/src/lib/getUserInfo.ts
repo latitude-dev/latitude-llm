@@ -1,4 +1,4 @@
-import { SessionUser } from '../providers'
+import type { SessionUser } from '../providers'
 
 const BG_COLORS = {
   yellow: 'bg-yellow-500 text-yellow-100',

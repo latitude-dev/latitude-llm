@@ -17,20 +17,13 @@ export default function SuggestionMail({
   link: string
 }) {
   return (
-    <ContainerLayout
-      title='Suggestion'
-      previewText={`Suggestion for ${document}.`}
-    >
+    <ContainerLayout title='Suggestion' previewText={`Suggestion for ${document}.`}>
       <Text>Hi {user},</Text>
       <Text>
         We have generated a suggestion for {document} to improve {evaluation}:
       </Text>
       <Text>{suggestion}</Text>
-      <Link
-        href={link}
-        target='_blank'
-        className='text-blue-500 font-medium text-base mb-4'
-      >
+      <Link href={link} target='_blank' className='text-blue-500 font-medium text-base mb-4'>
         Click here to improve {document}
       </Link>
     </ContainerLayout>

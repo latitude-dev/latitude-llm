@@ -1,28 +1,23 @@
-import {
-  DocumentTriggerType,
-  EMAIL_TRIGGER_DOMAIN,
-} from '@latitude-data/constants'
-import { PromptLFile } from 'promptl-ai'
-import { DocumentTrigger, HEAD_COMMIT, Workspace } from '../../../../browser'
+import { DocumentTriggerType, EMAIL_TRIGGER_DOMAIN } from '@latitude-data/constants'
+import type { PromptLFile } from 'promptl-ai'
+import { type DocumentTrigger, HEAD_COMMIT, type Workspace } from '../../../../browser'
 import { database } from '../../../../client'
 import { unsafelyFindWorkspace } from '../../../../data-access'
-import { RunEmailTriggerJobData } from '../../../../jobs/job-definitions/documentTriggers/runEmailTriggerJob'
+import type { RunEmailTriggerJobData } from '../../../../jobs/job-definitions/documentTriggers/runEmailTriggerJob'
 import { defaultQueue } from '../../../../jobs/queues'
 import { BadRequestError, LatitudeError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'
-import { PromisedResult } from '../../../../lib/Transaction'
+import type { PromisedResult } from '../../../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../../../repositories'
 import { uploadFile } from '../../../files'
 import { findUnscopedDocumentTriggers } from '../../find'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 
 async function getTriggerName(
   trigger: DocumentTrigger,
   db = database,
 ): PromisedResult<string, Error> {
-  const configName = (
-    trigger.configuration as EmailTriggerConfiguration
-  ).name?.trim()
+  const configName = (trigger.configuration as EmailTriggerConfiguration).name?.trim()
   if (configName?.length) {
     return Result.ok(configName)
   }
@@ -131,10 +126,7 @@ export async function handleEmailTrigger(
   })
   if (assertFilterResult.error) return assertFilterResult
 
-  const workspace = (await unsafelyFindWorkspace(
-    trigger.workspaceId,
-    db,
-  )) as Workspace
+  const workspace = (await unsafelyFindWorkspace(trigger.workspaceId, db)) as Workspace
 
   const nameResult = await getTriggerName(trigger, db)
   if (nameResult.error) return nameResult

@@ -1,7 +1,7 @@
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { describe, expect, it } from 'vitest'
 
-import { ProviderLog, ProviderLogDto } from '../../browser'
+import type { ProviderLog, ProviderLogDto } from '../../browser'
 import { formatContext, formatConversation } from './serializeForEvaluation'
 
 describe('serialize', () => {
@@ -291,9 +291,7 @@ describe('serialize', () => {
         last: null,
       },
       assistant: {
-        all: [
-          { role: MessageRole.assistant, content: 'Hello!', toolCalls: [] },
-        ],
+        all: [{ role: MessageRole.assistant, content: 'Hello!', toolCalls: [] }],
         first: {
           role: MessageRole.assistant,
           content: 'Hello!',
@@ -487,9 +485,7 @@ describe('formatContext', () => {
 
     const result = formatContext(providerLog)
 
-    expect(result).toBe(
-      'User:\nSummarize this file\n[FILE]\n\n' + 'Assistant:\nNo.',
-    )
+    expect(result).toBe('User:\nSummarize this file\n[FILE]\n\n' + 'Assistant:\nNo.')
   })
 
   it('should handle empty messages array', () => {

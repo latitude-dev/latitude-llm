@@ -1,6 +1,6 @@
 import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 
-import { DocumentTrigger } from '../browser'
+import type { DocumentTrigger } from '../browser'
 import { documentTriggers } from '../schema'
 import Repository from './repositoryV2'
 import { DocumentTriggerType } from '@latitude-data/constants'
@@ -13,23 +13,19 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
   }
 
   get scope() {
-    return this.db
-      .select(tt)
-      .from(documentTriggers)
-      .where(this.scopeFilter)
-      .$dynamic()
+    return this.db.select(tt).from(documentTriggers).where(this.scopeFilter).$dynamic()
   }
 
   findByDocumentUuid(documentUuid: string): Promise<DocumentTrigger[]> {
-    return this.scope
-      .where(eq(documentTriggers.documentUuid, documentUuid))
-      .execute() as Promise<DocumentTrigger[]>
+    return this.scope.where(eq(documentTriggers.documentUuid, documentUuid)).execute() as Promise<
+      DocumentTrigger[]
+    >
   }
 
   findByProjectId(projectId: number): Promise<DocumentTrigger[]> {
-    return this.scope
-      .where(eq(documentTriggers.projectId, projectId))
-      .execute() as Promise<DocumentTrigger[]>
+    return this.scope.where(eq(documentTriggers.projectId, projectId)).execute() as Promise<
+      DocumentTrigger[]
+    >
   }
 
   findByIntegrationId(integrationId: number): Promise<DocumentTrigger[]> {

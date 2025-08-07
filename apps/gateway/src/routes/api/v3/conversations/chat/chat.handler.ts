@@ -1,8 +1,8 @@
 import { captureException } from '$/common/sentry'
-import { AppRouteHandler } from '$/openApi/types'
+import type { AppRouteHandler } from '$/openApi/types'
 import { runPresenter, runPresenterLegacy } from '$/presenters/runPresenter'
-import { ChatRoute } from '$/routes/api/v3/conversations/chat/chat.route'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import type { ChatRoute } from '$/routes/api/v3/conversations/chat/chat.route'
+import type { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
@@ -16,13 +16,7 @@ import { compareVersion } from '$/utils/versionComparison'
 // @ts-expect-error: streamSSE has type issues
 export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const { conversationUuid } = c.req.valid('param')
-  const {
-    messages,
-    tools,
-    stream: useSSE,
-    trace,
-    __internal,
-  } = c.req.valid('json')
+  const { messages, tools, stream: useSSE, trace, __internal } = c.req.valid('json')
   const workspace = c.get('workspace')
 
   const sdkVersion = c.req.header('X-Latitude-SDK-Version')
@@ -30,9 +24,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
 
   const result = (
     await _addMessages({
-      context: trace
-        ? telemetry.resume(trace)
-        : BACKGROUND({ workspaceId: workspace.id }),
+      context: trace ? telemetry.resume(trace) : BACKGROUND({ workspaceId: workspace.id }),
       workspace,
       tools: buildClientToolHandlersMap(tools),
       documentLogUuid: conversationUuid,

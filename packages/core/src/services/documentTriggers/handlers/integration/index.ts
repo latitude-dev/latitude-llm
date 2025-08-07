@@ -1,17 +1,14 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { database } from '../../../../client'
 import { HEAD_COMMIT } from '../../../../browser'
-import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import {
-  unsafelyFindDocumentTrigger,
-  unsafelyFindWorkspace,
-} from '../../../../data-access'
+import type { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { unsafelyFindDocumentTrigger, unsafelyFindWorkspace } from '../../../../data-access'
 import { documentsQueue } from '../../../../jobs/queues'
 import { BadRequestError, NotFoundError } from '../../../../lib/errors'
 import { LatitudeError } from '../../../../lib/errors'
-import { PromisedResult } from '../../../../lib/Transaction'
+import type { PromisedResult } from '../../../../lib/Transaction'
 import { Result } from '../../../../lib/Result'
-import { RunDocumentJobData } from '../../../../jobs/job-definitions'
+import type { RunDocumentJobData } from '../../../../jobs/job-definitions'
 
 export async function handleIntegrationTrigger(
   {

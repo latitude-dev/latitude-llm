@@ -1,4 +1,4 @@
-import { type DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -6,15 +6,12 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import {
   type BlockRootNode,
   BlocksEditor,
-  IncludedPrompt,
+  type IncludedPrompt,
 } from '@latitude-data/web-ui/molecules/BlocksEditor'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType, IProjectContextType } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
-import { Config, scan } from 'promptl-ai'
+import { type Config, scan } from 'promptl-ai'
 import { memo, Suspense, useCallback } from 'react'
 import { stringify as stringifyObjectToYaml } from 'yaml'
 import { useIncludabledPrompts } from './useIncludabledPrompts'
@@ -111,11 +108,7 @@ export const PlaygroundBlocksEditor = memo(
           />
         ) : (
           <Skeleton className='w-full h-full rounded-lg flex items-center justify-center gap-2 p-4'>
-            <Icon
-              name='loader'
-              color='foregroundMuted'
-              className='animate-spin'
-            />
+            <Icon name='loader' color='foregroundMuted' className='animate-spin' />
             <Text.H5 color='foregroundMuted'>Assembling prompt</Text.H5>
           </Skeleton>
         )}

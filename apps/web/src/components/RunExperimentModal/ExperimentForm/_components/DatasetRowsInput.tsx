@@ -1,9 +1,9 @@
-import { ExperimentFormPayload } from '../useExperimentFormPayload'
+import type { ExperimentFormPayload } from '../useExperimentFormPayload'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -129,7 +129,7 @@ function RowsInputs({
       to: rowCount,
     })
     setAllRows(true)
-  }, [rowCount, setToLine])
+  }, [rowCount])
 
   return (
     <div className='flex flex-col gap-y-2 w-1/2'>
@@ -172,11 +172,5 @@ export function DatasetRowsInput({
     )
   }
 
-  return (
-    <RowsInputs
-      rowCount={rowCount!}
-      setFromLine={setFromLine}
-      setToLine={setToLine}
-    />
-  )
+  return <RowsInputs rowCount={rowCount!} setFromLine={setFromLine} setToLine={setToLine} />
 }

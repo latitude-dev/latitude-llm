@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
-import { McpServer } from '../../browser'
-import { Result, TypedResult } from '../../lib/Result'
+import type { McpServer } from '../../browser'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { mcpServers } from '../../schema/models/mcpServers'
 
@@ -25,9 +25,7 @@ export async function updateMcpServerLastUsed(
       .returning()
 
     if (!updatedRecords[0]) {
-      return Result.error(
-        new Error(`MCP Server with ID ${mcpServer.id} not found`),
-      )
+      return Result.error(new Error(`MCP Server with ID ${mcpServer.id} not found`))
     }
 
     return Result.ok(updatedRecords[0])

@@ -3,10 +3,7 @@
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { CLOUD_MESSAGES } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
-import {
-  BadRequestError,
-  UnprocessableEntityError,
-} from '@latitude-data/constants/errors'
+import { BadRequestError, UnprocessableEntityError } from '@latitude-data/constants/errors'
 import {
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,
@@ -46,9 +43,13 @@ export const refinePromptAction = withDocument
 
     const { evaluationUuid, resultUuids } = input
 
+    // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
     let evaluation
+    // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
     let serializedEvaluation
+    // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
     let results
+    // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
     let serializedResults
 
     const evaluationsRepository = new EvaluationsV2Repository(ctx.workspace.id)
@@ -61,13 +62,9 @@ export const refinePromptAction = withDocument
       })
       .then((r) => r.unwrap())
 
-    serializedEvaluation = await serializeEvaluationV2({ evaluation }).then(
-      (r) => r.unwrap(),
-    )
+    serializedEvaluation = await serializeEvaluationV2({ evaluation }).then((r) => r.unwrap())
 
-    const resultsRepository = new EvaluationResultsV2Repository(
-      ctx.workspace.id,
-    )
+    const resultsRepository = new EvaluationResultsV2Repository(ctx.workspace.id)
     results = await resultsRepository
       .findManyByUuid([...new Set(resultUuids)])
       .then((r) => r.unwrap())

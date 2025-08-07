@@ -1,20 +1,10 @@
-import {
-  eq,
-  and,
-  getTableColumns,
-  sql,
-  count,
-  desc,
-  sum,
-  isNull,
-  isNotNull,
-} from 'drizzle-orm'
+import { eq, and, getTableColumns, sql, count, desc, sum, isNull, isNotNull } from 'drizzle-orm'
 
 import {
   ErrorableEntity,
-  Experiment,
-  ExperimentDto,
-  ExperimentLogsMetadata,
+  type Experiment,
+  type ExperimentDto,
+  type ExperimentLogsMetadata,
 } from '../browser'
 import {
   commits,
@@ -27,10 +17,10 @@ import {
 } from '../schema'
 import Repository from './repositoryV2'
 import { omit } from 'lodash-es'
-import { PromisedResult } from '../lib/Transaction'
+import type { PromisedResult } from '../lib/Transaction'
 import { LatitudeError, NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import { ExperimentScores } from '@latitude-data/constants'
+import type { ExperimentScores } from '@latitude-data/constants'
 
 export class ExperimentsRepository extends Repository<Experiment> {
   get scopeFilter() {
@@ -54,18 +44,14 @@ export class ExperimentsRepository extends Repository<Experiment> {
       ? await this.db
           .select({ id: experiments.id, uuid: experiments.uuid })
           .from(experiments)
-          .where(
-            and(this.scopeFilter, eq(experiments.uuid, params.experimentUuid)),
-          )
+          .where(and(this.scopeFilter, eq(experiments.uuid, params.experimentUuid)))
           .limit(1)
           .then((r) => r[0])
       : undefined
 
     if (params.experimentUuid && !experiment) {
       return Result.error(
-        new NotFoundError(
-          `Experiment with uuid ${params.experimentUuid} not found`,
-        ),
+        new NotFoundError(`Experiment with uuid ${params.experimentUuid} not found`),
       )
     }
 
@@ -76,9 +62,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
         : undefined
 
     if (!condition) {
-      return Result.error(
-        new LatitudeError(`Invalid condition provided with params ${params}`),
-      )
+      return Result.error(new LatitudeError(`Invalid condition provided with params ${params}`))
     }
 
     const evaluationAggregation = this.db.$with('evaluationAggregation').as(
@@ -99,10 +83,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
           `.as('total_score'),
         })
         .from(evaluationResultsV2)
-        .innerJoin(
-          experiments,
-          eq(evaluationResultsV2.experimentId, experiments.id),
-        )
+        .innerJoin(experiments, eq(evaluationResultsV2.experimentId, experiments.id))
         .where(and(this.scopeFilter, condition))
         .groupBy(evaluationResultsV2.experimentId),
     )
@@ -114,9 +95,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
         : undefined
 
     if (!logsCondition) {
-      return Result.error(
-        new LatitudeError(`Invalid condition provided with params ${params}`),
-      )
+      return Result.error(new LatitudeError(`Invalid condition provided with params ${params}`))
     }
 
     const logsAggregation = this.db.$with('logsAggregation').as(
@@ -130,10 +109,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
         .innerJoin(commits, eq(commits.id, documentLogs.commitId))
         .innerJoin(
           projects,
-          and(
-            eq(projects.id, commits.projectId),
-            eq(projects.workspaceId, this.workspaceId),
-          ),
+          and(eq(projects.id, commits.projectId), eq(projects.workspaceId, this.workspaceId)),
         )
         .where(and(isNotNull(documentLogs.experimentId), logsCondition))
         .groupBy(documentLogs.experimentId),
@@ -145,35 +121,15 @@ export class ExperimentsRepository extends Repository<Experiment> {
           .with(evaluationAggregation, logsAggregation)
           .select({
             id: experiments.id,
-            passedEvals:
-              sql<number>`MAX(${evaluationAggregation.passedEvals})`.as(
-                'passed_evals',
-              ),
-            failedEvals:
-              sql<number>`MAX(${evaluationAggregation.failedEvals})`.as(
-                'failed_evals',
-              ),
-            evalErrors:
-              sql<number>`MAX(${evaluationAggregation.evalErrors})`.as(
-                'eval_errors',
-              ),
-            totalScore:
-              sql<number>`MAX(${evaluationAggregation.totalScore})`.as(
-                'total_score',
-              ),
-            logErrors: sql<number>`MAX(${logsAggregation.logErrors})`.as(
-              'log_errors',
-            ),
+            passedEvals: sql<number>`MAX(${evaluationAggregation.passedEvals})`.as('passed_evals'),
+            failedEvals: sql<number>`MAX(${evaluationAggregation.failedEvals})`.as('failed_evals'),
+            evalErrors: sql<number>`MAX(${evaluationAggregation.evalErrors})`.as('eval_errors'),
+            totalScore: sql<number>`MAX(${evaluationAggregation.totalScore})`.as('total_score'),
+            logErrors: sql<number>`MAX(${logsAggregation.logErrors})`.as('log_errors'),
           })
           .from(experiments)
-          .leftJoin(
-            evaluationAggregation,
-            eq(evaluationAggregation.experimentId, experiments.id),
-          )
-          .leftJoin(
-            logsAggregation,
-            eq(logsAggregation.experimentId, experiments.id),
-          )
+          .leftJoin(evaluationAggregation, eq(evaluationAggregation.experimentId, experiments.id))
+          .leftJoin(logsAggregation, eq(logsAggregation.experimentId, experiments.id))
           .groupBy(experiments.id),
       ),
     )
@@ -245,41 +201,30 @@ export class ExperimentsRepository extends Repository<Experiment> {
       .where(and(this.scopeFilter, eq(experiments.uuid, uuid)))
 
     if (!results.length) {
-      return Result.error(
-        new NotFoundError(`Experiment not found with uuid '${uuid}'`),
-      )
+      return Result.error(new NotFoundError(`Experiment not found with uuid '${uuid}'`))
     }
 
     return Result.ok(this.experimentDtoPresenter(results[0]!))
   }
 
-  async getScores(
-    uuid: string,
-  ): PromisedResult<ExperimentScores, LatitudeError> {
+  async getScores(uuid: string): PromisedResult<ExperimentScores, LatitudeError> {
     const result = await this.db
       .select({
         experimentUuid: experiments.uuid,
         evaluationUuid: evaluationResultsV2.evaluationUuid,
         count: count(evaluationResultsV2.id).mapWith(Number).as('count'),
-        totalScore: sum(evaluationResultsV2.score)
-          .mapWith(Number)
-          .as('total_score'),
+        totalScore: sum(evaluationResultsV2.score).mapWith(Number).as('total_score'),
         totalNormalizedScore: sum(evaluationResultsV2.normalizedScore)
           .mapWith(Number)
           .as('total_normalized_score'),
       })
       .from(experiments)
-      .leftJoin(
-        evaluationResultsV2,
-        eq(evaluationResultsV2.experimentId, experiments.id),
-      )
+      .leftJoin(evaluationResultsV2, eq(evaluationResultsV2.experimentId, experiments.id))
       .where(and(this.scopeFilter, eq(experiments.uuid, uuid)))
       .groupBy(experiments.uuid, evaluationResultsV2.evaluationUuid)
 
     if (!result.length) {
-      return Result.error(
-        new NotFoundError(`Experiment not found with uuid '${uuid}'`),
-      )
+      return Result.error(new NotFoundError(`Experiment not found with uuid '${uuid}'`))
     }
 
     return Result.ok(
@@ -296,9 +241,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
     )
   }
 
-  async getLogsMetadata(
-    uuid: string,
-  ): PromisedResult<ExperimentLogsMetadata, LatitudeError> {
+  async getLogsMetadata(uuid: string): PromisedResult<ExperimentLogsMetadata, LatitudeError> {
     const experimentsCte = this.db.$with('experiments_cte').as(
       this.db
         .select({ id: experiments.id })
@@ -312,9 +255,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
         .select({
           experimentId: documentLogs.experimentId,
           logsCount: count(documentLogs.id).mapWith(Number).as('logs_count'),
-          totalDuration: sum(documentLogs.duration)
-            .mapWith(Number)
-            .as('total_duration'),
+          totalDuration: sum(documentLogs.duration).mapWith(Number).as('total_duration'),
         })
         .from(documentLogs)
         .leftJoin(
@@ -324,10 +265,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
             eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
           ),
         )
-        .innerJoin(
-          experimentsCte,
-          eq(documentLogs.experimentId, experimentsCte.id),
-        )
+        .innerJoin(experimentsCte, eq(documentLogs.experimentId, experimentsCte.id))
         .where(isNull(runErrors.id))
         .groupBy(documentLogs.experimentId),
     )
@@ -337,18 +275,11 @@ export class ExperimentsRepository extends Repository<Experiment> {
         .with(experimentsCte)
         .select({
           experimentId: documentLogs.experimentId,
-          totalCost: sum(providerLogs.costInMillicents)
-            .mapWith(Number)
-            .as('total_cost'),
-          totalTokens: sum(providerLogs.tokens)
-            .mapWith(Number)
-            .as('total_tokens'),
+          totalCost: sum(providerLogs.costInMillicents).mapWith(Number).as('total_cost'),
+          totalTokens: sum(providerLogs.tokens).mapWith(Number).as('total_tokens'),
         })
         .from(documentLogs)
-        .innerJoin(
-          providerLogs,
-          eq(providerLogs.documentLogUuid, documentLogs.uuid),
-        )
+        .innerJoin(providerLogs, eq(providerLogs.documentLogUuid, documentLogs.uuid))
         .leftJoin(
           runErrors,
           and(
@@ -356,10 +287,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
             eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
           ),
         )
-        .innerJoin(
-          experimentsCte,
-          eq(documentLogs.experimentId, experimentsCte.id),
-        )
+        .innerJoin(experimentsCte, eq(documentLogs.experimentId, experimentsCte.id))
         .where(isNull(runErrors.id))
         .groupBy(documentLogs.experimentId),
     )
@@ -374,14 +302,8 @@ export class ExperimentsRepository extends Repository<Experiment> {
         totalTokens: providerLogStats.totalTokens,
       })
       .from(experimentsCte)
-      .leftJoin(
-        documentLogStats,
-        eq(documentLogStats.experimentId, experimentsCte.id),
-      )
-      .leftJoin(
-        providerLogStats,
-        eq(providerLogStats.experimentId, experimentsCte.id),
-      )
+      .leftJoin(documentLogStats, eq(documentLogStats.experimentId, experimentsCte.id))
+      .leftJoin(providerLogStats, eq(providerLogStats.experimentId, experimentsCte.id))
 
     if (!row) {
       return Result.ok({
@@ -410,19 +332,11 @@ export class ExperimentsRepository extends Repository<Experiment> {
     },
   ): ExperimentDto => {
     return {
-      ...omit(row, [
-        'passedEvals',
-        'failedEvals',
-        'evalErrors',
-        'logErrors',
-        'totalScore',
-      ]),
+      ...omit(row, ['passedEvals', 'failedEvals', 'evalErrors', 'logErrors', 'totalScore']),
       results: {
         passed: Number(row.passedEvals),
         failed: Number(row.failedEvals),
-        errors:
-          Number(row.evalErrors) +
-          row.evaluationUuids.length * Number(row.logErrors),
+        errors: Number(row.evalErrors) + row.evaluationUuids.length * Number(row.logErrors),
         totalScore: Number(row.totalScore),
       },
     }

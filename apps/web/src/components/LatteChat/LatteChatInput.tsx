@@ -3,11 +3,12 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { useTypeWriterValue } from '@latitude-data/web-ui/browser'
-import React, { KeyboardEvent, useCallback, useState } from 'react'
+import type React from 'react'
+import { type KeyboardEvent, useCallback, useState } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ChangeList } from './_components/ChangesList'
-import { LatteChange } from '@latitude-data/constants/latte'
+import type { LatteChange } from '@latitude-data/constants/latte'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 
 const INPUT_PLACEHOLDERS = [
@@ -49,25 +50,17 @@ export function LatteChatInput({
   acceptChanges: () => void
   undoChanges: () => void
   feedbackRequested?: boolean
-  addFeedbackToLatteChange?: (
-    feedback: string,
-    evaluationResultUuid?: string,
-  ) => void
+  addFeedbackToLatteChange?: (feedback: string, evaluationResultUuid?: string) => void
 }) {
-  const placeholder = useTypeWriterValue(
-    inConversation ? [] : INPUT_PLACEHOLDERS,
-  )
+  const placeholder = useTypeWriterValue(inConversation ? [] : INPUT_PLACEHOLDERS)
 
   const [value, setValue] = useState('')
   const [action, setAction] = useState<'accept' | 'undo'>('accept')
 
-  const handleValueChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newValue = e.target.value
-      setValue(newValue)
-    },
-    [],
-  )
+  const handleValueChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value
+    setValue(newValue)
+  }, [])
 
   const onSubmit = useCallback(() => {
     if (isLoading) return
@@ -95,10 +88,7 @@ export function LatteChatInput({
       })}
     >
       {!changes.length && feedbackRequested ? (
-        <LatteChangesFeedback
-          onSubmit={addFeedbackToLatteChange!}
-          action={action}
-        />
+        <LatteChangesFeedback onSubmit={addFeedbackToLatteChange!} action={action} />
       ) : (
         <ChangeList
           changes={changes}
@@ -117,8 +107,7 @@ export function LatteChatInput({
         className={cn(
           'bg-transparent w-full px-2 pt-2 pb-14 resize-none text-sm focus-visible:ring-latte-border',
           {
-            'rounded-t-none border-t-0':
-              changes.length > 0 || feedbackRequested,
+            'rounded-t-none border-t-0': changes.length > 0 || feedbackRequested,
           },
         )}
         placeholder={inConversation ? 'Ask anything' : placeholder}
@@ -181,9 +170,7 @@ function LatteChangesFeedback({
     <div className='flex flex-col gap-2 p-2 border boder-input rounded-t-md'>
       <div className='flex items-center justify-between gap-2'>
         <Text.H6 color='foregroundMuted'>
-          {action === 'undo'
-            ? 'What did Latte get wrong?'
-            : 'Did Latte get this right?'}
+          {action === 'undo' ? 'What did Latte get wrong?' : 'Did Latte get this right?'}
         </Text.H6>
         <Button
           variant='ghost'

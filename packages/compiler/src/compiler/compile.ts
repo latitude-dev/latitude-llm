@@ -1,19 +1,15 @@
 import { error } from '$compiler/error/error'
 import errors from '$compiler/error/errors'
-import type {
-  BaseNode,
-  Fragment,
-  TemplateNode,
-} from '$compiler/parser/interfaces'
+import type { BaseNode, Fragment, TemplateNode } from '$compiler/parser/interfaces'
 import {
-  AssistantMessage,
-  Config,
+  type AssistantMessage,
+  type Config,
   ContentType,
-  Message,
-  MessageContent,
+  type Message,
+  type MessageContent,
   MessageRole,
-  PromptlSourceRef,
-  SystemMessage,
+  type PromptlSourceRef,
+  type SystemMessage,
 } from '$compiler/types'
 import type { Node as LogicalExpression } from 'estree'
 
@@ -25,14 +21,11 @@ import { compile as resolveIfBlock } from './base/nodes/if'
 import { compile as resolveMustache } from './base/nodes/mustache'
 import { compile as resolveElementTag } from './base/nodes/tag'
 import { compile as resolveText } from './base/nodes/text'
-import { CompileNodeContext, TemplateNodeWithStatus } from './base/types'
+import type { CompileNodeContext, TemplateNodeWithStatus } from './base/types'
 import { resolveLogicNode } from './logic'
-import Scope, { ScopeStash } from './scope'
-import type {
-  CompileOptions,
-  ResolveBaseNodeProps,
-  ToolCallReference,
-} from './types'
+import type Scope from './scope'
+import type { ScopeStash } from './scope'
+import type { CompileOptions, ResolveBaseNodeProps, ToolCallReference } from './types'
 import { getCommonIndent, removeCommonIndent } from './utils'
 
 export type CompilationStatus = {
@@ -93,7 +86,7 @@ export class Compile {
 
   async run(): Promise<CompilationStatus> {
     let completed = true
-    let stepConfig: Config | undefined = undefined
+    let stepConfig: Config | undefined 
 
     try {
       await this.resolveBaseNode({
@@ -136,14 +129,11 @@ export class Compile {
     this.config = config
   }
 
-  private getSourceRef(
-    text: string,
-    node?: TemplateNode,
-  ): PromptlSourceRef | undefined {
+  private getSourceRef(text: string, node?: TemplateNode): PromptlSourceRef | undefined {
     if (!node) return undefined
     if (node.type !== 'MustacheTag') return undefined
 
-    let sourceRef: PromptlSourceRef = {
+    const sourceRef: PromptlSourceRef = {
       start: this.accumulatedText.text.length,
       end: this.accumulatedText.text.length + text.length,
     }
@@ -168,10 +158,7 @@ export class Compile {
 
   // We should find another way to ensure SourceRefs
   // are in sync, this seems like a hack
-  private outdentSourceRefs(
-    text: string,
-    sourceMap: PromptlSourceRef[],
-  ): PromptlSourceRef[] {
+  private outdentSourceRefs(text: string, sourceMap: PromptlSourceRef[]): PromptlSourceRef[] {
     const indent = getCommonIndent(text)
     let position = 0
     text = text
@@ -286,10 +273,7 @@ export class Compile {
     return response
   }
 
-  private async resolveExpression(
-    expression: LogicalExpression,
-    scope: Scope,
-  ): Promise<unknown> {
+  private async resolveExpression(expression: LogicalExpression, scope: Scope): Promise<unknown> {
     return await resolveLogicNode({
       node: expression,
       scope,
@@ -408,14 +392,11 @@ export class Compile {
   ): never {
     const source = (node.loc?.source ?? this.rawText)!.split('\n')
     const start =
-      source
-        .slice(0, node.loc?.start.line! - 1)
-        .reduce((acc, line) => acc + line.length + 1, 0) +
+      source.slice(0, node.loc?.start.line! - 1).reduce((acc, line) => acc + line.length + 1, 0) +
       node.loc?.start.column!
     const end =
-      source
-        .slice(0, node.loc?.end.line! - 1)
-        .reduce((acc, line) => acc + line.length + 1, 0) + node.loc?.end.column!
+      source.slice(0, node.loc?.end.line! - 1).reduce((acc, line) => acc + line.length + 1, 0) +
+      node.loc?.end.column!
 
     error(message, {
       name: 'CompileError',

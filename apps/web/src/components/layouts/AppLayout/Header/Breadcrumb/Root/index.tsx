@@ -1,11 +1,8 @@
 import { ROUTES } from '$/services/routes'
-import {
-  BreadcrumbItem,
-  BreadcrumbSeparator,
-} from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { BreadcrumbItem, BreadcrumbSeparator } from '@latitude-data/web-ui/molecules/Breadcrumb'
 import { ProjectBreadcrumbItems } from '../Projects'
 import { DatasetBreadcrumbItems } from '../Datasets'
-import { BreadcrumbSelector, BreadcrumbSelectorOption } from '../Selector'
+import { BreadcrumbSelector, type BreadcrumbSelectorOption } from '../Selector'
 import { useMemo } from 'react'
 import { WorkspaceSwitcher } from '../WorkspaceSwitcher'
 
@@ -39,10 +36,7 @@ export function RootBreadcrumbItems({ segments }: { segments: string[] }) {
       <WorkspaceSwitcher />
       <BreadcrumbSeparator />
       <BreadcrumbItem noShrink>
-        <BreadcrumbSelector
-          label={selectedOption.label}
-          options={Object.values(options)}
-        />
+        <BreadcrumbSelector label={selectedOption.label} options={Object.values(options)} />
       </BreadcrumbItem>
       {segments.length > 1 && rootSegment === 'projects' && (
         <ProjectBreadcrumbItems segments={segments.slice(1)} />

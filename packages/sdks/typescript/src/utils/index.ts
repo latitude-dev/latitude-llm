@@ -1,15 +1,15 @@
 import {
-  AnnotateUrlParams,
-  ChatUrlParams,
-  CreateVersionUrlParams,
-  GetAllDocumentsParams,
-  GetDocumentUrlParams,
-  GetOrCreateDocumentUrlParams,
-  GetversionUrlParams,
+  type AnnotateUrlParams,
+  type ChatUrlParams,
+  type CreateVersionUrlParams,
+  type GetAllDocumentsParams,
+  type GetDocumentUrlParams,
+  type GetOrCreateDocumentUrlParams,
+  type GetversionUrlParams,
   HandlerType,
-  PushVersionUrlParams,
-  RunDocumentUrlParams,
-  UrlParams,
+  type PushVersionUrlParams,
+  type RunDocumentUrlParams,
+  type UrlParams,
 } from '$sdk/utils/types'
 import { HEAD_COMMIT } from '@latitude-data/constants'
 
@@ -34,9 +34,7 @@ export class RouteResolver {
     gateway: GatewayApiConfig
   }) {
     const protocol = gateway.ssl ? 'https' : 'http'
-    const domain = gateway.port
-      ? `${gateway.host}:${gateway.port}`
-      : gateway.host
+    const domain = gateway.port ? `${gateway.host}:${gateway.port}` : gateway.host
     this.basePath = `${protocol}://${domain}`
     this.apiVersion = apiVersion
   }
@@ -53,27 +51,23 @@ export class RouteResolver {
       }
       case HandlerType.GetAllDocuments: {
         const p = params as GetAllDocumentsParams
-        return this.projects
-          .project(p.projectId)
-          .versions.version(p.versionUuid ?? 'live').documents.root
+        return this.projects.project(p.projectId).versions.version(p.versionUuid ?? 'live')
+          .documents.root
       }
       case HandlerType.GetOrCreateDocument: {
         const p = params as GetOrCreateDocumentUrlParams
-        return this.projects
-          .project(p.projectId)
-          .versions.version(p.versionUuid ?? 'live').documents.getOrCreate
+        return this.projects.project(p.projectId).versions.version(p.versionUuid ?? 'live')
+          .documents.getOrCreate
       }
       case HandlerType.CreateDocument: {
         const p = params as GetOrCreateDocumentUrlParams
-        return this.projects
-          .project(p.projectId)
-          .versions.version(p.versionUuid ?? 'live').documents.root
+        return this.projects.project(p.projectId).versions.version(p.versionUuid ?? 'live')
+          .documents.root
       }
       case HandlerType.RunDocument: {
         const p = params as RunDocumentUrlParams
-        return this.projects
-          .project(p.projectId)
-          .versions.version(p.versionUuid ?? 'live').documents.run
+        return this.projects.project(p.projectId).versions.version(p.versionUuid ?? 'live')
+          .documents.run
       }
       case HandlerType.Chat: {
         const p = params as ChatUrlParams
@@ -81,19 +75,14 @@ export class RouteResolver {
       }
       case HandlerType.Annotate: {
         const p = params as AnnotateUrlParams
-        return this.conversations().annotate(
-          p.conversationUuid,
-          p.evaluationUuid,
-        )
+        return this.conversations().annotate(p.conversationUuid, p.evaluationUuid)
       }
       case HandlerType.GetAllProjects:
         return this.projects.root
       case HandlerType.CreateProject:
         return this.projects.root
       case HandlerType.CreateVersion:
-        return this.projects.project(
-          (params as CreateVersionUrlParams).projectId,
-        ).versions.root
+        return this.projects.project((params as CreateVersionUrlParams).projectId).versions.root
       case HandlerType.GetVersion:
         return this.projects
           .project((params as GetversionUrlParams).projectId)
@@ -105,9 +94,8 @@ export class RouteResolver {
       case HandlerType.Log:
         return this.projects
           .project((params as RunDocumentUrlParams).projectId)
-          .versions.version(
-            (params as RunDocumentUrlParams).versionUuid ?? HEAD_COMMIT,
-          ).documents.logs
+          .versions.version((params as RunDocumentUrlParams).versionUuid ?? HEAD_COMMIT).documents
+          .logs
       case HandlerType.ToolResults:
         return this.tools().results
       default:

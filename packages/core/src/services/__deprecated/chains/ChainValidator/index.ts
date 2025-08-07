@@ -1,27 +1,23 @@
 import {
   CompileError,
-  Conversation,
-  Chain as LegacyChain,
-  Message,
+  type Conversation,
+  type Chain as LegacyChain,
+  type Message,
 } from '@latitude-data/compiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { JSONSchema7 } from 'json-schema'
-import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
+import type { JSONSchema7 } from 'json-schema'
+import type { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
 import { z } from 'zod'
 
 import {
   azureConfig,
-  LatitudePromptConfig,
+  type LatitudePromptConfig,
 } from '@latitude-data/constants/latitudePromptSchema'
 import { CompileError as PromptlCompileError } from 'promptl-ai'
-import {
-  applyProviderRules,
-  ProviderApiKey,
-  Workspace,
-} from '../../../../browser'
-import { Result, TypedResult } from '../../../../lib/Result'
+import { applyProviderRules, type ProviderApiKey, type Workspace } from '../../../../browser'
+import { Result, type TypedResult } from '../../../../lib/Result'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
-import { CachedApiKeys } from '../run'
+import type { CachedApiKeys } from '../run'
 
 type SomeChain = LegacyChain | PromptlChain
 
@@ -57,9 +53,7 @@ export const getInputSchema = ({
 }): JSONSchema7 | undefined => {
   if (ignoreSchema) return undefined
   const overrideSchema =
-    configOverrides && 'schema' in configOverrides
-      ? configOverrides.schema
-      : undefined
+    configOverrides && 'schema' in configOverrides ? configOverrides.schema : undefined
   return overrideSchema || config.schema
 }
 
@@ -86,9 +80,7 @@ export const getOutputType = ({
  * Legacy compiler wants a string as response for the next step
  * But new Promptl can handle an array of messages
  */
-function getTextFromMessages(
-  prevContent: Message[] | string | undefined,
-): string | undefined {
+function getTextFromMessages(prevContent: Message[] | string | undefined): string | undefined {
   if (!prevContent) return undefined
   if (typeof prevContent === 'string') return prevContent
 
@@ -116,9 +108,7 @@ const safeChain = async ({
   try {
     if (promptlVersion === 0) {
       const prevText = getTextFromMessages(newMessages)
-      const { completed, conversation } = await (chain as LegacyChain).step(
-        prevText,
-      )
+      const { completed, conversation } = await (chain as LegacyChain).step(prevText)
       return Result.ok({ chainCompleted: completed, conversation })
     }
 
@@ -171,12 +161,8 @@ const findProvider = (name: string, providersMap: CachedApiKeys) => {
 // This is a lie
 const validateConfig = (
   config: Record<string, unknown>,
-): TypedResult<
-  LatitudePromptConfig,
-  ChainError<RunErrorCodes.DocumentConfigError>
-> => {
-  const doc =
-    'https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts'
+): TypedResult<LatitudePromptConfig, ChainError<RunErrorCodes.DocumentConfigError>> => {
+  const doc = 'https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts'
   const schema = z
     .object({
       model: z.string({
@@ -215,9 +201,7 @@ export const validateChain = async ({
   newMessages,
   configOverrides,
   removeSchema,
-}: ValidatorContext): Promise<
-  TypedResult<ValidatedChainStep, ChainError<RunErrorCodes>>
-> => {
+}: ValidatorContext): Promise<TypedResult<ValidatedChainStep, ChainError<RunErrorCodes>>> => {
   const chainResult = await safeChain({ promptlVersion, chain, newMessages })
   if (chainResult.error) return chainResult
 

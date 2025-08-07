@@ -1,12 +1,12 @@
-import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
-import { FinishReason, LanguageModelUsage, TextStreamPart } from 'ai'
-import { JSONSchema7 } from 'json-schema'
+import type { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import type { FinishReason, LanguageModelUsage, TextStreamPart } from 'ai'
+import type { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
-import { ParameterType } from './config'
-import { LatitudeEventData, LegacyChainEventTypes } from './events'
-import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
-import { ProviderLog } from './models'
+import type { ParameterType } from './config'
+import type { LatitudeEventData, LegacyChainEventTypes } from './events'
+import type { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
+import type { ProviderLog } from './models'
 
 export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
 

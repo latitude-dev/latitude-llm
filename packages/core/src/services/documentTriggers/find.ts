@@ -1,8 +1,8 @@
 import { and, eq } from 'drizzle-orm'
 import { database } from '../../client'
 import { documentTriggers } from '../../schema'
-import { DocumentTrigger } from '../../browser'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import type { DocumentTrigger } from '../../browser'
+import type { DocumentTriggerType } from '@latitude-data/constants'
 
 /**
  * Find document triggers by type without workspace scoping

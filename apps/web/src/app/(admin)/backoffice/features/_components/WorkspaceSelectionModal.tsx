@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
@@ -23,8 +23,7 @@ export function WorkspaceSelectionModal({
   isLoading,
   currentWorkspaceIds,
 }: WorkspaceSelectionModalProps) {
-  const [selectedWorkspaceIds, setSelectedWorkspaceIds] =
-    useState<number[]>(currentWorkspaceIds)
+  const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<number[]>(currentWorkspaceIds)
 
   const handleMultipleInputChange = useCallback((values: number[]) => {
     setSelectedWorkspaceIds(values)
@@ -32,12 +31,8 @@ export function WorkspaceSelectionModal({
 
   const handleConfirm = async () => {
     // Determine which workspaces to enable/disable
-    const toEnable = selectedWorkspaceIds.filter(
-      (id) => !currentWorkspaceIds.includes(id),
-    )
-    const toDisable = currentWorkspaceIds.filter(
-      (id) => !selectedWorkspaceIds.includes(id),
-    )
+    const toEnable = selectedWorkspaceIds.filter((id) => !currentWorkspaceIds.includes(id))
+    const toDisable = currentWorkspaceIds.filter((id) => !selectedWorkspaceIds.includes(id))
 
     // Enable for new workspaces
     if (toEnable.length > 0) {
@@ -79,12 +74,7 @@ export function WorkspaceSelectionModal({
           <Button fancy onClick={handleConfirm} disabled={isLoading}>
             {isLoading ? 'Updating...' : 'Update Feature'}
           </Button>
-          <Button
-            fancy
-            variant='outline'
-            onClick={handleCancel}
-            disabled={isLoading}
-          >
+          <Button fancy variant='outline' onClick={handleCancel} disabled={isLoading}>
             Cancel
           </Button>
         </div>

@@ -6,7 +6,7 @@ import { ROUTES } from '$/services/routes'
 import { useCommits } from '$/stores/commitsStore'
 import { useEvaluationResultsV2 } from '$/stores/evaluationResultsV2'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
@@ -21,10 +21,7 @@ import {
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType, IProjectContextType } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
@@ -48,8 +45,11 @@ export function Step2({
 }) {
   const { data: commits, isLoading: isCommitsLoading } = useCommits()
 
-  const { data: evaluations, isLoading: isEvaluationsLoading } =
-    useEvaluationsV2({ project, commit, document })
+  const { data: evaluations, isLoading: isEvaluationsLoading } = useEvaluationsV2({
+    project,
+    commit,
+    document,
+  })
   const evaluation = useMemo(
     () => evaluations.find((e) => e.uuid === evaluationUuid),
     [evaluations, evaluationUuid],
@@ -59,9 +59,7 @@ export function Step2({
   const search = useMemo(
     () => ({
       filters: {
-        commitIds: commits
-          .filter((c) => !!c.mergedAt || c.uuid == commit.uuid)
-          .map((c) => c.id),
+        commitIds: commits.filter((c) => !!c.mergedAt || c.uuid === commit.uuid).map((c) => c.id),
         errored: false,
       },
       pagination: { page, pageSize: PAGE_SIZE },
@@ -69,15 +67,13 @@ export function Step2({
     [commits, commit, page],
   )
 
-  const { data: results, isLoading: isResultsLoading } = useEvaluationResultsV2(
-    {
-      project: project,
-      commit: commit,
-      document: document,
-      evaluation: { uuid: evaluationUuid },
-      search: search,
-    },
-  )
+  const { data: results, isLoading: isResultsLoading } = useEvaluationResultsV2({
+    project: project,
+    commit: commit,
+    document: document,
+    evaluation: { uuid: evaluationUuid },
+    search: search,
+  })
 
   const { data: nextResults } = useEvaluationResultsV2({
     project: project,
@@ -103,12 +99,7 @@ export function Step2({
   const isLoading = isEvaluationsLoading || isResultsLoading || isCommitsLoading
 
   if (isLoading) {
-    return (
-      <TableSkeleton
-        rows={PAGE_SIZE}
-        cols={['', 'Time', 'Version', 'Result']}
-      />
-    )
+    return <TableSkeleton rows={PAGE_SIZE} cols={['', 'Time', 'Version', 'Result']} />
   }
 
   if (!results.length) {
@@ -121,8 +112,7 @@ export function Step2({
               ROUTES.projects
                 .detail({ id: project.id })
                 .commits.detail({ uuid: commit.uuid })
-                .documents.detail({ uuid: document.documentUuid }).evaluations
-                .root
+                .documents.detail({ uuid: document.documentUuid }).evaluations.root
             }
           >
             <Button>Add an evaluation</Button>
@@ -157,24 +147,17 @@ export function Step2({
             <TableRow
               key={result.uuid}
               onClick={() =>
-                selectableState.toggleRow(
-                  result.uuid,
-                  !selectableState.isSelected(result.uuid),
-                )
+                selectableState.toggleRow(result.uuid, !selectableState.isSelected(result.uuid))
               }
               className={cn(
                 'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors',
                 {
-                  'bg-secondary hover:bg-secondary/50':
-                    selectableState.isSelected(result.uuid),
+                  'bg-secondary hover:bg-secondary/50': selectableState.isSelected(result.uuid),
                 },
               )}
             >
               <TableCell align='left'>
-                <Checkbox
-                  fullWidth={false}
-                  checked={selectableState.isSelected(result.uuid)}
-                />
+                <Checkbox fullWidth={false} checked={selectableState.isSelected(result.uuid)} />
               </TableCell>
               <TableCell>
                 <Text.H5 noWrap>
@@ -187,9 +170,7 @@ export function Step2({
                 <span className='flex flex-row gap-2 items-center overflow-hidden'>
                   <Badge variant={result.commit.version ? 'accent' : 'muted'}>
                     <Text.H6 noWrap>
-                      {result.commit.version
-                        ? `v${result.commit.version}`
-                        : 'Draft'}
+                      {result.commit.version ? `v${result.commit.version}` : 'Draft'}
                     </Text.H6>
                   </Badge>
                   <Text.H5 noWrap ellipsis>

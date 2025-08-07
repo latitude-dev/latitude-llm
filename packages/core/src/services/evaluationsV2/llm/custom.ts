@@ -1,9 +1,9 @@
 import { scan } from 'promptl-ai'
 import { z } from 'zod'
 import {
-  EvaluationType,
+  type EvaluationType,
   formatConversation,
-  LlmEvaluationMetric,
+  type LlmEvaluationMetric,
   LlmEvaluationCustomSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
@@ -11,8 +11,8 @@ import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
 import {
-  EvaluationMetricRunArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricRunArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 import { runPrompt } from './shared'
@@ -24,12 +24,7 @@ export const LlmEvaluationCustomSpecification = {
 }
 
 async function validate(
-  {
-    configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.Custom
-  >,
+  { configuration }: EvaluationMetricValidateArgs<EvaluationType.Llm, LlmEvaluationMetric.Custom>,
   _ = database,
 ) {
   if (configuration.prompt === undefined) {
@@ -46,9 +41,7 @@ async function validate(
   }
 
   if (configuration.minScore >= configuration.maxScore) {
-    return Result.error(
-      new BadRequestError('Minimum score must be less than maximum score'),
-    )
+    return Result.error(new BadRequestError('Minimum score must be less than maximum score'))
   }
 
   if (
@@ -81,9 +74,7 @@ async function validate(
     configuration.minThreshold >= configuration.maxThreshold
   ) {
     return Result.error(
-      new BadRequestError(
-        'Minimum threshold must be less than maximum threshold',
-      ),
+      new BadRequestError('Minimum threshold must be less than maximum threshold'),
     )
   }
 
@@ -153,10 +144,9 @@ async function run(
     throw new BadRequestError('Provider is required')
   }
 
-  const evaluatedLog = await serializeDocumentLog(
-    { documentLog, workspace },
-    db,
-  ).then((r) => r.unwrap())
+  const evaluatedLog = await serializeDocumentLog({ documentLog, workspace }, db).then((r) =>
+    r.unwrap(),
+  )
 
   const promptSchema = z.preprocess(
     aliasVerdict,
@@ -210,10 +200,8 @@ async function run(
     )
   }
 
-  const minThreshold =
-    metadata.configuration.minThreshold ?? metadata.configuration.minScore
-  const maxThreshold =
-    metadata.configuration.maxThreshold ?? metadata.configuration.maxScore
+  const minThreshold = metadata.configuration.minThreshold ?? metadata.configuration.minScore
+  const maxThreshold = metadata.configuration.maxThreshold ?? metadata.configuration.maxScore
   const hasPassed = score >= minThreshold && score <= maxThreshold
 
   return { score, normalizedScore, metadata, hasPassed }

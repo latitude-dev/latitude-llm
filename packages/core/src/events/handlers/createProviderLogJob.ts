@@ -1,18 +1,10 @@
-import {
-  createProviderLog,
-  CreateProviderLogProps,
-} from '../../services/providerLogs'
+import { createProviderLog, type CreateProviderLogProps } from '../../services/providerLogs'
 
-export type CreateProviderLogJobProps = Omit<
-  CreateProviderLogProps,
-  'generatedAt'
-> & { generatedAt: string }
+export type CreateProviderLogJobProps = Omit<CreateProviderLogProps, 'generatedAt'> & {
+  generatedAt: string
+}
 
-export const createProviderLogJob = async ({
-  data,
-}: {
-  data: CreateProviderLogJobProps
-}) => {
+export const createProviderLogJob = async ({ data }: { data: CreateProviderLogJobProps }) => {
   return await createProviderLog({
     ...data,
     generatedAt: new Date(data.generatedAt),

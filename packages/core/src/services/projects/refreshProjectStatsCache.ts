@@ -1,9 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import { database, lro } from '../../client'
-import {
-  LIMITED_VIEW_THRESHOLD,
-  STATS_CACHING_THRESHOLD,
-} from '../../constants'
+import { LIMITED_VIEW_THRESHOLD, STATS_CACHING_THRESHOLD } from '../../constants'
 import { Result } from '../../lib/Result'
 import { DocumentLogsRepository } from '../../repositories'
 import { commits, documentLogs, projects } from '../../schema'
@@ -18,10 +15,7 @@ async function countByProject(projectId: number, db = database) {
     .then((r) => r[0]?.count ?? 0)
 }
 
-export async function refreshProjectStatsCache(
-  projectId: number,
-  db = database,
-) {
+export async function refreshProjectStatsCache(projectId: number, db = database) {
   try {
     const project = await db
       .select()

@@ -1,9 +1,9 @@
-import { ActionErrors, parseActionErrors } from '$/hooks/useLatitudeAction'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { type ActionErrors, parseActionErrors } from '$/hooks/useLatitudeAction'
+import type { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
-  EvaluationMetric,
-  EvaluationOptions,
-  EvaluationSettings,
+  type EvaluationMetric,
+  type EvaluationOptions,
+  type EvaluationSettings,
   EvaluationType,
   HumanEvaluationMetric,
   LlmEvaluationMetric,
@@ -18,12 +18,9 @@ import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '@latitude-data/web-ui/providers'
 import { useEffect, useMemo, useState } from 'react'
-import {
-  ConfigurationAdvancedForm,
-  ConfigurationSimpleForm,
-} from './ConfigurationForm'
+import { ConfigurationAdvancedForm, ConfigurationSimpleForm } from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
 
 const EVALUATION_TYPE_OPTIONS = Object.values(EvaluationType).map((type) => {
@@ -49,8 +46,7 @@ const EVALUATION_METRIC_OPTIONS = <
     case EvaluationType.Llm:
       metrics = Object.values(LlmEvaluationMetric).filter(
         (metric) =>
-          metric === LlmEvaluationMetric.Custom ||
-          !metric.startsWith(LlmEvaluationMetric.Custom),
+          metric === LlmEvaluationMetric.Custom || !metric.startsWith(LlmEvaluationMetric.Custom),
       ) as M[]
       break
     case EvaluationType.Human:
@@ -70,10 +66,7 @@ const EVALUATION_METRIC_OPTIONS = <
 
 // FIXME: Settings is a global object passed around which causes terrible
 // performance issues.
-export default function EvaluationV2Form<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({
+export default function EvaluationV2Form<T extends EvaluationType, M extends EvaluationMetric<T>>({
   mode,
   settings,
   setSettings,
@@ -88,10 +81,7 @@ export default function EvaluationV2Form<
   setSettings: (settings: EvaluationSettings<T, M>) => void
   options: Partial<EvaluationOptions>
   setOptions: (options: Partial<EvaluationOptions>) => void
-  errors?: ActionErrors<
-    typeof useEvaluationsV2,
-    'createEvaluation' | 'updateEvaluation'
-  >
+  errors?: ActionErrors<typeof useEvaluationsV2, 'createEvaluation' | 'updateEvaluation'>
   commit: ICommitContextType['commit']
   disabled?: boolean
 }) {
@@ -101,6 +91,7 @@ export default function EvaluationV2Form<
   const typeSpecification = EVALUATION_SPECIFICATIONS[settings.type]
   const metricSpecification = typeSpecification?.metrics[settings.metric]
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   useEffect(() => {
     if (mode === 'update') return
     if (metricSpecification) return
@@ -110,9 +101,9 @@ export default function EvaluationV2Form<
       ...settings,
       metric: EVALUATION_METRIC_OPTIONS(settings.type)[0]!.value as M,
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metricSpecification?.ConfigurationSimpleForm])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   useEffect(() => {
     if (mode === 'update') return
     if (!metricSpecification) return
@@ -122,7 +113,6 @@ export default function EvaluationV2Form<
       ...options,
       evaluateLiveLogs: !!metricSpecification.supportsLiveEvaluation,
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metricSpecification?.supportsLiveEvaluation])
 
   const commitMerged = mode === 'update' && !!commit.mergedAt
@@ -161,9 +151,7 @@ export default function EvaluationV2Form<
           placeholder='Describe what this evaluation is for'
           minRows={2}
           maxRows={4}
-          onChange={(e) =>
-            setSettings({ ...settings, description: e.target.value })
-          }
+          onChange={(e) => setSettings({ ...settings, description: e.target.value })}
           errors={errors?.['description']}
           className='w-full'
           disabled={disabled || commitMerged}
@@ -182,9 +170,7 @@ export default function EvaluationV2Form<
             description={metricSpecification?.description}
             placeholder='Select an evaluation metric'
             options={EVALUATION_METRIC_OPTIONS(settings.type)}
-            onChange={(value) =>
-              setSettings({ ...settings, metric: value as M })
-            }
+            onChange={(value) => setSettings({ ...settings, metric: value as M })}
             errors={errors?.['metric']}
             disabled={disabled || commitMerged}
             required
@@ -195,9 +181,7 @@ export default function EvaluationV2Form<
           type={settings.type}
           metric={settings.metric}
           configuration={settings.configuration}
-          setConfiguration={(value) =>
-            setSettings({ ...settings, configuration: value })
-          }
+          setConfiguration={(value) => setSettings({ ...settings, configuration: value })}
           settings={settings}
           setSettings={setSettings}
           errors={errors}
@@ -230,9 +214,7 @@ export default function EvaluationV2Form<
                 type={settings.type}
                 metric={settings.metric}
                 configuration={settings.configuration}
-                setConfiguration={(value) =>
-                  setSettings({ ...settings, configuration: value })
-                }
+                setConfiguration={(value) => setSettings({ ...settings, configuration: value })}
                 settings={settings}
                 setSettings={setSettings}
                 errors={errors}
@@ -245,13 +227,9 @@ export default function EvaluationV2Form<
                     name='evaluateLiveLogs'
                     label='Evaluate live logs'
                     description='Evaluate production and playground logs automatically'
-                    onCheckedChange={(value) =>
-                      setOptions({ ...options, evaluateLiveLogs: value })
-                    }
+                    onCheckedChange={(value) => setOptions({ ...options, evaluateLiveLogs: value })}
                     errors={errors?.['evaluateLiveLogs']}
-                    disabled={
-                      disabled || !metricSpecification?.supportsLiveEvaluation
-                    }
+                    disabled={disabled || !metricSpecification?.supportsLiveEvaluation}
                   />
                 )}
                 <SwitchInput
@@ -259,9 +237,7 @@ export default function EvaluationV2Form<
                   name='enableSuggestions'
                   label='Prompt suggestions'
                   description='Generate suggestions to improve your prompt based on the latest evaluations results'
-                  onCheckedChange={(value) =>
-                    setOptions({ ...options, enableSuggestions: value })
-                  }
+                  onCheckedChange={(value) => setOptions({ ...options, enableSuggestions: value })}
                   errors={errors?.['enableSuggestions']}
                   disabled={disabled}
                 />

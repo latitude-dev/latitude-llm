@@ -3,7 +3,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
-import { MouseEvent } from 'react'
+import type { MouseEvent } from 'react'
 
 export default function SignupFooter({
   onClickLogin,

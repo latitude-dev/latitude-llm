@@ -27,23 +27,21 @@ export function KeysetTablePaginationFooter({
     setPages([...pages, next])
     setPage(page + 1)
     setNext(next)
-  }, [pages, setPages, page, setPage, next, setNext])
+  }, [pages, page, next, setNext])
 
   const onPrev = useCallback(() => {
     if (page <= 1) return
     setPages(pages.slice(0, -1))
     setPage(page - 1)
     setPrev(pages[page - 2]!)
-  }, [pages, setPages, page, setPage, setPrev])
+  }, [pages, page, setPrev])
 
   return (
     <div className='w-full flex justify-between items-center'>
       {count !== undefined ? (
         <div className='flex flex-row items-center gap-x-1'>
           <Icon name='equalApproximately' color='foregroundMuted' />
-          <Text.H5M color='foregroundMuted'>
-            {countLabel?.(count) ?? `${count} rows`}
-          </Text.H5M>
+          <Text.H5M color='foregroundMuted'>{countLabel?.(count) ?? `${count} rows`}</Text.H5M>
         </div>
       ) : (
         <div />
