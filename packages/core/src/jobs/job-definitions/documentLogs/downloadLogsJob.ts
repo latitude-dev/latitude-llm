@@ -1,12 +1,12 @@
-import { Job } from 'bullmq'
-import { DocumentLogFilterOptions } from '../../../constants'
-import { DocumentVersion, User } from '../../../browser'
-import { Workspace } from '../../../browser'
+import type { Job } from 'bullmq'
+import type { DocumentLogFilterOptions } from '../../../constants'
+import type { DocumentVersion, User } from '../../../browser'
+import type { Workspace } from '../../../browser'
 import { database } from '../../../client'
 import { documentLogs } from '../../../schema/models/documentLogs'
 import { providerLogs } from '../../../schema/models/providerLogs'
 import { and, eq, lt, desc, notInArray, isNull } from 'drizzle-orm'
-import { Redis } from 'ioredis'
+import type { Redis } from 'ioredis'
 import { env } from '@latitude-data/env'
 import { buildRedisConnection } from '../../../redis'
 import { commits } from '../../../schema/models/commits'
@@ -18,7 +18,7 @@ import { buildProviderLogResponse } from '../../../services/providerLogs'
 import { markExportReady } from '../../../services/exports/markExportReady'
 import { findOrCreateExport } from '../../../services/exports/findOrCreate'
 import { buildLogsFilterSQLConditions } from '../../../services/documentLogs/logsFilterUtils'
-import { Readable } from 'stream'
+import { Readable } from 'node:stream'
 
 const BATCH_SIZE = 1000
 
@@ -79,14 +79,7 @@ export const downloadLogsJob = async (
     }
   }>,
 ) => {
-  const {
-    user,
-    token,
-    document,
-    filters,
-    selectionMode,
-    excludedDocumentLogIds,
-  } = job.data
+  const { user, token, document, filters, selectionMode, excludedDocumentLogIds } = job.data
   let lastCreatedAt: Date | null = null
   let totalProcessed = 0
   const workspace = await findWorkspaceFromDocument(document)
@@ -132,10 +125,7 @@ export const downloadLogsJob = async (
           createdAt: documentLogs.createdAt,
         })
         .from(documentLogs)
-        .innerJoin(
-          providerLogs,
-          eq(providerLogs.documentLogUuid, documentLogs.uuid),
-        )
+        .innerJoin(providerLogs, eq(providerLogs.documentLogUuid, documentLogs.uuid))
         .innerJoin(commits, eq(documentLogs.commitId, commits.id))
         .where(
           and(
@@ -145,28 +135,18 @@ export const downloadLogsJob = async (
               ...filters,
               createdAt: filters.createdAt
                 ? {
-                    from: filters.createdAt.from
-                      ? new Date(filters.createdAt.from)
-                      : undefined,
-                    to: filters.createdAt.to
-                      ? new Date(filters.createdAt.to)
-                      : undefined,
+                    from: filters.createdAt.from ? new Date(filters.createdAt.from) : undefined,
+                    to: filters.createdAt.to ? new Date(filters.createdAt.to) : undefined,
                   }
                 : undefined,
             }),
             selectionMode === 'ALL_EXCEPT'
               ? notInArray(documentLogs.id, excludedDocumentLogIds)
               : undefined,
-            lastCreatedAt
-              ? lt(documentLogs.createdAt, lastCreatedAt)
-              : undefined,
+            lastCreatedAt ? lt(documentLogs.createdAt, lastCreatedAt) : undefined,
           ),
         )
-        .orderBy(
-          desc(documentLogs.createdAt),
-          documentLogs.uuid,
-          desc(providerLogs.generatedAt),
-        )
+        .orderBy(desc(documentLogs.createdAt), documentLogs.uuid, desc(providerLogs.generatedAt))
         .limit(BATCH_SIZE)
 
       if (results.length === 0) {
@@ -205,9 +185,7 @@ export const downloadLogsJob = async (
       isFirstBatch = false
 
       // Update job progress
-      const progress = Math.floor(
-        (totalProcessed / (totalProcessed + BATCH_SIZE)) * 100,
-      )
+      const progress = Math.floor((totalProcessed / (totalProcessed + BATCH_SIZE)) * 100)
       await job.updateProgress(progress)
 
       if (results.length < BATCH_SIZE) break

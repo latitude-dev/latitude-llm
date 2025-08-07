@@ -4,7 +4,7 @@ import {
   REFERENCE_PROMPT_TAG,
   TOOL_CALL_TAG,
 } from '$compiler/constants'
-import {
+import type {
   ChainStepTag,
   ContentTag,
   ElementTag,
@@ -13,7 +13,7 @@ import {
   ToolCallTag,
 } from '$compiler/parser/interfaces'
 import { ContentType, MessageRole } from '$compiler/types'
-import { Scalar, Node as YAMLItem, YAMLMap, YAMLSeq } from 'yaml'
+import { type Scalar, type Node as YAMLItem, YAMLMap, YAMLSeq } from 'yaml'
 
 export function isIterable(obj: unknown): obj is Iterable<unknown> {
   return (obj as Iterable<unknown>)?.[Symbol.iterator] !== undefined
@@ -75,13 +75,8 @@ export function tagAttributeIsLiteral(tag: ElementTag, name: string): boolean {
 }
 
 type YAMLItemRange = [number, number] | undefined
-export function findYAMLItemPosition(
-  parent: YAMLItem,
-  path: (string | number)[],
-): YAMLItemRange {
-  const parentRange: YAMLItemRange = parent?.range
-    ? [parent.range[0], parent.range[1]]
-    : undefined
+export function findYAMLItemPosition(parent: YAMLItem, path: (string | number)[]): YAMLItemRange {
+  const parentRange: YAMLItemRange = parent?.range ? [parent.range[0], parent.range[1]] : undefined
 
   if (!parentRange || path.length === 0 || !('items' in parent)) {
     return parentRange

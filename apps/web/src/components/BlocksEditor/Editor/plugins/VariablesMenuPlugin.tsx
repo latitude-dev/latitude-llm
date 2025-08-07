@@ -1,4 +1,4 @@
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, type IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
@@ -7,8 +7,9 @@ import {
   MenuOption,
   useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin'
-import { $insertNodes, LexicalEditor, TextNode } from 'lexical'
-import React, { useCallback, useEffect, useState } from 'react'
+import { $insertNodes, type LexicalEditor, TextNode } from 'lexical'
+import type React from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { $getStepNames } from '../nodes/StepBlock'
 import { $getVariableNames, VariableNode } from '../nodes/VariableNode'
@@ -61,18 +62,13 @@ function ComponentPickerMenuItem({
         },
       )}
       ref={option.setRefElement}
-      role='option'
       aria-selected={isSelected}
       id={`typeahead-item-${index}`}
       onMouseEnter={onMouseEnter}
       onClick={onClick}
     >
       {!!option.icon && <Icon name={option.icon} color='foregroundMuted' />}
-      <Text.H5
-        color={isSelected ? 'accentForeground' : 'foregroundMuted'}
-        noWrap
-        ellipsis
-      >
+      <Text.H5 color={isSelected ? 'accentForeground' : 'foregroundMuted'} noWrap ellipsis>
         {option.label}
       </Text.H5>
     </li>
@@ -82,9 +78,7 @@ function ComponentPickerMenuItem({
 export function getAllVariables(editor: LexicalEditor): string[] {
   let variables: string[] = []
   editor.getEditorState().read(() => {
-    variables = Array.from(
-      new Set([...$getVariableNames(), ...$getStepNames()]),
-    )
+    variables = Array.from(new Set([...$getVariableNames(), ...$getStepNames()]))
   })
   return variables
 }
@@ -110,8 +104,7 @@ export function VariableMenuPlugin(): React.JSX.Element {
       )
     : allVariables
 
-  const [options, setOptions] =
-    useState<ComponentPickerOption[]>(filteredOptions)
+  const [options, setOptions] = useState<ComponentPickerOption[]>(filteredOptions)
 
   useEffect(() => {
     const allVariables = getVariableOptions(editor)

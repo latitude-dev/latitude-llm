@@ -1,8 +1,8 @@
-import { BadRequestError, LatitudeError } from '../../../lib/errors'
+import { BadRequestError, type LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { normalizedResult, withSafeSandbox } from './sandbox'
-import { CodeRunResult, CodeToolArgs, SupportedLanguage } from './types'
+import type { CodeRunResult, CodeToolArgs, SupportedLanguage } from './types'
 
 function getDependencyBuilder({ language }: { language: SupportedLanguage }) {
   if (language === 'python') return (dep: string) => `pip install ${dep}`
@@ -17,13 +17,7 @@ function getFilename({ language }: { language: SupportedLanguage }) {
   throw new BadRequestError(`Unsupported language: ${language}`)
 }
 
-function getRunCommand({
-  language,
-  filename,
-}: {
-  language: SupportedLanguage
-  filename: string
-}) {
+function getRunCommand({ language, filename }: { language: SupportedLanguage; filename: string }) {
   if (language === 'python') return `python ${filename}`
   if (language === 'javascript') return `node ${filename}`
   throw new Error(`Unsupported language: ${language}`)
@@ -44,16 +38,12 @@ export async function runCodeWithDependencies({
       const installResult = await sandbox.shells.run(buildDependency(dep))
       if (installResult.exitCode !== 0) {
         return Result.error(
-          new BadRequestError(
-            `Failed to install dependency: '${dep}'\n${installResult.output}`,
-          ),
+          new BadRequestError(`Failed to install dependency: '${dep}'\n${installResult.output}`),
         )
       }
     }
 
-    const scriptResult = await sandbox.shells.run(
-      getRunCommand({ language, filename }),
-    )
+    const scriptResult = await sandbox.shells.run(getRunCommand({ language, filename }))
     return Result.ok(normalizedResult(scriptResult))
   })
 }

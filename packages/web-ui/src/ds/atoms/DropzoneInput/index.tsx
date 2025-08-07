@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '../../../lib/utils'
 import { Button } from '../Button'
 import { Dropzone } from '../Dropzone'
-import { type DropzoneProps } from '../Dropzone'
+import type { DropzoneProps } from '../Dropzone'
 import { FormField } from '../FormField'
-import { type FormFieldProps } from '../FormField'
-import { Icon, IconName } from '../Icons'
+import type { FormFieldProps } from '../FormField'
+import { Icon, type IconName } from '../Icons'
 import { Text } from '../Text'
 
 type OnFileSizeErrorArgs = {
@@ -51,7 +51,7 @@ export function DropzoneInput({
   const onClickZone = useCallback(() => {
     if (!ref.current) return
     ref.current.click()
-  }, [ref])
+  }, [])
 
   const onFileChange = useCallback(
     (files: FileList | null) => {
@@ -71,30 +71,19 @@ export function DropzoneInput({
       setFilename(file.name)
       onChange?.(files)
     },
-    [setFilename, onChange, maxFileSize, onFileSizeError],
+    [onChange, maxFileSize, onFileSizeError],
   )
 
   const onClearFile = useCallback(() => {
     if (ref.current) ref.current.value = ''
     setFilename(undefined)
     onChange?.(null)
-  }, [ref, setFilename, onChange])
+  }, [onChange])
 
   return (
     <div onClick={onClickZone} className='w-full'>
-      <FormField
-        label={label}
-        description={description}
-        errors={errors}
-        errorStyle={errorStyle}
-      >
-        <Dropzone
-          ref={ref}
-          onChange={onFileChange}
-          accept={accept}
-          multiple={multiple}
-          {...rest}
-        >
+      <FormField label={label} description={description} errors={errors} errorStyle={errorStyle}>
+        <Dropzone ref={ref} onChange={onFileChange} accept={accept} multiple={multiple} {...rest}>
           {({ isDragging }) => (
             <div
               className={cn(

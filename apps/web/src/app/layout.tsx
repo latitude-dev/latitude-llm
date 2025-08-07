@@ -7,7 +7,7 @@ import { THEMES } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
 import { ThemeProvider } from '@latitude-data/web-ui/providers'
 import '@latitude-data/web-ui/styles.css'
 import NextTopLoader from 'nextjs-toploader'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import 'react-data-grid/lib/styles.css'
 
 export const metadata = buildMetatags({
@@ -20,20 +20,13 @@ export default function RootLayout({
   children: ReactNode
 }>) {
   return (
-    <html
-      lang='en'
-      translate='no'
-      suppressHydrationWarning
-      className='w-full h-full'
-    >
+    <html lang='en' translate='no' suppressHydrationWarning className='w-full h-full'>
       <head>
         <meta charSet='utf-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1' />
         <link rel='icon' href='/favicon.svg' />
       </head>
-      <body
-        className={`w-full h-full ${fontSans.variable} ${fontMono.variable} font-sans`}
-      >
+      <body className={`w-full h-full ${fontSans.variable} ${fontMono.variable} font-sans`}>
         <NextTopLoader showSpinner={false} />
         <SWRProvider config={{ revalidateOnFocus: false }}>
           <ThemeProvider

@@ -1,4 +1,4 @@
-import { User } from '@latitude-data/core/browser'
+import type { User } from '@latitude-data/core/browser'
 
 const BG_COLORS = {
   yellow: 'bg-yellow-500 text-yellow-100',

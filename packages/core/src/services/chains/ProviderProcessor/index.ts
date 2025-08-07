@@ -1,6 +1,6 @@
-import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
-import { AIReturn } from '../../ai'
-import { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
+import type { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
+import type { AIReturn } from '../../ai'
+import type { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
 
 function parseObject(text: string) {
   const parsed = text

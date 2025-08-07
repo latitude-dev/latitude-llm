@@ -1,34 +1,21 @@
-import { Dataset, DatasetRow } from '../../browser'
-import { DatasetV2CreatedEvent } from '../../events/events'
-import { diskFactory, DiskWrapper } from '../../lib/disk'
-import { csvBatchGenerator, CSVRow, type CsvBatch } from '../../lib/readCsv'
+import type { Dataset, DatasetRow } from '../../browser'
+import type { DatasetV2CreatedEvent } from '../../events/events'
+import { diskFactory, type DiskWrapper } from '../../lib/disk'
+import { csvBatchGenerator, type CSVRow, type CsvBatch } from '../../lib/readCsv'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DatasetsRepository } from '../../repositories'
-import { Column, DatasetRowData } from '../../schema'
+import type { Column, DatasetRowData } from '../../schema'
 import { updateDataset } from '../datasets/update'
-import {
-  buildColumns,
-  HashAlgorithmFn,
-  nanoidHashAlgorithm,
-} from '../datasets/utils'
+import { buildColumns, type HashAlgorithmFn, nanoidHashAlgorithm } from '../datasets/utils'
 import { insertRowsInBatch } from './insertRowsInBatch'
 
-function reorderRowsByColumns({
-  columns,
-  row,
-}: {
-  columns: Column[]
-  row: CSVRow
-}): string[] {
+function reorderRowsByColumns({ columns, row }: { columns: Column[]; row: CSVRow }): string[] {
   const keys = Object.keys(row.record)
   const columnOrderMap = new Map(columns.map((col, index) => [col.name, index]))
 
   return keys.sort((a, b) => {
-    return (
-      (columnOrderMap.get(a) ?? -Infinity) -
-      (columnOrderMap.get(b) ?? -Infinity)
-    )
+    return (columnOrderMap.get(a) ?? -Infinity) - (columnOrderMap.get(b) ?? -Infinity)
   })
 }
 
@@ -46,13 +33,7 @@ function parseRow({ columns, row }: { columns: Column[]; row: CSVRow }) {
   return rowData
 }
 
-function parseBatch({
-  columns,
-  batch,
-}: {
-  columns: Column[]
-  batch: CsvBatch
-}) {
+function parseBatch({ columns, batch }: { columns: Column[]; batch: CsvBatch }) {
   return batch.reduce((acc, row) => {
     const parsedRow = parseRow({ columns, row })
 
@@ -85,7 +66,7 @@ async function updateDatasetColumnsWithCsv({
 
 export async function createRowsFromUploadedDataset(
   {
-    event: event,
+    event,
     onRowsCreated,
     onFinished,
     onError,
@@ -162,10 +143,7 @@ export async function createRowsFromUploadedDataset(
 
     const rows = parseBatch({ columns, batch })
     rowCount += rows.length
-    const insertResult = await insertRowsInBatch(
-      { dataset, data: { rows } },
-      transaction,
-    )
+    const insertResult = await insertRowsInBatch({ dataset, data: { rows } }, transaction)
 
     if (insertResult.error) {
       onError?.(insertResult.error)

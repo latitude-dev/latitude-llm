@@ -1,15 +1,13 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { type PipedreamIntegrationWithCounts } from '@latitude-data/core/browser'
-import { OptionItem as SearchableOptionItem } from '@latitude-data/web-ui/molecules/SearchableList'
-import { type TriggerIntegrationType } from '../../client'
+import type { PipedreamIntegrationWithCounts } from '@latitude-data/core/browser'
+import type { OptionItem as SearchableOptionItem } from '@latitude-data/web-ui/molecules/SearchableList'
+import type { TriggerIntegrationType } from '../../client'
 
 function pluralize(count: number, singular: string, plural: string): string {
   return `${count} ${count === 1 ? singular : plural}`
 }
 
-function connectedPipedreamAppDescription(
-  integration: PipedreamIntegrationWithCounts,
-): string {
+function connectedPipedreamAppDescription(integration: PipedreamIntegrationWithCounts): string {
   const accounts = pluralize(integration.accountCount, 'account', 'accounts')
   const triggers = pluralize(integration.triggerCount, 'trigger', 'triggers')
   return `${accounts} · ${triggers}`
@@ -24,18 +22,14 @@ function integrationLogo(
   return {
     type: 'image',
     src: imageUrl,
-    alt:
-      integration.configuration?.metadata?.displayName ??
-      integration.configuration.appName,
+    alt: integration.configuration?.metadata?.displayName ?? integration.configuration.appName,
   }
 }
 
 export function buildIntegrationOption(
   integration: PipedreamIntegrationWithCounts,
 ): SearchableOptionItem<TriggerIntegrationType> {
-  const title =
-    integration.configuration.metadata?.displayName ??
-    integration.configuration.appName
+  const title = integration.configuration.metadata?.displayName ?? integration.configuration.appName
 
   return {
     type: 'item',

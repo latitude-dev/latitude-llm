@@ -6,8 +6,6 @@ export function buildProviderLogResponse(providerLog: {
 }) {
   return (
     providerLog.responseText ||
-    (providerLog.responseObject
-      ? objectToString(providerLog.responseObject)
-      : '')
+    (providerLog.responseObject ? objectToString(providerLog.responseObject) : '')
   )
 }

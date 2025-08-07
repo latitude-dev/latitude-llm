@@ -40,10 +40,7 @@ export default async function PreviewPage({
 
   return (
     <LatteLayout>
-      <TriggersList
-        triggers={integrationTriggers}
-        integrations={integrations}
-      />
+      <TriggersList triggers={integrationTriggers} integrations={integrations} />
     </LatteLayout>
   )
 }

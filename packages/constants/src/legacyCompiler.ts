@@ -1,4 +1,4 @@
-import { ToolResultPart } from 'ai'
+import type { ToolResultPart } from 'ai'
 
 export enum MessageRole {
   system = 'system',
@@ -90,11 +90,7 @@ export type ToolCall = {
   arguments: Record<string, unknown>
 }
 
-export type Message =
-  | AssistantMessage
-  | SystemMessage
-  | ToolMessage
-  | UserMessage
+export type Message = AssistantMessage | SystemMessage | ToolMessage | UserMessage
 
 export type Config = Record<string, unknown>
 export type Conversation = {

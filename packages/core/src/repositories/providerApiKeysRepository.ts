@@ -1,65 +1,36 @@
-import {
-  and,
-  desc,
-  eq,
-  getTableColumns,
-  inArray,
-  isNotNull,
-  isNull,
-  sql,
-} from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 
-import { EvaluationType, ProviderApiKey, ProviderApiKeyUsage } from '../browser'
+import { EvaluationType, type ProviderApiKey, type ProviderApiKeyUsage } from '../browser'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import {
-  commits,
-  documentVersions,
-  evaluationVersions,
-  projects,
-  providerApiKeys,
-} from '../schema'
+import { commits, documentVersions, evaluationVersions, projects, providerApiKeys } from '../schema'
 import RepositoryLegacy from './repository'
 
 const tt = getTableColumns(providerApiKeys)
 
-export class ProviderApiKeysRepository extends RepositoryLegacy<
-  typeof tt,
-  ProviderApiKey
-> {
+export class ProviderApiKeysRepository extends RepositoryLegacy<typeof tt, ProviderApiKey> {
   get scope() {
     return this.db
       .select(tt)
       .from(providerApiKeys)
       .where(
-        and(
-          isNull(providerApiKeys.deletedAt),
-          eq(providerApiKeys.workspaceId, this.workspaceId),
-        ),
+        and(isNull(providerApiKeys.deletedAt), eq(providerApiKeys.workspaceId, this.workspaceId)),
       )
       .as('providerApiKeysScope')
   }
 
   async findByName(name: string) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.name, name))
+    const result = await this.db.select().from(this.scope).where(eq(this.scope.name, name))
 
     if (!result.length) {
-      return Result.error(
-        new NotFoundError(`ProviderApiKey not found by name: "${name}"`),
-      )
+      return Result.error(new NotFoundError(`ProviderApiKey not found by name: "${name}"`))
     }
 
     return Result.ok(result[0]!)
   }
 
   async findAllByNames(names: string[]) {
-    return await this.db
-      .select()
-      .from(this.scope)
-      .where(inArray(this.scope.name, names))
+    return await this.db.select().from(this.scope).where(inArray(this.scope.name, names))
   }
 
   async getUsage(name: string) {
@@ -90,10 +61,7 @@ export class ProviderApiKeysRepository extends RepositoryLegacy<
       .as(
         this.db
           .with(mergedCommits)
-          .selectDistinctOn(
-            [mergedCommits.projectId],
-            mergedCommits._.selectedFields,
-          )
+          .selectDistinctOn([mergedCommits.projectId], mergedCommits._.selectedFields)
           .from(mergedCommits)
           .orderBy(desc(mergedCommits.projectId), desc(mergedCommits.mergedAt)),
       )
@@ -110,14 +78,8 @@ export class ProviderApiKeysRepository extends RepositoryLegacy<
           deletedAt: documentVersions.deletedAt,
         })
         .from(documentVersions)
-        .innerJoin(
-          mergedCommits,
-          eq(mergedCommits.commitId, documentVersions.commitId),
-        )
-        .orderBy(
-          desc(documentVersions.documentUuid),
-          desc(mergedCommits.mergedAt),
-        ),
+        .innerJoin(mergedCommits, eq(mergedCommits.commitId, documentVersions.commitId))
+        .orderBy(desc(documentVersions.documentUuid), desc(mergedCommits.mergedAt)),
     )
 
     // TODO: get documents when provider is denormalized in the schema
@@ -139,14 +101,8 @@ export class ProviderApiKeysRepository extends RepositoryLegacy<
           deletedAt: evaluationVersions.deletedAt,
         })
         .from(evaluationVersions)
-        .innerJoin(
-          mergedCommits,
-          eq(mergedCommits.commitId, evaluationVersions.commitId),
-        )
-        .orderBy(
-          desc(evaluationVersions.evaluationUuid),
-          desc(mergedCommits.mergedAt),
-        ),
+        .innerJoin(mergedCommits, eq(mergedCommits.commitId, evaluationVersions.commitId))
+        .orderBy(desc(evaluationVersions.evaluationUuid), desc(mergedCommits.mergedAt)),
     )
 
     const evaluations = await this.db
@@ -161,14 +117,8 @@ export class ProviderApiKeysRepository extends RepositoryLegacy<
         evaluationName: liveEvaluations.evaluationName,
       })
       .from(liveCommits)
-      .innerJoin(
-        liveDocuments,
-        eq(liveDocuments.projectId, liveCommits.projectId),
-      )
-      .innerJoin(
-        liveEvaluations,
-        eq(liveEvaluations.documentUuid, liveDocuments.documentUuid),
-      )
+      .innerJoin(liveDocuments, eq(liveDocuments.projectId, liveCommits.projectId))
+      .innerJoin(liveEvaluations, eq(liveEvaluations.documentUuid, liveDocuments.documentUuid))
       .where(
         and(
           isNull(liveCommits.deletedAt),

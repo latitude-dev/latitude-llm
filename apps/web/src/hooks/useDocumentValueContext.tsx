@@ -10,15 +10,12 @@ import useDocumentVersions from '$/stores/documentVersions'
 import useIntegrations from '$/stores/integrations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import useFeature from '$/stores/useFeature'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
+import type { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import {
   createContext,
-  ReactNode,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -41,9 +38,7 @@ type DocumentValueContextType = {
   isSaved: boolean
 }
 
-const DocumentValueContext = createContext<
-  DocumentValueContextType | undefined
->(undefined)
+const DocumentValueContext = createContext<DocumentValueContextType | undefined>(undefined)
 
 type DocumentValueProviderProps = {
   children: ReactNode
@@ -70,9 +65,7 @@ export function DocumentValueProvider({
     },
   )
   const document = useMemo(
-    () =>
-      documents?.find((d) => d.documentUuid === _document.documentUuid) ??
-      _document,
+    () => documents?.find((d) => d.documentUuid === _document.documentUuid) ?? _document,
     [documents, _document],
   )
 
@@ -84,13 +77,10 @@ export function DocumentValueProvider({
   const { toast } = useToast()
   const { isEnabled: newLatte } = useFeature(project.workspaceId, 'latte')
   const [origin, setOrigin] = useState<string>()
-  const setContentValue = useCallback(
-    (content: string, opts?: Parameters<updateContentFn>[1]) => {
-      setValue(content)
-      setOrigin(opts?.origin)
-    },
-    [setValue, setOrigin],
-  )
+  const setContentValue = useCallback((content: string, opts?: Parameters<updateContentFn>[1]) => {
+    setValue(content)
+    setOrigin(opts?.origin)
+  }, [])
   const updateDocumentContent = useDebouncedCallback(
     async (content: string, opts?: Parameters<updateContentFn>[1]) => {
       setContentValue(content, opts)
@@ -143,9 +133,7 @@ export function DocumentValueProvider({
 export function useDocumentValue() {
   const context = useContext(DocumentValueContext)
   if (context === undefined) {
-    throw new Error(
-      'useDocumentValue must be used within a DocumentValueProvider',
-    )
+    throw new Error('useDocumentValue must be used within a DocumentValueProvider')
   }
 
   return context
@@ -192,7 +180,7 @@ function useSyncLatteChanges({
   )
 }
 
-export function useRefreshPromptMetadata({
+function useRefreshPromptMetadata({
   value,
   document,
   commit,

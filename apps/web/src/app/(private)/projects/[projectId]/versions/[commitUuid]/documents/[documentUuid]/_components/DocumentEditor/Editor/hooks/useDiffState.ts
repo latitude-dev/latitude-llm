@@ -1,10 +1,7 @@
 import { useState } from 'react'
-import { type DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
+import type { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 
-export function useDiffState(
-  initialDiff?: string,
-  onChange?: (newValue: string) => void,
-) {
+export function useDiffState(initialDiff?: string, onChange?: (newValue: string) => void) {
   const [diff, setDiff] = useState<DiffOptions | undefined>(
     initialDiff
       ? {

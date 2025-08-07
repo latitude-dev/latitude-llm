@@ -1,21 +1,21 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
-import { ActionErrors } from '$/hooks/useLatitudeAction'
+import type { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import type { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
-  DocumentVersion,
-  EvaluationOptions,
-  EvaluationSettings,
+  type DocumentVersion,
+  type EvaluationOptions,
+  type EvaluationSettings,
   EvaluationType,
   RuleEvaluationMetric,
 } from '@latitude-data/core/browser'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import {
-  ICommitContextType,
-  IProjectContextType,
+  type ICommitContextType,
+  type IProjectContextType,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
@@ -137,14 +137,9 @@ function AddEvaluation({
   const navigate = useNavigate()
 
   const [openCreateModal, setOpenCreateModal] = useState(false)
-  const [settings, setSettings] = useState<EvaluationSettings>(
-    DEFAULT_EVALUATION_SETTINGS,
-  )
-  const [options, setOptions] = useState<Partial<EvaluationOptions>>(
-    DEFAULT_EVALUATION_OPTIONS,
-  )
-  const [errors, setErrors] =
-    useState<ActionErrors<typeof useEvaluationsV2, 'createEvaluation'>>()
+  const [settings, setSettings] = useState<EvaluationSettings>(DEFAULT_EVALUATION_SETTINGS)
+  const [options, setOptions] = useState<Partial<EvaluationOptions>>(DEFAULT_EVALUATION_OPTIONS)
+  const [errors, setErrors] = useState<ActionErrors<typeof useEvaluationsV2, 'createEvaluation'>>()
 
   const onCreate = useCallback(async () => {
     if (isCreatingEvaluation) return
@@ -170,10 +165,6 @@ function AddEvaluation({
     createEvaluation,
     settings,
     options,
-    setSettings,
-    setOptions,
-    setErrors,
-    setOpenCreateModal,
     project,
     commit,
     document,

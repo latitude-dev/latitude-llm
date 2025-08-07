@@ -1,6 +1,6 @@
 import type { ExperimentVariant } from '@latitude-data/constants/experiments'
-import { Dataset, Experiment, User } from '../../browser'
-import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
+import type { Dataset, Experiment, User } from '../../browser'
+import type { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
 import { ProviderApiKeysRepository } from '../../repositories'
 import Transaction from '../../lib/Transaction'
 import { Result } from '../../lib/Result'
@@ -41,8 +41,7 @@ export async function createExperimentVariants(
     const providersScope = new ProviderApiKeysRepository(workspace.id, tx)
     const providers = await providersScope.findAll().then((r) => r.unwrap())
     const nonExistingProvider = inputVariants.find(
-      (variant) =>
-        !providers.some((provider) => provider.name === variant.provider),
+      (variant) => !providers.some((provider) => provider.name === variant.provider),
     )
 
     if (nonExistingProvider) {

@@ -1,4 +1,4 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { DocumentTriggerEventsRepository } from '../../../repositories'
 import { runDocumentFromTriggerEvent } from '../../../services/documentTriggers/triggerEvents/runFromEvent'
 import { unsafelyFindWorkspace } from '../../../data-access'
@@ -11,18 +11,12 @@ export type ExecuteDocumentTriggerJobData = {
 /**
  * Job that executes a single document trigger event.
  */
-export const runDocumentTriggerEventJob = async (
-  job: Job<ExecuteDocumentTriggerJobData>,
-) => {
+export const runDocumentTriggerEventJob = async (job: Job<ExecuteDocumentTriggerJobData>) => {
   const { workspaceId, documentTriggerEventId } = job.data
   const workspace = (await unsafelyFindWorkspace(workspaceId))!
 
-  const documentTriggerEventsScope = new DocumentTriggerEventsRepository(
-    workspaceId,
-  )
-  const documentTriggerEventResult = await documentTriggerEventsScope.find(
-    documentTriggerEventId,
-  )
+  const documentTriggerEventsScope = new DocumentTriggerEventsRepository(workspaceId)
+  const documentTriggerEventResult = await documentTriggerEventsScope.find(documentTriggerEventId)
   const documentTriggerEvent = documentTriggerEventResult.unwrap()
 
   await runDocumentFromTriggerEvent({

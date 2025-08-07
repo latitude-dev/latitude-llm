@@ -52,9 +52,7 @@ function Antenna({
 }: AntennaSettings & {
   isThinking: boolean
 }) {
-  const [antennaDirection, setAntennaDirection] = useState<'left' | 'right'>(
-    'left',
-  )
+  const [antennaDirection, setAntennaDirection] = useState<'left' | 'right'>('left')
 
   const antennaPath = useMemo(() => {
     if (antennaDirection === 'right') return 'M12 4H16'

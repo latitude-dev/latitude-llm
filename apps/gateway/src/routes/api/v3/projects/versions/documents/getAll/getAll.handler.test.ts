@@ -1,5 +1,5 @@
 import app from '$/routes/app'
-import { Commit } from '@latitude-data/core/browser'
+import type { Commit } from '@latitude-data/core/browser'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import {
   createDocumentVersion,
@@ -18,9 +18,7 @@ vi.mock('$/jobs', () => ({
 describe('GET documents', () => {
   describe('unauthorized', () => {
     it('fails', async () => {
-      const res = await app.request(
-        '/api/v3/projects/1/versions/asldkfjhsadl/documents',
-      )
+      const res = await app.request('/api/v3/projects/1/versions/asldkfjhsadl/documents')
 
       expect(res.status).toBe(401)
     })

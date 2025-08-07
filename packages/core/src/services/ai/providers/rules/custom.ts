@@ -1,4 +1,4 @@
-import { AppliedRules, ProviderRules } from './types'
+import { type AppliedRules, ProviderRules } from './types'
 
 export function applyCustomRules(rules: AppliedRules): AppliedRules {
   const unsupportedSystemContent = rules.messages.some(
@@ -22,9 +22,7 @@ export function applyCustomRules(rules: AppliedRules): AppliedRules {
     (message) =>
       message.role === 'assistant' &&
       Array.isArray(message.content) &&
-      message.content.some(
-        (content) => !['text', 'tool-call'].includes(content.type),
-      ),
+      message.content.some((content) => !['text', 'tool-call'].includes(content.type)),
   )
 
   if (unsupportedAssistantContent) {
@@ -32,8 +30,7 @@ export function applyCustomRules(rules: AppliedRules): AppliedRules {
       ...rules.rules,
       {
         rule: ProviderRules.Custom,
-        ruleMessage:
-          'Assistant messages can only have text or tool call content.',
+        ruleMessage: 'Assistant messages can only have text or tool call content.',
       },
     ]
   }

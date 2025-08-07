@@ -1,5 +1,5 @@
 import { BACKGROUND } from '../../telemetry'
-import { TraceContext, Workspace } from '../../browser'
+import type { TraceContext, Workspace } from '../../browser'
 
 const TRACEPARENT = (traceId: string, spanId: string) => {
   return `00-${traceId}-${spanId}-01`
@@ -21,11 +21,7 @@ export async function createTelemetryTrace({
   }
 }
 
-export function createTelemetryContext({
-  workspace,
-}: {
-  workspace: Workspace
-}) {
+export function createTelemetryContext({ workspace }: { workspace: Workspace }) {
   return BACKGROUND({
     workspaceId: workspace.id,
   })

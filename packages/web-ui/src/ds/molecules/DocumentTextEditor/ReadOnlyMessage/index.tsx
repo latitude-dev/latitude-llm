@@ -12,10 +12,7 @@ export function EditorReadOnlyBanner({
   if (!readOnlyMessage) return null
   return (
     <div
-      className={cn(
-        'flex flex-row w-full items-center justify-center px-2 pt-3 gap-2',
-        className,
-      )}
+      className={cn('flex flex-row w-full items-center justify-center px-2 pt-3 gap-2', className)}
     >
       <Icon name='lock' color='foregroundMuted' />
       <Text.H6 color='foregroundMuted' userSelect={false}>

@@ -1,7 +1,7 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 
 import { LogSources } from '@latitude-data/constants'
-import { Experiment } from '../../../browser'
+import type { Experiment } from '../../../browser'
 import { NotFoundError } from '../../../lib/errors'
 import { ExperimentsRepository } from '../../../repositories'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'
@@ -10,7 +10,7 @@ import { captureException } from '../../../utils/workers/sentry'
 import { evaluationsQueue } from '../../queues'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
 import {
-  RunEvaluationV2JobData,
+  type RunEvaluationV2JobData,
   runEvaluationV2JobKey,
 } from '../evaluations/runEvaluationV2Job'
 import { updateExperimentStatus } from './shared'
@@ -25,21 +25,10 @@ export type RunDocumentForExperimentJobData = {
   datasetRowId?: number
 }
 
-export const runDocumentForExperimentJob = async (
-  job: Job<RunDocumentForExperimentJobData>,
-) => {
-  const {
-    workspaceId,
-    experimentId,
-    projectId,
-    commitUuid,
-    parameters,
-    datasetRowId,
-  } = job.data
+export const runDocumentForExperimentJob = async (job: Job<RunDocumentForExperimentJobData>) => {
+  const { workspaceId, experimentId, projectId, commitUuid, parameters, datasetRowId } = job.data
   const experimentScope = new ExperimentsRepository(workspaceId)
-  const experiment = await experimentScope
-    .find(experimentId)
-    .then((r) => r.unwrap())
+  const experiment = await experimentScope.find(experimentId).then((r) => r.unwrap())
   if (experiment.finishedAt) return
 
   try {
@@ -65,8 +54,7 @@ export const runDocumentForExperimentJob = async (
         workspaceId,
         experiment,
       },
-      (progressTracker) =>
-        progressTracker.incrementEnqueued(experiment.evaluationUuids.length),
+      (progressTracker) => progressTracker.incrementEnqueued(experiment.evaluationUuids.length),
     ).then((r) => r.unwrap())
 
     experiment.evaluationUuids.forEach((evaluationUuid) => {
@@ -95,8 +83,7 @@ export const runDocumentForExperimentJob = async (
         workspaceId,
         experiment,
       },
-      (progressTracker) =>
-        progressTracker.incrementErrors(experiment.evaluationUuids.length),
+      (progressTracker) => progressTracker.incrementErrors(experiment.evaluationUuids.length),
     )
   }
 }

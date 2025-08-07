@@ -1,13 +1,10 @@
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { Providers, User, Workspace } from '../../browser'
+import { Providers, type User, type Workspace } from '../../browser'
 import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
-import {
-  ProviderApiKeysRepository,
-  WorkspacesRepository,
-} from '../../repositories'
+import { ProviderApiKeysRepository, WorkspacesRepository } from '../../repositories'
 import { providerApiKeys } from '../../schema'
 import * as factories from '../../tests/factories'
 import { destroyProviderApiKey } from './destroy'
@@ -33,9 +30,7 @@ describe('destroyProviderApiKey', () => {
       token: env.DEFAULT_PROVIDER_API_KEY,
     })
 
-    await expect(
-      destroyProviderApiKey(provider).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
+    await expect(destroyProviderApiKey(provider).then((r) => r.unwrap())).rejects.toThrowError(
       new BadRequestError('Cannot delete the default provider API key'),
     )
 

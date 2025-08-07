@@ -1,9 +1,9 @@
 import { PlaygroundAction } from '$/hooks/usePlaygroundAction'
 import {
-  ActionType,
+  type ActionType,
   createAgentActionFrontendParametersSchema,
 } from '@latitude-data/core/browser'
-import { ActionExecuteArgs } from './shared'
+import type { ActionExecuteArgs } from './shared'
 
 export const CreateAgentActionSpecification = {
   parameters: createAgentActionFrontendParametersSchema,

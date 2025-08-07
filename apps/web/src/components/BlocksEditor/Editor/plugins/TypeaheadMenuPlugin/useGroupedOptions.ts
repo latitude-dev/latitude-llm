@@ -1,11 +1,11 @@
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { MenuOption } from '@lexical/react/LexicalTypeaheadMenuPlugin'
 import {
   $createParagraphNode,
   $getSelection,
   $isRangeSelection,
-  LexicalEditor,
+  type LexicalEditor,
   TextNode,
 } from 'lexical'
 import { useEffect, useMemo, useState } from 'react'

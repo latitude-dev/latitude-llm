@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
+import type {
   Conversation,
   Message as ConversationMessage,
 } from '@latitude-data/constants/legacyCompiler'
 import { Adapters, Chain as PromptlChain } from 'promptl-ai'
-import { ResolvedMetadata } from '$/workers/readMetadata'
-import { AppliedRules, applyProviderRules } from '@latitude-data/core/browser'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
+import { type AppliedRules, applyProviderRules } from '@latitude-data/core/browser'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
 export function usePreviewConversation({
@@ -27,7 +27,7 @@ export function usePreviewConversation({
     if (!conversation) return undefined
     if (!providers) return undefined
 
-    const providerName = conversation.config?.['provider']
+    const providerName = conversation.config?.provider
     if (!providerName) return undefined
 
     return providers.find((p) => p.name === providerName)
@@ -38,6 +38,7 @@ export function usePreviewConversation({
     if (!parameters) return
     if (metadata.errors.length > 0) return
 
+    // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
     let chain
     try {
       chain = new PromptlChain({
@@ -65,7 +66,7 @@ export function usePreviewConversation({
         setCompleted(true)
         setError(error)
       })
-  }, [promptlVersion, metadata, parameters])
+  }, [metadata, parameters])
 
   useEffect(() => {
     if (!conversation) return

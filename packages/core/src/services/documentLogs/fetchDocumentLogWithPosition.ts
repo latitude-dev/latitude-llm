@@ -2,19 +2,13 @@ import { and, eq, isNull, sql } from 'drizzle-orm'
 
 import {
   DEFAULT_PAGINATION_SIZE,
-  DocumentLogFilterOptions,
+  type DocumentLogFilterOptions,
   ErrorableEntity,
-  Workspace,
+  type Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import {
-  commits,
-  documentLogs,
-  projects,
-  runErrors,
-  workspaces,
-} from '../../schema'
+import { commits, documentLogs, projects, runErrors, workspaces } from '../../schema'
 import { fetchDocumentLogWithMetadata } from './fetchDocumentLogWithMetadata'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
@@ -40,10 +34,7 @@ async function getDocumentLogsQuery(
       count: sql`count(*)`.mapWith(Number).as('total_count'),
     })
     .from(documentLogs)
-    .innerJoin(
-      commits,
-      and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
-    )
+    .innerJoin(commits, and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)))
     .innerJoin(projects, eq(projects.id, commits.projectId))
     .innerJoin(workspaces, eq(workspaces.id, projects.workspaceId))
     .leftJoin(
@@ -72,10 +63,7 @@ async function getDocumentLogsWithErrorsQuery(
       count: sql`count(*)`.mapWith(Number).as('total_count'),
     })
     .from(documentLogs)
-    .innerJoin(
-      commits,
-      and(eq(commits.id, documentLogs.commitId), isNull(commits.deletedAt)),
-    )
+    .innerJoin(commits, and(eq(commits.id, documentLogs.commitId), isNull(commits.deletedAt)))
     .innerJoin(projects, eq(projects.id, commits.projectId))
     .innerJoin(workspaces, eq(workspaces.id, projects.workspaceId))
     .leftJoin(
@@ -110,9 +98,7 @@ export async function fetchDocumentLogWithPosition(
   const targetCreatedAtUTC = new Date(log.createdAt).toISOString()
   const documentUuid = log.documentUuid
 
-  const queryFn = excludeErrors
-    ? getDocumentLogsQuery
-    : getDocumentLogsWithErrorsQuery
+  const queryFn = excludeErrors ? getDocumentLogsQuery : getDocumentLogsWithErrorsQuery
 
   const result = await queryFn(
     {

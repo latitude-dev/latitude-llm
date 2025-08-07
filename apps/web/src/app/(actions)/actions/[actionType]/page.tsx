@@ -3,10 +3,7 @@
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { CSPostHogProvider, IdentifyUser } from '$/app/providers'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import {
-  ActionBackendParameters,
-  ActionType,
-} from '@latitude-data/core/browser'
+import type { ActionBackendParameters, ActionType } from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { ClientPage } from './_lib'
 
@@ -34,12 +31,7 @@ export default async function Actions({
           <div className='flex flex-col items-center justify-center gap-y-8 text-muted-foreground'>
             <Icon name='logo' size='xxxlarge' />
             <div className='flex flex-col items-center justify-center gap-y-2'>
-              <ClientPage
-                type={type}
-                parameters={parameters}
-                user={user}
-                workspace={workspace}
-              />
+              <ClientPage type={type} parameters={parameters} user={user} workspace={workspace} />
             </div>
           </div>
         </div>

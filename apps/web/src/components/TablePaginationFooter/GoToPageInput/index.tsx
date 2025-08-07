@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useCallback } from 'react'
+import { type FormEvent, useCallback } from 'react'
 
 import { buildPaginatedUrl } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { Input } from '@latitude-data/web-ui/atoms/Input'

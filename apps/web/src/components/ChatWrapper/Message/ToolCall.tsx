@@ -5,14 +5,11 @@ import { useFormAction } from '$/hooks/useFormAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import {
   AGENT_TOOL_PREFIX,
-  AgentToolsMap,
+  type AgentToolsMap,
   LATITUDE_TOOL_PREFIX,
   LatitudeToolInternalName,
 } from '@latitude-data/constants'
-import {
-  ToolContent,
-  ToolRequestContent,
-} from '@latitude-data/constants/legacyCompiler'
+import type { ToolContent, ToolRequestContent } from '@latitude-data/constants/legacyCompiler'
 import type { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
 import type { ExtractToolArgs } from '@latitude-data/core/services/latitudeTools/webExtract/types'
 import type { SearchToolArgs } from '@latitude-data/core/services/latitudeTools/webSearch/types'
@@ -21,8 +18,8 @@ import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Label } from '@latitude-data/web-ui/atoms/Label'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import { ToolCallContent as PromptlToolCall } from 'promptl-ai'
-import { KeyboardEventHandler, useCallback, useState } from 'react'
+import type { ToolCallContent as PromptlToolCall } from 'promptl-ai'
+import { type KeyboardEventHandler, useCallback, useState } from 'react'
 import { ContentCard } from './ContentCard'
 import { CodeLatitudeToolCallContent } from './LatitudeTools/Code'
 import { WebExtractLatitudeToolCallContent } from './LatitudeTools/Extract'
@@ -30,9 +27,7 @@ import { WebSearchLatitudeToolCallContent } from './LatitudeTools/Search'
 import { LatitudeToolCallContent } from './LatitudeTools/SubAgent'
 import { ToolResultContent, ToolResultFooter } from './ToolResult'
 
-function toolArgs(
-  value: ToolRequestContent | PromptlToolCall,
-): Record<string, unknown> {
+function toolArgs(value: ToolRequestContent | PromptlToolCall): Record<string, unknown> {
   if ('args' in value) return value.args
   if ('toolArguments' in value) return value.toolArguments
   return {}
@@ -95,13 +90,7 @@ export function ToolCallContent({
     )
   }
 
-  return (
-    <ClientToolCallContent
-      value={value}
-      toolResponse={toolResponse}
-      args={args}
-    />
-  )
+  return <ClientToolCallContent value={value} toolResponse={toolResponse} args={args} />
 }
 
 function ClientToolCallContent({
@@ -128,9 +117,7 @@ function ClientToolCallContent({
           {toolResponse && <ToolResultContent toolResponse={toolResponse} />}
         </ToolResultFooter>
       }
-      separatorColor={
-        toolResponse?.isError ? 'destructiveMutedForeground' : undefined
-      }
+      separatorColor={toolResponse?.isError ? 'destructiveMutedForeground' : undefined}
     >
       <CodeBlock language='javascript'>{codeBlockValue}</CodeBlock>
       {!toolResponse && <ToolEditor toolCallId={value.toolCallId} />}
@@ -147,7 +134,7 @@ function ToolEditor({ toolCallId }: { toolCallId: string }) {
   const onKeyUp = useCallback(
     (event) => {
       // cmd + enter
-      if (event.ctrlKey && event.key == 'Enter' && value) {
+      if (event.ctrlKey && event.key === 'Enter' && value) {
         execute({ toolCallId, result: value, isError: false })
       }
     },

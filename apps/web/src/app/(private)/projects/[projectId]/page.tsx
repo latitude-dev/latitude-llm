@@ -1,14 +1,8 @@
-import { type Project } from '@latitude-data/core/browser'
+import type { Project } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
-import {
-  findCommitsByProjectCached,
-  findProjectCached,
-} from '$/app/(private)/_data-access'
+import { findCommitsByProjectCached, findProjectCached } from '$/app/(private)/_data-access'
 import { lastSeenCommitCookieName } from '$/helpers/cookies/lastSeenCommit'
-import {
-  SessionData,
-  getCurrentUserOrRedirect,
-} from '$/services/auth/getCurrentUser'
+import { type SessionData, getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { cookies } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
@@ -28,6 +22,7 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
 
   let session: SessionData
   let project: Project
+  // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
   let url
 
   try {

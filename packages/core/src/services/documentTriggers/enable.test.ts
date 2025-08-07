@@ -1,12 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType, Providers } from '@latitude-data/constants'
-import {
-  Commit,
-  Project,
-  Workspace,
-  DocumentVersion,
-  User,
-} from '../../browser'
+import type { Commit, Project, Workspace, DocumentVersion, User } from '../../browser'
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'
@@ -202,13 +196,12 @@ describe('setDocumentTriggerEnabled', () => {
     const live = await mergeCommit(draft).then((r) => r.unwrap())
 
     // Enable
-    const enableResult =
-      await setDocumentTriggerEnabled<DocumentTriggerType.Email>({
-        workspace,
-        commit: live,
-        triggerUuid: created.uuid,
-        enabled: true,
-      })
+    const enableResult = await setDocumentTriggerEnabled<DocumentTriggerType.Email>({
+      workspace,
+      commit: live,
+      triggerUuid: created.uuid,
+      enabled: true,
+    })
     expect(enableResult.ok).toBeTruthy()
     expect(enableResult.unwrap().enabled).toBe(true)
 
@@ -219,13 +212,12 @@ describe('setDocumentTriggerEnabled', () => {
     expect(enabledRecord.enabled).toBe(true)
 
     // Disable
-    const disableResult =
-      await setDocumentTriggerEnabled<DocumentTriggerType.Email>({
-        workspace,
-        commit: live,
-        triggerUuid: created.uuid,
-        enabled: false,
-      })
+    const disableResult = await setDocumentTriggerEnabled<DocumentTriggerType.Email>({
+      workspace,
+      commit: live,
+      triggerUuid: created.uuid,
+      enabled: false,
+    })
     expect(disableResult.ok).toBeTruthy()
     expect(disableResult.unwrap().enabled).toBe(false)
 

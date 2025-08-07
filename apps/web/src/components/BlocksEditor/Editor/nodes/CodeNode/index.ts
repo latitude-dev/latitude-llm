@@ -1,14 +1,14 @@
-import { AstError } from '@latitude-data/constants/promptl'
+import type { AstError } from '@latitude-data/constants/promptl'
 import {
   CodeNode as LexicalCodeNode,
-  SerializedCodeNode as LexicalSerializedCodeNode,
+  type SerializedCodeNode as LexicalSerializedCodeNode,
 } from '@lexical/code'
 import {
   $applyNodeReplacement,
-  EditorConfig,
-  LexicalUpdateJSON,
-  NodeKey,
-  Spread,
+  type EditorConfig,
+  type LexicalUpdateJSON,
+  type NodeKey,
+  type Spread,
 } from 'lexical'
 import { BLOCK_EDITOR_TYPE } from '../../state/promptlToLexical/types'
 
@@ -34,12 +34,7 @@ export class CodeNode extends LexicalCodeNode {
   }
 
   static clone(node: CodeNode): CodeNode {
-    return new CodeNode(
-      node.__language,
-      node.__errors,
-      node.__readOnly,
-      node.__key,
-    )
+    return new CodeNode(node.__language, node.__errors, node.__readOnly, node.__key)
   }
 
   constructor(

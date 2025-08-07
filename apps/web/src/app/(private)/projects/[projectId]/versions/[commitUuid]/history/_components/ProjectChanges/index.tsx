@@ -1,16 +1,13 @@
 'use client'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersion from '$/stores/useDocumentVersion'
-import { Commit } from '@latitude-data/core/browser'
+import type { Commit } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { CommitsList } from '../CommitsList'
@@ -81,16 +78,12 @@ export function ProjectChanges({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const [selectedCommitId, setSelectedCommitId] = useState<number>(commit.id)
-  const [selectedDocumentUuid, setSelectedDocumentUuid] = useState<
-    string | undefined
-  >(_documentUuid)
-
-  const [documentCommits, setDocumentCommits] = useState<Commit[] | undefined>(
-    _documentCommits,
-  )
-  const [documentUuid, setDocumentUuid] = useState<string | undefined>(
+  const [selectedDocumentUuid, setSelectedDocumentUuid] = useState<string | undefined>(
     _documentUuid,
   )
+
+  const [documentCommits, setDocumentCommits] = useState<Commit[] | undefined>(_documentCommits)
+  const [documentUuid, setDocumentUuid] = useState<string | undefined>(_documentUuid)
 
   const filteredCommits = useMemo(() => {
     return allCommits.filter((c) => {
@@ -106,9 +99,7 @@ export function ProjectChanges({
     window.history.replaceState(
       window.history.state,
       '',
-      ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({ uuid: commit.uuid }).history.root,
+      ROUTES.projects.detail({ id: project.id }).commits.detail({ uuid: commit.uuid }).history.root,
     )
   }
 
@@ -133,10 +124,7 @@ export function ProjectChanges({
                 banner={
                   !!documentCommits &&
                   documentUuid && (
-                    <DocumentFilterBanner
-                      documentUuid={documentUuid}
-                      removeFilter={removeFilter}
-                    />
+                    <DocumentFilterBanner documentUuid={documentUuid} removeFilter={removeFilter} />
                   )
                 }
               />
@@ -158,10 +146,7 @@ export function ProjectChanges({
                 }
                 secondPane={
                   <div className='w-full h-full pr-4 py-4'>
-                    <ChangeDiffViewer
-                      commit={selectedCommit}
-                      documentUuid={selectedDocumentUuid}
-                    />
+                    <ChangeDiffViewer commit={selectedCommit} documentUuid={selectedDocumentUuid} />
                   </div>
                 }
               />

@@ -9,9 +9,9 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { FancySwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { Config } from 'promptl-ai'
+import type { Config } from 'promptl-ai'
 import { PromptConfiguration } from '../../PromptConfiguration'
-import { EditorHeaderProps } from '../index'
+import type { EditorHeaderProps } from '../index'
 
 export function TitleRow({
   title,

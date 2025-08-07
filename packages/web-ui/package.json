@@ -4,7 +4,6 @@
   "description": "Latitude web ui elements",
   "private": true,
   "scripts": {
-    "lint": "eslint ./src",
     "tc": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -175,7 +174,6 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^8.4.1",
-    "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/dom": "^10.4.0",

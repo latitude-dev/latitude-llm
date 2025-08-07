@@ -1,16 +1,13 @@
 import { and, eq, getTableColumns, isNull, not, or, sum } from 'drizzle-orm'
 
-import { ClaimedReward, RewardType } from '../browser'
+import { type ClaimedReward, RewardType } from '../browser'
 import { Result } from '../lib/Result'
 import { claimedRewards } from '../schema/models/claimedRewards'
 import RepositoryLegacy from './repository'
 
 const tt = getTableColumns(claimedRewards)
 
-export class ClaimedRewardsRepository extends RepositoryLegacy<
-  typeof tt,
-  ClaimedReward
-> {
+export class ClaimedRewardsRepository extends RepositoryLegacy<typeof tt, ClaimedReward> {
   get scope() {
     return this.db
       .select(tt)
@@ -30,10 +27,7 @@ export class ClaimedRewardsRepository extends RepositoryLegacy<
   }
 
   async findAllValidOptimistic() {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(this.optimisticFilter)
+    const result = await this.db.select().from(this.scope).where(this.optimisticFilter)
 
     return Result.ok(result)
   }
@@ -58,13 +52,7 @@ export class ClaimedRewardsRepository extends RepositoryLegacy<
     return result.length > 0
   }
 
-  async exists({
-    rewardType,
-    reference,
-  }: {
-    rewardType: RewardType
-    reference: string
-  }) {
+  async exists({ rewardType, reference }: { rewardType: RewardType; reference: string }) {
     const result = await this.db
       .select()
       .from(this.scope)

@@ -1,7 +1,7 @@
 import { Skeleton } from '../../atoms/Skeleton'
 import { Text } from '../../atoms/Text'
 import { Badge } from '../../atoms/Badge'
-import { BadgeProps } from '../../atoms/Badge'
+import type { BadgeProps } from '../../atoms/Badge'
 
 type RangeBadgeProps = {
   value: number
@@ -18,10 +18,7 @@ export function RangeBadge({
   loading = false,
   ...badgeProps
 }: RangeBadgeProps) {
-  const positionInRange = Math.max(
-    0,
-    Math.min(1, (value - minValue) / (maxValue - minValue)),
-  )
+  const positionInRange = Math.max(0, Math.min(1, (value - minValue) / (maxValue - minValue)))
   const bgColor = `hsla(${120 * positionInRange}, 80%, 50%, 0.5)`
   const borderColor = `hsla(${120 * positionInRange}, 65%, 50%, 1)`
 

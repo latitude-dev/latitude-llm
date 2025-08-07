@@ -1,23 +1,18 @@
-import Stripe from 'stripe'
+import type Stripe from 'stripe'
 import { eq } from 'drizzle-orm'
 
-import { Database } from '../../client'
+import type { Database } from '../../client'
 import { workspaces } from '../../schema/models/workspaces'
 import { subscriptions } from '../../schema/models/subscriptions'
 import { SubscriptionPlan } from '../../plans'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import { LatitudeError } from '../../lib/errors'
-import {
-  unsafelyFindUserByEmail,
-  unsafelyFindWorkspacesFromUser,
-} from '../../data-access'
-import { Subscription, Workspace } from '../../browser'
+import { unsafelyFindUserByEmail, unsafelyFindWorkspacesFromUser } from '../../data-access'
+import type { Subscription, Workspace } from '../../browser'
 import Transaction from '../../lib/Transaction'
 
 // Infer the transaction type from the Drizzle instance
-export type TransactionType = Parameters<
-  Parameters<Database['transaction']>[0]
->[0]
+export type TransactionType = Parameters<Parameters<Database['transaction']>[0]>[0]
 
 interface HandleSubscriptionUpdateParams {
   stripeSubscription: Stripe.Subscription
@@ -28,9 +23,7 @@ interface HandleSubscriptionUpdateParams {
 export async function handleSubscriptionUpdate(
   { stripeSubscription, stripe }: HandleSubscriptionUpdateParams,
   transaction = new Transaction(),
-): Promise<
-  TypedResult<{ workspace: Workspace; subscription: Subscription }, Error>
-> {
+): Promise<TypedResult<{ workspace: Workspace; subscription: Subscription }, Error>> {
   // Ensure stripeSubscription.customer is a string (ID) before using it
   if (typeof stripeSubscription.customer !== 'string') {
     return Result.error(
@@ -41,9 +34,7 @@ export async function handleSubscriptionUpdate(
   }
 
   // 1. Retrieve Stripe Customer to get email
-  const stripeCustomer = await stripe.customers.retrieve(
-    stripeSubscription.customer,
-  )
+  const stripeCustomer = await stripe.customers.retrieve(stripeSubscription.customer)
   if (stripeCustomer.deleted) {
     return Result.error(
       new LatitudeError('Stripe customer has been deleted.', {
@@ -124,12 +115,9 @@ export async function handleSubscriptionUpdate(
         .where(eq(workspaces.id, workspace.id))
         .returning()
       if (!updatedWorkspace) {
-        throw new LatitudeError(
-          'Failed to update workspace with new subscription.',
-          {
-            workspaceId: workspace.id.toString(),
-          },
-        )
+        throw new LatitudeError('Failed to update workspace with new subscription.', {
+          workspaceId: workspace.id.toString(),
+        })
       }
 
       return Result.ok({

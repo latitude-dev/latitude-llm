@@ -1,10 +1,4 @@
-import {
-  type Commit,
-  type Project,
-  type ProviderApiKey,
-  type User,
-  type Workspace,
-} from '@latitude-data/core/browser'
+import type { Commit, Project, ProviderApiKey, User, Workspace } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
@@ -70,8 +64,7 @@ describe('deleteDraftCommitAction', () => {
     })
 
     it('returns error when commit does not belongs to project', async () => {
-      const { user: unrelatedUser, project: urelatedProject } =
-        await factories.createProject()
+      const { user: unrelatedUser, project: urelatedProject } = await factories.createProject()
       const { commit: unrelatedCommit } = await factories.createDraft({
         project: urelatedProject,
         user: unrelatedUser,
@@ -108,9 +101,7 @@ describe('deleteDraftCommitAction', () => {
     it('deletes associated documents with draft commit', async () => {
       const documentVersionsScope = new DocumentVersionsRepository(workspace.id)
 
-      const before = await documentVersionsScope
-        .findAll()
-        .then((r) => r.unwrap())
+      const before = await documentVersionsScope.findAll().then((r) => r.unwrap())
 
       const { commit: draft } = await factories.createDraft({
         project,
@@ -140,9 +131,7 @@ describe('deleteDraftCommitAction', () => {
         id: draft.id,
       })
 
-      const after = await documentVersionsScope
-        .findAll()
-        .then((r) => r.unwrap())
+      const after = await documentVersionsScope.findAll().then((r) => r.unwrap())
 
       expect(after.length - before.length).toEqual(1)
     })

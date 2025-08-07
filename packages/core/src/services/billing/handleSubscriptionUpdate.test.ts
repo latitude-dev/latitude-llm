@@ -1,18 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import Stripe from 'stripe'
+import type Stripe from 'stripe'
 import { eq } from 'drizzle-orm'
 
 import { database } from '../../client'
 import { handleSubscriptionUpdate } from './handleSubscriptionUpdate'
-import {
-  createUser,
-  createSubscription,
-  createProject,
-} from '../../tests/factories'
+import { createUser, createSubscription, createProject } from '../../tests/factories'
 import { workspaces } from '../../schema/models/workspaces'
 import { SubscriptionPlan } from '../../plans'
 import { LatitudeError } from '../../lib/errors'
-import { User, Workspace } from '../../browser'
+import type { User, Workspace } from '../../browser'
 
 const mockStripe = {
   customers: {
@@ -186,9 +182,7 @@ describe('handleSubscriptionUpdate', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toBeInstanceOf(LatitudeError)
-    expect(result.error?.message).toBe(
-      'Stripe customer does not have an email.',
-    )
+    expect(result.error?.message).toBe('Stripe customer does not have an email.')
   })
 
   it('should throw LatitudeError if user not found in DB', async () => {
@@ -203,9 +197,7 @@ describe('handleSubscriptionUpdate', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toBeInstanceOf(LatitudeError)
-    expect(result.error?.message).toBe(
-      `User with email wat@example.com not found.`,
-    )
+    expect(result.error?.message).toBe(`User with email wat@example.com not found.`)
   })
 
   it('should throw LatitudeError if no workspace found for user (via membership)', async () => {
@@ -225,8 +217,6 @@ describe('handleSubscriptionUpdate', () => {
     expect(result.ok).toBe(false)
 
     expect(result.error).toBeInstanceOf(LatitudeError)
-    expect(result.error?.message).toBe(
-      `No workspace found for user ${userWithNoWorkspace.id}.`,
-    )
+    expect(result.error?.message).toBe(`No workspace found for user ${userWithNoWorkspace.id}.`)
   })
 })

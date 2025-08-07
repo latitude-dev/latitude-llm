@@ -1,9 +1,6 @@
 'use server'
 
-import {
-  EvaluationOptionsSchema,
-  EvaluationSettingsSchema,
-} from '@latitude-data/core/browser'
+import { EvaluationOptionsSchema, EvaluationSettingsSchema } from '@latitude-data/core/browser'
 import { updateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/update'
 import { z } from 'zod'
 import { withEvaluation } from '../procedures'
@@ -12,9 +9,7 @@ export const updateEvaluationV2Action = withEvaluation
   .createServerAction()
   .input(
     z.object({
-      settings: EvaluationSettingsSchema.omit({ type: true, metric: true })
-        .partial()
-        .optional(),
+      settings: EvaluationSettingsSchema.omit({ type: true, metric: true }).partial().optional(),
       options: EvaluationOptionsSchema.partial().optional(),
     }),
   )

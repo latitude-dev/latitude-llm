@@ -1,10 +1,7 @@
-import { Text } from '$compiler/parser/interfaces'
+import type { Text } from '$compiler/parser/interfaces'
 
-import { CompileNodeContext } from '../types'
+import type { CompileNodeContext } from '../types'
 
-export async function compile({
-  node,
-  addStrayText,
-}: CompileNodeContext<Text>) {
+export async function compile({ node, addStrayText }: CompileNodeContext<Text>) {
   addStrayText(node.data)
 }

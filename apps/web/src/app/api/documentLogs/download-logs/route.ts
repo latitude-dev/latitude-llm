@@ -1,9 +1,9 @@
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { generateCsvFromLogs } from '@latitude-data/core/services/datasets/generateCsvFromLogs'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export const POST = errorHandler(
   authHandler(
@@ -28,7 +28,7 @@ export const POST = errorHandler(
         throw new BadRequestError('No document log ids provided')
       }
 
-      if (ids.some((id) => isNaN(+id))) {
+      if (ids.some((id) => Number.isNaN(+id))) {
         throw new BadRequestError('Invalid document log ids provided')
       }
       const documentLogIds = ids.map(Number)

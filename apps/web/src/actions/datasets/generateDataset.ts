@@ -1,11 +1,7 @@
 'use server'
 
 import { z } from 'zod'
-import {
-  ChainStepResponse,
-  CLOUD_MESSAGES,
-  LogSources,
-} from '@latitude-data/core/browser'
+import { type ChainStepResponse, CLOUD_MESSAGES, LogSources } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
@@ -31,9 +27,7 @@ export const generateDatasetAction = authProcedure
       throw new BadRequestError('COPILOT_PROJECT_ID is not set')
     }
     if (!env.COPILOT_PROMPT_DATASET_GENERATOR_PATH) {
-      throw new BadRequestError(
-        'COPILOT_PROMPT_DATASET_GENERATOR_PATH is not set',
-      )
+      throw new BadRequestError('COPILOT_PROMPT_DATASET_GENERATOR_PATH is not set')
     }
     if (!env.COPILOT_WORKSPACE_API_KEY) {
       throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
@@ -47,23 +41,18 @@ export const generateDatasetAction = authProcedure
       __internal: { source: LogSources.Playground },
     }).then((r) => r.unwrap())
 
-    const sdkResponse = await sdk.prompts.run(
-      env.COPILOT_PROMPT_DATASET_GENERATOR_PATH,
-      {
-        stream: false,
-        parameters: {
-          row_count: input.rowCount,
-          parameters: input.parameters,
-          user_message: input.description,
-        },
+    const sdkResponse = await sdk.prompts.run(env.COPILOT_PROMPT_DATASET_GENERATOR_PATH, {
+      stream: false,
+      parameters: {
+        row_count: input.rowCount,
+        parameters: input.parameters,
+        user_message: input.description,
       },
-    )
+    })
     const sdkResult = sdkResponse
 
     if (!sdkResult) {
-      throw new BadRequestError(
-        'Something went wrong generating the Dataset preview',
-      )
+      throw new BadRequestError('Something went wrong generating the Dataset preview')
     }
 
     const response = sdkResult.response as ChainStepResponse<'object'>

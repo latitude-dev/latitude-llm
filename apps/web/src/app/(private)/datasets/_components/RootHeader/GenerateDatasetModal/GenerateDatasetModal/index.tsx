@@ -1,4 +1,4 @@
-import { FormEvent } from 'react'
+import type { FormEvent } from 'react'
 
 import { useServerAction } from 'zsa-react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'

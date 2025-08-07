@@ -1,7 +1,7 @@
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import useProviderApiKeys from '$/stores/providerApiKeys'
-import {
+import type {
   DocumentLog,
   DocumentLogWithMetadataAndError,
   ProviderApiKey,
@@ -18,24 +18,18 @@ import { useCallback, useMemo } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { MetadataItem, MetadataItemTooltip } from '$/components/MetadataItem'
-import {
-  asPromptLFile,
-  PromptLFileParameter,
-} from '$/components/PromptLFileParameter'
+import { asPromptLFile, PromptLFileParameter } from '$/components/PromptLFileParameter'
 import { DetailsPanel } from '$/components/tracing/spans/DetailsPanel'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { getCostPer1M } from '@latitude-data/core/services/ai/estimateCost/index'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { LineSeparator } from '@latitude-data/web-ui/atoms/LineSeparator'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { FinishReasonItem } from '../../../../../../[documentUuid]/_components/FinishReasonItem'
 
 function costNotCalculatedReason({
@@ -85,10 +79,7 @@ function useCostByModel({
           }
           return acc
         },
-        {} as Record<
-          string,
-          { cost: number; notImplementedReason: string | undefined }
-        >,
+        {} as Record<string, { cost: number; notImplementedReason: string | undefined }>,
       ) ?? {}
     )
   }, [providerLogs, providers, providersLoading])
@@ -132,20 +123,13 @@ function ProviderLogsMetadata({
 
   return (
     <>
-      <MetadataItem
-        label='Timestamp'
-        value={format(documentLog.createdAt, 'PPp')}
-      />
+      <MetadataItem label='Timestamp' value={format(documentLog.createdAt, 'PPp')} />
       <FinishReasonItem providerLog={providerLog} />
       {Object.keys(tokensByModel).length > 0 ? (
         <MetadataItemTooltip
           label='Tokens'
           loading={providersLoading}
-          trigger={
-            <Text.H5 color='foregroundMuted'>
-              {documentLog.tokens ?? '-'}
-            </Text.H5>
-          }
+          trigger={<Text.H5 color='foregroundMuted'>{documentLog.tokens ?? '-'}</Text.H5>}
           tooltipContent={
             <div className='flex flex-col justify-between'>
               {Object.entries(tokensByModel).map(([model, tokens]) => (
@@ -160,8 +144,8 @@ function ProviderLogsMetadata({
               {Object.values(tokensByModel).some((t) => t === 0) && (
                 <div className='pt-4'>
                   <Text.H6 color='background'>
-                    Note: Number of tokens is provided by your LLM Provider.
-                    Some providers may return 0 tokens.
+                    Note: Number of tokens is provided by your LLM Provider. Some providers may
+                    return 0 tokens.
                   </Text.H6>
                 </div>
               )}
@@ -187,32 +171,27 @@ function ProviderLogsMetadata({
           tooltipContent={
             <div className='flex flex-col justify-between'>
               <div className='flex flex-col justify-between gap-y-2 divide-y divider-background'>
-                {Object.entries(costByModel).map(
-                  ([providerId, providerCost]) => (
-                    <div key={providerId} className='flex flex-col w-full'>
-                      <div className='flex flex-row w-full justify-between items-center gap-4'>
-                        <Text.H6B color='background'>
-                          {providers?.find((p) => p.id === Number(providerId))
-                            ?.name ?? 'Unknown'}
-                        </Text.H6B>
-                        <Text.H6 color='background'>
-                          {providerCost.notImplementedReason
-                            ? 'N/A'
-                            : formatCostInMillicents(providerCost.cost)}
-                        </Text.H6>
-                      </div>
-                      {providerCost.notImplementedReason ? (
-                        <Text.H7 color='background'>
-                          {providerCost.notImplementedReason}
-                        </Text.H7>
-                      ) : null}
+                {Object.entries(costByModel).map(([providerId, providerCost]) => (
+                  <div key={providerId} className='flex flex-col w-full'>
+                    <div className='flex flex-row w-full justify-between items-center gap-4'>
+                      <Text.H6B color='background'>
+                        {providers?.find((p) => p.id === Number(providerId))?.name ?? 'Unknown'}
+                      </Text.H6B>
+                      <Text.H6 color='background'>
+                        {providerCost.notImplementedReason
+                          ? 'N/A'
+                          : formatCostInMillicents(providerCost.cost)}
+                      </Text.H6>
                     </div>
-                  ),
-                )}
+                    {providerCost.notImplementedReason ? (
+                      <Text.H7 color='background'>{providerCost.notImplementedReason}</Text.H7>
+                    ) : null}
+                  </div>
+                ))}
                 <div className='pt-4'>
                   <Text.H6 color='background'>
-                    Note: This is just an estimate based on the token usage and
-                    your provider's pricing. Actual cost may vary.
+                    Note: This is just an estimate based on the token usage and your provider's
+                    pricing. Actual cost may vary.
                   </Text.H6>
                 </div>
               </div>
@@ -223,21 +202,13 @@ function ProviderLogsMetadata({
         <MetadataItem label='Cost' value='-' />
       )}
       {duration && (
-        <MetadataItem
-          label='Time until last message'
-          value={duration}
-          loading={providersLoading}
-        />
+        <MetadataItem label='Time until last message' value={duration} loading={providersLoading} />
       )}
     </>
   )
 }
 
-export function DocumentLogParameters({
-  documentLog,
-}: {
-  documentLog: DocumentLog
-}) {
+export function DocumentLogParameters({ documentLog }: { documentLog: DocumentLog }) {
   const parameters = useMemo(() => {
     return Object.entries(documentLog.parameters).map(([parameter, value]) => {
       if (value === undefined || value === null) {
@@ -245,7 +216,7 @@ export function DocumentLogParameters({
       } else if (typeof value === 'object' || Array.isArray(value)) {
         try {
           value = JSON.stringify(value)
-        } catch (error) {
+        } catch (_error) {
           value = String(value)
         }
       } else {
@@ -269,25 +240,15 @@ export function DocumentLogParameters({
         {parameters.map(({ parameter, value }, index) => {
           const file = asPromptLFile(value)
           return (
-            <div
-              key={index}
-              className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
-            >
+            <div key={index} className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'>
               <div className='flex flex-row items-center gap-x-2 min-h-8'>
-                <Badge variant='accent'>
-                  &#123;&#123;{parameter}&#125;&#125;
-                </Badge>
+                <Badge variant='accent'>&#123;&#123;{parameter}&#125;&#125;</Badge>
               </div>
               <div className='flex flex-grow w-full min-w-0'>
                 {file ? (
                   <PromptLFileParameter file={file} />
                 ) : (
-                  <TextArea
-                    value={String(value || '')}
-                    minRows={1}
-                    maxRows={6}
-                    disabled={true}
-                  />
+                  <TextArea value={String(value || '')} minRows={1} maxRows={6} disabled={true} />
                 )}
               </div>
             </div>
@@ -338,10 +299,7 @@ export function DocumentLogMetadata({
           </Text.H5>
         </ClickToCopy>
       </MetadataItem>
-      <MetadataItem
-        label='Duration'
-        value={formatDuration(documentLog.duration)}
-      />
+      <MetadataItem label='Duration' value={formatDuration(documentLog.duration)} />
       {providerLog ? (
         <ProviderLogsMetadata
           providerLog={providerLog}
@@ -355,21 +313,14 @@ export function DocumentLogMetadata({
       {lastResponse ? (
         <div className='flex flex-col gap-y-2'>
           <Text.H5M color='foreground'>Last Response</Text.H5M>
-          <MessageComponent
-            role={lastResponse.role}
-            content={lastResponse.content}
-          />
+          <MessageComponent role={lastResponse.role} content={lastResponse.content} />
         </div>
       ) : null}
       {isSpanLoading ? (
         <>
           <LineSeparator text='Event details' />
           <div className='w-full h-full flex items-center justify-center gap-2'>
-            <Icon
-              name='loader'
-              color='foregroundMuted'
-              className='animate-spin'
-            />
+            <Icon name='loader' color='foregroundMuted' className='animate-spin' />
             <Text.H5 color='foregroundMuted'>Loading details</Text.H5>
           </div>
         </>
@@ -377,9 +328,7 @@ export function DocumentLogMetadata({
         !!span && (
           <>
             <LineSeparator text='Event details' />
-            <DetailsPanel
-              span={{ ...span, conversationId: documentLog.uuid }}
-            />
+            <DetailsPanel span={{ ...span, conversationId: documentLog.uuid }} />
           </>
         )
       )}
@@ -415,15 +364,7 @@ function UseDocumentLogInPlaygroundButton({
         })
         .documents.detail({ uuid: documentUuid }).root,
     )
-  }, [
-    setHistoryLog,
-    setSource,
-    navigate,
-    project.id,
-    commit.uuid,
-    documentUuid,
-    documentLog,
-  ])
+  }, [setHistoryLog, setSource, navigate, project.id, commit.uuid, documentUuid, documentLog])
   const hasError = 'error' in documentLog && !!documentLog.error.message
 
   if (hasError) return null

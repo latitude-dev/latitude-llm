@@ -1,6 +1,6 @@
 import useIntegrations from '$/stores/integrations'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
+import type {
   DocumentTrigger,
   DocumentVersion,
   IntegrationDto,
@@ -10,12 +10,12 @@ import {
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { FormEvent, useCallback, useEffect, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { TriggerTypeSelector } from './TriggerTypeSelector'
 import { IntegrationTriggerConfig } from './IntegrationTriggerConfig'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
-import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
+import type { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 
 export function TriggerConfigModal({
   document,
@@ -49,17 +49,15 @@ export function TriggerConfigModal({
       },
     },
   )
-  const { data: integrations, isLoading: loadingIntegrations } =
-    useIntegrations({ withTriggers: true })
+  const { data: integrations, isLoading: loadingIntegrations } = useIntegrations({
+    withTriggers: true,
+  })
 
   const [[integration, component], setSelectedPair] = useState<
-    | [IntegrationDto, PipedreamComponent<PipedreamComponentType.Trigger>]
-    | [undefined, undefined]
+    [IntegrationDto, PipedreamComponent<PipedreamComponentType.Trigger>] | [undefined, undefined]
   >([undefined, undefined])
 
-  const [configuredProps, setConfiguredProps] = useState<
-    ConfiguredProps<ConfigurableProps>
-  >({})
+  const [configuredProps, setConfiguredProps] = useState<ConfiguredProps<ConfigurableProps>>({})
   const [payloadParameters, setPayloadParameters] = useState<string[]>([])
 
   const integrationForTrigger = integrations?.find(
@@ -67,8 +65,7 @@ export function TriggerConfigModal({
   )
 
   const { data: pipedreamData, isLoading: loadingComponents } = usePipedreamApp(
-    (integrationForTrigger as PipedreamIntegration | undefined)?.configuration
-      .appName,
+    (integrationForTrigger as PipedreamIntegration | undefined)?.configuration.appName,
   )
 
   useEffect(() => {
@@ -88,14 +85,7 @@ export function TriggerConfigModal({
     setSelectedPair([integrationForTrigger, triggerComponent])
     setConfiguredProps(trigger.configuration.properties ?? {})
     setPayloadParameters(trigger.configuration.payloadParameters ?? [])
-  }, [
-    trigger,
-    integration,
-    component,
-    integrationForTrigger,
-    loadingComponents,
-    pipedreamData,
-  ])
+  }, [trigger, integration, integrationForTrigger, loadingComponents, pipedreamData])
 
   useEffect(() => {
     // Reset state when modal is closed
@@ -152,7 +142,6 @@ export function TriggerConfigModal({
       configuredProps,
       payloadParameters,
       integration,
-      component,
       isCreating,
       isUpdating,
       document.documentUuid,
@@ -195,11 +184,7 @@ export function TriggerConfigModal({
           selectedComponent={component}
           onSelect={handleSelect}
         />
-        <form
-          id='triggerConfigForm'
-          className='flex-1 overflow-auto pb-4'
-          onSubmit={onSubmit}
-        >
+        <form id='triggerConfigForm' className='flex-1 overflow-auto pb-4' onSubmit={onSubmit}>
           {integration && component && (
             <IntegrationTriggerConfig
               key={component.key}

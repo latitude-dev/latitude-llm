@@ -1,7 +1,7 @@
 'use client'
 
-import { createContext, ReactNode, useContext } from 'react'
-import { FeatureFlag, ResolvedFeatureFlags } from './flags'
+import { createContext, type ReactNode, useContext } from 'react'
+import type { FeatureFlag, ResolvedFeatureFlags } from './flags'
 
 type IFeatureFlagsContext = { featureFlags: ResolvedFeatureFlags }
 const FeatureFlagContext = createContext<IFeatureFlagsContext>({
@@ -16,9 +16,7 @@ export function FeatureFlagProvider({
   featureFlags: ResolvedFeatureFlags
 }) {
   return (
-    <FeatureFlagContext.Provider value={{ featureFlags }}>
-      {children}
-    </FeatureFlagContext.Provider>
+    <FeatureFlagContext.Provider value={{ featureFlags }}>{children}</FeatureFlagContext.Provider>
   )
 }
 

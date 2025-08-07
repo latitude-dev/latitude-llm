@@ -1,12 +1,5 @@
 import { sql } from 'drizzle-orm'
-import {
-  bigint,
-  bigserial,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-} from 'drizzle-orm/pg-core'
+import { bigint, bigserial, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { users } from '../models/users'
@@ -23,18 +16,12 @@ export const memberships = latitudeSchema.table(
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    invitationToken: uuid('invitation_token')
-      .notNull()
-      .unique()
-      .default(sql`gen_random_uuid()`),
+    invitationToken: uuid('invitation_token').notNull().unique().default(sql`gen_random_uuid()`),
     confirmedAt: timestamp('confirmed_at'),
     ...timestamps(),
   },
   (membership) => ({
-    uniqueMembershipIndex: uniqueIndex().on(
-      membership.workspaceId,
-      membership.userId,
-    ),
+    uniqueMembershipIndex: uniqueIndex().on(membership.workspaceId, membership.userId),
     invitationTokenIdx: uniqueIndex().on(membership.invitationToken),
   }),
 )

@@ -1,4 +1,4 @@
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Providers } from '@latitude-data/core/browser'
 
 export const ICON_BY_LLM_PROVIDER: Record<Providers, IconName> = {
@@ -30,6 +30,5 @@ export const LABEL_BY_LLM_PROVIDER: Record<Providers, string> = {
   [Providers.AmazonBedrock]: 'Amazon Bedrock',
   [Providers.DeepSeek]: 'DeepSeek',
   [Providers.Perplexity]: 'Perplexity',
-  [Providers.Custom]:
-    'Custom - OpenAI Compatible (e.g OpenRouter, LM Studio, ...)',
+  [Providers.Custom]: 'Custom - OpenAI Compatible (e.g OpenRouter, LM Studio, ...)',
 }

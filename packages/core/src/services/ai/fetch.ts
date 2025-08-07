@@ -1,12 +1,8 @@
-import { FetchFunction } from '@ai-sdk/provider-utils'
-import { telemetry, TelemetryContext } from '../../telemetry'
+import type { FetchFunction } from '@ai-sdk/provider-utils'
+import { telemetry, type TelemetryContext } from '../../telemetry'
 
-export function instrumentedFetch({
-  context,
-}: {
-  context: TelemetryContext
-}): FetchFunction {
-  return async function (input, init) {
+export function instrumentedFetch({ context }: { context: TelemetryContext }): FetchFunction {
+  return async (input, init) => {
     const $http = telemetry.http(context, {
       request: await getRequest(input, init),
     })
@@ -56,7 +52,7 @@ async function getRequest(...parameters: Parameters<FetchFunction>) {
       headers: await getHeaders(headers),
       body: await getBody(body),
     }
-  } catch (error) {
+  } catch (_error) {
     return {
       method: 'UNKNOWN',
       url: 'UNKNOWN',
@@ -73,7 +69,7 @@ async function getResponse(response: Response) {
       headers: await getHeaders(response.headers),
       body: await getBody(response.text()),
     }
-  } catch (error) {
+  } catch (_error) {
     return {
       status: 0,
       headers: {},

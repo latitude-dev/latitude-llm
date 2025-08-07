@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { switchWorkspaceAction } from '$/actions/workspaces/switch'
 import useFetcher from '$/hooks/useFetcher'
@@ -16,14 +16,10 @@ export default function useAvailableWorkspaces() {
   const fetcher = useFetcher<Workspace[]>(ROUTES.api.workspaces.available)
 
   const { mutate: refreshCurrentWorkspace } = useCurrentWorkspace()
-  const { data, ...rest } = useSWR<Workspace[], Error>(
-    'api/workspaces/available',
-    fetcher,
-  )
+  const { data, ...rest } = useSWR<Workspace[], Error>('api/workspaces/available', fetcher)
 
-  const { execute: switchWorkspace, isPending: isSwitching } = useServerAction(
-    switchWorkspaceAction,
-  )
+  const { execute: switchWorkspace, isPending: isSwitching } =
+    useServerAction(switchWorkspaceAction)
 
   const switchToWorkspace = useCallback(
     async (workspaceId: number) => {

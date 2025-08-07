@@ -1,4 +1,4 @@
-import {
+import type {
   DocumentVersion,
   EvaluationType,
   EvaluationV2,

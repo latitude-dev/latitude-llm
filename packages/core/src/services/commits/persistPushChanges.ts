@@ -1,6 +1,6 @@
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import type { Commit, DocumentVersion, Workspace } from '../../browser'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { destroyOrSoftDeleteDocuments } from '../documents/destroyOrSoftDeleteDocuments'
@@ -19,8 +19,7 @@ export interface PersistPushChangesParams {
   changes: PushChangeDocument[]
 }
 
-type DocumentVersionToProcess = Partial<DocumentVersion> &
-  Pick<DocumentVersion, 'path' | 'content'>
+type DocumentVersionToProcess = Partial<DocumentVersion> & Pick<DocumentVersion, 'path' | 'content'>
 
 /**
  * Persists push changes to a commit by creating, updating, or deleting document versions
@@ -31,9 +30,7 @@ export async function persistPushChanges(
 ): Promise<TypedResult<Commit, Error>> {
   return await transaction.call(async (trx) => {
     const docsScope = new DocumentVersionsRepository(workspace.id, trx)
-    const originDocuments = await docsScope
-      .getDocumentsAtCommit(commit)
-      .then((r) => r.unwrap())
+    const originDocuments = await docsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
     // Ensure the commit is a draft
     assertCommitIsDraft(commit).unwrap()
@@ -60,10 +57,7 @@ export async function persistPushChanges(
         if (originDoc) {
           documentsToDelete.push(originDoc)
         }
-      } else if (
-        changeDoc.status === 'added' ||
-        changeDoc.status === 'modified'
-      ) {
+      } else if (changeDoc.status === 'added' || changeDoc.status === 'modified') {
         const documentVersion: DocumentVersionToProcess = {
           documentUuid: originDocMap.get(changeDoc.path)?.documentUuid,
           path: changeDoc.path,
@@ -89,9 +83,7 @@ export async function persistPushChanges(
     // Separate documents to insert vs update
     const [docsToInsert, docsToUpdate] = documentVersionsToProcess.reduce(
       (acc, doc) => {
-        const existingDoc = originDocuments.find(
-          (d) => d.documentUuid === doc.documentUuid,
-        )
+        const existingDoc = originDocuments.find((d) => d.documentUuid === doc.documentUuid)
         if (existingDoc) {
           acc[1].push(doc)
         } else {

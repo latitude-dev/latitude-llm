@@ -74,8 +74,8 @@ jobs:
       - name: Use Turbo to build affected packages
         run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
 
-      - name: Prettier
-        run: pnpm prettier:check
+      - name: Biome
+        run: pnpm format
 
       - name: Node.js Lint
         run: pnpm lint

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 
-import { CheckedState } from '@latitude-data/web-ui/atoms/Checkbox'
+import type { CheckedState } from '@latitude-data/web-ui/atoms/Checkbox'
 
 export type SelectionMode = 'NONE' | 'PARTIAL' | 'ALL' | 'ALL_EXCEPT'
 
@@ -19,13 +19,11 @@ export function useSelectableRows<T extends string | number>({
   initialSelection?: T[]
   totalRowCount: number
 }) {
-  const [selectionState, setSelectionState] = useState<SelectionState<T>>(
-    () => ({
-      mode: initialSelection.length > 0 ? 'PARTIAL' : 'NONE',
-      selectedIds: new Set(initialSelection),
-      excludedIds: new Set(),
-    }),
-  )
+  const [selectionState, setSelectionState] = useState<SelectionState<T>>(() => ({
+    mode: initialSelection.length > 0 ? 'PARTIAL' : 'NONE',
+    selectedIds: new Set(initialSelection),
+    excludedIds: new Set(),
+  }))
 
   const headerState = useMemo<CheckedState>(() => {
     switch (selectionState.mode) {
@@ -39,57 +37,54 @@ export function useSelectableRows<T extends string | number>({
     }
   }, [selectionState.mode])
 
-  const toggleRow = useCallback(
-    <I extends T = T>(id: I | undefined, checked: CheckedState) => {
-      if (id === undefined) return
+  const toggleRow = useCallback(<I extends T = T>(id: I | undefined, checked: CheckedState) => {
+    if (id === undefined) return
 
-      setSelectionState((prev) => {
-        const newState: SelectionState<T> = {
-          mode: prev.mode,
-          selectedIds: new Set<T>(prev.selectedIds),
-          excludedIds: new Set<T>(prev.excludedIds),
-        }
+    setSelectionState((prev) => {
+      const newState: SelectionState<T> = {
+        mode: prev.mode,
+        selectedIds: new Set<T>(prev.selectedIds),
+        excludedIds: new Set<T>(prev.excludedIds),
+      }
 
-        switch (prev.mode) {
-          case 'ALL':
-            if (!checked) {
-              newState.mode = 'ALL_EXCEPT'
-              newState.excludedIds = new Set([id])
+      switch (prev.mode) {
+        case 'ALL':
+          if (!checked) {
+            newState.mode = 'ALL_EXCEPT'
+            newState.excludedIds = new Set([id])
+          }
+          break
+        case 'NONE':
+          if (checked) {
+            newState.mode = 'PARTIAL'
+            newState.selectedIds = new Set([id])
+          }
+          break
+        case 'PARTIAL':
+          if (checked) {
+            newState.selectedIds.add(id)
+          } else {
+            newState.selectedIds.delete(id)
+            if (newState.selectedIds.size === 0) {
+              newState.mode = 'NONE'
             }
-            break
-          case 'NONE':
-            if (checked) {
-              newState.mode = 'PARTIAL'
-              newState.selectedIds = new Set([id])
+          }
+          break
+        case 'ALL_EXCEPT':
+          if (checked) {
+            newState.excludedIds.delete(id)
+            if (newState.excludedIds.size === 0) {
+              newState.mode = 'ALL'
             }
-            break
-          case 'PARTIAL':
-            if (checked) {
-              newState.selectedIds.add(id)
-            } else {
-              newState.selectedIds.delete(id)
-              if (newState.selectedIds.size === 0) {
-                newState.mode = 'NONE'
-              }
-            }
-            break
-          case 'ALL_EXCEPT':
-            if (checked) {
-              newState.excludedIds.delete(id)
-              if (newState.excludedIds.size === 0) {
-                newState.mode = 'ALL'
-              }
-            } else {
-              newState.excludedIds.add(id)
-            }
-            break
-        }
+          } else {
+            newState.excludedIds.add(id)
+          }
+          break
+      }
 
-        return newState
-      })
-    },
-    [],
-  )
+      return newState
+    })
+  }, [])
 
   const clearSelections = useCallback(() => {
     setSelectionState({
@@ -116,6 +111,7 @@ export function useSelectableRows<T extends string | number>({
     })
   }, [])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   const selectedRowIds = useMemo(() => {
     switch (selectionState.mode) {
       case 'ALL':
@@ -130,7 +126,6 @@ export function useSelectableRows<T extends string | number>({
     // This is legitimate case since rowIds is an array we need to force a deep
     // equality check to compute the memo only when the array's content has
     // changed
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectionState, rowIds.join('')])
 
   const selectedCount = useMemo(() => {
@@ -144,12 +139,7 @@ export function useSelectableRows<T extends string | number>({
       case 'ALL_EXCEPT':
         return totalRowCount - selectionState.excludedIds.size
     }
-  }, [
-    selectionState.mode,
-    selectionState.excludedIds,
-    selectionState.selectedIds,
-    totalRowCount,
-  ])
+  }, [selectionState.mode, selectionState.excludedIds, selectionState.selectedIds, totalRowCount])
 
   return useMemo(() => {
     const isSelected = <I extends T = T>(id: I | undefined) => {

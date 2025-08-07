@@ -1,4 +1,4 @@
-import { CommitStatus, User, Workspace } from '@latitude-data/core/browser'
+import { CommitStatus, type User, type Workspace } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -20,9 +20,7 @@ describe('GET handler for commits', () => {
   let mockUser: User
 
   beforeEach(async () => {
-    mockRequest = new NextRequest(
-      'http://localhost:3000/api/projects/1/commits?status=draft',
-    )
+    mockRequest = new NextRequest('http://localhost:3000/api/projects/1/commits?status=draft')
     const { workspace, userData } = await factories.createWorkspace({
       name: 'test',
     })

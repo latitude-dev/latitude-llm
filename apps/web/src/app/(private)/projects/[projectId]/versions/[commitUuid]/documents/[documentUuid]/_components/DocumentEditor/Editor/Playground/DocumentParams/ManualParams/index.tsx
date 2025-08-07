@@ -1,17 +1,14 @@
 import { useDebouncedCallback } from 'use-debounce'
 import { ParameterInput } from '$/components/ParameterInput'
-import {
-  UseDocumentParameters,
-  useDocumentParameters,
-} from '$/hooks/useDocumentParameters'
+import { type UseDocumentParameters, useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { ParameterType } from '@latitude-data/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ParameterTypeSelector } from './ParameterTypeSelector'
-import { PlaygroundInput } from '@latitude-data/core/browser'
+import type { PlaygroundInput } from '@latitude-data/core/browser'
 
-import { Props } from '../index'
+import type { Props } from '../index'
 import { ParametersWrapper } from '../ParametersWrapper'
 
 type ManualParameterProps = {
@@ -58,10 +55,7 @@ export function ManualParams({ document, commit, prompt, setPrompt }: Props) {
 
           const includedInPrompt = input.metadata.includeInPrompt ?? true
           return (
-            <div
-              key={idx}
-              className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
-            >
+            <div key={idx} className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'>
               <div className='flex flex-row items-center gap-x-2 min-h-8'>
                 <ParameterTypeSelector
                   parameter={param}

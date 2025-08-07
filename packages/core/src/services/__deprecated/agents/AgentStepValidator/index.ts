@@ -1,27 +1,23 @@
 import {
-  AssistantMessage,
+  type AssistantMessage,
   ContentType,
-  Conversation,
-  Message,
+  type Conversation,
+  type Message,
   MessageRole,
 } from '@latitude-data/compiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { JSONSchema7 } from 'json-schema'
+import type { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
 import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 import {
   azureConfig,
-  LatitudePromptConfig,
+  type LatitudePromptConfig,
 } from '@latitude-data/constants/latitudePromptSchema'
-import {
-  applyProviderRules,
-  ProviderApiKey,
-  Workspace,
-} from '../../../../browser'
-import { Result, TypedResult } from '../../../../lib/Result'
+import { applyProviderRules, type ProviderApiKey, type Workspace } from '../../../../browser'
+import { Result, type TypedResult } from '../../../../lib/Result'
 import { checkFreeProviderQuota } from '../../chains/checkFreeProviderQuota'
-import { CachedApiKeys } from '../../chains/run'
+import type { CachedApiKeys } from '../../chains/run'
 
 export type ValidatedAgentStep = {
   config: LatitudePromptConfig
@@ -59,12 +55,8 @@ const findProvider = (name: string, providersMap: CachedApiKeys) => {
 // This schema is incomplete
 const validateConfig = (
   config: Record<string, unknown>,
-): TypedResult<
-  LatitudePromptConfig,
-  ChainError<RunErrorCodes.DocumentConfigError>
-> => {
-  const doc =
-    'https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts'
+): TypedResult<LatitudePromptConfig, ChainError<RunErrorCodes.DocumentConfigError>> => {
+  const doc = 'https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts'
   const schema = z
     .object({
       model: z.string({
@@ -109,8 +101,7 @@ function isChainCompleted(newMessages?: Message[]) {
 
     return message.content.filter(
       (content) =>
-        content.type === ContentType.toolResult &&
-        returnToolCallIds.includes(content.toolCallId),
+        content.type === ContentType.toolResult && returnToolCallIds.includes(content.toolCallId),
     ).length
   }, 0)
 
@@ -122,9 +113,7 @@ export const validateAgentStep = async ({
   providersMap,
   conversation,
   newMessages,
-}: ValidatorContext): Promise<
-  TypedResult<ValidatedAgentStep, ChainError<RunErrorCodes>>
-> => {
+}: ValidatorContext): Promise<TypedResult<ValidatedAgentStep, ChainError<RunErrorCodes>>> => {
   const configResult = validateConfig(conversation.config)
   if (configResult.error) return Result.error(configResult.error)
 

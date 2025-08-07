@@ -15,7 +15,8 @@ export async function getResizablePanelGroupData({
 }): Promise<number | undefined> {
   const cks = await cookies()
   const layout = cks.get(`react-resizable-panels:${group}`)
-  let layoutData = undefined
+  // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
+  let layoutData
 
   try {
     if (layout) {

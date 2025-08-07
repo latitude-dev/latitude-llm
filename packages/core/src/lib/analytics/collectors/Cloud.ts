@@ -1,9 +1,5 @@
 import debug from '../../debug'
-import {
-  DataCollector,
-  type CollectorInput,
-  type CollectorOutput,
-} from './DataCollector'
+import { DataCollector, type CollectorInput, type CollectorOutput } from './DataCollector'
 
 export class CloudCollector extends DataCollector<'cloud'> {
   collect(args: CollectorInput): CollectorOutput<'cloud'> | undefined {

@@ -1,18 +1,16 @@
-import { Context } from 'hono'
+import type { Context } from 'hono'
 import { z } from '@hono/zod-openapi'
 import { createProject } from '@latitude-data/core/services/projects/create'
 import { findFirstUserInWorkspace } from '@latitude-data/core/data-access'
-import { AppRouteHandler } from '$/openApi/types'
-import { createRoute } from './create.route'
+import type { AppRouteHandler } from '$/openApi/types'
+import type { createRoute } from './create.route'
 
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Project name is required'),
 })
 
 // @ts-expect-error: broken types
-export const createHandler: AppRouteHandler<typeof createRoute> = async (
-  c: Context,
-) => {
+export const createHandler: AppRouteHandler<typeof createRoute> = async (c: Context) => {
   const workspace = c.get('workspace')
 
   try {

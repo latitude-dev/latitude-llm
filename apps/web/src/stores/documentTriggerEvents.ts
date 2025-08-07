@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
-import { DocumentTriggerEvent } from '@latitude-data/core/browser'
+import useSWR, { type SWRConfiguration } from 'swr'
+import type { DocumentTriggerEvent } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 
@@ -14,10 +14,8 @@ export default function useDocumentTriggerEvents(
   { ...opts }: SWRConfiguration & {} = {},
 ) {
   const fetcher = useFetcher<DocumentTriggerEvent[]>(
-    ROUTES.api.projects
-      .detail(projectId)
-      .commits.detail(commitUuid)
-      .triggers.detail(triggerUuid).triggerEvents.root,
+    ROUTES.api.projects.detail(projectId).commits.detail(commitUuid).triggers.detail(triggerUuid)
+      .triggerEvents.root,
   )
 
   const { data = EMPTY_ARRAY, isLoading } = useSWR<DocumentTriggerEvent[]>(

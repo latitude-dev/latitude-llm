@@ -1,14 +1,14 @@
 import { LatitudeTool } from '@latitude-data/constants'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { StreamManager } from '..'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { StreamManager } from '..'
 import {
   getLatitudeToolDefinition,
   getLatitudeToolInternalName,
 } from '../../../services/latitudeTools/helpers'
-import { TelemetryContext } from '../../../telemetry'
-import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
-import { Result, TypedResult } from '../../Result'
-import { ResolvedTools, ToolSource } from './types'
+import type { TelemetryContext } from '../../../telemetry'
+import { BadRequestError, type LatitudeError, NotFoundError } from '../../errors'
+import { Result, type TypedResult } from '../../Result'
+import { type ResolvedTools, ToolSource } from './types'
 
 const ALL_LATITUDE_RESOLVED_TOOLS = (context: TelemetryContext) =>
   Object.fromEntries(
@@ -53,32 +53,21 @@ function resolveLatitudeToolsFromNewSchema({
   for (const latitudeToolName of latitudeToolNames) {
     if (latitudeToolName === '') {
       // 'latitude' was used as the whole toolId, without any '/' separator
-      return Result.error(
-        new BadRequestError(`You must specify a tool name after 'latitude/'`),
-      )
+      return Result.error(new BadRequestError(`You must specify a tool name after 'latitude/'`))
     }
 
     if (latitudeToolName === '*') {
-      Object.assign(
-        resolvedTools,
-        ALL_LATITUDE_RESOLVED_TOOLS(streamManager.$completion!.context),
-      )
+      Object.assign(resolvedTools, ALL_LATITUDE_RESOLVED_TOOLS(streamManager.$completion!.context))
       continue
     }
 
-    if (
-      !Object.values(LatitudeTool).includes(latitudeToolName as LatitudeTool)
-    ) {
+    if (!Object.values(LatitudeTool).includes(latitudeToolName as LatitudeTool)) {
       return Result.error(
-        new NotFoundError(
-          `There is no Latitude tool with the name '${latitudeToolName}'`,
-        ),
+        new NotFoundError(`There is no Latitude tool with the name '${latitudeToolName}'`),
       )
     }
 
-    resolvedTools[
-      getLatitudeToolInternalName(latitudeToolName as LatitudeTool)
-    ] = {
+    resolvedTools[getLatitudeToolInternalName(latitudeToolName as LatitudeTool)] = {
       definition: getLatitudeToolDefinition(
         latitudeToolName as LatitudeTool,
         streamManager.$completion!.context,

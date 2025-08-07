@@ -1,9 +1,9 @@
 import { executeLatitudeToolCall } from '../../../../../services/latitudeTools'
 import { Result } from '../../../../../lib/Result'
-import { PromisedResult } from '../../../../../lib/Transaction'
+import type { PromisedResult } from '../../../../../lib/Transaction'
 import { NotFoundError } from '../../../../../lib/errors'
 import { ToolSource } from '../../resolveTools/types'
-import { ToolResponsesArgs } from './types'
+import type { ToolResponsesArgs } from './types'
 
 export function getLatitudeCallResults({
   toolCalls,

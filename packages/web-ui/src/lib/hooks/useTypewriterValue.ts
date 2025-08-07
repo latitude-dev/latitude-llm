@@ -49,15 +49,7 @@ export function useTypeWriterValue(
       }
     }
     return () => clearTimeout(timeout)
-  }, [
-    currentText,
-    phase,
-    currentValueIndex,
-    values,
-    typeTime,
-    eraseTime,
-    pauseTime,
-  ])
+  }, [currentText, phase, currentValueIndex, values, typeTime, eraseTime, pauseTime])
 
   return prefix + currentText
 }

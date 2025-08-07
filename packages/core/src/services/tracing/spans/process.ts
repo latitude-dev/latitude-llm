@@ -12,7 +12,7 @@ import {
   AI_OPERATION_ID_VALUE_STREAM_OBJECT,
   AI_OPERATION_ID_VALUE_STREAM_TEXT,
   AI_OPERATION_ID_VALUE_TOOL,
-  ApiKey,
+  type ApiKey,
   ATTR_AI_OPERATION_ID,
   ATTR_LATITUDE_TYPE,
   ATTR_LLM_REQUEST_TYPE,
@@ -26,35 +26,33 @@ import {
   LLM_REQUEST_TYPE_VALUE_EMBEDDING,
   LLM_REQUEST_TYPE_VALUE_RERANK,
   Otlp,
-  SpanAttribute,
+  type SpanAttribute,
   SpanStatus,
   SpanType,
-  Workspace,
+  type Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
-import { Result, TypedResult } from '../../../lib/Result'
+import { Result, type TypedResult } from '../../../lib/Result'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { internalBaggageSchema } from '../../../telemetry'
 import { ATTR_LATITUDE_INTERNAL } from '../../../browser'
 import { ApiKeysRepository } from '../../../repositories'
 
-export function convertSpanAttribute(
-  attribute: Otlp.AttributeValue,
-): TypedResult<SpanAttribute> {
-  if (attribute.stringValue != undefined) {
+export function convertSpanAttribute(attribute: Otlp.AttributeValue): TypedResult<SpanAttribute> {
+  if (attribute.stringValue !== undefined) {
     return Result.ok(attribute.stringValue)
   }
 
-  if (attribute.intValue != undefined) {
+  if (attribute.intValue !== undefined) {
     return Result.ok(attribute.intValue)
   }
 
-  if (attribute.boolValue != undefined) {
+  if (attribute.boolValue !== undefined) {
     return Result.ok(attribute.boolValue)
   }
 
-  if (attribute.arrayValue != undefined) {
+  if (attribute.arrayValue !== undefined) {
     const values = attribute.arrayValue.values.map(convertSpanAttribute)
     if (values.some((v) => v.error)) return Result.error(values[0]!.error!)
 
@@ -78,9 +76,7 @@ export function convertSpanAttributes(
   return Result.ok(result)
 }
 
-export function extractSpanType(
-  attributes: Record<string, SpanAttribute>,
-): TypedResult<SpanType> {
+export function extractSpanType(attributes: Record<string, SpanAttribute>): TypedResult<SpanType> {
   const type = String(attributes[ATTR_LATITUDE_TYPE] ?? '')
   switch (type) {
     case SpanType.Tool:
@@ -147,9 +143,7 @@ export function extractSpanType(
   return Result.ok(SpanType.Unknown)
 }
 
-export function convertSpanStatus(
-  status: Otlp.Status,
-): TypedResult<SpanStatus> {
+export function convertSpanStatus(status: Otlp.Status): TypedResult<SpanStatus> {
   switch (status.code) {
     case Otlp.StatusCode.Ok:
       return Result.ok(SpanStatus.Ok)
@@ -186,10 +180,7 @@ export async function extractApiKeyAndWorkspace(
   if (gettingWorkspace.error) return Result.error(gettingWorkspace.error)
   const workspace = gettingWorkspace.value
 
-  const gettingApiKey = await getApiKey(
-    { apiKeyId: apiKeyId ?? internal?.apiKeyId, workspace },
-    db,
-  )
+  const gettingApiKey = await getApiKey({ apiKeyId: apiKeyId ?? internal?.apiKeyId, workspace }, db)
   if (gettingApiKey.error) return Result.error(gettingApiKey.error)
   const apiKey = gettingApiKey.value
 
@@ -199,9 +190,7 @@ export async function extractApiKeyAndWorkspace(
 function extractInternal(attributes: Record<string, SpanAttribute>) {
   const attribute = String(attributes[ATTR_LATITUDE_INTERNAL] ?? '')
   if (!attribute) {
-    return Result.error(
-      new UnprocessableEntityError('Internal baggage is required'),
-    )
+    return Result.error(new UnprocessableEntityError('Internal baggage is required'))
   }
 
   try {
@@ -209,10 +198,8 @@ function extractInternal(attributes: Record<string, SpanAttribute>) {
     const baggage = internalBaggageSchema.parse(payload)
 
     return Result.ok(baggage)
-  } catch (error) {
-    return Result.error(
-      new UnprocessableEntityError('Invalid internal baggage'),
-    )
+  } catch (_error) {
+    return Result.error(new UnprocessableEntityError('Invalid internal baggage'))
   }
 }
 

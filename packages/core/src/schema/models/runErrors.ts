@@ -2,7 +2,7 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { bigserial, index, jsonb, text, uuid } from 'drizzle-orm/pg-core'
 
 import { ErrorableEntity } from '../../constants'
-import { LatitudeErrorDetails } from '../../lib/errors'
+import type { LatitudeErrorDetails } from '../../lib/errors'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 
@@ -32,10 +32,9 @@ export const runErrorEntities = latitudeSchema.enum('run_error_entity_enum', [
   ErrorableEntity.EvaluationResult,
 ])
 
-export type RunErrorDetails<C extends RunErrorCodes> =
-  C extends RunErrorCodes.ChainCompileError
-    ? { compileCode: string; message: string }
-    : never
+export type RunErrorDetails<C extends RunErrorCodes> = C extends RunErrorCodes.ChainCompileError
+  ? { compileCode: string; message: string }
+  : never
 
 export const runErrors = latitudeSchema.table(
   'run_errors',
@@ -45,9 +44,7 @@ export const runErrors = latitudeSchema.table(
     errorableType: runErrorEntities('errorable_type').notNull(),
     errorableUuid: uuid('errorable_uuid').notNull(),
     message: text('message').notNull(),
-    details: jsonb('details').$type<
-      RunErrorDetails<RunErrorCodes> | LatitudeErrorDetails
-    >(),
+    details: jsonb('details').$type<RunErrorDetails<RunErrorCodes> | LatitudeErrorDetails>(),
     ...timestamps(),
   },
   (table) => ({

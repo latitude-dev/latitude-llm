@@ -10,11 +10,7 @@ vi.mock('./path/to/subscription/service', () => ({
 describe('createWorkspace', () => {
   it('creates a hobby plan subscription', async () => {
     const user = await createUser()
-    const workspace = await createWorkspace({ name: 'foo', user }).then((r) =>
-      r.unwrap(),
-    )
-    expect(workspace.currentSubscription).toEqual(
-      expect.objectContaining({ plan: 'hobby_v2' }),
-    )
+    const workspace = await createWorkspace({ name: 'foo', user }).then((r) => r.unwrap())
+    expect(workspace.currentSubscription).toEqual(expect.objectContaining({ plan: 'hobby_v2' }))
   })
 })

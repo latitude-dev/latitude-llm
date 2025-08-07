@@ -1,4 +1,4 @@
-import { EvaluationResultConfiguration } from '../../browser'
+import type { EvaluationResultConfiguration } from '../../browser'
 import { findEvaluationTemplateCategoryById } from '../../data-access/evaluationTemplateCategories'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -25,10 +25,7 @@ export async function createEvaluationTemplate(
     let category
 
     if (categoryId) {
-      const categoryResult = await findEvaluationTemplateCategoryById(
-        categoryId,
-        tx,
-      )
+      const categoryResult = await findEvaluationTemplateCategoryById(categoryId, tx)
 
       if (categoryResult.error instanceof NotFoundError) {
         category = await createCategory(categoryName, transaction)
@@ -59,10 +56,7 @@ export async function createEvaluationTemplate(
   })
 }
 
-async function createCategory(
-  categoryName: string | undefined,
-  transaction = new Transaction(),
-) {
+async function createCategory(categoryName: string | undefined, transaction = new Transaction()) {
   const newCategoryResult = await createEvaluationTemplateCategory(
     { name: categoryName || DEFAULT_CATEGORY_NAME },
     transaction,

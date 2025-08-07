@@ -7,6 +7,4 @@ export const amazonBedrockConfigurationSchema = z.object({
   sessionToken: z.string().optional(),
 })
 
-export type AmazonBedrockConfiguration = z.infer<
-  typeof amazonBedrockConfigurationSchema
->
+export type AmazonBedrockConfiguration = z.infer<typeof amazonBedrockConfigurationSchema>

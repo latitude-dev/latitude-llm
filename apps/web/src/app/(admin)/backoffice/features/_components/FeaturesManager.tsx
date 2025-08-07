@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import type React from 'react'
+import { useState } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
@@ -34,20 +35,9 @@ export function FeaturesManager() {
     currentWorkspaceIds: [],
   })
 
-  const {
-    data: features,
-    create,
-    isCreating,
-    destroy,
-    isDestroying,
-  } = useFeatures()
+  const { data: features, create, isCreating, destroy, isDestroying } = useFeatures()
 
-  const {
-    data: adminFeatures,
-    toggleForWorkspaces,
-    isToggling,
-    mutate,
-  } = useAdminFeatures()
+  const { data: adminFeatures, toggleForWorkspaces, isToggling, mutate } = useAdminFeatures()
 
   const handleCreateFeature = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -65,9 +55,7 @@ export function FeaturesManager() {
   }
 
   const handleDeleteFeature = async (feature: { id: number; name: string }) => {
-    if (
-      confirm(`Are you sure you want to delete the feature "${feature.name}"?`)
-    ) {
+    if (confirm(`Are you sure you want to delete the feature "${feature.name}"?`)) {
       await destroy({ id: feature.id })
 
       mutate() // Refetch workspace features after creating a new feature
@@ -87,16 +75,11 @@ export function FeaturesManager() {
       isOpen: true,
       featureId: feature.id,
       featureName: feature.name,
-      currentWorkspaceIds: feature.workspaces
-        .filter((w) => w.enabled)
-        .map((w) => w.id),
+      currentWorkspaceIds: feature.workspaces.filter((w) => w.enabled).map((w) => w.id),
     })
   }
 
-  const handleWorkspaceToggle = async (
-    workspaceIds: number[],
-    enabled: boolean,
-  ) => {
+  const handleWorkspaceToggle = async (workspaceIds: number[], enabled: boolean) => {
     if (workspaceModalState.featureId) {
       await toggleForWorkspaces({
         featureId: workspaceModalState.featureId,
@@ -114,8 +97,8 @@ export function FeaturesManager() {
           <div className='flex flex-col gap-2'>
             <Text.H4B>Available Features</Text.H4B>
             <Text.H5 color='foregroundMuted'>
-              Manage feature toggles for workspaces. Create new features and
-              toggle them on/off for specific workspaces.
+              Manage feature toggles for workspaces. Create new features and toggle them on/off for
+              specific workspaces.
             </Text.H5>
           </div>
           <Button fancy onClick={() => setIsCreateModalOpen(true)}>
@@ -137,9 +120,7 @@ export function FeaturesManager() {
               <TableRow key={feature.id}>
                 <TableCell>{feature.name}</TableCell>
                 <TableCell>{feature.description || '-'}</TableCell>
-                <TableCell>
-                  {new Date(feature.createdAt).toLocaleDateString()}
-                </TableCell>
+                <TableCell>{new Date(feature.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell>
                   <Button
                     iconProps={{ name: 'trash' }}
@@ -160,8 +141,7 @@ export function FeaturesManager() {
         <div className='flex flex-col gap-2'>
           <Text.H4B>Feature Workspace Management</Text.H4B>
           <Text.H5 color='foregroundMuted'>
-            Manage which workspaces have access to each feature by entering
-            workspace IDs
+            Manage which workspaces have access to each feature by entering workspace IDs
           </Text.H5>
         </div>
 
@@ -183,12 +163,8 @@ export function FeaturesManager() {
                   <Tooltip
                     trigger={
                       <>
-                        {feature.workspaces.filter((w) => w.enabled).length}{' '}
-                        workspace
-                        {feature.workspaces.filter((w) => w.enabled).length !==
-                        1
-                          ? 's'
-                          : ''}
+                        {feature.workspaces.filter((w) => w.enabled).length} workspace
+                        {feature.workspaces.filter((w) => w.enabled).length !== 1 ? 's' : ''}
                       </>
                     }
                   >
@@ -227,12 +203,7 @@ export function FeaturesManager() {
       >
         <form onSubmit={handleCreateFeature}>
           <FormWrapper>
-            <Input
-              name='name'
-              label='Feature Name'
-              placeholder='Enter feature name'
-              required
-            />
+            <Input name='name' label='Feature Name' placeholder='Enter feature name' required />
             <TextArea
               name='description'
               label='Description'
@@ -242,11 +213,7 @@ export function FeaturesManager() {
               <Button type='submit' disabled={isCreating}>
                 {isCreating ? 'Creating...' : 'Create Feature'}
               </Button>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => setIsCreateModalOpen(false)}
-              >
+              <Button type='button' variant='outline' onClick={() => setIsCreateModalOpen(false)}>
                 Cancel
               </Button>
             </div>
@@ -258,9 +225,7 @@ export function FeaturesManager() {
       {workspaceModalState.isOpen && (
         <WorkspaceSelectionModal
           isOpen={workspaceModalState.isOpen}
-          onOpenChange={(open) =>
-            setWorkspaceModalState((prev) => ({ ...prev, isOpen: open }))
-          }
+          onOpenChange={(open) => setWorkspaceModalState((prev) => ({ ...prev, isOpen: open }))}
           featureName={workspaceModalState.featureName}
           onConfirm={handleWorkspaceToggle}
           isLoading={isToggling}

@@ -1,5 +1,5 @@
 import tracer from '../common/tracer'
-import { Context, Next } from 'hono'
+import type { Context, Next } from 'hono'
 
 function isResponse(value: unknown): value is Response {
   return value instanceof Response

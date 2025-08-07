@@ -21,9 +21,7 @@ export const updatePublishedDocumentAction = withDocument
   .input(input)
   .handler(async ({ ctx, input }) => {
     const repo = new PublishedDocumentRepository(ctx.workspace.id)
-    const publishedDocument = await repo
-      .findByUuid(input.uuid)
-      .then((r) => r.unwrap())
+    const publishedDocument = await repo.findByUuid(input.uuid).then((r) => r.unwrap())
     return updatePublishedDocument({
       publishedDocument,
       data: input,

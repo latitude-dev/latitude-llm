@@ -1,13 +1,13 @@
 import { useCallback } from 'react'
 import { noop } from 'lodash-es'
 
-import { ClaimedReward } from '@latitude-data/core/browser'
+import type { ClaimedReward } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { claimRewardAction } from '$/actions/rewards/claimRewardAction'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 import useWorkspaceUsage from './workspaceUsage'
 
@@ -69,21 +69,19 @@ export default function useRewards(opts?: SWRConfiguration) {
       reference: string
       optimistic?: boolean
     }) => {
-      return executeClaimRewardAction({ type, reference }).then(
-        ([claimedReward]) => {
-          if (!claimedReward) return
+      return executeClaimRewardAction({ type, reference }).then(([claimedReward]) => {
+        if (!claimedReward) return
 
-          toast({
-            title: 'Success',
-            description: 'Your reward has been claimed successfully',
-          })
+        toast({
+          title: 'Success',
+          description: 'Your reward has been claimed successfully',
+        })
 
-          if (optimistic) {
-            updateRewards(claimedReward)
-            increaseMaxUsage(claimedReward.value)
-          }
-        },
-      )
+        if (optimistic) {
+          updateRewards(claimedReward)
+          increaseMaxUsage(claimedReward.value)
+        }
+      })
     },
     [executeClaimRewardAction, toast, updateRewards, increaseMaxUsage],
   )

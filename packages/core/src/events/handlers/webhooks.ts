@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { database } from '../../client'
 import { webhooks } from '../../schema/models/webhooks'
-import { type WebhookDeliveryCreatedEvent } from '../events'
+import type { WebhookDeliveryCreatedEvent } from '../events'
 
 export async function updateWebhookLastTriggeredAt({
   data,

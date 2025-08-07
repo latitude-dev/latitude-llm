@@ -1,11 +1,8 @@
 import { useDevMode } from '$/hooks/useDevMode'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { useMetadata } from '$/hooks/useMetadata'
-import { DocumentVersion } from '@latitude-data/core/browser'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import type { DocumentVersion } from '@latitude-data/core/browser'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { PlaygroundBlocksEditor } from '../BlocksEditor'
 import { useDiffState } from '../hooks/useDiffState'
 import { useLatteStreaming } from '../hooks/useLatteStreaming'
@@ -31,9 +28,7 @@ export function Editors({
   })
   const { diff, setDiff } = useDiffState(initialDiff, updateDocumentContent)
   const readOnlyMessage =
-    commit.mergedAt !== null
-      ? 'Create a draft to edit documents.'
-      : customReadOnlyMessage
+    commit.mergedAt !== null ? 'Create a draft to edit documents.' : customReadOnlyMessage
 
   return devMode ? (
     <PlaygroundTextEditor

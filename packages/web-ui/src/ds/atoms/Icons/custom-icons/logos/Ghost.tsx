@@ -1,4 +1,4 @@
-import { type LucideProps } from 'lucide-react'
+import type { LucideProps } from 'lucide-react'
 import { LatitudeLogoMonochrome } from '..'
 
 export default function Ghost(props: LucideProps) {

@@ -4,16 +4,16 @@ import { useDraggable, useDroppable } from '@latitude-data/web-ui/hooks/useDnD'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 
-import { type IndentType } from './NodeHeaderWrapper'
+import type { IndentType } from './NodeHeaderWrapper'
 import DocumentHeader from './DocumentHeader'
 import { FileTreeProvider, useFileTreeContext } from './FilesProvider'
 import FolderHeader from './FolderHeader'
 import { TreeToolbar } from './TreeToolbar'
 import { useOpenPaths } from './useOpenPaths'
 import { useTempNodes } from './useTempNodes'
-import { Node, SidebarDocument, useTree } from './useTree'
+import { type Node, type SidebarDocument, useTree } from './useTree'
 import { useParams } from 'next/navigation'
-import { type ParamValue } from 'next/dist/server/request/params'
+import type { ParamValue } from 'next/dist/server/request/params'
 
 function NodeHeader({
   selected,
@@ -72,7 +72,7 @@ function NodeHeader({
   )
 }
 
-export type FileNodeProps = {
+type FileNodeProps = {
   isMerged: boolean
   node: Node
   indentation?: IndentType[]
@@ -104,13 +104,8 @@ function FileNode({
   const tmpNodes = allTmpFolders[node.path] ?? EMPTY_TMP_NODES
   const { currentUuid } = useFileTreeContext()
   const documentUuid = node.doc?.documentUuid
-  const [selected, setSelected] = useState(
-    !!currentUuid && currentUuid === documentUuid,
-  )
-  const allNodes = useMemo(
-    () => [...tmpNodes, ...node.children],
-    [tmpNodes, node.children],
-  )
+  const [selected, setSelected] = useState(!!currentUuid && currentUuid === documentUuid)
+  const allNodes = useMemo(() => [...tmpNodes, ...node.children], [tmpNodes, node.children])
   const lastIdx = allNodes.length - 1
   const { togglePath, openPaths } = useOpenPaths((state) => ({
     openPaths: state.openPaths,
@@ -129,8 +124,7 @@ function FileNode({
     setSelected(!!currentUuid && currentUuid === documentUuid)
   }, [currentUuid, documentUuid])
 
-  const overMyself =
-    droppable.over && droppable.over.id === droppable.active?.id
+  const overMyself = droppable.over && droppable.over.id === droppable.active?.id
   const someoneIsOverMe = droppable.isOver && !overMyself
   const canDrag = !isMerged && !node.isRoot
   return (
@@ -155,8 +149,7 @@ function FileNode({
           className={cn('flex flex-col', {
             hidden: !open && !node.isRoot,
             'pt-1 pb-8': node.isRoot,
-            'outline outline-1 outline-primary':
-              droppable.isOver && node.isRoot,
+            'outline outline-1 outline-primary': droppable.isOver && node.isRoot,
           })}
         >
           {allNodes.map((node, idx) => {
@@ -242,15 +235,12 @@ export function FilesTree({
     togglePath: state.togglePath,
   }))
   const rootNode = useTree({ documents, liveDocuments })
-  const [deletableNode, setDeletable] =
-    useState<DeletableElement<DeletableType> | null>(null)
+  const [deletableNode, setDeletable] = useState<DeletableElement<DeletableType> | null>(null)
 
   const currentPath = useMemo(() => {
     if (!currentUuid) return undefined
 
-    const currentDocument = documents.find(
-      (d) => d.documentUuid === currentUuid,
-    )
+    const currentDocument = documents.find((d) => d.documentUuid === currentUuid)
     return currentDocument?.path
   }, [currentUuid, documents])
 
@@ -280,7 +270,7 @@ export function FilesTree({
 
       setDeletable(null)
     },
-    [destroyFile, destroyFolder, setDeletable],
+    [destroyFile, destroyFolder],
   )
 
   const deletingFolder = deletableNode?.type === 'folder'

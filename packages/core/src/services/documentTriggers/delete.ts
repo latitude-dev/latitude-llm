@@ -1,18 +1,11 @@
-import {
-  BadRequestError,
-  LatitudeError,
-  NotFoundError,
-} from '@latitude-data/constants/errors'
-import { Commit, DocumentTrigger, Workspace } from '../../browser'
+import { BadRequestError, LatitudeError, NotFoundError } from '@latitude-data/constants/errors'
+import type { Commit, DocumentTrigger, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
 import { documentTriggers } from '../../schema'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import type { DocumentTriggerType } from '@latitude-data/constants'
 import { undeployDocumentTrigger } from './deploy'
-import {
-  CommitsRepository,
-  DocumentTriggersRepository,
-} from '../../repositories'
+import { CommitsRepository, DocumentTriggersRepository } from '../../repositories'
 import { eq } from 'drizzle-orm'
 
 async function getLiveDocumentTrigger<T extends DocumentTriggerType>(
@@ -68,11 +61,10 @@ async function findTriggerContext<T extends DocumentTriggerType>(
   return transaction.call<ContextResult<T>>(async (tx) => {
     const triggersScope = new DocumentTriggersRepository(workspace.id, tx)
 
-    const currentDocumentTriggerResult =
-      await triggersScope.getTriggerByUuid<T>({
-        uuid: triggerUuid,
-        commit,
-      })
+    const currentDocumentTriggerResult = await triggersScope.getTriggerByUuid<T>({
+      uuid: triggerUuid,
+      commit,
+    })
 
     if (currentDocumentTriggerResult.error) return currentDocumentTriggerResult
 
@@ -169,9 +161,7 @@ export async function deleteDocumentTrigger<T extends DocumentTriggerType>(
         .returning()) as DocumentTrigger<T>[]
 
       if (!createdTrigger) {
-        return Result.error(
-          new LatitudeError('Failed to create delete trigger'),
-        )
+        return Result.error(new LatitudeError('Failed to create delete trigger'))
       }
 
       return Result.ok(createdTrigger)

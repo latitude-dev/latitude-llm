@@ -1,5 +1,5 @@
-import { type DatasetColumnRole } from '@latitude-data/core/browser'
-import { BackgroundColor, colors } from '@latitude-data/web-ui/tokens'
+import type { DatasetColumnRole } from '@latitude-data/core/browser'
+import { type BackgroundColor, colors } from '@latitude-data/web-ui/tokens'
 import { useCallback, useMemo } from 'react'
 
 type RoleStyle = { bgColor: BackgroundColor }
@@ -14,6 +14,7 @@ const ROLE_STYLES: RoleStyles = {
 }
 export function useDatasetRole() {
   const getStyleForRole = useCallback((role: DatasetColumnRole) => {
+    // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
     let styles
     switch (role) {
       case 'label':

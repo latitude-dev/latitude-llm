@@ -1,7 +1,7 @@
 import type { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
 
-import { LanguageModelUsage } from 'ai'
-import { Commit, LogSources } from '../../browser'
+import type { LanguageModelUsage } from 'ai'
+import type { Commit, LogSources } from '../../browser'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { NotFoundError } from '../../lib/errors'

@@ -1,17 +1,14 @@
 import { parseISO } from 'date-fns'
-import { Commit, LOG_SOURCES, LogSources } from '../../../browser'
-import { QueryParams } from '../../../lib/pagination/buildPaginatedUrl'
+import { type Commit, LOG_SOURCES, type LogSources } from '../../../browser'
+import type { QueryParams } from '../../../lib/pagination/buildPaginatedUrl'
 import { formatDocumentLogCreatedAtParam } from './generateDocumentLogsApiRouteWithParams'
 
 function parseLogSourcesSafe(origins: string[] | string | undefined) {
-  const logSources = (origins?.toString()?.split(',') ??
-    LOG_SOURCES) as LogSources[]
+  const logSources = (origins?.toString()?.split(',') ?? LOG_SOURCES) as LogSources[]
   return logSources.filter((s) => LOG_SOURCES.includes(s as LogSources))
 }
 
-export function parseSafeCreatedAtRange(
-  createdAt: string[] | string | undefined,
-) {
+export function parseSafeCreatedAtRange(createdAt: string[] | string | undefined) {
   const [rawFrom, rawTo] = createdAt?.toString()?.split(',') ?? []
 
   // URL encoding replaces '+' with ' ' so we need to replace it back
@@ -24,9 +21,7 @@ export function parseSafeCreatedAtRange(
   }
 }
 
-export function parseSafeCustomIdentifier(
-  customIdentifier: string | string[] | undefined,
-) {
+export function parseSafeCustomIdentifier(customIdentifier: string | string[] | undefined) {
   if (!customIdentifier) return undefined
 
   if (Array.isArray(customIdentifier) && customIdentifier.length) {
@@ -35,7 +30,7 @@ export function parseSafeCustomIdentifier(
 
   try {
     customIdentifier = decodeURIComponent(customIdentifier as string).trim()
-  } catch (error) {
+  } catch (_error) {
     return undefined
   }
 
@@ -44,9 +39,7 @@ export function parseSafeCustomIdentifier(
   return customIdentifier
 }
 
-export function parseSafeExperimentId(
-  experimentId: string | string[] | undefined,
-) {
+export function parseSafeExperimentId(experimentId: string | string[] | undefined) {
   if (!experimentId) return undefined
 
   if (Array.isArray(experimentId) && experimentId.length) {
@@ -56,10 +49,10 @@ export function parseSafeExperimentId(
   try {
     experimentId = decodeURIComponent(experimentId as string).trim()
     const experimentIdNumber = Number(experimentId)
-    if (!isNaN(experimentIdNumber)) {
+    if (!Number.isNaN(experimentIdNumber)) {
       return experimentIdNumber
     }
-  } catch (error) {
+  } catch (_error) {
     // do nothing
   }
 
@@ -86,8 +79,7 @@ export function parseLogFiltersParams({
     customIdentifier: customIdentifierParam,
     experimentId: experimentIdParam,
   } = params
-  const commitIds =
-    versions?.toString()?.split(',')?.map(Number) ?? originalSelectedCommitsIds
+  const commitIds = versions?.toString()?.split(',')?.map(Number) ?? originalSelectedCommitsIds
   const logSources = parseLogSourcesSafe(origins)
   const createdAt = parseSafeCreatedAtRange(createdAtParam)
   const formattedCreatedAt = formatDocumentLogCreatedAtParam(createdAt)
@@ -107,9 +99,7 @@ export function parseLogFiltersParams({
       versions ? `versions=${versions}` : undefined,
       origins ? `origins=${origins}` : undefined,
       formattedCreatedAt ? formattedCreatedAt.urlParam : undefined,
-      customIdentifier
-        ? `customIdentifier=${customIdentifierParam}`
-        : undefined,
+      customIdentifier ? `customIdentifier=${customIdentifierParam}` : undefined,
       experimentId ? `experimentId=${experimentIdParam}` : undefined,
     ],
   }

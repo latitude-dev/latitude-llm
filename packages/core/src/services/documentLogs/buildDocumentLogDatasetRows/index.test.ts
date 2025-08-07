@@ -2,11 +2,11 @@ import { sum } from 'lodash-es'
 import { describe, beforeAll, beforeEach, it, expect } from 'vitest'
 import { Providers } from '@latitude-data/constants'
 import * as factories from '../../../tests/factories'
-import { type FactoryCreateProjectReturn } from '../../../tests/factories'
+import type { FactoryCreateProjectReturn } from '../../../tests/factories'
 import { identityHashAlgorithm } from '../../datasets/utils'
 import { buildDocumentLogDatasetRows } from './index'
 import { ProviderLogsRepository } from '../../../repositories'
-import { Dataset, DocumentLog, ErrorableEntity } from '../../../browser'
+import { type Dataset, type DocumentLog, ErrorableEntity } from '../../../browser'
 import getTestDisk from '../../../tests/testDrive'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
@@ -101,15 +101,14 @@ describe('buildDocumentLogDatasetRows', async () => {
     })
 
     it('set as columns parameters of all the document logs', async () => {
-      const { documentLog: anotherDocumentLog } =
-        await factories.createDocumentLog({
-          document: setup.documents[0]!,
-          commit: setup.commit,
-          parameters: {
-            nationality: 'Brazilian',
-            age: 49,
-          },
-        })
+      const { documentLog: anotherDocumentLog } = await factories.createDocumentLog({
+        document: setup.documents[0]!,
+        commit: setup.commit,
+        parameters: {
+          nationality: 'Brazilian',
+          age: 49,
+        },
+      })
       const result = await buildDocumentLogDatasetRows({
         workspace: setup.workspace,
         documentLogIds: [documentLog.id, anotherDocumentLog.id],
@@ -259,11 +258,10 @@ describe('buildDocumentLogDatasetRows', async () => {
         }),
       },
     })
-    const { documentLog: anotherWorkspaceLog } =
-      await factories.createDocumentLog({
-        document: another.documents[0]!,
-        commit: another.commit,
-      })
+    const { documentLog: anotherWorkspaceLog } = await factories.createDocumentLog({
+      document: another.documents[0]!,
+      commit: another.commit,
+    })
     const result = await buildDocumentLogDatasetRows({
       workspace: setup.workspace,
       documentLogIds: [anotherWorkspaceLog.id],

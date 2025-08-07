@@ -19,10 +19,7 @@ export const commits = latitudeSchema.table(
   'commits',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
-    uuid: uuid('uuid')
-      .notNull()
-      .unique()
-      .default(sql`gen_random_uuid()`),
+    uuid: uuid('uuid').notNull().unique().default(sql`gen_random_uuid()`),
     title: varchar('title', { length: 256 }).notNull(),
     description: text('description'),
     projectId: bigint('project_id', { mode: 'number' })
@@ -37,14 +34,8 @@ export const commits = latitudeSchema.table(
     ...timestamps(),
   },
   (table) => ({
-    projectCommitOrderIdx: index('project_commit_order_idx').on(
-      table.mergedAt,
-      table.projectId,
-    ),
-    uniqueCommitVersion: uniqueIndex('unique_commit_version').on(
-      table.version,
-      table.projectId,
-    ),
+    projectCommitOrderIdx: index('project_commit_order_idx').on(table.mergedAt, table.projectId),
+    uniqueCommitVersion: uniqueIndex('unique_commit_version').on(table.version, table.projectId),
     userIdx: index('user_idx').on(table.userId),
     mergedAtIdx: index('merged_at_idx').on(table.mergedAt),
     projectIdIdx: index('project_id_idx').on(table.projectId),

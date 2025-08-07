@@ -1,5 +1,5 @@
 import { LineSeparator } from '@latitude-data/web-ui/atoms/LineSeparator'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 export function ExpandMessages({
   isExpanded,
@@ -18,15 +18,9 @@ export function ExpandMessages({
         icon={{
           spin: isLoading,
           color: 'foregroundMuted',
-          name: isLoading
-            ? 'loader'
-            : isExpanded
-              ? 'chevronsDownUp'
-              : 'chevronsUpDown',
+          name: isLoading ? 'loader' : isExpanded ? 'chevronsDownUp' : 'chevronsUpDown',
         }}
-        text={
-          isLoading ? 'Loading...' : isExpanded ? 'Hide prompt' : 'Show prompt'
-        }
+        text={isLoading ? 'Loading...' : isExpanded ? 'Hide prompt' : 'Show prompt'}
       />
     </div>
   )

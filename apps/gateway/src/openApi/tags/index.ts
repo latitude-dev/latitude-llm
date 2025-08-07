@@ -43,10 +43,4 @@ const evaluationsTag = {
   },
 }
 
-export const tags = [
-  documentTag,
-  conversationTag,
-  projectsTag,
-  versionsTag,
-  evaluationsTag,
-]
+export const tags = [documentTag, conversationTag, projectsTag, versionsTag, evaluationsTag]

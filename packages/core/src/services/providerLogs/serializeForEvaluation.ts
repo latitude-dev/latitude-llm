@@ -1,7 +1,7 @@
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 
 import { objectToString } from '@latitude-data/constants'
-import {
+import type {
   Message,
   ProviderLog,
   ProviderLogDto,
@@ -38,9 +38,7 @@ export function formatConversation(
   return formatMessages(messages) as SerializedConversation
 }
 
-export function formatContext(
-  providerLog: ProviderLog | ProviderLogDto,
-): string {
+export function formatContext(providerLog: ProviderLog | ProviderLogDto): string {
   const messages = providerLog.messages || []
   let formattedConversation = ''
 
@@ -81,8 +79,7 @@ function formatMessages(messages: Message[]) {
     return message
   })
 
-  const filterMessages = (role: MessageRole) =>
-    messages.filter((m) => m.role === role)
+  const filterMessages = (role: MessageRole) => messages.filter((m) => m.role === role)
 
   const formatRoleMessages = (role: MessageRole) => {
     const roleMessages = filterMessages(role)
@@ -105,9 +102,7 @@ function formatMessages(messages: Message[]) {
 
 // TODO(evalsv2): This is v1 deprecated but is mantained
 // for backwards compatibility with v1 llm evaluations
-export function serializeForEvaluation(
-  providerLog: ProviderLog,
-): SerializedProviderLog {
+export function serializeForEvaluation(providerLog: ProviderLog): SerializedProviderLog {
   const response = buildProviderLogResponse(providerLog)
 
   return {

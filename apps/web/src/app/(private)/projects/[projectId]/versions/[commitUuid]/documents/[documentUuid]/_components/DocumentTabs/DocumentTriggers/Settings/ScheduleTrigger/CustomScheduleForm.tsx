@@ -1,5 +1,5 @@
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { ScheduleConfig } from './scheduleUtils'
+import type { ScheduleConfig } from './scheduleUtils'
 
 interface CustomScheduleFormProps {
   config: ScheduleConfig
@@ -7,11 +7,7 @@ interface CustomScheduleFormProps {
   isLoading: boolean
 }
 
-export function CustomScheduleForm({
-  config,
-  updateConfig,
-  isLoading,
-}: CustomScheduleFormProps) {
+export function CustomScheduleForm({ config, updateConfig, isLoading }: CustomScheduleFormProps) {
   const handleCustomExpressionChange = (expression: string) => {
     updateConfig((prev) => ({
       ...prev,

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import {
+import type {
   inferServerActionError,
   inferServerActionReturnData,
   TAnyZodSafeFunctionHandler,
@@ -23,30 +23,23 @@ export function parseActionErrors<
 
     return issues.reduce(
       (acc, issue) => {
-        acc[issue.path.join('.')] = [
-          ...(acc[issue.path.join('.')] ?? []),
-          issue.message,
-        ]
+        acc[issue.path.join('.')] = [...(acc[issue.path.join('.')] ?? []), issue.message]
         return acc
       },
       {} as Record<string, string[]>,
     )
-  } catch (error) {
+  } catch (_error) {
     return {}
   }
 }
 
-export default function useLatitudeAction<
-  const TServerAction extends TAnyZodSafeFunctionHandler,
->(
+export default function useLatitudeAction<const TServerAction extends TAnyZodSafeFunctionHandler>(
   action: TServerAction,
   {
     onSuccess,
     onError,
   }: {
-    onSuccess?: (args: {
-      data: inferServerActionReturnData<TServerAction>
-    }) => void
+    onSuccess?: (args: { data: inferServerActionReturnData<TServerAction> }) => void
     onError?: (args: { err: inferServerActionError<TServerAction> }) => void
   } = {},
 ) {

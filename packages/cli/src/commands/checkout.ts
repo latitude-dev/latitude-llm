@@ -1,7 +1,7 @@
-import { Command } from 'commander'
-import { CheckoutOptions } from '../types'
+import type { Command } from 'commander'
+import type { CheckoutOptions } from '../types'
 import { BaseCommand } from '../utils/baseCommand'
-import { LatitudeLockFile } from '../utils/lockFileManager'
+import type { LatitudeLockFile } from '../utils/lockFileManager'
 import { savePrompts } from '../utils/promptOperations'
 import { registerCommand } from '../utils/commandRegistrar'
 
@@ -14,10 +14,7 @@ export class CheckoutCommand extends BaseCommand {
   /**
    * Execute the checkout command
    */
-  async execute(
-    versionUuid: string | undefined,
-    options: CheckoutOptions,
-  ): Promise<void> {
+  async execute(versionUuid: string | undefined, options: CheckoutOptions): Promise<void> {
     try {
       // Validate environment
       await this.validateEnvironment(options)
@@ -39,10 +36,7 @@ export class CheckoutCommand extends BaseCommand {
         }
 
         console.log(`Creating new version: ${options.branch}...`)
-        const newVersion = await this.createNewVersion(
-          lockFile.projectId,
-          options.branch,
-        )
+        const newVersion = await this.createNewVersion(lockFile.projectId, options.branch)
         targetVersionUuid = newVersion.uuid
         console.log(`✅ Created new version: ${targetVersionUuid}`)
       }
@@ -53,36 +47,19 @@ export class CheckoutCommand extends BaseCommand {
         )
       }
 
-      console.log(
-        `Checking out version ${targetVersionUuid} to ${this.projectPath}...`,
-      )
+      console.log(`Checking out version ${targetVersionUuid} to ${this.projectPath}...`)
 
       // First verify we can fetch prompts with the version UUID
       // This validates the version exists before updating the lock file
       console.log(`Verifying version ${targetVersionUuid} exists...`)
-      const version = await this.verifyVersion(
-        lockFile.projectId,
-        targetVersionUuid,
-      )
-      const prompts = await this.fetchAllPrompts(
-        lockFile.projectId,
-        version.uuid,
-      )
+      const version = await this.verifyVersion(lockFile.projectId, targetVersionUuid)
+      const prompts = await this.fetchAllPrompts(lockFile.projectId, version.uuid)
 
       // Update the lock file with the new version only after verification
-      await this.updateLockFile(
-        lockFile.projectId,
-        lockFile.rootFolder,
-        targetVersionUuid,
-      )
+      await this.updateLockFile(lockFile.projectId, lockFile.rootFolder, targetVersionUuid)
 
       // Now proceed with saving the prompts
-      await this.savePrompts(
-        lockFile.rootFolder,
-        targetVersionUuid,
-        prompts,
-        !!lockFile.npm,
-      )
+      await this.savePrompts(lockFile.rootFolder, targetVersionUuid, prompts, !!lockFile.npm)
 
       console.log(`✅ Successfully checked out version ${targetVersionUuid}!`)
     } catch (error: any) {
@@ -90,10 +67,7 @@ export class CheckoutCommand extends BaseCommand {
       if (this.originalLockFile) {
         try {
           console.log('Reverting lock file to original version due to error...')
-          await this.lockFileManager.write(
-            this.projectPath,
-            this.originalLockFile,
-          )
+          await this.lockFileManager.write(this.projectPath, this.originalLockFile)
         } catch (revertError: any) {
           console.error(
             `❌ Failed to revert lock file: ${revertError.message || String(revertError)}`,
@@ -105,21 +79,12 @@ export class CheckoutCommand extends BaseCommand {
     }
   }
 
-  private async fetchAllPrompts(
-    projectId: number,
-    versionUuid: string,
-  ): Promise<any[]> {
+  private async fetchAllPrompts(projectId: number, versionUuid: string): Promise<any[]> {
     try {
       console.log('fetch all prompts')
-      return await this.projectManager.fetchAllPrompts(
-        this.client!,
-        projectId,
-        versionUuid,
-      )
+      return await this.projectManager.fetchAllPrompts(this.client!, projectId, versionUuid)
     } catch (error: any) {
-      throw new Error(
-        `Failed to fetch prompts: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to fetch prompts: ${error.message || String(error)}`)
     }
   }
 
@@ -128,15 +93,9 @@ export class CheckoutCommand extends BaseCommand {
    */
   private async createNewVersion(projectId: number, name: string) {
     try {
-      return await this.projectManager.createVersion(
-        this.client!,
-        name,
-        projectId,
-      )
+      return await this.projectManager.createVersion(this.client!, name, projectId)
     } catch (error: any) {
-      throw new Error(
-        `Failed to create new version: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to create new version: ${error.message || String(error)}`)
     }
   }
 
@@ -146,11 +105,7 @@ export class CheckoutCommand extends BaseCommand {
   private async verifyVersion(projectId: number, versionUuid: string) {
     try {
       // Attempt to fetch prompts using the specified version UUID
-      const version = await this.projectManager.getVersion(
-        this.client!,
-        projectId,
-        versionUuid,
-      )
+      const version = await this.projectManager.getVersion(this.client!, projectId, versionUuid)
 
       // If we got here, the version exists and we can proceed
       return version
@@ -182,9 +137,7 @@ export class CheckoutCommand extends BaseCommand {
       await this.lockFileManager.write(this.projectPath, updatedLockFile)
       console.log(`Updated latitude-lock.json with version: ${versionUuid}`)
     } catch (error: any) {
-      throw new Error(
-        `Failed to update lock file: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to update lock file: ${error.message || String(error)}`)
     }
   }
 
@@ -198,9 +151,7 @@ export class CheckoutCommand extends BaseCommand {
     isNpmProject: boolean = false,
   ): Promise<void> {
     try {
-      console.log(
-        `Processing ${prompts.length} prompts from version ${versionUuid}...`,
-      )
+      console.log(`Processing ${prompts.length} prompts from version ${versionUuid}...`)
 
       await savePrompts(
         prompts,
@@ -213,9 +164,7 @@ export class CheckoutCommand extends BaseCommand {
 
       console.log(`✅ Successfully saved prompts from version ${versionUuid}.`)
     } catch (error: any) {
-      throw new Error(
-        `Failed to save prompts: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to save prompts: ${error.message || String(error)}`)
     }
   }
 }
@@ -238,8 +187,7 @@ export function checkout(program: Command): void {
         },
         {
           flags: '-b, --branch <name>',
-          description:
-            'Create a new version/commit with the specified name and checkout to it',
+          description: 'Create a new version/commit with the specified name and checkout to it',
         },
         {
           flags: '--dev',

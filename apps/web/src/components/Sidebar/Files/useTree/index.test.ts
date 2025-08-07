@@ -3,7 +3,7 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { Node, SidebarDocument, useTree } from './index'
+import { type Node, type SidebarDocument, useTree } from './index'
 import { ModifiedDocumentType } from '@latitude-data/core/browser'
 
 const FAKE_RANDOM_ID = 'RANDOM_ID'

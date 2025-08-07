@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 
-import { Dataset } from '../../browser'
-import { Result, TypedResult } from '../../lib/Result'
+import type { Dataset } from '../../browser'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { Column, datasets } from '../../schema'
+import { type Column, datasets } from '../../schema'
 
 export async function updateDataset(
   {

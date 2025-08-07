@@ -1,19 +1,13 @@
 import { env } from '@latitude-data/env'
-import {
-  ActionType,
-  cloneAgentActionBackendParametersSchema,
-} from '../../browser'
+import { type ActionType, cloneAgentActionBackendParametersSchema } from '../../browser'
 import { database } from '../../client'
 import { unsafelyFindProject, unsafelyFindWorkspace } from '../../data-access'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '../../repositories'
 import { forkDocument } from '../documents/forkDocument'
-import { ActionExecuteArgs } from './shared'
+import type { ActionExecuteArgs } from './shared'
 
 export const CloneAgentActionSpecification = {
   parameters: cloneAgentActionBackendParametersSchema,
@@ -62,28 +56,19 @@ async function execute(
   })
 }
 
-async function getSampleAgent(
-  { documentUuid }: { documentUuid: string },
-  db = database,
-) {
+async function getSampleAgent({ documentUuid }: { documentUuid: string }, db = database) {
   if (!env.SAMPLE_AGENTS_PROJECT_ID) {
-    return Result.error(
-      new UnprocessableEntityError('SAMPLE_AGENTS_PROJECT_ID is not set'),
-    )
+    return Result.error(new UnprocessableEntityError('SAMPLE_AGENTS_PROJECT_ID is not set'))
   }
 
   const project = await unsafelyFindProject(env.SAMPLE_AGENTS_PROJECT_ID, db)
   if (!project) {
-    return Result.error(
-      new UnprocessableEntityError('Sample Agents project not found'),
-    )
+    return Result.error(new UnprocessableEntityError('Sample Agents project not found'))
   }
 
   const workspace = await unsafelyFindWorkspace(project.workspaceId, db)
   if (!workspace) {
-    return Result.error(
-      new UnprocessableEntityError('Sample Agents workspace not found'),
-    )
+    return Result.error(new UnprocessableEntityError('Sample Agents workspace not found'))
   }
 
   const commitsRepository = new CommitsRepository(workspace.id, db)
@@ -93,9 +78,7 @@ async function getSampleAgent(
   }
   const commit = gettingco.unwrap()
   if (!commit) {
-    return Result.error(
-      new UnprocessableEntityError('Sample Agents commit not found'),
-    )
+    return Result.error(new UnprocessableEntityError('Sample Agents commit not found'))
   }
 
   const documentsRepository = new DocumentVersionsRepository(workspace.id, db)
@@ -109,9 +92,7 @@ async function getSampleAgent(
   }
   const document = gettingdo.unwrap()
   if (!document) {
-    return Result.error(
-      new UnprocessableEntityError('Sample Agent document not found'),
-    )
+    return Result.error(new UnprocessableEntityError('Sample Agent document not found'))
   }
 
   return Result.ok({ workspace, project, commit, document })

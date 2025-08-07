@@ -1,10 +1,10 @@
-import { randomBytes } from 'crypto'
+import { randomBytes } from 'node:crypto'
 
 import { UnprocessableEntityError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { webhooks } from '../../schema/models/webhooks'
-import { type CreateWebhookParams, type Webhook } from './types'
+import type { CreateWebhookParams, Webhook } from './types'
 
 export async function createWebhook(
   params: CreateWebhookParams,
@@ -38,9 +38,7 @@ export async function createWebhook(
       .returning()
 
     if (!webhook) {
-      return Result.error(
-        new UnprocessableEntityError('Failed to create webhook'),
-      )
+      return Result.error(new UnprocessableEntityError('Failed to create webhook'))
     }
 
     return Result.ok(webhook)

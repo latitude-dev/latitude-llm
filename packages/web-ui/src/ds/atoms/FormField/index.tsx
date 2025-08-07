@@ -1,10 +1,10 @@
 import { Slot } from '@radix-ui/react-slot'
 import {
-  ComponentPropsWithRef,
-  ElementRef,
+  type ComponentPropsWithRef,
+  type ElementRef,
   forwardRef,
-  HTMLAttributes,
-  ReactNode,
+  type HTMLAttributes,
+  type ReactNode,
   useId,
 } from 'react'
 
@@ -13,11 +13,7 @@ import { TooltipLabel } from '../Label'
 import { Text } from '../Text'
 import { Tooltip } from '../Tooltip'
 
-export function FormDescription({
-  children,
-}: {
-  children: string | ReactNode
-}) {
+export function FormDescription({ children }: { children: string | ReactNode }) {
   if (typeof children !== 'string') return children
 
   return (
@@ -27,13 +23,7 @@ export function FormDescription({
   )
 }
 
-export function InlineFormErrorMessage({
-  error,
-  id,
-}: {
-  id: string
-  error: string | undefined
-}) {
+export function InlineFormErrorMessage({ error, id }: { id: string; error: string | undefined }) {
   if (!error) return null
 
   return (
@@ -56,11 +46,7 @@ export const FormControl = forwardRef<
     <Slot
       ref={props.ref}
       id={formItemId}
-      aria-describedby={
-        !error
-          ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`
-      }
+      aria-describedby={!error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`}
       aria-invalid={!!error}
       {...props}
     />
@@ -81,9 +67,7 @@ function DescriptionAndError({
   return (
     <>
       {description && <FormDescription>{description}</FormDescription>}
-      {errorStyle === 'inline' ? (
-        <InlineFormErrorMessage error={error} id={formMessageId} />
-      ) : null}
+      {errorStyle === 'inline' ? <InlineFormErrorMessage error={error} id={formMessageId} /> : null}
     </>
   )
 }
@@ -141,13 +125,7 @@ function InlineInput({
 
   const hasSubcontent = error || description || label
   return (
-    <TooltipLabel
-      inline
-      htmlFor={formItemId}
-      badgeLabel={badgeLabel}
-      info={info}
-      error={error}
-    >
+    <TooltipLabel inline htmlFor={formItemId} badgeLabel={badgeLabel} info={info} error={error}>
       <div
         className={cn('flex flex-row gap-x-2', {
           'items-center': !hasSubcontent,
@@ -191,12 +169,7 @@ function StackInput({
   return (
     <>
       {label ? (
-        <TooltipLabel
-          htmlFor={formItemId}
-          badgeLabel={badgeLabel}
-          info={info}
-          error={error}
-        >
+        <TooltipLabel htmlFor={formItemId} badgeLabel={badgeLabel} info={info} error={error}>
           {label}
         </TooltipLabel>
       ) : null}
@@ -218,10 +191,7 @@ function StackInput({
   )
 }
 
-export type FormFieldProps = Omit<
-  HTMLAttributes<HTMLDivElement>,
-  'onChange'
-> & {
+export type FormFieldProps = Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> & {
   children: ReactNode
   label?: string | ReactNode
   badgeLabel?: boolean
@@ -262,11 +232,7 @@ function FormField({
         },
         className,
       )}
-      aria-describedby={
-        !error
-          ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`
-      }
+      aria-describedby={!error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`}
       aria-invalid={!!error}
     >
       <InputCmp

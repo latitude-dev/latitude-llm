@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ZodError } from 'zod'
 import {
-  Commit,
-  DocumentVersion,
-  EvaluationOptions,
-  EvaluationSettings,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationOptions,
+  type EvaluationSettings,
   EvaluationType,
   Providers,
   RuleEvaluationMetric,
-  Workspace,
+  type Workspace,
 } from '../../browser'
 import { BadRequestError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
@@ -19,10 +19,7 @@ describe('validateEvaluationV2', () => {
   let workspace: Workspace
   let commit: Commit
   let document: DocumentVersion
-  let settings: EvaluationSettings<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.ExactMatch
-  >
+  let settings: EvaluationSettings<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>
   let options: EvaluationOptions
 
   beforeEach(async () => {
@@ -82,9 +79,7 @@ describe('validateEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
       }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new BadRequestError('Evaluation is required to update from'),
-    )
+    ).rejects.toThrowError(new BadRequestError('Evaluation is required to update from'))
   })
 
   it('fails when name is not provided', async () => {
@@ -170,9 +165,7 @@ describe('validateEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
       }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new BadRequestError('Field accessor is not supported for this format'),
-    )
+    ).rejects.toThrowError(new BadRequestError('Field accessor is not supported for this format'))
   })
 
   it('fails when expected output validation fails', async () => {
@@ -199,10 +192,9 @@ describe('validateEvaluationV2', () => {
   })
 
   it('fails when type and metric validation fails', async () => {
-    vi.spyOn(
-      RuleEvaluationExactMatchSpecification,
-      'validate',
-    ).mockRejectedValue(new Error('metric validation error'))
+    vi.spyOn(RuleEvaluationExactMatchSpecification, 'validate').mockRejectedValue(
+      new Error('metric validation error'),
+    )
 
     await expect(
       validateEvaluationV2({
@@ -234,9 +226,7 @@ describe('validateEvaluationV2', () => {
         workspace: workspace,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError(
-        'An evaluation with this name already exists for this document',
-      ),
+      new BadRequestError('An evaluation with this name already exists for this document'),
     )
   })
 
@@ -253,21 +243,18 @@ describe('validateEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
       }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new BadRequestError('This metric does not support live evaluation'),
-    )
+    ).rejects.toThrowError(new BadRequestError('This metric does not support live evaluation'))
   })
 
   it('succeeds when validating an evaluation from create', async () => {
-    const { settings: validatedSettings, options: validatedOptions } =
-      await validateEvaluationV2({
-        mode: 'create',
-        settings: settings,
-        options: options,
-        document: document,
-        commit: commit,
-        workspace: workspace,
-      }).then((r) => r.unwrap())
+    const { settings: validatedSettings, options: validatedOptions } = await validateEvaluationV2({
+      mode: 'create',
+      settings: settings,
+      options: options,
+      document: document,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
 
     expect(validatedSettings).toEqual(settings)
     expect(validatedOptions).toEqual(options)
@@ -283,16 +270,15 @@ describe('validateEvaluationV2', () => {
       ...options,
     })
 
-    const { settings: validatedSettings, options: validatedOptions } =
-      await validateEvaluationV2({
-        mode: 'update',
-        evaluation: evaluation,
-        settings: settings,
-        options: options,
-        document: document,
-        commit: commit,
-        workspace: workspace,
-      }).then((r) => r.unwrap())
+    const { settings: validatedSettings, options: validatedOptions } = await validateEvaluationV2({
+      mode: 'update',
+      evaluation: evaluation,
+      settings: settings,
+      options: options,
+      document: document,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
 
     expect(validatedSettings).toEqual(settings)
     expect(validatedOptions).toEqual(options)

@@ -1,22 +1,19 @@
 import { captureException } from '$/common/sentry'
 import {
   AGENT_RETURN_TOOL_NAME,
-  AssertedStreamType,
-  ChainStepObjectResponse,
-  ChainStepTextResponse,
-  RunSyncAPIResponse,
+  type AssertedStreamType,
+  type ChainStepObjectResponse,
+  type ChainStepTextResponse,
+  type RunSyncAPIResponse,
 } from '@latitude-data/constants'
 import { LatitudeError } from '@latitude-data/constants/errors'
-import { Result, TypedResult } from '@latitude-data/core/lib/Result'
+import { Result, type TypedResult } from '@latitude-data/core/lib/Result'
 
 type DocumentResponse = ChainStepObjectResponse | ChainStepTextResponse
 
 export function v2RunPresenter(
   response: DocumentResponse,
-): TypedResult<
-  Omit<RunSyncAPIResponse<AssertedStreamType>, 'toolRequests'>,
-  LatitudeError
-> {
+): TypedResult<Omit<RunSyncAPIResponse<AssertedStreamType>, 'toolRequests'>, LatitudeError> {
   const conversation = response.providerLog?.messages
   const uuid = response.documentLogUuid
   const errorMessage = !uuid
@@ -47,7 +44,7 @@ export function v2RunPresenter(
 }
 
 // TODO(compiler): remove this
-export function extractAgentToolCalls(toolCalls: any[]): [any[], any[]] {
+function extractAgentToolCalls(toolCalls: any[]): [any[], any[]] {
   return toolCalls.reduce(
     (acc, tool) => {
       if (tool.name === AGENT_RETURN_TOOL_NAME) {

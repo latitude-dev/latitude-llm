@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useTempNodes } from '../../useTempNodes'
-import { DragEndEvent } from '@latitude-data/web-ui/hooks/useDnD'
-import { DraggableAndDroppableData } from '../DragOverlayNode'
+import type { DragEndEvent } from '@latitude-data/web-ui/hooks/useDnD'
+import type { DraggableAndDroppableData } from '../DragOverlayNode'
 
 export function useDragEndFile({
   renamePaths,

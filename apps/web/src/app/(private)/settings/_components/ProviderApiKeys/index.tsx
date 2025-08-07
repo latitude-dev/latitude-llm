@@ -1,9 +1,5 @@
 'use client'
-import {
-  Providers,
-  Workspace,
-  type ProviderApiKey,
-} from '@latitude-data/core/browser'
+import { Providers, type Workspace, type ProviderApiKey } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
@@ -29,10 +25,8 @@ import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
 
 export default function ProviderApiKeys() {
-  const { data: providerApiKeys, isLoading: isProviderApiKeysLoading } =
-    useProviderApiKeys()
-  const { data: workspace, isLoading: isWorkspaceLoading } =
-    useCurrentWorkspace()
+  const { data: providerApiKeys, isLoading: isProviderApiKeysLoading } = useProviderApiKeys()
+  const { data: workspace, isLoading: isWorkspaceLoading } = useCurrentWorkspace()
   const isLoading = isProviderApiKeysLoading || isWorkspaceLoading
 
   return (
@@ -51,10 +45,7 @@ export default function ProviderApiKeys() {
       <div className='flex flex-col gap-2'>
         {isLoading && <TableSkeleton cols={6} rows={3} />}
         {!isLoading && workspace && providerApiKeys.length > 0 && (
-          <ProviderApiKeysTable
-            providerApiKeys={providerApiKeys}
-            workspace={workspace}
-          />
+          <ProviderApiKeysTable providerApiKeys={providerApiKeys} workspace={workspace} />
         )}
         {!isLoading && providerApiKeys.length === 0 && (
           <TableBlankSlate
@@ -89,13 +80,11 @@ const DefaultProviderBadge = ({
     >
       <div className='flex flex-col gap-2'>
         <Text.H6 color='background'>
-          The provider selected by default in new prompts or evaluations. You
-          can choose another provider anytime in the editor.
+          The provider selected by default in new prompts or evaluations. You can choose another
+          provider anytime in the editor.
         </Text.H6>
         {provider.defaultModel && (
-          <Text.H6 color='background'>
-            The default model is {provider.defaultModel}.
-          </Text.H6>
+          <Text.H6 color='background'>The default model is {provider.defaultModel}.</Text.H6>
         )}
       </div>
     </Tooltip>
@@ -137,9 +126,7 @@ const ProviderApiKeysTable = ({
               </div>
             </TableCell>
             <TableCell>
-              <Text.H5 color='foregroundMuted'>
-                {findProvider(apiKey.provider)}
-              </Text.H5>
+              <Text.H5 color='foregroundMuted'>{findProvider(apiKey.provider)}</Text.H5>
             </TableCell>
             <TableCell>
               <Text.H5 color='foregroundMuted'>{apiKey.token}</Text.H5>
@@ -170,9 +157,7 @@ const ProviderApiKeysTable = ({
                   {
                     label: 'Remove',
                     onClick: () =>
-                      router.push(
-                        ROUTES.settings.providerApiKeys.destroy(apiKey.id).root,
-                      ),
+                      router.push(ROUTES.settings.providerApiKeys.destroy(apiKey.id).root),
                     type: 'destructive',
                   },
                 ]}

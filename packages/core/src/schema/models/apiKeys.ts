@@ -1,12 +1,5 @@
 import { sql } from 'drizzle-orm'
-import {
-  bigint,
-  bigserial,
-  index,
-  timestamp,
-  uuid,
-  varchar,
-} from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
@@ -16,10 +9,7 @@ export const apiKeys = latitudeSchema.table(
   'api_keys',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
-    token: uuid('token')
-      .notNull()
-      .unique()
-      .default(sql`gen_random_uuid()`),
+    token: uuid('token').notNull().unique().default(sql`gen_random_uuid()`),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id),

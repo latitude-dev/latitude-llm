@@ -1,4 +1,4 @@
-import { User } from '../../browser'
+import type { User } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -9,10 +9,7 @@ export async function createMagicLinkToken(
   transaction = new Transaction(),
 ) {
   return transaction.call(async (tx) => {
-    const magicLinkToken = await tx
-      .insert(magicLinkTokens)
-      .values({ userId: user.id })
-      .returning()
+    const magicLinkToken = await tx.insert(magicLinkTokens).values({ userId: user.id }).returning()
 
     publisher.publishLater({
       type: 'magicLinkTokenCreated',

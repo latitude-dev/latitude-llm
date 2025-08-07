@@ -1,4 +1,4 @@
-import { type LucideProps } from 'lucide-react'
+import type { LucideProps } from 'lucide-react'
 
 export default function Hyperbrowser(props: LucideProps) {
   return (
@@ -38,15 +38,8 @@ export default function Hyperbrowser(props: LucideProps) {
           <feOffset dx='-4' dy='4' />
           <feGaussianBlur stdDeviation='8' />
           <feComposite in2='hardAlpha' operator='out' />
-          <feColorMatrix
-            type='matrix'
-            values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0'
-          />
-          <feBlend
-            mode='normal'
-            in2='BackgroundImageFix'
-            result='effect1_dropShadow_128_35'
-          />
+          <feColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0' />
+          <feBlend mode='normal' in2='BackgroundImageFix' result='effect1_dropShadow_128_35' />
           <feBlend
             mode='normal'
             in='SourceGraphic'

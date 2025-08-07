@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import {
+import type {
   Commit,
   EvaluationMetric,
   EvaluationType,
@@ -46,10 +46,7 @@ export async function deleteEvaluationV2<
           deletedAt: new Date(),
         })
         .onConflictDoUpdate({
-          target: [
-            evaluationVersions.commitId,
-            evaluationVersions.evaluationUuid,
-          ],
+          target: [evaluationVersions.commitId, evaluationVersions.evaluationUuid],
           set: { deletedAt: new Date() },
         })
         .returning()
@@ -61,9 +58,7 @@ export async function deleteEvaluationV2<
         versionId: result.id,
       } as unknown as EvaluationV2<T, M>
     } else {
-      await tx
-        .delete(evaluationVersions)
-        .where(eq(evaluationVersions.id, evaluation.versionId))
+      await tx.delete(evaluationVersions).where(eq(evaluationVersions.id, evaluation.versionId))
 
       evaluation.deletedAt = new Date()
     }

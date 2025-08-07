@@ -11,11 +11,8 @@ import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 
 import { EmailsWhitelist } from './EmailsWhitelist'
-import {
-  EmailAvailabilityOptions,
-  UseEmailTriggerConfiguration,
-} from './useConfiguration'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { EmailAvailabilityOptions, type UseEmailTriggerConfiguration } from './useConfiguration'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 
 const PARAMETER_OPTIONS: Record<DocumentTriggerParameters, string> = {
   [DocumentTriggerParameters.SenderName]: 'Sender Name',
@@ -54,12 +51,7 @@ function ParameterSelects({
             className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
           >
             <div className='flex flex-row items-center min-h-8'>
-              <Badge
-                variant={value ? 'accent' : 'muted'}
-                noWrap
-                ellipsis
-                className='min-w-24'
-              >
+              <Badge variant={value ? 'accent' : 'muted'} noWrap ellipsis className='min-w-24'>
                 {`{{${paramName}}}`}
               </Badge>
             </div>
@@ -146,21 +138,19 @@ export function EmailTriggerForm({
         onChange={(e) => setName(e.target.value)}
         placeholder={document.path.split('/').at(-1)}
       />
-      <>
-        {!!documentParameters.length && (
-          <FormFieldGroup
-            label='Parameters'
-            description='Match parameters in your prompt with info from the incoming email'
-          >
-            <ParameterSelects
-              parameterNames={documentParameters}
-              parameters={parameters}
-              setParameters={setParameters}
-              disabled={disabled}
-            />
-          </FormFieldGroup>
-        )}
-      </>
+      {!!documentParameters.length && (
+        <FormFieldGroup
+          label='Parameters'
+          description='Match parameters in your prompt with info from the incoming email'
+        >
+          <ParameterSelects
+            parameterNames={documentParameters}
+            parameters={parameters}
+            setParameters={setParameters}
+            disabled={disabled}
+          />
+        </FormFieldGroup>
+      )}
       <SwitchInput
         disabled={disabled}
         label='Reply with response'
@@ -174,9 +164,7 @@ export function EmailTriggerForm({
         name='availability'
         options={availabilityOptions}
         value={emailAvailability}
-        onChange={(value) =>
-          setEmailEvailability(value as EmailAvailabilityOptions)
-        }
+        onChange={(value) => setEmailEvailability(value as EmailAvailabilityOptions)}
       />
       {emailAvailability === EmailAvailabilityOptions.Private && (
         <EmailsWhitelist

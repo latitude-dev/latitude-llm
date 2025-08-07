@@ -1,13 +1,6 @@
-import {
-  bigint,
-  bigserial,
-  index,
-  pgEnum,
-  text,
-  uuid,
-} from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, pgEnum, text, uuid } from 'drizzle-orm/pg-core'
 
-import { EvaluationResultableType, LogSources } from '../../constants'
+import { EvaluationResultableType, type LogSources } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { documentLogs } from '../models/documentLogs'
 import { logSourcesEnum, providerLogs } from '../models/providerLogs'
@@ -34,9 +27,7 @@ export const evaluationResults = latitudeSchema.table(
       .notNull()
       .references(() => documentLogs.id),
     // TODO: remove
-    providerLogId: bigint('provider_log_id', { mode: 'number' }).references(
-      () => providerLogs.id,
-    ),
+    providerLogId: bigint('provider_log_id', { mode: 'number' }).references(() => providerLogs.id),
     evaluatedProviderLogId: bigint('evaluated_provider_log_id', {
       mode: 'number',
     }).references(() => providerLogs.id),
@@ -54,23 +45,15 @@ export const evaluationResults = latitudeSchema.table(
     evaluationProviderLogIdx: index('evaluation_provider_log_idx').on(
       table.evaluationProviderLogId,
     ),
-    evaluatedProviderLogIdx: index('evaluated_provider_log_idx').on(
-      table.evaluatedProviderLogId,
-    ),
+    evaluatedProviderLogIdx: index('evaluated_provider_log_idx').on(table.evaluatedProviderLogId),
     // TODO: remove
-    evaluationResultDocumentLogIdx: index('document_log_idx').on(
-      table.documentLogId,
-    ),
+    evaluationResultDocumentLogIdx: index('document_log_idx').on(table.documentLogId),
     // TODO: remove
-    evaluationResultProviderLogIdx: index('provider_log_idx').on(
-      table.providerLogId,
-    ),
+    evaluationResultProviderLogIdx: index('provider_log_idx').on(table.providerLogId),
     evaluationResultMetadataIdx: index('resultable_idx').on(
       table.resultableId,
       table.resultableType,
     ),
-    createdAtIdx: index('evaluation_results_created_at_idx').on(
-      table.createdAt,
-    ),
+    createdAtIdx: index('evaluation_results_created_at_idx').on(table.createdAt),
   }),
 )

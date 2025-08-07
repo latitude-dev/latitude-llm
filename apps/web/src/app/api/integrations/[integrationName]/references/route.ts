@@ -1,10 +1,10 @@
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { listReferences } from '@latitude-data/core/services/integrations/index'
-import { LatitudeTool, McpTool } from '@latitude-data/constants'
+import { LatitudeTool, type McpTool } from '@latitude-data/constants'
 import { getLatitudeToolDefinition } from '@latitude-data/core/services/latitudeTools/helpers'
 
 export const GET = errorHandler(
@@ -22,16 +22,14 @@ export const GET = errorHandler(
       },
     ) => {
       if (params.integrationName === 'latitude') {
-        const latitudeTools: McpTool[] = Object.values(LatitudeTool).map(
-          (latitudeTool) => {
-            const toolDefinition = getLatitudeToolDefinition(latitudeTool)!
-            return {
-              name: latitudeTool,
-              description: toolDefinition.description,
-              inputSchema: toolDefinition.parameters,
-            }
-          },
-        )
+        const latitudeTools: McpTool[] = Object.values(LatitudeTool).map((latitudeTool) => {
+          const toolDefinition = getLatitudeToolDefinition(latitudeTool)!
+          return {
+            name: latitudeTool,
+            description: toolDefinition.description,
+            inputSchema: toolDefinition.parameters,
+          }
+        })
         return NextResponse.json(
           {
             ok: true,

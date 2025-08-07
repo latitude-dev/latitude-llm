@@ -1,7 +1,7 @@
 'use client'
 import { RewardType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, type IconName } from '@latitude-data/web-ui/atoms/Icons'
 import {
   Table,
   TableBody,
@@ -17,13 +17,7 @@ import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import usePendingRewardClaims from '$/stores/pendingRewardClaims'
 import Link from 'next/link'
 
-function ReferenceCell({
-  reference,
-  type,
-}: {
-  reference: string
-  type: RewardType
-}) {
+function ReferenceCell({ reference, type }: { reference: string; type: RewardType }) {
   if ([RewardType.Post, RewardType.GithubIssue].includes(type)) {
     return (
       <Link href={reference}>
@@ -55,13 +49,7 @@ const REWARD_TITLES: Record<RewardType, string> = {
   [RewardType.SignupLaunchDay]: 'Signed up on Launch Day',
 }
 
-function RewardTypeCell({
-  type,
-  rewardAmount,
-}: {
-  type: RewardType
-  rewardAmount: number
-}) {
+function RewardTypeCell({ type, rewardAmount }: { type: RewardType; rewardAmount: number }) {
   return (
     <div className='flex flex-row items-center gap-2'>
       <Text.H6 color='foregroundMuted'> (+{rewardAmount / 1000}k)</Text.H6>
@@ -79,31 +67,17 @@ function ValidateButtons({
 }) {
   return (
     <div className='flex flex-row gap-2'>
-      <Button
-        variant='outline'
-        onClick={() => updateRewardClaim({ claimId, isValid: true })}
-      >
+      <Button variant='outline' onClick={() => updateRewardClaim({ claimId, isValid: true })}>
         <Icon name='thumbsUp' />
       </Button>
-      <Button
-        variant='outline'
-        onClick={() => updateRewardClaim({ claimId, isValid: false })}
-      >
+      <Button variant='outline' onClick={() => updateRewardClaim({ claimId, isValid: false })}>
         <Icon name='thumbsDown' />
       </Button>
     </div>
   )
 }
 
-function LinkButton({
-  label,
-  href,
-  icon,
-}: {
-  label: string
-  href: string
-  icon: IconName
-}) {
+function LinkButton({ label, href, icon }: { label: string; href: string; icon: IconName }) {
   return (
     <Link href={href} target='_blank'>
       <Button variant='outline' className='w-fit' iconProps={{ name: icon }}>
@@ -118,13 +92,7 @@ export default function AdminPage() {
   const { data: pendingClaims, updateRewardClaim } = usePendingRewardClaims()
   const { toast } = useToast()
 
-  const handleUpdateRewardClaim = ({
-    claimId,
-    isValid,
-  }: {
-    claimId: number
-    isValid: boolean
-  }) => {
+  const handleUpdateRewardClaim = ({ claimId, isValid }: { claimId: number; isValid: boolean }) => {
     updateRewardClaim({ claimId, isValid })
     const { dismiss } = toast({
       title: `Claim ${isValid ? 'accepted' : 'rejected'}`,
@@ -152,11 +120,7 @@ export default function AdminPage() {
           href='https://github.com/latitude-dev/latitude-llm/stargazers'
           icon='star'
         />
-        <LinkButton
-          label='X Followers'
-          href='https://x.com/trylatitude/followers'
-          icon='twitter'
-        />
+        <LinkButton label='X Followers' href='https://x.com/trylatitude/followers' icon='twitter' />
         <LinkButton
           label='Pull Requests'
           href='https://github.com/latitude-dev/latitude-llm/pulls'
@@ -185,20 +149,14 @@ export default function AdminPage() {
                   className='border-b-[0.5px] h-12 max-h-12 border-border'
                 >
                   <TableCell>
-                    <Text.H5 noWrap>
-                      {rewardClaim.createdAt.toLocaleString()}
-                    </Text.H5>
+                    <Text.H5 noWrap>{rewardClaim.createdAt.toLocaleString()}</Text.H5>
                   </TableCell>
                   <TableCell>
-                    <Text.H5 noWrap>
-                      {rewardClaim.workspaceName ?? 'Deleted workspace'}
-                    </Text.H5>
+                    <Text.H5 noWrap>{rewardClaim.workspaceName ?? 'Deleted workspace'}</Text.H5>
                   </TableCell>
                   <TableCell>
                     <div className='flex flex-col py-2'>
-                      <Text.H5 noWrap>
-                        {rewardClaim.userName ?? 'Deleted user'}
-                      </Text.H5>
+                      <Text.H5 noWrap>{rewardClaim.userName ?? 'Deleted user'}</Text.H5>
                       <Text.H5 noWrap color='foregroundMuted'>
                         {rewardClaim.userEmail ?? 'Deleted user'}
                       </Text.H5>

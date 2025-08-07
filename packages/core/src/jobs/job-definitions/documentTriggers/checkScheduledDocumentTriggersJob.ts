@@ -1,7 +1,5 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { findAndRegisterScheduledTriggerEvents } from '../../../services/documentTriggers/handlers/scheduled/registerEvents'
-
-export type CheckScheduledDocumentTriggersJobData = unknown
 
 /**
  * Job that runs every minute to check for scheduled document triggers that need to be executed.

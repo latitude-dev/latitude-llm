@@ -1,16 +1,16 @@
 import { uniq } from 'lodash-es'
-import { ResolvedMetadata } from '$/workers/readMetadata'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
 import {
   INPUT_SOURCE,
-  LinkedDataset,
-  LinkedDatasetRow,
-  Inputs,
-  InputSource,
-  DocumentLog,
-  PlaygroundInputs,
+  type LinkedDataset,
+  type LinkedDatasetRow,
+  type Inputs,
+  type InputSource,
+  type DocumentLog,
+  type PlaygroundInputs,
 } from '@latitude-data/core/browser'
 import { recalculateInputs } from './recalculateInputs'
-import { EmptyInputs } from '$/hooks/useDocumentParameters/metadataParametersStore'
+import type { EmptyInputs } from '$/hooks/useDocumentParameters/metadataParametersStore'
 
 export type InputsByDocument = Record<string, PlaygroundInputs<InputSource>>
 const EMPTY_LINKED_DATASET = {
@@ -35,10 +35,9 @@ export function getDocState(oldState: InputsByDocument | null, key: string) {
   return { state, doc }
 }
 
-export function getValue({ paramValue }: { paramValue: unknown | undefined }) {
+function getValue({ paramValue }: { paramValue: unknown | undefined }) {
   try {
-    const value =
-      typeof paramValue === 'string' ? paramValue : JSON.stringify(paramValue)
+    const value = typeof paramValue === 'string' ? paramValue : JSON.stringify(paramValue)
     return { value, metadata: { includeInPrompt: paramValue !== undefined } }
   } catch {
     return { value: '', metadata: { includeInPrompt: false } }
@@ -62,10 +61,13 @@ export function mapLogParametersToInputs({
   const inputsKeys = Object.keys(inputs)
   const newInputsKeys = Object.keys(emptyInputs ?? {})
   const allKeys = uniq([...inputsKeys, ...newInputsKeys])
-  return allKeys.reduce((acc, key) => {
-    acc[key] = getValue({ paramValue: params[key] })
-    return acc
-  }, {} as Inputs<'history'>)
+  return allKeys.reduce(
+    (acc, key) => {
+      acc[key] = getValue({ paramValue: params[key] })
+      return acc
+    },
+    {} as Inputs<'history'>,
+  )
 }
 
 export function getInputsBySource<S extends InputSource>({

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import buildMetatags from '$/app/_lib/buildMetatags'
 

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { createSupportUserIdentity } from '$/app/(private)/_lib/createSupportUserIdentity'
 import buildMetatags from '$/app/_lib/buildMetatags'

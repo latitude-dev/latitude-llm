@@ -1,12 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  ProviderApiKey,
-  Workspace,
-} from '../../browser'
+import type { Commit, DocumentVersion, Project, ProviderApiKey, Workspace } from '../../browser'
 import * as cacheModule from '../../cache'
 import { EvaluationType, LlmEvaluationMetric, Providers } from '../../constants'
 import * as factories from '../../tests/factories'
@@ -248,9 +242,7 @@ describe('computeProjectStats', () => {
     expect(stats).toEqual(cachedStats)
 
     // Verify cache was checked
-    expect(mockRedis.get).toHaveBeenCalledWith(
-      `project_stats:${workspace.id}:${project.id}`,
-    )
+    expect(mockRedis.get).toHaveBeenCalledWith(`project_stats:${workspace.id}:${project.id}`)
     // Verify no database queries were made (we can't directly verify this, but we can check that set wasn't called)
     expect(mockRedis.set).not.toHaveBeenCalled()
   })
@@ -304,9 +296,7 @@ describe('computeProjectStats', () => {
     // Should match actual data
     expect(stats.totalTokens).toBe(providerLog.tokens)
     expect(stats.totalRuns).toBe(1)
-    expect(mockRedis.get).not.toHaveBeenCalledWith(
-      `project_stats:${workspace.id}:${project.id}`,
-    )
+    expect(mockRedis.get).not.toHaveBeenCalledWith(`project_stats:${workspace.id}:${project.id}`)
   })
 
   it('handles cache errors gracefully', async () => {

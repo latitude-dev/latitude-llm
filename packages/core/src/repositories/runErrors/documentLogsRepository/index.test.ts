@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { Commit, DocumentVersion, Providers, Workspace } from '../../../browser'
-import {
-  createDocumentLog,
-  createProject,
-  helpers,
-} from '../../../tests/factories'
+import { type Commit, type DocumentVersion, Providers, type Workspace } from '../../../browser'
+import { createDocumentLog, createProject, helpers } from '../../../tests/factories'
 import { DocumentLogsWithErrorsRepository } from './index'
 
 let workspace: Workspace

@@ -2,19 +2,16 @@ import { and, eq, getTableColumns } from 'drizzle-orm'
 
 import { database } from '../client'
 import { commits, documentVersions, projects, workspaces } from '../schema'
-import { DocumentVersion, Project, Workspace } from '../browser'
+import type { DocumentVersion, Project, Workspace } from '../browser'
 import { Result } from '../lib/Result'
-import { LatitudeError, NotFoundError } from '@latitude-data/constants/errors'
-import { PromisedResult } from '../lib/Transaction'
+import { type LatitudeError, NotFoundError } from '@latitude-data/constants/errors'
+import type { PromisedResult } from '../lib/Transaction'
 
 export function unsafelyFindProject(projectId: number, db = database) {
   return db.query.projects.findFirst({ where: eq(projects.id, projectId) })
 }
 
-export function findProjectFromDocument(
-  document: DocumentVersion,
-  db = database,
-) {
+export function findProjectFromDocument(document: DocumentVersion, db = database) {
   return db
     .select(getTableColumns(projects))
     .from(projects)

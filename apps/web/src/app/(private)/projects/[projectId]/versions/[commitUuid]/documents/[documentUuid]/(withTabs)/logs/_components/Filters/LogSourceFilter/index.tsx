@@ -69,8 +69,7 @@ export function LogSourceFilter({
 }) {
   const headerState = useMemo(() => {
     if (selectedLogSources.length === 0) return false
-    if (selectedLogSources.length === Object.keys(LogSources).length)
-      return true
+    if (selectedLogSources.length === Object.keys(LogSources).length) return true
     return 'indeterminate'
   }, [selectedLogSources])
 
@@ -89,17 +88,11 @@ export function LogSourceFilter({
   })
 
   return (
-    <FilterButton
-      label={filterLabel}
-      color={filterColor.color}
-      darkColor={filterColor.darkColor}
-    >
+    <FilterButton label={filterLabel} color={filterColor.color} darkColor={filterColor.darkColor}>
       <div className='flex flex-row gap-4 w-full flex-nowrap'>
         <Checkbox
           checked={headerState}
-          onCheckedChange={() =>
-            onSelectLogSources(headerState ? [] : LOG_SOURCES)
-          }
+          onCheckedChange={() => onSelectLogSources(headerState ? [] : LOG_SOURCES)}
           label={
             <Text.H5 noWrap ellipsis>
               {selectedLogSources.length} selected

@@ -1,6 +1,6 @@
 import { configurePipedreamComponentAction } from '$/actions/integrations/pipedream/configureComponent'
-import { IntegrationDto, PipedreamComponent } from '@latitude-data/core/browser'
-import {
+import type { IntegrationDto, PipedreamComponent } from '@latitude-data/core/browser'
+import type {
   ConfigurableProp,
   ConfigurableProps,
   ConfigureComponentResponse,
@@ -26,13 +26,10 @@ export function usePipedreamDynamicPropConfig({
   const [query, _setQuery] = useState<string | undefined>(undefined)
   const [page, setPage] = useState<number | undefined>(undefined)
 
-  const setQuery = useCallback(
-    (newQuery: string | undefined) => {
-      setPage(undefined) // Reset page when query changes
-      _setQuery(newQuery)
-    },
-    [_setQuery],
-  )
+  const setQuery = useCallback((newQuery: string | undefined) => {
+    setPage(undefined) // Reset page when query changes
+    _setQuery(newQuery)
+  }, [])
 
   const nextPage = useCallback(() => {
     setPage((prevPage) => {
@@ -48,13 +45,9 @@ export function usePipedreamDynamicPropConfig({
     })
   }, [])
 
-  const [context, setContext] = useState<ConfigureComponentContext | undefined>(
-    undefined,
-  )
+  const [context, setContext] = useState<ConfigureComponentContext | undefined>(undefined)
 
-  const [config, setConfig] = useState<ConfigureComponentResponse | undefined>(
-    undefined,
-  )
+  const [config, setConfig] = useState<ConfigureComponentResponse | undefined>(undefined)
   const {
     execute,
     isPending: isLoading,
@@ -71,6 +64,7 @@ export function usePipedreamDynamicPropConfig({
     trailing: true,
   })
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   useEffect(() => {
     debouncedExecute({
       integrationName: integration.name,
@@ -81,7 +75,6 @@ export function usePipedreamDynamicPropConfig({
       query,
       page,
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- context causes infinite loop
   }, [
     integration.name,
     component.key,

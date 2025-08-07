@@ -1,8 +1,8 @@
 import {
-  ActualOutputConfiguration,
-  DocumentLog,
-  EvaluatedDocumentLog,
-  ProviderLog,
+  type ActualOutputConfiguration,
+  type DocumentLog,
+  type EvaluatedDocumentLog,
+  type ProviderLog,
   buildConversation,
   formatConversation,
 } from '../../../browser'
@@ -23,9 +23,7 @@ export async function serializeEvaluatedDocumentLog({
     documentLog,
     providerLogs,
   }).unwrap()
-  const providerLog = serializeProviderLog(
-    providerLogs[providerLogs.length - 1]!,
-  )
+  const providerLog = serializeProviderLog(providerLogs[providerLogs.length - 1]!)
   const conversation = formatConversation(buildConversation(providerLog))
   const actualOutput = await extractActualOutput({
     providerLog: providerLog,

@@ -6,17 +6,13 @@ const actualOutputConfiguration = z.object({
   parsingFormat: z.enum(['string', 'json']),
   fieldAccessor: z.string().optional(), // Field accessor to get the output from if it's a key-value format
 })
-export type ActualOutputConfiguration = z.infer<
-  typeof actualOutputConfiguration
->
+export type ActualOutputConfiguration = z.infer<typeof actualOutputConfiguration>
 
 const expectedOutputConfiguration = z.object({
   parsingFormat: z.enum(['string', 'json']),
   fieldAccessor: z.string().optional(), // Field accessor to get the output from if it's a key-value format
 })
-export type ExpectedOutputConfiguration = z.infer<
-  typeof expectedOutputConfiguration
->
+export type ExpectedOutputConfiguration = z.infer<typeof expectedOutputConfiguration>
 
 export const ACCESSIBLE_OUTPUT_FORMATS = ['json']
 

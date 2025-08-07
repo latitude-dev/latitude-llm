@@ -18,19 +18,12 @@ export function useLatteStreaming({
   const streamLatteUpdate = useCallback(
     (newValue: string) => {
       isStreamingRef.current = true
-      setCustomReadOnlyMessage(
-        'Latte is updating the document. Please wait for it to finish.',
-      )
+      setCustomReadOnlyMessage('Latte is updating the document. Please wait for it to finish.')
 
       const diffs = customDiff(value, newValue)
 
-      const totalCharacterChanges = diffs.reduce(
-        (acc, diff) => acc + diff.length,
-        0,
-      )
-      const chunkSize = Math.ceil(
-        totalCharacterChanges / (MAX_ANIMATION_TIME / STEP_DURATION),
-      )
+      const totalCharacterChanges = diffs.reduce((acc, diff) => acc + diff.length, 0)
+      const chunkSize = Math.ceil(totalCharacterChanges / (MAX_ANIMATION_TIME / STEP_DURATION))
 
       let cursor = 0 // Current position in the prompt
       let currentValue = value // Currently displayed value
@@ -62,8 +55,7 @@ export function useLatteStreaming({
 
         if (diff.type === CustomDiffType.DELETE) {
           currentValue =
-            currentValue.slice(0, cursor) +
-            currentValue.slice(cursor + stepChunkLength)
+            currentValue.slice(0, cursor) + currentValue.slice(cursor + stepChunkLength)
         } else if (diff.type === CustomDiffType.INSERT) {
           currentValue =
             currentValue.slice(0, cursor) +

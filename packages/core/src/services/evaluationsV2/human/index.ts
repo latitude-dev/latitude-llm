@@ -1,12 +1,12 @@
 import {
-  EvaluationType,
+  type EvaluationType,
   HumanEvaluationMetric,
   HumanEvaluationSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import {
+import type {
   EvaluationMetricAnnotateArgs,
   EvaluationMetricBackendSpecification,
   EvaluationMetricValidateArgs,
@@ -14,7 +14,6 @@ import {
 import { HumanEvaluationBinarySpecification } from './binary'
 import { HumanEvaluationRatingSpecification } from './rating'
 
-// prettier-ignore
 const METRICS: {
   [M in HumanEvaluationMetric]: EvaluationMetricBackendSpecification<EvaluationType.Human, M>
 } = {
@@ -51,10 +50,7 @@ async function validate<M extends HumanEvaluationMetric>(
 
   configuration.criteria = configuration.criteria?.trim()
 
-  const validation = await metricSpecification.validate(
-    { configuration, ...rest },
-    db,
-  )
+  const validation = await metricSpecification.validate({ configuration, ...rest }, db)
   if (validation.error) {
     return Result.error(validation.error)
   }
@@ -94,10 +90,7 @@ async function annotate<M extends HumanEvaluationMetric>(
     metricSpecification.resultMetadata.partial().parse(resultMetadata)
   }
 
-  const value = await metricSpecification.annotate(
-    { resultMetadata, ...rest },
-    db,
-  )
+  const value = await metricSpecification.annotate({ resultMetadata, ...rest }, db)
 
   return value
 }

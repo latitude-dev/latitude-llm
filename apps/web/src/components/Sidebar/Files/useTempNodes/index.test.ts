@@ -134,9 +134,7 @@ describe('useTempNodes', () => {
       }),
     )
     const id = result?.current?.tmpFolders?.['some-folder']?.[0]?.id
-    act(() =>
-      result.current.updateFolder({ id: id!, path: 'parent-tmp-folder' }),
-    )
+    act(() => result.current.updateFolder({ id: id!, path: 'parent-tmp-folder' }))
 
     act(() =>
       result.current.addFolder({
@@ -146,11 +144,8 @@ describe('useTempNodes', () => {
       }),
     )
 
-    const childId =
-      result?.current?.tmpFolders?.['some-folder']?.[0]?.children?.[0]?.id
-    act(() =>
-      result.current.updateFolder({ id: childId!, path: 'child-tmp-folder' }),
-    )
+    const childId = result?.current?.tmpFolders?.['some-folder']?.[0]?.children?.[0]?.id
+    act(() => result.current.updateFolder({ id: childId!, path: 'child-tmp-folder' }))
     act(() => result.current.deleteTmpFolder({ id: childId! }))
 
     expect(result.current.tmpFolders).toEqual({
@@ -177,9 +172,7 @@ describe('useTempNodes', () => {
       }),
     )
     const id = result?.current?.tmpFolders?.['some-folder']?.[0]?.id
-    act(() =>
-      result.current.updateFolder({ id: id!, path: 'parent-tmp-folder' }),
-    )
+    act(() => result.current.updateFolder({ id: id!, path: 'parent-tmp-folder' }))
 
     act(() =>
       result.current.addFolder({
@@ -189,12 +182,9 @@ describe('useTempNodes', () => {
       }),
     )
 
-    const childId =
-      result?.current?.tmpFolders?.['some-folder']?.[0]?.children?.[0]?.id
+    const childId = result?.current?.tmpFolders?.['some-folder']?.[0]?.children?.[0]?.id
 
-    act(() =>
-      result.current.updateFolder({ id: childId!, path: 'child-tmp-folder' }),
-    )
+    act(() => result.current.updateFolder({ id: childId!, path: 'child-tmp-folder' }))
 
     const child = new Node({
       id: expect.any(String),
@@ -231,9 +221,7 @@ describe('useTempNodes', () => {
       }),
     )
     const id = result?.current?.tmpFolders?.['some-folder']?.[0]?.id
-    act(() =>
-      result.current.updateFolder({ id: id!, path: 'parent-tmp-folder' }),
-    )
+    act(() => result.current.updateFolder({ id: id!, path: 'parent-tmp-folder' }))
 
     act(() =>
       result.current.addFolder({
@@ -243,8 +231,7 @@ describe('useTempNodes', () => {
       }),
     )
 
-    const childId =
-      result?.current?.tmpFolders?.['some-folder']?.[0]?.children?.[0]?.id
+    const childId = result?.current?.tmpFolders?.['some-folder']?.[0]?.children?.[0]?.id
 
     const spyFn = vi.fn()
     act(() =>
@@ -290,11 +277,8 @@ describe('useTempNodes', () => {
     child.children[0]!.parent = child
 
     const grandChildInTmpFolders =
-      result.current.tmpFolders['some-folder']?.[0]?.children?.[0]
-        ?.children?.[0]
+      result.current.tmpFolders['some-folder']?.[0]?.children?.[0]?.children?.[0]
     expect(grandChildInTmpFolders).toEqual(grandChild)
-    expect(spyFn).toHaveBeenCalledWith(
-      'some-folder/parent-tmp-folder/child-tmp-folder',
-    )
+    expect(spyFn).toHaveBeenCalledWith('some-folder/parent-tmp-folder/child-tmp-folder')
   })
 })

@@ -5,7 +5,7 @@ import { defineLatteTool } from '../types'
 import { getApp } from '../../../../integrations/pipedream/apps'
 import { createIntegration } from '../../../../integrations'
 import { IntegrationType } from '@latitude-data/constants'
-import { UnconfiguredPipedreamIntegrationConfiguration } from '../../../../integrations/helpers/schema'
+import type { UnconfiguredPipedreamIntegrationConfiguration } from '../../../../integrations/helpers/schema'
 
 const createIntegrationLatte = defineLatteTool(
   async ({ name, app: appName }, { workspace, user }) => {

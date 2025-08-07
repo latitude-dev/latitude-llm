@@ -2,10 +2,10 @@
 
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { SpanWithDetails } from '@latitude-data/core/browser'
+import type { SpanWithDetails } from '@latitude-data/core/browser'
 import { compact } from 'lodash-es'
 import { useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 export function useSpan(
   {
@@ -31,8 +31,8 @@ export function useSpan(
   const {
     data = undefined,
     mutate,
-    ...rest
+    isLoading,
   } = useSWR<SpanWithDetails>(compact(route), fetcher, opts)
 
-  return useMemo(() => ({ data, mutate, ...rest }), [data, mutate, rest])
+  return useMemo(() => ({ data, mutate, isLoading }), [data, mutate, isLoading])
 }

@@ -3,9 +3,9 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
-  ActualOutputConfiguration,
-  EvaluationMetric,
-  EvaluationType,
+  type ActualOutputConfiguration,
+  type EvaluationMetric,
+  type EvaluationType,
   baseEvaluationConfiguration,
 } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
@@ -19,14 +19,11 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
 import { SelectableSwitch } from '@latitude-data/web-ui/molecules/SelectableSwitch'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useDebounce } from 'use-debounce'
-import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
+import { type ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
 
 const MESSAGE_SELECTION_OPTIONS = baseEvaluationConfiguration.shape.actualOutput
   .unwrap()
@@ -50,10 +47,7 @@ const PARSING_FORMAT_OPTIONS = baseEvaluationConfiguration.shape.actualOutput
     value: option,
   }))
 
-export function ConfigurationSimpleForm<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({
+export function ConfigurationSimpleForm<T extends EvaluationType, M extends EvaluationMetric<T>>({
   type,
   metric,
   ...rest
@@ -61,17 +55,10 @@ export function ConfigurationSimpleForm<
   const typeSpecification = EVALUATION_SPECIFICATIONS[type]
   if (!typeSpecification) return null
 
-  return (
-    <>
-      <typeSpecification.ConfigurationSimpleForm metric={metric} {...rest} />
-    </>
-  )
+  return <typeSpecification.ConfigurationSimpleForm metric={metric} {...rest} />
 }
 
-export function ConfigurationAdvancedForm<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({
+export function ConfigurationAdvancedForm<T extends EvaluationType, M extends EvaluationMetric<T>>({
   mode,
   type,
   metric,
@@ -84,11 +71,10 @@ export function ConfigurationAdvancedForm<
   const formatIsAccessible = useMemo(
     () =>
       !!configuration.actualOutput?.parsingFormat &&
-      ACCESSIBLE_OUTPUT_FORMATS.includes(
-        configuration.actualOutput.parsingFormat,
-      ),
+      ACCESSIBLE_OUTPUT_FORMATS.includes(configuration.actualOutput.parsingFormat),
     [configuration.actualOutput?.parsingFormat],
   )
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   useEffect(() => {
     if (formatIsAccessible) return
     if (!configuration.actualOutput) return
@@ -101,7 +87,6 @@ export function ConfigurationAdvancedForm<
         fieldAccessor: undefined,
       },
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formatIsAccessible])
 
   const [testConfiguration] = useDebounce(configuration.actualOutput, 333)
@@ -130,10 +115,8 @@ export function ConfigurationAdvancedForm<
         trueLabel='Higher score'
         falseLabel='Lower score'
         description='Whether a higher or lower score is better for this evaluation. This will guide the refiner to select the best results when optimizing your prompt'
-        onChange={(value) =>
-          setConfiguration({ ...configuration, reverseScale: !value })
-        }
-        errors={errors?.['reverseScale']}
+        onChange={(value) => setConfiguration({ ...configuration, reverseScale: !value })}
+        errors={errors?.reverseScale}
         disabled={disabled}
         required
       />
@@ -261,11 +244,7 @@ export function ConfigurationAdvancedForm<
   )
 }
 
-function ActualOutputTest({
-  configuration,
-}: {
-  configuration?: ActualOutputConfiguration
-}) {
+function ActualOutputTest({ configuration }: { configuration?: ActualOutputConfiguration }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
@@ -274,13 +253,13 @@ function ActualOutputTest({
 
   const {
     selectedLog: log,
-    isLoadingLog: isLoadingLog,
+    isLoadingLog,
     isLoading: isLoadingCount,
     position: logPosition,
     count: totalLogs,
     onNextPage: nextLog,
     onPrevPage: prevLog,
-    error: error,
+    error,
   } = useSerializedLogs({ document, configuration })
 
   const isLoading = isLoadingLog || isLoadingCount
@@ -351,8 +330,7 @@ function ActualOutputTest({
                   ROUTES.projects
                     .detail({ id: project.id })
                     .commits.detail({ uuid: commit.uuid })
-                    .documents.detail({ uuid: document.documentUuid }).editor
-                    .root,
+                    .documents.detail({ uuid: document.documentUuid }).editor.root,
                 )
               }}
             >
@@ -365,9 +343,7 @@ function ActualOutputTest({
   }
 
   if (logPosition === undefined || totalLogs === undefined) {
-    return (
-      <Alert variant='destructive' description='Error while fetching logs' />
-    )
+    return <Alert variant='destructive' description='Error while fetching logs' />
   }
 
   if (log === undefined) {
@@ -410,10 +386,7 @@ function ActualOutputTest({
             />
           </div>
         </div>
-        <Alert
-          variant='destructive'
-          description={error || 'Error while fetching logs'}
-        />
+        <Alert variant='destructive' description={error || 'Error while fetching logs'} />
       </>
     )
   }
@@ -465,12 +438,7 @@ function ActualOutputTest({
         <LineSeparator text='Actual output' />
         <div className='w-full max-h-60 custom-scrollbar scrollable-indicator'>
           <div className='rounded-xl bg-backgroundCode border border-muted-foreground/10 px-4 py-3'>
-            <Text.H5
-              monospace
-              color='foregroundMuted'
-              whiteSpace='preWrap'
-              wordBreak='breakAll'
-            >
+            <Text.H5 monospace color='foregroundMuted' whiteSpace='preWrap' wordBreak='breakAll'>
               {log.actualOutput}
             </Text.H5>
           </div>

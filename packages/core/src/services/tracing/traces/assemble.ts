@@ -1,9 +1,4 @@
-import {
-  AssembledSpan,
-  AssembledTrace,
-  Span,
-  Workspace,
-} from '../../../browser'
+import type { AssembledSpan, AssembledTrace, Span, Workspace } from '../../../browser'
 import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
@@ -27,13 +22,11 @@ export async function assembleTrace(
 
   const spans = listing.value
   if (spans.length < 1) {
-    return Result.error(
-      new UnprocessableEntityError('Cannot assemble an empty trace'),
-    )
+    return Result.error(new UnprocessableEntityError('Cannot assemble an empty trace'))
   }
 
-  const startedAt = new Date(Math.min(...spans.map((s) => s.startedAt.getTime()))) // prettier-ignore
-  const endedAt = new Date(Math.max(...spans.map((s) => s.endedAt.getTime()))) // prettier-ignore
+  const startedAt = new Date(Math.min(...spans.map((s) => s.startedAt.getTime())))
+  const endedAt = new Date(Math.max(...spans.map((s) => s.endedAt.getTime())))
   const duration = endedAt.getTime() - startedAt.getTime()
 
   const childrens = new Map<string, Span[]>()

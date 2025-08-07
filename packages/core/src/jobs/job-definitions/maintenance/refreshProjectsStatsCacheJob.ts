@@ -1,4 +1,4 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { isNull } from 'drizzle-orm'
 import { database } from '../../../client'
 import { projects } from '../../../schema'
@@ -6,9 +6,7 @@ import { maintenanceQueue } from '../../queues'
 
 export type RefreshProjectsStatsCacheJobData = Record<string, never>
 
-export const refreshProjectsStatsCacheJob = async (
-  _: Job<RefreshProjectsStatsCacheJobData>,
-) => {
+export const refreshProjectsStatsCacheJob = async (_: Job<RefreshProjectsStatsCacheJobData>) => {
   const candidates = await database
     .select({ id: projects.id })
     .from(projects)

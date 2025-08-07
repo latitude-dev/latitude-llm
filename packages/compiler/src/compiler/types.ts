@@ -1,5 +1,5 @@
-import { TemplateNode, ToolCallTag } from '$compiler/parser/interfaces'
-import { ToolCall } from '$compiler/types'
+import type { TemplateNode, ToolCallTag } from '$compiler/parser/interfaces'
+import type { ToolCall } from '$compiler/types'
 
 import type Scope from './scope'
 

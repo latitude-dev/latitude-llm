@@ -4,10 +4,10 @@ import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilt
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogs from '$/stores/documentLogs'
 import useDocumentLogWithPaginationPosition, {
-  LogWithPosition,
+  type LogWithPosition,
 } from '$/stores/documentLogWithPaginationPosition'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 
 const ONLY_ONE_PAGE = '1'
@@ -29,16 +29,15 @@ export function useLogHistoryParams({
 
   // Note: If we need to speed up history logs as a best-effort basis, filter by playground logs.
   const filterOptions = useDefaultLogFilterOptions()
-  const { data: pagination, isLoading: isLoadingCounter } =
-    useDocumentLogsPagination({
-      projectId: project.id,
-      commitUuid: commitVersionUuid,
-      documentUuid: document.documentUuid,
-      filterOptions,
-      page: '1', // Not used really. This is only for the counter.
-      pageSize: ONLY_ONE_PAGE,
-      excludeErrors: true,
-    })
+  const { data: pagination, isLoading: isLoadingCounter } = useDocumentLogsPagination({
+    projectId: project.id,
+    commitUuid: commitVersionUuid,
+    documentUuid: document.documentUuid,
+    filterOptions,
+    page: '1', // Not used really. This is only for the counter.
+    pageSize: ONLY_ONE_PAGE,
+    excludeErrors: true,
+  })
 
   const [position, setPosition] = useState<LogWithPosition | undefined>(
     logUuid ? undefined : { position: 1, page: 1 },
@@ -46,16 +45,14 @@ export function useLogHistoryParams({
   const onFetchCurrentLog = useCallback((data: LogWithPosition) => {
     setPosition(data)
   }, [])
-  const { isLoading: isLoadingPosition } = useDocumentLogWithPaginationPosition(
-    {
-      documentLogUuid: logUuid,
-      document,
-      projectId: project.id,
-      filterOptions,
-      onFetched: onFetchCurrentLog,
-      excludeErrors: true,
-    },
-  )
+  const { isLoading: isLoadingPosition } = useDocumentLogWithPaginationPosition({
+    documentLogUuid: logUuid,
+    document,
+    projectId: project.id,
+    filterOptions,
+    onFetched: onFetchCurrentLog,
+    excludeErrors: true,
+  })
 
   const { data: logs, isLoading: isLoadingLog } = useDocumentLogs({
     documentUuid: position === undefined ? undefined : document.documentUuid,
@@ -77,9 +74,7 @@ export function useLogHistoryParams({
     (position: number) => {
       if (isLoadingLog) return
 
-      setPosition((prev) =>
-        prev ? { ...prev, position } : { position, page: 1 },
-      )
+      setPosition((prev) => (prev ? { ...prev, position } : { position, page: 1 }))
     },
     [isLoadingLog],
   )

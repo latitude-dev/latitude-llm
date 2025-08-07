@@ -1,7 +1,7 @@
 import { unsafelyFindWorkspace } from '../../data-access'
 import { NotFoundError } from '../../lib/errors'
 import { WebsocketClient } from '../../websockets/workers'
-import { DocumentSuggestionCreatedEvent } from '../events'
+import type { DocumentSuggestionCreatedEvent } from '../events'
 
 export const notifyClientOfDocumentSuggestionCreated = async ({
   data: event,

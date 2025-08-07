@@ -1,19 +1,13 @@
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { type EventArgs, useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useDocumentSuggestions from '$/stores/documentSuggestions'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
+import type { ICommitContextType, IProjectContextType } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useState } from 'react'
 import { SuggestionItem } from './SuggestionItem'
 
@@ -36,15 +30,9 @@ const useDocumentSuggestionsSocket = ({
         return
       }
 
-      mutate(
-        (prev) => [
-          { ...event.suggestion, evaluation: event.evaluation },
-          ...(prev ?? []),
-        ],
-        {
-          revalidate: false,
-        },
-      )
+      mutate((prev) => [{ ...event.suggestion, evaluation: event.evaluation }, ...(prev ?? [])], {
+        revalidate: false,
+      })
 
       notify()
     },
@@ -75,8 +63,9 @@ export function DocumentSuggestions({
   setPrompt: (prompt: string) => void
 }) {
   const [isOpen, setIsOpen] = useState(false)
-  const close = useCallback(() => setIsOpen(false), [setIsOpen])
+  const close = useCallback(() => setIsOpen(false), [])
   const [notifier, setNotifier] = useState<Notifier>({ isOpen: false })
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   const notify = useCallback(() => {
     if (notifier.timeout) clearTimeout(notifier.timeout)
 
@@ -85,7 +74,6 @@ export function DocumentSuggestions({
       timeout: setTimeout(() => setNotifier({ isOpen: false }), 5000),
     })
     // FIXME: Adding notifier as a dependency would trigger an infinite loop, fix this.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setNotifier])
   useEffect(() => {
     if (isOpen) setNotifier({ isOpen: false })
@@ -122,8 +110,7 @@ export function DocumentSuggestions({
           containerClassName='flex-shrink-0'
         >
           <Text.H6M color='accentForeground'>
-            {suggestions.length}{' '}
-            {suggestions.length > 1 ? 'suggestions' : 'suggestion'}
+            {suggestions.length} {suggestions.length > 1 ? 'suggestions' : 'suggestion'}
           </Text.H6M>
           <Tooltip
             asChild
@@ -149,8 +136,8 @@ export function DocumentSuggestions({
           <Text.H4M>Suggestions</Text.H4M>
         </span>
         <Text.H6 color='foregroundMuted'>
-          Suggestions are automatically generated to improve your prompt based
-          on your latest evaluations results.
+          Suggestions are automatically generated to improve your prompt based on your latest
+          evaluations results.
         </Text.H6>
         <ul className='w-full border border-border divide-y divide-border rounded-md'>
           {suggestions.map((suggestion) => (

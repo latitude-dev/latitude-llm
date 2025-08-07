@@ -1,5 +1,5 @@
 import { claimNewUserReferrals } from '../../services/claimedRewards'
-import { ClaimReferralInvitationEvent } from '../events'
+import type { ClaimReferralInvitationEvent } from '../events'
 
 export const createClaimInvitationReferralJob = ({
   data: event,

@@ -1,6 +1,6 @@
-import { Commit, DocumentVersion, Workspace } from '../../browser'
-import { LatitudeError, UnprocessableEntityError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import type { Commit, DocumentVersion, Workspace } from '../../browser'
+import { type LatitudeError, UnprocessableEntityError } from '../../lib/errors'
+import { Result, type TypedResult } from '../../lib/Result'
 import { DocumentVersionsRepository } from '../../repositories'
 import { scanDocumentContent } from './scan'
 
@@ -21,23 +21,15 @@ export async function getResolvedContent({
   customPrompt?: string
 }): Promise<TypedResult<string, LatitudeError>> {
   const documentScope = new DocumentVersionsRepository(workspaceId)
-  const docs = await documentScope
-    .getDocumentsAtCommit(commit)
-    .then((r) => r.unwrap())
+  const docs = await documentScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
   const docInCommit = docs.find((d) => d.documentUuid === document.documentUuid)
 
   if (!docInCommit) {
-    return Result.error(
-      new UnprocessableEntityError('Document not found in commit', {}),
-    )
+    return Result.error(new UnprocessableEntityError('Document not found in commit', {}))
   }
 
-  if (
-    customPrompt === undefined &&
-    commit.mergedAt != null &&
-    document.resolvedContent != null
-  ) {
+  if (customPrompt === undefined && commit.mergedAt != null && document.resolvedContent != null) {
     return Result.ok(document.resolvedContent!)
   }
 

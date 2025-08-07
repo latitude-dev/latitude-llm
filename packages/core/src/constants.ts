@@ -7,14 +7,14 @@ import type {
 } from '@latitude-data/constants/legacyCompiler'
 import {
   EvaluationResultableType,
-  LatitudeTool,
-  LatitudeToolInternalName,
+  type LatitudeTool,
+  type LatitudeToolInternalName,
   LogSources,
 } from '@latitude-data/constants'
-import { FinishReason, LanguageModelUsage, Tool, ToolResultPart } from 'ai'
+import type { FinishReason, LanguageModelUsage, Tool, ToolResultPart } from 'ai'
 import { z } from 'zod'
 
-import { App, ConfigurableProps, V1Component } from '@pipedream/sdk/browser'
+import type { App, ConfigurableProps, V1Component } from '@pipedream/sdk/browser'
 import type {
   ApiKey,
   Commit,
@@ -24,10 +24,10 @@ import type {
   ProviderLog,
   Workspace,
 } from './browser'
-import { PromisedResult } from './lib/Transaction'
-import { LatitudeError } from './lib/errors'
-import { TelemetryContext } from '@latitude-data/telemetry'
-import { ConfigurableProp, PropOption } from '@pipedream/sdk'
+import type { PromisedResult } from './lib/Transaction'
+import type { LatitudeError } from './lib/errors'
+import type { TelemetryContext } from '@latitude-data/telemetry'
+import type { ConfigurableProp, PropOption } from '@pipedream/sdk'
 
 export {
   DocumentType,
@@ -52,7 +52,6 @@ export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
 export const LATITUDE_EMAIL = 'hello@latitude.so'
 export const LATITUDE_SLACK_URL =
   'https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw'
-export const LATITUDE_HELP_URL = LATITUDE_SLACK_URL
 export const DEFAULT_PROVIDER_MAX_FREE_RUNS = 100
 
 export enum CommitStatus {
@@ -96,12 +95,11 @@ export type ChainStepObjectResponse = BaseResponse & {
   object: any
 }
 
-export type ChainStepResponse<T extends StreamType = StreamType> =
-  T extends 'text'
-    ? ChainStepTextResponse
-    : T extends 'object'
-      ? ChainStepObjectResponse
-      : never
+export type ChainStepResponse<T extends StreamType = StreamType> = T extends 'text'
+  ? ChainStepTextResponse
+  : T extends 'object'
+    ? ChainStepObjectResponse
+    : never
 
 export const LOG_SOURCES = Object.values(LogSources)
 
@@ -226,8 +224,7 @@ export type SerializedEvaluationManualResult = {
 }
 type EvaluatedProviderLog = Omit<SerializedProviderLog, 'response'>
 
-export type SerializedEvaluationResult = SerializedEvaluationManualResult &
-  EvaluatedProviderLog
+export type SerializedEvaluationResult = SerializedEvaluationManualResult & EvaluatedProviderLog
 
 export const ULTRA_LARGE_PAGE_SIZE = 1000
 export const DELIMITER_VALUES = {
@@ -236,13 +233,7 @@ export const DELIMITER_VALUES = {
   tab: '\t',
   space: ' ',
 }
-export const DELIMITERS_KEYS = [
-  'comma',
-  'semicolon',
-  'tab',
-  'space',
-  'custom',
-] as const
+export const DELIMITERS_KEYS = ['comma', 'semicolon', 'tab', 'space', 'custom'] as const
 export const MAX_SIZE = 25
 export const MAX_UPLOAD_SIZE_IN_MB = MAX_SIZE * 1024 * 1024
 
@@ -271,11 +262,7 @@ const imageContentSchema = z.object({
 
 const fileContentSchema = z.object({
   type: z.literal('file'),
-  file: z
-    .string()
-    .or(z.instanceof(Uint8Array))
-    .or(z.instanceof(ArrayBuffer))
-    .or(z.instanceof(URL)),
+  file: z.string().or(z.instanceof(Uint8Array)).or(z.instanceof(ArrayBuffer)).or(z.instanceof(URL)),
   mimeType: z.string(),
 })
 
@@ -304,20 +291,14 @@ export const messageSchema = z
       role: z.literal('user'),
       content: z
         .string()
-        .or(
-          z.array(
-            textContentSchema.or(imageContentSchema).or(fileContentSchema),
-          ),
-        ),
+        .or(z.array(textContentSchema.or(imageContentSchema).or(fileContentSchema))),
       name: z.string().optional(),
     }),
   )
   .or(
     z.object({
       role: z.literal('assistant'),
-      content: z
-        .string()
-        .or(z.array(textContentSchema.or(toolCallContentSchema))),
+      content: z.string().or(z.array(textContentSchema.or(toolCallContentSchema))),
       toolCalls: z
         .array(
           z.object({
@@ -389,15 +370,11 @@ export type DocumentVersionDto = DocumentVersion & {
 export const documentLogFilterOptionsSchema = z.object({
   commitIds: z.array(z.number()),
   logSources: z.array(z.nativeEnum(LogSources)),
-  createdAt: z
-    .object({ from: z.date().optional(), to: z.date().optional() })
-    .optional(),
+  createdAt: z.object({ from: z.date().optional(), to: z.date().optional() }).optional(),
   customIdentifier: z.string().optional(),
   experimentId: z.number().optional(),
 })
-export type DocumentLogFilterOptions = z.infer<
-  typeof documentLogFilterOptionsSchema
->
+export type DocumentLogFilterOptions = z.infer<typeof documentLogFilterOptionsSchema>
 
 export const RELATIVE_DATES = {
   today: 'today',
@@ -433,8 +410,7 @@ export type DraftChange = {
   content: DiffValue
 }
 
-const CLOUD_INFO_URL =
-  'https://docs.latitude.so/guides/getting-started/quick-start#latitude-cloud'
+const CLOUD_INFO_URL = 'https://docs.latitude.so/guides/getting-started/quick-start#latitude-cloud'
 const CLOUD_INFO = `More info: ${CLOUD_INFO_URL}`
 export const CLOUD_MESSAGES = {
   generateDatasets: `Dataset generator is only available on Latitude Cloud. ${CLOUD_INFO}`,
@@ -476,8 +452,7 @@ export const DATASET_COLUMN_ROLES = {
   metadata: 'metadata',
 } as const
 
-export type DatasetColumnRole =
-  (typeof DATASET_COLUMN_ROLES)[keyof typeof DATASET_COLUMN_ROLES]
+export type DatasetColumnRole = (typeof DATASET_COLUMN_ROLES)[keyof typeof DATASET_COLUMN_ROLES]
 
 export type ProviderApiKeyUsage = {
   projectId: number
@@ -491,14 +466,10 @@ export type ProviderApiKeyUsage = {
 
 export const LIMITED_VIEW_THRESHOLD = 1_000_000 // Approximated logs
 export const STATS_CACHING_THRESHOLD = 5_000 // Actual logs
-export const DOCUMENT_STATS_CACHE_KEY = (
-  workspaceId: number,
-  documentUuid: string,
-) => `document_stats:${workspaceId}:${documentUuid}`
-export const PROJECT_STATS_CACHE_KEY = (
-  workspaceId: number,
-  projectId: number,
-) => `project_stats:${workspaceId}:${projectId}`
+export const DOCUMENT_STATS_CACHE_KEY = (workspaceId: number, documentUuid: string) =>
+  `document_stats:${workspaceId}:${documentUuid}`
+export const PROJECT_STATS_CACHE_KEY = (workspaceId: number, projectId: number) =>
+  `project_stats:${workspaceId}:${projectId}`
 export const STATS_CACHE_TTL = 2 * 24 * 60 * 60 // 2 days
 
 export enum PipedreamComponentType {
@@ -546,9 +517,7 @@ export class RemoteOptions {
     })
   }
   containsAll(lattesChoices: string[] | string): boolean {
-    const lattesChoicesArray = Array.isArray(lattesChoices)
-      ? lattesChoices
-      : [lattesChoices]
+    const lattesChoicesArray = Array.isArray(lattesChoices) ? lattesChoices : [lattesChoices]
     return lattesChoicesArray.every((value) => this.includes(value))
   }
   private includes(searchValue: string): boolean {

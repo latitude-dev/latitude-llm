@@ -1,8 +1,8 @@
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import AnnotationForm from '$/components/evaluations/AnnotationForm'
-import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import {
+import type useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
+import type { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import type {
   EvaluationMetric,
   EvaluationResultMetadata,
   EvaluationResultV2,
@@ -11,12 +11,9 @@ import {
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { isEqual } from 'lodash-es'
-import { ComponentProps, useCallback, useEffect, useState } from 'react'
+import { type ComponentProps, useCallback, useEffect, useState } from 'react'
 
-export function DocumentLogAnnotation<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({
+export function DocumentLogAnnotation<T extends EvaluationType, M extends EvaluationMetric<T>>({
   evaluation,
   result,
   mutateEvaluationResults,
@@ -30,17 +27,13 @@ export function DocumentLogAnnotation<
   'resultScore' | 'setResultScore' | 'resultMetadata' | 'setResultMetadata'
 > & {
   result?: EvaluationResultV2<T, M>
-  mutateEvaluationResults: ReturnType<
-    typeof useEvaluationResultsV2ByDocumentLogs
-  >['mutate']
+  mutateEvaluationResults: ReturnType<typeof useEvaluationResultsV2ByDocumentLogs>['mutate']
   annotateEvaluation: ReturnType<typeof useEvaluationsV2>['annotateEvaluation']
   isAnnotatingEvaluation: boolean
 }) {
   const [isExpanded, setIsExpanded] = useState(true)
 
-  const [resultScore, setResultScore] = useState<number | undefined>(
-    result?.score ?? undefined,
-  )
+  const [resultScore, setResultScore] = useState<number | undefined>(result?.score ?? undefined)
   useEffect(() => setResultScore(result?.score ?? undefined), [result])
   const [resultMetadata, setResultMetadata] = useState<
     Partial<EvaluationResultMetadata<T, M>> | undefined
@@ -61,15 +54,11 @@ export function DocumentLogAnnotation<
     const { result } = annotationResult
     mutateEvaluationResults((prev) => {
       const prevResults = prev?.[documentLog.uuid] || []
-      const existingResult = prevResults.find(
-        (r) => r.result.uuid === result.uuid,
-      )
+      const existingResult = prevResults.find((r) => r.result.uuid === result.uuid)
       return {
         ...(prev ?? {}),
         [documentLog.uuid]: existingResult
-          ? prevResults.map((r) =>
-              r.result.uuid === result.uuid ? { evaluation, result } : r,
-            )
+          ? prevResults.map((r) => (r.result.uuid === result.uuid ? { evaluation, result } : r))
           : [{ evaluation, result }, ...prevResults],
       }
     })
@@ -104,8 +93,7 @@ export function DocumentLogAnnotation<
             disabled={isAnnotatingEvaluation}
             {...rest}
           />
-          {(resultScore !== result?.score ||
-            !isEqual(resultMetadata, result?.metadata)) && (
+          {(resultScore !== result?.score || !isEqual(resultMetadata, result?.metadata)) && (
             <Button
               fullWidth
               fancy

@@ -1,7 +1,4 @@
-import type {
-  ResolveNodeProps,
-  UpdateScopeContextProps,
-} from '$compiler/compiler/logic/types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '$compiler/compiler/logic/types'
 import CompileError from '$compiler/error/error'
 import errors from '$compiler/error/errors'
 import type { SimpleCallExpression } from 'estree'
@@ -29,9 +26,7 @@ export async function resolve(props: ResolveNodeProps<SimpleCallExpression>) {
   return await runMethod({ ...props, method, args })
 }
 
-function resolveArgs(
-  props: ResolveNodeProps<SimpleCallExpression>,
-): Promise<unknown[]> {
+function resolveArgs(props: ResolveNodeProps<SimpleCallExpression>): Promise<unknown[]> {
   const { node } = props
   return Promise.all(
     node.arguments.map((arg) =>

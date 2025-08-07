@@ -1,6 +1,6 @@
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import { sendWebhook } from './sendWebhook'
-import { WebhookTestResponse } from './types'
+import type { WebhookTestResponse } from './types'
 
 interface TestWebhookEndpointParams {
   url: string
@@ -8,9 +8,7 @@ interface TestWebhookEndpointParams {
 
 export async function testWebhookEndpoint({
   url,
-}: TestWebhookEndpointParams): Promise<
-  TypedResult<WebhookTestResponse, Error>
-> {
+}: TestWebhookEndpointParams): Promise<TypedResult<WebhookTestResponse, Error>> {
   const response = await sendWebhook({
     url,
     headers: {
@@ -40,9 +38,7 @@ export async function testWebhookEndpoint({
 
     if (response.error?.message?.includes('ETIMEDOUT')) {
       return Result.error(
-        new Error(
-          'Connection timed out. The webhook server took too long to respond.',
-        ),
+        new Error('Connection timed out. The webhook server took too long to respond.'),
       )
     }
 
@@ -58,29 +54,21 @@ export async function testWebhookEndpoint({
     if (response.statusCode) {
       if (response.statusCode === 404) {
         return Result.error(
-          new Error(
-            'Webhook URL not found (404). Please verify the endpoint URL.',
-          ),
+          new Error('Webhook URL not found (404). Please verify the endpoint URL.'),
         )
       }
       if (response.statusCode === 401 || response.statusCode === 403) {
         return Result.error(
-          new Error(
-            'Authentication failed. The webhook endpoint requires valid credentials.',
-          ),
+          new Error('Authentication failed. The webhook endpoint requires valid credentials.'),
         )
       }
       if (response.statusCode === 405) {
         return Result.error(
-          new Error(
-            'Method not allowed. The webhook endpoint does not accept POST requests.',
-          ),
+          new Error('Method not allowed. The webhook endpoint does not accept POST requests.'),
         )
       }
       if (response.statusCode === 429) {
-        return Result.error(
-          new Error('Rate limit exceeded. Please try again later.'),
-        )
+        return Result.error(new Error('Rate limit exceeded. Please try again later.'))
       }
       if (response.statusCode >= 500) {
         return Result.error(
@@ -94,18 +82,13 @@ export async function testWebhookEndpoint({
     // URL format issues
     if (response.error?.message?.includes('Invalid URL')) {
       return Result.error(
-        new Error(
-          'Invalid webhook URL format. Please provide a valid HTTP/HTTPS URL.',
-        ),
+        new Error('Invalid webhook URL format. Please provide a valid HTTP/HTTPS URL.'),
       )
     }
 
     // Fallback error
     return Result.error(
-      response.error ||
-        new Error(
-          'Failed to test webhook. Please check the URL and try again.',
-        ),
+      response.error || new Error('Failed to test webhook. Please check the URL and try again.'),
     )
   }
 

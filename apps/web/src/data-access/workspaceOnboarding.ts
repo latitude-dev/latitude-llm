@@ -4,7 +4,7 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
  * Get the current workspace onboarding status
  * If the onboarding status doesn't exist, it creates a new one
  */
-export async function getWorkspaceOnboardingStatus() {
+async function getWorkspaceOnboardingStatus() {
   const { workspace } = await getCurrentUserOrRedirect()
   if (!workspace) {
     throw new Error('No workspace found')

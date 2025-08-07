@@ -1,4 +1,4 @@
-import { LanguageModelUsage } from 'ai'
+import type { LanguageModelUsage } from 'ai'
 
 import { Providers } from '../../../browser'
 import { GROQ_MODELS } from './groq'
@@ -84,9 +84,7 @@ function computeCost({
 
     const tierStart = cost.tokensRangeStart ?? 0
     const tierEnd =
-      i + 1 < sortedTiers.length
-        ? (sortedTiers[i + 1]?.tokensRangeStart ?? Infinity)
-        : Infinity
+      i + 1 < sortedTiers.length ? (sortedTiers[i + 1]?.tokensRangeStart ?? Infinity) : Infinity
 
     // If the total tokens are less than or equal to the start of this tier,
     // then no tokens fall into this tier.
@@ -124,8 +122,8 @@ export function estimateCost({
   const costSpec = getCostPer1M({ provider, model }).cost
 
   // Guard against NaN token counts.
-  const validInputTokens = isNaN(promptTokens) ? 0 : promptTokens
-  const validOutputTokens = isNaN(completionTokens) ? 0 : completionTokens
+  const validInputTokens = Number.isNaN(promptTokens) ? 0 : promptTokens
+  const validOutputTokens = Number.isNaN(completionTokens) ? 0 : completionTokens
 
   const inputCost = computeCost({
     costSpec,

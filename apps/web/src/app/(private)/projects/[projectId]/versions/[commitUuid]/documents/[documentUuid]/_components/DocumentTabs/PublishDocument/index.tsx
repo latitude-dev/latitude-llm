@@ -1,5 +1,5 @@
 import usePublishedDocument from '$/stores/publishedDocument'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CopyButton } from '@latitude-data/web-ui/atoms/CopyButton'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
@@ -47,14 +47,9 @@ function UnpublishedDocumentSettings({
     <div className='flex flex-col items-center w-full gap-4 p-4'>
       <div className='flex flex-col w-full items-center'>
         <Text.H5B>Share to the web</Text.H5B>
-        <Text.H5 color='foregroundMuted'>
-          Create a public chatbot with Latitude
-        </Text.H5>
+        <Text.H5 color='foregroundMuted'>Create a public chatbot with Latitude</Text.H5>
       </div>
-      <PublishedDocumentPreview
-        document={document}
-        publishedData={publishedData}
-      />
+      <PublishedDocumentPreview document={document} publishedData={publishedData} />
       <div className='max-w-[300px] w-full'>
         <Button
           fullWidth
@@ -93,9 +88,7 @@ function PublishedDocumentSettings({
   const [title, setTitle] = useState<string | undefined>()
   const [description, setDescription] = useState<string | undefined>()
   const [canChat, setCanChat] = useState<boolean | undefined>()
-  const [displayPromptOnly, setdisplayPromptOnly] = useState<
-    boolean | undefined
-  >()
+  const [displayPromptOnly, setdisplayPromptOnly] = useState<boolean | undefined>()
 
   const hasEdits =
     title !== undefined ||
@@ -174,11 +167,7 @@ function PublishedDocumentSettings({
         </Button>
         <div className='flex flex-row w-full items-center justify-end gap-4'>
           <Link href={url} target='_blank'>
-            <Button
-              variant='outline'
-              fancy
-              iconProps={{ name: 'externalLink' }}
-            >
+            <Button variant='outline' fancy iconProps={{ name: 'externalLink' }}>
               Open
             </Button>
           </Link>
@@ -215,10 +204,7 @@ export function PublishDocumentButton({
         <Button fancy variant='outline'>
           <div className='flex flex-row items-center gap-2'>
             <Text.H5>Share</Text.H5>
-            <DotIndicator
-              variant={isPublished ? 'success' : 'muted'}
-              pulse={isPublished}
-            />
+            <DotIndicator variant={isPublished ? 'success' : 'muted'} pulse={isPublished} />
           </div>
         </Button>
       </Popover.Trigger>
@@ -228,15 +214,9 @@ export function PublishDocumentButton({
           allowOnly='live'
         />
         {isPublished ? (
-          <PublishedDocumentSettings
-            document={document}
-            projectId={projectId}
-          />
+          <PublishedDocumentSettings document={document} projectId={projectId} />
         ) : (
-          <UnpublishedDocumentSettings
-            document={document}
-            projectId={projectId}
-          />
+          <UnpublishedDocumentSettings document={document} projectId={projectId} />
         )}
       </Popover.Content>
     </Popover.Root>

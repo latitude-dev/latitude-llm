@@ -1,7 +1,7 @@
 import * as k8s from '@kubernetes/client-node'
 import { eq } from 'drizzle-orm'
 import yaml from 'js-yaml'
-import { McpServer } from '../../browser'
+import type { McpServer } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { mcpServers } from '../../schema/models/mcpServers'
@@ -14,10 +14,7 @@ import { getDecryptedEnvironmentVariables } from './getDecryptedEnvironmentVaria
  * Using the stored YAML manifest from the database, this function
  * identifies and deletes all resources associated with the application.
  */
-export async function destroyMcpServer(
-  mcpServer: McpServer,
-  transaction = new Transaction(),
-) {
+export async function destroyMcpServer(mcpServer: McpServer, transaction = new Transaction()) {
   try {
     const client = getK8sClient()
     const kc = client.kc
@@ -34,26 +31,20 @@ export async function destroyMcpServer(
         } catch (resourceError: any) {
           if (resourceError.response?.statusCode !== 404) {
             return Result.error(
-              resourceError instanceof Error
-                ? resourceError
-                : new Error(String(resourceError)),
+              resourceError instanceof Error ? resourceError : new Error(String(resourceError)),
             )
           }
         }
       }
     } catch (manifestError) {
       return Result.error(
-        manifestError instanceof Error
-          ? manifestError
-          : new Error(String(manifestError)),
+        manifestError instanceof Error ? manifestError : new Error(String(manifestError)),
       )
     }
 
     // Delete associated secrets
     try {
-      const environmentVariables = getDecryptedEnvironmentVariables(
-        mcpServer.environmentVariables,
-      )
+      const environmentVariables = getDecryptedEnvironmentVariables(mcpServer.environmentVariables)
 
       if (Object.keys(environmentVariables).length > 0) {
         const secretsList = await coreV1Api.listNamespacedSecret({
@@ -87,9 +78,7 @@ export async function destroyMcpServer(
       }
     } catch (secretError) {
       return Result.error(
-        secretError instanceof Error
-          ? secretError
-          : new Error(String(secretError)),
+        secretError instanceof Error ? secretError : new Error(String(secretError)),
       )
     }
 
@@ -103,8 +92,6 @@ export async function destroyMcpServer(
       return Result.ok(k8sApp)
     })
   } catch (error) {
-    return Result.error(
-      error instanceof Error ? error : new Error(String(error)),
-    )
+    return Result.error(error instanceof Error ? error : new Error(String(error)))
   }
 }

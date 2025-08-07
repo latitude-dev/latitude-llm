@@ -1,4 +1,4 @@
-import { DocumentType, ModifiedDocumentType } from '@latitude-data/core/browser'
+import { type DocumentType, ModifiedDocumentType } from '@latitude-data/core/browser'
 import { useMemo } from 'react'
 
 export type SidebarDocument = {
@@ -92,9 +92,7 @@ function getChangeType(
 ): ModifiedDocumentType | undefined {
   if (!liveDocuments) return undefined
 
-  const liveDoc = liveDocuments.find(
-    (liveDoc) => liveDoc.documentUuid === doc.documentUuid,
-  )
+  const liveDoc = liveDocuments.find((liveDoc) => liveDoc.documentUuid === doc.documentUuid)
 
   if (!liveDoc) return ModifiedDocumentType.Created
   if (liveDoc.path !== doc.path) return ModifiedDocumentType.UpdatedPath

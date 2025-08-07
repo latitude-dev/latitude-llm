@@ -1,15 +1,15 @@
 import Ajv from 'ajv'
 import {
-  EvaluationType,
-  RuleEvaluationMetric,
+  type EvaluationType,
+  type RuleEvaluationMetric,
   RuleEvaluationSchemaValidationSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {
-  EvaluationMetricRunArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricRunArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 
@@ -22,10 +22,7 @@ export const RuleEvaluationSchemaValidationSpecification = {
 async function validate(
   {
     configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.SchemaValidation
-  >,
+  }: EvaluationMetricValidateArgs<EvaluationType.Rule, RuleEvaluationMetric.SchemaValidation>,
   _ = database,
 ) {
   configuration.schema = configuration.schema.trim()
@@ -46,9 +43,7 @@ async function validate(
 
           ajv.compile(JSON.parse(configuration.schema))
           if (ajv.errors?.length) {
-            return Result.error(
-              new BadRequestError(ajv.errors.map((e) => e.message).join('. ')),
-            )
+            return Result.error(new BadRequestError(ajv.errors.map((e) => e.message).join('. ')))
           }
         }
         break
@@ -74,10 +69,7 @@ async function run(
   {
     evaluation,
     actualOutput,
-  }: EvaluationMetricRunArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.SchemaValidation
-  >,
+  }: EvaluationMetricRunArgs<EvaluationType.Rule, RuleEvaluationMetric.SchemaValidation>,
   _ = database,
 ) {
   const metadata = {
@@ -109,7 +101,7 @@ async function run(
           }
 
           score = 1
-        } catch (error) {
+        } catch (_error) {
           score = 0
         }
       }

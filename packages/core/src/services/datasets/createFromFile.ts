@@ -1,11 +1,11 @@
-import path from 'path'
+import path from 'node:path'
 import slugify from '@sindresorhus/slugify'
 
-import { User, Workspace } from '../../browser'
+import type { User, Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
-import { diskFactory, DiskWrapper } from '../../lib/disk'
-import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
+import { diskFactory, type DiskWrapper } from '../../lib/disk'
+import { type HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 import { createDataset, getCsvAndBuildColumns } from './create'
 import Transaction from '../../lib/Transaction'
 

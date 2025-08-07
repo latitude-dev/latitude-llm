@@ -86,19 +86,16 @@ describe('setupService', () => {
     expect(createdApiKey).toBeDefined()
 
     // Check provider API key creation when ENV variables are present
-    const createdProviderApiKey =
-      await database.query.providerApiKeys.findFirst({
-        where: utils.eq(providerApiKeys.workspaceId, workspace.id),
-      })
+    const createdProviderApiKey = await database.query.providerApiKeys.findFirst({
+      where: utils.eq(providerApiKeys.workspaceId, workspace.id),
+    })
     expect(createdProviderApiKey).toBeDefined()
     expect(createdProviderApiKey?.authorId).toBe(user.id)
 
     // Check if onboarding evaluation was created
-    const createdEvaluation = await database.query.evaluationVersions.findFirst(
-      {
-        where: utils.eq(evaluations.workspaceId, workspace.id),
-      },
-    )
+    const createdEvaluation = await database.query.evaluationVersions.findFirst({
+      where: utils.eq(evaluations.workspaceId, workspace.id),
+    })
     expect(createdEvaluation).toBeDefined()
   })
 
@@ -168,11 +165,9 @@ describe('setupService', () => {
     expect(importedDocuments[0]!.document_versions.content).toEqual(prompt)
 
     // Check if onboarding evaluation was created
-    const createdEvaluation = await database.query.evaluationVersions.findFirst(
-      {
-        where: utils.eq(evaluations.workspaceId, workspace.id),
-      },
-    )
+    const createdEvaluation = await database.query.evaluationVersions.findFirst({
+      where: utils.eq(evaluations.workspaceId, workspace.id),
+    })
     expect(createdEvaluation).toBeDefined()
   })
 })

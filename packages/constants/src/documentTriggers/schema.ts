@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { DocumentTriggerParameters, DocumentTriggerType } from '..'
+import { DocumentTriggerParameters, type DocumentTriggerType } from '..'
 
 // ────────────────────────────────────────────────────────────────────────────────
 // EMAIL TRIGGER
@@ -60,7 +60,9 @@ export const scheduledTriggerEventPayloadSchema = z.object({
 })
 
 export type ScheduledTriggerConfiguration = z.infer<typeof scheduledTriggerConfigurationSchema> // prettier-ignore
-export type ScheduledTriggerDeploymentSettings = z.infer<typeof scheduledTriggerDeploymentSettingsSchema> // prettier-ignore
+export type ScheduledTriggerDeploymentSettings = z.infer<
+  typeof scheduledTriggerDeploymentSettingsSchema
+> // prettier-ignore
 export type ScheduledTriggerEventPayload = z.infer<typeof scheduledTriggerEventPayloadSchema> // prettier-ignore
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -78,13 +80,12 @@ export const integrationTriggerDeploymentSettingsSchema = z.object({
   triggerId: z.string(),
 })
 
-export const integrationTriggerEventPayloadSchema = z.record(
-  z.string(),
-  z.unknown(),
-)
+export const integrationTriggerEventPayloadSchema = z.record(z.string(), z.unknown())
 
 export type IntegrationTriggerConfiguration = z.infer<typeof integrationTriggerConfigurationSchema> // prettier-ignore
-export type IntegrationTriggerDeploymentSettings = z.infer<typeof integrationTriggerDeploymentSettingsSchema> // prettier-ignore
+export type IntegrationTriggerDeploymentSettings = z.infer<
+  typeof integrationTriggerDeploymentSettingsSchema
+> // prettier-ignore
 export type IntegrationTriggerEventPayload = z.infer<typeof integrationTriggerEventPayloadSchema> // prettier-ignore
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -99,21 +100,30 @@ export const documentTriggerConfigurationSchema = z.union([
 
 // prettier-ignore
 export type DocumentTriggerConfiguration<T extends DocumentTriggerType> =
-  T extends DocumentTriggerType.Email ? EmailTriggerConfiguration :
-  T extends DocumentTriggerType.Scheduled ? ScheduledTriggerConfiguration :
-  T extends DocumentTriggerType.Integration ? IntegrationTriggerConfiguration :
-  never
+  T extends DocumentTriggerType.Email
+    ? EmailTriggerConfiguration
+    : T extends DocumentTriggerType.Scheduled
+      ? ScheduledTriggerConfiguration
+      : T extends DocumentTriggerType.Integration
+        ? IntegrationTriggerConfiguration
+        : never
 
 // prettier-ignore
 export type DocumentTriggerDeploymentSettings<T extends DocumentTriggerType> =
-  T extends DocumentTriggerType.Email ? EmailTriggerDeploymentSettings :
-  T extends DocumentTriggerType.Scheduled ? ScheduledTriggerDeploymentSettings :
-  T extends DocumentTriggerType.Integration ? IntegrationTriggerDeploymentSettings :
-  never
+  T extends DocumentTriggerType.Email
+    ? EmailTriggerDeploymentSettings
+    : T extends DocumentTriggerType.Scheduled
+      ? ScheduledTriggerDeploymentSettings
+      : T extends DocumentTriggerType.Integration
+        ? IntegrationTriggerDeploymentSettings
+        : never
 
 // prettier-ignore
 export type DocumentTriggerEventPayload<T extends DocumentTriggerType> =
-  T extends DocumentTriggerType.Email ? EmailTriggerEventPayload :
-  T extends DocumentTriggerType.Scheduled ? ScheduledTriggerEventPayload :
-  T extends DocumentTriggerType.Integration ? IntegrationTriggerEventPayload :
-  never
+  T extends DocumentTriggerType.Email
+    ? EmailTriggerEventPayload
+    : T extends DocumentTriggerType.Scheduled
+      ? ScheduledTriggerEventPayload
+      : T extends DocumentTriggerType.Integration
+        ? IntegrationTriggerEventPayload
+        : never

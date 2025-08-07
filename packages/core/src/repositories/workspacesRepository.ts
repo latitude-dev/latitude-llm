@@ -1,6 +1,6 @@
 import { eq, getTableColumns, sql } from 'drizzle-orm'
 
-import { Database, database } from '../client'
+import { type Database, database } from '../client'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { memberships, subscriptions, workspaces } from '../schema'
@@ -8,9 +8,7 @@ import { memberships, subscriptions, workspaces } from '../schema'
 export const workspacesDtoColumns = {
   ...getTableColumns(workspaces),
   currentSubscription: {
-    id: sql<number>`${subscriptions.id}`
-      .mapWith(Number)
-      .as('currentSubscriptionId'),
+    id: sql<number>`${subscriptions.id}`.mapWith(Number).as('currentSubscriptionId'),
     plan: subscriptions.plan,
     workspaceId: subscriptions.workspaceId,
     updatedAt: sql<Date>`${subscriptions.updatedAt}`
@@ -36,10 +34,7 @@ export class WorkspacesRepository {
       .select(workspacesDtoColumns)
       .from(workspaces)
       .innerJoin(memberships, eq(memberships.workspaceId, workspaces.id))
-      .innerJoin(
-        subscriptions,
-        eq(subscriptions.id, workspaces.currentSubscriptionId),
-      )
+      .innerJoin(subscriptions, eq(subscriptions.id, workspaces.currentSubscriptionId))
       .where(eq(memberships.userId, this.userId))
       .as('workspacesScope')
   }

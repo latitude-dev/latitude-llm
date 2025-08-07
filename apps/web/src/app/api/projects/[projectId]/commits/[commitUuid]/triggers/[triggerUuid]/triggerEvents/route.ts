@@ -1,7 +1,7 @@
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import {
   CommitsRepository,
   DocumentTriggersRepository,
@@ -37,9 +37,7 @@ export const GET = errorHandler(
         .then((r) => r.unwrap())
 
       // Get trigger events for this specific trigger
-      const triggerEventsScope = new DocumentTriggerEventsRepository(
-        workspace.id,
-      )
+      const triggerEventsScope = new DocumentTriggerEventsRepository(workspace.id)
       const triggerEvents = await triggerEventsScope
         .getTriggerEventsInTrigger({ triggerUuid, commit })
         .then((r) => r.unwrap())

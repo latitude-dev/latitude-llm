@@ -19,12 +19,7 @@ export default function DestroyProviderApiKey({
   const { providerApiKeyId } = use(params)
   const navigate = useNavigate()
 
-  const {
-    data: apiKeys,
-    isLoading: isLoadingApiKey,
-    destroy,
-    isDestroying,
-  } = useProviderApiKeys()
+  const { data: apiKeys, isLoading: isLoadingApiKey, destroy, isDestroying } = useProviderApiKeys()
   const apiKey = useMemo(
     () => apiKeys.find((p) => p.id === Number(providerApiKeyId)),
     [apiKeys, providerApiKeyId],
@@ -76,9 +71,7 @@ export default function DestroyProviderApiKey({
                 : baseUrl.root
 
               const basePath = `${item.projectName} / ${item.documentPath.split('/').pop()}`
-              const path = item.evaluationUuid
-                ? `${basePath} / ${item.evaluationName}`
-                : basePath
+              const path = item.evaluationUuid ? `${basePath} / ${item.evaluationName}` : basePath
 
               const icon = item.evaluationUuid ? 'listCheck' : 'file'
 

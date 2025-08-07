@@ -1,13 +1,13 @@
 import {
-  ChainStepObjectResponse,
+  type ChainStepObjectResponse,
   LogSources,
-  ToolDefinition,
+  type ToolDefinition,
 } from '@latitude-data/constants'
-import { ToolExecutionOptions } from 'ai'
+import type { ToolExecutionOptions } from 'ai'
 import { publisher } from '../../../events/publisher'
 import { getCopilotDataForGenerateToolResponses } from '../../../jobs/job-definitions/documents/runDocumentAtCommitWithAutoToolResponses/getCopilotData'
 import { runDocumentAtCommit } from '../../../services/commits'
-import { TelemetryContext } from '../../../telemetry'
+import type { TelemetryContext } from '../../../telemetry'
 import { ChainError, RunErrorCodes } from '../../errors'
 
 const TIMEOUT_CLIENT_TOOL_CALL = 5 * 60 * 1000 // 5 minutes
@@ -21,15 +21,9 @@ export type ToolHandlerProps = {
 
 export type ToolHandler = (props: ToolHandlerProps) => Promise<any>
 
-export async function mockClientToolResult({
-  toolDefinition,
-  context,
-  args,
-}: ToolHandlerProps) {
+export async function mockClientToolResult({ toolDefinition, context, args }: ToolHandlerProps) {
   try {
-    const copilot = await getCopilotDataForGenerateToolResponses().then((r) =>
-      r.unwrap(),
-    )
+    const copilot = await getCopilotDataForGenerateToolResponses().then((r) => r.unwrap())
 
     const { response } = await runDocumentAtCommit({
       context,
@@ -79,8 +73,7 @@ export function awaitClientToolResult({ toolCall }: ToolHandlerProps) {
       if (isError === 'true') {
         const error = new ChainError({
           code: RunErrorCodes.AIRunError,
-          message:
-            typeof result === 'string' ? result : 'Tool execution failed',
+          message: typeof result === 'string' ? result : 'Tool execution failed',
         })
 
         reject(error)

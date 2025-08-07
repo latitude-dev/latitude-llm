@@ -1,9 +1,9 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { ProjectsRepository } from '@latitude-data/core/repositories'
 import { computeProjectStats } from '@latitude-data/core/services/projects/computeProjectStats'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 const paramsSchema = z.object({
@@ -29,9 +29,7 @@ export const GET = errorHandler(
       })
 
       const projectsScope = new ProjectsRepository(workspace.id)
-      const project = await projectsScope
-        .find(projectId)
-        .then((r) => r.unwrap())
+      const project = await projectsScope.find(projectId).then((r) => r.unwrap())
 
       const result = await computeProjectStats({
         workspaceId: project.workspaceId,

@@ -4,25 +4,17 @@ import { database } from '../../client'
 import { unsafelyFindWorkspace } from '../../data-access'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '../../repositories'
 import { publishedDocuments } from '../../schema'
 
 const NotFound = Result.error(
-  new NotFoundError(
-    'Prompt not found, check with the person that shared it to you',
-  ),
+  new NotFoundError('Prompt not found, check with the person that shared it to you'),
 )
 
 async function findByUuid(uuid: string, db = database) {
   try {
     const shared = await db.query.publishedDocuments.findFirst({
-      where: and(
-        eq(publishedDocuments.uuid, uuid),
-        eq(publishedDocuments.isPublished, true),
-      ),
+      where: and(eq(publishedDocuments.uuid, uuid), eq(publishedDocuments.isPublished, true)),
     })
     return Result.ok(shared)
   } catch {

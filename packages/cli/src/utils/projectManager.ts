@@ -1,6 +1,6 @@
-import * as fs from 'fs/promises'
-import * as path from 'path'
-import { Latitude } from '@latitude-data/sdk'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
+import type { Latitude } from '@latitude-data/sdk'
 
 /**
  * Manages project operations for the Latitude CLI
@@ -14,7 +14,7 @@ export class ProjectManager {
       const packageJsonPath = path.join(projectPath, 'package.json')
       await fs.access(packageJsonPath)
       return true
-    } catch (error) {
+    } catch (_error) {
       return false
     }
   }
@@ -33,9 +33,7 @@ export class ProjectManager {
       const { project, version } = await client.projects.create(projectName)
       return { projectId: project.id, versionUuid: version.uuid }
     } catch (error: any) {
-      throw new Error(
-        `Failed to create project: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to create project: ${error.message || String(error)}`)
     }
   }
 
@@ -45,20 +43,14 @@ export class ProjectManager {
    * @param projectId The project ID
    * @param versionUuid The version UUID to fetch (defaults to 'live')
    */
-  async fetchAllPrompts(
-    client: Latitude,
-    projectId: number,
-    versionUuid = 'live',
-  ) {
+  async fetchAllPrompts(client: Latitude, projectId: number, versionUuid = 'live') {
     try {
       return await client.prompts.getAll({
         projectId,
         versionUuid,
       })
     } catch (error: any) {
-      throw new Error(
-        `Failed to fetch prompts: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to fetch prompts: ${error.message || String(error)}`)
     }
   }
 
@@ -68,17 +60,11 @@ export class ProjectManager {
    * @param projectId The project ID
    * @param versionUuid The version UUID to fetch (defaults to 'live')
    */
-  async getVersion(
-    client: Latitude,
-    projectId: number,
-    versionUuid: string = 'live',
-  ) {
+  async getVersion(client: Latitude, projectId: number, versionUuid: string = 'live') {
     try {
       return await client.versions.get(projectId, versionUuid)
     } catch (error: any) {
-      throw new Error(
-        `Failed to get version: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to get version: ${error.message || String(error)}`)
     }
   }
 
@@ -91,9 +77,7 @@ export class ProjectManager {
     try {
       return await client.versions.create(name, { projectId })
     } catch (error: any) {
-      throw new Error(
-        `Failed to create version: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to create version: ${error.message || String(error)}`)
     }
   }
 }

@@ -1,7 +1,7 @@
 import * as k8s from '@kubernetes/client-node'
 import { eq } from 'drizzle-orm'
 import yaml from 'js-yaml'
-import { McpServer } from '../../browser'
+import type { McpServer } from '../../browser'
 import { decrypt } from '../../lib/encryption'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -41,9 +41,7 @@ export async function updateMcpServerResources(
         environmentVariables = JSON.parse(decryptedString)
       } catch (error) {
         console.error('Failed to decrypt environment variables:', error)
-        return Result.error(
-          new Error('Failed to decrypt environment variables'),
-        )
+        return Result.error(new Error('Failed to decrypt environment variables'))
       }
     }
 
@@ -89,17 +87,11 @@ export async function updateMcpServerResources(
               }
             }
           } catch (secretError: any) {
-            return Result.error(
-              new Error(`Failed to update Secret: ${secretError.message}`),
-            )
+            return Result.error(new Error(`Failed to update Secret: ${secretError.message}`))
           }
         }
       } catch (secretError: any) {
-        return Result.error(
-          new Error(
-            `Failed to process Secret manifest: ${secretError.message}`,
-          ),
-        )
+        return Result.error(new Error(`Failed to process Secret manifest: ${secretError.message}`))
       }
     }
 
@@ -121,18 +113,14 @@ export async function updateMcpServerResources(
                 const kind = resource.kind || 'unknown'
                 const name = resource.metadata?.name || 'unnamed'
                 return Result.error(
-                  new Error(
-                    `Failed to patch ${kind}/${name}: ${patchError.message}`,
-                  ),
+                  new Error(`Failed to patch ${kind}/${name}: ${patchError.message}`),
                 )
               }
             }
           } catch (error: any) {
             const kind = resource.kind || 'unknown'
             const name = resource.metadata?.name || 'unnamed'
-            return Result.error(
-              new Error(`Failed to update ${kind}/${name}: ${error.message}`),
-            )
+            return Result.error(new Error(`Failed to update ${kind}/${name}: ${error.message}`))
           }
         }),
       )
@@ -140,12 +128,8 @@ export async function updateMcpServerResources(
       // Check if any operations failed
       const failures = applyResults.filter((result) => !result.ok)
       if (failures.length > 0) {
-        const errorMessages = failures
-          .map((failure) => failure.error!.message)
-          .join('; ')
-        return Result.error(
-          new Error(`Failed to apply one or more resources: ${errorMessages}`),
-        )
+        const errorMessages = failures.map((failure) => failure.error!.message).join('; ')
+        return Result.error(new Error(`Failed to apply one or more resources: ${errorMessages}`))
       }
 
       return transaction.call(async (tx) => {
@@ -161,13 +145,9 @@ export async function updateMcpServerResources(
         return Result.ok(result[0]!)
       })
     } catch (manifestError: any) {
-      return Result.error(
-        new Error(`Failed to apply manifest: ${manifestError.message}`),
-      )
+      return Result.error(new Error(`Failed to apply manifest: ${manifestError.message}`))
     }
   } catch (error) {
-    return Result.error(
-      error instanceof Error ? error : new Error(String(error)),
-    )
+    return Result.error(error instanceof Error ? error : new Error(String(error)))
   }
 }

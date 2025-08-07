@@ -75,10 +75,8 @@ export const VERTEX_GOOGLE_MODELS = createModelSpec({
     if (model === 'gemini-2.5-pro') return 'gemini-2.5-pro'
     if (model === 'gemini-2.5-flash') return 'gemini-2.5-flash'
     if (model === 'gemini-2.5-flash-lite') return 'gemini-2.5-flash-lite'
-    if (model === 'gemini-2.5-pro-preview-03-25')
-      return 'gemini-2.5-pro-preview-03-25'
-    if (model === 'gemini-2.5-flash-preview-04-17')
-      return 'gemini-2.5-flash-preview-04-17'
+    if (model === 'gemini-2.5-pro-preview-03-25') return 'gemini-2.5-pro-preview-03-25'
+    if (model === 'gemini-2.5-flash-preview-04-17') return 'gemini-2.5-flash-preview-04-17'
     if (model === 'gemini-2.5-pro-exp-03-25') return 'gemini-2.5-pro-exp-03-25'
     if (model === 'imagen-3') return 'imagen-3'
     if (model === 'veo-2') return 'veo-2'
@@ -95,8 +93,7 @@ export const VERTEX_GOOGLE_MODELS = createModelSpec({
       return 'gemini-2.0-flash-thinking-exp'
     }
     if (model.startsWith('gemini-2.0-pro-exp')) return 'gemini-2.0-pro-exp'
-    if (model.startsWith('gemini-2.0-flash-lite-'))
-      return 'gemini-2.0-flash-lite'
+    if (model.startsWith('gemini-2.0-flash-lite-')) return 'gemini-2.0-flash-lite'
     if (model.startsWith('gemini-2.0-flash-')) return 'gemini-2.0-flash'
 
     if (model.startsWith('gemini-1.5-pro-')) return 'gemini-1.5-pro'

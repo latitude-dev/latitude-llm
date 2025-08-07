@@ -1,24 +1,14 @@
-import {
-  DocumentTriggerType,
-  EMAIL_TRIGGER_DOMAIN,
-} from '@latitude-data/constants'
-import { PromptLFile } from 'promptl-ai'
-import {
-  DocumentTrigger,
-  DocumentTriggerEvent,
-  Workspace,
-} from '../../../../browser'
+import { DocumentTriggerType, EMAIL_TRIGGER_DOMAIN } from '@latitude-data/constants'
+import type { PromptLFile } from 'promptl-ai'
+import type { DocumentTrigger, DocumentTriggerEvent, Workspace } from '../../../../browser'
 import { database } from '../../../../client'
 import { unsafelyFindWorkspaceAndProjectFromDocumentUuid } from '../../../../data-access'
-import { BadRequestError, LatitudeError } from '../../../../lib/errors'
+import { BadRequestError, type LatitudeError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'
-import { PromisedResult } from '../../../../lib/Transaction'
-import {
-  CommitsRepository,
-  DocumentTriggersRepository,
-} from '../../../../repositories'
+import type { PromisedResult } from '../../../../lib/Transaction'
+import { CommitsRepository, DocumentTriggersRepository } from '../../../../repositories'
 import { uploadFile } from '../../../files'
-import {
+import type {
   EmailTriggerConfiguration,
   EmailTriggerEventPayload,
 } from '@latitude-data/constants/documentTriggers'
@@ -99,19 +89,15 @@ export async function registerEmailTriggerEvent(
     return Result.nil()
   }
 
-  const findResult = await unsafelyFindWorkspaceAndProjectFromDocumentUuid(
-    documentUuid,
-    db,
-  )
+  const findResult = await unsafelyFindWorkspaceAndProjectFromDocumentUuid(documentUuid, db)
   if (findResult.error) return Result.nil() // Filter out emails without existing destination
   const { workspace, project } = findResult.unwrap()
 
   const documentTriggerScope = new DocumentTriggersRepository(workspace.id, db)
 
-  const documentTriggersResult =
-    await documentTriggerScope.getTriggersInDocument({
-      documentUuid,
-    })
+  const documentTriggersResult = await documentTriggerScope.getTriggersInDocument({
+    documentUuid,
+  })
   if (documentTriggersResult.error) return Result.nil()
   const documentTriggers = documentTriggersResult.unwrap()
   const emailTriggers = documentTriggers.filter(

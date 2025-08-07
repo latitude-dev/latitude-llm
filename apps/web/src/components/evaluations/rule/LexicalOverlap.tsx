@@ -1,17 +1,13 @@
 import {
-  EvaluationType,
+  type EvaluationType,
   RuleEvaluationLexicalOverlapSpecification,
-  RuleEvaluationMetric,
+  type RuleEvaluationMetric,
 } from '@latitude-data/constants'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 
 const specification = RuleEvaluationLexicalOverlapSpecification
 export default {
@@ -22,21 +18,17 @@ export default {
   chartConfiguration: chartConfiguration,
 }
 
-const ALGORITHM_OPTIONS =
-  specification.configuration.shape.algorithm.options.map((option) => ({
-    label: option.toUpperCase().split('_').join(' '),
-    value: option,
-  }))
+const ALGORITHM_OPTIONS = specification.configuration.shape.algorithm.options.map((option) => ({
+  label: option.toUpperCase().split('_').join(' '),
+  value: option,
+}))
 
 function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
   errors,
   disabled,
-}: ConfigurationFormProps<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.LexicalOverlap
->) {
+}: ConfigurationFormProps<EvaluationType.Rule, RuleEvaluationMetric.LexicalOverlap>) {
   return (
     <>
       <Select
@@ -46,10 +38,8 @@ function ConfigurationSimpleForm({
         description='How to measure overlap'
         placeholder='Select an algorithm'
         options={ALGORITHM_OPTIONS}
-        onChange={(value) =>
-          setConfiguration({ ...configuration, algorithm: value })
-        }
-        errors={errors?.['algorithm']}
+        onChange={(value) => setConfiguration({ ...configuration, algorithm: value })}
+        errors={errors?.algorithm}
         disabled={disabled}
         required
       />
@@ -64,10 +54,8 @@ function ConfigurationSimpleForm({
           placeholder='No minimum'
           min={0}
           max={100}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minOverlap: value })
-          }
-          errors={errors?.['minOverlap']}
+          onChange={(value) => setConfiguration({ ...configuration, minOverlap: value })}
+          errors={errors?.minOverlap}
           defaultAppearance
           className='w-full'
           disabled={disabled}
@@ -80,10 +68,8 @@ function ConfigurationSimpleForm({
           placeholder='No maximum'
           min={0}
           max={100}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxOverlap: value })
-          }
-          errors={errors?.['maxOverlap']}
+          onChange={(value) => setConfiguration({ ...configuration, maxOverlap: value })}
+          errors={errors?.maxOverlap}
           defaultAppearance
           className='w-full'
           disabled={disabled}
@@ -102,10 +88,7 @@ function ResultBadge({
 
 function chartConfiguration({
   evaluation,
-}: ChartConfigurationArgs<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.LexicalOverlap
->) {
+}: ChartConfigurationArgs<EvaluationType.Rule, RuleEvaluationMetric.LexicalOverlap>) {
   return {
     min: 0,
     max: 100,

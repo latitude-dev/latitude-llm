@@ -1,11 +1,11 @@
 import { IntegrationType } from '@latitude-data/constants'
 import type { IntegrationDto, User, Workspace } from '../../browser'
 import { BadRequestError } from '../../lib/errors'
-import { ErrorResult, Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
+import { type ErrorResult, Result } from '../../lib/Result'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
 import { integrations } from '../../schema'
 import { deployMcpServer } from '../mcpServers/deployService'
-import {
+import type {
   ExternalMcpIntegrationConfiguration,
   HostedMcpIntegrationConfiguration,
   HostedMcpIntegrationConfigurationForm,
@@ -19,14 +19,13 @@ type ConfigurationFormTypeMap = {
   [K in IntegrationType]: K extends IntegrationType.ExternalMCP
     ? ExternalMcpIntegrationConfiguration
     : K extends IntegrationType.Pipedream
-      ?
-          | PipedreamIntegrationConfiguration
-          | UnconfiguredPipedreamIntegrationConfiguration
+      ? PipedreamIntegrationConfiguration | UnconfiguredPipedreamIntegrationConfiguration
       : HostedMcpIntegrationConfigurationForm
 }
 
-type ConfigurationFormType<T extends IntegrationType> =
-  T extends keyof ConfigurationFormTypeMap ? ConfigurationFormTypeMap[T] : never
+type ConfigurationFormType<T extends IntegrationType> = T extends keyof ConfigurationFormTypeMap
+  ? ConfigurationFormTypeMap[T]
+  : never
 
 async function obtainIntegrationComponents<T extends IntegrationType>({
   type,
@@ -70,9 +69,7 @@ export async function createIntegration<p extends IntegrationType>(
   const { workspace, name, type, configuration, author } = params
 
   if (type === IntegrationType.Latitude) {
-    return Result.error(
-      new BadRequestError('Cannot create a Latitude integration'),
-    )
+    return Result.error(new BadRequestError('Cannot create a Latitude integration'))
   }
 
   // For MCPServer type, first deploy the server

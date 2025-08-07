@@ -1,16 +1,16 @@
 import { distance } from 'fastest-levenshtein'
 import * as rouge from 'js-rouge'
 import {
-  EvaluationType,
-  RuleEvaluationMetric,
+  type EvaluationType,
+  type RuleEvaluationMetric,
   RuleEvaluationLexicalOverlapSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {
-  EvaluationMetricRunArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricRunArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 
@@ -23,28 +23,21 @@ export const RuleEvaluationLexicalOverlapSpecification = {
 async function validate(
   {
     configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LexicalOverlap
-  >,
+  }: EvaluationMetricValidateArgs<EvaluationType.Rule, RuleEvaluationMetric.LexicalOverlap>,
   _ = database,
 ) {
   if (
     configuration.minOverlap !== undefined &&
     (configuration.minOverlap < 0 || configuration.minOverlap > 100)
   ) {
-    return Result.error(
-      new BadRequestError('Minimum overlap must be a number between 0 and 100'),
-    )
+    return Result.error(new BadRequestError('Minimum overlap must be a number between 0 and 100'))
   }
 
   if (
     configuration.maxOverlap !== undefined &&
     (configuration.maxOverlap < 0 || configuration.maxOverlap > 100)
   ) {
-    return Result.error(
-      new BadRequestError('Maximum overlap must be a number between 0 and 100'),
-    )
+    return Result.error(new BadRequestError('Maximum overlap must be a number between 0 and 100'))
   }
 
   if (
@@ -52,9 +45,7 @@ async function validate(
     configuration.maxOverlap !== undefined &&
     configuration.minOverlap >= configuration.maxOverlap
   ) {
-    return Result.error(
-      new BadRequestError('Minimum overlap must be less than maximum overlap'),
-    )
+    return Result.error(new BadRequestError('Minimum overlap must be less than maximum overlap'))
   }
 
   // Note: all settings are explicitly returned to ensure we don't
@@ -85,7 +76,6 @@ function longestCommonSubstring(actual: string, expected: string) {
         longestMatch = Math.max(longestMatch, current[j])
       } else current[j] = 0
     }
-
     // Note: Swapping current and previous rows without reallocation
     ;[previous, current] = [current, previous]
   }
@@ -99,10 +89,7 @@ async function run(
     actualOutput,
     expectedOutput,
     datasetLabel,
-  }: EvaluationMetricRunArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.LexicalOverlap
-  >,
+  }: EvaluationMetricRunArgs<EvaluationType.Rule, RuleEvaluationMetric.LexicalOverlap>,
   _ = database,
 ) {
   const metadata = {
@@ -121,10 +108,7 @@ async function run(
   switch (metadata.configuration.algorithm) {
     case 'substring':
       {
-        const longestMatch = longestCommonSubstring(
-          metadata.actualOutput,
-          metadata.expectedOutput,
-        )
+        const longestMatch = longestCommonSubstring(metadata.actualOutput, metadata.expectedOutput)
 
         score =
           metadata.expectedOutput.length > 0
@@ -137,10 +121,7 @@ async function run(
     case 'levenshtein_distance':
       {
         const edits = distance(metadata.actualOutput, metadata.expectedOutput)
-        const maxEdits = Math.max(
-          metadata.actualOutput.length,
-          metadata.expectedOutput.length,
-        )
+        const maxEdits = Math.max(metadata.actualOutput.length, metadata.expectedOutput.length)
 
         score = (1 - edits / maxEdits) * 100
       }

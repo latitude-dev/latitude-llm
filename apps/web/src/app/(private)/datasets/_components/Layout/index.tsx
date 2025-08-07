@@ -1,7 +1,7 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { Container } from '@latitude-data/web-ui/atoms/Container'
-import { ContainerSize } from '@latitude-data/web-ui/atoms/Container'
+import type { ContainerSize } from '@latitude-data/web-ui/atoms/Container'
 import { AppTabs } from '$/app/(private)/AppTabs'
 
 export default async function DatasetsList({

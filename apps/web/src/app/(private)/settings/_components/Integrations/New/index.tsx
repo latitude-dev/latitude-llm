@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useMemo, useRef, useState, FormEvent } from 'react'
+import { useCallback, useMemo, useRef, useState, type FormEvent } from 'react'
 
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -11,7 +11,7 @@ import useIntegrations from '$/stores/integrations'
 import { IntegrationType } from '@latitude-data/constants'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
-import {
+import type {
   IntegrationConfiguration,
   UnconfiguredPipedreamIntegrationConfiguration,
 } from '@latitude-data/core/services/integrations/helpers/schema'
@@ -51,9 +51,7 @@ export default function NewIntegration() {
     return errors.length ? errors : undefined
   }, [integrationName])
 
-  const [integrationType, setIntegrationType] = useState<IntegrationType>(
-    IntegrationType.Pipedream,
-  )
+  const [integrationType, setIntegrationType] = useState<IntegrationType>(IntegrationType.Pipedream)
 
   const [error, setError] = useState<Error | undefined>(undefined)
 
@@ -117,11 +115,7 @@ export default function NewIntegration() {
         </>
       }
     >
-      <form
-        id='createIntegrationForm'
-        onSubmit={handleSubmit}
-        className='flex flex-col gap-4'
-      >
+      <form id='createIntegrationForm' onSubmit={handleSubmit} className='flex flex-col gap-4'>
         <Input
           required
           type='text'
@@ -159,13 +153,7 @@ export default function NewIntegration() {
           <ExternalIntegrationConfiguration ref={configRef} />
         )}
 
-        {error && (
-          <Alert
-            variant='destructive'
-            title={error.name}
-            description={error.message}
-          />
-        )}
+        {error && <Alert variant='destructive' title={error.name} description={error.message} />}
       </form>
     </Modal>
   )

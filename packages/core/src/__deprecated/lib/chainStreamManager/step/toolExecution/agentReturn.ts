@@ -1,6 +1,6 @@
 import { Result } from '../../../../../lib/Result'
-import { PromisedResult } from '../../../../../lib/Transaction'
-import { ToolResponsesArgs } from './types'
+import type { PromisedResult } from '../../../../../lib/Transaction'
+import type { ToolResponsesArgs } from './types'
 
 export function getAgentReturnToolCallsResults({
   toolCalls,

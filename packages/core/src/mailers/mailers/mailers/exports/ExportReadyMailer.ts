@@ -1,20 +1,17 @@
 import { render } from '@react-email/components'
-import Mail from 'nodemailer/lib/mailer'
-import SMTPTransport from 'nodemailer/lib/smtp-transport'
+import type Mail from 'nodemailer/lib/mailer'
+import type SMTPTransport from 'nodemailer/lib/smtp-transport'
 
-import { TypedResult } from '../../../../lib/Result'
+import type { TypedResult } from '../../../../lib/Result'
 import Mailer from '../../Mailer'
-import { User } from '../../../../browser'
+import type { User } from '../../../../browser'
 import ExportReadyMail from '../../../emails/exports/ExportReadyMail'
 
 export class ExportReadyMailer extends Mailer {
   token: string
   user: User
 
-  constructor(
-    { token, user }: { token: string; user: User },
-    options: Mail.Options,
-  ) {
+  constructor({ token, user }: { token: string; user: User }, options: Mail.Options) {
     super(options)
 
     this.token = token
@@ -25,9 +22,7 @@ export class ExportReadyMailer extends Mailer {
     return this.sendMail({
       ...this.options,
       subject: 'Your export is ready!',
-      html: await render(
-        ExportReadyMail({ token: this.token, user: this.user }),
-      ),
+      html: await render(ExportReadyMail({ token: this.token, user: this.user })),
     })
   }
 }

@@ -2,28 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import {
-  Area,
-  Label,
-  AreaChart as RechartsAreaChart,
-  ReferenceLine,
-  XAxis,
-  YAxis,
-} from 'recharts'
-import {
-  NameType,
-  Payload,
-  ValueType,
-} from 'recharts/types/component/DefaultTooltipContent'
+import { Area, Label, AreaChart as RechartsAreaChart, ReferenceLine, XAxis, YAxis } from 'recharts'
+import type { NameType, Payload, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 
 import { Text } from '../../../atoms/Text'
-import { AreaChartConfig, CartesianDataItem } from '../types'
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '../../../atoms/Charts'
-import { CurveType } from 'recharts/types/shape/Curve'
+import type { AreaChartConfig, CartesianDataItem } from '../types'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../../../atoms/Charts'
+import type { CurveType } from 'recharts/types/shape/Curve'
 
 export function AreaChart({
   config: { curveType, ...config },
@@ -36,10 +21,7 @@ export function AreaChart({
     height: number
   }>({ width: 0, height: 0 })
 
-  const color = useMemo(
-    () => config.color ?? 'hsl(var(--primary))',
-    [config.color],
-  )
+  const color = useMemo(() => config.color ?? 'hsl(var(--primary))', [config.color])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -65,15 +47,12 @@ export function AreaChart({
 
       return <Text.H5B>{dataPayload.label}</Text.H5B>
     },
+    // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
     [config],
   )
 
   const tooltipFormatter = useCallback(
-    (
-      _value: ValueType,
-      name: NameType,
-      payload: Payload<ValueType, NameType>,
-    ) => {
+    (_value: ValueType, name: NameType, payload: Payload<ValueType, NameType>) => {
       if (name !== 'y') return null // Used to display a single content
 
       const item = payload.payload as CartesianDataItem
@@ -92,6 +71,7 @@ export function AreaChart({
         </div>
       )
     },
+    // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
     [config],
   )
 

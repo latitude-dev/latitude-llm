@@ -2,11 +2,11 @@ import { setDefaultProviderAction } from '$/actions/workspaces/setDefaultProvide
 import { updateWorkspaceAction } from '$/actions/workspaces/update'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
 
 export default function useCurrentWorkspace(opts?: SWRConfiguration) {
@@ -15,11 +15,7 @@ export default function useCurrentWorkspace(opts?: SWRConfiguration) {
   const route = ROUTES.api.workspaces.current
   const fetcher = useFetcher<Workspace>(route, { fallback: null })
 
-  const {
-    data = undefined,
-    mutate,
-    ...rest
-  } = useSWR<Workspace>(compact(route), fetcher, opts)
+  const { data = undefined, mutate, isLoading } = useSWR<Workspace>(compact(route), fetcher, opts)
 
   const { execute: updateWorkspace } = useServerAction(updateWorkspaceAction)
   const updateName = useCallback(
@@ -41,7 +37,7 @@ export default function useCurrentWorkspace(opts?: SWRConfiguration) {
       }
 
       toast({
-        title: 'Name updated to ' + payload.name,
+        title: `Name updated to ${payload.name}`,
       })
 
       mutate(workspace)
@@ -51,9 +47,7 @@ export default function useCurrentWorkspace(opts?: SWRConfiguration) {
     [mutate, data, toast, updateWorkspace],
   )
 
-  const { execute: setDefaultProvider } = useServerAction(
-    setDefaultProviderAction,
-  )
+  const { execute: setDefaultProvider } = useServerAction(setDefaultProviderAction)
   const updateDefaultProvider = useCallback(
     async (payload: { defaultProviderId: number | null }) => {
       if (!data) return
@@ -88,8 +82,8 @@ export default function useCurrentWorkspace(opts?: SWRConfiguration) {
       updateName,
       updateDefaultProvider,
       mutate,
-      ...rest,
+      isLoading,
     }),
-    [data, updateName, updateDefaultProvider, mutate, rest],
+    [data, updateName, updateDefaultProvider, mutate, isLoading],
   )
 }

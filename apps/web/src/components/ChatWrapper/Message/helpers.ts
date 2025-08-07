@@ -1,5 +1,3 @@
-export const ROLE_VARIANS = ['user', 'system', 'assistant']
-
 export const roleVariant = (role: string) => {
   switch (role) {
     case 'user':

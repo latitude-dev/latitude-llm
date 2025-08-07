@@ -1,10 +1,10 @@
 import {
-  EvaluationType,
+  type EvaluationType,
   RuleEvaluationMetric,
   RuleEvaluationSpecification,
 } from '@latitude-data/constants'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import {
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type {
   ChartConfigurationArgs,
   ConfigurationFormProps,
   EvaluationMetricFrontendSpecification,
@@ -18,7 +18,6 @@ import RuleEvaluationRegularExpressionSpecification from './RegularExpression'
 import RuleEvaluationSchemaValidationSpecification from './SchemaValidation'
 import RuleEvaluationSemanticSimilaritySpecification from './SemanticSimilarity'
 
-// prettier-ignore
 const METRICS: {
   [M in RuleEvaluationMetric]: EvaluationMetricFrontendSpecification<EvaluationType.Rule, M>
 } = {
@@ -51,11 +50,7 @@ function ConfigurationSimpleForm<M extends RuleEvaluationMetric>({
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
-  return (
-    <>
-      <metricSpecification.ConfigurationSimpleForm {...rest} />
-    </>
-  )
+  return <metricSpecification.ConfigurationSimpleForm {...rest} />
 }
 
 function ConfigurationAdvancedForm<M extends RuleEvaluationMetric>({
@@ -85,11 +80,7 @@ function ResultBadge<M extends RuleEvaluationMetric>({
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
-  return (
-    <>
-      <metricSpecification.ResultBadge {...rest} />
-    </>
-  )
+  return <metricSpecification.ResultBadge {...rest} />
 }
 
 function chartConfiguration<M extends RuleEvaluationMetric>({

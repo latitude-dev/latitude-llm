@@ -1,8 +1,8 @@
-import { type IntegrationDto } from '@latitude-data/core/browser'
+import type { IntegrationDto } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
-import { IntegrationReference } from '@latitude-data/constants'
+import useSWR, { type SWRConfiguration } from 'swr'
+import type { IntegrationReference } from '@latitude-data/constants'
 
 const EMPTY_ARRAY: IntegrationReference[] = []
 
@@ -15,9 +15,7 @@ export default function useIntegrationReferences(
   opts?: SWRConfiguration,
 ) {
   const fetcher = useFetcher<IntegrationReference[], ReferencesResponse>(
-    integration
-      ? ROUTES.api.integrations.detail(integration.name).references.root
-      : undefined,
+    integration ? ROUTES.api.integrations.detail(integration.name).references.root : undefined,
     {
       serializer: (response) => {
         if (!response.ok) {
@@ -32,11 +30,7 @@ export default function useIntegrationReferences(
     data = EMPTY_ARRAY,
     isLoading,
     error,
-  } = useSWR<IntegrationReference[]>(
-    ['integrationReferences', integration?.name],
-    fetcher,
-    opts,
-  )
+  } = useSWR<IntegrationReference[]>(['integrationReferences', integration?.name], fetcher, opts)
 
   return {
     data,

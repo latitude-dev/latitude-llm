@@ -1,8 +1,8 @@
 import { and, desc, eq, getTableColumns, isNull, not } from 'drizzle-orm'
 
-import { ClaimedRewardWithUserInfo, RewardType } from '../browser'
+import { type ClaimedRewardWithUserInfo, RewardType } from '../browser'
 import { database } from '../client'
-import { Ok, Result } from '../lib/Result'
+import { type Ok, Result } from '../lib/Result'
 import { claimedRewards, users, workspaces } from '../schema'
 
 export async function findAllRewardClaimsPendingToValidate(

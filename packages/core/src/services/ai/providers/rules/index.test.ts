@@ -44,10 +44,7 @@ describe('rules', () => {
           model: 'gpt4-o',
           something_underscored: {
             type: 'enabled',
-            things_to_do: [
-              { thing_one: 'Thing one' },
-              { thing_two: 'Thing two' },
-            ],
+            things_to_do: [{ thing_one: 'Thing one' }, { thing_two: 'Thing two' }],
           },
         },
       }),
@@ -58,20 +55,14 @@ describe('rules', () => {
         model: 'gpt4-o',
         something_underscored: {
           type: 'enabled',
-          things_to_do: [
-            { thing_one: 'Thing one' },
-            { thing_two: 'Thing two' },
-          ],
+          things_to_do: [{ thing_one: 'Thing one' }, { thing_two: 'Thing two' }],
         },
         providerOptions: {
           openai: {
             model: 'gpt4-o',
             somethingUnderscored: {
               type: 'enabled',
-              thingsToDo: [
-                { thingOne: 'Thing one' },
-                { thingTwo: 'Thing two' },
-              ],
+              thingsToDo: [{ thingOne: 'Thing one' }, { thingTwo: 'Thing two' }],
             },
           },
         },

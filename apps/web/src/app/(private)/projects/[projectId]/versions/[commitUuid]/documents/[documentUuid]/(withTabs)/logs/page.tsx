@@ -9,14 +9,14 @@ import {
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import {
-  Commit,
-  Cursor,
-  DocumentLogFilterOptions,
-  DocumentVersion,
+  type Commit,
+  type Cursor,
+  type DocumentLogFilterOptions,
+  type DocumentVersion,
   LIMITED_VIEW_THRESHOLD,
-  Workspace,
+  type Workspace,
 } from '@latitude-data/core/browser'
-import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
+import type { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import {
   computeDocumentLogLimitedCursor,
   computeDocumentLogsLimited,
@@ -89,18 +89,14 @@ export default async function DocumentPage({
   const commit = await findCommitCached({ projectId, uuid: commitUuid })
   const commits = await findCommitsByProjectCached({ projectId })
 
-  const {
-    logUuid,
-    pageSize,
-    page: pageString,
-    from: fromString,
-    ...rest
-  } = await searchParams
-  const { filterOptions, redirectUrlParams, originalSelectedCommitsIds } =
-    parseLogFiltersParams({ params: rest, currentCommit: commit, commits })
+  const { logUuid, pageSize, page: pageString, from: fromString, ...rest } = await searchParams
+  const { filterOptions, redirectUrlParams, originalSelectedCommitsIds } = parseLogFiltersParams({
+    params: rest,
+    currentCommit: commit,
+    commits,
+  })
 
-  const approximatedCount =
-    await getDocumentLogsApproximatedCountCached(documentUuid)
+  const approximatedCount = await getDocumentLogsApproximatedCountCached(documentUuid)
   if (approximatedCount > LIMITED_VIEW_THRESHOLD) {
     return DocumentLogsLimitedPage({
       workspace: workspace,

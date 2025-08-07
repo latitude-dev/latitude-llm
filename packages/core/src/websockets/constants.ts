@@ -14,7 +14,7 @@ import type {
   ExperimentDto,
   ProviderLogDto,
 } from '../browser'
-import { LatteChange } from '@latitude-data/constants/latte'
+import type { LatteChange } from '@latitude-data/constants/latte'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
@@ -146,10 +146,7 @@ export type WebServerToClientEvents = {
   mcpServerScaleEvent: (args: McpServerScaleEventArgs) => void
   mcpServerConnected: (args: McpServerConnectedArgs) => void
   latteThreadUpdate: (args: LatteThreadUpdateArgs) => void
-  latteProjectChanges: (args: {
-    threadUuid: string
-    changes: LatteChange[]
-  }) => void
+  latteProjectChanges: (args: { threadUuid: string; changes: LatteChange[] }) => void
 }
 
 export type WebClientToServerEvents = {
@@ -157,18 +154,9 @@ export type WebClientToServerEvents = {
 }
 
 export type WorkersClientToServerEvents = {
-  documentBatchRunStatus: (args: {
-    workspaceId: number
-    data: DocumentBatchRunStatusArgs
-  }) => void
-  datasetRowsCreated: (args: {
-    workspaceId: number
-    data: DatasetRowsCreatedArgs
-  }) => void
-  documentLogCreated: (args: {
-    workspaceId: number
-    data: DocumentLogCreatedArgs
-  }) => void
+  documentBatchRunStatus: (args: { workspaceId: number; data: DocumentBatchRunStatusArgs }) => void
+  datasetRowsCreated: (args: { workspaceId: number; data: DatasetRowsCreatedArgs }) => void
+  documentLogCreated: (args: { workspaceId: number; data: DocumentLogCreatedArgs }) => void
   documentSuggestionCreated: (args: {
     workspaceId: number
     data: DocumentSuggestionCreatedArgs
@@ -177,22 +165,10 @@ export type WorkersClientToServerEvents = {
     workspaceId: number
     data: EvaluationResultV2CreatedArgs
   }) => void
-  experimentStatus: (args: {
-    workspaceId: number
-    data: ExperimentStatusArgs
-  }) => void
-  mcpServerScaleEvent: (args: {
-    workspaceId: number
-    data: McpServerScaleEventArgs
-  }) => void
-  mcpServerConnected: (args: {
-    workspaceId: number
-    data: McpServerConnectedArgs
-  }) => void
-  latteThreadUpdate: (args: {
-    workspaceId: number
-    data: LatteThreadUpdateArgs
-  }) => void
+  experimentStatus: (args: { workspaceId: number; data: ExperimentStatusArgs }) => void
+  mcpServerScaleEvent: (args: { workspaceId: number; data: McpServerScaleEventArgs }) => void
+  mcpServerConnected: (args: { workspaceId: number; data: McpServerConnectedArgs }) => void
+  latteThreadUpdate: (args: { workspaceId: number; data: LatteThreadUpdateArgs }) => void
   latteProjectChanges: (args: {
     workspaceId: number
     data: { threadUuid: string; changes: LatteChange[] }

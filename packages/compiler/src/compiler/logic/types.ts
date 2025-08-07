@@ -1,5 +1,6 @@
-import Scope, { ScopeContext } from '$compiler/compiler/scope'
-import { Node } from 'estree'
+import type Scope from '$compiler/compiler/scope'
+import type { ScopeContext } from '$compiler/compiler/scope'
+import type { Node } from 'estree'
 
 export enum NodeType {
   Literal = 'Literal',

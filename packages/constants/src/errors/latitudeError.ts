@@ -1,4 +1,4 @@
-import { LatitudeErrorCodes, LatitudeErrorDetails } from './constants'
+import { LatitudeErrorCodes, type LatitudeErrorDetails } from './constants'
 
 export class LatitudeError extends Error {
   statusCode: number = 500

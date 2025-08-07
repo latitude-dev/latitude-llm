@@ -1,19 +1,15 @@
 import { env } from '@latitude-data/env'
 import { subDays } from 'date-fns'
 import { eq } from 'drizzle-orm'
-import { DOCUMENT_SUGGESTION_NOTIFICATION_DAYS, User } from '../../browser'
+import { DOCUMENT_SUGGESTION_NOTIFICATION_DAYS, type User } from '../../browser'
 import { unsafelyFindWorkspace } from '../../data-access'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { SuggestionMailer } from '../../mailers'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-  UsersRepository,
-} from '../../repositories'
+import { CommitsRepository, DocumentVersionsRepository, UsersRepository } from '../../repositories'
 import { users } from '../../schema'
-import { DocumentSuggestionCreatedEvent } from '../events'
+import type { DocumentSuggestionCreatedEvent } from '../events'
 
 const UTM_SOURCE = 'email'
 const UTM_CAMPAIGN = 'document_suggestions'
@@ -21,8 +17,7 @@ const UTM_CAMPAIGN = 'document_suggestions'
 function hasExceededNotificationLimits(user: User) {
   return (
     user.lastSuggestionNotifiedAt &&
-    user.lastSuggestionNotifiedAt >
-      subDays(new Date(), DOCUMENT_SUGGESTION_NOTIFICATION_DAYS)
+    user.lastSuggestionNotifiedAt > subDays(new Date(), DOCUMENT_SUGGESTION_NOTIFICATION_DAYS)
   )
 }
 
@@ -38,9 +33,7 @@ export const sendSuggestionNotification = async ({
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
   const commitsRepository = new CommitsRepository(workspace.id)
-  const commit = await commitsRepository
-    .getCommitById(suggestion.commitId)
-    .then((r) => r.unwrap())
+  const commit = await commitsRepository.getCommitById(suggestion.commitId).then((r) => r.unwrap())
 
   const documentsRepository = new DocumentVersionsRepository(workspace.id)
   const document = await documentsRepository

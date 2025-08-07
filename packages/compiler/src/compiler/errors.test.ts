@@ -17,13 +17,7 @@ const getExpectedError = async (
   throw new Error(errorMessage)
 }
 
-const expectBothErrors = async ({
-  code,
-  prompt,
-}: {
-  code: string
-  prompt: string
-}) => {
+const expectBothErrors = async ({ code, prompt }: { code: string; prompt: string }) => {
   const compileError = await getExpectedError(async () => {
     await render({
       prompt: removeCommonIndent(prompt),

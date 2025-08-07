@@ -1,16 +1,15 @@
-import { Span, SpanType } from '../../../browser'
+import { type Span, SpanType } from '../../../browser'
 import { CompletionSpanSpecification } from './completion'
 import { EmbeddingSpanSpecification } from './embedding'
 import { HttpSpanSpecification } from './http'
 import { PromptSpanSpecification } from './prompt'
 import { RerankingSpanSpecification } from './reranking'
 import { RetrievalSpanSpecification } from './retrieval'
-import { SpanBackendSpecification } from './shared'
+import type { SpanBackendSpecification } from './shared'
 import { StepSpanSpecification } from './step'
 import { ToolSpanSpecification } from './tool'
 import { UnknownSpanSpecification } from './unknown'
 
-// prettier-ignore
 export const SPAN_SPECIFICATIONS: {
   [T in SpanType]: SpanBackendSpecification<T>
 } = {
@@ -25,8 +24,6 @@ export const SPAN_SPECIFICATIONS: {
   [SpanType.Unknown]: UnknownSpanSpecification,
 }
 
-export function getSpanSpecification<T extends SpanType = SpanType>(
-  span: Span<T>,
-) {
+export function getSpanSpecification<T extends SpanType = SpanType>(span: Span<T>) {
   return SPAN_SPECIFICATIONS[span.type]
 }

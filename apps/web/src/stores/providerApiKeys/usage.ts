@@ -1,11 +1,8 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import {
-  ProviderApiKey,
-  ProviderApiKeyUsage,
-} from '@latitude-data/core/browser'
+import type { ProviderApiKey, ProviderApiKeyUsage } from '@latitude-data/core/browser'
 import { compact } from 'lodash-es'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 export function useProviderApiKeyUsage(
   {

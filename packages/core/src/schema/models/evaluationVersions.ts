@@ -10,11 +10,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
-import {
-  EvaluationConfiguration,
-  EvaluationMetric,
-  EvaluationType,
-} from '../../constants'
+import type { EvaluationConfiguration, EvaluationMetric, EvaluationType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
@@ -35,12 +31,8 @@ export const evaluationVersions = latitudeSchema.table(
     name: varchar('name', { length: 256 }).notNull(),
     description: text('description').notNull(),
     type: varchar('type', { length: 128 }).notNull().$type<EvaluationType>(),
-    metric: varchar('metric', { length: 128 })
-      .notNull()
-      .$type<EvaluationMetric>(),
-    configuration: jsonb('configuration')
-      .notNull()
-      .$type<EvaluationConfiguration>(),
+    metric: varchar('metric', { length: 128 }).notNull().$type<EvaluationMetric>(),
+    configuration: jsonb('configuration').notNull().$type<EvaluationConfiguration>(),
     // Denormalized configuration fields - create indexes if necessary
     evaluateLiveLogs: boolean('evaluate_live_logs'),
     enableSuggestions: boolean('enable_suggestions'),
@@ -49,9 +41,7 @@ export const evaluationVersions = latitudeSchema.table(
     deletedAt: timestamp('deleted_at'),
   },
   (table) => ({
-    workspaceIdIdx: index('evaluation_versions_workspace_id_idx').on(
-      table.workspaceId,
-    ),
+    workspaceIdIdx: index('evaluation_versions_workspace_id_idx').on(table.workspaceId),
     uniqueCommitIdEvaluationUuid: uniqueIndex(
       'evaluation_versions_unique_commit_id_evaluation_uuid',
     ).on(table.commitId, table.evaluationUuid),
@@ -59,11 +49,7 @@ export const evaluationVersions = latitudeSchema.table(
       'evaluation_versions_unique_name_commit_id_document_uuid_deleted_at',
     ).on(table.name, table.commitId, table.documentUuid, table.deletedAt),
     commitIdIdx: index('evaluation_versions_commit_id_idx').on(table.commitId),
-    evaluationUuidIdx: index('evaluation_versions_evaluation_uuid_idx').on(
-      table.evaluationUuid,
-    ),
-    documentUuidIdx: index('evaluation_versions_document_uuid_idx').on(
-      table.documentUuid,
-    ),
+    evaluationUuidIdx: index('evaluation_versions_evaluation_uuid_idx').on(table.evaluationUuid),
+    documentUuidIdx: index('evaluation_versions_document_uuid_idx').on(table.documentUuid),
   }),
 )

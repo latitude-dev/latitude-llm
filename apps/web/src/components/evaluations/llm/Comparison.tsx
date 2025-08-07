@@ -1,18 +1,14 @@
 import {
-  EvaluationType,
+  type EvaluationType,
   LlmEvaluationComparisonSpecification,
-  LlmEvaluationMetric,
+  type LlmEvaluationMetric,
 } from '@latitude-data/constants'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 
 const specification = LlmEvaluationComparisonSpecification
 export default {
@@ -40,10 +36,8 @@ function ConfigurationSimpleForm({
         placeholder='Judge the similarity of the translation'
         minRows={2}
         maxRows={4}
-        onChange={(e) =>
-          setConfiguration({ ...configuration, criteria: e.target.value })
-        }
-        errors={errors?.['criteria']}
+        onChange={(e) => setConfiguration({ ...configuration, criteria: e.target.value })}
+        errors={errors?.criteria}
         className='w-full'
         disabled={disabled}
         required
@@ -60,7 +54,7 @@ function ConfigurationSimpleForm({
             passDescription: e.target.value,
           })
         }
-        errors={errors?.['passDescription']}
+        errors={errors?.passDescription}
         className='w-full'
         disabled={disabled}
         required
@@ -77,7 +71,7 @@ function ConfigurationSimpleForm({
             failDescription: e.target.value,
           })
         }
-        errors={errors?.['failDescription']}
+        errors={errors?.failDescription}
         className='w-full'
         disabled={disabled}
         required
@@ -93,45 +87,39 @@ function ConfigurationAdvancedForm({
   disabled,
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Comparison>) {
   return (
-    <>
-      <FormFieldGroup
-        layout='horizontal'
-        description='The minimum and maximum percentage of criteria met of the response'
-      >
-        <NumberInput
-          value={configuration.minThreshold ?? undefined}
-          name='minThreshold'
-          label='Minimum threshold'
-          placeholder='No minimum'
-          min={0}
-          max={100}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minThreshold: value })
-          }
-          errors={errors?.['minThreshold']}
-          defaultAppearance
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-        <NumberInput
-          value={configuration.maxThreshold ?? undefined}
-          name='maxThreshold'
-          label='Maximum threshold'
-          placeholder='No maximum'
-          min={0}
-          max={100}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxThreshold: value })
-          }
-          errors={errors?.['maxThreshold']}
-          defaultAppearance
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-      </FormFieldGroup>
-    </>
+    <FormFieldGroup
+      layout='horizontal'
+      description='The minimum and maximum percentage of criteria met of the response'
+    >
+      <NumberInput
+        value={configuration.minThreshold ?? undefined}
+        name='minThreshold'
+        label='Minimum threshold'
+        placeholder='No minimum'
+        min={0}
+        max={100}
+        onChange={(value) => setConfiguration({ ...configuration, minThreshold: value })}
+        errors={errors?.minThreshold}
+        defaultAppearance
+        className='w-full'
+        disabled={disabled}
+        required
+      />
+      <NumberInput
+        value={configuration.maxThreshold ?? undefined}
+        name='maxThreshold'
+        label='Maximum threshold'
+        placeholder='No maximum'
+        min={0}
+        max={100}
+        onChange={(value) => setConfiguration({ ...configuration, maxThreshold: value })}
+        errors={errors?.maxThreshold}
+        defaultAppearance
+        className='w-full'
+        disabled={disabled}
+        required
+      />
+    </FormFieldGroup>
   )
 }
 

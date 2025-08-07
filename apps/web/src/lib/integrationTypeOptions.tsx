@@ -1,21 +1,15 @@
-import {
-  HostedIntegrationType,
-  IntegrationType,
-} from '@latitude-data/constants'
-import { IntegrationDto } from '@latitude-data/core/browser'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { HostedIntegrationType, IntegrationType } from '@latitude-data/constants'
+import type { IntegrationDto } from '@latitude-data/core/browser'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import Image from 'next/image'
-import React from 'react'
+import type React from 'react'
 
-export type IntegrationTypeOption = {
+type IntegrationTypeOption = {
   label: string
   icon: IconName | React.JSX.Element
 }
 
-export const INTEGRATION_TYPE_VALUES: Record<
-  IntegrationType,
-  IntegrationTypeOption
-> = {
+const INTEGRATION_TYPE_VALUES: Record<IntegrationType, IntegrationTypeOption> = {
   [IntegrationType.ExternalMCP]: {
     label: 'Custom MCP Server',
     icon: 'mcp',
@@ -34,10 +28,7 @@ export const INTEGRATION_TYPE_VALUES: Record<
   },
 }
 
-export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
-  HostedIntegrationType,
-  IntegrationTypeOption
-> = {
+const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<HostedIntegrationType, IntegrationTypeOption> = {
   [HostedIntegrationType.Slack]: {
     label: 'Slack',
     icon: 'slack',
@@ -360,23 +351,17 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
   },
 }
 
-export function integrationOptions(
-  integration: IntegrationDto,
-): IntegrationTypeOption {
+export function integrationOptions(integration: IntegrationDto): IntegrationTypeOption {
   if (
     integration.type === IntegrationType.HostedMCP &&
-    Object.keys(HOSTED_INTEGRATION_TYPE_OPTIONS).includes(
-      integration.configuration.type,
-    )
+    Object.keys(HOSTED_INTEGRATION_TYPE_OPTIONS).includes(integration.configuration.type)
   ) {
     return HOSTED_INTEGRATION_TYPE_OPTIONS[integration.configuration.type]
   }
 
   if (integration.type === IntegrationType.Pipedream) {
     return {
-      label:
-        integration.configuration.metadata?.displayName ??
-        integration.configuration.appName,
+      label: integration.configuration.metadata?.displayName ?? integration.configuration.appName,
       icon: integration.configuration.metadata?.imageUrl ? (
         <Image
           src={integration.configuration.metadata?.imageUrl}

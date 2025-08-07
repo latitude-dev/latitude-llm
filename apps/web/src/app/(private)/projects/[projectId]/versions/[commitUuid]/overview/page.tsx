@@ -49,9 +49,9 @@ export default async function OverviewPage({
     )
   }
 
-  let limitedView = undefined
-  const approximatedCount =
-    await getDocumentLogsApproximatedCountByProjectCached(projectId)
+  // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
+  let limitedView
+  const approximatedCount = await getDocumentLogsApproximatedCountByProjectCached(projectId)
   if (approximatedCount > LIMITED_VIEW_THRESHOLD) {
     limitedView = await getProjectStatsCached(projectId)
     if (!limitedView) {

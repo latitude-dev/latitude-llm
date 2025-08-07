@@ -1,4 +1,4 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 import { npxCommand } from '../utils'
 
 export default {
@@ -18,6 +18,5 @@ export default {
       required: true,
     },
   },
-  envSource:
-    'https://github.com/modelcontextprotocol/servers/tree/main/src/slack#setup',
+  envSource: 'https://github.com/modelcontextprotocol/servers/tree/main/src/slack#setup',
 } as HostedIntegrationConfig

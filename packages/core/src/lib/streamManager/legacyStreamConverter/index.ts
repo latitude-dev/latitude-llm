@@ -1,17 +1,13 @@
 import {
-  ChainStepResponse,
-  LegacyChainEvent,
+  type ChainStepResponse,
+  type LegacyChainEvent,
   LegacyChainEventTypes,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
-import { StreamType } from '../../../constants'
-import {
-  Message,
-  MessageRole,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { type ChainEvent, ChainEventTypes } from '@latitude-data/constants'
+import type { StreamType } from '../../../constants'
+import { type Message, MessageRole, type ToolCall } from '@latitude-data/constants/legacyCompiler'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 function getAssistantMessageToolCallIds(message?: Message): unknown[] {
   if (message?.role !== 'assistant') return []
@@ -21,14 +17,10 @@ function getAssistantMessageToolCallIds(message?: Message): unknown[] {
   }
 
   if (!Array.isArray(message.content)) return []
-  return message.content
-    .filter((c) => c.type === 'tool-call')
-    .map((t) => t.toolCallId)
+  return message.content.filter((c) => c.type === 'tool-call').map((t) => t.toolCallId)
 }
 
-export function convertToLegacyChainStream(
-  stream: ReadableStream<ChainEvent>,
-): {
+export function convertToLegacyChainStream(stream: ReadableStream<ChainEvent>): {
   stream: ReadableStream<LegacyChainEvent>
   response: Promise<ChainStepResponse<StreamType>>
 } {
@@ -72,10 +64,7 @@ export function convertToLegacyChainStream(
               stepMessages.filter(
                 (m) =>
                   m.role === MessageRole.tool &&
-                  m.content.some(
-                    (c) =>
-                      'toolCallId' in c && toolCallIds.includes(c.toolCallId),
-                  ),
+                  m.content.some((c) => 'toolCallId' in c && toolCallIds.includes(c.toolCallId)),
               ).length + 1
 
             isResumingPausedChain = false

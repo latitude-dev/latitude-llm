@@ -1,5 +1,5 @@
 import { useExperiments } from '$/stores/experiments'
-import {
+import type {
   Commit,
   DocumentVersion,
   EvaluationV2,
@@ -58,9 +58,7 @@ export function RunExperimentModal({
             .detail({ id: project.id })
             .commits.detail({ uuid: commit.uuid })
             .documents.detail({ uuid: document.documentUuid })
-            [DocumentRoutes.experiments].withSelected(
-              experiments.map((exp) => exp.uuid),
-            ),
+            [DocumentRoutes.experiments].withSelected(experiments.map((exp) => exp.uuid)),
         )
       },
     },
@@ -97,7 +95,7 @@ export function RunExperimentModal({
   useEffect(() => {
     setVariants([])
     addNewVariant()
-  }, [setVariants, addNewVariant, isOpen])
+  }, [setVariants, addNewVariant])
 
   return (
     <Modal
@@ -115,8 +113,7 @@ export function RunExperimentModal({
               !document ||
               isCreating ||
               formPayload.isLoadingMetadata ||
-              (formPayload.parameters.length > 0 &&
-                !formPayload.selectedDataset)
+              (formPayload.parameters.length > 0 && !formPayload.selectedDataset)
             }
             fancy
             onClick={createExperiment}

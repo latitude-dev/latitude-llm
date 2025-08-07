@@ -1,5 +1,5 @@
 import { PaginatedSelect } from '@latitude-data/web-ui/molecules/PaginatedSelect'
-import { App } from '@pipedream/sdk/browser'
+import type { App } from '@pipedream/sdk/browser'
 import { ROUTES } from '$/services/routes'
 import Image from 'next/image'
 import { useCallback } from 'react'
@@ -14,20 +14,12 @@ export function AppSelector({
   isLoading?: boolean
 }) {
   const fetchOptions = useCallback(
-    async ({
-      query,
-      cursor,
-    }: {
-      query: string
-      cursor: string | undefined
-    }) => {
+    async ({ query, cursor }: { query: string; cursor: string | undefined }) => {
       const params = new URLSearchParams()
       if (query) params.append('query', query)
       if (cursor) params.append('cursor', cursor)
 
-      const response = await fetch(
-        `${ROUTES.api.integrations.pipedream.apps}?${params}`,
-      )
+      const response = await fetch(`${ROUTES.api.integrations.pipedream.apps}?${params}`)
       if (!response.ok) {
         return {
           items: [],
@@ -58,15 +50,7 @@ export function AppSelector({
         value: app.name_slug,
         label: app.name,
         description: app.description,
-        icon: (
-          <Image
-            src={app.img_src}
-            alt={app.name}
-            width={16}
-            height={16}
-            unoptimized
-          />
-        ),
+        icon: <Image src={app.img_src} alt={app.name} width={16} height={16} unoptimized />,
       })}
       debounce={200}
       label='App'

@@ -1,4 +1,4 @@
-import { Commit, Project, User, Workspace } from '../../browser'
+import type { Commit, Project, User, Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -22,10 +22,7 @@ export async function createProject(
   return transaction.call<{ project: Project; commit: Commit }>(
     async (tx) => {
       const project = (
-        await tx
-          .insert(projects)
-          .values({ workspaceId: workspace.id, name })
-          .returning()
+        await tx.insert(projects).values({ workspaceId: workspace.id, name }).returning()
       )[0]!
 
       const result = await createCommit(

@@ -1,6 +1,6 @@
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { UsedToolsDoc } from '../index'
+import type { UsedToolsDoc } from '../index'
 
 export function APIUsage({
   projectId,
@@ -24,10 +24,7 @@ export function APIUsage({
     } as Record<string, unknown>
 
     if (parameters.size > 0) {
-      body['parameters'] = Array.from(parameters).reduce(
-        (acc, param) => ({ ...acc, [param]: '' }),
-        {},
-      )
+      body.parameters = Array.from(parameters).reduce((acc, param) => ({ ...acc, [param]: '' }), {})
     }
 
     return JSON.stringify(body, null, 2)
@@ -48,24 +45,18 @@ ${getRequestBodyContent()}
 
   return (
     <div className='flex flex-col gap-4'>
-      <Text.H5>
-        To run this document programmatically, execute the following command:
-      </Text.H5>
+      <Text.H5>To run this document programmatically, execute the following command:</Text.H5>
       <CodeBlock language='bash'>{apiCode.trim()}</CodeBlock>
       {tools.length > 0 && (
         <Text.H5>
-          You have defined {tools.length} tools in this document. The
-          conversation will stop when assistant messages with tool call content
-          are received. You can continue the conversation by returning the tools
-          results in the chat endpoint.
+          You have defined {tools.length} tools in this document. The conversation will stop when
+          assistant messages with tool call content are received. You can continue the conversation
+          by returning the tools results in the chat endpoint.
         </Text.H5>
       )}
       <Text.H5>
         Check out{' '}
-        <a
-          target='_blank'
-          href='https://docs.latitude.so/guides/api/api-access'
-        >
+        <a target='_blank' href='https://docs.latitude.so/guides/api/api-access' rel='noopener'>
           <Text.H5 underline color='primary'>
             our docs
           </Text.H5>

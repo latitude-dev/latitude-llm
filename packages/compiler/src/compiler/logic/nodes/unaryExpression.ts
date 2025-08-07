@@ -1,8 +1,5 @@
 import { UNARY_OPERATOR_METHODS } from '$compiler/compiler/logic/operators'
-import type {
-  ResolveNodeProps,
-  UpdateScopeContextProps,
-} from '$compiler/compiler/logic/types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '$compiler/compiler/logic/types'
 import errors from '$compiler/error/errors'
 import type { UnaryExpression } from 'estree'
 
@@ -14,11 +11,7 @@ import { resolveLogicNode, updateScopeContextForNode } from '..'
  *
  * Example: `{!a}`
  */
-export async function resolve({
-  node,
-  raiseError,
-  ...props
-}: ResolveNodeProps<UnaryExpression>) {
+export async function resolve({ node, raiseError, ...props }: ResolveNodeProps<UnaryExpression>) {
   const unaryOperator = node.operator
   if (!(unaryOperator in UNARY_OPERATOR_METHODS)) {
     raiseError(errors.unsupportedOperator(unaryOperator), node)

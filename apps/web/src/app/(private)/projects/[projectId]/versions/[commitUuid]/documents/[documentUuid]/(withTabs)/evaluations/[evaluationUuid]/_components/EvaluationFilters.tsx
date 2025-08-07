@@ -1,12 +1,12 @@
 import { useCommits } from '$/stores/commitsStore'
-import { EvaluationResultsV2Search } from '@latitude-data/core/browser'
+import type { EvaluationResultsV2Search } from '@latitude-data/core/browser'
 import { DatePickerRange } from '@latitude-data/web-ui/atoms/DatePicker'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { endOfDay, startOfDay } from 'date-fns'
 import { isEqual } from 'lodash-es'
-import { ComponentProps, useMemo } from 'react'
+import { type ComponentProps, useMemo } from 'react'
 import { CommitFilter } from '../../../logs/_components/Filters/CommitFilter'
 
 export function EvaluationFilters({
@@ -19,10 +19,7 @@ export function EvaluationFilters({
   isLoading?: boolean
 }) {
   const { data: commits, isLoading: isLoadingCommits } = useCommits()
-  const defaultSelectedCommits = useMemo(
-    () => commits.map((c) => c.id),
-    [commits],
-  )
+  const defaultSelectedCommits = useMemo(() => commits.map((c) => c.id), [commits])
 
   return (
     <div className='flex items-center gap-4'>
@@ -55,9 +52,7 @@ export function EvaluationFilters({
       <DatePickerRange
         showPresets
         initialRange={
-          search.filters?.createdAt as ComponentProps<
-            typeof DatePickerRange
-          >['initialRange']
+          search.filters?.createdAt as ComponentProps<typeof DatePickerRange>['initialRange']
         }
         onCloseChange={(value) => {
           if (value?.from) value.from = startOfDay(value.from)
@@ -84,8 +79,7 @@ export function EvaluationFilters({
           })
         }
         isDefault={
-          !search.filters?.commitIds ||
-          isEqual(search.filters?.commitIds, defaultSelectedCommits)
+          !search.filters?.commitIds || isEqual(search.filters?.commitIds, defaultSelectedCommits)
         }
         reset={() =>
           setSearch({

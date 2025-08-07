@@ -1,4 +1,4 @@
-import { DocumentVersion } from '../models'
+import type { DocumentVersion } from '../models'
 
 interface ILatteDraftAction {
   type: 'prompt'

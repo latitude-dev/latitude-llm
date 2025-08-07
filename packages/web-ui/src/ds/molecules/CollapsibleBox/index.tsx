@@ -1,7 +1,7 @@
 'use client'
-import { MouseEvent, ReactNode, useCallback, useState } from 'react'
+import { type MouseEvent, type ReactNode, useCallback, useState } from 'react'
 import { cn } from '../../../lib/utils'
-import { Icon, IconName } from '../../atoms/Icons'
+import { Icon, type IconName } from '../../atoms/Icons'
 import { Text } from '../../atoms/Text'
 
 export const COLLAPSED_BOX_HEIGHT = 48
@@ -75,15 +75,11 @@ export function CollapsibleBox({
 
   return (
     <div
-      className={cn(
-        className,
-        'w-full border rounded-lg relative overflow-hidden',
-        {
-          'h-auto': !isExpanded,
-          'custom-scrollbar': scrollable,
-          'flex flex-col': !scrollable,
-        },
-      )}
+      className={cn(className, 'w-full border rounded-lg relative overflow-hidden', {
+        'h-auto': !isExpanded,
+        'custom-scrollbar': scrollable,
+        'flex flex-col': !scrollable,
+      })}
       style={{ minHeight: COLLAPSED_BOX_HEIGHT }}
     >
       <div
@@ -94,45 +90,27 @@ export function CollapsibleBox({
         onClick={handleToggle}
       >
         <div
-          className={cn(
-            'flex flex-shrink-0 justify-between items-center py-3.5 px-4 gap-x-4',
-            {
-              'border-b': isExpanded && headerDivider,
-            },
-          )}
+          className={cn('flex flex-shrink-0 justify-between items-center py-3.5 px-4 gap-x-4', {
+            'border-b': isExpanded && headerDivider,
+          })}
         >
-          <div
-            className='flex flex-row items-center gap-x-2'
-            onClick={onTitleClick}
-          >
+          <div className='flex flex-row items-center gap-x-2' onClick={onTitleClick}>
             {handlePosition === 'left' && handleIcon && (
-              <Icon
-                className='flex-shrink-0'
-                name={isExpanded ? 'chevronUp' : 'chevronDown'}
-              />
+              <Icon className='flex-shrink-0' name={isExpanded ? 'chevronUp' : 'chevronDown'} />
             )}
             {icon && <Icon className='flex-shrink-0' name={icon} />}
-            {typeof title === 'string' ? (
-              <Text.H5M userSelect={false}>{title}</Text.H5M>
-            ) : (
-              title
-            )}
+            {typeof title === 'string' ? <Text.H5M userSelect={false}>{title}</Text.H5M> : title}
           </div>
           <div className='flex flex-row flex-grow min-w-0 items-center gap-x-2'>
             <div className='flex-grow min-w-0'>
               {isExpanded ? expandedContentHeader : collapsedContentHeader}
             </div>
             {handlePosition === 'right' && handleIcon && (
-              <Icon
-                className='flex-shrink-0'
-                name={isExpanded ? 'chevronUp' : 'chevronDown'}
-              />
+              <Icon className='flex-shrink-0' name={isExpanded ? 'chevronUp' : 'chevronDown'} />
             )}
           </div>
         </div>
-        {!isExpanded && collapsedContent && (
-          <div className='px-4 pb-4'>{collapsedContent}</div>
-        )}
+        {!isExpanded && collapsedContent && <div className='px-4 pb-4'>{collapsedContent}</div>}
       </div>
       <div
         className={cn('transition-all duration-300 ease-in-out', {

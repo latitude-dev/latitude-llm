@@ -1,8 +1,8 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 
-import { Commit } from '../../../browser'
-import { LogSources } from '../../../constants'
+import type { Commit } from '../../../browser'
+import type { LogSources } from '../../../constants'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { DocumentVersionsRepository } from '../../../repositories'
 import { createDocumentLog } from '../../../services/documentLogs/create'
@@ -16,11 +16,8 @@ export type CreateDocumentLogJobProps = {
   responseText: string
 }
 
-export const createDocumentLogJob = async (
-  job: Job<CreateDocumentLogJobProps>,
-) => {
-  const { workspaceId, documentUuid, commit, source, messages, responseText } =
-    job.data
+export const createDocumentLogJob = async (job: Job<CreateDocumentLogJobProps>) => {
+  const { workspaceId, documentUuid, commit, source, messages, responseText } = job.data
   const docsRepo = new DocumentVersionsRepository(workspaceId)
   const document = await docsRepo
     .getDocumentByUuid({

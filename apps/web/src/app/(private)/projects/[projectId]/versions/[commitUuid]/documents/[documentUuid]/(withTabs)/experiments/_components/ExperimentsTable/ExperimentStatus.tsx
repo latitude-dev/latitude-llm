@@ -1,4 +1,4 @@
-import { ExperimentDto } from '@latitude-data/core/browser'
+import type { ExperimentDto } from '@latitude-data/core/browser'
 import { getStatus } from './shared'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -58,11 +58,8 @@ export function ExperimentStatus({
                 <Icon name='loader' color='primary' spin />
               )}
               <Text.H5 noWrap color={isHovered ? 'destructive' : 'primary'}>
-                {experiment.results.passed +
-                  experiment.results.failed +
-                  experiment.results.errors}{' '}
-                /{' '}
-                {experiment.metadata.count * experiment.evaluationUuids.length}
+                {experiment.results.passed + experiment.results.failed + experiment.results.errors}{' '}
+                / {experiment.metadata.count * experiment.evaluationUuids.length}
               </Text.H5>
             </div>
           </Button>

@@ -1,11 +1,8 @@
-import {
-  type Message,
-  MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+import { type Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { describe, expect, it } from 'vitest'
 
 import { Providers } from '../models'
-import { AppliedRules, ProviderRules } from './types'
+import { type AppliedRules, ProviderRules } from './types'
 import { applyProviderRules } from '.'
 
 let model = 'o1-mini'

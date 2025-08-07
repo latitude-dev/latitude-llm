@@ -4,7 +4,7 @@ import {
   formatConversation,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationMetric,
-  ProviderApiKey,
+  type ProviderApiKey,
   LlmEvaluationRatingSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
@@ -12,9 +12,9 @@ import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
 import {
-  EvaluationMetricCloneArgs,
-  EvaluationMetricRunArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricCloneArgs,
+  type EvaluationMetricRunArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 import { promptTask, runPrompt } from './shared'
@@ -27,12 +27,7 @@ export const LlmEvaluationRatingSpecification = {
 }
 
 async function validate(
-  {
-    configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.Rating
-  >,
+  { configuration }: EvaluationMetricValidateArgs<EvaluationType.Llm, LlmEvaluationMetric.Rating>,
   _ = database,
 ) {
   configuration.criteria = configuration.criteria.trim()
@@ -41,23 +36,17 @@ async function validate(
   }
 
   if (configuration.minRating >= configuration.maxRating) {
-    return Result.error(
-      new BadRequestError('Minimum rating must be less than maximum rating'),
-    )
+    return Result.error(new BadRequestError('Minimum rating must be less than maximum rating'))
   }
 
   configuration.minRatingDescription = configuration.minRatingDescription.trim()
   if (!configuration.minRatingDescription) {
-    return Result.error(
-      new BadRequestError('Minimum rating description is required'),
-    )
+    return Result.error(new BadRequestError('Minimum rating description is required'))
   }
 
   configuration.maxRatingDescription = configuration.maxRatingDescription.trim()
   if (!configuration.maxRatingDescription) {
-    return Result.error(
-      new BadRequestError('Maximum rating description is required'),
-    )
+    return Result.error(new BadRequestError('Maximum rating description is required'))
   }
 
   if (
@@ -90,9 +79,7 @@ async function validate(
     configuration.minThreshold >= configuration.maxThreshold
   ) {
     return Result.error(
-      new BadRequestError(
-        'Minimum threshold must be less than maximum threshold',
-      ),
+      new BadRequestError('Minimum threshold must be less than maximum threshold'),
     )
   }
 
@@ -181,10 +168,9 @@ async function run(
     throw new BadRequestError('Provider is required')
   }
 
-  const evaluatedLog = await serializeDocumentLog(
-    { documentLog, workspace },
-    db,
-  ).then((r) => r.unwrap())
+  const evaluatedLog = await serializeDocumentLog({ documentLog, workspace }, db).then((r) =>
+    r.unwrap(),
+  )
 
   const promptSchema = z.object({
     rating: z
@@ -217,10 +203,7 @@ async function run(
   metadata.duration = stats.duration
 
   const score = Math.min(
-    Math.max(
-      Number(verdict.rating.toFixed(0)),
-      metadata.configuration.minRating,
-    ),
+    Math.max(Number(verdict.rating.toFixed(0)), metadata.configuration.minRating),
     metadata.configuration.maxRating,
   )
 
@@ -237,10 +220,8 @@ async function run(
     )
   }
 
-  const minThreshold =
-    metadata.configuration.minThreshold ?? metadata.configuration.minRating
-  const maxThreshold =
-    metadata.configuration.maxThreshold ?? metadata.configuration.maxRating
+  const minThreshold = metadata.configuration.minThreshold ?? metadata.configuration.minRating
+  const maxThreshold = metadata.configuration.maxThreshold ?? metadata.configuration.maxRating
   const hasPassed = score >= minThreshold && score <= maxThreshold
 
   return { score, normalizedScore, metadata, hasPassed }

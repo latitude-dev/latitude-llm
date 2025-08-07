@@ -15,7 +15,7 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { datasetsV1 } from '../legacyModels/datasetsV1'
-import { DocumentType, LinkedDataset, LinkedDatasetRow } from '../../browser'
+import { DocumentType, type LinkedDataset, type LinkedDatasetRow } from '../../browser'
 import { datasets } from './datasets'
 
 type LinkedDatasetByDatasetId = Record<number, LinkedDataset>
@@ -39,17 +39,13 @@ export const documentVersions = latitudeSchema.table(
     resolvedContent: text('resolved_content'),
     contentHash: text('content_hash'),
     promptlVersion: integer('promptl_version').notNull().default(0),
-    documentType: documentTypesEnum('document_type')
-      .notNull()
-      .default(DocumentType.Prompt),
-    datasetId: bigint('dataset_id', { mode: 'number' }).references(
-      () => datasetsV1.id,
-      { onDelete: 'set null' },
-    ),
-    datasetV2Id: bigint('dataset_v2_id', { mode: 'number' }).references(
-      () => datasets.id,
-      { onDelete: 'set null' },
-    ),
+    documentType: documentTypesEnum('document_type').notNull().default(DocumentType.Prompt),
+    datasetId: bigint('dataset_id', { mode: 'number' }).references(() => datasetsV1.id, {
+      onDelete: 'set null',
+    }),
+    datasetV2Id: bigint('dataset_v2_id', { mode: 'number' }).references(() => datasets.id, {
+      onDelete: 'set null',
+    }),
     linkedDataset: json('linked_dataset_by_dataset_id')
       .$type<LinkedDatasetByDatasetId>()
       .default({}),
@@ -60,9 +56,10 @@ export const documentVersions = latitudeSchema.table(
     ...timestamps(),
   },
   (table) => ({
-    uniqueDocumentUuidCommitId: uniqueIndex(
-      'document_versions_unique_document_uuid_commit_id',
-    ).on(table.documentUuid, table.commitId),
+    uniqueDocumentUuidCommitId: uniqueIndex('document_versions_unique_document_uuid_commit_id').on(
+      table.documentUuid,
+      table.commitId,
+    ),
     uniquePathCommitIdDeletedAt: uniqueIndex(
       'document_versions_unique_path_commit_id_deleted_at',
     ).on(table.path, table.commitId, table.deletedAt),

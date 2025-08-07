@@ -1,14 +1,10 @@
 import { SubscriptionPlans } from '@latitude-data/core/browser'
 import { unsafelyGetApiKeyByToken } from '@latitude-data/core/data-access'
 import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
-import {
-  NotFoundError,
-  RateLimitError,
-  UnauthorizedError,
-} from '@latitude-data/constants/errors'
+import { NotFoundError, RateLimitError, UnauthorizedError } from '@latitude-data/constants/errors'
 import { createMiddleware } from 'hono/factory'
 import { ReplyError } from 'ioredis'
-import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
+import { type RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 import { getFromTokenCache, setToTokenCache } from './tokenCache'
 import { getRateLimiterForRateLimit } from './rateLimiterCache'
 
@@ -58,8 +54,7 @@ export const rateLimitMiddleware = () =>
     const token = authorization?.split(' ')[1]
     if (!token) throw new UnauthorizedError('Authorization token required')
 
-    const { workspaceId, rateLimit, rateLimiter } =
-      await getTokenRateLimit(token)
+    const { workspaceId, rateLimit, rateLimiter } = await getTokenRateLimit(token)
 
     try {
       const rateLimitKey = `workspace:${workspaceId}`
@@ -68,10 +63,7 @@ export const rateLimitMiddleware = () =>
       c.header('Retry-After', (result.msBeforeNext / 1000).toString())
       c.header('X-RateLimit-Limit', rateLimit.toString())
       c.header('X-RateLimit-Remaining', result.remainingPoints.toString())
-      c.header(
-        'X-RateLimit-Reset',
-        (Date.now() + result.msBeforeNext).toString(),
-      )
+      c.header('X-RateLimit-Reset', (Date.now() + result.msBeforeNext).toString())
 
       await next()
     } catch (error) {

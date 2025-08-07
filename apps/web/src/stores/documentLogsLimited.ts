@@ -1,10 +1,10 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import {
+import type {
   DocumentLogFilterOptions,
   DocumentLogWithMetadataAndError,
 } from '@latitude-data/core/browser'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 type UseDocumentLogsLimitedResult = {
   items: DocumentLogWithMetadataAndError[]
@@ -27,10 +27,7 @@ export default function useDocumentLogsLimited(
   },
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher<
-    UseDocumentLogsLimitedResult,
-    UseDocumentLogsLimitedResult
-  >(
+  const fetcher = useFetcher<UseDocumentLogsLimitedResult, UseDocumentLogsLimitedResult>(
     disable
       ? undefined
       : documentUuid
@@ -60,8 +57,6 @@ export default function useDocumentLogsLimited(
   return { data, mutate, isLoading }
 }
 
-export function documentLogPresenter(
-  documentLog: DocumentLogWithMetadataAndError,
-) {
+function documentLogPresenter(documentLog: DocumentLogWithMetadataAndError) {
   return { ...documentLog, createdAt: new Date(documentLog.createdAt) }
 }

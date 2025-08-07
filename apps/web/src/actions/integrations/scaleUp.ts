@@ -15,9 +15,7 @@ export const scaleUpMcpServerAction = authProcedure
   )
   .handler(async ({ input, ctx }) => {
     const mcpServerRepo = new McpServerRepository(ctx.workspace.id)
-    const mcpServer = await mcpServerRepo
-      .find(input.mcpServerId)
-      .then((r) => r.unwrap())
+    const mcpServer = await mcpServerRepo.find(input.mcpServerId).then((r) => r.unwrap())
 
     return scaleMcpServer({
       mcpServer,

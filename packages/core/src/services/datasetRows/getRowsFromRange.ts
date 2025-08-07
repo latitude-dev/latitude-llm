@@ -1,7 +1,7 @@
-import { DatasetRow, Dataset } from '../../browser'
+import type { DatasetRow, Dataset } from '../../browser'
 import { database } from '../../client'
 import { DatasetRowsRepository } from '../../repositories'
-import { DatasetRowDataContent } from '../../schema'
+import type { DatasetRowDataContent } from '../../schema'
 
 async function getToLine({
   toLine,

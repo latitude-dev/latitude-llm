@@ -1,9 +1,10 @@
 import { env } from '@latitude-data/env'
-import { SentMessageInfo, Transporter } from 'nodemailer'
-import Mail, { Address } from 'nodemailer/lib/mailer'
-import SMTPTransport from 'nodemailer/lib/smtp-transport'
+import type { SentMessageInfo, Transporter } from 'nodemailer'
+import type Mail from 'nodemailer/lib/mailer'
+import type { Address } from 'nodemailer/lib/mailer'
+import type SMTPTransport from 'nodemailer/lib/smtp-transport'
 
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import { createAdapter } from './adapters'
 
 export default abstract class Mailer {
@@ -38,9 +39,7 @@ export default abstract class Mailer {
       const failed = info.rejected.concat(info.pending).filter(Boolean)
 
       if (failed.length) {
-        return Result.error(
-          new Error(`Email(s) (${failed.join(', ')}) could not be sent`),
-        )
+        return Result.error(new Error(`Email(s) (${failed.join(', ')}) could not be sent`))
       }
 
       return Result.ok(info)

@@ -2,15 +2,15 @@ import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  Commit,
-  DocumentLog,
-  DocumentVersion,
+  type Commit,
+  type DocumentLog,
+  type DocumentVersion,
   LOG_SOURCES,
-  Project,
-  ProviderApiKey,
+  type Project,
+  type ProviderApiKey,
   Providers,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { documentLogs } from '../../schema'
@@ -55,17 +55,16 @@ describe('getDocumentLogsWithMetadata', () => {
         user: setup.user,
       })
       commit = commit1
-      const { documentVersion: docVersion } =
-        await factories.createDocumentVersion({
-          workspace: setup.workspace,
-          user: setup.user,
-          commit: commit1,
-          path: 'folder1/doc1',
-          content: factories.helpers.createPrompt({
-            provider,
-            content: 'VERSION_1',
-          }),
-        })
+      const { documentVersion: docVersion } = await factories.createDocumentVersion({
+        workspace: setup.workspace,
+        user: setup.user,
+        commit: commit1,
+        path: 'folder1/doc1',
+        content: factories.helpers.createPrompt({
+          provider,
+          content: 'VERSION_1',
+        }),
+      })
       doc = docVersion
       await mergeCommit(commit1).then((r) => r.unwrap())
 
@@ -141,18 +140,16 @@ describe('getDocumentLogsWithMetadata', () => {
           },
         })
         anotherCommit = another.commit
-        const { documentVersion: doc2 } = await factories.createDocumentVersion(
-          {
-            workspace,
-            user,
-            commit,
-            path: 'folder1/doc2',
-            content: factories.helpers.createPrompt({
-              provider,
-              content: 'DOC_2_VERSION_1',
-            }),
-          },
-        )
+        const { documentVersion: doc2 } = await factories.createDocumentVersion({
+          workspace,
+          user,
+          commit,
+          path: 'folder1/doc2',
+          content: factories.helpers.createPrompt({
+            provider,
+            content: 'DOC_2_VERSION_1',
+          }),
+        })
         const { documentLog: lg3 } = await factories.createDocumentLog({
           document: doc2,
           commit,
@@ -165,22 +162,13 @@ describe('getDocumentLogsWithMetadata', () => {
         })
 
         anotherWorkspaceLog = awlog
-        log1Before = await updateLogCreatedAt(
-          new Date('2024-12-10T22:59:59Z'),
-          log1,
-        )
-        log2Between = await updateLogCreatedAt(
-          new Date('2024-12-10T23:00:01Z'),
-          log2,
-        )
+        log1Before = await updateLogCreatedAt(new Date('2024-12-10T22:59:59Z'), log1)
+        log2Between = await updateLogCreatedAt(new Date('2024-12-10T23:00:01Z'), log2)
         anotherWorkspacelogBetween = await updateLogCreatedAt(
           new Date('2024-12-10T23:00:01Z'),
           anotherWorkspaceLog,
         )
-        log3InAfter = await updateLogCreatedAt(
-          new Date('2024-12-11T23:00:01Z'),
-          log3,
-        )
+        log3InAfter = await updateLogCreatedAt(new Date('2024-12-11T23:00:01Z'), log3)
       })
 
       it('filter logs by createdAt', async () => {
@@ -202,9 +190,7 @@ describe('getDocumentLogsWithMetadata', () => {
         expect(result.length).toBe(1)
         expect(result.find((l) => l.uuid === log1Before.uuid)).toBeUndefined()
         expect(result.find((l) => l.uuid === log2Between.uuid)).toBeDefined()
-        expect(
-          result.find((l) => l.uuid === anotherWorkspacelogBetween.uuid),
-        ).toBeUndefined()
+        expect(result.find((l) => l.uuid === anotherWorkspacelogBetween.uuid)).toBeUndefined()
         expect(result.find((l) => l.uuid === log3InAfter.uuid)).toBeUndefined()
       })
 
@@ -224,9 +210,7 @@ describe('getDocumentLogsWithMetadata', () => {
         expect(result.length).toBe(1)
         expect(result.find((l) => l.uuid === log1Before.uuid)).toBeUndefined()
         expect(result.find((l) => l.uuid === log2Between.uuid)).toBeDefined()
-        expect(
-          result.find((l) => l.uuid === anotherWorkspacelogBetween.uuid),
-        ).toBeUndefined()
+        expect(result.find((l) => l.uuid === anotherWorkspacelogBetween.uuid)).toBeUndefined()
         expect(result.find((l) => l.uuid === log3InAfter.uuid)).toBeUndefined()
       })
     })
@@ -264,8 +248,7 @@ describe('getDocumentLogsWithMetadata', () => {
   })
 
   it('includes logs from specified draft', async () => {
-    const { project, user, workspace, providers } =
-      await factories.createProject()
+    const { project, user, workspace, providers } = await factories.createProject()
     const { commit: commit1 } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       workspace,
@@ -331,8 +314,7 @@ describe('getDocumentLogsWithMetadata', () => {
   })
 
   it('does not include logs from non-specified drafts', async () => {
-    const { project, user, workspace, providers } =
-      await factories.createProject()
+    const { project, user, workspace, providers } = await factories.createProject()
     const { commit: commit1 } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       workspace,
@@ -396,21 +378,18 @@ describe('getDocumentLogsWithMetadata', () => {
   })
 
   it('includes logs from specified custom identifier', async () => {
-    const { project, user, workspace, providers } =
-      await factories.createProject()
+    const { project, user, workspace, providers } = await factories.createProject()
     const { commit } = await factories.createDraft({ project, user })
-    const { documentVersion: document } = await factories.createDocumentVersion(
-      {
-        workspace,
-        user,
-        commit,
-        path: 'folder1/doc1',
-        content: factories.helpers.createPrompt({
-          provider: providers[0]!,
-          content: 'VERSION_1',
-        }),
-      },
-    )
+    const { documentVersion: document } = await factories.createDocumentVersion({
+      workspace,
+      user,
+      commit,
+      path: 'folder1/doc1',
+      content: factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'VERSION_1',
+      }),
+    })
 
     const { documentLog: log0 } = await factories.createDocumentLog({
       document,
@@ -468,8 +447,7 @@ describe('getDocumentLogsWithMetadata', () => {
   })
 
   it('returns a sum of tokens and cost', async () => {
-    const { project, user, workspace, providers } =
-      await factories.createProject()
+    const { project, user, workspace, providers } = await factories.createProject()
     const { commit } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       workspace,
@@ -501,14 +479,11 @@ describe('getDocumentLogsWithMetadata', () => {
 
     expect(result.find((l) => l.uuid === log.uuid)).toBeDefined()
     expect(result.find((l) => l.uuid === log.uuid)?.tokens).toBeTypeOf('number')
-    expect(
-      result.find((l) => l.uuid === log.uuid)?.costInMillicents,
-    ).toBeTypeOf('number')
+    expect(result.find((l) => l.uuid === log.uuid)?.costInMillicents).toBeTypeOf('number')
   })
 
   it('does not include logs from non-specified log source', async () => {
-    const { project, user, workspace, providers } =
-      await factories.createProject()
+    const { project, user, workspace, providers } = await factories.createProject()
     const { commit } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       workspace,
@@ -541,13 +516,7 @@ describe('getDocumentLogsWithMetadata', () => {
   })
 
   it('returns logs without provider logs', async () => {
-    const {
-      project,
-      user,
-      workspace,
-      providers,
-      commit: commit0,
-    } = await factories.createProject()
+    const { project, user, workspace, providers, commit: commit0 } = await factories.createProject()
     const { commit: commit1 } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       workspace,

@@ -7,9 +7,7 @@ const client = await cache()
 
 const rateLimiters = new Map<number, RateLimiterRedis>()
 
-export function getRateLimiterForRateLimit(
-  rateLimit: number,
-): RateLimiterRedis {
+export function getRateLimiterForRateLimit(rateLimit: number): RateLimiterRedis {
   if (rateLimiters.has(rateLimit)) {
     return rateLimiters.get(rateLimit)!
   }

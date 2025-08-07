@@ -1,28 +1,22 @@
 import { DocumentTriggerType, LogSources } from '@latitude-data/constants'
-import {
-  DocumentTrigger,
-  DocumentTriggerEvent,
-  Workspace,
-} from '../../../browser'
-import { PromisedResult } from '../../../lib/Transaction'
-import { Result, TypedResult } from '../../../lib/Result'
+import type { DocumentTrigger, DocumentTriggerEvent, Workspace } from '../../../browser'
+import type { PromisedResult } from '../../../lib/Transaction'
+import { Result, type TypedResult } from '../../../lib/Result'
 import { NotImplementedError } from '@latitude-data/constants/errors'
 import {
   CommitsRepository,
   DocumentTriggersRepository,
   DocumentVersionsRepository,
 } from '../../../repositories'
-import { ExecuteDocumentTriggerJobData } from '../../../jobs/job-definitions/documentTriggers/runDocumentTriggerEventJob'
+import type { ExecuteDocumentTriggerJobData } from '../../../jobs/job-definitions/documentTriggers/runDocumentTriggerEventJob'
 import { documentsQueue } from '../../../jobs/queues'
 import { runDocumentAtCommit } from '../../commits'
 import { BACKGROUND } from '../../../telemetry'
 import { sendEmailResponse } from '../handlers/email/sendResponse'
-import { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
+import type { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
 import { getDocumentTriggerEventRunParameters } from './getDocumentTriggerRunParameters'
 
-function getRunSource(
-  documentTrigger: DocumentTrigger,
-): TypedResult<LogSources> {
+function getRunSource(documentTrigger: DocumentTrigger): TypedResult<LogSources> {
   switch (documentTrigger.triggerType) {
     case DocumentTriggerType.Email:
       return Result.ok(LogSources.EmailTrigger)
@@ -32,16 +26,12 @@ function getRunSource(
       return Result.ok(LogSources.IntegrationTrigger)
     default:
       return Result.error(
-        new NotImplementedError(
-          `Trigger type '${documentTrigger.triggerType}' is not implemented`,
-        ),
+        new NotImplementedError(`Trigger type '${documentTrigger.triggerType}' is not implemented`),
       )
   }
 }
 
-export async function runDocumentFromTriggerEvent<
-  T extends DocumentTriggerType,
->({
+export async function runDocumentFromTriggerEvent<T extends DocumentTriggerType>({
   workspace,
   documentTriggerEvent,
 }: {
@@ -53,14 +43,11 @@ export async function runDocumentFromTriggerEvent<
   if (!Result.isOk(commitResult)) return commitResult
   const commit = commitResult.unwrap()
 
-  const documentTriggersRepository = new DocumentTriggersRepository(
-    workspace.id,
-  )
-  const documentTriggerResult =
-    await documentTriggersRepository.getTriggerByUuid({
-      uuid: documentTriggerEvent.triggerUuid,
-      commit,
-    })
+  const documentTriggersRepository = new DocumentTriggersRepository(workspace.id)
+  const documentTriggerResult = await documentTriggersRepository.getTriggerByUuid({
+    uuid: documentTriggerEvent.triggerUuid,
+    commit,
+  })
   if (!Result.isOk(documentTriggerResult)) return documentTriggerResult
   const documentTrigger = documentTriggerResult.unwrap()
 
@@ -80,9 +67,7 @@ export async function runDocumentFromTriggerEvent<
 
   if (parameters === null) {
     return Result.error(
-      new NotImplementedError(
-        `Trigger type '${documentTrigger.triggerType}' is not implemented`,
-      ),
+      new NotImplementedError(`Trigger type '${documentTrigger.triggerType}' is not implemented`),
     )
   }
 
@@ -112,10 +97,8 @@ export async function runDocumentFromTriggerEvent<
     }
 
     const sendResponseResult = await sendEmailResponse({
-      documentTrigger:
-        documentTrigger as DocumentTrigger<DocumentTriggerType.Email>,
-      documentTriggerEvent:
-        documentTriggerEvent as DocumentTriggerEvent<DocumentTriggerType.Email>,
+      documentTrigger: documentTrigger as DocumentTrigger<DocumentTriggerType.Email>,
+      documentTriggerEvent: documentTriggerEvent as DocumentTriggerEvent<DocumentTriggerType.Email>,
       result,
     })
 

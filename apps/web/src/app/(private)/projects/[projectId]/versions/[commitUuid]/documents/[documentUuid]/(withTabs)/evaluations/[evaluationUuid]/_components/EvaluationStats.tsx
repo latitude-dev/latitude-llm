@@ -1,8 +1,8 @@
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import {
-  EvaluationMetric,
+  type EvaluationMetric,
   EvaluationType,
-  EvaluationV2Stats,
+  type EvaluationV2Stats,
 } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import AverageScoreChart from './charts/AverageScore'

@@ -1,18 +1,13 @@
 import {
-  Dataset,
+  type Dataset,
   DATASET_COLUMN_ROLES,
   DEFAULT_DATASET_LABEL,
-  DocumentLogWithMetadataAndError,
+  type DocumentLogWithMetadataAndError,
 } from '../../../browser'
-import { Column } from '../../../schema'
-import {
-  buildColumns as buildColumnsFn,
-  HashAlgorithmFn,
-} from '../../datasets/utils'
+import type { Column } from '../../../schema'
+import { buildColumns as buildColumnsFn, type HashAlgorithmFn } from '../../datasets/utils'
 
-function getUniqueParameterNamesFromLogs(
-  logs: DocumentLogWithMetadataAndError[],
-) {
+function getUniqueParameterNamesFromLogs(logs: DocumentLogWithMetadataAndError[]) {
   const parameterNames = new Set<string>()
   for (const log of logs) {
     const paramaterKeys = log.parameters ? Object.keys(log.parameters) : []
@@ -52,30 +47,24 @@ export function buildColumns({
     prevColumns: datasetColumns,
   })
 
-  const fixedColumnsByName = allColumns.reduce<FixedColumnsByName>(
-    (acc, column) => {
-      if (column.role === DATASET_COLUMN_ROLES.label) {
-        acc.label = column
-      } else if (column.name === 'document_log_id') {
-        acc.documentLogId = column
-      } else if (column.name === 'tokens') {
-        acc.tokens = column
-      }
+  const fixedColumnsByName = allColumns.reduce<FixedColumnsByName>((acc, column) => {
+    if (column.role === DATASET_COLUMN_ROLES.label) {
+      acc.label = column
+    } else if (column.name === 'document_log_id') {
+      acc.documentLogId = column
+    } else if (column.name === 'tokens') {
+      acc.tokens = column
+    }
 
-      return acc
-    },
-    {} as FixedColumnsByName,
-  )
-  const parametersByName = allColumns.reduce<Record<string, Column>>(
-    (acc, column) => {
-      if (column.role === DATASET_COLUMN_ROLES.parameter) {
-        acc[column.name] = column
-      }
+    return acc
+  }, {} as FixedColumnsByName)
+  const parametersByName = allColumns.reduce<Record<string, Column>>((acc, column) => {
+    if (column.role === DATASET_COLUMN_ROLES.parameter) {
+      acc[column.name] = column
+    }
 
-      return acc
-    },
-    {},
-  )
+    return acc
+  }, {})
 
   return { allColumns, parametersByName, fixedColumnsByName }
 }

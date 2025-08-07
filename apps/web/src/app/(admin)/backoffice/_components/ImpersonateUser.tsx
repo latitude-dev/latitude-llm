@@ -15,12 +15,7 @@ export function ImpersonateUser() {
     <form action={action} className='flex flex-col gap-4 max-w-md'>
       <div className='flex flex-col gap-2'>
         <Label htmlFor='email'>User Email</Label>
-        <Input
-          id='email'
-          type='email'
-          name='email'
-          placeholder='user@example.com'
-        />
+        <Input id='email' type='email' name='email' placeholder='user@example.com' />
       </div>
       <Button type='submit'>Impersonate User</Button>
     </form>

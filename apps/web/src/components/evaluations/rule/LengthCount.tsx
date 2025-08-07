@@ -1,18 +1,14 @@
 import { formatCount } from '$/lib/formatCount'
 import {
-  EvaluationType,
+  type EvaluationType,
   RuleEvaluationLengthCountSpecification,
-  RuleEvaluationMetric,
+  type RuleEvaluationMetric,
 } from '@latitude-data/constants'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 
 const specification = RuleEvaluationLengthCountSpecification
 export default {
@@ -23,21 +19,17 @@ export default {
   chartConfiguration: chartConfiguration,
 }
 
-const ALGORITHM_OPTIONS =
-  specification.configuration.shape.algorithm.options.map((option) => ({
-    label: option.toUpperCase().split('_').join(' '),
-    value: option,
-  }))
+const ALGORITHM_OPTIONS = specification.configuration.shape.algorithm.options.map((option) => ({
+  label: option.toUpperCase().split('_').join(' '),
+  value: option,
+}))
 
 function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
   errors,
   disabled,
-}: ConfigurationFormProps<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.LengthCount
->) {
+}: ConfigurationFormProps<EvaluationType.Rule, RuleEvaluationMetric.LengthCount>) {
   return (
     <>
       <Select
@@ -47,10 +39,8 @@ function ConfigurationSimpleForm({
         description='What to count in the response'
         placeholder='Select an algorithm'
         options={ALGORITHM_OPTIONS}
-        onChange={(value) =>
-          setConfiguration({ ...configuration, algorithm: value })
-        }
-        errors={errors?.['algorithm']}
+        onChange={(value) => setConfiguration({ ...configuration, algorithm: value })}
+        errors={errors?.algorithm}
         disabled={disabled}
         required
       />
@@ -64,10 +54,8 @@ function ConfigurationSimpleForm({
           label='Minimum length'
           placeholder='No minimum'
           min={0}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minLength: value })
-          }
-          errors={errors?.['minLength']}
+          onChange={(value) => setConfiguration({ ...configuration, minLength: value })}
+          errors={errors?.minLength}
           defaultAppearance
           className='w-full'
           disabled={disabled}
@@ -79,10 +67,8 @@ function ConfigurationSimpleForm({
           label='Maximum length'
           placeholder='No maximum'
           min={0}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxLength: value })
-          }
-          errors={errors?.['maxLength']}
+          onChange={(value) => setConfiguration({ ...configuration, maxLength: value })}
+          errors={errors?.maxLength}
           defaultAppearance
           className='w-full'
           disabled={disabled}
@@ -105,10 +91,7 @@ function ResultBadge({
 
 function chartConfiguration({
   evaluation,
-}: ChartConfigurationArgs<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.LengthCount
->) {
+}: ChartConfigurationArgs<EvaluationType.Rule, RuleEvaluationMetric.LengthCount>) {
   return {
     min: 0,
     max: evaluation.configuration.maxLength ?? Infinity,

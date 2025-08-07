@@ -1,13 +1,8 @@
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
-import { ReactNode, useMemo } from 'react'
+import { type ReactNode, useMemo } from 'react'
 
-export function ToolBarWrapper({
-  children,
-}: {
-  children: ReactNode
-  className?: string
-}) {
+export function ToolBarWrapper({ children }: { children: ReactNode; className?: string }) {
   return useMemo(
     () => (
       <FloatingPanel visible>

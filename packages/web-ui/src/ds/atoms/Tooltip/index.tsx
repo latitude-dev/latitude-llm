@@ -1,19 +1,14 @@
 'use client'
-import {
-  ComponentPropsWithoutRef,
-  ElementRef,
-  forwardRef,
-  ReactNode,
-} from 'react'
+import { type ComponentPropsWithoutRef, type ElementRef, forwardRef, type ReactNode } from 'react'
 import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 
 import { cn } from '../../../lib/utils'
 import { Text } from '../Text'
-import { TextColor } from '../../tokens'
+import type { TextColor } from '../../tokens'
 import { Icon } from '../Icons'
-import { IconProps } from '../Icons'
+import type { IconProps } from '../Icons'
 import { Badge } from '../Badge'
-import { BadgeProps } from '../Badge'
+import type { BadgeProps } from '../Badge'
 import { zIndex } from '../../tokens/zIndex'
 
 const TooltipProvider = TooltipPrimitive.Provider
@@ -25,26 +20,12 @@ const TooltipTrigger = TooltipPrimitive.Trigger
 export type TooltipVariant = 'default' | 'destructive' | 'inverse' | 'ghost'
 type PropviderProps = ComponentPropsWithoutRef<typeof TooltipProvider>
 type RootProps = ComponentPropsWithoutRef<typeof TooltipRoot>
-type ContentProps = ComponentPropsWithoutRef<
-  typeof TooltipPrimitive.Content
-> & {
+type ContentProps = ComponentPropsWithoutRef<typeof TooltipPrimitive.Content> & {
   variant?: TooltipVariant
   maxWidth?: string
 }
-const TooltipContent = forwardRef<
-  ElementRef<typeof TooltipPrimitive.Content>,
-  ContentProps
->(
-  (
-    {
-      className,
-      variant = 'default',
-      sideOffset = 4,
-      maxWidth = 'max-w-72',
-      ...props
-    },
-    ref,
-  ) => (
+const TooltipContent = forwardRef<ElementRef<typeof TooltipPrimitive.Content>, ContentProps>(
+  ({ className, variant = 'default', sideOffset = 4, maxWidth = 'max-w-72', ...props }, ref) => (
     <TooltipPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
@@ -153,11 +134,7 @@ function Tooltip({
           hideWhenDetached={hideWhenDetached}
           updatePositionStrategy={updatePositionStrategy}
         >
-          {isChildrenString ? (
-            <Text.H6B color={textColor}>{children}</Text.H6B>
-          ) : (
-            children
-          )}
+          {isChildrenString ? <Text.H6B color={textColor}>{children}</Text.H6B> : children}
         </TooltipContent>
       </TooltipPrimitive.Portal>
     </TooltipRoot>

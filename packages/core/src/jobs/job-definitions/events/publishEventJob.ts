@@ -1,6 +1,6 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 
-import { LatitudeEvent } from '../../../events/events'
+import type { LatitudeEvent } from '../../../events/events'
 import { EventHandlers } from '../../../events/handlers/index'
 import { eventHandlersQueue } from '../../queues'
 

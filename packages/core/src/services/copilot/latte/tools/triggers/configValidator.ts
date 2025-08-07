@@ -1,13 +1,9 @@
-import {
+import type {
   ConfigurablePropWithRemoteOptions,
   PipedreamIntegration,
 } from '../../../../../browser'
-import { PromisedResult } from '../../../../../lib/Transaction'
-import {
-  BackendClient,
-  ConfigurableProps,
-  ConfiguredProps,
-} from '@pipedream/sdk'
+import type { PromisedResult } from '../../../../../lib/Transaction'
+import type { BackendClient, ConfigurableProps, ConfiguredProps } from '@pipedream/sdk'
 import { Result } from '../../../../../lib/Result'
 import {
   addRemoteOptions,
@@ -16,7 +12,7 @@ import {
 } from './fetchFullConfigSchema'
 import { reloadComponentProps } from '../../../../integrations/pipedream/components/reloadComponentProps'
 import { LatitudeError } from '@latitude-data/constants/errors'
-import { PipedreamIntegrationConfiguration } from '../../../../integrations/helpers/schema'
+import type { PipedreamIntegrationConfiguration } from '../../../../integrations/helpers/schema'
 import { captureMessage } from '../../../../../utils/workers/sentry'
 
 export async function validateLattesChoices({
@@ -60,9 +56,7 @@ export async function validateLattesChoices({
     const reloadResult = await reloadComponentProps({
       integration,
       componentId: componentId,
-      configuredProps: Object.fromEntries([
-        [prop.name, lattesChoices[prop.name]],
-      ]),
+      configuredProps: Object.fromEntries([[prop.name, lattesChoices[prop.name]]]),
       pipedream,
     })
 
@@ -80,15 +74,12 @@ export async function validateLattesChoices({
       )
     }
 
-    const relevantLattePropsFromReload =
-      reloadedProps.dynamicProps.configurableProps.filter(
-        (prop) => !IRRELEVANT_PROP_TYPES.includes(prop.type),
-      )
+    const relevantLattePropsFromReload = reloadedProps.dynamicProps.configurableProps.filter(
+      (prop) => !IRRELEVANT_PROP_TYPES.includes(prop.type),
+    )
 
     // More performant way to check if the prop names are already in the full schema
-    const propNamesWithRemoteOptions = new Set(
-      fullTriggerConfigSchema.map((prop) => prop.name),
-    )
+    const propNamesWithRemoteOptions = new Set(fullTriggerConfigSchema.map((prop) => prop.name))
 
     const newPropsFromReload = relevantLattePropsFromReload.filter(
       (prop) => !propNamesWithRemoteOptions.has(prop.name),
@@ -99,8 +90,7 @@ export async function validateLattesChoices({
       pipedream,
       newPropsFromReload,
       integration,
-      (integration.configuration as PipedreamIntegrationConfiguration)
-        .externalUserId,
+      (integration.configuration as PipedreamIntegrationConfiguration).externalUserId,
     )
 
     if (!Result.isOk(newPropsFromReloadWithOptionsResult)) {
@@ -152,29 +142,21 @@ export async function isValidConfiguration({
       continue
     }
 
-    if (
-      prop.remoteOptionValues &&
-      !prop.remoteOptionValues.containsAll(chosenPropValue)
-    ) {
+    if (prop.remoteOptionValues && !prop.remoteOptionValues.containsAll(chosenPropValue)) {
       latteErrors.push(
         `Invalid value for configured prop ${prop.name} with value ${chosenPropValue}. Expected one of: ${prop.remoteOptionValues.getFlattenedValues().join(', ')}`,
       )
     }
   }
   return latteErrors.length > 0
-    ? Result.error(
-        new LatteInvalidChoiceError(latteErrors, fullTriggerConfigSchema),
-      )
+    ? Result.error(new LatteInvalidChoiceError(latteErrors, fullTriggerConfigSchema))
     : Result.ok(true)
 }
 
 export class LatteInvalidChoiceError extends Error {
   public readonly errors: string[]
   public readonly fullSchema: ConfigurablePropWithRemoteOptions[]
-  constructor(
-    errors: string[],
-    fullSchema: ConfigurablePropWithRemoteOptions[],
-  ) {
+  constructor(errors: string[], fullSchema: ConfigurablePropWithRemoteOptions[]) {
     super('Latte choices are invalid')
     this.fullSchema = fullSchema
     this.errors = errors
@@ -187,9 +169,7 @@ export function isValidPropType(propType: string, value: any): boolean {
       return typeof value === 'string'
 
     case 'string[]':
-      return (
-        Array.isArray(value) && value.every((item) => typeof item === 'string')
-      )
+      return Array.isArray(value) && value.every((item) => typeof item === 'string')
 
     case 'boolean':
       return typeof value === 'boolean'
@@ -200,15 +180,11 @@ export function isValidPropType(propType: string, value: any): boolean {
     case 'integer[]':
       return (
         Array.isArray(value) &&
-        value.every(
-          (item) => typeof item === 'number' && Number.isInteger(item),
-        )
+        value.every((item) => typeof item === 'number' && Number.isInteger(item))
       )
 
     case 'object':
-      return (
-        typeof value === 'object' && !Array.isArray(value) && value !== null
-      )
+      return typeof value === 'object' && !Array.isArray(value) && value !== null
 
     case 'any':
       return true
@@ -234,9 +210,7 @@ export function isValidPropType(propType: string, value: any): boolean {
       return typeof value === 'string'
 
     case '$.discord.channel[]':
-      return (
-        Array.isArray(value) && value.every((item) => typeof item === 'string')
-      )
+      return Array.isArray(value) && value.every((item) => typeof item === 'string')
 
     // Alert type should never have a value (it's display-only)
     case 'alert':

@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { Workspace, Dataset, User } from '../../browser'
+import type { Workspace, Dataset, User } from '../../browser'
 import * as factories from '../../tests/factories'
 import { insertRowsInBatch } from './insertRowsInBatch'
 import { DatasetRowsRepository } from '../../repositories'
-import { DatasetRowData } from '../../schema'
+import type { DatasetRowData } from '../../schema'
 
 let workspace: Workspace
 let author: User
@@ -76,9 +76,7 @@ describe('insertRowsInBatch', () => {
       )
 
       expect(testRows).toHaveLength(2)
-      expect(testRows.map((r) => r.rowData)).toEqual(
-        expect.arrayContaining(rowData),
-      )
+      expect(testRows.map((r) => r.rowData)).toEqual(expect.arrayContaining(rowData))
     }
   })
 

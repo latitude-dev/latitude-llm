@@ -26,9 +26,7 @@ export function useCellPosition(): ReturnType {
     if (!el) return
 
     const cellRect = el.getBoundingClientRect()
-    const gridWrapperEl = el.closest(
-      '[role="grid-wrapper"]',
-    ) as HTMLElement | null
+    const gridWrapperEl = el.closest('[role="grid-wrapper"]') as HTMLElement | null
 
     if (!gridWrapperEl) return
 

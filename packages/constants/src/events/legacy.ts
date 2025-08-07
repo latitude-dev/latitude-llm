@@ -1,7 +1,7 @@
-import { Message } from '@latitude-data/constants/legacyCompiler'
-import { ChainEventDtoResponse } from '..'
-import { FinishReason } from 'ai'
-import { LatitudePromptConfig } from '../latitudePromptSchema'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
+import type { ChainEventDtoResponse } from '..'
+import type { FinishReason } from 'ai'
+import type { LatitudePromptConfig } from '../latitudePromptSchema'
 
 export enum LegacyChainEventTypes {
   Error = 'chain-error',

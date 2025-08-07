@@ -1,10 +1,9 @@
-import { env } from 'process'
-import React from 'react'
+import { env } from 'node:process'
 
 import { Link, Text } from '@react-email/components'
 
 import ContainerLayout from '../_components/ContainerLayout'
-import { Dataset, User } from '../../../browser'
+import type { Dataset, User } from '../../../browser'
 
 type Props = {
   user: User
@@ -14,10 +13,7 @@ export default function DatasetUpdateMail({ user, dataset }: Props) {
   return (
     <ContainerLayout previewText={`Dataset has been updated.`}>
       <Text>Hi {user.name},</Text>
-      <Text>
-        The dataset {dataset.name} has been updated. Click the link below to
-        preview it.
-      </Text>
+      <Text>The dataset {dataset.name} has been updated. Click the link below to preview it.</Text>
       <Link
         href={createDatasetLink(dataset)}
         target='_blank'

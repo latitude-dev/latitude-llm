@@ -1,17 +1,14 @@
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
-import {
-  ResultRowCells,
-  ResultRowHeaders,
-} from '$/components/evaluations/ResultRow'
+import { ResultRowCells, ResultRowHeaders } from '$/components/evaluations/ResultRow'
 import { LogicTablePaginationFooter } from '$/components/TablePaginationFooter/LogicTablePaginationFooter'
-import { useSelectableRows } from '$/hooks/useSelectableRows'
+import type { useSelectableRows } from '$/hooks/useSelectableRows'
 import {
   DEFAULT_PAGINATION_SIZE,
-  EvaluationMetric,
-  EvaluationResultsV2Search,
-  EvaluationResultV2WithDetails,
-  EvaluationType,
-  EvaluationV2,
+  type EvaluationMetric,
+  type EvaluationResultsV2Search,
+  type EvaluationResultV2WithDetails,
+  type EvaluationType,
+  type EvaluationV2,
 } from '@latitude-data/core/browser'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -24,7 +21,7 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { cn } from '@latitude-data/web-ui/utils'
-import { Ref } from 'react'
+import type { Ref } from 'react'
 
 function EvaluationResultsTableRow<
   T extends EvaluationType = EvaluationType,
@@ -44,11 +41,7 @@ function EvaluationResultsTableRow<
 }) {
   return (
     <TableRow
-      onClick={() =>
-        setSelectedResult(
-          result.uuid === selectedResult?.uuid ? undefined : result,
-        )
-      }
+      onClick={() => setSelectedResult(result.uuid === selectedResult?.uuid ? undefined : result)}
       className={cn(
         'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors',
         {
@@ -91,9 +84,7 @@ function EvaluationResultsTableRow<
 }
 
 const countLabel = (selected: number) => (count: number) => {
-  return selected
-    ? `${selected} of ${count} results selected`
-    : `${count} results`
+  return selected ? `${selected} of ${count} results selected` : `${count} results`
 }
 
 export function EvaluationResultsTableBody<

@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback, useEffect, useState } from 'react'
+import { type ChangeEvent, useCallback, useEffect, useState } from 'react'
 import { useServerAction } from 'zsa-react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { generateDatasetPreviewAction } from '$/actions/sdk/generateDatasetPreviewAction'
@@ -43,16 +43,13 @@ export function useDatasetPreviewModal({
   const preview = usePreviewData()
   const [parameters, setParameters] = useState<string[]>(defaultParameters)
 
-  const handleParametersChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const parameterList = e.target.value
-        .split(',')
-        .map((param) => param.trim())
-        .filter(Boolean)
-      setParameters(parameterList)
-    },
-    [],
-  )
+  const handleParametersChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const parameterList = e.target.value
+      .split(',')
+      .map((param) => param.trim())
+      .filter(Boolean)
+    setParameters(parameterList)
+  }, [])
 
   const generatePreview = useCallback(
     async (formData: FormData) => {
@@ -66,9 +63,7 @@ export function useDatasetPreviewModal({
   )
 
   const handleRegeneratePreview = useCallback(async () => {
-    const form = window.document.getElementById(
-      'generateDatasetForm',
-    ) as HTMLFormElement
+    const form = window.document.getElementById('generateDatasetForm') as HTMLFormElement
     const formData = new FormData(form)
 
     await preview.runPreviewAction({

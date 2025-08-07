@@ -3,7 +3,7 @@ import { API_ROUTES } from '$/api.routes'
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 
-export const VersionSchema = z.object({
+const VersionSchema = z.object({
   id: z.number(),
   uuid: z.string(),
   projectId: z.number(),

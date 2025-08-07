@@ -1,4 +1,4 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { downloadLogsJob } from './downloadLogsJob'
 import * as factories from '../../../tests/factories'
@@ -88,9 +88,7 @@ describe('downloadLogsJob', () => {
 
     // Mock export operations
     vi.mocked(findOrCreateExport).mockResolvedValue(Result.ok(mockExport))
-    vi.mocked(updateExport).mockResolvedValue(
-      Result.ok({ ...mockExport, readyAt: now }),
-    )
+    vi.mocked(updateExport).mockResolvedValue(Result.ok({ ...mockExport, readyAt: now }))
 
     // Create mock job
     mockJob = {
@@ -148,9 +146,7 @@ describe('downloadLogsJob', () => {
     })
 
     // Mock disk write error
-    mockDisk.putStream.mockResolvedValue(
-      Result.error(new Error('Disk write failed')),
-    )
+    mockDisk.putStream.mockResolvedValue(Result.error(new Error('Disk write failed')))
 
     // Run the job and expect error
     await expect(downloadLogsJob(mockJob)).rejects.toThrow('Disk write failed')

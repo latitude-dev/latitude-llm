@@ -13,7 +13,5 @@ export default async function RedirectToGenerateModalPage({
 }) {
   const { parameters, name, backUrl } = await searchParams
 
-  return redirect(
-    ROUTES.datasets.root({ modal: 'generate', name, parameters, backUrl }),
-  )
+  return redirect(ROUTES.datasets.root({ modal: 'generate', name, parameters, backUrl }))
 }

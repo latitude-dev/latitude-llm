@@ -7,7 +7,7 @@ import { ProgressTracker } from '../../jobs/utils/progressTracker'
 import { eq } from 'drizzle-orm'
 import { createExperiment, createProject, helpers } from '../../tests/factories'
 import { Providers } from '@latitude-data/constants'
-import { Commit, Workspace, User, DocumentVersion } from '../../browser'
+import type { Commit, Workspace, User, DocumentVersion } from '../../browser'
 
 // Mock external dependencies
 vi.mock('../../websockets/workers')
@@ -25,9 +25,7 @@ describe('completeExperiment', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    vi.mocked(ProgressTracker).mockImplementation(
-      () => mockProgressTracker as any,
-    )
+    vi.mocked(ProgressTracker).mockImplementation(() => mockProgressTracker as any)
     const {
       documents: d,
       commit: c,

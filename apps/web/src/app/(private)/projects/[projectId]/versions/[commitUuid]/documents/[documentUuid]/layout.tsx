@@ -1,17 +1,12 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
-import {
-  getApiKeysCached,
-  getDocumentByUuidCached,
-} from '$/app/(private)/_data-access'
+import { getApiKeysCached, getDocumentByUuidCached } from '$/app/(private)/_data-access'
 import { DocumentVersionProvider } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
 import ProjectLayout from '../../_components/ProjectLayout'
-import DocumentationModal, {
-  DocumentationModalProvider,
-} from './_components/DocumentationModal'
+import DocumentationModal, { DocumentationModalProvider } from './_components/DocumentationModal'
 import buildMetatags from '$/app/_lib/buildMetatags'
 
 export const metadata = buildMetatags({
@@ -42,16 +37,8 @@ export default async function DocumentPage({
     })
 
     return (
-      <DocumentVersionProvider
-        document={document}
-        projectId={projectId}
-        commitUuid={commitUuid}
-      >
-        <ProjectLayout
-          projectId={projectId}
-          commitUuid={commitUuid}
-          document={document}
-        >
+      <DocumentVersionProvider document={document} projectId={projectId} commitUuid={commitUuid}>
+        <ProjectLayout projectId={projectId} commitUuid={commitUuid} document={document}>
           <DocumentationModalProvider>
             <DocumentationModal
               projectId={String(projectId)}
@@ -63,11 +50,10 @@ export default async function DocumentPage({
         </ProjectLayout>
       </DocumentVersionProvider>
     )
-  } catch (error) {
+  } catch (_error) {
     return redirect(
-      ROUTES.projects
-        .detail({ id: Number(projectId) })
-        .commits.detail({ uuid: commitUuid }).documents.root,
+      ROUTES.projects.detail({ id: Number(projectId) }).commits.detail({ uuid: commitUuid })
+        .documents.root,
     )
   }
 }

@@ -14,12 +14,8 @@ export const applyDocumentSuggestionAction = withDocument
     }),
   )
   .handler(async ({ ctx, input }) => {
-    const suggestionsRepository = new DocumentSuggestionsRepository(
-      ctx.workspace.id,
-    )
-    const suggestion = await suggestionsRepository
-      .find(input.suggestionId)
-      .then((r) => r.unwrap())
+    const suggestionsRepository = new DocumentSuggestionsRepository(ctx.workspace.id)
+    const suggestion = await suggestionsRepository.find(input.suggestionId).then((r) => r.unwrap())
 
     const result = await applyDocumentSuggestion({
       suggestion: suggestion,

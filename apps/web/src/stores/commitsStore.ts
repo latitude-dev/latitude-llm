@@ -1,6 +1,6 @@
 'use client'
 
-import { Commit, CommitStatus } from '@latitude-data/core/browser'
+import type { Commit, CommitStatus } from '@latitude-data/core/browser'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createDraftCommitAction } from '$/actions/commits/create'
@@ -9,7 +9,7 @@ import { publishDraftCommitAction } from '$/actions/commits/publishDraftCommitAc
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 type CommitOptions = SWRConfiguration & {
   onSuccessCreate?: (commit: Commit) => void
@@ -23,22 +23,12 @@ export function useCommits(opts: CommitOptions = {}) {
   return useCommitsFromProject(project.id, opts)
 }
 
-export function useCommitsFromProject(
-  projectId?: number,
-  opts: CommitOptions = {},
-) {
-  const { onSuccessCreate, onSuccessDestroy, onSuccessPublish, commitStatus } =
-    opts
+export function useCommitsFromProject(projectId?: number, opts: CommitOptions = {}) {
+  const { onSuccessCreate, onSuccessDestroy, onSuccessPublish, commitStatus } = opts
   const { toast } = useToast()
-  const route = projectId
-    ? ROUTES.api.projects.detail(projectId).commits.root
-    : undefined
+  const route = projectId ? ROUTES.api.projects.detail(projectId).commits.root : undefined
   const fetcher = useFetcher<Commit[], Commit[]>(
-    route
-      ? commitStatus
-        ? `${route}?status=${commitStatus}`
-        : route
-      : undefined,
+    route ? (commitStatus ? `${route}?status=${commitStatus}` : route) : undefined,
     {
       // Sort by latest version first
       serializer: (data) =>
@@ -68,7 +58,7 @@ export function useCommitsFromProject(
 
         toast({
           title: 'Success',
-          description: 'New Draft version ' + draft.title + ' created',
+          description: `New Draft version ${draft.title} created`,
         })
       },
     },
@@ -82,7 +72,7 @@ export function useCommitsFromProject(
         onSuccessDestroy?.(deletedDraft)
         toast({
           title: 'Success',
-          description: 'Draft version ' + deletedDraft.title + ' deleted',
+          description: `Draft version ${deletedDraft.title} deleted`,
         })
       },
     },
@@ -92,11 +82,7 @@ export function useCommitsFromProject(
     publishDraftCommitAction,
     {
       onSuccess: async ({ data: publishedCommit }) => {
-        mutate(
-          data.map((item) =>
-            item.id === publishedCommit.id ? publishedCommit : item,
-          ),
-        )
+        mutate(data.map((item) => (item.id === publishedCommit.id ? publishedCommit : item)))
         onSuccessPublish?.(publishedCommit)
 
         toast({

@@ -1,5 +1,5 @@
-import * as fs from 'fs/promises'
-import * as path from 'path'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
 
 // Define the structure of the latitude-lock.json file
 export interface LatitudeLockFile {
@@ -23,7 +23,7 @@ export class LockFileManager {
       const lockFilePath = path.join(projectPath, this.lockFileName)
       await fs.access(lockFilePath)
       return true
-    } catch (error) {
+    } catch (_error) {
       return false
     }
   }
@@ -36,7 +36,7 @@ export class LockFileManager {
       const lockFilePath = path.join(projectPath, this.lockFileName)
       const fileContent = await fs.readFile(lockFilePath, 'utf-8')
       return JSON.parse(fileContent) as LatitudeLockFile
-    } catch (error) {
+    } catch (_error) {
       return null
     }
   }
@@ -47,15 +47,9 @@ export class LockFileManager {
   async write(projectPath: string, lockFile: LatitudeLockFile): Promise<void> {
     try {
       const lockFilePath = path.join(projectPath, this.lockFileName)
-      await fs.writeFile(
-        lockFilePath,
-        JSON.stringify(lockFile, null, 2),
-        'utf-8',
-      )
+      await fs.writeFile(lockFilePath, JSON.stringify(lockFile, null, 2), 'utf-8')
     } catch (error: any) {
-      throw new Error(
-        `Error creating ${this.lockFileName}: ${error.message || String(error)}`,
-      )
+      throw new Error(`Error creating ${this.lockFileName}: ${error.message || String(error)}`)
     }
   }
 }

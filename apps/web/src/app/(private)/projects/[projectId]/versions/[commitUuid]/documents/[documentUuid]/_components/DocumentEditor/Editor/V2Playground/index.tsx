@@ -1,7 +1,7 @@
 import Chat from './Chat'
-import { ResolvedMetadata } from '$/workers/readMetadata'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
 import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import type { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import PreviewPrompt from './PreviewPrompt'
 
 export function V2Playground({

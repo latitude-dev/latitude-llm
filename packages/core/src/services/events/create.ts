@@ -1,12 +1,9 @@
-import { LatitudeEvent } from '../../events/events'
+import type { LatitudeEvent } from '../../events/events'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { events } from '../../schema'
 
-export async function createEvent(
-  event: LatitudeEvent,
-  transaction = new Transaction(),
-) {
+export async function createEvent(event: LatitudeEvent, transaction = new Transaction()) {
   return transaction.call(async (tx) => {
     let workspaceId: number | undefined | null
     if ('workspaceId' in event.data) {

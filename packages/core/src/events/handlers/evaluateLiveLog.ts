@@ -12,17 +12,13 @@ import {
   EvaluationsV2Repository,
 } from '../../repositories'
 import { getEvaluationMetricSpecification } from '../../services/evaluationsV2/specifications'
-import { DocumentLogCreatedEvent } from '../events'
+import type { DocumentLogCreatedEvent } from '../events'
 
 const LIVE_EVALUABLE_LOG_SOURCES = Object.values(LogSources).filter(
   (source) => source !== 'evaluation' && source !== 'experiment',
 ) as LogSources[]
 
-export const evaluateLiveLogJob = async ({
-  data: event,
-}: {
-  data: DocumentLogCreatedEvent
-}) => {
+export const evaluateLiveLogJob = async ({ data: event }: { data: DocumentLogCreatedEvent }) => {
   const { id, workspaceId } = event.data
   const repo = new DocumentLogsRepository(workspaceId)
   const documentLogResult = await repo.find(id)
@@ -31,24 +27,16 @@ export const evaluateLiveLogJob = async ({
   const documentLog = documentLogResult.unwrap()
   const workspace = await findWorkspaceFromDocumentLog(documentLog)
   if (!workspace) {
-    throw new NotFoundError(
-      `Workspace not found from document log ${documentLog.id}`,
-    )
+    throw new NotFoundError(`Workspace not found from document log ${documentLog.id}`)
   }
 
-  if (
-    !LIVE_EVALUABLE_LOG_SOURCES.includes(documentLog.source ?? LogSources.API)
-  ) {
+  if (!LIVE_EVALUABLE_LOG_SOURCES.includes(documentLog.source ?? LogSources.API)) {
     return
   }
 
   const commitsRepository = new CommitsRepository(workspace.id)
-  const commit = await commitsRepository
-    .getCommitById(documentLog.commitId)
-    .then((r) => r.unwrap())
-  const providerLog = await findLastProviderLogFromDocumentLogUuid(
-    documentLog.uuid,
-  )
+  const commit = await commitsRepository.getCommitById(documentLog.commitId).then((r) => r.unwrap())
+  const providerLog = await findLastProviderLogFromDocumentLogUuid(documentLog.uuid)
   if (!providerLog) {
     throw new NotFoundError(`Provider log not found for document log ${id}`)
   }

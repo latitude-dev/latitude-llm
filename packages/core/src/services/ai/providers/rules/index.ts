@@ -4,15 +4,15 @@ import { Providers } from '../models'
 import { applyAnthropicRules } from './anthropic'
 import { applyCustomRules } from './custom'
 import { applyGoogleRules } from './google'
-import { AppliedRules } from './types'
+import type { AppliedRules } from './types'
 import { vercelSdkRules } from './vercel'
 import { applyOpenAiRules } from './openai'
 import { applyVertexAnthropicRules } from './vertexAnthropic'
 import { applyVertexGoogleRules } from './vertexGoogle'
 import { applyPerplexityRules } from './perplexity'
 import { getProviderMetadataKey } from './providerMetadata'
-import { JSONValue } from 'ai'
-import { VercelConfig } from '@latitude-data/constants'
+import type { JSONValue } from 'ai'
+import type { VercelConfig } from '@latitude-data/constants'
 import { toCamelCaseDeep } from '../../../../lib/camelCaseRecursive'
 
 type Props = {
@@ -21,21 +21,16 @@ type Props = {
   config: AppliedRules['config']
 }
 
-const RULES: Partial<Record<Providers, (props: AppliedRules) => AppliedRules>> =
-  {
-    [Providers.AnthropicVertex]: applyVertexAnthropicRules,
-    [Providers.Anthropic]: applyAnthropicRules,
-    [Providers.GoogleVertex]: applyVertexGoogleRules,
-    [Providers.Google]: applyGoogleRules,
-    [Providers.OpenAI]: applyOpenAiRules,
-    [Providers.Perplexity]: applyPerplexityRules,
-  }
+const RULES: Partial<Record<Providers, (props: AppliedRules) => AppliedRules>> = {
+  [Providers.AnthropicVertex]: applyVertexAnthropicRules,
+  [Providers.Anthropic]: applyAnthropicRules,
+  [Providers.GoogleVertex]: applyVertexGoogleRules,
+  [Providers.Google]: applyGoogleRules,
+  [Providers.OpenAI]: applyOpenAiRules,
+  [Providers.Perplexity]: applyPerplexityRules,
+}
 
-export function applyProviderRules({
-  providerType,
-  messages,
-  config,
-}: Props): AppliedRules {
+export function applyProviderRules({ providerType, messages, config }: Props): AppliedRules {
   let rules: AppliedRules = {
     rules: [],
     messages,

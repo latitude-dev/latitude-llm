@@ -3,7 +3,7 @@ import { getExpectedError } from '$compiler/compiler/test/helpers'
 import { removeCommonIndent } from '$compiler/compiler/utils'
 import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
 import CompileError from '$compiler/error/error'
-import {
+import type {
   AssistantMessage,
   ImageContent,
   SystemMessage,
@@ -211,9 +211,7 @@ describe('message contents', async () => {
     expect((message.content[1]! as ImageContent).image).toBe('image content')
 
     expect(message.content[2]!.type).toBe('text')
-    expect((message.content[2]! as TextContent).text).toBe(
-      'another text content',
-    )
+    expect((message.content[2]! as TextContent).text).toBe('another text content')
   })
 
   it('fails when using an invalid content type', async () => {

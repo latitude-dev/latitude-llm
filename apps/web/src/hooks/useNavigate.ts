@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 
-import { type NavigateOptions } from 'next/dist/shared/lib/app-router-context.shared-runtime'
+import type { NavigateOptions } from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import { useRouter } from 'next/navigation'
 import { start } from 'nprogress'
 

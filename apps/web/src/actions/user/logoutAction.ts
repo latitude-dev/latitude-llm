@@ -5,10 +5,8 @@ import { removeSession } from '$/services/auth/removeSession'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
-export const logoutAction = authProcedure
-  .createServerAction()
-  .handler(async ({ ctx }) => {
-    await removeSession({ session: ctx.session })
+export const logoutAction = authProcedure.createServerAction().handler(async ({ ctx }) => {
+  await removeSession({ session: ctx.session })
 
-    redirect(ROUTES.auth.login)
-  })
+  redirect(ROUTES.auth.login)
+})

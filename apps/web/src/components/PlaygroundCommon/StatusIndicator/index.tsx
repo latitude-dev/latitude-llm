@@ -1,5 +1,5 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import type { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { formatCount } from '$/lib/formatCount'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
@@ -9,7 +9,7 @@ import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
-import { LanguageModelUsage } from 'ai'
+import type { LanguageModelUsage } from 'ai'
 import { useMemo } from 'react'
 
 type StatusIndicatorProps = {
@@ -21,16 +21,10 @@ type StatusIndicatorProps = {
   canChat?: boolean
 }
 
-export function StatusIndicator({
-  playground,
-  canChat = true,
-  ...rest
-}: StatusIndicatorProps) {
+export function StatusIndicator({ playground, canChat = true, ...rest }: StatusIndicatorProps) {
   const { data: providers } = useProviderApiKeys()
   const cost = useMemo(() => {
-    const provider = providers?.find(
-      (provider) => provider.name === playground.provider,
-    )
+    const provider = providers?.find((provider) => provider.name === playground.provider)
     const model = playground.model || provider?.defaultModel
     if (!provider || !model) return undefined
     return Math.ceil(
@@ -54,11 +48,7 @@ export function StatusIndicator({
         <Icon name='loader' color='foregroundMuted' className='animate-spin' />
       )}
       {!!playground.duration && (
-        <StatusInfo
-          usage={playground.usage}
-          cost={cost}
-          duration={playground.duration}
-        />
+        <StatusInfo usage={playground.usage} cost={cost} duration={playground.duration} />
       )}
       <InnerIndicator playground={playground} {...rest} />
     </div>
@@ -82,8 +72,7 @@ function InnerIndicator({
       <>
         <Separator orientation='vertical' className='self-stretch h-auto' />
         <Text.H6 color='foregroundMuted'>
-          Waking up <Text.H6B color='primary'>{wakingUpIntegration}</Text.H6B>{' '}
-          integration
+          Waking up <Text.H6B color='primary'>{wakingUpIntegration}</Text.H6B> integration
         </Text.H6>
       </>
     )
@@ -160,13 +149,10 @@ function StatusInfo({
       className='!cursor-default'
       trigger={
         <span className='inline-flex items-center justify-center flex-row gap-2 cursor-default'>
-          <Text.H6M color='foregroundMuted'>
-            {formatDuration(duration, false)}
-          </Text.H6M>
+          <Text.H6M color='foregroundMuted'>{formatDuration(duration, false)}</Text.H6M>
           <Separator orientation='vertical' className='self-stretch h-auto' />
           <Text.H6M color='foregroundMuted' centered>
-            {formatCount(totalTokens || promptTokens || completionTokens || 0)}{' '}
-            tokens
+            {formatCount(totalTokens || promptTokens || completionTokens || 0)} tokens
           </Text.H6M>
         </span>
       }
@@ -182,17 +168,12 @@ function StatusInfo({
           <div className='pt-2'>
             <StatusInfoItem label='Tokens' value={totalTokens} />
             {cost !== undefined && (
-              <StatusInfoItem
-                label='Cost'
-                value={formatCostInMillicents(cost)}
-              />
+              <StatusInfoItem label='Cost' value={formatCostInMillicents(cost)} />
             )}
             <StatusInfoItem label='Duration' value={formatDuration(duration)} />
             <StatusInfoItem
               label='Tok/Sec'
-              value={formatCount(
-                Math.ceil(completionTokens / (duration / 1000)),
-              )}
+              value={formatCount(Math.ceil(completionTokens / (duration / 1000)))}
             />
           </div>
           <div className='pt-2'>
@@ -208,13 +189,7 @@ function StatusInfo({
   )
 }
 
-function StatusInfoItem({
-  label,
-  value,
-}: {
-  label: string
-  value?: number | string
-}) {
+function StatusInfoItem({ label, value }: { label: string; value?: number | string }) {
   return (
     <div className='w-full flex flex-row justify-between items-center gap-4'>
       <Text.H6B color='background'>{label}</Text.H6B>

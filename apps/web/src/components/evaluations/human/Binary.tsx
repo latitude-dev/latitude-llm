@@ -1,13 +1,13 @@
 import {
-  EvaluationType,
+  type EvaluationType,
   HumanEvaluationBinarySpecification,
-  HumanEvaluationMetric,
+  type HumanEvaluationMetric,
 } from '@latitude-data/constants'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
 import { useMemo } from 'react'
-import {
+import type {
   AnnotationFormProps,
   ChartConfigurationArgs,
   ConfigurationFormProps,
@@ -44,7 +44,7 @@ function ConfigurationSimpleForm({
             passDescription: e.target.value,
           })
         }
-        errors={errors?.['passDescription']}
+        errors={errors?.passDescription}
         className='w-full'
         disabled={disabled}
         required
@@ -61,7 +61,7 @@ function ConfigurationSimpleForm({
             failDescription: e.target.value,
           })
         }
-        errors={errors?.['failDescription']}
+        errors={errors?.failDescription}
         className='w-full'
         disabled={disabled}
         required
@@ -102,32 +102,26 @@ function AnnotationForm({
     const description = []
 
     if (evaluation.configuration.passDescription) {
-      description.push(
-        `The response should pass when: ${evaluation.configuration.passDescription}`,
-      )
+      description.push(`The response should pass when: ${evaluation.configuration.passDescription}`)
     }
 
     if (evaluation.configuration.failDescription) {
-      description.push(
-        `The response should fail when: ${evaluation.configuration.failDescription}`,
-      )
+      description.push(`The response should fail when: ${evaluation.configuration.failDescription}`)
     }
 
     return description.join('. ')
   }, [evaluation.configuration])
 
   return (
-    <>
-      <TabSelect
-        value={resultScore ?? undefined}
-        name='resultScore'
-        description={description || 'Whether the response passes or fails'}
-        options={options}
-        onChange={(value) => setResultScore(value)}
-        disabled={disabled}
-        required
-      />
-    </>
+    <TabSelect
+      value={resultScore ?? undefined}
+      name='resultScore'
+      description={description || 'Whether the response passes or fails'}
+      options={options}
+      onChange={(value) => setResultScore(value)}
+      disabled={disabled}
+      required
+    />
   )
 }
 

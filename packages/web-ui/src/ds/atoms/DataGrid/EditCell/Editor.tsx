@@ -1,17 +1,11 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { type editor } from 'monaco-editor'
-import MonacoReactEditor, { Monaco } from '@monaco-editor/react'
+import type { editor } from 'monaco-editor'
+import MonacoReactEditor, { type Monaco } from '@monaco-editor/react'
 
 import { useCellPosition } from './useCellPosition'
 import { DEFAULT_ROW_HEIGHT } from '..'
-import { EditorCellProps } from '..'
+import type { EditorCellProps } from '..'
 
 export function useUpdateEditorHeight({
   initialHeight,
@@ -41,7 +35,7 @@ export function useUpdateEditorHeight({
         }
 
         setHeight(height)
-        el.style.height = height + 'px'
+        el.style.height = `${height}px`
 
         editor.layout()
       })
@@ -55,12 +49,7 @@ type Props = EditorCellProps & {
   onHeightChange: (height: number) => void
 }
 
-function Editor({
-  value: initialValue,
-  valueType,
-  onChange,
-  onHeightChange,
-}: Props) {
+function Editor({ value: initialValue, valueType, onChange, onHeightChange }: Props) {
   const { height, updateHeight } = useUpdateEditorHeight({
     initialHeight: DEFAULT_ROW_HEIGHT,
     limitToInitialHeight: true,
@@ -97,7 +86,7 @@ function Editor({
 
       isMountedRef.current = true
     },
-    [isMountedRef, onChangeEditorValue, updateHeight],
+    [onChangeEditorValue, updateHeight],
   )
 
   useLayoutEffect(() => {
@@ -105,7 +94,7 @@ function Editor({
     if (editor && isMountedRef.current) {
       updateHeight(editor)
     }
-  }, [value, updateHeight])
+  }, [updateHeight])
 
   useEffect(() => {
     onHeightChange(height)

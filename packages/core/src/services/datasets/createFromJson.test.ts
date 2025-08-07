@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { createDatasetFromJson } from './createFromJson'
 import { identityHashAlgorithm } from '../datasets/utils'
 import * as factories from '../../tests/factories'
-import { type CreateWorkspaceResult } from '../../tests/factories/workspaces'
+import type { CreateWorkspaceResult } from '../../tests/factories/workspaces'
 import { DatasetRowsRepository } from '../../repositories'
 
 const validJsonArray = JSON.stringify([
@@ -79,8 +79,6 @@ describe('createDatasetFromJson', () => {
       hashAlgorithm: identityHashAlgorithm,
     })
     expect(result.error).toBeTruthy()
-    expect(result.error?.message).toBe(
-      'Invalid generated data: { invalid json } is not valid JSON',
-    )
+    expect(result.error?.message).toBe('Invalid generated data: { invalid json } is not valid JSON')
   })
 })

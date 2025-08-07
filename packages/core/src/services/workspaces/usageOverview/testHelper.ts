@@ -1,20 +1,11 @@
-import {
-  EvaluationResultV2,
-  EvaluationV2,
-  Providers,
-} from '@latitude-data/constants'
+import { type EvaluationResultV2, type EvaluationV2, Providers } from '@latitude-data/constants'
 import { addDays, format } from 'date-fns'
 import { orderBy } from 'lodash-es'
-import {
-  Commit,
-  DocumentVersion,
-  ProviderLog,
-  Workspace,
-} from '../../../browser'
+import type { Commit, DocumentVersion, ProviderLog, Workspace } from '../../../browser'
 import * as factories from '../../../tests/factories'
 import { createMembership } from '../../memberships/create'
 import { generateWorkspaceFixtures, type WorkspaceInfo } from './fixtures'
-import { GetUsageOverview, GetUsageOverviewRow } from './getUsageOverview'
+import type { GetUsageOverview, GetUsageOverviewRow } from './getUsageOverview'
 
 async function createMember({
   workspace,
@@ -157,11 +148,7 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
 type ExpectedRowData = Omit<GetUsageOverviewRow, 'id', 'currentMonthRuns'> & {
   id: string
 }
-async function createWorkspaces({
-  workspacesInfo,
-}: {
-  workspacesInfo: WorkspaceInfo[]
-}) {
+async function createWorkspaces({ workspacesInfo }: { workspacesInfo: WorkspaceInfo[] }) {
   const list = await Promise.all(workspacesInfo.map(createWorkspace))
   return list.reduce<Record<string, ExpectedRowData>>((acc, w) => {
     const name = w.workspace.name.replace('overview__', '')
@@ -170,10 +157,7 @@ async function createWorkspaces({
         workspaceId: w.workspace.id,
         name,
         subscriptionPlan: w.subcription.plan,
-        subscriptionCreatedAt: format(
-          w.subcription.createdAt,
-          'yyyy-MM-dd HH:mm:ss',
-        ),
+        subscriptionCreatedAt: format(w.subcription.createdAt, 'yyyy-MM-dd HH:mm:ss'),
         numOfMembers: w.membersCount.toString(),
         emails: w.emails,
       },

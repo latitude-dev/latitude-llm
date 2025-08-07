@@ -1,11 +1,11 @@
-import {
+import type {
   CHAIN_STEP_TAG,
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_TAG,
   TOOL_CALL_TAG,
 } from '$compiler/constants'
-import { ContentType, MessageRole } from '$compiler/types'
-import { Identifier, type Node as LogicalExpression } from 'estree'
+import type { ContentType, MessageRole } from '$compiler/types'
+import type { Identifier, Node as LogicalExpression } from 'estree'
 
 export type BaseNode = {
   start: number | null
@@ -44,17 +44,11 @@ type IElementTag<T extends string> = BaseNode & {
 }
 
 export type ContentTag = IElementTag<ContentType>
-export type MessageTag =
-  | IElementTag<MessageRole>
-  | IElementTag<typeof CUSTOM_MESSAGE_TAG>
+export type MessageTag = IElementTag<MessageRole> | IElementTag<typeof CUSTOM_MESSAGE_TAG>
 export type ReferenceTag = IElementTag<typeof REFERENCE_PROMPT_TAG>
 export type ChainStepTag = IElementTag<typeof CHAIN_STEP_TAG>
 export type ToolCallTag = IElementTag<typeof TOOL_CALL_TAG>
-export type ElementTag =
-  | ContentTag
-  | MessageTag
-  | ReferenceTag
-  | IElementTag<string>
+export type ElementTag = ContentTag | MessageTag | ReferenceTag | IElementTag<string>
 
 export type MustacheTag = BaseNode & {
   type: 'MustacheTag'

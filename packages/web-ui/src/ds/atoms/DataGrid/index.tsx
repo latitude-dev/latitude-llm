@@ -1,8 +1,8 @@
 'use client'
-import { Key, MouseEvent, ReactNode, useCallback, useRef } from 'react'
+import { type Key, type MouseEvent, type ReactNode, useCallback, useRef } from 'react'
 import {
   DataGrid as ReactDataGrid,
-  RenderCheckboxProps,
+  type RenderCheckboxProps,
   type DataGridProps,
 } from 'react-data-grid'
 
@@ -19,13 +19,13 @@ export type {
 
 import { cn } from '../../../lib/utils'
 import { Text } from '../Text'
-import { CheckedState } from '../Checkbox'
+import type { CheckedState } from '../Checkbox'
 import { CheckboxAtom } from '../Checkbox/Primitive'
 
 export const DEFAULT_HEADER_ROW_HEIGHT = 40
 export const DEFAULT_ROW_HEIGHT = 31
 
-export { type EditorCellProps } from './EditCell/types'
+export type { EditorCellProps } from './EditCell/types'
 export * from './EditCell/Editor'
 export * from './EditCell/EditorWrapper'
 
@@ -33,11 +33,7 @@ const NoRowsFallback = ({ fallbackText }: { fallbackText: string }) => (
   <Text.H5>{fallbackText}</Text.H5>
 )
 
-const RenderCheckbox = ({
-  checked: isChecked,
-  indeterminate,
-  onChange,
-}: RenderCheckboxProps) => {
+const RenderCheckbox = ({ checked: isChecked, indeterminate, onChange }: RenderCheckboxProps) => {
   const lastShiftKeyRef = useRef(false)
   const checked = indeterminate ? 'indeterminate' : isChecked
   const onClickLabel = useCallback((e: MouseEvent) => {
@@ -52,20 +48,14 @@ const RenderCheckbox = ({
   )
 
   return (
-    <label
-      onClickCapture={onClickLabel}
-      className='flex items-center justify-center'
-    >
+    // biome-ignore lint/a11y/noLabelWithoutControl: ignored using `--suppress`
+    <label onClickCapture={onClickLabel} className='flex items-center justify-center'>
       <CheckboxAtom checked={checked} onCheckedChange={onChangeHandler} />
     </label>
   )
 }
 
-export type Props<R, SR = unknown, K extends Key = Key> = DataGridProps<
-  R,
-  SR,
-  K
-> & {
+export type Props<R, SR = unknown, K extends Key = Key> = DataGridProps<R, SR, K> & {
   fallbackText?: string
   footer?: ReactNode
 }
@@ -81,10 +71,7 @@ export default function DataGrid<R, SR = unknown, K extends Key = Key>({
   ...rest
 }: Props<R, SR, K>) {
   return (
-    <div
-      role='grid-wrapper'
-      className='relative flex-1 min-h-0 flex flex-col max-w-full border rounded-lg '
-    >
+    <div className='relative flex-1 min-h-0 flex flex-col max-w-full border rounded-lg '>
       <div className='flex flex-col flex-1 min-h-0 relative'>
         <ReactDataGrid<R, SR, K>
           className={cn(

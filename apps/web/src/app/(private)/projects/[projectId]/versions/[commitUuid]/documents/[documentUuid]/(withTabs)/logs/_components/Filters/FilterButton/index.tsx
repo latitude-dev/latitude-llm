@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 

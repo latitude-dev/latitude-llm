@@ -1,8 +1,8 @@
 import {
-  DocumentVersion,
+  type DocumentVersion,
   Providers,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '@latitude-data/core/browser'
 import { createProject, helpers } from '@latitude-data/core/factories'
 import { NextRequest } from 'next/server'

@@ -1,11 +1,11 @@
 import { Slot, Slottable } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
-import { ButtonHTMLAttributes, forwardRef, ReactNode, useMemo } from 'react'
+import { type ButtonHTMLAttributes, forwardRef, type ReactNode, useMemo } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { font } from '../../tokens'
-import { DotIndicator, DotIndicatorProps } from '../DotIndicator'
-import { Icon, IconProps } from '../Icons'
+import { DotIndicator, type DotIndicatorProps } from '../DotIndicator'
+import { Icon, type IconProps } from '../Icons'
 
 const buttonContainerVariants = cva(
   cn(
@@ -18,8 +18,7 @@ const buttonContainerVariants = cva(
       variant: {
         default: 'bg-accent-button hover:bg-accent-foreground/90',
         nope: 'bg-transparent hover:bg-transparent',
-        destructive:
-          'bg-destructive-muted-foreground hover:bg-destructive-muted-foreground/90',
+        destructive: 'bg-destructive-muted-foreground hover:bg-destructive-muted-foreground/90',
         outline: 'bg-secondary hover:bg-secondary/60',
         secondary: 'bg-secondary hover:bg-secondary/80',
         ghost: 'shadow-none bg-transparent',
@@ -67,22 +66,16 @@ const buttonVariants = cva(
         default:
           'border border-transparent bg-primary text-primary-foreground group-hover:bg-primary/90 disabled:cursor-default',
         nope: 'bg-transparent text-primary-foreground group-hover:bg-transparent',
-        destructive:
-          'bg-destructive text-destructive-foreground group-hover:bg-destructive/90',
+        destructive: 'bg-destructive text-destructive-foreground group-hover:bg-destructive/90',
         outline:
           'border border-input bg-background group-hover:bg-secondary group-hover:text-secondary-foreground/80',
-        secondary:
-          'bg-secondary text-secondary-foreground group-hover:bg-secondary/80',
+        secondary: 'bg-secondary text-secondary-foreground group-hover:bg-secondary/80',
         ghost: 'shadow-none bg-transparent text-muted-foreground',
         link: 'shadow-none underline-offset-4 group-hover:underline text-accent-foreground',
         linkOutline: 'shadow-none underline-offset-4 group-hover:underline',
-        linkDestructive:
-          'shadow-none underline-offset-4 group-hover:underline text-destructive',
-        shiny: cn(
-          'bg-accent border-accent group-hover:bg-primary/15 overflow-hidden',
-        ),
-        latte:
-          'bg-latte text-latte-input-foreground group-hover:bg-latte/90 border-latte-border',
+        linkDestructive: 'shadow-none underline-offset-4 group-hover:underline text-destructive',
+        shiny: cn('bg-accent border-accent group-hover:bg-primary/15 overflow-hidden'),
+        latte: 'bg-latte text-latte-input-foreground group-hover:bg-latte/90 border-latte-border',
       },
       size: {
         default: 'py-buttonDefaultVertical px-3 min-h-8',
@@ -186,16 +179,12 @@ export function useButtonStyles({
           '!rounded-[0.55rem]': roundy,
         },
       ),
-      buttonClass: cn(
-        'relative',
-        buttonVariants({ variant, size, className, fanciness }),
-        {
-          'overflow-hidden': ellipsis,
-          'animate-pulse': isLoading,
-          'cursor-not-allowed': lookDisabled,
-          '!rounded-[0.55rem]': roundy,
-        },
-      ),
+      buttonClass: cn('relative', buttonVariants({ variant, size, className, fanciness }), {
+        'overflow-hidden': ellipsis,
+        'animate-pulse': isLoading,
+        'cursor-not-allowed': lookDisabled,
+        '!rounded-[0.55rem]': roundy,
+      }),
       innerButtonClass: cn(
         'flex flex-row items-center gap-x-1.5 cursor-pointer max-w-full',
         innerClassName,
@@ -270,12 +259,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   })
 
   return (
-    <Comp
-      ref={ref}
-      disabled={disabled || isLoading}
-      className={buttonStyles.container}
-      {...props}
-    >
+    <Comp ref={ref} disabled={disabled || isLoading} className={buttonStyles.container} {...props}>
       <Slottable>
         <div className={buttonStyles.buttonClass}>
           {variant === 'shiny' && (
@@ -290,17 +274,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
           <div className={buttonStyles.innerButtonClass}>
             {indicator ? <DotIndicator {...indicator} /> : null}
             {iconProps && iconPlacement === 'left' ? (
-              <Icon
-                {...iconProps}
-                className={cn('flex-shrink-0', iconProps.className)}
-              />
+              <Icon {...iconProps} className={cn('flex-shrink-0', iconProps.className)} />
             ) : null}
             {children ? (
               <div
                 className={cn({
                   'flex flex-row items-center w-full': !childrenOnlyText,
-                  'flex-grow flex-shrink truncate':
-                    !childrenOnlyText && ellipsis,
+                  'flex-grow flex-shrink truncate': !childrenOnlyText && ellipsis,
                   truncate: childrenOnlyText && ellipsis,
                   'justify-center': fullWidth || !iconProps,
                   'select-none': !userSelect,
@@ -310,10 +290,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
               </div>
             ) : null}
             {iconProps && iconPlacement === 'right' ? (
-              <Icon
-                {...iconProps}
-                className={cn('flex-shrink-0', iconProps.className)}
-              />
+              <Icon {...iconProps} className={cn('flex-shrink-0', iconProps.className)} />
             ) : null}
           </div>
         </div>

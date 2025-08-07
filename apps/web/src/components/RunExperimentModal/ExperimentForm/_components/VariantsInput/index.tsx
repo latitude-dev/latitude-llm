@@ -1,4 +1,4 @@
-import { ExperimentFormPayload } from '../../useExperimentFormPayload'
+import type { ExperimentFormPayload } from '../../useExperimentFormPayload'
 import { ExperimentVariantCard, NewVariantCard } from './ExperimentVariant'
 
 const MAX_EXPERIMENTS = 3
@@ -11,9 +11,7 @@ export function ExperimentVariantsInput(payload: ExperimentFormPayload) {
       {variants.map((_, index) => {
         return <ExperimentVariantCard key={index} index={index} {...payload} />
       })}
-      {variants.length < MAX_EXPERIMENTS && (
-        <NewVariantCard onClick={addNewVariant} />
-      )}
+      {variants.length < MAX_EXPERIMENTS && <NewVariantCard onClick={addNewVariant} />}
     </div>
   )
 }

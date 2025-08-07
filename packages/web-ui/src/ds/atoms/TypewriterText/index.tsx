@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import type React from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { cn } from '../../../lib/utils'
 
 interface TypewriterTextProps {
@@ -8,10 +9,7 @@ interface TypewriterTextProps {
   speed?: number
 }
 
-export const TypewriterText: React.FC<TypewriterTextProps> = ({
-  text,
-  speed = 50,
-}) => {
+export const TypewriterText: React.FC<TypewriterTextProps> = ({ text, speed = 50 }) => {
   const [displayedText, setDisplayedText] = useState('')
   const [isGenerating, setIsGenerating] = useState(true)
 
@@ -34,7 +32,7 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
     }, speed)
 
     return () => clearInterval(typingInterval)
-  }, [text, speed, typeNextCharacter])
+  }, [speed, typeNextCharacter])
 
   return (
     <span

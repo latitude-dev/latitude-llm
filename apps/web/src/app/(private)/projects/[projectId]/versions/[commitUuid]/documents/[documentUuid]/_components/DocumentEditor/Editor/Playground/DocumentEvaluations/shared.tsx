@@ -1,13 +1,10 @@
-import {
+import type {
   DocumentLogWithMetadata,
   DocumentVersion,
   EvaluationResultV2,
   EvaluationV2,
 } from '@latitude-data/core/browser'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType, IProjectContextType } from '@latitude-data/web-ui/providers'
 
 export type Props = {
   results: Record<string, EvaluationResultV2>

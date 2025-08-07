@@ -1,14 +1,14 @@
 import {
-  EvaluationType,
-  HumanEvaluationMetric,
+  type EvaluationType,
+  type HumanEvaluationMetric,
   HumanEvaluationRatingSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {
-  EvaluationMetricAnnotateArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricAnnotateArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 
@@ -21,23 +21,16 @@ export const HumanEvaluationRatingSpecification = {
 async function validate(
   {
     configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Human,
-    HumanEvaluationMetric.Rating
-  >,
+  }: EvaluationMetricValidateArgs<EvaluationType.Human, HumanEvaluationMetric.Rating>,
   _ = database,
 ) {
   if (configuration.minRating >= configuration.maxRating) {
-    return Result.error(
-      new BadRequestError('Minimum rating must be less than maximum rating'),
-    )
+    return Result.error(new BadRequestError('Minimum rating must be less than maximum rating'))
   }
 
-  configuration.minRatingDescription =
-    configuration.minRatingDescription?.trim()
+  configuration.minRatingDescription = configuration.minRatingDescription?.trim()
 
-  configuration.maxRatingDescription =
-    configuration.maxRatingDescription?.trim()
+  configuration.maxRatingDescription = configuration.maxRatingDescription?.trim()
 
   if (
     configuration.minThreshold !== undefined &&
@@ -69,9 +62,7 @@ async function validate(
     configuration.minThreshold >= configuration.maxThreshold
   ) {
     return Result.error(
-      new BadRequestError(
-        'Minimum threshold must be less than maximum threshold',
-      ),
+      new BadRequestError('Minimum threshold must be less than maximum threshold'),
     )
   }
 
@@ -97,10 +88,7 @@ async function annotate(
     resultMetadata,
     evaluation,
     actualOutput,
-  }: EvaluationMetricAnnotateArgs<
-    EvaluationType.Human,
-    HumanEvaluationMetric.Rating
-  >,
+  }: EvaluationMetricAnnotateArgs<EvaluationType.Human, HumanEvaluationMetric.Rating>,
   _ = database,
 ) {
   const metadata = {
@@ -127,10 +115,8 @@ async function annotate(
     )
   }
 
-  const minThreshold =
-    metadata.configuration.minThreshold ?? metadata.configuration.minRating
-  const maxThreshold =
-    metadata.configuration.maxThreshold ?? metadata.configuration.maxRating
+  const minThreshold = metadata.configuration.minThreshold ?? metadata.configuration.minRating
+  const maxThreshold = metadata.configuration.maxThreshold ?? metadata.configuration.maxRating
   const hasPassed = score >= minThreshold && score <= maxThreshold
 
   return { score, normalizedScore, metadata, hasPassed }

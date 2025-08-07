@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm'
-import { DocumentSuggestion, User, Workspace } from '../../browser'
+import type { DocumentSuggestion, User, Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

@@ -1,12 +1,12 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import {
-  Commit,
-  DocumentVersion,
-  Project,
+  type Commit,
+  type DocumentVersion,
+  type Project,
   Providers,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '../../browser'
 import * as factories from '../../tests/factories'
 import { UnprocessableEntityError } from './../../lib/errors'
@@ -76,12 +76,9 @@ describe('findOrCreate', () => {
     })
 
     expect(result.error).toEqual(
-      new UnprocessableEntityError(
-        'Document already has a published version.',
-        {
-          documentUuid: 'Document already has a published version.',
-        },
-      ),
+      new UnprocessableEntityError('Document already has a published version.', {
+        documentUuid: 'Document already has a published version.',
+      }),
     )
   })
 

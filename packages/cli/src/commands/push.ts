@@ -1,15 +1,15 @@
-import { Command } from 'commander'
-import * as path from 'path'
-import * as fs from 'fs/promises'
+import type { Command } from 'commander'
+import * as path from 'node:path'
+import * as fs from 'node:fs/promises'
 import chalk from 'chalk'
-import { PushOptions } from '../types'
+import type { PushOptions } from '../types'
 import { BaseCommand } from '../utils/baseCommand'
 import { registerCommand } from '../utils/commandRegistrar'
 import {
   computePromptDiff,
-  DiffResult,
-  IncomingPrompt,
-  OriginPrompt,
+  type DiffResult,
+  type IncomingPrompt,
+  type OriginPrompt,
 } from '../utils/computePromptDiff'
 import { hashContent } from '../utils/hashContent'
 
@@ -29,10 +29,7 @@ export class PushCommand extends BaseCommand {
       const lockFile = await this.getLockFile()
 
       // Read local prompts
-      const localPrompts = await this.readLocalPrompts(
-        lockFile.rootFolder,
-        !!lockFile.npm,
-      )
+      const localPrompts = await this.readLocalPrompts(lockFile.rootFolder, !!lockFile.npm)
 
       // Get diff with remote
       const diffResults = await this.getDiffWithRemote(
@@ -108,10 +105,8 @@ export class PushCommand extends BaseCommand {
     ) {
       try {
         return await this.importPromptFromFile(filePath)
-      } catch (error) {
-        console.warn(
-          chalk.yellow(`Failed to import prompt from ${filePath}, skipping...`),
-        )
+      } catch (_error) {
+        console.warn(chalk.yellow(`Failed to import prompt from ${filePath}, skipping...`))
         // If import fails, we assume the prompt is not valid/available
         throw new Error(`Cannot read prompt from ${filePath}`)
       }
@@ -124,11 +119,7 @@ export class PushCommand extends BaseCommand {
 
     // Skip TypeScript files for now as they need compilation
     if (filePath.endsWith('.ts')) {
-      console.warn(
-        chalk.yellow(
-          `TypeScript files not supported yet, skipping ${filePath}`,
-        ),
-      )
+      console.warn(chalk.yellow(`TypeScript files not supported yet, skipping ${filePath}`))
       throw new Error(`TypeScript files not supported yet`)
     }
 
@@ -200,30 +191,23 @@ export class PushCommand extends BaseCommand {
       })
 
       // Map remote prompts to our interface
-      const mappedRemotePrompts: OriginPrompt[] = remotePrompts.map(
-        (prompt) => ({
-          path: prompt.path,
-          content: prompt.content,
-          contentHash: hashContent(prompt.content),
-        }),
-      )
+      const mappedRemotePrompts: OriginPrompt[] = remotePrompts.map((prompt) => ({
+        path: prompt.path,
+        content: prompt.content,
+        contentHash: hashContent(prompt.content),
+      }))
 
       // Compute diff locally
       return computePromptDiff(localPrompts, mappedRemotePrompts)
     } catch (error: any) {
-      throw new Error(
-        `Failed to compute diff: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to compute diff: ${error.message || String(error)}`)
     }
   }
 
   /**
    * Display diff summary and handle user interaction
    */
-  private async displayDiffSummary(
-    diffResults: DiffResult[],
-    options: PushOptions,
-  ): Promise<void> {
+  private async displayDiffSummary(diffResults: DiffResult[], options: PushOptions): Promise<void> {
     const hasChanges = this.showChangesSummary(diffResults)
 
     if (!hasChanges) {
@@ -232,11 +216,7 @@ export class PushCommand extends BaseCommand {
 
     // Present user with options and handle response
     // Pass false to indicate this is a push operation
-    const shouldPush = await this.handleUserChoice(
-      diffResults,
-      false,
-      options.yes,
-    )
+    const shouldPush = await this.handleUserChoice(diffResults, false, options.yes)
 
     if (shouldPush) {
       await this.executePush(diffResults)
@@ -254,9 +234,7 @@ export class PushCommand extends BaseCommand {
       const lockFile = await this.getLockFile()
 
       // Use the SDK versions.push method (currently mocked)
-      const changes = diffResults.filter(
-        (result) => result.status !== 'unchanged',
-      )
+      const changes = diffResults.filter((result) => result.status !== 'unchanged')
       const changesForSdk = changes.map((change) => ({
         path: change.path,
         content: change.localContent,
@@ -264,17 +242,11 @@ export class PushCommand extends BaseCommand {
         contentHash: change.contentHash,
       }))
 
-      await this.client!.versions.push(
-        lockFile.projectId,
-        lockFile.version,
-        changesForSdk,
-      )
+      await this.client!.versions.push(lockFile.projectId, lockFile.version, changesForSdk)
 
       console.log(`${chalk.green('✓')} Successfully pushed changes!`)
     } catch (error: any) {
-      console.error(
-        `${chalk.red('✖')} Failed to push changes: ${error.message}`,
-      )
+      console.error(`${chalk.red('✖')} Failed to push changes: ${error.message}`)
       throw error
     }
   }

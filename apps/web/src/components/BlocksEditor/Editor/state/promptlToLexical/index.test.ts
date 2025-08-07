@@ -1,9 +1,9 @@
-import { AstError } from '@latitude-data/constants/promptl'
+import type { AstError } from '@latitude-data/constants/promptl'
 import { parse, scan } from 'promptl-ai'
 import { describe, expect, it } from 'vitest'
 import { fromAstToBlocks } from './fromAstToBlocks'
 import { fromBlocksToText } from './fromBlocksToText'
-import { StepBlock, TextBlock } from './types'
+import type { StepBlock, TextBlock } from './types'
 
 describe('fromAstToBlocks', () => {
   it('should convert plain text to simple blocks', () => {
@@ -319,39 +319,27 @@ This is an outside system message
       expect.arrayContaining([
         expect.objectContaining({
           type: 'paragraph',
-          children: [
-            expect.objectContaining({ type: 'text', text: '<\\step>' }),
-          ],
+          children: [expect.objectContaining({ type: 'text', text: '<\\step>' })],
         }),
         expect.objectContaining({
           type: 'paragraph',
-          children: [
-            expect.objectContaining({ type: 'text', text: '</\\step>' }),
-          ],
+          children: [expect.objectContaining({ type: 'text', text: '</\\step>' })],
         }),
         expect.objectContaining({
           type: 'paragraph',
-          children: [
-            expect.objectContaining({ type: 'text', text: '<\\message>' }),
-          ],
+          children: [expect.objectContaining({ type: 'text', text: '<\\message>' })],
         }),
         expect.objectContaining({
           type: 'paragraph',
-          children: [
-            expect.objectContaining({ type: 'text', text: '<\\/message>' }),
-          ],
+          children: [expect.objectContaining({ type: 'text', text: '<\\/message>' })],
         }),
         expect.objectContaining({
           type: 'paragraph',
-          children: [
-            expect.objectContaining({ type: 'text', text: '<\\tag>' }),
-          ],
+          children: [expect.objectContaining({ type: 'text', text: '<\\tag>' })],
         }),
         expect.objectContaining({
           type: 'paragraph',
-          children: [
-            expect.objectContaining({ type: 'text', text: '<\\/tag>' }),
-          ],
+          children: [expect.objectContaining({ type: 'text', text: '<\\/tag>' })],
         }),
       ]),
     )
@@ -1320,9 +1308,7 @@ How are you?
     const rootNode = fromAstToBlocks({ ast, prompt })
 
     expect(rootNode.children[0]?.type).toBe('step')
-    expect(
-      (rootNode.children[0]! as StepBlock).attributes?.isolated,
-    ).toBeFalsy()
+    expect((rootNode.children[0]! as StepBlock).attributes?.isolated).toBeFalsy()
 
     const output = fromBlocksToText(rootNode)
     expect(output).toBe(
@@ -1340,9 +1326,7 @@ How are you?
     const rootNode = fromAstToBlocks({ ast, prompt })
 
     expect(rootNode.children[0]?.type).toBe('step')
-    expect(
-      (rootNode.children[0]! as StepBlock).attributes?.isolated,
-    ).toBeFalsy()
+    expect((rootNode.children[0]! as StepBlock).attributes?.isolated).toBeFalsy()
 
     const output = fromBlocksToText(rootNode)
     expect(output).toBe(
@@ -1360,9 +1344,7 @@ How are you?
     const rootNode = fromAstToBlocks({ ast, prompt })
 
     expect(rootNode.children[0]?.type).toBe('step')
-    expect(
-      (rootNode.children[0]! as StepBlock).attributes?.isolated,
-    ).toBeTruthy()
+    expect((rootNode.children[0]! as StepBlock).attributes?.isolated).toBeTruthy()
 
     const output = fromBlocksToText(rootNode)
     expect(output).toBe(

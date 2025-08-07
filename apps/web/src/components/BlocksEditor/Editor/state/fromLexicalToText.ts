@@ -1,10 +1,8 @@
-import { EditorState, SerializedLexicalNode, SerializedRootNode } from 'lexical'
-import { BlocksEditorProps } from '../../types'
-import { BlockRootNode, fromBlocksToText } from './promptlToLexical'
+import type { EditorState, SerializedLexicalNode, SerializedRootNode } from 'lexical'
+import type { BlocksEditorProps } from '../../types'
+import { type BlockRootNode, fromBlocksToText } from './promptlToLexical'
 
-function isBlockRootNode(
-  node: SerializedRootNode<SerializedLexicalNode>,
-): node is BlockRootNode {
+function isBlockRootNode(node: SerializedRootNode<SerializedLexicalNode>): node is BlockRootNode {
   return node.type === 'root' && Array.isArray(node.children)
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Position } from '../types'
+import type { Position } from '../types'
 
 export function useCursorPosition({
   position: iconPosition,
@@ -17,12 +17,12 @@ export function useCursorPosition({
   useEffect(() => {
     window.addEventListener('mousemove', updateCursorPosition)
     return () => window.removeEventListener('mousemove', updateCursorPosition)
-  }, [])
+    // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
+  }, [updateCursorPosition])
 
   return useMemo(() => {
     const distanceToMouse = Math.sqrt(
-      (cursorPosition.x - iconPosition.x) ** 2 +
-        (cursorPosition.y - iconPosition.y) ** 2,
+      (cursorPosition.x - iconPosition.x) ** 2 + (cursorPosition.y - iconPosition.y) ** 2,
     )
     if (distanceToMouse <= maxDistance) return cursorPosition
     return undefined

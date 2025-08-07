@@ -2,17 +2,13 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   ErrorableEntity,
   Providers,
-  Workspace,
+  type Workspace,
 } from '../../browser'
-import {
-  createDocumentLog,
-  createProject,
-  helpers,
-} from '../../tests/factories'
+import { createDocumentLog, createProject, helpers } from '../../tests/factories'
 import { createRunError } from '../../tests/factories/runErrors'
 import { DocumentLogsRepository } from './index'
 

@@ -1,7 +1,7 @@
 import { TEMPLATES } from './k8sTemplates'
 import Mustache from 'mustache'
 import { env } from '@latitude-data/env'
-import { createHash } from 'crypto'
+import { createHash } from 'node:crypto'
 
 function buildCommand(command: string): string {
   const executeCommand = `npx -y @latitude-data/supergateway --stdio ${JSON.stringify(command)}`
@@ -55,8 +55,7 @@ export function generateK8sManifest(params: K8sDeploymentParams): {
     SECRET_HASH: secretHash,
     NODE_GROUP_NAME: env.MCP_NODE_GROUP_NAME,
     // TODO: Remove NODE_ENV check and move to proper env var
-    INGRESS_CLASS_NAME:
-      env.NODE_ENV === 'production' ? 'nginx-internal-prod' : 'nginx',
+    INGRESS_CLASS_NAME: env.NODE_ENV === 'production' ? 'nginx-internal-prod' : 'nginx',
   }
 
   // Add command and args if provided
@@ -107,10 +106,7 @@ ${ingressYaml}`
   if (Object.keys(environmentVariables).length > 0) {
     // Create secret data in base64 format
     const secretData = Object.entries(environmentVariables)
-      .map(
-        ([key, value]) =>
-          `${key}: ${Buffer.from(value as string).toString('base64')}`,
-      )
+      .map(([key, value]) => `${key}: ${Buffer.from(value as string).toString('base64')}`)
       .join('\n  ')
 
     const secretParams = {

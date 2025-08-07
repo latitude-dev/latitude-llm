@@ -2,13 +2,10 @@
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { EvaluationV2 } from '@latitude-data/core/browser'
+import type { EvaluationV2 } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { EvaluationsActions } from './EvaluationsActions'
 import { EvaluationsTable } from './EvaluationsTable'
 import { EvaluationsTemplates } from './EvaluationsTemplates'
@@ -32,10 +29,7 @@ export function EvaluationsPage({
     isCreatingEvaluation,
     isDeletingEvaluation,
     isGeneratingEvaluation,
-  } = useEvaluationsV2(
-    { project, commit, document },
-    { fallbackData: serverEvaluations },
-  )
+  } = useEvaluationsV2({ project, commit, document }, { fallbackData: serverEvaluations })
 
   return (
     <div className='w-full flex flex-col gap-4 p-6'>

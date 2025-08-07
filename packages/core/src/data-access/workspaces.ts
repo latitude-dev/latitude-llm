@@ -1,6 +1,6 @@
 import { desc, eq } from 'drizzle-orm'
 
-import { DocumentVersion, ProviderApiKey, type Commit } from '../browser'
+import type { DocumentVersion, ProviderApiKey, Commit } from '../browser'
 import { database } from '../client'
 import { workspacesDtoColumns } from '../repositories'
 import {
@@ -17,29 +17,20 @@ export async function unsafelyFindWorkspace(id: number, db = database) {
   const result = await db
     .select(workspacesDtoColumns)
     .from(workspaces)
-    .innerJoin(
-      subscriptions,
-      eq(workspaces.currentSubscriptionId, subscriptions.id),
-    )
+    .innerJoin(subscriptions, eq(workspaces.currentSubscriptionId, subscriptions.id))
     .where(eq(workspaces.id, id))
     .limit(1)
 
   return result[0]
 }
 
-export async function unsafelyFindWorkspacesFromUser(
-  userId: string | undefined,
-  db = database,
-) {
+export async function unsafelyFindWorkspacesFromUser(userId: string | undefined, db = database) {
   if (!userId) return []
 
   return await db
     .select(workspacesDtoColumns)
     .from(workspaces)
-    .innerJoin(
-      subscriptions,
-      eq(workspaces.currentSubscriptionId, subscriptions.id),
-    )
+    .innerJoin(subscriptions, eq(workspaces.currentSubscriptionId, subscriptions.id))
     .innerJoin(memberships, eq(workspaces.id, memberships.workspaceId))
     .where(eq(memberships.userId, userId))
     .orderBy(desc(workspaces.createdAt))
@@ -49,10 +40,7 @@ export async function findWorkspaceFromCommit(commit: Commit, db = database) {
   const results = await db
     .select(workspacesDtoColumns)
     .from(workspaces)
-    .innerJoin(
-      subscriptions,
-      eq(workspaces.currentSubscriptionId, subscriptions.id),
-    )
+    .innerJoin(subscriptions, eq(workspaces.currentSubscriptionId, subscriptions.id))
     .innerJoin(projects, eq(projects.workspaceId, workspaces.id))
     .innerJoin(commits, eq(commits.projectId, projects.id))
     .where(eq(commits.id, commit.id))
@@ -61,17 +49,11 @@ export async function findWorkspaceFromCommit(commit: Commit, db = database) {
   return results[0]
 }
 
-export async function findWorkspaceFromDocument(
-  document: DocumentVersion,
-  db = database,
-) {
+export async function findWorkspaceFromDocument(document: DocumentVersion, db = database) {
   const results = await db
     .select(workspacesDtoColumns)
     .from(workspaces)
-    .innerJoin(
-      subscriptions,
-      eq(workspaces.currentSubscriptionId, subscriptions.id),
-    )
+    .innerJoin(subscriptions, eq(workspaces.currentSubscriptionId, subscriptions.id))
     .innerJoin(projects, eq(projects.workspaceId, workspaces.id))
     .innerJoin(commits, eq(commits.projectId, projects.id))
     .innerJoin(documentVersions, eq(documentVersions.commitId, commits.id))
@@ -88,10 +70,7 @@ export async function findWorkspaceFromProviderApiKey(
   const results = await db
     .select(workspacesDtoColumns)
     .from(workspaces)
-    .innerJoin(
-      subscriptions,
-      eq(workspaces.currentSubscriptionId, subscriptions.id),
-    )
+    .innerJoin(subscriptions, eq(workspaces.currentSubscriptionId, subscriptions.id))
     .innerJoin(providerApiKeys, eq(providerApiKeys.workspaceId, workspaces.id))
     .where(eq(providerApiKeys.id, providerApiKey.id))
     .limit(1)

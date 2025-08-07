@@ -1,37 +1,24 @@
-import {
-  Commit,
-  ExperimentWithScores,
-  Project,
-} from '@latitude-data/core/browser'
+import type { Commit, ExperimentWithScores, Project } from '@latitude-data/core/browser'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import {
-  BestLogsMetadata,
-  EvaluationWithBestExperiment,
-} from '$/stores/experimentComparison'
+import type { BestLogsMetadata, EvaluationWithBestExperiment } from '$/stores/experimentComparison'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ExperimentPrompt } from './Prompt'
-import {
-  ExperimentLogsMetadata,
-  ExperimentLogsMetadataPlaceholder,
-} from './LogsMetadata'
+import { ExperimentLogsMetadata, ExperimentLogsMetadataPlaceholder } from './LogsMetadata'
 import {
   ExperimentEvaluationScores,
   ExperimentEvaluationScoresPlaceholder,
 } from './EvaluationScores'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ActionButtons } from './ActionButtons'
-import { DocumentVersion } from '@latitude-data/constants'
+import type { DocumentVersion } from '@latitude-data/constants'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { stopExperimentAction } from '$/actions/experiments'
 import { useCallback } from 'react'
 
-export function ExperimentItemPlaceholder({
+function ExperimentItemPlaceholder({
   isLast,
   evaluationCount,
 }: {
@@ -40,19 +27,14 @@ export function ExperimentItemPlaceholder({
 }) {
   return (
     <div
-      className={cn(
-        'w-full max-w-[40%] min-w-80 min-h-40 flex flex-col gap-4 p-4 border-border',
-        {
-          'border-r': !isLast,
-        },
-      )}
+      className={cn('w-full max-w-[40%] min-w-80 min-h-40 flex flex-col gap-4 p-4 border-border', {
+        'border-r': !isLast,
+      })}
     >
       <Skeleton height='h4' className='w-[85%]' />
       <ExperimentPrompt experiment={undefined} />
       <ExperimentLogsMetadataPlaceholder />
-      <ExperimentEvaluationScoresPlaceholder
-        evaluationCount={evaluationCount}
-      />
+      <ExperimentEvaluationScoresPlaceholder evaluationCount={evaluationCount} />
     </div>
   )
 }
@@ -86,22 +68,14 @@ export function ExperimentItem({
   }, [experiment, execute, project.id, commit.uuid, document.documentUuid])
 
   if (!experiment) {
-    return (
-      <ExperimentItemPlaceholder
-        isLast={isLast}
-        evaluationCount={evaluations?.length}
-      />
-    )
+    return <ExperimentItemPlaceholder isLast={isLast} evaluationCount={evaluations?.length} />
   }
 
   return (
     <div
-      className={cn(
-        'w-full max-w-[40%] min-w-80 min-h-40 flex flex-col gap-4 p-4 border-border',
-        {
-          'border-r': !isLast,
-        },
-      )}
+      className={cn('w-full max-w-[40%] min-w-80 min-h-40 flex flex-col gap-4 p-4 border-border', {
+        'border-r': !isLast,
+      })}
     >
       <div className='flex flex-row w-full items-center justify-between gap-4'>
         <div className='w-full'>
@@ -138,14 +112,8 @@ export function ExperimentItem({
         )}
       </div>
       <ExperimentPrompt experiment={experiment} />
-      <ExperimentLogsMetadata
-        experiment={experiment}
-        bestLogsMetadata={bestLogsMetadata}
-      />
-      <ExperimentEvaluationScores
-        experiment={experiment}
-        evaluations={evaluations}
-      />
+      <ExperimentLogsMetadata experiment={experiment} bestLogsMetadata={bestLogsMetadata} />
+      <ExperimentEvaluationScores experiment={experiment} evaluations={evaluations} />
       <ActionButtons
         project={project as Project}
         commit={commit as Commit}

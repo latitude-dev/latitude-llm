@@ -1,6 +1,6 @@
-import { Message } from '@latitude-data/compiler'
-import { Result, TypedResult } from '../../../../../lib/Result'
-import { LatitudeError } from '../../../../../lib/errors'
+import type { Message } from '@latitude-data/compiler'
+import { Result, type TypedResult } from '../../../../../lib/Result'
+import type { LatitudeError } from '../../../../../lib/errors'
 import { injectFakeStartAutonomousWorkflowMessages } from '../../../../../services/__deprecated/agents/promptInjection'
 
 export function performAgentMessagesOptimization({

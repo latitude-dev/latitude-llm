@@ -1,13 +1,13 @@
 import { vi, beforeEach, describe, expect, it } from 'vitest'
 import { publisher } from '../../events/publisher'
 import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  EvaluationV2,
-  Workspace,
+  type Commit,
+  type Dataset,
+  type DocumentVersion,
+  type EvaluationV2,
+  type Workspace,
   Providers,
-  User,
+  type User,
 } from '../../browser'
 import * as factories from '../../tests/factories'
 import { createExperimentVariants } from './createVariants'
@@ -57,11 +57,7 @@ describe('createExperimentVariants', () => {
       author: user,
       fileContent: factories.generateCsvContent({
         headers: ['a', 'b', 'c'],
-        rows: Array.from({ length: 50 }).map((_, i) => [
-          `a${i}`,
-          `b${i}`,
-          `c${i}`,
-        ]),
+        rows: Array.from({ length: 50 }).map((_, i) => [`a${i}`, `b${i}`, `c${i}`]),
       }),
     })
     dataset = createdDataset

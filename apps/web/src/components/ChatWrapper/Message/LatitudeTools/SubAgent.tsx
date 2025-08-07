@@ -1,6 +1,6 @@
 'use client'
-import { AgentToolsMap } from '@latitude-data/constants'
-import { ToolContent } from '@latitude-data/constants/legacyCompiler'
+import type { AgentToolsMap } from '@latitude-data/constants'
+import type { ToolContent } from '@latitude-data/constants/legacyCompiler'
 import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 import { ContentCard, ContentCardContainer } from '../ContentCard'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
@@ -27,9 +27,7 @@ export function LatitudeToolCallContent({
       bgColor='bg-success'
       fgColor='successForeground'
       info={toolCallId}
-      separatorColor={
-        toolResponse?.isError ? 'destructiveMutedForeground' : undefined
-      }
+      separatorColor={toolResponse?.isError ? 'destructiveMutedForeground' : undefined}
       resultFooter={
         <ToolResultFooter loadingMessage='Waiting for agent response...'>
           {toolResponse && <ToolResultContent toolResponse={toolResponse} />}

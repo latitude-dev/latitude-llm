@@ -4,7 +4,7 @@ import { usePipedreamApp } from '$/stores/pipedreamApp'
 import useDocumentVersions from '$/stores/documentVersions'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { cn } from '@latitude-data/web-ui/utils'
-import {
+import type {
   DocumentTrigger,
   DocumentVersion,
   IntegrationDto,
@@ -12,14 +12,14 @@ import {
 } from '@latitude-data/core/browser'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { humanizeCronValue } from '@latitude-data/web-ui/organisms/CronInput'
-import {
+import type {
   EmailTriggerConfiguration,
   ScheduledTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
 import { ICONS_BY_TRIGGER } from '../../@modal/(.)triggers/new/_components/IntegrationsList'
 import { TriggerWrapper } from '../TriggerWrapper'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { OnRunTriggerFn } from '../TriggersList'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { OnRunTriggerFn } from '../TriggersList'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 
 function IntegrationTriggerCard({
@@ -41,9 +41,9 @@ function IntegrationTriggerCard({
 }) {
   const integration = useMemo(() => {
     if (!integrations) return undefined
-    return integrations.find(
-      (i) => i.id === trigger.configuration.integrationId,
-    ) as PipedreamIntegration | undefined
+    return integrations.find((i) => i.id === trigger.configuration.integrationId) as
+      | PipedreamIntegration
+      | undefined
   }, [integrations, trigger.configuration.integrationId])
 
   const { data: app } = usePipedreamApp(integration?.configuration.appName)
@@ -112,9 +112,7 @@ function GenericTriggerCard({
     switch (type) {
       case DocumentTriggerType.Scheduled: {
         const config = trigger.configuration as ScheduledTriggerConfiguration
-        const humanCron = humanizeCronValue(
-          config.cronExpression ?? '* * * * *',
-        )
+        const humanCron = humanizeCronValue(config.cronExpression ?? '* * * * *')
         description = `${humanCron} · ${documentName}`
         break
       }
@@ -146,9 +144,7 @@ function GenericTriggerCard({
       description={info.description}
       image={
         <div
-          className={cn(
-            'size-10 rounded-md bg-backgroundCode flex items-center justify-center',
-          )}
+          className={cn('size-10 rounded-md bg-backgroundCode flex items-center justify-center')}
         >
           <Icon name={info.iconName} size='large' color='foregroundMuted' />
         </div>
@@ -184,9 +180,7 @@ export function TriggersCard({
   const documentWithName = useMemo<DocumentWithName | undefined>(() => {
     if (!documents) return undefined
 
-    const document = documents.find(
-      (d) => d.documentUuid === trigger.documentUuid,
-    )!
+    const document = documents.find((d) => d.documentUuid === trigger.documentUuid)!
     return {
       documentName: document?.path?.split('/')?.at(-1) ?? '',
       document,

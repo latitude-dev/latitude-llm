@@ -1,9 +1,8 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 import { npxCommand } from '../utils'
 
 export default {
-  description:
-    'Integrates the Brave Search API, providing both web and local search capabilities.',
+  description: 'Integrates the Brave Search API, providing both web and local search capabilities.',
   command: npxCommand({
     package: '@modelcontextprotocol/server-brave-search',
   }),

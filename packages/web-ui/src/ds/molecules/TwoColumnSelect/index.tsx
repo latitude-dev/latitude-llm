@@ -1,14 +1,9 @@
-import { JSX, ReactNode, useCallback, useState } from 'react'
+import { type JSX, type ReactNode, useCallback, useState } from 'react'
 import { Skeleton } from '../../atoms/Skeleton'
 import { cn } from '../../../lib/utils'
-import { Icon, IconName } from '../../atoms/Icons'
+import { Icon, type IconName } from '../../atoms/Icons'
 import { Text } from '../../atoms/Text'
-import {
-  Command,
-  CommandEmpty,
-  CommandItem,
-  CommandList,
-} from '../../atoms/Command'
+import { Command, CommandEmpty, CommandItem, CommandList } from '../../atoms/Command'
 import { Button } from '../../atoms/Button'
 import { DotIndicator } from '../../atoms/DotIndicator'
 
@@ -30,7 +25,7 @@ function LoadingSelectorSkeleton() {
   return LOADING_BLOCKS.map((_, i) => <LoadingOptionSkeleton key={i} />)
 }
 
-export type TwoColumnSelectOption<V extends unknown = unknown> = {
+export type TwoColumnSelectOption<V = unknown> = {
   value: V
   name: string
   label: string
@@ -38,7 +33,7 @@ export type TwoColumnSelectOption<V extends unknown = unknown> = {
   isActive?: boolean
 }
 
-function OptionItem<V extends unknown = unknown>({
+function OptionItem<V = unknown>({
   name,
   label,
   icon,
@@ -112,7 +107,7 @@ function AddNewItem({
   )
 }
 
-export function TwoColumnSelect<V extends unknown = unknown>({
+export function TwoColumnSelect<V = unknown>({
   options,
   loading = false,
   disabled = false,
@@ -133,9 +128,7 @@ export function TwoColumnSelect<V extends unknown = unknown>({
   children?: ReactNode
   emptySlateLabel?: string
 }) {
-  const [selectedValue, setSelected] = useState<V | undefined>(
-    value ?? defaultValue,
-  )
+  const [selectedValue, setSelected] = useState<V | undefined>(value ?? defaultValue)
   const onSelect = useCallback(
     (newValue: V) => () => {
       setSelected(newValue as V)
@@ -187,10 +180,7 @@ export function TwoColumnSelect<V extends unknown = unknown>({
             </Command>
             {addNew ? (
               <div className='flex flex-col border-border border-t p-2'>
-                <AddNewItem
-                  onAddNew={addNew.onAddNew}
-                  addNewLabel={addNew.addNewLabel}
-                />
+                <AddNewItem onAddNew={addNew.onAddNew} addNewLabel={addNew.addNewLabel} />
               </div>
             ) : null}
           </>

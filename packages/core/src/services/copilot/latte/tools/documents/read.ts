@@ -1,9 +1,6 @@
 import { LatitudeError } from '@latitude-data/constants/errors'
-import { ErrorResult, Result } from '../../../../../lib/Result'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../../../../repositories'
+import { type ErrorResult, Result } from '../../../../../lib/Result'
+import { CommitsRepository, DocumentVersionsRepository } from '../../../../../repositories'
 import { defineLatteTool } from '../types'
 import { z } from 'zod'
 import { scanDocuments } from '../../helpers'
@@ -29,9 +26,7 @@ const readPrompt = defineLatteTool(
     const document = documents.find((doc) => doc.path === path)
     if (!document) {
       return Result.error(
-        new LatitudeError(
-          `Document with path "${path}" not found in commit ${commit.uuid}.`,
-        ),
+        new LatitudeError(`Document with path "${path}" not found in commit ${commit.uuid}.`),
       )
     }
 

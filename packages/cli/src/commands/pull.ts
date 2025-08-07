@@ -1,16 +1,16 @@
-import { Command } from 'commander'
+import type { Command } from 'commander'
 import chalk from 'chalk'
-import * as path from 'path'
-import * as fs from 'fs/promises'
-import { PullOptions } from '../types'
+import * as path from 'node:path'
+import * as fs from 'node:fs/promises'
+import type { PullOptions } from '../types'
 import { BaseCommand } from '../utils/baseCommand'
 import { savePrompts } from '../utils/promptOperations'
 import { registerCommand } from '../utils/commandRegistrar'
 import {
   computePromptDiff,
-  DiffResult,
-  IncomingPrompt,
-  OriginPrompt,
+  type DiffResult,
+  type IncomingPrompt,
+  type OriginPrompt,
 } from '../utils/computePromptDiff'
 import { hashContent } from '../utils/hashContent'
 
@@ -23,9 +23,7 @@ export class PullCommand extends BaseCommand {
    */
   async execute(options: PullOptions): Promise<void> {
     try {
-      console.log(
-        chalk.blue(`\n🔍 Analyzing project at ${this.projectPath}...`),
-      )
+      console.log(chalk.blue(`\n🔍 Analyzing project at ${this.projectPath}...`))
 
       // Validate environment
       await this.validateEnvironment(options)
@@ -34,10 +32,7 @@ export class PullCommand extends BaseCommand {
       const lockFile = await this.getLockFile()
 
       // Get version details
-      const versionDetails = await this.client!.versions.get(
-        lockFile.projectId,
-        lockFile.version,
-      )
+      const versionDetails = await this.client!.versions.get(lockFile.projectId, lockFile.version)
 
       console.log(
         `\nProject ${chalk.cyan.bold(lockFile.projectId)} ${chalk.gray(`https://app.latitude.so/projects/${lockFile.projectId}/commits/${lockFile.version}`)}`,
@@ -54,9 +49,7 @@ export class PullCommand extends BaseCommand {
 
       // If no changes, inform the user and exit
       if (diffResults.every((result) => result.status === 'unchanged')) {
-        console.log(
-          `\n${chalk.green('✓')} No changes detected. Local prompts are up to date.`,
-        )
+        console.log(`\n${chalk.green('✓')} No changes detected. Local prompts are up to date.`)
         return
       }
 
@@ -64,11 +57,7 @@ export class PullCommand extends BaseCommand {
       this.showChangesSummary(diffResults)
 
       // Ask for user confirmation (true indicates this is a pull operation)
-      const shouldPull = await this.handleUserChoice(
-        diffResults,
-        true,
-        options.yes,
-      )
+      const shouldPull = await this.handleUserChoice(diffResults, true, options.yes)
 
       if (shouldPull) {
         // Pull all prompts from the project
@@ -79,9 +68,7 @@ export class PullCommand extends BaseCommand {
           !!lockFile.npm,
         )
 
-        console.log(
-          `\n${chalk.green('✓')} Successfully pulled all prompts from the project!`,
-        )
+        console.log(`\n${chalk.green('✓')} Successfully pulled all prompts from the project!`)
       } else {
         console.log(`\n${chalk.red('x')} Pull operation canceled.`)
       }
@@ -107,12 +94,10 @@ export class PullCommand extends BaseCommand {
       })
 
       // Map to the format needed for diff computation
-      const mappedRemotePrompts: IncomingPrompt[] = remotePrompts.map(
-        (prompt) => ({
-          path: prompt.path,
-          content: prompt.content,
-        }),
-      )
+      const mappedRemotePrompts: IncomingPrompt[] = remotePrompts.map((prompt) => ({
+        path: prompt.path,
+        content: prompt.content,
+      }))
 
       // Read local prompts
       const localPrompts = await this.readLocalPrompts(rootFolder, isNpmProject)
@@ -127,9 +112,7 @@ export class PullCommand extends BaseCommand {
       // Compute diff with remote (switch order compared to push - here remote is "incoming")
       return computePromptDiff(mappedRemotePrompts, mappedLocalPrompts)
     } catch (error: any) {
-      throw new Error(
-        `Failed to compute diff: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to compute diff: ${error.message || String(error)}`)
     }
   }
 
@@ -193,10 +176,8 @@ export class PullCommand extends BaseCommand {
     ) {
       try {
         return await this.importPromptFromFile(filePath)
-      } catch (error) {
-        console.warn(
-          chalk.yellow(`Failed to import prompt from ${filePath}, skipping...`),
-        )
+      } catch (_error) {
+        console.warn(chalk.yellow(`Failed to import prompt from ${filePath}, skipping...`))
         // If import fails, we assume the prompt is not valid/available
         throw new Error(`Cannot read prompt from ${filePath}`)
       }
@@ -209,11 +190,7 @@ export class PullCommand extends BaseCommand {
 
     // Skip TypeScript files for now as they need compilation
     if (filePath.endsWith('.ts')) {
-      console.warn(
-        chalk.yellow(
-          `TypeScript files not supported yet, skipping ${filePath}`,
-        ),
-      )
+      console.warn(chalk.yellow(`TypeScript files not supported yet, skipping ${filePath}`))
       throw new Error(`TypeScript files not supported yet`)
     }
 
@@ -279,14 +256,8 @@ export class PullCommand extends BaseCommand {
     isNpmProject: boolean = false,
   ): Promise<void> {
     try {
-      console.log(
-        chalk.blue(`\n🔄 Pulling prompts from project ${projectId}...`),
-      )
-      const prompts = await this.projectManager.fetchAllPrompts(
-        this.client!,
-        projectId,
-        version,
-      )
+      console.log(chalk.blue(`\n🔄 Pulling prompts from project ${projectId}...`))
+      const prompts = await this.projectManager.fetchAllPrompts(this.client!, projectId, version)
 
       // Use the common utility for saving prompts
       await savePrompts(
@@ -298,9 +269,7 @@ export class PullCommand extends BaseCommand {
         isNpmProject,
       )
     } catch (error: any) {
-      throw new Error(
-        `Failed to pull prompts: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to pull prompts: ${error.message || String(error)}`)
     }
   }
 }

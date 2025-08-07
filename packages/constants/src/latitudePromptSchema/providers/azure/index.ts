@@ -25,10 +25,7 @@ export const azureConfig = z.object({
     .describe(
       'Use a different URL prefix for API calls, e.g. to use proxy servers. Either this or resourceName can be used. When a baseURL is provided, the resourceName is ignored. With a baseURL, the resolved URL is {baseURL}/{modelId}{path}.',
     ),
-  headers: z
-    .record(z.string())
-    .optional()
-    .describe('Custom headers to include in the requests.'),
+  headers: z.record(z.string()).optional().describe('Custom headers to include in the requests.'),
 })
 
 export type AzureConfig = z.infer<typeof azureConfig>

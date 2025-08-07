@@ -15,20 +15,13 @@ export class FeaturesRepository {
   }
 
   async findAll() {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .orderBy(asc(this.scope.name))
+    const result = await this.db.select().from(this.scope).orderBy(asc(this.scope.name))
 
     return Result.ok(result)
   }
 
   async find(id: number) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.id, id))
-      .limit(1)
+    const result = await this.db.select().from(this.scope).where(eq(this.scope.id, id)).limit(1)
 
     if (!result.length) {
       return Result.error(new NotFoundError('Feature not found'))
@@ -38,11 +31,7 @@ export class FeaturesRepository {
   }
 
   async findByName(name: string) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.name, name))
-      .limit(1)
+    const result = await this.db.select().from(this.scope).where(eq(this.scope.name, name)).limit(1)
 
     if (!result.length) {
       return Result.error(new NotFoundError('Feature not found'))

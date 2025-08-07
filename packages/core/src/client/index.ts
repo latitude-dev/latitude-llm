@@ -1,8 +1,8 @@
 import { env } from '@latitude-data/env'
-import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres'
+import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres'
 import pg from 'pg'
 
-import { PgWithReplicas, withReplicas } from 'drizzle-orm/pg-core'
+import { type PgWithReplicas, withReplicas } from 'drizzle-orm/pg-core'
 import type { Pool as IPool, PoolConfig } from 'pg'
 import * as schema from '../schema'
 
@@ -98,9 +98,7 @@ export function setupLRO() {
   }
 
   const database =
-    replicas.length > 0
-      ? withReplicas(primary, replicas as [Connection, ...Connection[]])
-      : primary
+    replicas.length > 0 ? withReplicas(primary, replicas as [Connection, ...Connection[]]) : primary
 
   _lro = { pools, replicas, database }
 }

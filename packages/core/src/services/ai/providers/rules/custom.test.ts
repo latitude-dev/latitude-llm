@@ -2,7 +2,7 @@ import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { describe, expect, it } from 'vitest'
 
 import { applyCustomRules } from './custom'
-import { AppliedRules, ProviderRules } from './types'
+import { type AppliedRules, ProviderRules } from './types'
 
 const config = {} as AppliedRules['config']
 describe('applyCustomRules', () => {
@@ -201,8 +201,7 @@ describe('applyCustomRules', () => {
       rules: [
         {
           rule: ProviderRules.Custom,
-          ruleMessage:
-            'Assistant messages can only have text or tool call content.',
+          ruleMessage: 'Assistant messages can only have text or tool call content.',
         },
       ],
     })
@@ -270,8 +269,7 @@ describe('applyCustomRules', () => {
         },
         {
           rule: ProviderRules.Custom,
-          ruleMessage:
-            'Assistant messages can only have text or tool call content.',
+          ruleMessage: 'Assistant messages can only have text or tool call content.',
         },
       ],
     })

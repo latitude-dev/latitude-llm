@@ -12,21 +12,15 @@ async function run() {
     [
       {
         role: MessageRole.user,
-        content: [
-          { type: 'text', text: 'Tell me a joke about Python' },
-        ],
+        content: [{ type: 'text', text: 'Tell me a joke about Python' }],
       },
       {
         role: MessageRole.assistant,
-        content: [
-          { type: 'text', text: 'Python is a great language!' },
-        ],
+        content: [{ type: 'text', text: 'Python is a great language!' }],
       },
       {
         role: MessageRole.user,
-        content: [
-          { type: 'text', text: 'Tell me a joke about javascript!' },
-        ],
+        content: [{ type: 'text', text: 'Tell me a joke about javascript!' }],
       },
     ],
     {

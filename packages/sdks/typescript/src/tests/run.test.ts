@@ -1,21 +1,9 @@
 import { Latitude, LogSources } from '$sdk/index'
 import { FINAL_RESPONSE } from '$sdk/test/chunks-example'
-import {
-  ApiErrorCodes,
-  LatitudeApiError,
-  RunErrorCodes,
-} from '$sdk/utils/errors'
+import { ApiErrorCodes, LatitudeApiError, RunErrorCodes } from '$sdk/utils/errors'
 import { parseSSE } from '$sdk/utils/parseSSE'
 import { setupServer } from 'msw/node'
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { RUN_TEXT_RESPONSE } from '$sdk/test/run-sync-response'
 import {
@@ -25,8 +13,8 @@ import {
   mockStreamResponse,
 } from './helpers/run'
 
-let latitudeApiKey = 'fake-api-key'
-let projectId = 123
+const latitudeApiKey = 'fake-api-key'
+const projectId = 123
 
 const server = setupServer()
 

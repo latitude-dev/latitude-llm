@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Dataset } from '@latitude-data/core/browser'
+import type { Dataset } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { dateFormatter } from '@latitude-data/web-ui/dateUtils'
 import {
@@ -26,11 +26,7 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 
 export const DATASET_TABLE_PAGE_SIZE = '25'
-export function DatasetsTable({
-  datasets: serverDatasets,
-}: {
-  datasets: Dataset[]
-}) {
+export function DatasetsTable({ datasets: serverDatasets }: { datasets: Dataset[] }) {
   const navigate = useNavigate()
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
@@ -54,19 +50,14 @@ export function DatasetsTable({
         <TableBlankSlate
           description={msg}
           link={
-            <>
-              {isFirstPage ? (
-                <TableBlankSlate.Button onClick={newDataset.onOpen}>
-                  Create your first dataset
-                </TableBlankSlate.Button>
-              ) : null}
-            </>
+            isFirstPage ? (
+              <TableBlankSlate.Button onClick={newDataset.onOpen}>
+                Create your first dataset
+              </TableBlankSlate.Button>
+            ) : null
           }
         />
-        <NewDatasetModal
-          open={newDataset.open}
-          onOpenChange={newDataset.onOpenChange}
-        />
+        <NewDatasetModal open={newDataset.open} onOpenChange={newDataset.onOpenChange} />
       </>
     )
   }

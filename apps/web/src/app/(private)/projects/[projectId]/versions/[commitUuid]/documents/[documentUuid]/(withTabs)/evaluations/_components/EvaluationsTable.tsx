@@ -5,8 +5,8 @@ import {
 } from '$/components/evaluations'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { EvaluationV2 } from '@latitude-data/core/browser'
+import type { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import type { EvaluationV2 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
@@ -25,10 +25,7 @@ import {
   BlankSlateStep,
   BlankSlateWithSteps,
 } from '@latitude-data/web-ui/molecules/BlankSlateWithSteps'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
 import { EvaluationsGenerator } from './EvaluationsGenerator'
 
@@ -71,7 +68,7 @@ export function EvaluationsTable({
       if (errors) return
       setOpenDeleteModal(false)
     },
-    [isDeletingEvaluation, deleteEvaluation, setOpenDeleteModal],
+    [isDeletingEvaluation, deleteEvaluation],
   )
 
   return (
@@ -121,23 +118,17 @@ export function EvaluationsTable({
                         <Text.H5 noWrap ellipsis>
                           {evaluation.name}
                         </Text.H5>
-                        {!!evaluation.evaluateLiveLogs && (
-                          <Badge variant='accent'>Live</Badge>
-                        )}
+                        {!!evaluation.evaluateLiveLogs && <Badge variant='accent'>Live</Badge>}
                       </div>
                     </TableCell>
                     <TableCell>
                       <Text.H5>{evaluation.description || '-'}</Text.H5>
                     </TableCell>
                     <TableCell>
-                      <Text.H5>
-                        {getEvaluationTypeSpecification(evaluation).name}
-                      </Text.H5>
+                      <Text.H5>{getEvaluationTypeSpecification(evaluation).name}</Text.H5>
                     </TableCell>
                     <TableCell>
-                      <Text.H5>
-                        {getEvaluationMetricSpecification(evaluation).name}
-                      </Text.H5>
+                      <Text.H5>{getEvaluationMetricSpecification(evaluation).name}</Text.H5>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu
@@ -260,11 +251,7 @@ Don't rawdog your prompts!
           </div>
           <div className='absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-secondary to-transparent pointer-events-none'></div>
           <div className='flex justify-center absolute right-0 bottom-4 w-full'>
-            <Button
-              fancy
-              onClick={() => setOpenGenerateModal(true)}
-              disabled={!generatorEnabled}
-            >
+            <Button fancy onClick={() => setOpenGenerateModal(true)} disabled={!generatorEnabled}>
               Generate the evaluation
             </Button>
             <EvaluationsGenerator

@@ -38,10 +38,7 @@ interface ParsedVersion {
  * - If no version header is present (undefined), defaults to using the latest methods
  * - Comparison follows semantic versioning rules: major > minor > patch > prerelease
  */
-export function compareVersion(
-  version: string | undefined,
-  targetVersion: string,
-): boolean {
+export function compareVersion(version: string | undefined, targetVersion: string): boolean {
   if (!version) return false
 
   const parseVersion = (v: string): ParsedVersion => {

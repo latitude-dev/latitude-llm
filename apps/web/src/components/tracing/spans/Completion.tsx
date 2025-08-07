@@ -1,24 +1,17 @@
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
-import {
-  Message as MessageComponent,
-  MessageList,
-} from '$/components/ChatWrapper'
+import { Message as MessageComponent, MessageList } from '$/components/ChatWrapper'
 import { MetadataItem } from '$/components/MetadataItem'
-import { Message } from '@latitude-data/constants/legacyCompiler'
-import {
-  FINISH_REASON_DETAILS,
-  SPAN_SPECIFICATIONS,
-  SpanType,
-} from '@latitude-data/core/browser'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
+import { FINISH_REASON_DETAILS, SPAN_SPECIFICATIONS, SpanType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { LineSeparator } from '@latitude-data/web-ui/atoms/LineSeparator'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useState } from 'react'
-import { DetailsPanelProps, SPAN_COLORS } from './shared'
+import { type DetailsPanelProps, SPAN_COLORS } from './shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Completion]
 export default {
@@ -28,13 +21,7 @@ export default {
   DetailsPanel: DetailsPanel,
 }
 
-function MessagesDetails({
-  input,
-  output,
-}: {
-  input: Message[]
-  output: Message[]
-}) {
+function MessagesDetails({ input, output }: { input: Message[]; output: Message[] }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -66,21 +53,13 @@ function MessagesDetails({
       </div>
       <div className='w-full flex flex-col gap-y-2.5'>
         {input.length > 0 && (
-          <MessageComponent
-            role={input.at(0)!.role}
-            content={input.at(0)!.content}
-          />
+          <MessageComponent role={input.at(0)!.role} content={input.at(0)!.content} />
         )}
         <div className='w-full flex items-center justify-center py-1 px-4 bg-secondary rounded-lg'>
-          <Text.H6 color='foregroundMuted'>
-            ...Preview, expand to see more...
-          </Text.H6>
+          <Text.H6 color='foregroundMuted'>...Preview, expand to see more...</Text.H6>
         </div>
         {output.length > 0 && (
-          <MessageComponent
-            role={output.at(-1)!.role}
-            content={output.at(-1)!.content}
-          />
+          <MessageComponent role={output.at(-1)!.role} content={output.at(-1)!.content} />
         )}
       </div>
       <Modal
@@ -121,27 +100,19 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Completion>) {
                 <div className='w-full flex flex-col justify-between'>
                   <div className='w-full flex flex-row justify-between items-center gap-4'>
                     <Text.H6B color='background'>Prompt</Text.H6B>
-                    <Text.H6 color='background'>
-                      {span.metadata.tokens.prompt}
-                    </Text.H6>
+                    <Text.H6 color='background'>{span.metadata.tokens.prompt}</Text.H6>
                   </div>
                   <div className='w-full flex flex-row justify-between items-center gap-4'>
                     <Text.H6B color='background'>Cached</Text.H6B>
-                    <Text.H6 color='background'>
-                      {span.metadata.tokens.cached}
-                    </Text.H6>
+                    <Text.H6 color='background'>{span.metadata.tokens.cached}</Text.H6>
                   </div>
                   <div className='w-full flex flex-row justify-between items-center gap-4'>
                     <Text.H6B color='background'>Reasoning</Text.H6B>
-                    <Text.H6 color='background'>
-                      {span.metadata.tokens.reasoning}
-                    </Text.H6>
+                    <Text.H6 color='background'>{span.metadata.tokens.reasoning}</Text.H6>
                   </div>
                   <div className='w-full flex flex-row justify-between items-center gap-4'>
                     <Text.H6B color='background'>Completion</Text.H6B>
-                    <Text.H6 color='background'>
-                      {span.metadata.tokens.completion}
-                    </Text.H6>
+                    <Text.H6 color='background'>{span.metadata.tokens.completion}</Text.H6>
                   </div>
                 </div>
               }
@@ -158,9 +129,7 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Completion>) {
             <MetadataItem
               label='Finish reason'
               value={FINISH_REASON_DETAILS[span.metadata.finishReason].name}
-              tooltip={
-                FINISH_REASON_DETAILS[span.metadata.finishReason].description
-              }
+              tooltip={FINISH_REASON_DETAILS[span.metadata.finishReason].description}
             />
           )}
           <MetadataItem label='Configuration' contentClassName='pt-2' stacked>

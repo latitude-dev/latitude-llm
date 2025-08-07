@@ -7,11 +7,7 @@ import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
 import AuthFooter from '../../_components/Footer'
-import {
-  findMembershipByTokenCache,
-  findUserCache,
-  findWorkspaceCache,
-} from '../../_data_access'
+import { findMembershipByTokenCache, findUserCache, findWorkspaceCache } from '../../_data_access'
 import InvitationForm from './InvitationForm'
 
 export const dynamic = 'force-dynamic'
@@ -20,12 +16,9 @@ export const metadata = buildMetatags({
   title: 'You have been invited to join a workspace',
 })
 
-export default async function InvitationPage({
-  params,
-}: {
-  params: Promise<{ token: string }>
-}) {
+export default async function InvitationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
+  // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
   let workspace, user, membership
   try {
     membership = await findMembershipByTokenCache(token as string)
@@ -55,11 +48,7 @@ export default async function InvitationPage({
     >
       <Card>
         <CardContent standalone>
-          <InvitationForm
-            user={user}
-            membership={membership}
-            footer={<AuthFooter />}
-          />
+          <InvitationForm user={user} membership={membership} footer={<AuthFooter />} />
         </CardContent>
       </Card>
     </FocusLayout>

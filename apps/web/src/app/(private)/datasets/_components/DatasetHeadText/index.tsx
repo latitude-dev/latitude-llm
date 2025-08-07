@@ -1,14 +1,8 @@
-import { DatasetColumnRole } from '@latitude-data/core/browser'
+import type { DatasetColumnRole } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
-export function DatasetHeadText({
-  text,
-  role,
-}: {
-  text: string
-  role: DatasetColumnRole
-}) {
+export function DatasetHeadText({ text, role }: { text: string; role: DatasetColumnRole }) {
   if (role !== 'label') return <Text.H5>{text}</Text.H5>
 
   return (
@@ -19,9 +13,9 @@ export function DatasetHeadText({
         children: 'Label',
       }}
     >
-      This column contains the expected output from the LLM response. Labels may
-      be manually assigned or curated from production logs. Labels can help you
-      evaluate an LLM based on ground-truth.
+      This column contains the expected output from the LLM response. Labels may be manually
+      assigned or curated from production logs. Labels can help you evaluate an LLM based on
+      ground-truth.
     </Tooltip>
   )
 }

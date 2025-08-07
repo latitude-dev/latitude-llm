@@ -1,8 +1,5 @@
 import { formatISO } from 'date-fns'
-import {
-  DocumentLogFilterOptions,
-  LOG_FILTERS_ENCODED_PARAMS,
-} from '../../../constants'
+import { type DocumentLogFilterOptions, LOG_FILTERS_ENCODED_PARAMS } from '../../../constants'
 import { paramsToString } from '../../../lib/pagination/buildPaginatedUrl'
 
 type CreatedAt = DocumentLogFilterOptions['createdAt']
@@ -40,8 +37,7 @@ function processFilterOptions(filterOptions?: DocumentLogFilterOptions) {
   return paramsToString({
     params: {
       ...filterOptions,
-      createdAt: formatDocumentLogCreatedAtParam(filterOptions.createdAt)
-        ?.formattedValue,
+      createdAt: formatDocumentLogCreatedAtParam(filterOptions.createdAt)?.formattedValue,
     },
     paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
   })

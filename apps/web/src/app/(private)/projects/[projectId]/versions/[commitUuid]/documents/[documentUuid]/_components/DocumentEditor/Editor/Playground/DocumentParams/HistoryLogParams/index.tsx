@@ -1,8 +1,5 @@
-import {
-  UseDocumentParameters,
-  useDocumentParameters,
-} from '$/hooks/useDocumentParameters'
-import { DocumentVersion, PlaygroundInput } from '@latitude-data/core/browser'
+import { type UseDocumentParameters, useDocumentParameters } from '$/hooks/useDocumentParameters'
+import type { DocumentVersion, PlaygroundInput } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -10,15 +7,12 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 
-import { type UseLogHistoryParams } from './useLogHistoryParams'
-import {
-  asPromptLFile,
-  PromptLFileParameter,
-} from '$/components/PromptLFileParameter'
-import { ChangeEvent, useCallback, useEffect, useState } from 'react'
+import type { UseLogHistoryParams } from './useLogHistoryParams'
+import { asPromptLFile, PromptLFileParameter } from '$/components/PromptLFileParameter'
+import { type ChangeEvent, useCallback, useEffect, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { ParametersWrapper } from '../ParametersWrapper'
 import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
@@ -114,11 +108,7 @@ export function HistoryLogParams({
                     {urlData.createdAt}
                   </Text.H5>
                   <Badge variant='accent'>{urlData.shortCode}</Badge>
-                  <Icon
-                    name='externalLink'
-                    color='foregroundMuted'
-                    className='flex-none'
-                  />
+                  <Icon name='externalLink' color='foregroundMuted' className='flex-none' />
                 </Link>
               ) : null}
             </div>

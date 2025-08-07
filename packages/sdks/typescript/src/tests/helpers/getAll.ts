@@ -1,7 +1,7 @@
 import { ApiErrorCodes } from '@latitude-data/constants/errors'
-import { SdkApiVersion } from '$sdk/utils/types'
+import type { SdkApiVersion } from '$sdk/utils/types'
 import { http, HttpResponse } from 'msw'
-import { setupServer } from 'msw/node'
+import type { setupServer } from 'msw/node'
 import { vi } from 'vitest'
 
 type Server = ReturnType<typeof setupServer>
@@ -57,17 +57,14 @@ export function mock500Error({
   docPath: string
 }) {
   server.use(
-    http.get(
-      `http://localhost:8787/api/${apiVersion}/projects/123/versions/live/documents`,
-      () => {
-        return HttpResponse.json(
-          {
-            message: 'Something went wrong',
-            errorCode: ApiErrorCodes.InternalServerError,
-          },
-          { status: 500 },
-        )
-      },
-    ),
+    http.get(`http://localhost:8787/api/${apiVersion}/projects/123/versions/live/documents`, () => {
+      return HttpResponse.json(
+        {
+          message: 'Something went wrong',
+          errorCode: ApiErrorCodes.InternalServerError,
+        },
+        { status: 500 },
+      )
+    }),
   )
 }

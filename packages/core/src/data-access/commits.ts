@@ -1,9 +1,9 @@
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 
-import { Commit, HEAD_COMMIT } from '../browser'
+import { type Commit, HEAD_COMMIT } from '../browser'
 import { database } from '../client'
-import { LatitudeError, NotFoundError } from '../lib/errors'
-import { Result, TypedResult } from '../lib/Result'
+import { type LatitudeError, NotFoundError } from '../lib/errors'
+import { Result, type TypedResult } from '../lib/Result'
 import { commits } from '../schema'
 
 export async function findHeadCommit(
@@ -14,11 +14,7 @@ export async function findHeadCommit(
     .select()
     .from(commits)
     .where(
-      and(
-        isNull(commits.deletedAt),
-        isNotNull(commits.mergedAt),
-        eq(commits.projectId, projectId),
-      ),
+      and(isNull(commits.deletedAt), isNotNull(commits.mergedAt), eq(commits.projectId, projectId)),
     )
     .orderBy(desc(commits.mergedAt))
     .limit(1)
@@ -62,10 +58,7 @@ export async function findCommitById(id: number, tx = database) {
   })
 }
 
-export async function unsafelyFindCommitsByProjectId(
-  projectId: number,
-  db = database,
-) {
+export async function unsafelyFindCommitsByProjectId(projectId: number, db = database) {
   return db.query.commits.findMany({
     where: eq(commits.projectId, projectId),
   })

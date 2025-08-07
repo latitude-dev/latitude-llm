@@ -5,10 +5,7 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { magicLinkTokens } from '../../schema'
 
-export async function confirmMagicLinkToken(
-  token: string,
-  transaction = new Transaction(),
-) {
+export async function confirmMagicLinkToken(token: string, transaction = new Transaction()) {
   return await transaction.call(async (tx) => {
     const magicLinkToken = await tx
       .select()

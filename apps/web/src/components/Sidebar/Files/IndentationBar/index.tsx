@@ -1,4 +1,4 @@
-import { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
+import type { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
 
 export function IndentationLine({ showCurve }: { showCurve: boolean }) {
   return (
@@ -23,9 +23,7 @@ export function IndentationBar({
   indentation: IndentType[]
 }) {
   return indentation.map((indent, index) => {
-    const anyNextIndentIsNotLast = !!indentation
-      .slice(index)
-      .find((i) => !i.isLast)
+    const anyNextIndentIsNotLast = !!indentation.slice(index).find((i) => !i.isLast)
     const showBorder = anyNextIndentIsNotLast ? false : indent.isLast
     const showCurve = !hasChildren && showBorder
     return (

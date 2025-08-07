@@ -1,9 +1,9 @@
-import { memo, ReactNode, useEffect, useRef, useState } from 'react'
+import { memo, type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { useMeasure } from '../../../../browser'
 import { cn } from '../../../../lib/utils'
 import { PaneWrapper, ResizablePane } from '../Common'
-import { getGap, getGapWrapperPadding, SplitGap } from '../index'
+import { getGap, getGapWrapperPadding, type SplitGap } from '../index'
 
 export const HorizontalSplit = memo(
   ({
@@ -52,8 +52,7 @@ export const HorizontalSplit = memo(
       const percentage = initialPercentage / 100
       setPaneWidth(Math.max(initialWidthFromRef * percentage, minWidth))
       // FIXME: Do not use useEffect to set local state paneWidth.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initialWidth, initialWidthFromRef, initialPercentage, minWidth])
+    }, [initialWidthFromRef, initialPercentage, minWidth, paneWidth])
 
     useEffect(() => {
       if (!autoResize) return

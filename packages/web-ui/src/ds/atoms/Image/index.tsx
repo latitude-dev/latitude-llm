@@ -1,4 +1,4 @@
-import { forwardRef, ImgHTMLAttributes } from 'react'
+import { forwardRef, type ImgHTMLAttributes } from 'react'
 import { cn } from '../../../lib/utils'
 
 export type ImageProps = ImgHTMLAttributes<HTMLImageElement>
@@ -16,10 +16,7 @@ export const Image = forwardRef<HTMLImageElement, ImageProps>(function Image(
       fetchPriority='auto'
       loading='lazy'
       decoding='async'
-      className={cn(
-        'aspect-auto h-auto w-auto bg-muted object-cover shadow-sm',
-        className,
-      )}
+      className={cn('aspect-auto h-auto w-auto bg-muted object-cover shadow-sm', className)}
       ref={ref}
       {...props}
     />

@@ -1,9 +1,6 @@
 import { z } from 'zod'
 import { defineLatteTool } from '../types'
-import {
-  CommitsRepository,
-  DocumentTriggersRepository,
-} from '../../../../../repositories'
+import { CommitsRepository, DocumentTriggersRepository } from '../../../../../repositories'
 
 const listExistingTriggers = defineLatteTool(
   async ({ promptUuid, versionUuid }, { workspace }) => {

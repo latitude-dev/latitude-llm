@@ -1,11 +1,11 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
+import type {
   EmailTriggerEventPayload,
   IntegrationTriggerEventPayload,
   ScheduledTriggerEventPayload,
 } from '@latitude-data/constants/documentTriggers'
 import { v4 as uuidv4 } from 'uuid'
-import { DocumentTriggerEvent } from '../../browser'
+import type { DocumentTriggerEvent } from '../../browser'
 import { database } from '../../client'
 import { documentTriggerEvents } from '../../schema'
 import { createProject } from './createProject'

@@ -1,7 +1,7 @@
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import { captureException } from '$/helpers/captureException'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import debug from '@latitude-data/core/lib/debug'
 
 export function errorHandler(handler: any) {
@@ -22,10 +22,7 @@ export function errorHandler(handler: any) {
 
       captureException(error as Error)
 
-      return NextResponse.json(
-        { message: 'Internal Server Error' },
-        { status: 500 },
-      )
+      return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 })
     }
   }
 }

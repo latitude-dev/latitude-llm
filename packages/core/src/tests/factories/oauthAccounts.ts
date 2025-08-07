@@ -37,10 +37,7 @@ export const createOAuthAccount = async (
     userId: userId!,
   }
 
-  const [newOAuthAccount] = await database
-    .insert(oauthAccounts)
-    .values(data)
-    .returning()
+  const [newOAuthAccount] = await database.insert(oauthAccounts).values(data).returning()
 
   return newOAuthAccount
 }

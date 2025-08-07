@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  getChangesToResetProjectToCommit,
-  resetProjectToCommit,
-} from './resetProjectToCommit'
+import { getChangesToResetProjectToCommit, resetProjectToCommit } from './resetProjectToCommit'
 import { Providers } from '@latitude-data/constants'
 import { mergeCommit } from '../commits'
 

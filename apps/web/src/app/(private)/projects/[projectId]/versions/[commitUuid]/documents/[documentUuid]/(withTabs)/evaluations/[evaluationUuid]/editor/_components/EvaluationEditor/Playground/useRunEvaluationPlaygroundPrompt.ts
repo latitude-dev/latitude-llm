@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import {
+import type {
   Commit,
   DocumentVersion,
   EvaluationType,
@@ -22,8 +22,7 @@ export function useRunEvaluationPlaygroundPrompt({
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
   parameters: Record<string, unknown> | undefined
 }) {
-  const { createStreamHandler, abortCurrentStream, hasActiveStream } =
-    useStreamHandler()
+  const { createStreamHandler, abortCurrentStream, hasActiveStream } = useStreamHandler()
   const runPromptFn = useCallback(async () => {
     const route = ROUTES.api.projects
       .detail(projectId)

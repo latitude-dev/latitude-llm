@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
+import type {
   Commit,
   Dataset,
   DocumentVersion,
   EvaluationV2,
   Project,
 } from '@latitude-data/core/browser'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useMetadata } from '$/hooks/useMetadata'
 
 export type ExperimentFormPayload = {
@@ -73,9 +73,9 @@ export function useExperimentFormPayload({
   const [fromLine, setFromLine] = useState<number>()
   const [toLine, setToLine] = useState<number>()
   const [parametersMap, setParametersMap] = useState<Record<string, number>>({})
-  const [selectedEvaluations, setSelectedEvaluations] = useState<
-    EvaluationV2[]
-  >(initialEvaluation ? [initialEvaluation] : [])
+  const [selectedEvaluations, setSelectedEvaluations] = useState<EvaluationV2[]>(
+    initialEvaluation ? [initialEvaluation] : [],
+  )
   const [datasetLabels, setDatasetLabels] = useState<Record<string, string>>({})
 
   const [variants, setVariants] = useState<

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import hslToHex from 'hsl-to-hex'
-import { type languages } from 'monaco-editor'
-import { useTheme } from 'next-themes'
+import type { languages } from 'monaco-editor'
 
 export const tokenizer = {
   root: [
@@ -166,21 +165,18 @@ const recalculateColors = () => ({
   foreground: colorFromProperty('--foreground'),
   accentForeground: colorFromProperty('--accent-foreground'),
   destructive: colorFromProperty('--destructive'),
-  destructiveMutedForeground: colorFromProperty(
-    '--destructive-muted-foreground',
-  ),
+  destructiveMutedForeground: colorFromProperty('--destructive-muted-foreground'),
   mutedForeground: colorFromProperty('--muted-foreground'),
 })
 
 export type ThemeColors = ReturnType<typeof recalculateColors>
 
 export const useThemeColors = () => {
-  const { theme } = useTheme()
   const [themeColors, setThemeColors] = useState(recalculateColors())
   useEffect(() => {
     // Must resolve current callstack before recalculating colors, otherwise they won't be updated on time.
     setTimeout(() => setThemeColors(recalculateColors()), 0)
-  }, [theme])
+  }, [])
 
   return themeColors
 }

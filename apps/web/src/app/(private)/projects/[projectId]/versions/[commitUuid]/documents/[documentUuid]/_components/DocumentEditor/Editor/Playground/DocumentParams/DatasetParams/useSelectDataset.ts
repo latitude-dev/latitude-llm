@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 
-import {
+import type {
   DocumentVersion,
   Dataset,
   InputSource,
@@ -37,8 +37,7 @@ export function useSelectDataset({
   source: InputSource
 }) {
   const [selectedDataset, setSelectedDataset] = useState<Dataset | undefined>()
-  const { position, getPosition, setPosition, isLoadingPosition } =
-    useDatasetRowPosition()
+  const { position, getPosition, setPosition, isLoadingPosition } = useDatasetRowPosition()
   const { datasetV2: localDatasetData } = useDocumentParameters({
     document,
     commitVersionUuid,

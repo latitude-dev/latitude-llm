@@ -3,18 +3,14 @@
 import { ROUTES } from '$/services/routes'
 import useSWR from 'swr'
 import useFetcher from '../hooks/useFetcher'
-import { AppDto } from '@latitude-data/core/browser'
+import type { AppDto } from '@latitude-data/core/browser'
 import { useMemo } from 'react'
 
-type AppResponse =
-  | { data: AppDto; ok: true }
-  | { errorMessage: string; ok: false }
+type AppResponse = { data: AppDto; ok: true } | { errorMessage: string; ok: false }
 
 export function usePipedreamApp(slugName: string | undefined) {
   const fetcher = useFetcher<AppDto, AppResponse>(
-    slugName
-      ? ROUTES.api.integrations.pipedream.detail(slugName).root
-      : undefined,
+    slugName ? ROUTES.api.integrations.pipedream.detail(slugName).root : undefined,
     {
       serializer: (response) => {
         if (!response.ok) {
@@ -26,10 +22,7 @@ export function usePipedreamApp(slugName: string | undefined) {
     },
   )
 
-  const { data = undefined, isLoading } = useSWR<AppDto>(
-    ['pipedreamApp', slugName],
-    fetcher,
-  )
+  const { data = undefined, isLoading } = useSWR<AppDto>(['pipedreamApp', slugName], fetcher)
 
   return useMemo(() => ({ data, isLoading }), [data, isLoading])
 }

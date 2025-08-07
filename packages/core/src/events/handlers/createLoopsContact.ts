@@ -1,7 +1,7 @@
 import { env } from '@latitude-data/env'
 import { LoopsClient } from 'loops'
 
-import { type UserCreatedEvent } from '../events'
+import type { UserCreatedEvent } from '../events'
 import { Result } from '../../lib/Result'
 
 function getApiKey() {
@@ -14,11 +14,7 @@ function getApiKey() {
   return apiKey
 }
 
-export async function createLoopsContact({
-  data: event,
-}: {
-  data: UserCreatedEvent
-}) {
+export async function createLoopsContact({ data: event }: { data: UserCreatedEvent }) {
   // In dev is an empty string
   const apiKey = getApiKey()
   if (apiKey === '') return Result.nil()

@@ -5,10 +5,7 @@ import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js'
 import { ExpressAdapter } from '@bull-board/express'
 
-import {
-  captureException,
-  captureMessage,
-} from '@latitude-data/core/utils/workers/sentry'
+import { captureException, captureMessage } from '@latitude-data/core/utils/workers/sentry'
 import { startWorkers, setupSchedules } from './workers'
 import { env } from '@latitude-data/env'
 import * as queues from '@latitude-data/core/queues'
@@ -28,11 +25,7 @@ createBullBoard({
 })
 
 // Basic authentication middleware
-const basicAuth = (
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction,
-) => {
+const basicAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const auth = req.headers.authorization
   const expectedAuth = `Basic ${Buffer.from(`${env.BULL_ADMIN_USER}:${env.BULL_ADMIN_PASS}`).toString('base64')}`
 
@@ -80,7 +73,7 @@ const gracefulShutdown = async (signal: string) => {
 process.on('SIGINT', () => gracefulShutdown('SIGINT'))
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
 
-process.on('uncaughtException', function (err) {
+process.on('uncaughtException', (err) => {
   captureException(err)
 })
 

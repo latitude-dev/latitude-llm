@@ -1,9 +1,9 @@
-import { ExperimentFormPayload } from '../useExperimentFormPayload'
+import type { ExperimentFormPayload } from '../useExperimentFormPayload'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -73,7 +73,7 @@ function LineRangeInputs({
         onChange={(e) => {
           setFromText(e.target.value)
           const n = Number(e.target.value)
-          if (!isNaN(n)) debouncedFrom(n)
+          if (!Number.isNaN(n)) debouncedFrom(n)
         }}
         min={1}
         max={max}
@@ -89,7 +89,7 @@ function LineRangeInputs({
         onChange={(e) => {
           setToText(e.target.value)
           const n = Number(e.target.value)
-          if (!isNaN(n)) debouncedTo(n)
+          if (!Number.isNaN(n)) debouncedTo(n)
         }}
         min={1}
         max={max}
@@ -129,7 +129,7 @@ function RowsInputs({
       to: rowCount,
     })
     setAllRows(true)
-  }, [rowCount, setToLine])
+  }, [rowCount])
 
   return (
     <div className='flex flex-col gap-y-2 w-1/2'>
@@ -172,11 +172,5 @@ export function DatasetRowsInput({
     )
   }
 
-  return (
-    <RowsInputs
-      rowCount={rowCount!}
-      setFromLine={setFromLine}
-      setToLine={setToLine}
-    />
-  )
+  return <RowsInputs rowCount={rowCount!} setFromLine={setFromLine} setToLine={setToLine} />
 }

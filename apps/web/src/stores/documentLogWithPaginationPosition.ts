@@ -1,10 +1,7 @@
-import {
-  DocumentLogFilterOptions,
-  DocumentVersion,
-} from '@latitude-data/core/browser'
+import type { DocumentLogFilterOptions, DocumentVersion } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 export type LogWithPosition = {
   position: number
@@ -39,13 +36,7 @@ export default function useDocumentLogWithPaginationPosition(
       : undefined,
   )
   const { data, isLoading } = useSWR<LogWithPosition>(
-    [
-      'documentLogWithPosition',
-      documentLogUuid,
-      projectId,
-      filterOptions,
-      excludeErrors,
-    ],
+    ['documentLogWithPosition', documentLogUuid, projectId, filterOptions, excludeErrors],
     fetcher,
     {
       ...opts,

@@ -1,6 +1,6 @@
-import { MustacheTag } from '$compiler/parser/interfaces'
+import type { MustacheTag } from '$compiler/parser/interfaces'
 
-import { CompileNodeContext } from '../types'
+import type { CompileNodeContext } from '../types'
 
 export async function compile({
   node,

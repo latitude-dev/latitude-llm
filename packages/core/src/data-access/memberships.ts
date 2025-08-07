@@ -5,10 +5,7 @@ import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { memberships } from '../schema'
 
-export async function unsafelyFindMembershipByToken(
-  token: string,
-  db = database,
-) {
+export async function unsafelyFindMembershipByToken(token: string, db = database) {
   const m = await db.query.memberships.findFirst({
     where: eq(memberships.invitationToken, token),
   })

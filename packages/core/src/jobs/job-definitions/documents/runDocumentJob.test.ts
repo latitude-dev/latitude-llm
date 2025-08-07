@@ -1,4 +1,4 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
@@ -23,10 +23,7 @@ describe('runDocumentJob', () => {
   vi.mock('../../../redis', () => ({
     buildRedisConnection: vi.fn().mockResolvedValue({} as any),
   }))
-  vi.spyOn(
-    runDocumentAtCommitWithAutoToolResponses,
-    'runDocumentAtCommitWithAutoToolResponses',
-  )
+  vi.spyOn(runDocumentAtCommitWithAutoToolResponses, 'runDocumentAtCommitWithAutoToolResponses')
   // @ts-ignore
   vi.spyOn(utils, 'ProgressTracker').mockImplementation(() => ({
     incrementCompleted: vi.fn(),
@@ -98,18 +95,15 @@ describe('runDocumentJob', () => {
       source: LogSources.Playground,
     })
 
-    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
-      'documentBatchRunStatus',
-      {
-        workspaceId: workspace.id,
-        data: expect.objectContaining({
-          documentUuid: document.documentUuid,
-          completed: 0,
-          errors: 0,
-          total: 1,
-        }),
-      },
-    )
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith('documentBatchRunStatus', {
+      workspaceId: workspace.id,
+      data: expect.objectContaining({
+        documentUuid: document.documentUuid,
+        completed: 0,
+        errors: 0,
+        total: 1,
+      }),
+    })
 
     expect(incrementErrorsMock).not.toHaveBeenCalled()
   })
@@ -124,18 +118,15 @@ describe('runDocumentJob', () => {
 
     await runDocumentJob(mockJob)
 
-    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
-      'documentBatchRunStatus',
-      {
-        workspaceId: workspace.id,
-        data: expect.objectContaining({
-          documentUuid: document.documentUuid,
-          completed: 0,
-          errors: 0,
-          total: 1,
-        }),
-      },
-    )
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith('documentBatchRunStatus', {
+      workspaceId: workspace.id,
+      data: expect.objectContaining({
+        documentUuid: document.documentUuid,
+        completed: 0,
+        errors: 0,
+        total: 1,
+      }),
+    })
 
     expect(
       runDocumentAtCommitWithAutoToolResponses.runDocumentAtCommitWithAutoToolResponses,

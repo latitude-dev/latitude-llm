@@ -1,13 +1,13 @@
 import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
 import {
-  Span,
+  type Span,
   SPAN_METADATA_CACHE_TTL,
   SPAN_METADATA_STORAGE_KEY,
-  SpanMetadata,
-  SpanType,
+  type SpanMetadata,
+  type SpanType,
 } from '../browser'
 import { cache as redis } from '../cache'
-import { diskFactory, DiskWrapper } from '../lib/disk'
+import { diskFactory, type DiskWrapper } from '../lib/disk'
 import { Result } from '../lib/Result'
 import { spans } from '../schema'
 import Repository from './repositoryV2'
@@ -31,9 +31,7 @@ export class SpansRepository extends Repository<Span> {
 
   async get({ spanId, traceId }: { spanId: string; traceId: string }) {
     const result = await this.scope
-      .where(
-        and(this.scopeFilter, eq(spans.traceId, traceId), eq(spans.id, spanId)),
-      )
+      .where(and(this.scopeFilter, eq(spans.traceId, traceId), eq(spans.id, spanId)))
       .limit(1)
       .then((r) => r[0])
 

@@ -1,8 +1,4 @@
-import {
-  Inputs,
-  InputSource,
-  PlaygroundInput,
-} from '@latitude-data/core/browser'
+import type { Inputs, InputSource, PlaygroundInput } from '@latitude-data/core/browser'
 import { TABS } from '../index'
 import { ParameterInputSkeleton } from '$/components/ParameterInput'
 import { ParameterTypeSelector } from '../ManualParams/ParameterTypeSelector'
@@ -21,10 +17,7 @@ const FAKE_INPUTS: Inputs<InputSource> = {
   },
 }
 const fakeSetPrompt = (_prompt: string) => {}
-const fakeSetInput = (
-  _param: string,
-  _input: PlaygroundInput<InputSource>,
-) => {}
+const fakeSetInput = (_param: string, _input: PlaygroundInput<InputSource>) => {}
 
 function LoadingInput() {
   return (
@@ -63,11 +56,7 @@ function LoadingContent({ source }: { source: InputSource }) {
   )
 }
 
-export default function DocumentParamsLoading({
-  source,
-}: {
-  source: InputSource
-}) {
+export default function DocumentParamsLoading({ source }: { source: InputSource }) {
   return (
     <ClientOnly>
       <CollapsibleBox

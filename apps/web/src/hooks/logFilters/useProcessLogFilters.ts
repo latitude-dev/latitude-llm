@@ -1,12 +1,12 @@
 import {
-  DocumentLogFilterOptions,
+  type DocumentLogFilterOptions,
   LOG_FILTERS_ENCODED_PARAMS,
   LOG_SOURCES,
-  LogSources,
+  type LogSources,
 } from '@latitude-data/core/browser'
 import { paramsToString } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { formatDocumentLogCreatedAtParam } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { endOfDay } from 'date-fns'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
@@ -20,7 +20,8 @@ function useEditableSearchParams() {
     const urlParams = new URLSearchParams(prevParams)
     const params = Object.fromEntries(urlParams.entries())
 
-    let newParams = undefined
+    // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
+    let newParams
 
     if (value) {
       const data = {
@@ -63,16 +64,11 @@ export function useProcessLogFilters({
   const setSearchParams = useEditableSearchParams()
 
   const isCommitsDefault = useMemo(() => {
-    return (
-      filterOptions.commitIds.sort().join(',') ===
-      originalSelectedCommitsIds.sort().join(',')
-    )
+    return filterOptions.commitIds.sort().join(',') === originalSelectedCommitsIds.sort().join(',')
   }, [filterOptions.commitIds, originalSelectedCommitsIds])
 
   const isLogSourcesDefault = useMemo(() => {
-    return (
-      filterOptions.logSources.sort().join(',') === LOG_SOURCES.sort().join(',')
-    )
+    return filterOptions.logSources.sort().join(',') === LOG_SOURCES.sort().join(',')
   }, [filterOptions.logSources])
 
   const onSelectCommits = useCallback(
@@ -81,10 +77,7 @@ export function useProcessLogFilters({
         ...currentFilters,
         commitIds: selectedCommitsIds,
       }))
-      if (
-        selectedCommitsIds.sort().join(',') ===
-        originalSelectedCommitsIds.sort().join(',')
-      ) {
+      if (selectedCommitsIds.sort().join(',') === originalSelectedCommitsIds.sort().join(',')) {
         setSearchParams('versions', undefined)
       } else {
         setSearchParams('versions', selectedCommitsIds.map(String))
@@ -121,9 +114,7 @@ export function useProcessLogFilters({
         ...currentFilters,
         logSources: selectedLogSources,
       }))
-      if (
-        selectedLogSources.sort().join(',') === LOG_SOURCES.sort().join(',')
-      ) {
+      if (selectedLogSources.sort().join(',') === LOG_SOURCES.sort().join(',')) {
         setSearchParams('origins', undefined)
       } else {
         setSearchParams('origins', selectedLogSources)

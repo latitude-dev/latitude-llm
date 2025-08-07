@@ -1,6 +1,6 @@
 import * as k8s from '@kubernetes/client-node'
 import { eq } from 'drizzle-orm'
-import { McpServer } from '../../browser'
+import type { McpServer } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { mcpServers } from '../../schema/models/mcpServers'
@@ -15,10 +15,7 @@ type DeploymentStatus = 'deploying' | 'deployed' | 'failed' | 'deleted'
  * @param db Database instance
  * @returns Result with the updated MCP server record
  */
-export async function updateMcpServerStatus(
-  mcpServer: McpServer,
-  transaction = new Transaction(),
-) {
+export async function updateMcpServerStatus(mcpServer: McpServer, transaction = new Transaction()) {
   try {
     // Initialize Kubernetes client
     const kc = getK8sClient().kc
@@ -52,10 +49,7 @@ export async function updateMcpServerStatus(
       const readyReplicas = deploymentResponse.status?.readyReplicas || 0
       const desiredReplicas = deploymentResponse.status?.replicas || 0
 
-      if (
-        availableCondition?.status === 'True' &&
-        readyReplicas === desiredReplicas
-      ) {
+      if (availableCondition?.status === 'True' && readyReplicas === desiredReplicas) {
         currentStatus = 'deployed'
       } else if (progressingCondition?.status === 'False') {
         currentStatus = 'failed'
@@ -115,13 +109,9 @@ export async function updateMcpServerStatus(
         })
       }
 
-      return Result.error(
-        new Error(`Failed to fetch deployment status: ${k8sError.message}`),
-      )
+      return Result.error(new Error(`Failed to fetch deployment status: ${k8sError.message}`))
     }
   } catch (error) {
-    return Result.error(
-      error instanceof Error ? error : new Error(String(error)),
-    )
+    return Result.error(error instanceof Error ? error : new Error(String(error)))
   }
 }

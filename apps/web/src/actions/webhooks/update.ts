@@ -21,14 +21,12 @@ export const updateWebhookAction = authProcedure
     let projectIds: number[] | undefined
     try {
       projectIds = input.projectIds ? JSON.parse(input.projectIds) : undefined
-    } catch (error) {
+    } catch (_e) {
       throw new BadRequestError('Invalid project IDs')
     }
 
     // First get the webhook instance
-    const webhook = await getWebhook(input.id, ctx.workspace).then((r) =>
-      r.unwrap(),
-    )
+    const webhook = await getWebhook(input.id, ctx.workspace).then((r) => r.unwrap())
 
     const result = await updateWebhook({
       webhook,

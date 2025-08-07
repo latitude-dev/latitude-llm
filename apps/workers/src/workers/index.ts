@@ -3,10 +3,7 @@ import { startDefaultWorker } from './worker-definitions/defaultWorker'
 import { startDocumentSuggestionsWorker } from './worker-definitions/documentSuggestionsWorker'
 import { startDocumentsWorker } from './worker-definitions/documentsWorker'
 import { startEvaluationsWorker } from './worker-definitions/evaluationsWorker'
-import {
-  startEventHandlersWorker,
-  startEventsWorker,
-} from './worker-definitions/eventsWorker'
+import { startEventHandlersWorker, startEventsWorker } from './worker-definitions/eventsWorker'
 import { startLiveEvaluationsWorker } from './worker-definitions/liveEvaluationsWorker'
 import { startMaintenanceWorker } from './worker-definitions/maintenanceWorker'
 import { startTracingWorker } from './worker-definitions/tracingWorker'

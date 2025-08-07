@@ -1,18 +1,16 @@
-import { AppRouteHandler } from '$/openApi/types'
+import type { AppRouteHandler } from '$/openApi/types'
 import { verifyWebhookSignature } from '@latitude-data/core/services/documentTriggers/helpers/verifySignature'
 import { extractEmailSender } from '@latitude-data/core/services/documentTriggers/helpers/extractEmailSender'
-import { EmailWebhookRoute } from './webhook.route'
+import type { EmailWebhookRoute } from './webhook.route'
 import { env } from '@latitude-data/env'
 import { UnauthorizedError } from '@latitude-data/constants/errors'
-import { EmailWebhookBodySchema } from './bodySchema'
+import type { EmailWebhookBodySchema } from './bodySchema'
 import { registerEmailTriggerEvent } from '@latitude-data/core/services/documentTriggers/handlers/email/registerEvent'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735
 // https://github.com/orgs/honojs/discussions/1803
-export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (
-  c,
-) => {
+export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (c) => {
   const formData = await c.req.formData()
   const data = Object.fromEntries(formData.entries())
   const {
@@ -35,9 +33,7 @@ export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (
   }
 
   const attachedFiles = await c.req.parseBody()
-  const attachments = Object.values(attachedFiles).filter(
-    (item) => typeof item !== 'string',
-  )
+  const attachments = Object.values(attachedFiles).filter((item) => typeof item !== 'string')
 
   verifyWebhookSignature({
     token,

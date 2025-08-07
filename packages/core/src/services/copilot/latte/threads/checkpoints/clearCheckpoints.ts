@@ -19,16 +19,8 @@ export function clearLatteThreadCheckpoints(
         id: latteThreadCheckpoints.id,
       })
       .from(latteThreadCheckpoints)
-      .leftJoin(
-        latteThreads,
-        eq(latteThreadCheckpoints.threadUuid, latteThreads.uuid),
-      )
-      .where(
-        and(
-          eq(latteThreads.uuid, threadUuid),
-          eq(latteThreads.workspaceId, workspaceId),
-        ),
-      )
+      .leftJoin(latteThreads, eq(latteThreadCheckpoints.threadUuid, latteThreads.uuid))
+      .where(and(eq(latteThreads.uuid, threadUuid), eq(latteThreads.workspaceId, workspaceId)))
 
     await tx.delete(latteThreadCheckpoints).where(
       inArray(

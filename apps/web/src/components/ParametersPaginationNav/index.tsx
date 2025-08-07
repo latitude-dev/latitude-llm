@@ -37,17 +37,14 @@ export function ParametersPaginationNav({
       />
       <div className='flex flex-row justify-center items-center flex-grow min-w-0'>
         <Text.H5M userSelect={false} color='foregroundMuted' ellipsis noWrap>
-          {zeroIndex ? currentIndex + INDEX_ZERO_LIST : currentIndex} of{' '}
-          {totalCount} {label}
+          {zeroIndex ? currentIndex + INDEX_ZERO_LIST : currentIndex} of {totalCount} {label}
         </Text.H5M>
       </div>
       <Button
         size='icon'
         variant='ghost'
         disabled={
-          disabled ||
-          currentIndex >=
-            (zeroIndex ? totalCount - INDEX_ZERO_LIST : totalCount)
+          disabled || currentIndex >= (zeroIndex ? totalCount - INDEX_ZERO_LIST : totalCount)
         }
         iconProps={{
           name: 'chevronRight',

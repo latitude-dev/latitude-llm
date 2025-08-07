@@ -1,6 +1,6 @@
 import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
 
-import { Parser } from '..'
+import type { Parser } from '..'
 import { config } from './config'
 import { multiLineComment } from './multi_line_comment'
 import { mustache } from './mustache'

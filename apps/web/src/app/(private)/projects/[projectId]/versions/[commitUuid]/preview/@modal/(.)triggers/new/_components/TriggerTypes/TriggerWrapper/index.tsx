@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 

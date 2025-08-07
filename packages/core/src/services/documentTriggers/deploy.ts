@@ -3,15 +3,12 @@ import {
   NotFoundError,
   NotImplementedError,
 } from '@latitude-data/constants/errors'
-import { Commit, DocumentTrigger, Workspace } from '../../browser'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
-import { Result, TypedResult } from '../../lib/Result'
+import type { Commit, DocumentTrigger, Workspace } from '../../browser'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
+import { Result, type TypedResult } from '../../lib/Result'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  deployIntegrationTrigger,
-  undeployIntegrationTrigger,
-} from './deploy/integrationTrigger'
-import {
+import { deployIntegrationTrigger, undeployIntegrationTrigger } from './deploy/integrationTrigger'
+import type {
   DocumentTriggerConfiguration,
   DocumentTriggerDeploymentSettings,
 } from '@latitude-data/constants/documentTriggers'
@@ -63,8 +60,7 @@ export async function deployDocumentTrigger<T extends DocumentTriggerType>(
 
     case DocumentTriggerType.Scheduled:
       return deployScheduledTrigger({
-        configuration:
-          configuration as DocumentTriggerConfiguration<DocumentTriggerType.Scheduled>,
+        configuration: configuration as DocumentTriggerConfiguration<DocumentTriggerType.Scheduled>,
       }) as TypedResult<DocumentTriggerDeploymentSettings<T>>
 
     case DocumentTriggerType.Email:
@@ -75,9 +71,7 @@ export async function deployDocumentTrigger<T extends DocumentTriggerType>(
 
     default:
       return Result.error(
-        new NotImplementedError(
-          `Trigger type '${triggerType}' is not supported for deployment.`,
-        ),
+        new NotImplementedError(`Trigger type '${triggerType}' is not supported for deployment.`),
       )
   }
 }
@@ -104,8 +98,7 @@ export async function undeployDocumentTrigger<T extends DocumentTriggerType>(
       undeployResult = await undeployIntegrationTrigger(
         {
           workspace,
-          documentTrigger:
-            documentTrigger as DocumentTrigger<DocumentTriggerType.Integration>,
+          documentTrigger: documentTrigger as DocumentTrigger<DocumentTriggerType.Integration>,
         },
         transaction,
       )

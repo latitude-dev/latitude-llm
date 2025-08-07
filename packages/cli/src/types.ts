@@ -1,4 +1,4 @@
-import { Command } from 'commander'
+import type { Command } from 'commander'
 
 /**
  * Represents a command handler for the CLI

@@ -1,9 +1,6 @@
-import {
-  type AssistantMessage,
-  type MessageContent,
-} from '@latitude-data/constants/legacyCompiler'
+import type { AssistantMessage, MessageContent } from '@latitude-data/constants/legacyCompiler'
 import { Img, Text } from '@react-email/components'
-import { TypedResult } from '../../../lib/Result'
+import type { TypedResult } from '../../../lib/Result'
 import ContainerLayout from '../_components/ContainerLayout'
 import PlainLayout from '../_components/PlainLayout'
 
@@ -33,11 +30,7 @@ export default function DocumentTriggerResponseMail({
   )
 }
 
-function RegularPromptResponseContent({
-  message,
-}: {
-  message: AssistantMessage
-}) {
+function RegularPromptResponseContent({ message }: { message: AssistantMessage }) {
   const content: MessageContent[] =
     typeof message.content === 'string'
       ? [{ type: 'text', text: message.content }]
@@ -47,9 +40,7 @@ function RegularPromptResponseContent({
     <>
       {content.map((content, index) => {
         if (content.type === 'text') {
-          return content
-            .text!.split('\n')
-            .map((text, index) => <Text key={index}>{text}</Text>)
+          return content.text!.split('\n').map((text, index) => <Text key={index}>{text}</Text>)
         }
         if (content.type === 'image') {
           return <Img key={index} src={content.image as string} />

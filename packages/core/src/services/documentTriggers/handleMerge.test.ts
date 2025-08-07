@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType, Providers } from '@latitude-data/constants'
-import {
+import type {
   Commit,
   Project,
   Workspace,
@@ -53,9 +53,7 @@ describe('handleTriggerMerge', () => {
     user = u
 
     const deployModule = await import('./deploy')
-    vi.spyOn(deployModule, 'deployDocumentTrigger').mockImplementation(
-      mocks.deployDocumentTrigger,
-    )
+    vi.spyOn(deployModule, 'deployDocumentTrigger').mockImplementation(mocks.deployDocumentTrigger)
     vi.spyOn(deployModule, 'undeployDocumentTrigger').mockImplementation(
       mocks.undeployDocumentTrigger,
     )

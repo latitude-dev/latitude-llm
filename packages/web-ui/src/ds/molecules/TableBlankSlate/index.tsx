@@ -1,4 +1,4 @@
-import { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
 import { Button } from '../../atoms/Button'
 import { Text } from '../../atoms/Text'
@@ -14,13 +14,7 @@ export function LinkButtonStyle({
   )
 }
 
-const TableBlankSlate = ({
-  link,
-  description,
-}: {
-  link?: ReactNode
-  description: string
-}) => {
+const TableBlankSlate = ({ link, description }: { link?: ReactNode; description: string }) => {
   return (
     <div className='rounded-lg w-full py-40 flex flex-col gap-4 items-center justify-center bg-gradient-to-b from-secondary to-transparent px-4'>
       <div className='max-w-2xl'>

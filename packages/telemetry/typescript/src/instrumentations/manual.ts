@@ -1,4 +1,4 @@
-import { BaseInstrumentation } from '$telemetry/instrumentations/base'
+import type { BaseInstrumentation } from '$telemetry/instrumentations/base'
 import {
   ATTR_GEN_AI_COMPLETIONS,
   ATTR_GEN_AI_MESSAGE_CONTENT,
@@ -35,7 +35,7 @@ import {
   HEAD_COMMIT,
   SPAN_SPECIFICATIONS,
   SpanType,
-  TraceContext,
+  type TraceContext,
 } from '@latitude-data/constants'
 import * as otel from '@opentelemetry/api'
 import { propagation, trace } from '@opentelemetry/api'
@@ -214,7 +214,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
     const start = options || {}
 
-    let operation = undefined
+    let operation
     if (SPAN_SPECIFICATIONS[type].isGenAI) {
       operation = type
     }
@@ -257,7 +257,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     let jsonArguments = ''
     try {
       jsonArguments = JSON.stringify(start.call.arguments)
-    } catch (error) {
+    } catch (_error) {
       jsonArguments = '{}'
     }
 
@@ -280,7 +280,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         if (typeof end.result.value !== 'string') {
           try {
             stringResult = JSON.stringify(end.result.value)
-          } catch (error) {
+          } catch (_error) {
             stringResult = '{}'
           }
         } else {
@@ -299,16 +299,13 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }
   }
 
-  private attribifyMessageToolCalls(
-    prefix: string,
-    toolCalls: Record<string, unknown>[],
-  ) {
+  private attribifyMessageToolCalls(prefix: string, toolCalls: Record<string, unknown>[]) {
     const attributes: otel.Attributes = {}
 
     for (let i = 0; i < toolCalls.length; i++) {
       for (const key in toolCalls[i]!) {
         const field = this.toCamelCase(key)
-        let value = toolCalls[i]![key]
+        const value = toolCalls[i]![key]
         if (value === null || value === undefined) continue
 
         switch (field) {
@@ -343,7 +340,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
                 attributes[
                   `${prefix}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS_ARGUMENTS}`
                 ] = JSON.stringify(value)
-              } catch (error) {
+              } catch (_error) {
                 attributes[
                   `${prefix}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_CALLS_ARGUMENTS}`
                 ] = '{}'
@@ -383,9 +380,8 @@ export class ManualInstrumentation implements BaseInstrumentation {
     }
 
     try {
-      attributes[`${prefix}.${ATTR_GEN_AI_MESSAGE_CONTENT}`] =
-        JSON.stringify(content)
-    } catch (error) {
+      attributes[`${prefix}.${ATTR_GEN_AI_MESSAGE_CONTENT}`] = JSON.stringify(content)
+    } catch (_error) {
       attributes[`${prefix}.${ATTR_GEN_AI_MESSAGE_CONTENT}`] = '[]'
     }
 
@@ -412,18 +408,14 @@ export class ManualInstrumentation implements BaseInstrumentation {
     return attributes
   }
 
-  private attribifyMessages(
-    direction: 'input' | 'output',
-    messages: Record<string, unknown>[],
-  ) {
-    const prefix =
-      direction === 'input' ? ATTR_GEN_AI_PROMPTS : ATTR_GEN_AI_COMPLETIONS
+  private attribifyMessages(direction: 'input' | 'output', messages: Record<string, unknown>[]) {
+    const prefix = direction === 'input' ? ATTR_GEN_AI_PROMPTS : ATTR_GEN_AI_COMPLETIONS
 
     let attributes: otel.Attributes = {}
     for (let i = 0; i < messages.length; i++) {
       for (const key in messages[i]!) {
         const field = this.toCamelCase(key)
-        let value = messages[i]![key]
+        const value = messages[i]![key]
         if (value === null || value === undefined) continue
 
         switch (field) {
@@ -458,15 +450,13 @@ export class ManualInstrumentation implements BaseInstrumentation {
           case 'toolId':
           case 'toolUseId': {
             if (typeof value !== 'string') continue
-            attributes[`${prefix}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_CALL_ID}`] =
-              value
+            attributes[`${prefix}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_CALL_ID}`] = value
             break
           }
 
           case 'toolName': {
             if (typeof value !== 'string') continue
-            attributes[`${prefix}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_NAME}`] =
-              value
+            attributes[`${prefix}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_NAME}`] = value
             break
           }
 
@@ -474,9 +464,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
 
           case 'isError': {
             if (typeof value !== 'boolean') continue
-            attributes[
-              `${prefix}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_RESULT_IS_ERROR}`
-            ] = value
+            attributes[`${prefix}.${i}.${ATTR_GEN_AI_MESSAGE_TOOL_RESULT_IS_ERROR}`] = value
             break
           }
         }
@@ -490,8 +478,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     direction: 'input' | 'output',
     configuration: Record<string, unknown>,
   ) {
-    const prefix =
-      direction === 'input' ? ATTR_GEN_AI_REQUEST : ATTR_GEN_AI_RESPONSE
+    const prefix = direction === 'input' ? ATTR_GEN_AI_REQUEST : ATTR_GEN_AI_RESPONSE
 
     const attributes: otel.Attributes = {}
     for (const key in configuration) {
@@ -501,7 +488,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       if (typeof value === 'object' && !Array.isArray(value)) {
         try {
           value = JSON.stringify(value)
-        } catch (error) {
+        } catch (_error) {
           value = '{}'
         }
       }
@@ -522,18 +509,15 @@ export class ManualInstrumentation implements BaseInstrumentation {
     let jsonConfiguration = ''
     try {
       jsonConfiguration = JSON.stringify(configuration)
-    } catch (error) {
+    } catch (_error) {
       jsonConfiguration = '{}'
     }
-    const attrConfiguration = this.attribifyConfiguration(
-      'input',
-      configuration,
-    )
+    const attrConfiguration = this.attribifyConfiguration('input', configuration)
 
     let jsonInput = ''
     try {
       jsonInput = JSON.stringify(start.input)
-    } catch (error) {
+    } catch (_error) {
       jsonInput = '[]'
     }
     const attrInput = this.attribifyMessages('input', start.input)
@@ -562,7 +546,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         let jsonOutput = ''
         try {
           jsonOutput = JSON.stringify(end.output)
-        } catch (error) {
+        } catch (_error) {
           jsonOutput = '[]'
         }
         const attrOutput = this.attribifyMessages('output', end.output)
@@ -617,14 +601,8 @@ export class ManualInstrumentation implements BaseInstrumentation {
     )
   }
 
-  private attribifyHeaders(
-    direction: 'request' | 'response',
-    headers: Record<string, string>,
-  ) {
-    const prefix =
-      direction === 'request'
-        ? ATTR_HTTP_REQUEST_HEADER
-        : ATTR_HTTP_RESPONSE_HEADER
+  private attribifyHeaders(direction: 'request' | 'response', headers: Record<string, string>) {
+    const prefix = direction === 'request' ? ATTR_HTTP_REQUEST_HEADER : ATTR_HTTP_RESPONSE_HEADER
 
     const attributes: otel.Attributes = {}
     for (const key in headers) {
@@ -652,25 +630,20 @@ export class ManualInstrumentation implements BaseInstrumentation {
     } else {
       try {
         finalBody = JSON.stringify(start.request.body)
-      } catch (error) {
+      } catch (_error) {
         finalBody = '{}'
       }
     }
 
-    const span = this.span(
-      ctx,
-      start.name || `${method} ${start.request.url}`,
-      SpanType.Http,
-      {
-        attributes: {
-          [ATTR_HTTP_REQUEST_METHOD]: method,
-          [ATTR_HTTP_REQUEST_URL]: start.request.url,
-          ...attrHeaders,
-          [ATTR_HTTP_REQUEST_BODY]: finalBody,
-          ...(start.attributes || {}),
-        },
+    const span = this.span(ctx, start.name || `${method} ${start.request.url}`, SpanType.Http, {
+      attributes: {
+        [ATTR_HTTP_REQUEST_METHOD]: method,
+        [ATTR_HTTP_REQUEST_URL]: start.request.url,
+        ...attrHeaders,
+        [ATTR_HTTP_REQUEST_BODY]: finalBody,
+        ...(start.attributes || {}),
       },
-    )
+    })
 
     return {
       context: span.context,
@@ -678,10 +651,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         const end = options
 
         // Note: do not serialize headers as a single attribute because fields won't be redacted
-        const attrHeaders = this.attribifyHeaders(
-          'response',
-          end.response.headers,
-        )
+        const attrHeaders = this.attribifyHeaders('response', end.response.headers)
 
         let finalBody = ''
         if (typeof end.response.body === 'string') {
@@ -689,7 +659,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         } else {
           try {
             finalBody = JSON.stringify(end.response.body)
-          } catch (error) {
+          } catch (_error) {
             finalBody = '{}'
           }
         }
@@ -724,7 +694,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     let jsonParameters = ''
     try {
       jsonParameters = JSON.stringify(parameters || {})
-    } catch (error) {
+    } catch (_error) {
       jsonParameters = '{}'
     }
 

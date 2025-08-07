@@ -2,19 +2,16 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useUsers from '$/stores/users'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import { DocumentTriggerParameters } from '@latitude-data/constants'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { DocumentTriggerParameters } from '@latitude-data/constants'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 
 export enum EmailAvailabilityOptions {
   Public = 'public',
   Private = 'private',
 }
 
-const AVAILABILITY_OPTIONS: Record<
-  EmailAvailabilityOptions,
-  { label: string }
-> = {
+const AVAILABILITY_OPTIONS: Record<EmailAvailabilityOptions, { label: string }> = {
   [EmailAvailabilityOptions.Private]: {
     label: 'Only selected emails and domains',
   },
@@ -51,23 +48,19 @@ export function useEmailTriggerConfiguration({
   const emails = emailTriggerConfig?.emailWhitelist?.length ?? 0
   const domains = emailTriggerConfig?.domainWhitelist?.length ?? 0
   const emailsAndDomainsCount = emails + domains
-  const [emailAvailability, _setEmailAvailability] =
-    useState<EmailAvailabilityOptions>(
-      !emailTriggerConfig
+  const [emailAvailability, _setEmailAvailability] = useState<EmailAvailabilityOptions>(
+    !emailTriggerConfig
+      ? EmailAvailabilityOptions.Private
+      : emailsAndDomainsCount > 0
         ? EmailAvailabilityOptions.Private
-        : emailsAndDomainsCount > 0
-          ? EmailAvailabilityOptions.Private
-          : EmailAvailabilityOptions.Public,
-    )
+        : EmailAvailabilityOptions.Public,
+  )
 
   const userEmails = useMemo(() => users.map((u) => u.email), [users])
   const [emailWhitelist, setEmailWhitelist] = useState<string[]>(() => {
     const existingWhiteList = emailTriggerConfig?.emailWhitelist ?? []
 
-    if (
-      !existingWhiteList.length &&
-      emailAvailability === EmailAvailabilityOptions.Public
-    ) {
+    if (!existingWhiteList.length && emailAvailability === EmailAvailabilityOptions.Public) {
       return []
     }
     return existingWhiteList.length > 0 ? existingWhiteList : userEmails
@@ -80,9 +73,9 @@ export function useEmailTriggerConfiguration({
   const [name, setName] = useState<string>(
     emailTriggerConfig?.name ?? document.path.split('/').at(-1)!,
   )
-  const [parameters, setParameters] = useState<
-    Record<string, DocumentTriggerParameters>
-  >(emailTriggerConfig?.parameters ?? {})
+  const [parameters, setParameters] = useState<Record<string, DocumentTriggerParameters>>(
+    emailTriggerConfig?.parameters ?? {},
+  )
 
   const [emailInput, setEmailInput] = useState('')
   const onAddEmail = useCallback(() => {
@@ -154,6 +147,4 @@ export function useEmailTriggerConfiguration({
   )
 }
 
-export type UseEmailTriggerConfiguration = ReturnType<
-  typeof useEmailTriggerConfiguration
->
+export type UseEmailTriggerConfiguration = ReturnType<typeof useEmailTriggerConfiguration>

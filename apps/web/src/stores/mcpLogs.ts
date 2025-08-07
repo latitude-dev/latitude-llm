@@ -1,17 +1,17 @@
 'use client'
 
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 
-export interface McpLogOptions {
+interface McpLogOptions {
   tailLines?: number
   timestamps?: boolean
   previous?: boolean
   limitBytes?: number
 }
 
-export interface McpLogsResponse {
+interface McpLogsResponse {
   logs: string
 }
 

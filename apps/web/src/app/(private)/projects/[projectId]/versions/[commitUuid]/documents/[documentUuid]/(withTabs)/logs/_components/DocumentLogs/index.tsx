@@ -1,15 +1,15 @@
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { OnSelectedSpanFn } from '$/components/tracing/traces/Timeline'
+import type { OnSelectedSpanFn } from '$/components/tracing/traces/Timeline'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
-import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import type useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
+import type { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs from '$/stores/providerLogs'
 import { useSpan } from '$/stores/spans'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-import {
+import type {
   DocumentLogFilterOptions,
   DocumentLogsAggregations,
   DocumentLogsLimitedView,
@@ -21,10 +21,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useSearchParams } from 'next/navigation'
 import { useMemo, useRef, useState } from 'react'
@@ -60,9 +57,7 @@ export function DocumentLogs({
   aggregations?: DocumentLogsAggregations
   isAggregationsLoading: boolean
   evaluationResults: Record<string, ResultWithEvaluationV2[]>
-  mutateEvaluationResults: ReturnType<
-    typeof useEvaluationResultsV2ByDocumentLogs
-  >['mutate']
+  mutateEvaluationResults: ReturnType<typeof useEvaluationResultsV2ByDocumentLogs>['mutate']
   isEvaluationsLoading: boolean
   evaluations: EvaluationV2[]
   annotateEvaluation: ReturnType<typeof useEvaluationsV2>['annotateEvaluation']
@@ -81,10 +76,9 @@ export function DocumentLogs({
     serverSelectedLog,
   })
 
-  const { data: providerLogs, isLoading: isProviderLogsLoading } =
-    useProviderLogs({
-      documentLogUuid: selectedLog?.uuid,
-    })
+  const { data: providerLogs, isLoading: isProviderLogsLoading } = useProviderLogs({
+    documentLogUuid: selectedLog?.uuid,
+  })
 
   const {
     data: dailyCountNormal,
@@ -115,17 +109,12 @@ export function DocumentLogs({
   })
 
   const selectableLogIds = useMemo(
-    () =>
-      documentLogs
-        .filter((l) => !getRunErrorFromErrorable(l.error))
-        .map((l) => l.id),
+    () => documentLogs.filter((l) => !getRunErrorFromErrorable(l.error)).map((l) => l.id),
     [documentLogs],
   )
   const selectableState = useSelectableRows({
     rowIds: selectableLogIds,
-    totalRowCount: limitedView
-      ? limitedView.totalCount
-      : (pagination?.count ?? 0),
+    totalRowCount: limitedView ? limitedView.totalCount : (pagination?.count ?? 0),
   })
   const previewLogsState = useSelectedLogs({
     selectableState,
@@ -133,10 +122,7 @@ export function DocumentLogs({
   })
 
   const manualEvaluations = useMemo(
-    () =>
-      evaluations.filter(
-        (e) => getEvaluationMetricSpecification(e).supportsManualEvaluation,
-      ),
+    () => evaluations.filter((e) => getEvaluationMetricSpecification(e).supportsManualEvaluation),
     [evaluations],
   )
 
@@ -146,26 +132,20 @@ export function DocumentLogs({
 
     const lastProviderLog = providerLogs.at(-1)
     if (!lastProviderLog) return undefined
-    if (lastProviderLog.documentLogUuid != selectedLog.uuid) return undefined
+    if (lastProviderLog.documentLogUuid !== selectedLog.uuid) return undefined
 
     return lastProviderLog
   }, [selectedLog, providerLogs])
 
-  const [selectedSpan, setSelectedSpan] =
-    useState<Parameters<OnSelectedSpanFn>[0]>()
+  const [selectedSpan, setSelectedSpan] = useState<Parameters<OnSelectedSpanFn>[0]>()
   const { data: span, isLoading: isSpanLoading } = useSpan({
     conversationId: selectedSpan?.conversationId ?? '',
     traceId: selectedSpan?.traceId ?? '',
     spanId: selectedSpan?.spanId ?? '',
   })
 
-  if (
-    !documentLogFilterOptions.logSources.length &&
-    !documentLogFilterOptions.logSources.length
-  ) {
-    return (
-      <TableBlankSlate description='Select one or more log sources and commits to see logs.' />
-    )
+  if (!documentLogFilterOptions.logSources.length && !documentLogFilterOptions.logSources.length) {
+    return <TableBlankSlate description='Select one or more log sources and commits to see logs.' />
   }
 
   if (!documentLogs.length) {
@@ -177,15 +157,8 @@ export function DocumentLogs({
   return (
     <div className='flex flex-col flex-grow min-h-0 w-full gap-4'>
       <div className='grid xl:grid-cols-2 gap-4 flex-grow'>
-        <LogsOverTime
-          data={dailyCount}
-          isLoading={isDailyCountLoading}
-          error={dailyCountError}
-        />
-        <AggregationPanels
-          aggregations={aggregations}
-          isLoading={isAggregationsLoading}
-        />
+        <LogsOverTime data={dailyCount} isLoading={isDailyCountLoading} error={dailyCountError} />
+        <AggregationPanels aggregations={aggregations} isLoading={isAggregationsLoading} />
       </div>
 
       <div

@@ -1,25 +1,25 @@
 import {
-  EvaluationConfiguration,
-  EvaluationMetric,
-  EvaluationMetricSpecification,
-  EvaluationResultMetadata,
-  EvaluationResultV2,
-  EvaluationSettings,
-  EvaluationSpecification,
+  type EvaluationConfiguration,
+  type EvaluationMetric,
+  type EvaluationMetricSpecification,
+  type EvaluationResultMetadata,
+  type EvaluationResultV2,
+  type EvaluationSettings,
+  type EvaluationSpecification,
   EvaluationType,
-  EvaluationV2,
+  type EvaluationV2,
 } from '@latitude-data/constants'
-import {
+import type {
   Commit,
   Dataset,
   DatasetRow,
   DocumentLog,
   ProviderLogDto,
 } from '@latitude-data/core/browser'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
-import { TextColor } from '@latitude-data/web-ui/tokens'
-import React from 'react'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
+import type { TextColor } from '@latitude-data/web-ui/tokens'
+import type React from 'react'
 import HumanEvaluationSpecification from './human'
 import LlmEvaluationSpecification from './llm'
 import RuleEvaluationSpecification from './rule'
@@ -86,9 +86,7 @@ export type AnnotationFormProps<
   resultScore?: number
   setResultScore: (resultScore: number) => void
   resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
-  setResultMetadata: (
-    resultMetadata: Partial<EvaluationResultMetadata<T, M>>,
-  ) => void
+  setResultMetadata: (resultMetadata: Partial<EvaluationResultMetadata<T, M>>) => void
   providerLog: ProviderLogDto
   documentLog: DocumentLog
   commit: Commit
@@ -102,7 +100,7 @@ export type ChartConfigurationArgs<
   evaluation: EvaluationV2<T, M>
 }
 
-export type ChartConfigurationResult = {
+type ChartConfigurationResult = {
   min: number
   max: number
   thresholds: {
@@ -118,12 +116,8 @@ export type EvaluationMetricFrontendSpecification<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = EvaluationMetricSpecification<T, M> & {
   icon: IconName
-  ConfigurationSimpleForm: (
-    props: ConfigurationFormProps<T, M>,
-  ) => React.ReactNode
-  ConfigurationAdvancedForm?: (
-    props: ConfigurationFormProps<T, M>,
-  ) => React.ReactNode
+  ConfigurationSimpleForm: (props: ConfigurationFormProps<T, M>) => React.ReactNode
+  ConfigurationAdvancedForm?: (props: ConfigurationFormProps<T, M>) => React.ReactNode
   ResultBadge: (props: ResultBadgeProps<T, M>) => React.ReactNode
   ResultRowHeaders?: (props: ResultRowHeadersProps<T, M>) => React.ReactNode
   ResultRowCells?: (props: ResultRowCellsProps<T, M>) => React.ReactNode
@@ -131,23 +125,18 @@ export type EvaluationMetricFrontendSpecification<
   ResultPanelMetadata?: (props: ResultPanelProps<T, M>) => React.ReactNode
   ResultPanelContent?: (props: ResultPanelProps<T, M>) => React.ReactNode
   AnnotationForm?: (props: AnnotationFormProps<T, M>) => React.ReactNode
-  chartConfiguration: (
-    args: ChartConfigurationArgs<T, M>,
-  ) => ChartConfigurationResult
+  chartConfiguration: (args: ChartConfigurationArgs<T, M>) => ChartConfigurationResult
 }
 
-export type EvaluationFrontendSpecification<
-  T extends EvaluationType = EvaluationType,
-> = Omit<EvaluationSpecification<T>, 'metrics'> & {
+type EvaluationFrontendSpecification<T extends EvaluationType = EvaluationType> = Omit<
+  EvaluationSpecification<T>,
+  'metrics'
+> & {
   icon: IconName
-  ConfigurationSimpleForm: <
-    M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  >(
+  ConfigurationSimpleForm: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     props: ConfigurationFormProps<T, M> & { metric: M },
   ) => React.ReactNode
-  ConfigurationAdvancedForm?: <
-    M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  >(
+  ConfigurationAdvancedForm?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     props: ConfigurationFormProps<T, M> & { metric: M },
   ) => React.ReactNode
   ResultBadge: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
@@ -159,9 +148,7 @@ export type EvaluationFrontendSpecification<
   ResultRowCells?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     props: ResultRowCellsProps<T, M> & { metric: M },
   ) => React.ReactNode
-  resultPanelTabs?: <
-    M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  >(args: {
+  resultPanelTabs?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(args: {
     metric: M
   }) => TabSelectorOption<string>[]
   ResultPanelMetadata?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
@@ -189,9 +176,9 @@ export const EVALUATION_SPECIFICATIONS: {
   [EvaluationType.Human]: HumanEvaluationSpecification,
 }
 
-export function getEvaluationTypeSpecification<
-  T extends EvaluationType = EvaluationType,
->(evaluation: EvaluationV2<T>) {
+export function getEvaluationTypeSpecification<T extends EvaluationType = EvaluationType>(
+  evaluation: EvaluationV2<T>,
+) {
   return EVALUATION_SPECIFICATIONS[evaluation.type]
 }
 

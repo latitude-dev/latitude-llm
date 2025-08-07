@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import {
   DELIMITER_VALUES,
   DELIMITERS_KEYS,
   MAX_SIZE,
   MAX_UPLOAD_SIZE_IN_MB,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '@latitude-data/core/browser'
 import { createDatasetFromFile } from '@latitude-data/core/services/datasets/createFromFile'
 import { authHandler } from '$/middlewares/authHandler'
@@ -28,8 +28,7 @@ const createDatasetSchema = (workspaceId: number) =>
             return !existing.length
           },
           {
-            message:
-              'This name was already used, please use something different',
+            message: 'This name was already used, please use something different',
           },
         ),
       csvDelimiter: z.enum(DELIMITERS_KEYS, {
@@ -41,10 +40,7 @@ const createDatasetSchema = (workspaceId: number) =>
         .refine(async (file) => {
           return file.size <= MAX_UPLOAD_SIZE_IN_MB
         }, MAX_SIZE_MESSAGE)
-        .refine(
-          async (file) => file.type === 'text/csv',
-          'Your dataset must be a CSV file',
-        ),
+        .refine(async (file) => file.type === 'text/csv', 'Your dataset must be a CSV file'),
     })
     .refine(
       async (schema) => {
@@ -130,8 +126,7 @@ export const POST = errorHandler(
         )
       }
 
-      const { name, csvDelimiter, csvCustomDelimiter, dataset_file } =
-        validation.data
+      const { name, csvDelimiter, csvCustomDelimiter, dataset_file } = validation.data
 
       const delimiter =
         csvDelimiter === 'custom'

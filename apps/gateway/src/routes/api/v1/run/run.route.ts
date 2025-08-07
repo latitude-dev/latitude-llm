@@ -1,9 +1,6 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
-import {
-  legacyChainEventDtoSchema,
-  internalInfoSchema,
-} from '$/openApi/schemas'
+import { legacyChainEventDtoSchema, internalInfoSchema } from '$/openApi/schemas'
 import { ROUTES } from '$/routes'
 import { documentParamsSchema } from '$/routes/api/v2/documents/paramsSchema'
 import { createRoute, z } from '@hono/zod-openapi'

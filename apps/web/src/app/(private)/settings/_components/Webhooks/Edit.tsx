@@ -66,12 +66,7 @@ export default function EditWebhook() {
               Cancel
             </Button>
           </Link>
-          <Button
-            fancy
-            type='submit'
-            form='edit-webhook-form'
-            disabled={isUpdating}
-          >
+          <Button fancy type='submit' form='edit-webhook-form' disabled={isUpdating}>
             Update
           </Button>
         </div>
@@ -107,11 +102,7 @@ export default function EditWebhook() {
             />
           </div>
 
-          <SwitchInput
-            label='Active'
-            name='isActive'
-            defaultChecked={webhook.isActive}
-          />
+          <SwitchInput label='Active' name='isActive' defaultChecked={webhook.isActive} />
 
           <Input hidden name='id' defaultValue={webhook.id} />
         </FormWrapper>

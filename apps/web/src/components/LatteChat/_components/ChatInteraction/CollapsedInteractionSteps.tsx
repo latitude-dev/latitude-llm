@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { LatteInteractionStep } from '$/hooks/latte/types'
+import type { LatteInteractionStep } from '$/hooks/latte/types'
 import { InteractionStep } from './InteractionStep'
 
 const STEP_LINE_HEIGHT = 1.25 // rem
@@ -26,12 +26,7 @@ export const CollapsedInteractionSteps = ({
         }}
       >
         {/* Thinking step*/}
-        <InteractionStep
-          key={-1}
-          step={undefined}
-          isLoading={isLoading}
-          singleLine
-        />{' '}
+        <InteractionStep key={-1} step={undefined} isLoading={isLoading} singleLine />{' '}
         {steps.map((step, index) => (
           <InteractionStep
             key={index}

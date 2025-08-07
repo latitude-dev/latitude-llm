@@ -1,7 +1,7 @@
-import { ReactNode, useCallback, useState } from 'react'
+import { type ReactNode, useCallback, useState } from 'react'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
-import useIntegrationTools, { McpToolDto } from '$/stores/integrationTools'
-import { IntegrationDto } from '@latitude-data/core/browser'
+import useIntegrationTools, { type McpToolDto } from '$/stores/integrationTools'
+import type { IntegrationDto } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -15,13 +15,7 @@ import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 
-export function ItemWrapper({
-  children,
-  isFirst,
-}: {
-  children: ReactNode
-  isFirst?: boolean
-}) {
+export function ItemWrapper({ children, isFirst }: { children: ReactNode; isFirst?: boolean }) {
   return (
     <div
       className={cn('flex flex-col gap-2 p-4', {
@@ -52,11 +46,7 @@ function IntegrationToolItem({
         <Text.H6B ellipsis noWrap color='foreground'>
           {tool.displayName ?? tool.name}
         </Text.H6B>
-        <SwitchToggle
-          checked={isActive}
-          onClick={onToggle}
-          disabled={disabled}
-        />
+        <SwitchToggle checked={isActive} onClick={onToggle} disabled={disabled} />
       </div>
       <Text.H6 color='foregroundMuted'>{tool.description}</Text.H6>
       <div className='flex flex-wrap items-center'>
@@ -68,11 +58,7 @@ function IntegrationToolItem({
               key={property}
               className='cursor-default'
               trigger={
-                <Badge
-                  key={property}
-                  variant='muted'
-                  className='mr-2 cursor-default'
-                >
+                <Badge key={property} variant='muted' className='mr-2 cursor-default'>
                   {property}
                 </Badge>
               }
@@ -84,9 +70,7 @@ function IntegrationToolItem({
                   <Text.H6B color='background'>{property}</Text.H6B>
                   <Text.H7 color='background'>{type}</Text.H7>
                 </div>
-                {description && (
-                  <Text.H6 color='background'>{description}</Text.H6>
-                )}
+                {description && <Text.H6 color='background'>{description}</Text.H6>}
               </div>
             </Tooltip>
           )
@@ -122,18 +106,9 @@ export function IntegrationToolsList({
   integration: IntegrationDto
   activeTools: string[] | true | undefined
   addIntegrationTool: (integrationName: string, toolName: string) => void
-  removeIntegrationTool: (
-    integrationName: string,
-    toolName: string,
-    toolNames: string[],
-  ) => void
+  removeIntegrationTool: (integrationName: string, toolName: string, toolNames: string[]) => void
 }) {
-  const {
-    data: tools,
-    isLoading,
-    isValidating,
-    error,
-  } = useIntegrationTools(integration)
+  const { data: tools, isLoading, isValidating, error } = useIntegrationTools(integration)
   const [wakingUp, setWakingUp] = useState(false)
 
   useSockets({
@@ -181,25 +156,14 @@ export function IntegrationToolsList({
         addIntegrationTool(integration.name, toolName)
       }
     },
-    [
-      activeTools,
-      tools,
-      disabled,
-      addIntegrationTool,
-      removeIntegrationTool,
-      integration.name,
-    ],
+    [activeTools, tools, disabled, addIntegrationTool, removeIntegrationTool, integration.name],
   )
 
   const allEnabled = activeTools === true
   const toggleAllEnabled = () => {
     if (disabled) return
     if (allEnabled) {
-      removeIntegrationTool(
-        integration.name,
-        '*',
-        tools?.map((t) => t.name) ?? [],
-      )
+      removeIntegrationTool(integration.name, '*', tools?.map((t) => t.name) ?? [])
     } else {
       addIntegrationTool(integration.name, '*')
     }
@@ -247,9 +211,7 @@ export function IntegrationToolsList({
   if (error) {
     return (
       <div className='w-full h-full flex flex-col gap-2 bg-destructive-muted p-4'>
-        <Text.H5B color='destructiveMutedForeground'>
-          Error loading tools
-        </Text.H5B>
+        <Text.H5B color='destructiveMutedForeground'>Error loading tools</Text.H5B>
         <Text.H6 color='destructiveMutedForeground'>{error.message}</Text.H6>
         {activeTools !== undefined && (
           <Button
@@ -257,9 +219,7 @@ export function IntegrationToolsList({
             className='border-destructive-muted-foreground'
             onClick={() => removeIntegrationTool(integration.name, '*', [])}
           >
-            <Text.H6 color='destructiveMutedForeground'>
-              Remove from prompt
-            </Text.H6>
+            <Text.H6 color='destructiveMutedForeground'>Remove from prompt</Text.H6>
           </Button>
         )}
       </div>
@@ -270,15 +230,10 @@ export function IntegrationToolsList({
     <div className='divide-y divide-border'>
       <ItemWrapper isFirst>
         <Text.H6B color='foreground'>Enable all</Text.H6B>
-        <SwitchToggle
-          checked={allEnabled}
-          onClick={toggleAllEnabled}
-          disabled={disabled}
-        />
+        <SwitchToggle checked={allEnabled} onClick={toggleAllEnabled} disabled={disabled} />
       </ItemWrapper>
       {tools?.map((tool) => {
-        const isActive =
-          activeTools === true || (activeTools?.includes(tool.name) ?? false)
+        const isActive = activeTools === true || (activeTools?.includes(tool.name) ?? false)
 
         return (
           <IntegrationToolItem

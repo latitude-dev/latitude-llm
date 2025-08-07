@@ -1,4 +1,4 @@
-import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
+import { type Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 
 type GetCommitUrlParams = {
@@ -41,9 +41,7 @@ function getCommitUrl({
 
   if (
     lastSeenCommitUuid === HEAD_COMMIT ||
-    (lastSeenCommitUuid &&
-      !commits.some((c) => c.uuid === lastSeenCommitUuid) &&
-      headCommit)
+    (lastSeenCommitUuid && !commits.some((c) => c.uuid === lastSeenCommitUuid) && headCommit)
   ) {
     return PROJECT_ROUTE({ id: projectId }).commits.detail({
       uuid: HEAD_COMMIT,

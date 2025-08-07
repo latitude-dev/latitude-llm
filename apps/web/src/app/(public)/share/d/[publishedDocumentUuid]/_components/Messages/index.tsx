@@ -1,29 +1,22 @@
 import { useRef, useState } from 'react'
 
 import { ChatTextArea } from '$/components/ChatWrapper'
-import { Conversation } from '@latitude-data/constants/legacyCompiler'
+import type { Conversation } from '@latitude-data/constants/legacyCompiler'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { AnimatedDots } from '@latitude-data/web-ui/molecules/AnimatedDots'
 import { cn } from '@latitude-data/web-ui/utils'
-import { LastMessage } from '../SharedDocument/RunPrompt/usePrompt'
+import type { LastMessage } from '../SharedDocument/RunPrompt/usePrompt'
 import { AllMessages } from './AllMessages'
 import { ChatMessages } from './ChatMessages'
 import { LastMessageOnly, useFakeStream } from './LastMessageOnly'
 
-export function StreamingIndicator({
-  isScrolledToBottom,
-}: {
-  isScrolledToBottom: boolean
-}) {
+function StreamingIndicator({ isScrolledToBottom }: { isScrolledToBottom: boolean }) {
   return (
     <div
-      className={cn(
-        'absolute -top-10 bg-background rounded-xl p-2 flex flex-row gap-2',
-        {
-          'shadow-xl': !isScrolledToBottom,
-        },
-      )}
+      className={cn('absolute -top-10 bg-background rounded-xl p-2 flex flex-row gap-2', {
+        'shadow-xl': !isScrolledToBottom,
+      })}
     >
       <AnimatedDots />
     </div>
@@ -103,9 +96,7 @@ export function Messages({
       </div>
 
       <div className='sticky bottom-0 flex flex-row w-full items-center justify-center'>
-        {streaming ? (
-          <StreamingIndicator isScrolledToBottom={isScrolledToBottom} />
-        ) : null}
+        {streaming ? <StreamingIndicator isScrolledToBottom={isScrolledToBottom} /> : null}
 
         {canChat ? (
           <ChatTextArea

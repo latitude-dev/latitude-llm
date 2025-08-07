@@ -1,10 +1,7 @@
-import {
-  type Message,
-  MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+import { type Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { PartialConfig } from '../../helpers'
+import type { PartialConfig } from '../../helpers'
 import { Providers } from '../models'
 import { applyProviderRules } from './index'
 import { ProviderRules } from './types'

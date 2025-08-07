@@ -1,4 +1,4 @@
-import { ModifiedDocumentType, DraftChange } from '@latitude-data/core/browser'
+import { ModifiedDocumentType, type DraftChange } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
@@ -10,9 +10,9 @@ import {
   createContext,
   useState,
   useContext,
-  ReactNode,
-  Dispatch,
-  SetStateAction,
+  type ReactNode,
+  type Dispatch,
+  type SetStateAction,
   useMemo,
   useEffect,
   useCallback,
@@ -31,44 +31,33 @@ interface HistoryActionModalContextProps {
   setOnConfirm: Dispatch<SetStateAction<undefined | (() => void)>>
 }
 
-const HistoryActionModalContext = createContext<HistoryActionModalContextProps>(
-  {
-    isOpen: false,
-    setOpen: () => {},
-    title: '',
-    open: () => {},
-    error: undefined,
-    setError: () => {},
-    changes: undefined,
-    setChanges: () => {},
-    onConfirm: undefined,
-    setOnConfirm: () => {},
-  },
-)
+const HistoryActionModalContext = createContext<HistoryActionModalContextProps>({
+  isOpen: false,
+  setOpen: () => {},
+  title: '',
+  open: () => {},
+  error: undefined,
+  setError: () => {},
+  changes: undefined,
+  setChanges: () => {},
+  onConfirm: undefined,
+  setOnConfirm: () => {},
+})
 
-export function HistoryActionModalProvider({
-  children,
-}: {
-  children: ReactNode
-}) {
+export function HistoryActionModalProvider({ children }: { children: ReactNode }) {
   const [isOpen, setOpen] = useState(false)
   const [title, setTitle] = useState<string>('')
   const [error, setError] = useState<string | undefined>(undefined)
-  const [onConfirm, setOnConfirm] = useState<undefined | (() => void)>(
-    undefined,
-  )
+  const [onConfirm, setOnConfirm] = useState<undefined | (() => void)>(undefined)
   const [changes, setChanges] = useState<DraftChange[] | undefined>(undefined)
 
-  const open = useCallback(
-    ({ title, onConfirm }: { title: string; onConfirm: () => void }) => {
-      setChanges(undefined)
-      setError(undefined)
-      setTitle(title)
-      setOnConfirm(() => onConfirm)
-      setOpen(true)
-    },
-    [],
-  )
+  const open = useCallback(({ title, onConfirm }: { title: string; onConfirm: () => void }) => {
+    setChanges(undefined)
+    setError(undefined)
+    setTitle(title)
+    setOnConfirm(() => onConfirm)
+    setOpen(true)
+  }, [])
 
   return (
     <HistoryActionModalContext.Provider
@@ -90,8 +79,7 @@ export function HistoryActionModalProvider({
   )
 }
 
-export const useHistoryActionModalContext = () =>
-  useContext(HistoryActionModalContext)
+export const useHistoryActionModalContext = () => useContext(HistoryActionModalContext)
 
 const getChangeType = (change: DraftChange): ModifiedDocumentType => {
   if (!change.content.newValue) return ModifiedDocumentType.Deleted
@@ -109,9 +97,7 @@ export function HistoryActionModal() {
 
   const [isConfirming, setIsConfirming] = useState(false)
 
-  const [selectedChange, setSelectedChange] = useState<
-    DraftChange | undefined
-  >()
+  const [selectedChange, setSelectedChange] = useState<DraftChange | undefined>()
   useEffect(() => {
     setSelectedChange(changes?.[0])
   }, [changes])
@@ -142,12 +128,7 @@ export function HistoryActionModal() {
       dismissible
       footer={
         <div className='flex flex-row w-full justify-end gap-2'>
-          <Button
-            variant='outline'
-            fancy
-            onClick={() => setOpen(false)}
-            disabled={isConfirming}
-          >
+          <Button variant='outline' fancy onClick={() => setOpen(false)} disabled={isConfirming}>
             Cancel
           </Button>
           <Button
@@ -167,22 +148,10 @@ export function HistoryActionModal() {
           <div className='flex flex-col w-full'>
             {isLoading ? (
               <ul>
-                <DocumentChangeSkeleton
-                  width={62}
-                  changeType={ModifiedDocumentType.Deleted}
-                />
-                <DocumentChangeSkeleton
-                  width={87}
-                  changeType={ModifiedDocumentType.Updated}
-                />
-                <DocumentChangeSkeleton
-                  width={23}
-                  changeType={ModifiedDocumentType.Created}
-                />
-                <DocumentChangeSkeleton
-                  width={67}
-                  changeType={ModifiedDocumentType.Updated}
-                />
+                <DocumentChangeSkeleton width={62} changeType={ModifiedDocumentType.Deleted} />
+                <DocumentChangeSkeleton width={87} changeType={ModifiedDocumentType.Updated} />
+                <DocumentChangeSkeleton width={23} changeType={ModifiedDocumentType.Created} />
+                <DocumentChangeSkeleton width={67} changeType={ModifiedDocumentType.Updated} />
               </ul>
             ) : (
               changes?.map((change, i) => {
@@ -191,7 +160,7 @@ export function HistoryActionModal() {
                     key={i}
                     path={change.newDocumentPath}
                     oldPath={
-                      change.newDocumentPath == change.oldDocumentPath
+                      change.newDocumentPath === change.oldDocumentPath
                         ? undefined
                         : change.oldDocumentPath
                     }
@@ -211,9 +180,7 @@ export function HistoryActionModal() {
             )}
           </div>
         </div>
-        {error && (
-          <Alert variant='destructive' title='Error' description={error} />
-        )}
+        {error && <Alert variant='destructive' title='Error' description={error} />}
       </div>
     </Modal>
   )

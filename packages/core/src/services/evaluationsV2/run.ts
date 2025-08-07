@@ -1,21 +1,17 @@
-import {
-  ChainError,
-  NotFoundError,
-  RunErrorCodes,
-} from '@latitude-data/constants/errors'
+import { ChainError, NotFoundError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   buildConversation,
-  Commit,
-  Dataset,
-  DatasetRow,
+  type Commit,
+  type Dataset,
+  type DatasetRow,
   EVALUATION_SCORE_SCALE,
-  EvaluationMetric,
-  EvaluationResultValue,
-  EvaluationType,
-  EvaluationV2,
-  Experiment,
-  ProviderLogDto,
-  Workspace,
+  type EvaluationMetric,
+  type EvaluationResultValue,
+  type EvaluationType,
+  type EvaluationV2,
+  type Experiment,
+  type ProviderLogDto,
+  type Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
@@ -31,10 +27,7 @@ import { extractActualOutput, extractExpectedOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
 
-export async function runEvaluationV2<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->(
+export async function runEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
   {
     evaluation,
     providerLog,
@@ -80,9 +73,7 @@ export async function runEvaluationV2<
     .then((r) => r.unwrap())
 
   if (!providerLog.documentLogUuid) {
-    return Result.error(
-      new BadRequestError('Provider log is not attached to a document log'),
-    )
+    return Result.error(new BadRequestError('Provider log is not attached to a document log'))
   }
 
   const documentLogsRepository = new DocumentLogsRepository(workspace.id)
@@ -92,9 +83,7 @@ export async function runEvaluationV2<
 
   if (documentLog.documentUuid !== document.documentUuid) {
     return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that is from a different document',
-      ),
+      new UnprocessableEntityError('Cannot evaluate a log that is from a different document'),
     )
   }
 
@@ -104,9 +93,7 @@ export async function runEvaluationV2<
   }
 
   if (!typeSpecification.run) {
-    return Result.error(
-      new BadRequestError('Running is not supported for this evaluation'),
-    )
+    return Result.error(new BadRequestError('Running is not supported for this evaluation'))
   }
 
   const metricSpecification = typeSpecification.metrics[evaluation.metric]
@@ -117,9 +104,7 @@ export async function runEvaluationV2<
   if (dataset && datasetLabel && datasetRow) {
     if (datasetRow.datasetId !== dataset.id) {
       return Result.error(
-        new UnprocessableEntityError(
-          'Cannot evaluate a row that is from a different dataset',
-        ),
+        new UnprocessableEntityError('Cannot evaluate a row that is from a different dataset'),
       )
     }
   } else if (metricSpecification.requiresExpectedOutput) {
@@ -137,7 +122,7 @@ export async function runEvaluationV2<
       configuration: evaluation.configuration.actualOutput,
     }).then((r) => r.unwrap())
 
-    let expectedOutput = undefined
+    let expectedOutput
     if (dataset && datasetLabel && datasetRow) {
       expectedOutput = await extractExpectedOutput({
         dataset: dataset,
@@ -166,8 +151,7 @@ export async function runEvaluationV2<
 
     if (
       !value.error &&
-      (value.normalizedScore < 0 ||
-        value.normalizedScore > EVALUATION_SCORE_SCALE)
+      (value.normalizedScore < 0 || value.normalizedScore > EVALUATION_SCORE_SCALE)
     ) {
       throw new UnprocessableEntityError(
         `Normalized metric score must be between 0 and ${EVALUATION_SCORE_SCALE}`,

@@ -1,16 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  DocumentTriggerType,
-  DocumentVersion,
-  Providers,
-} from '@latitude-data/constants'
-import { Commit, Project, Workspace } from '../../browser'
+import { DocumentTriggerType, type DocumentVersion, Providers } from '@latitude-data/constants'
+import type { Commit, Project, Workspace } from '../../browser'
 import { createDocumentTrigger } from './create'
 import { BadRequestError, LatitudeError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'
 import { Result } from '../../lib/Result'
-import {
+import type {
   EmailTriggerConfiguration,
   ScheduledTriggerConfiguration,
   IntegrationTriggerConfiguration,
@@ -78,9 +74,7 @@ describe('createDocumentTrigger', () => {
       // Assert
       expect(result.ok).toBeFalsy()
       expect(result.error).toBeInstanceOf(BadRequestError)
-      expect(result.error?.message).toBe(
-        'Cannot create document trigger in a merged commit',
-      )
+      expect(result.error?.message).toBe('Cannot create document trigger in a merged commit')
       expect(mocks.deployDocumentTrigger).not.toHaveBeenCalled()
     })
   })
@@ -89,9 +83,7 @@ describe('createDocumentTrigger', () => {
     it('returns deployment error without creating database record', async () => {
       // Arrange
       const deploymentError = new LatitudeError('Deployment failed')
-      mocks.deployDocumentTrigger.mockResolvedValue(
-        Result.error(deploymentError),
-      )
+      mocks.deployDocumentTrigger.mockResolvedValue(Result.error(deploymentError))
 
       // Act
       const result = await createDocumentTrigger({
@@ -143,9 +135,7 @@ describe('createDocumentTrigger', () => {
       }
       const deploymentSettings: EmailTriggerDeploymentSettings = {}
 
-      mocks.deployDocumentTrigger.mockResolvedValue(
-        Result.ok(deploymentSettings),
-      )
+      mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(deploymentSettings))
 
       // Act
       const result = await createDocumentTrigger({
@@ -191,9 +181,7 @@ describe('createDocumentTrigger', () => {
         nextRunTime: new Date('2023-01-02T09:00:00Z'),
       }
 
-      mocks.deployDocumentTrigger.mockResolvedValue(
-        Result.ok(deploymentSettings),
-      )
+      mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(deploymentSettings))
 
       // Act
       const result = await createDocumentTrigger({
@@ -245,9 +233,7 @@ describe('createDocumentTrigger', () => {
         triggerId: 'external-trigger-id-456',
       }
 
-      mocks.deployDocumentTrigger.mockResolvedValue(
-        Result.ok(deploymentSettings),
-      )
+      mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(deploymentSettings))
 
       // Act
       const result = await createDocumentTrigger({

@@ -1,6 +1,6 @@
 import { LogSources } from '@latitude-data/core/browser'
 
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
@@ -81,7 +81,7 @@ export const POST = errorHandler(
             isWriterClosed = true
             try {
               await writer.close()
-            } catch (error) {
+            } catch (_error) {
               // do nothion, writer might be closed already
             }
           }
@@ -94,10 +94,7 @@ export const POST = errorHandler(
               encoder.encode(
                 `event: error\ndata: ${JSON.stringify({
                   name: error instanceof Error ? error.name : 'UnknownError',
-                  message:
-                    error instanceof Error
-                      ? error.message
-                      : 'An unexpected error occurred',
+                  message: error instanceof Error ? error.message : 'An unexpected error occurred',
                   stack: error instanceof Error ? error.stack : undefined,
                 })}\n\n`,
               ),
@@ -127,9 +124,7 @@ export const POST = errorHandler(
                 }
 
                 await writer.write(
-                  encoder.encode(
-                    `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
-                  ),
+                  encoder.encode(`event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`),
                 )
               } catch (error) {
                 captureException(error as Error)
@@ -145,9 +140,7 @@ export const POST = errorHandler(
             onFinished: async () => {
               try {
                 await writer.write(
-                  encoder.encode(
-                    `event: finished\ndata: ${JSON.stringify({ success: true })}\n\n`,
-                  ),
+                  encoder.encode(`event: finished\ndata: ${JSON.stringify({ success: true })}\n\n`),
                 )
               } catch (error) {
                 captureException(error as Error)

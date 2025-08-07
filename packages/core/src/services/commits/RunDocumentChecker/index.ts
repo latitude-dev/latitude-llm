@@ -1,18 +1,11 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import {
-  Adapters,
-  Chain,
-  isPromptLFile,
-  scan,
-  toPromptLFile,
-  type PromptLFile,
-} from 'promptl-ai'
+import { Adapters, Chain, isPromptLFile, scan, toPromptLFile, type PromptLFile } from 'promptl-ai'
 
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { DocumentVersion, ErrorableEntity } from '../../../browser'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { type DocumentVersion, ErrorableEntity } from '../../../browser'
 import { BadRequestError, LatitudeError } from '../../../lib/errors'
-import { ErrorResult, Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
+import { type ErrorResult, Result } from '../../../lib/Result'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { parsePrompt } from '../../documents/parse'
 import { createRunError } from '../../runErrors/create'
 
@@ -106,7 +99,7 @@ export class RunDocumentChecker {
         if (typeof value === 'string') {
           try {
             acc[key] = JSON.parse(value as string)
-          } catch (e) {
+          } catch (_e) {
             acc[key] = value
           }
         } else {
@@ -124,9 +117,7 @@ export class RunDocumentChecker {
   /**
    * Fetches the file metadata for a given URL without downloading the file.
    */
-  private async getFileMetadata(
-    url: string,
-  ): PromisedResult<PromptLFile, LatitudeError> {
+  private async getFileMetadata(url: string): PromisedResult<PromptLFile, LatitudeError> {
     try {
       const response = await fetch(url, { method: 'HEAD' })
       if (!response.ok) {
@@ -157,7 +148,7 @@ export class RunDocumentChecker {
           } as File,
         }),
       )
-    } catch (e) {
+    } catch (_e) {
       return Result.error(new LatitudeError(`Error fetching file: ${url}`))
     }
   }

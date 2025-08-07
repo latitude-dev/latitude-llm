@@ -5,7 +5,7 @@ import type {
   ExtractToolResult,
 } from '@latitude-data/core/services/latitudeTools/webExtract/types'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ToolContent } from '@latitude-data/constants/legacyCompiler'
+import type { ToolContent } from '@latitude-data/constants/legacyCompiler'
 import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 import { CollapsibleContent } from './CollapsibleContent'
 import { Markdown } from '@latitude-data/web-ui/atoms/Markdown'
@@ -27,15 +27,12 @@ export function WebExtractLatitudeToolCallContent({
       bgColor='bg-success'
       fgColor='successForeground'
       info={toolCallId}
-      separatorColor={
-        toolResponse?.isError ? 'destructiveMutedForeground' : undefined
-      }
+      separatorColor={toolResponse?.isError ? 'destructiveMutedForeground' : undefined}
       resultFooter={useMemo(
         () => (
           <ToolResultFooter loadingMessage='Rendering webpage...'>
             {toolResponse &&
-              (toolResponse.isError ||
-              typeof toolResponse.result === 'string' ? (
+              (toolResponse.isError || typeof toolResponse.result === 'string' ? (
                 <ToolResultContent toolResponse={toolResponse} />
               ) : (
                 <WebExtractLatitudeToolResponseContent
@@ -58,11 +55,7 @@ export function WebExtractLatitudeToolCallContent({
 
 const MAX_CLOSED_HEIGHT = 300
 
-export function WebExtractLatitudeToolResponseContent({
-  result,
-}: {
-  result: ExtractToolResult
-}) {
+function WebExtractLatitudeToolResponseContent({ result }: { result: ExtractToolResult }) {
   const ref = useRef<HTMLDivElement>(null)
   const [shouldCollapse, setShouldCollapse] = useState(false)
 

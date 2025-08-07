@@ -1,11 +1,11 @@
 import { useMemo, useState, useCallback } from 'react'
-import { IntegrationDto } from '@latitude-data/core/browser'
+import type { IntegrationDto } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   TwoColumnSelect,
-  TwoColumnSelectOption,
+  type TwoColumnSelectOption,
 } from '@latitude-data/web-ui/molecules/TwoColumnSelect'
-import { ActiveIntegrations } from './useActiveIntegrations'
+import type { ActiveIntegrations } from './useActiveIntegrations'
 import { ROUTES } from '$/services/routes'
 import { IntegrationToolsList } from './IntegrationTools'
 import { integrationOptions } from '$/lib/integrationTypeOptions'
@@ -23,17 +23,12 @@ export function IntegrationsList({
   integrations: IntegrationDto[]
   activeIntegrations: ActiveIntegrations
   addIntegrationTool: (integrationName: string, toolName: string) => void
-  removeIntegrationTool: (
-    integrationName: string,
-    toolName: string,
-    toolNames: string[],
-  ) => void
+  removeIntegrationTool: (integrationName: string, toolName: string, toolNames: string[]) => void
   disabled?: boolean
   isLoading?: boolean
 }) {
   const navigate = useNavigate()
-  const [selectedIntegration, setSelectedIntegration] =
-    useState<IntegrationDto | null>(null)
+  const [selectedIntegration, setSelectedIntegration] = useState<IntegrationDto | null>(null)
 
   const options = useMemo<TwoColumnSelectOption<number>[]>(
     () =>
@@ -63,12 +58,7 @@ export function IntegrationsList({
     [onAddNew],
   )
   return (
-    <TwoColumnSelect
-      loading={isLoading}
-      options={options}
-      addNew={addNew}
-      onChange={onChange}
-    >
+    <TwoColumnSelect loading={isLoading} options={options} addNew={addNew} onChange={onChange}>
       {selectedIntegration ? (
         <IntegrationToolsList
           disabled={disabled}

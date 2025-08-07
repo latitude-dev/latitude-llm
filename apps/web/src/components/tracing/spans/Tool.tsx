@@ -2,11 +2,11 @@ import { MetadataItem } from '$/components/MetadataItem'
 import { SPAN_SPECIFICATIONS, SpanType } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
-import { DetailsPanelProps, SPAN_COLORS } from './shared'
+import { type DetailsPanelProps, SPAN_COLORS } from './shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Tool]
 export default {

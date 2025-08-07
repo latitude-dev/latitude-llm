@@ -1,10 +1,7 @@
-import { Commit, DraftChange, Project, User, Workspace } from '../../browser'
+import type { Commit, DraftChange, Project, User, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
-import { PromisedResult } from '../../lib/Transaction'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../repositories'
+import type { PromisedResult } from '../../lib/Transaction'
+import { CommitsRepository, DocumentVersionsRepository } from '../../repositories'
 import { createCommit } from '../commits'
 import { computeDocumentRevertChanges, updateDocument } from '../documents'
 
@@ -33,9 +30,7 @@ async function fetchDocumentVersionDetails({
       .then((r) => r.value)
 
     const commitScope = new CommitsRepository(workspace.id)
-    const headCommit = await commitScope
-      .getHeadCommit(project.id)
-      .then((r) => r.unwrap()!)
+    const headCommit = await commitScope.getHeadCommit(project.id).then((r) => r.unwrap()!)
 
     const targetCommit = targetDraftUuid
       ? await commitScope
@@ -79,8 +74,7 @@ export async function getChangesToResetDocumentToVersion({
   if (documentVersionDetails.error) {
     return Result.error(documentVersionDetails.error)
   }
-  const { originalDocument, targetCommit, targetDocument } =
-    documentVersionDetails.unwrap()
+  const { originalDocument, targetCommit, targetDocument } = documentVersionDetails.unwrap()
 
   const changeResult = await computeDocumentRevertChanges({
     workspace: workspace,
@@ -94,11 +88,9 @@ export async function getChangesToResetDocumentToVersion({
   const isCreated = change.deletedAt === null
   const isDeleted = !isCreated && change.deletedAt !== undefined
 
-  const newDocumentPath =
-    change.path ?? targetDocument?.path ?? originalDocument!.path
+  const newDocumentPath = change.path ?? targetDocument?.path ?? originalDocument!.path
 
-  const oldDocumentPath =
-    targetDocument?.path ?? originalDocument?.path ?? newDocumentPath
+  const oldDocumentPath = targetDocument?.path ?? originalDocument?.path ?? newDocumentPath
 
   const previousContent = targetDocument?.content ?? originalDocument?.content
 
@@ -143,8 +135,7 @@ export async function resetDocumentToVersion({
   if (documentVersionDetails.error) {
     return Result.error(documentVersionDetails.error)
   }
-  const { originalDocument, targetCommit, targetDocument } =
-    documentVersionDetails.unwrap()
+  const { originalDocument, targetCommit, targetDocument } = documentVersionDetails.unwrap()
 
   const documentVersionChangesResult = await computeDocumentRevertChanges({
     workspace: workspace,
@@ -159,9 +150,7 @@ export async function resetDocumentToVersion({
   const documentVersionChanges = documentVersionChangesResult.unwrap()
 
   const oldDocumentPath =
-    targetDocument?.path ??
-    originalDocument?.path ??
-    documentVersionChanges.path
+    targetDocument?.path ?? originalDocument?.path ?? documentVersionChanges.path
 
   const targetDraftResult = targetDraftUuid
     ? Result.ok(targetCommit)
@@ -190,7 +179,6 @@ export async function resetDocumentToVersion({
 
   return Result.ok({
     commit: targetDraft,
-    documentUuid:
-      documentVersionChanges.deletedAt != null ? undefined : documentUuid,
+    documentUuid: documentVersionChanges.deletedAt != null ? undefined : documentUuid,
   })
 }

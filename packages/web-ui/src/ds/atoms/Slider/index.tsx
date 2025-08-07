@@ -11,15 +11,11 @@ type AdditionalSliderProps = {
 
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> &
-    AdditionalSliderProps
+  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> & AdditionalSliderProps
 >(({ className, showMiddleRange, ...props }, ref) => (
   <SliderPrimitive.Root
     ref={ref}
-    className={cn(
-      'relative flex w-full touch-none select-none items-center',
-      className,
-    )}
+    className={cn('relative flex w-full touch-none select-none items-center', className)}
     {...props}
   >
     {showMiddleRange && (

@@ -31,12 +31,5 @@ export default async function ForkedDocumentPage({
   const { project, commit, document } = forkedResult.value
   const shared = result.value.shared
 
-  return (
-    <ForkedDocument
-      shared={shared}
-      project={project}
-      commit={commit}
-      document={document}
-    />
-  )
+  return <ForkedDocument shared={shared} project={project} commit={commit} document={document} />
 }

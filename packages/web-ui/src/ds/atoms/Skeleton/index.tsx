@@ -1,7 +1,7 @@
-import { HTMLAttributes } from 'react'
+import type { HTMLAttributes } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { skeleton, SkeletonHeight } from '../../tokens'
+import { skeleton, type SkeletonHeight } from '../../tokens'
 
 function Skeleton({
   className,

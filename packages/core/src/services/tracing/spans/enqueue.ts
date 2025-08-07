@@ -1,16 +1,16 @@
 import {
-  ApiKey,
-  Otlp,
+  type ApiKey,
+  type Otlp,
   SPAN_INGESTION_STORAGE_KEY,
-  SpanIngestionData,
+  type SpanIngestionData,
   TRACING_JOBS_MAX_ATTEMPTS,
-  Workspace,
+  type Workspace,
 } from '../../../browser'
 import { ingestSpansJobKey } from '../../../jobs/job-definitions/tracing/ingestSpansJob'
 import { tracingQueue } from '../../../jobs/queues'
-import { diskFactory, DiskWrapper } from '../../../lib/disk'
+import { diskFactory, type DiskWrapper } from '../../../lib/disk'
 import { hashContent as hash } from '../../../lib/hashContent'
-import { Result, TypedResult } from '../../../lib/Result'
+import { Result, type TypedResult } from '../../../lib/Result'
 
 export async function enqueueSpans(
   {
@@ -59,9 +59,7 @@ async function uploadSpansToStorage(
   }
 }
 
-async function generateIngestionId(
-  spans: Otlp.ResourceSpan[],
-): Promise<string> {
+async function generateIngestionId(spans: Otlp.ResourceSpan[]): Promise<string> {
   let ingestionId = ''
   for (const { scopeSpans } of spans) {
     for (const { spans } of scopeSpans) {

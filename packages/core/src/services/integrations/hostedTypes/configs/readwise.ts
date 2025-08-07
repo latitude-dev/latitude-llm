@@ -1,9 +1,8 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 import { npxCommand } from '../utils'
 
 export default {
-  description:
-    'Readwise makes it easy to revisit and learn from your ebook & article highlights.',
+  description: 'Readwise makes it easy to revisit and learn from your ebook & article highlights.',
   command: npxCommand({ package: '@readwise/readwise-mcp' }),
   env: {
     ACCESS_TOKEN: {

@@ -42,7 +42,5 @@ export function BlankSlateButton({
       </Link>
     )
   }
-  return (
-    <InnerButton title={title} description={description} onClick={onClick} />
-  )
+  return <InnerButton title={title} description={description} onClick={onClick} />
 }

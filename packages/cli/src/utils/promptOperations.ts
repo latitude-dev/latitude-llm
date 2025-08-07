@@ -1,7 +1,7 @@
-import * as path from 'path'
-import * as fs from 'fs/promises'
-import { Prompt } from '@latitude-data/sdk'
-import { PromptManager } from './promptManager'
+import * as path from 'node:path'
+import * as fs from 'node:fs/promises'
+import type { Prompt } from '@latitude-data/sdk'
+import type { PromptManager } from './promptManager'
 
 /**
  * Save prompts to the filesystem
@@ -25,9 +25,7 @@ export async function savePrompts(
     return
   }
 
-  console.log(
-    `Found ${prompts.length} prompts. Saving to ${promptsRootFolder}/...`,
-  )
+  console.log(`Found ${prompts.length} prompts. Saving to ${promptsRootFolder}/...`)
 
   // Ensure the prompts directory exists
   await promptManager.createPromptDirectory(projectPath, promptsRootFolder)
@@ -61,11 +59,7 @@ export async function savePrompts(
       )
     } else {
       // Save as .promptl file for non-npm projects
-      savedPath = await savePromptAsPlainText(
-        prompt,
-        promptsRootFolder,
-        projectPath,
-      )
+      savedPath = await savePromptAsPlainText(prompt, promptsRootFolder, projectPath)
     }
 
     console.log(`  - Saved ${prompt.path} to ${savedPath}`)
@@ -87,16 +81,14 @@ async function savePromptAsPlainText(
 ): Promise<string> {
   // Use the prompt's path property to determine where to save it
   // Remove any leading slashes
-  const promptPath = prompt.path.startsWith('/')
-    ? prompt.path.slice(1)
-    : prompt.path
+  const promptPath = prompt.path.startsWith('/') ? prompt.path.slice(1) : prompt.path
 
   // Create the full directory path
   const dirPath = path.join(projectPath, rootFolder, path.dirname(promptPath))
   await fs.mkdir(dirPath, { recursive: true })
 
   // Create the file with .promptl extension
-  const fileName = path.basename(promptPath) + '.promptl'
+  const fileName = `${path.basename(promptPath)}.promptl`
   const filePath = path.join(dirPath, fileName)
 
   // Write the prompt content directly to the file

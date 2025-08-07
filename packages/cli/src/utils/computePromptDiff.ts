@@ -27,9 +27,7 @@ export function computePromptDiff(
   originPrompts: OriginPrompt[],
 ): DiffResult[] {
   const diffResults: DiffResult[] = []
-  const originPromptMap = new Map(
-    originPrompts.map((prompt) => [prompt.path, prompt]),
-  )
+  const originPromptMap = new Map(originPrompts.map((prompt) => [prompt.path, prompt]))
 
   // Check each local prompt
   for (const incomingPrompt of incomingPrompts) {

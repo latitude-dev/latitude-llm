@@ -1,11 +1,8 @@
-import { Commit, DraftChange, Project, User, Workspace } from '../../browser'
+import type { Commit, DraftChange, Project, User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { PromisedResult } from '../../lib/Transaction'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../repositories'
+import type { PromisedResult } from '../../lib/Transaction'
+import { CommitsRepository, DocumentVersionsRepository } from '../../repositories'
 import { createCommit } from '../commits'
 import { computeChangesToRevertCommit } from '../commits/computeRevertChanges'
 import { updateDocument } from '../documents'
@@ -24,9 +21,7 @@ async function fetchCommitDetails({
   try {
     const commitScope = new CommitsRepository(workspace.id)
 
-    const headCommit = await commitScope
-      .getHeadCommit(project.id)
-      .then((r) => r.unwrap()!)
+    const headCommit = await commitScope.getHeadCommit(project.id).then((r) => r.unwrap()!)
 
     const targetCommit = targetDraftUuid
       ? await commitScope
@@ -87,24 +82,16 @@ export async function getChangesToResetProjectToCommit({
       const isCreated = change.deletedAt === null
       const isDeleted = !isCreated && change.deletedAt !== undefined
 
-      const newDocument = newDocuments.value.find(
-        (d) => d.documentUuid === change.documentUuid,
-      )
-      const oldDocument = oldDocuments.value.find(
-        (d) => d.documentUuid === change.documentUuid,
-      )
+      const newDocument = newDocuments.value.find((d) => d.documentUuid === change.documentUuid)
+      const oldDocument = oldDocuments.value.find((d) => d.documentUuid === change.documentUuid)
 
-      const newDocumentPath =
-        change.path ?? newDocument?.path ?? oldDocument!.path
+      const newDocumentPath = change.path ?? newDocument?.path ?? oldDocument!.path
 
-      const oldDocumentPath =
-        newDocument?.path ?? oldDocument?.path ?? newDocumentPath
+      const oldDocumentPath = newDocument?.path ?? oldDocument?.path ?? newDocumentPath
 
       const previousContent = newDocument?.content ?? oldDocument?.content
 
-      const newContent = isDeleted
-        ? undefined
-        : (change.content ?? previousContent)
+      const newContent = isDeleted ? undefined : (change.content ?? previousContent)
 
       const oldCOntent = isCreated ? undefined : previousContent
 
@@ -165,9 +152,7 @@ export async function resetProjectToCommit(
   const docsScope = new DocumentVersionsRepository(workspace.id, db, {
     includeDeleted: true,
   })
-  const targetDocumentsResult = await docsScope.getDocumentsAtCommit(
-    targetDraft.value,
-  )
+  const targetDocumentsResult = await docsScope.getDocumentsAtCommit(targetDraft.value)
 
   if (targetDocumentsResult.error) {
     return Result.error(targetDocumentsResult.error)
@@ -176,9 +161,7 @@ export async function resetProjectToCommit(
 
   const results = await Promise.all(
     changes.map((change) => {
-      const document = targetDocuments.find(
-        (d) => d.documentUuid === change.documentUuid,
-      )
+      const document = targetDocuments.find((d) => d.documentUuid === change.documentUuid)
 
       return updateDocument({
         commit: targetDraft.value,

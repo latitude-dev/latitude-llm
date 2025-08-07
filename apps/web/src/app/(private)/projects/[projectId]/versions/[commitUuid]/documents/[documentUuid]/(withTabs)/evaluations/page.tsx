@@ -26,10 +26,5 @@ export default async function EvaluationsPage({
     documentUuid: documentUuid,
   })
 
-  return (
-    <ClientEvaluationsPage
-      evaluations={evaluations}
-      generatorEnabled={env.LATITUDE_CLOUD}
-    />
-  )
+  return <ClientEvaluationsPage evaluations={evaluations} generatorEnabled={env.LATITUDE_CLOUD} />
 }

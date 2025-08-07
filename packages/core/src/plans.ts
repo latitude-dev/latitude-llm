@@ -36,9 +36,8 @@ export const SubscriptionPlans = {
   },
 }
 
-export type SubscriptionPlanContent =
-  (typeof SubscriptionPlans)[keyof typeof SubscriptionPlans] & {
-    plan: SubscriptionPlan
-  }
+export type SubscriptionPlanContent = (typeof SubscriptionPlans)[keyof typeof SubscriptionPlans] & {
+  plan: SubscriptionPlan
+}
 
 export const FREE_PLANS = [SubscriptionPlan.HobbyV1, SubscriptionPlan.HobbyV2]

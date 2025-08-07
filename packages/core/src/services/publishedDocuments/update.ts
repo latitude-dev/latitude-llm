@@ -1,16 +1,12 @@
 import { eq } from 'drizzle-orm'
 
-import { PublishedDocument } from '../../browser'
+import type { PublishedDocument } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { publishedDocuments } from '../../schema'
 type UpdatablePublishedDocument = Pick<
   PublishedDocument,
-  | 'isPublished'
-  | 'canFollowConversation'
-  | 'title'
-  | 'description'
-  | 'displayPromptOnly'
+  'isPublished' | 'canFollowConversation' | 'title' | 'description' | 'displayPromptOnly'
 >
 export async function updatePublishedDocument(
   {

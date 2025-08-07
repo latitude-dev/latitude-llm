@@ -1,11 +1,8 @@
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
-import {
-  CommitsRepository,
-  DocumentTriggersRepository,
-} from '@latitude-data/core/repositories'
+import { type NextRequest, NextResponse } from 'next/server'
+import { CommitsRepository, DocumentTriggersRepository } from '@latitude-data/core/repositories'
 
 export const GET = errorHandler(
   authHandler(

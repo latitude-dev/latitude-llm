@@ -1,14 +1,7 @@
-import {
-  ComponentProps,
-  ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react'
+import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Command } from 'cmdk'
 import { cn } from '../../../lib/utils'
-import { Icon, IconProps } from '../../atoms/Icons'
+import { Icon, type IconProps } from '../../atoms/Icons'
 import { Skeleton } from '../../atoms/Skeleton'
 import { Text } from '../../atoms/Text'
 import { font } from '../../tokens/font'
@@ -24,10 +17,7 @@ function LoadingItem() {
       )}
     >
       <div className='flex-none'>
-        <Skeleton
-          height='h8'
-          className='h-10 w-10 rounded-md bg-backgroundCode'
-        />
+        <Skeleton height='h8' className='h-10 w-10 rounded-md bg-backgroundCode' />
       </div>
       <div className='flex-1 flex flex-col gap-y-2 min-w-0'>
         <Skeleton height='h4' className='w-1/3' />
@@ -67,26 +57,21 @@ function LoadingList({
 function SearchInput(props: ComponentProps<typeof Command.Input>) {
   const { placeholder = 'Search…', ...inputProps } = props
   return (
-    <>
-      <div
-        className={cn(
-          'flex items-center gap-2 w-full border border-input bg-background ring-offset-background',
-          'focus-within:outline-none focus-within:ring-ring rounded-md focus-within:ring-2 focus-within:ring-offset-2',
-          'disabled:cursor-not-allowed disabled:opacity-50',
-          'px-2 py-1 h-8',
-        )}
-      >
-        <Icon name='search' color='foregroundMuted' />
-        <Command.Input
-          placeholder={placeholder}
-          className={cn(
-            'w-full bg-transparent border-none outline-none py-1',
-            font.size.h5,
-          )}
-          {...inputProps}
-        />
-      </div>
-    </>
+    <div
+      className={cn(
+        'flex items-center gap-2 w-full border border-input bg-background ring-offset-background',
+        'focus-within:outline-none focus-within:ring-ring rounded-md focus-within:ring-2 focus-within:ring-offset-2',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        'px-2 py-1 h-8',
+      )}
+    >
+      <Icon name='search' color='foregroundMuted' />
+      <Command.Input
+        placeholder={placeholder}
+        className={cn('w-full bg-transparent border-none outline-none py-1', font.size.h5)}
+        {...inputProps}
+      />
+    </div>
   )
 }
 
@@ -95,13 +80,7 @@ function ImageIcon({ imageIcon }: { imageIcon: OptionItem['imageIcon'] }) {
 
   if (imageIcon.type === 'image') {
     return (
-      <img
-        src={imageIcon.src}
-        alt={imageIcon.alt}
-        width={40}
-        height={40}
-        className='rounded'
-      />
+      <img src={imageIcon.src} alt={imageIcon.alt} width={40} height={40} className='rounded' />
     )
   }
 
@@ -117,10 +96,7 @@ function ImageIcon({ imageIcon }: { imageIcon: OptionItem['imageIcon'] }) {
   )
 }
 
-type ItemProps<T extends ItemType> = Omit<
-  ComponentProps<typeof Command.Item>,
-  'onSelect'
-> & {
+type ItemProps<T extends ItemType> = Omit<ComponentProps<typeof Command.Item>, 'onSelect'> & {
   item: OptionItem<T>
   textSize: 'normal' | 'small'
   onSelectValue?: OnSelectValue<T>
@@ -182,12 +158,9 @@ function Item<T extends ItemType = 'no_type'>({
           name='arrowRight'
           color='foregroundMuted'
           size='large'
-          className={cn(
-            'group-aria-selected:text-accent-foreground ml-auto flex-none',
-            {
-              'text-accent-foreground': isSelected,
-            },
-          )}
+          className={cn('group-aria-selected:text-accent-foreground ml-auto flex-none', {
+            'text-accent-foreground': isSelected,
+          })}
         />
       </div>
     </Command.Item>
@@ -219,30 +192,16 @@ export type OptionGroup<T extends ItemType = 'no_type'> = {
   loading?: boolean
 }
 
-export type Option<T extends ItemType = 'no_type'> =
-  | OptionItem<T>
-  | OptionGroup<T>
+export type Option<T extends ItemType = 'no_type'> = OptionItem<T> | OptionGroup<T>
 
-function Heading({
-  label,
-  loading = false,
-}: {
-  label: string
-  loading?: boolean
-}) {
+function Heading({ label, loading = false }: { label: string; loading?: boolean }) {
   return (
     <div className='flex items-center justify-between mb-2'>
       <Text.H5M display='block'>{label}</Text.H5M>
       {loading ? (
         <div className='flex flex-row justify-center gap-x-2'>
           <Text.H6 color='foregroundMuted'>Loading...</Text.H6>
-          <Icon
-            name='loader'
-            spin
-            size='small'
-            color='foregroundMuted'
-            className='flex-none'
-          />
+          <Icon name='loader' spin size='small' color='foregroundMuted' className='flex-none' />
         </div>
       ) : null}
     </div>
@@ -286,8 +245,7 @@ function GroupWrapper({ children, style }: GroupWrapperProps) {
   return (
     <div
       className={cn('border-border', {
-        'rounded-2xl overflow-hidden border divide-border divide-y':
-          style === 'border',
+        'rounded-2xl overflow-hidden border divide-border divide-y': style === 'border',
         ' divide-border divide-y border-b': style === 'onlySeparators',
       })}
     >
@@ -312,10 +270,7 @@ function renderGroup<T extends ItemType = 'no_type'>({
   selectedValue?: string | undefined
 }) {
   return (
-    <Command.Group
-      key={idx}
-      heading={<Heading loading={group.loading} label={group.label} />}
-    >
+    <Command.Group key={idx} heading={<Heading loading={group.loading} label={group.label} />}>
       <GroupWrapper style={groupStyle}>
         {!group.loading
           ? group.items.map((item, idx) =>
@@ -444,15 +399,9 @@ export function SearchableList<T extends ItemType>({
 
   return (
     <Command className='relative flex flex-col gap-y-4 h-full min-h-0'>
-      {showSearch ? (
-        <SearchInput placeholder={placeholder} onValueChange={onSearchChange} />
-      ) : null}
+      {showSearch ? <SearchInput placeholder={placeholder} onValueChange={onSearchChange} /> : null}
       {loading ? (
-        <LoadingList
-          groupStyle={groupStyle}
-          size='loading'
-          multiGroup={multiGroup}
-        />
+        <LoadingList groupStyle={groupStyle} size='loading' multiGroup={multiGroup} />
       ) : (
         <Command.List
           asChild
@@ -485,20 +434,16 @@ export function SearchableList<T extends ItemType>({
           </Command.Empty>
 
           {/* End message when no more items to load */}
-          {infiniteScroll?.isReachingEnd &&
-            !infiniteScroll?.isLoadingMore &&
-            items.length > 0 && (
-              <div className='pt-2 pb-4 flex items-center justify-center'>
-                <Text.H6 color='foregroundMuted'>{endMessage}</Text.H6>
-              </div>
-            )}
+          {infiniteScroll?.isReachingEnd && !infiniteScroll?.isLoadingMore && items.length > 0 && (
+            <div className='pt-2 pb-4 flex items-center justify-center'>
+              <Text.H6 color='foregroundMuted'>{endMessage}</Text.H6>
+            </div>
+          )}
 
           {/* Sentinel element for intersection observer */}
           {infiniteScroll?.onReachBottom &&
             !infiniteScroll?.isLoadingMore &&
-            !infiniteScroll?.isReachingEnd && (
-              <div ref={sentinelRef} className='h-1' />
-            )}
+            !infiniteScroll?.isReachingEnd && <div ref={sentinelRef} className='h-1' />}
 
           {/* Infinite loading items */}
           {infiniteScroll?.isLoadingMore && (

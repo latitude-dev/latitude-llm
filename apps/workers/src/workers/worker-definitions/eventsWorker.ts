@@ -27,10 +27,8 @@ const eventHandlersJobMappings = {
   touchApiKeyJob: jobs.touchApiKeyJob,
   notifyClientOfExportReady: jobs.notifyClientOfExportReady,
   notifyToClientDocumentLogCreatedJob: jobs.notifyToClientDocumentLogCreatedJob,
-  notifyClientOfDocumentSuggestionCreated:
-    jobs.notifyClientOfDocumentSuggestionCreated,
-  notifyClientOfEvaluationResultV2Created:
-    jobs.notifyClientOfEvaluationResultV2Created,
+  notifyClientOfDocumentSuggestionCreated: jobs.notifyClientOfDocumentSuggestionCreated,
+  notifyClientOfEvaluationResultV2Created: jobs.notifyClientOfEvaluationResultV2Created,
   notifyClientOfScaleUpMcpServer: jobs.notifyClientOfScaleUpMcpServer,
   notifyClientOfMcpServerConnected: jobs.notifyClientOfMcpServerConnected,
 }

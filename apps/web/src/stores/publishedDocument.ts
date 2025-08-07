@@ -1,19 +1,16 @@
 import { useCallback, useMemo } from 'react'
 
-import {
-  HEAD_COMMIT,
-  type PublishedDocument,
-} from '@latitude-data/core/browser'
+import { HEAD_COMMIT, type PublishedDocument } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createPublishedDocumentAction } from '$/actions/documents/sharing/createPublishedDocumentAction'
 import {
   updatePublishedDocumentAction,
-  UpdatePublishedDocumentInput,
+  type UpdatePublishedDocumentInput,
 } from '$/actions/documents/sharing/updatePublishedDocumentAction'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import { publishDocumentAction } from '$/actions/documents/sharing/publishDocumentAction'
 
 const EMPTY_ARRAY = [] as const
@@ -30,11 +27,7 @@ export default function usePublishedDocument(
     data: publishedDocuments = EMPTY_ARRAY,
     mutate,
     isLoading,
-  } = useSWR<PublishedDocument[]>(
-    ['publishedDocuments', projectId],
-    fetcher,
-    opts,
-  )
+  } = useSWR<PublishedDocument[]>(['publishedDocuments', projectId], fetcher, opts)
 
   const { execute: create, isPending: isCreating } = useLatitudeAction(
     createPublishedDocumentAction,
@@ -81,26 +74,23 @@ export default function usePublishedDocument(
     [executeUpdate, projectId, documentUuid, data],
   )
 
-  const { execute: publish, isPending: isPublishing } = useLatitudeAction(
-    publishDocumentAction,
-    {
-      onSuccess: ({ data: publishedDocument }) => {
-        toast({
-          title: 'Success',
-          description: 'Document published successfully.',
-        })
+  const { execute: publish, isPending: isPublishing } = useLatitudeAction(publishDocumentAction, {
+    onSuccess: ({ data: publishedDocument }) => {
+      toast({
+        title: 'Success',
+        description: 'Document published successfully.',
+      })
 
-        mutate((prev = []) => {
-          const idx = prev?.findIndex((d) => d.uuid === publishedDocument.uuid)
-          if (idx === undefined || idx < 0) return [...prev, publishedDocument]
+      mutate((prev = []) => {
+        const idx = prev?.findIndex((d) => d.uuid === publishedDocument.uuid)
+        if (idx === undefined || idx < 0) return [...prev, publishedDocument]
 
-          const newData = [...prev]
-          newData[idx] = publishedDocument
-          return newData
-        })
-      },
+        const newData = [...prev]
+        newData[idx] = publishedDocument
+        return newData
+      })
     },
-  )
+  })
 
   return {
     data,

@@ -11,7 +11,7 @@ import {
 } from '../../../schema'
 import {
   evaluationResultDto,
-  EvaluationResultWithMetadata,
+  type EvaluationResultWithMetadata,
 } from '../../evaluationResultsRepository'
 import RepositoryLegacy from '../../repository'
 
@@ -19,12 +19,8 @@ const evaluationResultDtoWithErrors = {
   ...evaluationResultDto,
   error: {
     code: sql<string>`${runErrors.code}`.as('evaluation_result_error_code'),
-    message: sql<string>`${runErrors.message}`.as(
-      'evaluation_result_error_message',
-    ),
-    details: sql<string>`${runErrors.details}`.as(
-      'evaluation_result_error_details',
-    ),
+    message: sql<string>`${runErrors.message}`.as('evaluation_result_error_message'),
+    details: sql<string>`${runErrors.details}`.as('evaluation_result_error_details'),
   },
 }
 
@@ -33,10 +29,9 @@ export type RunErrorField = {
   message: string | null
   details: string | null
 }
-export type EvaluationResultWithMetadataAndErrors =
-  EvaluationResultWithMetadata & {
-    error: RunErrorField
-  }
+export type EvaluationResultWithMetadataAndErrors = EvaluationResultWithMetadata & {
+  error: RunErrorField
+}
 
 export class EvaluationResultsWithErrorsRepository extends RepositoryLegacy<
   typeof evaluationResultDtoWithErrors,
@@ -48,18 +43,12 @@ export class EvaluationResultsWithErrorsRepository extends RepositoryLegacy<
       .from(evaluationResults)
       .innerJoin(
         evaluations,
-        and(
-          isNull(evaluations.deletedAt),
-          eq(evaluations.id, evaluationResults.evaluationId),
-        ),
+        and(isNull(evaluations.deletedAt), eq(evaluations.id, evaluationResults.evaluationId)),
       )
       .leftJoin(
         evaluationResultableBooleans,
         and(
-          eq(
-            evaluationResults.resultableType,
-            EvaluationResultableType.Boolean,
-          ),
+          eq(evaluationResults.resultableType, EvaluationResultableType.Boolean),
           eq(evaluationResults.resultableId, evaluationResultableBooleans.id),
         ),
       )

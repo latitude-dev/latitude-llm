@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Providers } from '../../../../../constants'
 import writePrompt from './writePrompt'
 import { DocumentVersionsRepository } from '../../../../../repositories'
-import { Commit, Project, User, Workspace } from '../../../../../browser'
+import type { Commit, Project, User, Workspace } from '../../../../../browser'
 import * as factories from '../../../../../tests/factories'
 import { createLatteThread } from '../../threads/createThread'
-import { LatteToolContext } from '../types'
+import type { LatteToolContext } from '../types'
 import { WebsocketClient } from '../../../../../websockets/workers'
-import { CompileError } from '@latitude-data/compiler'
+import type { CompileError } from '@latitude-data/compiler'
 
 vi.spyOn(WebsocketClient, 'sendEvent').mockImplementation(vi.fn())
 
@@ -35,9 +35,7 @@ describe('writePrompt', () => {
     project = p
     draft = c
 
-    const latteThread = await createLatteThread({ workspace, user }).then((r) =>
-      r.unwrap(),
-    )
+    const latteThread = await createLatteThread({ workspace, user }).then((r) => r.unwrap())
 
     // @ts-expect-error Only defining stuff being used in writePrompt
     latteContext = {
@@ -66,9 +64,7 @@ describe('writePrompt', () => {
     expect(success).toBe(true)
 
     const documentScope = new DocumentVersionsRepository(workspace.id)
-    const docs = await documentScope
-      .getDocumentsAtCommit(draft)
-      .then((r) => r.unwrap())
+    const docs = await documentScope.getDocumentsAtCommit(draft).then((r) => r.unwrap())
 
     expect(docs).toHaveLength(1)
     expect(docs[0]!.path).toBe(path)
@@ -103,9 +99,7 @@ describe('writePrompt', () => {
     expect(success).toBe(true)
 
     const documentScope = new DocumentVersionsRepository(workspace.id)
-    const docs = await documentScope
-      .getDocumentsAtCommit(draft)
-      .then((r) => r.unwrap())
+    const docs = await documentScope.getDocumentsAtCommit(draft).then((r) => r.unwrap())
 
     expect(docs).toHaveLength(1)
     expect(docs[0]!.documentUuid).toBe(documentVersion.documentUuid)

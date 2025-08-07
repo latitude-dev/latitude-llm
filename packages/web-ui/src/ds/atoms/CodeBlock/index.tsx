@@ -1,6 +1,6 @@
 'use client'
 
-import React, { memo, ReactNode } from 'react'
+import { memo, type ReactNode } from 'react'
 import { useTheme } from 'next-themes'
 
 import { CurrentTheme } from '../../../constants'
@@ -51,8 +51,7 @@ const Content = memo(
         ) : null}
         <SyntaxHighlighter
           className={cn('text-sm', className, {
-            'break-words whitespace-pre-wrap [&>code]:!whitespace-pre-wrap':
-              textWrap,
+            'break-words whitespace-pre-wrap [&>code]:!whitespace-pre-wrap': textWrap,
           })}
           wrapLongLines={textWrap}
           currentTheme={resolvedTheme}

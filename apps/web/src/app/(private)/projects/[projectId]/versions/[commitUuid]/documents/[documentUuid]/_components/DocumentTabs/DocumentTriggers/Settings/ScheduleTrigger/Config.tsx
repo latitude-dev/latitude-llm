@@ -7,19 +7,17 @@ import { SimpleScheduleForm } from './SimpleScheduleForm'
 import { SpecificScheduleForm } from './SpecificScheduleForm'
 import { CustomScheduleForm } from './CustomScheduleForm'
 import {
-  ScheduleConfig,
-  SavedConfig,
-  ScheduleType,
+  type ScheduleConfig,
+  type SavedConfig,
+  type ScheduleType,
   DEFAULT_CONFIG,
   convertToCronExpression,
   getScheduleDescription,
 } from './scheduleUtils'
-import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 
 // Convert ScheduledTriggerConfiguration to ScheduleConfig
-function convertToScheduleConfig(
-  triggerConfig?: ScheduledTriggerConfiguration,
-): ScheduleConfig {
+function convertToScheduleConfig(triggerConfig?: ScheduledTriggerConfiguration): ScheduleConfig {
   if (!triggerConfig) {
     return DEFAULT_CONFIG
   }
@@ -45,9 +43,7 @@ export function ScheduleTriggerConfig({
   isLoading: boolean
   initialConfig?: ScheduledTriggerConfiguration
 }) {
-  const [config, setConfig] = useState<ScheduleConfig>(
-    convertToScheduleConfig(initialConfig),
-  )
+  const [config, setConfig] = useState<ScheduleConfig>(convertToScheduleConfig(initialConfig))
   const [isDirty, setIsDirty] = useState(false)
   const { commit } = useCurrentCommit()
   const disabled = !!commit.mergedAt || isLoading
@@ -99,27 +95,15 @@ export function ScheduleTriggerConfig({
       </div>
 
       {config.type === 'simple' && (
-        <SimpleScheduleForm
-          config={config}
-          updateConfig={updateConfig}
-          isLoading={isLoading}
-        />
+        <SimpleScheduleForm config={config} updateConfig={updateConfig} isLoading={isLoading} />
       )}
 
       {config.type === 'specific' && (
-        <SpecificScheduleForm
-          config={config}
-          updateConfig={updateConfig}
-          isLoading={isLoading}
-        />
+        <SpecificScheduleForm config={config} updateConfig={updateConfig} isLoading={isLoading} />
       )}
 
       {config.type === 'custom' && (
-        <CustomScheduleForm
-          config={config}
-          updateConfig={updateConfig}
-          isLoading={isLoading}
-        />
+        <CustomScheduleForm config={config} updateConfig={updateConfig} isLoading={isLoading} />
       )}
 
       <div className='p-3 bg-muted rounded-md flex flex-col gap-1'>
@@ -140,11 +124,7 @@ export function ScheduleTriggerConfig({
         >
           Remove
         </Button>
-        <Button
-          fancy
-          onClick={handleSave}
-          disabled={disabled || isLoading || !isDirty}
-        >
+        <Button fancy onClick={handleSave} disabled={disabled || isLoading || !isDirty}>
           Save Changes
         </Button>
       </div>

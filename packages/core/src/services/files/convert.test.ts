@@ -1,5 +1,5 @@
-import { readFile, readdir } from 'fs/promises'
-import { join } from 'path'
+import { readFile, readdir } from 'node:fs/promises'
+import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as constants from '../../constants'
 import { convertFile } from './convert'
@@ -18,9 +18,9 @@ describe('convertFile', () => {
   it('not converts empty file', async () => {
     const file = new File([Buffer.from('')], 'file')
 
-    await expect(
-      convertFile(file).then((r) => r.unwrap()),
-    ).rejects.toThrowError(new BadRequestError(`File is empty`))
+    await expect(convertFile(file).then((r) => r.unwrap())).rejects.toThrowError(
+      new BadRequestError(`File is empty`),
+    )
   })
 
   it('not converts large file', async () => {
@@ -28,9 +28,9 @@ describe('convertFile', () => {
 
     const file = new File([Buffer.from('Too large!')], 'file')
 
-    await expect(
-      convertFile(file).then((r) => r.unwrap()),
-    ).rejects.toThrowError(new BadRequestError(`File too large`))
+    await expect(convertFile(file).then((r) => r.unwrap())).rejects.toThrowError(
+      new BadRequestError(`File too large`),
+    )
   })
 
   it('not converts unsupported file', async () => {
@@ -38,9 +38,9 @@ describe('convertFile', () => {
     const content = await readFile(join(DOCUMENTS_PATH, name))
     const file = new File([content], name)
 
-    await expect(
-      convertFile(file).then((r) => r.unwrap()),
-    ).rejects.toThrowError(new BadRequestError(`Unsupported file type: .bin`))
+    await expect(convertFile(file).then((r) => r.unwrap())).rejects.toThrowError(
+      new BadRequestError(`Unsupported file type: .bin`),
+    )
   })
 
   it('not converts when file conversion fails', async () => {
@@ -48,9 +48,7 @@ describe('convertFile', () => {
     const content = await readFile(join(DOCUMENTS_PATH, name))
     const file = new File([content.slice(0, -(content.length / 2))], name)
 
-    await expect(
-      convertFile(file).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
+    await expect(convertFile(file).then((r) => r.unwrap())).rejects.toThrowError(
       new UnprocessableEntityError(`Failed to convert .docx file to text`, {}),
     )
   })

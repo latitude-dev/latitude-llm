@@ -1,12 +1,8 @@
-import {
-  Chain as PromptlChain,
-  type SerializedChain,
-  Message,
-} from 'promptl-ai'
+import { Chain as PromptlChain, type SerializedChain, type Message } from 'promptl-ai'
 
-import { Workspace } from '../../../../browser'
+import type { Workspace } from '../../../../browser'
 import { cache } from '../../../../cache'
-import { ChainStepResponse, StreamType } from '../../../../constants'
+import type { ChainStepResponse, StreamType } from '../../../../constants'
 
 type CachedChain = {
   chain: PromptlChain<Message>
@@ -35,7 +31,7 @@ async function setToCache({
   try {
     const c = await cache()
     await c.set(key, JSON.stringify({ chain, previousResponse }))
-  } catch (e) {
+  } catch (_e) {
     // Silently fail cache writes
   }
 }
@@ -57,7 +53,7 @@ async function getFromCache(key: string): Promise<CachedChain | undefined> {
       chain,
       previousResponse: deserialized.previousResponse,
     }
-  } catch (e) {
+  } catch (_e) {
     return undefined
   }
 }
@@ -86,7 +82,7 @@ export async function deleteCachedChain({
   try {
     const c = await cache()
     await c.del(key)
-  } catch (e) {
+  } catch (_e) {
     // Silently fail cache writes
   }
 }

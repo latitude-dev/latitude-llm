@@ -20,6 +20,7 @@ export const refineApplyAction = withDocument
     const result = transaction
       .call(
         async () => {
+          // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
           let draft
           if (ctx.commit.mergedAt) {
             draft = await createCommit(

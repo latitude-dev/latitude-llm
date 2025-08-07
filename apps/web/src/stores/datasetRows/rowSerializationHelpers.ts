@@ -1,4 +1,4 @@
-import { DatasetRow, parseRowCell } from '@latitude-data/core/browser'
+import { type DatasetRow, parseRowCell } from '@latitude-data/core/browser'
 
 export type ClientDatasetRow = DatasetRow & {
   processedRowData: { [key: string]: string }

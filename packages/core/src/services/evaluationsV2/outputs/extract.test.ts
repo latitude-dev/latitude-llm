@@ -2,9 +2,9 @@ import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   DEFAULT_DATASET_LABEL,
-  Dataset,
-  DatasetRow,
-  ProviderLogDto,
+  type Dataset,
+  type DatasetRow,
+  type ProviderLogDto,
   Providers,
 } from '../../../browser'
 import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
@@ -29,7 +29,7 @@ describe('extractActualOutput', () => {
       },
     })
 
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
+    const { providerLogs } = await factories.createDocumentLog({
       document: document!,
       commit: commit,
     })
@@ -90,9 +90,7 @@ describe('extractActualOutput', () => {
         },
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        'Log does not contain any assistant messages',
-      ),
+      new UnprocessableEntityError('Log does not contain any assistant messages'),
     )
   })
 
@@ -108,9 +106,7 @@ describe('extractActualOutput', () => {
         },
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        `Unexpected token 'o', "not a valid json" is not valid JSON`,
-      ),
+      new UnprocessableEntityError(`Unexpected token 'o', "not a valid json" is not valid JSON`),
     )
   })
 
@@ -127,9 +123,7 @@ describe('extractActualOutput', () => {
         },
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        `Field 'response' is not present in the actual output`,
-      ),
+      new UnprocessableEntityError(`Field 'response' is not present in the actual output`),
     )
   })
 
@@ -144,9 +138,7 @@ describe('extractActualOutput', () => {
           parsingFormat: 'string',
         },
       }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new UnprocessableEntityError('Actual output is required'),
-    )
+    ).rejects.toThrowError(new UnprocessableEntityError('Actual output is required'))
   })
 
   it('succeeds when configuration is not set', async () => {
@@ -247,9 +239,7 @@ value1,value2,"Some expected output"
       columns: dataset.columns,
       workspace: workspace,
     })
-    datasetColumn = dataset.columns.find(
-      (c) => c.name === datasetLabel,
-    )!.identifier
+    datasetColumn = dataset.columns.find((c) => c.name === datasetLabel)!.identifier
 
     datasetRow.rowData = {
       FRnxVQp: 'value1',
@@ -268,9 +258,7 @@ value1,value2,"Some expected output"
           parsingFormat: 'string',
         },
       }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new BadRequestError(`Column 'unknown' not found in dataset`),
-    )
+    ).rejects.toThrowError(new BadRequestError(`Column 'unknown' not found in dataset`))
   })
 
   it('fails when output cannot be parsed with the format', async () => {
@@ -286,9 +274,7 @@ value1,value2,"Some expected output"
         },
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        `Unexpected token 'o', "not a valid json" is not valid JSON`,
-      ),
+      new UnprocessableEntityError(`Unexpected token 'o', "not a valid json" is not valid JSON`),
     )
   })
 
@@ -306,9 +292,7 @@ value1,value2,"Some expected output"
         },
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        `Field 'response' is not present in the expected output`,
-      ),
+      new UnprocessableEntityError(`Field 'response' is not present in the expected output`),
     )
   })
 
@@ -324,9 +308,7 @@ value1,value2,"Some expected output"
           parsingFormat: 'string',
         },
       }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new UnprocessableEntityError('Expected output is required'),
-    )
+    ).rejects.toThrowError(new UnprocessableEntityError('Expected output is required'))
   })
 
   it('succeeds when configuration is not set', async () => {
@@ -341,8 +323,7 @@ value1,value2,"Some expected output"
   })
 
   it('succeeds when parsing the output', async () => {
-    datasetRow.rowData[datasetColumn] =
-      '{"answer": {"classes": ["class-1", "class-2"]}}'
+    datasetRow.rowData[datasetColumn] = '{"answer": {"classes": ["class-1", "class-2"]}}'
 
     const result = await extractExpectedOutput({
       dataset: dataset,
@@ -357,8 +338,7 @@ value1,value2,"Some expected output"
   })
 
   it('succeeds when accessing the output by field', async () => {
-    datasetRow.rowData[datasetColumn] =
-      '{"answer": {"classes": ["class-1", "class-2"]}}'
+    datasetRow.rowData[datasetColumn] = '{"answer": {"classes": ["class-1", "class-2"]}}'
 
     const result = await extractExpectedOutput({
       dataset: dataset,

@@ -1,19 +1,16 @@
 import { ROUTES } from '$/services/routes'
 import useFetcher from '$/hooks/useFetcher'
-import {
+import type {
   Project,
   Commit,
   DocumentVersion,
   EvaluationV2,
   ExperimentWithScores,
 } from '@latitude-data/core/browser'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import { useEvaluationsV2 } from './evaluationsV2'
 import { useEffect, useMemo, useState } from 'react'
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { type EventArgs, useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 
 const EMPTY_ARRAY: [] = []
 
@@ -156,12 +153,11 @@ export function useExperimentComparison(
     opts,
   )
 
-  const { data: evaluations, isLoading: isLoadingEvaluations } =
-    useEvaluationsV2({
-      project,
-      commit,
-      document,
-    })
+  const { data: evaluations, isLoading: isLoadingEvaluations } = useEvaluationsV2({
+    project,
+    commit,
+    document,
+  })
 
   const [experimentsWithScores, setExperimentsWithScores] =
     useState<(ExperimentWithScores | undefined)[]>(EMPTY_ARRAY)
@@ -184,25 +180,18 @@ export function useExperimentComparison(
     )
   }, [data, experimentUuids])
 
-  const evaluationsWithBestExperiments = useMemo<
-    EvaluationWithBestExperiment[] | undefined
-  >(() => {
+  const evaluationsWithBestExperiments = useMemo<EvaluationWithBestExperiment[] | undefined>(() => {
     if (!evaluations) return undefined
     // Get a list of all evaluation uuids from the current experiments
     const evaluationUuids = experimentsWithScores
       .filter(Boolean)
-      .map((experiment) => experiment!.evaluationUuids)
-      .flat()
-      .filter(
-        (evaluationUuid, index, self) => self.indexOf(evaluationUuid) === index,
-      )
+      .flatMap((experiment) => experiment!.evaluationUuids)
+      .filter((evaluationUuid, index, self) => self.indexOf(evaluationUuid) === index)
 
     // Return a list of all selected evaluations, and recalculate which experiments have the best score
     return evaluationUuids
       .map((evaluationUuid) => {
-        const evaluation = evaluations.find(
-          (evaluation) => evaluation.uuid === evaluationUuid,
-        )
+        const evaluation = evaluations.find((evaluation) => evaluation.uuid === evaluationUuid)
 
         if (!evaluation) return undefined
 
@@ -225,9 +214,7 @@ export function useExperimentComparison(
       if (!message) return
       const { experiment: updatedExperiment } = message
 
-      const index = experimentUuids.findIndex(
-        (uuid) => uuid === updatedExperiment.uuid,
-      )
+      const index = experimentUuids.findIndex((uuid) => uuid === updatedExperiment.uuid)
       if (index === -1) return
 
       // Experiment is selected but not loaded, so we can create it
@@ -258,11 +245,7 @@ export function useExperimentComparison(
       message.result.experimentId
       const { result } = message
 
-      if (
-        !experimentsWithScores.some(
-          (experiment) => experiment?.id === result.experimentId,
-        )
-      ) {
+      if (!experimentsWithScores.some((experiment) => experiment?.id === result.experimentId)) {
         return
       }
 
@@ -270,9 +253,7 @@ export function useExperimentComparison(
         if (!prev) return prev
 
         // Find the experiment that was updated
-        const prevExperimentIdx = prev.findIndex(
-          (exp) => exp?.id === result.experimentId,
-        )
+        const prevExperimentIdx = prev.findIndex((exp) => exp?.id === result.experimentId)
 
         if (prevExperimentIdx === -1) return prev
 
@@ -290,8 +271,7 @@ export function useExperimentComparison(
             ...prevExperiment.scores,
             [result.evaluationUuid]: {
               count: prevScore.count + 1,
-              totalNormalizedScore:
-                prevScore.totalNormalizedScore + (result.normalizedScore ?? 0),
+              totalNormalizedScore: prevScore.totalNormalizedScore + (result.normalizedScore ?? 0),
               totalScore: prevScore.totalScore + (result.score ?? 0),
             },
           },
@@ -310,9 +290,7 @@ export function useExperimentComparison(
 
   useEffect(() => {
     if (!experimentsWithScores) return
-    setBestLogsMetadata(
-      getExperimentUuidsWithBestLogsMetadata(experimentsWithScores),
-    )
+    setBestLogsMetadata(getExperimentUuidsWithBestLogsMetadata(experimentsWithScores))
   }, [experimentsWithScores])
 
   useSockets({
@@ -345,15 +323,9 @@ export function useExperimentComparison(
           logsMetadata: {
             ...prevExperiment.logsMetadata,
             count: prevLogsMetadata.count + 1,
-            totalCost:
-              prevLogsMetadata.totalCost +
-              (documentLogWithMetadata.costInMillicents ?? 0),
-            totalTokens:
-              prevLogsMetadata.totalTokens +
-              (documentLogWithMetadata.tokens ?? 0),
-            totalDuration:
-              prevLogsMetadata.totalDuration +
-              (documentLogWithMetadata.duration ?? 0),
+            totalCost: prevLogsMetadata.totalCost + (documentLogWithMetadata.costInMillicents ?? 0),
+            totalTokens: prevLogsMetadata.totalTokens + (documentLogWithMetadata.tokens ?? 0),
+            totalDuration: prevLogsMetadata.totalDuration + (documentLogWithMetadata.duration ?? 0),
           },
         }
 

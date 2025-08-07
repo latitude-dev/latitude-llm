@@ -1,7 +1,7 @@
-import { Dataset, DatasetRow } from '../../browser'
+import type { Dataset, DatasetRow } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { DatasetRowData, datasetRows } from '../../schema'
+import { type DatasetRowData, datasetRows } from '../../schema'
 
 export async function insertRowsInBatch(
   {

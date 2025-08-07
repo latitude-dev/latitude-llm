@@ -10,19 +10,11 @@ import {
   YAxis,
   ZAxis,
 } from 'recharts'
-import {
-  NameType,
-  Payload,
-  ValueType,
-} from 'recharts/types/component/DefaultTooltipContent'
+import type { NameType, Payload, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 
 import { Text } from '../../../atoms/Text'
-import { ScatterChartConfig, ScatterDataItem } from '../types'
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '../../../atoms/Charts'
+import type { ScatterChartConfig, ScatterDataItem } from '../types'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '../../../atoms/Charts'
 
 export function ScatterChart({ config }: { config: ScatterChartConfig }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -81,11 +73,7 @@ export function ScatterChart({ config }: { config: ScatterChartConfig }) {
   )
 
   const tooltipFormatter = useCallback(
-    (
-      _value: ValueType,
-      name: NameType,
-      payload: Payload<ValueType, NameType>,
-    ) => {
+    (_value: ValueType, name: NameType, payload: Payload<ValueType, NameType>) => {
       if (name !== 'y') return null // Used to display a single content
 
       const item = payload.payload as ScatterDataItem

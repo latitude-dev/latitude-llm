@@ -19,10 +19,9 @@ const humanEvaluationBinaryConfiguration = humanEvaluationConfiguration.extend({
   passDescription: z.string().optional(),
   failDescription: z.string().optional(),
 })
-const humanEvaluationBinaryResultMetadata =
-  humanEvaluationResultMetadata.extend({
-    configuration: humanEvaluationBinaryConfiguration,
-  })
+const humanEvaluationBinaryResultMetadata = humanEvaluationResultMetadata.extend({
+  configuration: humanEvaluationBinaryConfiguration,
+})
 const humanEvaluationBinaryResultError = humanEvaluationResultError.extend({})
 export const HumanEvaluationBinarySpecification = {
   name: 'Binary',
@@ -56,10 +55,9 @@ const humanEvaluationRatingConfiguration = humanEvaluationConfiguration.extend({
   minThreshold: z.number().optional(), // Threshold in rating range
   maxThreshold: z.number().optional(), // Threshold in rating range
 })
-const humanEvaluationRatingResultMetadata =
-  humanEvaluationResultMetadata.extend({
-    configuration: humanEvaluationRatingConfiguration,
-  })
+const humanEvaluationRatingResultMetadata = humanEvaluationResultMetadata.extend({
+  configuration: humanEvaluationRatingConfiguration,
+})
 const humanEvaluationRatingResultError = humanEvaluationResultError.extend({})
 export const HumanEvaluationRatingSpecification = {
   name: 'Rating',
@@ -90,23 +88,26 @@ export enum HumanEvaluationMetric {
   Rating = 'rating',
 }
 
-// prettier-ignore
 export type HumanEvaluationConfiguration<M extends HumanEvaluationMetric = HumanEvaluationMetric> =
-  M extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryConfiguration :
-  M extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingConfiguration :
-  never;
+  M extends HumanEvaluationMetric.Binary
+    ? HumanEvaluationBinaryConfiguration
+    : M extends HumanEvaluationMetric.Rating
+      ? HumanEvaluationRatingConfiguration
+      : never
 
-// prettier-ignore
 export type HumanEvaluationResultMetadata<M extends HumanEvaluationMetric = HumanEvaluationMetric> =
-  M extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryResultMetadata :
-  M extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingResultMetadata :
-  never;
+  M extends HumanEvaluationMetric.Binary
+    ? HumanEvaluationBinaryResultMetadata
+    : M extends HumanEvaluationMetric.Rating
+      ? HumanEvaluationRatingResultMetadata
+      : never
 
-// prettier-ignore
 export type HumanEvaluationResultError<M extends HumanEvaluationMetric = HumanEvaluationMetric> =
-  M extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryResultError :
-  M extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingResultError :
-  never;
+  M extends HumanEvaluationMetric.Binary
+    ? HumanEvaluationBinaryResultError
+    : M extends HumanEvaluationMetric.Rating
+      ? HumanEvaluationRatingResultError
+      : never
 
 export const HumanEvaluationSpecification = {
   name: 'Human-in-the-Loop',
@@ -114,7 +115,7 @@ export const HumanEvaluationSpecification = {
   configuration: humanEvaluationConfiguration,
   resultMetadata: humanEvaluationResultMetadata,
   resultError: humanEvaluationResultError,
-  // prettier-ignore
+
   metrics: {
     [HumanEvaluationMetric.Binary]: HumanEvaluationBinarySpecification,
     [HumanEvaluationMetric.Rating]: HumanEvaluationRatingSpecification,

@@ -1,16 +1,16 @@
 import { capitalize } from 'lodash-es'
 
-import { APICallError, FinishReason, RetryError } from 'ai'
+import { APICallError, type FinishReason, RetryError } from 'ai'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
-  LegacyChainEvent,
-  Providers,
+  type LegacyChainEvent,
+  type Providers,
   StreamEventTypes,
-  StreamType,
+  type StreamType,
 } from '../../../../constants'
-import { AIReturn } from '../../../../services/ai'
-import { ProviderData } from '@latitude-data/constants'
+import type { AIReturn } from '../../../../services/ai'
+import type { ProviderData } from '@latitude-data/constants'
 import { streamToGenerator } from '../../../../lib/streamToGenerator'
 
 interface ConsumeStreamParams {
@@ -33,9 +33,7 @@ export async function consumeStream({
   let error: ChainError<PosibleErrorCode, NoRunError> | undefined
   let finishReason: FinishReason = 'stop'
 
-  for await (const chunk of streamToGenerator<ProviderData>(
-    result.fullStream,
-  )) {
+  for await (const chunk of streamToGenerator<ProviderData>(result.fullStream)) {
     if (chunk.type === 'error') {
       finishReason = 'error'
       error = createAIError(
@@ -53,10 +51,7 @@ export async function consumeStream({
       finishReason = chunk.finishReason
 
       if (chunk.finishReason === 'error') {
-        error = createAIError(
-          'AI run finished with error',
-          RunErrorCodes.AIRunError,
-        )
+        error = createAIError('AI run finished with error', RunErrorCodes.AIRunError)
         break
       }
     }
@@ -88,10 +83,7 @@ function getErrorCode(error: unknown) {
   return RunErrorCodes.AIRunError
 }
 
-function enqueueChainEvent(
-  controller: ReadableStreamDefaultController,
-  event: LegacyChainEvent,
-) {
+function enqueueChainEvent(controller: ReadableStreamDefaultController, event: LegacyChainEvent) {
   controller.enqueue(event)
 }
 
@@ -129,7 +121,7 @@ function getErrorMessage({
           return item.error.message
         })
         .join(', ')}`
-    } catch (e) {
+    } catch (_e) {
       return `${intro}: ${error.message}`
     }
   }
@@ -140,7 +132,7 @@ function getErrorMessage({
 
   try {
     return `${intro}: ${JSON.stringify(error)}`
-  } catch (e) {
+  } catch (_e) {
     return `${intro}: Unknown error`
   }
 }

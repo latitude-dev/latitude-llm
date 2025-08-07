@@ -1,11 +1,11 @@
 import { sql } from 'drizzle-orm'
 import type { PgSelect } from 'drizzle-orm/pg-core'
 
-import { QueryParams } from './buildPaginatedUrl'
+import type { QueryParams } from './buildPaginatedUrl'
 import {
   buildPagination,
   getPaginationParamsWithDefaults,
-  PaginationArgs,
+  type PaginationArgs,
 } from './buildPagination'
 
 /**

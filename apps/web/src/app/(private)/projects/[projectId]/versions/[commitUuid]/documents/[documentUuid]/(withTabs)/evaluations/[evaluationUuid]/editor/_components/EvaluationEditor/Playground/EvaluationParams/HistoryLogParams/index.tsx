@@ -1,6 +1,6 @@
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
-import {
+import type {
   DocumentVersion,
   EvaluationType,
   EvaluationV2,
@@ -11,11 +11,11 @@ import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { EditableParameters } from './EditableParameters'
-import { type UseLogHistoryParams } from './useLogHistoryParams'
+import type { UseLogHistoryParams } from './useLogHistoryParams'
 
 function DocumentLogsNavigation({ data }: { data: UseLogHistoryParams }) {
   const urlData = usePaginatedDocumentLogUrl({
@@ -45,11 +45,7 @@ function DocumentLogsNavigation({ data }: { data: UseLogHistoryParams }) {
                   {urlData.createdAt}
                 </Text.H5>
                 <Badge variant='accent'>{urlData.shortCode}</Badge>
-                <Icon
-                  name='externalLink'
-                  color='foregroundMuted'
-                  className='flex-none'
-                />
+                <Icon name='externalLink' color='foregroundMuted' className='flex-none' />
               </Link>
             ) : null}
           </div>
@@ -92,19 +88,13 @@ export function HistoryLogParams({
       </div>
       {data.error ? (
         <div className='w-full flex justify-center pr-4'>
-          <Alert
-            variant='destructive'
-            description={data.error || 'Error while fetching logs'}
-          />
+          <Alert variant='destructive' description={data.error || 'Error while fetching logs'} />
         </div>
       ) : (
         <div
-          className={cn(
-            'w-full p-1 pb-3.5 flex flex-col gap-y-4 custom-scrollbar',
-            {
-              'opacity-50': data.isLoading,
-            },
-          )}
+          className={cn('w-full p-1 pb-3.5 flex flex-col gap-y-4 custom-scrollbar', {
+            'opacity-50': data.isLoading,
+          })}
         >
           <EditableParameters
             commit={commit}

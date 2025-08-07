@@ -1,8 +1,8 @@
 import { ChainError } from '@latitude-data/constants/errors'
 import {
   ErrorableEntity,
-  EvaluationResultValue,
-  EvaluationType,
+  type EvaluationResultValue,
+  type EvaluationType,
   LlmEvaluationMetric,
   LlmEvaluationSpecification as specification,
 } from '../../../browser'
@@ -13,7 +13,7 @@ import { ProviderApiKeysRepository } from '../../../repositories'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { createRunError } from '../../runErrors/create'
 import { isErrorRetryable } from '../run'
-import {
+import type {
   EvaluationMetricBackendSpecification,
   EvaluationMetricCloneArgs,
   EvaluationMetricRunArgs,
@@ -25,7 +25,6 @@ import { LlmEvaluationCustomSpecification } from './custom'
 import { LlmEvaluationCustomLabeledSpecification } from './customLabeled'
 import { LlmEvaluationRatingSpecification } from './rating'
 
-// prettier-ignore
 const METRICS: {
   [M in LlmEvaluationMetric]: EvaluationMetricBackendSpecification<EvaluationType.Llm, M>
 } = {
@@ -176,9 +175,7 @@ async function clone<M extends LlmEvaluationMetric>(
   }
 
   if (!metricSpecification.clone) {
-    return Result.error(
-      new BadRequestError('Cloning is not supported for this evaluation'),
-    )
+    return Result.error(new BadRequestError('Cloning is not supported for this evaluation'))
   }
 
   const providers = await buildProvidersMap({ workspaceId: workspace.id }, db)

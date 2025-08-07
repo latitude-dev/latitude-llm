@@ -1,12 +1,12 @@
 import pg from 'pg'
 const { DatabaseError } = pg
 
-import { Providers, User, Workspace } from '../../browser'
+import { Providers, type User, type Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, databaseErrorCodes } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { providerApiKeys, ProviderConfiguration } from '../../schema'
+import { providerApiKeys, type ProviderConfiguration } from '../../schema'
 import { amazonBedrockConfigurationSchema } from '../ai'
 
 export type Props = {
@@ -20,16 +20,7 @@ export type Props = {
   configuration?: ProviderConfiguration<Providers> | undefined
 }
 export function createProviderApiKey(
-  {
-    workspace,
-    provider,
-    token,
-    url,
-    name,
-    defaultModel,
-    author,
-    configuration,
-  }: Props,
+  { workspace, provider, token, url, name, defaultModel, author, configuration }: Props,
   transaction = new Transaction(),
 ) {
   return transaction.call(async (tx) => {
@@ -43,9 +34,7 @@ export function createProviderApiKey(
 
     if (provider === Providers.AmazonBedrock) {
       if (!configuration) {
-        return Result.error(
-          new BadRequestError('AmazonBedrock provider requires configuration'),
-        )
+        return Result.error(new BadRequestError('AmazonBedrock provider requires configuration'))
       } else {
         const result = amazonBedrockConfigurationSchema.safeParse(configuration)
 
@@ -90,9 +79,7 @@ export function createProviderApiKey(
       if (error instanceof DatabaseError) {
         if (error.code === databaseErrorCodes.uniqueViolation) {
           if (error.constraint?.includes('name')) {
-            throw new BadRequestError(
-              'A provider API key with this name already exists',
-            )
+            throw new BadRequestError('A provider API key with this name already exists')
           }
 
           if (error.constraint?.includes('token')) {

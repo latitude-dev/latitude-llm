@@ -277,10 +277,7 @@ describe('computeChangesToRevertCommit', () => {
     expect(revertChanges).toEqual([
       {
         documentUuid: document.documentUuid,
-        content: document.content.replace(
-          originalContent,
-          expectedRevertedContent,
-        ),
+        content: document.content.replace(originalContent, expectedRevertedContent),
       },
     ])
   })

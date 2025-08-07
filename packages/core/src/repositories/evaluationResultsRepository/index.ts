@@ -15,12 +15,12 @@ import {
   sql,
 } from 'drizzle-orm'
 import {
-  Commit,
+  type Commit,
   ErrorableEntity,
   EVALUATION_RESULT_RECENCY_DAYS,
-  EvaluationDto,
+  type EvaluationDto,
   EvaluationResultableType,
-  EvaluationResultDto,
+  type EvaluationResultDto,
   MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
 } from '../../browser'
 import { Result } from '../../lib/Result'
@@ -35,8 +35,7 @@ import {
 import { EvaluationsRepository } from '../evaluationsRepository'
 import Repository from '../repositoryV2'
 
-const { providerLogId: _providerLogId, ...tt } =
-  getTableColumns(evaluationResults)
+const { providerLogId: _providerLogId, ...tt } = getTableColumns(evaluationResults)
 
 export const evaluationResultDto = {
   ...tt,
@@ -84,18 +83,12 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
       .from(evaluationResults)
       .innerJoin(
         evaluations,
-        and(
-          isNull(evaluations.deletedAt),
-          eq(evaluations.id, evaluationResults.evaluationId),
-        ),
+        and(isNull(evaluations.deletedAt), eq(evaluations.id, evaluationResults.evaluationId)),
       )
       .leftJoin(
         evaluationResultableBooleans,
         and(
-          eq(
-            evaluationResults.resultableType,
-            EvaluationResultableType.Boolean,
-          ),
+          eq(evaluationResults.resultableType, EvaluationResultableType.Boolean),
           eq(evaluationResults.resultableId, evaluationResultableBooleans.id),
         ),
       )
@@ -126,12 +119,7 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
 
   async findByDocumentLogIds(documentLogIds: number[]) {
     const results = await this.scope
-      .where(
-        and(
-          this.scopeFilter,
-          inArray(evaluationResults.documentLogId, documentLogIds),
-        ),
-      )
+      .where(and(this.scopeFilter, inArray(evaluationResults.documentLogId, documentLogIds)))
       .orderBy(desc(evaluationResults.updatedAt))
 
     return Result.ok(results.map(EvaluationResultsRepository.parseResult))
@@ -163,25 +151,17 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
   }
 
   async selectForDocumentSuggestion(evaluationId: number) {
-    const evaluationsRepository = new EvaluationsRepository(
-      this.workspaceId,
-      this.db,
-    )
-    const evaluation = await evaluationsRepository
-      .find(evaluationId)
-      .then((r) => r.unwrap())
+    const evaluationsRepository = new EvaluationsRepository(this.workspaceId, this.db)
+    const evaluation = await evaluationsRepository.find(evaluationId).then((r) => r.unwrap())
 
     let resultFilter
     let resultOrder
 
-    if (evaluation.resultType == EvaluationResultableType.Boolean) {
+    if (evaluation.resultType === EvaluationResultableType.Boolean) {
       resultFilter = eq(evaluationResultableBooleans.result, false)
       resultOrder = asc(evaluationResultableBooleans.result)
-    } else if (evaluation.resultType == EvaluationResultableType.Number) {
-      resultFilter = lt(
-        evaluationResultableNumbers.result,
-        evaluation.resultConfiguration.maxValue,
-      )
+    } else if (evaluation.resultType === EvaluationResultableType.Number) {
+      resultFilter = lt(evaluationResultableNumbers.result, evaluation.resultConfiguration.maxValue)
       resultOrder = asc(evaluationResultableNumbers.result)
     } else {
       resultFilter = ne(evaluationResultableTexts.result, '')
@@ -195,10 +175,7 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
           this.scopeFilter,
           eq(evaluationResults.evaluationId, evaluationId),
           resultFilter,
-          gte(
-            evaluationResults.updatedAt,
-            subDays(new Date(), EVALUATION_RESULT_RECENCY_DAYS),
-          ),
+          gte(evaluationResults.updatedAt, subDays(new Date(), EVALUATION_RESULT_RECENCY_DAYS)),
         ),
       )
       .orderBy(resultOrder, desc(evaluationResults.updatedAt))

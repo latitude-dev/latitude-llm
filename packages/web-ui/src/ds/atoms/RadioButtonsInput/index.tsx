@@ -1,8 +1,8 @@
 'use client'
 import { FormField } from '../FormField'
 import { Label } from '../Label'
-import { SelectOption } from '../Select'
-import { SelectProps } from '../Select'
+import type { SelectOption } from '../Select'
+import type { SelectProps } from '../Select'
 import { RadioGroup, RadioGroupItem } from './Primitives'
 
 function Options({ options }: { options: SelectOption[] }) {
@@ -14,7 +14,7 @@ function Options({ options }: { options: SelectOption[] }) {
   ))
 }
 
-export function RadioButtonsInput<V extends unknown = unknown>({
+export function RadioButtonsInput<V = unknown>({
   name,
   label,
   badgeLabel,

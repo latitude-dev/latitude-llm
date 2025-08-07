@@ -1,4 +1,4 @@
-import { ResolvedMetadata } from '$/workers/readMetadata'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
 import { describe, expect, it } from 'vitest'
 
 import { recalculateInputs } from './index'

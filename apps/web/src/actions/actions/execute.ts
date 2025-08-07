@@ -1,8 +1,8 @@
 'use server'
 
 import {
-  ActionBackendParameters,
-  ActionFrontendParameters,
+  type ActionBackendParameters,
+  type ActionFrontendParameters,
   ActionType,
 } from '@latitude-data/core/browser'
 import { executeAction } from '@latitude-data/core/services/actions/execute'

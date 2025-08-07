@@ -1,13 +1,13 @@
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { EvaluationV2 } from '@latitude-data/constants'
+import type { EvaluationV2 } from '@latitude-data/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCallback, useEffect, useMemo } from 'react'
-import { ExperimentFormPayload } from '../useExperimentFormPayload'
+import type { ExperimentFormPayload } from '../useExperimentFormPayload'
 import { useLabels } from './useLabels'
 
 function DatasetLabelSelector({
@@ -53,11 +53,7 @@ function DatasetLabelSelector({
         <div className='flex flex-row items-center gap-2'>
           <Text.H5>Expected output for</Text.H5>
           <Badge variant='muted'>
-            <Icon
-              name={specification.icon}
-              className='mr-1'
-              color='foregroundMuted'
-            ></Icon>
+            <Icon name={specification.icon} className='mr-1' color='foregroundMuted'></Icon>
             <Text.H6 color='foregroundMuted'>{evaluation.name}</Text.H6>
           </Badge>
         </div>

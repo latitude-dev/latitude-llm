@@ -1,13 +1,10 @@
 import { BadRequestError, LatitudeError } from '@latitude-data/constants/errors'
-import { Commit, DocumentTrigger, Workspace } from '../../browser'
+import type { Commit, DocumentTrigger, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
 import { documentTriggers } from '../../schema'
-import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  CommitsRepository,
-  DocumentTriggersRepository,
-} from '../../repositories'
+import type { DocumentTriggerType } from '@latitude-data/constants'
+import { CommitsRepository, DocumentTriggersRepository } from '../../repositories'
 import { eq } from 'drizzle-orm'
 
 /**
@@ -35,9 +32,7 @@ export async function setDocumentTriggerEnabled<T extends DocumentTriggerType>(
 
     if (commit.uuid !== liveCommit?.uuid) {
       return Result.error(
-        new BadRequestError(
-          'A trigger can only be enabled or disabled in the Live commit',
-        ),
+        new BadRequestError('A trigger can only be enabled or disabled in the Live commit'),
       )
     }
 
@@ -50,9 +45,7 @@ export async function setDocumentTriggerEnabled<T extends DocumentTriggerType>(
     const trigger = triggerResult.unwrap()
 
     if (trigger.deletedAt) {
-      return Result.error(
-        new BadRequestError('Cannot enable a deleted trigger'),
-      )
+      return Result.error(new BadRequestError('Cannot enable a deleted trigger'))
     }
 
     if (trigger.enabled === enabled) {

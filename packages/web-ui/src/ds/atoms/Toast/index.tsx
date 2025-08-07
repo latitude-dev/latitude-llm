@@ -1,11 +1,6 @@
 'use client'
 
-import {
-  ComponentPropsWithRef,
-  ElementRef,
-  forwardRef,
-  ReactElement,
-} from 'react'
+import { type ComponentPropsWithRef, type ElementRef, forwardRef, type ReactElement } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import * as ToastPrimitives from '@radix-ui/react-toast'
 
@@ -56,8 +51,7 @@ const toastVariants = cva(
 
 const Toast = forwardRef<
   ElementRef<typeof ToastPrimitives.Root>,
-  ComponentPropsWithRef<typeof ToastPrimitives.Root> &
-    VariantProps<typeof toastVariants>
+  ComponentPropsWithRef<typeof ToastPrimitives.Root> & VariantProps<typeof toastVariants>
 >(function Toast({ className, variant, ref, ...props }, _ref) {
   return (
     <ToastPrimitives.Root

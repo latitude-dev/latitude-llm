@@ -1,7 +1,7 @@
-import * as fs from 'fs/promises'
-import * as path from 'path'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
 import glob from 'glob'
-import { Prompt } from '@latitude-data/sdk'
+import type { Prompt } from '@latitude-data/sdk'
 /**
  * Manages prompt operations for the Latitude CLI
  */
@@ -9,10 +9,7 @@ export class PromptManager {
   /**
    * Determine the root folder for storing prompts
    */
-  async determineRootFolder(
-    projectPath: string,
-    defaultFolder = 'prompts',
-  ): Promise<string> {
+  async determineRootFolder(projectPath: string, defaultFolder = 'prompts'): Promise<string> {
     try {
       // Check if src folder exists
       const srcPath = path.join(projectPath, 'src')
@@ -24,7 +21,7 @@ export class PromptManager {
         // If src doesn't exist, default to prompts
         return defaultFolder
       }
-    } catch (error) {
+    } catch (_error) {
       // If any error occurs, default to prompts
       return defaultFolder
     }
@@ -32,18 +29,13 @@ export class PromptManager {
   /**
    * Create the prompt directory structure
    */
-  async createPromptDirectory(
-    projectPath: string,
-    promptsRoot: string,
-  ): Promise<void> {
+  async createPromptDirectory(projectPath: string, promptsRoot: string): Promise<void> {
     try {
       const dirPath = path.join(projectPath, promptsRoot)
       await fs.mkdir(dirPath, { recursive: true })
       return
     } catch (error: any) {
-      throw new Error(
-        `Failed to create prompt directory: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to create prompt directory: ${error.message || String(error)}`)
     }
   }
   /**
@@ -55,7 +47,7 @@ export class PromptManager {
       const packageJsonContent = await fs.readFile(packageJsonPath, 'utf-8')
       const packageJson = JSON.parse(packageJsonContent)
       return packageJson.type === 'module'
-    } catch (error) {
+    } catch (_error) {
       // Default to CJS if we can't determine
       return false
     }
@@ -71,9 +63,7 @@ export class PromptManager {
   ): Promise<string> {
     // Use the prompt's path property to determine where to save it
     // Remove any leading slashes
-    const promptPath = prompt.path.startsWith('/')
-      ? prompt.path.slice(1)
-      : prompt.path
+    const promptPath = prompt.path.startsWith('/') ? prompt.path.slice(1) : prompt.path
     // Create the full directory path
     const dirPath = path.join(projectPath, rootFolder, path.dirname(promptPath))
     await fs.mkdir(dirPath, { recursive: true })
@@ -105,16 +95,14 @@ export class PromptManager {
     isEsm: boolean = false,
   ): string {
     // Remove any leading slashes
-    const normalizedPath = promptPath.startsWith('/')
-      ? promptPath.slice(1)
-      : promptPath
+    const normalizedPath = promptPath.startsWith('/') ? promptPath.slice(1) : promptPath
 
     // Add appropriate extension based on project type
     if (isNpmProject) {
       const extension = isEsm ? '.js' : '.cjs'
       return path.join(rootFolder, normalizedPath + extension)
     } else {
-      return path.join(rootFolder, normalizedPath + '.promptl')
+      return path.join(rootFolder, `${normalizedPath}.promptl`)
     }
   }
   /**
@@ -156,25 +144,19 @@ export class PromptManager {
   ): Promise<string[]> {
     try {
       // Get all prompt files in the filesystem
-      const existingFiles = await this.findAllPromptFiles(
-        rootFolder,
-        projectPath,
-        isNpmProject,
-      )
+      const existingFiles = await this.findAllPromptFiles(rootFolder, projectPath, isNpmProject)
       // Create a set of files that should exist based on the prompts
       const shouldExist = new Set<string>()
       for (const prompt of prompts) {
         // Remove any leading slashes
-        const promptPath = prompt.path.startsWith('/')
-          ? prompt.path.slice(1)
-          : prompt.path
+        const promptPath = prompt.path.startsWith('/') ? prompt.path.slice(1) : prompt.path
 
         // Add filename with appropriate extension
         let fileName: string
         if (isNpmProject) {
           fileName = path.basename(promptPath) + (isEsm ? '.js' : '.cjs')
         } else {
-          fileName = path.basename(promptPath) + '.promptl'
+          fileName = `${path.basename(promptPath)}.promptl`
         }
 
         // Calculate relative path
@@ -182,9 +164,7 @@ export class PromptManager {
         shouldExist.add(relativePath)
       }
       // Find files that shouldn't exist
-      const filesToDelete = existingFiles.filter(
-        (file) => !shouldExist.has(file),
-      )
+      const filesToDelete = existingFiles.filter((file) => !shouldExist.has(file))
       // Delete each file
       const deletedFiles: string[] = []
       for (const file of filesToDelete) {
@@ -194,9 +174,7 @@ export class PromptManager {
       }
       return deletedFiles
     } catch (error: any) {
-      throw new Error(
-        `Failed to clean up prompt files: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to clean up prompt files: ${error.message || String(error)}`)
     }
   }
 }

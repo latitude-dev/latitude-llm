@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 
-import { Commit } from '../../browser'
+import type { Commit } from '../../browser'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { commits } from '../../schema'
 
@@ -20,16 +20,10 @@ export async function updateCommit(
     if (assertResult.error) return assertResult
 
     if (Object.keys(data).length === 0) {
-      return Result.error(
-        new BadRequestError('No updates provided for the commit'),
-      )
+      return Result.error(new BadRequestError('No updates provided for the commit'))
     }
 
-    const result = await tx
-      .update(commits)
-      .set(data)
-      .where(eq(commits.id, commit.id))
-      .returning()
+    const result = await tx.update(commits).set(data).where(eq(commits.id, commit.id)).returning()
 
     const updatedCommit = result[0]
     return Result.ok(updatedCommit!)

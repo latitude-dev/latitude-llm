@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 
-import { DocumentLog } from '../browser'
+import type { DocumentLog } from '../browser'
 import { database } from '../client'
 import { workspacesDtoColumns } from '../repositories'
 import {
@@ -12,17 +12,11 @@ import {
   workspaces,
 } from '../schema'
 
-export const findWorkspaceFromDocumentLog = async (
-  documentLog: DocumentLog,
-  db = database,
-) => {
+export const findWorkspaceFromDocumentLog = async (documentLog: DocumentLog, db = database) => {
   const result = await db
     .select(workspacesDtoColumns)
     .from(workspaces)
-    .innerJoin(
-      subscriptions,
-      eq(workspaces.currentSubscriptionId, subscriptions.id),
-    )
+    .innerJoin(subscriptions, eq(workspaces.currentSubscriptionId, subscriptions.id))
     .innerJoin(projects, eq(projects.workspaceId, workspaces.id))
     .innerJoin(commits, eq(commits.projectId, projects.id))
     .innerJoin(documentVersions, eq(documentVersions.commitId, commits.id))
@@ -32,10 +26,7 @@ export const findWorkspaceFromDocumentLog = async (
   return result[0]
 }
 
-export const unsafelyFindDocumentLogByUuid = async (
-  documentLogUuid: string,
-  db = database,
-) => {
+export const unsafelyFindDocumentLogByUuid = async (documentLogUuid: string, db = database) => {
   const result = await db
     .select()
     .from(documentLogs)

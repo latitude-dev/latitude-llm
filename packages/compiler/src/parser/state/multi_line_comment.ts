@@ -1,7 +1,7 @@
 import PARSER_ERRORS from '$compiler/error/errors'
 import type { Comment } from '$compiler/parser/interfaces'
 
-import { Parser } from '..'
+import type { Parser } from '..'
 
 export function multiLineComment(parser: Parser) {
   if (parser.match('*/')) {

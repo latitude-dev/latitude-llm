@@ -1,24 +1,15 @@
 'use client'
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-  useCallback,
-} from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react'
 import Intercom, { show, onUnreadCountChange } from '@intercom/messenger-js-sdk'
-import { type SupportUserIdentity } from '$/app/(private)/_lib/createSupportUserIdentity'
+import type { SupportUserIdentity } from '$/app/(private)/_lib/createSupportUserIdentity'
 
 interface IntercomContextValue {
   open: () => void
   unreadCount: number
 }
 
-const IntercomContext = createContext<IntercomContextValue | undefined>(
-  undefined,
-)
+const IntercomContext = createContext<IntercomContextValue | undefined>(undefined)
 
 export function IntercomProvider({
   identity,
@@ -64,7 +55,6 @@ export function IntercomProvider({
 
 export function useIntercom(): IntercomContextValue {
   const ctx = useContext(IntercomContext)
-  if (!ctx)
-    throw new Error('useIntercom must be used within an IntercomProvider')
+  if (!ctx) throw new Error('useIntercom must be used within an IntercomProvider')
   return ctx
 }

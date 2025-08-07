@@ -1,11 +1,7 @@
 import { cache } from 'react'
 
-import { Workspace } from '@latitude-data/core/browser'
-import {
-  FEATURE_FLAGS_CONDITIONS,
-  FeatureFlag,
-  ResolvedFeatureFlags,
-} from './flags'
+import type { Workspace } from '@latitude-data/core/browser'
+import { FEATURE_FLAGS_CONDITIONS, type FeatureFlag, type ResolvedFeatureFlags } from './flags'
 
 export const getFeatureFlagsForWorkspaceCached = cache(
   ({ workspace }: { workspace: Workspace }) => {
@@ -16,8 +12,7 @@ export const getFeatureFlagsForWorkspaceCached = cache(
       if (!condition) return acc
 
       const enabled =
-        condition.workspaceIds === 'all' ||
-        condition.workspaceIds.includes(workspace.id)
+        condition.workspaceIds === 'all' || condition.workspaceIds.includes(workspace.id)
       return { ...acc, [key]: { enabled } }
     }, {} as ResolvedFeatureFlags)
   },

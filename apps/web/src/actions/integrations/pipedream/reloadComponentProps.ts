@@ -17,9 +17,7 @@ export const reloadPipedreamComponentPropsAction = authProcedure
   )
   .handler(async ({ input, ctx }) => {
     const integrationScope = new IntegrationsRepository(ctx.workspace.id)
-    const integrationResult = await integrationScope.findByName(
-      input.integrationName,
-    )
+    const integrationResult = await integrationScope.findByName(input.integrationName)
     const integration = integrationResult.unwrap()
 
     if (integration.type !== IntegrationType.Pipedream) {

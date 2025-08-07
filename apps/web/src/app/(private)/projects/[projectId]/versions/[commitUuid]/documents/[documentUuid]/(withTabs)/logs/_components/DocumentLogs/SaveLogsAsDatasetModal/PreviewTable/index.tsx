@@ -9,8 +9,8 @@ import {
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import { cn } from '@latitude-data/web-ui/utils'
-import { type OutputItem } from '../useSelectedLogs'
-import { Column } from '@latitude-data/core/schema'
+import type { OutputItem } from '../useSelectedLogs'
+import type { Column } from '@latitude-data/core/schema'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
 
@@ -55,8 +55,7 @@ export function PreviewTable({
       <Text.H4>Logs preview</Text.H4>
       <Text.H6 color='foregroundMuted'>
         {selectedCount} logs will be added to{' '}
-        {previewData.datasetRows.length > 0 ? 'the dataset' : 'a new dataset'}.
-        Here's a preview.
+        {previewData.datasetRows.length > 0 ? 'the dataset' : 'a new dataset'}. Here's a preview.
       </Text.H6>
       {isLoading ? (
         <TableSkeleton rows={10} cols={5} maxHeight={320} />
@@ -79,12 +78,7 @@ export function PreviewTable({
           </TableHeader>
           <TableBody className='relative'>
             {previewData.datasetRows.map((cells, index) => (
-              <TableRow
-                key={index}
-                verticalPadding
-                hoverable={false}
-                className='relative'
-              >
+              <TableRow key={index} verticalPadding hoverable={false} className='relative'>
                 {cells.map((cell, index) => (
                   <PreviewCell
                     oldData

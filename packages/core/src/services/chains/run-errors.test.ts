@@ -1,21 +1,16 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { TextStreamPart } from 'ai'
+import type { TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Workspace } from '../../browser'
-import {
-  ErrorableEntity,
-  LogSources,
-  PromptSource,
-  Providers,
-} from '../../constants'
+import type { Workspace } from '../../browser'
+import { ErrorableEntity, LogSources, type PromptSource, Providers } from '../../constants'
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
 import * as ChainValidator from './ChainValidator'
 import { runChain } from './run'
-import { TelemetryContext } from '../../telemetry'
-import { Chain, createChain, MessageRole } from 'promptl-ai'
+import type { TelemetryContext } from '../../telemetry'
+import { type Chain, createChain, MessageRole } from 'promptl-ai'
 
 let context: TelemetryContext
 let providersMap: Map<string, any>
@@ -93,17 +88,14 @@ describe('run chain error handling', () => {
 
   // TODO: troll test in CI
   it.skip('stores error when default provider quota is exceeded', async () => {
-    const chainValidatorCall = vi
-      .spyOn(ChainValidator, 'renderChain')
-      .mockResolvedValueOnce(
-        Result.error(
-          new ChainError({
-            code: RunErrorCodes.DefaultProviderExceededQuota,
-            message:
-              'You have exceeded your maximum number of free runs for today',
-          }),
-        ),
-      )
+    const chainValidatorCall = vi.spyOn(ChainValidator, 'renderChain').mockResolvedValueOnce(
+      Result.error(
+        new ChainError({
+          code: RunErrorCodes.DefaultProviderExceededQuota,
+          message: 'You have exceeded your maximum number of free runs for today',
+        }),
+      ),
+    )
 
     const run = runChain({
       context: context,
@@ -137,16 +129,14 @@ describe('run chain error handling', () => {
   })
 
   it('store error as unknown when something undefined happens', async () => {
-    const chainValidatorCall = vi
-      .spyOn(ChainValidator, 'renderChain')
-      .mockResolvedValue(
-        Result.error(
-          new ChainError({
-            code: RunErrorCodes.Unknown,
-            message: 'Something undefined happened',
-          }),
-        ),
-      )
+    const chainValidatorCall = vi.spyOn(ChainValidator, 'renderChain').mockResolvedValue(
+      Result.error(
+        new ChainError({
+          code: RunErrorCodes.Unknown,
+          message: 'Something undefined happened',
+        }),
+      ),
+    )
 
     const run = runChain({
       context: context,

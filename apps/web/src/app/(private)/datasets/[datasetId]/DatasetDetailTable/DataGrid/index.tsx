@@ -1,12 +1,12 @@
 import { UpdateColumnModal } from '$/app/(private)/datasets/[datasetId]/DatasetDetailTable/DataGrid/UpdateColumnModal'
 import { DatasetHeadText } from '$/app/(private)/datasets/_components/DatasetHeadText'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
-import { DatasetRoleStyle } from '$/hooks/useDatasetRoles'
-import useDatasetRows from '$/stores/datasetRows'
-import { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
+import type { DatasetRoleStyle } from '$/hooks/useDatasetRoles'
+import type useDatasetRows from '$/stores/datasetRows'
+import type { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
 import useDatasets from '$/stores/datasets'
-import { Dataset } from '@latitude-data/core/browser'
-import { ClientPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import type { Dataset } from '@latitude-data/core/browser'
+import type { ClientPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import type {
   CellClickArgs,
@@ -19,12 +19,12 @@ import type {
 } from '@latitude-data/web-ui/atoms/DataGrid'
 import BaseDataGrid, {
   DataGridCellEditor,
-  EditorCellProps,
+  type EditorCellProps,
   SelectColumn,
 } from '@latitude-data/web-ui/atoms/DataGrid'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Suspense, useCallback, useMemo, useState } from 'react'
 
@@ -32,7 +32,7 @@ function rowKeyGetter(row: ClientDatasetRow) {
   return row.id
 }
 
-export type DatasetRowsTableProps = {
+type DatasetRowsTableProps = {
   dataset: Dataset
   rows: ClientDatasetRow[]
   selectedRow?: ClientDatasetRow
@@ -79,11 +79,7 @@ function RenderEditCell(props: RenderEditCellProps<ClientDatasetRow, unknown>) {
   const valueType = typeof storedRowValue === 'object' ? 'json' : 'text'
   return (
     <Suspense fallback={null}>
-      <DataGridCellEditor
-        valueType={valueType}
-        value={initialValue}
-        onChange={onChange}
-      />
+      <DataGridCellEditor valueType={valueType} value={initialValue} onChange={onChange} />
     </Suspense>
   )
 }
@@ -97,6 +93,7 @@ const renderHeaderCell =
     column: Dataset['columns'][0]
   }) =>
   (props: RenderHeaderCellProps<ClientDatasetRow>) => {
+    // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
     const onClickEdit = useCallback(() => {
       setEditColumnKey(props.column.key)
     }, [props.column.key])
@@ -141,25 +138,21 @@ export default function DataGrid({
   )
   const [editColumnKey, setEditColumnKey] = useState<string | null>(null)
   const columns = useMemo<DataGridProps<ClientDatasetRow>['columns']>(() => {
-    const dataColumns: DataGridProps<ClientDatasetRow>['columns'] =
-      dataset.columns.map((col) => ({
-        key: col.identifier,
-        name: col.name,
-        resizable: true,
-        selectable: true,
-        minWidth: 80,
-        headerCellClass: cn(
-          'group/cell-header',
-          backgroundCssClasses[col.role],
-        ),
-        renderEditCell: RenderEditCell,
-        renderHeaderCell: renderHeaderCell({
-          column: col,
-          setEditColumnKey,
-        }),
-        cellClass: backgroundCssClasses[col.role],
-        renderCell,
-      }))
+    const dataColumns: DataGridProps<ClientDatasetRow>['columns'] = dataset.columns.map((col) => ({
+      key: col.identifier,
+      name: col.name,
+      resizable: true,
+      selectable: true,
+      minWidth: 80,
+      headerCellClass: cn('group/cell-header', backgroundCssClasses[col.role]),
+      renderEditCell: RenderEditCell,
+      renderHeaderCell: renderHeaderCell({
+        column: col,
+        setEditColumnKey,
+      }),
+      cellClass: backgroundCssClasses[col.role],
+      renderCell,
+    }))
 
     return [SelectColumn, ...dataColumns]
   }, [dataset.columns, backgroundCssClasses])
@@ -172,13 +165,8 @@ export default function DataGrid({
   )
 
   const onRowsChange = useCallback(
-    (
-      rows: ClientDatasetRow[],
-      { indexes }: RowsChangeData<ClientDatasetRow>,
-    ) => {
-      const changedRows = indexes
-        .map((index) => rows[index])
-        .filter((r) => r !== undefined)
+    (rows: ClientDatasetRow[], { indexes }: RowsChangeData<ClientDatasetRow>) => {
+      const changedRows = indexes.map((index) => rows[index]).filter((r) => r !== undefined)
 
       updateRows({ rows: changedRows })
     },
@@ -191,7 +179,7 @@ export default function DataGrid({
       rowIds: rowIdsToDelete,
     })
     setSelectedRows(new Set<number>())
-  }, [deleteRows, selectedRows, dataset.id, setSelectedRows])
+  }, [deleteRows, selectedRows, dataset.id])
 
   return (
     <>
@@ -210,12 +198,7 @@ export default function DataGrid({
         onCellClick={onCellClick}
         selectedRows={selectedRows}
         onSelectedRowsChange={setSelectedRows}
-        footer={
-          <LinkableTablePaginationFooter
-            pagination={pagination}
-            countLabel={countLabel}
-          />
-        }
+        footer={<LinkableTablePaginationFooter pagination={pagination} countLabel={countLabel} />}
       />
       <div className='z-40 flex justify-center absolute left-0 right-0 bottom-4 pointer-events-none'>
         <FloatingPanel visible={selectedRows.size > 0}>
@@ -228,11 +211,7 @@ export default function DataGrid({
             >
               {isDeleting ? 'Deleting rows...' : 'Delete rows'}
             </Button>
-            <Button
-              fancy
-              variant='outline'
-              onClick={() => setSelectedRows(new Set<number>())}
-            >
+            <Button fancy variant='outline' onClick={() => setSelectedRows(new Set<number>())}>
               Clear selection
             </Button>
           </div>

@@ -21,10 +21,7 @@ export function LogicTablePaginationFooter({
   onPageChange: (page: number) => void
   isLoading?: boolean
 }) {
-  const totalPages = useMemo(
-    () => Math.ceil(count / pageSize),
-    [count, pageSize],
-  )
+  const totalPages = useMemo(() => Math.ceil(count / pageSize), [count, pageSize])
 
   if (isLoading) {
     return (
@@ -37,9 +34,7 @@ export function LogicTablePaginationFooter({
 
   return (
     <div className='w-full flex justify-between items-center'>
-      <Text.H5M color='foregroundMuted'>
-        {countLabel?.(count) ?? count}
-      </Text.H5M>
+      <Text.H5M color='foregroundMuted'>{countLabel?.(count) ?? count}</Text.H5M>
 
       <div className='flex items-center'>
         <Button

@@ -1,9 +1,5 @@
 import { DEFAULT_PAGINATION_SIZE } from '../../constants'
-import {
-  buildPaginatedUrl,
-  parseSearchParams,
-  QueryParams,
-} from './buildPaginatedUrl'
+import { buildPaginatedUrl, parseSearchParams, type QueryParams } from './buildPaginatedUrl'
 
 export type PaginationArgs = {
   page?: number

@@ -60,9 +60,7 @@ export function extractContentMetadata({
   provider: Providers
 }) {
   const definedAttributes = Object.keys(content).filter((key) =>
-    CONTENT_DEFINED_ATTRIBUTES.includes(
-      key as (typeof CONTENT_DEFINED_ATTRIBUTES)[number],
-    ),
+    CONTENT_DEFINED_ATTRIBUTES.includes(key as (typeof CONTENT_DEFINED_ATTRIBUTES)[number]),
   ) as (typeof CONTENT_DEFINED_ATTRIBUTES)[number][]
 
   const providerAttributes = Object.keys(content).filter(
@@ -118,7 +116,7 @@ export function extractMessageMetadata({
 
   if (Object.keys(rest).length === 0) return common
 
-  if (role === 'user' && Object.hasOwnProperty.call(rest, 'name')) {
+  if (role === 'user' && Object.hasOwn(rest, 'name')) {
     // @ts-ignore
     const name = rest.name
     common = {

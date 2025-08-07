@@ -1,9 +1,9 @@
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../../lib/Result'
-import { LatteChange, LatteEditAction } from '@latitude-data/constants/latte'
-import { Commit, DocumentVersion, Workspace } from '../../../../../../browser'
+import type { LatteChange, LatteEditAction } from '@latitude-data/constants/latte'
+import type { Commit, DocumentVersion, Workspace } from '../../../../../../browser'
 import { createNewDocument, updateDocument } from '../../../../../documents'
-import Transaction, { PromisedResult } from '../../../../../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../../../../../lib/Transaction'
 
 export async function executeEditAction(
   {
@@ -20,9 +20,7 @@ export async function executeEditAction(
   transaction = new Transaction(),
 ): PromisedResult<LatteChange> {
   if (action.operation === 'update') {
-    const document = documents.find(
-      (doc) => doc.documentUuid === action.promptUuid,
-    )
+    const document = documents.find((doc) => doc.documentUuid === action.promptUuid)
     if (!document) {
       return Result.error(
         new NotFoundError(
@@ -89,9 +87,7 @@ export async function executeEditAction(
   }
 
   if (action.operation === 'delete') {
-    const document = documents.find(
-      (doc) => doc.documentUuid === action.promptUuid,
-    )
+    const document = documents.find((doc) => doc.documentUuid === action.promptUuid)
     if (!document) {
       return Result.error(
         new NotFoundError(
@@ -123,8 +119,6 @@ export async function executeEditAction(
   }
 
   return Result.error(
-    new BadRequestError(
-      `Unsupported operation: ${(action as LatteEditAction).operation}`,
-    ),
+    new BadRequestError(`Unsupported operation: ${(action as LatteEditAction).operation}`),
   )
 }

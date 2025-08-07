@@ -10,12 +10,7 @@ const JSON_SCHEMA_TYPES = [
   'null',
 ] as const
 
-const JSON_ENUM_VALUES = z.union([
-  z.string(),
-  z.number(),
-  z.boolean(),
-  z.null(),
-])
+const JSON_ENUM_VALUES = z.union([z.string(), z.number(), z.boolean(), z.null()])
 
 export const zodJsonSchema: z.ZodType<unknown> = z.lazy(() =>
   z
@@ -32,10 +27,7 @@ export const zodJsonSchema: z.ZodType<unknown> = z.lazy(() =>
 
       // Core Validation Keywords
       type: z
-        .union([
-          z.enum(JSON_SCHEMA_TYPES),
-          z.array(z.enum(JSON_SCHEMA_TYPES)).nonempty(),
-        ])
+        .union([z.enum(JSON_SCHEMA_TYPES), z.array(z.enum(JSON_SCHEMA_TYPES)).nonempty()])
         .optional(),
 
       enum: z.array(JSON_ENUM_VALUES).optional(),
@@ -59,9 +51,7 @@ export const zodJsonSchema: z.ZodType<unknown> = z.lazy(() =>
       minItems: z.number().int().min(0).optional(),
       uniqueItems: z.boolean().optional(),
 
-      items: z
-        .union([zodJsonSchema, z.array(zodJsonSchema).nonempty()])
-        .optional(),
+      items: z.union([zodJsonSchema, z.array(zodJsonSchema).nonempty()]).optional(),
       additionalItems: z.union([z.boolean(), zodJsonSchema]).optional(),
       contains: zodJsonSchema.optional(),
 
@@ -72,9 +62,7 @@ export const zodJsonSchema: z.ZodType<unknown> = z.lazy(() =>
       properties: z.record(zodJsonSchema).optional(),
       patternProperties: z.record(zodJsonSchema).optional(),
       additionalProperties: z.union([z.boolean(), zodJsonSchema]).optional(),
-      dependencies: z
-        .record(z.union([z.array(z.string()).nonempty(), zodJsonSchema]))
-        .optional(),
+      dependencies: z.record(z.union([z.array(z.string()).nonempty(), zodJsonSchema])).optional(),
       propertyNames: zodJsonSchema.optional(),
 
       // Combining / Logic keywords
@@ -140,12 +128,7 @@ export const zodJsonSchema: z.ZodType<unknown> = z.lazy(() =>
       }
 
       // 3) string-only keywords require type: string
-      const stringOnlyKeys = [
-        'pattern',
-        'format',
-        'minLength',
-        'maxLength',
-      ] as const
+      const stringOnlyKeys = ['pattern', 'format', 'minLength', 'maxLength'] as const
       for (const key of stringOnlyKeys) {
         if ((obj as any)[key] !== undefined) {
           if (obj.type !== undefined) {

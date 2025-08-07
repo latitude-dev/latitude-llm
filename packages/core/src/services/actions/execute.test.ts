@@ -1,6 +1,6 @@
 import * as env from '@latitude-data/env'
-import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
-import { ActionType, User, Workspace } from '../../browser'
+import { beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
+import { ActionType, type User, type Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
@@ -28,9 +28,7 @@ describe('executeAction', () => {
     user = u
 
     mocks = {
-      publisher: vi
-        .spyOn(publisher, 'publishLater')
-        .mockImplementation(async () => {}),
+      publisher: vi.spyOn(publisher, 'publishLater').mockImplementation(async () => {}),
     }
 
     vi.spyOn(env, 'env', 'get').mockReturnValue({
@@ -71,10 +69,9 @@ describe('executeAction', () => {
   })
 
   it('fails when onboarding could not be marked as complete', async () => {
-    vi.spyOn(
-      onboardingServices,
-      'markWorkspaceOnboardingComplete',
-    ).mockRejectedValue(new Error('Onboarding marking failed!'))
+    vi.spyOn(onboardingServices, 'markWorkspaceOnboardingComplete').mockRejectedValue(
+      new Error('Onboarding marking failed!'),
+    )
 
     await expect(
       executeAction({
@@ -98,9 +95,7 @@ describe('executeAction', () => {
         user: user,
         workspace: workspace,
       }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new BadRequestError('Prompt must be between 1 and 2500 characters'),
-    )
+    ).rejects.toThrowError(new BadRequestError('Prompt must be between 1 and 2500 characters'))
 
     const onboarding = await getWorkspaceOnboarding({ workspace })
     expect(onboarding.value?.completedAt).toBeFalsy()
@@ -134,7 +129,7 @@ describe('executeAction', () => {
 
   it('succeeds when onboarding was already completed', async () => {
     await onboardingServices.markWorkspaceOnboardingComplete({
-      onboarding: await getWorkspaceOnboarding({ workspace }).then((r) =>r.unwrap()), // prettier-ignore
+      onboarding: await getWorkspaceOnboarding({ workspace }).then((r) => r.unwrap()), // prettier-ignore
     })
 
     const result = await executeAction({

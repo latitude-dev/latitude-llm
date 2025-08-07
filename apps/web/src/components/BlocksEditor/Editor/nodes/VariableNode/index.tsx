@@ -1,7 +1,7 @@
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { $nodesOfType, DecoratorNode } from 'lexical'
-import { JSX } from 'react'
-import { BLOCK_EDITOR_TYPE, Variable } from '../../state/promptlToLexical/types'
+import type { JSX } from 'react'
+import { BLOCK_EDITOR_TYPE, type Variable } from '../../state/promptlToLexical/types'
 
 export class VariableNode extends DecoratorNode<JSX.Element> {
   __name: string

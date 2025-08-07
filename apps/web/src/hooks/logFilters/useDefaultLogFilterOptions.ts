@@ -8,9 +8,7 @@ export function useDefaultLogFilterOptions() {
   const { data: commits } = useCommits()
   return useMemo(() => {
     return {
-      commitIds: commits
-        ?.filter((c) => !!c.mergedAt || c.uuid === commit.uuid)
-        .map((c) => c.id),
+      commitIds: commits?.filter((c) => !!c.mergedAt || c.uuid === commit.uuid).map((c) => c.id),
       logSources: LOG_SOURCES,
       createdAt: undefined,
       customIdentifier: undefined,

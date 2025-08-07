@@ -1,12 +1,8 @@
-import { Conversation, ConversationMetadata } from '$compiler/types'
-import { z } from 'zod'
+import type { Conversation, ConversationMetadata } from '$compiler/types'
+import type { z } from 'zod'
 
 import { Chain } from './chain'
-import {
-  ReadMetadata,
-  type Document,
-  type ReferencePromptFn,
-} from './readMetadata'
+import { ReadMetadata, type Document, type ReferencePromptFn } from './readMetadata'
 import type { CompileOptions } from './types'
 
 export async function render({

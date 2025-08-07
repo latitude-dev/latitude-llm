@@ -1,16 +1,13 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { ResolvedMetadata } from '$/workers/readMetadata'
-import { Commit, Project } from '@latitude-data/core/browser'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
+import type { Commit, Project } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useCallback, useState } from 'react'
 
-import { type ActionsState } from '$/components/PlaygroundCommon/Actions'
+import type { ActionsState } from '$/components/PlaygroundCommon/Actions'
 import PreviewPrompt from '$/components/PlaygroundCommon/PreviewPrompt'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 
 export default function Preview({
   metadata,
@@ -29,7 +26,7 @@ export default function Preview({
   const [experimentModalOpen, setExperimentModalOpen] = useState(false)
   const onClickRunExperiment = useCallback(() => {
     setExperimentModalOpen(true)
-  }, [setExperimentModalOpen])
+  }, [])
 
   return (
     <>
@@ -41,12 +38,7 @@ export default function Preview({
         expandParameters={expandParameters}
         setExpandParameters={setExpandParameters}
         actions={
-          <Button
-            variant='outline'
-            onClick={onClickRunExperiment}
-            fancy={true}
-            roundy={true}
-          >
+          <Button variant='outline' onClick={onClickRunExperiment} fancy={true} roundy={true}>
             Run experiment
           </Button>
         }

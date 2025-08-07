@@ -1,23 +1,23 @@
 import { z } from 'zod'
 import {
-  HumanEvaluationConfiguration,
+  type HumanEvaluationConfiguration,
   HumanEvaluationMetric,
-  HumanEvaluationResultError,
-  HumanEvaluationResultMetadata,
+  type HumanEvaluationResultError,
+  type HumanEvaluationResultMetadata,
   HumanEvaluationSpecification,
 } from './human'
 import {
-  LlmEvaluationConfiguration,
+  type LlmEvaluationConfiguration,
   LlmEvaluationMetric,
-  LlmEvaluationResultError,
-  LlmEvaluationResultMetadata,
+  type LlmEvaluationResultError,
+  type LlmEvaluationResultMetadata,
   LlmEvaluationSpecification,
 } from './llm'
 import {
-  RuleEvaluationConfiguration,
+  type RuleEvaluationConfiguration,
   RuleEvaluationMetric,
-  RuleEvaluationResultError,
-  RuleEvaluationResultMetadata,
+  type RuleEvaluationResultError,
+  type RuleEvaluationResultMetadata,
   RuleEvaluationSpecification,
 } from './rule'
 
@@ -34,12 +34,14 @@ export enum EvaluationType {
 
 export const EvaluationTypeSchema = z.nativeEnum(EvaluationType)
 
-// prettier-ignore
 export type EvaluationMetric<T extends EvaluationType = EvaluationType> =
-  T extends EvaluationType.Rule ? RuleEvaluationMetric :
-  T extends EvaluationType.Llm ? LlmEvaluationMetric :
-  T extends EvaluationType.Human ? HumanEvaluationMetric :
-  never;
+  T extends EvaluationType.Rule
+    ? RuleEvaluationMetric
+    : T extends EvaluationType.Llm
+      ? LlmEvaluationMetric
+      : T extends EvaluationType.Human
+        ? HumanEvaluationMetric
+        : never
 
 export const EvaluationMetricSchema = z.union([
   z.nativeEnum(RuleEvaluationMetric),
@@ -47,45 +49,45 @@ export const EvaluationMetricSchema = z.union([
   z.nativeEnum(HumanEvaluationMetric),
 ])
 
-// prettier-ignore
 export type EvaluationConfiguration<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-> =
-  T extends EvaluationType.Rule ? RuleEvaluationConfiguration<M extends RuleEvaluationMetric ? M : never> :
-  T extends EvaluationType.Llm ? LlmEvaluationConfiguration<M extends LlmEvaluationMetric ? M : never> :
-  T extends EvaluationType.Human ? HumanEvaluationConfiguration<M extends HumanEvaluationMetric ? M : never> :
-  never;
+> = T extends EvaluationType.Rule
+  ? RuleEvaluationConfiguration<M extends RuleEvaluationMetric ? M : never>
+  : T extends EvaluationType.Llm
+    ? LlmEvaluationConfiguration<M extends LlmEvaluationMetric ? M : never>
+    : T extends EvaluationType.Human
+      ? HumanEvaluationConfiguration<M extends HumanEvaluationMetric ? M : never>
+      : never
 
 export const EvaluationConfigurationSchema = z.custom<EvaluationConfiguration>()
 
-// prettier-ignore
 export type EvaluationResultMetadata<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-> =
-  T extends EvaluationType.Rule ? RuleEvaluationResultMetadata<M extends RuleEvaluationMetric ? M : never> :
-  T extends EvaluationType.Llm ? LlmEvaluationResultMetadata<M extends LlmEvaluationMetric ? M : never> :
-  T extends EvaluationType.Human ? HumanEvaluationResultMetadata<M extends HumanEvaluationMetric ? M : never> :
-  never;
+> = T extends EvaluationType.Rule
+  ? RuleEvaluationResultMetadata<M extends RuleEvaluationMetric ? M : never>
+  : T extends EvaluationType.Llm
+    ? LlmEvaluationResultMetadata<M extends LlmEvaluationMetric ? M : never>
+    : T extends EvaluationType.Human
+      ? HumanEvaluationResultMetadata<M extends HumanEvaluationMetric ? M : never>
+      : never
 
-// prettier-ignore
 export const EvaluationResultMetadataSchema = z.custom<EvaluationResultMetadata>()
 
-// prettier-ignore
 export type EvaluationResultError<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-> =
-  T extends EvaluationType.Rule ? RuleEvaluationResultError<M extends RuleEvaluationMetric ? M : never> :
-  T extends EvaluationType.Llm ? LlmEvaluationResultError<M extends LlmEvaluationMetric ? M : never> :
-  T extends EvaluationType.Human ? HumanEvaluationResultError<M extends HumanEvaluationMetric ? M : never> :
-  never;
+> = T extends EvaluationType.Rule
+  ? RuleEvaluationResultError<M extends RuleEvaluationMetric ? M : never>
+  : T extends EvaluationType.Llm
+    ? LlmEvaluationResultError<M extends LlmEvaluationMetric ? M : never>
+    : T extends EvaluationType.Human
+      ? HumanEvaluationResultError<M extends HumanEvaluationMetric ? M : never>
+      : never
 
-// prettier-ignore
 export const EvaluationResultErrorSchema = z.custom<EvaluationResultError>()
 
-// prettier-ignore
 type ZodSchema<T = any> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny, T, T>
 
 export type EvaluationMetricSpecification<
@@ -103,15 +105,14 @@ export type EvaluationMetricSpecification<
   supportsManualEvaluation: boolean
 }
 
-export type EvaluationSpecification<T extends EvaluationType = EvaluationType> =
-  {
-    name: string
-    description: string
-    configuration: ZodSchema
-    resultMetadata: ZodSchema
-    resultError: ZodSchema
-    metrics: { [M in EvaluationMetric<T>]: EvaluationMetricSpecification<T, M> }
-  }
+export type EvaluationSpecification<T extends EvaluationType = EvaluationType> = {
+  name: string
+  description: string
+  configuration: ZodSchema
+  resultMetadata: ZodSchema
+  resultError: ZodSchema
+  metrics: { [M in EvaluationMetric<T>]: EvaluationMetricSpecification<T, M> }
+}
 
 export const EVALUATION_SPECIFICATIONS = {
   [EvaluationType.Rule]: RuleEvaluationSpecification,
@@ -122,16 +123,16 @@ export const EVALUATION_SPECIFICATIONS = {
 }
 type EvaluationSpecifications = typeof EVALUATION_SPECIFICATIONS
 
-// prettier-ignore
 type EvaluationMetricSpecificationFilter<
   F extends keyof EvaluationMetricSpecification,
-  T extends EvaluationType = EvaluationType
-> = { [K in EvaluationType]: {
-    [M in keyof EvaluationSpecifications[K]['metrics']]:
-      // @ts-expect-error F can indeed index M type
-      EvaluationSpecifications[K]['metrics'][M][F] extends true ? M : never
+  T extends EvaluationType = EvaluationType,
+> = {
+  [K in EvaluationType]: {
+    [M in keyof EvaluationSpecifications[K]['metrics']]: // @ts-expect-error F can indeed index M type
+    EvaluationSpecifications[K]['metrics'][M][F] extends true ? M : never
   }[keyof EvaluationSpecifications[K]['metrics']]
-}[T] & EvaluationMetric<T>
+}[T] &
+  EvaluationMetric<T>
 
 export type LiveEvaluationMetric<T extends EvaluationType = EvaluationType> =
   EvaluationMetricSpecificationFilter<'supportsLiveEvaluation', T>
@@ -203,22 +204,13 @@ export type EvaluationResultV2<
 
 export type PublicManualEvaluationResultV2 = Pick<
   EvaluationResultV2<EvaluationType.Human, HumanEvaluationMetric>,
-  | 'uuid'
-  | 'score'
-  | 'normalizedScore'
-  | 'metadata'
-  | 'hasPassed'
-  | 'createdAt'
-  | 'updatedAt'
+  'uuid' | 'score' | 'normalizedScore' | 'metadata' | 'hasPassed' | 'createdAt' | 'updatedAt'
 > & { versionUuid: string; error: string | null }
 
 export type EvaluationSettings<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-> = Pick<
-  EvaluationV2<T, M>,
-  'name' | 'description' | 'type' | 'metric' | 'configuration'
->
+> = Pick<EvaluationV2<T, M>, 'name' | 'description' | 'type' | 'metric' | 'configuration'>
 
 export const EvaluationSettingsSchema = z.object({
   name: z.string(),

@@ -1,24 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import {
-  getChangesToRevertDocumentChanges,
-  revertChangesToDocument,
-} from './revertDocumentVersion'
+import { getChangesToRevertDocumentChanges, revertChangesToDocument } from './revertDocumentVersion'
 import { Providers } from '@latitude-data/constants'
 import { mergeCommit } from '../commits'
 import { DocumentVersionsRepository } from '../../repositories'
 
 describe('getChangesToRevertDocumentChanges', () => {
   it('fetches and computes changes for a document reversion', async (ctx) => {
-    const { workspace, project, documents, user } =
-      await ctx.factories.createProject({
-        providers: [{ type: Providers.OpenAI, name: 'openai' }],
-        documents: {
-          foo: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'initial content',
-          }),
-        },
-      })
+    const { workspace, project, documents, user } = await ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'initial content',
+        }),
+      },
+    })
 
     const document = documents[0]!
     const { commit: changedCommit } = await ctx.factories.createDraft({
@@ -67,16 +63,15 @@ describe('getChangesToRevertDocumentChanges', () => {
 
 describe('revertChangesToDocument', () => {
   it('reverts a document properly for the specified draft', async (ctx) => {
-    const { workspace, project, documents, user } =
-      await ctx.factories.createProject({
-        providers: [{ type: Providers.OpenAI, name: 'openai' }],
-        documents: {
-          foo: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'initial content',
-          }),
-        },
-      })
+    const { workspace, project, documents, user } = await ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'initial content',
+        }),
+      },
+    })
 
     const document = documents[0]!
     const { commit: changedCommit } = await ctx.factories.createDraft({
@@ -125,16 +120,15 @@ describe('revertChangesToDocument', () => {
   })
 
   it('creates a new draft when no target draft is provided', async (ctx) => {
-    const { workspace, project, documents, user } =
-      await ctx.factories.createProject({
-        providers: [{ type: Providers.OpenAI, name: 'openai' }],
-        documents: {
-          foo: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'initial content',
-          }),
-        },
-      })
+    const { workspace, project, documents, user } = await ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'initial content',
+        }),
+      },
+    })
 
     const document = documents[0]!
     const { commit: changedCommit } = await ctx.factories.createDraft({
@@ -146,9 +140,7 @@ describe('revertChangesToDocument', () => {
       commit: changedCommit,
       content: document.content.replace('initial content', 'updated content'),
     })
-    const mergedCommit = await mergeCommit(changedCommit).then((r) =>
-      r.unwrap(),
-    )
+    const mergedCommit = await mergeCommit(changedCommit).then((r) => r.unwrap())
 
     const revertResult = await revertChangesToDocument({
       workspace,
@@ -161,9 +153,7 @@ describe('revertChangesToDocument', () => {
     expect(revertResult.error).toBeUndefined()
     const finalDraft = revertResult.unwrap()
 
-    expect(finalDraft.commit.title).toContain(
-      `Revert changes for "${document.path}"`,
-    )
+    expect(finalDraft.commit.title).toContain(`Revert changes for "${document.path}"`)
     expect(finalDraft.documentUuid).toEqual(document.documentUuid)
   })
 

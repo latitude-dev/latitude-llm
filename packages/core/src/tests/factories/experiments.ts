@@ -1,17 +1,17 @@
 import { faker } from '@faker-js/faker'
 import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  EvaluationV2,
-  Experiment,
+  type Commit,
+  type Dataset,
+  type DocumentVersion,
+  type EvaluationV2,
+  type Experiment,
   LogSources,
-  ProviderApiKey,
-  User,
-  Workspace,
+  type ProviderApiKey,
+  type User,
+  type Workspace,
 } from '../../browser'
 import { createExperiment as createExperimentFn } from '../../services/experiments/create'
-import { createDataset, ICreateDatasetV2 } from './datasets'
+import { createDataset, type ICreateDatasetV2 } from './datasets'
 import { createDocumentLog } from './documentLogs'
 import { createEvaluationResultV2 } from './evaluationResultsV2'
 import { createProviderLog } from './providerLogs'

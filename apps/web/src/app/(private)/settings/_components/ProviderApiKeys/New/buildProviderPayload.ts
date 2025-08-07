@@ -1,10 +1,10 @@
 import { merge } from 'lodash-es'
 import {
   COMMON_PROVIDER_INPUT_FIELDS_KEYS,
-  CommonProviderInputKey,
-  ProviderInputSchema,
+  type CommonProviderInputKey,
+  type ProviderInputSchema,
 } from '$/actions/providerApiKeys/inputSchema'
-import { Providers } from '@latitude-data/constants'
+import type { Providers } from '@latitude-data/constants'
 
 const CONFIG_PARAM_REGX = /\[([^\]]+)\]/g
 
@@ -84,8 +84,6 @@ export function buildConfigFieldName({
   fieldNamespace: string
   namespace?: string
 }) {
-  const field = fieldNamespace.startsWith('[')
-    ? fieldNamespace
-    : `[${fieldNamespace}]`
+  const field = fieldNamespace.startsWith('[') ? fieldNamespace : `[${fieldNamespace}]`
   return `${namespace}${field}`
 }

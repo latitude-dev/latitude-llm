@@ -1,18 +1,10 @@
-import { useState, useEffect, ChangeEvent } from 'react'
+import { useState, useEffect, type ChangeEvent } from 'react'
 import { Text } from '../../atoms/Text'
 import { Button } from '../../atoms/Button'
 import { Input } from '../../atoms/Input'
-import { CronValue } from './utils'
+import type { CronValue } from './utils'
 
-type SelectedDays = [
-  boolean,
-  boolean,
-  boolean,
-  boolean,
-  boolean,
-  boolean,
-  boolean,
-]
+type SelectedDays = [boolean, boolean, boolean, boolean, boolean, boolean, boolean]
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
 
@@ -101,11 +93,7 @@ export function ScheduleCronInput({
             variant={selectedDays[idx] ? 'default' : 'outline'}
             onClick={() => toggleDay(idx)}
           >
-            <Text.H5
-              color={selectedDays[idx] ? 'background' : 'foregroundMuted'}
-            >
-              {label}
-            </Text.H5>
+            <Text.H5 color={selectedDays[idx] ? 'background' : 'foregroundMuted'}>{label}</Text.H5>
           </Button>
         ))}
       </div>

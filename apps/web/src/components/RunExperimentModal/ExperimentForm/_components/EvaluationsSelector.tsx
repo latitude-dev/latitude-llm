@@ -1,4 +1,4 @@
-import { ExperimentFormPayload } from '../useExperimentFormPayload'
+import type { ExperimentFormPayload } from '../useExperimentFormPayload'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
@@ -12,12 +12,11 @@ export function EvaluationsSelector({
   selectedEvaluations,
   setSelectedEvaluations,
 }: ExperimentFormPayload) {
-  const { data: evaluations, isLoading: isLoadingEvaluations } =
-    useEvaluationsV2({
-      project,
-      commit,
-      document,
-    })
+  const { data: evaluations, isLoading: isLoadingEvaluations } = useEvaluationsV2({
+    project,
+    commit,
+    document,
+  })
 
   if (isLoadingEvaluations) {
     return <Skeleton height='h2' className='w-1/2' />
@@ -44,15 +43,11 @@ export function EvaluationsSelector({
             }
           })}
         onChange={(uuids) => {
-          setSelectedEvaluations(
-            uuids.map((uuid) => evaluations.find((ev) => ev.uuid === uuid)!),
-          )
+          setSelectedEvaluations(uuids.map((uuid) => evaluations.find((ev) => ev.uuid === uuid)!))
         }}
       />
-      {selectedEvaluations.length == 0 && (
-        <Text.H6 color='foregroundMuted'>
-          The results will not be evaluated.
-        </Text.H6>
+      {selectedEvaluations.length === 0 && (
+        <Text.H6 color='foregroundMuted'>The results will not be evaluated.</Text.H6>
       )}
     </div>
   )

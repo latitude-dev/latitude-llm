@@ -3,11 +3,8 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { DecoratorNode } from 'lexical'
-import { JSX } from 'react'
-import {
-  BLOCK_EDITOR_TYPE,
-  FileBlock,
-} from '../../state/promptlToLexical/types'
+import type { JSX } from 'react'
+import { BLOCK_EDITOR_TYPE, type FileBlock } from '../../state/promptlToLexical/types'
 
 function FileComponent({ src }: { src: string }) {
   if (!isSafeUrl(src)) {
@@ -37,12 +34,7 @@ function FileComponent({ src }: { src: string }) {
       )}
     >
       <Icon name='file' color='foregroundMuted' />
-      <Text.H5
-        whiteSpace='preWrap'
-        wordBreak='breakAll'
-        color='foregroundMuted'
-        userSelect={false}
-      >
+      <Text.H5 whiteSpace='preWrap' wordBreak='breakAll' color='foregroundMuted' userSelect={false}>
         {src.split('/').at(-1) || 'Unnamed file'}
       </Text.H5>
     </a>
@@ -59,12 +51,7 @@ export class FileNode extends DecoratorNode<JSX.Element> {
   }
 
   static clone(node: FileNode) {
-    return new FileNode(
-      node.__content,
-      node.__attributes,
-      node.__readOnly,
-      node.__key,
-    )
+    return new FileNode(node.__content, node.__attributes, node.__readOnly, node.__key)
   }
 
   constructor(
@@ -100,11 +87,7 @@ export class FileNode extends DecoratorNode<JSX.Element> {
   }
 
   static importJSON(serializedNode: FileBlock) {
-    return new FileNode(
-      serializedNode.content,
-      serializedNode.attributes,
-      serializedNode.readOnly,
-    )
+    return new FileNode(serializedNode.content, serializedNode.attributes, serializedNode.readOnly)
   }
 
   exportJSON(): FileBlock {

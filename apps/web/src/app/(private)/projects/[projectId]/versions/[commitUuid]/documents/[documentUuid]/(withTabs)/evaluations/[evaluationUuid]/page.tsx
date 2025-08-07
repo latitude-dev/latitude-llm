@@ -4,11 +4,11 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import {
   DEFAULT_PAGINATION_SIZE,
-  EvaluationResultsV2Search,
+  type EvaluationResultsV2Search,
   evaluationResultsV2SearchFromQueryParams,
   evaluationResultsV2SearchToQueryParams,
 } from '@latitude-data/core/browser'
-import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
+import type { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
 import { env } from '@latitude-data/env'
 import { cloneDeep } from 'lodash-es'
@@ -82,9 +82,7 @@ export default async function EvaluationPage({
     })
     .then((r) => r.unwrap())
 
-  const selectedResult = results.find(
-    (r) => r.uuid === search.pagination.resultUuid,
-  )
+  const selectedResult = results.find((r) => r.uuid === search.pagination.resultUuid)
 
   // Note: stats are lazily loaded in the client
 

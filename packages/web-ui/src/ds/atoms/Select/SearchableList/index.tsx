@@ -8,10 +8,10 @@ import {
   CommandList,
 } from '../../Command'
 import { Text } from '../../Text'
-import { Options, SelectGroup, SelectOption } from '../index'
-import { Icon, IconName } from '../../Icons'
+import { Options, SelectGroup, type SelectOption } from '../index'
+import { Icon, type IconName } from '../../Icons'
 
-export function SearchableSelectList<V extends unknown = unknown>({
+export function SearchableSelectList<V = unknown>({
   options,
   onChange,
 }: {
@@ -34,9 +34,7 @@ export function SearchableSelectList<V extends unknown = unknown>({
           </CommandEmpty>
           <CommandGroup>
             {options
-              .filter((option) =>
-                option.label.toLowerCase().includes(searchQuery.toLowerCase()),
-              )
+              .filter((option) => option.label.toLowerCase().includes(searchQuery.toLowerCase()))
               .map((option) => (
                 <CommandItem
                   key={option.label}
@@ -51,11 +49,7 @@ export function SearchableSelectList<V extends unknown = unknown>({
                   className='cursor-pointer flex items-center gap-2'
                 >
                   {option.icon && typeof option.icon === 'string' ? (
-                    <Icon
-                      name={option.icon as IconName}
-                      size='small'
-                      color='foregroundMuted'
-                    />
+                    <Icon name={option.icon as IconName} size='small' color='foregroundMuted' />
                   ) : (
                     option.icon
                   )}

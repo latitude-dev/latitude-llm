@@ -16,33 +16,17 @@ describe('relativeTime', () => {
   })
 
   it('returns formatted relative time', () => {
-    expect(relativeTime(new Date(NOW.getTime() - 3 * SECONDS))).toBe(
-      'Less than a minute ago',
+    expect(relativeTime(new Date(NOW.getTime() - 3 * SECONDS))).toBe('Less than a minute ago')
+    expect(relativeTime(new Date(NOW.getTime() - 30 * SECONDS))).toBe('1 minute ago')
+    expect(relativeTime(new Date(NOW.getTime() - 30 * MINUTES))).toBe('30 minutes ago')
+    expect(relativeTime(new Date(NOW.getTime() - 59 * MINUTES))).toBe('About 1 hour ago')
+    expect(relativeTime(new Date(NOW.getTime() - 2 * HOURS))).toBe('Today at 10:00 AM')
+    expect(relativeTime(new Date(NOW.getTime() - 3 * DAYS))).toBe('Last Friday at 12:00 PM')
+    expect(relativeTime(new Date(NOW.getTime() - (6 * DAYS + 12 * HOURS)))).toBe(
+      'Jul 25, 2000, 12:00:00 AM',
     )
-    expect(relativeTime(new Date(NOW.getTime() - 30 * SECONDS))).toBe(
-      '1 minute ago',
-    )
-    expect(relativeTime(new Date(NOW.getTime() - 30 * MINUTES))).toBe(
-      '30 minutes ago',
-    )
-    expect(relativeTime(new Date(NOW.getTime() - 59 * MINUTES))).toBe(
-      'About 1 hour ago',
-    )
-    expect(relativeTime(new Date(NOW.getTime() - 2 * HOURS))).toBe(
-      'Today at 10:00 AM',
-    )
-    expect(relativeTime(new Date(NOW.getTime() - 3 * DAYS))).toBe(
-      'Last Friday at 12:00 PM',
-    )
-    expect(
-      relativeTime(new Date(NOW.getTime() - (6 * DAYS + 12 * HOURS))),
-    ).toBe('Jul 25, 2000, 12:00:00 AM')
-    expect(relativeTime(new Date(NOW.getTime() - 7 * DAYS))).toBe(
-      'Jul 24, 2000, 12:00:00 PM',
-    )
-    expect(relativeTime(new Date(NOW.getTime() - 1 * YEARS))).toBe(
-      'Aug 1, 1999, 12:00:00 PM',
-    )
+    expect(relativeTime(new Date(NOW.getTime() - 7 * DAYS))).toBe('Jul 24, 2000, 12:00:00 PM')
+    expect(relativeTime(new Date(NOW.getTime() - 1 * YEARS))).toBe('Aug 1, 1999, 12:00:00 PM')
   })
 
   it('returns "-" when no date is provided', () => {

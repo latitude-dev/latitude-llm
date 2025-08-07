@@ -4,7 +4,7 @@ import {
   formatConversation,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationMetric,
-  ProviderApiKey,
+  type ProviderApiKey,
   LlmEvaluationComparisonSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
@@ -12,9 +12,9 @@ import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
 import {
-  EvaluationMetricCloneArgs,
-  EvaluationMetricRunArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricCloneArgs,
+  type EvaluationMetricRunArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 import { promptTask, runPrompt } from './shared'
@@ -29,10 +29,7 @@ export const LlmEvaluationComparisonSpecification = {
 async function validate(
   {
     configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.Comparison
-  >,
+  }: EvaluationMetricValidateArgs<EvaluationType.Llm, LlmEvaluationMetric.Comparison>,
   _ = database,
 ) {
   configuration.criteria = configuration.criteria.trim()
@@ -54,22 +51,14 @@ async function validate(
     configuration.minThreshold !== undefined &&
     (configuration.minThreshold < 0 || configuration.minThreshold > 100)
   ) {
-    return Result.error(
-      new BadRequestError(
-        'Minimum threshold must be a number between 0 and 100',
-      ),
-    )
+    return Result.error(new BadRequestError('Minimum threshold must be a number between 0 and 100'))
   }
 
   if (
     configuration.maxThreshold !== undefined &&
     (configuration.maxThreshold < 0 || configuration.maxThreshold > 100)
   ) {
-    return Result.error(
-      new BadRequestError(
-        'Maximum threshold must be a number between 0 and 100',
-      ),
-    )
+    return Result.error(new BadRequestError('Maximum threshold must be a number between 0 and 100'))
   }
 
   if (
@@ -78,9 +67,7 @@ async function validate(
     configuration.minThreshold >= configuration.maxThreshold
   ) {
     return Result.error(
-      new BadRequestError(
-        'Minimum threshold must be less than maximum threshold',
-      ),
+      new BadRequestError('Minimum threshold must be less than maximum threshold'),
     )
   }
 
@@ -157,10 +144,7 @@ async function run(
     providers,
     commit,
     workspace,
-  }: EvaluationMetricRunArgs<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.Comparison
-  >,
+  }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Comparison>,
   db = database,
 ) {
   const metadata = {
@@ -184,10 +168,9 @@ async function run(
     throw new BadRequestError('Provider is required')
   }
 
-  const evaluatedLog = await serializeDocumentLog(
-    { documentLog, workspace },
-    db,
-  ).then((r) => r.unwrap())
+  const evaluatedLog = await serializeDocumentLog({ documentLog, workspace }, db).then((r) =>
+    r.unwrap(),
+  )
 
   const { response, stats, verdict } = await runPrompt({
     prompt: buildPrompt({ ...metadata.configuration, provider }),
@@ -229,10 +212,7 @@ async function clone(
   {
     evaluation,
     providers,
-  }: EvaluationMetricCloneArgs<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.Comparison
-  >,
+  }: EvaluationMetricCloneArgs<EvaluationType.Llm, LlmEvaluationMetric.Comparison>,
   _ = database,
 ) {
   const provider = providers?.get(evaluation.configuration.provider)

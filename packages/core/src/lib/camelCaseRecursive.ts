@@ -5,9 +5,7 @@ type CamelCaseString<S> = S extends `${infer T}_${infer U}`
   : S
 
 type CamelCasedProperties<T> = {
-  [K in keyof T as K extends string
-    ? CamelCaseString<K>
-    : K]: T[K] extends Record<string, unknown>
+  [K in keyof T as K extends string ? CamelCaseString<K> : K]: T[K] extends Record<string, unknown>
     ? CamelCasedProperties<T[K]>
     : T[K] extends Array<infer U>
       ? Array<CamelCasedProperties<U>>

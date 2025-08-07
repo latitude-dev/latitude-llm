@@ -1,7 +1,7 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { ProviderApiKey, Providers, Workspace } from '../../../browser'
+import { type ProviderApiKey, Providers, type Workspace } from '../../../browser'
 import { cache } from '../../../cache'
 import * as factories from '../../../tests/factories'
 import { buildFreeRunCacheKey, getFreeRuns } from '../../freeRunsManager'
@@ -11,10 +11,7 @@ import { Result } from './../../../lib/Result'
 let workspace: Workspace
 let provider: ProviderApiKey
 
-async function resetFreeRuns(
-  workspaceId: number,
-  prevCount: number | null | string,
-) {
+async function resetFreeRuns(workspaceId: number, prevCount: number | null | string) {
   const c = await cache()
   const key = buildFreeRunCacheKey(workspaceId)
   c.set(key, prevCount === null ? 0 : prevCount)
@@ -69,8 +66,7 @@ describe('checkFreeProviderQuota', () => {
         Result.error(
           new ChainError({
             code: RunErrorCodes.DefaultProviderExceededQuota,
-            message:
-              'You have exceeded your maximum number of free runs for today',
+            message: 'You have exceeded your maximum number of free runs for today',
           }),
         ),
       )

@@ -1,10 +1,10 @@
 'use client'
 
 import {
-  Message as ConversationMessage,
+  type Message as ConversationMessage,
   MessageRole,
-  ToolContent,
-  ToolMessage,
+  type ToolContent,
+  type ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
 
 import type { AgentToolsMap } from '@latitude-data/constants'
@@ -16,17 +16,10 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 /**
  * Checks if the tool message has an existing tool request with the same ID.
  */
-function isToolMessageResolved(
-  message: ToolMessage,
-  toolContentMap: Record<string, ToolContent>,
-) {
-  const toolResponses = message.content.filter(
-    (content) => content.type === 'tool-result',
-  )
+function isToolMessageResolved(message: ToolMessage, toolContentMap: Record<string, ToolContent>) {
+  const toolResponses = message.content.filter((content) => content.type === 'tool-result')
 
-  return toolResponses.every(
-    (toolResponse) => toolResponse.toolCallId in toolContentMap,
-  )
+  return toolResponses.every((toolResponse) => toolResponse.toolCallId in toolContentMap)
 }
 
 export const MessageList = memo(

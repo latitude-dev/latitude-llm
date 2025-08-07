@@ -13,14 +13,9 @@ export function DocumentationContent({ isOpen }: { isOpen: boolean }) {
   const { ref: iframeRef, open, navigateTo } = useDocs()
 
   const pathname = usePathname()
-  const recommendedRoute = useMemo(
-    () => getRouteFromPathname(pathname),
-    [pathname],
-  )
+  const recommendedRoute = useMemo(() => getRouteFromPathname(pathname), [pathname])
 
-  const [initialRoute, setInitialRoute] = useState<DocsRoute>(
-    DocsRoute.Introduction,
-  )
+  const [initialRoute, setInitialRoute] = useState<DocsRoute>(DocsRoute.Introduction)
   const [hasOpened, setHasOpened] = useState(false)
   const [currentRoute, setCurrentRoute] = useState<DocsRoute>(recommendedRoute)
   const [docTitle, setDocTitle] = useState('Documentation')

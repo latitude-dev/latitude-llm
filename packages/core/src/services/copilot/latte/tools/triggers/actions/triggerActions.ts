@@ -1,8 +1,5 @@
 import { z } from 'zod'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../../../../../repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '../../../../../../repositories'
 import { defineLatteTool } from '../../types'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../../lib/Result'
@@ -19,12 +16,10 @@ const triggerActions = defineLatteTool(
   async ({ projectId, versionUuid, promptUuid, actions }, { workspace }) => {
     const commitsScope = new CommitsRepository(workspace.id)
 
-    const headCommit = await commitsScope
-      .getHeadCommit(projectId)
-      .then((r) => r.unwrap())
+    const headCommit = await commitsScope.getHeadCommit(projectId).then((r) => r.unwrap())
 
     if (
-      headCommit == undefined ||
+      headCommit === undefined ||
       (versionUuid !== headCommit.uuid && versionUuid !== HEAD_COMMIT)
     ) {
       return Result.error(
@@ -35,9 +30,7 @@ const triggerActions = defineLatteTool(
     }
 
     const documentsScope = new DocumentVersionsRepository(workspace.id)
-    const documents = await documentsScope
-      .getDocumentsAtCommit(headCommit)
-      .then((r) => r.unwrap())
+    const documents = await documentsScope.getDocumentsAtCommit(headCommit).then((r) => r.unwrap())
     const transaction = new Transaction()
 
     return await transaction.call(async () => {

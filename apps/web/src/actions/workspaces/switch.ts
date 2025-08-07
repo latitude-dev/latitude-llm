@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { setSession } from '$/services/auth/setSession'
 import { authProcedure } from '../procedures'
 import { cookies } from 'next/headers'
-import { removeSession, Session } from '$/services/auth/removeSession'
+import { removeSession, type Session } from '$/services/auth/removeSession'
 
 export const switchWorkspaceAction = authProcedure
   .createServerAction()
@@ -20,9 +20,7 @@ export const switchWorkspaceAction = authProcedure
     const workspacesScope = new WorkspacesRepository(userId)
 
     // Verify the user has access to this workspace
-    const workspace = await workspacesScope
-      .find(input.workspaceId)
-      .then((r) => r.unwrap())
+    const workspace = await workspacesScope.find(input.workspaceId).then((r) => r.unwrap())
 
     // Get the current user
     const user = await unsafelyGetUser(userId)

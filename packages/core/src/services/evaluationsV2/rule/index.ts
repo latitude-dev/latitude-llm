@@ -1,12 +1,12 @@
 import {
-  EvaluationType,
+  type EvaluationType,
   RuleEvaluationMetric,
   RuleEvaluationSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import {
+import type {
   EvaluationMetricBackendSpecification,
   EvaluationMetricRunArgs,
   EvaluationMetricValidateArgs,
@@ -19,7 +19,6 @@ import { RuleEvaluationRegularExpressionSpecification } from './regularExpressio
 import { RuleEvaluationSchemaValidationSpecification } from './schemaValidation'
 import { RuleEvaluationSemanticSimilaritySpecification } from './semanticSimilarity'
 
-// prettier-ignore
 const METRICS: {
   [M in RuleEvaluationMetric]: EvaluationMetricBackendSpecification<EvaluationType.Rule, M>
 } = {
@@ -59,10 +58,7 @@ async function validate<M extends RuleEvaluationMetric>(
     return Result.error(parsing.error)
   }
 
-  const validation = await metricSpecification.validate(
-    { configuration, ...rest },
-    db,
-  )
+  const validation = await metricSpecification.validate({ configuration, ...rest }, db)
   if (validation.error) {
     return Result.error(validation.error)
   }

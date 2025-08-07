@@ -1,26 +1,20 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
-import React, { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
+import type React from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
-import {
-  ChatTextArea,
-  ErrorMessage,
-  MessageList,
-} from '$/components/ChatWrapper'
+import { ChatTextArea, ErrorMessage, MessageList } from '$/components/ChatWrapper'
 import { StatusIndicator } from '$/components/PlaygroundCommon/StatusIndicator'
 import {
-  AddMessagesFn,
-  RunPromptFn,
+  type AddMessagesFn,
+  type RunPromptFn,
   usePlaygroundChat,
 } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
-import { AgentToolsMap } from '@latitude-data/constants'
+import type { AgentToolsMap } from '@latitude-data/constants'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
-import Actions, { ActionsState } from '../Actions'
+import Actions, { type ActionsState } from '../Actions'
 
 export default function Chat({
   canChat,
@@ -71,10 +65,7 @@ export default function Chat({
   }, [abortCurrentStream, clearChat, playground.messages.length])
 
   const toolContentMap = useToolContentMap(playground.messages)
-  const parameterKeys = useMemo(
-    () => Object.keys(parameters ?? {}),
-    [parameters],
-  )
+  const parameterKeys = useMemo(() => Object.keys(parameters ?? {}), [parameters])
 
   // FIXME: Do not run side effects on useEffect. Move to event handler.
   useEffect(() => {
@@ -82,16 +73,12 @@ export default function Chat({
       runOnce.current = true
       playground.start()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playground.start])
 
   return (
     <div className='flex flex-col flex-1 h-full overflow-y-auto'>
       {showHeader && (
-        <Header
-          expandParameters={expandParameters}
-          setExpandParameters={setExpandParameters}
-        />
+        <Header expandParameters={expandParameters} setExpandParameters={setExpandParameters} />
       )}
       <Messages
         playground={playground}
@@ -118,10 +105,7 @@ function Header({ expandParameters, setExpandParameters }: ActionsState) {
   return (
     <div className='flex flex-row items-center justify-between w-full pb-3'>
       <Text.H6M>Prompt</Text.H6M>
-      <Actions
-        expandParameters={expandParameters}
-        setExpandParameters={setExpandParameters}
-      />
+      <Actions expandParameters={expandParameters} setExpandParameters={setExpandParameters} />
     </div>
   )
 }
@@ -188,9 +172,7 @@ function ChatInputBox({
         placeholder='Ask anything'
         onSubmit={playground.submitUserMessage}
         onClear={clearChat}
-        disabledSubmit={
-          playground.isLoading || !!playground.error || !hasActiveStream()
-        }
+        disabledSubmit={playground.isLoading || !!playground.error || !hasActiveStream()}
         disabledClear={playground.isLoading}
       />
     </div>

@@ -1,5 +1,5 @@
 import { env } from '@latitude-data/env'
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { NotFoundError, UnprocessableEntityError } from '../../../lib/errors'
 import {
@@ -38,9 +38,7 @@ export const generateDocumentSuggestionJob = async (
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
   const commitsRepository = new CommitsRepository(workspace.id)
-  const commit = await commitsRepository
-    .getCommitById(commitId)
-    .then((r) => r.unwrap())
+  const commit = await commitsRepository.getCommitById(commitId).then((r) => r.unwrap())
 
   const documentsRepository = new DocumentVersionsRepository(workspace.id)
   const document = await documentsRepository

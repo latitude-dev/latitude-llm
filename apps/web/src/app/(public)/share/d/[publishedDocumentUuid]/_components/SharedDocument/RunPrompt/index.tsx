@@ -1,6 +1,6 @@
 import { capitalize } from 'lodash-es'
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
-import { PublishedDocument } from '@latitude-data/core/browser'
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
+import type { PublishedDocument } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -12,7 +12,7 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { Container } from '../../Container'
 import { Messages } from '../../Messages'
-import { ServerClientMetadata } from '../types'
+import type { ServerClientMetadata } from '../types'
 import { useChat } from './useChat'
 import { usePrompt } from './usePrompt'
 
@@ -24,19 +24,14 @@ const DURATION_MS_RUN = 100
 const DURATION_MS_RESET = 100
 const CARD_Y_PADDING = 24 // 12px padding top and bottom
 
-function convertParametersToUrlSearchParams(
-  parameters: Record<string, string>,
-) {
-  const clean = Object.entries(parameters).reduce<Record<string, string>>(
-    (acc, [key, value]) => {
-      const cleanValue = value.trim()
-      if (cleanValue.length > 0) {
-        acc[encodeURIComponent(key)] = encodeURIComponent(cleanValue)
-      }
-      return acc
-    },
-    {},
-  )
+function convertParametersToUrlSearchParams(parameters: Record<string, string>) {
+  const clean = Object.entries(parameters).reduce<Record<string, string>>((acc, [key, value]) => {
+    const cleanValue = value.trim()
+    if (cleanValue.length > 0) {
+      acc[encodeURIComponent(key)] = encodeURIComponent(cleanValue)
+    }
+    return acc
+  }, {})
   return new URLSearchParams(clean).toString()
 }
 
@@ -59,7 +54,7 @@ function useParameters({
 }) {
   return useState(
     Array.from(metadata.parameters).reduce<Parameters>((acc, parameter) => {
-      let type = (metadata.config.parameters || {})[parameter]?.type
+      let type = metadata.config.parameters?.[parameter]?.type
       if (!type || !ParameterTypes.includes(type)) type = ParameterType.Text
 
       acc[parameter] = {
@@ -189,7 +184,7 @@ export function RunPrompt({
       setFormVisible(true)
       resetPromptFn()
     }, DURATION_MS_RESET)
-  }, [resetPromptFn, setFormVisible])
+  }, [resetPromptFn])
 
   const { onChat } = useChat({
     shared,
@@ -208,7 +203,7 @@ export function RunPrompt({
     originalFormHeight.current = height
     originalFormWidth.current = form.clientWidth
     setFormHeight(height)
-  }, [formHeight])
+  }, [])
   return (
     <Container
       className={cn('flex justify-center', {
@@ -229,13 +224,9 @@ export function RunPrompt({
       >
         <CardContent standalone spacing='small' className='h-full'>
           <div
-            className={cn(
-              'relative flex flex-col justify-center gap-y-4',
-              'transition-all',
-              {
-                'h-full': originalFormHeight.current !== undefined,
-              },
-            )}
+            className={cn('relative flex flex-col justify-center gap-y-4', 'transition-all', {
+              'h-full': originalFormHeight.current !== undefined,
+            })}
           >
             <div
               ref={formRef}
@@ -244,21 +235,13 @@ export function RunPrompt({
                 '-translate-y-full': !isFormVisible,
               })}
             >
-              <PromptForm
-                metadata={metadata}
-                onSubmit={onSubmit}
-                queryParams={queryParams}
-              />
+              <PromptForm metadata={metadata} onSubmit={onSubmit} queryParams={queryParams} />
             </div>
             <div
-              className={cn(
-                'absolute inset-0 transform transition-all',
-                DURATION_CLASS,
-                {
-                  'translate-y-0 opacity-100': isChatVisible,
-                  'pointer-events-none opacity-0': !isChatVisible,
-                },
-              )}
+              className={cn('absolute inset-0 transform transition-all', DURATION_CLASS, {
+                'translate-y-0 opacity-100': isChatVisible,
+                'pointer-events-none opacity-0': !isChatVisible,
+              })}
             >
               {isChatVisible && (
                 <Messages

@@ -6,7 +6,5 @@ import { createConnectToken } from '@latitude-data/core/services/integrations/pi
 export const createPipedreamTokenAction = authProcedure
   .createServerAction()
   .handler(async ({ ctx }) => {
-    return createConnectToken({ workspace: ctx.workspace }).then((r) =>
-      r.unwrap(),
-    )
+    return createConnectToken({ workspace: ctx.workspace }).then((r) => r.unwrap())
   })

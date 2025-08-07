@@ -1,17 +1,10 @@
 'use client'
 
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useDocumentVersions from '$/stores/documentVersions'
-import { ApiKey } from '@latitude-data/core/browser'
+import type { ApiKey } from '@latitude-data/core/browser'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { scan, type ConversationMetadata } from 'promptl-ai'
 
@@ -69,7 +62,7 @@ export default function DocumentationModal({
 
     return Object.entries(rawTools).map(([name, values]) => ({
       name,
-      parameters: Object.keys((values?.parameters ?? {}).properties ?? {}),
+      parameters: Object.keys(values?.parameters?.properties ?? {}),
     })) as UsedToolsDoc[]
   }, [rawTools])
   return (
@@ -95,11 +88,7 @@ export default function DocumentationModal({
   )
 }
 
-export const DocumentationModalProvider = ({
-  children,
-}: {
-  children: ReactNode
-}) => {
+export const DocumentationModalProvider = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false)
   const toggleDocumentation = () => setOpen((open) => !open)
 

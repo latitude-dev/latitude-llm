@@ -1,10 +1,7 @@
 import { useMemo } from 'react'
-import { DocumentTrigger } from '@latitude-data/core/browser'
-import { DocumentTriggerType } from '@latitude-data/constants'
-import type {
-  PipedreamComponent,
-  PipedreamComponentType,
-} from '@latitude-data/core/browser'
+import type { DocumentTrigger } from '@latitude-data/core/browser'
+import type { DocumentTriggerType } from '@latitude-data/constants'
+import type { PipedreamComponent, PipedreamComponentType } from '@latitude-data/core/browser'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import useIntegrations from '$/stores/integrations'
 
@@ -16,14 +13,13 @@ export function useIntegrationData({
 }: {
   trigger: DocumentTrigger<DocumentTriggerType.Integration>
 }) {
-  const { data: integrations, isLoading: isLoadingIntegration } =
-    useIntegrations({ withTriggers: true })
+  const { data: integrations, isLoading: isLoadingIntegration } = useIntegrations({
+    withTriggers: true,
+  })
 
   const integration = useMemo(
     () =>
-      integrations.find(
-        (integration) => integration.id === trigger.configuration.integrationId,
-      ),
+      integrations.find((integration) => integration.id === trigger.configuration.integrationId),
     [integrations, trigger.configuration.integrationId],
   )
 
@@ -32,8 +28,7 @@ export function useIntegrationData({
   if (integrationConfig && 'appName' in integrationConfig) {
     pipedreamSlug = integrationConfig.appName
   }
-  const { data: pipedreamApp, isLoading: isLoadingPipedramApp } =
-    usePipedreamApp(pipedreamSlug)
+  const { data: pipedreamApp, isLoading: isLoadingPipedramApp } = usePipedreamApp(pipedreamSlug)
 
   const isLoading = isLoadingIntegration || isLoadingPipedramApp
   const pipedreamTriggerKey = trigger.configuration.componentId
@@ -60,9 +55,7 @@ export function useIntegrationData({
     }
 
     const pipedreamTriggers = pipedreamApp.triggers ?? EMPTY_LIST
-    const pipedreamTrigger = pipedreamTriggers.find(
-      (pt) => pt.key === pipedreamTriggerKey,
-    )
+    const pipedreamTrigger = pipedreamTriggers.find((pt) => pt.key === pipedreamTriggerKey)
 
     if (!pipedreamSlug || !pipedreamTrigger) {
       return {

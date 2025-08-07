@@ -1,4 +1,4 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { autoScaleInactiveServers } from '../../../services/mcpServers/autoScaleService'
 import { Result } from '../../../lib/Result'
 

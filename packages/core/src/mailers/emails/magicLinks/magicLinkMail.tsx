@@ -1,5 +1,3 @@
-import React from 'react'
-
 import { env } from '@latitude-data/env'
 import { Link, Text } from '@react-email/components'
 
@@ -17,10 +15,7 @@ export default function MagicLinkMail({
   return (
     <ContainerLayout title='Login' previewText='Log in with this magic link'>
       <Text>Hi {user},</Text>
-      <Text>
-        Here's your magic link to access Latitude. Click the link below to log
-        in.
-      </Text>
+      <Text>Here's your magic link to access Latitude. Click the link below to log in.</Text>
       <Link
         href={createMagicLink(magicLinkToken, returnTo)}
         target='_blank'

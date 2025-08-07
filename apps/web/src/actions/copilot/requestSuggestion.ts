@@ -1,7 +1,7 @@
 'use server'
 
 import {
-  ChainStepResponse,
+  type ChainStepResponse,
   CLOUD_MESSAGES,
   PROVIDER_MODELS,
 } from '@latitude-data/core/browser'
@@ -73,17 +73,14 @@ export const requestSuggestionAction = authProcedure
       projectId: env.COPILOT_PROJECT_ID,
     }).then((r) => r.unwrap())
 
-    const result = await sdk.prompts.run(
-      env.COPILOT_PROMPT_EDITOR_COPILOT_PATH,
-      {
-        stream: false,
-        parameters: {
-          prompt: document.content,
-          request,
-          providers,
-        },
+    const result = await sdk.prompts.run(env.COPILOT_PROMPT_EDITOR_COPILOT_PATH, {
+      stream: false,
+      parameters: {
+        prompt: document.content,
+        request,
+        providers,
       },
-    )
+    })
 
     if (!result) throw new Error('Failed to request prompt suggestion')
 

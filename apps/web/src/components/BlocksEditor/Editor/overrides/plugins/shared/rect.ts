@@ -1,4 +1,4 @@
-import { Point } from './point'
+import type { Point } from './point'
 
 export class Rectangle {
   private readonly _left: number
@@ -38,12 +38,7 @@ export class Rectangle {
   }
 
   public equals({ left, top, right, bottom }: Rectangle): boolean {
-    return (
-      this.left === left &&
-      this.top === top &&
-      this.right === right &&
-      this.bottom === bottom
-    )
+    return this.left === left && this.top === top && this.right === right && this.bottom === bottom
   }
 
   public contains({ x, y }: Point): {
@@ -60,8 +55,7 @@ export class Rectangle {
     const isOnLeftSide = x < this.left
     const isOnRightSide = x > this.right
 
-    const result =
-      !isOnTopSide && !isOnBottomSide && !isOnLeftSide && !isOnRightSide
+    const result = !isOnTopSide && !isOnBottomSide && !isOnLeftSide && !isOnRightSide
 
     return {
       reason: {
@@ -93,21 +87,11 @@ export class Rectangle {
     return new Rectangle(left, top, right, bottom)
   }
 
-  static fromLTRB(
-    left: number,
-    top: number,
-    right: number,
-    bottom: number,
-  ): Rectangle {
+  static fromLTRB(left: number, top: number, right: number, bottom: number): Rectangle {
     return new Rectangle(left, top, right, bottom)
   }
 
-  static fromLTWH(
-    left: number,
-    top: number,
-    width: number,
-    height: number,
-  ): Rectangle {
+  static fromLTWH(left: number, top: number, width: number, height: number): Rectangle {
     return new Rectangle(left, top, left + width, top + height)
   }
 

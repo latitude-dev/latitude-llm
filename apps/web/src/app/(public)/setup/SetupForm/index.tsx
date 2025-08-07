@@ -1,5 +1,5 @@
 'use client'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { setupAction } from '$/actions/user/setupAction'
 import { useFormAction } from '$/hooks/useFormAction'

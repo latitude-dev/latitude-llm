@@ -1,8 +1,8 @@
-import { DocumentLog, DocumentLogWithMetadataAndError } from '../../browser'
+import type { DocumentLog, DocumentLogWithMetadataAndError } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromDocumentLog } from '../../data-access'
 import { NotFoundError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
 
 export async function computeDocumentLogWithMetadata(

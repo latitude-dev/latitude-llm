@@ -6,14 +6,10 @@ export type HandlerConfig<U, B> = {
   BodyParams: B
 }
 
-import { RouteResolver } from '$sdk/utils'
-import { LatitudeApiError } from '$sdk/utils/errors'
+import type { RouteResolver } from '$sdk/utils'
+import type { LatitudeApiError } from '$sdk/utils/errors'
+import type { Config, Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
 import type {
-  Config,
-  Message,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
-import {
   ChainCallResponseDto,
   LegacyChainEvent as ChainEvent,
   ChainEventDto,
@@ -25,11 +21,7 @@ import {
   StreamEventTypes,
   AssertedStreamType,
 } from '@latitude-data/constants'
-import {
-  AdapterMessageType,
-  ProviderAdapter,
-  type Message as PromptlMessage,
-} from 'promptl-ai'
+import type { AdapterMessageType, ProviderAdapter, Message as PromptlMessage } from 'promptl-ai'
 
 export type GetAllDocumentsParams = {
   projectId: number
@@ -169,10 +161,7 @@ export type HandlerConfigs = {
     GetOrCreateDocumentBodyParams
   >
   [HandlerType.CreateProject]: HandlerConfig<never, CreateProjectBodyParams>
-  [HandlerType.CreateVersion]: HandlerConfig<
-    CreateVersionUrlParams,
-    CreateVersionBodyParams
-  >
+  [HandlerType.CreateVersion]: HandlerConfig<CreateVersionUrlParams, CreateVersionBodyParams>
   [HandlerType.GetAllDocuments]: HandlerConfig<GetAllDocumentsParams, never>
   [HandlerType.GetAllProjects]: HandlerConfig<never, never>
   [HandlerType.GetDocument]: HandlerConfig<GetDocumentUrlParams, never>
@@ -181,14 +170,8 @@ export type HandlerConfigs = {
     GetOrCreateDocumentBodyParams
   >
   [HandlerType.GetVersion]: HandlerConfig<GetversionUrlParams, never>
-  [HandlerType.PushVersion]: HandlerConfig<
-    PushVersionUrlParams,
-    PushVersionBodyParams
-  >
-  [HandlerType.RunDocument]: HandlerConfig<
-    RunDocumentUrlParams,
-    RunDocumentBodyParams
-  >
+  [HandlerType.PushVersion]: HandlerConfig<PushVersionUrlParams, PushVersionBodyParams>
+  [HandlerType.RunDocument]: HandlerConfig<RunDocumentUrlParams, RunDocumentBodyParams>
   [HandlerType.Log]: HandlerConfig<RunDocumentUrlParams, LogBodyParams>
   [HandlerType.ToolResults]: HandlerConfig<never, ToolResultsBodyParams>
 }
@@ -203,13 +186,7 @@ export type GenerationResponse<S extends AssertedStreamType = 'text'> = {
 }
 
 export type StreamResponseCallbacks<S extends AssertedStreamType = 'text'> = {
-  onEvent?: ({
-    event,
-    data,
-  }: {
-    event: StreamEventTypes
-    data: ChainEventDto
-  }) => void
+  onEvent?: ({ event, data }: { event: StreamEventTypes; data: ChainEventDto }) => void
   onFinished?: (data: GenerationResponse<S>) => void
   onError?: (error: LatitudeApiError) => void
 }
@@ -276,14 +253,13 @@ export type RunPromptOptions<
   signal?: AbortSignal
 }
 
-export type RenderPromptOptions<M extends AdapterMessageType = PromptlMessage> =
-  {
-    prompt: {
-      content: string
-    }
-    parameters: Record<string, unknown>
-    adapter?: ProviderAdapter<M>
+export type RenderPromptOptions<M extends AdapterMessageType = PromptlMessage> = {
+  prompt: {
+    content: string
   }
+  parameters: Record<string, unknown>
+  adapter?: ProviderAdapter<M>
+}
 
 export type RenderChainOptions<
   M extends AdapterMessageType = PromptlMessage,
@@ -292,10 +268,7 @@ export type RenderChainOptions<
   prompt: Prompt
   parameters: Record<string, unknown>
   adapter?: ProviderAdapter<M>
-  onStep: (args: {
-    config: Config
-    messages: M[]
-  }) => Promise<string | Omit<M, 'role'>>
+  onStep: (args: { config: Config; messages: M[] }) => Promise<string | Omit<M, 'role'>>
   tools?: RenderToolCalledFn<Tool>
   logResponses?: boolean
 }

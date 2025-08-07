@@ -11,13 +11,7 @@ type ModelStats = {
   rollingDocumentLogs: { count: number; date: string }[]
 }
 
-export function ModelCharts({
-  stats,
-  isLoading,
-}: {
-  stats?: ModelStats
-  isLoading: boolean
-}) {
+export function ModelCharts({ stats, isLoading }: { stats?: ModelStats; isLoading: boolean }) {
   const runsPerModelData = useMemo(() => {
     if (!stats?.runsPerModel) return []
     return Object.entries(stats.runsPerModel).map(([model, runs]) => ({
@@ -67,9 +61,7 @@ export function ModelCharts({
             }}
           />
         )}
-        {!runsPerModelData.length && (
-          <ChartBlankSlate>No runs found so far.</ChartBlankSlate>
-        )}
+        {!runsPerModelData.length && <ChartBlankSlate>No runs found so far.</ChartBlankSlate>}
       </ChartWrapper>
 
       <ChartWrapper label='Total cost per model' loading={isLoading}>
@@ -84,8 +76,7 @@ export function ModelCharts({
                 label: 'Cost (USD)',
                 type: 'number',
                 min: 0,
-                tickFormatter: (value) =>
-                  `${formatCostInMillicents(Number(value))}`,
+                tickFormatter: (value) => `${formatCostInMillicents(Number(value))}`,
               },
               data: costPerModelData,
               tooltipContent: (item) => (
@@ -96,18 +87,14 @@ export function ModelCharts({
                   </div>
                   <div className='flex w-full gap-2 justify-between'>
                     <Text.H6B>Cost</Text.H6B>
-                    <Text.H6>
-                      {formatCostInMillicents(Number(Number(item.y)))}
-                    </Text.H6>
+                    <Text.H6>{formatCostInMillicents(Number(Number(item.y)))}</Text.H6>
                   </div>
                 </div>
               ),
             }}
           />
         )}
-        {!costPerModelData.length && (
-          <ChartBlankSlate>No cost data found so far.</ChartBlankSlate>
-        )}
+        {!costPerModelData.length && <ChartBlankSlate>No cost data found so far.</ChartBlankSlate>}
       </ChartWrapper>
     </div>
   )

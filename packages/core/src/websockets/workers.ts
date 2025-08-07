@@ -43,11 +43,7 @@ export class WebsocketClient {
     return this.sendEventWithRetry(event, data, false)
   }
 
-  private async sendEventWithRetry(
-    event: string,
-    data: any,
-    isRetry: boolean,
-  ): Promise<any> {
+  private async sendEventWithRetry(event: string, data: any, isRetry: boolean): Promise<any> {
     const token = await this.getToken()
 
     try {
@@ -72,8 +68,7 @@ export class WebsocketClient {
           !isRetry &&
           (response.status === 401 ||
             response.status === 403 ||
-            (error.error &&
-              error.error.includes('exp claim timestamp check failed')))
+            error.error?.includes('exp claim timestamp check failed'))
         ) {
           // Force token refresh
           this.token = null

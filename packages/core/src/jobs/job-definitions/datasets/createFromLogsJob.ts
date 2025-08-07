@@ -1,10 +1,7 @@
-import { Job } from 'bullmq'
-import { DocumentLogFilterOptions } from '../../../constants'
+import type { Job } from 'bullmq'
+import type { DocumentLogFilterOptions } from '../../../constants'
 import { unsafelyFindWorkspace } from '../../../data-access'
-import {
-  DocumentVersionsRepository,
-  UsersRepository,
-} from '../../../repositories'
+import { DocumentVersionsRepository, UsersRepository } from '../../../repositories'
 import { findOrCreateDataset } from '../../../services/datasets/findOrCreate'
 import { CursorState } from '../documentLogs/downloadLogsJob'
 import { database } from '../../../client'
@@ -28,9 +25,7 @@ type CreateDatasetFromLogsJobProps = {
 
 const BATCH_SIZE = 1000
 
-export const createDatasetFromLogsJob = async (
-  job: Job<CreateDatasetFromLogsJobProps>,
-) => {
+export const createDatasetFromLogsJob = async (job: Job<CreateDatasetFromLogsJobProps>) => {
   const {
     name,
     userId,
@@ -51,9 +46,7 @@ export const createDatasetFromLogsJob = async (
   const author = await repo.find(userId).then((r) => r.unwrap())
 
   const docsRepo = new DocumentVersionsRepository(workspaceId)
-  const document = await docsRepo
-    .find(documentVersionId)
-    .then((r) => r.unwrap())
+  const document = await docsRepo.find(documentVersionId).then((r) => r.unwrap())
   const dt = await findOrCreateDataset({
     name,
     author,
@@ -75,10 +68,7 @@ export const createDatasetFromLogsJob = async (
         createdAt: documentLogs.createdAt,
       })
       .from(documentLogs)
-      .innerJoin(
-        providerLogs,
-        eq(providerLogs.documentLogUuid, documentLogs.uuid),
-      )
+      .innerJoin(providerLogs, eq(providerLogs.documentLogUuid, documentLogs.uuid))
       .innerJoin(commits, eq(documentLogs.commitId, commits.id))
       .where(
         and(
@@ -110,9 +100,7 @@ export const createDatasetFromLogsJob = async (
     totalProcessed += results.length
 
     // Update job progress
-    const progress = Math.floor(
-      (totalProcessed / (totalProcessed + BATCH_SIZE)) * 100,
-    )
+    const progress = Math.floor((totalProcessed / (totalProcessed + BATCH_SIZE)) * 100)
     await job.updateProgress(progress)
 
     if (results.length < BATCH_SIZE) {

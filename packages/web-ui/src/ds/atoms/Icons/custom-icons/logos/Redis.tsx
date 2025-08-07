@@ -1,4 +1,4 @@
-import { type LucideProps } from 'lucide-react'
+import type { LucideProps } from 'lucide-react'
 
 export default function Redis(props: LucideProps) {
   return (
@@ -36,10 +36,7 @@ export default function Redis(props: LucideProps) {
         d='M159.283 32.757l-22.01 2.285-4.927 11.856-7.958-13.23-25.415-2.284 18.964-6.839-5.69-10.498 17.755 6.944 16.738-5.48-4.524 10.855 17.067 6.391M131.032 90.275L89.955 73.238l58.86-9.035-17.783 26.072M74.082 39.347c17.375 0 31.46 5.46 31.46 12.194 0 6.736-14.085 12.195-31.46 12.195s-31.46-5.46-31.46-12.195c0-6.734 14.085-12.194 31.46-12.194'
         fill='#FFF'
       />
-      <path
-        d='M185.295 35.998l34.836 13.766-34.806 13.753-.03-27.52'
-        fill='currentColor'
-      />
+      <path d='M185.295 35.998l34.836 13.766-34.806 13.753-.03-27.52' fill='currentColor' />
       <path
         d='M146.755 51.243l38.54-15.245.03 27.519-3.779 1.478-34.791-13.752'
         fill='currentColor'

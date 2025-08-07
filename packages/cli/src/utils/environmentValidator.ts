@@ -1,4 +1,4 @@
-import { LockFileManager } from './lockFileManager'
+import type { LockFileManager } from './lockFileManager'
 
 /**
  * Verify project environment
@@ -15,9 +15,7 @@ export async function validateEnvironment(
   if (checkLockFile) {
     const lockFileExists = await lockFileManager.exists(projectPath)
     if (!lockFileExists) {
-      throw new Error(
-        '❌ No latitude-lock.json file found. Please run "latitude init" first.',
-      )
+      throw new Error('❌ No latitude-lock.json file found. Please run "latitude init" first.')
     }
   }
 }

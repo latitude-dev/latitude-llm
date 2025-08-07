@@ -1,19 +1,19 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
-  LegacyChainEvent,
+  type LegacyChainEvent,
   LegacyChainEventTypes,
-  ChainStepResponse,
-  Message,
+  type ChainStepResponse,
+  type Message,
   StreamEventTypes,
-  StreamType,
+  type StreamType,
 } from '../../../../constants'
-import { ValidatedChainStep } from '../../../../services/chains/ChainValidator'
+import type { ValidatedChainStep } from '../../../../services/chains/ChainValidator'
 
-import { FinishReason } from 'ai'
+import type { FinishReason } from 'ai'
 import { buildMessagesFromResponse } from '../../../../helpers'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { ValidatedAgentStep } from '../../../../services/__deprecated/agents/AgentStepValidator'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { ValidatedAgentStep } from '../../../../services/__deprecated/agents/AgentStepValidator'
 
 type ValidatedStep = ValidatedChainStep | ValidatedAgentStep
 
@@ -24,8 +24,7 @@ export function enqueueChainEvent(
   controller.enqueue(event)
 }
 
-export const isChainError = (e: unknown): e is ChainError<RunErrorCodes> =>
-  e instanceof ChainError
+export const isChainError = (e: unknown): e is ChainError<RunErrorCodes> => e instanceof ChainError
 
 function parseError(e: unknown) {
   if (!isChainError(e)) {
@@ -194,8 +193,7 @@ export class ChainStreamConsumer {
     finishReason: FinishReason
     responseMessages?: Message[]
   }) {
-    const responseMessages =
-      defaultResponseMessages ?? buildMessagesFromResponse({ response })
+    const responseMessages = defaultResponseMessages ?? buildMessagesFromResponse({ response })
     return ChainStreamConsumer.chainCompleted({
       controller: this.controller,
       response,

@@ -3,7 +3,7 @@ export * from './BarChart'
 export * from './PanelChart'
 export * from './ScatterChart'
 export * from './types'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { cn } from '../../../lib/utils'
 import { Icon } from '../../atoms/Icons'
 import { Skeleton } from '../../atoms/Skeleton'
@@ -27,21 +27,15 @@ export function ChartWrapper({
 }) {
   return (
     <div
-      className={cn(
-        'h-full w-full flex-1 flex flex-col gap-2 p-4 border rounded-lg',
-        className,
-        {
-          'border-border': !error,
-          'border-destructive': !!error,
-          'bg-destructive/50': !!error,
-        },
-      )}
+      className={cn('h-full w-full flex-1 flex flex-col gap-2 p-4 border rounded-lg', className, {
+        'border-border': !error,
+        'border-destructive': !!error,
+        'bg-destructive/50': !!error,
+      })}
     >
       {label && (
         <span className='flex flex-row items-center gap-2'>
-          <Text.H5 color={error ? 'destructiveForeground' : 'foregroundMuted'}>
-            {label}
-          </Text.H5>
+          <Text.H5 color={error ? 'destructiveForeground' : 'foregroundMuted'}>{label}</Text.H5>
           {tooltip && (
             <Tooltip
               asChild
@@ -59,9 +53,7 @@ export function ChartWrapper({
           )}
         </span>
       )}
-      {loading && (
-        <Skeleton className='min-h-10 h-full w-full bg-muted animate-pulse' />
-      )}
+      {loading && <Skeleton className='min-h-10 h-full w-full bg-muted animate-pulse' />}
       {error && (
         <>
           <Text.H5B color='destructiveForeground'>{error.name}</Text.H5B>

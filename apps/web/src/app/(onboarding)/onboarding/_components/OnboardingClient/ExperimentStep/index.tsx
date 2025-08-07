@@ -4,17 +4,12 @@ import { MessageList } from '$/components/ChatWrapper'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient'
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { ParameterTable } from './ParameterTable'
 import { ExperimentVariants } from './ExperimentVariants'
-import {
-  DocumentVersion,
-  Project,
-  Commit,
-  Dataset,
-} from '@latitude-data/core/browser'
+import type { DocumentVersion, Project, Commit, Dataset } from '@latitude-data/core/browser'
 import { useExperiments } from '$/stores/experiments'
-import { OnboardingDocumentParameterKeys } from '@latitude-data/constants/onboarding'
+import type { OnboardingDocumentParameterKeys } from '@latitude-data/constants/onboarding'
 import type { ExperimentVariant } from '@latitude-data/constants/experiments'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { envClient } from '$/envClient'
@@ -48,11 +43,7 @@ export function ExperimentStep({
   dataset: Dataset
   messages: Message[]
   currentStep: OnboardingStep
-  onCompleteOnboarding: ({
-    experimentUuids,
-  }: {
-    experimentUuids: string[]
-  }) => Promise<void>
+  onCompleteOnboarding: ({ experimentUuids }: { experimentUuids: string[] }) => Promise<void>
 }) {
   const { create, isCreating } = useExperiments(
     {
@@ -107,22 +98,13 @@ export function ExperimentStep({
       datasetLabels: {},
       evaluationUuids,
     })
-  }, [
-    create,
-    commit,
-    document,
-    project.id,
-    dataset.id,
-    evaluationUuids,
-    variants,
-  ])
+  }, [create, commit, document, project.id, dataset.id, evaluationUuids, variants])
   return (
     <div
       className={cn(
         'absolute inset-x-0 top-0 flex flex-col gap-12 transition-opacity duration-500 ease-in-out',
         {
-          'opacity-100':
-            currentStep === OnboardingStep.ShowResultsAndExperiment,
+          'opacity-100': currentStep === OnboardingStep.ShowResultsAndExperiment,
           'opacity-0 pointer-events-none invisible':
             currentStep !== OnboardingStep.ShowResultsAndExperiment,
         },
@@ -142,9 +124,9 @@ export function ExperimentStep({
             Nice! But something is missing...
           </Text.H4B>
           <Text.H6 centered display='block' color='foregroundMuted'>
-            To get the best results from your prompt, it's key to test it with a
-            variety of inputs. You can do this by using datasets, which you can
-            upload or create yourself. Here's a sample dataset for this prompt.
+            To get the best results from your prompt, it's key to test it with a variety of inputs.
+            You can do this by using datasets, which you can upload or create yourself. Here's a
+            sample dataset for this prompt.
           </Text.H6>
         </div>
         <ParameterTable />

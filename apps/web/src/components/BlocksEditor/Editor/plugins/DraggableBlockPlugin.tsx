@@ -1,12 +1,8 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import {
-  $createParagraphNode,
-  $createTextNode,
-  $getNearestNodeFromDOMNode,
-} from 'lexical'
-import { MouseEvent, useCallback, useRef, useState } from 'react'
+import { $createParagraphNode, $createTextNode, $getNearestNodeFromDOMNode } from 'lexical'
+import { type MouseEvent, useCallback, useRef, useState } from 'react'
 
-import { $isParagraphNode, LexicalNode } from 'lexical'
+import { $isParagraphNode, type LexicalNode } from 'lexical'
 import { DraggableBlockPlugin_EXPERIMENTAL } from '../overrides/plugins/DraggableBlockPlugin'
 
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -30,9 +26,7 @@ export function DraggableBlockPlugin(_p: DraggableBlockPluginProps) {
   const [editor] = useLexicalComposerContext()
   const menuRef = useRef<HTMLDivElement>(null)
   const targetLineRef = useRef<HTMLDivElement>(null)
-  const [draggableElement, setDraggableElement] = useState<HTMLElement | null>(
-    null,
-  )
+  const [draggableElement, setDraggableElement] = useState<HTMLElement | null>(null)
 
   const insertBlock = useCallback(
     (e: MouseEvent) => {
@@ -75,28 +69,25 @@ export function DraggableBlockPlugin(_p: DraggableBlockPluginProps) {
     return $isStepBlockNode(node) || $isMessageBlockNode(node)
   }, [])
 
-  const validateDrop = useCallback(
-    (draggedNode: LexicalNode, targetNode: LexicalNode) => {
-      // Never drop targets
-      if ($isParagraphNode(targetNode)) return false
-      if ($isCodeNode(targetNode)) return false
+  const validateDrop = useCallback((draggedNode: LexicalNode, targetNode: LexicalNode) => {
+    // Never drop targets
+    if ($isParagraphNode(targetNode)) return false
+    if ($isCodeNode(targetNode)) return false
 
-      // Handle direct drops onto custom blocks
-      if ($isMessageBlockNode(targetNode)) {
-        // Message blocks can only contain paragraphs (no custom blocks)
-        return $isParagraphNode(draggedNode)
-      }
+    // Handle direct drops onto custom blocks
+    if ($isMessageBlockNode(targetNode)) {
+      // Message blocks can only contain paragraphs (no custom blocks)
+      return $isParagraphNode(draggedNode)
+    }
 
-      if ($isStepBlockNode(targetNode)) {
-        // Step blocks can contain message blocks and paragraphs, but not other step blocks
-        return $isParagraphNode(draggedNode) || $isMessageBlockNode(draggedNode)
-      }
+    if ($isStepBlockNode(targetNode)) {
+      // Step blocks can contain message blocks and paragraphs, but not other step blocks
+      return $isParagraphNode(draggedNode) || $isMessageBlockNode(draggedNode)
+    }
 
-      // Root level or other contexts - allow all block types
-      return true
-    },
-    [],
-  )
+    // Root level or other contexts - allow all block types
+    return true
+  }, [])
 
   return (
     <DraggableBlockPlugin_EXPERIMENTAL
@@ -107,10 +98,7 @@ export function DraggableBlockPlugin(_p: DraggableBlockPluginProps) {
       menuComponent={
         <div
           ref={menuRef}
-          className={cn(
-            DRAGGABLE_BLOCK_MENU_CLASSNAME,
-            'absolute pr-1 top-0 z-[1000]',
-          )}
+          className={cn(DRAGGABLE_BLOCK_MENU_CLASSNAME, 'absolute pr-1 top-0 z-[1000]')}
         >
           <div
             className={cn(

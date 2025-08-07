@@ -1,13 +1,8 @@
-import {
-  DocumentLog,
-  ProviderLog,
-  SerializedDocumentLog,
-  Workspace,
-} from '../../browser'
+import type { DocumentLog, ProviderLog, SerializedDocumentLog, Workspace } from '../../browser'
 import { database } from '../../client'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import { PromisedResult } from '../../lib/Transaction'
+import type { PromisedResult } from '../../lib/Transaction'
 import { ProviderLogsRepository } from '../../repositories'
 import { serializeForEvaluation as serializeProviderLog } from '../providerLogs'
 
@@ -54,9 +49,7 @@ export async function serialize(
     .then((r) => r.unwrap())
 
   if (!providerLogs.length) {
-    return Result.error(
-      new NotFoundError('ProviderLogs not found for DocumentLog'),
-    )
+    return Result.error(new NotFoundError('ProviderLogs not found for DocumentLog'))
   }
 
   return serializeAggregatedProviderLog({ documentLog, providerLogs })

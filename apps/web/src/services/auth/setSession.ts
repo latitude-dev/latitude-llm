@@ -1,10 +1,10 @@
-import { type TokenType } from '@latitude-data/core/websockets/constants'
+import type { TokenType } from '@latitude-data/core/websockets/constants'
 import { generateWebsocketToken } from '@latitude-data/core/websockets/utils'
 import { cookies } from 'next/headers'
 
 import { lucia } from '.'
-import { SessionData } from './getCurrentUser'
-import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies'
+import type { SessionData } from './getCurrentUser'
+import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies'
 
 type PartialSession = Omit<SessionData, 'session'>
 export async function setWebsocketSessionCookie(

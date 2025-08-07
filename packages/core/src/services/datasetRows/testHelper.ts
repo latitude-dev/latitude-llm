@@ -1,5 +1,5 @@
-import { promises as fs } from 'fs'
-import path from 'path'
+import { promises as fs } from 'node:fs'
+import path from 'node:path'
 import { TEST_DISK_LOCATION } from '../../tests/testDrive'
 
 const TEST_CSV_CONTENT = `name,surname,age,nationality

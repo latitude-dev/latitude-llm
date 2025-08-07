@@ -1,9 +1,9 @@
 import { tagAttributeIsLiteral } from '$compiler/compiler/utils'
 import errors from '$compiler/error/errors'
-import { ChainStepTag } from '$compiler/parser/interfaces'
-import { Config } from '$compiler/types'
+import type { ChainStepTag } from '$compiler/parser/interfaces'
+import type { Config } from '$compiler/types'
 
-import { CompileNodeContext } from '../../types'
+import type { CompileNodeContext } from '../../types'
 
 function isValidConfig(value: unknown): value is Config | undefined {
   if (value === undefined) return true

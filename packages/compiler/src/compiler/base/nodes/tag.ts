@@ -6,7 +6,7 @@ import {
   isToolCallTag,
 } from '$compiler/compiler/utils'
 import errors from '$compiler/error/errors'
-import {
+import type {
   ChainStepTag,
   ContentTag,
   ElementTag,
@@ -15,7 +15,7 @@ import {
   ToolCallTag,
 } from '$compiler/parser/interfaces'
 
-import { CompileNodeContext } from '../types'
+import type { CompileNodeContext } from '../types'
 import { compile as resolveChainStep } from './tags/chainStep'
 import { compile as resolveContent } from './tags/content'
 import { compile as resolveMessage } from './tags/message'
@@ -52,14 +52,11 @@ async function resolveTagAttributes({
         const resolvedValue = await resolveExpression(expression, scope)
         if (resolvedValue === undefined) continue
         accumulatedValue.push(resolvedValue)
-        continue
       }
     }
 
     const finalValue =
-      accumulatedValue.length > 1
-        ? accumulatedValue.map(String).join('')
-        : accumulatedValue[0]
+      accumulatedValue.length > 1 ? accumulatedValue.map(String).join('') : accumulatedValue[0]
 
     attributes[name] = finalValue
   }
@@ -102,10 +99,7 @@ export async function compile(props: CompileNodeContext<ElementTag>) {
   }
 
   if (isChainStepTag(node)) {
-    await resolveChainStep(
-      props as CompileNodeContext<ChainStepTag>,
-      attributes,
-    )
+    await resolveChainStep(props as CompileNodeContext<ChainStepTag>, attributes)
     return
   }
 

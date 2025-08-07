@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  buildConfigFieldName,
-  buildProviderPayload,
-} from './buildProviderPayload'
+import { buildConfigFieldName, buildProviderPayload } from './buildProviderPayload'
 import { Providers } from '@latitude-data/constants'
 
 describe('buildProviderPayload', () => {

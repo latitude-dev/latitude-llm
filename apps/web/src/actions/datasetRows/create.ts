@@ -10,9 +10,7 @@ export const createDatasetRowAction = authProcedure
   .input(z.object({ datasetId: z.number() }), { type: 'json' })
   .handler(async ({ ctx, input }) => {
     const datasetRepo = new DatasetsRepository(ctx.workspace.id)
-    const dataset = await datasetRepo
-      .find(input.datasetId)
-      .then((r) => r.unwrap())
+    const dataset = await datasetRepo.find(input.datasetId).then((r) => r.unwrap())
 
     return createDatasetEmptyRow({
       workspace: ctx.workspace,

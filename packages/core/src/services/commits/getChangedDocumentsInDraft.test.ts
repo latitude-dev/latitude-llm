@@ -1,21 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   ModifiedDocumentType,
-  Project,
+  type Project,
   Providers,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '../../browser'
 import { destroyDocument, updateDocument } from '../documents'
-import {
-  createDocumentVersion,
-  createDraft,
-  createProject,
-  helpers,
-} from '../../tests/factories'
+import { createDocumentVersion, createDraft, createProject, helpers } from '../../tests/factories'
 import { getCommitChanges } from './getChanges'
 import { mergeCommit } from './merge'
 
@@ -142,7 +137,7 @@ describe('publishDraftCommit', () => {
       commit: draftCommit,
     }).then((r) => r.unwrap())
     await updateDocument({
-      document: documents['doc2']!,
+      document: documents.doc2!,
       content: helpers.createPrompt({
         provider: 'openai',
         content: '{{ WRONG ',
@@ -157,7 +152,7 @@ describe('publishDraftCommit', () => {
 
     expect(changes).toEqual([
       {
-        documentUuid: documents['doc2']!.documentUuid,
+        documentUuid: documents.doc2!.documentUuid,
         path: 'doc2',
         changeType: ModifiedDocumentType.Updated,
         errors: 1,
@@ -190,7 +185,7 @@ describe('publishDraftCommit', () => {
 
     // Renaming the doc2 will make the doc1 to contain errors
     await updateDocument({
-      document: documents['doc2']!,
+      document: documents.doc2!,
       path: 'new-doc2',
       commit: newCommit,
     }).then((r) => r.unwrap())
@@ -211,7 +206,7 @@ describe('publishDraftCommit', () => {
     expect(changes).toEqual(
       expect.arrayContaining([
         {
-          documentUuid: documents['doc2']!.documentUuid,
+          documentUuid: documents.doc2!.documentUuid,
           path: 'new-doc2',
           changeType: ModifiedDocumentType.UpdatedPath,
           errors: 0,

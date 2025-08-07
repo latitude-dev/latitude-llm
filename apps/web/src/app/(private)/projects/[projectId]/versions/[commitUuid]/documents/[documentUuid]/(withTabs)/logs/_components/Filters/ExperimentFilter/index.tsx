@@ -29,11 +29,7 @@ export function ExperimentFilter({
   return (
     <Button variant='outline' onClick={() => onChange(undefined)}>
       <div className='flex flex-row items-center gap-2 max-w-40'>
-        <Text.H5
-          noWrap
-          ellipsis
-          color={selectedExperimentId ? 'primary' : 'foregroundMuted'}
-        >
+        <Text.H5 noWrap ellipsis color={selectedExperimentId ? 'primary' : 'foregroundMuted'}>
           {selectedExperiment?.name ?? 'Unknown experiment'}
         </Text.H5>
         <Icon name='close' color='foregroundMuted' />

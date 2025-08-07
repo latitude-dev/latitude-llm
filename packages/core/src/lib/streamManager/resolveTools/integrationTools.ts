@@ -1,13 +1,13 @@
-import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
-import { PromisedResult } from '../../Transaction'
+import { BadRequestError, type LatitudeError, NotFoundError } from '../../errors'
+import type { PromisedResult } from '../../Transaction'
 import { Result } from '../../Result'
-import { ResolvedTools, ToolSource } from './types'
+import { type ResolvedTools, ToolSource } from './types'
 import { IntegrationsRepository } from '../../../repositories'
 import { listTools } from '../../../services/integrations'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { Tool } from 'ai'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { Tool } from 'ai'
 import { callIntegrationTool } from '../../../services/integrations/McpClient/callTool'
-import { StreamManager } from '..'
+import type { StreamManager } from '..'
 import { LATITUDE_TOOL_PREFIX } from '@latitude-data/constants'
 import { telemetry } from '../../../telemetry'
 
@@ -37,15 +37,11 @@ export async function resolveIntegrationTools({
 
   const invalidToolId = integrationToolIds.find((t) => t.length !== 2)
   if (invalidToolId) {
-    return Result.error(
-      new BadRequestError(`Invalid tool id: '${invalidToolId.join('/')}'`),
-    )
+    return Result.error(new BadRequestError(`Invalid tool id: '${invalidToolId.join('/')}'`))
   }
 
   const resolvedTools: ResolvedTools = {}
-  const integrationsScope = new IntegrationsRepository(
-    streamManager.workspace.id,
-  )
+  const integrationsScope = new IntegrationsRepository(streamManager.workspace.id)
   const integrationTools: Record<string, Record<string, Tool>> = {}
 
   for (const [integrationName, toolName] of integrationToolIds) {
@@ -57,29 +53,23 @@ export async function resolveIntegrationTools({
     }).then((r) => r.unwrap())
 
     if (toolName === '*') {
-      Object.entries(integrationAvailableTools).forEach(
-        ([toolName, definition]) => {
-          resolvedTools[
-            `${LATITUDE_TOOL_PREFIX}_${integrationName}_${toolName}`
-          ] = {
-            definition,
-            sourceData: {
-              source: ToolSource.Integration,
-              integrationName,
-              toolName,
-            },
-          }
-        },
-      )
+      Object.entries(integrationAvailableTools).forEach(([toolName, definition]) => {
+        resolvedTools[`${LATITUDE_TOOL_PREFIX}_${integrationName}_${toolName}`] = {
+          definition,
+          sourceData: {
+            source: ToolSource.Integration,
+            integrationName,
+            toolName,
+          },
+        }
+      })
 
       continue
     }
 
     if (!integrationAvailableTools[toolName]) {
       return Result.error(
-        new NotFoundError(
-          `Tool '${toolName}' not found in Integration '${integrationName}'`,
-        ),
+        new NotFoundError(`Tool '${toolName}' not found in Integration '${integrationName}'`),
       )
     }
 
@@ -103,8 +93,7 @@ async function addIntegrationTools({
   integrationsScope: IntegrationsRepository
   streamManager: StreamManager
 }) {
-  if (integrationTools[integrationName])
-    return Result.ok(integrationTools[integrationName])
+  if (integrationTools[integrationName]) return Result.ok(integrationTools[integrationName])
 
   const integrationResult = await integrationsScope.findByName(integrationName)
   if (integrationResult.error) return integrationResult

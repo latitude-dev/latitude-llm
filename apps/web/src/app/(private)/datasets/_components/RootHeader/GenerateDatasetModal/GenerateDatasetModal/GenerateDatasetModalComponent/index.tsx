@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
 import Link from 'next/link'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
@@ -99,9 +99,7 @@ export function GenerateDatasetModalComponent({
               </Button>
             </div>
           </div>
-          <div className='justify-end flex-grow'>
-            {generateIsLoading && <LoadingText />}
-          </div>
+          <div className='justify-end flex-grow'>{generateIsLoading && <LoadingText />}</div>
         </div>
       }
     >
@@ -133,8 +131,7 @@ export function GenerateDatasetModalComponent({
                 {parameters.length > 0 && (
                   <div className='flex flex-col gap-2'>
                     <Text.H6 color='foregroundMuted'>
-                      The AI agent will generate a dataset with these
-                      parameters:
+                      The AI agent will generate a dataset with these parameters:
                     </Text.H6>
                     <div className='flex flex-wrap gap-2'>
                       {parameters.map((param, index) => (
@@ -177,13 +174,7 @@ export function GenerateDatasetModalComponent({
             ) : null}
           </FormWrapper>
         </form>
-        {errorMessage && (
-          <Alert
-            title='Error'
-            description={errorMessage}
-            variant='destructive'
-          />
-        )}
+        {errorMessage && <Alert title='Error' description={errorMessage} variant='destructive' />}
         {previewIsLoading && !previewDone && (
           <div className='animate-in fade-in slide-in-from-top-5 duration-300 overflow-y-hidden'>
             <TableSkeleton rows={10} cols={parameters} maxHeight={320} />
@@ -191,17 +182,14 @@ export function GenerateDatasetModalComponent({
         )}
         {previewDone && previewData.rows.length > 0 && (
           <div className='animate-in fade-in duration-300 flex flex-col gap-2'>
-            <PreviewTable
-              rows={previewData.rows}
-              headers={previewData.headers}
-            />
+            <PreviewTable rows={previewData.rows} headers={previewData.headers} />
             <div className='flex items-start gap-2'>
               <Tooltip trigger={<Icon name='info' color='foregroundMuted' />}>
                 {explanation}
               </Tooltip>
               <Text.H6 color='foregroundMuted'>
-                This is a preview of the dataset. You can generate the complete
-                dataset by clicking the button below.
+                This is a preview of the dataset. You can generate the complete dataset by clicking
+                the button below.
               </Text.H6>
             </div>
           </div>

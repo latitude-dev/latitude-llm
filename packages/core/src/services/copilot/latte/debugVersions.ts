@@ -1,6 +1,6 @@
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { CommitsRepository } from '../../../repositories'
 import { isFeatureEnabledByName } from '../../workspaceFeatures/isFeatureEnabledByName'
 import { assertCopilotIsSupported, getCopilotDocument } from './helpers'
@@ -11,27 +11,18 @@ export type LatteVersion = {
   isLive: boolean
 }
 
-async function assertLatteDebugModeIsEnabled(
-  workspaceId: number,
-): PromisedResult<undefined> {
-  const isEnabledResult = await isFeatureEnabledByName(
-    workspaceId,
-    'latteDebugMode',
-  )
+async function assertLatteDebugModeIsEnabled(workspaceId: number): PromisedResult<undefined> {
+  const isEnabledResult = await isFeatureEnabledByName(workspaceId, 'latteDebugMode')
   if (!Result.isOk(isEnabledResult)) return isEnabledResult
 
   if (!isEnabledResult.unwrap()) {
-    return Result.error(
-      new BadRequestError('This workspace cannot use Latte Debug Mode'),
-    )
+    return Result.error(new BadRequestError('This workspace cannot use Latte Debug Mode'))
   }
 
   return Result.nil()
 }
 
-export async function getLatteDebugVersions(
-  workspaceId: number,
-): PromisedResult<LatteVersion[]> {
+export async function getLatteDebugVersions(workspaceId: number): PromisedResult<LatteVersion[]> {
   const featureEnabledResult = await assertLatteDebugModeIsEnabled(workspaceId)
   if (!Result.isOk(featureEnabledResult)) return featureEnabledResult
 

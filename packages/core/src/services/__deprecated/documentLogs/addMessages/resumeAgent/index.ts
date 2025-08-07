@@ -1,29 +1,27 @@
 import {
-  AssistantMessage,
-  Config,
+  type AssistantMessage,
+  type Config,
   ContentType,
-  Message,
-  MessageContent,
+  type Message,
+  type MessageContent,
   MessageRole,
-  ToolRequestContent,
+  type ToolRequestContent,
 } from '@latitude-data/compiler'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ChainStreamManager } from '../../../../../__deprecated/lib/chainStreamManager'
-import { LogSources, ProviderLog, Workspace } from '../../../../../browser'
-import { PromptSource } from '../../../../../constants'
+import type { LogSources, ProviderLog, Workspace } from '../../../../../browser'
+import type { PromptSource } from '../../../../../constants'
 import { Result } from '../../../../../lib/Result'
 import { buildProvidersMap } from '../../../../providerApiKeys/buildMap'
 import { runAgentStep } from '../../../agents/runStep'
 
 function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
-  const toolContents: ToolRequestContent[] = providerLog.toolCalls.map(
-    (toolCall) => ({
-      type: ContentType.toolCall,
-      toolCallId: toolCall.id,
-      toolName: toolCall.name,
-      args: toolCall.arguments,
-    }),
-  )
+  const toolContents: ToolRequestContent[] = providerLog.toolCalls.map((toolCall) => ({
+    type: ContentType.toolCall,
+    toolCallId: toolCall.id,
+    toolName: toolCall.name,
+    args: toolCall.arguments,
+  }))
 
   const textContents = providerLog.responseText
     ? [{ type: ContentType.text, text: providerLog.responseText }]
@@ -63,10 +61,7 @@ export async function resumeAgent({
     workspaceId: workspace.id,
   })
 
-  const newMessages = [
-    buildAssistantMessage(providerLog),
-    ...userProvidedMessags,
-  ]
+  const newMessages = [buildAssistantMessage(providerLog), ...userProvidedMessags]
 
   const chainStreamManager = new ChainStreamManager({
     workspace,

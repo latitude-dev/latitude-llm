@@ -1,12 +1,10 @@
 import { asc, eq, getTableColumns } from 'drizzle-orm'
 
-import { User, Workspace, WorkspaceDto } from '../browser'
+import type { User, Workspace, WorkspaceDto } from '../browser'
 import { database } from '../client'
 import { memberships, users } from '../schema'
 
-export async function findFirstUserInWorkspace(
-  workspace: WorkspaceDto | Workspace,
-) {
+export async function findFirstUserInWorkspace(workspace: WorkspaceDto | Workspace) {
   const results = await database
     .select(getTableColumns(users))
     .from(users)

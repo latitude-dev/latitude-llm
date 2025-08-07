@@ -24,10 +24,7 @@ export async function autoScaleInactiveServers(db = database) {
       .select({ id: mcpServers.id })
       .from(mcpServers)
       .innerJoin(workspaces, eq(mcpServers.workspaceId, workspaces.id))
-      .innerJoin(
-        subscriptions,
-        eq(workspaces.currentSubscriptionId, subscriptions.id),
-      )
+      .innerJoin(subscriptions, eq(workspaces.currentSubscriptionId, subscriptions.id))
       .where(
         and(
           lt(
@@ -36,10 +33,7 @@ export async function autoScaleInactiveServers(db = database) {
           ),
           gt(mcpServers.replicas, SCALE_DOWN_REPLICAS),
           eq(mcpServers.status, 'deployed'),
-          inArray(subscriptions.plan, [
-            SubscriptionPlan.HobbyV1,
-            SubscriptionPlan.HobbyV2,
-          ]),
+          inArray(subscriptions.plan, [SubscriptionPlan.HobbyV1, SubscriptionPlan.HobbyV2]),
         ),
       )
 
@@ -54,8 +48,6 @@ export async function autoScaleInactiveServers(db = database) {
 
     return Result.ok(inactiveServers.length)
   } catch (error) {
-    return Result.error(
-      error instanceof Error ? error : new Error(String(error)),
-    )
+    return Result.error(error instanceof Error ? error : new Error(String(error)))
   }
 }

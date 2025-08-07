@@ -1,14 +1,11 @@
-import {
-  LatitudeTool,
-  LatitudeToolInternalName,
-} from '@latitude-data/constants'
-import { LatitudeToolDefinition } from '../../../constants'
+import { LatitudeTool, LatitudeToolInternalName } from '@latitude-data/constants'
+import type { LatitudeToolDefinition } from '../../../constants'
 import { BadRequestError, LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
-import { TelemetryContext } from '../../../telemetry'
+import type { PromisedResult } from '../../../lib/Transaction'
+import type { TelemetryContext } from '../../../telemetry'
 import { withTelemetryWrapper } from '../telemetryWrapper'
-import { CodeToolArgs } from './types'
+import type { CodeToolArgs } from './types'
 import { runCodeWithDependencies } from './withDependencies'
 import { runCodeWithoutDependencies } from './withoutDependencies'
 
@@ -17,9 +14,7 @@ function assertContainsPrintStatement({ code, language }: CodeToolArgs) {
     if (language === 'python') return Result.ok('print(')
     if (language === 'javascript') return Result.ok('console.log(')
 
-    return Result.error(
-      new BadRequestError(`Unsupported language: ${language}`),
-    )
+    return Result.error(new BadRequestError(`Unsupported language: ${language}`))
   })()
 
   if (printStatementResult.error) return printStatementResult
@@ -27,9 +22,7 @@ function assertContainsPrintStatement({ code, language }: CodeToolArgs) {
 
   if (!code.includes(printStatement)) {
     return Result.error(
-      new BadRequestError(
-        `${language} code must include a \`${printStatement}...)\` statement`,
-      ),
+      new BadRequestError(`${language} code must include a \`${printStatement}...)\` statement`),
     )
   }
 
@@ -44,9 +37,7 @@ async function runCode({
   const assertResult = assertContainsPrintStatement({ code, language })
   if (assertResult.error) return assertResult
 
-  const runFn = dependencies?.length
-    ? runCodeWithDependencies
-    : runCodeWithoutDependencies
+  const runFn = dependencies?.length ? runCodeWithDependencies : runCodeWithoutDependencies
 
   const runResult = await runFn({ code, language, dependencies })
   if (runResult.error) return runResult
@@ -77,8 +68,7 @@ export default {
         language: {
           type: 'string',
           enum: ['python', 'javascript'],
-          description:
-            'The language of the script. Either "python" or "javascript" (node).',
+          description: 'The language of the script. Either "python" or "javascript" (node).',
         },
         code: {
           type: 'string',

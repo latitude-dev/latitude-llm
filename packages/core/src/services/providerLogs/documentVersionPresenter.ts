@@ -1,4 +1,4 @@
-import { Commit, DocumentVersion, DocumentVersionDto } from '../../browser'
+import type { Commit, DocumentVersion, DocumentVersionDto } from '../../browser'
 
 export function documentVersionPresenter({
   documentVersion,

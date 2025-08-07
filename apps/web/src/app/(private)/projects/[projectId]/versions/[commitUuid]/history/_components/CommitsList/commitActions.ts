@@ -1,4 +1,4 @@
-import { Commit } from '@latitude-data/core/browser'
+import type { Commit } from '@latitude-data/core/browser'
 import { useCurrentCommit } from '@latitude-data/web-ui/browser'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
@@ -15,53 +15,38 @@ export function useCommitActions({ commit }: { commit: Commit }) {
   const { open, setError, setChanges } = useHistoryActionModalContext()
   const { commit: currentCommit } = useCurrentCommit()
 
-  const { execute: executeGetChangesToRevert } = useLatitudeAction(
-    getChangesToRevertCommitAction,
-    {
-      onSuccess: ({ data: changes }) => {
-        setChanges(changes)
-      },
-      onError: ({ err: error }) => setError(error.message),
+  const { execute: executeGetChangesToRevert } = useLatitudeAction(getChangesToRevertCommitAction, {
+    onSuccess: ({ data: changes }) => {
+      setChanges(changes)
     },
-  )
+    onError: ({ err: error }) => setError(error.message),
+  })
 
-  const { execute: executeGetChangesToReset } = useLatitudeAction(
-    getChangesToResetCommitAction,
-    {
-      onSuccess: ({ data: changes }) => {
-        setChanges(changes)
-      },
-      onError: ({ err: error }) => setError(error.message),
+  const { execute: executeGetChangesToReset } = useLatitudeAction(getChangesToResetCommitAction, {
+    onSuccess: ({ data: changes }) => {
+      setChanges(changes)
     },
-  )
+    onError: ({ err: error }) => setError(error.message),
+  })
 
-  const { execute: executeRevertChanges } = useLatitudeAction(
-    revertCommitChangesAction,
-    {
-      onSuccess: ({ data: { commitUuid } }) => {
-        router.push(
-          ROUTES.projects
-            .detail({ id: commit.projectId })
-            .commits.detail({ uuid: commitUuid }).root,
-        )
-      },
-      onError: ({ err: error }) => setError(error.message),
+  const { execute: executeRevertChanges } = useLatitudeAction(revertCommitChangesAction, {
+    onSuccess: ({ data: { commitUuid } }) => {
+      router.push(
+        ROUTES.projects.detail({ id: commit.projectId }).commits.detail({ uuid: commitUuid }).root,
+      )
     },
-  )
+    onError: ({ err: error }) => setError(error.message),
+  })
 
-  const { execute: executeResetChanges } = useLatitudeAction(
-    resetCommitVersionAction,
-    {
-      onSuccess: ({ data: { commitUuid } }) => {
-        router.push(
-          ROUTES.projects
-            .detail({ id: commit.projectId })
-            .commits.detail({ uuid: commitUuid }).documents.root,
-        )
-      },
-      onError: ({ err: error }) => setError(error.message),
+  const { execute: executeResetChanges } = useLatitudeAction(resetCommitVersionAction, {
+    onSuccess: ({ data: { commitUuid } }) => {
+      router.push(
+        ROUTES.projects.detail({ id: commit.projectId }).commits.detail({ uuid: commitUuid })
+          .documents.root,
+      )
     },
-  )
+    onError: ({ err: error }) => setError(error.message),
+  })
 
   const getChangesToRevert = useCallback(() => {
     open({
@@ -69,9 +54,7 @@ export function useCommitActions({ commit }: { commit: Commit }) {
       onConfirm: () =>
         executeRevertChanges({
           projectId: commit.projectId,
-          targetDraftUuid: currentCommit.mergedAt
-            ? undefined
-            : currentCommit.uuid,
+          targetDraftUuid: currentCommit.mergedAt ? undefined : currentCommit.uuid,
           commitUuid: commit.uuid,
         }),
     })
@@ -96,9 +79,7 @@ export function useCommitActions({ commit }: { commit: Commit }) {
       onConfirm: () =>
         executeResetChanges({
           projectId: commit.projectId,
-          targetDraftUuid: currentCommit.mergedAt
-            ? undefined
-            : currentCommit.uuid,
+          targetDraftUuid: currentCommit.mergedAt ? undefined : currentCommit.uuid,
           commitUuid: commit.uuid,
         }),
     })

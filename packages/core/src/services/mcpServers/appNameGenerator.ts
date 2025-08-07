@@ -1,4 +1,4 @@
-import { createHash } from 'crypto'
+import { createHash } from 'node:crypto'
 
 /**
  * Generate a unique hash for the app name to prevent collisions
@@ -10,16 +10,10 @@ import { createHash } from 'crypto'
  * @param workspaceId - The workspace ID where the app is being deployed
  * @returns A unique, Kubernetes-compatible app name with hash suffix
  */
-export function generateUniqueAppName(
-  appName: string,
-  workspaceId: number,
-): string {
+export function generateUniqueAppName(appName: string, workspaceId: number): string {
   const timestamp = Date.now().toString()
   const hashInput = `${appName}-${workspaceId}-${timestamp}`
-  const hash = createHash('sha1')
-    .update(hashInput)
-    .digest('hex')
-    .substring(0, 8)
+  const hash = createHash('sha1').update(hashInput).digest('hex').substring(0, 8)
 
   // Ensure the app name is valid for Kubernetes (lowercase, alphanumeric with dashes)
   // Max length for most k8s resources is 63 chars, so we'll limit the base name

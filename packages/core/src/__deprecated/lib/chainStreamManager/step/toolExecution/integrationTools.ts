@@ -1,13 +1,13 @@
-import { ChainStreamManager } from '../..'
-import { IntegrationDto } from '../../../../../browser'
+import type { ChainStreamManager } from '../..'
+import type { IntegrationDto } from '../../../../../browser'
 import { IntegrationsRepository } from '../../../../../repositories'
 import { callIntegrationTool } from '../../../../../services/integrations/McpClient/callTool'
-import { createMcpClientManager } from '../../../../../services/integrations/McpClient/McpClientManager'
+import type { createMcpClientManager } from '../../../../../services/integrations/McpClient/McpClientManager'
 import { NotFoundError } from '../../../../../lib/errors'
 import { Result } from '../../../../../lib/Result'
-import { PromisedResult } from '../../../../../lib/Transaction'
+import type { PromisedResult } from '../../../../../lib/Transaction'
 import { ToolSource } from '../../resolveTools/types'
-import { ToolResponsesArgs } from './types'
+import type { ToolResponsesArgs } from './types'
 
 export function getIntegrationToolCallResults({
   workspace,
@@ -26,14 +26,8 @@ export function getIntegrationToolCallResults({
   }, new Set<string>())
 
   const integrationsScope = new IntegrationsRepository(workspace.id)
-  const integrations: Record<
-    string,
-    PromisedResult<IntegrationDto>
-  > = Object.fromEntries(
-    [...integrationNames].map((name) => [
-      name,
-      integrationsScope.findByName(name),
-    ]),
+  const integrations: Record<string, PromisedResult<IntegrationDto>> = Object.fromEntries(
+    [...integrationNames].map((name) => [name, integrationsScope.findByName(name)]),
   )
 
   return toolCalls.map(async (toolCall) => {
@@ -42,8 +36,7 @@ export function getIntegrationToolCallResults({
       return Result.error(new NotFoundError(`Unknown tool`))
     }
 
-    const integrationResult =
-      await integrations[toolSourceData.integrationName]!
+    const integrationResult = await integrations[toolSourceData.integrationName]!
     if (integrationResult.error) return integrationResult
     const integration = integrationResult.unwrap()
 

@@ -1,9 +1,9 @@
-import { Events } from '../../events/events'
+import type { Events } from '../../events/events'
 import { publisher } from '../../events/publisher'
 import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { webhookDeliveries } from '../../schema/models/webhooks'
-import { WebhookDelivery } from './types'
+import type { WebhookDelivery } from './types'
 
 export async function createWebhookDelivery(
   params: {

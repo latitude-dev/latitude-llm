@@ -1,8 +1,8 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import {
+import type {
   Commit,
   Dataset,
   DatasetRow,
@@ -10,7 +10,7 @@ import {
   ProviderLog,
   Workspace,
 } from '../../../browser'
-import { EvaluationV2, Providers } from '../../../constants'
+import { type EvaluationV2, Providers } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import * as evaluationsV2 from '../../../services/evaluationsV2/run'
@@ -18,10 +18,7 @@ import { completeExperiment } from '../../../services/experiments/complete'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import * as factories from '../../../tests/factories'
 import * as progressTracker from '../../utils/progressTracker'
-import {
-  runEvaluationV2Job,
-  type RunEvaluationV2JobData,
-} from './runEvaluationV2Job'
+import { runEvaluationV2Job, type RunEvaluationV2JobData } from './runEvaluationV2Job'
 import { WebsocketClient } from '../../../websockets/workers'
 
 vi.mock('../../../redis', () => ({
@@ -49,9 +46,7 @@ vi.spyOn(progressTracker, 'ProgressTracker').mockImplementation(() => ({
 
 let jobData: Job<RunEvaluationV2JobData>
 
-function buildJobData(
-  data: Partial<RunEvaluationV2JobData>,
-): RunEvaluationV2JobData {
+function buildJobData(data: Partial<RunEvaluationV2JobData>): RunEvaluationV2JobData {
   return {
     workspaceId: data.workspaceId || 1,
     commitId: data.commitId || 1,
@@ -358,9 +353,7 @@ describe('runEvaluationV2Job', () => {
         }),
       } as Job<RunEvaluationV2JobData>
 
-      await expect(runEvaluationV2Job(jobData)).rejects.toThrow(
-        'Workspace not found',
-      )
+      await expect(runEvaluationV2Job(jobData)).rejects.toThrow('Workspace not found')
     })
   })
 })

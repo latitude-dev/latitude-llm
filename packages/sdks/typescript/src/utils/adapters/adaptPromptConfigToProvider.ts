@@ -1,7 +1,7 @@
 import { getOpenAIResponseTools } from '$sdk/utils/adapters/openai/getFunctionTools'
-import { ToolInputMap } from '$sdk/utils/adapters/types'
+import type { ToolInputMap } from '$sdk/utils/adapters/types'
 import type { Config } from '@latitude-data/constants/legacyCompiler'
-import { Adapters, ProviderAdapter } from 'promptl-ai'
+import { Adapters, type ProviderAdapter } from 'promptl-ai'
 import { getAIProviderTools } from './getProviderTools'
 
 const ADAPTERS_WITH_SNAKE_CASE = [
@@ -21,10 +21,7 @@ export function adaptPromptConfigToProvider(
   adapter: ProviderAdapter<object>,
 ): Config {
   if (config.tools) {
-    config.tools = adaptToolsConfig(
-      config.tools as ToolInputMap | ToolInputMap[],
-      adapter,
-    )
+    config.tools = adaptToolsConfig(config.tools as ToolInputMap | ToolInputMap[], adapter)
   }
 
   if (ADAPTERS_WITH_SNAKE_CASE.includes(adapter.type)) {
@@ -72,7 +69,7 @@ export function adaptToolsConfig(
     return getOpenAIResponseTools({ clientTools, providerTools })
   }
 
-  if (adapter == Adapters.anthropic) {
+  if (adapter === Adapters.anthropic) {
     return Object.entries(clientTools).map(([name, definition]) => {
       const { parameters, ...rest } = definition
       return {

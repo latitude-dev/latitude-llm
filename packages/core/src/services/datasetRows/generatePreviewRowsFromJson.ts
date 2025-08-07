@@ -1,10 +1,6 @@
-import { Result, TypedResult } from '../../lib/Result'
-import { Column, DatasetRowDataContent } from '../../schema'
-import {
-  buildColumns,
-  HashAlgorithmFn,
-  nanoidHashAlgorithm,
-} from '../datasets/utils'
+import { Result, type TypedResult } from '../../lib/Result'
+import type { Column, DatasetRowDataContent } from '../../schema'
+import { buildColumns, type HashAlgorithmFn, nanoidHashAlgorithm } from '../datasets/utils'
 import { parseRowCell } from './utils'
 
 type JsonRow = Record<string, unknown>
@@ -13,16 +9,12 @@ function parseStringRows(json: string): TypedResult<JsonRow[], Error> {
   try {
     const rows = JSON.parse(json)
     if (!Array.isArray(rows)) {
-      return Result.error(
-        new Error('Invalid JSON format it has to be an array'),
-      )
+      return Result.error(new Error('Invalid JSON format it has to be an array'))
     }
 
     return Result.ok(rows)
   } catch {
-    return Result.error(
-      new Error(`Invalid generated data: ${json} is not valid JSON`),
-    )
+    return Result.error(new Error(`Invalid generated data: ${json} is not valid JSON`))
   }
 }
 

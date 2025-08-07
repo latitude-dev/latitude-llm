@@ -1,15 +1,11 @@
 import {
-  LatitudePromptConfig,
-  OpenAIToolList,
+  type LatitudePromptConfig,
+  type OpenAIToolList,
   openAIToolsList,
 } from '@latitude-data/constants/latitudePromptSchema'
-import { Result, TypedResult } from '../../Result'
-import { ResolvedProviderTool, ResolvedTools, ToolSource } from './types'
-import {
-  LatitudeError,
-  NotFoundError,
-  UnprocessableEntityError,
-} from '../../errors'
+import { Result, type TypedResult } from '../../Result'
+import { type ResolvedProviderTool, type ResolvedTools, ToolSource } from './types'
+import { type LatitudeError, NotFoundError, UnprocessableEntityError } from '../../errors'
 import { openai } from '@ai-sdk/openai'
 import { Providers } from '@latitude-data/constants'
 
@@ -26,17 +22,13 @@ function resolveOpenAITools(openAITools: OpenAIToolList) {
 
   if (tool.type === 'file_search') {
     return Result.error(
-      new UnprocessableEntityError(
-        'OpenAI file search tool is not supported yet at Latitude',
-      ),
+      new UnprocessableEntityError('OpenAI file search tool is not supported yet at Latitude'),
     )
   }
 
   if (tool.type === 'computer_use_preview') {
     return Result.error(
-      new UnprocessableEntityError(
-        'OpenAI computer use tool is not supported yet at Latitude',
-      ),
+      new UnprocessableEntityError('OpenAI computer use tool is not supported yet at Latitude'),
     )
   }
 

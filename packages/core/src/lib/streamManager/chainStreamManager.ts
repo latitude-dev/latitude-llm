@@ -1,13 +1,10 @@
 import { streamAIResponse } from './step/streamAIResponse'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
-import { Chain } from 'promptl-ai'
-import {
-  renderChain,
-  ValidatedChainStep,
-} from '../../services/chains/ChainValidator'
-import { StreamManager, StreamManagerProps } from '.'
+import type { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import type { Chain } from 'promptl-ai'
+import { renderChain, type ValidatedChainStep } from '../../services/chains/ChainValidator'
+import { StreamManager, type StreamManagerProps } from '.'
 import { resolveToolsFromConfig } from './resolveTools'
-import { CachedApiKeys } from '../../services/chains/run'
+import type { CachedApiKeys } from '../../services/chains/run'
 import { isAbortError } from '../isAbortError'
 
 /**
@@ -61,13 +58,8 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
         provider: chain.provider,
       })
 
-      const toolsBySource = await this.getToolsBySource(chain).then((r) =>
-        r.unwrap(),
-      )
-      const config = this.transformPromptlToVercelToolDeclarations(
-        chain.config,
-        toolsBySource,
-      )
+      const toolsBySource = await this.getToolsBySource(chain).then((r) => r.unwrap())
+      const config = this.transformPromptlToVercelToolDeclarations(chain.config, toolsBySource)
 
       const {
         response,

@@ -12,13 +12,7 @@ export function useEvaluationEditorLink({
   documentUuid: string
 }) {
   return useCallback(
-    ({
-      evaluationUuid,
-      documentLogUuid,
-    }: {
-      evaluationUuid: string
-      documentLogUuid?: string
-    }) => {
+    ({ evaluationUuid, documentLogUuid }: { evaluationUuid: string; documentLogUuid?: string }) => {
       const path = ROUTES.projects
         .detail({ id: +projectId })
         .commits.detail({ uuid: commitUuid })
@@ -27,7 +21,7 @@ export function useEvaluationEditorLink({
 
       if (!documentLogUuid) return path
 
-      return path + `?logUuid=${documentLogUuid}`
+      return `${path}?logUuid=${documentLogUuid}`
     },
     [projectId, commitUuid, documentUuid],
   )

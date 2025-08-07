@@ -1,10 +1,7 @@
 'use server'
 
 import { withProject } from '$/actions/procedures'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '@latitude-data/core/repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { destroyDocument } from '@latitude-data/core/services/documents/destroyDocument'
 import { z } from 'zod'
 

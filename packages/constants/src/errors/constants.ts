@@ -38,12 +38,11 @@ export enum RunErrorCodes {
 }
 // NOTE: If you add a new error code, please add it to the pg enum in models/runErrors.ts
 
-export type RunErrorDetails<C extends RunErrorCodes> =
-  C extends RunErrorCodes.ChainCompileError
-    ? { compileCode: string; message: string }
-    : C extends RunErrorCodes.Unknown
-      ? { stack: string }
-      : never
+export type RunErrorDetails<C extends RunErrorCodes> = C extends RunErrorCodes.ChainCompileError
+  ? { compileCode: string; message: string }
+  : C extends RunErrorCodes.Unknown
+    ? { stack: string }
+    : never
 
 export enum ApiErrorCodes {
   HTTPException = 'http_exception',

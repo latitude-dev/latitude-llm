@@ -1,4 +1,4 @@
-import { Commit, Project, User } from '../../browser'
+import type { Commit, Project, User } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

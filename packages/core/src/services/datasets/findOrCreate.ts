@@ -1,4 +1,4 @@
-import { User, Workspace } from '../../browser'
+import type { User, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DatasetsRepository } from '../../repositories'

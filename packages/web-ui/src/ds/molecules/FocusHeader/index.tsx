@@ -1,13 +1,7 @@
 import { Icon } from '../../atoms/Icons'
 import { Text } from '../../atoms/Text'
 
-export function FocusHeader({
-  title,
-  description,
-}: {
-  title: string
-  description?: string
-}) {
+export function FocusHeader({ title, description }: { title: string; description?: string }) {
   return (
     <div className='flex flex-col items-center justify-center gap-y-6'>
       <Icon name='logo' size='xlarge' />

@@ -1,16 +1,14 @@
 'use client'
 
-import { createContext, ReactNode, useContext, useMemo } from 'react'
+import { createContext, type ReactNode, useContext, useMemo } from 'react'
 
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import useDocumentVersions from '$/stores/documentVersions'
 
 type DocumentVersionContext = {
   document: DocumentVersion
 }
-const DocumentContext = createContext<DocumentVersionContext>(
-  {} as DocumentVersionContext,
-)
+const DocumentContext = createContext<DocumentVersionContext>({} as DocumentVersionContext)
 
 const DocumentVersionProvider = ({
   children,
@@ -29,9 +27,7 @@ const DocumentVersionProvider = ({
   })
 
   const document = useMemo(() => {
-    return (
-      documents?.find((d) => d.id === fallbackDocument.id) ?? fallbackDocument
-    )
+    return documents?.find((d) => d.id === fallbackDocument.id) ?? fallbackDocument
   }, [documents, fallbackDocument])
 
   return (
@@ -49,9 +45,7 @@ const useCurrentDocument = () => {
   const context = useContext(DocumentContext)
 
   if (!context) {
-    throw new Error(
-      'useCurrentDocument must be used within a DocumentVersionProvider',
-    )
+    throw new Error('useCurrentDocument must be used within a DocumentVersionProvider')
   }
   return context
 }

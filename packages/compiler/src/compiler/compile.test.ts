@@ -2,23 +2,20 @@ import { getExpectedError } from '$compiler/compiler/test/helpers'
 import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
 import CompileError from '$compiler/error/error'
 import {
-  AssistantMessage,
+  type AssistantMessage,
   ContentType,
-  Message,
-  MessageContent,
+  type Message,
+  type MessageContent,
   MessageRole,
-  TextContent,
-  UserMessage,
+  type TextContent,
+  type UserMessage,
 } from '$compiler/types'
 import { describe, expect, it, vi } from 'vitest'
 
 import { render } from '.'
 import { removeCommonIndent } from './utils'
 
-async function getCompiledText(
-  prompt: string,
-  parameters: Record<string, any> = {},
-) {
+async function getCompiledText(prompt: string, parameters: Record<string, any> = {}) {
   const result = await render({
     prompt: removeCommonIndent(prompt),
     parameters,
@@ -28,9 +25,7 @@ async function getCompiledText(
     const content =
       typeof message.content === 'string'
         ? message.content
-        : (message.content as MessageContent[])
-            .map((c) => (c as TextContent).text)
-            .join('')
+        : (message.content as MessageContent[]).map((c) => (c as TextContent).text).join('')
 
     return acc + content
   }, '')
@@ -642,9 +637,7 @@ Given a context, answer questions succintly yet complete.
       },
       {
         role: MessageRole.user,
-        content: [
-          { type: ContentType.text, text: 'Please, help me with question!' },
-        ],
+        content: [{ type: ContentType.text, text: 'Please, help me with question!' }],
       },
     ])
   })

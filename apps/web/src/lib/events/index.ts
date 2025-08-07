@@ -4,11 +4,11 @@ import { type DependencyList, useEffect } from 'react'
 import type { SubscriptionEvents, SubscriptionFn, TriggerFn } from './generics'
 import type { Events } from './types'
 
-export const on: SubscriptionFn = (eventType, callback) => {
+const on: SubscriptionFn = (eventType, callback) => {
   document.addEventListener(eventType, callback)
 }
 
-export const off: SubscriptionFn = (eventType, callback) => {
+const off: SubscriptionFn = (eventType, callback) => {
   // @ts-ignore TODO: wdym
   document.removeEventListener(eventType, callback)
 }
@@ -21,10 +21,7 @@ export const trigger: TriggerFn = (type, detail) => {
 // To see subscribed events in the browser just go to dev tools and do:
 // `getEventListeners(document)` You should see our custom events
 // attached to `document`
-export const useEvents = (
-  events: SubscriptionEvents<Events>,
-  deps: DependencyList = [],
-) => {
+export const useEvents = (events: SubscriptionEvents<Events>, deps: DependencyList = []) => {
   useEffect(() => {
     // Subscribe events
     const mappings = Object.keys(events).map((key: string) => {
@@ -45,7 +42,5 @@ export const useEvents = (
         off(eventMapping.eventType, eventMapping.callback)
       })
     }
-    // TODO: Remove events dependency
-    /* eslint-disable react-hooks/exhaustive-deps */
   }, [events, ...deps])
 }

@@ -1,15 +1,6 @@
-import {
-  and,
-  count,
-  eq,
-  getTableColumns,
-  gte,
-  inArray,
-  isNull,
-  sql,
-} from 'drizzle-orm'
+import { and, count, eq, getTableColumns, gte, inArray, isNull, sql } from 'drizzle-orm'
 
-import { DocumentLog, ErrorableEntity, LogSources } from '../../browser'
+import { type DocumentLog, ErrorableEntity, type LogSources } from '../../browser'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import rowsFromQueryPlan from '../../lib/rowsFromQueryPlan'
@@ -27,10 +18,7 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
     return this.db
       .select(tt)
       .from(documentLogs)
-      .innerJoin(
-        commits,
-        and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
-      )
+      .innerJoin(commits, and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)))
       .innerJoin(projects, eq(projects.id, commits.projectId))
       .leftJoin(
         runErrors,
@@ -48,14 +36,10 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
       return Result.error(new NotFoundError('DocumentLog not found'))
     }
 
-    const result = await this.scope.where(
-      and(this.scopeFilter, eq(documentLogs.uuid, uuid)),
-    )
+    const result = await this.scope.where(and(this.scopeFilter, eq(documentLogs.uuid, uuid)))
 
     if (!result.length) {
-      return Result.error(
-        new NotFoundError(`DocumentLog not found with uuid ${uuid}`),
-      )
+      return Result.error(new NotFoundError(`DocumentLog not found with uuid ${uuid}`))
     }
 
     return Result.ok(result[0]!)
@@ -71,10 +55,7 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
       .innerJoin(commits, eq(commits.id, documentLogs.commitId))
       .innerJoin(
         projects,
-        and(
-          eq(projects.id, commits.projectId),
-          eq(projects.workspaceId, this.workspaceId),
-        ),
+        and(eq(projects.id, commits.projectId), eq(projects.workspaceId, this.workspaceId)),
       )
       .leftJoin(
         runErrors,

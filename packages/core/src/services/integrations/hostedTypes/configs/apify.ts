@@ -1,4 +1,4 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 import { npxCommand } from '../utils'
 
 export default {
@@ -16,8 +16,7 @@ export default {
     },
     ACTORS: {
       label: 'Actors',
-      description:
-        'The list of actors to be used in the integration, separated by commas',
+      description: 'The list of actors to be used in the integration, separated by commas',
       placeholder: 'actor1,actor2,actor3',
       required: false,
     },

@@ -1,11 +1,8 @@
-import { useRef, useEffect, useState, RefObject } from 'react'
+import { useRef, useEffect, useState, type RefObject } from 'react'
 
 export function useFollowedPosition<T extends HTMLElement>(
   ref: RefObject<T>,
-  {
-    activeOnHover = false,
-    threshold = 1,
-  }: { activeOnHover?: boolean; threshold?: number } = {},
+  { activeOnHover = false, threshold = 1 }: { activeOnHover?: boolean; threshold?: number } = {},
 ) {
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const positionRef = useRef(position)

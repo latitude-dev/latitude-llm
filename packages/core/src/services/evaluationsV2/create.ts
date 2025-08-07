@@ -1,4 +1,4 @@
-import {
+import type {
   Commit,
   DocumentVersion,
   EvaluationMetric,
@@ -15,10 +15,7 @@ import Transaction from '../../lib/Transaction'
 import { evaluationVersions } from '../../schema'
 import { validateEvaluationV2 } from './validate'
 
-export async function createEvaluationV2<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->(
+export async function createEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
   {
     document,
     commit,

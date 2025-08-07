@@ -1,8 +1,4 @@
-import {
-  DataCollector,
-  type CollectorInput,
-  type CollectorOutput,
-} from './DataCollector'
+import { DataCollector, type CollectorInput, type CollectorOutput } from './DataCollector'
 
 export class OpenSourceCollector extends DataCollector<'oss'> {
   collect(args: CollectorInput): CollectorOutput<'oss'> | undefined {

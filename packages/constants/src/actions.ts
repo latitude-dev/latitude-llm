@@ -38,12 +38,16 @@ export type CloneAgentActionFrontendParameters = z.infer<
 
 // prettier-ignore
 export type ActionBackendParameters<T extends ActionType = ActionType> =
-  T extends ActionType.CreateAgent ? CreateAgentActionBackendParameters :
-  T extends ActionType.CloneAgent ? CloneAgentActionBackendParameters :
-  never;
+  T extends ActionType.CreateAgent
+    ? CreateAgentActionBackendParameters
+    : T extends ActionType.CloneAgent
+      ? CloneAgentActionBackendParameters
+      : never
 
 // prettier-ignore
 export type ActionFrontendParameters<T extends ActionType = ActionType> =
-  T extends ActionType.CreateAgent ? CreateAgentActionFrontendParameters :
-  T extends ActionType.CloneAgent ? CloneAgentActionFrontendParameters :
-  never;
+  T extends ActionType.CreateAgent
+    ? CreateAgentActionFrontendParameters
+    : T extends ActionType.CloneAgent
+      ? CloneAgentActionFrontendParameters
+      : never

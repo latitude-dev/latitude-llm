@@ -1,25 +1,16 @@
-import {
-  LatitudeTool,
-  LatitudeToolInternalName,
-} from '@latitude-data/constants'
+import { LatitudeTool, LatitudeToolInternalName } from '@latitude-data/constants'
 import { env } from '@latitude-data/env'
-import { LatitudeToolDefinition } from '../../../constants'
+import type { LatitudeToolDefinition } from '../../../constants'
 import { BadRequestError, LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
-import { TelemetryContext } from '../../../telemetry'
+import type { PromisedResult } from '../../../lib/Transaction'
+import type { TelemetryContext } from '../../../telemetry'
 import { withTelemetryWrapper } from '../telemetryWrapper'
-import { ExtractToolArgs, ExtractToolResult } from './types'
+import type { ExtractToolArgs, ExtractToolResult } from './types'
 
 const HANDINGER_API_URL = 'https://api.handinger.com/markdown'
 
-export function adjustLocalURLs({
-  markdown,
-  url,
-}: {
-  markdown: string
-  url: URL
-}): string {
+export function adjustLocalURLs({ markdown, url }: { markdown: string; url: URL }): string {
   const regex = /\[([^\]]+)\]\((\/[^)]+)\)/g
 
   return markdown.replace(regex, (match, text, path) => {
@@ -40,7 +31,7 @@ async function webExtract({
   let url: URL
   try {
     url = new URL(_url)
-  } catch (error) {
+  } catch (_error) {
     return Result.error(new BadRequestError('Invalid URL'))
   }
 
@@ -53,9 +44,7 @@ async function webExtract({
   })
     .then(async (response) => {
       if (!response.ok) {
-        return Result.error(
-          new LatitudeError(`Failed to fetch ${url.toString()}`),
-        )
+        return Result.error(new LatitudeError(`Failed to fetch ${url.toString()}`))
       }
       const adjustedMarkdown = adjustLocalURLs({
         markdown: await response.text(),

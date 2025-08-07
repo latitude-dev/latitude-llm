@@ -7,14 +7,12 @@
   "type": "module",
   "main": "index.ts",
   "scripts": {
-    "lint": "eslint src",
     "tc": "tsc --noEmit"
   },
   "exports": {
     ".": "./src/index.ts"
   },
   "devDependencies": {
-    "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*"
   },
   "dependencies": {

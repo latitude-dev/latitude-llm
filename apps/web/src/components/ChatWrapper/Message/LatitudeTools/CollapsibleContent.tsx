@@ -2,7 +2,7 @@
 
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ReactNode, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 
 export function CollapsibleContent({
   children,
@@ -40,9 +40,7 @@ export function CollapsibleContent({
             setIsCollapsed(!isCollapsed)
           }}
         >
-          <Text.H6 color='foregroundMuted'>
-            {isCollapsed ? 'Show more +' : 'Show less -'}
-          </Text.H6>
+          <Text.H6 color='foregroundMuted'>{isCollapsed ? 'Show more +' : 'Show less -'}</Text.H6>
         </Button>
       </div>
     </div>

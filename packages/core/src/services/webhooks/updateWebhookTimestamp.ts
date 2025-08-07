@@ -3,7 +3,7 @@ import { NotFoundError } from '../../lib/errors'
 import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { webhooks } from '../../schema/models/webhooks'
-import { type Webhook } from './types'
+import type { Webhook } from './types'
 
 export async function updateWebhookTimestamp(
   webhookId: number,

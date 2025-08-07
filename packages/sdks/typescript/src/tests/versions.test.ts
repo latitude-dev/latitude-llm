@@ -10,9 +10,9 @@ import {
   mockVersionsError,
 } from './helpers/versions'
 
-let FAKE_API_KEY = 'fake-api-key'
-let projectId = 123
-let versionUuid = 'test-version-uuid'
+const FAKE_API_KEY = 'fake-api-key'
+const projectId = 123
+const versionUuid = 'test-version-uuid'
 let sdk: Latitude
 
 const server = setupServer()
@@ -69,9 +69,7 @@ describe('versions', () => {
           await sdk.versions.get(projectId, versionUuid)
         } catch (error) {
           // @ts-expect-error - mock error
-          expect(error.message).toEqual(
-            'Unexpected API Error: 500 Something went wrong',
-          )
+          expect(error.message).toEqual('Unexpected API Error: 500 Something went wrong')
         }
       }),
     )
@@ -102,9 +100,7 @@ describe('versions', () => {
           versionName,
         })
         await sdk.versions.create(versionName, { projectId })
-        expect(mockBodyFn).toHaveBeenCalledWith(
-          expect.objectContaining({ name: versionName }),
-        )
+        expect(mockBodyFn).toHaveBeenCalledWith(expect.objectContaining({ name: versionName }))
       }),
     )
 
@@ -135,9 +131,7 @@ describe('versions', () => {
           versionName,
         })
         await sdkWithProject.versions.create(versionName)
-        expect(mockBodyFn).toHaveBeenCalledWith(
-          expect.objectContaining({ name: versionName }),
-        )
+        expect(mockBodyFn).toHaveBeenCalledWith(expect.objectContaining({ name: versionName }))
       }),
     )
 
@@ -166,9 +160,7 @@ describe('versions', () => {
           await sdk.versions.create('Test Version', { projectId })
         } catch (error) {
           // @ts-expect-error - mock error
-          expect(error.message).toEqual(
-            'Unexpected API Error: 500 Something went wrong',
-          )
+          expect(error.message).toEqual('Unexpected API Error: 500 Something went wrong')
         }
       }),
     )

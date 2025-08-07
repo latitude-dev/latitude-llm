@@ -1,11 +1,11 @@
-import { Command } from 'commander'
+import type { Command } from 'commander'
 import inquirer from 'inquirer'
-import * as fs from 'fs/promises'
-import * as path from 'path'
-import { InitOptions } from '../types'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
+import type { InitOptions } from '../types'
 import { BaseCommand } from '../utils/baseCommand'
 import { savePrompts } from '../utils/promptOperations'
-import { LatitudeLockFile } from '../utils/lockFileManager'
+import type { LatitudeLockFile } from '../utils/lockFileManager'
 import { registerCommand } from '../utils/commandRegistrar'
 
 /**
@@ -27,12 +27,8 @@ export class InitCommand extends BaseCommand {
       await this.setClient()
 
       // Check if we're in an npm project
-      this.isNpmProject = await this.projectManager.verifyNpmProject(
-        this.projectPath,
-      )
-      console.log(
-        `Detected ${this.isNpmProject ? 'npm' : 'non-npm'} project environment`,
-      )
+      this.isNpmProject = await this.projectManager.verifyNpmProject(this.projectPath)
+      console.log(`Detected ${this.isNpmProject ? 'npm' : 'non-npm'} project environment`)
 
       // Check if a latitude-lock.json file already exists
       const lockFileExists = await this.lockFileManager.exists(this.projectPath)
@@ -41,16 +37,13 @@ export class InitCommand extends BaseCommand {
           {
             type: 'confirm',
             name: 'overrideLock',
-            message:
-              'A latitude-lock.json file already exists. Do you want to override it?',
+            message: 'A latitude-lock.json file already exists. Do you want to override it?',
             default: false,
           },
         ])
 
         if (!overrideLock) {
-          console.log(
-            'Init cancelled. Existing latitude-lock.json file will not be modified.',
-          )
+          console.log('Init cancelled. Existing latitude-lock.json file will not be modified.')
           process.exit(0)
         }
       }
@@ -72,15 +65,14 @@ export class InitCommand extends BaseCommand {
     // Check if an API key already exists
     try {
       return await this.configManager.getApiKey()
-    } catch (error) {
+    } catch (_error) {
       // No API key found, prompt for one
       const { apiKey } = await inquirer.prompt([
         {
           type: 'password',
           name: 'apiKey',
           message: 'Enter your Latitude API key:',
-          validate: (input) =>
-            input.trim() !== '' ? true : 'API key is required',
+          validate: (input) => (input.trim() !== '' ? true : 'API key is required'),
         },
       ])
 
@@ -122,8 +114,7 @@ export class InitCommand extends BaseCommand {
         type: 'input',
         name: 'projectName',
         message: 'Enter name for your new Latitude project:',
-        validate: (input) =>
-          input.trim() !== '' ? true : 'Project name is required',
+        validate: (input) => (input.trim() !== '' ? true : 'Project name is required'),
       },
     ])
 
@@ -154,8 +145,7 @@ export class InitCommand extends BaseCommand {
         type: 'input',
         name: 'existingProjectId',
         message: 'Enter your existing Latitude project ID:',
-        validate: (input) =>
-          input.trim() !== '' ? true : 'Project ID is required',
+        validate: (input) => (input.trim() !== '' ? true : 'Project ID is required'),
       },
     ])
 
@@ -180,9 +170,7 @@ export class InitCommand extends BaseCommand {
    */
   private async setupProjectStructure(): Promise<string> {
     // Determine the root folder for storing prompts
-    const defaultPath = await this.promptManager.determineRootFolder(
-      this.projectPath,
-    )
+    const defaultPath = await this.promptManager.determineRootFolder(this.projectPath)
 
     let promptsRoot = defaultPath
     let isEmptyDirectory = false
@@ -195,8 +183,7 @@ export class InitCommand extends BaseCommand {
           name: 'userPromptsRoot',
           message: 'Enter the relative path for storing prompts:',
           default: promptsRoot,
-          validate: (input) =>
-            input.trim() !== '' ? true : 'Path is required',
+          validate: (input) => (input.trim() !== '' ? true : 'Path is required'),
         },
       ])
 
@@ -229,21 +216,18 @@ export class InitCommand extends BaseCommand {
           } else {
             isEmptyDirectory = true // Directory exists and is empty
           }
-        } catch (err) {
+        } catch (_err) {
           // Directory doesn't exist yet, which is fine
           isEmptyDirectory = true
         }
-      } catch (err) {
+      } catch (_err) {
         // Error checking directory, let's just proceed (directory will be created)
         isEmptyDirectory = true
       }
     }
 
     // Create the directory
-    await this.promptManager.createPromptDirectory(
-      this.projectPath,
-      promptsRoot,
-    )
+    await this.promptManager.createPromptDirectory(this.projectPath, promptsRoot)
 
     return promptsRoot
   }
@@ -253,16 +237,10 @@ export class InitCommand extends BaseCommand {
    * @param projectId The project ID to pull prompts from
    * @param promptsRootFolder The folder to save prompts to
    */
-  private async pullPrompts(
-    projectId: number,
-    promptsRootFolder: string,
-  ): Promise<void> {
+  private async pullPrompts(projectId: number, promptsRootFolder: string): Promise<void> {
     try {
       console.log(`Pulling all prompts from project ${projectId}...`)
-      const prompts = await this.projectManager.fetchAllPrompts(
-        this.client!,
-        projectId,
-      )
+      const prompts = await this.projectManager.fetchAllPrompts(this.client!, projectId)
 
       this.detectModuleFormat()
 
@@ -277,9 +255,7 @@ export class InitCommand extends BaseCommand {
 
       console.log(`✅ Successfully pulled ${prompts.length} prompts`)
     } catch (error: any) {
-      console.error(
-        `❌ Error pulling prompts: ${error.message || String(error)}`,
-      )
+      console.error(`❌ Error pulling prompts: ${error.message || String(error)}`)
       // Continue with the initialization even if pulling prompts fails
     }
   }
@@ -306,9 +282,7 @@ export class InitCommand extends BaseCommand {
       await this.lockFileManager.write(this.projectPath, lockFile)
       console.log('✅ Created latitude-lock.json file')
     } catch (error: any) {
-      throw new Error(
-        `Error creating lock file: ${error.message || String(error)}`,
-      )
+      throw new Error(`Error creating lock file: ${error.message || String(error)}`)
     }
   }
 }

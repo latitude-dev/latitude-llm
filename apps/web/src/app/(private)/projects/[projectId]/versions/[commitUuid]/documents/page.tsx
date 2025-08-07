@@ -9,8 +9,7 @@ export default async function DocumentsPage({
   const { projectId, commitUuid } = await params
 
   return redirect(
-    ROUTES.projects
-      .detail({ id: Number(projectId) })
-      .commits.detail({ uuid: commitUuid }).overview.root,
+    ROUTES.projects.detail({ id: Number(projectId) }).commits.detail({ uuid: commitUuid }).overview
+      .root,
   )
 }

@@ -1,4 +1,4 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { Result } from '../../../lib/Result'
 import { McpServerRepository } from '../../../repositories'
 import { updateMcpServerLastUsed } from '../../../services/mcpServers/updateLastUsed'
@@ -8,9 +8,7 @@ export interface UpdateMcpServerLastUsedJobData {
   mcpServerId: number
 }
 
-export const updateMcpServerLastUsedJob = async (
-  job: Job<UpdateMcpServerLastUsedJobData>,
-) => {
+export const updateMcpServerLastUsedJob = async (job: Job<UpdateMcpServerLastUsedJobData>) => {
   const { workspaceId, mcpServerId } = job.data
 
   const mcpServerRepo = new McpServerRepository(workspaceId)

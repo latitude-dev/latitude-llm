@@ -1,10 +1,10 @@
 'use server'
 
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { getCommitChanges } from '@latitude-data/core/services/commits/getChanges'
 
 export const GET = errorHandler(
@@ -34,9 +34,7 @@ export const GET = errorHandler(
         .getCommitByUuid({ uuid: commitUuid, projectId: Number(projectId) })
         .then((r) => r.unwrap())
 
-      const changes = await getCommitChanges({ commit, workspace }).then((r) =>
-        r.unwrap(),
-      )
+      const changes = await getCommitChanges({ commit, workspace }).then((r) => r.unwrap())
 
       return NextResponse.json(changes, { status: 200 })
     },

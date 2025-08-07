@@ -1,10 +1,10 @@
 import { faker } from '@faker-js/faker'
 
-import { Project, User } from '../../browser'
-import { hasOwnProperty } from '../../lib/commonTypes'
+import type { Project, User } from '../../browser'
+import { objectHasOwnProperty } from '../../lib/commonTypes'
 import { createCommit as createCommitFn } from '../../services/commits/create'
 import { createProject } from './createProject'
-import { ICreateProject } from './projects'
+import type { ICreateProject } from './projects'
 
 export type ICreateCommit = {
   projectId: number
@@ -18,12 +18,7 @@ export type ICreateDraft = {
   user: User
 }
 
-export async function createCommit({
-  projectId,
-  mergedAt,
-  title,
-  user,
-}: ICreateCommit) {
+export async function createCommit({ projectId, mergedAt, title, user }: ICreateCommit) {
   const result = await createCommitFn({
     project: { id: projectId } as Project,
     user,
@@ -36,7 +31,7 @@ export async function createCommit({
 }
 
 export async function createDraft({ project, user }: ICreateDraft) {
-  const projectModel = hasOwnProperty<number, object, string>(project, 'id')
+  const projectModel = objectHasOwnProperty<number, object, string>(project, 'id')
     ? (project as unknown as Project)
     : (await createProject(project)).project
 

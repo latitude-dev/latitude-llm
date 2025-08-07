@@ -1,12 +1,12 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import {
+import type {
   ActualOutputConfiguration,
   DocumentLogFilterOptions,
   EvaluatedDocumentLog,
 } from '@latitude-data/core/browser'
 import { useMemo, useState } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 const EMPTY_ARRAY: [] = []
 export default function useEvaluatedDocumentLogs(
@@ -40,9 +40,7 @@ export default function useEvaluatedDocumentLogs(
             page: page ? Number(page) : undefined,
             pageSize: pageSize ? Number(pageSize) : undefined,
             filterOptions,
-            configuration: configuration
-              ? JSON.stringify(configuration)
-              : undefined,
+            configuration: configuration ? JSON.stringify(configuration) : undefined,
           })
       : undefined,
     {
@@ -74,8 +72,5 @@ export default function useEvaluatedDocumentLogs(
     },
   )
 
-  return useMemo(
-    () => ({ data, mutate, isLoading, error }),
-    [mutate, data, isLoading, error],
-  )
+  return useMemo(() => ({ data, mutate, isLoading, error }), [mutate, data, isLoading, error])
 }

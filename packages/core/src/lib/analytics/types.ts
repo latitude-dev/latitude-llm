@@ -1,4 +1,4 @@
-import { PostHog } from 'posthog-node'
+import type { PostHog } from 'posthog-node'
 export type PostHogInstance = InstanceType<typeof PostHog>
 
 export type AnalyticsEnvironment = {

@@ -1,16 +1,14 @@
 'use client'
 
-import { Commit } from '@latitude-data/core/browser'
-import { createContext, ReactNode, useContext } from 'react'
+import type { Commit } from '@latitude-data/core/browser'
+import { createContext, type ReactNode, useContext } from 'react'
 
 interface ICommitContextType {
   commit: Commit
   isHead: boolean
 }
 
-const CommitContext = createContext<ICommitContextType>(
-  {} as ICommitContextType,
-)
+const CommitContext = createContext<ICommitContextType>({} as ICommitContextType)
 
 const CommitProvider = ({
   children,
@@ -19,11 +17,7 @@ const CommitProvider = ({
 }: {
   children: ReactNode
 } & ICommitContextType) => {
-  return (
-    <CommitContext.Provider value={{ commit, isHead }}>
-      {children}
-    </CommitContext.Provider>
-  )
+  return <CommitContext.Provider value={{ commit, isHead }}>{children}</CommitContext.Provider>
 }
 
 const useCurrentCommit = () => {

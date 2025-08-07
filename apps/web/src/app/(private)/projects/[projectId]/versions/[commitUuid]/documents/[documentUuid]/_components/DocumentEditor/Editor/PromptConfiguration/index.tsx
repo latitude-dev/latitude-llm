@@ -3,7 +3,7 @@ import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { useState } from 'react'
 import { GenerationSettings } from './GenerationSettings'
 import { BehaviourSettings } from './BehaviourSettings'
-import { PromptConfigurationProps, useReactiveConfig } from './utils'
+import { type PromptConfigurationProps, useReactiveConfig } from './utils'
 import { LimitSettings } from './LimitSettings'
 
 export function PromptConfiguration({
@@ -68,6 +68,7 @@ export function PromptConfiguration({
           <a
             target='_blank'
             href='https://docs.latitude.so/guides/prompt-manager/configuration#configuration-options'
+            rel='noopener'
           >
             <Button variant='link' className='p-0'>
               More configuration

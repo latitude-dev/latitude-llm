@@ -1,15 +1,12 @@
 'use client'
 import { useCallback, useState } from 'react'
 
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { createDraftWithPromptlUpgradeAction } from '$/actions/commits/createDraftWithPromptlUpgrade'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
@@ -18,7 +15,7 @@ import useDocumentVersions from '$/stores/documentVersions'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-export function UpgradeToPromptlModal({
+function UpgradeToPromptlModal({
   open,
   onOpenChange,
 }: {
@@ -116,9 +113,9 @@ export function UpgradeToPromptlModal({
       onConfirm={() => upgradeDocument(document.documentUuid)}
     >
       <Text.H5>
-        Since Latitude launched, we have been working on improving the syntax,
-        addressing user feedback. The new syntax is called PromptL and it is
-        designed to be more intuitive and easier to use.
+        Since Latitude launched, we have been working on improving the syntax, addressing user
+        feedback. The new syntax is called PromptL and it is designed to be more intuitive and
+        easier to use.
       </Text.H5>
 
       <Text.H5>
@@ -147,11 +144,7 @@ export function UpgradeToPromptlModal({
   )
 }
 
-export function UpdateToPromptLButton({
-  document,
-}: {
-  document: DocumentVersion
-}) {
+export function UpdateToPromptLButton({ document }: { document: DocumentVersion }) {
   const [open, setOpen] = useState(false)
 
   if (document.promptlVersion !== 0) return null

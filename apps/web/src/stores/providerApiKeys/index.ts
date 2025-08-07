@@ -6,7 +6,7 @@ import { ROUTES } from '$/services/routes'
 import type { ProviderApiKey } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 export type SerializedProviderApiKey = Omit<
   ProviderApiKey,
@@ -29,25 +29,18 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
   const {
     data = EMPTY_ARRAY,
     mutate,
-    ...rest
-  } = useSWR<SerializedProviderApiKey[], ProviderApiKey[]>(
-    'api/providerApiKeys',
-    fetcher,
-    opts,
-  )
-  const { execute: create, isPending: isCreating } = useLatitudeAction(
-    createProviderApiKeyAction,
-    {
-      onSuccess: async ({ data: apikey }) => {
-        toast({
-          title: 'Success',
-          description: `${apikey.name} created successfully`,
-        })
+    isLoading,
+  } = useSWR<SerializedProviderApiKey[], ProviderApiKey[]>('api/providerApiKeys', fetcher, opts)
+  const { execute: create, isPending: isCreating } = useLatitudeAction(createProviderApiKeyAction, {
+    onSuccess: async ({ data: apikey }) => {
+      toast({
+        title: 'Success',
+        description: `${apikey.name} created successfully`,
+      })
 
-        mutate([...data, apikey])
-      },
+      mutate([...data, apikey])
     },
-  )
+  })
 
   const { execute: destroy, isPending: isDestroying } = useLatitudeAction(
     destroyProviderApiKeyAction,
@@ -71,9 +64,9 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
       mutate,
       isCreating,
       isDestroying,
-      ...rest,
+      isLoading,
     }),
-    [data, create, destroy, mutate, isCreating, isDestroying, rest],
+    [data, create, destroy, mutate, isCreating, isDestroying, isLoading],
   )
 }
 

@@ -10,12 +10,12 @@
 - `pnpm test:watch` - Run tests in watch mode (specific packages)
 - `pnpm --filter @latitude-data/core db:migrate` - Run database migrations
 - `pnpm --filter @latitude-data/core db:generate` - Generate database migrations
-- `pnpm prettier` - **ALWAYS run this when completing tasks** - Formats all code to standardize patterns
+- `pnpm exec biome format --write` - **ALWAYS run this when completing tasks** - Formats all code to standardize patterns
 
 ## Code Style
 
 - Use TypeScript for all code, prefer types over interfaces
-- Prettier config: single quotes, no semicolons, trailing commas
+- Formatting config: single quotes, no semicolons, trailing commas
 - Functional programming patterns, early returns for readability
 - Named exports preferred, descriptive names with auxiliary verbs (isLoading, hasError)
 - Event handlers prefixed with "handle" (handleClick, handleSubmit)
@@ -207,7 +207,7 @@ When implementing new features, follow this order:
 7. **UI Components**: Build interface following design patterns
 8. **Routes**: Add navigation and routing
 9. **Testing**: Validate with linting and type checking
-10. **Code Formatting**: **ALWAYS run `pnpm prettier`** to standardize patterns
+10. **Code Formatting**: **ALWAYS run `pnpm exec biome format --write`** to standardize patterns
 
 ## Action Organization Patterns
 

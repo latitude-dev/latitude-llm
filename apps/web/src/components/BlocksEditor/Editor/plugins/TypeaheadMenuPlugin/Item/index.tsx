@@ -1,25 +1,20 @@
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import { ComponentPickerOption, PickerGroup } from '../useGroupedOptions'
+import type { ComponentPickerOption, PickerGroup } from '../useGroupedOptions'
 
 export function flattenGroups(groups: PickerGroup[]): ComponentPickerOption[] {
   return groups.flatMap((g) => g.options)
 }
 
-export function filterGroups(
-  groups: PickerGroup[],
-  query: string | null,
-): PickerGroup[] {
+export function filterGroups(groups: PickerGroup[], query: string | null): PickerGroup[] {
   if (!query) return groups
   const regex = new RegExp(query, 'i')
   return groups
     .map((group) => ({
       ...group,
       options: group.options.filter(
-        (option) =>
-          regex.test(option.title) ||
-          option.keywords.some((k) => regex.test(k)),
+        (option) => regex.test(option.title) || option.keywords.some((k) => regex.test(k)),
       ),
     }))
     .filter((group) => group.options.length > 0)
@@ -50,18 +45,13 @@ export function ComponentPickerMenuItem({
         },
       )}
       ref={option.setRefElement}
-      role='option'
       aria-selected={isSelected}
       id={`typeahead-item-${index}`}
       onMouseEnter={onMouseEnter}
       onClick={onClick}
     >
       {!!option.icon && <Icon name={option.icon} color='foregroundMuted' />}
-      <Text.H5
-        color={isSelected ? 'accentForeground' : 'foregroundMuted'}
-        noWrap
-        ellipsis
-      >
+      <Text.H5 color={isSelected ? 'accentForeground' : 'foregroundMuted'} noWrap ellipsis>
         {option.title}
       </Text.H5>
       {!!option.hotkey && (

@@ -1,12 +1,9 @@
-import {
-  type Message,
-  MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+import { type Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { applyProviderRules } from '.'
 import { Providers } from '../models'
-import { AppliedRules, ProviderRules } from './types'
+import { type AppliedRules, ProviderRules } from './types'
 
 const providerType = Providers.Anthropic
 

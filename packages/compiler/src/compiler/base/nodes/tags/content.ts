@@ -1,8 +1,8 @@
 import errors from '$compiler/error/errors'
-import { ContentTag } from '$compiler/parser/interfaces'
+import type { ContentTag } from '$compiler/parser/interfaces'
 import { ContentType } from '$compiler/types'
 
-import { CompileNodeContext } from '../../types'
+import type { CompileNodeContext } from '../../types'
 
 export async function compile(
   {

@@ -14,9 +14,7 @@ export const discardDocumentSuggestionAction = withDocument
   )
   .handler(async ({ ctx, input }) => {
     const repository = new DocumentSuggestionsRepository(ctx.workspace.id)
-    const suggestion = await repository
-      .find(input.suggestionId)
-      .then((r) => r.unwrap())
+    const suggestion = await repository.find(input.suggestionId).then((r) => r.unwrap())
 
     const result = await discardDocumentSuggestion({
       suggestion: suggestion,

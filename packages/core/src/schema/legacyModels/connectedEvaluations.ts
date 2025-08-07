@@ -1,12 +1,4 @@
-import {
-  bigint,
-  bigserial,
-  boolean,
-  index,
-  timestamp,
-  unique,
-  uuid,
-} from 'drizzle-orm/pg-core'
+import { bigint, bigserial, boolean, index, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
@@ -25,14 +17,13 @@ export const connectedEvaluations = latitudeSchema.table(
     ...timestamps(),
   },
   (table) => ({
-    connectedEvaluationEvaluationIdx: index(
-      'connected_evaluations_evaluation_idx',
-    ).on(table.evaluationId),
-    connectedEvaluationsUniqueIdx: unique(
-      'connected_evaluations_unique_idx',
-    ).on(table.documentUuid, table.evaluationId),
-    documentUuidIdx: index('connected_evaluations_document_uuid_idx').on(
-      table.documentUuid,
+    connectedEvaluationEvaluationIdx: index('connected_evaluations_evaluation_idx').on(
+      table.evaluationId,
     ),
+    connectedEvaluationsUniqueIdx: unique('connected_evaluations_unique_idx').on(
+      table.documentUuid,
+      table.evaluationId,
+    ),
+    documentUuidIdx: index('connected_evaluations_document_uuid_idx').on(table.documentUuid),
   }),
 )

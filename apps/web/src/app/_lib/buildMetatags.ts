@@ -17,15 +17,12 @@ export default function buildMetatags({
   locationDescription?: string
   parent?: ResolvedMetadata
 }): Metadata {
-  let parentTitle = parent?.title?.absolute || ''
+  const parentTitle = parent?.title?.absolute || ''
   let metaTitle =
-    title && parentTitle
-      ? `${title} - ${parentTitle}`
-      : title || parentTitle || DEFAULT_TITLE
+    title && parentTitle ? `${title} - ${parentTitle}` : title || parentTitle || DEFAULT_TITLE
   if (!metaTitle.endsWith(' - Latitude')) metaTitle += ' - Latitude'
 
-  let closestLocationDescription =
-    locationDescription || parent?.other?.['location-description']
+  const closestLocationDescription = locationDescription || parent?.other?.['location-description']
 
   const metaDescription = description || DEFAULT_DESCRIPTION
 

@@ -1,13 +1,11 @@
-import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import type { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
+import type { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
+import type { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { LatitudeError } from '../../../lib/errors'
-import { Result, TypedResult } from '../../../lib/Result'
+import { Result, type TypedResult } from '../../../lib/Result'
 
 // Types
-export type McpClientTransport =
-  | SSEClientTransport
-  | StreamableHTTPClientTransport
+export type McpClientTransport = SSEClientTransport | StreamableHTTPClientTransport
 
 export interface McpClientConnection {
   client: McpClient
@@ -56,11 +54,9 @@ export function normalizeMcpUrl(url: string): TypedResult<URL, McpUrlError> {
     // Add http:// protocol if the URL doesn't include a protocol
     const urlWithProtocol = url.match(/^https?:\/\//) ? url : `http://${url}`
     // Add /sse path if the URL doesn't include a path
-    const urlWithPath = urlWithProtocol.match(/\/sse$/)
-      ? urlWithProtocol
-      : `${urlWithProtocol}/sse`
+    const urlWithPath = urlWithProtocol.match(/\/sse$/) ? urlWithProtocol : `${urlWithProtocol}/sse`
     return Result.ok(new URL(urlWithPath))
-  } catch (error) {
+  } catch (_error) {
     return Result.error(new McpUrlError(`Invalid MCP server URL: ${url}`))
   }
 }
@@ -82,19 +78,13 @@ export async function retryWithBackoff<T>(
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err))
 
-      const delay = Math.min(
-        config.initialDelay * Math.pow(2, attempt),
-        config.maxTimeout,
-      )
+      const delay = Math.min(config.initialDelay * 2 ** attempt, config.maxTimeout)
 
       await sleep(delay)
     }
   }
 
   return Result.error(
-    new McpConnectionError(
-      `Operation failed after ${config.maxRetries} attempts`,
-      lastError,
-    ),
+    new McpConnectionError(`Operation failed after ${config.maxRetries} attempts`, lastError),
   )
 }

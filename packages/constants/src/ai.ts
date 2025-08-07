@@ -1,21 +1,12 @@
-import {
-  AssistantMessage,
-  Message,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
-import {
-  FinishReason,
-  LanguageModelUsage,
-  TextStreamPart,
-  ToolContent,
-} from 'ai'
-import { JSONSchema7 } from 'json-schema'
+import type { AssistantMessage, Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import type { FinishReason, LanguageModelUsage, TextStreamPart, ToolContent } from 'ai'
+import type { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
-import { ParameterType } from './config'
-import { LatitudeEventData, LegacyChainEventTypes } from './events'
-import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
-import { ProviderLog } from './models'
+import type { ParameterType } from './config'
+import type { LatitudeEventData, LegacyChainEventTypes } from './events'
+import type { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
+import type { ProviderLog } from './models'
 
 export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
 
@@ -62,12 +53,11 @@ export type ProviderData = TextStreamPart<any>
 export type ChainEventDto = ProviderData | LatitudeEventData
 
 export type AssertedStreamType = 'text' | Record<string | symbol, unknown>
-export type ChainCallResponseDto<S extends AssertedStreamType = 'text'> =
-  S extends 'text'
-    ? ChainStepTextResponse
-    : S extends Record<string | symbol, unknown>
-      ? ChainStepObjectResponse<S>
-      : never
+export type ChainCallResponseDto<S extends AssertedStreamType = 'text'> = S extends 'text'
+  ? ChainStepTextResponse
+  : S extends Record<string | symbol, unknown>
+    ? ChainStepObjectResponse<S>
+    : never
 
 export type ChainEventDtoResponse =
   | Omit<ChainStepResponse<'object'>, 'providerLog'>
@@ -88,11 +78,10 @@ export type ChainStepTextResponse = BaseResponse & {
   toolCalls: ToolCall[]
 }
 
-export type ChainStepObjectResponse<S extends Record<string, unknown> = any> =
-  BaseResponse & {
-    streamType: 'object'
-    object: S
-  }
+export type ChainStepObjectResponse<S extends Record<string, unknown> = any> = BaseResponse & {
+  streamType: 'object'
+  object: S
+}
 
 export type ChainStepResponse<T extends StreamType> = T extends 'text'
   ? ChainStepTextResponse
@@ -156,8 +145,7 @@ export type RunSyncAPIResponse<S extends AssertedStreamType = 'text'> = {
   response: ChainCallResponseDto<S>
 }
 
-export type ChatSyncAPIResponse<S extends AssertedStreamType = 'text'> =
-  RunSyncAPIResponse<S>
+export type ChatSyncAPIResponse<S extends AssertedStreamType = 'text'> = RunSyncAPIResponse<S>
 
 export const toolCallResponseSchema = z.object({
   id: z.string(),

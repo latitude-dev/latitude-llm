@@ -21,7 +21,7 @@ async function getDiffFromExperimentId({
   workspaceId: number
   experimentId?: number
 }): Promise<string | undefined> {
-  if (!experimentId || isNaN(experimentId)) {
+  if (!experimentId || Number.isNaN(experimentId)) {
     return undefined
   }
   const experimentsScope = new ExperimentsRepository(workspaceId)
@@ -49,6 +49,7 @@ export default async function DocumentPage({
   const projectId = Number(pjid)
   const { workspace } = await getCurrentUserOrRedirect()
 
+  // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
   let commit
   try {
     commit = await findCommitCached({ projectId, uuid: commitUuid })
@@ -72,7 +73,7 @@ export default async function DocumentPage({
   const awaitedSearchParams = await searchParams
   const initialDiff = await getDiffFromExperimentId({
     workspaceId: workspace.id,
-    experimentId: Number(awaitedSearchParams?.['applyExperimentId']),
+    experimentId: Number(awaitedSearchParams?.applyExperimentId),
   })
 
   return (

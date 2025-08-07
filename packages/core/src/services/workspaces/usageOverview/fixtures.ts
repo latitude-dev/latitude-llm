@@ -31,9 +31,7 @@ export type WorkspaceInfo = {
   memberEmails: string[]
 }
 
-export const generateWorkspaceFixtures = (
-  currentDate: Date,
-): Record<string, WorkspaceInfo> => {
+export const generateWorkspaceFixtures = (currentDate: Date): Record<string, WorkspaceInfo> => {
   const subscriptionCreatedAt = subDays(subMonths(currentDate, 6), 14)
   // Leave these logs here. Very handy for debugging dates are correct.
 

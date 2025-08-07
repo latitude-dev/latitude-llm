@@ -89,10 +89,7 @@ export class Parser {
   }
 
   allowWhitespace() {
-    while (
-      this.index < this.template.length &&
-      /\s/.test(this.template[this.index] || '')
-    ) {
+    while (this.index < this.template.length && /\s/.test(this.template[this.index] || '')) {
       this.index++
     }
   }
@@ -107,11 +104,7 @@ export class Parser {
     this.allowWhitespace()
   }
 
-  eat(
-    str: string,
-    required: boolean = false,
-    error?: { code: string; message: string },
-  ) {
+  eat(str: string, required: boolean = false, error?: { code: string; message: string }) {
     if (this.match(str)) {
       this.index += str.length
       return true
@@ -127,10 +120,7 @@ export class Parser {
     return false
   }
 
-  error(
-    { code, message }: { code: string; message: string },
-    index = this.index,
-  ): never {
+  error({ code, message }: { code: string; message: string }, index = this.index): never {
     error(message, {
       name: 'ParseError',
       code,

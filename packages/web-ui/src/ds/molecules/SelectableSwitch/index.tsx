@@ -1,18 +1,13 @@
 'use client'
-import { ReactNode, useEffect, useId, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Button } from '../../atoms/Button'
-import {
-  FormControl,
-  FormDescription,
-  InlineFormErrorMessage,
-} from '../../atoms/FormField'
+import { FormControl, FormDescription, InlineFormErrorMessage } from '../../atoms/FormField'
 import { Label } from '../../atoms/Label'
 import { Text } from '../../atoms/Text'
 
-const ButtonBaseClassName =
-  'w-full h-8 flex items-center justify-center gap-1 px-3 rounded-md'
+const ButtonBaseClassName = 'w-full h-8 flex items-center justify-center gap-1 px-3 rounded-md'
 const ButtonSelectableClassName =
   'cursor-pointer pointer-events-auto group-disabled:!cursor-not-allowed group-disabled:!opacity-80 disabled:!opacity-100'
 const ButtonUnselectableClassName =
@@ -69,14 +64,10 @@ export function SelectableSwitch({
     resizeObserver.observe(button)
 
     return () => resizeObserver.disconnect()
-  }, [selected])
+  }, [])
 
-  const TrueButtonClassName = !selected
-    ? ButtonSelectableClassName
-    : ButtonUnselectableClassName
-  const FalseButtonClassName = selected
-    ? ButtonSelectableClassName
-    : ButtonUnselectableClassName
+  const TrueButtonClassName = !selected ? ButtonSelectableClassName : ButtonUnselectableClassName
+  const FalseButtonClassName = selected ? ButtonSelectableClassName : ButtonUnselectableClassName
 
   const error = errors?.[0]
   const id = useId()
@@ -87,11 +78,7 @@ export function SelectableSwitch({
   return (
     <div
       className={cn('flex flex-col gap-y-2 w-full', className)}
-      aria-describedby={
-        !error
-          ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`
-      }
+      aria-describedby={!error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`}
       aria-invalid={!!error}
     >
       {label && (
@@ -133,9 +120,7 @@ export function SelectableSwitch({
               disabled={disabled}
             >
               <Text.H5M color={selected ? 'background' : 'foregroundMuted'}>
-                <span className='transition-colors duration-200 ease-in-out'>
-                  {trueLabel}
-                </span>
+                <span className='transition-colors duration-200 ease-in-out'>{trueLabel}</span>
               </Text.H5M>
             </Button>
           </div>
@@ -156,9 +141,7 @@ export function SelectableSwitch({
               disabled={disabled}
             >
               <Text.H5M color={!selected ? 'background' : 'foregroundMuted'}>
-                <span className='transition-colors duration-200 ease-in-out'>
-                  {falseLabel}
-                </span>
+                <span className='transition-colors duration-200 ease-in-out'>{falseLabel}</span>
               </Text.H5M>
             </Button>
           </div>

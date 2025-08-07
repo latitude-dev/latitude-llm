@@ -3,10 +3,7 @@ import { EditorReadOnlyBanner } from '@latitude-data/web-ui/molecules/DocumentTe
 import { font } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin'
-import {
-  InitialConfigType,
-  LexicalComposer,
-} from '@lexical/react/LexicalComposer'
+import { type InitialConfigType, LexicalComposer } from '@lexical/react/LexicalComposer'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary'
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
@@ -14,7 +11,7 @@ import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { useCallback, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import { BlocksEditorProps } from '../types'
+import type { BlocksEditorProps } from '../types'
 import { CodeNode } from './nodes/CodeNode'
 import { FileNode } from './nodes/FileNode'
 import { ImageNode } from './nodes/ImageNode'
@@ -63,23 +60,13 @@ const theme = {
   },
 }
 
-function OnChangeHandler({
-  onChange,
-}: {
-  onChange: BlocksEditorProps['onChange']
-}) {
-  const handleChange = useDebouncedCallback(
-    fromLexicalToText({ onChange }),
-    100,
-    { trailing: true },
-  )
+function OnChangeHandler({ onChange }: { onChange: BlocksEditorProps['onChange'] }) {
+  const handleChange = useDebouncedCallback(fromLexicalToText({ onChange }), 100, {
+    trailing: true,
+  })
 
   return (
-    <OnChangePlugin
-      onChange={handleChange}
-      ignoreHistoryMergeTagChange
-      ignoreSelectionChange
-    />
+    <OnChangePlugin onChange={handleChange} ignoreHistoryMergeTagChange ignoreSelectionChange />
   )
 }
 
@@ -99,8 +86,7 @@ export function BlocksEditor({
   autoFocus = false,
 }: BlocksEditorProps) {
   const readOnly = Boolean(readOnlyMessage)
-  const [floatingAnchorElem, setFloatingAnchorElem] =
-    useState<HTMLDivElement | null>(null)
+  const [floatingAnchorElem, setFloatingAnchorElem] = useState<HTMLDivElement | null>(null)
 
   const onRef = useCallback((floatingAnchorElem: HTMLDivElement) => {
     if (floatingAnchorElem !== null) {
@@ -127,27 +113,19 @@ export function BlocksEditor({
   }, [readOnly, onError, initialValue])
 
   return (
-    <BlocksEditorProvider
-      currentDocument={currentDocument}
-      prompts={prompts}
-      readOnly={readOnly}
-    >
+    <BlocksEditorProvider currentDocument={currentDocument} prompts={prompts} readOnly={readOnly}>
       <LexicalComposer initialConfig={initialConfig}>
         <div
           className={cn(
             // Note: min-h-6 necessary to avoid showing the scrollbar when there is no content
             'h-full min-h-6 relative overflow-y-auto custom-scrollbar scrollable-indicator',
             {
-              'border border-border bg-backgroundCode rounded-md px-3 pb-3':
-                readOnly,
+              'border border-border bg-backgroundCode rounded-md px-3 pb-3': readOnly,
             },
           )}
           ref={onRef}
         >
-          <EditorReadOnlyBanner
-            readOnlyMessage={readOnlyMessage}
-            className='pb-3'
-          />
+          <EditorReadOnlyBanner readOnlyMessage={readOnlyMessage} className='pb-3' />
           <RichTextPlugin
             ErrorBoundary={LexicalErrorBoundary}
             contentEditable={
@@ -161,27 +139,17 @@ export function BlocksEditor({
                     'cursor-default opacity-80': readOnly,
                   },
                 )}
-                aria-placeholder={
-                  readOnly ? readOnlyMessage || '' : placeholder
-                }
+                aria-placeholder={readOnly ? readOnlyMessage || '' : placeholder}
                 placeholder={
                   readOnly ? (
                     <div className='absolute bottom-2 text-gray-400 pointer-events-none select-none'>
-                      <Text.H5
-                        color='foregroundMuted'
-                        textOpacity={50}
-                        userSelect={false}
-                      >
+                      <Text.H5 color='foregroundMuted' textOpacity={50} userSelect={false}>
                         This prompt is empty
                       </Text.H5>
                     </div>
                   ) : (
                     <div className='absolute top-0 text-gray-400 pointer-events-none select-none'>
-                      <Text.H5
-                        color='foregroundMuted'
-                        textOpacity={50}
-                        userSelect={false}
-                      >
+                      <Text.H5 color='foregroundMuted' textOpacity={50} userSelect={false}>
                         {placeholder}
                       </Text.H5>
                     </div>
@@ -201,9 +169,7 @@ export function BlocksEditor({
             onRequestPromptMetadata={onRequestPromptMetadata}
             onToggleDevEditor={onToggleDevEditor}
           />
-          <ReferenceEditPlugin
-            onRequestPromptMetadata={onRequestPromptMetadata}
-          />
+          <ReferenceEditPlugin onRequestPromptMetadata={onRequestPromptMetadata} />
           <HierarchyValidationPlugin />
           <VariableTransformPlugin />
           <HistoryPlugin />

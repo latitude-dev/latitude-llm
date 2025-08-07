@@ -1,4 +1,4 @@
-import { DocumentVersion } from '../../../browser'
+import type { DocumentVersion } from '../../../browser'
 
 export function getMergedAndDraftDocuments({
   headDocuments,
@@ -9,10 +9,7 @@ export function getMergedAndDraftDocuments({
 }) {
   const mergedDocuments: DocumentVersion[] = headDocuments
   const draftDocuments = mergedDocuments
-    .filter(
-      (d) =>
-        !documentsInDrafCommit.find((c) => c.documentUuid === d.documentUuid),
-    )
+    .filter((d) => !documentsInDrafCommit.find((c) => c.documentUuid === d.documentUuid))
     .concat(documentsInDrafCommit)
 
   return { mergedDocuments, draftDocuments }

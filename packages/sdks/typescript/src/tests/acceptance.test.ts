@@ -59,7 +59,7 @@ Location: {{ location }}
           project = result.project
           versionUuid = result.version.uuid
         }
-      } catch (error) {
+      } catch (_error) {
         // If we can't get projects, create a new one
         const result = await setupSdk.projects.create('E2E Test Project')
         project = result.project
@@ -101,9 +101,7 @@ Location: {{ location }}
 
   it('should instantiate SDK targeting localhost:8787 with no SSL and run prompt with tool handler', async () => {
     // Create the get_weather tool handler
-    const getWeatherTool = vi
-      .fn()
-      .mockImplementation(async () => 'Temperature is 25°C and sunny')
+    const getWeatherTool = vi.fn().mockImplementation(async () => 'Temperature is 25°C and sunny')
 
     try {
       // Run prompt with get_weather tool - this makes a real API call
@@ -155,9 +153,7 @@ Location: {{ location }}
   })
 
   it('should handle tool calls during prompt execution with streaming', async () => {
-    const getWeatherMock = vi
-      .fn()
-      .mockResolvedValue('Temperature is 22°C and cloudy')
+    const getWeatherMock = vi.fn().mockResolvedValue('Temperature is 22°C and cloudy')
 
     const onFinishedMock = vi.fn()
     const onErrorMock = vi.fn()
@@ -213,9 +209,7 @@ Location: {{ location }}
   })
 
   it('should ensure tool handler gets called when tools are requested', async () => {
-    const getWeatherMock = vi
-      .fn()
-      .mockResolvedValue('Temperature is 20°C and rainy')
+    const getWeatherMock = vi.fn().mockResolvedValue('Temperature is 20°C and rainy')
 
     try {
       // Make real API call

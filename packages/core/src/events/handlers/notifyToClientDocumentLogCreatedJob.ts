@@ -4,7 +4,7 @@ import { NotFoundError } from '../../lib/errors'
 import { DocumentLogsWithErrorsRepository } from '../../repositories'
 import { computeDocumentLogWithMetadata } from '../../services/documentLogs/computeDocumentLogWithMetadata'
 import { WebsocketClient } from '../../websockets/workers'
-import { DocumentLogCreatedEvent } from '../events'
+import type { DocumentLogCreatedEvent } from '../events'
 
 export const notifyToClientDocumentLogCreatedJob = async ({
   data: event,
@@ -17,7 +17,7 @@ export const notifyToClientDocumentLogCreatedJob = async ({
   let documentLog
   try {
     documentLog = await repo.find(id).then((r) => r.unwrap())
-  } catch (error) {
+  } catch (_error) {
     // do nothing, we don't wanna retry the job
     return
   }
@@ -29,17 +29,17 @@ export const notifyToClientDocumentLogCreatedJob = async ({
   try {
     commit = await findCommitById(documentLog.commitId)
     if (!commit) throw new NotFoundError('Commit not found')
-  } catch (error) {
+  } catch (_error) {
     // do nothing, we don't wanna retry the job
     return
   }
 
   let documentLogWithMetadata
   try {
-    documentLogWithMetadata = await computeDocumentLogWithMetadata(
-      documentLog,
-    ).then((r) => r.unwrap())
-  } catch (error) {
+    documentLogWithMetadata = await computeDocumentLogWithMetadata(documentLog).then((r) =>
+      r.unwrap(),
+    )
+  } catch (_error) {
     // do nothing, we don't wanna retry the job
     return
   }

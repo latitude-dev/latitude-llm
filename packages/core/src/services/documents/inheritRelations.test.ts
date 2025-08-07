@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DocumentSuggestion, DocumentVersion, Workspace } from '../../browser'
+import type { DocumentSuggestion, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
 import { DocumentSuggestionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
@@ -22,12 +22,7 @@ describe('inheritDocumentRelations', () => {
     vi.resetAllMocks()
     vi.restoreAllMocks()
 
-    const {
-      workspace: w,
-      providers,
-      project,
-      user,
-    } = await factories.createProject()
+    const { workspace: w, providers, project, user } = await factories.createProject()
     workspace = w
     const provider = providers[0]!
 
@@ -45,14 +40,13 @@ describe('inheritDocumentRelations', () => {
     })
     fromVersion = documentVersion
 
-    const { documentVersion: anotherDocument } =
-      await factories.createDocumentVersion({
-        workspace: workspace,
-        user: user,
-        commit: fromCommit,
-        path: 'another-prompt',
-        content: factories.helpers.createPrompt({ provider }),
-      })
+    const { documentVersion: anotherDocument } = await factories.createDocumentVersion({
+      workspace: workspace,
+      user: user,
+      commit: fromCommit,
+      path: 'another-prompt',
+      content: factories.helpers.createPrompt({ provider }),
+    })
     fromAnotherDocument = anotherDocument
 
     suggestions = [

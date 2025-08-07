@@ -23,9 +23,7 @@ export const acceptInvitationAction = createServerAction()
   )
   .handler(async ({ input }) => {
     const { membershipToken } = input
-    const membership = await unsafelyFindMembershipByToken(
-      membershipToken,
-    ).then((r) => r.unwrap())
+    const membership = await unsafelyFindMembershipByToken(membershipToken).then((r) => r.unwrap())
     const workspace = await unsafelyFindWorkspace(membership.workspaceId)
     if (!workspace) throw new NotFoundError('Workspace not found')
 

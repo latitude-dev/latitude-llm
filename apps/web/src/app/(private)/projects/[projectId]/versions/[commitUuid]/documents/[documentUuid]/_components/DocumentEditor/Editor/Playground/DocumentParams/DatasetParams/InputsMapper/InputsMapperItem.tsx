@@ -1,16 +1,14 @@
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { InputSource } from '@latitude-data/core/browser'
-import { type UseSelectDataset } from '../useSelectDataset'
+import type { InputSource } from '@latitude-data/core/browser'
+import type { UseSelectDataset } from '../useSelectDataset'
 
 type SelectValueType = string
-export type OnSelectRowCellFn<T> = (
-  param: string,
-) => (value: T | undefined) => void
+export type OnSelectRowCellFn<T> = (param: string) => (value: T | undefined) => void
 
 export function InputsMapperItem({
   value,
@@ -33,15 +31,12 @@ export function InputsMapperItem({
   tooltipValue: { isEmpty: boolean; value: string }
   copyToManual: () => void
 }) {
-  const isLoading =
-    loadingState.rows || loadingState.position || loadingState.isAssigning
+  const isLoading = loadingState.rows || loadingState.position || loadingState.isAssigning
 
   return (
     <div className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'>
       <div className='flex flex-row items-center gap-x-2 min-h-8'>
-        <Badge variant={isMapped ? 'accent' : 'muted'}>
-          &#123;&#123;{param}&#125;&#125;
-        </Badge>
+        <Badge variant={isMapped ? 'accent' : 'muted'}>&#123;&#123;{param}&#125;&#125;</Badge>
         {!isMapped ? (
           <Tooltip trigger={<Icon name='info' />}>
             This variable is not mapped to any row header

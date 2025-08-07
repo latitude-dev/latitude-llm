@@ -1,10 +1,10 @@
 import { Disk } from 'flydrive'
 import { FSDriver } from 'flydrive/drivers/fs'
-import { promises as fs } from 'fs'
-import os from 'os'
+import { promises as fs } from 'node:fs'
+import os from 'node:os'
 import { DiskWrapper } from '../lib/disk'
 
-let testDisk: DiskWrapper | undefined = undefined
+let testDisk: DiskWrapper | undefined
 
 export const TEST_DISK_LOCATION = `${os.tmpdir()}/test-disk-${process.pid}-${Date.now()}`
 

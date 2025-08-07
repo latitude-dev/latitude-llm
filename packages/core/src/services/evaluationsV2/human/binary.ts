@@ -1,13 +1,13 @@
 import {
-  EvaluationType,
-  HumanEvaluationMetric,
+  type EvaluationType,
+  type HumanEvaluationMetric,
   HumanEvaluationBinarySpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import {
-  EvaluationMetricAnnotateArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricAnnotateArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 
@@ -20,10 +20,7 @@ export const HumanEvaluationBinarySpecification = {
 async function validate(
   {
     configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Human,
-    HumanEvaluationMetric.Binary
-  >,
+  }: EvaluationMetricValidateArgs<EvaluationType.Human, HumanEvaluationMetric.Binary>,
   _ = database,
 ) {
   configuration.passDescription = configuration.passDescription?.trim()
@@ -48,10 +45,7 @@ async function annotate(
     resultMetadata,
     evaluation,
     actualOutput,
-  }: EvaluationMetricAnnotateArgs<
-    EvaluationType.Human,
-    HumanEvaluationMetric.Binary
-  >,
+  }: EvaluationMetricAnnotateArgs<EvaluationType.Human, HumanEvaluationMetric.Binary>,
   _ = database,
 ) {
   const metadata = {

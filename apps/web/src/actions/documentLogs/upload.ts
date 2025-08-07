@@ -1,10 +1,6 @@
 'use server'
 
-import {
-  DELIMITERS_KEYS,
-  MAX_SIZE,
-  MAX_UPLOAD_SIZE_IN_MB,
-} from '@latitude-data/core/browser'
+import { DELIMITERS_KEYS, MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/browser'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { bulkUploadDocumentLogs } from '@latitude-data/core/services/documentLogs/bulkUpload'
 import { z } from 'zod'
@@ -23,10 +19,7 @@ export const uploadDocumentLogsAction = withDocument
         .refine(async (file) => {
           return !file || file.size <= MAX_UPLOAD_SIZE_IN_MB
         }, `Your file must be less than ${MAX_SIZE}MB in size`)
-        .refine(
-          async (file) => file.type === 'text/csv',
-          'Your file must be a CSV file',
-        ),
+        .refine(async (file) => file.type === 'text/csv', 'Your file must be a CSV file'),
     }),
   )
   .handler(async ({ ctx, input }) => {

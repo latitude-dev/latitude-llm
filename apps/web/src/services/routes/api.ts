@@ -1,4 +1,4 @@
-import { type DocumentLogFilterOptions } from '@latitude-data/core/browser'
+import type { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { generateDocumentLogsApiRouteWithParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
 
 type PaginationParameters = { page: number; pageSize: number }
@@ -358,8 +358,7 @@ export const API_ROUTES = {
     },
     features: {
       root: '/api/admin/features',
-      workspaces: (featureId: number) =>
-        `/api/admin/features/${featureId}/workspaces`,
+      workspaces: (featureId: number) => `/api/admin/features/${featureId}/workspaces`,
     },
   },
   conversations: {

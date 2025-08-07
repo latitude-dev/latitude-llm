@@ -1,4 +1,4 @@
-import { Commit, DocumentVersion } from '../../../browser'
+import type { Commit, DocumentVersion } from '../../../browser'
 import { getDocumentMetadata } from '../scan'
 
 export async function buildDocuments({
@@ -18,8 +18,7 @@ export async function buildDocuments({
     origin.documents.map(async (doc) => {
       const { config, setConfig } = await getDocumentMetadata({
         document: doc,
-        getDocumentByPath: (path) =>
-          origin.documents.find((d) => d.path === path),
+        getDocumentByPath: (path) => origin.documents.find((d) => d.path === path),
       })
       delete config.model
       delete config.provider

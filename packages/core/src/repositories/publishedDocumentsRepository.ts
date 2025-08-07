@@ -1,5 +1,5 @@
 import { and, eq, getTableColumns } from 'drizzle-orm'
-import { PublishedDocument } from '../browser'
+import type { PublishedDocument } from '../browser'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { publishedDocuments } from '../schema'
@@ -13,11 +13,7 @@ export class PublishedDocumentRepository extends Repository<PublishedDocument> {
   }
 
   get scope() {
-    return this.db
-      .select(tt)
-      .from(publishedDocuments)
-      .where(this.scopeFilter)
-      .$dynamic()
+    return this.db.select(tt).from(publishedDocuments).where(this.scopeFilter).$dynamic()
   }
 
   async findByUuid(uuid: string) {
@@ -34,20 +30,13 @@ export class PublishedDocumentRepository extends Repository<PublishedDocument> {
 
   async findByDocumentUuid(documentUuid: string) {
     const results = await this.scope
-      .where(
-        and(
-          this.scopeFilter,
-          eq(publishedDocuments.documentUuid, documentUuid),
-        ),
-      )
+      .where(and(this.scopeFilter, eq(publishedDocuments.documentUuid, documentUuid)))
       .limit(1)
 
     return results[0]
   }
 
   async findByProject(projectId: number) {
-    return this.scope.where(
-      and(this.scopeFilter, eq(publishedDocuments.projectId, projectId)),
-    )
+    return this.scope.where(and(this.scopeFilter, eq(publishedDocuments.projectId, projectId)))
   }
 }

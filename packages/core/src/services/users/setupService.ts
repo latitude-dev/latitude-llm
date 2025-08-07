@@ -1,10 +1,10 @@
 import { env } from '@latitude-data/env'
-import { Commit, DocumentVersion, User, Workspace } from '../../browser'
+import type { Commit, DocumentVersion, User, Workspace } from '../../browser'
 import { Providers } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
 import { createApiKey } from '../apiKeys'
 import { createOnboardingDataset } from '../datasets/createOnboardingDataset'
 import { ONBOARDING_DOCUMENT_PATH } from '../documents/findOnboardingDocument'
@@ -39,10 +39,9 @@ export default async function setupService(
   },
   transaction = new Transaction(),
 ): PromisedResult<{ user: User; workspace: Workspace }> {
-  const user = await createUser(
-    { email, name, confirmedAt: new Date() },
-    transaction,
-  ).then((r) => r.unwrap())
+  const user = await createUser({ email, name, confirmedAt: new Date() }, transaction).then((r) =>
+    r.unwrap(),
+  )
   const workspace = await createWorkspace(
     {
       name: companyName,
@@ -70,21 +69,15 @@ export default async function setupService(
     transaction,
   )
 
-  await createMembership(
-    { confirmedAt: new Date(), user, workspace },
-    transaction,
-  ).then((r) => r.unwrap())
-  await createApiKey({ workspace }, transaction).then((r) => r.unwrap())
-  await createWorkspaceOnboarding({ workspace }, transaction).then((r) =>
+  await createMembership({ confirmedAt: new Date(), user, workspace }, transaction).then((r) =>
     r.unwrap(),
   )
-  await createOnboardingDataset({ workspace, author: user }, transaction).then(
+  await createApiKey({ workspace }, transaction).then((r) => r.unwrap())
+  await createWorkspaceOnboarding({ workspace }, transaction).then((r) => r.unwrap())
+  await createOnboardingDataset({ workspace, author: user }, transaction).then((r) => r.unwrap())
+  await createDemoEvaluation({ workspace, document: onboardingDocument, commit }, transaction).then(
     (r) => r.unwrap(),
   )
-  await createDemoEvaluation(
-    { workspace, document: onboardingDocument, commit },
-    transaction,
-  ).then((r) => r.unwrap())
 
   publisher.publishLater({
     type: 'userCreated',

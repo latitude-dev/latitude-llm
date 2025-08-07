@@ -1,16 +1,16 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  Commit,
+  type Commit,
   EvaluationType,
-  EvaluationV2,
+  type EvaluationV2,
   LLM_EVALUATION_PROMPT_PARAMETERS,
   LlmEvaluationMetric,
   LogSources,
-  ProviderApiKey,
-  ProviderLog,
+  type ProviderApiKey,
+  type ProviderLog,
   Providers,
-  Workspace,
+  type Workspace,
 } from '../../../browser'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import * as factories from '../../../tests/factories'
@@ -71,9 +71,7 @@ describe('runPrompt', () => {
     resultUuid = generateUUIDIdentifier()
 
     prompt = buildPrompt({ ...evaluation.configuration, provider })
-    parameters = Object.fromEntries(
-      LLM_EVALUATION_PROMPT_PARAMETERS.map((p) => [p, p]),
-    )
+    parameters = Object.fromEntries(LLM_EVALUATION_PROMPT_PARAMETERS.map((p) => [p, p]))
 
     await factories.createProviderLog({
       documentLogUuid: resultUuid,

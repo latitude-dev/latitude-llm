@@ -1,6 +1,6 @@
 'use client'
 import { PromptHeader } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Header'
-import {
+import type {
   Commit,
   DocumentVersion,
   Project,
@@ -10,11 +10,7 @@ import { Container } from '$/app/(public)/share/d/[publishedDocumentUuid]/_compo
 import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  CardDescription,
-  CardTitle,
-  CardHeader,
-} from '@latitude-data/web-ui/atoms/Card'
+import { CardDescription, CardTitle, CardHeader } from '@latitude-data/web-ui/atoms/Card'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
@@ -49,11 +45,7 @@ export function ForkedDocument({
                 <div className='flex flex-col gap-y-4'>
                   <Text.H5>You can see it here:</Text.H5>
                   <Link href={url}>
-                    <Button
-                      fancy
-                      variant='default'
-                      iconProps={{ name: 'externalLink' }}
-                    >
+                    <Button fancy variant='default' iconProps={{ name: 'externalLink' }}>
                       View copied project
                     </Button>
                   </Link>

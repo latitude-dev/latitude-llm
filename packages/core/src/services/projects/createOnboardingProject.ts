@@ -1,4 +1,4 @@
-import { User, Workspace } from '../../browser'
+import type { User, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { createProject } from './create'
@@ -54,9 +54,7 @@ Length: {{word_count}} words`,
   }
 
   // Merge the commit to finalize the document
-  const mergedCommit = await mergeCommit(commit, transaction).then((r) =>
-    r.unwrap(),
-  )
+  const mergedCommit = await mergeCommit(commit, transaction).then((r) => r.unwrap())
 
   return Result.ok({
     project,

@@ -1,15 +1,11 @@
 import { IntegrationType } from '@latitude-data/constants'
-import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
-import { IntegrationDto } from '../../../browser'
-import { Result, TypedResult } from '../../../lib/Result'
-import { StreamManager } from '../../../lib/streamManager'
+import type { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
+import type { IntegrationDto } from '../../../browser'
+import { Result, type TypedResult } from '../../../lib/Result'
+import type { StreamManager } from '../../../lib/streamManager'
 import { createAndConnectExternalMcpClient } from './external'
 import { createAndConnectHostedMcpClient } from './hosted'
-import {
-  McpClientConnection,
-  McpClientTransport,
-  McpConnectionError,
-} from './utils'
+import { type McpClientConnection, type McpClientTransport, McpConnectionError } from './utils'
 
 // Public Types
 export interface McpClientManager {
@@ -106,8 +102,6 @@ async function createAndConnectClient(
   }
 
   return Result.error(
-    new McpConnectionError(
-      `Integration type ${integration.type} is not supported for MCP client`,
-    ),
+    new McpConnectionError(`Integration type ${integration.type} is not supported for MCP client`),
   )
 }

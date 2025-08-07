@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { CheckoutCommand } from './checkout'
-import { CheckoutOptions } from '../types'
+import type { CheckoutOptions } from '../types'
 
 vi.mock('chalk', () => ({
   default: {
@@ -46,9 +46,7 @@ describe('CheckoutCommand', () => {
         'validateEnvironment',
         // @ts-expect-error - mock
       ).mockResolvedValue()
-      vi.spyOn(checkoutCommand as any, 'getLockFile').mockResolvedValue(
-        mockLockFile,
-      )
+      vi.spyOn(checkoutCommand as any, 'getLockFile').mockResolvedValue(mockLockFile)
       vi.spyOn(checkoutCommand as any, 'verifyVersion').mockResolvedValue({
         uuid: 'target-version',
         title: 'Target Version',
@@ -65,22 +63,15 @@ describe('CheckoutCommand', () => {
     it('should checkout to existing version successfully', async () => {
       await checkoutCommand.execute('target-version', mockOptions)
 
-      expect(checkoutCommand['validateEnvironment']).toHaveBeenCalledWith(
-        mockOptions,
-      )
-      expect(checkoutCommand['verifyVersion']).toHaveBeenCalledWith(
-        123,
-        'target-version',
-      )
+      expect(checkoutCommand['validateEnvironment']).toHaveBeenCalledWith(mockOptions)
+      expect(checkoutCommand['verifyVersion']).toHaveBeenCalledWith(123, 'target-version')
       expect(checkoutCommand['updateLockFile']).toHaveBeenCalledWith(
         123,
         'prompts',
         'target-version',
       )
       expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'Successfully checked out version target-version',
-        ),
+        expect.stringContaining('Successfully checked out version target-version'),
       )
     })
 
@@ -96,10 +87,7 @@ describe('CheckoutCommand', () => {
 
       await checkoutCommand.execute(undefined, optionsWithBranch)
 
-      expect(checkoutCommand['createNewVersion']).toHaveBeenCalledWith(
-        123,
-        'new-branch',
-      )
+      expect(checkoutCommand['createNewVersion']).toHaveBeenCalledWith(123, 'new-branch')
       expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Created new version: new-version-uuid'),
       )
@@ -111,23 +99,17 @@ describe('CheckoutCommand', () => {
         branch: 'new-branch',
       }
 
-      await expect(
-        checkoutCommand.execute('target-version', optionsWithBranch),
-      ).rejects.toThrow()
+      await expect(checkoutCommand.execute('target-version', optionsWithBranch)).rejects.toThrow()
     })
 
     it('should throw error when no version UUID provided and no -b flag', async () => {
-      await expect(
-        checkoutCommand.execute(undefined, mockOptions),
-      ).rejects.toThrow()
+      await expect(checkoutCommand.execute(undefined, mockOptions)).rejects.toThrow()
     })
 
     it('should revert lock file on error', async () => {
       const error = new Error('Test error')
       vi.spyOn(checkoutCommand as any, 'verifyVersion').mockRejectedValue(error)
-      vi.spyOn(checkoutCommand as any, 'handleError').mockImplementation(
-        () => {},
-      )
+      vi.spyOn(checkoutCommand as any, 'handleError').mockImplementation(() => {})
       vi.spyOn(checkoutCommand['lockFileManager'], 'write').mockResolvedValue()
 
       await checkoutCommand.execute('target-version', mockOptions)
@@ -145,12 +127,8 @@ describe('CheckoutCommand', () => {
       const error = new Error('Test error')
       const revertError = new Error('Revert error')
       vi.spyOn(checkoutCommand as any, 'verifyVersion').mockRejectedValue(error)
-      vi.spyOn(checkoutCommand as any, 'handleError').mockImplementation(
-        () => {},
-      )
-      vi.spyOn(checkoutCommand['lockFileManager'], 'write').mockRejectedValue(
-        revertError,
-      )
+      vi.spyOn(checkoutCommand as any, 'handleError').mockImplementation(() => {})
+      vi.spyOn(checkoutCommand['lockFileManager'], 'write').mockRejectedValue(revertError)
 
       await checkoutCommand.execute('target-version', mockOptions)
 
@@ -162,10 +140,7 @@ describe('CheckoutCommand', () => {
 
   describe('createNewVersion', () => {
     beforeEach(() => {
-      vi.spyOn(
-        checkoutCommand['projectManager'],
-        'createVersion',
-      ).mockResolvedValue(
+      vi.spyOn(checkoutCommand['projectManager'], 'createVersion').mockResolvedValue(
         expect.objectContaining({
           uuid: 'new-version-uuid',
           title: 'New Version',
@@ -182,14 +157,13 @@ describe('CheckoutCommand', () => {
     })
 
     it('should create new version successfully', async () => {
-      const result = await (checkoutCommand as any).createNewVersion(
-        123,
-        'new-branch',
-      )
+      const result = await (checkoutCommand as any).createNewVersion(123, 'new-branch')
 
-      expect(
-        checkoutCommand['projectManager'].createVersion,
-      ).toHaveBeenCalledWith(checkoutCommand['client'], 'new-branch', 123)
+      expect(checkoutCommand['projectManager'].createVersion).toHaveBeenCalledWith(
+        checkoutCommand['client'],
+        'new-branch',
+        123,
+      )
       expect(result).toEqual(
         expect.objectContaining({
           createdAt: '2024-01-01T00:00:00Z',
@@ -208,14 +182,11 @@ describe('CheckoutCommand', () => {
 
     it('should handle creation errors', async () => {
       const error = new Error('Creation failed')
-      vi.spyOn(
-        checkoutCommand['projectManager'],
-        'createVersion',
-      ).mockRejectedValue(error)
+      vi.spyOn(checkoutCommand['projectManager'], 'createVersion').mockRejectedValue(error)
 
-      await expect(
-        (checkoutCommand as any).createNewVersion(123, 'new-branch'),
-      ).rejects.toThrow('Failed to create new version: Creation failed')
+      await expect((checkoutCommand as any).createNewVersion(123, 'new-branch')).rejects.toThrow(
+        'Failed to create new version: Creation failed',
+      )
     })
   })
 
@@ -232,10 +203,7 @@ describe('CheckoutCommand', () => {
     })
 
     it('should verify version successfully', async () => {
-      const result = await (checkoutCommand as any).verifyVersion(
-        123,
-        'version-uuid',
-      )
+      const result = await (checkoutCommand as any).verifyVersion(123, 'version-uuid')
 
       expect(checkoutCommand['projectManager'].getVersion).toHaveBeenCalledWith(
         checkoutCommand['client'],
@@ -250,14 +218,9 @@ describe('CheckoutCommand', () => {
 
     it('should handle verification errors', async () => {
       const error = new Error('Version not found')
-      vi.spyOn(
-        checkoutCommand['projectManager'],
-        'getVersion',
-      ).mockRejectedValue(error)
+      vi.spyOn(checkoutCommand['projectManager'], 'getVersion').mockRejectedValue(error)
 
-      await expect(
-        (checkoutCommand as any).verifyVersion(123, 'invalid-version'),
-      ).rejects.toThrow(
+      await expect((checkoutCommand as any).verifyVersion(123, 'invalid-version')).rejects.toThrow(
         'Invalid version UUID or unable to fetch prompts: Version not found',
       )
     })
@@ -275,11 +238,7 @@ describe('CheckoutCommand', () => {
     })
 
     it('should update lock file successfully', async () => {
-      await (checkoutCommand as any).updateLockFile(
-        123,
-        'prompts',
-        'new-version',
-      )
+      await (checkoutCommand as any).updateLockFile(123, 'prompts', 'new-version')
 
       expect(checkoutCommand['lockFileManager'].write).toHaveBeenCalledWith(
         checkoutCommand['projectPath'],
@@ -291,17 +250,13 @@ describe('CheckoutCommand', () => {
         },
       )
       expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'Updated latitude-lock.json with version: new-version',
-        ),
+        expect.stringContaining('Updated latitude-lock.json with version: new-version'),
       )
     })
 
     it('should handle update errors', async () => {
       const error = new Error('Write failed')
-      vi.spyOn(checkoutCommand['lockFileManager'], 'write').mockRejectedValue(
-        error,
-      )
+      vi.spyOn(checkoutCommand['lockFileManager'], 'write').mockRejectedValue(error)
 
       await expect(
         (checkoutCommand as any).updateLockFile(123, 'prompts', 'new-version'),
@@ -311,10 +266,7 @@ describe('CheckoutCommand', () => {
 
   describe('fetchAllPrompts', () => {
     beforeEach(() => {
-      vi.spyOn(
-        checkoutCommand['projectManager'],
-        'fetchAllPrompts',
-      ).mockResolvedValue([
+      vi.spyOn(checkoutCommand['projectManager'], 'fetchAllPrompts').mockResolvedValue([
         {
           path: 'test',
           content: 'test content',
@@ -327,28 +279,24 @@ describe('CheckoutCommand', () => {
     })
 
     it('should fetch all prompts successfully', async () => {
-      const result = await (checkoutCommand as any).fetchAllPrompts(
+      const result = await (checkoutCommand as any).fetchAllPrompts(123, 'version-uuid')
+
+      expect(checkoutCommand['projectManager'].fetchAllPrompts).toHaveBeenCalledWith(
+        checkoutCommand['client'],
         123,
         'version-uuid',
       )
-
-      expect(
-        checkoutCommand['projectManager'].fetchAllPrompts,
-      ).toHaveBeenCalledWith(checkoutCommand['client'], 123, 'version-uuid')
       expect(result).toHaveLength(1)
       expect(console.log).toHaveBeenCalledWith('fetch all prompts')
     })
 
     it('should handle fetch errors', async () => {
       const error = new Error('Fetch failed')
-      vi.spyOn(
-        checkoutCommand['projectManager'],
-        'fetchAllPrompts',
-      ).mockRejectedValue(error)
+      vi.spyOn(checkoutCommand['projectManager'], 'fetchAllPrompts').mockRejectedValue(error)
 
-      await expect(
-        (checkoutCommand as any).fetchAllPrompts(123, 'version-uuid'),
-      ).rejects.toThrow('Failed to fetch prompts: Fetch failed')
+      await expect((checkoutCommand as any).fetchAllPrompts(123, 'version-uuid')).rejects.toThrow(
+        'Failed to fetch prompts: Fetch failed',
+      )
     })
   })
 
@@ -374,22 +322,13 @@ describe('CheckoutCommand', () => {
         },
       ]
 
-      await (checkoutCommand as any).savePrompts(
-        'prompts',
-        'version-uuid',
-        mockPrompts,
-        true,
-      )
+      await (checkoutCommand as any).savePrompts('prompts', 'version-uuid', mockPrompts, true)
 
       expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'Processing 1 prompts from version version-uuid',
-        ),
+        expect.stringContaining('Processing 1 prompts from version version-uuid'),
       )
       expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'Successfully saved prompts from version version-uuid',
-        ),
+        expect.stringContaining('Successfully saved prompts from version version-uuid'),
       )
     })
   })

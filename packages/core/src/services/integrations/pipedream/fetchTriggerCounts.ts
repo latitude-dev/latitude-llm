@@ -1,7 +1,7 @@
-import { App, BackendClient } from '@pipedream/sdk/server'
+import type { App, BackendClient } from '@pipedream/sdk/server'
 import { buildPipedreamClient } from './apps'
-import { Result, TypedResult } from '../../../lib/Result'
-import {
+import { Result, type TypedResult } from '../../../lib/Result'
+import type {
   PipedreamIntegrationWithAcountCount,
   PipedreamIntegrationWithCounts,
 } from '../../../browser'

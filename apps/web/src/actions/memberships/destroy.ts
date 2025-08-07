@@ -21,9 +21,7 @@ export const destroyMembershipAction = authProcedure
     }
 
     const membershipsScope = new MembershipsRepository(ctx.workspace.id)
-    const membership = await membershipsScope
-      .findByUserId(id)
-      .then((r) => r.unwrap())
+    const membership = await membershipsScope.findByUserId(id).then((r) => r.unwrap())
 
     return await destroyMembership(membership).then((r) => r.unwrap())
   })

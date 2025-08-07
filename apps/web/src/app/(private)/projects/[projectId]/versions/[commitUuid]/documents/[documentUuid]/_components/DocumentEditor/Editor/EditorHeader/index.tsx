@@ -1,5 +1,5 @@
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
-import { ResolvedMetadata } from '$/workers/readMetadata'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
 import { memo } from 'react'
 import { AgentToolbar } from './AgentToolbar'
 import { TitleRow } from './TitleRow'
@@ -36,10 +36,7 @@ export const EditorHeader = memo(
           prompt={prompt}
           onChangePrompt={onChangePrompt}
         />
-        <FreeRunsBanner
-          isLatitudeProvider={isLatitudeProvider}
-          freeRunsCount={freeRunsCount}
-        />
+        <FreeRunsBanner isLatitudeProvider={isLatitudeProvider} freeRunsCount={freeRunsCount} />
         <AgentToolbar
           isMerged={isMerged}
           isAgent={isAgent}

@@ -1,27 +1,23 @@
-import { ChangedDocument } from '@latitude-data/constants'
+import type { ChangedDocument } from '@latitude-data/constants'
 import type { CompileError } from 'promptl-ai'
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   ModifiedDocumentType,
-  Workspace,
+  type Workspace,
 } from '../../browser'
 import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../repositories'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
+import { CommitsRepository, DocumentVersionsRepository } from '../../repositories'
 import { recomputeChanges } from '../documents'
 
 type DocumentErrors = { [documentUuid: string]: CompileError[] }
 
-const byErrors =
-  (errors: DocumentErrors) => (a: DocumentVersion, b: DocumentVersion) => {
-    const aErrors = errors[a.documentUuid]?.length ?? 0
-    const bErrors = errors[b.documentUuid]?.length ?? 0
-    return bErrors - aErrors
-  }
+const byErrors = (errors: DocumentErrors) => (a: DocumentVersion, b: DocumentVersion) => {
+  const aErrors = errors[a.documentUuid]?.length ?? 0
+  const bErrors = errors[b.documentUuid]?.length ?? 0
+  return bErrors - aErrors
+}
 
 export function changesPresenter({
   currentCommitChanges,
@@ -68,14 +64,9 @@ async function getDraftChanges(
 
   // Include documents with errors on `changes.changedDocuments`
   for (const documentUuid of Object.keys(changes.errors)) {
-    if (
-      changes.changedDocuments.some((doc) => doc.documentUuid === documentUuid)
-    )
-      continue
+    if (changes.changedDocuments.some((doc) => doc.documentUuid === documentUuid)) continue
 
-    const document = changes.headDocuments.find(
-      (doc) => doc.documentUuid === documentUuid,
-    )
+    const document = changes.headDocuments.find((doc) => doc.documentUuid === documentUuid)
     if (!document) continue
 
     changes.changedDocuments.push(document)
@@ -95,15 +86,13 @@ export async function getCommitChanges(
   transaction = new Transaction(),
 ): PromisedResult<ChangedDocument[]> {
   return transaction.call(async (tx) => {
-    if (!commit.mergedAt)
-      return getDraftChanges({ workspace, draft: commit }, transaction)
+    if (!commit.mergedAt) return getDraftChanges({ workspace, draft: commit }, transaction)
 
     const commitsRepository = new CommitsRepository(workspace.id, tx)
     const previousCommit = await commitsRepository.getPreviousCommit(commit)
     const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
 
-    const currentCommitChanges =
-      await documentsRepository.listCommitChanges(commit)
+    const currentCommitChanges = await documentsRepository.listCommitChanges(commit)
     if (currentCommitChanges.error) {
       return Result.error(currentCommitChanges.error)
     }

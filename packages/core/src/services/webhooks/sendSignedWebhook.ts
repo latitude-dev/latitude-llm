@@ -1,7 +1,7 @@
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import { generateWebhookSignature } from './generateSignature'
 import { sendWebhook, type WebhookSendResponse } from './sendWebhook'
-import { type WebhookPayload } from './types'
+import type { WebhookPayload } from './types'
 
 export interface SendSignedWebhookParams {
   url: string
@@ -29,9 +29,7 @@ export async function sendSignedWebhook({
   })
 
   if (!response.success) {
-    return Result.error(
-      response.error || new Error('Failed to send signed webhook'),
-    )
+    return Result.error(response.error || new Error('Failed to send signed webhook'))
   }
 
   return Result.ok(response)

@@ -1,13 +1,14 @@
 'use client'
 
-import { LatteChange } from '@latitude-data/constants/latte'
+import type { LatteChange } from '@latitude-data/constants/latte'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { useTypeWriterValue } from '@latitude-data/web-ui/browser'
 import { cn } from '@latitude-data/web-ui/utils'
-import React, { KeyboardEvent, useCallback, useEffect, useState } from 'react'
+import type React from 'react'
+import { type KeyboardEvent, useCallback, useEffect, useState } from 'react'
 import { ChangeList } from './_components/ChangesList'
 import { LatteDebugVersionSelector } from './_components/DebugVersionSelector'
 
@@ -50,25 +51,17 @@ export function LatteChatInput({
   acceptChanges: () => void
   undoChanges: () => void
   feedbackRequested?: boolean
-  addFeedbackToLatteChange?: (
-    feedback: string,
-    evaluationResultUuid?: string,
-  ) => void
+  addFeedbackToLatteChange?: (feedback: string, evaluationResultUuid?: string) => void
 }) {
-  const placeholder = useTypeWriterValue(
-    inConversation ? [] : INPUT_PLACEHOLDERS,
-  )
+  const placeholder = useTypeWriterValue(inConversation ? [] : INPUT_PLACEHOLDERS)
 
   const [value, setValue] = useState('')
   const [action, setAction] = useState<'accept' | 'undo'>('accept')
 
-  const handleValueChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newValue = e.target.value
-      setValue(newValue)
-    },
-    [],
-  )
+  const handleValueChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value
+    setValue(newValue)
+  }, [])
 
   const onSubmit = useCallback(() => {
     if (isLoading) return
@@ -96,10 +89,7 @@ export function LatteChatInput({
       })}
     >
       {!changes.length && feedbackRequested ? (
-        <LatteChangesFeedback
-          onSubmit={addFeedbackToLatteChange!}
-          action={action}
-        />
+        <LatteChangesFeedback onSubmit={addFeedbackToLatteChange!} action={action} />
       ) : (
         <ChangeList
           changes={changes}
@@ -121,17 +111,10 @@ export function LatteChatInput({
           'ring-0 focus-visible:ring-0 outline-none focus-visible:outline-none',
           'focus-visible:animate-glow focus-visible:glow-latte custom-scrollbar scrollable-indicator',
           {
-            'rounded-t-none border-t-0':
-              changes.length > 0 || feedbackRequested,
+            'rounded-t-none border-t-0': changes.length > 0 || feedbackRequested,
           },
         )}
-        placeholder={
-          inConversation
-            ? isLoading
-              ? 'Brewing...'
-              : 'Brew anything'
-            : placeholder
-        }
+        placeholder={inConversation ? (isLoading ? 'Brewing...' : 'Brew anything') : placeholder}
         autoGrow={value !== ''}
         disabled={isLoading || !!error}
         value={value}
@@ -172,8 +155,7 @@ export function LatteChatInput({
             iconProps={{
               name: 'plus',
               color: 'latteInputForeground',
-              className:
-                'flex-shrink-0 group-hover:text-latte-input-foreground/75',
+              className: 'flex-shrink-0 group-hover:text-latte-input-foreground/75',
             }}
             className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
             userSelect={false}
@@ -213,7 +195,7 @@ function LatteChangesFeedback({
   const handleSubmit = useCallback(() => {
     setHasAutoSubmitted(true)
     onSubmit('')
-  }, [setHasAutoSubmitted, onSubmit])
+  }, [onSubmit])
 
   useEffect(() => {
     if (value.trim() === '' && !hasAutoSubmitted) {
@@ -258,9 +240,7 @@ function LatteChangesFeedback({
       )}
       <div className='flex items-center justify-between gap-2'>
         <Text.H6M color='latteInputForeground'>
-          {action === 'undo'
-            ? 'What did Latte get wrong?'
-            : 'Did Latte get this right?'}
+          {action === 'undo' ? 'What did Latte get wrong?' : 'Did Latte get this right?'}
         </Text.H6M>
         <Button
           variant='ghost'

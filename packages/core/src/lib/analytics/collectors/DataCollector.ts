@@ -1,5 +1,5 @@
-import { LatitudeEvent } from '../../../events/events'
-import { AnalyticsEnvironment, PostHogInstance } from '../types'
+import type { LatitudeEvent } from '../../../events/events'
+import type { AnalyticsEnvironment, PostHogInstance } from '../types'
 
 type OriginalOutput = Parameters<PostHogInstance['capture']>[0]
 

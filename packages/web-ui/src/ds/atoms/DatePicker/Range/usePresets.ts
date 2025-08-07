@@ -11,9 +11,9 @@ import {
   subMonths,
   subWeeks,
 } from 'date-fns'
-import { RelativeDate } from '@latitude-data/core/browser'
-import { SelectOption } from '../../Select'
-import { DateRange } from 'react-day-picker'
+import type { RelativeDate } from '@latitude-data/core/browser'
+import type { SelectOption } from '../../Select'
+import type { DateRange } from 'react-day-picker'
 import { useMemo } from 'react'
 
 export const RELATIVE_DATES_OPTIONS: SelectOption<RelativeDate>[] = [
@@ -133,9 +133,7 @@ export function usePresets({
     const from = range?.from ? formatISO(range.from) : undefined
     const to = range?.to ? formatISO(range.to) : undefined
     const preset = presets.find(
-      (preset) =>
-        formatISO(preset.range.from) === from &&
-        formatISO(preset.range.to) === to,
+      (preset) => formatISO(preset.range.from) === from && formatISO(preset.range.to) === to,
     )
 
     return preset

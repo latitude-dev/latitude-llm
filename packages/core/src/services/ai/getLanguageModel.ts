@@ -1,11 +1,11 @@
 import { omit } from 'lodash-es'
 import { Providers } from '@latitude-data/constants'
-import { LanguageModel } from 'ai'
-import { VercelConfigWithProviderRules } from './providers/rules'
-import { LlmProvider } from './helpers'
-import { OpenAIProvider } from '@ai-sdk/openai'
-import { ProviderApiKey } from '../../browser'
-import { ProviderConfiguration } from '../../schema'
+import type { LanguageModel } from 'ai'
+import type { VercelConfigWithProviderRules } from './providers/rules'
+import type { LlmProvider } from './helpers'
+import type { OpenAIProvider } from '@ai-sdk/openai'
+import type { ProviderApiKey } from '../../browser'
+import type { ProviderConfiguration } from '../../schema'
 
 function buildGenericLanguageModel({
   model,
@@ -45,8 +45,7 @@ export function getLanguageModel({
   }
 
   const openAiProvider = llmProvider as OpenAIProvider
-  const configuration =
-    provider.configuration as ProviderConfiguration<Providers.OpenAI>
+  const configuration = provider.configuration as ProviderConfiguration<Providers.OpenAI>
   const usingOpenAIResponses = configuration?.endpoint === 'responses'
 
   if (usingOpenAIResponses) return openAiProvider.responses(model)

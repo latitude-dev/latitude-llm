@@ -1,15 +1,13 @@
 'use client'
 
-import { Project } from '@latitude-data/core/browser'
-import { createContext, ReactNode, useContext } from 'react'
+import type { Project } from '@latitude-data/core/browser'
+import { createContext, type ReactNode, useContext } from 'react'
 
 type IProjectContextType = {
   project: Project
 }
 
-const ProjectContext = createContext<IProjectContextType>(
-  {} as IProjectContextType,
-)
+const ProjectContext = createContext<IProjectContextType>({} as IProjectContextType)
 
 const ProjectProvider = ({
   children,
@@ -17,11 +15,7 @@ const ProjectProvider = ({
 }: {
   children: ReactNode
 } & IProjectContextType) => {
-  return (
-    <ProjectContext.Provider value={{ project }}>
-      {children}
-    </ProjectContext.Provider>
-  )
+  return <ProjectContext.Provider value={{ project }}>{children}</ProjectContext.Provider>
 }
 
 const useCurrentProject = () => {

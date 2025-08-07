@@ -1,16 +1,13 @@
-import { Dispatch, useCallback, useRef, useState } from 'react'
-import {
+import { type Dispatch, useCallback, useRef, useState } from 'react'
+import type {
   Conversation,
   Message as ConversationMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import {
-  PublishedDocument,
-  StreamEventTypes,
-} from '@latitude-data/core/browser'
+import { type PublishedDocument, StreamEventTypes } from '@latitude-data/core/browser'
 import { runSharedPromptAction } from '$/actions/sdk/runSharedPromptAction'
 import { readStreamableValue } from 'ai/rsc'
-import { SetStateAction } from '@latitude-data/web-ui/commonTypes'
-import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
+import type { SetStateAction } from '@latitude-data/web-ui/commonTypes'
+import { type ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 
 type AccoumulatedDeltaMessage = { deltas: string[] }
 export type LastMessage = {
@@ -51,7 +48,7 @@ function getDeltas({
 
       return splitInWords(c.text! as string)
     })
-  } catch (error) {
+  } catch (_error) {
     return []
   }
 }
@@ -65,29 +62,23 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
   const [reasoningStream, setReasoningStream] = useState<string | undefined>()
   const [isStreaming, setIsStreaming] = useState(false)
   const [conversation, setConversation] = useState<Conversation | undefined>()
-  const [lastMessage, setLastMessage] = useState<LastMessage | undefined>(
-    undefined,
-  )
+  const [lastMessage, setLastMessage] = useState<LastMessage | undefined>(undefined)
   const [chainLength, setChainLength] = useState<number>(Infinity)
-  const setMessages: Dispatch<SetStateAction<ConversationMessage[]>> =
-    useCallback(
-      (
-        value:
-          | ConversationMessage[]
-          | ((prevMessages: ConversationMessage[]) => ConversationMessage[]),
-      ) => {
-        setConversation((prevConversation) => {
-          return {
-            ...prevConversation,
-            messages:
-              typeof value === 'function'
-                ? value(prevConversation?.messages ?? [])
-                : value,
-          } as Conversation
-        })
-      },
-      [setConversation],
-    )
+  const setMessages: Dispatch<SetStateAction<ConversationMessage[]>> = useCallback(
+    (
+      value:
+        | ConversationMessage[]
+        | ((prevMessages: ConversationMessage[]) => ConversationMessage[]),
+    ) => {
+      setConversation((prevConversation) => {
+        return {
+          ...prevConversation,
+          messages: typeof value === 'function' ? value(prevConversation?.messages ?? []) : value,
+        } as Conversation
+      })
+    },
+    [],
+  )
 
   const sharedUuid = shared.uuid!
   const runPrompt = useCallback(
@@ -97,16 +88,15 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
       let response = ''
       let reasoning = ''
       let rollingIndex = 0
-      let accomulatedDeltas: AccoumulatedDeltaMessage[] = [{ deltas: [] }]
+      const accomulatedDeltas: AccoumulatedDeltaMessage[] = [{ deltas: [] }]
       let messagesCount = 0
       let lastMessage: ConversationMessage | undefined
 
       try {
-        const { response: actionResponse, output } =
-          await runSharedPromptAction({
-            publishedDocumentUuid: sharedUuid,
-            parameters,
-          })
+        const { response: actionResponse, output } = await runSharedPromptAction({
+          publishedDocumentUuid: sharedUuid,
+          parameters,
+        })
 
         actionResponse.then((r) => {
           // Follow up conversation log ID

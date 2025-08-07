@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { DocumentLogsWithMetadataAndErrorsRepository } from '.'
-import {
+import type {
   Commit,
   DocumentLog,
   DocumentVersion,
@@ -36,17 +36,16 @@ describe('getDocumentLogsWithMetadata', () => {
         user: setup.user,
       })
       commit = commit1
-      const { documentVersion: docVersion } =
-        await factories.createDocumentVersion({
-          workspace: setup.workspace,
-          user: setup.user,
-          commit: commit1,
-          path: 'folder1/doc1',
-          content: factories.helpers.createPrompt({
-            provider,
-            content: 'VERSION_1',
-          }),
-        })
+      const { documentVersion: docVersion } = await factories.createDocumentVersion({
+        workspace: setup.workspace,
+        user: setup.user,
+        commit: commit1,
+        path: 'folder1/doc1',
+        content: factories.helpers.createPrompt({
+          provider,
+          content: 'VERSION_1',
+        }),
+      })
       doc = docVersion
       await mergeCommit(commit1).then((r) => r.unwrap())
 
@@ -77,9 +76,7 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     it('return all logs from merged commits', async () => {
-      const repo = new DocumentLogsWithMetadataAndErrorsRepository(
-        project.workspaceId,
-      )
+      const repo = new DocumentLogsWithMetadataAndErrorsRepository(project.workspaceId)
       const foundLog1 = await repo.findByUuid(log1.uuid).then((r) => r.unwrap())
       const foundLog2 = await repo.findByUuid(log2.uuid).then((r) => r.unwrap())
 
@@ -102,9 +99,7 @@ describe('getDocumentLogsWithMetadata', () => {
         document: doc2,
         commit,
       })
-      const repo = new DocumentLogsWithMetadataAndErrorsRepository(
-        project.workspaceId,
-      )
+      const repo = new DocumentLogsWithMetadataAndErrorsRepository(project.workspaceId)
       const foundLog1 = await repo.findByUuid(log1.uuid).then((r) => r.unwrap())
       const foundLog2 = await repo.findByUuid(log2.uuid).then((r) => r.unwrap())
       const foundLog3 = await repo.findByUuid(log3.uuid).then((r) => r.unwrap())
@@ -115,8 +110,7 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     it('returns a sum of tokens and cost', async () => {
-      const { project, user, workspace, providers } =
-        await factories.createProject()
+      const { project, user, workspace, providers } = await factories.createProject()
       const { commit } = await factories.createDraft({ project, user })
       const { documentVersion: doc } = await factories.createDocumentVersion({
         workspace,
@@ -135,9 +129,7 @@ describe('getDocumentLogsWithMetadata', () => {
         commit,
       })
 
-      const repo = new DocumentLogsWithMetadataAndErrorsRepository(
-        project.workspaceId,
-      )
+      const repo = new DocumentLogsWithMetadataAndErrorsRepository(project.workspaceId)
       const foundLog = await repo.findByUuid(log.uuid).then((r) => r.unwrap())
 
       expect(foundLog).toBeDefined()
@@ -146,8 +138,7 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     it('returns logs without provider logs', async () => {
-      const { project, user, workspace, providers } =
-        await factories.createProject()
+      const { project, user, workspace, providers } = await factories.createProject()
       const { commit: commit1 } = await factories.createDraft({ project, user })
       const { documentVersion: doc } = await factories.createDocumentVersion({
         workspace,
@@ -167,9 +158,7 @@ describe('getDocumentLogsWithMetadata', () => {
         skipProviderLogs: true,
       })
 
-      const repo = new DocumentLogsWithMetadataAndErrorsRepository(
-        project.workspaceId,
-      )
+      const repo = new DocumentLogsWithMetadataAndErrorsRepository(project.workspaceId)
       const log = await repo.findByUuid(log1.uuid).then((r) => r.unwrap())
 
       expect(log).toBeDefined()

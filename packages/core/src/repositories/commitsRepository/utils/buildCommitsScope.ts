@@ -10,9 +10,7 @@ export function buildCommitsScope(workspaceId: number, db = database) {
     .select(columnSelection)
     .from(commits)
     .innerJoin(projects, eq(projects.id, commits.projectId))
-    .where(
-      and(isNull(commits.deletedAt), eq(projects.workspaceId, workspaceId)),
-    )
+    .where(and(isNull(commits.deletedAt), eq(projects.workspaceId, workspaceId)))
     .as('commitsScope')
 
   return scope

@@ -1,28 +1,19 @@
-import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
+import { type Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentChangeSkeleton } from '@latitude-data/web-ui/molecules/DocumentChange'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import { useCommitsChanges } from '$/stores/commitChanges'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/browser'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/browser'
 import { useDocumentDiff } from '$/stores/documentDiff'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
 import { useDocumentActions } from './documentActions'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useMemo } from 'react'
-import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
+import { type ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
 
-function useCanRevert({
-  commit,
-  change,
-}: {
-  commit: Commit
-  change: ChangedDocument
-}) {
+function useCanRevert({ commit, change }: { commit: Commit; change: ChangedDocument }) {
   const { project } = useCurrentProject()
   const { commit: currentCommit } = useCurrentCommit()
 
@@ -59,8 +50,7 @@ function useCanRevert({
   }
 
   const documentHasChanged =
-    diff?.newValue !== diff?.oldValue ||
-    currentVersionOfDocument.path !== change.path
+    diff?.newValue !== diff?.oldValue || currentVersionOfDocument.path !== change.path
 
   // If the document has not changed, there is no change to revert anymore
   return documentHasChanged
@@ -87,8 +77,7 @@ function useCanReset({
   }, [currentDocuments, change])
 
   // The diff will only be relevant if the change is not in the current draft (resetting it means nothing) or if the change was a Deletion
-  const requiresDiff =
-    !isCurrentDraft && change.changeType === ModifiedDocumentType.Deleted
+  const requiresDiff = !isCurrentDraft && change.changeType === ModifiedDocumentType.Deleted
 
   const { data: diff } = useDocumentDiff({
     commit: !requiresDiff ? commit : undefined,
@@ -104,8 +93,7 @@ function useCanReset({
   }
 
   const documentHasChanged =
-    diff?.newValue !== diff?.oldValue ||
-    currentVersionOfDocument?.path !== change.path
+    diff?.newValue !== diff?.oldValue || currentVersionOfDocument?.path !== change.path
 
   // If the document has not changed, there is no change to reset anymore
   return documentHasChanged
@@ -152,9 +140,7 @@ function Change({
   }
 
   const { data: prevDocument } = useDocumentVersion(
-    change.changeType === ModifiedDocumentType.UpdatedPath
-      ? change.documentUuid
-      : null,
+    change.changeType === ModifiedDocumentType.UpdatedPath ? change.documentUuid : null,
   )
 
   const canRevert = useCanRevert({
@@ -229,50 +215,29 @@ export function CommitChangesList({
       <ul className='flex flex-col custom-scrollbar gap-1 pt-4 px-2'>
         {isLoading ? (
           <>
-            <DocumentChangeSkeleton
-              width={62}
-              changeType={ModifiedDocumentType.Deleted}
-            />
-            <DocumentChangeSkeleton
-              width={87}
-              changeType={ModifiedDocumentType.Updated}
-            />
-            <DocumentChangeSkeleton
-              width={23}
-              changeType={ModifiedDocumentType.Created}
-            />
-            <DocumentChangeSkeleton
-              width={67}
-              changeType={ModifiedDocumentType.Updated}
-            />
+            <DocumentChangeSkeleton width={62} changeType={ModifiedDocumentType.Deleted} />
+            <DocumentChangeSkeleton width={87} changeType={ModifiedDocumentType.Updated} />
+            <DocumentChangeSkeleton width={23} changeType={ModifiedDocumentType.Created} />
+            <DocumentChangeSkeleton width={67} changeType={ModifiedDocumentType.Updated} />
           </>
+        ) : changes.length ? (
+          changes.map((change) => (
+            <Change
+              key={change.documentUuid}
+              commit={commit}
+              change={change}
+              isSelected={selectedDocumentUuid === change.documentUuid}
+              onSelect={() => selectDocumentUuid(change.documentUuid)}
+              isDimmed={
+                currentDocumentUuid !== undefined && currentDocumentUuid !== change.documentUuid
+              }
+              isCurrentDraft={!commit.mergedAt && commit.id === currentCommit.id}
+            />
+          ))
         ) : (
-          <>
-            {changes.length ? (
-              changes.map((change) => (
-                <Change
-                  key={change.documentUuid}
-                  commit={commit}
-                  change={change}
-                  isSelected={selectedDocumentUuid === change.documentUuid}
-                  onSelect={() => selectDocumentUuid(change.documentUuid)}
-                  isDimmed={
-                    currentDocumentUuid !== undefined &&
-                    currentDocumentUuid !== change.documentUuid
-                  }
-                  isCurrentDraft={
-                    !commit.mergedAt && commit.id === currentCommit.id
-                  }
-                />
-              ))
-            ) : (
-              <div className='w-full h-full flex flex-col items-center justify-center p-4'>
-                <Text.H5 color='foregroundMuted'>
-                  This draft has no changes yet
-                </Text.H5>
-              </div>
-            )}
-          </>
+          <div className='w-full h-full flex flex-col items-center justify-center p-4'>
+            <Text.H5 color='foregroundMuted'>This draft has no changes yet</Text.H5>
+          </div>
         )}
       </ul>
     </div>

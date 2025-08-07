@@ -1,12 +1,12 @@
-import { ChainEvent } from '@latitude-data/constants'
+import type { ChainEvent } from '@latitude-data/constants'
 import { z } from 'zod'
-import {
+import type {
   EvaluationType,
   EvaluationV2,
   LlmEvaluationMetricAnyCustom,
   Workspace,
 } from '../../../browser'
-import { Result, TypedResult } from '../../../lib/Result'
+import { Result, type TypedResult } from '../../../lib/Result'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { BACKGROUND, telemetry } from '../../../telemetry'
 import { runChain } from '../../chains/run'
@@ -14,10 +14,7 @@ import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { buildLlmEvaluationRunFunction } from './shared'
 
 const buildStreamHandler =
-  (
-    stream: ReadableStream<ChainEvent>,
-    $span: ReturnType<typeof telemetry.prompt>,
-  ) =>
+  (stream: ReadableStream<ChainEvent>, $span: ReturnType<typeof telemetry.prompt>) =>
   async ({
     signal,
     onEvent,

@@ -15,15 +15,15 @@ import {
   ATTR_TOOL_CALL_ID,
   ATTR_TOOL_NAME,
   SPAN_SPECIFICATIONS,
-  SpanAttribute,
+  type SpanAttribute,
   SpanStatus,
   SpanType,
-  ToolSpanMetadata,
+  type ToolSpanMetadata,
 } from '../../../browser'
 import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
-import { Result, TypedResult } from '../../../lib/Result'
-import { SpanProcessArgs } from './shared'
+import { Result, type TypedResult } from '../../../lib/Result'
+import type { SpanProcessArgs } from './shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Tool]
 export const ToolSpanSpecification = {
@@ -31,10 +31,7 @@ export const ToolSpanSpecification = {
   process: process,
 }
 
-async function process(
-  { attributes, status }: SpanProcessArgs<SpanType.Tool>,
-  _ = database,
-) {
+async function process({ attributes, status }: SpanProcessArgs<SpanType.Tool>, _ = database) {
   const extractingtn = extractToolName(attributes)
   if (extractingtn.error) return Result.error(extractingtn.error)
   const name = extractingtn.value
@@ -111,10 +108,8 @@ function extractToolCallArguments(
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))
-    } catch (error) {
-      return Result.error(
-        new UnprocessableEntityError('Invalid tool call arguments'),
-      )
+    } catch (_error) {
+      return Result.error(new UnprocessableEntityError('Invalid tool call arguments'))
     }
   }
 
@@ -132,7 +127,7 @@ function extractToolResultValue(
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))
-    } catch (error) {
+    } catch (_error) {
       return Result.ok(attribute ?? '')
     }
   }

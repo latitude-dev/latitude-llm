@@ -3,17 +3,14 @@ import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import { formatCount } from '$/lib/formatCount'
 import {
-  EvaluationMetric,
+  type EvaluationMetric,
   EvaluationType,
-  EvaluationV2Stats,
+  type EvaluationV2Stats,
 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  ChartWrapper,
-  ScatterChart,
-} from '@latitude-data/web-ui/molecules/Charts'
+import { ChartWrapper, ScatterChart } from '@latitude-data/web-ui/molecules/Charts'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo } from 'react'
@@ -38,9 +35,7 @@ export default function VersionOverviewChart<
         y: Number(configuration.scale(point.averageScore).toFixed(2)),
         size: commit.id === point.version.id ? 10 : 5,
         color:
-          commit.id === point.version.id
-            ? 'hsl(var(--primary))'
-            : 'hsl(var(--muted-foreground))',
+          commit.id === point.version.id ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
       })) || []
     )
   }, [stats, commit.id, configuration])
@@ -81,8 +76,7 @@ export default function VersionOverviewChart<
               min: minY,
               max: maxY,
               thresholds: configuration.thresholds,
-              tickFormatter: (score) =>
-                configuration.format(Number(score), true),
+              tickFormatter: (score) => configuration.format(Number(score), true),
             },
             data: data,
             // @ts-expect-error typescript cannot infer the type from [key: string]: any
@@ -91,9 +85,7 @@ export default function VersionOverviewChart<
                 <div className='flex flex-row gap-2 items-center w-full'>
                   <Badge variant={point.version.mergedAt ? 'accent' : 'muted'}>
                     <Text.H6 noWrap>
-                      {point.version.mergedAt
-                        ? `v${point.version.version}`
-                        : 'Draft'}
+                      {point.version.mergedAt ? `v${point.version.version}` : 'Draft'}
                     </Text.H6>
                   </Badge>
                   <Text.H5 noWrap>{point.version.title}</Text.H5>
@@ -108,9 +100,7 @@ export default function VersionOverviewChart<
                     <Text.H6B>Average score</Text.H6B>
                     <Text.H6>
                       {configuration.format(
-                        Number(
-                          configuration.scale(point.averageScore).toFixed(2),
-                        ),
+                        Number(configuration.scale(point.averageScore).toFixed(2)),
                       )}
                     </Text.H6>
                   </div>
@@ -118,9 +108,7 @@ export default function VersionOverviewChart<
                     <>
                       <div className='flex w-full gap-2 justify-between'>
                         <Text.H6B>Total cost</Text.H6B>
-                        <Text.H6>
-                          {formatCostInMillicents(point.totalCost)}
-                        </Text.H6>
+                        <Text.H6>{formatCostInMillicents(point.totalCost)}</Text.H6>
                       </div>
                       <div className='flex w-full gap-2 justify-between'>
                         <Text.H6B>Total tokens</Text.H6B>

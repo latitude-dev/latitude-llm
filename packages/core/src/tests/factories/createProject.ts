@@ -6,7 +6,7 @@ import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
 import { createProject as createProjectFn } from '../../services/projects'
 import { createDraft } from './commits'
-import { flattenDocumentStructure, ICreateProject } from './projects'
+import { flattenDocumentStructure, type ICreateProject } from './projects'
 import { createWorkspace } from './workspaces'
 
 export async function createProject(projectData: Partial<ICreateProject> = {}) {

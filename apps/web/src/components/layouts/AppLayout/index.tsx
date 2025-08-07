@@ -1,12 +1,12 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
-import { User } from '@latitude-data/core/browser'
+import type { User } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 
-import AppHeader, { AppHeaderProps } from './Header'
+import AppHeader, { type AppHeaderProps } from './Header'
 import RightSidebarLayout from './RightSidebarLayout'
 
-export type AppLayoutProps = AppHeaderProps & {
+type AppLayoutProps = AppHeaderProps & {
   children: ReactNode
   currentUser: User | undefined
   scrollable?: boolean
@@ -33,9 +33,7 @@ export default function AppLayout({
         isCloud={isCloud}
       />
       <RightSidebarLayout>
-        <main className='w-full flex-grow min-h-0 h-full relative'>
-          {children}
-        </main>
+        <main className='w-full flex-grow min-h-0 h-full relative'>{children}</main>
       </RightSidebarLayout>
     </div>
   )

@@ -1,10 +1,7 @@
-import { Commit, DraftChange, Project, User, Workspace } from '../../browser'
+import type { Commit, DraftChange, Project, User, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
-import { PromisedResult } from '../../lib/Transaction'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../repositories'
+import type { PromisedResult } from '../../lib/Transaction'
+import { CommitsRepository, DocumentVersionsRepository } from '../../repositories'
 import { createCommit } from '../commits'
 import { computeDocumentRevertChanges, updateDocument } from '../documents'
 
@@ -23,9 +20,7 @@ async function fetchDocumentReversionDetails({
 }) {
   try {
     const commitScope = new CommitsRepository(workspace.id)
-    const headCommit = await commitScope
-      .getHeadCommit(project.id)
-      .then((r) => r.unwrap()!)
+    const headCommit = await commitScope.getHeadCommit(project.id).then((r) => r.unwrap()!)
 
     const targetDraft = targetDraftUuid
       ? await commitScope
@@ -118,21 +113,13 @@ export async function getChangesToRevertDocumentChanges({
   const isDeleted = !isCreated && change.deletedAt !== undefined
 
   const newDocumentPath =
-    change.path ??
-    draftDocument?.path ??
-    changedDocument?.path ??
-    originalDocument!.path
+    change.path ?? draftDocument?.path ?? changedDocument?.path ?? originalDocument!.path
 
   const oldDocumentPath =
-    draftDocument?.path ??
-    originalDocument?.path ??
-    changedDocument?.path ??
-    newDocumentPath!
+    draftDocument?.path ?? originalDocument?.path ?? changedDocument?.path ?? newDocumentPath!
 
   const previousContent =
-    draftDocument?.content ??
-    changedDocument?.content ??
-    originalDocument?.content
+    draftDocument?.content ?? changedDocument?.content ?? originalDocument?.content
 
   const newContent = isDeleted ? undefined : (change.content ?? previousContent)
 
@@ -192,9 +179,7 @@ export async function revertChangesToDocument({
   const documentVersionChanges = documentVersionChangesResult.unwrap()
 
   const oldDocumentPath =
-    changedDocument?.path ??
-    originalDocument?.path ??
-    documentVersionChanges.path
+    changedDocument?.path ?? originalDocument?.path ?? documentVersionChanges.path
 
   const finalDraft = targetDraftUuid
     ? Result.ok(targetDraft)
@@ -219,7 +204,6 @@ export async function revertChangesToDocument({
 
   return Result.ok({
     commit: finalDraft.value,
-    documentUuid:
-      documentVersionChanges.deletedAt != null ? undefined : documentUuid,
+    documentUuid: documentVersionChanges.deletedAt != null ? undefined : documentUuid,
   })
 }

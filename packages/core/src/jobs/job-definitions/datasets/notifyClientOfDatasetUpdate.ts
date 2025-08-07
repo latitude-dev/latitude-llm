@@ -1,4 +1,4 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { DatasetsRepository, UsersRepository } from '../../../repositories'
 import { DatasetUpdateMailer } from '../../../mailers/mailers/mailers/datasets/DatasetUpdateMailer'

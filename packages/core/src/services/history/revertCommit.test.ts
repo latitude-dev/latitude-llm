@@ -6,16 +6,15 @@ import { DocumentVersionsRepository } from '../../repositories'
 
 describe('getChangesToRevertCommit', () => {
   it('fetches and computes changes for a commit reversion', async (ctx) => {
-    const { workspace, project, documents, user } =
-      await ctx.factories.createProject({
-        providers: [{ type: Providers.OpenAI, name: 'openai' }],
-        documents: {
-          foo: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'initial content',
-          }),
-        },
-      })
+    const { workspace, project, documents, user } = await ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'initial content',
+        }),
+      },
+    })
 
     const document = documents[0]!
 
@@ -63,16 +62,15 @@ describe('getChangesToRevertCommit', () => {
 
 describe('revertCommit', () => {
   it('reverts a commit properly', async (ctx) => {
-    const { workspace, project, documents, user } =
-      await ctx.factories.createProject({
-        providers: [{ type: Providers.OpenAI, name: 'openai' }],
-        documents: {
-          foo: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'initial content',
-          }),
-        },
-      })
+    const { workspace, project, documents, user } = await ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'initial content',
+        }),
+      },
+    })
 
     const document = documents[0]!
 
@@ -117,16 +115,15 @@ describe('revertCommit', () => {
   })
 
   it('creates a new draft when no target draft is provided', async (ctx) => {
-    const { workspace, project, documents, user } =
-      await ctx.factories.createProject({
-        providers: [{ type: Providers.OpenAI, name: 'openai' }],
-        documents: {
-          foo: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'initial content',
-          }),
-        },
-      })
+    const { workspace, project, documents, user } = await ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'initial content',
+        }),
+      },
+    })
 
     const document = documents[0]!
 
@@ -140,9 +137,7 @@ describe('revertCommit', () => {
       content: document.content.replace('initial content', 'updated content'),
     })
 
-    const mergedChangedCommit = await mergeCommit(changedCommit).then((r) =>
-      r.unwrap(),
-    )
+    const mergedChangedCommit = await mergeCommit(changedCommit).then((r) => r.unwrap())
 
     const revertResult = await revertCommit({
       workspace,

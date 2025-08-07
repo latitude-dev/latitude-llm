@@ -1,15 +1,12 @@
 import { useMemo } from 'react'
 
-import {
-  BreadcrumbItem,
-  BreadcrumbSeparator,
-} from '@latitude-data/web-ui/molecules/Breadcrumb'
+import { BreadcrumbItem, BreadcrumbSeparator } from '@latitude-data/web-ui/molecules/Breadcrumb'
 import { BreadcrumbItemSkeleton } from '@latitude-data/web-ui/molecules/Breadcrumb'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { ROUTES } from '$/services/routes'
 import useProjects from '$/stores/projects'
 
-import { BreadcrumbSelector, BreadcrumbSelectorOption } from '../Selector'
+import { BreadcrumbSelector, type BreadcrumbSelectorOption } from '../Selector'
 import { CommitBreadcrumbItems } from './Versions'
 
 export function ProjectBreadcrumbItems({ segments }: { segments: string[] }) {
@@ -37,10 +34,7 @@ export function ProjectBreadcrumbItems({ segments }: { segments: string[] }) {
           <BreadcrumbItemSkeleton />
         ) : (
           <div className='flex flex-row items-center gap-x-1'>
-            <BreadcrumbSelector
-              label={currentProject?.name || 'Unknown'}
-              options={options}
-            />
+            <BreadcrumbSelector label={currentProject?.name || 'Unknown'} options={options} />
             {currentProject && (
               <ClickToCopy
                 tooltipContent='Click to copy the project ID'
@@ -51,11 +45,8 @@ export function ProjectBreadcrumbItems({ segments }: { segments: string[] }) {
         )}
       </BreadcrumbItem>
 
-      {segments.length > 2 && segments[1] == 'versions' && (
-        <CommitBreadcrumbItems
-          segments={segments.slice(2)}
-          projectId={projectId}
-        />
+      {segments.length > 2 && segments[1] === 'versions' && (
+        <CommitBreadcrumbItems segments={segments.slice(2)} projectId={projectId} />
       )}
     </>
   )

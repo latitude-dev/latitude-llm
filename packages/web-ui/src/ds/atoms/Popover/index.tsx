@@ -1,13 +1,13 @@
 'use client'
-import { forwardRef, ReactNode, Ref } from 'react'
+import { forwardRef, type ReactNode, type Ref } from 'react'
 import * as RadixPopover from '@radix-ui/react-popover'
 
 import { cn } from '../../../lib/utils'
-import { Button, ButtonProps } from '../Button'
+import { Button, type ButtonProps } from '../Button'
 import { Icon } from '../Icons'
-import { IconProps } from '../Icons'
+import type { IconProps } from '../Icons'
 import { Text } from '../Text'
-import { TextColor } from '../../tokens'
+import type { TextColor } from '../../tokens'
 import { isString } from 'lodash-es'
 import { zIndex } from '../../tokens/zIndex'
 
@@ -18,51 +18,48 @@ export type PopoverContentProps = RadixPopover.PopoverContentProps & {
   maxHeight?: 'normal' | 'none'
   width?: number
 }
-const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
-  function Content(
-    {
-      inPortal = true,
-      scrollable = true,
-      size = 'small',
-      className = '',
-      maxHeight = 'normal',
-      width,
-      ...rest
-    },
-    ref,
-  ) {
-    const props = {
-      ...rest,
-      className: cn(
-        className,
-        'animate-in fade-in-0 slide-in-from-top-2',
-        'bg-background shadow-lg rounded-md',
-        'mt-1 border border-border',
-        'gap-y-4 flex flex-col',
-        zIndex.popover,
-        {
-          'custom-scrollbar': scrollable,
-          'max-w-80 p-2': size === 'small',
-          'max-w-96 p-4': size === 'medium',
-          'max-w-xl p-4': size === 'large',
-          'max-h-96': maxHeight === 'normal',
-          'w-[var(--radix-popover-trigger-width)]': size === 'auto',
-        },
-      ),
-      style: {
-        ...rest.style,
-        ...(width ? { minWidth: width, maxWidth: width } : {}),
-      },
-    }
-    if (!inPortal) return <RadixPopover.Content {...props} />
-
-    return (
-      <RadixPopover.Portal>
-        <RadixPopover.Content {...props} ref={ref} />
-      </RadixPopover.Portal>
-    )
+const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(function Content(
+  {
+    inPortal = true,
+    scrollable = true,
+    size = 'small',
+    className = '',
+    maxHeight = 'normal',
+    width,
+    ...rest
   },
-)
+  ref,
+) {
+  const props = {
+    ...rest,
+    className: cn(
+      className,
+      'animate-in fade-in-0 slide-in-from-top-2',
+      'bg-background shadow-lg rounded-md',
+      'mt-1 border border-border',
+      'gap-y-4 flex flex-col',
+      zIndex.popover,
+      {
+        'custom-scrollbar': scrollable,
+        'max-w-80 p-2': size === 'small',
+        'max-w-96 p-4': size === 'medium',
+        'max-w-xl p-4': size === 'large',
+        'max-h-96': maxHeight === 'normal',
+      },
+    ),
+    style: {
+      ...rest.style,
+      ...(width ? { minWidth: width, maxWidth: width } : {}),
+    },
+  }
+  if (!inPortal) return <RadixPopover.Content {...props} />
+
+  return (
+    <RadixPopover.Portal>
+      <RadixPopover.Content {...props} ref={ref} />
+    </RadixPopover.Portal>
+  )
+})
 
 export const ButtonTrigger = ({
   color,

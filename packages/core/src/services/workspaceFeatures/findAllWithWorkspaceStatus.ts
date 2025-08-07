@@ -4,10 +4,7 @@ import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { features, workspaceFeatures } from '../../schema'
 
-export async function findAllFeaturesWithWorkspaceStatus(
-  workspaceId: number,
-  db = database,
-) {
+export async function findAllFeaturesWithWorkspaceStatus(workspaceId: number, db = database) {
   const allFeatures = await db
     .select({
       id: features.id,

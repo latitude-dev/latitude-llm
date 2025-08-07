@@ -9,10 +9,7 @@ const UserLocationSchema = z.object({
   timezone: z.string().optional(),
 })
 
-const OPEN_AI_SEARCH_TYPES = [
-  'web_search_preview',
-  'web_search_preview_2025_03_11',
-] as const
+const OPEN_AI_SEARCH_TYPES = ['web_search_preview', 'web_search_preview_2025_03_11'] as const
 
 export const WebSearchToolSchema = z.object({
   type: z.enum(OPEN_AI_SEARCH_TYPES),

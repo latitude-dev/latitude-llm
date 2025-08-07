@@ -1,17 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   ErrorableEntity,
   LogSources,
   Providers,
 } from '../../browser'
 import * as factories from '../../tests/factories'
-import {
-  computeDocumentLogs,
-  computeDocumentLogsCount,
-} from './computeDocumentLogs'
+import { computeDocumentLogs, computeDocumentLogsCount } from './computeDocumentLogs'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 describe('computeDocumentLogs', () => {
@@ -51,9 +48,7 @@ describe('computeDocumentLogs', () => {
     })
 
     expect(result).toHaveLength(2)
-    expect(result.map((log) => log.uuid)).toEqual(
-      expect.arrayContaining([log1.uuid, log2.uuid]),
-    )
+    expect(result.map((log) => log.uuid)).toEqual(expect.arrayContaining([log1.uuid, log2.uuid]))
   })
 
   it('paginates results correctly', async () => {

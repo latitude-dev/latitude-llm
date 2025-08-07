@@ -4,13 +4,7 @@ import { timestamps } from '../schemaHelpers'
 import { datasets } from './datasets'
 import { workspaces } from './workspaces'
 
-export type DatasetRowDataContent =
-  | string
-  | number
-  | boolean
-  | object
-  | null
-  | undefined
+export type DatasetRowDataContent = string | number | boolean | object | null | undefined
 export type DatasetRowData = {
   [key: string]: DatasetRowDataContent
 }
@@ -29,8 +23,6 @@ export const datasetRows = latitudeSchema.table(
     ...timestamps(),
   },
   (table) => ({
-    datasetWorkspaceIdx: index('dataset_row_workspace_idx').on(
-      table.workspaceId,
-    ),
+    datasetWorkspaceIdx: index('dataset_row_workspace_idx').on(table.workspaceId),
   }),
 )

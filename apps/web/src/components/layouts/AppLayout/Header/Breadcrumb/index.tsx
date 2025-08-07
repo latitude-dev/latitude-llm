@@ -12,10 +12,7 @@ export function HeaderBreadcrumb() {
 
   return (
     <Breadcrumb>
-      <Link
-        href={ROUTES.dashboard.root}
-        className='flex flex-row items-center gap-x-4'
-      >
+      <Link href={ROUTES.dashboard.root} className='flex flex-row items-center gap-x-4'>
         {logoElement}
       </Link>
 

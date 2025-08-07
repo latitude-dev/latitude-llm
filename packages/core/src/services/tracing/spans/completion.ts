@@ -7,11 +7,11 @@ import {
 } from '@opentelemetry/semantic-conventions/incubating'
 import {
   ContentType,
-  Message,
-  MessageContent,
+  type Message,
+  type MessageContent,
   MessageRole,
-  ToolCallContent,
-  ToolMessage,
+  type ToolCallContent,
+  type ToolMessage,
 } from 'promptl-ai'
 import {
   ATTR_AI_MODEL_ID,
@@ -55,7 +55,7 @@ import {
   ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_INPUT,
   ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_READ,
   ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_WRITE,
-  CompletionSpanMetadata,
+  type CompletionSpanMetadata,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_CONTENT_FILTER,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_ERROR,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_LENGTH,
@@ -63,24 +63,19 @@ import {
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_UNKNOWN,
-  Providers,
+  type Providers,
   SPAN_SPECIFICATIONS,
-  SpanAttribute,
+  type SpanAttribute,
   SpanStatus,
   SpanType,
-  Workspace,
+  type Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
-import { Result, TypedResult } from '../../../lib/Result'
+import { Result, type TypedResult } from '../../../lib/Result'
 import { ProviderApiKeysRepository } from '../../../repositories'
 import { estimateCost } from '../../ai/estimateCost'
-import {
-  setField,
-  SpanProcessArgs,
-  toCamelCase,
-  validateUndefineds,
-} from './shared'
+import { setField, type SpanProcessArgs, toCamelCase, validateUndefineds } from './shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Completion]
 export const CompletionSpanSpecification = {
@@ -173,9 +168,7 @@ function extractProvider(
   if (!provider) provider = String(attributes[ATTR_AI_MODEL_PROVIDER] ?? '')
   if (provider) return Result.ok(provider)
 
-  return Result.error(
-    new UnprocessableEntityError('Completion provider is required'),
-  )
+  return Result.error(new UnprocessableEntityError('Completion provider is required'))
 }
 
 function extractModel(
@@ -188,18 +181,10 @@ function extractModel(
   if (!model) model = String(attributes[ATTR_AI_MODEL_ID] ?? '')
   if (model) return Result.ok(model)
 
-  return Result.error(
-    new UnprocessableEntityError('Completion model is required'),
-  )
+  return Result.error(new UnprocessableEntityError('Completion model is required'))
 }
 
-const NOT_CONFIGURATIONS = [
-  'id',
-  'configuration',
-  'template',
-  'parameters',
-  'messages',
-]
+const NOT_CONFIGURATIONS = ['id', 'configuration', 'template', 'parameters', 'messages']
 
 function extractConfiguration(
   attributes: Record<string, SpanAttribute>,
@@ -211,13 +196,9 @@ function extractConfiguration(
   if (!attribute) attribute = String(attributes[ATTR_AI_SETTINGS] ?? '')
   if (attribute) {
     try {
-      return Result.ok(
-        toCamelCase(JSON.parse(attribute) as Record<string, unknown>),
-      )
-    } catch (error) {
-      return Result.error(
-        new UnprocessableEntityError('Invalid completion configuration'),
-      )
+      return Result.ok(toCamelCase(JSON.parse(attribute) as Record<string, unknown>))
+    } catch (_error) {
+      return Result.error(new UnprocessableEntityError('Invalid completion configuration'))
     }
   }
 
@@ -225,16 +206,14 @@ function extractConfiguration(
   for (const key in attributes) {
     if (!key.startsWith(ATTR_GEN_AI_REQUEST)) continue
     if (NOT_CONFIGURATIONS.some((not) => key.endsWith(not))) continue
-    const parameter = key.replace(ATTR_GEN_AI_REQUEST + '.', '')
+    const parameter = key.replace(`${ATTR_GEN_AI_REQUEST}.`, '')
     configuration[parameter] = attributes[key]
   }
 
   return Result.ok(toCamelCase(configuration))
 }
 
-function convertToolCalls(
-  raws: Record<string, unknown>[],
-): TypedResult<ToolCallContent[]> {
+function convertToolCalls(raws: Record<string, unknown>[]): TypedResult<ToolCallContent[]> {
   const toolCalls: ToolCallContent[] = []
 
   try {
@@ -252,16 +231,16 @@ function convertToolCalls(
       } else {
         toolCalls.push({
           type: ContentType.toolCall,
-          toolCallId: String(toolCall.id || toolCall.toolCallId || toolCall.toolUseId || ''), // prettier-ignore
+          toolCallId: String(toolCall.id || toolCall.toolCallId || toolCall.toolUseId || ''),
           toolName: String(toolCall.name || toolCall.toolName || ''),
-          toolArguments: JSON.parse(String(toolCall.arguments || toolCall.toolArguments || toolCall.input || '{}')), // prettier-ignore
+          toolArguments: JSON.parse(
+            String(toolCall.arguments || toolCall.toolArguments || toolCall.input || '{}'),
+          ),
         })
       }
     }
   } catch {
-    return Result.error(
-      new UnprocessableEntityError('Invalid completion tool calls'),
-    )
+    return Result.error(new UnprocessableEntityError('Invalid completion tool calls'))
   }
 
   return Result.ok(toolCalls)
@@ -304,17 +283,13 @@ function convertMessageContent(
     for (const raw of content) {
       const payload = typeof raw === 'string' ? JSON.parse(raw) : raw
       if (!payload || typeof payload !== 'object') {
-        return Result.error(
-          new UnprocessableEntityError('Invalid message content'),
-        )
+        return Result.error(new UnprocessableEntityError('Invalid message content'))
       }
 
       const item = toCamelCase(raw as Record<string, unknown>)
 
       if (!item.type) {
-        return Result.error(
-          new UnprocessableEntityError('Content type is required'),
-        )
+        return Result.error(new UnprocessableEntityError('Content type is required'))
       }
       const convertingt = convertContentType(String(item.type))
       if (convertingt.error) return Result.error(convertingt.error)
@@ -350,7 +325,7 @@ function convertMessageContent(
         case 'tool-result' as ContentType:
           result.push({
             type: 'tool-result',
-            toolCallId: String(item.toolId || item.toolCallId || item.toolUseId || ''), // prettier-ignore
+            toolCallId: String(item.toolId || item.toolCallId || item.toolUseId || ''),
             toolName: String(item.toolName || ''),
             result: item.result || {},
             isError: Boolean(item.isError || false),
@@ -363,9 +338,7 @@ function convertMessageContent(
   }
 
   try {
-    return Result.ok([
-      { type: ContentType.text, text: JSON.stringify(content) },
-    ])
+    return Result.ok([{ type: ContentType.text, text: JSON.stringify(content) }])
   } catch {
     return Result.error(new UnprocessableEntityError('Invalid message content'))
   }
@@ -394,9 +367,7 @@ function convertMessageRole(role: string): TypedResult<MessageRole> {
   }
 }
 
-function convertMessages(
-  raws: Record<string, unknown>[],
-): TypedResult<Message[]> {
+function convertMessages(raws: Record<string, unknown>[]): TypedResult<Message[]> {
   const messages: Message[] = []
 
   try {
@@ -404,18 +375,14 @@ function convertMessages(
       const message = toCamelCase(raw)
 
       if (!message.role) {
-        return Result.error(
-          new UnprocessableEntityError('Message role is required'),
-        )
+        return Result.error(new UnprocessableEntityError('Message role is required'))
       }
       const convertingr = convertMessageRole(String(message.role))
       if (convertingr.error) return Result.error(convertingr.error)
       const role = convertingr.value
 
       if (!message.content && message.content !== '') {
-        return Result.error(
-          new UnprocessableEntityError('Message content is required'),
-        )
+        return Result.error(new UnprocessableEntityError('Message content is required'))
       }
       const convertingc = convertMessageContent(message.content)
       if (convertingc.error) return Result.error(convertingc.error)
@@ -431,15 +398,19 @@ function convertMessages(
         messages.push({ role, content } as Message)
       } else {
         const toolName = String(message.toolName || '')
-        const toolId = String(message.toolId || message.toolCallId || message.toolUseId || '') // prettier-ignore
+        const toolId = String(message.toolId || message.toolCallId || message.toolUseId || '')
         const isError = String(message.isError || '')
-        messages.push({ role, content, toolName, toolId, isError } as ToolMessage) // prettier-ignore
+        messages.push({
+          role,
+          content,
+          toolName,
+          toolId,
+          isError,
+        } as ToolMessage)
       }
     }
   } catch {
-    return Result.error(
-      new UnprocessableEntityError('Invalid completion messages'),
-    )
+    return Result.error(new UnprocessableEntityError('Invalid completion messages'))
   }
 
   return Result.ok(messages)
@@ -454,19 +425,15 @@ function extractMessages(
   try {
     for (const key in attributes) {
       if (!key.startsWith(prefix)) continue
-      const field = key.replace(prefix + '.', '')
+      const field = key.replace(`${prefix}.`, '')
       setField(messages, field, attributes[key])
     }
   } catch {
-    return Result.error(
-      new UnprocessableEntityError('Invalid completion messages'),
-    )
+    return Result.error(new UnprocessableEntityError('Invalid completion messages'))
   }
 
   if (!validateUndefineds(messages)) {
-    return Result.error(
-      new UnprocessableEntityError('Invalid completion messages'),
-    )
+    return Result.error(new UnprocessableEntityError('Invalid completion messages'))
   }
 
   return convertMessages(messages)
@@ -495,9 +462,7 @@ function extractInput(
     try {
       const payload = JSON.parse(attribute)
       if (!Array.isArray(payload)) {
-        return Result.error(
-          new UnprocessableEntityError('Invalid input messages'),
-        )
+        return Result.error(new UnprocessableEntityError('Invalid input messages'))
       }
 
       // Note: messages are already in PromptL format
@@ -509,9 +474,7 @@ function extractInput(
       if (converting.error) return Result.error(converting.error)
       return Result.ok([...messages, ...converting.value])
     } catch {
-      return Result.error(
-        new UnprocessableEntityError('Invalid input messages'),
-      )
+      return Result.error(new UnprocessableEntityError('Invalid input messages'))
     }
   }
 
@@ -528,18 +491,13 @@ function extractInput(
 function extractOutput(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<Required<CompletionSpanMetadata>['output']> {
-  for (const source of [
-    ATTR_GEN_AI_RESPONSE_MESSAGES,
-    ATTR_LLM_OUTPUT_MESSAGES,
-  ]) {
+  for (const source of [ATTR_GEN_AI_RESPONSE_MESSAGES, ATTR_LLM_OUTPUT_MESSAGES]) {
     const attribute = String(attributes[source] ?? '')
     if (!attribute) continue
     try {
       const payload = JSON.parse(attribute)
       if (!Array.isArray(payload)) {
-        return Result.error(
-          new UnprocessableEntityError('Invalid output messages'),
-        )
+        return Result.error(new UnprocessableEntityError('Invalid output messages'))
       }
 
       // Note: messages are already in PromptL format
@@ -551,9 +509,7 @@ function extractOutput(
       if (converting.error) return Result.error(converting.error)
       return Result.ok(converting.value)
     } catch {
-      return Result.error(
-        new UnprocessableEntityError('Invalid output messages'),
-      )
+      return Result.error(new UnprocessableEntityError('Invalid output messages'))
     }
   }
 
@@ -566,7 +522,7 @@ function extractOutput(
 
   const responseText = String(attributes[ATTR_AI_RESPONSE_TEXT] ?? '')
   const responseObject = String(attributes[ATTR_AI_RESPONSE_OBJECT] ?? '')
-  const responseToolCalls = String(attributes[ATTR_AI_RESPONSE_TOOL_CALLS] ?? '') // prettier-ignore
+  const responseToolCalls = String(attributes[ATTR_AI_RESPONSE_TOOL_CALLS] ?? '')
   if (responseText || responseObject || responseToolCalls) {
     const message: Message = { role: MessageRole.assistant, content: [] }
 
@@ -582,18 +538,14 @@ function extractOutput(
       try {
         const payload = JSON.parse(responseToolCalls)
         if (!Array.isArray(payload)) {
-          return Result.error(
-            new UnprocessableEntityError('Invalid output tool calls'),
-          )
+          return Result.error(new UnprocessableEntityError('Invalid output tool calls'))
         }
 
         const converting = convertToolCalls(payload)
         if (converting.error) return Result.error(converting.error)
         message.content.push(...converting.value)
       } catch {
-        return Result.error(
-          new UnprocessableEntityError('Invalid output tool calls'),
-        )
+        return Result.error(new UnprocessableEntityError('Invalid output tool calls'))
       }
     }
 
@@ -607,16 +559,16 @@ function extractPromptTokens(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<Required<CompletionSpanMetadata>['tokens']['prompt']> {
   let tokens = Number(attributes[ATTR_GEN_AI_USAGE_PROMPT_TOKENS] ?? NaN)
-  if (isNaN(tokens)) {
+  if (Number.isNaN(tokens)) {
     tokens = Number(attributes[ATTR_GEN_AI_USAGE_INPUT_TOKENS] ?? NaN)
   }
-  if (isNaN(tokens)) {
+  if (Number.isNaN(tokens)) {
     tokens = Number(attributes[ATTR_LLM_TOKEN_COUNT_PROMPT] ?? NaN)
   }
-  if (isNaN(tokens)) {
+  if (Number.isNaN(tokens)) {
     tokens = Number(attributes[ATTR_AI_USAGE_PROMPT_TOKENS] ?? NaN)
   }
-  if (!isNaN(tokens)) return Result.ok(tokens)
+  if (!Number.isNaN(tokens)) return Result.ok(tokens)
 
   return Result.ok(0)
 }
@@ -625,18 +577,18 @@ function extractCachedTokens(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<Required<CompletionSpanMetadata>['tokens']['cached']> {
   let tokens = Number(attributes[ATTR_GEN_AI_USAGE_CACHED_TOKENS] ?? NaN)
-  if (isNaN(tokens)) {
-    const input = Number(attributes[ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_INPUT] ?? NaN) // prettier-ignore
-    const read = Number(attributes[ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_READ] ?? NaN) // prettier-ignore
-    const write = Number(attributes[ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_WRITE] ?? NaN) // prettier-ignore
+  if (Number.isNaN(tokens)) {
+    const input = Number(attributes[ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_INPUT] ?? NaN)
+    const read = Number(attributes[ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_READ] ?? NaN)
+    const write = Number(attributes[ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_WRITE] ?? NaN)
     tokens = input + read + write
   }
-  if (isNaN(tokens)) {
-    const create = Number(attributes[ATTR_GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS] ?? NaN) // prettier-ignore
-    const read = Number(attributes[ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS] ?? NaN) // prettier-ignore
+  if (Number.isNaN(tokens)) {
+    const create = Number(attributes[ATTR_GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS] ?? NaN)
+    const read = Number(attributes[ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS] ?? NaN)
     tokens = create + read
   }
-  if (!isNaN(tokens)) return Result.ok(tokens)
+  if (!Number.isNaN(tokens)) return Result.ok(tokens)
 
   return Result.ok(0)
 }
@@ -645,10 +597,10 @@ function extractReasoningTokens(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<Required<CompletionSpanMetadata>['tokens']['reasoning']> {
   let tokens = Number(attributes[ATTR_GEN_AI_USAGE_REASONING_TOKENS] ?? NaN)
-  if (isNaN(tokens)) {
-    tokens = Number(attributes[ATTR_LLM_TOKEN_COUNT_COMPLETION_DETAILS_REASONING] ?? NaN) // prettier-ignore
+  if (Number.isNaN(tokens)) {
+    tokens = Number(attributes[ATTR_LLM_TOKEN_COUNT_COMPLETION_DETAILS_REASONING] ?? NaN)
   }
-  if (!isNaN(tokens)) return Result.ok(tokens)
+  if (!Number.isNaN(tokens)) return Result.ok(tokens)
 
   return Result.ok(0)
 }
@@ -657,16 +609,16 @@ function extractCompletionTokens(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<Required<CompletionSpanMetadata>['tokens']['completion']> {
   let tokens = Number(attributes[ATTR_GEN_AI_USAGE_COMPLETION_TOKENS] ?? NaN)
-  if (isNaN(tokens)) {
+  if (Number.isNaN(tokens)) {
     tokens = Number(attributes[ATTR_GEN_AI_USAGE_OUTPUT_TOKENS] ?? NaN)
   }
-  if (isNaN(tokens)) {
+  if (Number.isNaN(tokens)) {
     tokens = Number(attributes[ATTR_LLM_TOKEN_COUNT_COMPLETION] ?? NaN)
   }
-  if (isNaN(tokens)) {
+  if (Number.isNaN(tokens)) {
     tokens = Number(attributes[ATTR_AI_USAGE_COMPLETION_TOKENS] ?? NaN)
   }
-  if (!isNaN(tokens)) return Result.ok(tokens)
+  if (!Number.isNaN(tokens)) return Result.ok(tokens)
 
   return Result.ok(0)
 }
@@ -699,19 +651,19 @@ async function enrichCost(
   return Result.ok(cost)
 }
 
-const FINISH_REASON_STOP = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP) // prettier-ignore
-const FINISH_REASON_LENGTH = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_LENGTH) // prettier-ignore
-const FINISH_REASON_CONTENT_FILTER = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_CONTENT_FILTER) // prettier-ignore
-const FINISH_REASON_TOOL_CALLS = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS) // prettier-ignore
-const FINISH_REASON_ERROR = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_ERROR) // prettier-ignore
-const FINISH_REASON_OTHER = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_OTHER) // prettier-ignore
-const FINISH_REASON_UNKNOWN = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_UNKNOWN) // prettier-ignore
+const FINISH_REASON_STOP = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP)
+const FINISH_REASON_LENGTH = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_LENGTH)
+const FINISH_REASON_CONTENT_FILTER = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_CONTENT_FILTER)
+const FINISH_REASON_TOOL_CALLS = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS)
+const FINISH_REASON_ERROR = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_ERROR)
+const FINISH_REASON_OTHER = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_OTHER)
+const FINISH_REASON_UNKNOWN = toCamelCase(GEN_AI_RESPONSE_FINISH_REASON_VALUE_UNKNOWN)
 
 function extractFinishReason(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<Required<CompletionSpanMetadata>['finishReason']> {
   const attribute = attributes[ATTR_GEN_AI_RESPONSE_FINISH_REASONS] ?? []
-  let reason = Array.isArray(attribute) ? (attribute.map(String)[0] ?? '') : String(attribute) // prettier-ignore
+  let reason = Array.isArray(attribute) ? (attribute.map(String)[0] ?? '') : String(attribute)
   if (!reason) {
     reason = String(attributes[ATTR_LLM_RESPONSE_FINISH_REASON] ?? '')
   }

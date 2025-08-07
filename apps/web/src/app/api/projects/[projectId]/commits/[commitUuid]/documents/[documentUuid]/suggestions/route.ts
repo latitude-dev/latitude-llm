@@ -1,12 +1,12 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import {
   CommitsRepository,
   DocumentSuggestionsRepository,
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
   authHandler(
@@ -40,9 +40,7 @@ export const GET = errorHandler(
         })
         .then((r) => r.unwrap())
 
-      const suggestionsRepository = new DocumentSuggestionsRepository(
-        workspace.id,
-      )
+      const suggestionsRepository = new DocumentSuggestionsRepository(workspace.id)
       const suggestions = await suggestionsRepository
         .listByDocumentVersionWithDetails({ commit, document })
         .then((r) => r.unwrap())

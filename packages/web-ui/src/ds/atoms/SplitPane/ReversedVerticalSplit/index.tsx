@@ -1,9 +1,9 @@
-import { ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { useMeasure } from '../../../../browser'
 import { cn } from '../../../../lib/utils'
 import { PaneWrapper, ResizablePane } from '../Common'
-import { getGap, getGapWrapperPadding, SplitGap } from '../index'
+import { getGap, getGapWrapperPadding, type SplitGap } from '../index'
 
 export function ReversedVerticalSplit({
   topPane,
@@ -59,11 +59,7 @@ export function ReversedVerticalSplit({
   return (
     <div
       ref={ref}
-      className={cn(
-        'flex flex-col relative w-full h-full',
-        className,
-        getGap('vertical', gap),
-      )}
+      className={cn('flex flex-col relative w-full h-full', className, getGap('vertical', gap))}
     >
       <PaneWrapper direction='vertical' className={classNamePanelWrapper}>
         {topPane}

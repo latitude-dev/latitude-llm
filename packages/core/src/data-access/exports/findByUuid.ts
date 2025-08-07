@@ -1,6 +1,6 @@
 import { latitudeExports } from '../../schema/models/exports'
 import { and, eq } from 'drizzle-orm'
-import { Export, Workspace } from '../../browser'
+import type { Export, Workspace } from '../../browser'
 import { database } from '../../client'
 
 export async function findByUuid(
@@ -14,9 +14,6 @@ export async function findByUuid(
   db = database,
 ): Promise<Export | undefined> {
   return await db.query.latitudeExports.findFirst({
-    where: and(
-      eq(latitudeExports.uuid, uuid),
-      eq(latitudeExports.workspaceId, workspace.id),
-    ),
+    where: and(eq(latitudeExports.uuid, uuid), eq(latitudeExports.workspaceId, workspace.id)),
   })
 }

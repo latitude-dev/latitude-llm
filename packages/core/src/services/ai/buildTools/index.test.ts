@@ -2,14 +2,13 @@ import { z } from 'zod'
 import { jsonSchema } from 'ai'
 import { describe, it, expect } from 'vitest'
 import { buildTools } from './index'
-import { VercelTools } from '@latitude-data/constants'
+import type { VercelTools } from '@latitude-data/constants'
 
 describe('buildTools', () => {
   it('builds and validate tools', () => {
     const tools = {
       get_weather: {
-        description:
-          'Obtains the weather temperature from a given location id.',
+        description: 'Obtains the weather temperature from a given location id.',
         parameters: {
           type: 'object',
           additionalProperties: false,
@@ -35,8 +34,7 @@ describe('buildTools', () => {
     const result = buildTools(tools)
     expect(result.value).toEqual({
       get_weather: {
-        description:
-          'Obtains the weather temperature from a given location id.',
+        description: 'Obtains the weather temperature from a given location id.',
         parameters: jsonSchema({
           type: 'object',
           additionalProperties: false,

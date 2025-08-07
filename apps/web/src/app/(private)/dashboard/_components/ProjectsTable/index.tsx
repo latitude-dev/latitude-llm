@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 
-import { Project } from '@latitude-data/core/browser'
+import type { Project } from '@latitude-data/core/browser'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import {
   Table,
@@ -21,11 +21,7 @@ import RenameProjectModal from './RenameProjectModal'
 type ProjectWithAgreggatedData = Project & {
   lastEditedAt: Date | null
 }
-export function ProjectsTable({
-  projects,
-}: {
-  projects: ProjectWithAgreggatedData[]
-}) {
+export function ProjectsTable({ projects }: { projects: ProjectWithAgreggatedData[] }) {
   const navigate = useNavigate()
   const [projectToRename, setProjectToRename] = useState<Project | null>(null)
 
@@ -46,22 +42,16 @@ export function ProjectsTable({
               key={project.id}
               verticalPadding
               className='cursor-pointer'
-              onClick={() =>
-                navigate.push(ROUTES.projects.detail({ id: project.id }).root)
-              }
+              onClick={() => navigate.push(ROUTES.projects.detail({ id: project.id }).root)}
             >
               <TableCell>
                 <Text.H5>{project.name}</Text.H5>
               </TableCell>
               <TableCell>
-                <Text.H5 color='foregroundMuted'>
-                  {relativeTime(project.lastEditedAt)}
-                </Text.H5>
+                <Text.H5 color='foregroundMuted'>{relativeTime(project.lastEditedAt)}</Text.H5>
               </TableCell>
               <TableCell>
-                <Text.H5 color='foregroundMuted'>
-                  {relativeTime(project.createdAt)}
-                </Text.H5>
+                <Text.H5 color='foregroundMuted'>{relativeTime(project.createdAt)}</Text.H5>
               </TableCell>
               <TableCell>
                 <DropdownMenu
@@ -82,9 +72,7 @@ export function ProjectsTable({
                         e.stopPropagation()
                       },
                       onClick: () => {
-                        navigate.push(
-                          ROUTES.dashboard.projects.destroy(project.id).root,
-                        )
+                        navigate.push(ROUTES.dashboard.projects.destroy(project.id).root)
                       },
                     },
                   ]}
@@ -102,10 +90,7 @@ export function ProjectsTable({
       </Table>
 
       {projectToRename && (
-        <RenameProjectModal
-          project={projectToRename}
-          onClose={() => setProjectToRename(null)}
-        />
+        <RenameProjectModal project={projectToRename} onClose={() => setProjectToRename(null)} />
       )}
     </>
   )

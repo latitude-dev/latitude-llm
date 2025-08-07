@@ -1,17 +1,6 @@
 import { sql } from 'drizzle-orm'
-import {
-  bigint,
-  bigserial,
-  boolean,
-  index,
-  jsonb,
-  uniqueIndex,
-  uuid,
-} from 'drizzle-orm/pg-core'
-import {
-  EvaluationResultError,
-  EvaluationResultMetadata,
-} from '../../constants'
+import { bigint, bigserial, boolean, index, jsonb, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import type { EvaluationResultError, EvaluationResultMetadata } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
@@ -33,14 +22,13 @@ export const evaluationResultsV2 = latitudeSchema.table(
       .notNull()
       .references(() => commits.id, { onDelete: 'restrict' }),
     evaluationUuid: uuid('evaluation_uuid').notNull(),
-    experimentId: bigint('experiment_id', { mode: 'number' }).references(
-      () => experiments.id,
-      { onDelete: 'restrict', onUpdate: 'cascade' },
-    ),
-    datasetId: bigint('dataset_id', { mode: 'number' }).references(
-      () => datasets.id,
-      { onDelete: 'set null' },
-    ),
+    experimentId: bigint('experiment_id', { mode: 'number' }).references(() => experiments.id, {
+      onDelete: 'restrict',
+      onUpdate: 'cascade',
+    }),
+    datasetId: bigint('dataset_id', { mode: 'number' }).references(() => datasets.id, {
+      onDelete: 'set null',
+    }),
     evaluatedRowId: bigint('evaluated_row_id', { mode: 'number' }).references(
       () => datasetRows.id,
       { onDelete: 'set null' },
@@ -58,33 +46,18 @@ export const evaluationResultsV2 = latitudeSchema.table(
     ...timestamps(),
   },
   (table) => ({
-    workspaceIdIdx: index('evaluation_results_v2_workspace_id_idx').on(
-      table.workspaceId,
-    ),
-    commitIdIdx: index('evaluation_results_v2_commit_id_idx').on(
+    workspaceIdIdx: index('evaluation_results_v2_workspace_id_idx').on(table.workspaceId),
+    commitIdIdx: index('evaluation_results_v2_commit_id_idx').on(table.commitId),
+    evaluationUuidIdx: index('evaluation_results_v2_evaluation_uuid_idx').on(table.evaluationUuid),
+    experimentIdIdx: index('evaluation_results_v2_experiment_id_idx').on(table.experimentId),
+    datasetIdIdx: index('evaluation_results_v2_dataset_id_idx').on(table.datasetId),
+    evaluatedRowIdIdx: index('evaluation_results_v2_evaluated_row_id_idx').on(table.evaluatedRowId),
+    evaluatedLogIdIdx: index('evaluation_results_v2_evaluated_log_id_idx').on(table.evaluatedLogId),
+    createdAtIdx: index('evaluation_results_v2_created_at_idx').on(table.createdAt),
+    commitEvaluationIdx: index('evaluation_results_v2_commit_evaluation_idx').on(
       table.commitId,
-    ),
-    evaluationUuidIdx: index('evaluation_results_v2_evaluation_uuid_idx').on(
       table.evaluationUuid,
     ),
-    experimentIdIdx: index('evaluation_results_v2_experiment_id_idx').on(
-      table.experimentId,
-    ),
-    datasetIdIdx: index('evaluation_results_v2_dataset_id_idx').on(
-      table.datasetId,
-    ),
-    evaluatedRowIdIdx: index('evaluation_results_v2_evaluated_row_id_idx').on(
-      table.evaluatedRowId,
-    ),
-    evaluatedLogIdIdx: index('evaluation_results_v2_evaluated_log_id_idx').on(
-      table.evaluatedLogId,
-    ),
-    createdAtIdx: index('evaluation_results_v2_created_at_idx').on(
-      table.createdAt,
-    ),
-    commitEvaluationIdx: index(
-      'evaluation_results_v2_commit_evaluation_idx',
-    ).on(table.commitId, table.evaluationUuid),
     uniqueEvaluatedLogIdEvaluationUuidIdx: uniqueIndex(
       'evaluation_results_v2_unique_evaluated_log_id_evaluation_uuid_idx',
     ).on(table.evaluatedLogId, table.evaluationUuid),

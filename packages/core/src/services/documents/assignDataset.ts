@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 
-import { Dataset, DocumentVersion } from '../../browser'
-import { Result, TypedResult } from '../../lib/Result'
+import type { Dataset, DocumentVersion } from '../../browser'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { documentVersions } from '../../schema'
 

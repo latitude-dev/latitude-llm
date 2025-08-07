@@ -3,7 +3,7 @@
 import { getUnsafeIp } from '$/helpers/ip'
 import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/browser'
 import { uploadFile } from '@latitude-data/core/services/files/upload'
-import { createHash } from 'crypto'
+import { createHash } from 'node:crypto'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 

@@ -1,7 +1,7 @@
 'use client'
 import { useMemo } from 'react'
 
-import { REWARD_VALUES, RewardType } from '@latitude-data/core/browser'
+import { REWARD_VALUES, type RewardType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -40,11 +40,7 @@ export function RewardItem({
       <div className='flex flex-row w-full items-center gap-4 justify-between'>
         <div className='flex flex-row items-center gap-1'>
           {isLoading ? (
-            <Icon
-              name='loader'
-              color='foregroundMuted'
-              className='animate-spin'
-            />
+            <Icon name='loader' color='foregroundMuted' className='animate-spin' />
           ) : (
             <Icon
               name='check'
@@ -52,13 +48,9 @@ export function RewardItem({
               className={cn({ 'opacity-50': !isClaimed })}
             />
           )}
-          <Text.H5M color={isClaimed ? 'primary' : 'foreground'}>
-            {description}
-          </Text.H5M>
+          <Text.H5M color={isClaimed ? 'primary' : 'foreground'}>{description}</Text.H5M>
         </div>
-        <Text.H5M color={isClaimed ? 'accentForeground' : 'foregroundMuted'}>
-          +{runs} runs
-        </Text.H5M>
+        <Text.H5M color={isClaimed ? 'accentForeground' : 'foregroundMuted'}>+{runs} runs</Text.H5M>
       </div>
     </Button>
   )

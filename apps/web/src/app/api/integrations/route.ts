@@ -1,7 +1,7 @@
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { listIntegrations } from '@latitude-data/core/services/integrations/list'
 
 export const GET = errorHandler(
@@ -14,9 +14,7 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const integrations = await listIntegrations(workspace).then((r) =>
-        r.unwrap(),
-      )
+      const integrations = await listIntegrations(workspace).then((r) => r.unwrap())
       return NextResponse.json(integrations, { status: 200 })
     },
   ),

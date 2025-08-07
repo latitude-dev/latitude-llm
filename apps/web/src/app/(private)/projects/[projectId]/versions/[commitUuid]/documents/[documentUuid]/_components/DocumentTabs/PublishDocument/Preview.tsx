@@ -1,4 +1,4 @@
-import { DocumentVersion, PublishedDocument } from '@latitude-data/core/browser'
+import type { DocumentVersion, PublishedDocument } from '@latitude-data/core/browser'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
@@ -21,9 +21,7 @@ export function PublishedDocumentPreview({
         <Dot />
       </div>
       <div className='flex flex-col w-full items-center p-4 gap-2'>
-        <Text.H8>
-          {publishedData?.title ?? document.path.split('/').at(-1)}
-        </Text.H8>
+        <Text.H8>{publishedData?.title ?? document.path.split('/').at(-1)}</Text.H8>
         <div className='flex flex-col max-w-[100px] w-full gap-1 border border-border rounded-sm p-2'>
           <Skeleton height='h8' className='w-8' />
           <div className='w-full h-2 border border-border' />

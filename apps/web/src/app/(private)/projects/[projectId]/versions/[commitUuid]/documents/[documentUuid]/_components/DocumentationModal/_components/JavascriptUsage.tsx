@@ -1,7 +1,7 @@
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { UsedToolsDoc } from '../index'
+import type { UsedToolsDoc } from '../index'
 
 function getToolsString(tools: UsedToolsDoc[]) {
   if (!tools.length) return ''
@@ -92,18 +92,13 @@ const result = await sdk.prompts.run('${documentPath}'${getRunOptions() ? `, ${g
 
   return (
     <div className='flex flex-col gap-4'>
-      <Text.H5>
-        First, to run this document programmatically, install the SDK:
-      </Text.H5>
+      <Text.H5>First, to run this document programmatically, install the SDK:</Text.H5>
       <CodeBlock language='bash'>npm install @latitude-data/sdk</CodeBlock>
       <Text.H5>Then, use the following code to run the document:</Text.H5>
       <CodeBlock language='typescript'>{sdkCode}</CodeBlock>
       <Text.H5>
         Check out{' '}
-        <a
-          target='_blank'
-          href='https://docs.latitude.so/guides/sdk/typescript'
-        >
+        <a target='_blank' href='https://docs.latitude.so/guides/sdk/typescript' rel='noopener'>
           <Text.H5 underline color='primary'>
             our docs
           </Text.H5>

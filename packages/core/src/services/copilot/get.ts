@@ -1,15 +1,9 @@
 import { env } from '@latitude-data/env'
 import { database } from '../../client'
-import {
-  unsafelyFindWorkspace,
-  unsafelyGetApiKeyByToken,
-} from '../../data-access'
+import { unsafelyFindWorkspace, unsafelyGetApiKeyByToken } from '../../data-access'
 import { Result } from '../../lib/Result'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../repositories'
-import { Copilot } from './shared'
+import { CommitsRepository, DocumentVersionsRepository } from '../../repositories'
+import type { Copilot } from './shared'
 
 export async function getCopilot({ path }: { path: string }, db = database) {
   if (!env.COPILOT_WORKSPACE_API_KEY) {

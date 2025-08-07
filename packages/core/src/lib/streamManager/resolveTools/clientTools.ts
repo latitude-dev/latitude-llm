@@ -1,19 +1,19 @@
-import { LogSources, ToolDefinition } from '@latitude-data/constants'
-import { LatitudeError } from '../../errors'
-import { Result, TypedResult } from '../../Result'
-import { ResolvedTools, ToolSource } from './types'
+import { LogSources, type ToolDefinition } from '@latitude-data/constants'
+import type { LatitudeError } from '../../errors'
+import { Result, type TypedResult } from '../../Result'
+import { type ResolvedTools, ToolSource } from './types'
 import {
   AI_PROVIDERS_WITH_BUILTIN_TOOLS,
-  LatitudePromptConfig,
+  type LatitudePromptConfig,
 } from '@latitude-data/constants/latitudePromptSchema'
-import { StreamManager } from '..'
-import { telemetry, TelemetryContext } from '../../../telemetry'
-import { Tool } from 'ai'
-import { ToolExecutionOptions } from 'ai'
+import type { StreamManager } from '..'
+import { telemetry, type TelemetryContext } from '../../../telemetry'
+import type { Tool } from 'ai'
+import type { ToolExecutionOptions } from 'ai'
 import {
   awaitClientToolResult,
   mockClientToolResult,
-  ToolHandler,
+  type ToolHandler,
 } from '../clientTools/handlers'
 
 type ToolTuple = [string, ToolDefinition]
@@ -25,9 +25,7 @@ export function resolveClientTools({
   config: LatitudePromptConfig
   streamManager: StreamManager
 }): TypedResult<ResolvedTools, LatitudeError> {
-  const tools = config.tools as
-    | ToolDefinition[]
-    | Record<string, ToolDefinition>
+  const tools = config.tools as ToolDefinition[] | Record<string, ToolDefinition>
   if (!tools) return Result.ok({})
 
   // Old schema: tools is a { [name: string]: ToolDefinition } object
@@ -53,16 +51,12 @@ function oldSchemaToolDeclarations({
 }): TypedResult<ResolvedTools, LatitudeError> {
   return Result.ok(
     Object.fromEntries(
-      Object.entries(tools)
-        .filter(filterProviderTools)
-        .map(buildDefinition(streamManager)),
+      Object.entries(tools).filter(filterProviderTools).map(buildDefinition(streamManager)),
     ),
   )
 }
 
-export function isOldToolsSchema(
-  tools: Record<string, ToolDefinition> | Array<ToolDefinition>,
-) {
+export function isOldToolsSchema(tools: Record<string, ToolDefinition> | Array<ToolDefinition>) {
   return typeof tools === 'object' && !Array.isArray(tools) && tools !== null
 }
 

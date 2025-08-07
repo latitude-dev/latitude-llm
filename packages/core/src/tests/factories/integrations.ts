@@ -1,11 +1,11 @@
 import { faker } from '@faker-js/faker'
 
-import { IntegrationDto, Workspace } from '../../browser'
+import type { IntegrationDto, Workspace } from '../../browser'
 import { database } from '../../client'
-import { IntegrationConfiguration } from '../../services/integrations/helpers/schema'
+import type { IntegrationConfiguration } from '../../services/integrations/helpers/schema'
 import { integrations } from '../../schema'
 import { IntegrationsRepository } from '../../repositories'
-import { DatabaseError } from 'pg'
+import type { DatabaseError } from 'pg'
 
 export type ICreateIntegration = {
   workspace: Workspace
@@ -25,8 +25,7 @@ export async function createIntegration({
         workspaceId: workspace.id,
         name,
         type,
-        configuration:
-          configuration as IntegrationConfiguration['configuration'],
+        configuration: configuration as IntegrationConfiguration['configuration'],
         authorId: workspace.creatorId ?? '',
       })
       .returning()

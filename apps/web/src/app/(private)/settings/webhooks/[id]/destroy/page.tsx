@@ -7,11 +7,7 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useWebhooks from '$/stores/webhooks'
 
-export default function DestroyWebhook({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
+export default function DestroyWebhook({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const navigate = useNavigate()
   const { data, destroy, isDestroying } = useWebhooks()

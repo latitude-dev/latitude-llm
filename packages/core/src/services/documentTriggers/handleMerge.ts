@@ -1,11 +1,8 @@
 import { BadRequestError } from '@latitude-data/constants/errors'
-import { Commit, Workspace } from '../../browser'
+import type { Commit, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
-import {
-  CommitsRepository,
-  DocumentTriggersRepository,
-} from '../../repositories'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
+import { CommitsRepository, DocumentTriggersRepository } from '../../repositories'
 import { undeployDocumentTrigger } from './deploy'
 
 /**
@@ -37,8 +34,7 @@ export async function handleTriggerMerge(
     const liveCommit = liveCommitResult.unwrap()
     if (!liveCommit) return Result.ok([]) // No live commit, no triggers to undeploy
 
-    const triggerUpdatesResult =
-      await triggersScope.getTriggerUpdatesInDraft(draft)
+    const triggerUpdatesResult = await triggersScope.getTriggerUpdatesInDraft(draft)
     if (!Result.isOk(triggerUpdatesResult)) return triggerUpdatesResult
     const triggerUpdates = triggerUpdatesResult.unwrap()
 

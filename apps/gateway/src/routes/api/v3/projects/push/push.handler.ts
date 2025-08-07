@@ -1,17 +1,12 @@
-import { Context } from 'hono'
+import type { Context } from 'hono'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
-import { AppRouteHandler } from '$/openApi/types'
-import {
-  CommitsRepository,
-  ProjectsRepository,
-} from '@latitude-data/core/repositories'
+import type { AppRouteHandler } from '$/openApi/types'
+import { CommitsRepository, ProjectsRepository } from '@latitude-data/core/repositories'
 import { persistPushChanges } from '@latitude-data/core/services/commits/persistPushChanges'
-import { pushRoute } from './push.route'
+import type { pushRoute } from './push.route'
 
 // @ts-expect-error - TODO: Fix this
-export const pushHandler: AppRouteHandler<typeof pushRoute> = async (
-  c: Context,
-) => {
+export const pushHandler: AppRouteHandler<typeof pushRoute> = async (c: Context) => {
   const workspace = c.get('workspace')
   const { projectId, versionUuid } = c.req.param()
   const { changes } = await c.req.json()

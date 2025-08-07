@@ -4,7 +4,7 @@ import {
   formatConversation,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationMetric,
-  ProviderApiKey,
+  type ProviderApiKey,
   LlmEvaluationBinarySpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
@@ -12,9 +12,9 @@ import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
 import {
-  EvaluationMetricCloneArgs,
-  EvaluationMetricRunArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricCloneArgs,
+  type EvaluationMetricRunArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 import { promptTask, runPrompt } from './shared'
@@ -27,12 +27,7 @@ export const LlmEvaluationBinarySpecification = {
 }
 
 async function validate(
-  {
-    configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.Binary
-  >,
+  { configuration }: EvaluationMetricValidateArgs<EvaluationType.Llm, LlmEvaluationMetric.Binary>,
   _ = database,
 ) {
   configuration.criteria = configuration.criteria.trim()
@@ -132,10 +127,9 @@ async function run(
     throw new BadRequestError('Provider is required')
   }
 
-  const evaluatedLog = await serializeDocumentLog(
-    { documentLog, workspace },
-    db,
-  ).then((r) => r.unwrap())
+  const evaluatedLog = await serializeDocumentLog({ documentLog, workspace }, db).then((r) =>
+    r.unwrap(),
+  )
 
   const { response, stats, verdict } = await runPrompt({
     prompt: buildPrompt({ ...metadata.configuration, provider }),

@@ -1,13 +1,7 @@
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  User,
-  Workspace,
-} from '../../browser'
+import type { Commit, DocumentVersion, Project, User, Workspace } from '../../browser'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

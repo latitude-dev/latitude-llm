@@ -47,11 +47,7 @@ describe('disambiguateFilePaths', () => {
   })
 
   it('adds ellipsis at both sides when non-repeated context is in the middle', () => {
-    const paths = [
-      'parent1/child1/grandchild1/A',
-      'parent1/child2/grandchild1/A',
-      'parent2/B',
-    ]
+    const paths = ['parent1/child1/grandchild1/A', 'parent1/child2/grandchild1/A', 'parent2/B']
 
     const result = disambiguateFilePaths(paths)
     expect(result).toEqual([

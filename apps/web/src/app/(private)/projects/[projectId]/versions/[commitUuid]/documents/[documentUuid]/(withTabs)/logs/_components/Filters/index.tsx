@@ -1,11 +1,8 @@
-import {
-  DocumentLogFilterOptions,
-  LOG_SOURCES,
-} from '@latitude-data/core/browser'
+import { type DocumentLogFilterOptions, LOG_SOURCES } from '@latitude-data/core/browser'
 
 import { useProcessLogFilters } from '$/hooks/logFilters/useProcessLogFilters'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { DatePickerRange } from '@latitude-data/web-ui/atoms/DatePicker'
 import { CommitFilter } from './CommitFilter'
 import { LogSourceFilter } from './LogSourceFilter'

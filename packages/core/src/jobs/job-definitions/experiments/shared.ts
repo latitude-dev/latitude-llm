@@ -1,7 +1,7 @@
-import { Experiment } from '../../../browser'
-import { LatitudeError } from '../../../lib/errors'
+import type { Experiment } from '../../../browser'
+import type { LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { completeExperiment } from '../../../services/experiments/complete'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
@@ -21,8 +21,7 @@ export async function updateExperimentStatus(
   const progress = await progressTracker.getProgress()
   await progressTracker.cleanup()
 
-  const expectedTotal =
-    experiment.metadata.count * experiment.evaluationUuids.length
+  const expectedTotal = experiment.metadata.count * experiment.evaluationUuids.length
 
   const current = progress.completed + progress.failed + progress.errors
   if (current >= expectedTotal) {

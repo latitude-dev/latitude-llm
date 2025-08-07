@@ -1,10 +1,10 @@
-import { Dataset, Workspace } from '../../browser'
+import type { Dataset, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
 import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
 import { updateDataset } from './update'
-import { HashAlgorithmFn } from './utils'
+import type { HashAlgorithmFn } from './utils'
 
 export const updateDatasetFromLogs = async (
   {
@@ -29,10 +29,7 @@ export const updateDatasetFromLogs = async (
   if (builtLogsResult.error) return builtLogsResult
   const exportedLogs = builtLogsResult.value
 
-  const ds = await updateDataset(
-    { dataset, data: { columns: exportedLogs.columns } },
-    transaction,
-  )
+  const ds = await updateDataset({ dataset, data: { columns: exportedLogs.columns } }, transaction)
   if (ds.error) return ds
   const row = await insertRowsInBatch(
     {

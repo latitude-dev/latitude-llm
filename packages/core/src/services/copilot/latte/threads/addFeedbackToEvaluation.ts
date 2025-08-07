@@ -1,5 +1,5 @@
 import { env } from '@latitude-data/env'
-import {
+import type {
   EvaluationType,
   EvaluationV2,
   HumanEvaluationMetric,
@@ -60,21 +60,15 @@ export async function addFeedbackToEvaluationResult(
     HumanEvaluationMetric.Binary
   >
 
-  const evaluationResultsScope = new EvaluationResultsV2Repository(
-    latteWorkspace.id,
-    db,
-  )
-  const evalResultResult =
-    await evaluationResultsScope.findByUuid(evaluationResultUuid)
+  const evaluationResultsScope = new EvaluationResultsV2Repository(latteWorkspace.id, db)
+  const evalResultResult = await evaluationResultsScope.findByUuid(evaluationResultUuid)
   if (!evalResultResult.ok) {
     return Result.error(evalResultResult.error!)
   }
   const evalResult = evalResultResult.unwrap()
 
   const providerLogScope = new ProviderLogsRepository(latteWorkspace.id, db)
-  const providerLogResult = await providerLogScope.find(
-    evalResult.evaluatedLogId,
-  )
+  const providerLogResult = await providerLogScope.find(evalResult.evaluatedLogId)
   if (!providerLogResult.ok) {
     return Result.error(providerLogResult.error!)
   }

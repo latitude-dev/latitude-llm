@@ -1,27 +1,22 @@
-import { env } from 'process'
-import React from 'react'
+import { env } from 'node:process'
 
 import { Link, Text } from '@react-email/components'
 
 import ContainerLayout from '../_components/ContainerLayout'
-import { User } from '../../../browser'
+import type { User } from '../../../browser'
 
 type Props = {
   invited: User
   invitee: User
   invitationToken: string
 }
-export default function InvitationMail({
-  invited,
-  invitee,
-  invitationToken,
-}: Props) {
+export default function InvitationMail({ invited, invitee, invitationToken }: Props) {
   return (
     <ContainerLayout previewText={`Join ${invitee.name}'s workspace.`}>
       <Text>Hi {invited.name},</Text>
       <Text>
-        {invitee.name} has invited you to join their workspace in Latitude.
-        Click the link below to log in.
+        {invitee.name} has invited you to join their workspace in Latitude. Click the link below to
+        log in.
       </Text>
       <Link
         href={createInvitationLink(invitationToken)}

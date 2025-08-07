@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { Providers } from '../../constants'
 import { DocumentVersionsRepository } from '../../repositories'
-import { persistPushChanges, PushChangeDocument } from './persistPushChanges'
+import { persistPushChanges, type PushChangeDocument } from './persistPushChanges'
 
 describe('persistPushChanges', () => {
   it('should add new documents', async (ctx) => {
@@ -37,9 +37,7 @@ describe('persistPushChanges', () => {
 
     // Verify document was created
     const docsScope = new DocumentVersionsRepository(workspace.id)
-    const docsAtCommit = await docsScope
-      .getDocumentsAtCommit(draftCommit)
-      .then((r) => r.unwrap())
+    const docsAtCommit = await docsScope.getDocumentsAtCommit(draftCommit).then((r) => r.unwrap())
 
     expect(docsAtCommit.length).toBe(1)
     expect(docsAtCommit[0]!.path).toBe('new-document')
@@ -87,9 +85,7 @@ describe('persistPushChanges', () => {
 
     // Verify document was updated
     const docsScope = new DocumentVersionsRepository(workspace.id)
-    const docsAtCommit = await docsScope
-      .getDocumentsAtCommit(draftCommit)
-      .then((r) => r.unwrap())
+    const docsAtCommit = await docsScope.getDocumentsAtCommit(draftCommit).then((r) => r.unwrap())
 
     expect(docsAtCommit.length).toBe(1)
     expect(docsAtCommit[0]!.path).toBe('existing-doc')
@@ -134,9 +130,7 @@ describe('persistPushChanges', () => {
 
     // Verify document was deleted
     const docsScope = new DocumentVersionsRepository(workspace.id)
-    const docsAtCommit = await docsScope
-      .getDocumentsAtCommit(draftCommit)
-      .then((r) => r.unwrap())
+    const docsAtCommit = await docsScope.getDocumentsAtCommit(draftCommit).then((r) => r.unwrap())
 
     expect(docsAtCommit.length).toBe(0)
   })
@@ -198,9 +192,7 @@ describe('persistPushChanges', () => {
 
     // Verify changes
     const docsScope = new DocumentVersionsRepository(workspace.id)
-    const docsAtCommit = await docsScope
-      .getDocumentsAtCommit(draftCommit)
-      .then((r) => r.unwrap())
+    const docsAtCommit = await docsScope.getDocumentsAtCommit(draftCommit).then((r) => r.unwrap())
 
     expect(docsAtCommit.length).toBe(2)
 
@@ -287,9 +279,7 @@ describe('persistPushChanges', () => {
 
     // Verify only the new document was created
     const docsScope = new DocumentVersionsRepository(workspace.id)
-    const docsAtCommit = await docsScope
-      .getDocumentsAtCommit(draftCommit)
-      .then((r) => r.unwrap())
+    const docsAtCommit = await docsScope.getDocumentsAtCommit(draftCommit).then((r) => r.unwrap())
 
     expect(docsAtCommit.length).toBe(1)
     expect(docsAtCommit[0]!.path).toBe('new-document')
@@ -321,9 +311,7 @@ describe('persistPushChanges', () => {
 
     // Verify no documents were created
     const docsScope = new DocumentVersionsRepository(workspace.id)
-    const docsAtCommit = await docsScope
-      .getDocumentsAtCommit(draftCommit)
-      .then((r) => r.unwrap())
+    const docsAtCommit = await docsScope.getDocumentsAtCommit(draftCommit).then((r) => r.unwrap())
     expect(docsAtCommit.length).toBe(0)
   })
 })

@@ -1,13 +1,11 @@
-import { Context } from 'hono'
+import type { Context } from 'hono'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { BadRequestError } from '@latitude-data/constants/errors'
-import { AppRouteHandler } from '$/openApi/types'
-import { getVersionRoute } from './getCommit.route'
+import type { AppRouteHandler } from '$/openApi/types'
+import type { getVersionRoute } from './getCommit.route'
 
 // @ts-expect-error: broken types
-export const getVersionHandler: AppRouteHandler<
-  typeof getVersionRoute
-> = async (c: Context) => {
+export const getVersionHandler: AppRouteHandler<typeof getVersionRoute> = async (c: Context) => {
   const workspace = c.get('workspace')
   const { projectId, versionUuid } = c.req.param()
   if (!versionUuid) {

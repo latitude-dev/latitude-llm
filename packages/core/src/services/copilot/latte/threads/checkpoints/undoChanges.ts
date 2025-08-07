@@ -1,10 +1,6 @@
-import {
-  DocumentVersion,
-  LatteThreadCheckpoint,
-  Workspace,
-} from '../../../../../browser'
+import type { DocumentVersion, LatteThreadCheckpoint, Workspace } from '../../../../../browser'
 import { Result } from '../../../../../lib/Result'
-import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../../../../lib/Transaction'
 import { LatteThreadsRepository } from '../../../../../repositories'
 import { documentVersions } from '../../../../../schema'
 import { and, eq } from 'drizzle-orm'
@@ -22,15 +18,10 @@ export async function undoLatteThreadChanges(
 ): PromisedResult<undefined> {
   return transaction.call(async (tx) => {
     const threadsScope = new LatteThreadsRepository(workspace.id, tx)
-    const checkpoints = await threadsScope
-      .findAllCheckpoints(threadUuid)
-      .then((r) => r.unwrap())
+    const checkpoints = await threadsScope.findAllCheckpoints(threadUuid).then((r) => r.unwrap())
 
     for await (const checkpoint of checkpoints) {
-      const restoreResult = await restoreThreadCheckpoint(
-        checkpoint,
-        transaction,
-      )
+      const restoreResult = await restoreThreadCheckpoint(checkpoint, transaction)
 
       if (!restoreResult.ok) {
         return Result.error(restoreResult.error!)
@@ -90,9 +81,7 @@ function restoreThreadCheckpoint(
       commitId: checkpoint.data.commitId,
       path: checkpoint.data.path,
       content: checkpoint.data.content,
-      deletedAt: checkpoint.data.deletedAt
-        ? new Date(checkpoint.data.deletedAt)
-        : null,
+      deletedAt: checkpoint.data.deletedAt ? new Date(checkpoint.data.deletedAt) : null,
       resolvedContent: null,
       contentHash: null,
     }

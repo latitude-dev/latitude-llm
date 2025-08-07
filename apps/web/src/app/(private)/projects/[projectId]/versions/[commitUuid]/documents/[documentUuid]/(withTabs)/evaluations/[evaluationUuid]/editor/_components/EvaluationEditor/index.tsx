@@ -11,12 +11,12 @@ import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useIntegrations from '$/stores/integrations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
-  Commit,
-  DocumentVersion,
-  EvaluationType,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationType,
   LLM_EVALUATION_PROMPT_PARAMETERS,
-  LlmEvaluationMetricAnyCustom,
-  ProviderApiKey,
+  type LlmEvaluationMetricAnyCustom,
+  type ProviderApiKey,
 } from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
@@ -28,8 +28,7 @@ import { useEvaluationParameters } from './hooks/useEvaluationParamaters'
 import { Playground } from './Playground'
 import { TextEditor } from './TextEditor'
 
-const ALLOWED_PARAMETERS =
-  LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
+const ALLOWED_PARAMETERS = LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
 
 export function EvaluationEditor(props: {
   document: DocumentVersion
@@ -66,10 +65,7 @@ function EvaluationEditorContent({
   selectedDocumentLogUuid?: string
 }) {
   const { project } = useCurrentProject()
-  const { evaluation } = useCurrentEvaluationV2<
-    EvaluationType.Llm,
-    LlmEvaluationMetricAnyCustom
-  >()
+  const { evaluation } = useCurrentEvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>()
   const { updateEvaluation, isUpdatingEvaluation } = useEvaluationsV2({
     project: project,
     commit: commit,
@@ -83,10 +79,7 @@ function EvaluationEditorContent({
   const [value, setValue] = useState(originalPrompt)
   const providerNames = useMemo(() => providers.map((p) => p.name), [providers])
   const { data: integrations } = useIntegrations({ withTools: true })
-  const integrationNames = useMemo(
-    () => integrations?.map((i) => i.name) ?? [],
-    [integrations],
-  )
+  const integrationNames = useMemo(() => integrations?.map((i) => i.name) ?? [], [integrations])
   const buildPromptMetadata = useCallback(
     ({ promptValue }: { promptValue: string }) => {
       return {
@@ -129,7 +122,7 @@ function EvaluationEditorContent({
 
       debouncedSave(newPrompt)
     },
-    [debouncedSave, setValue],
+    [debouncedSave],
   )
 
   const { metadata, updateMetadata: runReadMetadata } = useMetadata()
@@ -152,61 +145,55 @@ function EvaluationEditorContent({
     .documents.detail({ uuid: document.documentUuid })
     .evaluations.detail({ uuid: evaluation.uuid }).root
   return (
-    <>
-      <SplitPane
-        className='pt-6'
-        direction='horizontal'
-        reversed
-        initialWidthClass='min-w-1/2'
-        minSize={350}
-        initialPercentage={40}
-        firstPane={
-          <SplitPane.Pane>
-            <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0 pl-6 pb-6 pr-4'>
-              <EvaluationEditorHeader
-                canUseSubagents={false}
-                providers={providers}
-                disabledMetadataSelectors={commit.mergedAt !== null}
-                titleVerticalAlign='top'
-                title={
-                  <EvaluationTitle
-                    evaluation={evaluation}
-                    backHref={backHref}
-                    subSection='Editor'
-                  />
-                }
-                metadata={metadata}
-                prompt={originalPrompt}
-                onChangePrompt={onChange}
-                isLatitudeProvider={isLatitudeProvider}
-                freeRunsCount={freeRunsCount}
-              />
-              <TextEditor
-                compileErrors={metadata?.errors}
-                defaultValue={originalPrompt}
-                value={value}
-                isMerged={commit.mergedAt !== null}
-                isSaved={!isUpdatingEvaluation}
-                copilotEnabled={copilotEnabled}
-                onChange={onChange}
-              />
-            </div>
-          </SplitPane.Pane>
-        }
-        secondPane={
-          <SplitPane.Pane>
-            <div className='flex-1 relative max-h-full px-4'>
-              <Playground
-                commit={commit}
-                document={document}
-                evaluation={evaluation}
-                metadata={metadata!}
-                selectedDocumentLogUuid={selectedDocumentLogUuid}
-              />
-            </div>
-          </SplitPane.Pane>
-        }
-      />
-    </>
+    <SplitPane
+      className='pt-6'
+      direction='horizontal'
+      reversed
+      initialWidthClass='min-w-1/2'
+      minSize={350}
+      initialPercentage={40}
+      firstPane={
+        <SplitPane.Pane>
+          <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0 pl-6 pb-6 pr-4'>
+            <EvaluationEditorHeader
+              canUseSubagents={false}
+              providers={providers}
+              disabledMetadataSelectors={commit.mergedAt !== null}
+              titleVerticalAlign='top'
+              title={
+                <EvaluationTitle evaluation={evaluation} backHref={backHref} subSection='Editor' />
+              }
+              metadata={metadata}
+              prompt={originalPrompt}
+              onChangePrompt={onChange}
+              isLatitudeProvider={isLatitudeProvider}
+              freeRunsCount={freeRunsCount}
+            />
+            <TextEditor
+              compileErrors={metadata?.errors}
+              defaultValue={originalPrompt}
+              value={value}
+              isMerged={commit.mergedAt !== null}
+              isSaved={!isUpdatingEvaluation}
+              copilotEnabled={copilotEnabled}
+              onChange={onChange}
+            />
+          </div>
+        </SplitPane.Pane>
+      }
+      secondPane={
+        <SplitPane.Pane>
+          <div className='flex-1 relative max-h-full px-4'>
+            <Playground
+              commit={commit}
+              document={document}
+              evaluation={evaluation}
+              metadata={metadata!}
+              selectedDocumentLogUuid={selectedDocumentLogUuid}
+            />
+          </div>
+        </SplitPane.Pane>
+      }
+    />
   )
 }

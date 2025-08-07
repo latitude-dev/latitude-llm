@@ -1,13 +1,8 @@
-import { Context } from '@opentelemetry/api'
-import { ExportResult, ExportResultCode } from '@opentelemetry/core'
-import {
-  ReadableSpan,
-  SpanExporter,
-  SpanProcessor,
-} from '@opentelemetry/sdk-trace-node'
+import type { Context } from '@opentelemetry/api'
+import { type ExportResult, ExportResultCode } from '@opentelemetry/core'
+import type { ReadableSpan, SpanExporter, SpanProcessor } from '@opentelemetry/sdk-trace-node'
 import { vi } from 'vitest'
 
-// prettier-ignore
 export class MockSpanProcessor implements SpanProcessor {
   onStart = vi.fn((_span: ReadableSpan, _context: Context): void => {
     // Noop
@@ -47,7 +42,6 @@ export class MockSpanProcessor implements SpanProcessor {
   }
 }
 
-// prettier-ignore
 export class MockSpanExporter implements SpanExporter {
   export = vi.fn((_spans: ReadableSpan[], callback: (result: ExportResult) => void): void => {
     callback({ code: ExportResultCode.SUCCESS })

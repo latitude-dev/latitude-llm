@@ -1,5 +1,5 @@
-import { Adapters, ProviderAdapter } from 'promptl-ai'
-import { ToolInputMap } from '$sdk/utils/adapters/types'
+import { Adapters, type ProviderAdapter } from 'promptl-ai'
+import type { ToolInputMap } from '$sdk/utils/adapters/types'
 import { getOpenAIResponsesBuiltinTools } from './openai/getOpenAIResponsesBuiltinTools'
 
 export function getAIProviderTools({

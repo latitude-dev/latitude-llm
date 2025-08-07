@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useRef, useState } from 'react'
+import { type FormEvent, useCallback, useRef, useState } from 'react'
 import { DropzoneInput } from '@latitude-data/web-ui/atoms/DropzoneInput'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
@@ -10,15 +10,11 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'
 import DelimiterSelector from '$/app/(private)/datasets/_components/DelimiterSelector'
-import {
-  Dataset,
-  MAX_UPLOAD_SIZE_IN_MB,
-  MAX_SIZE,
-} from '@latitude-data/core/browser'
+import { type Dataset, MAX_UPLOAD_SIZE_IN_MB, MAX_SIZE } from '@latitude-data/core/browser'
 
 const MAX_SIZE_MESSAGE = `Your dataset must be less than ${MAX_SIZE}MB in size.`
 
-export function NewDatasetModalComponent({
+function NewDatasetModalComponent({
   open,
   onOpenChange,
   onDatasetCreated,
@@ -61,23 +57,13 @@ export function NewDatasetModalComponent({
       footer={
         <>
           <CloseTrigger />
-          <Button
-            disabled={isCreating}
-            fancy
-            form='createDatasetForm'
-            type='submit'
-          >
+          <Button disabled={isCreating} fancy form='createDatasetForm' type='submit'>
             {isCreating ? 'Creating dataset...' : 'Create dataset'}
           </Button>
         </>
       }
     >
-      <form
-        ref={formRef}
-        className='min-w-0'
-        id='createDatasetForm'
-        onSubmit={handleSubmit}
-      >
+      <form ref={formRef} className='min-w-0' id='createDatasetForm' onSubmit={handleSubmit}>
         <FormWrapper>
           <Input
             type='text'
@@ -111,7 +97,7 @@ export function NewDatasetModalComponent({
   )
 }
 
-export type NewDatasetModalProps = {
+type NewDatasetModalProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
 }

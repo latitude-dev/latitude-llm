@@ -1,7 +1,7 @@
 import { env } from '@latitude-data/env'
-import nodemailer, { Transporter } from 'nodemailer'
+import nodemailer, { type Transporter } from 'nodemailer'
 
-import { MailerOptions } from '.'
+import type { MailerOptions } from '.'
 
 export default function createSmtpTransport({
   transportOptions,

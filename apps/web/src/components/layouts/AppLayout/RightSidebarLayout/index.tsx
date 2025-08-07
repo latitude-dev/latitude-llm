@@ -1,6 +1,6 @@
 'use client'
 
-import React, { ReactNode, useCallback, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useMemo, useState } from 'react'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { RightSidebar } from './RightSidebar'
 import type { RightSidebarItem, RightSidebarTabs } from './types'
@@ -10,11 +10,7 @@ import { DocumentationContent } from '$/components/Documentation'
 const MIN_SIDEBAR_WIDTH_PX = 400
 const COLLAPSED_SIDEBAR_WIDTH_PX = 49
 
-export default function RightSidebarLayout({
-  children,
-}: {
-  children: ReactNode
-}) {
+export default function RightSidebarLayout({ children }: { children: ReactNode }) {
   const [selected, setSelected] = useState<RightSidebarTabs>()
   const onOpen = useCallback(() => setSelected('docs'), [])
   const items = useMemo<RightSidebarItem[]>(
@@ -42,11 +38,7 @@ export default function RightSidebarLayout({
           firstPane={<SplitPane.Pane>{children}</SplitPane.Pane>}
           secondPane={
             <SplitPane.Pane>
-              <RightSidebar
-                selected={selected}
-                setSelected={setSelected}
-                items={items}
-              />
+              <RightSidebar selected={selected} setSelected={setSelected} items={items} />
             </SplitPane.Pane>
           }
         />

@@ -22,9 +22,7 @@ export function LimitedTablePaginationFooter({
       {count !== undefined ? (
         <div className='flex flex-row items-center gap-x-1'>
           <Icon name='equalApproximately' color='foregroundMuted' />
-          <Text.H5M color='foregroundMuted'>
-            {countLabel?.(count) ?? `${count} rows`}
-          </Text.H5M>
+          <Text.H5M color='foregroundMuted'>{countLabel?.(count) ?? `${count} rows`}</Text.H5M>
         </div>
       ) : (
         <div />

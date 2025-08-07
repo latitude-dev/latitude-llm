@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { Tooltip } from '../../atoms/Tooltip'
 import { cn } from '../../../lib/utils'
 
@@ -19,9 +19,7 @@ export function TruncatedTooltip({
   useEffect(() => {
     const checkOverflow = () => {
       if (textRef.current) {
-        setIsOverflowing(
-          textRef.current.scrollWidth > textRef.current.clientWidth,
-        )
+        setIsOverflowing(textRef.current.scrollWidth > textRef.current.clientWidth)
       }
     }
 

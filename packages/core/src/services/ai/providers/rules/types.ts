@@ -1,5 +1,5 @@
 import type { Config, Message } from '@latitude-data/constants/legacyCompiler'
-import { PartialConfig } from '../../helpers'
+import type { PartialConfig } from '../../helpers'
 
 export enum ProviderRules {
   Anthropic = 'anthropic',

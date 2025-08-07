@@ -2,11 +2,8 @@ import { useState, useCallback } from 'react'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
-import { OnTriggerCreated } from '../../../client'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
+import type { OnTriggerCreated } from '../../../client'
 import {
   DEFAULT_CONFIG,
   type ScheduleConfig,
@@ -19,11 +16,7 @@ import {
 } from '../PipedreamTrigger/TriggerConfiguration/SelectDocument'
 import { TriggerWrapper } from '../TriggerWrapper'
 
-export function ScheduleTrigger({
-  onTriggerCreated,
-}: {
-  onTriggerCreated: OnTriggerCreated
-}) {
+export function ScheduleTrigger({ onTriggerCreated }: { onTriggerCreated: OnTriggerCreated }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
 
@@ -64,11 +57,7 @@ export function ScheduleTrigger({
       />
       {document ? (
         <>
-          <ScheduleTriggerForm
-            config={config}
-            setConfig={setConfig}
-            isExecuting={isCreating}
-          />
+          <ScheduleTriggerForm config={config} setConfig={setConfig} isExecuting={isCreating} />
           <Button fancy onClick={onCreate} disabled={isCreating}>
             {isCreating ? 'Creating trigger...' : 'Create trigger'}
           </Button>

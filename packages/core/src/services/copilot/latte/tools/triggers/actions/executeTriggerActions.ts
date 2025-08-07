@@ -1,17 +1,11 @@
-import { DocumentTriggerType, DocumentVersion } from '@latitude-data/constants'
-import { Commit, DocumentTrigger, Workspace } from '../../../../../../browser'
-import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { DocumentTriggerType, type DocumentVersion } from '@latitude-data/constants'
+import type { Commit, DocumentTrigger, Workspace } from '../../../../../../browser'
+import type { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { Result } from '../../../../../../lib/Result'
-import Transaction, { PromisedResult } from '../../../../../../lib/Transaction'
-import {
-  LatteTriggerAction,
-  LatteTriggerChanges,
-} from '@latitude-data/constants/latte'
+import Transaction, { type PromisedResult } from '../../../../../../lib/Transaction'
+import type { LatteTriggerAction, LatteTriggerChanges } from '@latitude-data/constants/latte'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import {
-  DocumentTriggersRepository,
-  ProjectsRepository,
-} from '../../../../../../repositories'
+import { DocumentTriggersRepository, ProjectsRepository } from '../../../../../../repositories'
 import { deleteDocumentTrigger } from '../../../../../documentTriggers/delete'
 import { updateDocumentTriggerConfiguration } from '../../../../../documentTriggers/update'
 import { createDocumentTrigger } from '../../../../../documentTriggers/create'
@@ -36,15 +30,11 @@ async function executeTriggerActions(
     const document = documents.find((doc) => doc.documentUuid === promptUuid)
 
     const projectRepository = new ProjectsRepository(workspace.id)
-    const project = await projectRepository
-      .getProjectById(commit.projectId)
-      .then((r) => r.unwrap())
+    const project = await projectRepository.getProjectById(commit.projectId).then((r) => r.unwrap())
 
     if (!document) {
       return Result.error(
-        new NotFoundError(
-          `Document with UUID ${promptUuid} not found in commit ${commit.uuid}.`,
-        ),
+        new NotFoundError(`Document with UUID ${promptUuid} not found in commit ${commit.uuid}.`),
       )
     }
 
@@ -73,12 +63,7 @@ async function executeTriggerActions(
   }
 
   if (action.operation === 'delete') {
-    const triggerResult = await getTriggerDocument(
-      action,
-      workspace.id,
-      commit,
-      promptUuid,
-    )
+    const triggerResult = await getTriggerDocument(action, workspace.id, commit, promptUuid)
 
     if (!triggerResult.ok) {
       return Result.error(triggerResult.error!)
@@ -93,9 +78,7 @@ async function executeTriggerActions(
         .then((r) => r.unwrap())
 
       if (!project) {
-        return Result.error(
-          new NotFoundError(`Project with ID ${commit.projectId} not found.`),
-        )
+        return Result.error(new NotFoundError(`Project with ID ${commit.projectId} not found.`))
       }
     }
 
@@ -121,12 +104,7 @@ async function executeTriggerActions(
   }
 
   if (action.operation === 'update') {
-    const triggerResult = await getTriggerDocument(
-      action,
-      workspace.id,
-      commit,
-      promptUuid,
-    )
+    const triggerResult = await getTriggerDocument(action, workspace.id, commit, promptUuid)
 
     if (!triggerResult.ok) {
       return Result.error(triggerResult.error!)
@@ -177,9 +155,7 @@ async function getTriggerDocument(
 
   if (documentTriggers.length === 0) {
     return Result.error(
-      new NotFoundError(
-        `Document with UUID ${promptUuid} has no document triggers.`,
-      ),
+      new NotFoundError(`Document with UUID ${promptUuid} has no document triggers.`),
     )
   }
 

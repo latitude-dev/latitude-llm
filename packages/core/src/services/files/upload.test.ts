@@ -1,7 +1,7 @@
-import { readdir, readFile } from 'fs/promises'
-import { join } from 'path'
+import { readdir, readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Workspace } from '../../browser'
+import type { Workspace } from '../../browser'
 import * as constants from '../../constants'
 import * as lib from '../../lib/generateUUID'
 import { diskFactory } from '../../lib/disk'
@@ -53,9 +53,7 @@ describe('uploadFile', () => {
   })
 
   it('not uploads when disk upload fails', async () => {
-    vi.spyOn(disk, 'putFile').mockResolvedValue(
-      Result.error(new Error('Upload failed')),
-    )
+    vi.spyOn(disk, 'putFile').mockResolvedValue(Result.error(new Error('Upload failed')))
 
     const name = 'file.png'
     const content = await readFile(join(IMAGES_PATH, name))
@@ -77,9 +75,7 @@ describe('uploadFile', () => {
       const uploadedFile = result.unwrap()
       expect(isPromptLFile(uploadedFile)).toBeTruthy()
       expect(uploadedFile.name).toBe(name)
-      expect(uploadedFile.url).toContain(
-        `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
-      )
+      expect(uploadedFile.url).toContain(`/workspaces/${workspace.id}/files/fake-uuid/${name}`)
     }
   })
 
@@ -94,9 +90,7 @@ describe('uploadFile', () => {
       const uploadedFile = result.unwrap()
       expect(isPromptLFile(uploadedFile)).toBeTruthy()
       expect(uploadedFile.name).toBe(name)
-      expect(uploadedFile.url).toContain(
-        `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
-      )
+      expect(uploadedFile.url).toContain(`/workspaces/${workspace.id}/files/fake-uuid/${name}`)
     }
   })
 
@@ -111,9 +105,7 @@ describe('uploadFile', () => {
       const uploadedFile = result.unwrap()
       expect(isPromptLFile(uploadedFile)).toBeTruthy()
       expect(uploadedFile.name).toBe(name)
-      expect(uploadedFile.url).toContain(
-        `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
-      )
+      expect(uploadedFile.url).toContain(`/workspaces/${workspace.id}/files/fake-uuid/${name}`)
     }
   })
 
@@ -127,9 +119,7 @@ describe('uploadFile', () => {
     const uploadedFile = result.unwrap()
     expect(isPromptLFile(uploadedFile)).toBeTruthy()
     expect(uploadedFile.name).toBe(name)
-    expect(uploadedFile.url).toContain(
-      `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
-    )
+    expect(uploadedFile.url).toContain(`/workspaces/${workspace.id}/files/fake-uuid/${name}`)
   })
 
   it('it uploads files with a custom prefix', async () => {

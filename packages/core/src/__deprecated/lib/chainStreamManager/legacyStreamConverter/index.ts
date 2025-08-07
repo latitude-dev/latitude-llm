@@ -1,18 +1,13 @@
 import {
-  ChainStepResponse,
-  LegacyChainEvent,
+  type ChainStepResponse,
+  type LegacyChainEvent,
   LegacyChainEventTypes,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
-import { StreamType } from '../../../../constants'
-import {
-  ContentType,
-  Message,
-  MessageRole,
-  ToolCall,
-} from '@latitude-data/compiler'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { type ChainEvent, ChainEventTypes } from '@latitude-data/constants'
+import type { StreamType } from '../../../../constants'
+import { ContentType, type Message, MessageRole, type ToolCall } from '@latitude-data/compiler'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 function getAssistantMessageToolCallIds(message?: Message): unknown[] {
   if (message?.role !== 'assistant') return []
@@ -22,14 +17,10 @@ function getAssistantMessageToolCallIds(message?: Message): unknown[] {
   }
 
   if (!Array.isArray(message.content)) return []
-  return message.content
-    .filter((c) => c.type === ContentType.toolCall)
-    .map((t) => t.toolCallId)
+  return message.content.filter((c) => c.type === ContentType.toolCall).map((t) => t.toolCallId)
 }
 
-export function convertToLegacyChainStream(
-  stream: ReadableStream<ChainEvent>,
-): {
+export function convertToLegacyChainStream(stream: ReadableStream<ChainEvent>): {
   stream: ReadableStream<LegacyChainEvent>
   response: Promise<ChainStepResponse<StreamType>>
 } {

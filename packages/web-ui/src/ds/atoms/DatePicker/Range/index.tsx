@@ -3,8 +3,8 @@
 import { format } from 'date-fns'
 import { useCallback, useMemo, useState } from 'react'
 
-import { RelativeDate } from '@latitude-data/core/browser'
-import { DateRange } from 'react-day-picker'
+import type { RelativeDate } from '@latitude-data/core/browser'
+import type { DateRange } from 'react-day-picker'
 import { cn } from '../../../../lib/utils'
 import { Button } from '../../Button'
 import { Popover } from '../../Popover'
@@ -118,11 +118,7 @@ export function DatePickerRange({
           </span>
         </Button>
       </Popover.Trigger>
-      <Popover.Content
-        align='start'
-        className='flex w-auto flex-col'
-        maxHeight='none'
-      >
+      <Popover.Content align='start' className='flex w-auto flex-col' maxHeight='none'>
         {showPresets ? (
           <Select
             name='date-preset'
@@ -133,12 +129,7 @@ export function DatePickerRange({
           />
         ) : null}
         <div>
-          <Calendar
-            mode='range'
-            selected={range}
-            onSelect={setRange}
-            disabled={disabled}
-          />
+          <Calendar mode='range' selected={range} onSelect={setRange} disabled={disabled} />
           <div className='flex justify-end gap-x-2' onClick={clearAndClose}>
             <Button variant='ghost' disabled={disabled}>
               Clear dates

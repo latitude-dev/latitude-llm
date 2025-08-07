@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import type { DocumentTriggerType } from '@latitude-data/constants'
 import {
   configureEmailAllowList,
   getEmailTriggerAddress,

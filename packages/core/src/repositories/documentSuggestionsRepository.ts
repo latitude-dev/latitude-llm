@@ -1,11 +1,11 @@
 import { subDays } from 'date-fns'
 import { and, count, desc, eq, getTableColumns, gte } from 'drizzle-orm'
 import {
-  Commit,
+  type Commit,
   DOCUMENT_SUGGESTION_EXPIRATION_DAYS,
-  DocumentSuggestion,
-  DocumentSuggestionWithDetails,
-  DocumentVersion,
+  type DocumentSuggestion,
+  type DocumentSuggestionWithDetails,
+  type DocumentVersion,
 } from '../browser'
 import { Result } from '../lib/Result'
 import { documentSuggestions } from '../schema'
@@ -95,10 +95,7 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
       documentUuid: document.documentUuid,
     }).then((r) => r.unwrap())
 
-    const evaluationsV2Repository = new EvaluationsV2Repository(
-      this.workspaceId,
-      this.db,
-    )
+    const evaluationsV2Repository = new EvaluationsV2Repository(this.workspaceId, this.db)
     const evaluations = await evaluationsV2Repository
       .listAtCommitByDocument({
         commitUuid: commit.uuid,
@@ -108,9 +105,7 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
 
     const suggestionsWithDetails = []
     for (const suggestion of suggestions) {
-      const evaluation = evaluations.find(
-        (e) => e.uuid === suggestion.evaluationUuid,
-      )
+      const evaluation = evaluations.find((e) => e.uuid === suggestion.evaluationUuid)
       if (!evaluation) continue
 
       suggestionsWithDetails.push({ ...suggestion, evaluation })

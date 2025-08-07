@@ -1,14 +1,11 @@
 import {
-  AssistantMessage,
+  type AssistantMessage,
   ContentType,
-  Message,
+  type Message,
   MessageRole,
-  ToolMessage,
+  type ToolMessage,
 } from '@latitude-data/compiler'
-import {
-  AGENT_RETURN_TOOL_NAME,
-  FAKE_AGENT_START_TOOL_NAME,
-} from '@latitude-data/constants'
+import { AGENT_RETURN_TOOL_NAME, FAKE_AGENT_START_TOOL_NAME } from '@latitude-data/constants'
 
 const FAKE_AGENT_START_TOOL_CONTENT = `
   Autonomous workflow started.
@@ -23,9 +20,7 @@ const FAKE_AGENT_START_TOOL_CONTENT = `
  * Injects fake assistant messages used to request the start of an autonomous workflow.
  * These messages greatly help the AI understand they are in an autonomous workflow and how it works.
  */
-export function injectFakeStartAutonomousWorkflowMessages(
-  messages: Message[],
-): Message[] {
+export function injectFakeStartAutonomousWorkflowMessages(messages: Message[]): Message[] {
   let wokflowCount = 1
   const createFakeStartTool = (): [AssistantMessage, ToolMessage] => {
     const toolId = `agent_start_${wokflowCount++}`
@@ -73,9 +68,7 @@ export function injectFakeStartAutonomousWorkflowMessages(
     const isLast = index === messages.length - 1
     const isAgentReturnTool =
       message.role === MessageRole.assistant &&
-      message.toolCalls?.some(
-        (toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME,
-      )
+      message.toolCalls?.some((toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME)
 
     if (!inAutonomousMode && message.role === MessageRole.assistant) {
       inAutonomousMode = true
@@ -97,53 +90,46 @@ export function injectFakeStartAutonomousWorkflowMessages(
   return newMessages
 }
 
-export function injectAgentFinishToolResponsesAfterEachRequest(
-  messages: Message[],
-): Message[] {
-  return messages
-    .map((message, idx) => {
-      if (message.role !== MessageRole.assistant) return [message]
-      const agentToolCallIds = message.toolCalls
-        .filter((toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME)
-        .map((toolCall) => toolCall.id)
+export function injectAgentFinishToolResponsesAfterEachRequest(messages: Message[]): Message[] {
+  // @ts-expect-error - TODO(compiler): fix types
+  return messages.flatMap((message, idx) => {
+    if (message.role !== MessageRole.assistant) return [message]
+    const agentToolCallIds = message.toolCalls
+      .filter((toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME)
+      .map((toolCall) => toolCall.id)
 
-      const nextNonToolResponseIdx = messages.findIndex(
-        (msg, j) => j > idx && msg.role !== MessageRole.tool,
+    const nextNonToolResponseIdx = messages.findIndex(
+      (msg, j) => j > idx && msg.role !== MessageRole.tool,
+    )
+    const nextToolResponses = messages.slice(idx + 1, Math.max(nextNonToolResponseIdx, idx + 1))
+    const nextToolResponsesIds = nextToolResponses
+      .filter((msg) => msg.role === MessageRole.tool)
+      .flatMap((msg) => msg.content)
+      .filter(
+        (content) =>
+          content.type === ContentType.toolResult && content.toolCallId === AGENT_RETURN_TOOL_NAME,
       )
-      const nextToolResponses = messages.slice(
-        idx + 1,
-        Math.max(nextNonToolResponseIdx, idx + 1),
-      )
-      const nextToolResponsesIds = nextToolResponses
-        .filter((msg) => msg.role === MessageRole.tool)
-        .flatMap((msg) => msg.content)
-        .filter(
-          (content) =>
-            content.type === ContentType.toolResult &&
-            content.toolCallId === AGENT_RETURN_TOOL_NAME,
-        )
-        .map((content) => content.toolCallId)
+      .map((content) => content.toolCallId)
 
-      const nonRespondedAgentToolCallIds = agentToolCallIds.filter(
-        (toolCallId) => !nextToolResponsesIds.includes(toolCallId),
-      )
+    const nonRespondedAgentToolCallIds = agentToolCallIds.filter(
+      (toolCallId) => !nextToolResponsesIds.includes(toolCallId),
+    )
 
-      const toolResponses = nonRespondedAgentToolCallIds.map(
-        (toolCallId) =>
-          ({
-            role: MessageRole.tool,
-            content: [
-              {
-                type: ContentType.toolResult,
-                toolCallId,
-                toolName: AGENT_RETURN_TOOL_NAME,
-                result: {},
-                isError: false,
-              },
-            ],
-          }) as ToolMessage,
-      )
-      return [message, ...toolResponses]
-    })
-    .flat()
+    const toolResponses = nonRespondedAgentToolCallIds.map(
+      (toolCallId) =>
+        ({
+          role: MessageRole.tool,
+          content: [
+            {
+              type: ContentType.toolResult,
+              toolCallId,
+              toolName: AGENT_RETURN_TOOL_NAME,
+              result: {},
+              isError: false,
+            },
+          ],
+        }) as ToolMessage,
+    )
+    return [message, ...toolResponses]
+  })
 }

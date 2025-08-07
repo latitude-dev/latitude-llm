@@ -99,10 +99,9 @@ const llmEvaluationComparisonConfiguration = llmEvaluationConfiguration.extend({
   minThreshold: z.number().optional(), // Threshold percentage
   maxThreshold: z.number().optional(), // Threshold percentage
 })
-const llmEvaluationComparisonResultMetadata =
-  llmEvaluationResultMetadata.extend({
-    configuration: llmEvaluationComparisonConfiguration,
-  })
+const llmEvaluationComparisonResultMetadata = llmEvaluationResultMetadata.extend({
+  configuration: llmEvaluationComparisonConfiguration,
+})
 const llmEvaluationComparisonResultError = llmEvaluationResultError.extend({})
 export const LlmEvaluationComparisonSpecification = {
   name: 'Comparison',
@@ -211,32 +210,44 @@ export type LlmEvaluationMetricAnyCustom =
   | LlmEvaluationMetric.Custom
   | LlmEvaluationMetric.CustomLabeled
 
-// prettier-ignore
 export type LlmEvaluationConfiguration<M extends LlmEvaluationMetric = LlmEvaluationMetric> =
-  M extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryConfiguration :
-  M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingConfiguration :
-  M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonConfiguration :
-  M extends LlmEvaluationMetric.Custom ? LlmEvaluationCustomConfiguration :
-  M extends LlmEvaluationMetric.CustomLabeled ? LlmEvaluationCustomConfiguration :
-  never;
+  M extends LlmEvaluationMetric.Binary
+    ? LlmEvaluationBinaryConfiguration
+    : M extends LlmEvaluationMetric.Rating
+      ? LlmEvaluationRatingConfiguration
+      : M extends LlmEvaluationMetric.Comparison
+        ? LlmEvaluationComparisonConfiguration
+        : M extends LlmEvaluationMetric.Custom
+          ? LlmEvaluationCustomConfiguration
+          : M extends LlmEvaluationMetric.CustomLabeled
+            ? LlmEvaluationCustomConfiguration
+            : never
 
-// prettier-ignore
 export type LlmEvaluationResultMetadata<M extends LlmEvaluationMetric = LlmEvaluationMetric> =
-  M extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryResultMetadata :
-  M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingResultMetadata :
-  M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonResultMetadata :
-  M extends LlmEvaluationMetric.Custom ? LlmEvaluationCustomResultMetadata :
-  M extends LlmEvaluationMetric.CustomLabeled ? LlmEvaluationCustomResultMetadata :
-  never;
+  M extends LlmEvaluationMetric.Binary
+    ? LlmEvaluationBinaryResultMetadata
+    : M extends LlmEvaluationMetric.Rating
+      ? LlmEvaluationRatingResultMetadata
+      : M extends LlmEvaluationMetric.Comparison
+        ? LlmEvaluationComparisonResultMetadata
+        : M extends LlmEvaluationMetric.Custom
+          ? LlmEvaluationCustomResultMetadata
+          : M extends LlmEvaluationMetric.CustomLabeled
+            ? LlmEvaluationCustomResultMetadata
+            : never
 
-// prettier-ignore
 export type LlmEvaluationResultError<M extends LlmEvaluationMetric = LlmEvaluationMetric> =
-  M extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryResultError :
-  M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingResultError :
-  M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonResultError :
-  M extends LlmEvaluationMetric.Custom ? LlmEvaluationCustomResultError :
-  M extends LlmEvaluationMetric.CustomLabeled ? LlmEvaluationCustomResultError :
-  never;
+  M extends LlmEvaluationMetric.Binary
+    ? LlmEvaluationBinaryResultError
+    : M extends LlmEvaluationMetric.Rating
+      ? LlmEvaluationRatingResultError
+      : M extends LlmEvaluationMetric.Comparison
+        ? LlmEvaluationComparisonResultError
+        : M extends LlmEvaluationMetric.Custom
+          ? LlmEvaluationCustomResultError
+          : M extends LlmEvaluationMetric.CustomLabeled
+            ? LlmEvaluationCustomResultError
+            : never
 
 export const LlmEvaluationSpecification = {
   name: 'LLM-as-a-Judge',
@@ -244,7 +255,7 @@ export const LlmEvaluationSpecification = {
   configuration: llmEvaluationConfiguration,
   resultMetadata: llmEvaluationResultMetadata,
   resultError: llmEvaluationResultError,
-  // prettier-ignore
+
   metrics: {
     [LlmEvaluationMetric.Binary]: LlmEvaluationBinarySpecification,
     [LlmEvaluationMetric.Rating]: LlmEvaluationRatingSpecification,
@@ -270,5 +281,4 @@ export const LLM_EVALUATION_PROMPT_PARAMETERS = [
   'response',
 ] as const
 
-export type LlmEvaluationPromptParameter =
-  (typeof LLM_EVALUATION_PROMPT_PARAMETERS)[number]
+export type LlmEvaluationPromptParameter = (typeof LLM_EVALUATION_PROMPT_PARAMETERS)[number]

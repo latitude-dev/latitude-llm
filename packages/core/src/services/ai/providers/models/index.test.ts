@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { ProviderApiKey } from '../../../../schema/types'
+import type { ProviderApiKey } from '../../../../schema/types'
 import { findFirstModelForProvider, PROVIDER_MODELS, Providers } from './index'
 
 describe('findFirstModelForProvider', () => {

@@ -1,18 +1,15 @@
-import { PipedreamIntegration } from '../../../../../browser'
+import type { PipedreamIntegration } from '../../../../../browser'
 import { IntegrationType } from '@latitude-data/constants'
 import * as fetchFullConfigSchemaModule from './fetchFullConfigSchema'
 import * as reloadComponentPropsModule from '../../../../integrations/pipedream/components/reloadComponentProps'
-import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk'
+import type { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  ConfigurablePropWithRemoteOptions,
-  RemoteOptions,
-} from '../../../../../constants'
+import { type ConfigurablePropWithRemoteOptions, RemoteOptions } from '../../../../../constants'
 import { Result } from '../../../../../lib/Result'
 import { omit } from 'lodash-es'
 import {
   isValidConfiguration,
-  LatteInvalidChoiceError,
+  type LatteInvalidChoiceError,
   validateLattesChoices,
 } from './configValidator'
 
@@ -28,12 +25,9 @@ vi.mock('./fetchFullConfigSchema', () => ({
   ],
 }))
 
-vi.mock(
-  '../../../../integrations/pipedream/components/reloadComponentProps',
-  () => ({
-    reloadComponentProps: vi.fn(),
-  }),
-)
+vi.mock('../../../../integrations/pipedream/components/reloadComponentProps', () => ({
+  reloadComponentProps: vi.fn(),
+}))
 
 describe('Validating schema', () => {
   let latteChosenConfiguredProps: ConfiguredProps<ConfigurableProps>
@@ -109,15 +103,9 @@ describe('Validating schema', () => {
   })
 
   describe('Validate Lattes choices', () => {
-    const mockFetchFullConfigSchema = vi.mocked(
-      fetchFullConfigSchemaModule.fetchFullConfigSchema,
-    )
-    const mockAddRemoteOptions = vi.mocked(
-      fetchFullConfigSchemaModule.addRemoteOptions,
-    )
-    const mockReloadComponentProps = vi.mocked(
-      reloadComponentPropsModule.reloadComponentProps,
-    )
+    const mockFetchFullConfigSchema = vi.mocked(fetchFullConfigSchemaModule.fetchFullConfigSchema)
+    const mockAddRemoteOptions = vi.mocked(fetchFullConfigSchemaModule.addRemoteOptions)
+    const mockReloadComponentProps = vi.mocked(reloadComponentPropsModule.reloadComponentProps)
 
     let integration: PipedreamIntegration
     beforeEach(() => {
@@ -144,9 +132,7 @@ describe('Validating schema', () => {
     })
 
     it('should return true for valid Lattes choices without reloadProps', async () => {
-      mockFetchFullConfigSchema.mockResolvedValue(
-        Result.ok(fullTriggerConfigSchema),
-      )
+      mockFetchFullConfigSchema.mockResolvedValue(Result.ok(fullTriggerConfigSchema))
 
       const result = await validateLattesChoices({
         componentId: 'notion',
@@ -159,9 +145,7 @@ describe('Validating schema', () => {
     })
 
     it('should return false for invalid Lattes choices', async () => {
-      mockFetchFullConfigSchema.mockResolvedValue(
-        Result.ok(fullTriggerConfigSchema),
-      )
+      mockFetchFullConfigSchema.mockResolvedValue(Result.ok(fullTriggerConfigSchema))
 
       const invalidChoices = {
         ...latteChosenConfiguredProps,
@@ -190,10 +174,7 @@ describe('Validating schema', () => {
         errors: [],
         dynamicProps: {
           id: 'test',
-          configurableProps: [
-            ...fullTriggerConfigSchema,
-            relevantLattePropsFromReload,
-          ],
+          configurableProps: [...fullTriggerConfigSchema, relevantLattePropsFromReload],
         },
       }
 
@@ -203,9 +184,7 @@ describe('Validating schema', () => {
 
       mockFetchFullConfigSchema.mockResolvedValue(Result.ok(modifiedSchema))
 
-      mockReloadComponentProps.mockResolvedValue(
-        Result.ok(reloadedPropsResponse),
-      )
+      mockReloadComponentProps.mockResolvedValue(Result.ok(reloadedPropsResponse))
 
       mockAddRemoteOptions.mockResolvedValue(
         Result.ok([
@@ -249,10 +228,7 @@ describe('Validating schema', () => {
         errors: [],
         dynamicProps: {
           id: 'test',
-          configurableProps: [
-            ...fullTriggerConfigSchema,
-            relevantLattePropsFromReload,
-          ],
+          configurableProps: [...fullTriggerConfigSchema, relevantLattePropsFromReload],
         },
       }
 
@@ -262,13 +238,9 @@ describe('Validating schema', () => {
 
       mockFetchFullConfigSchema.mockResolvedValue(Result.ok(modifiedSchema))
 
-      mockReloadComponentProps.mockResolvedValue(
-        Result.ok(reloadedPropsResponse),
-      )
+      mockReloadComponentProps.mockResolvedValue(Result.ok(reloadedPropsResponse))
 
-      mockAddRemoteOptions.mockResolvedValue(
-        Result.ok([relevantLattePropsFromReload]),
-      )
+      mockAddRemoteOptions.mockResolvedValue(Result.ok([relevantLattePropsFromReload]))
 
       const result = await validateLattesChoices({
         componentId: 'notion',
@@ -281,9 +253,7 @@ describe('Validating schema', () => {
       expect(result.error).toBeDefined()
       const errorMessage = result.error as LatteInvalidChoiceError
       expect(errorMessage.errors).toHaveLength(1)
-      expect(errorMessage.errors[0]).toContain(
-        'Missing value for configured prop newProp',
-      )
+      expect(errorMessage.errors[0]).toContain('Missing value for configured prop newProp')
     })
   })
 

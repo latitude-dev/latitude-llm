@@ -1,12 +1,12 @@
-import { type Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 
-import { VercelConfig } from '@latitude-data/constants'
+import type { VercelConfig } from '@latitude-data/constants'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { buildConversation, LogSources, Workspace } from '../../../browser'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { buildConversation, type LogSources, type Workspace } from '../../../browser'
 import { unsafelyFindProviderApiKey } from '../../../data-access'
 import { Result } from '../../../lib/Result'
-import { ToolHandler } from '../../../lib/streamManager/clientTools/handlers'
+import type { ToolHandler } from '../../../lib/streamManager/clientTools/handlers'
 import { DefaultStreamManager } from '../../../lib/streamManager/defaultStreamManager'
 import {
   CommitsRepository,
@@ -14,7 +14,7 @@ import {
   DocumentVersionsRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
-import { BACKGROUND, TelemetryContext } from '../../../telemetry'
+import { BACKGROUND, type TelemetryContext } from '../../../telemetry'
 import { getInputSchema, getOutputType } from '../../chains/ChainValidator'
 import { scanDocumentContent } from '../../documents'
 import serializeProviderLog from '../../providerLogs/serialize'
@@ -51,18 +51,14 @@ export async function addMessages({
 
   if (!providerLog.providerId) {
     return Result.error(
-      new NotFoundError(
-        `Cannot add messages to a conversation that has no associated provider`,
-      ),
+      new NotFoundError(`Cannot add messages to a conversation that has no associated provider`),
     )
   }
 
   const provider = await unsafelyFindProviderApiKey(providerLog.providerId)
   if (!provider) {
     return Result.error(
-      new NotFoundError(
-        `Could not find provider API key with id ${providerLog.providerId}`,
-      ),
+      new NotFoundError(`Could not find provider API key with id ${providerLog.providerId}`),
     )
   }
 
@@ -125,8 +121,7 @@ async function retrieveData({
   const document = documentResult.value
 
   const providerLogRepo = new ProviderLogsRepository(workspace.id)
-  const providerLogResult =
-    await providerLogRepo.findLastByDocumentLogUuid(documentLogUuid)
+  const providerLogResult = await providerLogRepo.findLastByDocumentLogUuid(documentLogUuid)
   if (providerLogResult.error) return providerLogResult
   const providerLog = providerLogResult.value
 

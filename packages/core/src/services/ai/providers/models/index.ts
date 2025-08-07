@@ -1,4 +1,4 @@
-import { ProviderApiKey } from '../../../../schema/types'
+import type { ProviderApiKey } from '../../../../schema/types'
 import { Providers } from '@latitude-data/constants'
 import { GROQ_MODELS } from '../../estimateCost/groq'
 import { ANTHROPIC_MODELS } from '../../estimateCost/anthropic'
@@ -22,9 +22,7 @@ export const DEFAULT_PROVIDER_SUPPORTED_MODELS = [
   'gpt-4.1-nano',
 ]
 
-export const PROVIDER_MODELS: Partial<
-  Record<Providers, Record<string, string>>
-> = {
+export const PROVIDER_MODELS: Partial<Record<Providers, Record<string, string>>> = {
   [Providers.OpenAI]: OPENAI_MODELS.uiList,
   [Providers.Anthropic]: ANTHROPIC_MODELS.uiList,
   [Providers.Groq]: GROQ_MODELS.uiList,
@@ -54,9 +52,7 @@ export function listModelsForProvider({
 
   if (name && name === defaultProviderName) {
     return Object.fromEntries(
-      Object.entries(models).filter(([key]) =>
-        DEFAULT_PROVIDER_SUPPORTED_MODELS.includes(key),
-      ),
+      Object.entries(models).filter(([key]) => DEFAULT_PROVIDER_SUPPORTED_MODELS.includes(key)),
     )
   }
 

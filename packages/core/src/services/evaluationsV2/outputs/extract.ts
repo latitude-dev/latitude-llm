@@ -1,22 +1,19 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
-  ActualOutputConfiguration,
+  type ActualOutputConfiguration,
   buildConversation,
-  Dataset,
-  DatasetRow,
-  ExpectedOutputConfiguration,
+  type Dataset,
+  type DatasetRow,
+  type ExpectedOutputConfiguration,
   formatMessage,
-  ProviderLogDto,
+  type ProviderLogDto,
 } from '../../../browser'
 import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { getColumnData } from '../../datasets/utils'
 
-const CONTENT_FILTER_TYPE: Record<
-  Required<ActualOutputConfiguration>['contentFilter'],
-  string
-> = {
+const CONTENT_FILTER_TYPE: Record<Required<ActualOutputConfiguration>['contentFilter'], string> = {
   text: 'text',
   image: 'image',
   file: 'file',
@@ -47,7 +44,7 @@ function accessField(output: any, path: string = '') {
 
   try {
     return JSON.stringify(value)
-  } catch (error) {
+  } catch (_error) {
     return value.toString()
   }
 }
@@ -94,9 +91,7 @@ export async function extractActualOutput({
           filteredConversation.push(message)
         }
       } else {
-        const filteredContent = message.content.filter(
-          (content) => content.type === contentFilter,
-        )
+        const filteredContent = message.content.filter((content) => content.type === contentFilter)
         if (filteredContent.length > 0) {
           filteredConversation.push({
             ...message,
@@ -109,11 +104,7 @@ export async function extractActualOutput({
   }
 
   if (conversation.length < 1) {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Log does not contain any assistant messages',
-      ),
-    )
+    return Result.error(new UnprocessableEntityError('Log does not contain any assistant messages'))
   }
 
   switch (configuration.messageSelection) {
@@ -128,9 +119,7 @@ export async function extractActualOutput({
       }
       break
     default:
-      return Result.error(
-        new BadRequestError('Invalid assistant message selection'),
-      )
+      return Result.error(new BadRequestError('Invalid assistant message selection'))
   }
 
   try {
@@ -151,9 +140,7 @@ export async function extractActualOutput({
   }
 
   if (!actualOutput) {
-    return Result.error(
-      new UnprocessableEntityError('Actual output is required'),
-    )
+    return Result.error(new UnprocessableEntityError('Actual output is required'))
   }
 
   return Result.ok(actualOutput)
@@ -179,9 +166,7 @@ export async function extractExpectedOutput({
   let expectedOutput = ''
 
   if (!dataset.columns.find((c) => c.name === column)) {
-    return Result.error(
-      new BadRequestError(`Column '${column}' not found in dataset`),
-    )
+    return Result.error(new BadRequestError(`Column '${column}' not found in dataset`))
   }
 
   expectedOutput = getColumnData({ dataset, row, column })
@@ -204,9 +189,7 @@ export async function extractExpectedOutput({
   }
 
   if (!expectedOutput) {
-    return Result.error(
-      new UnprocessableEntityError('Expected output is required'),
-    )
+    return Result.error(new UnprocessableEntityError('Expected output is required'))
   }
 
   return Result.ok(expectedOutput)

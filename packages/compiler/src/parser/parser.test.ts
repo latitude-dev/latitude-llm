@@ -3,12 +3,9 @@ import CompileError from '$compiler/error/error'
 import { describe, expect, it } from 'vitest'
 
 import parse from '.'
-import { TemplateNode } from './interfaces'
+import type { TemplateNode } from './interfaces'
 
-const getExpectedError = <T>(
-  action: () => void,
-  errorClass: new () => T,
-): T => {
+const getExpectedError = <T>(action: () => void, errorClass: new () => T): T => {
   try {
     action()
   } catch (err) {
@@ -70,8 +67,7 @@ describe('If block', () => {
   })
 
   it('fails if the if block is not closed', () => {
-    const action = () =>
-      parse(`${CUSTOM_TAG_START}#if condition${CUSTOM_TAG_END}`)
+    const action = () => parse(`${CUSTOM_TAG_START}#if condition${CUSTOM_TAG_END}`)
     const error = getExpectedError(action, CompileError)
     expect(error.code).toBe('unclosed-block')
   })
@@ -98,13 +94,9 @@ describe('If block', () => {
 
   it('fails if a condition is not provided', () => {
     const action1 = () =>
-      parse(
-        `${CUSTOM_TAG_START}#if${CUSTOM_TAG_END}then${CUSTOM_TAG_START}/if${CUSTOM_TAG_END}`,
-      )
+      parse(`${CUSTOM_TAG_START}#if${CUSTOM_TAG_END}then${CUSTOM_TAG_START}/if${CUSTOM_TAG_END}`)
     const action2 = () =>
-      parse(
-        `${CUSTOM_TAG_START}#if ${CUSTOM_TAG_END}then${CUSTOM_TAG_START}/if${CUSTOM_TAG_END}`,
-      )
+      parse(`${CUSTOM_TAG_START}#if ${CUSTOM_TAG_END}then${CUSTOM_TAG_START}/if${CUSTOM_TAG_END}`)
     const error1 = getExpectedError(action1, CompileError)
     const error2 = getExpectedError(action2, CompileError)
     expect(error1.code).toBe('missing-whitespace')
@@ -161,9 +153,7 @@ describe('Else block', () => {
 
   it('fails if the else does not have a matching if', () => {
     const action = () =>
-      parse(
-        `${CUSTOM_TAG_START}:else${CUSTOM_TAG_END}else${CUSTOM_TAG_START}/if${CUSTOM_TAG_END}`,
-      )
+      parse(`${CUSTOM_TAG_START}:else${CUSTOM_TAG_END}else${CUSTOM_TAG_START}/if${CUSTOM_TAG_END}`)
     const error = getExpectedError(action, CompileError)
     expect(error.code).toBe('invalid-else-placement')
   })
@@ -235,8 +225,7 @@ describe('Each block', () => {
   })
 
   it('fails if the each block is not closed', () => {
-    const action = () =>
-      parse(`${CUSTOM_TAG_START}#each list as item${CUSTOM_TAG_END}item`)
+    const action = () => parse(`${CUSTOM_TAG_START}#each list as item${CUSTOM_TAG_END}item`)
     const error = getExpectedError(action, CompileError)
     expect(error.code).toBe('unclosed-block')
   })
@@ -341,9 +330,7 @@ describe('Tags', () => {
   })
 
   it('parses all attributes', () => {
-    const fragment = parse(
-      '<custom-tag attr1="value1" attr2="value2"></custom-tag>',
-    )
+    const fragment = parse('<custom-tag attr1="value1" attr2="value2"></custom-tag>')
     expect(fragment.children.length).toBe(1)
 
     const tag = fragment.children[0]!
@@ -369,9 +356,7 @@ describe('Tags', () => {
   })
 
   it('Parses attribute vales as expressions when interpolated', () => {
-    const fragment = parse(
-      `<custom-tag attr=${CUSTOM_TAG_START}value${CUSTOM_TAG_END} />`,
-    )
+    const fragment = parse(`<custom-tag attr=${CUSTOM_TAG_START}value${CUSTOM_TAG_END} />`)
     expect(fragment.children.length).toBe(1)
 
     const tag = fragment.children[0]!

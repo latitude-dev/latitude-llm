@@ -6,7 +6,7 @@ const LOADED_MODULES: Record<string, string> = {}
 
 async function loadModule(specifier: string) {
   const resolvedPath = require.resolve(specifier)
-  const url = pathToFileURL(resolvedPath).href + `?t=${Date.now()}`
+  const url = `${pathToFileURL(resolvedPath).href}?t=${Date.now()}`
   const module = await import(url)
   LOADED_MODULES[specifier] = resolvedPath
   return module
@@ -19,7 +19,7 @@ async function reloadAllModules() {
   const entries = Object.entries(LOADED_MODULES)
   const reloaded: Record<string, any> = {}
   for (const [specifier, resolvedPath] of entries) {
-    const url = pathToFileURL(resolvedPath).href + `?t=${Date.now()}`
+    const url = `${pathToFileURL(resolvedPath).href}?t=${Date.now()}`
     const mod = await import(url)
     reloaded[specifier] = mod
   }

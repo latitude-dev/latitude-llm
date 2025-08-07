@@ -1,24 +1,21 @@
 import {
-  ComponentId,
-  ConfigurableProps,
-  ConfiguredProps,
+  type ComponentId,
+  type ConfigurableProps,
+  type ConfiguredProps,
   createBackendClient,
 } from '@pipedream/sdk'
 import {
-  Commit,
-  DocumentTrigger,
+  type Commit,
+  type DocumentTrigger,
   gatewayPath,
-  PipedreamIntegration,
-  Workspace,
+  type PipedreamIntegration,
+  type Workspace,
 } from '../../../browser'
 import { getPipedreamEnvironment } from './apps'
 import { Result } from '../../../lib/Result'
-import Transaction, { PromisedResult } from '../../../lib/Transaction'
-import {
-  fillConfiguredProps,
-  isIntegrationConfigured,
-} from './components/fillConfiguredProps'
-import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
+import Transaction, { type PromisedResult } from '../../../lib/Transaction'
+import { fillConfiguredProps, isIntegrationConfigured } from './components/fillConfiguredProps'
+import { type DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
 import { IntegrationsRepository } from '../../../repositories'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 
@@ -37,9 +34,7 @@ export async function deployPipedreamTrigger({
 }): PromisedResult<{ id: string }> {
   if (!isIntegrationConfigured(integration)) {
     return Result.error(
-      new BadRequestError(
-        `Integration '${integration.name}' has not been configured.`,
-      ),
+      new BadRequestError(`Integration '${integration.name}' has not been configured.`),
     )
   }
 
@@ -75,9 +70,7 @@ export async function deployPipedreamTrigger({
       triggerId: componentId,
       configuredProps,
       dynamicPropsId: reload.dynamicProps?.id,
-      webhookUrl: gatewayPath(
-        `/webhook/integration/${triggerUuid}/${commit.uuid}`,
-      ),
+      webhookUrl: gatewayPath(`/webhook/integration/${triggerUuid}/${commit.uuid}`),
     })
 
     return Result.ok({ id: deployResult.data.id })
@@ -109,16 +102,12 @@ export async function destroyPipedreamTrigger(
 
   if (integration.type !== IntegrationType.Pipedream) {
     return Result.error(
-      new Error(
-        `Integration type '${integration.type}' is not supported for document triggers`,
-      ),
+      new Error(`Integration type '${integration.type}' is not supported for document triggers`),
     )
   }
   if (!isIntegrationConfigured(integration)) {
     return Result.error(
-      new NotFoundError(
-        `Integration '${integration.name}' has not been configured.`,
-      ),
+      new NotFoundError(`Integration '${integration.name}' has not been configured.`),
     )
   }
 

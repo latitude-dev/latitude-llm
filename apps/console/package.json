@@ -6,7 +6,6 @@
   "devDependencies": {
     "@types/node": "^22.5.1",
     "@latitude-data/core": "workspace:^",
-    "@latitude-data/eslint-config": "workspace:^",
     "@latitude-data/typescript-config": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "tsx": "^4.16.2"

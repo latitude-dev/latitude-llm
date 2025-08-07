@@ -1,8 +1,8 @@
-import { BadRequestError, LatitudeError } from '../../../lib/errors'
+import { BadRequestError, type LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { normalizedResult, withSafeSandbox } from './sandbox'
-import { CodeRunResult, CodeToolArgs } from './types'
+import type { CodeRunResult, CodeToolArgs } from './types'
 
 export async function runCodeWithoutDependencies({
   code,

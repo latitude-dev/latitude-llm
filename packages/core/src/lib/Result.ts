@@ -36,9 +36,7 @@ export class ErrorResult<E extends Error> {
   }
 }
 
-export type TypedResult<V = undefined, E extends Error = Error> =
-  | Ok<V>
-  | ErrorResult<E>
+export type TypedResult<V = undefined, E extends Error = Error> = Ok<V> | ErrorResult<E>
 
 export class Result {
   private constructor() {}

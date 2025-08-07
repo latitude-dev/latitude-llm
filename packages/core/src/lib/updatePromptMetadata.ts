@@ -5,13 +5,7 @@ function extractFrontMatter(content: string) {
   return match ? match[1] : null
 }
 
-function formatPrompt({
-  frontMatter,
-  prompt,
-}: {
-  frontMatter: string
-  prompt: string
-}) {
+function formatPrompt({ frontMatter, prompt }: { frontMatter: string; prompt: string }) {
   return `---\n${frontMatter}---\n\n${prompt.replace(/(?:\n)?---[\s\S]*?---(?:\n)?/g, '')}`
 }
 
@@ -38,10 +32,7 @@ export function updatePromptMetadata(
   // Check if the prompt has frontmatter
   if (!prompt.match(/(?:\/\*[\s\S]*?\*\/\s*)?---/)) {
     // If no frontmatter exists, create one with the updates
-    const cleanUpdates = cleanUpdatesFromNullKeys(
-      updates,
-      keysToBeRemovedWhenNull,
-    )
+    const cleanUpdates = cleanUpdatesFromNullKeys(updates, keysToBeRemovedWhenNull)
     const newFrontMatter = stringify(cleanUpdates)
     return `---\n${newFrontMatter}---\n\n${prompt}`
   }
@@ -49,10 +40,7 @@ export function updatePromptMetadata(
   try {
     const frontMatter = extractFrontMatter(prompt)
     if (!frontMatter) {
-      const cleanUpdates = cleanUpdatesFromNullKeys(
-        updates,
-        keysToBeRemovedWhenNull,
-      )
+      const cleanUpdates = cleanUpdatesFromNullKeys(updates, keysToBeRemovedWhenNull)
       // Invalid frontmatter format, create new one
       return formatPrompt({ frontMatter: stringify(cleanUpdates), prompt })
     }
@@ -74,11 +62,7 @@ export function updatePromptMetadata(
       }
     }
 
-    if (
-      'tools' in updated &&
-      Array.isArray(updated.tools) &&
-      updated.tools.length === 0
-    ) {
+    if ('tools' in updated && Array.isArray(updated.tools) && updated.tools.length === 0) {
       // If tools is an empty array, remove it from the frontmatter
       delete updated.tools
     }
@@ -87,16 +71,10 @@ export function updatePromptMetadata(
     const newFrontMatter = stringify(updated)
 
     // Replace old frontmatter with new one, preserving any leading comments
-    return prompt.replace(
-      /((?:\/\*[\s\S]*?\*\/\s*)?---\n)[\s\S]*?\n---/,
-      `$1${newFrontMatter}---`,
-    )
-  } catch (error) {
+    return prompt.replace(/((?:\/\*[\s\S]*?\*\/\s*)?---\n)[\s\S]*?\n---/, `$1${newFrontMatter}---`)
+  } catch (_error) {
     // If parsing fails, create new frontmatter
-    const cleanUpdates = cleanUpdatesFromNullKeys(
-      updates,
-      keysToBeRemovedWhenNull,
-    )
+    const cleanUpdates = cleanUpdatesFromNullKeys(updates, keysToBeRemovedWhenNull)
     return formatPrompt({ frontMatter: stringify(cleanUpdates), prompt })
   }
 }

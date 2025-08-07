@@ -4,9 +4,9 @@ import {
   publishDocumentRunRequestedEvent,
 } from '$/common/documents/getData'
 import { captureException } from '$/common/sentry'
-import { AppRouteHandler } from '$/openApi/types'
+import type { AppRouteHandler } from '$/openApi/types'
 import { v2RunPresenter } from '$/presenters/runPresenter'
-import { RunRoute } from '$/routes/api/v2/documents/run/run.route'
+import type { RunRoute } from '$/routes/api/v2/documents/run/run.route'
 import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
@@ -19,13 +19,7 @@ import { runDocumentAtCommitLegacy } from '@latitude-data/core/services/__deprec
 // https://github.com/orgs/honojs/discussions/1803
 export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   const { projectId, versionUuid } = c.req.valid('param')
-  const {
-    path,
-    parameters,
-    customIdentifier,
-    stream: useSSE,
-    __internal,
-  } = c.req.valid('json')
+  const { path, parameters, customIdentifier, stream: useSSE, __internal } = c.req.valid('json')
   const workspace = c.get('workspace')
   const { document, commit, project } = await getData({
     workspace,

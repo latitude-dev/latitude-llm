@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import Stripe from 'stripe'
+import type Stripe from 'stripe'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Hoist mocks for env and services
@@ -9,9 +9,7 @@ const mocks = vi.hoisted(() => {
       STRIPE_SECRET_KEY: 'sk_test_123',
       STRIPE_WEBHOOK_SECRET: 'whsec_test_123',
     },
-    handleSubscriptionUpdate: vi.fn(() =>
-      Promise.resolve({ unwrap: () => ({}) }),
-    ),
+    handleSubscriptionUpdate: vi.fn(() => Promise.resolve({ unwrap: () => ({}) })),
     // Mock the actual Stripe constructor
     Stripe: vi.fn(),
     // Store the mock constructEvent function here to be used by the Stripe mock instance
@@ -28,12 +26,9 @@ vi.mock('@latitude-data/env', () => ({
   env: mocks.env,
 }))
 
-vi.mock(
-  '@latitude-data/core/services/billing/handleSubscriptionUpdate',
-  () => ({
-    handleSubscriptionUpdate: mocks.handleSubscriptionUpdate,
-  }),
-)
+vi.mock('@latitude-data/core/services/billing/handleSubscriptionUpdate', () => ({
+  handleSubscriptionUpdate: mocks.handleSubscriptionUpdate,
+}))
 
 // Now import the route handler
 import { POST } from './route'
@@ -73,21 +68,14 @@ describe('POST /api/webhooks/stripe', () => {
       try {
         const event = JSON.parse(body as string)
         // A basic check, actual Stripe events are more complex and validated by Stripe SDK.
-        if (
-          event &&
-          typeof event.type === 'string' &&
-          typeof event.data === 'object'
-        ) {
+        if (event && typeof event.type === 'string' && typeof event.data === 'object') {
           return event as Stripe.Event // This cast is okay for testing purposes
         }
         throw new Error('Parsed body does not resemble a Stripe event.')
       } catch (error) {
         // This fallback should ideally not be hit if tests correctly mock return values
         // or provide valid JSON string bodies that parse into expected event structures.
-        console.error(
-          'Error in mockConstructEvent default implementation:',
-          error,
-        )
+        console.error('Error in mockConstructEvent default implementation:', error)
         throw new Error(
           'Mock constructEvent error: Could not parse body or body was not a valid event. Ensure your test provides a valid JSON string for the event or mock constructEvent for this test case.',
         )
@@ -114,9 +102,7 @@ describe('POST /api/webhooks/stripe', () => {
 
     expect(response.status).toBe(422)
     const body = await response.json()
-    expect(body.message).toContain(
-      'Stripe SDK not initialized. Server configuration error.',
-    )
+    expect(body.message).toContain('Stripe SDK not initialized. Server configuration error.')
   })
 
   it('should return 422 if webhook secret is not configured', async () => {
@@ -165,9 +151,7 @@ describe('POST /api/webhooks/stripe', () => {
 
     expect(response.status).toBe(422)
     const body = await response.json()
-    expect(body.message).toContain(
-      'Webhook Error: Mocked Stripe Webhook: Invalid signature',
-    )
+    expect(body.message).toContain('Webhook Error: Mocked Stripe Webhook: Invalid signature')
   })
 
   describe('when event is customer.subscription.updated', () => {

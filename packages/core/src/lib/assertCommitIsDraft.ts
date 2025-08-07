@@ -1,4 +1,4 @@
-import { Commit } from '../browser'
+import type { Commit } from '../browser'
 import { BadRequestError } from './errors'
 import { Result } from './Result'
 

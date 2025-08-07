@@ -1,16 +1,13 @@
-import type {
-  Message as LegacyMessage,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
-import { FinishReason, LanguageModelUsage } from 'ai'
+import type { Message as LegacyMessage, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import type { FinishReason, LanguageModelUsage } from 'ai'
 
-import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
-import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
+import type { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
+import type { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { providerLogs } from '../../schema'
-import { estimateCost, PartialConfig } from '../ai'
+import { estimateCost, type PartialConfig } from '../ai'
 const TO_MILLICENTS_FACTOR = 100_000
 
 export type CreateProviderLogProps = {
@@ -90,7 +87,7 @@ export async function createProviderLog(
         output,
         toolCalls,
         tokens: usage
-          ? isNaN(usage.totalTokens)
+          ? Number.isNaN(usage.totalTokens)
             ? 0
             : (usage.totalTokens ?? 0)
           : undefined,

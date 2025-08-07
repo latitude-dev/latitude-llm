@@ -1,5 +1,5 @@
-import crypto from 'crypto'
-import { Result, TypedResult } from '../../../lib/Result'
+import crypto from 'node:crypto'
+import { Result, type TypedResult } from '../../../lib/Result'
 import { UnauthorizedError } from '../../../lib/errors'
 
 type VerifyWebhookSignatureOptions = {

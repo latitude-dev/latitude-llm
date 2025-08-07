@@ -11,11 +11,7 @@ const PROVIDERS_WITHOUT_API_KEY = [
   Providers.AmazonBedrock,
 ]
 
-export function ProviderConfigurationForm({
-  provider,
-}: {
-  provider: Providers
-}) {
+export function ProviderConfigurationForm({ provider }: { provider: Providers }) {
   return (
     <FormFieldGroup label='Provider Configuration' layout='vertical'>
       {!PROVIDERS_WITHOUT_API_KEY.includes(provider) ? (
@@ -42,9 +38,7 @@ export function ProviderConfigurationForm({
       {provider === Providers.OpenAI ? <OpenAIConfiguration /> : null}
       {provider === Providers.GoogleVertex ? <VertexConfiguration /> : null}
       {provider === Providers.AnthropicVertex ? <VertexConfiguration /> : null}
-      {provider === Providers.AmazonBedrock ? (
-        <AmazonBedrockConfiguration />
-      ) : null}
+      {provider === Providers.AmazonBedrock ? <AmazonBedrockConfiguration /> : null}
     </FormFieldGroup>
   )
 }

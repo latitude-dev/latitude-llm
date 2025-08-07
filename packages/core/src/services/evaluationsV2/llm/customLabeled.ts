@@ -1,16 +1,13 @@
 import {
-  EvaluationResultValue,
-  EvaluationType,
-  EvaluationV2,
-  LlmEvaluationMetric,
+  type EvaluationResultValue,
+  type EvaluationType,
+  type EvaluationV2,
+  type LlmEvaluationMetric,
   LlmEvaluationCustomLabeledSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
-import {
-  EvaluationMetricRunArgs,
-  EvaluationMetricValidateArgs,
-} from '../shared'
+import type { EvaluationMetricRunArgs, EvaluationMetricValidateArgs } from '../shared'
 import { LlmEvaluationCustomSpecification } from './custom'
 
 export const LlmEvaluationCustomLabeledSpecification = {
@@ -21,12 +18,7 @@ export const LlmEvaluationCustomLabeledSpecification = {
 }
 
 async function validate(
-  {
-    ...rest
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.CustomLabeled
-  >,
+  { ...rest }: EvaluationMetricValidateArgs<EvaluationType.Llm, LlmEvaluationMetric.CustomLabeled>,
   db = database,
 ) {
   return await LlmEvaluationCustomSpecification.validate({ ...rest }, db)
@@ -38,10 +30,7 @@ async function run(
     evaluation,
     expectedOutput,
     ...rest
-  }: EvaluationMetricRunArgs<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.CustomLabeled
-  >,
+  }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.CustomLabeled>,
   db = database,
 ) {
   if (!expectedOutput) {

@@ -1,13 +1,13 @@
 import {
   AGENT_RETURN_TOOL_NAME,
   FAKE_AGENT_START_TOOL_NAME,
-  ToolDefinition,
+  type ToolDefinition,
 } from '@latitude-data/constants'
-import { LatitudeError } from '../../../../lib/errors'
-import { Result, TypedResult } from '../../../../lib/Result'
-import { JSONSchema7 } from 'json-schema'
-import { ResolvedTools, ToolSource } from './types'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { LatitudeError } from '../../../../lib/errors'
+import { Result, type TypedResult } from '../../../../lib/Result'
+import type { JSONSchema7 } from 'json-schema'
+import { type ResolvedTools, ToolSource } from './types'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 const AGENT_RETURN_TOOL_DESCRIPTION = `
 The '${FAKE_AGENT_START_TOOL_NAME}' tool is used to start an autonomous chain-of-thought workflow.

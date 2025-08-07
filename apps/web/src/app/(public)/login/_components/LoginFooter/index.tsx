@@ -3,7 +3,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
-import { MouseEvent } from 'react'
+import type { MouseEvent } from 'react'
 
 export default function LoginFooter({
   returnTo,
@@ -17,10 +17,7 @@ export default function LoginFooter({
       <Text.H5 color='foregroundMuted'>
         Don't have an account yet?{' '}
         <Link
-          href={
-            ROUTES.auth.setup +
-            (returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '')
-          }
+          href={ROUTES.auth.setup + (returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '')}
           onClick={onClickSignup}
         >
           <Button variant='link' className='p-0'>

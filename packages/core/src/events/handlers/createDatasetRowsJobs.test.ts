@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { WebsocketClient } from '../../websockets/workers'
 import { createRowsFromUploadedDataset } from '../../services/datasetRows/createRowsFromUploadedDataset'
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
-import { DatasetV2CreatedEvent } from '../events'
+import type { DatasetV2CreatedEvent } from '../events'
 
 vi.mock('../../services/datasetRows/createRowsFromUploadedDataset', () => ({
   createRowsFromUploadedDataset: vi.fn(),
@@ -36,18 +36,15 @@ describe('createDatasetRowsJob', () => {
 
     await createDatasetRowsJob({ data: FAKE_EVENT })
 
-    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
-      'datasetRowsCreated',
-      {
-        workspaceId: FAKE_EVENT.data.workspaceId,
-        data: {
-          datasetId: FAKE_EVENT.data.datasetId,
-          rows,
-          error: null,
-          finished: false,
-        },
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith('datasetRowsCreated', {
+      workspaceId: FAKE_EVENT.data.workspaceId,
+      data: {
+        datasetId: FAKE_EVENT.data.datasetId,
+        rows,
+        error: null,
+        finished: false,
       },
-    )
+    })
   })
 
   it('should emit datasetRowsCreated with error on failure', async () => {
@@ -60,17 +57,14 @@ describe('createDatasetRowsJob', () => {
 
     await createDatasetRowsJob({ data: FAKE_EVENT })
 
-    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
-      'datasetRowsCreated',
-      {
-        workspaceId: FAKE_EVENT.data.workspaceId,
-        data: {
-          datasetId: FAKE_EVENT.data.datasetId,
-          rows: null,
-          finished: false,
-          error,
-        },
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith('datasetRowsCreated', {
+      workspaceId: FAKE_EVENT.data.workspaceId,
+      data: {
+        datasetId: FAKE_EVENT.data.datasetId,
+        rows: null,
+        finished: false,
+        error,
       },
-    )
+    })
   })
 })

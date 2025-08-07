@@ -23,7 +23,7 @@ export function truncateToWidth(text: string, maxWidth: number) {
 
   let truncated = ''
   for (let i = 0; i < text.length; i++) {
-    const candidate = text.slice(0, i + 1) + '…'
+    const candidate = `${text.slice(0, i + 1)}…`
     if (getTextWidth(candidate) > maxWidth) break
     truncated = candidate
   }

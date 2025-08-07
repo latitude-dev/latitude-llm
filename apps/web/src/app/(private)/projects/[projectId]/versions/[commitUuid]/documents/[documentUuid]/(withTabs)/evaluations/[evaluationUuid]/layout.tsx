@@ -3,7 +3,7 @@
 import { getEvaluationV2AtCommitByDocumentCached } from '$/app/(private)/_data-access'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { EvaluationV2Provider } from '$/app/providers/EvaluationV2Provider'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 export async function generateMetadata() {
   return buildMetatags({
@@ -32,9 +32,5 @@ export default async function EvaluationLayout({
     evaluationUuid: evaluationUuid,
   })
 
-  return (
-    <EvaluationV2Provider evaluation={evaluation}>
-      {children}
-    </EvaluationV2Provider>
-  )
+  return <EvaluationV2Provider evaluation={evaluation}>{children}</EvaluationV2Provider>
 }

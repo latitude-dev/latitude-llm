@@ -1,12 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType, Providers } from '@latitude-data/constants'
-import {
-  Commit,
-  Project,
-  Workspace,
-  DocumentVersion,
-  User,
-} from '../../../../browser'
+import type { Commit, Project, Workspace, DocumentVersion, User } from '../../../../browser'
 import { Result } from '../../../../lib/Result'
 import * as factories from '../../../../tests/factories'
 import { mergeCommit } from '../../../commits'
@@ -15,15 +9,14 @@ import { findAndRegisterScheduledTriggerEvents } from './registerEvents'
 import { database } from '../../../../client'
 import { eq } from 'drizzle-orm'
 import { documentTriggers, documentTriggerEvents } from '../../../../schema'
-import { ScheduledTriggerDeploymentSettings } from '@latitude-data/constants/documentTriggers'
+import type { ScheduledTriggerDeploymentSettings } from '@latitude-data/constants/documentTriggers'
 
 const mocks = vi.hoisted(() => ({
   enqueueRunDocumentFromTriggerEventJob: vi.fn(),
 }))
 
 vi.mock('../../triggerEvents/runFromEvent', () => ({
-  enqueueRunDocumentFromTriggerEventJob:
-    mocks.enqueueRunDocumentFromTriggerEventJob,
+  enqueueRunDocumentFromTriggerEventJob: mocks.enqueueRunDocumentFromTriggerEventJob,
 }))
 
 describe('findAndRegisterScheduledTriggerEvents', () => {
@@ -162,9 +155,9 @@ describe('findAndRegisterScheduledTriggerEvents', () => {
         .deploymentSettings as ScheduledTriggerDeploymentSettings
       expect(deploymentSettings.nextRunTime).toBeTruthy()
       expect(new Date(deploymentSettings.nextRunTime!)).toBeInstanceOf(Date)
-      expect(
-        new Date(deploymentSettings.nextRunTime!).getTime(),
-      ).toBeGreaterThan(pastDate.getTime())
+      expect(new Date(deploymentSettings.nextRunTime!).getTime()).toBeGreaterThan(
+        pastDate.getTime(),
+      )
     })
 
     it('creates trigger events in the database', async () => {
@@ -309,9 +302,7 @@ describe('findAndRegisterScheduledTriggerEvents', () => {
         workspace,
       })
 
-      const anotherLive = await mergeCommit(anotherDraft).then((r) =>
-        r.unwrap(),
-      )
+      const anotherLive = await mergeCommit(anotherDraft).then((r) => r.unwrap())
 
       // Create trigger on the old live commit (which is now merged but not the current live)
       const pastDate = new Date(Date.now() - 60 * 60 * 1000)

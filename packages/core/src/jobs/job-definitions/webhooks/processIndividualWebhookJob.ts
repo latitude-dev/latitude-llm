@@ -1,14 +1,11 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { eq } from 'drizzle-orm'
 
 import { database } from '../../../client'
 import { webhooks } from '../../../schema/models/webhooks'
-import { events } from '../../../schema/models/events'
-import {
-  createWebhookDelivery,
-  sendSignedWebhook,
-} from '../../../services/webhooks'
-import { Events, LatitudeEvent } from '../../../events/events'
+import type { events } from '../../../schema/models/events'
+import { createWebhookDelivery, sendSignedWebhook } from '../../../services/webhooks'
+import type { Events, LatitudeEvent } from '../../../events/events'
 import { processWebhookPayload } from './utils/processWebhookPayload'
 import { WEBHOOK_EVENTS } from './processWebhookJob'
 import { findCommitById } from '../../../data-access/commits'
@@ -20,16 +17,11 @@ export type ProcessIndividualWebhookJobData = {
   webhookId: number
 }
 
-export const processIndividualWebhookJob = async (
-  job: Job<ProcessIndividualWebhookJobData>,
-) => {
+export const processIndividualWebhookJob = async (job: Job<ProcessIndividualWebhookJobData>) => {
   const { event, webhookId } = job.data
 
   // Get the webhook and event
-  const [webhook] = await database
-    .select()
-    .from(webhooks)
-    .where(eq(webhooks.id, webhookId))
+  const [webhook] = await database.select().from(webhooks).where(eq(webhooks.id, webhookId))
 
   if (!webhook || !webhook.isActive) {
     throw new Error(`Webhook not found or inactive: ${webhookId}`)
@@ -52,9 +44,7 @@ export const processIndividualWebhookJob = async (
   }
 
   // Create webhook payload
-  const payload = await processWebhookPayload(event as LatitudeEvent).then(
-    (r) => r.unwrap(),
-  )
+  const payload = await processWebhookPayload(event as LatitudeEvent).then((r) => r.unwrap())
 
   try {
     // Send signed webhook

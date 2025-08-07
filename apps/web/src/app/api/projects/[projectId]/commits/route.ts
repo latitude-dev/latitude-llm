@@ -1,15 +1,12 @@
 import {
-  CommitStatus,
+  type CommitStatus,
   ULTRA_LARGE_PAGE_SIZE,
-  Workspace,
+  type Workspace,
 } from '@latitude-data/core/browser'
-import {
-  CommitsRepository,
-  ProjectsRepository,
-} from '@latitude-data/core/repositories'
+import { CommitsRepository, ProjectsRepository } from '@latitude-data/core/repositories'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { BadRequestError, NotFoundError } from '@latitude-data/core/lib/errors'
 import { paginateQuery } from '@latitude-data/core/lib/pagination/paginate'
 

@@ -1,8 +1,8 @@
-import { EvaluationMetric, EvaluationType, EvaluationV2 } from '../../browser'
+import { type EvaluationMetric, EvaluationType, type EvaluationV2 } from '../../browser'
 import { HumanEvaluationSpecification } from './human'
 import { LlmEvaluationSpecification } from './llm'
 import { RuleEvaluationSpecification } from './rule'
-import { EvaluationBackendSpecification } from './shared'
+import type { EvaluationBackendSpecification } from './shared'
 
 export const EVALUATION_SPECIFICATIONS: {
   [T in EvaluationType]: EvaluationBackendSpecification<T>
@@ -12,9 +12,9 @@ export const EVALUATION_SPECIFICATIONS: {
   [EvaluationType.Human]: HumanEvaluationSpecification,
 }
 
-export function getEvaluationTypeSpecification<
-  T extends EvaluationType = EvaluationType,
->(evaluation: EvaluationV2<T>) {
+export function getEvaluationTypeSpecification<T extends EvaluationType = EvaluationType>(
+  evaluation: EvaluationV2<T>,
+) {
   return EVALUATION_SPECIFICATIONS[evaluation.type]
 }
 

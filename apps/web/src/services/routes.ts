@@ -12,7 +12,7 @@ export enum DocumentRoutes {
   experiments = 'experiments',
 }
 
-export enum EvaluationRoutes {
+enum EvaluationRoutes {
   editor = 'editor',
 }
 
@@ -192,11 +192,7 @@ export const ROUTES = {
                     [DocumentRoutes.logs]: {
                       root: `${root}/${DocumentRoutes.logs}`,
                       upload: `${root}/${DocumentRoutes.logs}/upload`,
-                      withFilters: ({
-                        experimentId,
-                      }: {
-                        experimentId?: number
-                      }) => {
+                      withFilters: ({ experimentId }: { experimentId?: number }) => {
                         const base = `${root}/${DocumentRoutes.logs}`
                         if (experimentId) {
                           return `${base}?experimentId=${experimentId}`
@@ -223,11 +219,9 @@ export const ROUTES = {
   auth: {
     setup: PUBLIC_ROOT_PATHS.setup,
     login: PUBLIC_ROOT_PATHS.login,
-    magicLinkSent: (email: string) =>
-      `${PUBLIC_ROOT_PATHS.magicLinks}/sent?email=${email}`,
+    magicLinkSent: (email: string) => `${PUBLIC_ROOT_PATHS.magicLinks}/sent?email=${email}`,
     magicLinks: {
-      confirm: (token: string) =>
-        `${PUBLIC_ROOT_PATHS.magicLinks}/confirm/${token}`,
+      confirm: (token: string) => `${PUBLIC_ROOT_PATHS.magicLinks}/confirm/${token}`,
     },
   },
   share: {

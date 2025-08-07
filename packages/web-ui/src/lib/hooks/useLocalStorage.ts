@@ -2,10 +2,10 @@
 
 import { useCallback } from 'react'
 
-import { create, StateCreator } from 'zustand'
-import { persist, PersistOptions } from 'zustand/middleware'
+import { create, type StateCreator } from 'zustand'
+import { persist, type PersistOptions } from 'zustand/middleware'
 
-import { ReactStateDispatch, SetStateAction } from '../commonTypes'
+import type { ReactStateDispatch, SetStateAction } from '../commonTypes'
 
 export enum AppLocalStorage {
   colorTheme = 'latitudeColorTheme',
@@ -27,7 +27,7 @@ export const isLocalStorageAvailable = (() => {
     localStorage.setItem(testKey, testKey)
     localStorage.removeItem(testKey)
     return true
-  } catch (e) {
+  } catch (_e) {
     return false
   }
 })()
@@ -41,7 +41,7 @@ export function getStorageValue(key: string, defaultValue: unknown) {
 
   try {
     const saved = localStorage.getItem(key)
-    if (saved == 'undefined') return undefined
+    if (saved === 'undefined') return undefined
     return saved ? JSON.parse(saved) : defaultValue
   } catch {
     return defaultValue
@@ -113,10 +113,7 @@ type ReturnType<T> = {
   value: T
   setValue: ReactStateDispatch<T>
 }
-export const useLocalStorage = <T>({
-  key,
-  defaultValue,
-}: Props<T>): ReturnType<T> => {
+export const useLocalStorage = <T>({ key, defaultValue }: Props<T>): ReturnType<T> => {
   const fullKey = buildKey(key)
   const { value, setValue } = useLocalStorageStore((state) => {
     if (!(fullKey in state.values)) {

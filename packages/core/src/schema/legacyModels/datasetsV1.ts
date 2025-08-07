@@ -1,13 +1,5 @@
-import {
-  bigint,
-  bigserial,
-  index,
-  jsonb,
-  text,
-  uniqueIndex,
-  varchar,
-} from 'drizzle-orm/pg-core'
-import { type FileSnapshot } from 'flydrive/types'
+import { bigint, bigserial, index, jsonb, text, uniqueIndex, varchar } from 'drizzle-orm/pg-core'
+import type { FileSnapshot } from 'flydrive/types'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
@@ -35,9 +27,6 @@ export const datasetsV1 = latitudeSchema.table(
   (table) => ({
     datasetWorkspaceIdx: index('datasets_workspace_idx').on(table.workspaceId),
     authorIdx: index('datasets_author_idx').on(table.authorId),
-    uniqueDatasetNameInWorkspace: uniqueIndex().on(
-      table.workspaceId,
-      table.name,
-    ),
+    uniqueDatasetNameInWorkspace: uniqueIndex().on(table.workspaceId, table.name),
   }),
 )

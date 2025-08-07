@@ -2,7 +2,7 @@ import { RewardType } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { z } from 'zod'
 
-import { RewardConfig } from './RewardMenuBase'
+import type { RewardConfig } from './RewardMenuBase'
 
 export const REWARD_CONFIGS: Partial<{ [key in RewardType]: RewardConfig }> = {
   [RewardType.Follow]: {
@@ -32,11 +32,7 @@ export const REWARD_CONFIGS: Partial<{ [key in RewardType]: RewardConfig }> = {
     placeholder: 'https://linkedin.com/post/...',
     steps: [
       {
-        title: (
-          <Text.H5>
-            Post mentioning Latitude on X (@trylatitude) or LinkedIn
-          </Text.H5>
-        ),
+        title: <Text.H5>Post mentioning Latitude on X (@trylatitude) or LinkedIn</Text.H5>,
       },
       {
         title: <Text.H5>Add here the link to the post</Text.H5>,
@@ -70,11 +66,7 @@ export const REWARD_CONFIGS: Partial<{ [key in RewardType]: RewardConfig }> = {
     placeholder: 'https://github.com/latitude-dev/latitude-llm/pull/123',
     steps: [
       {
-        title: (
-          <Text.H5>
-            Create a Pull Request on GitHub resolving a listed issue.
-          </Text.H5>
-        ),
+        title: <Text.H5>Create a Pull Request on GitHub resolving a listed issue.</Text.H5>,
         links: [
           {
             href: 'https://github.com/latitude-dev/latitude-llm/issues',
@@ -96,8 +88,7 @@ export const REWARD_CONFIGS: Partial<{ [key in RewardType]: RewardConfig }> = {
       {
         title: (
           <Text.H5>
-            Refer Latitude to a friend by sending them an email. They have to
-            accept the invitation.
+            Refer Latitude to a friend by sending them an email. They have to accept the invitation.
           </Text.H5>
         ),
         input: true,

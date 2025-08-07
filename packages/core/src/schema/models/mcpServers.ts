@@ -1,11 +1,4 @@
-import {
-  bigint,
-  bigserial,
-  index,
-  integer,
-  text,
-  timestamp,
-} from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, integer, text, timestamp } from 'drizzle-orm/pg-core'
 
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'

@@ -1,11 +1,10 @@
-export const EVALUATION_INPUT_SOURCE = {
+const EVALUATION_INPUT_SOURCE = {
   history: 'history',
 } as const
 
-export type EvaluationInputSource =
-  (typeof EVALUATION_INPUT_SOURCE)[keyof typeof EVALUATION_INPUT_SOURCE]
+type EvaluationInputSource = (typeof EVALUATION_INPUT_SOURCE)[keyof typeof EVALUATION_INPUT_SOURCE]
 
-export type EvaluationPlaygroundInputs<S extends EvaluationInputSource> = {
+type EvaluationPlaygroundInputs<S extends EvaluationInputSource> = {
   source: S
   history: {
     logUuid: string | undefined

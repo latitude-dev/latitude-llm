@@ -27,7 +27,7 @@ export function parseSSE(data?: string): Record<string, string> | undefined {
 
     // Append the value if the field already exists
     if (event[field]) {
-      event[field] += '\n' + value
+      event[field] += `\n${value}`
     } else {
       event[field] = value
     }

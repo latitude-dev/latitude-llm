@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, vi, it } from 'vitest'
-import { IntegrationDto } from '../../../../browser'
+import type { IntegrationDto } from '../../../../browser'
 import { IntegrationType } from '@latitude-data/constants'
-import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
+import type { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 import * as appsModule from '../apps' // adjust the path if needed
 import { configureComponent } from './configureComponent'
 import { Result } from '../../../../lib/Result'
-import { PipedreamIntegrationConfiguration } from '../../helpers/schema'
+import type { PipedreamIntegrationConfiguration } from '../../helpers/schema'
 
 const configureComponentSpy = vi.fn().mockResolvedValue({})
 
@@ -129,9 +129,7 @@ describe('Pipedream Configuring Components', () => {
     expect(args?.configuredProps).toBeDefined()
 
     // Should always have the app prop with the authProvisionId
-    expect(args?.configuredProps).toHaveProperty(
-      githubIntegration.configuration.appName,
-    )
+    expect(args?.configuredProps).toHaveProperty(githubIntegration.configuration.appName)
     expect(args?.configuredProps.github).toBeDefined()
     expect(args?.configuredProps.github).toEqual({
       authProvisionId: githubIntegration.configuration.connectionId,

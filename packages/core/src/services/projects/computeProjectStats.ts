@@ -2,7 +2,7 @@ import { and, count, desc, eq, inArray, isNull, sql, sum } from 'drizzle-orm'
 import {
   EvaluationType,
   PROJECT_STATS_CACHE_KEY,
-  ProjectStats,
+  type ProjectStats,
   STATS_CACHE_TTL,
   STATS_CACHING_THRESHOLD,
 } from '../../browser'
@@ -47,7 +47,7 @@ export async function computeProjectStats(
       if (cachedStats) {
         return Result.ok(JSON.parse(cachedStats) as ProjectStats)
       }
-    } catch (error) {
+    } catch (_error) {
       // Continue with computation if cache read fails
     }
   }
@@ -94,18 +94,12 @@ export async function computeProjectStats(
       runs: count(),
     })
     .from(providerLogs)
-    .innerJoin(
-      documentLogs,
-      eq(documentLogs.uuid, providerLogs.documentLogUuid),
-    )
+    .innerJoin(documentLogs, eq(documentLogs.uuid, providerLogs.documentLogUuid))
     .where(inArray(documentLogs.commitId, commitIds))
     .groupBy(providerLogs.model)
 
   // Calculate total tokens
-  const totalTokens = modelStats.reduce(
-    (acc, stat) => acc + (stat.totalTokens ?? 0),
-    0,
-  )
+  const totalTokens = modelStats.reduce((acc, stat) => acc + (stat.totalTokens ?? 0), 0)
 
   // Build runs per model map
   const runsPerModel = modelStats.reduce<Record<string, number>>(
@@ -140,9 +134,7 @@ export async function computeProjectStats(
   // Rolling count of document logs created per day in the last 30 days
   const rollingDocumentLogs = await db
     .select({
-      date: sql<string>`date_trunc('day', ${documentLogs.createdAt})::date`.as(
-        'date',
-      ),
+      date: sql<string>`date_trunc('day', ${documentLogs.createdAt})::date`.as('date'),
       count: count().as('count'),
     })
     .from(documentLogs)
@@ -199,10 +191,7 @@ export async function computeProjectStats(
     .with(latestEvaluationsVersions)
     .select({
       evaluation: latestEvaluationsVersions.name,
-      totalCost:
-        sql`sum((${evaluationResultsV2.metadata}->>'cost')::bigint)`.mapWith(
-          Number,
-        ),
+      totalCost: sql`sum((${evaluationResultsV2.metadata}->>'cost')::bigint)`.mapWith(Number),
     })
     .from(evaluationResultsV2)
     .innerJoin(
@@ -242,7 +231,7 @@ export async function computeProjectStats(
   if (totalRuns >= STATS_CACHING_THRESHOLD) {
     try {
       await redis.set(cacheKey, JSON.stringify(stats), 'EX', STATS_CACHE_TTL)
-    } catch (error) {
+    } catch (_error) {
       // Continue even if caching fails
     }
   }

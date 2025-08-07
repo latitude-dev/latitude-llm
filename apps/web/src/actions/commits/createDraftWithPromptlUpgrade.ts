@@ -1,10 +1,7 @@
 'use server'
 
-import { Commit } from '@latitude-data/core/browser'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '@latitude-data/core/repositories'
+import type { Commit } from '@latitude-data/core/browser'
+import { CommitsRepository, DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { createCommit } from '@latitude-data/core/services/commits/create'
 import { updateDocument } from '@latitude-data/core/services/documents/update'
 import { z } from 'zod'

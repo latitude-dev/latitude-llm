@@ -2,11 +2,11 @@
 
 import * as SwitchPrimitives from '@radix-ui/react-switch'
 import {
-  ComponentPropsWithoutRef,
-  ElementRef,
+  type ComponentPropsWithoutRef,
+  type ElementRef,
   forwardRef,
-  HTMLAttributes,
-  ReactNode,
+  type HTMLAttributes,
+  type ReactNode,
   useCallback,
   useEffect,
   useId,
@@ -15,47 +15,42 @@ import {
 } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { ButtonStylesProps, useButtonStyles } from '../Button'
-import {
-  FormControl,
-  FormDescription,
-  InlineFormErrorMessage,
-} from '../FormField'
-import { Icon, IconProps } from '../Icons'
+import { type ButtonStylesProps, useButtonStyles } from '../Button'
+import { FormControl, FormDescription, InlineFormErrorMessage } from '../FormField'
+import { Icon, type IconProps } from '../Icons'
 import { Label } from '../Label'
 
 type ToogleProps = ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> & {
   size?: 'normal'
 }
-const SwitchToggle = forwardRef<
-  ElementRef<typeof SwitchPrimitives.Root>,
-  ToogleProps
->(({ className, size = 'normal', ...props }, ref) => (
-  <SwitchPrimitives.Root
-    className={cn(
-      'peer inline-flex w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-      'disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-accent-button dark:data-[state=checked]:bg-white/20',
-      'data-[state=unchecked]:bg-input dark:data-[state=unchecked]:bg-muted-foreground',
-      className,
-      {
-        'h-4 w-8': size === 'normal',
-      },
-    )}
-    {...props}
-    ref={ref}
-  >
-    <SwitchPrimitives.Thumb
+const SwitchToggle = forwardRef<ElementRef<typeof SwitchPrimitives.Root>, ToogleProps>(
+  ({ className, size = 'normal', ...props }, ref) => (
+    <SwitchPrimitives.Root
       className={cn(
-        'pointer-events-none block rounded-full bg-white shadow-lg',
-        'ring-0 transition-transform data-[state=unchecked]:translate-x-0',
+        'peer inline-flex w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        'disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-accent-button dark:data-[state=checked]:bg-white/20',
+        'data-[state=unchecked]:bg-input dark:data-[state=unchecked]:bg-muted-foreground',
+        className,
         {
-          'h-3 w-3 data-[state=checked]:translate-x-4 ': size === 'normal',
+          'h-4 w-8': size === 'normal',
         },
       )}
-    />
-  </SwitchPrimitives.Root>
-))
+      {...props}
+      ref={ref}
+    >
+      <SwitchPrimitives.Thumb
+        className={cn(
+          'pointer-events-none block rounded-full bg-white shadow-lg',
+          'ring-0 transition-transform data-[state=unchecked]:translate-x-0',
+          {
+            'h-3 w-3 data-[state=checked]:translate-x-4 ': size === 'normal',
+          },
+        )}
+      />
+    </SwitchPrimitives.Root>
+  ),
+)
 
 SwitchToggle.displayName = SwitchPrimitives.Root.displayName
 
@@ -81,7 +76,7 @@ function useCheckedState({
       setIsChecked(checked)
       onCheckedChange?.(checked)
     },
-    [setIsChecked, onCheckedChange],
+    [onCheckedChange],
   )
   return useMemo(() => ({ isChecked, onChange }), [isChecked, onChange])
 }
@@ -125,11 +120,7 @@ function SwitchInput({
       className={cn('flex flex-col gap-y-2', className, {
         'w-full': fullWidth,
       })}
-      aria-describedby={
-        !error
-          ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`
-      }
+      aria-describedby={!error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`}
       aria-invalid={!!error}
     >
       <div className='flex flex-row items-center gap-x-2 w-full'>
@@ -140,11 +131,7 @@ function SwitchInput({
           formMessageId={formMessageId}
         >
           <div className='flex items-center'>
-            <input
-              type='hidden'
-              name={name}
-              value={isChecked ? 'true' : 'false'}
-            />
+            <input type='hidden' name={name} value={isChecked ? 'true' : 'false'} />
             <SwitchToggle
               {...rest}
               checked={isChecked}
@@ -154,10 +141,7 @@ function SwitchInput({
           </div>
         </FormControl>
         {label ? (
-          <Label
-            variant={error ? 'destructive' : 'default'}
-            htmlFor={formItemId}
-          >
+          <Label variant={error ? 'destructive' : 'default'} htmlFor={formItemId}>
             {label}
           </Label>
         ) : null}
@@ -204,11 +188,7 @@ function FancySwitchToggle({
       <div className={buttonStyles.buttonClass}>
         <div className={buttonStyles.innerButtonClass}>
           {loading ? (
-            <Icon
-              name='loader'
-              color={iconProps.color}
-              className='animate-spin'
-            />
+            <Icon name='loader' color={iconProps.color} className='animate-spin' />
           ) : (
             <Icon {...iconProps} />
           )}

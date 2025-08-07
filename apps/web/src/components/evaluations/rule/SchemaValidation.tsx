@@ -1,18 +1,14 @@
 'use client'
 
 import {
-  EvaluationType,
-  RuleEvaluationMetric,
+  type EvaluationType,
+  type RuleEvaluationMetric,
   RuleEvaluationSchemaValidationSpecification,
 } from '@latitude-data/constants'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { useEffect } from 'react'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 
 const specification = RuleEvaluationSchemaValidationSpecification
 export default {
@@ -36,14 +32,11 @@ function ConfigurationSimpleForm({
   setConfiguration,
   errors,
   disabled,
-}: ConfigurationFormProps<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.SchemaValidation
->) {
+}: ConfigurationFormProps<EvaluationType.Rule, RuleEvaluationMetric.SchemaValidation>) {
   // TODO: Do not set state in useEffects. Move this to an event handler.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   useEffect(() => {
     setConfiguration({ ...configuration, format: 'json' })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
@@ -73,10 +66,8 @@ function ConfigurationSimpleForm({
         }
         description='The schema to validate against'
         placeholder='{ "type": "object" }'
-        onChange={(e) =>
-          setConfiguration({ ...configuration, schema: e.target.value })
-        }
-        errors={errors?.['schema']}
+        onChange={(e) => setConfiguration({ ...configuration, schema: e.target.value })}
+        errors={errors?.schema}
         minRows={3}
         disabled={disabled}
         required
@@ -87,19 +78,13 @@ function ConfigurationSimpleForm({
 
 function ResultBadge({
   result,
-}: ResultBadgeProps<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.SchemaValidation
->) {
+}: ResultBadgeProps<EvaluationType.Rule, RuleEvaluationMetric.SchemaValidation>) {
   return <>{result.score === 1 ? 'Valid' : 'Invalid'}</>
 }
 
 function chartConfiguration({
   evaluation,
-}: ChartConfigurationArgs<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.SchemaValidation
->) {
+}: ChartConfigurationArgs<EvaluationType.Rule, RuleEvaluationMetric.SchemaValidation>) {
   return {
     min: 0,
     max: 100,

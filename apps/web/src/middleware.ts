@@ -1,9 +1,5 @@
-import {
-  AUTH_COOKIE_NAME,
-  isPublicPath,
-  PUBLIC_ROOT_PATHS,
-} from '$/services/auth/constants'
-import { NextRequest, NextResponse } from 'next/server'
+import { AUTH_COOKIE_NAME, isPublicPath, PUBLIC_ROOT_PATHS } from '$/services/auth/constants'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   // Set current url in headers so downstream components can
@@ -21,9 +17,7 @@ export async function middleware(request: NextRequest) {
   const hasSession = request.cookies.get(AUTH_COOKIE_NAME)
   if (!hasSession) {
     const loginUrl = new URL(PUBLIC_ROOT_PATHS.login, request.url)
-    return NextResponse.redirect(
-      `${loginUrl}?returnTo=${encodeURIComponent(currentUrl)}`,
-    )
+    return NextResponse.redirect(`${loginUrl}?returnTo=${encodeURIComponent(currentUrl)}`)
   }
 
   return NextResponse.next({ request: { headers } })

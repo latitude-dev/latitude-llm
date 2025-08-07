@@ -1,6 +1,6 @@
-import { AstError } from '@latitude-data/constants/promptl'
-import { DecoratorNode, LexicalNode } from 'lexical'
-import { JSX } from 'react'
+import type { AstError } from '@latitude-data/constants/promptl'
+import { DecoratorNode, type LexicalNode } from 'lexical'
+import type { JSX } from 'react'
 import {
   BLOCK_EDITOR_TYPE,
   type ReferenceLink as SerializedReferenceLink,
@@ -134,8 +134,6 @@ export class ReferenceNode extends DecoratorNode<JSX.Element> {
   }
 }
 
-export function $isReferenceNode(
-  node: LexicalNode | null | undefined,
-): node is ReferenceNode {
+export function $isReferenceNode(node: LexicalNode | null | undefined): node is ReferenceNode {
   return node instanceof ReferenceNode
 }

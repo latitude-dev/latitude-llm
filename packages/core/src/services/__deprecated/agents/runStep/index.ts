@@ -1,8 +1,8 @@
 import {
-  AssistantMessage,
-  Config,
-  Conversation,
-  Message,
+  type AssistantMessage,
+  type Config,
+  type Conversation,
+  type Message,
   MessageRole,
 } from '@latitude-data/compiler'
 import {
@@ -12,16 +12,12 @@ import {
   MAX_STEPS_CONFIG_NAME,
 } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { ChainStreamManager } from '../../../../__deprecated/lib/chainStreamManager'
-import {
-  buildMessagesFromResponse,
-  LogSources,
-  Workspace,
-} from '../../../../browser'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { ChainStreamManager } from '../../../../__deprecated/lib/chainStreamManager'
+import { buildMessagesFromResponse, type LogSources, type Workspace } from '../../../../browser'
 import { Result } from '../../../../lib/Result'
-import { CachedApiKeys, stepLimitExceededErrorMessage } from '../../chains/run'
-import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
+import { type CachedApiKeys, stepLimitExceededErrorMessage } from '../../chains/run'
+import { validateAgentStep, type ValidatedAgentStep } from '../AgentStepValidator'
 
 function inferStepsFromConversation(messages: Message[]): number {
   // Returns the count of assistant messages since the last agent response
@@ -31,9 +27,7 @@ function inferStepsFromConversation(messages: Message[]): number {
     .findIndex(
       (message) =>
         message.role === MessageRole.assistant &&
-        message.toolCalls?.some(
-          (toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME,
-        ),
+        message.toolCalls?.some((toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME),
     )
 
   const messagesSinceLastAgentResponse =
@@ -41,10 +35,9 @@ function inferStepsFromConversation(messages: Message[]): number {
       ? messages
       : messages.slice(messages.length - lastAgentResponseInverseIndex)
 
-  const assistantMessagesSinceLastAgentResponse =
-    messagesSinceLastAgentResponse.filter(
-      (message) => message.role === MessageRole.assistant,
-    )
+  const assistantMessagesSinceLastAgentResponse = messagesSinceLastAgentResponse.filter(
+    (message) => message.role === MessageRole.assistant,
+  )
 
   return assistantMessagesSinceLastAgentResponse.length
 }
@@ -57,8 +50,7 @@ function assertValidStepCount({
   step: ValidatedAgentStep
 }) {
   const maxSteps = Math.min(
-    (step.conversation.config[MAX_STEPS_CONFIG_NAME] as number | undefined) ??
-      DEFAULT_MAX_STEPS,
+    (step.conversation.config[MAX_STEPS_CONFIG_NAME] as number | undefined) ?? DEFAULT_MAX_STEPS,
     ABSOLUTE_MAX_STEPS,
   )
 
@@ -120,11 +112,7 @@ export async function runAgentStep({
         message: lastResponseMessage,
         config: globalConfig,
       })
-    newMessages = [
-      lastResponseMessage,
-      ...latitudeToolResponses,
-      ...newMessages.slice(1),
-    ]
+    newMessages = [lastResponseMessage, ...latitudeToolResponses, ...newMessages.slice(1)]
   }
 
   const step = await validateAgentStep({

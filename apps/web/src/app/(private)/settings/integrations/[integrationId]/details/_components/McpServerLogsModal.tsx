@@ -28,13 +28,7 @@ export function McpServerLogsModal({ integrationId }: McpServerLogsModalProps) {
   const mcpServerId = integration?.mcpServerId?.toString() || null
 
   // Use the mcpLogs hook to fetch logs
-  const {
-    data,
-    isLoading,
-    isValidating,
-    error,
-    mutate: refresh,
-  } = useMcpLogs(mcpServerId)
+  const { data, isLoading, isValidating, error, mutate: refresh } = useMcpLogs(mcpServerId)
 
   // Handle close
   const handleClose = () => {
@@ -86,15 +80,13 @@ export function McpServerLogsModal({ integrationId }: McpServerLogsModalProps) {
           (error ? (
             <div className='text-red-500 p-4'>
               <Text.H5>Error loading logs</Text.H5>
-              <Text.H6 color='foregroundMuted'>
-                An unknown error occurred
-              </Text.H6>
+              <Text.H6 color='foregroundMuted'>An unknown error occurred</Text.H6>
             </div>
           ) : data.logs.length === 0 ? (
             <div className='text-center p-4 flex flex-col items-center gap-4'>
               <Text.H6 color='foregroundMuted'>
-                No logs available. Please wait a few seconds for logs to appear
-                after creating this integration.
+                No logs available. Please wait a few seconds for logs to appear after creating this
+                integration.
               </Text.H6>
             </div>
           ) : (

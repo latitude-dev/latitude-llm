@@ -1,5 +1,5 @@
 import { ToolBarWrapper } from '$/components/ChatWrapper/ChatTextArea/ToolBar'
-import { ResolvedMetadata } from '$/workers/readMetadata'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { memo } from 'react'

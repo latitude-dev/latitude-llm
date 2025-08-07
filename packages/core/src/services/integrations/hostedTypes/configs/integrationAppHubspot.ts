@@ -1,4 +1,4 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 import { npxCommand } from '../utils'
 
 const INTEGRATION_APP_HUBSPOT_MCP_CONFIG: HostedIntegrationConfig = {

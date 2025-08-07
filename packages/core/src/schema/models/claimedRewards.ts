@@ -32,8 +32,6 @@ export const claimedRewards = latitudeSchema.table(
     ...timestamps(),
   },
   (table) => ({
-    workspaceIdIdx: index('claimed_rewards_workspace_id_idx').on(
-      table.workspaceId,
-    ),
+    workspaceIdIdx: index('claimed_rewards_workspace_id_idx').on(table.workspaceId),
   }),
 )

@@ -33,22 +33,9 @@ let repository: CommitsRepository
 
 describe('Commits by project', () => {
   beforeEach(async () => {
-    const {
-      workspace,
-      project: firstProject,
-      user,
-      providers,
-    } = await factories.createProject()
-    const drafsCommits = await createDraftsCommits(
-      user,
-      workspace,
-      firstProject,
-      providers[0]!,
-    )
-    await Promise.all([
-      mergeCommit(drafsCommits[0]!.commit),
-      mergeCommit(drafsCommits[1]!.commit),
-    ])
+    const { workspace, project: firstProject, user, providers } = await factories.createProject()
+    const drafsCommits = await createDraftsCommits(user, workspace, firstProject, providers[0]!)
+    await Promise.all([mergeCommit(drafsCommits[0]!.commit), mergeCommit(drafsCommits[1]!.commit)])
     project = firstProject
     repository = new CommitsRepository(project.workspaceId)
   })
@@ -78,8 +65,7 @@ describe('Commits by project', () => {
 
 describe('findAll', () => {
   beforeEach(async () => {
-    const { project, workspace, user, providers } =
-      await factories.createProject()
+    const { project, workspace, user, providers } = await factories.createProject()
 
     await createDraftsCommits(user, workspace, project, providers[0]!)
   })

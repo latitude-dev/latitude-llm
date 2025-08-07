@@ -6,26 +6,16 @@ import { useActiveIntegrations } from './useActiveIntegrations'
 import useIntegrations from '$/stores/integrations'
 import { IntegrationsList } from './IntegrationsList'
 
-export function PromptIntegrations({
-  prompt,
-  disabled,
-}: {
-  prompt: string
-  disabled?: boolean
-}) {
+export function PromptIntegrations({ prompt, disabled }: { prompt: string; disabled?: boolean }) {
   const [isOpen, setIsOpen] = useState(false)
   const { data: integrations } = useIntegrations({
     includeLatitudeTools: true,
     withTools: true,
   })
-  const {
-    isInitialized,
-    activeIntegrations,
-    addIntegrationTool,
-    removeIntegrationTool,
-  } = useActiveIntegrations({
-    prompt,
-  })
+  const { isInitialized, activeIntegrations, addIntegrationTool, removeIntegrationTool } =
+    useActiveIntegrations({
+      prompt,
+    })
 
   const isDisabled = disabled || !isInitialized
   return (

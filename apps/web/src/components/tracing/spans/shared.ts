@@ -1,18 +1,14 @@
 import {
   SpanKind,
-  SpanSpecification,
+  type SpanSpecification,
   SpanStatus,
-  SpanType,
-  SpanWithDetails,
+  type SpanType,
+  type SpanWithDetails,
 } from '@latitude-data/core/browser'
-import { BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import {
-  BackgroundColor,
-  BorderColor,
-  TextColor,
-} from '@latitude-data/web-ui/tokens'
-import React from 'react'
+import type { BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { BackgroundColor, BorderColor, TextColor } from '@latitude-data/web-ui/tokens'
+import type React from 'react'
 
 export type DetailsPanelProps<T extends SpanType = SpanType> = {
   span: SpanWithDetails<T> & {
@@ -20,14 +16,13 @@ export type DetailsPanelProps<T extends SpanType = SpanType> = {
   }
 }
 
-export type SpanFrontendSpecification<T extends SpanType = SpanType> =
-  SpanSpecification<T> & {
-    icon: IconName
-    color: SpanColor
-    DetailsPanel?: (props: DetailsPanelProps<T>) => React.ReactNode
-  }
+export type SpanFrontendSpecification<T extends SpanType = SpanType> = SpanSpecification<T> & {
+  icon: IconName
+  color: SpanColor
+  DetailsPanel?: (props: DetailsPanelProps<T>) => React.ReactNode
+}
 
-export type SpanColor = {
+type SpanColor = {
   text: TextColor
   background: BackgroundColor
   border: BorderColor

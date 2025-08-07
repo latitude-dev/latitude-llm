@@ -1,7 +1,7 @@
 import errors from '$compiler/error/errors'
-import { ToolCallTag } from '$compiler/parser/interfaces'
+import type { ToolCallTag } from '$compiler/parser/interfaces'
 
-import { CompileNodeContext } from '../../types'
+import type { CompileNodeContext } from '../../types'
 
 export async function compile(
   {

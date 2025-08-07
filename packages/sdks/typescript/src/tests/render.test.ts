@@ -1,5 +1,5 @@
 import { Latitude } from '$sdk/index'
-import { Prompt } from '$sdk/utils/types'
+import type { Prompt } from '$sdk/utils/types'
 import { Adapters } from 'promptl-ai'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { MockInstrumentation } from './helpers/instrumentation'
@@ -50,7 +50,7 @@ maxTokens: 100
 `,
 }
 
-let FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
+const FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
 let sdk: Latitude
 
 describe('render', () => {
@@ -82,9 +82,7 @@ describe('render', () => {
         },
         {
           role: 'user',
-          content: [
-            { type: 'text', text: 'Wow, what a cool way to write prompts!' },
-          ],
+          content: [{ type: 'text', text: 'Wow, what a cool way to write prompts!' }],
         },
       ])
     })
@@ -117,9 +115,7 @@ describe('render', () => {
         },
         {
           role: 'user',
-          content: [
-            { type: 'text', text: 'Wow, what a cool way to write prompts!' },
-          ],
+          content: [{ type: 'text', text: 'Wow, what a cool way to write prompts!' }],
         },
       ])
 
@@ -280,9 +276,7 @@ This is a custom prompt language
         },
         {
           role: 'user',
-          content: [
-            { type: 'text', text: 'Wow, what a cool way to write prompts!' },
-          ],
+          content: [{ type: 'text', text: 'Wow, what a cool way to write prompts!' }],
           name: undefined,
         },
         {
@@ -402,9 +396,7 @@ This is a custom prompt language
         },
         {
           role: 'user',
-          content: [
-            { type: 'text', text: 'Wow, what a cool way to write prompts!' },
-          ],
+          content: [{ type: 'text', text: 'Wow, what a cool way to write prompts!' }],
         },
         {
           role: 'assistant',
@@ -500,10 +492,7 @@ tools:
           get_weather,
         },
       })
-      expect(get_weather).toHaveBeenCalledExactlyOnceWith(
-        { location: 'Paris' },
-        expect.any(Object),
-      )
+      expect(get_weather).toHaveBeenCalledExactlyOnceWith({ location: 'Paris' }, expect.any(Object))
       expect(instrumentation.wrapRenderChain).toHaveBeenCalledTimes(1)
       expect(instrumentation.wrapRenderStep).toHaveBeenCalledTimes(2)
       expect(instrumentation.wrapRenderCompletion).toHaveBeenCalledTimes(2)

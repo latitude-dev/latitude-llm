@@ -1,12 +1,7 @@
 import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
 import PARSER_ERRORS from '$compiler/error/errors'
-import { type Parser } from '$compiler/parser'
-import type {
-  BaseNode,
-  EachBlock,
-  ElseBlock,
-  IfBlock,
-} from '$compiler/parser/interfaces'
+import type { Parser } from '$compiler/parser'
+import type { BaseNode, EachBlock, ElseBlock, IfBlock } from '$compiler/parser/interfaces'
 import readContext from '$compiler/parser/read/context'
 import readExpression from '$compiler/parser/read/expression'
 
@@ -93,9 +88,7 @@ export function mustache(parser: Parser) {
       const block = parser.current()
       if (block.type !== 'IfBlock' && block.type !== 'EachBlock') {
         parser.error(
-          parser.stack.some(
-            (block) => block.type === 'IfBlock' || block.type === 'EachBlock',
-          )
+          parser.stack.some((block) => block.type === 'IfBlock' || block.type === 'EachBlock')
             ? PARSER_ERRORS.invalidElsePlacementUnclosedBlock(toString(block))
             : PARSER_ERRORS.invalidElsePlacementOutsideIf,
         )
@@ -164,11 +157,7 @@ export function mustache(parser: Parser) {
   }
 }
 
-function trimWhitespace(
-  block: BaseNode,
-  trimBefore: boolean = false,
-  trimAfter: boolean = false,
-) {
+function trimWhitespace(block: BaseNode, trimBefore: boolean = false, trimAfter: boolean = false) {
   if (!block.children || block.children.length === 0) return // AwaitBlock
   const firstChild = block.children[0]!
   const lastChild = block.children[block.children.length - 1]!

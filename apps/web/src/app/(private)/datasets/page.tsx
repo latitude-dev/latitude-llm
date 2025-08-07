@@ -4,7 +4,7 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { env } from '@latitude-data/env'
 import { RootDatasetHeader } from './_components/RootHeader'
 import { DatasetsTable } from './_components/DatasetsTable'
-import { IDatasetSettingsModal } from '$/services/routes'
+import type { IDatasetSettingsModal } from '$/services/routes'
 import Layout from './_components/Layout'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
@@ -23,14 +23,7 @@ export default async function DatasetsRoot({
   }>
 }) {
   const { workspace } = await getCurrentUserOrRedirect()
-  const {
-    pageSize,
-    page: pageString,
-    modal,
-    name,
-    parameters,
-    backUrl,
-  } = await searchParams
+  const { pageSize, page: pageString, modal, name, parameters, backUrl } = await searchParams
   const page = pageString?.toString?.()
   const scope = new DatasetsRepository(workspace.id)
   const datasets = await scope.findAllPaginated({

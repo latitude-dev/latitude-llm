@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, isNull, max, sql } from 'drizzle-orm'
 import { database } from '../../../client'
 import { ErrorableEntity } from '../../../constants'
-import { SubscriptionPlan } from '../../../plans'
+import type { SubscriptionPlan } from '../../../plans'
 import {
   commits,
   documentLogs,
@@ -39,8 +39,7 @@ export async function getUsageOverview(
   },
   db = database,
 ) {
-  const targetDate =
-    target?.toISOString().replace('T', ' ').replace('Z', '') ?? undefined
+  const targetDate = target?.toISOString().replace('T', ' ').replace('Z', '') ?? undefined
   const dateCondition = targetDate
     ? sql<Date>`CAST(${targetDate} AS DATE)`
     : sql<Date>`CURRENT_DATE`
@@ -66,12 +65,8 @@ export async function getUsageOverview(
     db
       .with(projectsCTE, errorsCTE)
       .select({
-        workspaceId: sql<number>`${workspaces.id}`.as(
-          'document_log_workspace_id',
-        ),
-        latestCreatedAt: max(documentLogs.createdAt).as(
-          'latest_log_created_at',
-        ),
+        workspaceId: sql<number>`${workspaces.id}`.as('document_log_workspace_id'),
+        latestCreatedAt: max(documentLogs.createdAt).as('latest_log_created_at'),
         lastMonthCount: sql<number>`
           COUNT(
             CASE WHEN ${documentLogs.createdAt} >= ${dateCondition} - INTERVAL '1 month'
@@ -102,10 +97,7 @@ export async function getUsageOverview(
       .where(
         and(
           isNull(errorsCTE.id),
-          gte(
-            documentLogs.createdAt,
-            sql<Date>`${dateCondition} - INTERVAL '2 months'`,
-          ),
+          gte(documentLogs.createdAt, sql<Date>`${dateCondition} - INTERVAL '2 months'`),
         ),
       )
       .groupBy(workspaces.id),
@@ -117,12 +109,8 @@ export async function getUsageOverview(
     db
       .with(errorsCTE)
       .select({
-        workspaceId: sql<number>`${workspaces.id}`.as(
-          'evaluation_result_workspace_id',
-        ),
-        latestCreatedAt: max(evaluationResults.createdAt).as(
-          'latest_evaluation_result_created_at',
-        ),
+        workspaceId: sql<number>`${workspaces.id}`.as('evaluation_result_workspace_id'),
+        latestCreatedAt: max(evaluationResults.createdAt).as('latest_evaluation_result_created_at'),
         lastMonthCount: sql<number>`
           COUNT(
             CASE WHEN ${evaluationResults.createdAt} >= ${dateCondition} - INTERVAL '1 month'
@@ -152,10 +140,7 @@ export async function getUsageOverview(
       .where(
         and(
           isNull(errorsCTE.id),
-          gte(
-            evaluationResults.createdAt,
-            sql<Date>`${dateCondition} - INTERVAL '2 months'`,
-          ),
+          gte(evaluationResults.createdAt, sql<Date>`${dateCondition} - INTERVAL '2 months'`),
         ),
       )
       .groupBy(workspaces.id),
@@ -190,32 +175,22 @@ export async function getUsageOverview(
       .where(
         and(
           isNull(evaluationResultsV2.error),
-          gte(
-            evaluationResultsV2.createdAt,
-            sql<Date>`${dateCondition} - INTERVAL '2 months'`,
-          ),
+          gte(evaluationResultsV2.createdAt, sql<Date>`${dateCondition} - INTERVAL '2 months'`),
         ),
       )
       .groupBy(evaluationResultsV2.workspaceId),
   )
 
   const query = db
-    .with(
-      workspaceUsageInfoCTE,
-      logsCTE,
-      evaluationResultsCTE,
-      evaluationResultsV2CTE,
-    )
+    .with(workspaceUsageInfoCTE, logsCTE, evaluationResultsCTE, evaluationResultsV2CTE)
     .select({
       workspaceId: max(workspaces.id),
       name: max(workspaces.name),
       subscriptionPlan: sql<SubscriptionPlan>`MAX(${workspaceUsageInfoCTE.subscriptionPlan})`,
-      subscriptionCreatedAt: max(
-        workspaceUsageInfoCTE.subscriptionCreatedAt,
-      ).as('subscription_created_at'),
-      numOfMembers: max(workspaceUsageInfoCTE.numOfMembers).as(
-        'num_of_members',
+      subscriptionCreatedAt: max(workspaceUsageInfoCTE.subscriptionCreatedAt).as(
+        'subscription_created_at',
       ),
+      numOfMembers: max(workspaceUsageInfoCTE.numOfMembers).as('num_of_members'),
       emails: max(workspaceUsageInfoCTE.emails),
       lastMonthRuns: sql<number>`SUM(
         COALESCE(${logsCTE.lastMonthCount}, 0) +
@@ -234,31 +209,17 @@ export async function getUsageOverview(
       )`.as('latest_run_at'),
     })
     .from(workspaces)
-    .leftJoin(
-      workspaceUsageInfoCTE,
-      eq(workspaceUsageInfoCTE.id, workspaces.id),
-    )
+    .leftJoin(workspaceUsageInfoCTE, eq(workspaceUsageInfoCTE.id, workspaces.id))
     .leftJoin(logsCTE, eq(logsCTE.workspaceId, workspaces.id))
-    .leftJoin(
-      evaluationResultsCTE,
-      eq(evaluationResultsCTE.workspaceId, workspaces.id),
-    )
-    .leftJoin(
-      evaluationResultsV2CTE,
-      eq(evaluationResultsV2CTE.workspaceId, workspaces.id),
-    )
+    .leftJoin(evaluationResultsCTE, eq(evaluationResultsCTE.workspaceId, workspaces.id))
+    .leftJoin(evaluationResultsV2CTE, eq(evaluationResultsV2CTE.workspaceId, workspaces.id))
     .groupBy(workspaces.id, sql`latest_run_at`)
-    .orderBy(
-      desc(sql<number>`last_month_runs`),
-      desc(sql<number>`num_of_members`),
-    )
+    .orderBy(desc(sql<number>`last_month_runs`), desc(sql<number>`num_of_members`))
     .limit(pageSize)
     .offset((page - 1) * pageSize)
 
   return query
 }
 
-export type GetUsageOverviewRow = Awaited<
-  ReturnType<typeof getUsageOverview>
->[number]
+export type GetUsageOverviewRow = Awaited<ReturnType<typeof getUsageOverview>>[number]
 export type GetUsageOverview = GetUsageOverviewRow[]

@@ -3,14 +3,9 @@
 import { refineApplyAction } from '$/actions/copilot/refineApply'
 import { refinePromptAction } from '$/actions/copilot/refinePrompt'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
+import type { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { RefObject, useCallback } from 'react'
-
-export type Refinement = {
-  prompt: string
-  summary: string
-}
+import { type RefObject, useCallback } from 'react'
 
 export function useRefiner(
   {
@@ -26,8 +21,9 @@ export function useRefiner(
 ) {
   const { toast } = useToast()
 
-  const { execute: executeRefinePrompt, isPending: isRefiningPrompt } =
-    useLatitudeAction(refinePromptAction, {
+  const { execute: executeRefinePrompt, isPending: isRefiningPrompt } = useLatitudeAction(
+    refinePromptAction,
+    {
       onSuccess: async () => {
         if (cancelled?.current) return
         toast({
@@ -43,7 +39,8 @@ export function useRefiner(
           variant: 'destructive',
         })
       },
-    })
+    },
+  )
   const refinePrompt = useCallback(
     async ({
       evaluationUuid,
@@ -63,8 +60,9 @@ export function useRefiner(
     [project, commit, document, executeRefinePrompt],
   )
 
-  const { execute: executeRefineApply, isPending: isApplyingRefine } =
-    useLatitudeAction(refineApplyAction, {
+  const { execute: executeRefineApply, isPending: isApplyingRefine } = useLatitudeAction(
+    refineApplyAction,
+    {
       onSuccess: async () => {}, // Avoid toast
       onError: async (error) => {
         if (cancelled?.current) return
@@ -74,7 +72,8 @@ export function useRefiner(
           variant: 'destructive',
         })
       },
-    })
+    },
+  )
   const refineApply = useCallback(
     async ({ prompt }: { prompt: string }) => {
       return await executeRefineApply({

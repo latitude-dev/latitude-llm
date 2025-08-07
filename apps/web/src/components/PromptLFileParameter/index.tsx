@@ -3,7 +3,7 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
-import { isPromptLFile, PromptLFile } from 'promptl-ai'
+import { isPromptLFile, type PromptLFile } from 'promptl-ai'
 import { useState } from 'react'
 
 export function PromptLFileParameter({ file }: { file: PromptLFile }) {
@@ -26,11 +26,7 @@ export function PromptLFileParameter({ file }: { file: PromptLFile }) {
           color={isHovered ? 'accentForeground' : 'foregroundMuted'}
           className='flex flex-shrink-0'
         />
-        <Text.H6
-          color={isHovered ? 'accentForeground' : 'foregroundMuted'}
-          noWrap
-          ellipsis
-        >
+        <Text.H6 color={isHovered ? 'accentForeground' : 'foregroundMuted'} noWrap ellipsis>
           {file.name}
         </Text.H6>
         <Icon

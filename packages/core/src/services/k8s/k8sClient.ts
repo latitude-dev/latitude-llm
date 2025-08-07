@@ -57,12 +57,9 @@ function initializeK8sClient() {
   const config = loadConfig()
 
   if (env.USE_EKS_CLUSTER) {
-    if (!config.apiUrl)
-      throw new Error('Production environment requires K8S_API_URL')
-    if (!config.awsRegion)
-      throw new Error('Production environment requires AWS_REGION')
-    if (!config.awsAccessKey)
-      throw new Error('Production environment requires AWS_ACCESS_KEY_ID')
+    if (!config.apiUrl) throw new Error('Production environment requires K8S_API_URL')
+    if (!config.awsRegion) throw new Error('Production environment requires AWS_REGION')
+    if (!config.awsAccessKey) throw new Error('Production environment requires AWS_ACCESS_KEY_ID')
     if (!config.awsSecretKey)
       throw new Error('Production environment requires AWS_SECRET_ACCESS_KEY')
 
@@ -136,10 +133,8 @@ function loadConfig() {
     eksClusterName: env.EKS_CLUSTER_NAME,
   }
   if (!env.USE_EKS_CLUSTER) return customConfig
-  if (!env.AWS_REGION)
-    throw new Error('Production environment requires AWS_REGION')
-  if (!env.AWS_ACCESS_KEY)
-    throw new Error('Production environment requires AWS_ACCESS_KEY_ID')
+  if (!env.AWS_REGION) throw new Error('Production environment requires AWS_REGION')
+  if (!env.AWS_ACCESS_KEY) throw new Error('Production environment requires AWS_ACCESS_KEY_ID')
   if (!env.AWS_ACCESS_SECRET)
     throw new Error('Production environment requires AWS_SECRET_ACCESS_KEY')
 

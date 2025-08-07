@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import type React from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { IntegrationType } from '@latitude-data/constants'
-import {
+import type {
   IntegrationDto,
   PipedreamComponent,
   PipedreamComponentType,
@@ -86,9 +87,7 @@ function IntegrationTriggerGroup({
   integration: Extract<IntegrationDto, { type: IntegrationType.Pipedream }>
   isSelected: boolean
   selectedComponentKey?: string
-  onSelectComponent: (
-    c: PipedreamComponent<PipedreamComponentType.Trigger>,
-  ) => void
+  onSelectComponent: (c: PipedreamComponent<PipedreamComponentType.Trigger>) => void
   disabled?: boolean
 }) {
   const { data, isLoading } = usePipedreamApp(integration.configuration.appName)
@@ -126,9 +125,7 @@ function IntegrationTriggerGroup({
             <TriggerOption
               key={comp.key}
               label={comp.name}
-              description={
-                <Text.H6 color='foregroundMuted'>{comp.description}</Text.H6>
-              }
+              description={<Text.H6 color='foregroundMuted'>{comp.description}</Text.H6>}
               isSelected={selectedComponentKey === comp.key}
               disabled={disabled}
               onClick={() => onSelectComponent(comp)}
@@ -209,9 +206,7 @@ function TriggerOption({
               'bg-muted': !isSelected,
             })}
           />
-          <div className='flex flex-col gap-2 pt-2 flex-grow min-w-0'>
-            {children}
-          </div>
+          <div className='flex flex-col gap-2 pt-2 flex-grow min-w-0'>{children}</div>
         </div>
       )}
     </div>

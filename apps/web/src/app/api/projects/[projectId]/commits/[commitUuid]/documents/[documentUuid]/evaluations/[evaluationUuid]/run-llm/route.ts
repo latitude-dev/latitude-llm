@@ -1,6 +1,6 @@
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { authHandler } from '$/middlewares/authHandler'
@@ -9,28 +9,21 @@ import { captureException } from '$/helpers/captureException'
 import {
   ChainEventTypes,
   EvaluationType,
-  EvaluationV2,
+  type EvaluationV2,
   LlmEvaluationMetric,
-  LlmEvaluationMetricAnyCustom,
+  type LlmEvaluationMetricAnyCustom,
 } from '@latitude-data/constants'
 import { EvaluationsV2Repository } from '@latitude-data/core/repositories'
 import { buildStreamEvaluationRun } from '@latitude-data/core/services/evaluationsV2/llm/buildStreamEvaluationRun'
-import {
-  NotFoundError,
-  UnprocessableEntityError,
-} from '@latitude-data/core/lib/errors'
+import { NotFoundError, UnprocessableEntityError } from '@latitude-data/core/lib/errors'
 
 function isCustomLlmEvaluation(
   evaluation: EvaluationV2,
-): evaluation is EvaluationV2<
-  EvaluationType.Llm,
-  LlmEvaluationMetricAnyCustom
-> {
+): evaluation is EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom> {
   const metric = evaluation.metric
   return (
     evaluation.type === EvaluationType.Llm &&
-    (metric === LlmEvaluationMetric.Custom ||
-      metric === LlmEvaluationMetric.CustomLabeled)
+    (metric === LlmEvaluationMetric.Custom || metric === LlmEvaluationMetric.CustomLabeled)
   )
 }
 
@@ -69,10 +62,7 @@ const buildWriteErrorToStream =
         encoder.encode(
           `event: error\ndata: ${JSON.stringify({
             name: error instanceof Error ? error.name : 'UnknownError',
-            message:
-              error instanceof Error
-                ? error.message
-                : 'An unexpected error occurred',
+            message: error instanceof Error ? error.message : 'An unexpected error occurred',
             stack: error instanceof Error ? error.stack : undefined,
           })}\n\n`,
         ),
@@ -140,7 +130,7 @@ export const POST = errorHandler(
         const { readable, writable } = new TransformStream()
         const writer = writable.getWriter()
         const encoder = new TextEncoder()
-        let isWriterClosed = false
+        const isWriterClosed = false
         const safeCloseWriter = buildSelfCloseWriter({ writer, isWriterClosed })
         const writeErrorToStream = buildWriteErrorToStream({
           encoder,
@@ -163,9 +153,7 @@ export const POST = errorHandler(
                 }
 
                 await writer.write(
-                  encoder.encode(
-                    `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
-                  ),
+                  encoder.encode(`event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`),
                 )
               } catch (error) {
                 captureException(error as Error)
@@ -180,9 +168,7 @@ export const POST = errorHandler(
             onFinished: async () => {
               try {
                 await writer.write(
-                  encoder.encode(
-                    `event: finished\ndata: ${JSON.stringify({ success: true })}\n\n`,
-                  ),
+                  encoder.encode(`event: finished\ndata: ${JSON.stringify({ success: true })}\n\n`),
                 )
               } catch (error) {
                 captureException(error as Error)
@@ -209,10 +195,7 @@ export const POST = errorHandler(
         })
       } catch (error) {
         if (error instanceof z.ZodError) {
-          throw new UnprocessableEntityError(
-            'Invalid input',
-            error.flatten().fieldErrors,
-          )
+          throw new UnprocessableEntityError('Invalid input', error.flatten().fieldErrors)
         }
 
         // When client closes the connection, the SDK will throw an undefined

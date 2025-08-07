@@ -3,12 +3,12 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   CLOUD_MESSAGES,
-  Commit,
-  DocumentVersion,
-  EvaluationResultV2,
-  EvaluationV2,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationResultV2,
+  type EvaluationV2,
   MAX_DOCUMENT_SUGGESTIONS_PER_EVALUATION,
-  Workspace,
+  type Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { UnprocessableEntityError } from '../../lib/errors'
@@ -50,9 +50,7 @@ async function checkSuggestionLimits(
     .then((r) => r.unwrap())
   if (count >= MAX_DOCUMENT_SUGGESTIONS_PER_EVALUATION) {
     return Result.error(
-      new UnprocessableEntityError(
-        'Maximum suggestions reached for this evaluation',
-      ),
+      new UnprocessableEntityError('Maximum suggestions reached for this evaluation'),
     )
   }
 
@@ -95,9 +93,7 @@ export async function generateDocumentSuggestion(
 
   if (!evaluation.enableSuggestions) {
     return Result.error(
-      new UnprocessableEntityError(
-        'Suggestions are not enabled for this evaluation',
-      ),
+      new UnprocessableEntityError('Suggestions are not enabled for this evaluation'),
     )
   }
 
@@ -119,18 +115,12 @@ export async function generateDocumentSuggestion(
   }
 
   if (!results || !results!.length) {
-    return Result.error(
-      new UnprocessableEntityError('Not enough evaluation results found'),
-    )
+    return Result.error(new UnprocessableEntityError('Not enough evaluation results found'))
   }
 
   for (const result of results) {
     if (result.hasPassed || result.error || result.usedForSuggestion) {
-      return Result.error(
-        new UnprocessableEntityError(
-          'Cannot use these results for a suggestion',
-        ),
-      )
+      return Result.error(new UnprocessableEntityError('Cannot use these results for a suggestion'))
     }
   }
 
@@ -140,9 +130,7 @@ export async function generateDocumentSuggestion(
 
   const serializedResults = await Promise.all(
     results.map((result) =>
-      serializeEvaluationResultV2({ evaluation, result, workspace }).then((r) =>
-        r.unwrap(),
-      ),
+      serializeEvaluationResultV2({ evaluation, result, workspace }).then((r) => r.unwrap()),
     ),
   )
 

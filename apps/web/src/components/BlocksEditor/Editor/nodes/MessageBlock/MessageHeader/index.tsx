@@ -1,21 +1,13 @@
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { useCallback } from 'react'
-import {
-  triggerMessageDelete,
-  triggerMessageRoleUpdate,
-} from '../../../plugins/MessageEditPlugin'
-import {
-  MESSAGE_BLOCK,
-  MessageBlockType,
-} from '../../../state/promptlToLexical/types'
+import { triggerMessageDelete, triggerMessageRoleUpdate } from '../../../plugins/MessageEditPlugin'
+import { MESSAGE_BLOCK, type MessageBlockType } from '../../../state/promptlToLexical/types'
 
-const ROLE_OPTIONS = MESSAGE_BLOCK.map<SelectOption<MessageBlockType>>(
-  (role) => ({
-    value: role,
-    label: role.charAt(0).toUpperCase() + role.slice(1),
-  }),
-)
+const ROLE_OPTIONS = MESSAGE_BLOCK.map<SelectOption<MessageBlockType>>((role) => ({
+  value: role,
+  label: role.charAt(0).toUpperCase() + role.slice(1),
+}))
 
 export function MessageHeader({
   nodeKey,

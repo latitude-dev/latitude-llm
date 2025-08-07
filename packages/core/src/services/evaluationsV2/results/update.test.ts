@@ -1,14 +1,14 @@
 import { desc, eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
+import { beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 import {
-  Commit,
-  DocumentVersion,
-  EvaluationResultV2,
-  EvaluationType,
-  EvaluationV2,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationResultV2,
+  type EvaluationType,
+  type EvaluationV2,
   Providers,
-  RuleEvaluationMetric,
-  Workspace,
+  type RuleEvaluationMetric,
+  type Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
@@ -25,14 +25,8 @@ describe('updateEvaluationResultV2', () => {
   let workspace: Workspace
   let commit: Commit
   let document: DocumentVersion
-  let evaluation: EvaluationV2<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.ExactMatch
-  >
-  let result: EvaluationResultV2<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.ExactMatch
-  >
+  let evaluation: EvaluationV2<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>
+  let result: EvaluationResultV2<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -63,7 +57,7 @@ describe('updateEvaluationResultV2', () => {
       workspace: workspace,
     })
 
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
+    const { providerLogs } = await factories.createDocumentLog({
       document: document,
       commit: commit,
     })
@@ -77,9 +71,7 @@ describe('updateEvaluationResultV2', () => {
     })
 
     mocks = {
-      publisher: vi
-        .spyOn(publisher, 'publishLater')
-        .mockImplementation(async () => {}),
+      publisher: vi.spyOn(publisher, 'publishLater').mockImplementation(async () => {}),
     }
   })
 

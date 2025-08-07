@@ -1,8 +1,8 @@
 import {
-  DocumentVersion,
-  Project,
+  type DocumentVersion,
+  type Project,
   Providers,
-  User,
+  type User,
 } from '@latitude-data/core/browser'
 import { findCommitById } from '@latitude-data/core/data-access/commits'
 import * as factories from '@latitude-data/core/factories'
@@ -61,18 +61,16 @@ describe('updateDocumentAction', async () => {
 
     beforeEach(async () => {
       const { workspace, userData } = await factories.createWorkspace()
-      const { documents, project: projectData } = await factories.createProject(
-        {
-          workspace,
-          providers: [{ type: Providers.OpenAI, name: 'openai' }],
-          documents: {
-            doc1: factories.helpers.createPrompt({
-              provider: 'openai',
-              content: 'foo',
-            }),
-          },
+      const { documents, project: projectData } = await factories.createProject({
+        workspace,
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          doc1: factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'foo',
+          }),
         },
-      )
+      })
       doc1 = documents.filter((d) => d.path === 'doc1')[0]!
       project = projectData
       user = userData

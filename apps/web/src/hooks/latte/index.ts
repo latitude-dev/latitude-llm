@@ -14,17 +14,10 @@ import { ROUTES } from '$/services/routes'
 import { useCurrentUser } from '$/stores/currentUser'
 import { useLatteStore } from '$/stores/latte'
 import useProviderLogs from '$/stores/providerLogs'
-import {
-  LatteChange,
-  LatteEditAction,
-  LatteTool,
-} from '@latitude-data/constants/latte'
-import { LatteThreadUpdateArgs } from '@latitude-data/core/browser'
-import { LatteVersion } from '@latitude-data/core/services/copilot/latte/debugVersions'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { type LatteChange, type LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
+import type { LatteThreadUpdateArgs } from '@latitude-data/core/browser'
+import type { LatteVersion } from '@latitude-data/core/services/copilot/latte/debugVersions'
+import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { sortBy } from 'lodash-es'
 import { useCallback, useEffect, useMemo } from 'react'
 import useSWR from 'swr'
@@ -32,7 +25,7 @@ import useFetcher from '../useFetcher'
 import { useOnce } from '../useMount'
 import { useLatteContext } from './context'
 import { getDescriptionFromToolCall } from './helpers'
-import {
+import type {
   LatteActionStep,
   LatteInteraction,
   LatteInteractionStep,
@@ -47,11 +40,12 @@ const EMPTY_ARRAY = [] as const
  */
 export function useSyncLatteUrlState() {
   const { threadUuid, setThreadUuid } = useLatteStore()
-  const { value: storedThreadUuid, setValue: setStoredThreadUuid } =
-    useLocalStorage<string | undefined>({
-      key: AppLocalStorage.latteThreadUuid,
-      defaultValue: undefined,
-    })
+  const { value: storedThreadUuid, setValue: setStoredThreadUuid } = useLocalStorage<
+    string | undefined
+  >({
+    key: AppLocalStorage.latteThreadUuid,
+    defaultValue: undefined,
+  })
 
   useOnce(() => {
     // If `threadUuid` exists and `storedThreadUuid` does not, set the local storage to `threadUuid`
@@ -82,14 +76,8 @@ export function useSyncLatteUrlState() {
  */
 export function useLatteChatActions() {
   const latteContext = useLatteContext()
-  const {
-    threadUuid,
-    setThreadUuid,
-    setIsLoading,
-    setError,
-    addInteractions,
-    debugVersionUuid,
-  } = useLatteStore()
+  const { threadUuid, setThreadUuid, setIsLoading, setError, addInteractions, debugVersionUuid } =
+    useLatteStore()
   const { execute: createNewChat } = useServerAction(createNewLatteAction, {
     onSuccess: ({ data }) => {
       setThreadUuid(data.uuid)
@@ -100,15 +88,12 @@ export function useLatteChatActions() {
     },
   })
 
-  const { execute: addMessageToExistingChat } = useServerAction(
-    addMessageToLatteAction,
-    {
-      onError: ({ err }) => {
-        setError(err.message)
-        setIsLoading(false)
-      },
+  const { execute: addMessageToExistingChat } = useServerAction(addMessageToLatteAction, {
+    onError: ({ err }) => {
+      setError(err.message)
+      setIsLoading(false)
     },
-  )
+  })
 
   const sendMessage = useCallback(
     async (message: string) => {
@@ -150,53 +135,41 @@ export function useLatteChatActions() {
  *   - `addFeedbackToLatteChange`: Function to add feedback to a specific change
  */
 export function useLatteChangeActions() {
-  const {
-    threadUuid,
-    changes,
-    setChanges,
-    setLatteActionsFeedbackUuid,
-    setIsLoading,
-    setError,
-  } = useLatteStore()
+  const { threadUuid, changes, setChanges, setLatteActionsFeedbackUuid, setIsLoading, setError } =
+    useLatteStore()
 
-  const { execute: executeAcceptChanges } = useServerAction(
-    acceptLatteChangesAction,
-    {
-      onSuccess: ({ data: { evaluationUuid } }) => {
-        setChanges([])
-        setIsLoading(false)
-        setLatteActionsFeedbackUuid(evaluationUuid)
-      },
-      onError: ({ err }) => {
-        setError(err.message)
-        setIsLoading(false)
-      },
+  const { execute: executeAcceptChanges } = useServerAction(acceptLatteChangesAction, {
+    onSuccess: ({ data: { evaluationUuid } }) => {
+      setChanges([])
+      setIsLoading(false)
+      setLatteActionsFeedbackUuid(evaluationUuid)
     },
-  )
+    onError: ({ err }) => {
+      setError(err.message)
+      setIsLoading(false)
+    },
+  })
 
-  const { execute: executeUndoChanges } = useServerAction(
-    discardLatteChangesActions,
-    {
-      onSuccess: ({ data: { evaluationUuid } }) => {
-        // Undo changes in the UI
-        trigger('LatteProjectChanges', {
-          changes: changes.map((c) => ({
-            ...c,
-            previous: c.current,
-            current: c.previous ?? { ...c.current, isDeleted: true },
-          })),
-        })
-        // Clear changes state
-        setChanges([])
-        setIsLoading(false)
-        setLatteActionsFeedbackUuid(evaluationUuid)
-      },
-      onError: ({ err }) => {
-        setError(err.message)
-        setIsLoading(false)
-      },
+  const { execute: executeUndoChanges } = useServerAction(discardLatteChangesActions, {
+    onSuccess: ({ data: { evaluationUuid } }) => {
+      // Undo changes in the UI
+      trigger('LatteProjectChanges', {
+        changes: changes.map((c) => ({
+          ...c,
+          previous: c.current,
+          current: c.previous ?? { ...c.current, isDeleted: true },
+        })),
+      })
+      // Clear changes state
+      setChanges([])
+      setIsLoading(false)
+      setLatteActionsFeedbackUuid(evaluationUuid)
     },
-  )
+    onError: ({ err }) => {
+      setError(err.message)
+      setIsLoading(false)
+    },
+  })
 
   const { execute: executeAddFeedbackToLatteChange } = useServerAction(
     addFeedbackToLatteChangeAction,
@@ -235,11 +208,7 @@ export function useLatteChangeActions() {
         evaluationResultUuid,
       })
     },
-    [
-      executeAddFeedbackToLatteChange,
-      setLatteActionsFeedbackUuid,
-      setIsLoading,
-    ],
+    [executeAddFeedbackToLatteChange, setLatteActionsFeedbackUuid, setIsLoading],
   )
 
   return {
@@ -255,16 +224,12 @@ export function useLatteChangeActions() {
  * and tool starts, updating the interactions state accordingly.
  */
 export function useLatteThreadUpdates() {
-  const { threadUuid, setInteractions, setIsLoading, setError } =
-    useLatteStore()
+  const { threadUuid, setInteractions, setIsLoading, setError } = useLatteStore()
   const handleThreadUpdate = useCallback(
     (update: LatteThreadUpdateArgs) => {
       const currentTimeAsString = new Date().toString()
       if (!update) {
-        console.warn(
-          'Received empty latteThreadUpdate event from server',
-          currentTimeAsString,
-        )
+        console.warn('Received empty latteThreadUpdate event from server', currentTimeAsString)
         return
       }
       const { threadUuid: incomingthreadUuid } = update
@@ -301,11 +266,7 @@ export function useLatteThreadUpdates() {
         if (update.type === 'toolCompleted') {
           const finishedToolId = update.toolCallId
           lastInteraction.steps = lastInteraction.steps.map((step) => {
-            if (
-              step.type === 'tool' &&
-              !step.finished &&
-              step.id === finishedToolId
-            ) {
+            if (step.type === 'tool' && !step.finished && step.id === finishedToolId) {
               step.finished = true
             }
             return step
@@ -348,7 +309,7 @@ export function useLatteThreadUpdates() {
             steps = [
               {
                 type: 'thought',
-                content: update.args['thought'] as string,
+                content: update.args.thought as string,
               },
             ]
           }
@@ -374,8 +335,7 @@ export function useLatteThreadUpdates() {
  * updates, and removals of changes based on the current thread.
  */
 export function useLatteProjectChanges() {
-  const { threadUuid, setChanges, setLatteActionsFeedbackUuid } =
-    useLatteStore()
+  const { threadUuid, setChanges, setLatteActionsFeedbackUuid } = useLatteStore()
 
   useSockets({
     event: 'latteProjectChanges',
@@ -456,8 +416,7 @@ export function useLoadThreadFromProviderLogs() {
           _interactions.push(currentInteraction)
         }
         currentInteraction = {
-          input:
-            message.content.filter((t) => t.type === 'text').at(-1)?.text ?? '',
+          input: message.content.filter((t) => t.type === 'text').at(-1)?.text ?? '',
           steps: [],
           output: undefined,
         }
@@ -466,8 +425,7 @@ export function useLoadThreadFromProviderLogs() {
           typeof message.content === 'string'
             ? message.content
             : // @ts-expect-error - cast message content to TextContent
-              (message.content.filter((t) => t.type === 'text').at(-1)?.text ??
-              '')
+              (message.content.filter((t) => t.type === 'text').at(-1)?.text ?? '')
       }
     }
 
@@ -492,15 +450,12 @@ export function useLoadThreadFromProviderLogs() {
  */
 const useLatteThreadProviderLog = () => {
   const { threadUuid } = useLatteStore()
-  const { data: providerLogs, ...rest } = useProviderLogs({
+  const { data: providerLogs, isLoading } = useProviderLogs({
     documentLogUuid: threadUuid,
   })
-  const providerLog = useMemo(
-    () => sortBy(providerLogs, 'generatedAt').at(-1),
-    [providerLogs],
-  )
+  const providerLog = useMemo(() => sortBy(providerLogs, 'generatedAt').at(-1), [providerLogs])
 
-  return useMemo(() => ({ providerLog, ...rest }), [providerLog, rest])
+  return useMemo(() => ({ providerLog, isLoading }), [providerLog, isLoading])
 }
 
 /**
@@ -519,16 +474,13 @@ export function useLatteDebugMode() {
     enabled ? ROUTES.api.latte.debug.versions.root : undefined,
   )
 
-  const { data = EMPTY_ARRAY, isLoading } = useSWR<LatteVersion[]>(
-    ['latteDebugVersions'],
-    fetcher,
-  )
+  const { data = EMPTY_ARRAY, isLoading } = useSWR<LatteVersion[]>(['latteDebugVersions'], fetcher)
 
   const selectedVersionUuid = useMemo(() => {
     if (!enabled) return undefined
     if (!data) return debugVersionUuid
 
-    if (data.some((version) => version.uuid == debugVersionUuid)) {
+    if (data.some((version) => version.uuid === debugVersionUuid)) {
       return debugVersionUuid
     }
 

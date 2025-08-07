@@ -1,11 +1,8 @@
-import { McpServer } from '@latitude-data/core/browser'
-import useSWR, { SWRConfiguration } from 'swr'
+import type { McpServer } from '@latitude-data/core/browser'
+import useSWR, { type SWRConfiguration } from 'swr'
 import { useState } from 'react'
 
-export function useMcpServer(
-  mcpServerId: string | null | undefined,
-  swrConfig?: SWRConfiguration,
-) {
+export function useMcpServer(mcpServerId: string | null | undefined, swrConfig?: SWRConfiguration) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [updateError, setUpdateError] = useState<Error | null>(null)
   const { data, isLoading, isValidating, error } = useSWR<McpServer>(

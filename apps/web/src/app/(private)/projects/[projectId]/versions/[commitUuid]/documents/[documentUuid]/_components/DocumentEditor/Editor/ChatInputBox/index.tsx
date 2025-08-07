@@ -1,5 +1,5 @@
 import { StatusIndicator } from '$/components/PlaygroundCommon/StatusIndicator'
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import type { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { ChatTextArea } from './ChatTextArea'
 
 export function ChatInputBox({
@@ -29,9 +29,7 @@ export function ChatInputBox({
         placeholder='Ask anything'
         onSubmit={playground.submitUserMessage}
         onBack={onBack}
-        disabledSubmit={
-          playground.isLoading || !!playground.error || !hasActiveStream()
-        }
+        disabledSubmit={playground.isLoading || !!playground.error || !hasActiveStream()}
         disabledBack={playground.isLoading}
       />
     </div>

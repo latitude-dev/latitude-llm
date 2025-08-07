@@ -1,12 +1,6 @@
 import app from '$/routes/app'
 import { LatitudeErrorCodes } from '@latitude-data/constants/errors'
-import {
-  Commit,
-  Project,
-  ProviderApiKey,
-  User,
-  Workspace,
-} from '@latitude-data/core/browser'
+import type { Commit, Project, ProviderApiKey, User, Workspace } from '@latitude-data/core/browser'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import {
   createDocumentVersion,
@@ -63,12 +57,7 @@ describe('POST /get-or-create', () => {
     beforeEach(async () => {
       vi.clearAllMocks()
 
-      const {
-        workspace: w,
-        project: p,
-        user: u,
-        providers: ps,
-      } = await createProject()
+      const { workspace: w, project: p, user: u, providers: ps } = await createProject()
       workspace = w
       project = p
       user = u
@@ -88,7 +77,7 @@ describe('POST /get-or-create', () => {
     })
 
     it('succeeds when getting an existing document', async () => {
-      let { documentVersion: document } = await createDocumentVersion({
+      const { documentVersion: document } = await createDocumentVersion({
         workspace,
         user,
         commit,

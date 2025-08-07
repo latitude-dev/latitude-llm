@@ -14,11 +14,8 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 import { workspaces } from './workspaces'
-import {
-  AmazonBedrockConfiguration,
-  VertexConfiguration,
-} from '../../services/ai'
-import { OpenAIProviderConfiguration } from '../../services/ai/providers/helpers/openai'
+import type { AmazonBedrockConfiguration, VertexConfiguration } from '../../services/ai'
+import type { OpenAIProviderConfiguration } from '../../services/ai/providers/helpers/openai'
 
 export const providersEnum = latitudeSchema.enum('provider', [
   Providers.OpenAI,
@@ -36,14 +33,13 @@ export const providersEnum = latitudeSchema.enum('provider', [
   Providers.AmazonBedrock,
 ])
 
-export type ProviderConfiguration<P extends Providers> =
-  P extends Providers.GoogleVertex
-    ? VertexConfiguration
-    : P extends Providers.AmazonBedrock
-      ? AmazonBedrockConfiguration
-      : P extends Providers.OpenAI
-        ? OpenAIProviderConfiguration
-        : never
+export type ProviderConfiguration<P extends Providers> = P extends Providers.GoogleVertex
+  ? VertexConfiguration
+  : P extends Providers.AmazonBedrock
+    ? AmazonBedrockConfiguration
+    : P extends Providers.OpenAI
+      ? OpenAIProviderConfiguration
+      : never
 
 export const providerApiKeys = latitudeSchema.table(
   'provider_api_keys',
@@ -62,24 +58,14 @@ export const providerApiKeys = latitudeSchema.table(
       .references(() => workspaces.id),
     lastUsedAt: timestamp('last_used_at'),
     deletedAt: timestamp('deleted_at'),
-    configuration:
-      jsonb('configuration').$type<ProviderConfiguration<Providers>>(),
+    configuration: jsonb('configuration').$type<ProviderConfiguration<Providers>>(),
     ...timestamps(),
   },
   (table) => ({
-    workspaceIdIdx: index('provider_apikeys_workspace_id_idx').on(
-      table.workspaceId,
-    ),
+    workspaceIdIdx: index('provider_apikeys_workspace_id_idx').on(table.workspaceId),
     nameIdx: index().on(table.name, table.workspaceId, table.deletedAt),
-    nameUniqueness: unique()
-      .on(table.name, table.workspaceId, table.deletedAt)
-      .nullsNotDistinct(),
+    nameUniqueness: unique().on(table.name, table.workspaceId, table.deletedAt).nullsNotDistinct(),
     userIdIdx: index('provider_apikeys_user_id_idx').on(table.authorId),
-    tokenIdx: index().on(
-      table.token,
-      table.provider,
-      table.workspaceId,
-      table.deletedAt,
-    ),
+    tokenIdx: index().on(table.token, table.provider, table.workspaceId, table.deletedAt),
   }),
 )

@@ -1,7 +1,4 @@
-export const createPromiseWithResolver = <T>(): readonly [
-  Promise<T>,
-  (value: T) => void,
-] => {
+export const createPromiseWithResolver = <T>(): readonly [Promise<T>, (value: T) => void] => {
   let resolveValue: (value: T) => void
   const promisedValue = new Promise<T>((resolve) => {
     resolveValue = (value) => {

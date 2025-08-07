@@ -1,12 +1,4 @@
-import {
-  bigint,
-  bigserial,
-  index,
-  text,
-  timestamp,
-  uuid,
-  varchar,
-} from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 
 import { EvaluationMetadataType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
@@ -41,9 +33,7 @@ export const evaluations = latitudeSchema.table(
     ...timestamps(),
   },
   (table) => ({
-    evaluationWorkspaceIdx: index('evaluation_workspace_idx').on(
-      table.workspaceId,
-    ),
+    evaluationWorkspaceIdx: index('evaluation_workspace_idx').on(table.workspaceId),
     evaluationMetadataIdx: index('evaluation_metadata_idx').on(
       table.metadataId,
       table.metadataType,

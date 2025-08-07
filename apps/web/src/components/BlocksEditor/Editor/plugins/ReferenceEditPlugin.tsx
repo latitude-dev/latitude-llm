@@ -3,7 +3,7 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { $getNodeByKey } from 'lexical'
 import { $isReferenceNode } from '../nodes/ReferenceNode'
 import { buildEmptyAttributes, buildReferencePath } from './ReferencesPlugin'
-import { BlocksEditorProps, IncludedPrompt } from '../../types'
+import type { BlocksEditorProps, IncludedPrompt } from '../../types'
 
 export function ReferenceEditPlugin({
   onRequestPromptMetadata,
@@ -35,13 +35,9 @@ export function ReferenceEditPlugin({
       })
     }
 
-    document.addEventListener(
-      'reference-path-update',
-      handleReferencePathUpdate,
-      {
-        signal: abortController.signal,
-      },
-    )
+    document.addEventListener('reference-path-update', handleReferencePathUpdate, {
+      signal: abortController.signal,
+    })
 
     return () => {
       abortController.abort()
@@ -51,10 +47,7 @@ export function ReferenceEditPlugin({
   return null
 }
 
-export function triggerReferencePathUpdate(
-  nodeKey: string,
-  newPrompt: IncludedPrompt,
-) {
+export function triggerReferencePathUpdate(nodeKey: string, newPrompt: IncludedPrompt) {
   const event = new CustomEvent('reference-path-update', {
     detail: { nodeKey, newPrompt },
   })

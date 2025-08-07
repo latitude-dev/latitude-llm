@@ -1,7 +1,4 @@
-import type {
-  ResolveNodeProps,
-  UpdateScopeContextProps,
-} from '$compiler/compiler/logic/types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '$compiler/compiler/logic/types'
 import type { ConditionalExpression } from 'estree'
 
 import { resolveLogicNode, updateScopeContextForNode } from '..'
@@ -12,10 +9,7 @@ import { resolveLogicNode, updateScopeContextForNode } from '..'
  *
  * Example: `a ? b : c`
  */
-export async function resolve({
-  node,
-  ...props
-}: ResolveNodeProps<ConditionalExpression>) {
+export async function resolve({ node, ...props }: ResolveNodeProps<ConditionalExpression>) {
   const condition = await resolveLogicNode({ node: node.test, ...props })
   return await resolveLogicNode({
     node: condition ? node.consequent : node.alternate,

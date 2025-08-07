@@ -1,7 +1,7 @@
-import { updateContentFn } from '$/hooks/useDocumentValueContext'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
-import { ConversationMetadata } from 'promptl-ai'
-import { BlockRootNode } from './Editor/state/promptlToLexical/types'
+import type { updateContentFn } from '$/hooks/useDocumentValueContext'
+import type { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
+import type { ConversationMetadata } from 'promptl-ai'
+import type { BlockRootNode } from './Editor/state/promptlToLexical/types'
 
 export type IncludedPrompt = {
   url: string
@@ -22,9 +22,7 @@ export type BlocksEditorProps = {
   onToggleDevEditor: () => void
   onError: (error: Error) => void
   prompts: Record<string, IncludedPrompt>
-  onRequestPromptMetadata: (
-    prompt: IncludedPrompt,
-  ) => Promise<ConversationMetadata>
+  onRequestPromptMetadata: (prompt: IncludedPrompt) => Promise<ConversationMetadata>
   onChange: updateContentFn
   className?: string
   readOnlyMessage?: string

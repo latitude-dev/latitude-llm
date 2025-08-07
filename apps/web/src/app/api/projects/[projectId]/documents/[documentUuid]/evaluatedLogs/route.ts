@@ -1,6 +1,6 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { UnprocessableEntityError } from '@latitude-data/core/lib/errors'
 import {
   DocumentVersionsRepository,
@@ -9,7 +9,7 @@ import {
 import { computeDocumentLogs } from '@latitude-data/core/services/documentLogs/computeDocumentLogs'
 import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 import { serializeEvaluatedDocumentLog } from '@latitude-data/core/services/evaluationsV2/llm/serializeEvaluatedDocumentLog'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
   authHandler(
@@ -32,8 +32,7 @@ export const GET = errorHandler(
       if (+queryParams.pageSize > 1) {
         return NextResponse.json(
           {
-            message:
-              'At the moment we only support pageSize=1 for evaluated logs',
+            message: 'At the moment we only support pageSize=1 for evaluated logs',
           },
           { status: 422 },
         )
@@ -66,12 +65,11 @@ export const GET = errorHandler(
         .then((r) => r.unwrap())
 
       if (!providerLogs.length) {
-        throw new UnprocessableEntityError(
-          'ProviderLogs not found for DocumentLog',
-        )
+        throw new UnprocessableEntityError('ProviderLogs not found for DocumentLog')
       }
 
-      let configuration = undefined
+      // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
+      let configuration
       if (searchParams.has('configuration')) {
         try {
           configuration = JSON.parse(searchParams.get('configuration')!)

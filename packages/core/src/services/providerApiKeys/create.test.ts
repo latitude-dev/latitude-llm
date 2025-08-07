@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Providers, User, Workspace } from '../../browser'
+import { Providers, type User, type Workspace } from '../../browser'
 import { ProviderApiKeysRepository } from '../../repositories'
 import { createProject } from '../../tests/factories'
 import { createProviderApiKey } from './create'
@@ -174,9 +174,7 @@ describe('createProviderApiKey', () => {
 
     expect(result.ok).toEqual(false)
     expect(result.error).toBeInstanceOf(BadRequestError)
-    expect(result.error!.message).toEqual(
-      'AmazonBedrock provider requires configuration',
-    )
+    expect(result.error!.message).toEqual('AmazonBedrock provider requires configuration')
 
     const providersScope = new ProviderApiKeysRepository(workspace.id)
     const providers = await providersScope.findAll().then((r) => r.unwrap())
@@ -337,9 +335,7 @@ describe('createProviderApiKey', () => {
 
     expect(result.ok).toEqual(false)
     expect(result.error).toBeInstanceOf(BadRequestError)
-    expect(result.error!.message).toEqual(
-      'A provider API key with this name already exists',
-    )
+    expect(result.error!.message).toEqual('A provider API key with this name already exists')
 
     const providersScope = new ProviderApiKeysRepository(workspace.id)
     const providers = await providersScope.findAll().then((r) => r.unwrap())

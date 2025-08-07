@@ -1,16 +1,13 @@
-import {
-  LatitudeTool,
-  LatitudeToolInternalName,
-} from '@latitude-data/constants'
+import { LatitudeTool, LatitudeToolInternalName } from '@latitude-data/constants'
 import { env } from '@latitude-data/env'
 import { tavily } from '@tavily/core'
-import { LatitudeToolDefinition } from '../../../constants'
-import { BadRequestError, LatitudeError } from '../../../lib/errors'
+import type { LatitudeToolDefinition } from '../../../constants'
+import { BadRequestError, type LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
-import { TelemetryContext } from '../../../telemetry'
+import type { PromisedResult } from '../../../lib/Transaction'
+import type { TelemetryContext } from '../../../telemetry'
 import { withTelemetryWrapper } from '../telemetryWrapper'
-import { SearchToolArgs, SearchToolResult } from './types'
+import type { SearchToolArgs, SearchToolResult } from './types'
 
 async function webSearch({
   query,
@@ -60,13 +57,11 @@ export default {
         },
         days: {
           type: 'integer',
-          description:
-            'The number of days to search for. Available only if topic is `news`.',
+          description: 'The number of days to search for. Available only if topic is `news`.',
         },
         maxResults: {
           type: 'integer',
-          description:
-            'The maximum number of results to return. Defaults to 5.',
+          description: 'The maximum number of results to return. Defaults to 5.',
         },
       },
       required: ['query'],

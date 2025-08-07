@@ -32,8 +32,5 @@ export default function useModelOptions({
   provider?: Providers | string
   name?: string
 }) {
-  return useMemo(
-    () => getModelOptionsForProvider({ provider, name }),
-    [provider, name],
-  )
+  return useMemo(() => getModelOptionsForProvider({ provider, name }), [provider, name])
 }

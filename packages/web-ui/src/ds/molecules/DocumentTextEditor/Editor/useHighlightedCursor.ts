@@ -1,7 +1,7 @@
-import { MutableRefObject, useEffect, useState } from 'react'
+import { type MutableRefObject, useEffect, useState } from 'react'
 
-import { type Monaco } from '@monaco-editor/react'
-import { editor } from 'monaco-editor'
+import type { Monaco } from '@monaco-editor/react'
+import type { editor } from 'monaco-editor'
 
 export function useHighlightedCursor({
   monacoRef,
@@ -24,7 +24,7 @@ export function useHighlightedCursor({
     const editor = editorRef.current
     const monaco = monacoRef.current
 
-    if (highlightedCursorIndex == undefined) {
+    if (highlightedCursorIndex === undefined) {
       if (decorationIds.length) {
         const ids = editor?.deltaDecorations(decorationIds, [])
         setDecorationIds(ids || [])
@@ -54,8 +54,7 @@ export function useHighlightedCursor({
         range: new monaco.Range(lineNumber, column, lineNumber, column),
         options: {
           beforeContentClassName: 'myCursorDecoration',
-          stickiness:
-            monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+          stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
         },
       },
     ]
@@ -64,12 +63,5 @@ export function useHighlightedCursor({
     setDecorationIds(newIds)
 
     editor.revealPositionInCenter({ lineNumber, column })
-  }, [
-    highlightedCursorIndex,
-    value,
-    isEditorMounted,
-    decorationIds,
-    monacoRef,
-    editorRef,
-  ])
+  }, [highlightedCursorIndex, value, isEditorMounted, decorationIds, monacoRef, editorRef])
 }

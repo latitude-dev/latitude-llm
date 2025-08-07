@@ -1,7 +1,4 @@
-import {
-  HostedIntegrationType,
-  IntegrationType,
-} from '@latitude-data/constants'
+import { HostedIntegrationType, IntegrationType } from '@latitude-data/constants'
 import { z } from 'zod'
 
 export const externalMcpIntegrationConfigurationSchema = z.object({
@@ -80,6 +77,4 @@ export const integrationConfigurationSchema = z.union([
   }),
 ])
 
-export type IntegrationConfiguration = z.infer<
-  typeof integrationConfigurationSchema
->
+export type IntegrationConfiguration = z.infer<typeof integrationConfigurationSchema>

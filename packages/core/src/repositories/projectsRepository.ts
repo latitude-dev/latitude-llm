@@ -1,6 +1,6 @@
 import { and, desc, eq, getTableColumns, isNull } from 'drizzle-orm'
 
-import { Project } from '../browser'
+import type { Project } from '../browser'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { commits, documentVersions, projects } from '../schema'
@@ -20,10 +20,7 @@ export class ProjectsRepository extends RepositoryLegacy<typeof tt, Project> {
   }
 
   async getProjectById(id: number) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.id, id))
+    const result = await this.db.select().from(this.scope).where(eq(this.scope.id, id))
     const project = result[0]
 
     if (!project) {

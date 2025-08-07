@@ -2,7 +2,7 @@ import {
   getEvaluationMetricSpecification,
   getEvaluationTypeSpecification,
 } from '$/components/evaluations'
-import { type EvaluationV2 } from '@latitude-data/core/browser'
+import type { EvaluationV2 } from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -15,11 +15,7 @@ export function EvaluationBadge({ evaluation }: { evaluation: EvaluationV2 }) {
       <Tooltip
         trigger={
           <div className='py-0.5 flex flex-row items-center min-w-0 gap-x-1'>
-            <Icon
-              name={typeSpec.icon}
-              color='foregroundMuted'
-              className='flex-none'
-            />
+            <Icon name={typeSpec.icon} color='foregroundMuted' className='flex-none' />
             <Text.H6 noWrap ellipsis color='foreground'>
               {typeSpec.name}
             </Text.H6>

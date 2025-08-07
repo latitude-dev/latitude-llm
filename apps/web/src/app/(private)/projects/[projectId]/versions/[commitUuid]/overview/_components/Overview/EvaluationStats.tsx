@@ -1,5 +1,5 @@
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
-import { ProjectStats } from '@latitude-data/core/browser'
+import type { ProjectStats } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { BarChart, ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
@@ -16,12 +16,10 @@ export function EvaluationStats({
 }) {
   const costPerEvaluationData = useMemo(() => {
     if (!stats?.costPerEvaluation) return []
-    return Object.entries(stats.costPerEvaluation).map(
-      ([evaluation, cost]) => ({
-        x: evaluation,
-        y: cost,
-      }),
-    )
+    return Object.entries(stats.costPerEvaluation).map(([evaluation, cost]) => ({
+      x: evaluation,
+      y: cost,
+    }))
   }, [stats?.costPerEvaluation])
 
   return (
@@ -53,8 +51,7 @@ export function EvaluationStats({
                   label: 'Cost (USD)',
                   type: 'number',
                   min: 0,
-                  tickFormatter: (value) =>
-                    formatCostInMillicents(Number(value)),
+                  tickFormatter: (value) => formatCostInMillicents(Number(value)),
                 },
                 data: costPerEvaluationData,
                 tooltipContent: (item) => (
@@ -65,9 +62,7 @@ export function EvaluationStats({
                     </div>
                     <div className='flex w-full gap-2 justify-between'>
                       <Text.H6B>Cost</Text.H6B>
-                      <Text.H6>
-                        {formatCostInMillicents(Number(item.y))}
-                      </Text.H6>
+                      <Text.H6>{formatCostInMillicents(Number(item.y))}</Text.H6>
                     </div>
                   </div>
                 ),

@@ -4,10 +4,10 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip, TooltipProvider } from '@latitude-data/web-ui/atoms/Tooltip'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import {
-  ChangeEvent,
-  KeyboardEvent,
+  type ChangeEvent,
+  type KeyboardEvent,
   useCallback,
   useEffect,
   useRef,
@@ -46,11 +46,7 @@ function StepName({
           className='opacity-0 group-hover:opacity-100'
           disabled={readOnly}
         >
-          <Icon
-            name={noName ? 'plus' : 'pencil'}
-            color='foregroundMuted'
-            size='small'
-          />
+          <Icon name={noName ? 'plus' : 'pencil'} color='foregroundMuted' size='small' />
         </button>
       )}
     </div>
@@ -82,9 +78,7 @@ function RightArea({
         the model. Type '{{ nameOfStep }}' to reference the step name in the prompt.`}
       </Tooltip>
       {readOnly ? (
-        <Text.H6 color='foregroundMuted'>
-          {isolated ? 'Isolated' : 'Not isolated'}
-        </Text.H6>
+        <Text.H6 color='foregroundMuted'>{isolated ? 'Isolated' : 'Not isolated'}</Text.H6>
       ) : (
         <>
           <Text.H6 color='foregroundMuted'>Isolated</Text.H6>
@@ -112,8 +106,7 @@ function RightArea({
             />
           }
         >
-          This step has extra configuration. Please click to edit it on the code
-          editor.
+          This step has extra configuration. Please click to edit it on the code editor.
         </Tooltip>
       )}
       {!readOnly && (
@@ -156,12 +149,9 @@ export function StepHeader({
     left: number
     width: number
   } | null>(null)
-  const onChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      setValue(e.target.value)
-    },
-    [setValue],
-  )
+  const onChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setValue(e.target.value)
+  }, [])
 
   const save = useCallback(() => {
     setEditing(false)
@@ -199,10 +189,7 @@ export function StepHeader({
           <div className='flex items-center justify-center border border-border rounded-lg p-0.5 min-w-6 min-h-6'>
             <Text.H6M userSelect={false}>{stepIndex}</Text.H6M>
           </div>
-          <div
-            ref={inputWrapper}
-            className='min-h-6 flex relative items-center min-w-52'
-          >
+          <div ref={inputWrapper} className='min-h-6 flex relative items-center min-w-52'>
             {editing && pos ? (
               createPortal(
                 <Input

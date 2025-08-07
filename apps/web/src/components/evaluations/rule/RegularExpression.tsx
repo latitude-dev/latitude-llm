@@ -1,15 +1,11 @@
 import {
-  EvaluationType,
-  RuleEvaluationMetric,
+  type EvaluationType,
+  type RuleEvaluationMetric,
   RuleEvaluationRegularExpressionSpecification,
 } from '@latitude-data/constants'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 
 const specification = RuleEvaluationRegularExpressionSpecification
 export default {
@@ -25,45 +21,32 @@ function ConfigurationSimpleForm({
   setConfiguration,
   errors,
   disabled,
-}: ConfigurationFormProps<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.RegularExpression
->) {
+}: ConfigurationFormProps<EvaluationType.Rule, RuleEvaluationMetric.RegularExpression>) {
   return (
-    <>
-      <Input
-        value={configuration.pattern ?? ''}
-        name='pattern'
-        label='Regex pattern'
-        description='The regex pattern to match against'
-        placeholder='.*pattern.*'
-        onChange={(e) =>
-          setConfiguration({ ...configuration, pattern: e.target.value })
-        }
-        errors={errors?.['pattern']}
-        className='w-full'
-        disabled={disabled}
-        required
-      />
-    </>
+    <Input
+      value={configuration.pattern ?? ''}
+      name='pattern'
+      label='Regex pattern'
+      description='The regex pattern to match against'
+      placeholder='.*pattern.*'
+      onChange={(e) => setConfiguration({ ...configuration, pattern: e.target.value })}
+      errors={errors?.pattern}
+      className='w-full'
+      disabled={disabled}
+      required
+    />
   )
 }
 
 function ResultBadge({
   result,
-}: ResultBadgeProps<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.RegularExpression
->) {
+}: ResultBadgeProps<EvaluationType.Rule, RuleEvaluationMetric.RegularExpression>) {
   return <>{result.score === 1 ? 'Matched' : 'Unmatched'}</>
 }
 
 function chartConfiguration({
   evaluation,
-}: ChartConfigurationArgs<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.RegularExpression
->) {
+}: ChartConfigurationArgs<EvaluationType.Rule, RuleEvaluationMetric.RegularExpression>) {
   return {
     min: 0,
     max: 100,

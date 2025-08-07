@@ -1,17 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  Commit,
-  Project,
-  ProviderApiKey,
+  type Commit,
+  type Project,
+  type ProviderApiKey,
   Providers,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '../../browser'
-import {
-  DocumentVersionsRepository,
-  WorkspacesRepository,
-} from '../../repositories'
+import { DocumentVersionsRepository, WorkspacesRepository } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits/merge'
 import { createNewDocument } from './create'
@@ -60,12 +57,7 @@ describe('createNewDocument', () => {
   })
 
   it('fails if document path is invalid', async () => {
-    const paths = [
-      'invalid path',
-      '/invalid/path',
-      'invalid:path',
-      'invalid**path||ªªª!!!',
-    ]
+    const paths = ['invalid path', '/invalid/path', 'invalid:path', 'invalid**path||ªªª!!!']
 
     for (const path of paths) {
       const result = await createNewDocument({
@@ -98,9 +90,7 @@ describe('createNewDocument', () => {
     })
 
     expect(result.ok).toBe(false)
-    expect(result.error!.message).toBe(
-      'A document with the same path already exists',
-    )
+    expect(result.error!.message).toBe('A document with the same path already exists')
   })
 
   it('fails when trying to create a document in a merged commit', async () => {

@@ -1,6 +1,6 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
-import { ErrorableEntity, RunError } from '../../../browser'
+import type { ErrorableEntity, RunError } from '../../../browser'
 import { createRunError } from '../../../services/runErrors/create'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 
@@ -15,10 +15,7 @@ export async function createChainRunError({
 }) {
   if (!errorableType) return error
 
-  let chainError: ChainError<RunErrorCodes, RunError> = error as ChainError<
-    RunErrorCodes,
-    RunError
-  >
+  let chainError: ChainError<RunErrorCodes, RunError> = error as ChainError<RunErrorCodes, RunError>
   if (!(error instanceof ChainError)) {
     chainError = new ChainError<RunErrorCodes.Unknown, RunError>({
       ...error,

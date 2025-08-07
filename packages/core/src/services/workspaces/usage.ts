@@ -1,11 +1,11 @@
 import { count, eq, inArray } from 'drizzle-orm'
-import Redis from 'ioredis'
-import { Subscription, Workspace, WorkspaceUsage } from '../../browser'
+import type Redis from 'ioredis'
+import type { Subscription, Workspace, WorkspaceUsage } from '../../browser'
 import { cache } from '../../cache'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { PromisedResult } from '../../lib/Transaction'
-import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
+import type { PromisedResult } from '../../lib/Transaction'
+import { type SubscriptionPlan, SubscriptionPlans } from '../../plans'
 import {
   ClaimedRewardsRepository,
   EvaluationResultsV2Repository,
@@ -17,16 +17,13 @@ import { getLatestRenewalDate } from './utils/calculateRenewalDate'
 /**
  * Handle both old cache format (object) and new cache format (number)
  **/
-async function getUsageFromCache(
-  cacheClient: Redis,
-  cacheKey: string,
-): Promise<number | null> {
+async function getUsageFromCache(cacheClient: Redis, cacheKey: string): Promise<number | null> {
   const cachedUsage = await cacheClient.get(cacheKey)
   if (cachedUsage === undefined || cachedUsage === null) return null
 
   const parsedNumber = parseInt(cachedUsage)
 
-  if (!isNaN(parsedNumber)) return parsedNumber
+  if (!Number.isNaN(parsedNumber)) return parsedNumber
 
   // If not a number, try to parse as JSON (old cache format)
   try {
@@ -51,10 +48,7 @@ async function computeUsageFromDatabase(
   const createdAtDate = workspace.currentSubscriptionCreatedAt
   const targetDate = new Date(Date.now())
   const latestRenewalDate = getLatestRenewalDate(createdAtDate, targetDate)
-  const evaluationResultsV2Scope = new EvaluationResultsV2Repository(
-    workspace.id,
-    db,
-  )
+  const evaluationResultsV2Scope = new EvaluationResultsV2Repository(workspace.id, db)
 
   const commitIds = await db
     .select({ commitId: commits.id })
@@ -94,9 +88,7 @@ export async function computeWorkspaceUsage(
   }
 
   const claimedRewardsScope = new ClaimedRewardsRepository(workspace.id, db)
-  const extraRuns = await claimedRewardsScope
-    .getExtraRunsOptimistic()
-    .then((r) => r.unwrap())
+  const extraRuns = await claimedRewardsScope.getExtraRunsOptimistic().then((r) => r.unwrap())
   const currentSubscriptionPlan = SubscriptionPlans[workspace.plan]
 
   const membersRepo = new MembershipsRepository(workspace.id, db)

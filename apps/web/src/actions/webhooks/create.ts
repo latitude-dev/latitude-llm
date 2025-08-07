@@ -19,7 +19,7 @@ export const createWebhookAction = authProcedure
     let projectIds: number[] | undefined
     try {
       projectIds = input.projectIds ? JSON.parse(input.projectIds) : undefined
-    } catch (error) {
+    } catch (_error) {
       throw new BadRequestError('Invalid project IDs')
     }
 

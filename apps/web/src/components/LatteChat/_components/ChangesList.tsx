@@ -1,7 +1,7 @@
 'use client'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
 import { ModifiedDocumentType } from '@latitude-data/constants'
-import { LatteChange } from '@latitude-data/constants/latte'
+import type { LatteChange } from '@latitude-data/constants/latte'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
@@ -9,10 +9,7 @@ import Link from 'next/link'
 
 function ChangeListItem({ change }: { change: LatteChange }) {
   const path = change.current.path
-  const oldPath =
-    change.previous?.path !== change.current.path
-      ? change.previous?.path
-      : undefined
+  const oldPath = change.previous?.path !== change.current.path ? change.previous?.path : undefined
 
   const changeType: ModifiedDocumentType =
     change.previous === null
@@ -41,9 +38,7 @@ function ChangeListItem({ change }: { change: LatteChange }) {
         ROUTES.projects
           .detail({ id: change.projectId })
           .commits.detail({ uuid: change.draftUuid })
-          .documents.detail({ uuid: change.current.documentUuid })[
-          DocumentRoutes.editor
-        ].root
+          .documents.detail({ uuid: change.current.documentUuid })[DocumentRoutes.editor].root
       }
       className='w-full'
     >
@@ -88,8 +83,7 @@ export function ChangeList({
             iconProps={{
               name: 'undo',
               color: 'latteInputForeground',
-              className:
-                'flex-shrink-0 group-hover:text-latte-input-foreground/75 stroke-[1.5]',
+              className: 'flex-shrink-0 group-hover:text-latte-input-foreground/75 stroke-[1.5]',
             }}
             className='text-latte-input-foreground group-hover:text-latte-input-foreground/75 font-light'
             userSelect={false}
@@ -104,8 +98,7 @@ export function ChangeList({
             iconProps={{
               name: 'checkClean',
               color: 'latteInputForeground',
-              className:
-                'flex-shrink-0 group-hover:text-latte-input-foreground/75',
+              className: 'flex-shrink-0 group-hover:text-latte-input-foreground/75',
             }}
             className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
             userSelect={false}

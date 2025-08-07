@@ -1,11 +1,11 @@
-import { z } from 'zod'
-import { User, Workspace } from '../../../../browser'
-import { PromisedResult } from '../../../../lib/Transaction'
+import type { z } from 'zod'
+import type { User, Workspace } from '../../../../browser'
+import type { PromisedResult } from '../../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../lib/Result'
-import { TelemetryContext } from '../../../../telemetry'
-import { ToolExecutionOptions } from 'ai'
-import { LatteTool } from '@latitude-data/constants/latte'
+import type { TelemetryContext } from '../../../../telemetry'
+import type { ToolExecutionOptions } from 'ai'
+import type { LatteTool } from '@latitude-data/constants/latte'
 
 export type LatteToolContext = {
   context: TelemetryContext
@@ -22,9 +22,7 @@ export type LatteToolFn<P extends { [key: string]: unknown } = {}> = (
 
 export const defineLatteTool = <
   S extends z.ZodSchema | undefined = undefined,
-  P extends { [key: string]: unknown } = S extends z.ZodSchema
-    ? z.infer<S>
-    : {},
+  P extends { [key: string]: unknown } = S extends z.ZodSchema ? z.infer<S> : {},
 >(
   cb: LatteToolFn<P>,
   schema?: S,

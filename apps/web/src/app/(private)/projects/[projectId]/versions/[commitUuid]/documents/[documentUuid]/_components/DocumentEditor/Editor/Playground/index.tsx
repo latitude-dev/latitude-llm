@@ -5,17 +5,11 @@ import Chat from '$/components/PlaygroundCommon/Chat'
 import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
-import { ResolvedMetadata } from '$/workers/readMetadata'
-import { DocumentVersion, LogSources } from '@latitude-data/core/browser'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
+import { type DocumentVersion, LogSources } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import DocumentEvaluations from './DocumentEvaluations'
 import DocumentParams from './DocumentParams'
@@ -51,18 +45,16 @@ export const Playground = memo(
       document,
     })
 
-    const { value: expandParameters, setValue: setExpandParameters } =
-      useLocalStorage({
-        key: AppLocalStorage.expandParameters,
-        defaultValue: false,
-      })
+    const { value: expandParameters, setValue: setExpandParameters } = useLocalStorage({
+      key: AppLocalStorage.expandParameters,
+      defaultValue: false,
+    })
 
     const [runCount, setRunCount] = useState(0)
     const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
-    const { data: documentLog, isLoading: isDocumentLogLoading } =
-      useDocumentLogWithMetadata({
-        documentLogUuid: documentLogUuid,
-      })
+    const { data: documentLog, isLoading: isDocumentLogLoading } = useDocumentLogWithMetadata({
+      documentLogUuid: documentLogUuid,
+    })
     const onPromptRan = useCallback(
       (documentLogUuid?: string, error?: Error) => {
         if (!documentLogUuid || error) return
@@ -70,16 +62,16 @@ export const Playground = memo(
         setDocumentLogUuid(documentLogUuid)
         setHistoryLog({ uuid: documentLogUuid, source: LogSources.Playground })
       },
-      [setRunCount, setDocumentLogUuid, setHistoryLog],
+      [setHistoryLog],
     )
     const clearChat = useCallback(() => {
       expander.onToggle('parameters')(true)
       setMode('preview')
-    }, [expander, setMode])
+    }, [expander])
     const runPrompt = useCallback(() => {
       expander.closeAll()
       setMode('chat')
-    }, [expander, setMode])
+    }, [expander])
     const { runPromptFn, addMessagesFn, abortCurrentStream, hasActiveStream } =
       useRunPlaygroundPrompt({
         commit,
@@ -92,17 +84,9 @@ export const Playground = memo(
       <div className='h-full px-4 relative min-h-0 flex flex-col gap-y-4 min-w-0'>
         <div className='min-h-8 flex flex-row items-center justify-between w-full'>
           <Text.H4M>Preview</Text.H4M>
-          <Actions
-            expandParameters={expandParameters}
-            setExpandParameters={setExpandParameters}
-          />
+          <Actions expandParameters={expandParameters} setExpandParameters={setExpandParameters} />
         </div>
-        <div
-          className={cn(
-            'gap-2 w-full flex flex-col gap-y-2',
-            expander.cssClass,
-          )}
-        >
+        <div className={cn('gap-2 w-full flex flex-col gap-y-2', expander.cssClass)}>
           {!parameters ? (
             <DocumentParamsLoading source={source} />
           ) : (

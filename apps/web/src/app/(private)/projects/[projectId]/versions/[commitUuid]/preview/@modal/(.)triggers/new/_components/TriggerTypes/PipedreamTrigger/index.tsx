@@ -1,17 +1,14 @@
 import {
   SearchableList,
-  OptionItem,
+  type OptionItem,
   type OnSelectValue,
 } from '@latitude-data/web-ui/molecules/SearchableList'
 import { useCallback, useMemo, useState } from 'react'
-import type {
-  PipedreamComponent,
-  PipedreamComponentType,
-} from '@latitude-data/core/browser'
+import type { PipedreamComponent, PipedreamComponentType } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
-import { type OnTriggerCreated } from '../../../client'
+import type { OnTriggerCreated } from '../../../client'
 import { TriggerConfiguration } from './TriggerConfiguration'
 
 export type Trigger = PipedreamComponent<PipedreamComponentType.Trigger>
@@ -25,8 +22,7 @@ export function PipedreamTrigger({
   onTriggerCreated: OnTriggerCreated
 }) {
   const [selectedTrigger, setTrigger] = useState<Trigger | null>(null)
-  const { data: selectedPipedreamApp, isLoading } =
-    usePipedreamApp(pipedreamSlug)
+  const { data: selectedPipedreamApp, isLoading } = usePipedreamApp(pipedreamSlug)
 
   const triggers = selectedPipedreamApp?.triggers ?? EMPTY_LIST
   const options = useMemo<OptionItem[]>(
@@ -81,9 +77,7 @@ export function PipedreamTrigger({
           />
         ) : (
           <div className='h-full flex items-center justify-center'>
-            <Text.H6 color='foregroundMuted'>
-              Select a trigger to configure it.
-            </Text.H6>
+            <Text.H6 color='foregroundMuted'>Select a trigger to configure it.</Text.H6>
           </div>
         )}
       </div>

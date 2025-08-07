@@ -1,11 +1,11 @@
-import { BaseInstrumentation } from '$telemetry/instrumentations/base'
+import type { BaseInstrumentation } from '$telemetry/instrumentations/base'
 import { ManualInstrumentation } from '$telemetry/instrumentations/manual'
 import {
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS,
 } from '@latitude-data/constants'
 import type * as latitude from '@latitude-data/sdk'
-import * as otel from '@opentelemetry/api'
+import type * as otel from '@opentelemetry/api'
 import { context } from '@opentelemetry/api'
 import type * as promptl from 'promptl-ai'
 

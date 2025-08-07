@@ -2,19 +2,12 @@ import { eq, and } from 'drizzle-orm'
 
 import { database } from '../../../client'
 import { webhooks } from '../../../schema/models/webhooks'
-import { Events, LatitudeEvent } from '../../../events/events'
+import type { Events, LatitudeEvent } from '../../../events/events'
 import { webhooksQueue } from '../../queues'
 
-export const WEBHOOK_EVENTS: Array<Events> = [
-  'commitPublished',
-  'documentLogCreated',
-]
+export const WEBHOOK_EVENTS: Array<Events> = ['commitPublished', 'documentLogCreated']
 
-export async function processWebhookJob({
-  data: event,
-}: {
-  data: LatitudeEvent
-}) {
+export async function processWebhookJob({ data: event }: { data: LatitudeEvent }) {
   if (!('workspaceId' in event.data) || !event.data.workspaceId) {
     return // Skip silently as this is an expected condition
   }
@@ -26,12 +19,7 @@ export async function processWebhookJob({
   const activeWebhooks = await database
     .select()
     .from(webhooks)
-    .where(
-      and(
-        eq(webhooks.workspaceId, event.data.workspaceId),
-        eq(webhooks.isActive, true),
-      ),
-    )
+    .where(and(eq(webhooks.workspaceId, event.data.workspaceId), eq(webhooks.isActive, true)))
 
   // Enqueue a job for each webhook
   await Promise.all(

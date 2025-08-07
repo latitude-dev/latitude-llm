@@ -1,16 +1,9 @@
-import {
-  BadRequestError,
-  UnprocessableEntityError,
-} from '@latitude-data/constants/errors'
+import { BadRequestError, UnprocessableEntityError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
-import { App, BackendClient, createBackendClient } from '@pipedream/sdk/server'
-import {
-  AppDto,
-  PipedreamComponent,
-  PipedreamComponentType,
-} from '../../../constants'
+import { type App, type BackendClient, createBackendClient } from '@pipedream/sdk/server'
+import { type AppDto, type PipedreamComponent, PipedreamComponentType } from '../../../constants'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { fetchTriggerCounts } from './fetchTriggerCounts'
 
 const LIST_APPS_LIMIT = 64
@@ -114,9 +107,7 @@ export async function searchComponents({
 }): PromisedResult<PipedreamComponent[]> {
   if (!app && !query) {
     return Result.error(
-      new BadRequestError(
-        'Either app or query must be provided to search components.',
-      ),
+      new BadRequestError('Either app or query must be provided to search components.'),
     )
   }
 
@@ -155,7 +146,7 @@ async function getAllAppComponents(
 }> {
   const tools: PipedreamComponent<PipedreamComponentType.Tool>[] = []
   const triggers: PipedreamComponent<PipedreamComponentType.Trigger>[] = []
-  let cursor: string | undefined = undefined
+  let cursor: string | undefined
 
   do {
     const response = await pipedream.getComponents({
@@ -172,8 +163,7 @@ async function getAllAppComponents(
 
     triggers.push(
       ...(response.data.filter(
-        (component) =>
-          component.component_type === PipedreamComponentType.Trigger,
+        (component) => component.component_type === PipedreamComponentType.Trigger,
       ) as PipedreamComponent<PipedreamComponentType.Trigger>[]),
     )
 
@@ -186,11 +176,7 @@ async function getAllAppComponents(
   }
 }
 
-export async function getApp({
-  name,
-}: {
-  name: string
-}): PromisedResult<AppDto> {
+export async function getApp({ name }: { name: string }): PromisedResult<AppDto> {
   const pipedreamEnv = getPipedreamEnvironment()
   if (!pipedreamEnv.ok) {
     return Result.error(pipedreamEnv.error!)

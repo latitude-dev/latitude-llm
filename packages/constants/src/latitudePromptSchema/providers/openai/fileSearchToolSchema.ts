@@ -32,10 +32,7 @@ const CompoundFilterSchema: z.ZodType<CompoundFilter> = z.lazy(() =>
   }),
 )
 
-const FilterSchema: z.ZodType<Filter> = z.union([
-  ComparisonFilterSchema,
-  CompoundFilterSchema,
-])
+const FilterSchema: z.ZodType<Filter> = z.union([ComparisonFilterSchema, CompoundFilterSchema])
 
 const RankingOptionsSchema = z.object({
   ranker: z.enum(['auto', 'default-2024-11-15']).optional(),

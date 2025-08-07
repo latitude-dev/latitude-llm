@@ -1,13 +1,13 @@
-import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
+import type { InferInsertModel, InferSelectModel } from 'drizzle-orm'
 
-import {
+import type {
   DocumentLog,
   DocumentTriggerType,
   EvaluationResultDto,
   ExperimentScores,
   IntegrationType,
 } from '@latitude-data/constants'
-import {
+import type {
   EvaluationMetadataType,
   EvaluationMetric,
   EvaluationResultableType,
@@ -15,50 +15,50 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '../constants'
-import {
+import type {
   DocumentTriggerConfiguration,
   DocumentTriggerDeploymentSettings,
   DocumentTriggerEventPayload,
 } from '@latitude-data/constants/documentTriggers'
-import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
-import { connectedEvaluations } from './legacyModels/connectedEvaluations'
-import { evaluationAdvancedTemplates } from './legacyModels/evaluationAdvancedTemplates'
-import { evaluationConfigurationBoolean } from './legacyModels/evaluationConfigurationBoolean'
-import { evaluationConfigurationNumerical } from './legacyModels/evaluationConfigurationNumerical'
-import { evaluationConfigurationText } from './legacyModels/evaluationConfigurationText'
-import { evaluationMetadataManual } from './legacyModels/evaluationMetadataDefault'
-import { evaluationMetadataLlmAsJudgeAdvanced } from './legacyModels/evaluationMetadataLlmAsJudgeAdvanced'
-import { evaluationMetadataLlmAsJudgeSimple } from './legacyModels/evaluationMetadataLlmAsJudgeSimple'
-import { evaluations } from './legacyModels/evaluations'
-import { evaluationTemplateCategories } from './legacyModels/evaluationTemplateCategories'
-import { apiKeys } from './models/apiKeys'
-import { claimedRewards } from './models/claimedRewards'
-import { commits } from './models/commits'
-import { datasetRows } from './models/datasetRows'
-import { datasets } from './models/datasets'
-import { documentSuggestions } from './models/documentSuggestions'
-import { documentTriggers } from './models/documentTriggers'
-import { documentVersions } from './models/documentVersions'
-import { experiments } from './models/experiments'
-import { latitudeExports } from './models/exports'
-import { integrations } from './models/integrations'
-import { magicLinkTokens } from './models/magicLinkTokens'
-import { mcpServers } from './models/mcpServers'
-import { memberships } from './models/memberships'
-import { projects } from './models/projects'
-import { providerApiKeys } from './models/providerApiKeys'
-import { providerLogs } from './models/providerLogs'
-import { publishedDocuments } from './models/publishedDocuments'
-import { runErrors } from './models/runErrors'
-import { sessions } from './models/sessions'
-import { subscriptions } from './models/subscriptions'
-import { users } from './models/users'
-import { workspaces } from './models/workspaces'
-import { latteThreads } from './models/latteThreads'
-import { latteThreadCheckpoints } from './models/latteThreadCheckpoints'
-import { features } from './models/features'
-import { workspaceFeatures } from './models/workspaceFeatures'
-import { documentTriggerEvents } from './models/documentTriggerEvents'
+import type { IntegrationConfiguration } from '../services/integrations/helpers/schema'
+import type { connectedEvaluations } from './legacyModels/connectedEvaluations'
+import type { evaluationAdvancedTemplates } from './legacyModels/evaluationAdvancedTemplates'
+import type { evaluationConfigurationBoolean } from './legacyModels/evaluationConfigurationBoolean'
+import type { evaluationConfigurationNumerical } from './legacyModels/evaluationConfigurationNumerical'
+import type { evaluationConfigurationText } from './legacyModels/evaluationConfigurationText'
+import type { evaluationMetadataManual } from './legacyModels/evaluationMetadataDefault'
+import type { evaluationMetadataLlmAsJudgeAdvanced } from './legacyModels/evaluationMetadataLlmAsJudgeAdvanced'
+import type { evaluationMetadataLlmAsJudgeSimple } from './legacyModels/evaluationMetadataLlmAsJudgeSimple'
+import type { evaluations } from './legacyModels/evaluations'
+import type { evaluationTemplateCategories } from './legacyModels/evaluationTemplateCategories'
+import type { apiKeys } from './models/apiKeys'
+import type { claimedRewards } from './models/claimedRewards'
+import type { commits } from './models/commits'
+import type { datasetRows } from './models/datasetRows'
+import type { datasets } from './models/datasets'
+import type { documentSuggestions } from './models/documentSuggestions'
+import type { documentTriggers } from './models/documentTriggers'
+import type { documentVersions } from './models/documentVersions'
+import type { experiments } from './models/experiments'
+import type { latitudeExports } from './models/exports'
+import type { integrations } from './models/integrations'
+import type { magicLinkTokens } from './models/magicLinkTokens'
+import type { mcpServers } from './models/mcpServers'
+import type { memberships } from './models/memberships'
+import type { projects } from './models/projects'
+import type { providerApiKeys } from './models/providerApiKeys'
+import type { providerLogs } from './models/providerLogs'
+import type { publishedDocuments } from './models/publishedDocuments'
+import type { runErrors } from './models/runErrors'
+import type { sessions } from './models/sessions'
+import type { subscriptions } from './models/subscriptions'
+import type { users } from './models/users'
+import type { workspaces } from './models/workspaces'
+import type { latteThreads } from './models/latteThreads'
+import type { latteThreadCheckpoints } from './models/latteThreadCheckpoints'
+import type { features } from './models/features'
+import type { workspaceFeatures } from './models/workspaceFeatures'
+import type { documentTriggerEvents } from './models/documentTriggerEvents'
 
 export type {
   DocumentLog,
@@ -87,14 +87,10 @@ export type RunError = InferSelectModel<typeof runErrors>
 export type RunErrorInsert = InferInsertModel<typeof runErrors>
 export type Evaluation = InferSelectModel<typeof evaluations>
 export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
-export type EvaluationTemplate = InferSelectModel<
-  typeof evaluationAdvancedTemplates
->
+export type EvaluationTemplate = InferSelectModel<typeof evaluationAdvancedTemplates>
 export type MagicLinkToken = InferSelectModel<typeof magicLinkTokens>
 export type ClaimedReward = InferSelectModel<typeof claimedRewards>
-export type EvaluationTemplateCategory = InferSelectModel<
-  typeof evaluationTemplateCategories
->
+export type EvaluationTemplateCategory = InferSelectModel<typeof evaluationTemplateCategories>
 export type Subscription = InferSelectModel<typeof subscriptions>
 export type Export = typeof latitudeExports.$inferSelect
 export type NewExport = typeof latitudeExports.$inferInsert
@@ -131,9 +127,7 @@ export type EvaluationConfigurationText = Omit<
   'createdAt' | 'updatedAt'
 >
 export type LatteThread = InferSelectModel<typeof latteThreads>
-export type LatteThreadCheckpoint = InferSelectModel<
-  typeof latteThreadCheckpoints
->
+export type LatteThreadCheckpoint = InferSelectModel<typeof latteThreadCheckpoints>
 export type Feature = InferSelectModel<typeof features>
 export type WorkspaceFeature = InferSelectModel<typeof workspaceFeatures>
 
@@ -227,10 +221,9 @@ export type EvaluationTemplateWithCategory = EvaluationTemplate & {
   category: string
 }
 
-export type ProviderLogDto = Omit<
-  ProviderLog,
-  'responseText' | 'responseObject'
-> & { response: string }
+export type ProviderLogDto = Omit<ProviderLog, 'responseText' | 'responseObject'> & {
+  response: string
+}
 
 export type ClaimedRewardWithUserInfo = ClaimedReward & {
   workspaceName: string | null
@@ -259,25 +252,18 @@ export type DocumentSuggestionWithDetails = DocumentSuggestion & {
 }
 
 export type Integration = InferSelectModel<typeof integrations>
-export type IntegrationDto = Omit<Integration, 'configuration' | 'type'> &
-  IntegrationConfiguration
-export type PipedreamIntegration = Extract<
-  IntegrationDto,
-  { type: IntegrationType.Pipedream }
->
+export type IntegrationDto = Omit<Integration, 'configuration' | 'type'> & IntegrationConfiguration
+export type PipedreamIntegration = Extract<IntegrationDto, { type: IntegrationType.Pipedream }>
 
 export type PipedreamIntegrationWithAcountCount = PipedreamIntegration & {
   accountCount: number
 }
-export type PipedreamIntegrationWithCounts =
-  PipedreamIntegrationWithAcountCount & {
-    triggerCount: number
-  }
+export type PipedreamIntegrationWithCounts = PipedreamIntegrationWithAcountCount & {
+  triggerCount: number
+}
 
 type _DocumentTrigger = InferSelectModel<typeof documentTriggers>
-export type DocumentTrigger<
-  T extends DocumentTriggerType = DocumentTriggerType,
-> = Omit<
+export type DocumentTrigger<T extends DocumentTriggerType = DocumentTriggerType> = Omit<
   _DocumentTrigger,
   'triggerType' | 'configuration' | 'deploymentSettings'
 > & {
@@ -286,12 +272,11 @@ export type DocumentTrigger<
   deploymentSettings: DocumentTriggerDeploymentSettings<T> | null
 }
 
-export type DocumentTriggerEvent<
-  T extends DocumentTriggerType = DocumentTriggerType,
-> = InferSelectModel<typeof documentTriggerEvents> & {
-  triggerType: T
-  payload: DocumentTriggerEventPayload<T>
-}
+export type DocumentTriggerEvent<T extends DocumentTriggerType = DocumentTriggerType> =
+  InferSelectModel<typeof documentTriggerEvents> & {
+    triggerType: T
+    payload: DocumentTriggerEventPayload<T>
+  }
 
 export type ResultWithEvaluation = {
   result: EvaluationResultDto

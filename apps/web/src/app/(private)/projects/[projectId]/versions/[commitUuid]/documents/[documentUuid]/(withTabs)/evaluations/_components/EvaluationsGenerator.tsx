@@ -1,23 +1,17 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
-import { ActionErrors } from '$/hooks/useLatitudeAction'
+import type { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import {
-  EvaluationOptions,
-  EvaluationSettings,
-} from '@latitude-data/core/browser'
+import type { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import type { EvaluationOptions, EvaluationSettings } from '@latitude-data/core/browser'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useMemo, useState } from 'react'
 
 const DEFAULT_EVALUATION_OPTIONS = {
@@ -51,11 +45,8 @@ export function EvaluationsGenerator({
 
   const [instructions, setInstructions] = useState<string>()
   const [settings, setSettings] = useState<EvaluationSettings>()
-  const [options, setOptions] = useState<Partial<EvaluationOptions>>(
-    DEFAULT_EVALUATION_OPTIONS,
-  )
-  const [errors, setErrors] =
-    useState<ActionErrors<typeof useEvaluationsV2, 'createEvaluation'>>()
+  const [options, setOptions] = useState<Partial<EvaluationOptions>>(DEFAULT_EVALUATION_OPTIONS)
+  const [errors, setErrors] = useState<ActionErrors<typeof useEvaluationsV2, 'createEvaluation'>>()
 
   const onGenerate = useCallback(async () => {
     if (isGeneratingEvaluation) return
@@ -65,15 +56,7 @@ export function EvaluationsGenerator({
     setSettings(result.settings)
     setOptions(DEFAULT_EVALUATION_OPTIONS)
     setErrors(undefined)
-  }, [
-    isGeneratingEvaluation,
-    generateEvaluation,
-    instructions,
-    setInstructions,
-    setSettings,
-    setOptions,
-    setErrors,
-  ])
+  }, [isGeneratingEvaluation, generateEvaluation, instructions])
 
   const onCreate = useCallback(async () => {
     if (isCreatingEvaluation || !settings) return
@@ -100,10 +83,6 @@ export function EvaluationsGenerator({
     createEvaluation,
     settings,
     options,
-    setInstructions,
-    setSettings,
-    setOptions,
-    setErrors,
     setOpen,
     project,
     commit,
@@ -116,8 +95,7 @@ export function EvaluationsGenerator({
       return {
         number: 2,
         title: 'Generating evaluation',
-        description:
-          'We are generating an evaluation to assess the quality of your prompts',
+        description: 'We are generating an evaluation to assess the quality of your prompts',
         label: 'Generating...',
         onConfirm: () => {},
         content: (
@@ -145,8 +123,7 @@ export function EvaluationsGenerator({
       return {
         number: 1,
         title: 'Generate evaluation',
-        description:
-          'Generate an evaluation to assess the quality of your prompts',
+        description: 'Generate an evaluation to assess the quality of your prompts',
         label: isGeneratingEvaluation ? 'Generating...' : 'Generate evaluation',
         onConfirm: onGenerate,
         content: (
@@ -198,9 +175,6 @@ export function EvaluationsGenerator({
     options,
     errors,
     commit,
-    setInstructions,
-    setSettings,
-    setOptions,
     onGenerate,
     onCreate,
   ])

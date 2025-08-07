@@ -15,9 +15,7 @@ export const destroyIntegrationAction = authProcedure
   )
   .handler(async ({ input, ctx }) => {
     const integrationsRepo = new IntegrationsRepository(ctx.workspace.id)
-    const integration = await integrationsRepo
-      .find(input.id)
-      .then((r) => r.unwrap())
+    const integration = await integrationsRepo.find(input.id).then((r) => r.unwrap())
 
     return destroyIntegration(integration).then((r) => r.unwrap())
   })

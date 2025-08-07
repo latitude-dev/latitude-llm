@@ -1,18 +1,14 @@
-import type {
-  Message,
-  SystemMessage,
-  TextContent,
-} from '@latitude-data/constants/legacyCompiler'
-import { FilePart, ToolCallPart } from 'ai'
+import type { Message, SystemMessage, TextContent } from '@latitude-data/constants/legacyCompiler'
+import type { FilePart, ToolCallPart } from 'ai'
 
-import { Providers } from '../models'
+import type { Providers } from '../models'
 import {
   extractContentMetadata,
   extractMessageMetadata,
   getProviderMetadataKey,
   type ProviderMetadata,
 } from './providerMetadata'
-import { AppliedRules } from './types'
+import type { AppliedRules } from './types'
 
 function flattenSystemMessage({
   message,
@@ -89,8 +85,7 @@ function groupContentMetadata({
     if (!messageMetadata) return extracted
 
     // @ts-expect-error - metadata key can be not present
-    const contentMetadata = (extracted.providerOptions ??
-      {}) as ProviderMetadata
+    const contentMetadata = (extracted.providerOptions ?? {}) as ProviderMetadata
 
     return {
       ...extracted,
@@ -134,10 +129,10 @@ function adaptContentFields({
       case 'file': {
         const adaptedContent = {
           ...c,
-          data: (c as any)['file'] as FilePart['data'],
+          data: (c as any).file as FilePart['data'],
         } as FilePart
 
-        delete (adaptedContent as any)['file']
+        delete (adaptedContent as any).file
 
         return adaptedContent
       }
@@ -145,10 +140,10 @@ function adaptContentFields({
       case 'tool-call': {
         const adaptedContent = {
           ...c,
-          args: c.args || ((c as any)['toolArguments'] as ToolCallPart['args']),
+          args: c.args || ((c as any).toolArguments as ToolCallPart['args']),
         } as ToolCallPart
 
-        delete (adaptedContent as any)['toolArguments']
+        delete (adaptedContent as any).toolArguments
 
         return adaptedContent
       }
@@ -181,10 +176,7 @@ function extractPromptlToolInfo({ message }: { message: Message }) {
   return { toolCallId, toolName }
 }
 
-export function vercelSdkRules(
-  rules: AppliedRules,
-  provider: Providers,
-): AppliedRules {
+export function vercelSdkRules(rules: AppliedRules, provider: Providers): AppliedRules {
   const messages = rules.messages.flatMap((message) => {
     if (message.role === 'system') {
       return flattenSystemMessage({ message, provider })

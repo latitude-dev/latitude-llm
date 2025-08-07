@@ -1,24 +1,21 @@
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
 import {
-  GenerationResponse,
+  type GenerationResponse,
   HandlerType,
-  RunPromptOptions,
-  RunSyncAPIResponse,
-  SDKOptions,
-  ToolSpec,
+  type RunPromptOptions,
+  type RunSyncAPIResponse,
+  type SDKOptions,
+  type ToolSpec,
 } from '$sdk/utils/types'
 import {
   ApiErrorCodes,
-  ApiErrorJsonResponse,
+  type ApiErrorJsonResponse,
   LatitudeErrorCodes,
 } from '@latitude-data/constants/errors'
-import { AssertedStreamType } from '@latitude-data/constants'
+import type { AssertedStreamType } from '@latitude-data/constants'
 
-export async function syncRun<
-  Tools extends ToolSpec,
-  S extends AssertedStreamType = 'text',
->(
+export async function syncRun<Tools extends ToolSpec, S extends AssertedStreamType = 'text'>(
   path: string,
   {
     projectId,
@@ -66,7 +63,7 @@ export async function syncRun<
     let json: ApiErrorJsonResponse | undefined
     try {
       json = (await response.json()) as ApiErrorJsonResponse
-    } catch (error) {
+    } catch (_error) {
       // Do nothing, sometimes gateway returns html instead of json (502/504 errors)
     }
 

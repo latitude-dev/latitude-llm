@@ -26,7 +26,7 @@ import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
 
 export default function Integrations() {
-  const { data: integrations, isLoading: isLoading } = useIntegrations()
+  const { data: integrations, isLoading } = useIntegrations()
 
   return (
     <div className='flex flex-col gap-4'>
@@ -49,9 +49,7 @@ export default function Integrations() {
             description='There are no integrations yet. Create one to start working with your prompts.'
             link={
               <Link href={ROUTES.settings.integrations.new.root}>
-                <TableBlankSlate.Button>
-                  Create integration
-                </TableBlankSlate.Button>
+                <TableBlankSlate.Button>Create integration</TableBlankSlate.Button>
               </Link>
             }
           />
@@ -97,17 +95,12 @@ const IntegrationsTable = () => {
               </TableCell>
               <TableCell>
                 <Text.H5 color='foregroundMuted'>
-                  {relativeTime(
-                    integration.lastUsedAt ? integration.lastUsedAt : null,
-                  )}
+                  {relativeTime(integration.lastUsedAt ? integration.lastUsedAt : null)}
                 </Text.H5>
               </TableCell>
               <TableCell>
                 {integration.type === IntegrationType.HostedMCP ? (
-                  <McpServerStatus
-                    short
-                    mcpServerId={integration.mcpServerId || undefined}
-                  />
+                  <McpServerStatus short mcpServerId={integration.mcpServerId || undefined} />
                 ) : (
                   '-'
                 )}
@@ -120,31 +113,22 @@ const IntegrationsTable = () => {
                       hidden: integration.type !== IntegrationType.HostedMCP,
                       disabled: integration.type !== IntegrationType.HostedMCP,
                       onClick: () =>
-                        router.push(
-                          ROUTES.settings.integrations.details(integration.id)
-                            .root,
-                        ),
+                        router.push(ROUTES.settings.integrations.details(integration.id).root),
                     },
                     {
                       label: 'Scale Up',
-                      hidden:
-                        integration.type !== IntegrationType.HostedMCP ||
-                        workspace?.id !== 1,
+                      hidden: integration.type !== IntegrationType.HostedMCP || workspace?.id !== 1,
                       disabled:
-                        integration.type !== IntegrationType.HostedMCP ||
-                        workspace?.id !== 1,
+                        integration.type !== IntegrationType.HostedMCP || workspace?.id !== 1,
                       onClick: () =>
                         integration.mcpServerId &&
                         scaleUp({ mcpServerId: integration.mcpServerId }),
                     },
                     {
                       label: 'Scale Down',
-                      hidden:
-                        integration.type !== IntegrationType.HostedMCP ||
-                        workspace?.id !== 1,
+                      hidden: integration.type !== IntegrationType.HostedMCP || workspace?.id !== 1,
                       disabled:
-                        integration.type !== IntegrationType.HostedMCP ||
-                        workspace?.id !== 1,
+                        integration.type !== IntegrationType.HostedMCP || workspace?.id !== 1,
                       onClick: () =>
                         integration.mcpServerId &&
                         scaleDown({ mcpServerId: integration.mcpServerId }),
@@ -153,10 +137,7 @@ const IntegrationsTable = () => {
                     {
                       label: 'Remove',
                       onClick: () =>
-                        router.push(
-                          ROUTES.settings.integrations.destroy(integration.id)
-                            .root,
-                        ),
+                        router.push(ROUTES.settings.integrations.destroy(integration.id).root),
                       type: 'destructive',
                     },
                   ]}

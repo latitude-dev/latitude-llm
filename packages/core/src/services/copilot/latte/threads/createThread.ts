@@ -1,6 +1,6 @@
-import { LatteThread, User, Workspace } from '../../../../browser'
+import type { LatteThread, User, Workspace } from '../../../../browser'
 import { Result } from '../../../../lib/Result'
-import Transaction, { PromisedResult } from '../../../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../../../lib/Transaction'
 import { latteThreads } from '../../../../schema'
 
 export function createLatteThread(

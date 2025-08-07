@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import buildMetatags from '$/app/_lib/buildMetatags'

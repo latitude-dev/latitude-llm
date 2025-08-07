@@ -1,20 +1,15 @@
 'use client'
-import React from 'react'
 
 import { Button } from '../Button'
 import { Icon } from '../Icons'
-import { IconProps } from '../Icons'
+import type { IconProps } from '../Icons'
 import { useToast } from '../Toast'
 
 type CopyButtonProps = Omit<IconProps, 'name'> & {
   content: string
 }
 
-export function CopyButton({
-  content,
-  color = 'foregroundMuted',
-  ...rest
-}: CopyButtonProps) {
+export function CopyButton({ content, color = 'foregroundMuted', ...rest }: CopyButtonProps) {
   const { toast } = useToast()
 
   const handleCopy = () => {

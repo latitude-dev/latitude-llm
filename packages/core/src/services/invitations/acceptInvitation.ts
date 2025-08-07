@@ -1,4 +1,4 @@
-import { Membership, User } from '../../browser'
+import type { Membership, User } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { updateMembership } from '../memberships'
@@ -16,9 +16,7 @@ export async function acceptInvitation(
 ) {
   const date = new Date()
   if (!user.confirmedAt) {
-    await updateUser(user, { confirmedAt: date }, transaction).then((r) =>
-      r.unwrap(),
-    )
+    await updateUser(user, { confirmedAt: date }, transaction).then((r) => r.unwrap())
   }
 
   const m = await updateMembership(

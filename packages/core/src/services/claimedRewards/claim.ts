@@ -1,4 +1,4 @@
-import { REWARD_VALUES, RewardType, User, Workspace } from '../../browser'
+import { REWARD_VALUES, RewardType, type User, type Workspace } from '../../browser'
 import { unsafelyFindUserByEmail } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'

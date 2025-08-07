@@ -1,6 +1,6 @@
 'use client'
 
-import React, { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
 
@@ -17,13 +17,7 @@ export interface TabsProps {
   children: (activeTab: string) => ReactNode
 }
 
-export function Tabs({
-  tabs,
-  activeTab,
-  onChange,
-  className,
-  children,
-}: TabsProps) {
+export function Tabs({ tabs, activeTab, onChange, className, children }: TabsProps) {
   return (
     <div className={cn('flex flex-col border rounded-lg min-w-0', className)}>
       <div className='flex border-b border-border'>

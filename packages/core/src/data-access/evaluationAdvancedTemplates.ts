@@ -1,13 +1,10 @@
 import { asc, eq, getTableColumns, inArray } from 'drizzle-orm'
 
-import { EvaluationTemplate, EvaluationTemplateWithCategory } from '../browser'
+import type { EvaluationTemplate, EvaluationTemplateWithCategory } from '../browser'
 import { database } from '../client'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { Result, TypedResult } from '../lib/Result'
-import {
-  evaluationAdvancedTemplates,
-  evaluationTemplateCategories,
-} from '../schema'
+import { Result, type TypedResult } from '../lib/Result'
+import { evaluationAdvancedTemplates, evaluationTemplateCategories } from '../schema'
 
 export async function findAllEvaluationTemplates(): Promise<
   TypedResult<EvaluationTemplateWithCategory[], Error>
@@ -20,15 +17,9 @@ export async function findAllEvaluationTemplates(): Promise<
     .from(evaluationAdvancedTemplates)
     .innerJoin(
       evaluationTemplateCategories,
-      eq(
-        evaluationAdvancedTemplates.categoryId,
-        evaluationTemplateCategories.id,
-      ),
+      eq(evaluationAdvancedTemplates.categoryId, evaluationTemplateCategories.id),
     )
-    .orderBy(
-      asc(evaluationTemplateCategories.name),
-      asc(evaluationAdvancedTemplates.name),
-    )
+    .orderBy(asc(evaluationTemplateCategories.name), asc(evaluationAdvancedTemplates.name))
   return Result.ok(result)
 }
 
@@ -58,16 +49,10 @@ export async function filterEvaluationTemplatesById(
     .from(evaluationAdvancedTemplates)
     .innerJoin(
       evaluationTemplateCategories,
-      eq(
-        evaluationAdvancedTemplates.categoryId,
-        evaluationTemplateCategories.id,
-      ),
+      eq(evaluationAdvancedTemplates.categoryId, evaluationTemplateCategories.id),
     )
     .where(inArray(evaluationAdvancedTemplates.id, ids))
-    .orderBy(
-      asc(evaluationTemplateCategories.name),
-      asc(evaluationAdvancedTemplates.name),
-    )
+    .orderBy(asc(evaluationTemplateCategories.name), asc(evaluationAdvancedTemplates.name))
 
   return Result.ok(result)
 }

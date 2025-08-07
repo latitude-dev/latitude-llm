@@ -5,8 +5,8 @@ import { SimpleScheduleForm } from './SimpleScheduleForm'
 import { SpecificScheduleForm } from './SpecificScheduleForm'
 import { CustomScheduleForm } from './CustomScheduleForm'
 import {
-  ScheduleConfig,
-  ScheduleType,
+  type ScheduleConfig,
+  type ScheduleType,
   convertToCronExpression,
   getScheduleDescription,
 } from './scheduleUtils'
@@ -47,27 +47,15 @@ export function ScheduleTriggerForm({
       />
 
       {config.type === 'simple' && (
-        <SimpleScheduleForm
-          config={config}
-          updateConfig={setConfig}
-          isLoading={isExecuting}
-        />
+        <SimpleScheduleForm config={config} updateConfig={setConfig} isLoading={isExecuting} />
       )}
 
       {config.type === 'specific' && (
-        <SpecificScheduleForm
-          config={config}
-          updateConfig={setConfig}
-          isLoading={isExecuting}
-        />
+        <SpecificScheduleForm config={config} updateConfig={setConfig} isLoading={isExecuting} />
       )}
 
       {config.type === 'custom' && (
-        <CustomScheduleForm
-          config={config}
-          updateConfig={setConfig}
-          isLoading={isExecuting}
-        />
+        <CustomScheduleForm config={config} updateConfig={setConfig} isLoading={isExecuting} />
       )}
 
       <div className='p-3 bg-muted rounded-md flex flex-col gap-1'>

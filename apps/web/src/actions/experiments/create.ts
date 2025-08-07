@@ -3,10 +3,7 @@
 import { withDocument } from '../procedures'
 import { createExperimentVariants } from '@latitude-data/core/services/experiments/createVariants'
 import { startExperiment } from '@latitude-data/core/services/experiments/start/index'
-import {
-  DatasetsRepository,
-  EvaluationsV2Repository,
-} from '@latitude-data/core/repositories'
+import { DatasetsRepository, EvaluationsV2Repository } from '@latitude-data/core/repositories'
 import { experimentVariantSchema } from '@latitude-data/constants/experiments'
 import { z } from 'zod'
 
@@ -24,15 +21,8 @@ export const createExperimentAction = withDocument
     }),
   )
   .handler(async ({ ctx, input }) => {
-    const {
-      variants,
-      evaluationUuids,
-      datasetId,
-      parametersMap,
-      datasetLabels,
-      fromRow,
-      toRow,
-    } = input
+    const { variants, evaluationUuids, datasetId, parametersMap, datasetLabels, fromRow, toRow } =
+      input
     const datasetsScope = new DatasetsRepository(ctx.workspace.id)
     const dataset = datasetId
       ? await datasetsScope.find(datasetId).then((r) => r.unwrap())

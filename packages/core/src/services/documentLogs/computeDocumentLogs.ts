@@ -1,9 +1,9 @@
-import { and, desc, eq, getTableColumns, isNull, SQL, sql } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, isNull, type SQL, sql } from 'drizzle-orm'
 
 import {
   DEFAULT_PAGINATION_SIZE,
-  DocumentLogFilterOptions,
-  DocumentVersion,
+  type DocumentLogFilterOptions,
+  type DocumentVersion,
   ErrorableEntity,
 } from '../../browser'
 import { database } from '../../client'
@@ -33,9 +33,7 @@ export function computeDocumentLogs(
   ].filter(Boolean)
   const ordering = [
     filterOptions?.customIdentifier
-      ? desc(
-          sql`similarity(${documentLogs.customIdentifier}, ${filterOptions.customIdentifier})`,
-        )
+      ? desc(sql`similarity(${documentLogs.customIdentifier}, ${filterOptions.customIdentifier})`)
       : undefined,
     desc(documentLogs.createdAt),
   ].filter(Boolean) as SQL<unknown>[]

@@ -1,15 +1,13 @@
 'use client'
 
-import { User } from '@latitude-data/core/browser'
-import { createContext, ReactNode, useContext } from 'react'
+import type { User } from '@latitude-data/core/browser'
+import { createContext, type ReactNode, useContext } from 'react'
 
 interface ISessionContext {
   currentUser: User | undefined | null
 }
 
-const MaybeSessionContext = createContext<ISessionContext>(
-  {} as ISessionContext,
-)
+const MaybeSessionContext = createContext<ISessionContext>({} as ISessionContext)
 
 const MaybeSessionProvider = ({
   children,
@@ -17,11 +15,7 @@ const MaybeSessionProvider = ({
 }: {
   children: ReactNode
 } & ISessionContext) => {
-  return (
-    <MaybeSessionContext.Provider value={context}>
-      {children}
-    </MaybeSessionContext.Provider>
-  )
+  return <MaybeSessionContext.Provider value={context}>{children}</MaybeSessionContext.Provider>
 }
 
 const useMaybeSession = () => {

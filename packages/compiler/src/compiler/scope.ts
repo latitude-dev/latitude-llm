@@ -56,8 +56,7 @@ export default class Scope {
 
   get(name: string): unknown {
     const index = this.localPointers[name] ?? undefined
-    if (index === undefined)
-      throw new Error(`Variable '${name}' does not exist`)
+    if (index === undefined) throw new Error(`Variable '${name}' does not exist`)
     return this.readFromStash(index)
   }
 

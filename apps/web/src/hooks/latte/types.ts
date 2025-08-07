@@ -1,11 +1,11 @@
-import { LatteEditAction } from '@latitude-data/constants/latte'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { LatteEditAction } from '@latitude-data/constants/latte'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 
 interface ILatteInteractionStep {
   type: 'thought' | 'tool' | 'action'
 }
 
-export type LatteThoughtStep = ILatteInteractionStep & {
+type LatteThoughtStep = ILatteInteractionStep & {
   type: 'thought'
   content: string
 }
@@ -24,10 +24,7 @@ export type LatteActionStep = ILatteInteractionStep & {
   action: LatteEditAction
 }
 
-export type LatteInteractionStep =
-  | LatteThoughtStep
-  | LatteToolStep
-  | LatteActionStep
+export type LatteInteractionStep = LatteThoughtStep | LatteToolStep | LatteActionStep
 
 export type LatteInteraction = {
   input: string

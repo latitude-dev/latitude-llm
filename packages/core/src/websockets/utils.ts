@@ -1,7 +1,7 @@
 import { env } from '@latitude-data/env'
 import { jwtVerify, SignJWT } from 'jose'
 import { Result } from '../lib/Result'
-import { TOKEN_CONFIG, TokenType, WebSocketData } from './constants'
+import { TOKEN_CONFIG, type TokenType, type WebSocketData } from './constants'
 
 const SECRET_TOKENS: Record<TokenType, string> = {
   websocket: env.WEBSOCKET_SECRET_TOKEN_KEY,

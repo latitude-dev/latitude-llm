@@ -1,10 +1,10 @@
 import { isNumber } from 'lodash-es'
 
-import { parse as csvParse, Info } from 'csv-parse'
-import { CsvError, parse, type Options as CsvOptions } from 'csv-parse/sync'
+import { parse as csvParse, type Info } from 'csv-parse'
+import { type CsvError, parse, type Options as CsvOptions } from 'csv-parse/sync'
 import { castCell } from './castCells'
 
-import { Readable } from 'node:stream'
+import type { Readable } from 'node:stream'
 import { Result } from '../Result'
 
 function getData(file: File | string) {
@@ -22,12 +22,7 @@ type ParseCsvOptions = {
   columns?: boolean
 }
 
-function buildCsvOptions({
-  delimiter,
-  toLine,
-  fromLine,
-  columns = true,
-}: ParseCsvOptions) {
+function buildCsvOptions({ delimiter, toLine, fromLine, columns = true }: ParseCsvOptions) {
   let opts: CsvOptions = {
     delimiter,
     relax_column_count: true,
@@ -60,10 +55,7 @@ export type CsvParsedData = {
   rows: string[][]
   rowCount: number
 }
-export async function syncReadCsv(
-  file: File | string,
-  options: ParseCsvOptions,
-) {
+export async function syncReadCsv(file: File | string, options: ParseCsvOptions) {
   try {
     const data = await getData(file)
     const opts = buildCsvOptions(options)
@@ -74,8 +66,7 @@ export async function syncReadCsv(
     }
 
     const firstRecord = records[0]!
-    const headers =
-      firstRecord.info?.columns?.map?.((column) => column.name) ?? []
+    const headers = firstRecord.info?.columns?.map?.((column) => column.name) ?? []
 
     return Result.ok({ rowCount: records.length, headers, data: records })
   } catch (e) {

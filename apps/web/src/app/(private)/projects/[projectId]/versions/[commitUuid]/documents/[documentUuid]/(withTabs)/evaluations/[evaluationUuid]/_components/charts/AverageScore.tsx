@@ -1,22 +1,22 @@
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
-import {
+import type {
   EvaluationMetric,
   EvaluationType,
   EvaluationV2Stats,
 } from '@latitude-data/core/browser'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  ChartWrapper,
-  PanelChart,
-} from '@latitude-data/web-ui/molecules/Charts'
+import { ChartWrapper, PanelChart } from '@latitude-data/web-ui/molecules/Charts'
 import { useMemo } from 'react'
 
-export default function AverageScoreChart<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({ stats, isLoading }: { stats?: EvaluationV2Stats; isLoading?: boolean }) {
+export default function AverageScoreChart<T extends EvaluationType, M extends EvaluationMetric<T>>({
+  stats,
+  isLoading,
+}: {
+  stats?: EvaluationV2Stats
+  isLoading?: boolean
+}) {
   const { evaluation } = useCurrentEvaluationV2<T, M>()
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
@@ -24,16 +24,12 @@ export default function AverageScoreChart<
 
   const configuration = metricSpecification.chartConfiguration({ evaluation })
 
-  const averageScore = Number(
-    configuration.scale(stats?.averageScore ?? 0).toFixed(2),
-  )
+  const averageScore = Number(configuration.scale(stats?.averageScore ?? 0).toFixed(2))
 
   const color = useMemo(() => {
     if (
-      (configuration.thresholds.lower &&
-        averageScore < configuration.thresholds.lower) ||
-      (configuration.thresholds.upper &&
-        averageScore > configuration.thresholds.upper)
+      (configuration.thresholds.lower && averageScore < configuration.thresholds.lower) ||
+      (configuration.thresholds.upper && averageScore > configuration.thresholds.upper)
     ) {
       return 'destructiveMutedForeground'
     }
@@ -50,11 +46,7 @@ export default function AverageScoreChart<
       {stats?.averageScore !== undefined ? (
         <PanelChart
           asChild
-          data={
-            <Text.H3B color={color}>
-              {configuration.format(averageScore)}
-            </Text.H3B>
-          }
+          data={<Text.H3B color={color}>{configuration.format(averageScore)}</Text.H3B>}
         />
       ) : (
         <ChartBlankSlate>No logs evaluated so far</ChartBlankSlate>

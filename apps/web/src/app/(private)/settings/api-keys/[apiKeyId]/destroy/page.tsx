@@ -6,19 +6,12 @@ import useApiKeys from '$/stores/apiKeys'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { use, useCallback, useMemo } from 'react'
 
-export default function DestroyApiKeyPage({
-  params,
-}: {
-  params: Promise<{ apiKeyId: string }>
-}) {
+export default function DestroyApiKeyPage({ params }: { params: Promise<{ apiKeyId: string }> }) {
   const { apiKeyId } = use(params)
   const navigate = useNavigate()
 
   const { data: apiKeys, destroy, isDestroying } = useApiKeys()
-  const apiKey = useMemo(
-    () => apiKeys.find((k) => k.id === Number(apiKeyId)),
-    [apiKeys, apiKeyId],
-  )
+  const apiKey = useMemo(() => apiKeys.find((k) => k.id === Number(apiKeyId)), [apiKeys, apiKeyId])
 
   const onDestroy = useCallback(async () => {
     if (!apiKey) return

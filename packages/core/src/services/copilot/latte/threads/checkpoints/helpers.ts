@@ -1,4 +1,4 @@
-import { DocumentVersion, LatteThreadCheckpoint } from '../../../../../browser'
+import type { DocumentVersion, LatteThreadCheckpoint } from '../../../../../browser'
 
 export function groupCheckpointsByCommitId(
   checkpoints: LatteThreadCheckpoint[],
@@ -30,9 +30,7 @@ export function getDocumentsFromCheckpoint({
       return
     }
 
-    const docIndex = documents.findIndex(
-      (doc) => doc.documentUuid === documentUuid,
-    )
+    const docIndex = documents.findIndex((doc) => doc.documentUuid === documentUuid)
 
     if (docIndex === -1) {
       // document did not exist in the checkpoint, so we add it

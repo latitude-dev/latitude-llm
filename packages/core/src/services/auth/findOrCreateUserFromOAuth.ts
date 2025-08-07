@@ -1,16 +1,10 @@
 import { env } from '@latitude-data/env'
 import { and, eq } from 'drizzle-orm'
-import { Workspace } from '../../browser'
+import type { Workspace } from '../../browser'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import {
-  memberships,
-  oauthAccounts,
-  OAuthProvider,
-  users,
-  workspaces,
-} from '../../schema'
+import { memberships, oauthAccounts, type OAuthProvider, users, workspaces } from '../../schema'
 import setupServiceFn from '../users/setupService'
 
 interface FindOrCreateUserFromOAuthInput {

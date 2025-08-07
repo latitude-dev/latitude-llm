@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ChainEventTypes } from '@latitude-data/constants'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { TelemetryContext } from '@latitude-data/telemetry'
-import { Workspace } from '../../browser'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { TelemetryContext } from '@latitude-data/telemetry'
+import type { Workspace } from '../../browser'
 import {
   ErrorableEntity,
   LogSources,
-  PromptSource,
+  type PromptSource,
   Providers,
   StreamEventTypes,
 } from '../../constants'
@@ -15,8 +15,8 @@ import * as factories from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import * as aiModule from '../ai'
 import { runChain } from './run'
-import { Result, TypedResult } from './../../lib/Result'
-import { Chain, MessageRole } from 'promptl-ai'
+import { Result, type TypedResult } from './../../lib/Result'
+import { type Chain, MessageRole } from 'promptl-ai'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 const mocks = vi.hoisted(() => ({

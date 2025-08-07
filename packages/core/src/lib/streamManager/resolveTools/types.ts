@@ -1,9 +1,5 @@
-import {
-  LatitudeTool,
-  Providers,
-  VercelProviderTool,
-} from '@latitude-data/constants'
-import { Tool } from 'ai'
+import type { LatitudeTool, Providers, VercelProviderTool } from '@latitude-data/constants'
+import type { Tool } from 'ai'
 
 export enum ToolSource {
   Client = 'client',

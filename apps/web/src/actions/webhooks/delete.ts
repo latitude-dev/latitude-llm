@@ -14,9 +14,7 @@ export const deleteWebhookAction = authProcedure
   )
   .handler(async ({ input, ctx }) => {
     // First get the webhook instance
-    const webhook = await getWebhook(input.id, ctx.workspace).then((r) =>
-      r.unwrap(),
-    )
+    const webhook = await getWebhook(input.id, ctx.workspace).then((r) => r.unwrap())
 
     const result = await deleteWebhook({
       webhook,

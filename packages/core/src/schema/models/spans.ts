@@ -1,13 +1,6 @@
 import { sql } from 'drizzle-orm'
-import {
-  bigint,
-  index,
-  primaryKey,
-  timestamp,
-  uuid,
-  varchar,
-} from 'drizzle-orm/pg-core'
-import { SpanKind, SpanStatus, SpanType } from '../../constants'
+import { bigint, index, primaryKey, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
+import type { SpanKind, SpanStatus, SpanType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { apiKeys } from './apiKeys'
@@ -40,21 +33,13 @@ export const spans = latitudeSchema.table(
     primaryKey: primaryKey({ columns: [table.traceId, table.id] }),
     idIdx: index('spans_id_idx').on(table.id),
     traceIdIdx: index('spans_trace_id_idx').on(table.traceId),
-    documentLogUuidIdx: index('spans_document_log_uuid_idx').on(
-      table.documentLogUuid,
-    ),
+    documentLogUuidIdx: index('spans_document_log_uuid_idx').on(table.documentLogUuid),
     // traceIdIdIdx Note: already done with the primary key
     parentIdIdx: index('spans_parent_id_idx').on(table.parentId),
     workspaceIdIdx: index('spans_workspace_id_idx').on(table.workspaceId),
     apiKeyIdIdx: index('spans_api_key_id_idx').on(table.apiKeyId),
-    typeStartedAtIdx: index('spans_type_started_at_idx').on(
-      table.type,
-      table.startedAt,
-    ),
-    statusStartedAtIdx: index('spans_status_started_at_idx').on(
-      table.status,
-      table.startedAt,
-    ),
+    typeStartedAtIdx: index('spans_type_started_at_idx').on(table.type, table.startedAt),
+    statusStartedAtIdx: index('spans_status_started_at_idx').on(table.status, table.startedAt),
     startedAtIdx: index('spans_started_at_idx').on(table.startedAt),
     startedAtBrinIdx: index('spans_started_at_brin_idx')
       .using('brin', sql`${table.startedAt}`)

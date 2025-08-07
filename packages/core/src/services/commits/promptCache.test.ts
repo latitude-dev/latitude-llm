@@ -4,7 +4,7 @@ import * as cacheModule from '../../cache'
 import { LogSources } from '../../constants'
 import { createProject } from '../../tests/factories'
 import { getCachedResponse, setCachedResponse } from './promptCache'
-import { ChainStepResponse, StreamType } from '@latitude-data/constants'
+import type { ChainStepResponse, StreamType } from '@latitude-data/constants'
 
 describe('promptCache', async () => {
   const mockCache = {
@@ -153,9 +153,7 @@ describe('promptCache', async () => {
             streamType: 'invalid',
           },
         }),
-      ).rejects.toThrowError(
-        'Invalid "streamType" response, it should be "text" or "object"',
-      )
+      ).rejects.toThrowError('Invalid "streamType" response, it should be "text" or "object"')
     })
 
     it('silently fails when cache throws error', async () => {

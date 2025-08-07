@@ -1,13 +1,11 @@
-import { Context, MiddlewareHandler, Next } from 'hono'
+import type { Context, MiddlewareHandler, Next } from 'hono'
 
 /**
  * Memory tracking middleware with buffering to avoid excessive logging
  * @param bufferIntervalMs Time in ms between memory usage logs (default: 60000ms = 1 minute)
  * @returns Hono middleware handler
  */
-export const memoryUsageMiddleware = (
-  bufferIntervalMs = 60000,
-): MiddlewareHandler => {
+export const memoryUsageMiddleware = (bufferIntervalMs = 60000): MiddlewareHandler => {
   let lastLogTime = 0
 
   return async (_: Context, next: Next) => {

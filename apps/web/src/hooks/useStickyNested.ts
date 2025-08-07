@@ -13,7 +13,7 @@ function useUpdateWidthOnTargetContainerChange({
     if (!ready) return
 
     const resizeObserver = new ResizeObserver((entries) => {
-      for (let entry of entries) {
+      for (const entry of entries) {
         if (entry.contentBoxSize) {
           const newWidth = entry.contentRect.width
 
@@ -58,12 +58,10 @@ export function useStickyNested({
       const yOffset = offsetTop + offsetBottom
       const top = containerRect.top + offsetTop
 
-      let constrainedHeight =
-        containerRect.bottom - beaconRect.top - offsetBottom * 2
+      let constrainedHeight = containerRect.bottom - beaconRect.top - offsetBottom * 2
 
       if (top >= beaconRect.top) {
-        constrainedHeight =
-          containerRect.bottom - containerRect.top - yOffset - offsetBottom
+        constrainedHeight = containerRect.bottom - containerRect.top - yOffset - offsetBottom
         target.style.position = 'fixed'
         target.style.top = `${top}px`
         target.style.width = `${targetWidth}px`

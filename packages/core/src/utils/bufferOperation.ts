@@ -1,5 +1,5 @@
 import { cache } from '../cache'
-import { TypedResult } from '../lib/Result'
+import type { TypedResult } from '../lib/Result'
 
 /**
  * Buffers an operation to prevent it from being executed too frequently

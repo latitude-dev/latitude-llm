@@ -1,13 +1,10 @@
-import {
-  DocumentTriggerParameters,
-  DocumentTriggerType,
-} from '@latitude-data/constants'
+import { type DocumentTriggerParameters, DocumentTriggerType } from '@latitude-data/constants'
 import { v4 as uuidv4 } from 'uuid'
 import { database } from '../../client'
 import { documentTriggers } from '../../schema'
 import { createProject } from './createProject'
-import { DocumentTrigger } from '../../browser'
-import {
+import type { DocumentTrigger } from '../../browser'
+import type {
   EmailTriggerConfiguration,
   EmailTriggerDeploymentSettings,
   IntegrationTriggerConfiguration,

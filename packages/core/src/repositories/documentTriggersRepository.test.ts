@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  Commit,
-  DocumentVersion,
-  Project,
+  type Commit,
+  type DocumentVersion,
+  type Project,
   Providers,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '../browser'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import * as factories from '../tests/factories'
 import { mergeCommit } from '../services/commits'
 import { updateDocument } from '../services/documents'
@@ -177,9 +177,9 @@ describe('DocumentTriggersRepository', () => {
 
       expect(triggers).toHaveLength(1)
       expect(triggers[0]!.uuid).toBe(originalTrigger!.uuid)
-      expect(
-        (triggers[0]!.configuration as EmailTriggerConfiguration).name,
-      ).toBe('Original Trigger')
+      expect((triggers[0]!.configuration as EmailTriggerConfiguration).name).toBe(
+        'Original Trigger',
+      )
     })
 
     it('excludes triggers from different workspaces', async () => {
@@ -520,13 +520,10 @@ describe('DocumentTriggersRepository', () => {
 
       expect(triggers).toHaveLength(1)
       expect(triggers[0]!.uuid).toBe(originalTrigger!.uuid)
-      expect(
-        (triggers[0]!.configuration as EmailTriggerConfiguration).name,
-      ).toBe('Updated Name')
-      expect(
-        (triggers[0]!.configuration as EmailTriggerConfiguration)
-          .replyWithResponse,
-      ).toBe(false)
+      expect((triggers[0]!.configuration as EmailTriggerConfiguration).name).toBe('Updated Name')
+      expect((triggers[0]!.configuration as EmailTriggerConfiguration).replyWithResponse).toBe(
+        false,
+      )
     })
   })
 
@@ -536,9 +533,7 @@ describe('DocumentTriggersRepository', () => {
 
       expect(result.ok).toBeFalsy()
       expect(result.error).toBeInstanceOf(NotFoundError)
-      expect(result.error?.message).toBe(
-        "Trigger with uuid 'non-existent-uuid' not found",
-      )
+      expect(result.error?.message).toBe("Trigger with uuid 'non-existent-uuid' not found")
     })
 
     it('returns NotFoundError with commit context when trigger not found in specific commit', async () => {
@@ -659,9 +654,7 @@ describe('DocumentTriggersRepository', () => {
       expect(result.ok).toBeTruthy()
       const foundTrigger = result.unwrap()
       expect(foundTrigger.uuid).toBe(originalTrigger!.uuid)
-      expect(
-        (foundTrigger.configuration as EmailTriggerConfiguration).name,
-      ).toBe('Updated')
+      expect((foundTrigger.configuration as EmailTriggerConfiguration).name).toBe('Updated')
       expect(foundTrigger.commitId).toBe(newDraft.id)
     })
 
@@ -787,19 +780,17 @@ describe('DocumentTriggersRepository', () => {
         uuid: originalTrigger!.uuid,
         commit: mergedCommit1,
       })
-      expect(
-        (resultAtCommit1.unwrap().configuration as EmailTriggerConfiguration)
-          .name,
-      ).toBe('Version 1')
+      expect((resultAtCommit1.unwrap().configuration as EmailTriggerConfiguration).name).toBe(
+        'Version 1',
+      )
 
       // Current state should still show the email trigger
       const resultCurrent = await repo.getTriggerByUuid({
         uuid: originalTrigger!.uuid,
       })
-      expect(
-        (resultCurrent.unwrap().configuration as EmailTriggerConfiguration)
-          .name,
-      ).toBe('Version 1')
+      expect((resultCurrent.unwrap().configuration as EmailTriggerConfiguration).name).toBe(
+        'Version 1',
+      )
 
       // Should have both triggers now
       const allTriggers = await repo.getAllActiveTriggersInWorkspace()
@@ -877,16 +868,12 @@ describe('DocumentTriggersRepository', () => {
       const scheduledResult = await repo.getTriggerByUuid({
         uuid: scheduledTrigger!.uuid,
       })
-      expect(scheduledResult.unwrap().triggerType).toBe(
-        DocumentTriggerType.Scheduled,
-      )
+      expect(scheduledResult.unwrap().triggerType).toBe(DocumentTriggerType.Scheduled)
 
       const integrationResult = await repo.getTriggerByUuid({
         uuid: integrationTrigger!.uuid,
       })
-      expect(integrationResult.unwrap().triggerType).toBe(
-        DocumentTriggerType.Integration,
-      )
+      expect(integrationResult.unwrap().triggerType).toBe(DocumentTriggerType.Integration)
     })
   })
 })

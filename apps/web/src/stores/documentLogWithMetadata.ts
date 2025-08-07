@@ -1,7 +1,7 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { DocumentLogWithMetadata } from '@latitude-data/core/browser'
-import useSWR, { SWRConfiguration } from 'swr'
+import type { DocumentLogWithMetadata } from '@latitude-data/core/browser'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 export default function useDocumentLogWithMetadata(
   {

@@ -1,10 +1,10 @@
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
 import {
-  ActionType,
+  type ActionType,
   CLOUD_MESSAGES,
   createAgentActionBackendParametersSchema,
-  Workspace,
+  type Workspace,
 } from '../../browser'
 import { cache as getCache } from '../../cache'
 import { database } from '../../client'
@@ -15,7 +15,7 @@ import Transaction from '../../lib/Transaction'
 import { ProjectsRepository } from '../../repositories'
 import { getCopilot, runCopilot } from '../copilot'
 import { createProject } from '../projects/create'
-import { ActionExecuteArgs } from './shared'
+import type { ActionExecuteArgs } from './shared'
 
 export const CreateAgentActionSpecification = {
   parameters: createAgentActionBackendParametersSchema,
@@ -28,9 +28,7 @@ async function execute(
   tx = new Transaction(),
 ) {
   if (parameters.prompt.length < 1 || parameters.prompt.length > 2500) {
-    return Result.error(
-      new BadRequestError('Prompt must be between 1 and 2500 characters'),
-    )
+    return Result.error(new BadRequestError('Prompt must be between 1 and 2500 characters'))
   }
 
   const prompt = `
@@ -44,7 +42,7 @@ ${parameters.prompt}
     if (!details.error) {
       name = details.unwrap().name
     }
-  } catch (error) {
+  } catch (_error) {
     // Note: doing nothing
   }
 
@@ -73,17 +71,11 @@ const generatorSchema = z.object({
 })
 type AgentDetails = z.infer<typeof generatorSchema>
 
-const generatorKey = (prompt: string) =>
-  `agents:details:generator:${hashContent(prompt)}`
+const generatorKey = (prompt: string) => `agents:details:generator:${hashContent(prompt)}`
 
-async function generateAgentDetails(
-  { prompt }: { prompt: string },
-  db = database,
-) {
+async function generateAgentDetails({ prompt }: { prompt: string }, db = database) {
   if (!env.LATITUDE_CLOUD) {
-    return Result.error(
-      new UnprocessableEntityError(CLOUD_MESSAGES.generateAgentDetails),
-    )
+    return Result.error(new UnprocessableEntityError(CLOUD_MESSAGES.generateAgentDetails))
   }
 
   let details: AgentDetails | undefined
@@ -100,16 +92,11 @@ async function generateAgentDetails(
 
   if (!env.COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH) {
     return Result.error(
-      new UnprocessableEntityError(
-        'COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH is not set',
-      ),
+      new UnprocessableEntityError('COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH is not set'),
     )
   }
 
-  const getting = await getCopilot(
-    { path: env.COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH },
-    db,
-  )
+  const getting = await getCopilot({ path: env.COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH }, db)
   if (getting.error) {
     return Result.error(getting.error)
   }
@@ -154,9 +141,7 @@ async function ensureAgentName(
   }
   const projects = finding.unwrap()
 
-  const existing = projects.filter((project) =>
-    project.name.startsWith(name),
-  ).length
+  const existing = projects.filter((project) => project.name.startsWith(name)).length
   if (!existing) {
     return Result.ok({ name })
   }

@@ -1,10 +1,10 @@
 import { and, asc, desc, eq, getTableColumns, inArray, sum } from 'drizzle-orm'
 
-import { ProviderLog } from '../browser'
+import type { ProviderLog } from '../browser'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { documentLogs, providerLogs } from '../schema'
-import { QueryOptions } from './repository'
+import type { QueryOptions } from './repository'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(providerLogs)
@@ -15,11 +15,7 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
   }
 
   get scope() {
-    return this.db
-      .select(tt)
-      .from(providerLogs)
-      .where(this.scopeFilter)
-      .$dynamic()
+    return this.db.select(tt).from(providerLogs).where(this.scopeFilter).$dynamic()
   }
 
   async findByUuid(uuid: string) {
@@ -28,9 +24,7 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
       .limit(1)
 
     if (!result.length) {
-      return Result.error(
-        new NotFoundError(`ProviderLog with uuid ${uuid} not found`),
-      )
+      return Result.error(new NotFoundError(`ProviderLog with uuid ${uuid} not found`))
     }
 
     return Result.ok(result[0]!)
@@ -38,10 +32,7 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
 
   async findByDocumentUuid(documentUuid: string, opts: QueryOptions = {}) {
     const query = this.scope
-      .innerJoin(
-        documentLogs,
-        eq(providerLogs.documentLogUuid, documentLogs.uuid),
-      )
+      .innerJoin(documentLogs, eq(providerLogs.documentLogUuid, documentLogs.uuid))
       .where(and(this.scopeFilter, eq(documentLogs.documentUuid, documentUuid)))
       .orderBy(asc(providerLogs.generatedAt))
 
@@ -63,12 +54,7 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
     }
 
     const result = await this.scope
-      .where(
-        and(
-          this.scopeFilter,
-          eq(providerLogs.documentLogUuid, documentLogUuid),
-        ),
-      )
+      .where(and(this.scopeFilter, eq(providerLogs.documentLogUuid, documentLogUuid)))
       .orderBy(desc(providerLogs.generatedAt))
       .limit(1)
 
@@ -81,26 +67,13 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
 
   async findManyByDocumentLogUuid(documentLogUuids: string[]) {
     return await this.scope
-      .where(
-        and(
-          this.scopeFilter,
-          inArray(providerLogs.documentLogUuid, documentLogUuids),
-        ),
-      )
+      .where(and(this.scopeFilter, inArray(providerLogs.documentLogUuid, documentLogUuids)))
       .orderBy(desc(providerLogs.generatedAt))
   }
 
-  async findByDocumentLogUuid(
-    documentLogUuid: string,
-    opts: QueryOptions = {},
-  ) {
+  async findByDocumentLogUuid(documentLogUuid: string, opts: QueryOptions = {}) {
     const query = this.scope
-      .where(
-        and(
-          this.scopeFilter,
-          eq(providerLogs.documentLogUuid, documentLogUuid),
-        ),
-      )
+      .where(and(this.scopeFilter, eq(providerLogs.documentLogUuid, documentLogUuid)))
       .orderBy(asc(providerLogs.generatedAt))
 
     if (opts.limit !== undefined) {
@@ -124,12 +97,7 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
         costInMillicents: sum(providerLogs.costInMillicents).mapWith(Number),
       })
       .from(providerLogs)
-      .where(
-        and(
-          this.scopeFilter,
-          eq(providerLogs.documentLogUuid, documentLogUuid),
-        ),
-      )
+      .where(and(this.scopeFilter, eq(providerLogs.documentLogUuid, documentLogUuid)))
       .groupBy(providerLogs.documentLogUuid)
       .then((r) => r[0])
 

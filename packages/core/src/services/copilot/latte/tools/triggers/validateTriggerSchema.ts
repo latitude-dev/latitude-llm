@@ -1,11 +1,7 @@
 import { z } from 'zod'
 import { defineLatteTool } from '../types'
-import { PipedreamIntegration } from '../../../../../browser'
-import {
-  ConfigurableProps,
-  ConfiguredProps,
-  createBackendClient,
-} from '@pipedream/sdk'
+import type { PipedreamIntegration } from '../../../../../browser'
+import { type ConfigurableProps, type ConfiguredProps, createBackendClient } from '@pipedream/sdk'
 import { Result } from '../../../../../lib/Result'
 import { getPipedreamEnvironment } from '../../../../integrations/pipedream/apps'
 import {
@@ -16,18 +12,11 @@ import {
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { HEAD_COMMIT } from '@latitude-data/constants'
 import { validateLattesChoices } from './configValidator'
-import { PromisedResult } from '../../../../../lib/Transaction'
+import type { PromisedResult } from '../../../../../lib/Transaction'
 
 export const validateTriggerSchema = defineLatteTool(
   async (
-    {
-      projectId,
-      versionUuid,
-      componentId,
-      promptUuid,
-      integrationId,
-      configuration,
-    },
+    { projectId, versionUuid, componentId, promptUuid, integrationId, configuration },
     { workspace },
   ) => {
     const documentResult = await validateDocumentReadyForCreatingTrigger({
@@ -93,12 +82,10 @@ const validateDocumentReadyForCreatingTrigger = async ({
   promptUuid: string
 }): PromisedResult<boolean> => {
   const commitsScope = new CommitsRepository(workspaceId)
-  const headCommit = await commitsScope
-    .getHeadCommit(projectId)
-    .then((r) => r.unwrap())
+  const headCommit = await commitsScope.getHeadCommit(projectId).then((r) => r.unwrap())
 
   if (
-    headCommit == undefined ||
+    headCommit === undefined ||
     (versionUuid !== headCommit.uuid && versionUuid !== HEAD_COMMIT)
   ) {
     return Result.error(
@@ -109,17 +96,13 @@ const validateDocumentReadyForCreatingTrigger = async ({
   }
 
   const documentsScope = new DocumentVersionsRepository(workspaceId)
-  const documents = await documentsScope
-    .getDocumentsAtCommit(headCommit)
-    .then((r) => r.unwrap())
+  const documents = await documentsScope.getDocumentsAtCommit(headCommit).then((r) => r.unwrap())
 
   const document = documents.find((doc) => doc.documentUuid === promptUuid)
 
   if (!document) {
     return Result.error(
-      new NotFoundError(
-        `Document with UUID ${promptUuid} not found in commit ${headCommit.uuid}.`,
-      ),
+      new NotFoundError(`Document with UUID ${promptUuid} not found in commit ${headCommit.uuid}.`),
     )
   }
 

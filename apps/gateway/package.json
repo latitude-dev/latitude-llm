@@ -8,7 +8,6 @@
     "dev": "tsx watch src/server",
     "build": "tsup --config tsup.config.ts",
     "dev:debug": "tsx watch --inspect src/server",
-    "lint": "eslint src/",
     "tc": "tsc --noEmit",
     "test": "vitest --run",
     "test:watch": "vitest",
@@ -36,7 +35,6 @@
     "dd-trace": "catalog:"
   },
   "devDependencies": {
-    "@latitude-data/eslint-config": "workspace:^",
     "@latitude-data/typescript-config": "workspace:^",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^22.5.1",

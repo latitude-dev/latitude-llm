@@ -1,4 +1,4 @@
-import { AstError } from '@latitude-data/constants/promptl'
+import type { AstError } from '@latitude-data/constants/promptl'
 import {
   createTextNode,
   extractTextContent,
@@ -16,23 +16,23 @@ import {
 import { createCodeBlock } from './createCodeBlock'
 import {
   BLOCK_EDITOR_TYPE,
-  BlockAttributes,
-  BlockRootNode,
-  CodeBlock,
+  type BlockAttributes,
+  type BlockRootNode,
+  type CodeBlock,
   type ContentBlock,
   type ElementTag,
-  FileBlock,
-  Fragment,
-  ImageBlock,
-  InlineBlock,
-  MessageBlock,
-  MessageBlockType,
-  ParagraphBlock,
-  ReferenceLink,
-  StepBlock,
-  StepChild,
-  TemplateNode,
-  Variable,
+  type FileBlock,
+  type Fragment,
+  type ImageBlock,
+  type InlineBlock,
+  type MessageBlock,
+  type MessageBlockType,
+  type ParagraphBlock,
+  type ReferenceLink,
+  type StepBlock,
+  type StepChild,
+  type TemplateNode,
+  type Variable,
 } from './types'
 
 function findErrorsForNode({
@@ -65,11 +65,7 @@ function findErrorsForNode({
     }))
 }
 
-function createParagraph({
-  children,
-}: {
-  children: ParagraphBlock['children']
-}): ParagraphBlock {
+function createParagraph({ children }: { children: ParagraphBlock['children'] }): ParagraphBlock {
   return {
     type: BLOCK_EDITOR_TYPE.PARAGRAPH,
     children,
@@ -82,11 +78,7 @@ function createParagraph({
   }
 }
 
-function createEmptyParagraph({
-  content,
-}: {
-  content: string
-}): ParagraphBlock {
+function createEmptyParagraph({ content }: { content: string }): ParagraphBlock {
   return createParagraph({ children: [createTextNode({ text: content })] })
 }
 
@@ -121,13 +113,7 @@ function createReferenceLink({
   } as ReferenceLink
 }
 
-function createVariable({
-  node,
-  errors,
-}: {
-  node: TemplateNode
-  errors?: AstError[]
-}): Variable {
+function createVariable({ node, errors }: { node: TemplateNode; errors?: AstError[] }): Variable {
   const nodeErrors = errors ? findErrorsForNode({ node, errors }) : []
   return {
     type: BLOCK_EDITOR_TYPE.VARIABLE,
@@ -230,9 +216,7 @@ function proccesInlineNodes({
       // variable), so that k newlines produce exactly k-1 blank paragraphs
       // and we do not insert a spurious empty paragraph after inline nodes.
       const removeLeadingBoundaryEmpty =
-        (prevWasWithChildren ||
-          previousWasBlock ||
-          paragraphChildren.length > 0) &&
+        (prevWasWithChildren || previousWasBlock || paragraphChildren.length > 0) &&
         lines.length > 1 &&
         lines[0] === ''
       if (removeLeadingBoundaryEmpty) {
@@ -277,26 +261,18 @@ function proccesInlineNodes({
 
         if (text !== undefined && text !== '') {
           // Preserve literal text using prompt slice when available
-          const data = sliceLines
-            ? (sliceLines[lineIdx + sliceOffset] ?? text)
-            : text
+          const data = sliceLines ? (sliceLines[lineIdx + sliceOffset] ?? text) : text
           // If this is the trailing whitespace-only line immediately before a block tag
           // or a code block (unprocessable inline node), ignore it so indentation before
           // those constructs does not create an extra blank paragraph.
           if (
-            !(
-              isLastLine &&
-              (nextIsBlockWithChildren || nextCreatesCodeBlock) &&
-              isWhitespaceOnly
-            )
+            !(isLastLine && (nextIsBlockWithChildren || nextCreatesCodeBlock) && isWhitespaceOnly)
           ) {
             paragraphChildren.push(createTextNode({ text: data }))
           }
         } else if (!isLastLine) {
           flushChildren()
-          blocks.push(
-            createParagraph({ children: [createTextNode({ text: '' })] }),
-          )
+          blocks.push(createParagraph({ children: [createTextNode({ text: '' })] }))
           endsWithEmptyLine = false
         } else if (isLastLine) {
           // Only set the flag, do NOT flush yet
@@ -369,10 +345,7 @@ function stripIndentFromText(text: string, spaces: number): string {
     .join('\n')
 }
 
-function restartParagraphIndentation(
-  paragraph: ParagraphBlock,
-  stripSpaces: number,
-) {
+function restartParagraphIndentation(paragraph: ParagraphBlock, stripSpaces: number) {
   let didStripOnFirstText = false
   paragraph.children = paragraph.children.map((child) => {
     if (child.type === BLOCK_EDITOR_TYPE.TEXT_CONTENT) {
@@ -401,10 +374,7 @@ function restartIndentationInMessageChildren(
   return blocks
 }
 
-function restartIndentationInStepChildren(
-  blocks: StepChild[],
-  indentDepth: number,
-) {
+function restartIndentationInStepChildren(blocks: StepChild[], indentDepth: number) {
   const stripSpaces = indentDepth * 2
   blocks.forEach((block) => {
     if (block.type === BLOCK_EDITOR_TYPE.PARAGRAPH) {
@@ -443,10 +413,7 @@ function processBlockNode({
     processedChildren = trimEmptyStepChildren(processedChildren)
 
     // Restart indentation relative to this step container for paragraph lines
-    processedChildren = restartIndentationInStepChildren(
-      processedChildren,
-      indentDepth,
-    )
+    processedChildren = restartIndentationInStepChildren(processedChildren, indentDepth)
 
     // Preserve multiple consecutive empty paragraphs to reflect original blank lines
     if (processedChildren.length === 0) {
@@ -482,10 +449,7 @@ function processBlockNode({
     processedChildren = trimEmptyMessageChildren(processedChildren)
 
     // Restart indentation relative to this message container for paragraph lines
-    processedChildren = restartIndentationInMessageChildren(
-      processedChildren,
-      indentDepth,
-    )
+    processedChildren = restartIndentationInMessageChildren(processedChildren, indentDepth)
 
     // Preserve multiple consecutive empty paragraphs to reflect original blank lines
     if (processedChildren.length === 0) {
@@ -568,15 +532,14 @@ function processNodes({
         endIdx++
 
       const inlineNodes = nodes.slice(startIdx, endIdx)
-      let previousWasBlockWithChildren = isBlockWithChildren(previousNode)
+      const previousWasBlockWithChildren = isBlockWithChildren(previousNode)
       const processedInlineBlocks = proccesInlineNodes({
         prompt,
         nodes: inlineNodes,
         errors,
         previousWasBlockWithChildren,
         isLastNode: textCompleted && endIdx === nodes.length,
-        nextIsBlockWithChildren:
-          endIdx < nodes.length && isBlockWithChildren(nodes[endIdx]!),
+        nextIsBlockWithChildren: endIdx < nodes.length && isBlockWithChildren(nodes[endIdx]!),
       })
 
       blocks.push(...processedInlineBlocks)
@@ -632,13 +595,11 @@ function childrenWithoutConfig(children: TemplateNode[]): TemplateNode[] {
   return children.filter((node) => !isConfigNode(node))
 }
 
-function trimLeadingTexts(
-  blocks: ParagraphBlock['children'],
-): ParagraphBlock['children'] {
+function trimLeadingTexts(blocks: ParagraphBlock['children']): ParagraphBlock['children'] {
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]!
 
-    if (block.type != 'text') {
+    if (block.type !== 'text') {
       return blocks.slice(i)
     }
 
@@ -652,13 +613,11 @@ function trimLeadingTexts(
   return []
 }
 
-function trimTrailingTexts(
-  blocks: ParagraphBlock['children'],
-): ParagraphBlock['children'] {
+function trimTrailingTexts(blocks: ParagraphBlock['children']): ParagraphBlock['children'] {
   for (let i = blocks.length - 1; i >= 0; i--) {
     const block = blocks[i]!
 
-    if (block.type != 'text') {
+    if (block.type !== 'text') {
       return blocks.slice(0, i + 1)
     }
 
@@ -672,13 +631,11 @@ function trimTrailingTexts(
   return []
 }
 
-function trimLeadingParagraphs(
-  blocks: BlockRootNode['children'],
-): BlockRootNode['children'] {
+function trimLeadingParagraphs(blocks: BlockRootNode['children']): BlockRootNode['children'] {
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]!
 
-    if (block.type != 'paragraph') {
+    if (block.type !== 'paragraph') {
       return blocks.slice(i)
     }
 
@@ -692,13 +649,11 @@ function trimLeadingParagraphs(
   return []
 }
 
-function trimTrailingParagraphs(
-  blocks: BlockRootNode['children'],
-): BlockRootNode['children'] {
+function trimTrailingParagraphs(blocks: BlockRootNode['children']): BlockRootNode['children'] {
   for (let i = blocks.length - 1; i >= 0; i--) {
     const block = blocks[i]!
 
-    if (block.type != 'paragraph') {
+    if (block.type !== 'paragraph') {
       return blocks.slice(0, i + 1)
     }
 
@@ -712,9 +667,7 @@ function trimTrailingParagraphs(
   return []
 }
 
-function trimEmptyBlocks(
-  blocks: BlockRootNode['children'],
-): BlockRootNode['children'] {
+function trimEmptyBlocks(blocks: BlockRootNode['children']): BlockRootNode['children'] {
   return trimTrailingParagraphs(trimLeadingParagraphs(blocks))
 }
 
@@ -744,7 +697,7 @@ function trimLeadingMessageChildren(
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]!
 
-    if (block.type != 'paragraph') {
+    if (block.type !== 'paragraph') {
       return blocks.slice(i)
     }
 
@@ -764,7 +717,7 @@ function trimTrailingMessageChildren(
   for (let i = blocks.length - 1; i >= 0; i--) {
     const block = blocks[i]!
 
-    if (block.type != 'paragraph') {
+    if (block.type !== 'paragraph') {
       return blocks.slice(0, i + 1)
     }
 
@@ -788,7 +741,7 @@ function trimLeadingStepChildren(blocks: StepChild[]): StepChild[] {
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]!
 
-    if (block.type != 'paragraph') {
+    if (block.type !== 'paragraph') {
       return blocks.slice(i)
     }
 
@@ -806,7 +759,7 @@ function trimTrailingStepChildren(blocks: StepChild[]): StepChild[] {
   for (let i = blocks.length - 1; i >= 0; i--) {
     const block = blocks[i]!
 
-    if (block.type != 'paragraph') {
+    if (block.type !== 'paragraph') {
       return blocks.slice(0, i + 1)
     }
 

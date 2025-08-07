@@ -10,8 +10,7 @@ describe('Auth Service: findOrCreateUserFromOAuth', () => {
   const testName = 'Test User'
 
   it('should return existing user and workspace if OAuth account exists', async () => {
-    const { workspace: existingWorkspace, user: existingUser } =
-      await createProject()
+    const { workspace: existingWorkspace, user: existingUser } = await createProject()
 
     await createOAuthAccount({
       providerId: testProviderId,

@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 import { v4 as uuid } from 'uuid'
 
-import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
+import { LogSources, type ProviderLog, type Providers, type Workspace } from '../../browser'
 import { createProviderLog as createProviderLogService } from '../../services/providerLogs'
 import type { ToolCall, Message } from '@latitude-data/constants/legacyCompiler'
 
@@ -23,9 +23,7 @@ export type IProviderLogData = {
   apiKeyId?: number
 }
 
-export async function createProviderLog(
-  data: IProviderLogData,
-): Promise<ProviderLog> {
+export async function createProviderLog(data: IProviderLogData): Promise<ProviderLog> {
   const providerLog = await createProviderLogService({
     uuid: uuid(),
     workspace: data.workspace,
@@ -46,8 +44,7 @@ export async function createProviderLog(
     },
     duration: data.duration ?? faker.number.int({ min: 100, max: 5000 }),
     source: data.source ?? LogSources.Playground,
-    costInMillicents:
-      data.costInMillicents ?? faker.number.int({ min: 100, max: 5000 }),
+    costInMillicents: data.costInMillicents ?? faker.number.int({ min: 100, max: 5000 }),
     apiKeyId: data.apiKeyId,
   }).then((r) => r.unwrap())
 

@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { REWARD_VALUES, RewardType, User, Workspace } from '../browser'
+import { REWARD_VALUES, RewardType, type User, type Workspace } from '../browser'
 import { claimReward, updateRewardClaim } from '../services/claimedRewards'
 import { ClaimedRewardsRepository } from './claimedRewardsRepository'
 
@@ -11,8 +11,7 @@ describe('ClaimedRewardsRepository', () => {
   let user: User
 
   beforeEach(async (ctx) => {
-    const { workspace: createdWorkspace, user: createdUser } =
-      await ctx.factories.createProject()
+    const { workspace: createdWorkspace, user: createdUser } = await ctx.factories.createProject()
     workspace = createdWorkspace
     user = createdUser
 
@@ -102,8 +101,7 @@ describe('ClaimedRewardsRepository', () => {
       expect(result.ok).toBe(true)
       const totalValue = result.value
 
-      const expectedValue =
-        REWARD_VALUES[RewardType.Follow] + REWARD_VALUES[RewardType.GithubStar]
+      const expectedValue = REWARD_VALUES[RewardType.Follow] + REWARD_VALUES[RewardType.GithubStar]
       expect(totalValue).toBe(expectedValue)
     })
   })

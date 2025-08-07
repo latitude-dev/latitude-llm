@@ -1,14 +1,9 @@
 import { Providers } from '@latitude-data/constants'
-import {
-  AdapterMessageType,
-  Adapters,
-  Message,
-  ProviderAdapter,
-} from 'promptl-ai'
+import { type AdapterMessageType, Adapters, type Message, type ProviderAdapter } from 'promptl-ai'
 
-export function getPromptlAdapterFromProvider<
-  M extends AdapterMessageType = Message,
->(provider?: Providers): ProviderAdapter<M> {
+export function getPromptlAdapterFromProvider<M extends AdapterMessageType = Message>(
+  provider?: Providers,
+): ProviderAdapter<M> {
   switch (provider) {
     case Providers.OpenAI:
       return Adapters.openai as ProviderAdapter<M>

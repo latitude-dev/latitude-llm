@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 
 import { CommitStatus } from '@latitude-data/core/browser'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { ROUTES } from '$/services/routes'
 import { useCommits } from '$/stores/commitsStore'
@@ -23,10 +23,7 @@ export default function DeleteDraftCommitModal({
     },
   })
 
-  const commit = useMemo(
-    () => data.find((c) => c.id === commitId),
-    [commitId, data],
-  )
+  const commit = useMemo(() => data.find((c) => c.id === commitId), [commitId, data])
 
   const { project } = useCurrentProject()
   const router = useRouter()

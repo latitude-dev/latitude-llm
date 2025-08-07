@@ -1,5 +1,5 @@
 import {
-  Message as ConversationMessage,
+  type Message as ConversationMessage,
   MessageRole,
 } from '@latitude-data/constants/legacyCompiler'
 import { Message } from '$/components/ChatWrapper'

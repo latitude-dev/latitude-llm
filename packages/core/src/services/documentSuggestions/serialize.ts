@@ -1,23 +1,21 @@
 import {
-  EvaluationMetric,
-  EvaluationResultV2,
+  type EvaluationMetric,
+  type EvaluationResultV2,
   EvaluationType,
-  EvaluationV2,
-  Workspace,
+  type EvaluationV2,
+  type Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import {
-  DocumentLogsRepository,
-  ProviderLogsRepository,
-} from '../../repositories'
+import { DocumentLogsRepository, ProviderLogsRepository } from '../../repositories'
 import { serialize as serializeDocumentLog } from '../documentLogs/serialize'
 import { EVALUATION_SPECIFICATIONS } from '../evaluationsV2/specifications'
 
-export async function serializeEvaluation<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({ evaluation }: { evaluation: EvaluationV2<T, M> }) {
+export async function serializeEvaluation<T extends EvaluationType, M extends EvaluationMetric<T>>({
+  evaluation,
+}: {
+  evaluation: EvaluationV2<T, M>
+}) {
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) {
     return Result.error(new Error('Invalid evaluation type'))
@@ -75,14 +73,11 @@ export async function serializeEvaluationResult<
   }
 
   let reason = `${typeSpecification.name} evaluations do not report a reason`
-  if (
-    evaluation.type === EvaluationType.Llm ||
-    evaluation.type === EvaluationType.Human
-  ) {
+  if (evaluation.type === EvaluationType.Llm || evaluation.type === EvaluationType.Human) {
     // Seems TypeScript is not able to infer the type of the result
     reason =
-      (result as EvaluationResultV2<EvaluationType.Llm | EvaluationType.Human>)
-        .metadata!.reason || 'No reason reported'
+      (result as EvaluationResultV2<EvaluationType.Llm | EvaluationType.Human>).metadata!.reason ||
+      'No reason reported'
   }
 
   const providerLogsRepository = new ProviderLogsRepository(workspace.id, db)
@@ -95,10 +90,9 @@ export async function serializeEvaluationResult<
     .findByUuid(providerLog.documentLogUuid!)
     .then((r) => r.unwrap())
 
-  const evaluatedLog = await serializeDocumentLog(
-    { documentLog, workspace },
-    db,
-  ).then((r) => r.unwrap())
+  const evaluatedLog = await serializeDocumentLog({ documentLog, workspace }, db).then((r) =>
+    r.unwrap(),
+  )
 
   return Result.ok({
     result: result.score, // Compatibility with refine v1 prompt

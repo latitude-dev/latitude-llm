@@ -1,6 +1,6 @@
-import { LatteInteractionStep } from '$/hooks/latte/types'
-import { LatteEditAction } from '@latitude-data/constants/latte'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { LatteInteractionStep } from '$/hooks/latte/types'
+import type { LatteEditAction } from '@latitude-data/constants/latte'
+import { Icon, type IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export function InteractionStep({
@@ -42,13 +42,7 @@ export function InteractionStep({
   }
 
   if (step.type === 'action') {
-    return (
-      <EditActionStep
-        step={step}
-        singleLine={singleLine}
-        isLoading={isLoading}
-      />
-    )
+    return <EditActionStep step={step} singleLine={singleLine} isLoading={isLoading} />
   }
 
   return <ToolStep step={step} singleLine={singleLine} isLoading={isLoading} />
@@ -86,9 +80,7 @@ function ToolStep({
   )
 }
 
-const editAction = (
-  action: LatteEditAction,
-): { icon: IconName; operationDescription: string } => {
+const editAction = (action: LatteEditAction): { icon: IconName; operationDescription: string } => {
   if (action.operation === 'create') {
     return {
       icon: 'filePlus',
@@ -129,11 +121,7 @@ function EditActionStep({
 
   return (
     <div className='flex flex-row gap-2 items-start max-w-full'>
-      <Icon
-        name={icon}
-        color='latteOutputForegroundMuted'
-        className='min-w-4 mt-0.5'
-      />
+      <Icon name={icon} color='latteOutputForegroundMuted' className='min-w-4 mt-0.5' />
       <Text.H5
         noWrap={singleLine}
         ellipsis={singleLine}

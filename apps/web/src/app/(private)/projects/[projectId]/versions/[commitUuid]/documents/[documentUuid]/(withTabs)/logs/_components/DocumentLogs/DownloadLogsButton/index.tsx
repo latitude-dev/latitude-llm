@@ -6,17 +6,14 @@ import { useCurrentUrl } from '$/hooks/useCurrentUrl'
 import { handleResponse } from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
-import { SelectableRowsHook } from '$/hooks/useSelectableRows'
+import type { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { ROUTES } from '$/services/routes'
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
+import type { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
 
 const MAX_IMMEDIATE_DOWNLOAD = 25
@@ -37,18 +34,14 @@ export function DownloadLogsButton({
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
 
-  const { execute: executeAsyncDownload } = useLatitudeAction(
-    downloadLogsAsyncAction,
-    {
-      onSuccess: () => {
-        toast({
-          title: 'Download Started',
-          description:
-            'You will receive an email with the download link once the file is ready.',
-        })
-      },
+  const { execute: executeAsyncDownload } = useLatitudeAction(downloadLogsAsyncAction, {
+    onSuccess: () => {
+      toast({
+        title: 'Download Started',
+        description: 'You will receive an email with the download link once the file is ready.',
+      })
     },
-  )
+  })
 
   const handleImmediateDownload = useCallback(async () => {
     const formData = new FormData()
@@ -76,13 +69,7 @@ export function DownloadLogsButton({
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-  }, [
-    selectableState.selectedRowIds,
-    latitudeDocument.path,
-    navigate,
-    currentUrl,
-    toast,
-  ])
+  }, [selectableState.selectedRowIds, latitudeDocument.path, navigate, currentUrl, toast])
 
   const handleDownload = useCallback(async () => {
     setIsDownloading(true)
@@ -102,9 +89,7 @@ export function DownloadLogsButton({
           projectId: project.id,
           filterOptions,
           selectionMode: selectableState.selectionMode,
-          excludedDocumentLogIds: Array.from(
-            selectableState.excludedIds,
-          ) as number[],
+          excludedDocumentLogIds: Array.from(selectableState.excludedIds) as number[],
         })
       }
     } finally {
@@ -137,9 +122,7 @@ export function DownloadLogsButton({
         variant='outline'
         onClick={() => setIsModalOpen(true)}
       >
-        {isDownloading
-          ? 'Processing...'
-          : `Download ${selectableState.selectedCount} logs`}
+        {isDownloading ? 'Processing...' : `Download ${selectableState.selectedCount} logs`}
       </Button>
 
       <ConfirmModal

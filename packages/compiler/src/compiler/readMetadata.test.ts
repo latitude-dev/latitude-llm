@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
 import { readMetadata } from '.'
-import { Document } from './readMetadata'
+import type { Document } from './readMetadata'
 import { removeCommonIndent } from './utils'
 
 type PromptTree = {
@@ -609,9 +609,7 @@ describe('syntax errors', async () => {
     expect(metadata.errors.length).toBe(1)
     expect(metadata.errors[0]).toBeInstanceOf(CompileError)
     expect(metadata.errors[0]!.code).toBe('reference-error')
-    expect(metadata.errors[0]!.message).contains(
-      'The referenced prompt contains an error:',
-    )
+    expect(metadata.errors[0]!.message).contains('The referenced prompt contains an error:')
     expect(metadata.errors[0]!.message).contains(`Unknown tag: 'unknownTag'`)
   })
 })

@@ -1,12 +1,8 @@
-import { ExperimentFormPayload } from '../useExperimentFormPayload'
+import type { ExperimentFormPayload } from '../useExperimentFormPayload'
 import { useEffect } from 'react'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 
-export function NoDatasetRangeInput({
-  setFromLine,
-  setToLine,
-  toLine,
-}: ExperimentFormPayload) {
+export function NoDatasetRangeInput({ setFromLine, setToLine, toLine }: ExperimentFormPayload) {
   useEffect(() => {
     setFromLine(0)
     setToLine(9)
@@ -22,7 +18,7 @@ export function NoDatasetRangeInput({
       placeholder='Number of runs'
       onChange={(e) => {
         const n = Number(e.target.value)
-        if (!isNaN(n)) setToLine(n - 1)
+        if (!Number.isNaN(n)) setToLine(n - 1)
       }}
       min={1}
       className='w-1/2'

@@ -1,10 +1,7 @@
-import { Monaco } from '@monaco-editor/react'
-import { type editor } from 'monaco-editor'
+import type { Monaco } from '@monaco-editor/react'
+import type { editor } from 'monaco-editor'
 
-export function registerActions(
-  editor: editor.IStandaloneCodeEditor,
-  monaco: Monaco,
-) {
+export function registerActions(editor: editor.IStandaloneCodeEditor, monaco: Monaco) {
   editor.addAction({
     id: 'toggleBlockComment',
     label: 'Toggle comment',
@@ -32,9 +29,7 @@ export function registerActions(
           lineContent.trim().endsWith(endComment)
         ) {
           // Uncomment the line
-          const uncommentedLine = lineContent
-            .trim()
-            .slice(startComment.length, -endComment.length)
+          const uncommentedLine = lineContent.trim().slice(startComment.length, -endComment.length)
           model.pushEditOperations(
             [],
             [
@@ -75,15 +70,9 @@ export function registerActions(
         const startComment = '/* '
         const endComment = ' */'
 
-        if (
-          selectedText.startsWith(startComment) &&
-          selectedText.endsWith(endComment)
-        ) {
+        if (selectedText.startsWith(startComment) && selectedText.endsWith(endComment)) {
           // Uncomment the selection
-          const uncommented = selectedText.slice(
-            startComment.length,
-            -endComment.length,
-          )
+          const uncommented = selectedText.slice(startComment.length, -endComment.length)
           model.pushEditOperations(
             [],
             [

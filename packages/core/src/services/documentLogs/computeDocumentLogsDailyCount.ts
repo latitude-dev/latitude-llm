@@ -1,6 +1,6 @@
 import { subDays } from 'date-fns'
 import { and, eq, gte, inArray, isNull, sql } from 'drizzle-orm'
-import { DocumentLogFilterOptions } from '../../browser'
+import type { DocumentLogFilterOptions } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { commits, documentLogs } from '../../schema'
