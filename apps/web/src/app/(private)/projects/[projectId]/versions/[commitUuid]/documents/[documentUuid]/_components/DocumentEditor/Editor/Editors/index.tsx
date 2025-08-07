@@ -1,3 +1,5 @@
+import { useDevMode } from '$/hooks/useDevMode'
+import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { useMetadata } from '$/hooks/useMetadata'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import {
@@ -5,8 +7,6 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { PlaygroundBlocksEditor } from '../BlocksEditor'
-import { useDocumentValue } from '../context/DocumentValueContext'
-import { useDevMode } from '../hooks/useDevMode'
 import { useDiffState } from '../hooks/useDiffState'
 import { useLatteStreaming } from '../hooks/useLatteStreaming'
 import { PlaygroundTextEditor } from '../TextEditor'
@@ -49,15 +49,15 @@ export function Editors({
       onChange={updateDocumentContent}
       highlightedCursorIndex={highlightedCursorIndex}
     />
-  ) : metadata?.rootBlock ? (
+  ) : (
     <PlaygroundBlocksEditor
       commit={commit}
-      config={metadata.config}
+      config={metadata?.config}
       document={document}
       onChange={updateDocumentContent}
       project={project}
       readOnlyMessage={readOnlyMessage}
-      rootBlock={metadata.rootBlock}
+      defaultValue={metadata?.rootBlock}
     />
-  ) : null
+  )
 }

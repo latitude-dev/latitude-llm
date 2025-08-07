@@ -1,14 +1,14 @@
 import { ReactNode } from 'react'
 
+import { User } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
-import { SessionUser } from '@latitude-data/web-ui/providers'
 
 import AppHeader, { AppHeaderProps } from './Header'
 import RightSidebarLayout from './RightSidebarLayout'
 
 export type AppLayoutProps = AppHeaderProps & {
   children: ReactNode
-  currentUser: SessionUser | undefined
+  currentUser: User | undefined
   scrollable?: boolean
 }
 
@@ -18,6 +18,7 @@ export default function AppLayout({
   navigationLinks,
   scrollable = true,
   cloudInfo,
+  isCloud,
 }: AppLayoutProps) {
   return (
     <div
@@ -29,6 +30,7 @@ export default function AppLayout({
         navigationLinks={navigationLinks}
         currentUser={currentUser}
         cloudInfo={cloudInfo}
+        isCloud={isCloud}
       />
       <RightSidebarLayout>
         <main className='w-full flex-grow min-h-0 h-full relative'>

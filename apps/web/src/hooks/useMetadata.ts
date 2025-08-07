@@ -1,13 +1,12 @@
 'use client'
 
+import { debounce } from 'lodash-es'
 import { useMemo } from 'react'
 import { create } from 'zustand'
-
 import type {
   ReadMetadataWorkerProps,
   ResolvedMetadata,
 } from '../workers/readMetadata'
-import { debounce } from 'lodash-es'
 
 type MetadataState = {
   metadata: ResolvedMetadata | undefined

@@ -77,6 +77,45 @@
     z-index: 999999 !important;
     pointer-events: auto !important;
   }
+
+  .standalone-tooltip {
+    @apply relative;
+
+    /* Default position: top */
+    &::before {
+      content: attr(data-tooltip);
+      @apply absolute bottom-full left-1/2 transform -translate-x-1/2;
+      @apply px-3 py-1.5 text-xs font-semibold rounded-md overflow-hidden;
+      @apply opacity-0 pointer-events-none transition-opacity duration-300 delay-700;
+      @apply max-w-96 break-words text-center z-50;
+      @apply bg-foreground text-background;
+      @apply mb-1;
+    }
+
+    &:hover::before {
+      @apply opacity-100;
+    }
+
+    /* Bottom position */
+    &[data-tooltip-position='bottom']::before {
+      @apply bottom-auto top-full left-1/2 transform -translate-x-1/2 mt-1 mb-0;
+    }
+
+    /* Left position */
+    &[data-tooltip-position='left']::before {
+      @apply bottom-auto top-1/2 left-auto right-full transform -translate-y-1/2 translate-x-0 mr-1 mb-0;
+    }
+
+    /* Right position */
+    &[data-tooltip-position='right']::before {
+      @apply bottom-auto top-1/2 right-auto left-full transform -translate-y-1/2 translate-x-0 ml-1 mb-0;
+    }
+
+    /* Centered position */
+    &[data-tooltip-position='center']::before {
+      @apply bottom-auto top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 m-0;
+    }
+  }
 }
 
 @layer base {

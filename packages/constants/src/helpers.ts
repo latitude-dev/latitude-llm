@@ -1,5 +1,8 @@
 import type { DocumentVersion, SimplifiedDocumentVersion } from './models'
 
+export const EMAIL_REGEX =
+  /^(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*)@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/gi
+
 export function resolveRelativePath(refPath: string, from?: string): string {
   if (refPath.startsWith('/')) {
     return refPath.slice(1)

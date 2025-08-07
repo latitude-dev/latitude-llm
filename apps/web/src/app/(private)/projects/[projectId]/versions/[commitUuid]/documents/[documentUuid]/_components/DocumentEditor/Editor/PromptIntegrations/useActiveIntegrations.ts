@@ -4,7 +4,7 @@ import { IntegrationDto } from '@latitude-data/core/browser'
 import { useCallback, useState } from 'react'
 import { useEvents } from '$/lib/events'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
-import { useDocumentValue } from '../context/DocumentValueContext'
+import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import useIntegrations from '$/stores/integrations'
 
 export type ActiveIntegrations = Record<string, true | string[]> // true means '*'

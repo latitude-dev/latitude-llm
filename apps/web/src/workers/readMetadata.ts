@@ -1,16 +1,14 @@
+import type { AgentToolsMap } from '@latitude-data/constants'
 import { resolveRelativePath } from '@latitude-data/constants'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
-import { fromAstToBlocks } from '@latitude-data/web-ui/fromAstToBlocks'
-
-import type { AgentToolsMap } from '@latitude-data/constants'
 import type { AstError } from '@latitude-data/constants/promptl'
-import type { BlockRootNode } from '@latitude-data/web-ui/fromAstToBlocks'
-
 import {
   CompileError as PromptlCompileError,
   ConversationMetadata as PromptlConversationMetadata,
   scan,
 } from 'promptl-ai'
+import type { BlockRootNode } from '../components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
+import { fromAstToBlocks } from '../components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
 
 type CompileError = PromptlCompileError
 
@@ -22,6 +20,7 @@ export type ReadMetadataWorkerProps = Parameters<typeof scan>[0] & {
   integrationNames?: string[]
   agentToolsMap?: AgentToolsMap
   noOutputSchemaConfig?: { message: string }
+  origin?: 'blocksEditor' | 'latteCopilot' | string
 }
 
 function readDocument(document?: any, documents?: any[], prompt?: string) {
@@ -50,9 +49,11 @@ function readDocument(document?: any, documents?: any[], prompt?: string) {
 function handleMetadata({
   prompt,
   metadata,
+  origin,
 }: {
   prompt: string
   metadata: PromptlConversationMetadata
+  origin?: ReadMetadataWorkerProps['origin']
 }) {
   const { setConfig: _, errors: rawErrors, ...returnedMetadata } = metadata
   const errors = rawErrors.map((error: CompileError) => {
@@ -82,6 +83,7 @@ function handleMetadata({
     errors,
     // We lie with `!` but is ok because this is used only when visual editor
     rootBlock,
+    origin,
   }
 }
 
@@ -96,6 +98,7 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
     agentToolsMap,
     integrationNames,
     noOutputSchemaConfig,
+    origin,
     ...rest
   } = event.data
 
@@ -130,5 +133,5 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
   }
   const metadata = await scan(scanParams)
 
-  self.postMessage(handleMetadata({ metadata, prompt }))
+  self.postMessage(handleMetadata({ metadata, prompt, origin }))
 }
