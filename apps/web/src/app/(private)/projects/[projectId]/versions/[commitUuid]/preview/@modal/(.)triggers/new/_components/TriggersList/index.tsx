@@ -4,7 +4,8 @@ import {
   type OnSelectValue,
 } from '@latitude-data/web-ui/molecules/SearchableList'
 import { useCallback, useMemo, useState } from 'react'
-import {
+import type {
+  DocumentTrigger,
   PipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/browser'
@@ -17,7 +18,13 @@ const EMPTY_LIST: Trigger[] = []
 /**
  * This triggers are Pipedream triggers ONLY.
  */
-export function TriggersList({ pipedreamSlug }: { pipedreamSlug: string }) {
+export function TriggersList({
+  pipedreamSlug,
+  onTriggerCreated,
+}: {
+  pipedreamSlug: string
+  onTriggerCreated: (documentTrigger: DocumentTrigger) => void
+}) {
   const [selectedTrigger, setTrigger] = useState<Trigger | null>(null)
   const { data: selectedPipedreamApp, isLoading } =
     usePipedreamApp(pipedreamSlug)
@@ -66,6 +73,7 @@ export function TriggersList({ pipedreamSlug }: { pipedreamSlug: string }) {
           <TriggerConfiguration
             trigger={selectedTrigger}
             pipedreamApp={selectedPipedreamApp}
+            onTriggerCreated={onTriggerCreated}
           />
         ) : null}
       </div>

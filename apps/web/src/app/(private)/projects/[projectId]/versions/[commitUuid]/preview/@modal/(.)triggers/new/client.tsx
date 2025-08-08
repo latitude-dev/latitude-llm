@@ -11,7 +11,8 @@ import {
 import { IntegrationsList } from './_components/IntegrationsList'
 import { TriggersList } from './_components/TriggersList'
 import { IntegrationType } from '@latitude-data/constants'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import type { DocumentTrigger, IntegrationDto } from '@latitude-data/core/browser'
 
 export type SelectedIntegration = {
   slug: string
@@ -20,8 +21,10 @@ export type SelectedIntegration = {
 
 function IntegrationDetail({
   selectedIntegration,
+  onTriggerCreated,
 }: {
   selectedIntegration?: SelectedIntegration | null
+  onTriggerCreated: (documentTrigger: DocumentTrigger) => void
 }) {
   if (!selectedIntegration) {
     return (
@@ -37,7 +40,13 @@ function IntegrationDetail({
   }
 
   const slug = selectedIntegration.slug
-  return <TriggersList key={slug} pipedreamSlug={slug} />
+  return (
+    <TriggersList
+      key={slug}
+      pipedreamSlug={slug}
+      onTriggerCreated={onTriggerCreated}
+    />
+  )
 }
 
 export function NewTrigger() {
@@ -45,6 +54,19 @@ export function NewTrigger() {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const [selected, setSelected] = useState<SelectedIntegration | null>(null)
+  const onCloseModal = useCallback(() => {
+    navigate.push(
+      ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({ uuid: commit.uuid }).preview.root,
+    )
+  }, [navigate, project.id, commit.uuid])
+  const onTriggerCreated = useCallback(
+    (_i: IntegrationDto) => {
+      onCloseModal()
+    },
+    [onCloseModal],
+  )
 
   return (
     <Modal
@@ -55,18 +77,15 @@ export function NewTrigger() {
       height='maxHeightScreen'
       title='Add new trigger'
       description='Add a new trigger to run this project automatically'
-      onOpenChange={() => {
-        navigate.push(
-          ROUTES.projects
-            .detail({ id: project.id })
-            .commits.detail({ uuid: commit.uuid }).preview.root,
-        )
-      }}
+      onOpenChange={onCloseModal}
     >
       <div className='grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-6 w-full h-full min-h-0 pb-6'>
         <IntegrationsList onSelectIntegration={setSelected} />
         <div className='border border-border rounded-lg min-h-0 bg-secondary overflow-hidden'>
-          <IntegrationDetail selectedIntegration={selected} />
+          <IntegrationDetail
+            selectedIntegration={selected}
+            onTriggerCreated={onTriggerCreated}
+          />
         </div>
       </div>
     </Modal>

@@ -52,7 +52,7 @@ export function SearchableSelectList<V extends unknown = unknown>({
                   className='cursor-pointer flex items-center gap-2'
                 >
                   {option.icon && typeof option.icon === 'string' ? (
-                    <Icon name={option.icon as IconName} size='small' />
+                    <Icon name={option.icon as IconName} size='small' color='foregroundMuted' />
                   ) : (
                     option.icon
                   )}

@@ -1,77 +1,31 @@
-import { useCallback, useMemo, useState } from 'react'
-import { AppDto, IntegrationDto } from '@latitude-data/core/browser'
-import useIntegrations from '$/stores/integrations'
-import { IntegrationType } from '@latitude-data/constants'
-import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { useState } from 'react'
+import type {
+  AppDto,
+  DocumentTrigger,
+  IntegrationDto,
+} from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
-import { ConnectAccount } from '../ConnectAccount'
 import { type Trigger } from '../index'
-
-const CREATE_ACCOUNT_ID = 'create_account'
-function useConnectedPipedreamAccounts({
-  pipedreamSlug,
-}: {
-  pipedreamSlug: string
-}) {
-  const { data: integrations, isLoading } = useIntegrations({
-    withTriggers: true,
-  })
-  return useMemo(() => {
-    const accounts = integrations.filter(
-      (integration) =>
-        integration.type === IntegrationType.Pipedream &&
-        integration.configuration.appName === pipedreamSlug,
-    )
-    const options = accounts.map<SelectOption<string>>((account) => ({
-      value: String(account.id),
-      label: account.name,
-    }))
-    options.push({
-      icon: 'plus',
-      value: CREATE_ACCOUNT_ID,
-      label: 'Connect a new account',
-    })
-    return { accounts, options, isLoading }
-  }, [integrations, pipedreamSlug, isLoading])
-}
+import { ConnectAccount } from './ConnectAccount'
+import {
+  useDocumentSelection,
+  SelectDocument,
+  SelectPayloadParameters,
+} from './SelectDocument'
+import { ConfigureTrigger } from './ConfigureTrigger'
 
 export function TriggerConfiguration({
   trigger,
   pipedreamApp,
+  onTriggerCreated,
 }: {
   trigger: Trigger
   pipedreamApp: AppDto
+  onTriggerCreated: (documentTrigger: DocumentTrigger) => void
 }) {
-  const [_account, setAccount] = useState<IntegrationDto | undefined>(undefined)
-  const [choosedConnect, setChoosedConnect] = useState(false)
-  const { options, accounts, isLoading } = useConnectedPipedreamAccounts({
-    pipedreamSlug: pipedreamApp.name_slug,
-  })
-
-  const onSelectAccount = useCallback(
-    (accountId: string) => {
-      if (accountId === CREATE_ACCOUNT_ID) {
-        setChoosedConnect(true)
-        return
-      }
-
-      const account = accounts.find((a) => a.id === +accountId)
-      if (!account) return
-
-      setAccount(account)
-    },
-    [accounts],
-  )
-
-  const onCancel = useCallback(() => {
-    setChoosedConnect(false)
-    setAccount(undefined)
-  }, [])
-  const showConnectAccount =
-    (!isLoading && accounts.length === 0) || choosedConnect
-
+  const [account, setAccount] = useState<IntegrationDto | undefined>(undefined)
+  const doc = useDocumentSelection()
   return (
     <div className='flex flex-col gap-y-4'>
       <div className='flex flex-col'>
@@ -80,29 +34,42 @@ export function TriggerConfiguration({
         <Text.H5 color='foregroundMuted' lineClamp={2}>
           {trigger.description}
         </Text.H5>
-        <hr className='border-t border-border mt-3' />
       </div>
-      <FormFieldGroup
-        label='Connected Account'
-        description='Connect an account to use a trigger'
-        descriptionPosition='top'
-        layout='horizontal'
-      >
-        {showConnectAccount ? (
-          <ConnectAccount
-            app={pipedreamApp}
-            onAccountConnected={setAccount}
-            onCancel={onCancel}
-          />
-        ) : (
-          <Select<string>
-            name='connect-account'
-            searchable
-            options={options}
-            onChange={onSelectAccount}
-          />
-        )}
-      </FormFieldGroup>
+
+      <hr className='border-t border-border' />
+
+      <ConnectAccount
+        account={account}
+        setAccount={setAccount}
+        pipedreamApp={pipedreamApp}
+      />
+
+      {account ? (
+        <SelectDocument
+          document={doc.document}
+          onDocumentSelected={doc.onDocumentSelected}
+          options={doc.options}
+        />
+      ) : null}
+
+      {doc.document ? (
+        <SelectPayloadParameters
+          parameterNames={doc.parameterNames}
+          payloadParameters={doc.payloadParameters}
+          setPayloadParameters={doc.onSetPayloadParameters}
+        />
+      ) : null}
+
+      {account && doc.document ? (
+        <ConfigureTrigger
+          key={trigger.key}
+          triggerComponent={trigger}
+          account={account}
+          agent={doc.document}
+          onTriggerCreated={onTriggerCreated}
+          payloadParameters={doc.payloadParameters}
+        />
+      ) : null}
     </div>
   )
 }

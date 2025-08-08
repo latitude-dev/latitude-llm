@@ -11,7 +11,13 @@ import { IntegrationDto } from '@latitude-data/core/browser'
 
 const NO_TOKEN_MSG =
   'Authentication token not available. Please wait a few seconds and try again.'
-export function ConnectAccount({
+
+/**
+ * This connection is only for triggers.
+ * If you want to use for connecting tools be aware you need to
+ * set `withTools: true` in the `useIntegrations` hook.
+ */
+export function PipedreamConnect({
   app,
   onAccountConnected,
   onCancel,
@@ -22,7 +28,9 @@ export function ConnectAccount({
 }) {
   const { toast } = useToast()
   const { connect, externalUserId } = useConnectToPipedreamApp(app)
-  const { create } = useIntegrations()
+  const { create } = useIntegrations({
+    withTriggers: true,
+  })
 
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
@@ -33,8 +41,8 @@ export function ConnectAccount({
 
       if (!externalUserId) {
         toast({
-          title: NO_TOKEN_MSG,
-          description: createError.message,
+          title: 'Authentication failed',
+          description: NO_TOKEN_MSG,
           variant: 'destructive',
         })
         throw new Error(NO_TOKEN_MSG)
@@ -69,7 +77,7 @@ export function ConnectAccount({
         })
       }
 
-      onAccountConnected(integration)
+      onAccountConnected(integration as IntegrationDto)
     },
     [app, connect, externalUserId, create, toast, onAccountConnected],
   )
