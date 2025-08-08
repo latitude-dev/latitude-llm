@@ -11,6 +11,7 @@ import {
   PipedreamComponent,
   PipedreamComponentType,
 } from '../../../constants'
+import { fetchTriggerCounts } from './fetchTriggerCounts'
 
 const LIST_APPS_LIMIT = 64
 
@@ -45,30 +46,55 @@ export function getPipedreamEnvironment() {
   })
 }
 
+export function buildPipedreamClient() {
+  const pipedreamEnv = getPipedreamEnvironment()
+
+  if (pipedreamEnv.error) return pipedreamEnv
+
+  return Result.ok(createBackendClient(pipedreamEnv.value))
+}
+
 export async function listApps({
   query,
   cursor,
-}: { query?: string; cursor?: string } = {}): PromisedResult<{
+  withTriggers: hasTriggers = false,
+}: {
+  query?: string
+  cursor?: string
+  withTriggers?: boolean
+} = {}): PromisedResult<{
   apps: App[]
   totalCount: number
   cursor: string
+  withTriggers?: boolean
 }> {
-  const pipedreamEnv = getPipedreamEnvironment()
-  if (!pipedreamEnv.ok) {
-    return Result.error(pipedreamEnv.error!)
+  const pipedreamResult = buildPipedreamClient()
+
+  if (pipedreamResult.error) {
+    return Result.error(pipedreamResult.error)
   }
 
-  const pipedream = createBackendClient(pipedreamEnv.unwrap())
+  const pipedream = pipedreamResult.value
 
   try {
     const apps = await pipedream.getApps({
       q: query,
       limit: LIST_APPS_LIMIT,
       after: cursor,
-      hasComponents: true,
+      hasTriggers,
     })
+    let appsList: App[] = apps.data
+
+    if (hasTriggers) {
+      const appsListResult = await fetchTriggerCounts({
+        type: 'pipedreamApps',
+        apps: appsList,
+        pipedream,
+      })
+      appsList = appsListResult.unwrap()
+    }
     return Result.ok({
-      apps: apps.data,
+      apps: appsList,
       totalCount: apps.page_info.total_count,
       cursor: apps.page_info.end_cursor,
     })

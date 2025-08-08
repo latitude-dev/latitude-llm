@@ -260,6 +260,14 @@ export type PipedreamIntegration = Extract<
   { type: IntegrationType.Pipedream }
 >
 
+export type PipedreamIntegrationWithAcountCount = PipedreamIntegration & {
+  accountCount: number
+}
+export type PipedreamIntegrationWithCounts =
+  PipedreamIntegrationWithAcountCount & {
+    triggerCount: number
+  }
+
 type _DocumentTrigger = InferSelectModel<typeof documentTriggers>
 export type DocumentTrigger = Omit<_DocumentTrigger, 'configuration' | 'type'> &
   DocumentTriggerWithConfiguration

@@ -17,11 +17,8 @@ import { Icon, IconName } from '../../Icons'
 import { type SelectProps } from '../index'
 
 const SelectRoot = SelectPrimitive.Root
-
 const SelectGroup = SelectPrimitive.Group
-
 const SelectValuePrimitive = SelectPrimitive.Value
-
 const SelectTriggerPrimitive = SelectPrimitive.Trigger
 
 function SelectValueWithIcon({
@@ -59,8 +56,6 @@ function SelectValueWithDescription({
 }
 
 function findSelected(options: SelectOption[], selected: unknown) {
-  // Performing a non-strict comparison to avoid problems with different
-  // types between the options values and the selected value
   return options.find((option) => option.value == selected)
 }
 
@@ -125,49 +120,43 @@ const SelectTrigger = forwardRef<
     ref,
   ) => {
     return (
-      <div
-        className={cn(
-          'flex items-center justify-between gap-x-1 whitespace-nowrap rounded-md',
-          'border border-input bg-transparent text-sm shadow-sm ring-offset-background ',
-          'placeholder:text-muted-foreground focus:outline-none focus:ring-offset-2 focus:ring-2 focus:ring-ring',
-          'disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
-          'bg-background',
-          className,
-          {
-            'w-full': fullWidth,
-            'py-buttonDefaultVertical px-3 min-h-8': size === 'default',
-            'py-0 px-1.5 min-h-6': size === 'small',
-          },
-        )}
-      >
-        <SelectPrimitive.Trigger
-          ref={ref}
-          {...props}
-          className={cn('flex flex-row justify-between items-center gap-x-1', {
-            'w-full': fullWidth,
-          })}
+      <SelectPrimitive.Trigger ref={ref} asChild {...props}>
+        <div
+          className={cn(
+            'flex items-center justify-between gap-x-1 whitespace-nowrap rounded-md',
+            'border border-input bg-transparent text-sm shadow-sm ring-offset-background',
+            'placeholder:text-muted-foreground focus:outline-none focus:ring-offset-2 focus:ring-2 focus:ring-ring',
+            'disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 bg-background',
+            {
+              'w-full': fullWidth,
+              'py-buttonDefaultVertical px-3 min-h-8': size === 'default',
+              'py-0 px-1.5 min-h-6': size === 'small',
+            },
+            className,
+          )}
         >
-          {children}
-          <SelectPrimitive.Icon asChild>
-            {!removable && (
+          <div className='flex flex-row justify-between items-center gap-x-1 min-w-0 w-full'>
+            {children}
+          </div>
+          {!removable ? (
+            <SelectPrimitive.Icon asChild>
               <Icon
                 name='chevronsUpDown'
                 className='min-w-0 flex-none opacity-50'
               />
-            )}
-          </SelectPrimitive.Icon>
-        </SelectPrimitive.Trigger>
-        {removable && (
-          <Icon
-            name='close'
-            className='min-w-0 flex-none opacity-50 cursor-pointer'
-            onClick={(event) => {
-              event.preventDefault()
-              onRemove?.()
-            }}
-          />
-        )}
-      </div>
+            </SelectPrimitive.Icon>
+          ) : (
+            <Icon
+              name='close'
+              className='min-w-0 flex-none opacity-50 cursor-pointer'
+              onClick={(event) => {
+                event.preventDefault()
+                onRemove?.()
+              }}
+            />
+          )}
+        </div>
+      </SelectPrimitive.Trigger>
     )
   },
 )
@@ -229,28 +218,22 @@ const SelectContent = forwardRef<
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         ref={ref}
-        className={cn(
-          'relative z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
-          position === 'popper' &&
-            'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
-          className,
-          {
-            'max-h-96': !maxHeightAuto,
-          },
-        )}
         position={position}
+        className={cn(
+          'relative z-50 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+          'data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
+          position === 'popper' &&
+            'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:translate-y-1 w-[var(--radix-select-trigger-width)]',
+          !maxHeightAuto && 'max-h-96',
+          className,
+        )}
         {...props}
       >
         {autoScroll ? (
           <>
             <SelectScrollUpButton />
-            <SelectPrimitive.Viewport
-              className={cn(
-                'p-1',
-                position === 'popper' &&
-                  'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]',
-              )}
-            >
+            <SelectPrimitive.Viewport className='p-1'>
               {children}
             </SelectPrimitive.Viewport>
             <SelectScrollDownButton />

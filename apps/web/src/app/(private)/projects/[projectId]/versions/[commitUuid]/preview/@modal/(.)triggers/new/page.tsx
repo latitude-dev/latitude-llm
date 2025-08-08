@@ -1,5 +1,5 @@
-import { Client } from './client'
+import { NewTrigger } from './client'
 
 export default function NewTriggersPage() {
-  return <Client />
+  return <NewTrigger />
 }

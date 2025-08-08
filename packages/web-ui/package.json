@@ -103,6 +103,7 @@
     "./molecules/DynamicBot": "./src/ds/molecules/DynamicBot/index.tsx",
     "./molecules/PaginatedSelect": "./src/ds/molecules/PaginatedSelect/index.tsx",
     "./molecules/MultipleInput": "./src/ds/molecules/MultipleInput/index.tsx",
+    "./molecules/SearchableList": "./src/ds/molecules/SearchableList/index.tsx",
     "./organisms/ClickToCopyUuid": "./src/ds/organisms/ClickToCopyUuid/index.tsx",
     "./organisms/CronInput": "./src/ds/organisms/CronInput/index.tsx",
     "./tokens": "./src/ds/tokens/index.ts",

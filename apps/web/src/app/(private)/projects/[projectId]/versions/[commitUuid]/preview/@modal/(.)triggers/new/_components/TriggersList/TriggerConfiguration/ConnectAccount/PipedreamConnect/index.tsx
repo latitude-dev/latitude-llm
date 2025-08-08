@@ -1,26 +1,36 @@
 import { FormEvent, useCallback } from 'react'
 import { App } from '@pipedream/sdk/browser'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { useConnectToPipedreamApp } from '$/hooks/useConnectToPipedreamApp'
 import { IntegrationType } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import useIntegrations from '$/stores/integrations'
-import { useTriggersModalContext } from '../contexts/triggers-modal-context'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { IntegrationDto } from '@latitude-data/core/browser'
 
-interface IntegrationConnectionFormProps {
-  app: App
-}
+const NO_TOKEN_MSG =
+  'Authentication token not available. Please wait a few seconds and try again.'
 
-export function IntegrationConnectionForm({
+/**
+ * This connection is only for triggers.
+ * If you want to use for connecting tools be aware you need to
+ * set `withTools: true` in the `useIntegrations` hook.
+ */
+export function PipedreamConnect({
   app,
-}: IntegrationConnectionFormProps) {
+  onAccountConnected,
+  onCancel,
+}: {
+  app: App
+  onAccountConnected: (account: IntegrationDto) => void
+  onCancel: () => void
+}) {
   const { toast } = useToast()
-  const { setSelectedIntegration } = useTriggersModalContext()
   const { connect, externalUserId } = useConnectToPipedreamApp(app)
-  const { create } = useIntegrations()
+  const { create } = useIntegrations({
+    withTriggers: true,
+  })
 
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
@@ -30,9 +40,12 @@ export function IntegrationConnectionForm({
         .value
 
       if (!externalUserId) {
-        throw new Error(
-          'Authentication token not available. Please wait a few seconds and try again.',
-        )
+        toast({
+          title: 'Authentication failed',
+          description: NO_TOKEN_MSG,
+          variant: 'destructive',
+        })
+        throw new Error(NO_TOKEN_MSG)
       }
 
       const [connectionId, error] = await connect()
@@ -54,48 +67,45 @@ export function IntegrationConnectionForm({
         name: integrationName,
       })
 
-      if (createError) {
+      if (createError || !integration) {
         toast({
           title: 'Error creating integration',
-          description: createError.message,
+          description: createError
+            ? createError.message
+            : 'Unknown error occurred',
           variant: 'destructive',
         })
       }
-      if (!integration) return
 
-      setSelectedIntegration((prev) => ({
-        id: integration.id,
-        name: integration.name,
-        type: IntegrationType.Pipedream,
-        pipedream: {
-          app: {
-            name: app.name,
-          },
-          trigger: prev?.pipedream?.trigger,
-        },
-      }))
+      onAccountConnected(integration as IntegrationDto)
     },
-    [app, connect, externalUserId, create, setSelectedIntegration, toast],
+    [app, connect, externalUserId, create, toast, onAccountConnected],
   )
 
   return (
     <div className='flex flex-col gap-4'>
-      <Text.H5 centered color='foregroundMuted'>
-        Let's first connect {app.name} to Latitude
-      </Text.H5>
       <form onSubmit={handleSubmit}>
         <FormWrapper>
           <Input
             required
             name='integrationName'
-            label='Integration name'
             pattern='[a-z0-9\-]+'
-            title='Only lowercase letters, numbers, and hyphens are allowed. No spaces or uppercase letters.'
-            placeholder='my-integration-name'
+            description='Only lowercase letters, numbers, and hyphens are allowed. No spaces or uppercase letters.'
+            placeholder='my-account-name'
           />
-          <Button fancy fullWidth type='submit' disabled={!externalUserId}>
-            Connect
-          </Button>
+          <div className='flex flex-row gap-x-2'>
+            <Button
+              fullWidth
+              variant='outline'
+              type='button'
+              onClick={onCancel}
+            >
+              Cancel
+            </Button>
+            <Button fullWidth fancy type='submit' disabled={!externalUserId}>
+              Connect
+            </Button>
+          </div>
         </FormWrapper>
       </form>
     </div>
