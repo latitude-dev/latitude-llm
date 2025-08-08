@@ -77,6 +77,8 @@ describe('ProviderProcessor', () => {
         providerMetadata: new Promise<undefined>((resolve) =>
           resolve(undefined),
         ),
+        // @ts-expect-error - mock implementation
+        response: new Promise((resolve) => resolve({})),
       },
     })
 
@@ -84,6 +86,9 @@ describe('ProviderProcessor', () => {
       streamType: 'text',
       text: 'MY TEXT',
       toolCalls: [],
+      object: undefined,
+      output: [],
+      reasoning: undefined,
       usage: {
         promptTokens: 3,
         completionTokens: 7,

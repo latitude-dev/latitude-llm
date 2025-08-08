@@ -114,15 +114,6 @@ export async function runEvaluationV2<
     return Result.error(new BadRequestError('Invalid evaluation metric'))
   }
 
-  const conversation = buildConversation(providerLog)
-  if (conversation.at(-1)?.role != 'assistant') {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that does not end with an assistant message',
-      ),
-    )
-  }
-
   if (dataset && datasetLabel && datasetRow) {
     if (datasetRow.datasetId !== dataset.id) {
       return Result.error(
@@ -162,7 +153,7 @@ export async function runEvaluationV2<
       evaluation: evaluation,
       actualOutput: actualOutput,
       expectedOutput: expectedOutput,
-      conversation: conversation,
+      conversation: buildConversation(providerLog),
       providerLog: providerLog,
       documentLog: documentLog,
       document: document,

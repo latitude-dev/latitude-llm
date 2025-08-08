@@ -76,6 +76,11 @@ export function buildAllMessagesFromResponse<T extends StreamType>({
 export function buildConversation(providerLog: ProviderLogDto) {
   const messages: Message[] = [...providerLog.messages]
 
+  if (providerLog.output) {
+    messages.push(...(providerLog.output as Message[]))
+    return messages
+  }
+
   const message = buildResponseMessage({
     type: 'text',
     data: {
@@ -84,7 +89,6 @@ export function buildConversation(providerLog: ProviderLogDto) {
       toolCalls: providerLog.toolCalls,
     },
   })
-
   if (message) {
     messages.push(message)
   }

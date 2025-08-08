@@ -1,9 +1,10 @@
 import { hash } from 'crypto'
 import { omit } from 'lodash-es'
 
-import { ChainStepResponse, StreamType, type Workspace } from '../../browser'
+import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
 import { cache } from '../../cache'
 import { Config, Conversation } from 'promptl-ai'
+import { Workspace } from '../../browser'
 
 function cleanResponse<T extends StreamType>(response: ChainStepResponse<T>) {
   return omit<ChainStepResponse<T>, ['documentLogUuid', 'providerLog']>(

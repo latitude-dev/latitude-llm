@@ -4,6 +4,7 @@ import * as cacheModule from '../../cache'
 import { LogSources } from '../../constants'
 import { createProject } from '../../tests/factories'
 import { getCachedResponse, setCachedResponse } from './promptCache'
+import { ChainStepResponse, StreamType } from '@latitude-data/constants'
 
 describe('promptCache', async () => {
   const mockCache = {
@@ -110,7 +111,7 @@ describe('promptCache', async () => {
         workspace,
         config: { temperature: 0.5 },
         conversation,
-        response,
+        response: response as ChainStepResponse<StreamType>,
       })
 
       expect(mockCache.set).not.toHaveBeenCalled()
@@ -121,7 +122,7 @@ describe('promptCache', async () => {
         workspace,
         config,
         conversation,
-        response,
+        response: response as ChainStepResponse<StreamType>,
       })
 
       expect(mockCache.set).toHaveBeenCalledTimes(1)

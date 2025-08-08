@@ -82,7 +82,10 @@ function groupContentMetadata({
   }
 
   return content.map((contentItem) => {
-    const extracted = extractContentMetadata({ content: contentItem, provider })
+    const extracted = extractContentMetadata({
+      content: contentItem as Record<string, unknown>,
+      provider,
+    })
     if (!messageMetadata) return extracted
 
     // @ts-expect-error - metadata key can be not present

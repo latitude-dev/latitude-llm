@@ -96,7 +96,7 @@ export async function streamAIResponse({
         source,
         provider,
         conversation: {
-          messages: [...messages, ...responseMessages.slice(0, -1)],
+          messages,
           config,
         },
         stepStartTime: startTime,

@@ -72,7 +72,10 @@ export function convertToLegacyChainStream(
               stepMessages.filter(
                 (m) =>
                   m.role === MessageRole.tool &&
-                  m.content.some((c) => toolCallIds.includes(c.toolCallId)),
+                  m.content.some(
+                    (c) =>
+                      'toolCallId' in c && toolCallIds.includes(c.toolCallId),
+                  ),
               ).length + 1
 
             isResumingPausedChain = false
