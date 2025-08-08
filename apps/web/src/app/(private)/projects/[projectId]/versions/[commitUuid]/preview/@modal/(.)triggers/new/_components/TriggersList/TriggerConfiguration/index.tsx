@@ -26,8 +26,9 @@ export function TriggerConfiguration({
 }) {
   const [account, setAccount] = useState<IntegrationDto | undefined>(undefined)
   const doc = useDocumentSelection()
+
   return (
-    <div className='flex flex-col gap-y-4'>
+    <div className='flex flex-col gap-y-4 min-w-0'>
       <div className='flex flex-col'>
         <Text.H7 uppercase>new trigger</Text.H7>
         <Text.H4>{trigger.name}</Text.H4>
@@ -47,14 +48,14 @@ export function TriggerConfiguration({
       {account ? (
         <SelectDocument
           document={doc.document}
-          onDocumentSelected={doc.onDocumentSelected}
+          onSelectDocument={doc.onSelectDocument}
           options={doc.options}
         />
       ) : null}
 
       {doc.document ? (
         <SelectPayloadParameters
-          parameterNames={doc.parameterNames}
+          document={doc.document}
           payloadParameters={doc.payloadParameters}
           setPayloadParameters={doc.onSetPayloadParameters}
         />
@@ -65,7 +66,7 @@ export function TriggerConfiguration({
           key={trigger.key}
           triggerComponent={trigger}
           account={account}
-          agent={doc.document}
+          document={doc.document}
           onTriggerCreated={onTriggerCreated}
           payloadParameters={doc.payloadParameters}
         />

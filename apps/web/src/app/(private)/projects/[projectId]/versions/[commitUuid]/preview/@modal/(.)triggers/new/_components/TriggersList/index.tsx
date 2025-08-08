@@ -9,6 +9,8 @@ import type {
   PipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/browser'
+import { cn } from '@latitude-data/web-ui/utils'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { TriggerConfiguration } from './TriggerConfiguration'
 
@@ -55,9 +57,10 @@ export function TriggersList({
     [triggers],
   )
 
+  const canConfigureTrigger = selectedTrigger && selectedPipedreamApp
   return (
-    <div className='bg-background h-full grid grid-cols-2'>
-      <div className='border-r border-border overflow-y-auto custom-scrollbar pb-6'>
+    <div className='h-full grid grid-cols-2'>
+      <div className='bg-background border-r border-border overflow-y-auto custom-scrollbar pb-6'>
         <SearchableList
           loading={isLoading}
           listStyle={{ listWrapper: 'onlySeparators', size: 'small' }}
@@ -68,14 +71,24 @@ export function TriggersList({
           onSelectValue={onTriggerChange}
         />
       </div>
-      <div className='p-6'>
-        {selectedTrigger && selectedPipedreamApp ? (
+      <div
+        className={cn('p-6', {
+          'bg-background': canConfigureTrigger,
+        })}
+      >
+        {canConfigureTrigger ? (
           <TriggerConfiguration
             trigger={selectedTrigger}
             pipedreamApp={selectedPipedreamApp}
             onTriggerCreated={onTriggerCreated}
           />
-        ) : null}
+        ) : (
+          <div className='h-full flex justify-center'>
+            <Text.H6 color='foregroundMuted'>
+              Select a trigger to configure it.
+            </Text.H6>
+          </div>
+        )}
       </div>
     </div>
   )
