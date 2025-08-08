@@ -1,3 +1,4 @@
+import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { OnSelectedSpanFn } from '$/components/tracing/traces/Timeline'
@@ -113,12 +114,15 @@ export function DocumentLogs({
     disable: !!limitedView,
   })
 
-  const documentLogIds = useMemo(
-    () => documentLogs.map((r) => r.id),
+  const selectableLogIds = useMemo(
+    () =>
+      documentLogs
+        .filter((l) => !getRunErrorFromErrorable(l.error))
+        .map((l) => l.id),
     [documentLogs],
   )
   const selectableState = useSelectableRows({
-    rowIds: documentLogIds,
+    rowIds: selectableLogIds,
     totalRowCount: limitedView
       ? limitedView.totalCount
       : (pagination?.count ?? 0),

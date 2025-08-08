@@ -1,21 +1,21 @@
 'use client'
 
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCallback, useRef } from 'react'
-import { LatteMessageList } from './_components/MessageList'
-import { ChatSkeleton } from './_components/ChatSkeleton'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import { LatteChatInput } from './LatteChatInput'
-import Image from 'next/image'
-import { useLatteStore } from '$/stores/latte'
 import {
   useLatteChangeActions,
   useLatteChatActions,
   useLoadThreadFromProviderLogs,
   useSyncLatteUrlState,
 } from '$/hooks/latte'
+import { useLatteStore } from '$/stores/latte'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
+import Image from 'next/image'
+import { useCallback, useRef } from 'react'
+import { ChatSkeleton } from './_components/ChatSkeleton'
+import { LatteMessageList } from './_components/MessageList'
+import { LatteChatInput } from './LatteChatInput'
 
 export function LatteChat() {
   useSyncLatteUrlState()
@@ -51,7 +51,7 @@ export function LatteChat() {
 
   return (
     <div className='w-full h-full max-h-full flex flex-col items-center bg-latte-background'>
-      <div className='flex-1 flex flex-col h-full w-full items-center gap-4 max-w-[1200px] m-auto'>
+      <div className='flex-1 flex flex-col h-full w-full items-center gap-4 min-w-[300px] max-w-[1200px] m-auto flex-shrink-0'>
         <div className='flex-grow min-h-0 h-full w-full flex flex-col items-center justify-center relative'>
           <div
             className='w-full h-full  overflow-hidden custom-scrollbar flex flex-col gap-4 items-center'
@@ -60,7 +60,7 @@ export function LatteChat() {
             {isLoadingThread && !isLoading && <ChatSkeleton />}
             {!isLoadingThread &&
               (!inConversation ? (
-                <div className='flex flex-col items-center justify-center h-full gap-8 min-w-[50%]'>
+                <div className='flex flex-col items-center justify-center h-full gap-8 min-w-[50%] p-8'>
                   <div className='flex flex-col items-center justify-center gap-6'>
                     <Image
                       src='/latte.svg'
@@ -69,8 +69,10 @@ export function LatteChat() {
                       height={64}
                     />
                     <div className='flex flex-col items-center justify-center gap-2'>
-                      <Text.H3M>What do you want to automate today?</Text.H3M>
-                      <Text.H5 color='foregroundMuted'>
+                      <Text.H3M centered>
+                        What do you want to automate today?
+                      </Text.H3M>
+                      <Text.H5 color='foregroundMuted' centered>
                         Chat with Latte to build and improve your agent
                       </Text.H5>
                     </div>

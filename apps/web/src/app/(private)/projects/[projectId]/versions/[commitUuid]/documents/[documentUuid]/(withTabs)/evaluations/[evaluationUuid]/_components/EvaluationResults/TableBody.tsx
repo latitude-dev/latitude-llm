@@ -1,4 +1,3 @@
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import {
   ResultRowCells,
@@ -6,7 +5,6 @@ import {
 } from '$/components/evaluations/ResultRow'
 import { LogicTablePaginationFooter } from '$/components/TablePaginationFooter/LogicTablePaginationFooter'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
-import { useEvaluationResultsV2Count } from '$/stores/evaluationResultsV2'
 import {
   DEFAULT_PAGINATION_SIZE,
   EvaluationMetric,
@@ -25,10 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Ref } from 'react'
 
@@ -66,7 +60,13 @@ function EvaluationResultsTableRow<
       <TableCell
         preventDefault
         align='left'
-        onClick={() => toggleRow(result.uuid, !isSelected(result.uuid))}
+        onClick={() => {
+          if (result.error) return
+          toggleRow(result.uuid, !isSelected(result.uuid))
+        }}
+        className={cn({
+          'pointer-events-none cursor-wait': !!result.error,
+        })}
       >
         <Checkbox
           fullWidth={false}
@@ -101,6 +101,7 @@ export function EvaluationResultsTableBody<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 >({
   results,
+  totalResults,
   selectedResult,
   setSelectedResult,
   selectableState,
@@ -110,6 +111,7 @@ export function EvaluationResultsTableBody<
   ref,
 }: {
   results: EvaluationResultV2WithDetails<T, M>[]
+  totalResults: number
   selectedResult?: EvaluationResultV2WithDetails<T, M>
   setSelectedResult: (result?: EvaluationResultV2WithDetails<T, M>) => void
   selectableState: ReturnType<typeof useSelectableRows>
@@ -118,19 +120,7 @@ export function EvaluationResultsTableBody<
   isLoading?: boolean
   ref: Ref<HTMLTableElement>
 }) {
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
-  const { document } = useCurrentDocument()
   const { evaluation } = useCurrentEvaluationV2<T, M>()
-
-  const { data: count, isLoading: isCountLoading } =
-    useEvaluationResultsV2Count({
-      project: project,
-      commit: commit,
-      document: document,
-      evaluation: evaluation,
-      search: search,
-    })
 
   return (
     <Table
@@ -140,18 +130,20 @@ export function EvaluationResultsTableBody<
         <LogicTablePaginationFooter
           page={search.pagination.page}
           pageSize={search.pagination.pageSize}
-          count={count}
+          count={totalResults}
           countLabel={countLabel(selectableState.selectedCount)}
           onPageChange={(page) =>
             setSearch({ ...search, pagination: { ...search.pagination, page } })
           }
-          isLoading={isLoading || isCountLoading}
+          isLoading={isLoading}
         />
       }
     >
       <TableHeader className='isolate sticky top-0 z-10'>
         <TableRow>
-          <TableHead />
+          <TableHead align='left' onClick={selectableState.toggleAll}>
+            <Checkbox fullWidth={false} checked={selectableState.headerState} />
+          </TableHead>
           <ResultRowHeaders evaluation={evaluation} />
         </TableRow>
       </TableHeader>

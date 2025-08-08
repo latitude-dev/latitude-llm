@@ -1,6 +1,8 @@
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { ResultPanel } from '$/components/evaluations/ResultPanel'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
+import { useEvaluationResultsV2Count } from '$/stores/evaluationResultsV2'
 import {
   EvaluationMetric,
   EvaluationResultsV2Search,
@@ -8,8 +10,12 @@ import {
   EvaluationType,
 } from '@latitude-data/core/browser'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { EvaluationResultsTableActions } from './TableActions'
 import { EvaluationResultsTableBody } from './TableBody'
 
@@ -23,7 +29,7 @@ export function EvaluationResultsTable<
   search,
   setSearch,
   refinementEnabled,
-  isLoading,
+  isLoading: areResultsLoading,
 }: {
   results: EvaluationResultV2WithDetails<T, M>[]
   selectedResult?: EvaluationResultV2WithDetails<T, M>
@@ -33,15 +39,33 @@ export function EvaluationResultsTable<
   refinementEnabled: boolean
   isLoading?: boolean
 }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
   const { evaluation } = useCurrentEvaluationV2<T, M>()
 
   const tabelRef = useRef<HTMLTableElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
 
+  const { data: count, isLoading: isCountLoading } =
+    useEvaluationResultsV2Count({
+      project: project,
+      commit: commit,
+      document: document,
+      evaluation: evaluation,
+      search: search,
+    })
+
+  const selectableResultIds = useMemo(
+    () => results.filter((r) => !r.error).map((r) => r.uuid),
+    [results],
+  )
   const selectableState = useSelectableRows({
-    rowIds: results.filter((r) => !r.error).map((r) => r.uuid),
-    totalRowCount: results.length,
+    rowIds: selectableResultIds,
+    totalRowCount: count,
   })
+
+  const isLoading = areResultsLoading || isCountLoading
 
   return (
     <div className='flex flex-col gap-4 flex-grow min-h-0'>
@@ -56,6 +80,7 @@ export function EvaluationResultsTable<
             <EvaluationResultsTableBody
               ref={tabelRef}
               results={results}
+              totalResults={count}
               selectedResult={selectedResult}
               setSelectedResult={setSelectedResult}
               selectableState={selectableState}

@@ -18,6 +18,7 @@ export function InteractionStep({
         color='latteOutputForegroundMuted'
         noWrap={singleLine}
         ellipsis={singleLine}
+        userSelect={false}
         animate
       >
         Thinking...
@@ -32,6 +33,7 @@ export function InteractionStep({
         noWrap={singleLine}
         ellipsis={singleLine}
         whiteSpace='preWrap'
+        userSelect={false}
         animate={isLoading}
       >
         {step.content}
@@ -73,6 +75,7 @@ function ToolStep({
         noWrap={singleLine}
         ellipsis={singleLine}
         color='latteOutputForegroundMuted'
+        userSelect={false}
         animate={isLoading}
       >
         {step.finished
@@ -136,6 +139,7 @@ function EditActionStep({
         ellipsis={singleLine}
         color='latteOutputForegroundMuted'
         animate={isLoading}
+        userSelect={false}
       >
         {operationDescription}
       </Text.H5>

@@ -4,7 +4,10 @@ import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import { useCommits } from '$/stores/commitsStore'
-import { useEvaluationResultsV2 } from '$/stores/evaluationResultsV2'
+import {
+  useEvaluationResultsV2,
+  useEvaluationResultsV2Count,
+} from '$/stores/evaluationResultsV2'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
@@ -90,17 +93,34 @@ export function Step2({
     },
   })
 
+  const { data: count, isLoading: isCountLoading } =
+    useEvaluationResultsV2Count({
+      project: project,
+      commit: commit,
+      document: document,
+      evaluation: { uuid: evaluationUuid },
+      search: search,
+    })
+
+  const selectableResultIds = useMemo(
+    () => results.filter((r) => !r.error).map((r) => r.uuid),
+    [results],
+  )
   const selectableState = useSelectableRows({
-    rowIds: results.map((r) => r.uuid),
+    rowIds: selectableResultIds,
     initialSelection: selectedResultUuids,
-    totalRowCount: results.length,
+    totalRowCount: count,
   })
 
   useEffect(() => {
     setSelectedResultUuids(selectableState.selectedRowIds.map(String))
   }, [selectableState.selectedRowIds, setSelectedResultUuids])
 
-  const isLoading = isEvaluationsLoading || isResultsLoading || isCommitsLoading
+  const isLoading =
+    isEvaluationsLoading ||
+    isResultsLoading ||
+    isCommitsLoading ||
+    isCountLoading
 
   if (isLoading) {
     return (
@@ -146,7 +166,12 @@ export function Step2({
       >
         <TableHeader className='sticky top-0 z-10'>
           <TableRow>
-            <TableHead />
+            <TableHead align='left' onClick={selectableState.toggleAll}>
+              <Checkbox
+                fullWidth={false}
+                checked={selectableState.headerState}
+              />
+            </TableHead>
             <TableHead>Time</TableHead>
             <TableHead>Version</TableHead>
             <TableHead>Result</TableHead>
