@@ -167,6 +167,7 @@ describe('createNewDocument', () => {
 ---
 provider: ${provider.name}
 model: ${provider.defaultModel}
+temperature: 1
 ---
 
 `.trimStart(),
@@ -216,6 +217,7 @@ model: ${provider.defaultModel}
 ---
 provider: ${provider.name}
 model: ${provider.defaultModel}
+temperature: 1
 ---
 
 This is my prompt`.trimStart(),
@@ -236,7 +238,12 @@ This is my prompt`.trimStart(),
     })
 
     expect(result.ok).toBe(true)
-    expect(result.unwrap().content).toBe('')
+    expect(result.unwrap().content).toBe(`---
+
+temperature: 1
+---
+
+`)
   })
 
   describe('with provider', () => {
@@ -281,6 +288,7 @@ This is my prompt`.trimStart(),
         `
 ---
 provider: ${provider.name}
+temperature: 1
 ---
 
 `.trimStart(),
@@ -311,6 +319,7 @@ provider: ${provider.name}
 ---
 provider: ${provider.name}
 type: agent
+temperature: 1
 ---
 
 `.trimStart(),

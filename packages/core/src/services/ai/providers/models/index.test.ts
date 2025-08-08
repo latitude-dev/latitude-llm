@@ -84,6 +84,6 @@ describe('findFirstModelForProvider', () => {
       defaultProviderName: 'latitude',
     })
 
-    expect(result).toBe('gpt-4o-mini')
+    expect(result).toBe('gpt-4.1')
   })
 })

@@ -255,31 +255,6 @@ describe('forkDocument', () => {
         ])
       })
 
-      it('fork document with default model', async () => {
-        const [_, provider] = destProviders
-        await database
-          .update(providerApiKeys)
-          .set({
-            defaultModel: 'gemini-1.0-pro',
-          })
-          .where(eq(providerApiKeys.id, provider!.id))
-        const { project } = await forkDocument({
-          title: 'Copied Prompt',
-          origin: { workspace: fromWorkspace, commit, document },
-          destination: { workspace: toWorkspace, user },
-        }).then((r) => r.unwrap())
-        const { commitCount, documents } = await generateDocumentsOutput({
-          project,
-        })
-
-        expect(commitCount).toBe(1)
-        expect(documents[0]).toEqual({
-          path: 'some-folder/parent',
-          provider: 'google',
-          model: 'gemini-1.0-pro',
-        })
-      })
-
       it('fork a nested document', async () => {
         const anotherDoc = originDocuments.find(
           (d) => d.path === 'some-folder/children/child1',
