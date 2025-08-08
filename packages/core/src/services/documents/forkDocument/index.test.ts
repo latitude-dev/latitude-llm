@@ -1,4 +1,3 @@
-import { eq } from 'drizzle-orm'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -9,8 +8,6 @@ import {
   User,
   Workspace,
 } from '../../../browser'
-import { database } from '../../../client'
-import { providerApiKeys } from '../../../schema'
 import * as factories from '../../../tests/factories'
 import setupService from '../../users/setupService'
 import { forkDocument } from '../forkDocument'
