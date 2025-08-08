@@ -17,11 +17,9 @@ import { ChainStreamManager } from '../../../../__deprecated/lib/chainStreamMana
 import {
   buildMessagesFromResponse,
   LogSources,
-  TraceContext,
   Workspace,
 } from '../../../../browser'
 import { Result } from '../../../../lib/Result'
-import { telemetry, TelemetryContext } from '../../../../telemetry'
 import { CachedApiKeys, stepLimitExceededErrorMessage } from '../../chains/run'
 import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
 
@@ -87,7 +85,6 @@ function assertValidStepCount({
 }
 
 export type StepProps = {
-  context: TelemetryContext
   chainStreamManager: ChainStreamManager
   workspace: Workspace
   source: LogSources
@@ -102,7 +99,6 @@ export type StepProps = {
 }
 
 export async function runAgentStep({
-  context,
   chainStreamManager,
   workspace,
   source,
@@ -115,16 +111,12 @@ export async function runAgentStep({
   abortSignal,
 }: StepProps): Promise<{
   conversation: Conversation
-  trace: TraceContext
 }> {
-  let trace = telemetry.pause(context)
-
   if (newMessages?.length) {
     const lastResponseMessage = newMessages[0]! as AssistantMessage
     const latitudeToolResponses =
       // Built-in tools are executed after client tools
       await chainStreamManager.handleBuiltInToolCalls({
-        context: context, // Note: context from previous (maybe paused) step
         message: lastResponseMessage,
         config: globalConfig,
       })
@@ -135,13 +127,6 @@ export async function runAgentStep({
     ]
   }
 
-  // Note: incoming context could be from a paused or previous
-  // step, so we need to restore the original context
-  if (!telemetry.restored(context)) {
-    context = telemetry.restore(context)
-    trace = telemetry.pause(context)
-  }
-
   const step = await validateAgentStep({
     workspace,
     conversation,
@@ -149,46 +134,27 @@ export async function runAgentStep({
     providersMap,
   }).then((r) => r.unwrap())
 
-  if (step.chainCompleted) {
-    chainStreamManager.done(trace)
-    return { conversation: step.conversation, trace }
-  }
+  assertValidStepCount({ stepCount, step }).unwrap()
 
-  const $step = telemetry.step(context)
-  context = $step.context
-  trace = telemetry.pause(context)
-
-  let result
-  try {
-    assertValidStepCount({ stepCount, step }).unwrap()
-
-    result = await chainStreamManager.getProviderResponse({
-      context,
-      source,
-      conversation: step.conversation,
-      provider: step.provider,
-      schema: step.schema,
-      output: step.output,
-      injectAgentFinishTool: true,
-      injectFakeAgentStartTool: !step.config.disableAgentOptimization,
-      abortSignal,
-    })
-
-    $step.end()
-  } catch (error) {
-    $step.fail(error as Error)
-    throw error
-  }
+  const result = await chainStreamManager.getProviderResponse({
+    source,
+    conversation: step.conversation,
+    provider: step.provider,
+    schema: step.schema,
+    output: step.output,
+    injectAgentFinishTool: true,
+    injectFakeAgentStartTool: !step.config.disableAgentOptimization,
+    abortSignal,
+  })
 
   // Pause the agent if response has client tool calls
   // Chain is not cached because there is no chain anymore
   if (result.clientToolCalls.length) {
-    chainStreamManager.requestTools(result.clientToolCalls, trace)
-    return { conversation: step.conversation, trace }
+    chainStreamManager.requestTools(result.clientToolCalls)
+    return { conversation: step.conversation }
   }
 
   return runAgentStep({
-    context: telemetry.resume(trace), // Note: pseudo resume the step so the recursion treats equally paused or previous steps
     chainStreamManager,
     workspace,
     source,

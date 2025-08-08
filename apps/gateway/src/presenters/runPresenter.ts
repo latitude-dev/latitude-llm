@@ -4,7 +4,6 @@ import {
   ChainStepObjectResponse,
   ChainStepTextResponse,
   RunSyncAPIResponse,
-  TraceContext,
 } from '@latitude-data/constants'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { Result, TypedResult } from '@latitude-data/core/lib/Result'
@@ -13,7 +12,6 @@ type DocumentResponse = ChainStepObjectResponse | ChainStepTextResponse
 
 export function v2RunPresenter(
   response: DocumentResponse,
-  trace: TraceContext,
 ): TypedResult<Omit<RunSyncAPIResponse, 'toolRequests'>, LatitudeError> {
   const conversation = response.providerLog?.messages
   const uuid = response.documentLogUuid
@@ -41,7 +39,6 @@ export function v2RunPresenter(
       object: type === 'object' ? response.object : undefined,
       toolCalls: type === 'text' ? response.toolCalls : [],
     },
-    trace,
   })
 }
 
@@ -64,11 +61,9 @@ export function extractAgentToolCalls(toolCalls: any[]): [any[], any[]] {
 export function runPresenterLegacy({
   response,
   toolCalls = [],
-  trace,
 }: {
   response: DocumentResponse
   toolCalls: any[]
-  trace: TraceContext
 }): TypedResult<RunSyncAPIResponse, LatitudeError> {
   const conversation = response.providerLog?.messages
   const uuid = response.documentLogUuid
@@ -88,7 +83,6 @@ export function runPresenterLegacy({
       object: type === 'object' ? response.object : undefined,
       toolCalls: type === 'text' ? response.toolCalls : [],
     },
-    trace,
   })
 }
 

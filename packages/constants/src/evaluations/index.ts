@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { SegmentSource } from '../tracing'
 import {
   HumanEvaluationConfiguration,
   HumanEvaluationMetric,
@@ -241,10 +240,4 @@ export const EvaluationOptionsSchema = z.object({
 })
 
 export const EVALUATION_SCORE_SCALE = 100
-
 export const DEFAULT_DATASET_LABEL = 'output'
-
-export const LIVE_EVALUABLE_LOG_SOURCES = Object.values(SegmentSource).filter(
-  (source) =>
-    source !== SegmentSource.Evaluation && source !== SegmentSource.Experiment,
-) as SegmentSource[]

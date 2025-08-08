@@ -2,14 +2,12 @@ import { LatitudeTool } from '@latitude-data/constants'
 import { BadRequestError, LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
-import { TelemetryContext } from '../../telemetry'
 import { LATITUDE_TOOLS } from './tools'
 
 export async function executeLatitudeToolCall({
   latitudeTool,
   args,
 }: {
-  context: TelemetryContext
   latitudeTool: LatitudeTool
   args: Record<string, unknown>
 }): PromisedResult<unknown, LatitudeError> {

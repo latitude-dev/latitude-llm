@@ -1,4 +1,4 @@
-import { LIVE_EVALUABLE_LOG_SOURCES, LogSources } from '../../browser'
+import { LogSources } from '../../browser'
 import {
   findLastProviderLogFromDocumentLogUuid,
   findWorkspaceFromDocumentLog,
@@ -13,6 +13,10 @@ import {
 } from '../../repositories'
 import { getEvaluationMetricSpecification } from '../../services/evaluationsV2/specifications'
 import { DocumentLogCreatedEvent } from '../events'
+
+const LIVE_EVALUABLE_LOG_SOURCES = Object.values(LogSources).filter(
+  (source) => source !== 'evaluation' && source !== 'experiment',
+) as LogSources[]
 
 export const evaluateLiveLogJob = async ({
   data: event,

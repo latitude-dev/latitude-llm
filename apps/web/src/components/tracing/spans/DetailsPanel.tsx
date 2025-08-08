@@ -86,12 +86,12 @@ export function DetailsPanel<T extends SpanType>({
   if (!specification) return null
 
   return (
-    <div className='flex flex-col gap-4'>
-      <div className='w-full flex flex-col items-center gap-y-1.5'>
+    <div className='flex flex-col gap-8'>
+      <div className='w-full flex flex-col items-center gap-2'>
         <span className='w-full truncate'>
-          <Text.H4M userSelect={false} noWrap ellipsis>
+          <Text.H5M userSelect={false} noWrap ellipsis>
             {span.name}
-          </Text.H4M>
+          </Text.H5M>
         </span>
         <div className='w-full flex flex-row items-center gap-x-2'>
           <TypeBadge type={span.type} />
@@ -99,32 +99,37 @@ export function DetailsPanel<T extends SpanType>({
           <StatusBadge status={span.status} message={span.message} />
         </div>
       </div>
-      <MetadataItem label='Event id'>
-        <ClickToCopy copyValue={span.id}>
-          <Text.H5 align='right' color='foregroundMuted'>
-            {span.id.slice(0, 8)}
-          </Text.H5>
-        </ClickToCopy>
-      </MetadataItem>
-      <MetadataItem label='Trace id'>
-        <ClickToCopy copyValue={span.traceId}>
-          <Text.H5 align='right' color='foregroundMuted'>
-            {span.traceId.slice(0, 8)}
-          </Text.H5>
-        </ClickToCopy>
-      </MetadataItem>
-      <MetadataItem label='Conversation id'>
-        <ClickToCopy copyValue={span.conversationId}>
-          <Text.H5 align='right' color='foregroundMuted'>
-            {span.conversationId.slice(0, 8)}
-          </Text.H5>
-        </ClickToCopy>
-      </MetadataItem>
-      <MetadataItem label='Duration' value={formatDuration(span.duration)} />
-      <MetadataItem
-        label='Timestamp'
-        value={format(new Date(span.startedAt), 'PPp')}
-      />
+      <div className='w-full flex flex-col gap-4'>
+        <MetadataItem label='Event id'>
+          <ClickToCopy copyValue={span.id}>
+            <Text.H5 align='right' color='foregroundMuted'>
+              {span.id.slice(0, 8)}
+            </Text.H5>
+          </ClickToCopy>
+        </MetadataItem>
+        <MetadataItem label='Trace id'>
+          <ClickToCopy copyValue={span.traceId}>
+            <Text.H5 align='right' color='foregroundMuted'>
+              {span.traceId.slice(0, 8)}
+            </Text.H5>
+          </ClickToCopy>
+        </MetadataItem>
+        <MetadataItem label='Conversation id'>
+          <ClickToCopy copyValue={span.conversationId}>
+            <Text.H5 align='right' color='foregroundMuted'>
+              {span.conversationId.slice(0, 8)}
+            </Text.H5>
+          </ClickToCopy>
+        </MetadataItem>
+        <MetadataItem label='Duration' value={formatDuration(span.duration)} />
+        <MetadataItem
+          label='Timestamp'
+          value={format(new Date(span.startedAt), 'PPp')}
+        />
+        {!!specification.DetailsPanel && (
+          <specification.DetailsPanel span={span} />
+        )}
+      </div>
       {span.status === SpanStatus.Error && (
         <Alert
           variant='destructive'
@@ -132,9 +137,6 @@ export function DetailsPanel<T extends SpanType>({
           title='Event failed'
           description={span.message || 'Unknown error'}
         />
-      )}
-      {!!specification.DetailsPanel && (
-        <specification.DetailsPanel span={span} />
       )}
       {!span.metadata ? (
         span.status !== SpanStatus.Error && (

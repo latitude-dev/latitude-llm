@@ -97,7 +97,7 @@ export async function buildStreamEvaluationRun({
   const { runArgs } = result.unwrap()
 
   const $prompt = telemetry.prompt(BACKGROUND({ workspaceId: workspace.id }), {
-    logUuid: resultUuid,
+    documentLogUuid: resultUuid,
     promptUuid: evaluation.uuid,
     template: evaluation.configuration.prompt,
     parameters: parameters,

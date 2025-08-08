@@ -8,32 +8,21 @@ import {
   ApiKey,
   ATTR_LATITUDE_INTERNAL,
   Otlp,
-  SPAN_PROCESSING_STORAGE_KEY,
-  SpanAttribute,
-  SpanProcessingData,
   SpanStatus,
   SpanType,
-  TRACING_JOBS_MAX_ATTEMPTS,
   Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
-import { unsafelyFindWorkspace } from '../../../data-access'
-import { processSpanJobKey } from '../../../jobs/job-definitions/tracing/processSpanJob'
-import { tracingQueue } from '../../../jobs/queues'
-import { diskFactory, DiskWrapper } from '../../../lib/disk'
-import { UnprocessableEntityError } from '../../../lib/errors'
-import { hashContent as hash } from '../../../lib/hashContent'
 import { Result } from '../../../lib/Result'
-import { ApiKeysRepository } from '../../../repositories'
-import { internalBaggageSchema } from '../../../telemetry'
 import { captureException } from '../../../utils/workers/sentry'
 import {
   convertSpanAttributes,
   convertSpanStatus,
   extractSpanType,
+  extractApiKeyAndWorkspace,
 } from './process'
+import { processSpansBulk } from './processBulk'
 
-// TODO(tracing): enhance this function
 export async function ingestSpans(
   {
     spans,
@@ -45,11 +34,18 @@ export async function ingestSpans(
     workspaceId?: number
   },
   db = database,
-  disk: DiskWrapper = diskFactory('private'),
 ) {
   const workspaces: Record<number, Workspace> = {}
   const apiKeys: Record<number, ApiKey> = {}
+  const processedSpans: Array<{
+    span: Otlp.Span
+    scope: Otlp.Scope
+    resource: Otlp.Resource
+    apiKey: ApiKey
+    workspace: Workspace
+  }> = []
 
+  // Process all spans and collect valid ones
   for (const { resource, scopeSpans } of spans) {
     for (const { scope, spans } of scopeSpans) {
       for (const span of spans) {
@@ -68,45 +64,19 @@ export async function ingestSpans(
         const type = extracting.value
         if (type === SpanType.Unknown) continue
 
-        let internal
-        if (!workspaceId) {
-          const extracting = extractInternal(attributes)
-          if (extracting.error) {
-            captureException(extracting.error)
-            continue
-          }
-          internal = extracting.value
+        const extractingApiKeyAndWorkspace = await extractApiKeyAndWorkspace(
+          { apiKeyId, workspaceId, attributes },
+          db,
+        )
+        if (extractingApiKeyAndWorkspace.error) {
+          captureException(extractingApiKeyAndWorkspace.error)
+          continue
         }
+        const { apiKey, workspace } = extractingApiKeyAndWorkspace.value
 
-        let workspace = workspaces[workspaceId ?? internal?.workspaceId ?? -1]
-        if (!workspace) {
-          const getting = await getWorkspace(
-            { workspaceId: workspaceId ?? internal?.workspaceId },
-            db,
-          )
-          if (getting.error) {
-            captureException(getting.error)
-            continue
-          }
-
-          workspace = getting.value
-          workspaces[workspace.id] = workspace
-        }
-
-        let apiKey = apiKeys[apiKeyId ?? internal?.apiKeyId ?? -1]
-        if (!apiKey) {
-          const getting = await getApiKey(
-            { apiKeyId: apiKeyId ?? internal?.apiKeyId, workspace },
-            db,
-          )
-          if (getting.error) {
-            captureException(getting.error)
-            continue
-          }
-
-          apiKey = getting.value
-          apiKeys[apiKey.id] = apiKey
-        }
+        // Cache the results to avoid repeated lookups
+        workspaces[workspace.id] = workspace
+        apiKeys[apiKey.id] = apiKey
 
         const enriching = enrichAttributes({ resource, scope, span })
         if (enriching.error) {
@@ -117,93 +87,46 @@ export async function ingestSpans(
           ({ key }) => key !== ATTR_LATITUDE_INTERNAL,
         )
 
-        const enqueuing = await enqueueSpan(
-          { span, scope, resource, apiKey, workspace },
-          disk,
-        )
-        if (enqueuing.error) {
-          captureException(enqueuing.error)
-          continue
-        }
+        processedSpans.push({ span, scope, resource, apiKey, workspace })
+      }
+    }
+  }
+
+  // If no valid spans, return early
+  if (processedSpans.length === 0) {
+    return Result.nil()
+  }
+
+  // Group spans by workspace and API key for efficient processing
+  const spansByWorkspace = new Map<number, Map<number, typeof processedSpans>>()
+
+  for (const processedSpan of processedSpans) {
+    const { workspace, apiKey } = processedSpan
+    if (!spansByWorkspace.has(workspace.id)) {
+      spansByWorkspace.set(workspace.id, new Map())
+    }
+    const workspaceSpans = spansByWorkspace.get(workspace.id)!
+    if (!workspaceSpans.has(apiKey.id)) {
+      workspaceSpans.set(apiKey.id, [])
+    }
+    workspaceSpans.get(apiKey.id)!.push(processedSpan)
+  }
+
+  // Process spans in bulk for each workspace/apiKey combination
+  for (const [workspaceId, apiKeySpans] of spansByWorkspace) {
+    for (const [apiKeyId, spans] of apiKeySpans) {
+      const apiKey = apiKeys[apiKeyId]!
+      const workspace = workspaces[workspaceId]!
+
+      const processing = await processSpansBulk({ spans, apiKey, workspace })
+      if (processing.error) {
+        captureException(processing.error)
+        continue
       }
     }
   }
 
   return Result.nil()
-}
-
-function extractInternal(attributes: Record<string, SpanAttribute>) {
-  const attribute = String(attributes[ATTR_LATITUDE_INTERNAL] ?? '')
-  if (!attribute) {
-    return Result.error(
-      new UnprocessableEntityError('Internal baggage is required'),
-    )
-  }
-
-  try {
-    const payload = JSON.parse(attribute)
-    const baggage = internalBaggageSchema.parse(payload)
-
-    return Result.ok(baggage)
-  } catch (error) {
-    return Result.error(
-      new UnprocessableEntityError('Invalid internal baggage'),
-    )
-  }
-}
-
-async function getWorkspace(
-  {
-    workspaceId,
-  }: {
-    workspaceId?: number
-  },
-  db = database,
-) {
-  if (!workspaceId) {
-    return Result.error(new UnprocessableEntityError('Workspace is required'))
-  }
-
-  const workspace = await unsafelyFindWorkspace(workspaceId, db)
-  if (!workspace) {
-    return Result.error(new UnprocessableEntityError('Workspace not found'))
-  }
-
-  return Result.ok(workspace)
-}
-
-async function getApiKey(
-  {
-    apiKeyId,
-    workspace,
-  }: {
-    apiKeyId?: number
-    workspace: Workspace
-  },
-  db = database,
-) {
-  const repository = new ApiKeysRepository(workspace.id, db)
-
-  let apiKey
-  if (apiKeyId) {
-    const finding = await repository.find(apiKeyId)
-    if (finding.error) {
-      return Result.error(new UnprocessableEntityError('API key not found'))
-    }
-    apiKey = finding.value
-  } else {
-    const finding = await repository.selectFirst()
-    if (finding.error) {
-      return Result.error(new UnprocessableEntityError('API key not found'))
-    }
-    apiKey = finding.value
-  }
-
-  if (!apiKey) {
-    return Result.error(new UnprocessableEntityError('API key is required'))
-  }
-
-  return Result.ok(apiKey)
 }
 
 function enrichAttributes({
@@ -248,45 +171,4 @@ function enrichAttributes({
   }
 
   return Result.ok(attributes)
-}
-
-async function enqueueSpan(
-  {
-    span,
-    scope,
-    resource,
-    apiKey,
-    workspace,
-  }: {
-    span: Otlp.Span
-    scope: Otlp.Scope
-    resource: Otlp.Resource
-    apiKey: ApiKey
-    workspace: Workspace
-  },
-  disk: DiskWrapper,
-) {
-  const processingId = hash(span.traceId + span.spanId)
-  const key = SPAN_PROCESSING_STORAGE_KEY(processingId)
-  const data = { span, scope, resource } satisfies SpanProcessingData
-
-  try {
-    const payload = JSON.stringify(data)
-    await disk.put(key, payload).then((r) => r.unwrap())
-  } catch (error) {
-    return Result.error(error as Error)
-  }
-
-  const payload = {
-    processingId: processingId,
-    apiKeyId: apiKey.id,
-    workspaceId: workspace.id,
-  }
-
-  await tracingQueue.add('processSpanJob', payload, {
-    attempts: TRACING_JOBS_MAX_ATTEMPTS,
-    deduplication: { id: processSpanJobKey(payload) },
-  })
-
-  return Result.nil()
 }

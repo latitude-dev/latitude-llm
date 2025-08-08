@@ -121,7 +121,7 @@ async function addIntegrationTools({
         description: mcpTool?.description?.slice(0, 1023) ?? '',
         parameters: mcpTool.inputSchema,
         execute: async (args, toolCall) => {
-          const $tool = telemetry.tool(streamManager.$step!.context, {
+          const $tool = telemetry.tool(streamManager.$completion!.context, {
             name: `${LATITUDE_TOOL_PREFIX}_${integrationName}_${mcpTool.name}`,
             call: {
               id: toolCall.toolCallId,

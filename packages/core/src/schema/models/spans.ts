@@ -18,7 +18,7 @@ export const spans = latitudeSchema.table(
   {
     id: varchar('id', { length: 16 }).notNull(),
     traceId: varchar('trace_id', { length: 32 }).notNull(),
-    segmentId: uuid('segment_id'),
+    documentLogUuid: uuid('document_log_uuid'),
     parentId: varchar('parent_id', { length: 16 }),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
@@ -40,12 +40,10 @@ export const spans = latitudeSchema.table(
     primaryKey: primaryKey({ columns: [table.traceId, table.id] }),
     idIdx: index('spans_id_idx').on(table.id),
     traceIdIdx: index('spans_trace_id_idx').on(table.traceId),
-    segmentIdIdx: index('spans_segment_id_idx').on(table.segmentId),
-    // traceIdIdIdx Note: already done with the primary key
-    traceIdSegmentIdIdx: index('spans_trace_id_segment_id_idx').on(
-      table.traceId,
-      table.segmentId,
+    documentLogUuidIdx: index('spans_document_log_uuid_idx').on(
+      table.documentLogUuid,
     ),
+    // traceIdIdIdx Note: already done with the primary key
     parentIdIdx: index('spans_parent_id_idx').on(table.parentId),
     workspaceIdIdx: index('spans_workspace_id_idx').on(table.workspaceId),
     apiKeyIdIdx: index('spans_api_key_id_idx').on(table.apiKeyId),

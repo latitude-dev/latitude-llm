@@ -9,15 +9,9 @@ import {
 } from '@latitude-data/compiler'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ChainStreamManager } from '../../../../../__deprecated/lib/chainStreamManager'
-import {
-  LogSources,
-  ProviderLog,
-  TraceContext,
-  Workspace,
-} from '../../../../../browser'
+import { LogSources, ProviderLog, Workspace } from '../../../../../browser'
 import { PromptSource } from '../../../../../constants'
 import { Result } from '../../../../../lib/Result'
-import { TelemetryContext } from '../../../../../telemetry'
 import { buildProvidersMap } from '../../../../providerApiKeys/buildMap'
 import { runAgentStep } from '../../../agents/runStep'
 
@@ -49,7 +43,6 @@ function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
  * completed, and starts an autonomous workflow from that point.
  */
 export async function resumeAgent({
-  context,
   workspace,
   providerLog,
   globalConfig,
@@ -58,7 +51,6 @@ export async function resumeAgent({
   promptSource,
   abortSignal,
 }: {
-  context: TelemetryContext
   workspace: Workspace
   providerLog: ProviderLog
   globalConfig: LatitudePromptConfig
@@ -76,11 +68,6 @@ export async function resumeAgent({
     ...userProvidedMessags,
   ]
 
-  let resolveTrace: (trace: TraceContext) => void
-  const trace = new Promise<TraceContext>((resolve) => {
-    resolveTrace = resolve
-  })
-
   const chainStreamManager = new ChainStreamManager({
     workspace,
     errorableUuid: providerLog.documentLogUuid!,
@@ -93,7 +80,6 @@ export async function resumeAgent({
 
   const streamResult = chainStreamManager.start(async () => {
     const result = await runAgentStep({
-      context,
       chainStreamManager,
       workspace,
       source,
@@ -112,10 +98,8 @@ export async function resumeAgent({
       abortSignal,
     })
 
-    resolveTrace(result.trace)
-
     return result
   }, abortSignal)
 
-  return Result.ok({ ...streamResult, trace })
+  return Result.ok({ ...streamResult })
 }

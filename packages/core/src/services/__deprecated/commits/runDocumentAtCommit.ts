@@ -12,7 +12,6 @@ import {
 } from '../../../browser'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { Result } from '../../../lib/Result'
-import { telemetry, TelemetryContext } from '../../../telemetry'
 import { RunDocumentChecker } from '../../commits/RunDocumentChecker'
 import { createDocumentLog } from '../../documentLogs/create'
 import { getResolvedContent } from '../../documents'
@@ -63,7 +62,6 @@ async function createDocumentRunResult({
 }
 
 export async function runDocumentAtCommitLegacy({
-  context,
   workspace,
   document,
   parameters,
@@ -75,7 +73,6 @@ export async function runDocumentAtCommitLegacy({
   experiment,
   errorableUuid,
 }: {
-  context: TelemetryContext
   workspace: Workspace
   commit: Commit
   document: DocumentVersion
@@ -103,18 +100,6 @@ export async function runDocumentAtCommitLegacy({
   // in getResolvedContent it will not appear in Latitude
   if (result.error) return result
 
-  // Note: run document retries always produce new traces
-  const $prompt = telemetry.prompt(context, {
-    logUuid: errorableUuid,
-    versionUuid: commit.uuid,
-    promptUuid: document.documentUuid,
-    experimentUuid: experiment?.uuid,
-    externalId: customIdentifier,
-    template: result.value,
-    parameters: parameters,
-    _internal: { source },
-  })
-
   const checker = new RunDocumentChecker({
     document,
     errorableUuid,
@@ -135,12 +120,10 @@ export async function runDocumentAtCommitLegacy({
       publishEvent: false,
       experiment,
     })
-    $prompt.fail(checkerResult.error)
     return checkerResult
   }
 
   const runArgs = {
-    context: $prompt.context,
     abortSignal,
     generateUUID: () => errorableUuid,
     errorableType,
@@ -165,34 +148,27 @@ export async function runDocumentAtCommitLegacy({
     ...runResult,
     resolvedContent: result.value,
     errorableUuid,
-    lastResponse: runResult.lastResponse
-      .then(async (response) => {
-        const error = await runResult.error
-        if (error) {
-          $prompt.fail(error)
-          if (isErrorRetryable(error)) return response
-        } else {
-          $prompt.end()
-        }
+    lastResponse: runResult.lastResponse.then(async (response) => {
+      const error = await runResult.error
+      if (error) {
+        if (isErrorRetryable(error)) return response
+      }
 
-        await createDocumentRunResult({
-          workspace,
-          document,
-          commit,
-          errorableUuid,
-          parameters,
-          resolvedContent: result.value,
-          customIdentifier,
-          source,
-          duration: await runResult.duration,
-          publishEvent: true,
-          experiment,
-        })
-
-        return response
+      await createDocumentRunResult({
+        workspace,
+        document,
+        commit,
+        errorableUuid,
+        parameters,
+        resolvedContent: result.value,
+        customIdentifier,
+        source,
+        duration: await runResult.duration,
+        publishEvent: true,
+        experiment,
       })
-      .catch((error) => {
-        $prompt.fail(error)
-      }),
+
+      return response
+    }),
   })
 }

@@ -2,6 +2,7 @@ import {
   IntegrationDto,
   LogSources,
   PromptSource,
+  ProviderApiKey,
   Workspace,
 } from '../../browser'
 import {
@@ -60,7 +61,7 @@ export abstract class StreamManager {
   public workspace: Workspace
 
   public $context: TelemetryContext
-  public $step: ReturnType<typeof telemetry.step> | undefined
+  public $completion: ReturnType<typeof telemetry.completion> | undefined
 
   protected messages: LegacyMessage[]
   protected error: ChainError<RunErrorCodes> | undefined
@@ -151,8 +152,8 @@ export abstract class StreamManager {
 
     this.error = e
 
-    this.$step?.fail(e)
-    this.endStep()
+    this.$completion?.fail(e)
+
     this.endStream()
   }
 
@@ -216,19 +217,47 @@ export abstract class StreamManager {
     this.controller?.close()
   }
 
-  protected startProviderStep(config: ValidatedChainStep['config']) {
+  protected startProviderStep({
+    config,
+    messages,
+    provider,
+  }: {
+    config: ValidatedChainStep['config']
+    messages: LegacyMessage[]
+    provider: ProviderApiKey
+  }) {
+    this.$completion = telemetry.completion(this.$context, {
+      configuration: config,
+      input: messages,
+      model: config.model,
+      provider: provider.provider,
+    })
+
     this.sendEvent({ type: ChainEventTypes.ProviderStarted, config })
   }
 
   protected async endProviderStep({
+    responseMessages,
     tokenUsage,
     response,
     finishReason = 'stop',
   }: {
+    responseMessages: LegacyMessage[]
     tokenUsage: LanguageModelUsage
     response: ChainStepResponse<StreamType>
     finishReason?: FinishReason
   }) {
+    this.$completion?.end({
+      output: responseMessages,
+      tokens: {
+        prompt: tokenUsage.promptTokens,
+        cached: 0, // Note: not given by Vercel AI SDK yet
+        reasoning: 0, // Note: not given by Vercel AI SDK yet
+        completion: tokenUsage.completionTokens,
+      },
+      finishReason,
+    })
+
     this.sendEvent({
       type: ChainEventTypes.ProviderCompleted,
       providerLogUuid: response.providerLog!.uuid,
@@ -239,17 +268,12 @@ export abstract class StreamManager {
   }
 
   protected startStep() {
-    this.$step = telemetry.step(this.$context)
-
     this.sendEvent({
       type: ChainEventTypes.StepStarted,
     })
   }
 
   protected endStep() {
-    this.$step?.end()
-    this.$step = undefined
-
     this.sendEvent({
       type: ChainEventTypes.StepCompleted,
     })

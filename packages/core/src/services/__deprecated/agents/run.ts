@@ -1,7 +1,6 @@
 import { Conversation } from '@latitude-data/compiler'
 import { ChainEventTypes } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { TraceContext } from '../../../browser'
 import { ErrorableEntity } from '../../../constants'
 import { ChainStreamManager } from '../../../__deprecated/lib/chainStreamManager'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
@@ -10,7 +9,6 @@ import { runChain, RunChainArgs, SomeChain } from '../chains/run'
 import { runAgentStep } from './runStep'
 
 export function runAgent<T extends boolean, C extends SomeChain>({
-  context,
   workspace,
   providersMap,
   source,
@@ -31,11 +29,6 @@ export function runAgent<T extends boolean, C extends SomeChain>({
   const errorableUuid = generateUUID()
   const chainStartTime = Date.now()
 
-  let resolveTrace: (trace: TraceContext) => void
-  const trace = new Promise<TraceContext>((resolve) => {
-    resolveTrace = resolve
-  })
-
   // Conversation is returned for the Agent to use
   let resolveConversation: (conversation: Conversation) => void
   const conversation = new Promise<Conversation>((resolve) => {
@@ -54,7 +47,6 @@ export function runAgent<T extends boolean, C extends SomeChain>({
 
   const streamResult = chainStreamManager.start(async () => {
     const chainResult = runChain({
-      context,
       workspace,
       providersMap,
       source,
@@ -104,16 +96,11 @@ export function runAgent<T extends boolean, C extends SomeChain>({
         // Stop the stream and request tools from the user
         // TODO(compiler): fix types
         // @ts-expect-error - TODO: fix types
-        chainStreamManager.requestTools(value.data.tools, value.data.trace)
+        chainStreamManager.requestTools(value.data.tools)
         const conversation = await chainResult.conversation
 
-        // TODO(compiler): fix types
-        // @ts-expect-error - TODO: fix types
-        resolveTrace(value.data.trace)
         resolveConversation(conversation)
-        // TODO(compiler): fix types
-        // @ts-expect-error - TODO: fix types
-        return { conversation, trace: value.data.trace }
+        return { conversation }
       }
 
       if (value.data.type === ChainEventTypes.ProviderCompleted) {
@@ -136,7 +123,6 @@ export function runAgent<T extends boolean, C extends SomeChain>({
 
     await deleteCachedChain({ workspace, documentLogUuid: errorableUuid })
     const result = await runAgentStep({
-      context,
       chainStreamManager,
       workspace,
       source,
@@ -150,7 +136,6 @@ export function runAgent<T extends boolean, C extends SomeChain>({
     })
 
     resolveConversation(result.conversation)
-    resolveTrace(result.trace)
 
     return result
   }, abortSignal)
@@ -161,6 +146,5 @@ export function runAgent<T extends boolean, C extends SomeChain>({
     errorableUuid,
     duration: streamResult.messages.then(() => Date.now() - chainStartTime),
     conversation,
-    trace,
   }
 }

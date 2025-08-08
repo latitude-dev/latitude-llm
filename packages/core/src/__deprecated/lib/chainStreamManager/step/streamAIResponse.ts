@@ -2,12 +2,7 @@ import { Conversation } from '@latitude-data/compiler'
 import { VercelConfig } from '@latitude-data/constants'
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { JSONSchema7 } from 'json-schema'
-import {
-  buildMessagesFromResponse,
-  LogSources,
-  ProviderApiKey,
-  Workspace,
-} from '../../../../browser'
+import { LogSources, ProviderApiKey, Workspace } from '../../../../browser'
 import { ChainStepResponse, StreamType } from '../../../../constants'
 import { ai } from '../../../../services/ai'
 import { processResponse } from '../../../../services/chains/ProviderProcessor'
@@ -19,13 +14,12 @@ import {
   getCachedResponse,
   setCachedResponse,
 } from '../../../../services/commits/promptCache'
-import { telemetry, TelemetryContext } from '../../../../telemetry'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
 import { performAgentMessagesOptimization } from './agentOptimization'
+import { BACKGROUND } from '../../../../telemetry'
 
 type StreamProps = {
-  context: TelemetryContext
   controller: ReadableStreamDefaultController
   workspace: Workspace
   provider: ProviderApiKey
@@ -39,7 +33,6 @@ type StreamProps = {
 }
 
 export async function streamAIResponse({
-  context,
   provider,
   conversation,
   injectFakeAgentStartTool,
@@ -54,46 +47,15 @@ export async function streamAIResponse({
   }).unwrap()
   conversation.messages = optimizedAgentMessages
 
-  const $completion = telemetry.completion(context, {
-    provider: provider.name,
-    model: conversation.config.model as string,
-    configuration: conversation.config,
-    input: conversation.messages,
+  return executeAIResponse({
+    provider,
+    conversation,
+    injectFakeAgentStartTool,
+    ...rest,
   })
-
-  try {
-    const result = executeAIResponse({
-      context: $completion.context,
-      provider,
-      conversation,
-      injectFakeAgentStartTool,
-      ...rest,
-    })
-
-    result
-      .then(({ response }) => {
-        $completion.end({
-          output: buildMessagesFromResponse({ response }),
-          tokens: {
-            prompt: response.usage.promptTokens,
-            cached: 0, // Note: not given by Vercel AI SDK yet
-            reasoning: 0, // Note: not given by Vercel AI SDK yet
-            completion: response.usage.completionTokens,
-          },
-          finishReason: response.finishReason ?? 'unknown',
-        })
-      })
-      .catch((error) => $completion.fail(error))
-
-    return result
-  } catch (error) {
-    $completion.fail(error as Error)
-    throw error
-  }
 }
 
 export async function executeAIResponse({
-  context,
   controller,
   workspace,
   provider,
@@ -157,7 +119,8 @@ export async function executeAIResponse({
   }
 
   const aiResult = await ai({
-    context,
+    // TODO(tracing): temporary, remove when old prompt engine is removed
+    context: BACKGROUND({ workspaceId: workspace.id }),
     messages: conversation.messages,
     config: conversation.config as VercelConfig,
     provider,

@@ -10,17 +10,14 @@ import { ChainStreamManager } from '../../../../../__deprecated/lib/chainStreamM
 import {
   buildConversation,
   ChainStepResponse,
-  DocumentRunPromptSource,
   LogSources,
   PromptSource,
   ProviderLog,
   StreamType,
-  TraceContext,
   Workspace,
 } from '../../../../../browser'
 import { unsafelyFindProviderApiKey } from '../../../../../data-access'
 import { Result, TypedResult } from '../../../../../lib/Result'
-import { telemetry, TelemetryContext } from '../../../../../telemetry'
 import serializeProviderLog from '../../../../providerLogs/serialize'
 import { getInputSchema, getOutputType } from '../../../chains/ChainValidator'
 import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
@@ -36,7 +33,6 @@ export type ChainResponse<T extends StreamType> = TypedResult<
  * a single response.
  */
 export async function addChatMessage({
-  context,
   workspace,
   providerLog,
   source,
@@ -45,7 +41,6 @@ export async function addChatMessage({
   promptSource,
   abortSignal,
 }: {
-  context: TelemetryContext
   workspace: Workspace
   providerLog: ProviderLog
   messages: Message[]
@@ -77,19 +72,6 @@ export async function addChatMessage({
     messages: [...previousMessages, ...newMessages],
   }
 
-  let resolveTrace: (trace: TraceContext) => void
-  const trace = new Promise<TraceContext>((resolve) => {
-    resolveTrace = resolve
-  })
-
-  const $prompt = telemetry.prompt(context, {
-    logUuid: providerLog.documentLogUuid!,
-    versionUuid: (promptSource as DocumentRunPromptSource).commit.uuid,
-    promptUuid: (promptSource as DocumentRunPromptSource).document.documentUuid,
-    template: (promptSource as DocumentRunPromptSource).document.content,
-    _internal: { source },
-  })
-
   const chainStreamManager = new ChainStreamManager({
     workspace,
     errorableUuid: providerLog.documentLogUuid!,
@@ -109,7 +91,6 @@ export async function addChatMessage({
     }).then((r) => r.unwrap())
 
     const { clientToolCalls } = await chainStreamManager.getProviderResponse({
-      context: $prompt.context,
       provider,
       source,
       // TODO(compiler): fix types
@@ -120,25 +101,14 @@ export async function addChatMessage({
       schema: getInputSchema({ config: conversation.config }),
     })
 
-    const trace = telemetry.pause($prompt.context)
-    resolveTrace(trace)
-
     // Pause the follow up if response has client tool calls
     // Chain is not cached because there is no chain anymore
     if (clientToolCalls.length) {
-      chainStreamManager.requestTools(clientToolCalls, trace)
+      chainStreamManager.requestTools(clientToolCalls)
     }
 
-    return { conversation, trace }
+    return { conversation }
   })
 
-  streamResult.lastResponse
-    .then(async () => {
-      const error = await streamResult.error
-      if (error) $prompt.fail(error)
-      else $prompt.end()
-    })
-    .catch((error) => $prompt.fail(error))
-
-  return Result.ok({ ...streamResult, trace })
+  return Result.ok(streamResult)
 }

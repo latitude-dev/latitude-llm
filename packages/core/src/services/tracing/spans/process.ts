@@ -1,9 +1,4 @@
 import {
-  ATTR_ERROR_TYPE,
-  ATTR_EXCEPTION_MESSAGE,
-  ATTR_EXCEPTION_TYPE,
-} from '@opentelemetry/semantic-conventions'
-import {
   ATTR_GEN_AI_OPERATION_NAME,
   GEN_AI_OPERATION_NAME_VALUE_CHAT,
   GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS,
@@ -11,8 +6,6 @@ import {
   GEN_AI_OPERATION_NAME_VALUE_GENERATE_CONTENT,
   GEN_AI_OPERATION_NAME_VALUE_TEXT_COMPLETION,
 } from '@opentelemetry/semantic-conventions/incubating'
-import { differenceInMilliseconds } from 'date-fns'
-import { z } from 'zod'
 import {
   AI_OPERATION_ID_VALUE_GENERATE_OBJECT,
   AI_OPERATION_ID_VALUE_GENERATE_TEXT,
@@ -21,10 +14,8 @@ import {
   AI_OPERATION_ID_VALUE_TOOL,
   ApiKey,
   ATTR_AI_OPERATION_ID,
-  ATTR_LATITUDE_SEGMENTS,
   ATTR_LATITUDE_TYPE,
   ATTR_LLM_REQUEST_TYPE,
-  BaseSpanMetadata,
   GEN_AI_OPERATION_NAME_VALUE_COMPLETION,
   GEN_AI_OPERATION_NAME_VALUE_EMBEDDING,
   GEN_AI_OPERATION_NAME_VALUE_RERANKING,
@@ -35,236 +26,20 @@ import {
   LLM_REQUEST_TYPE_VALUE_EMBEDDING,
   LLM_REQUEST_TYPE_VALUE_RERANK,
   Otlp,
-  SegmentBaggage,
-  segmentBaggageSchema,
-  Span,
-  SPAN_METADATA_STORAGE_KEY,
   SpanAttribute,
-  SpanEvent,
-  SpanKind,
-  SpanLink,
-  SpanMetadata,
   SpanStatus,
   SpanType,
-  SpanWithDetails,
-  TRACING_JOBS_MAX_ATTEMPTS,
   Workspace,
 } from '../../../browser'
-import { cache as redis } from '../../../cache'
 import { database } from '../../../client'
-import { publisher } from '../../../events/publisher'
-import {
-  ProcessSegmentJobData,
-  processSegmentJobKey,
-} from '../../../jobs/job-definitions/tracing/processSegmentJob'
-import { tracingQueue } from '../../../jobs/queues'
-import { diskFactory, DiskWrapper } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
-import Transaction from '../../../lib/Transaction'
-import { SpanMetadatasRepository, SpansRepository } from '../../../repositories'
-import { spans } from '../../../schema'
-import { convertTimestamp } from './shared'
-import { SPAN_SPECIFICATIONS } from './specifications'
+import { unsafelyFindWorkspace } from '../../../data-access'
+import { internalBaggageSchema } from '../../../telemetry'
+import { ATTR_LATITUDE_INTERNAL } from '../../../browser'
+import { ApiKeysRepository } from '../../../repositories'
 
-export async function processSpan(
-  {
-    span,
-    scope,
-    apiKey,
-    workspace,
-  }: {
-    span: Otlp.Span
-    scope: Otlp.Scope
-    apiKey: ApiKey
-    workspace: Workspace
-  },
-  transaction = new Transaction(),
-  disk: DiskWrapper = diskFactory('private'),
-) {
-  const getting = await getExisting({ span, workspace })
-  if (getting.error) return Result.error(getting.error)
-  const existing = getting.value
-
-  if (existing) return Result.ok({ span: existing })
-
-  const convertingsa = convertSpanAttributes(span.attributes || [])
-  if (convertingsa.error) return Result.error(convertingsa.error)
-  const attributes = convertingsa.value
-
-  const extractingsb = extractSegmentsBaggage(attributes)
-  if (extractingsb.error) return Result.error(extractingsb.error)
-  const segments = extractingsb.value
-
-  const id = span.spanId
-
-  const traceId = span.traceId
-
-  const segmentId = segments.at(-1)?.id
-
-  const parentId = span.parentSpanId
-
-  const name = span.name.slice(0, 128)
-
-  const convertingsk = convertSpanKind(span.kind)
-  if (convertingsk.error) return Result.error(convertingsk.error)
-  const kind = convertingsk.value
-
-  const convertingst = extractSpanType(attributes)
-  if (convertingst.error) return Result.error(convertingst.error)
-  const type = convertingst.value
-
-  const specification = SPAN_SPECIFICATIONS[type]
-  if (!specification) {
-    return Result.error(new UnprocessableEntityError('Invalid span type'))
-  }
-
-  const convertingss = convertSpanStatus(span.status || { code: 0 })
-  if (convertingss.error) return Result.error(convertingss.error)
-  let status = convertingss.value
-
-  let message = span.status?.message?.slice(0, 256)
-
-  const convertingat = convertSpanTimestamp(span.startTimeUnixNano)
-  if (convertingat.error) return Result.error(convertingat.error)
-  const startedAt = convertingat.value
-
-  const convertinget = convertSpanTimestamp(span.endTimeUnixNano)
-  if (convertinget.error) return Result.error(convertinget.error)
-  const endedAt = convertinget.value
-
-  const duration = differenceInMilliseconds(endedAt, startedAt)
-  if (duration < 0) {
-    return Result.error(new UnprocessableEntityError('Invalid span duration'))
-  }
-
-  const convertingse = convertSpanEvents(span.events || [])
-  if (convertingse.error) return Result.error(convertingse.error)
-  const events = convertingse.value
-
-  const convertingsl = convertSpanLinks(span.links || [])
-  if (convertingsl.error) return Result.error(convertingsl.error)
-  const links = convertingsl.value
-
-  const extractingse = extractSpanError(attributes, events)
-  if (extractingse.error) return Result.error(extractingse.error)
-  if (extractingse.value != undefined) {
-    status = SpanStatus.Error
-    message = extractingse.value?.slice(0, 256) || undefined
-  }
-
-  let metadata = {
-    ...({
-      traceId: traceId,
-      spanId: id,
-      type: type,
-      attributes: attributes,
-      events: events,
-      links: links,
-    } satisfies BaseSpanMetadata),
-  } as SpanMetadata
-
-  const processing = await specification.process({
-    attributes,
-    status,
-    scope,
-    apiKey,
-    workspace,
-  })
-  if (processing.error) return Result.error(processing.error)
-  metadata = { ...metadata, ...processing.value }
-
-  const saving = await saveMetadata({ metadata, workspace }, disk)
-  if (saving.error) return Result.error(saving.error)
-
-  return await transaction.call(
-    async (tx) => {
-      const newSpan = (await tx
-        .insert(spans)
-        .values({
-          id: id,
-          traceId: traceId,
-          segmentId: segmentId,
-          parentId: parentId,
-          workspaceId: workspace.id,
-          apiKeyId: apiKey.id,
-          name: name,
-          kind: kind,
-          type: type,
-          status: status,
-          message: message,
-          duration: duration,
-          startedAt: startedAt,
-          endedAt: endedAt,
-        })
-        .returning()
-        .then((r) => r[0]!)) as Span
-
-      return Result.ok({ span: { ...newSpan, metadata } })
-    },
-    async ({ span }) => {
-      publisher.publishLater({
-        type: 'spanCreated',
-        data: {
-          spanId: span.id,
-          apiKeyId: apiKey.id,
-          workspaceId: workspace.id,
-        },
-      })
-
-      let payload: ProcessSegmentJobData | undefined
-      const segment = segments.pop()
-      if (segment) {
-        payload = {
-          segment: segment,
-          chain: segments,
-          childId: span.id,
-          childType: 'span' as const,
-          traceId: traceId,
-          apiKeyId: apiKey.id,
-          workspaceId: workspace.id,
-        }
-      }
-
-      if (payload) {
-        await tracingQueue.add('processSegmentJob', payload, {
-          attempts: TRACING_JOBS_MAX_ATTEMPTS,
-          deduplication: {
-            id: processSegmentJobKey(payload, span),
-          },
-        })
-      }
-    },
-  )
-}
-
-async function getExisting(
-  {
-    span: { spanId, traceId },
-    workspace,
-  }: {
-    span: Otlp.Span
-    workspace: Workspace
-  },
-  db = database,
-): Promise<TypedResult<SpanWithDetails | undefined>> {
-  const spansRepository = new SpansRepository(workspace.id, db)
-  const finding = await spansRepository.get({ spanId, traceId })
-  if (finding.error) return Result.error(finding.error)
-
-  const span = finding.value
-  if (!span) return Result.nil()
-
-  const metadatasRepository = new SpanMetadatasRepository(workspace.id)
-  const getting = await metadatasRepository.get({ spanId, traceId, fresh: true }) // prettier-ignore
-  if (getting.error) return Result.error(getting.error)
-
-  const metadata = getting.value
-
-  return Result.ok({ ...span, metadata } as SpanWithDetails)
-}
-
-function convertSpanAttribute(
+export function convertSpanAttribute(
   attribute: Otlp.AttributeValue,
 ): TypedResult<SpanAttribute> {
   if (attribute.stringValue != undefined) {
@@ -303,24 +78,6 @@ export function convertSpanAttributes(
   return Result.ok(result)
 }
 
-function extractSegmentsBaggage(
-  attributes: Record<string, SpanAttribute>,
-): TypedResult<SegmentBaggage[]> {
-  const attribute = String(attributes[ATTR_LATITUDE_SEGMENTS] ?? '')
-  if (!attribute) return Result.ok([])
-
-  try {
-    const payload = JSON.parse(attribute)
-    const baggage = z.array(segmentBaggageSchema).parse(payload)
-
-    return Result.ok(baggage)
-  } catch (error) {
-    return Result.error(
-      new UnprocessableEntityError('Invalid segments baggage'),
-    )
-  }
-}
-
 export function extractSpanType(
   attributes: Record<string, SpanAttribute>,
 ): TypedResult<SpanType> {
@@ -338,8 +95,10 @@ export function extractSpanType(
       return Result.ok(SpanType.Reranking)
     case SpanType.Http:
       return Result.ok(SpanType.Http)
-    case SpanType.Segment:
-      return Result.ok(SpanType.Segment)
+    case SpanType.Prompt:
+      return Result.ok(SpanType.Prompt)
+    case SpanType.Step:
+      return Result.ok(SpanType.Step)
     case SpanType.Unknown:
       return Result.ok(SpanType.Unknown)
   }
@@ -401,111 +160,112 @@ export function convertSpanStatus(
   }
 }
 
-function extractSpanError(
-  attributes: Record<string, SpanAttribute>,
-  events: SpanEvent[],
-): TypedResult<string | null | undefined> {
-  let error = String(attributes[ATTR_EXCEPTION_TYPE] ?? '')
-  let message = String(attributes[ATTR_EXCEPTION_MESSAGE] ?? '')
-  if (error || message) return Result.ok(message || error || null)
-
-  error = String(attributes[ATTR_ERROR_TYPE] ?? '')
-  if (error) return Result.ok(error || null)
-
-  for (const { name, attributes } of events) {
-    error = String(attributes[ATTR_EXCEPTION_TYPE] ?? '')
-    message = String(attributes[ATTR_EXCEPTION_MESSAGE] ?? '')
-    if (error || message) return Result.ok(message || error || null)
-
-    error = String(attributes[ATTR_ERROR_TYPE] ?? '')
-    if (error) return Result.ok(error || null)
-
-    if (name === 'exception' || name === 'error') {
-      return Result.ok('Unknown error')
-    }
-  }
-
-  return Result.nil()
-}
-
-function convertSpanKind(kind: number): TypedResult<SpanKind> {
-  switch (kind) {
-    case Otlp.SpanKind.Internal:
-      return Result.ok(SpanKind.Internal)
-    case Otlp.SpanKind.Server:
-      return Result.ok(SpanKind.Server)
-    case Otlp.SpanKind.Client:
-      return Result.ok(SpanKind.Client)
-    case Otlp.SpanKind.Producer:
-      return Result.ok(SpanKind.Producer)
-    case Otlp.SpanKind.Consumer:
-      return Result.ok(SpanKind.Consumer)
-    default:
-      return Result.error(new UnprocessableEntityError('Invalid span kind'))
-  }
-}
-
-function convertSpanTimestamp(timestamp: string): TypedResult<Date> {
-  const date = convertTimestamp(timestamp)
-  return Result.ok(date)
-}
-
-function convertSpanEvents(events: Otlp.Event[]): TypedResult<SpanEvent[]> {
-  const result: SpanEvent[] = []
-
-  for (const event of events) {
-    const convertinget = convertSpanTimestamp(event.timeUnixNano)
-    if (convertinget.error) return Result.error(convertinget.error)
-    const timestamp = convertinget.value
-
-    const convertingea = convertSpanAttributes(event.attributes || [])
-    if (convertingea.error) return Result.error(convertingea.error)
-    const attributes = convertingea.value
-
-    result.push({ name: event.name, timestamp, attributes })
-  }
-
-  return Result.ok(result)
-}
-
-function convertSpanLinks(links: Otlp.Link[]): TypedResult<SpanLink[]> {
-  const result: SpanLink[] = []
-
-  for (const link of links) {
-    const converting = convertSpanAttributes(link.attributes || [])
-    if (converting.error) return Result.error(converting.error)
-    const attributes = converting.value
-
-    result.push({ traceId: link.traceId, spanId: link.spanId, attributes })
-  }
-
-  return Result.ok(result)
-}
-
-async function saveMetadata(
+export async function extractApiKeyAndWorkspace(
   {
-    metadata,
-    workspace,
+    apiKeyId,
+    workspaceId,
+    attributes,
   }: {
-    metadata: SpanMetadata
-    workspace: Workspace
+    apiKeyId?: number
+    workspaceId?: number
+    attributes: Record<string, SpanAttribute>
   },
-  disk: DiskWrapper,
-): Promise<TypedResult> {
-  const key = SPAN_METADATA_STORAGE_KEY(
-    workspace.id,
-    metadata.traceId,
-    metadata.spanId,
+  db = database,
+): Promise<TypedResult<{ apiKey: ApiKey; workspace: Workspace }>> {
+  let internal
+  if (!workspaceId) {
+    const extracting = extractInternal(attributes)
+    if (extracting.error) return Result.error(extracting.error)
+    internal = extracting.value
+  }
+
+  const gettingWorkspace = await getWorkspace(
+    { workspaceId: workspaceId ?? internal?.workspaceId },
+    db,
   )
-  const cache = await redis()
+  if (gettingWorkspace.error) return Result.error(gettingWorkspace.error)
+  const workspace = gettingWorkspace.value
+
+  const gettingApiKey = await getApiKey(
+    { apiKeyId: apiKeyId ?? internal?.apiKeyId, workspace },
+    db,
+  )
+  if (gettingApiKey.error) return Result.error(gettingApiKey.error)
+  const apiKey = gettingApiKey.value
+
+  return Result.ok({ apiKey, workspace })
+}
+
+function extractInternal(attributes: Record<string, SpanAttribute>) {
+  const attribute = String(attributes[ATTR_LATITUDE_INTERNAL] ?? '')
+  if (!attribute) {
+    return Result.error(
+      new UnprocessableEntityError('Internal baggage is required'),
+    )
+  }
 
   try {
-    const payload = JSON.stringify(metadata)
-    await disk.put(key, payload).then((r) => r.unwrap())
-    await cache.del(key)
+    const payload = JSON.parse(attribute)
+    const baggage = internalBaggageSchema.parse(payload)
+
+    return Result.ok(baggage)
   } catch (error) {
-    return Result.error(error as Error)
+    return Result.error(
+      new UnprocessableEntityError('Invalid internal baggage'),
+    )
+  }
+}
+
+async function getWorkspace(
+  {
+    workspaceId,
+  }: {
+    workspaceId?: number
+  },
+  db = database,
+) {
+  if (!workspaceId) {
+    return Result.error(new UnprocessableEntityError('Workspace is required'))
   }
 
-  return Result.nil()
+  const workspace = await unsafelyFindWorkspace(workspaceId, db)
+  if (!workspace) {
+    return Result.error(new UnprocessableEntityError('Workspace not found'))
+  }
+
+  return Result.ok(workspace)
+}
+
+async function getApiKey(
+  {
+    apiKeyId,
+    workspace,
+  }: {
+    apiKeyId?: number
+    workspace: Workspace
+  },
+  db = database,
+) {
+  const repository = new ApiKeysRepository(workspace.id, db)
+
+  let apiKey
+  if (apiKeyId) {
+    const finding = await repository.find(apiKeyId)
+    if (finding.error) {
+      return Result.error(new UnprocessableEntityError('API key not found'))
+    }
+    apiKey = finding.value
+  } else {
+    const finding = await repository.selectFirst()
+    if (finding.error) {
+      return Result.error(new UnprocessableEntityError('API key not found'))
+    }
+    apiKey = finding.value
+  }
+
+  if (!apiKey) {
+    return Result.error(new UnprocessableEntityError('API key is required'))
+  }
+
+  return Result.ok(apiKey)
 }

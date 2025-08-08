@@ -4,7 +4,6 @@ import { Workspace } from '../../../../../browser'
 import { PromptSource } from '../../../../../constants'
 import { createMcpClientManager } from '../../../../../services/integrations/McpClient/McpClientManager'
 import { buildToolMessage } from '../../../../../services/latitudeTools/helpers'
-import { telemetry, TelemetryContext } from '../../../../../telemetry'
 import { Result } from '../../../../../lib/Result'
 import { PromisedResult } from '../../../../../lib/Transaction'
 import { NotFoundError } from '../../../../../lib/errors'
@@ -16,7 +15,6 @@ import { getLatitudeCallResults } from './latitudeTools'
 import { ToolResponsesArgs } from './types'
 
 export function getBuiltInToolCallResponses({
-  context,
   workspace,
   promptSource,
   resolvedTools,
@@ -25,7 +23,6 @@ export function getBuiltInToolCallResponses({
   chainStreamManager,
   mcpClientManager,
 }: {
-  context: TelemetryContext
   workspace: Workspace
   promptSource: PromptSource
   resolvedTools: ResolvedTools
@@ -82,21 +79,7 @@ export function getBuiltInToolCallResponses({
   ) => {
     if (!toolCalls.length) return []
 
-    const $tools: ReturnType<typeof telemetry.tool>[] = []
-    for (const toolCall of toolCalls) {
-      $tools.push(
-        telemetry.tool(context, {
-          name: toolCall.name,
-          call: {
-            id: toolCall.id,
-            arguments: toolCall.arguments,
-          },
-        }),
-      )
-    }
-
     const results = callback({
-      contexts: $tools.map(($tool) => $tool.context),
       workspace,
       promptSource,
       resolvedTools,
@@ -112,13 +95,6 @@ export function getBuiltInToolCallResponses({
         toolName: toolCalls[idx]!.name,
         toolId: toolCalls[idx]!.id,
         result: result,
-      })
-
-      $tools[idx]!.end({
-        result: {
-          value: result.value ?? result.error?.message,
-          isError: !result.ok,
-        },
       })
 
       // TODO(compiler): fix types

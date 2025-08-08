@@ -8,7 +8,6 @@ import {
   ProviderData,
   StreamEventTypes,
   StreamType,
-  TraceContext,
 } from '..'
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { ChainError, RunErrorCodes } from '../errors'
@@ -97,7 +96,6 @@ export interface LatitudeToolsRequestedEventData
   extends GenericLatitudeEventData {
   type: ChainEventTypes.ToolsRequested
   tools: ToolCall[]
-  trace: TraceContext
 }
 
 export type LatitudeEventData =

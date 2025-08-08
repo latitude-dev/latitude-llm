@@ -5,8 +5,6 @@ import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
   ingestSpansJob: jobs.ingestSpansJob,
-  processSpanJob: jobs.processSpanJob,
-  processSegmentJob: jobs.processSegmentJob,
 }
 
 export function startTracingWorker() {

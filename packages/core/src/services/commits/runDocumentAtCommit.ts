@@ -62,16 +62,16 @@ export async function runDocumentAtCommit({
   // in getResolvedContent it will not appear in Latitude
   if (result.error) return result
 
-  // Note: run document retries always produce new traces
+  // Note: run document retries always produce new traces)
   const $prompt = telemetry.prompt(context, {
-    logUuid: errorableUuid,
+    documentLogUuid: errorableUuid,
     versionUuid: commit.uuid,
     promptUuid: document.documentUuid,
     experimentUuid: experiment?.uuid,
     externalId: customIdentifier,
     template: result.value,
     parameters: parameters,
-    _internal: { source },
+    name: document.path.split('/').at(-1),
   })
 
   const checker = new RunDocumentChecker({

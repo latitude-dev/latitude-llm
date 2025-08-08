@@ -1,4 +1,4 @@
-import { and, asc, eq, getTableColumns } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
 import {
   Span,
   SPAN_METADATA_CACHE_TTL,
@@ -11,6 +11,7 @@ import { diskFactory, DiskWrapper } from '../lib/disk'
 import { Result } from '../lib/Result'
 import { spans } from '../schema'
 import Repository from './repositoryV2'
+import { parseJSON } from 'date-fns'
 
 const tt = getTableColumns(spans)
 
@@ -48,6 +49,21 @@ export class SpansRepository extends Repository<Span> {
       .orderBy(asc(spans.startedAt), asc(spans.id))
 
     return Result.ok<Span[]>(result as Span[])
+  }
+
+  async listTracesByLog(documentLogUuid: string) {
+    const result = await this.db
+      .select({
+        traceId: spans.traceId,
+        startedAt: sql`max(${spans.startedAt})`.mapWith(parseJSON),
+      })
+      .from(spans)
+      .where(and(this.scopeFilter, eq(spans.documentLogUuid, documentLogUuid)))
+      .groupBy(spans.traceId)
+      .orderBy(desc(sql`max(${spans.startedAt})`))
+      .then((r) => r.map((r) => r.traceId))
+
+    return result as string[]
   }
 }
 

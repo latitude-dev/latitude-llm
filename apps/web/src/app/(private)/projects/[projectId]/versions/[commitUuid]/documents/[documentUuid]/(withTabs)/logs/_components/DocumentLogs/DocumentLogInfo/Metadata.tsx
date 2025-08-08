@@ -314,28 +314,6 @@ export function DocumentLogMetadata({
   const providerLog = providerLogs[providerLogs.length - 1]
   return (
     <div className='flex flex-col gap-4'>
-      {isSpanLoading ? (
-        <>
-          <div className='w-full h-full flex items-center justify-center gap-2'>
-            <Icon
-              name='loader'
-              color='foregroundMuted'
-              className='animate-spin'
-            />
-            <Text.H5 color='foregroundMuted'>Loading details</Text.H5>
-          </div>
-          <LineSeparator text='Log details' />
-        </>
-      ) : (
-        !!span && (
-          <>
-            <DetailsPanel
-              span={{ ...span, conversationId: documentLog.uuid }}
-            />
-            <LineSeparator text='Log details' />
-          </>
-        )
-      )}
       <RunErrorMessage error={documentLog.error} />
       <MetadataItem label='Log uuid'>
         <ClickToCopy copyValue={documentLog.uuid}>
@@ -383,6 +361,28 @@ export function DocumentLogMetadata({
           />
         </div>
       ) : null}
+      {isSpanLoading ? (
+        <>
+          <LineSeparator text='Log details' />
+          <div className='w-full h-full flex items-center justify-center gap-2'>
+            <Icon
+              name='loader'
+              color='foregroundMuted'
+              className='animate-spin'
+            />
+            <Text.H5 color='foregroundMuted'>Loading details</Text.H5>
+          </div>
+        </>
+      ) : (
+        !!span && (
+          <>
+            <LineSeparator text='Log details' />
+            <DetailsPanel
+              span={{ ...span, conversationId: documentLog.uuid }}
+            />
+          </>
+        )
+      )}
     </div>
   )
 }

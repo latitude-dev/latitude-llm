@@ -16,10 +16,13 @@ import { z } from 'zod'
 
 import { App, ConfigurableProps, V1Component } from '@pipedream/sdk/browser'
 import type {
+  ApiKey,
   Commit,
   DocumentVersion,
   EvaluationV2,
+  Otlp,
   ProviderLog,
+  Workspace,
 } from './browser'
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
@@ -508,4 +511,14 @@ export type PipedreamComponent<T extends PipedreamComponentType = any> = Omit<
 export type AppDto = App & {
   tools: PipedreamComponent<PipedreamComponentType.Tool>[]
   triggers: PipedreamComponent<PipedreamComponentType.Trigger>[]
+}
+
+export type SpanBulkProcessingData = {
+  spans: Array<{
+    span: Otlp.Span
+    scope: Otlp.Scope
+    resource: Otlp.Resource
+    apiKey: ApiKey
+    workspace: Workspace
+  }>
 }

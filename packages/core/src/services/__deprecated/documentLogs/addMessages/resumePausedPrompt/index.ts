@@ -15,7 +15,6 @@ import {
   StreamType,
 } from '../../../../../constants'
 import { Result } from '../../../../../lib/Result'
-import { TelemetryContext } from '../../../../../telemetry'
 import { deleteCachedChain } from '../../../../chains/chainCache'
 import { getResolvedContent } from '../../../../documents'
 import { buildProvidersMap } from '../../../../providerApiKeys/buildMap'
@@ -35,7 +34,6 @@ import { runChain } from '../../../chains/run'
  * retrieved and the chain is run from the paused step.
  */
 export async function resumePausedPrompt({
-  context,
   workspace,
   document,
   commit,
@@ -47,7 +45,6 @@ export async function resumePausedPrompt({
   source,
   abortSignal,
 }: {
-  context: TelemetryContext
   workspace: Workspace
   commit: Commit
   document: DocumentVersion
@@ -78,7 +75,6 @@ export async function resumePausedPrompt({
     document.documentType === DocumentType.Agent ? runAgent : runChain
 
   const runResult = runFn({
-    context,
     generateUUID: () => errorableUuid,
     errorableType,
     workspace,

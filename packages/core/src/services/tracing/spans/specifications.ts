@@ -2,10 +2,11 @@ import { Span, SpanType } from '../../../browser'
 import { CompletionSpanSpecification } from './completion'
 import { EmbeddingSpanSpecification } from './embedding'
 import { HttpSpanSpecification } from './http'
+import { PromptSpanSpecification } from './prompt'
 import { RerankingSpanSpecification } from './reranking'
 import { RetrievalSpanSpecification } from './retrieval'
-import { SegmentSpanSpecification } from './segment'
 import { SpanBackendSpecification } from './shared'
+import { StepSpanSpecification } from './step'
 import { ToolSpanSpecification } from './tool'
 import { UnknownSpanSpecification } from './unknown'
 
@@ -19,7 +20,8 @@ export const SPAN_SPECIFICATIONS: {
   [SpanType.Retrieval]: RetrievalSpanSpecification,
   [SpanType.Reranking]: RerankingSpanSpecification,
   [SpanType.Http]: HttpSpanSpecification,
-  [SpanType.Segment]: SegmentSpanSpecification,
+  [SpanType.Prompt]: PromptSpanSpecification,
+  [SpanType.Step]: StepSpanSpecification,
   [SpanType.Unknown]: UnknownSpanSpecification,
 }
 

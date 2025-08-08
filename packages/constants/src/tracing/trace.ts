@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { SegmentBaggage } from './segment'
 import { Span, SpanType } from './span'
 
 // Note: Traces are unmaterialized but this context is used to propagate the trace
@@ -10,21 +9,6 @@ export const traceContextSchema = z.object({
   baggage: z.string().optional(), // <key>=urlencoded(<value>)[,<key>=urlencoded(<value>)]*
 })
 export type TraceContext = z.infer<typeof traceContextSchema>
-
-export type TraceBaggage = {
-  segment: Pick<SegmentBaggage, 'id' | 'parentId'> // Note: helper for third-party observability services
-  segments: (SegmentBaggage &
-    Pick<TraceContext, 'traceparent' | 'tracestate'> & {
-      paused?: boolean
-    })[]
-}
-
-// TODO(tracing): lets see if we can remove the concept of segments
-// export type AssembledSegment<T extends SegmentType = SegmentType> =
-//   Segment<T> & {
-//     class: 'segment'
-//     parts: (AssembledSegment | AssembledSpan)[]
-//   }
 
 export type AssembledSpan<T extends SpanType = SpanType> = Span<T> & {
   conversationId: string

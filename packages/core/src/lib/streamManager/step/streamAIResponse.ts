@@ -9,7 +9,7 @@ import { ai } from '../../../services/ai'
 import { processResponse } from '../../../services/chains/ProviderProcessor'
 import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
 import { createProviderLog } from '../../../services/providerLogs'
-import { telemetry, TelemetryContext } from '../../../telemetry'
+import { TelemetryContext } from '../../../telemetry'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
 
@@ -53,79 +53,54 @@ export async function streamAIResponse({
   output?: Output
   abortSignal?: AbortSignal
 }) {
-  const $completion = telemetry.completion(context, {
-    provider: provider.provider,
-    model: config.model,
-    configuration: config,
-    input: messages,
-  })
   const startTime = Date.now()
 
-  try {
-    // TODO(compiler): get response from cache
-    const aiResult = await ai({
-      context: $completion.context,
-      messages,
-      config,
-      provider,
-      schema,
-      output,
-      abortSignal,
-    }).then((r) => r.unwrap())
+  const aiResult = await ai({
+    context,
+    messages,
+    config,
+    provider,
+    schema,
+    output,
+    abortSignal,
+  }).then((r) => r.unwrap())
 
-    const checkResult = checkValidStream({ type: aiResult.type })
-    if (checkResult.error) throw checkResult.error
+  const checkResult = checkValidStream({ type: aiResult.type })
+  if (checkResult.error) throw checkResult.error
 
-    const { error } = await consumeStream({
-      controller,
-      result: aiResult,
-    })
-    if (error) throw error
+  const { error } = await consumeStream({
+    controller,
+    result: aiResult,
+  })
+  if (error) throw error
 
-    const processedResponse = await processResponse({
-      aiResult,
-      documentLogUuid,
-    })
-    const responseMessages = (await aiResult.response)
-      .messages as LegacyMessage[]
-    const providerLog = await createProviderLog({
+  const processedResponse = await processResponse({
+    aiResult,
+    documentLogUuid,
+  })
+  const responseMessages = (await aiResult.response).messages as LegacyMessage[]
+  const providerLog = await createProviderLog({
+    workspace,
+    finishReason: await aiResult.finishReason,
+    ...buildProviderLogDto({
       workspace,
-      finishReason: await aiResult.finishReason,
-      ...buildProviderLogDto({
-        workspace,
-        source,
-        provider,
-        conversation: {
-          messages,
-          config,
-        },
-        stepStartTime: startTime,
-        errorableUuid: documentLogUuid,
-        response: processedResponse,
-      }),
-    }).then((r) => r.unwrap())
-    const response = { ...processedResponse, providerLog }
-    const usage = await aiResult.usage
-
-    $completion.end({
-      output: responseMessages,
-      tokens: {
-        prompt: usage.promptTokens,
-        cached: 0, // Note: not given by Vercel AI SDK yet
-        reasoning: 0, // Note: not given by Vercel AI SDK yet
-        completion: usage.completionTokens,
+      source,
+      provider,
+      conversation: {
+        messages,
+        config,
       },
-      finishReason: await aiResult.finishReason,
-    })
+      stepStartTime: startTime,
+      errorableUuid: documentLogUuid,
+      response: processedResponse,
+    }),
+  }).then((r) => r.unwrap())
+  const response = { ...processedResponse, providerLog }
 
-    return {
-      response,
-      messages: responseMessages,
-      tokenUsage: await aiResult.usage,
-      finishReason: aiResult.finishReason,
-    }
-  } catch (e) {
-    $completion.fail(e as Error)
-    throw e
+  return {
+    response,
+    messages: responseMessages,
+    tokenUsage: await aiResult.usage,
+    finishReason: aiResult.finishReason,
   }
 }
