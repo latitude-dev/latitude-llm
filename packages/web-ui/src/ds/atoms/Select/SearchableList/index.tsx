@@ -27,7 +27,6 @@ export function SearchableSelectList<V extends unknown = unknown>({
           placeholder='Search...'
           value={searchQuery}
           onValueChange={setSearchQuery}
-          className='text-xs' // Consistent with MultiSelect
         />
         <CommandList>
           <CommandEmpty>
@@ -52,7 +51,11 @@ export function SearchableSelectList<V extends unknown = unknown>({
                   className='cursor-pointer flex items-center gap-2'
                 >
                   {option.icon && typeof option.icon === 'string' ? (
-                    <Icon name={option.icon as IconName} size='small' color='foregroundMuted' />
+                    <Icon
+                      name={option.icon as IconName}
+                      size='small'
+                      color='foregroundMuted'
+                    />
                   ) : (
                     option.icon
                   )}
@@ -62,6 +65,7 @@ export function SearchableSelectList<V extends unknown = unknown>({
           </CommandGroup>
         </CommandList>
       </Command>
+
       <SelectGroup hidden>
         <Options options={options as SelectOption<V>[]} />
       </SelectGroup>

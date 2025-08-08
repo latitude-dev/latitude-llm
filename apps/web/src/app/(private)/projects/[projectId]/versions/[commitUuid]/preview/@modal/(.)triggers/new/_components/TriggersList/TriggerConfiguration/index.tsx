@@ -15,17 +15,16 @@ import {
   SelectPayloadParameters,
 } from './SelectDocument'
 import { useCreateDocumentTrigger } from './useCreateDocumentTrigger'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 
 export function TriggerConfiguration({
   trigger,
   pipedreamApp,
   onTriggerCreated,
-  onBack,
 }: {
   trigger: Trigger
   pipedreamApp: AppDto
   onTriggerCreated: (documentTrigger: DocumentTrigger) => void
-  onBack: () => void
 }) {
   const [account, setAccount] = useState<IntegrationDto | undefined>(undefined)
   const doc = useDocumentSelection()
@@ -34,29 +33,11 @@ export function TriggerConfiguration({
     document: doc.document,
     onTriggerCreated,
     triggerComponent: trigger,
+    payloadParameters: doc.payloadParameters,
   })
   const canCreateTrigger = account && doc.document
   return (
     <div className='flex flex-col gap-y-4 min-w-0'>
-      <div className='flex flex-row justify-between'>
-        <Button
-          variant='outline'
-          iconProps={{ name: 'chevronLeft', color: 'foregroundMuted' }}
-          onClick={onBack}
-        >
-          Back
-        </Button>
-        <Button
-          fancy
-          disabled={!canCreateTrigger || triggerCreator.isCreating}
-          onClick={triggerCreator.onCreateTrigger}
-        >
-          Create trigger
-        </Button>
-      </div>
-
-      <hr className='border-t border-border' />
-
       <div>
         <Text.H4>{trigger.name}</Text.H4>
         <Text.H5 color='foregroundMuted' lineClamp={2}>
@@ -64,37 +45,51 @@ export function TriggerConfiguration({
         </Text.H5>
       </div>
 
-      <ConnectAccount
-        account={account}
-        setAccount={setAccount}
-        pipedreamApp={pipedreamApp}
-      />
+      <hr className='border-t border-border' />
 
-      {account ? (
-        <SelectDocument
-          document={doc.document}
-          onSelectDocument={doc.onSelectDocument}
-          options={doc.options}
+      <FormWrapper>
+        <ConnectAccount
+          account={account}
+          setAccount={setAccount}
+          pipedreamApp={pipedreamApp}
         />
-      ) : null}
 
-      {doc.document ? (
-        <SelectPayloadParameters
-          document={doc.document}
-          payloadParameters={doc.payloadParameters}
-          setPayloadParameters={doc.onSetPayloadParameters}
-        />
-      ) : null}
+        {account ? (
+          <SelectDocument
+            document={doc.document}
+            onSelectDocument={doc.onSelectDocument}
+            options={doc.options}
+          />
+        ) : null}
 
-      {canCreateTrigger ? (
-        <PipedreamComponentPropsForm
-          integration={account}
-          component={trigger}
-          values={triggerCreator.configuredProps}
-          onChange={triggerCreator.setConfiguredProps}
-          disabled={triggerCreator.isCreating}
-        />
-      ) : null}
+        {doc.document ? (
+          <SelectPayloadParameters
+            document={doc.document}
+            payloadParameters={doc.payloadParameters}
+            setPayloadParameters={doc.onSetPayloadParameters}
+          />
+        ) : null}
+
+        {canCreateTrigger ? (
+          <>
+            <PipedreamComponentPropsForm
+              integration={account}
+              component={trigger}
+              values={triggerCreator.configuredProps}
+              onChange={triggerCreator.setConfiguredProps}
+              disabled={triggerCreator.isCreating}
+            />
+            <Button
+              fancy
+              fullWidth
+              disabled={!canCreateTrigger || triggerCreator.isCreating}
+              onClick={triggerCreator.onCreateTrigger}
+            >
+              Create trigger
+            </Button>
+          </>
+        ) : null}
+      </FormWrapper>
     </div>
   )
 }

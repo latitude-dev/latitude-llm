@@ -2,12 +2,11 @@ import { useCallback, useMemo, useState } from 'react'
 import { AppDto, IntegrationDto } from '@latitude-data/core/browser'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IntegrationType } from '@latitude-data/constants'
-import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Select, type SelectOption, type SelectProps } from '@latitude-data/web-ui/atoms/Select'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import useIntegrations from '$/stores/integrations'
 import { PipedreamConnect } from './PipedreamConnect'
 
-const CREATE_ACCOUNT_ID = 'create_account'
 function useConnectedPipedreamAccounts({
   pipedreamSlug,
 }: {
@@ -23,15 +22,10 @@ function useConnectedPipedreamAccounts({
         integration.type === IntegrationType.Pipedream &&
         integration.configuration.appName === pipedreamSlug,
     )
-    const options = accounts.map<SelectOption<string>>((account) => ({
-      value: String(account.id),
+    const options = accounts.map<SelectOption<number>>((account) => ({
+      value: account.id,
       label: account.name,
     }))
-    options.push({
-      icon: 'plus',
-      value: CREATE_ACCOUNT_ID,
-      label: 'Connect a new account',
-    })
     return { accounts, options, isLoading }
   }, [integrations, pipedreamSlug, isLoading])
 }
@@ -50,12 +44,7 @@ export function ConnectAccount({
     pipedreamSlug: pipedreamApp.name_slug,
   })
   const onSelectAccount = useCallback(
-    (accountId: string) => {
-      if (accountId === CREATE_ACCOUNT_ID) {
-        setShowConnect(true)
-        return
-      }
-
+    (accountId: number) => {
       const account = accounts.find((a) => a.id === +accountId)
       if (!account) return
 
@@ -63,6 +52,11 @@ export function ConnectAccount({
     },
     [accounts, setAccount],
   )
+  const createNewAccountAction = useMemo<SelectProps['footerAction']>(() => ({
+    icon: 'plus',
+    label: 'Connect a new account',
+    onClick: () => setShowConnect(true)
+  }), [setShowConnect])
 
   const onCancel = useCallback(() => {
     setShowConnect(false)
@@ -90,7 +84,7 @@ export function ConnectAccount({
           onCancel={onCancel}
         />
       ) : (
-        <Select<string>
+        <Select<number>
           name='connect-account'
           searchable
           value={account ? String(account.id) : undefined}
@@ -99,6 +93,7 @@ export function ConnectAccount({
           placeholder='Select an account'
           loading={isLoading}
           disabled={isLoading}
+          footerAction={createNewAccountAction}
         />
       )}
     </FormFieldGroup>

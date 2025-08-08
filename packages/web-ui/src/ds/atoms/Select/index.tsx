@@ -4,8 +4,9 @@ import { ReactNode, useEffect, useState } from 'react'
 import { cn } from '../../../lib/utils'
 import { zIndex } from '../../tokens/zIndex'
 import { FormField, type FormFieldProps } from '../FormField'
-import { IconName } from '../Icons'
+import { Icon, IconName } from '../Icons'
 import { Skeleton } from '../Skeleton'
+import { Text } from '../Text'
 import {
   SelectContent,
   SelectGroup,
@@ -56,6 +57,11 @@ export type SelectProps<V extends unknown = unknown> = Omit<
   size?: 'small' | 'default'
   removable?: boolean
   searchable?: boolean
+  footerAction?: {
+    label: string
+    icon?: IconName
+    onClick: () => void
+  }
 }
 export function Select<V extends unknown = unknown>({
   name,
@@ -78,6 +84,7 @@ export function Select<V extends unknown = unknown>({
   required = false,
   removable = false,
   searchable = false,
+  footerAction,
 }: SelectProps<V>) {
   const [selectedValue, setSelected] = useState<V | undefined>(
     value ?? defaultValue,
@@ -108,7 +115,7 @@ export function Select<V extends unknown = unknown>({
           <Skeleton className='w-full h-8 rounded-md' />
         ) : (
           <SelectRoot
-            open={isOpen}
+            open={true || isOpen}
             required={required}
             disabled={disabled || loading}
             name={name}
@@ -147,6 +154,26 @@ export function Select<V extends unknown = unknown>({
                   <Options options={options as SelectOption<V>[]} />
                 </SelectGroup>
               )}
+              {footerAction ? (
+                <div className='border-t border-border pt-1'>
+                  <button
+                    onClick={footerAction.onClick}
+                    className={cn(
+                      'cursor-pointer flex items-center justify-center',
+                      'gap-2 py-1.5 px-2 w-full rounded-sm hover:bg-muted',
+                    )}
+                  >
+                    {footerAction.icon ? (
+                      <Icon
+                        name={footerAction.icon}
+                        size='small'
+                        color='foregroundMuted'
+                      />
+                    ) : null}
+                    <Text.H6>{footerAction.label}</Text.H6>
+                  </button>
+                </div>
+              ) : null}
             </SelectContent>
           </SelectRoot>
         )}
