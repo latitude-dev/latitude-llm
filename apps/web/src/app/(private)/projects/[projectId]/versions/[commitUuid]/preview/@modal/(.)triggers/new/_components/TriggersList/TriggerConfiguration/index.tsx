@@ -73,14 +73,14 @@ export function TriggerConfiguration({
     (!isLoading && accounts.length === 0) || choosedConnect
 
   return (
-    <div className='flex flex-col gap-y-6'>
+    <div className='flex flex-col gap-y-4'>
       <div className='flex flex-col'>
         <Text.H7 uppercase>new trigger</Text.H7>
         <Text.H4>{trigger.name}</Text.H4>
         <Text.H5 color='foregroundMuted' lineClamp={2}>
           {trigger.description}
         </Text.H5>
-        <hr className='border-t border-border my-2' />
+        <hr className='border-t border-border mt-3' />
       </div>
       <FormFieldGroup
         label='Connected Account'

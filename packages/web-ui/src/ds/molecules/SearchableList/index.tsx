@@ -143,6 +143,7 @@ function Item<T extends ItemType = 'no_type'>({
   return (
     <Command.Item
       onSelect={onSelect}
+      onMouseLeave={(e) => e.currentTarget.removeAttribute('aria-selected')}
       className={cn(
         'group p-4 cursor-pointer',
         'aria-selected:bg-accent aria-selected:text-accent-foreground',

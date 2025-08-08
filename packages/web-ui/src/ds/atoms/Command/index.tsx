@@ -44,7 +44,10 @@ const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
   CommandInputProps
 >(({ className, searchIcon = 'search', ...props }, ref) => (
-  <div className='flex items-center border-b px-1 gap-x-1' cmdk-input-wrapper=''>
+  <div
+    className='flex items-center border-b px-1 gap-x-1'
+    cmdk-input-wrapper=''
+  >
     {!!searchIcon && (
       <Icon name={searchIcon} className='h-4 w-4 shrink-0 opacity-50' />
     )}
