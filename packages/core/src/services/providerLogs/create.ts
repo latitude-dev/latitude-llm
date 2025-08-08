@@ -5,6 +5,7 @@ import type {
 import { FinishReason, LanguageModelUsage } from 'ai'
 
 import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
+import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -32,6 +33,7 @@ export type CreateProviderLogProps = {
   toolCalls?: ToolCall[]
   documentLogUuid?: string
   costInMillicents?: number
+  output?: ChainStepResponse<StreamType>['output']
 }
 
 export async function createProviderLog(
@@ -55,6 +57,7 @@ export async function createProviderLog(
     generatedAt,
     costInMillicents,
     finishReason = 'stop',
+    output,
   }: CreateProviderLogProps,
   transaction = new Transaction(),
 ) {
@@ -84,6 +87,7 @@ export async function createProviderLog(
         responseText,
         responseReasoning,
         responseObject,
+        output,
         toolCalls,
         tokens: usage
           ? isNaN(usage.totalTokens)

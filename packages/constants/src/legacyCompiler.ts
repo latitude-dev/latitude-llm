@@ -1,3 +1,5 @@
+import { ToolResultPart } from 'ai'
+
 export enum MessageRole {
   system = 'system',
   user = 'user',
@@ -78,7 +80,7 @@ export type AssistantMessage = {
 }
 export type ToolMessage = {
   role: MessageRole.tool
-  content: (TextContent | ToolContent)[]
+  content: (TextContent | ToolContent | ToolResultPart)[]
   [key: string]: unknown
 }
 

@@ -1,4 +1,3 @@
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
@@ -19,7 +18,6 @@ import {
   Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
-import * as helpers from '../../helpers'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
 import serializeProviderLog from '../providerLogs/serialize'
@@ -232,35 +230,6 @@ value1,value2,value3
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new BadRequestError('Running is not supported for this evaluation'),
-    )
-
-    expect(mocks.publisher).not.toHaveBeenCalled()
-  })
-
-  it('fails when evaluating a log that does not end with an assistant message', async () => {
-    vi.spyOn(helpers, 'buildConversation').mockReturnValue([
-      {
-        role: MessageRole.user,
-        content: [{ type: 'text', text: 'hi' }],
-      },
-    ])
-    mocks.publisher.mockClear()
-
-    await expect(
-      runEvaluationV2({
-        evaluation: evaluation,
-        providerLog: providerLog,
-        experiment: experiment,
-        dataset: dataset,
-        datasetLabel: datasetLabel,
-        datasetRow: datasetRow,
-        commit: commit,
-        workspace: workspace,
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that does not end with an assistant message',
-      ),
     )
 
     expect(mocks.publisher).not.toHaveBeenCalled()

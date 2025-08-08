@@ -1,6 +1,6 @@
 import { Conversation } from '@latitude-data/compiler'
 import { VercelConfig } from '@latitude-data/constants'
-import { LanguageModelUsage } from 'ai'
+import { FinishReason, LanguageModelUsage } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import {
   buildMessagesFromResponse,
@@ -124,7 +124,10 @@ export async function executeAIResponse({
   if (cachedResponse) {
     const providerLog = await saveOrPublishProviderLogs({
       workspace,
-      finishReason: cachedResponse.finishReason ?? 'stop',
+      finishReason:
+        'finishReason' in cachedResponse
+          ? (cachedResponse.finishReason as FinishReason)
+          : 'stop',
       data: buildProviderLogDto({
         workspace,
         source,
@@ -202,8 +205,6 @@ export async function executeAIResponse({
     // TODO(compiler)
     // @ts-expect-error - TODO: fix this
     conversation,
-    // TODO(compiler): fix types
-    // @ts-expect-error - TODO: fix types
     response,
   })
 

@@ -1,5 +1,14 @@
-import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
-import { FinishReason, LanguageModelUsage, TextStreamPart } from 'ai'
+import {
+  AssistantMessage,
+  Message,
+  ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
+import {
+  FinishReason,
+  LanguageModelUsage,
+  TextStreamPart,
+  ToolContent,
+} from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
@@ -66,6 +75,7 @@ type BaseResponse = {
   usage: LanguageModelUsage
   documentLogUuid?: string
   providerLog?: ProviderLog
+  output?: (AssistantMessage | { role: 'tool'; content: ToolContent })[]
 }
 
 export type ChainStepTextResponse = BaseResponse & {

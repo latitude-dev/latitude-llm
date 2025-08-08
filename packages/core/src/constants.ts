@@ -11,7 +11,7 @@ import {
   LatitudeToolInternalName,
   LogSources,
 } from '@latitude-data/constants'
-import { FinishReason, LanguageModelUsage, Tool } from 'ai'
+import { FinishReason, LanguageModelUsage, Tool, ToolResultPart } from 'ai'
 import { z } from 'zod'
 
 import { App, ConfigurableProps, V1Component } from '@pipedream/sdk/browser'
@@ -74,6 +74,8 @@ type BaseResponse = {
   chainCompleted?: boolean
   documentLogUuid?: string
   providerLog?: ProviderLog
+  // TODO(promptl): move this message type to promptl and call it ToolResultMessage
+  output?: (AssistantMessage | { role: 'tool'; content: ToolResultPart[] })[]
 }
 
 export type ChainStepTextResponse = BaseResponse & {

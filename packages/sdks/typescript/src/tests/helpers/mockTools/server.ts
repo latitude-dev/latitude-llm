@@ -71,7 +71,9 @@ function getStep(body: ExpectedBody) {
     const content = m.content
     if (!Array.isArray(content)) return false
 
-    return content.find((c) => c.toolName === 'get_coordinates')
+    return content.find(
+      (c) => 'toolName' in c && c.toolName === 'get_coordinates',
+    )
   })
 
   return { isFirstStep, firstStep, lastStep }
