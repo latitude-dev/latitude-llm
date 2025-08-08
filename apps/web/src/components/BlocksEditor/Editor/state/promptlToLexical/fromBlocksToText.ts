@@ -1,13 +1,12 @@
 import { attributesToString } from './astParsingUtils'
 import {
-  StepChild,
-  ContentBlock,
-  BlockAttributes,
   BLOCK_EDITOR_TYPE,
   BlockRootNode,
+  CodeBlock,
+  ContentBlock,
   InlineBlock,
   ParagraphBlock,
-  CodeBlock,
+  StepChild,
 } from './types'
 
 function contentBlockToText(child: ContentBlock): string {
@@ -27,25 +26,6 @@ function contentBlockToText(child: ContentBlock): string {
       } else {
         return `<content-file${attrsString}>${child.content}</content-file>`
       }
-    }
-    case BLOCK_EDITOR_TYPE.TOOL_CALL: {
-      // For tool-call blocks, include id, name, and parameters as attributes
-      const toolCallAttrs: BlockAttributes = {}
-      if (child.attributes.id) {
-        toolCallAttrs.id = child.attributes.id
-      }
-      if (child.attributes.name) {
-        toolCallAttrs.name = child.attributes.name
-      }
-      // Add parameters as individual attributes
-      if (child.attributes.parameters) {
-        Object.assign(toolCallAttrs, child.attributes.parameters)
-      }
-
-      const attrsString = attributesToString({
-        attributes: toolCallAttrs,
-      })
-      return `<tool-call${attrsString} />`
     }
     default:
       return ''

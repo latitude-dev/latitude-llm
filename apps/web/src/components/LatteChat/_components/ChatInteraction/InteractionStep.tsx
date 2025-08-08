@@ -21,7 +21,7 @@ export function InteractionStep({
         userSelect={false}
         animate
       >
-        Thinking...
+        Brewing...
       </Text.H5>
     )
   }

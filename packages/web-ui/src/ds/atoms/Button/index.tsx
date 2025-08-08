@@ -27,7 +27,7 @@ const buttonContainerVariants = cva(
         linkOutline: 'shadow-none underline-offset-4 hover:underline',
         linkDestructive: 'shadow-none underline-offset-4 hover:underline',
         shiny: '',
-        latte: 'bg-latte hover:bg-latte/90 border-latte-border',
+        latte: 'bg-latte-border hover:bg-latte-border/90 border-latte-border',
       },
       fanciness: {
         default: 'bg-transparent hover:bg-transparent',
@@ -40,6 +40,10 @@ const buttonContainerVariants = cva(
         variant: 'outline',
         fanciness: 'fancy',
         className: 'shadow-[inset_0px_0px_0px_1px_hsl(var(--input))]',
+      },
+      {
+        variant: 'latte',
+        className: 'shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.1)]',
       },
     ],
     defaultVariants: {
@@ -117,6 +121,10 @@ const buttonVariants = cva(
         fanciness: 'fancy',
         className: 'py-0.5',
       },
+      {
+        variant: 'latte',
+        className: 'shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.2)]',
+      },
     ],
     defaultVariants: {
       variant: 'default',
@@ -146,6 +154,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     fancy?: boolean
     indicator?: DotIndicatorProps
     childrenOnlyText?: boolean
+    userSelect?: boolean
   }
 
 export function useButtonStyles({
@@ -225,6 +234,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     lookDisabled,
     ellipsis,
     indicator,
+    userSelect = true,
     ...props
   },
   ref,
@@ -284,6 +294,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
                     !childrenOnlyText && ellipsis,
                   truncate: childrenOnlyText && ellipsis,
                   'justify-center': fullWidth || !iconProps,
+                  'select-none': !userSelect,
                 })}
               >
                 {children}

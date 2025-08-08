@@ -59,6 +59,7 @@ import {
   FolderClosed,
   FolderOpen,
   FolderPlus,
+  Forward,
   GitCompareArrows,
   Github,
   Gitlab,
@@ -361,6 +362,7 @@ const Icons = {
   chartNoAxesGantt: ChartNoAxesGantt,
   rectangleHorizontal: RectangleHorizontal,
   expand: Expand,
+  forward: Forward,
 }
 
 export type IconName = keyof typeof Icons

@@ -1,15 +1,15 @@
-import { describe, it, expect } from 'vitest'
-import { parse } from 'promptl-ai'
-import { fromAstToBlocks } from './fromAstToBlocks'
 import { AstError } from '@latitude-data/constants/promptl'
+import { parse } from 'promptl-ai'
+import { describe, expect, it } from 'vitest'
+import { fromAstToBlocks } from './fromAstToBlocks'
 import {
-  StepBlock,
-  MessageBlock,
-  ReferenceLink,
-  ToolCallBlock,
+  CodeBlock,
   FileBlock,
   ImageBlock,
+  MessageBlock,
   ParagraphBlock,
+  ReferenceLink,
+  StepBlock,
 } from './types'
 
 describe('astToSimpleBlocks with errors', () => {
@@ -108,37 +108,6 @@ describe('astToSimpleBlocks with errors', () => {
       )
       expect(promptBlock.errors?.[1]?.message).toBe(
         'Invalid location attribute',
-      )
-    })
-  })
-
-  describe('tool-call block errors', () => {
-    it('should map errors to tool-call blocks', () => {
-      const prompt = `<tool-call name="test" />`
-      const ast = parse(prompt)
-
-      const errors: AstError[] = [
-        {
-          startIndex: 0,
-          endIndex: 23,
-          start: { line: 1, column: 1 },
-          end: { line: 1, column: 24 },
-          message: 'Tool call must have an id attribute',
-          name: 'CompileError',
-        },
-      ]
-
-      const root = fromAstToBlocks({ ast, prompt, errors })
-      const blocks = root.children
-
-      expect(blocks).toHaveLength(1)
-      const paragraphBlock = blocks[0] as ParagraphBlock
-      const toolCallBlock = paragraphBlock.children[0] as ToolCallBlock
-      expect(toolCallBlock.type).toBe('tool_call')
-      expect(toolCallBlock.errors).toBeDefined()
-      expect(toolCallBlock.errors).toHaveLength(1)
-      expect(toolCallBlock.errors?.[0]?.message).toBe(
-        'Tool call must have an id attribute',
       )
     })
   })
@@ -340,14 +309,6 @@ Then call this tool:
           message: 'Content file must have name attribute',
           name: 'CompileError',
         },
-        {
-          startIndex: 171, // Position of tool-call (corrected from 130)
-          endIndex: 225,
-          start: { line: 8, column: 1 },
-          end: { line: 8, column: 53 },
-          message: 'Tool call must have id attribute',
-          name: 'CompileError',
-        },
       ]
 
       const root = fromAstToBlocks({ ast, prompt, errors })
@@ -373,13 +334,11 @@ Then call this tool:
       expect(imageBlock.errors).toBeUndefined() // No error for image
 
       // @ts-ignore
-      const toolCallBlock = userBlock.children[8].children[0] as ToolCallBlock
+      const toolCallBlock = userBlock.children[8] as CodeBlock
       expect(toolCallBlock).toBeDefined()
+      expect(toolCallBlock.type).toBe('code')
       expect(toolCallBlock.errors).toBeDefined()
-      expect(toolCallBlock.errors).toHaveLength(1)
-      expect(toolCallBlock.errors?.[0]?.message).toBe(
-        'Tool call must have id attribute',
-      )
+      expect(toolCallBlock.errors).toHaveLength(0)
     })
   })
 

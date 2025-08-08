@@ -27,15 +27,10 @@ export const BLOCK_EDITOR_TYPE = {
   FILE_CONTENT: 'content_file',
   IMAGE_CONTENT: 'content_image',
   VARIABLE: 'variable',
-  TOOL_CALL: 'tool_call',
 } as const
 
 export const MESSAGE_BLOCK = ['system', 'user', 'assistant'] as const
-export const CONTENT_BLOCK = [
-  'content-image',
-  'content-file',
-  'tool-call',
-] as const
+export const CONTENT_BLOCK = ['content-image', 'content-file'] as const
 export const BLOCK_WITH_CHILDREN = [...MESSAGE_BLOCK, 'step'] as const
 export type BlockWithChildren = (typeof BLOCK_WITH_CHILDREN)[number]
 export type MessageBlockType = (typeof MESSAGE_BLOCK)[number]
@@ -64,15 +59,6 @@ export interface FileBlock extends SimpleBlock {
   }
 }
 
-export interface ToolCallBlock extends SimpleBlock {
-  type: typeof BLOCK_EDITOR_TYPE.TOOL_CALL
-  attributes: {
-    id?: string
-    name?: string
-    parameters?: BlockAttributes
-  }
-}
-
 export interface ReferenceLink extends SimpleBlock {
   type: typeof BLOCK_EDITOR_TYPE.REFERENCE_LINK
   path: string
@@ -96,7 +82,7 @@ export interface CodeBlock extends SimpleBlock {
   errors?: AstError[]
 }
 
-export type ContentBlock = ImageBlock | FileBlock | ToolCallBlock
+export type ContentBlock = ImageBlock | FileBlock
 export type InlineBlock = ReferenceLink | Variable | TextBlock
 
 export interface ParagraphBlock extends SerializedParagraphNode {
