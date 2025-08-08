@@ -73,7 +73,7 @@ export function ToolResultContent({
         language={strResult?.length > MAX_LENGTH_JSON_PREVIEW ? '' : 'json'}
         bgColor={toolResponse.isError ? 'bg-destructive-muted' : undefined}
       >
-        {JSON.stringify(toolResponse.result, null, 2)}
+        {JSON.stringify(result, null, 2)}
       </CodeBlock>
     )
   }

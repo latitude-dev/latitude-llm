@@ -58,14 +58,17 @@ export async function runAction({
   })
 
   if (result.os.length > 0) {
-    const output = result.os[0]! as {
-      ts?: number
-      k?: 'error'
-      err?: { name: string; message: string; stack: string }
-    }
+    // The error is not always in the first log
+    for (const log of result.os) {
+      const output = log as {
+        ts?: number
+        k?: 'error'
+        err?: { name: string; message: string; stack: string }
+      }
 
-    if (output.k === 'error' && output.err) {
-      return Result.error(new Error(output.err.message))
+      if (output.k === 'error' && output.err) {
+        return Result.error(new Error(output.err.message))
+      }
     }
   }
 
