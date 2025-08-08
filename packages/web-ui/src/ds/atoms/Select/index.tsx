@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './Primitives'
+import { SearchableSelectList } from './SearchableList'
 
 export type SelectOption<V extends unknown = unknown> = {
   label: string
@@ -54,6 +55,7 @@ export type SelectProps<V extends unknown = unknown> = Omit<
   width?: 'auto' | 'full'
   size?: 'small' | 'default'
   removable?: boolean
+  searchable?: boolean
 }
 export function Select<V extends unknown = unknown>({
   name,
@@ -75,6 +77,7 @@ export function Select<V extends unknown = unknown>({
   disabled = false,
   required = false,
   removable = false,
+  searchable = false,
 }: SelectProps<V>) {
   const [selectedValue, setSelected] = useState<V | undefined>(
     value ?? defaultValue,
@@ -105,13 +108,13 @@ export function Select<V extends unknown = unknown>({
           <Skeleton className='w-full h-8 rounded-md' />
         ) : (
           <SelectRoot
+            open={isOpen}
             required={required}
             disabled={disabled || loading}
             name={name}
             value={selectedValue as string}
             defaultValue={defaultValue as string}
-            onValueChange={_onChange}
-            open={isOpen}
+            onValueChange={searchable ? undefined : _onChange}
             onOpenChange={setIsOpen}
           >
             {trigger ? (
@@ -134,9 +137,16 @@ export function Select<V extends unknown = unknown>({
               </SelectTrigger>
             )}
             <SelectContent className={cn(zIndex.dropdown, 'p-0')}>
-              <SelectGroup>
-                <Options options={options as SelectOption<V>[]} />
-              </SelectGroup>
+              {searchable ? (
+                <SearchableSelectList<V>
+                  options={options}
+                  onChange={_onChange}
+                />
+              ) : (
+                <SelectGroup>
+                  <Options options={options as SelectOption<V>[]} />
+                </SelectGroup>
+              )}
             </SelectContent>
           </SelectRoot>
         )}

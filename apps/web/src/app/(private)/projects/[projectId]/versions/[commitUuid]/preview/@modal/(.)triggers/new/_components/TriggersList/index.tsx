@@ -9,10 +9,14 @@ import {
   PipedreamComponentType,
 } from '@latitude-data/core/browser'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
+import { TriggerConfiguration } from './TriggerConfiguration'
 
-type Trigger = PipedreamComponent<PipedreamComponentType.Trigger>
+export type Trigger = PipedreamComponent<PipedreamComponentType.Trigger>
 const EMPTY_LIST: Trigger[] = []
 
+/**
+ * This triggers are Pipedream triggers ONLY.
+ */
 export function TriggersList({ pipedreamSlug }: { pipedreamSlug: string }) {
   const [selectedTrigger, setTrigger] = useState<Trigger | null>(null)
   const { data: selectedPipedreamApp, isLoading } =
@@ -27,7 +31,7 @@ export function TriggersList({ pipedreamSlug }: { pipedreamSlug: string }) {
             type: 'item',
             value: trigger.key,
             title: trigger.name,
-            description: trigger.name,
+            description: trigger.description ?? 'No description available',
           }) satisfies OptionItem,
       ),
     [triggers],
@@ -35,6 +39,8 @@ export function TriggersList({ pipedreamSlug }: { pipedreamSlug: string }) {
   const onTriggerChange: OnSelectValue = useCallback(
     (triggerKey: string) => {
       const foundTrigger = triggers.find((t) => t.key === triggerKey)
+
+      // Should not happen
       if (!foundTrigger) return
 
       setTrigger(foundTrigger)
@@ -43,17 +49,25 @@ export function TriggersList({ pipedreamSlug }: { pipedreamSlug: string }) {
   )
 
   return (
-    <div className='h-full grid grid-cols-2'>
-      <div className='bg-background border-r border-border overflow-y-auto custom-scrollbar pb-6'>
+    <div className='bg-background h-full grid grid-cols-2'>
+      <div className='border-r border-border overflow-y-auto custom-scrollbar pb-6'>
         <SearchableList
+          loading={isLoading}
           listStyle={{ listWrapper: 'onlySeparators', size: 'small' }}
           multiGroup={false}
           showSearch={false}
-          loading={isLoading}
           items={options}
           selectedValue={selectedTrigger?.key}
           onSelectValue={onTriggerChange}
         />
+      </div>
+      <div className='p-6'>
+        {selectedTrigger && selectedPipedreamApp ? (
+          <TriggerConfiguration
+            trigger={selectedTrigger}
+            pipedreamApp={selectedPipedreamApp}
+          />
+        ) : null}
       </div>
     </div>
   )
