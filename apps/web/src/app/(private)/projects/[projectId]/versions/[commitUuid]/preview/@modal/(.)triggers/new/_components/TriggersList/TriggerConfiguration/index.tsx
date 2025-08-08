@@ -5,39 +5,64 @@ import type {
   IntegrationDto,
 } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-
+import { PipedreamComponentPropsForm } from '$/components/Pipedream/PipedreamPropsForm'
 import { type Trigger } from '../index'
 import { ConnectAccount } from './ConnectAccount'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
   useDocumentSelection,
   SelectDocument,
   SelectPayloadParameters,
 } from './SelectDocument'
-import { ConfigureTrigger } from './ConfigureTrigger'
+import { useCreateDocumentTrigger } from './useCreateDocumentTrigger'
 
 export function TriggerConfiguration({
   trigger,
   pipedreamApp,
   onTriggerCreated,
+  onBack,
 }: {
   trigger: Trigger
   pipedreamApp: AppDto
   onTriggerCreated: (documentTrigger: DocumentTrigger) => void
+  onBack: () => void
 }) {
   const [account, setAccount] = useState<IntegrationDto | undefined>(undefined)
   const doc = useDocumentSelection()
-
+  const triggerCreator = useCreateDocumentTrigger({
+    account,
+    document: doc.document,
+    onTriggerCreated,
+    triggerComponent: trigger,
+  })
+  const canCreateTrigger = account && doc.document
   return (
     <div className='flex flex-col gap-y-4 min-w-0'>
-      <div className='flex flex-col'>
-        <Text.H7 uppercase>new trigger</Text.H7>
+      <div className='flex flex-row justify-between'>
+        <Button
+          variant='outline'
+          iconProps={{ name: 'chevronLeft', color: 'foregroundMuted' }}
+          onClick={onBack}
+        >
+          Back
+        </Button>
+        <Button
+          fancy
+          disabled={!canCreateTrigger || triggerCreator.isCreating}
+          onClick={triggerCreator.onCreateTrigger}
+        >
+          Create trigger
+        </Button>
+      </div>
+
+      <hr className='border-t border-border' />
+
+      <div>
         <Text.H4>{trigger.name}</Text.H4>
         <Text.H5 color='foregroundMuted' lineClamp={2}>
           {trigger.description}
         </Text.H5>
       </div>
-
-      <hr className='border-t border-border' />
 
       <ConnectAccount
         account={account}
@@ -61,14 +86,13 @@ export function TriggerConfiguration({
         />
       ) : null}
 
-      {account && doc.document ? (
-        <ConfigureTrigger
-          key={trigger.key}
-          triggerComponent={trigger}
-          account={account}
-          document={doc.document}
-          onTriggerCreated={onTriggerCreated}
-          payloadParameters={doc.payloadParameters}
+      {canCreateTrigger ? (
+        <PipedreamComponentPropsForm
+          integration={account}
+          component={trigger}
+          values={triggerCreator.configuredProps}
+          onChange={triggerCreator.setConfiguredProps}
+          disabled={triggerCreator.isCreating}
         />
       ) : null}
     </div>
