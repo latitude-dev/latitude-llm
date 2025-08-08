@@ -1,13 +1,12 @@
 import { attributesToString } from './astParsingUtils'
 import {
-  StepChild,
-  ContentBlock,
-  BlockAttributes,
   BLOCK_EDITOR_TYPE,
   BlockRootNode,
+  CodeBlock,
+  ContentBlock,
   InlineBlock,
   ParagraphBlock,
-  CodeBlock,
+  StepChild,
 } from './types'
 
 function contentBlockToText(child: ContentBlock): string {
@@ -27,25 +26,6 @@ function contentBlockToText(child: ContentBlock): string {
       } else {
         return `<content-file${attrsString}>${child.content}</content-file>`
       }
-    }
-    case BLOCK_EDITOR_TYPE.TOOL_CALL: {
-      // For tool-call blocks, include id, name, and parameters as attributes
-      const toolCallAttrs: BlockAttributes = {}
-      if (child.attributes.id) {
-        toolCallAttrs.id = child.attributes.id
-      }
-      if (child.attributes.name) {
-        toolCallAttrs.name = child.attributes.name
-      }
-      // Add parameters as individual attributes
-      if (child.attributes.parameters) {
-        Object.assign(toolCallAttrs, child.attributes.parameters)
-      }
-
-      const attrsString = attributesToString({
-        attributes: toolCallAttrs,
-      })
-      return `<tool-call${attrsString} />`
     }
     default:
       return ''
@@ -91,58 +71,106 @@ function paragraphToText(block: ParagraphBlock): string {
     .join('')
 }
 
+function indent(text: string, depth: number): string {
+  if (text.length === 0) return ''
+  const pad = '  '.repeat(depth)
+  return text
+    .split('\n')
+    .map((line) => (line.length > 0 ? `${pad}${line}` : line))
+    .join('\n')
+}
+
+function paragraphToTextIndented(block: ParagraphBlock, depth: number): string {
+  const raw = paragraphToText(block)
+  return indent(raw, depth)
+}
+
+function codeBlockToTextIndented(block: CodeBlock, depth: number): string {
+  const raw = codeBlockToText(block)
+  return indent(raw, depth)
+}
+
 function codeBlockToText(block: CodeBlock): string {
   return block.children.map((child) => child.text).join('')
 }
 
-function stepChildToText(block: StepChild): string {
+function stepChildToTextIndented(block: StepChild, depth: number): string {
   switch (block.type) {
-    case BLOCK_EDITOR_TYPE.MESSAGE:
-      return `<${block.role}>${block.children
+    case BLOCK_EDITOR_TYPE.MESSAGE: {
+      const content = block.children
         .map((child) => {
           if (child.type === BLOCK_EDITOR_TYPE.CODE) {
-            return codeBlockToText(child)
+            return codeBlockToTextIndented(child as CodeBlock, depth + 1)
           }
-          return paragraphToText(child)
+          return paragraphToTextIndented(child as ParagraphBlock, depth + 1)
         })
-        .join('\n')}</${block.role}>`
+        .join('\n')
+      const open = `${'  '.repeat(depth)}<${block.role}>`
+      const close = `${'  '.repeat(depth)}</${block.role}>`
+      return `${open}\n${content}\n${close}`
+    }
     case BLOCK_EDITOR_TYPE.PARAGRAPH:
-      return paragraphToText(block)
+      return paragraphToTextIndented(block, depth)
     case BLOCK_EDITOR_TYPE.CODE:
-      return codeBlockToText(block)
+      return codeBlockToTextIndented(block, depth)
     default:
       return ''
   }
 }
 
 export function fromBlocksToText(rootNode: BlockRootNode): string {
-  return rootNode.children
-    .map((block) => {
-      switch (block.type) {
-        case BLOCK_EDITOR_TYPE.CODE:
-          return codeBlockToText(block)
-        case BLOCK_EDITOR_TYPE.STEP: {
-          const children = block.children ?? []
-          const attr = attributesToString({
-            attributes: {
-              as: block.attributes?.as,
-              isolated: block.attributes?.isolated,
-              ...block.attributes?.otherAttributes,
-            },
-            shouldKebabCase: ['as', 'isolated'],
-          })
-          const stepContent = children
-            .map((child: any) => stepChildToText(child))
-            .join('\n')
+  const parts: string[] = []
 
-          return `<step${attr}>${stepContent}</step>`
-        }
-        case BLOCK_EDITOR_TYPE.MESSAGE:
-        case BLOCK_EDITOR_TYPE.PARAGRAPH:
-          return stepChildToText(block)
-        default:
-          return ''
+  for (let i = 0; i < rootNode.children.length; i++) {
+    const block = rootNode.children[i]!
+    let text = ''
+
+    switch (block.type) {
+      case BLOCK_EDITOR_TYPE.CODE:
+        text = codeBlockToTextIndented(block, 0)
+        break
+      case BLOCK_EDITOR_TYPE.STEP: {
+        const attr = attributesToString({
+          attributes: {
+            as: (block as any).attributes?.as,
+            isolated: (block as any).attributes?.isolated,
+            ...(block as any).attributes?.otherAttributes,
+          },
+          shouldKebabCase: ['as', 'isolated'],
+        })
+
+        const children = (block as any).children ?? []
+        const content = children
+          .map((child: StepChild) => `${stepChildToTextIndented(child, 1)}\n`)
+          .join('')
+
+        text = `<step${attr}>\n${content}</step>`
+        break
       }
-    })
-    .join('\n')
+      case BLOCK_EDITOR_TYPE.MESSAGE:
+        text = stepChildToTextIndented(block, 0)
+        break
+      case BLOCK_EDITOR_TYPE.PARAGRAPH:
+        text = paragraphToTextIndented(block, 0)
+        break
+      default:
+        text = ''
+    }
+
+    parts.push(text)
+
+    // Newline rules at root level:
+    // - Always append a single newline after MESSAGE or STEP blocks
+    // - For other blocks, append a single newline only if there is a following block
+    if (
+      block.type === BLOCK_EDITOR_TYPE.MESSAGE ||
+      block.type === BLOCK_EDITOR_TYPE.STEP
+    ) {
+      parts.push('\n')
+    } else if (i < rootNode.children.length - 1) {
+      parts.push('\n')
+    }
+  }
+
+  return parts.join('')
 }

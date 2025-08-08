@@ -131,6 +131,17 @@ export default {
           '25%': { transform: 'translateX(100%)' }, // Hack to apply a delay between animation iterations
           '100%': { transform: 'translateX(100%)' },
         },
+        glow: {
+          '0%': {
+            boxShadow: '0 0 20px 4px hsl(var(--latte-border) / 0.15)',
+          },
+          '50%': {
+            boxShadow: '0 0 30px 8px hsl(var(--latte-border) / 0.3)',
+          },
+          '100%': {
+            boxShadow: '0 0 20px 4px hsl(var(--latte-border) / 0.15)',
+          },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -138,6 +149,7 @@ export default {
         flash: 'flash-background 1s ease-in-out',
         'text-gradient': 'gradient-animation 3s linear infinite',
         shine: 'shine 12s linear infinite',
+        glow: 'glow 3s ease-in-out infinite',
       },
       width: {
         modal: '580px',

@@ -5,7 +5,6 @@ import {
   getContentFileAttributes,
   getPromptAttributes,
   getStepAttributes,
-  getToolCallAttributes,
   isBlockWithChildren,
   isConfigNode,
   isContentBlock,
@@ -31,8 +30,8 @@ import {
   ParagraphBlock,
   ReferenceLink,
   StepBlock,
+  StepChild,
   TemplateNode,
-  ToolCallBlock,
   Variable,
 } from './types'
 
@@ -146,7 +145,7 @@ function createContentBlock({
   prompt: string
   tag: ElementTag
   errors?: AstError[]
-}): ContentBlock | undefined {
+}): ContentBlock | CodeBlock {
   const blockErrors = findErrorsForNode({ node: tag, errors })
 
   if (tag.name === 'content-image') {
@@ -164,14 +163,10 @@ function createContentBlock({
       version: 1,
       ...(blockErrors.length > 0 && { errors: blockErrors }),
     } as FileBlock
-  } else if (tag.name === 'tool-call') {
-    return {
-      type: BLOCK_EDITOR_TYPE.TOOL_CALL,
-      attributes: getToolCallAttributes({ tag, prompt }),
-      version: 1,
-      ...(blockErrors.length > 0 && { errors: blockErrors }),
-    } as ToolCallBlock
   }
+
+  // Any unprocessable entity in Promptl is shown as code
+  return createCodeBlock({ node: tag, prompt, errors })
 }
 
 function lastNodeEndIsPromptEnd({
@@ -196,15 +191,17 @@ function proccesInlineNodes({
   errors = [],
   isLastNode,
   previousWasBlockWithChildren,
+  nextIsBlockWithChildren = false,
 }: {
   nodes: TemplateNode[]
   prompt: string
   previousWasBlockWithChildren: boolean
   isLastNode: boolean
   errors?: AstError[]
+  nextIsBlockWithChildren?: boolean
 }): Array<ParagraphBlock | CodeBlock> {
   const blocks: Array<ParagraphBlock | CodeBlock> = []
-  let paragraphChildren: InlineBlock[] = []
+  let paragraphChildren: (InlineBlock | ContentBlock)[] = []
   let prevWasWithChildren = previousWasBlockWithChildren
 
   const flushChildren = () => {
@@ -215,38 +212,87 @@ function proccesInlineNodes({
   }
 
   let previousWasBlock = false
-  let previousWasInlineBlock = false
+  // Note: previousWasInlineBlock is not required for preserving blank lines
+  // with the current logic, so we omit it to avoid unused state
   let endsWithEmptyLine = false
 
   for (let idx = 0; idx < nodes.length; idx++) {
     const node = nodes[idx]!
-    const previousNode = nodes[idx - 1]
+    // const previousNode = nodes[idx - 1]
 
     if (node.type === 'Text') {
-      let lines = node.data.split('\n')
+      // Split text by lines to handle blank lines
+      let lines = (node.raw ?? node.data).split('\n')
 
-      const nextNode = nodes[idx + 1]
-      const nextIsBlock = isContentBlock(nextNode)
-      const removeTrailingNewline =
-        (previousWasBlock || nextIsBlock) && previousNode !== undefined
-      if (removeTrailingNewline && lines.length > 1 && lines[0] === '') {
+      // Preserve blank lines between blocks. Only drop the leading empty
+      // segment once when this text is adjacent to a previous block or when
+      // it follows inline content in the same paragraph (e.g. after a
+      // variable), so that k newlines produce exactly k-1 blank paragraphs
+      // and we do not insert a spurious empty paragraph after inline nodes.
+      const removeLeadingBoundaryEmpty =
+        (prevWasWithChildren ||
+          previousWasBlock ||
+          paragraphChildren.length > 0) &&
+        lines.length > 1 &&
+        lines[0] === ''
+      if (removeLeadingBoundaryEmpty) {
         lines = lines.slice(1)
+        // If we already accumulated inline content (e.g. a variable), the
+        // leading empty split indicates a real paragraph break. Flush now so
+        // the following line starts a new paragraph without creating an
+        // extra blank one.
+        if (paragraphChildren.length > 0) {
+          flushChildren()
+        }
       }
+
+      // Prepare accurate per-line slices from the original prompt range
+      // keeping the same offset applied to `lines` above
+      let sliceLines: string[] | null = null
+      let sliceOffset = 0
+      if (node.start !== null && node.end !== null) {
+        const full = prompt.slice(node.start, node.end)
+        sliceLines = full.split('\n')
+        sliceOffset = removeLeadingBoundaryEmpty ? 1 : 0
+      }
+
+      // Lookahead to detect if the next inline node will become a code block
+      const nextNode = nodes[idx + 1]
+      const nextCreatesCodeBlock =
+        !!nextNode &&
+        !isBlockWithChildren(nextNode) &&
+        !isConfigNode(nextNode) &&
+        !isReferenceLink(nextNode as any) &&
+        !isVariable(nextNode as any) &&
+        !isContentBlock(nextNode as any) &&
+        (nextNode as any).type !== 'Text'
 
       for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
         const text = lines[lineIdx]
         const isLastLine = lineIdx === lines.length - 1
+        const isWhitespaceOnly = text !== undefined && text.trim().length === 0
         if (lineIdx > 0) {
           flushChildren()
         }
 
         if (text !== undefined && text !== '') {
-          paragraphChildren.push(createTextNode({ text }))
-        } else if (
-          !isLastLine &&
-          !prevWasWithChildren &&
-          (!previousWasInlineBlock || previousWasBlock)
-        ) {
+          // Preserve literal text using prompt slice when available
+          const data = sliceLines
+            ? (sliceLines[lineIdx + sliceOffset] ?? text)
+            : text
+          // If this is the trailing whitespace-only line immediately before a block tag
+          // or a code block (unprocessable inline node), ignore it so indentation before
+          // those constructs does not create an extra blank paragraph.
+          if (
+            !(
+              isLastLine &&
+              (nextIsBlockWithChildren || nextCreatesCodeBlock) &&
+              isWhitespaceOnly
+            )
+          ) {
+            paragraphChildren.push(createTextNode({ text: data }))
+          }
+        } else if (!isLastLine) {
           flushChildren()
           blocks.push(
             createParagraph({ children: [createTextNode({ text: '' })] }),
@@ -257,32 +303,31 @@ function proccesInlineNodes({
           if (text === '') endsWithEmptyLine = true
         }
 
-        // Reset this setting to allow empty lines "\n" inside a Text
-        // block to create new paragraphs
-        previousWasInlineBlock = false
+        // Reset to allow subsequent inline newlines to create paragraphs
         prevWasWithChildren = false
       }
       previousWasBlock = false
-      previousWasInlineBlock = true
     } else if (isReferenceLink(node)) {
       paragraphChildren.push(createReferenceLink({ prompt, tag: node, errors }))
-
-      previousWasInlineBlock = true
+      // Inline content continues
       previousWasBlock = false
     } else if (isVariable(node)) {
       paragraphChildren.push(createVariable({ node, errors }))
-
-      previousWasInlineBlock = true
+      // Inline content continues
       previousWasBlock = false
     } else if (isContentBlock(node)) {
-      flushChildren()
       const contentBlock = createContentBlock({ prompt, tag: node, errors })
-      if (contentBlock) {
-        blocks.push(createParagraph({ children: [contentBlock] }))
+      if (contentBlock.type === BLOCK_EDITOR_TYPE.CODE) {
+        // Code remains a block; flush current inline paragraph first
+        flushChildren()
+        blocks.push(contentBlock)
+        previousWasBlock = true
+        endsWithEmptyLine = false
+      } else {
+        // Treat content-image/file as inline within the current paragraph
+        paragraphChildren.push(contentBlock)
+        previousWasBlock = false
       }
-
-      previousWasBlock = true
-      endsWithEmptyLine = false
     } else if (node) {
       // Any unprocessable entity in Promptl is shown as code.
       flushChildren()
@@ -295,7 +340,6 @@ function proccesInlineNodes({
         blocks.push(codeBlock)
         previousWasBlock = true
         endsWithEmptyLine = false
-        endsWithEmptyLine = false
       }
     }
   }
@@ -303,10 +347,70 @@ function proccesInlineNodes({
   flushChildren()
 
   if (endsWithEmptyLine && isLastNode) {
-    // Add a trailing empty paragraph if the last line was empty
+    // Preserve trailing newline as an empty paragraph only at the very end
     blocks.push(createParagraph({ children: [createTextNode({ text: '' })] }))
   }
 
+  return blocks
+}
+
+function stripLeadingSpaces(line: string, spaces: number): string {
+  if (spaces <= 0) return line
+  let i = 0
+  while (i < spaces && i < line.length && line[i] === ' ') i++
+  return line.slice(i)
+}
+
+function stripIndentFromText(text: string, spaces: number): string {
+  if (spaces <= 0 || text.length === 0) return text
+  return text
+    .split('\n')
+    .map((ln) => stripLeadingSpaces(ln, spaces))
+    .join('\n')
+}
+
+function restartParagraphIndentation(
+  paragraph: ParagraphBlock,
+  stripSpaces: number,
+) {
+  let didStripOnFirstText = false
+  paragraph.children = paragraph.children.map((child) => {
+    if (child.type === BLOCK_EDITOR_TYPE.TEXT_CONTENT) {
+      if (!didStripOnFirstText) {
+        didStripOnFirstText = true
+        return { ...child, text: stripIndentFromText(child.text, stripSpaces) }
+      }
+      // Do not strip indentation on subsequent text children within the same
+      // paragraph, so spaces after inline nodes (e.g., variables) are preserved.
+      return child
+    }
+    return child
+  })
+}
+
+function restartIndentationInMessageChildren(
+  blocks: (ParagraphBlock | CodeBlock)[],
+  indentDepth: number,
+) {
+  const stripSpaces = indentDepth * 2
+  blocks.forEach((block) => {
+    if (block.type === BLOCK_EDITOR_TYPE.PARAGRAPH) {
+      restartParagraphIndentation(block, stripSpaces)
+    }
+  })
+  return blocks
+}
+
+function restartIndentationInStepChildren(
+  blocks: StepChild[],
+  indentDepth: number,
+) {
+  const stripSpaces = indentDepth * 2
+  blocks.forEach((block) => {
+    if (block.type === BLOCK_EDITOR_TYPE.PARAGRAPH) {
+      restartParagraphIndentation(block, stripSpaces)
+    }
+  })
   return blocks
 }
 
@@ -314,15 +418,41 @@ function processBlockNode({
   node,
   prompt,
   errors,
+  indentDepth,
 }: {
   node: TemplateNode
   prompt: string
   errors?: AstError[]
+  indentDepth: number
 }): StepBlock | MessageBlock | ParagraphBlock | CodeBlock | undefined {
   const blockErrors = errors ? findErrorsForNode({ node, errors }) : []
 
   if (isStepBlock(node)) {
     const children = node.children ?? []
+    let processedChildren =
+      children.length > 0
+        ? (processNodes({
+            nodes: node.children,
+            prompt,
+            errors,
+            indentDepth: indentDepth,
+          }) as StepChild[])
+        : [createEmptyParagraph({ content: '' })]
+
+    // Trim leading/trailing empty or whitespace-only paragraphs inside steps
+    processedChildren = trimEmptyStepChildren(processedChildren)
+
+    // Restart indentation relative to this step container for paragraph lines
+    processedChildren = restartIndentationInStepChildren(
+      processedChildren,
+      indentDepth,
+    )
+
+    // Preserve multiple consecutive empty paragraphs to reflect original blank lines
+    if (processedChildren.length === 0) {
+      processedChildren = [createEmptyParagraph({ content: '' })]
+    }
+
     return {
       attributes: getStepAttributes({ tag: node, prompt }),
       version: 1,
@@ -331,17 +461,37 @@ function processBlockNode({
       indent: 0,
       type: BLOCK_EDITOR_TYPE.STEP,
       errors: blockErrors?.length > 0 ? blockErrors : undefined,
-      // @ts-expect-error - Improve Typescript types for children
-      children:
-        children.length > 0
-          ? processNodes({ nodes: node.children, prompt, errors })
-          : [createEmptyParagraph({ content: '' })],
+      children: processedChildren,
     } satisfies StepBlock
   }
 
   if (isMessageBlock(node)) {
     const message = node as ElementTag
     const children = message.children ?? []
+    let processedChildren =
+      children.length > 0
+        ? (processNodes({
+            nodes: children,
+            prompt,
+            errors,
+            indentDepth: indentDepth,
+          }) as (ParagraphBlock | CodeBlock)[])
+        : [createEmptyParagraph({ content: '' })]
+
+    // Trim leading/trailing empty or whitespace-only paragraphs inside messages
+    processedChildren = trimEmptyMessageChildren(processedChildren)
+
+    // Restart indentation relative to this message container for paragraph lines
+    processedChildren = restartIndentationInMessageChildren(
+      processedChildren,
+      indentDepth,
+    )
+
+    // Preserve multiple consecutive empty paragraphs to reflect original blank lines
+    if (processedChildren.length === 0) {
+      processedChildren = [createEmptyParagraph({ content: '' })]
+    }
+
     return {
       version: 1,
       direction: 'ltr',
@@ -350,11 +500,7 @@ function processBlockNode({
       type: BLOCK_EDITOR_TYPE.MESSAGE,
       role: message.name as MessageBlockType,
       errors: blockErrors?.length > 0 ? blockErrors : undefined,
-      // @ts-expect-error - Improve Typescript types for children
-      children:
-        children.length > 0
-          ? processNodes({ nodes: children, prompt, errors })
-          : [createEmptyParagraph({ content: '' })],
+      children: processedChildren,
     } satisfies MessageBlock
   }
 
@@ -367,11 +513,13 @@ function processNodes({
   prompt,
   errors = [],
   isRoot = false,
+  indentDepth = 0,
 }: {
   nodes: TemplateNode[]
   prompt: string
   errors?: AstError[]
   isRoot?: boolean
+  indentDepth?: number
 }) {
   // Only when we're on the root of the AST we know we can have
   // an incompleted text due to parsing errors
@@ -398,7 +546,12 @@ function processNodes({
     }
 
     if (isBlockWithChildren(node)) {
-      const block = processBlockNode({ node, prompt, errors })
+      const block = processBlockNode({
+        node,
+        prompt,
+        errors,
+        indentDepth: indentDepth + 1,
+      })
       if (block) {
         blocks.push(block)
       }
@@ -422,6 +575,8 @@ function processNodes({
         errors,
         previousWasBlockWithChildren,
         isLastNode: textCompleted && endIdx === nodes.length,
+        nextIsBlockWithChildren:
+          endIdx < nodes.length && isBlockWithChildren(nodes[endIdx]!),
       })
 
       blocks.push(...processedInlineBlocks)
@@ -563,6 +718,112 @@ function trimEmptyBlocks(
   return trimTrailingParagraphs(trimLeadingParagraphs(blocks))
 }
 
+function isEmptyParagraph(block: ParagraphBlock): boolean {
+  if (block.type !== 'paragraph') return false
+  if (!block.children || block.children.length === 0) return true
+  if (block.children.length > 1) return false
+  const onlyChild = block.children[0] as any
+  return (
+    onlyChild?.type === BLOCK_EDITOR_TYPE.TEXT_CONTENT &&
+    typeof onlyChild.text === 'string' &&
+    onlyChild.text === ''
+  )
+}
+
+// Note: keep around if needed in the future to detect empty paragraphs.
+
+// Note: Do not collapse consecutive empty paragraphs; multiple empty paragraphs
+// represent multiple blank lines and must be preserved.
+
+// Note: Do not normalize indentation within paragraphs or code blocks.
+// Intentional indentation (e.g., lists or code) must be preserved.
+
+function trimLeadingMessageChildren(
+  blocks: (ParagraphBlock | CodeBlock)[],
+): (ParagraphBlock | CodeBlock)[] {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]!
+
+    if (block.type != 'paragraph') {
+      return blocks.slice(i)
+    }
+
+    const trimmed = trimLeadingTexts(block.children)
+    if (trimmed.length > 0) {
+      block.children = trimmed
+      return blocks.slice(i)
+    }
+  }
+
+  return []
+}
+
+function trimTrailingMessageChildren(
+  blocks: (ParagraphBlock | CodeBlock)[],
+): (ParagraphBlock | CodeBlock)[] {
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const block = blocks[i]!
+
+    if (block.type != 'paragraph') {
+      return blocks.slice(0, i + 1)
+    }
+
+    const trimmed = trimTrailingTexts(block.children)
+    if (trimmed.length > 0) {
+      block.children = trimmed
+      return blocks.slice(0, i + 1)
+    }
+  }
+
+  return []
+}
+
+function trimEmptyMessageChildren(
+  blocks: (ParagraphBlock | CodeBlock)[],
+): (ParagraphBlock | CodeBlock)[] {
+  return trimTrailingMessageChildren(trimLeadingMessageChildren(blocks))
+}
+
+function trimLeadingStepChildren(blocks: StepChild[]): StepChild[] {
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]!
+
+    if (block.type != 'paragraph') {
+      return blocks.slice(i)
+    }
+
+    const trimmed = trimLeadingTexts(block.children)
+    if (trimmed.length > 0) {
+      block.children = trimmed
+      return blocks.slice(i)
+    }
+  }
+
+  return []
+}
+
+function trimTrailingStepChildren(blocks: StepChild[]): StepChild[] {
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const block = blocks[i]!
+
+    if (block.type != 'paragraph') {
+      return blocks.slice(0, i + 1)
+    }
+
+    const trimmed = trimTrailingTexts(block.children)
+    if (trimmed.length > 0) {
+      block.children = trimmed
+      return blocks.slice(0, i + 1)
+    }
+  }
+
+  return []
+}
+
+function trimEmptyStepChildren(blocks: StepChild[]): StepChild[] {
+  return trimTrailingStepChildren(trimLeadingStepChildren(blocks))
+}
+
 export function fromAstToBlocks({
   ast,
   prompt,
@@ -577,7 +838,6 @@ export function fromAstToBlocks({
     nodes,
     prompt,
     errors,
-    isRoot: true,
   })
 
   const astMissingTextAsCodeBlock = maybeCreateCodeBlockWithFailedAst({
@@ -587,6 +847,12 @@ export function fromAstToBlocks({
   })
 
   if (astMissingTextAsCodeBlock) {
+    const last = children[children.length - 1]
+    if (last && (last as any).type === BLOCK_EDITOR_TYPE.PARAGRAPH) {
+      if (isEmptyParagraph(last as ParagraphBlock)) {
+        children.pop()
+      }
+    }
     children.push(astMissingTextAsCodeBlock)
   }
 

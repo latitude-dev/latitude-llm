@@ -123,7 +123,8 @@ export class StepBlockNode extends ElementNode {
 
   setStepName(newName: string): StepBlockNode {
     const writable = this.getWritable()
-    writable.__stepName = newName
+    // Note: if name is empty, we don't want to set the attribute
+    writable.__stepName = newName || undefined
     return writable
   }
 
