@@ -3,7 +3,7 @@ import { parse, scan } from 'promptl-ai'
 import { describe, expect, it } from 'vitest'
 import { fromAstToBlocks } from './fromAstToBlocks'
 import { fromBlocksToText } from './fromBlocksToText'
-import { StepBlock } from './types'
+import { StepBlock, TextBlock } from './types'
 
 describe('fromAstToBlocks', () => {
   it('should convert plain text to simple blocks', () => {
@@ -44,6 +44,250 @@ pong
 
     const output = fromBlocksToText(rootNode)
     expect(output).toBe(prompt.trim())
+  })
+
+  it('should handle indentations and newlines', () => {
+    const prompt = `
+
+
+  This is an outside system message
+
+<step>
+  This is a system message
+
+<user>
+  This is a user message
+</user>
+
+This is a list:
+  - This is a list item
+  - This is a list item
+
+<system>This is an inline system message</system>
+</step>
+
+
+
+`
+
+    const expectedPrompt = `
+This is an outside system message
+
+<step>
+  This is a system message
+
+  <user>
+    This is a user message
+  </user>
+
+  This is a list:
+    - This is a list item
+    - This is a list item
+
+  <system>
+    This is an inline system message
+  </system>
+</step>
+`.trim()
+
+    const expectedBlocks = [
+      expect.objectContaining({
+        type: 'paragraph',
+        children: [
+          expect.objectContaining({
+            type: 'text',
+            text: 'This is an outside system message',
+          }),
+        ],
+      }),
+      expect.objectContaining({
+        type: 'paragraph',
+        children: [
+          expect.objectContaining({
+            type: 'text',
+            text: '',
+          }),
+        ],
+      }),
+      expect.objectContaining({
+        type: 'step',
+        children: [
+          expect.objectContaining({
+            type: 'paragraph',
+            children: [
+              expect.objectContaining({
+                type: 'text',
+                text: 'This is a system message',
+              }),
+            ],
+          }),
+          expect.objectContaining({
+            type: 'paragraph',
+            children: [
+              expect.objectContaining({
+                type: 'text',
+                text: '',
+              }),
+            ],
+          }),
+          expect.objectContaining({
+            type: 'message',
+            role: 'user',
+            children: [
+              expect.objectContaining({
+                type: 'paragraph',
+                children: [
+                  expect.objectContaining({
+                    type: 'text',
+                    text: 'This is a user message',
+                  }),
+                ],
+              }),
+            ],
+          }),
+          expect.objectContaining({
+            type: 'paragraph',
+            children: [
+              expect.objectContaining({
+                type: 'text',
+                text: '',
+              }),
+            ],
+          }),
+          expect.objectContaining({
+            type: 'paragraph',
+            children: [
+              expect.objectContaining({
+                type: 'text',
+                text: 'This is a list:',
+              }),
+            ],
+          }),
+          expect.objectContaining({
+            type: 'paragraph',
+            children: [
+              expect.objectContaining({
+                type: 'text',
+                text: '  - This is a list item',
+              }),
+            ],
+          }),
+          expect.objectContaining({
+            type: 'paragraph',
+            children: [
+              expect.objectContaining({
+                type: 'text',
+                text: '  - This is a list item',
+              }),
+            ],
+          }),
+          expect.objectContaining({
+            type: 'paragraph',
+            children: [
+              expect.objectContaining({
+                type: 'text',
+                text: '',
+              }),
+            ],
+          }),
+          expect.objectContaining({
+            type: 'message',
+            role: 'system',
+            children: [
+              expect.objectContaining({
+                type: 'paragraph',
+                children: [
+                  expect.objectContaining({
+                    type: 'text',
+                    text: 'This is an inline system message',
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ]
+
+    // Note: testing idempotency
+
+    let ast = parse(prompt)
+    let rootNode = fromAstToBlocks({ ast, prompt })
+    expect(rootNode.children).toEqual(expectedBlocks)
+    let output = fromBlocksToText(rootNode)
+    expect(output).toBe(expectedPrompt)
+
+    ast = parse(output)
+    rootNode = fromAstToBlocks({ ast, prompt })
+    expect(rootNode.children).toEqual(expectedBlocks)
+    output = fromBlocksToText(rootNode)
+    expect(output).toBe(expectedPrompt)
+
+    ast = parse(output)
+    rootNode = fromAstToBlocks({ ast, prompt })
+    expect(rootNode.children).toEqual(expectedBlocks)
+    output = fromBlocksToText(rootNode)
+    expect(output).toBe(expectedPrompt)
+  })
+
+  it('should handle escaped tags', () => {
+    const prompt = `
+<\\step>
+  Escaped step
+</\\step>
+<\\message>
+  Escaped message
+<\\/message>
+<\\tag>
+  Escaped tag
+<\\/tag>
+`.trim()
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+
+    expect(rootNode.children).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'paragraph',
+          children: [
+            expect.objectContaining({ type: 'text', text: '<\\step>' }),
+          ],
+        }),
+        expect.objectContaining({
+          type: 'paragraph',
+          children: [
+            expect.objectContaining({ type: 'text', text: '</\\step>' }),
+          ],
+        }),
+        expect.objectContaining({
+          type: 'paragraph',
+          children: [
+            expect.objectContaining({ type: 'text', text: '<\\message>' }),
+          ],
+        }),
+        expect.objectContaining({
+          type: 'paragraph',
+          children: [
+            expect.objectContaining({ type: 'text', text: '<\\/message>' }),
+          ],
+        }),
+        expect.objectContaining({
+          type: 'paragraph',
+          children: [
+            expect.objectContaining({ type: 'text', text: '<\\tag>' }),
+          ],
+        }),
+        expect.objectContaining({
+          type: 'paragraph',
+          children: [
+            expect.objectContaining({ type: 'text', text: '<\\/tag>' }),
+          ],
+        }),
+      ]),
+    )
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt)
   })
 
   it('should handle top-level content-image blocks', () => {
@@ -797,6 +1041,62 @@ Some text here
     expect(output).toBe(prompt)
   })
 
+  it('should treat tool results as code blocks', () => {
+    const prompt = `
+<tool id="call_1" name="search" />
+
+<tool id="call_2" name="calculate">
+  Something
+</tool>
+`.trim()
+
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+    expect(rootNode.children[0]?.type).toBe('code')
+    expect((rootNode.children[0]?.children[0] as TextBlock)?.text).toBe(
+      '<tool id="call_1" name="search" />',
+    )
+    expect(rootNode.children[2]?.type).toBe('code')
+    expect((rootNode.children[2]?.children[0] as TextBlock)?.text).toBe(
+      `
+<tool id="call_2" name="calculate">
+  Something
+</tool>
+      `.trim(),
+    )
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt)
+  })
+
+  it('should treat tool calls as code blocks', () => {
+    const prompt = `
+<tool-call id="call_1" name="search" query="AI" />
+
+<tool-call id="call_2" name="calculate" expression="2+2">
+  Something
+</tool-call>
+`.trim()
+
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+    expect(rootNode.children[0]?.type).toBe('code')
+    expect((rootNode.children[0]?.children[0] as TextBlock)?.text).toBe(
+      '<tool-call id="call_1" name="search" query="AI" />',
+    )
+    expect(rootNode.children[2]?.type).toBe('code')
+    expect((rootNode.children[2]?.children[0] as TextBlock)?.text).toBe(
+      `
+<tool-call id="call_2" name="calculate" expression="2+2">
+  Something
+</tool-call>
+      `.trim(),
+    )
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt)
+  })
+
   it('should handle top-level tool-call blocks', () => {
     const prompt = `<tool-call id="call_123" name="get_weather" location="New York" unit="celsius" />`
 
@@ -825,7 +1125,7 @@ Some text here
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
     const output = fromBlocksToText(rootNode)
-    expect(output).toBe('<tool-call id="empty" name="noop" />')
+    expect(output).toBe('<tool-call id="empty" name="noop"></tool-call>')
   })
 
   it('should handle self-closing tool-call blocks', () => {
@@ -965,7 +1265,7 @@ How are you?
     expect(output).toBe(prompt)
   })
 
-  it('handles step with literal false isolated attribute', () => {
+  it('handles step with literal empty isolated attribute', () => {
     const prompt = '<step isolated="">Hello</step>'
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
@@ -997,6 +1297,56 @@ How are you?
     const prompt = `
 {{ isolated = true}}
 <step isolated={{isolated}}>Hello</step>
+`.trim()
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+
+    expect(rootNode.children[0]?.type).toBe('code')
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt)
+  })
+
+  it('handles step without as attribute', () => {
+    const prompt = '<step>Hello</step>'
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+
+    expect(rootNode.children[0]?.type).toBe('step')
+    expect((rootNode.children[0]! as StepBlock).attributes?.as).toBeUndefined()
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt)
+  })
+
+  it('handles step with literal empty as attribute', () => {
+    const prompt = '<step as="">Hello</step>'
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+
+    expect(rootNode.children[0]?.type).toBe('step')
+    expect((rootNode.children[0]! as StepBlock).attributes?.as).toBeUndefined()
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe('<step>Hello</step>')
+  })
+
+  it('handles step with literal as attribute', () => {
+    const prompt = '<step as="analysis">Hello</step>'
+    const ast = parse(prompt)
+    const rootNode = fromAstToBlocks({ ast, prompt })
+
+    expect(rootNode.children[0]?.type).toBe('step')
+    expect((rootNode.children[0]! as StepBlock).attributes?.as).toBe('analysis')
+
+    const output = fromBlocksToText(rootNode)
+    expect(output).toBe(prompt)
+  })
+
+  it('handles step with non literal as attribute', () => {
+    const prompt = `
+{{ as = "analysis"}}
+<step as={{as}}>Hello</step>
 `.trim()
     const ast = parse(prompt)
     const rootNode = fromAstToBlocks({ ast, prompt })
