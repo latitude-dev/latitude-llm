@@ -7,7 +7,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { useTypeWriterValue } from '@latitude-data/web-ui/browser'
 import { cn } from '@latitude-data/web-ui/utils'
-import React, { KeyboardEvent, useCallback, useState } from 'react'
+import React, { KeyboardEvent, useCallback, useEffect, useState } from 'react'
 import { ChangeList } from './_components/ChangesList'
 
 const INPUT_PLACEHOLDERS = [
@@ -203,8 +203,55 @@ function LatteChangesFeedback({
     [onSubmit, value],
   )
 
+  const [progress, setProgress] = useState(100)
+  const [isTimerActive, setIsTimerActive] = useState(true)
+  const [hasAutoSubmitted, setHasAutoSubmitted] = useState(false)
+
+  const handleSubmit = useCallback(() => {
+    setHasAutoSubmitted(true)
+    onSubmit(value)
+  }, [onSubmit, value])
+
+  useEffect(() => {
+    if (value.trim() === '' && !hasAutoSubmitted) {
+      // Start/restart timer when feedback is empty and hasn't auto-submitted yet
+      setIsTimerActive(true)
+      setProgress(100)
+
+      const totalTime = 10 * 1000 // 10 seconds
+      const interval = 100 // Update every 100ms
+      const decrement = (100 * interval) / totalTime
+
+      const progressInterval = setInterval(() => {
+        setProgress((prev) => {
+          const newProgress = prev - decrement
+          if (newProgress <= 0) {
+            clearInterval(progressInterval)
+            handleSubmit()
+            return 0
+          }
+          return newProgress
+        })
+      }, interval)
+
+      return () => clearInterval(progressInterval)
+    } else {
+      // Stop timer when feedback is not empty or has already auto-submitted
+      setIsTimerActive(false)
+      setProgress(0)
+    }
+  }, [value, handleSubmit, hasAutoSubmitted])
+
   return (
-    <div className='flex flex-col gap-2 border-latte-widget border-2 pt-3 pb-2 px-3 rounded-t-2xl'>
+    <div className='flex flex-col gap-2 border-latte-widget border-2 pt-3 pb-2 px-3 rounded-t-2xl relative overflow-hidden'>
+      {isTimerActive && (
+        <div
+          className='absolute bottom-0 left-0 h-0.5 bg-latte-widget transition-all duration-100 ease-out'
+          style={{
+            width: `${progress}%`,
+          }}
+        />
+      )}
       <div className='flex items-center justify-between gap-2'>
         <Text.H6M color='latteInputForeground'>
           {action === 'undo'

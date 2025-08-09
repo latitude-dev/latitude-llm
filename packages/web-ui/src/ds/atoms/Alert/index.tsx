@@ -50,10 +50,10 @@ export function Alert({
         />
       )}
       <div
-        className={cn('flex items-center justify-between', {
+        className={cn('flex items-start justify-between', {
           'flex-row ': direction === 'row',
           'flex-col': direction === 'column',
-          'justify-center': centered,
+          'items-center justify-center': centered,
           'gap-4 lg:gap-8': spacing === 'medium',
           'gap-2.5 lg:gap-5': spacing === 'small',
         })}
