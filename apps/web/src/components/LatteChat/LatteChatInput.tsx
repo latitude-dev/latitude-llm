@@ -227,7 +227,8 @@ function LatteChangesFeedback({
           const newProgress = prev - decrement
           if (newProgress <= 0) {
             clearInterval(progressInterval)
-            handleSubmit()
+            // Defer the submit to avoid React state update during render
+            setTimeout(() => handleSubmit(), 0)
             return 0
           }
           return newProgress
