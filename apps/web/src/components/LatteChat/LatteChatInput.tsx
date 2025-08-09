@@ -137,7 +137,7 @@ export function LatteChatInput({
         onChange={handleValueChange}
         onKeyDown={handleKeyDown}
         minRows={3}
-        maxRows={value === '' ? 3 : 5} // Note: fixes auto-grow with dynamic placeholder
+        maxRows={value === '' ? 3 : 6} // Note: fixes auto-grow with dynamic placeholder
       />
       <div
         className={cn(
