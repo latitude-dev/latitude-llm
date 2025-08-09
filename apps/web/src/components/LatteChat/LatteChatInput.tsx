@@ -209,8 +209,8 @@ function LatteChangesFeedback({
 
   const handleSubmit = useCallback(() => {
     setHasAutoSubmitted(true)
-    onSubmit(value)
-  }, [onSubmit, value])
+    onSubmit('')
+  }, [setHasAutoSubmitted, onSubmit])
 
   useEffect(() => {
     if (value.trim() === '' && !hasAutoSubmitted) {
