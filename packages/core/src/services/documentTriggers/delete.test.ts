@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { and, eq } from 'drizzle-orm'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTrigger, Workspace } from '../../browser'
 import { deleteDocumentTrigger } from './delete'
 import { documentTriggers } from '../../schema'
-import { and, eq } from 'drizzle-orm'
 import { LatitudeError } from './../../lib/errors'
+import { Result } from '../../lib/Result'
+import * as pipedreamTriggersModule from './../integrations/pipedream/triggers'
 
 describe('deleteDocumentTrigger', () => {
   let workspace: Workspace
-  let documentTrigger: DocumentTrigger
+  let emailTrigger: DocumentTrigger
+  let integrationTrigger: DocumentTrigger
   let mockTx: any
   let mockDelete: any
   let mockWhere: any
@@ -21,13 +24,13 @@ describe('deleteDocumentTrigger', () => {
   beforeEach(() => {
     // Setup test data
     workspace = { id: 1 } as Workspace
-    documentTrigger = {
-      id: 2,
+    emailTrigger = {
+      id: 11,
       triggerType: DocumentTriggerType.Email,
-      configuration: {
-        emailWhitelist: ['test@example.com'],
-        replyWithResponse: true,
-      },
+    } as DocumentTrigger
+    integrationTrigger = {
+      id: 22,
+      triggerType: DocumentTriggerType.Integration,
     } as DocumentTrigger
 
     // Setup mock transaction and database
@@ -45,16 +48,23 @@ describe('deleteDocumentTrigger', () => {
       ...(await importOriginal()),
       default: mocks.transactionMock,
     }))
+
+    // Ensure we can control destroyPipedreamTrigger per test
+    vi.spyOn(pipedreamTriggersModule, 'destroyPipedreamTrigger').mockReset()
   })
 
-  it('deletes a document trigger successfully', async () => {
+  it('deletes a non-integration trigger successfully', async () => {
     // Arrange
-    mockReturning.mockResolvedValue([documentTrigger])
+    mockReturning.mockResolvedValue([
+      {
+        ...emailTrigger,
+      } as DocumentTrigger,
+    ])
 
     // Act
     const result = await deleteDocumentTrigger({
       workspace,
-      documentTrigger,
+      documentTrigger: emailTrigger,
     })
 
     // Assert
@@ -67,10 +77,46 @@ describe('deleteDocumentTrigger', () => {
     expect(mockWhere).toHaveBeenCalledWith(
       and(
         eq(documentTriggers.workspaceId, workspace.id),
-        eq(documentTriggers.id, documentTrigger.id),
+        eq(documentTriggers.id, emailTrigger.id),
       ),
     )
-    expect(result.value).toEqual(documentTrigger)
+    expect(result.value).toEqual(emailTrigger)
+    expect(pipedreamTriggersModule.destroyPipedreamTrigger).not.toHaveBeenCalled()
+  })
+
+  it('deletes an integration trigger successfully after destroying pipedream trigger', async () => {
+    // Arrange
+    vi.spyOn(pipedreamTriggersModule, 'destroyPipedreamTrigger').mockResolvedValue(
+      Result.ok(undefined),
+    )
+
+    mockReturning.mockResolvedValue([
+      {
+        ...integrationTrigger,
+      } as DocumentTrigger,
+    ])
+
+    // Act
+    const result = await deleteDocumentTrigger({
+      workspace,
+      documentTrigger: integrationTrigger,
+    })
+
+    // Assert
+    expect(result.error).toBeUndefined()
+    expect(result.value).toBeDefined()
+    expect(pipedreamTriggersModule.destroyPipedreamTrigger).toHaveBeenCalledWith({
+      workspace,
+      documentTrigger: integrationTrigger,
+    })
+    expect(mockTx.delete).toHaveBeenCalledWith(documentTriggers)
+    expect(mockWhere).toHaveBeenCalledWith(
+      and(
+        eq(documentTriggers.workspaceId, workspace.id),
+        eq(documentTriggers.id, integrationTrigger.id),
+      ),
+    )
+    expect(result.value).toEqual(integrationTrigger)
   })
 
   it('returns an error when document trigger deletion fails', async () => {
@@ -80,7 +126,7 @@ describe('deleteDocumentTrigger', () => {
     // Act
     const result = await deleteDocumentTrigger({
       workspace,
-      documentTrigger,
+      documentTrigger: emailTrigger,
     })
 
     // Assert
@@ -94,8 +140,30 @@ describe('deleteDocumentTrigger', () => {
     expect(mockWhere).toHaveBeenCalledWith(
       and(
         eq(documentTriggers.workspaceId, workspace.id),
-        eq(documentTriggers.id, documentTrigger.id),
+        eq(documentTriggers.id, emailTrigger.id),
       ),
     )
+  })
+
+  it('returns an error and does not delete when destroying pipedream trigger fails', async () => {
+    // Arrange
+    vi.spyOn(pipedreamTriggersModule, 'destroyPipedreamTrigger').mockResolvedValue(
+      Result.error(new LatitudeError('Failed to destroy integration trigger')),
+    )
+
+    // Act
+    const result = await deleteDocumentTrigger({
+      workspace,
+      documentTrigger: integrationTrigger,
+    })
+
+    // Assert
+    expect(result.ok).toBeFalsy()
+    expect(result.error).toBeInstanceOf(LatitudeError)
+    expect(pipedreamTriggersModule.destroyPipedreamTrigger).toHaveBeenCalledWith({
+      workspace,
+      documentTrigger: integrationTrigger,
+    })
+    expect(mockTx.delete).not.toHaveBeenCalled()
   })
 })
