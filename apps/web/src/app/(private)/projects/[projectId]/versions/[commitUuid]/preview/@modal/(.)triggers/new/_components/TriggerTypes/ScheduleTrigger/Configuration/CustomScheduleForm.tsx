@@ -1,0 +1,34 @@
+import { Input } from '@latitude-data/web-ui/atoms/Input'
+import { ScheduleConfig } from './scheduleUtils'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+
+export function CustomScheduleForm({
+  config,
+  updateConfig,
+  isLoading,
+}: {
+  config: ScheduleConfig
+  updateConfig: ReactStateDispatch<ScheduleConfig>
+  isLoading: boolean
+}) {
+  const handleCustomExpressionChange = (expression: string) => {
+    updateConfig((prev) => ({
+      ...prev,
+      custom: {
+        expression,
+      },
+    }))
+  }
+
+  return (
+    <Input
+      name='cron-expression'
+      label='Cron Expression'
+      description='Format: minute hour day month weekday (e.g., \"0 * * * *\" for every hour)'
+      placeholder='* * * * *'
+      value={config.custom?.expression || ''}
+      onChange={(e) => handleCustomExpressionChange(e.target.value)}
+      disabled={isLoading}
+    />
+  )
+}

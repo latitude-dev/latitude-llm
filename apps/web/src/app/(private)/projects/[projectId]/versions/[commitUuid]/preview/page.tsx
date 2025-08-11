@@ -1,4 +1,3 @@
-import { DocumentTriggerType } from '@latitude-data/constants'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { LatteLayout } from '$/components/LatteLayout'
 import { TriggersList } from './_components/TriggersList'
@@ -15,11 +14,7 @@ export default async function PreviewPage({
   const { workspace } = await getCurrentUserOrRedirect()
   const { projectId } = await params
   const scope = new DocumentTriggersRepository(workspace.id)
-  const integrationTriggers = await scope
-    .findByProjectId(Number(projectId))
-    .then((triggers) =>
-      triggers.filter((t) => t.triggerType === DocumentTriggerType.Integration),
-    )
+  const integrationTriggers = await scope.findByProjectId(Number(projectId))
   const integrationsScope = new IntegrationsRepository(workspace.id)
   const integrations = await integrationsScope
     .findAll()
@@ -32,7 +27,6 @@ export default async function PreviewPage({
         <div className='flex flex-col h-full p-4'>
           <TriggersList
             triggers={integrationTriggers}
-            // @ts-expect-error - integrations is a union type but we are only passing pipedream type integrations
             integrations={integrations}
           />
         </div>

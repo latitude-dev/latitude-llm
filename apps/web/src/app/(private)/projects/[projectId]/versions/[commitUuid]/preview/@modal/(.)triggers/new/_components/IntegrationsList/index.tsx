@@ -2,17 +2,26 @@ import {
   SearchableList,
   Option as SearchableOption,
   OptionItem as SearchableOptionItem,
+  OptionGroup as SearchableOptionGroup,
   type OnSelectValue,
 } from '@latitude-data/web-ui/molecules/SearchableList'
 import usePipedreamApps from '$/stores/pipedreamApps'
 import { useCallback, useMemo, useState } from 'react'
 import useConnectedIntegrationsByPipedreamApp from '$/stores/integrationsConnectedByPipedreamApp'
 import { useDebouncedCallback } from 'use-debounce'
-import { IntegrationType } from '@latitude-data/constants'
+import { DocumentTriggerType } from '@latitude-data/constants'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { SelectedIntegration } from '../../client'
+import { SelectedIntegration, TriggerIntegrationType } from '../../client'
 import { buildIntegrationOption } from './utils'
+import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 
+export const ICONS_BY_TRIGGER: Partial<
+  Record<TriggerIntegrationType, IconName>
+> = {
+  Chat: 'chat',
+  [DocumentTriggerType.Scheduled]: 'clock',
+  [DocumentTriggerType.Email]: 'mail',
+}
 export function IntegrationsList({
   onSelectIntegration,
 }: {
@@ -37,7 +46,9 @@ export function IntegrationsList({
 
   const isLoading = isLoadingPipedreamApps || isLoadingConnectedIntegrations
 
-  const optionGroups = useMemo<SearchableOption<IntegrationType>[]>(() => {
+  const optionGroups = useMemo<
+    SearchableOption<TriggerIntegrationType>[]
+  >(() => {
     if (isLoadingPipedreamApps && isLoadingConnectedIntegrations) return []
 
     const connectedSlugs = connectedApps.reduce(
@@ -50,33 +61,72 @@ export function IntegrationsList({
       {} as Record<string, string>,
     )
 
-    const availableApps: SearchableOptionItem<IntegrationType>[] = pipedreamApps
-      .filter((app) => !connectedSlugs[app.name_slug])
-      .map(
-        (app) =>
-          ({
-            type: 'item',
-            value: app.name_slug,
-            keywords: [app.name, app.name_slug],
-            metadata: { type: IntegrationType.Pipedream },
-            title: app.name,
-            description: `${app.triggerCount} triggers`,
-            imageIcon: {
-              type: 'image',
-              src: app.img_src,
-              alt: app.name,
-            },
-          }) satisfies SearchableOptionItem<IntegrationType>,
-      )
+    const availableApps: SearchableOptionItem<TriggerIntegrationType>[] =
+      pipedreamApps
+        .filter((app) => !connectedSlugs[app.name_slug])
+        .map(
+          (app) =>
+            ({
+              type: 'item',
+              value: app.name_slug,
+              keywords: [app.name, app.name_slug],
+              metadata: { type: DocumentTriggerType.Integration },
+              title: app.name,
+              description: `${app.triggerCount} triggers`,
+              imageIcon: {
+                type: 'image',
+                src: app.img_src,
+                alt: app.name,
+              },
+            }) satisfies SearchableOptionItem<TriggerIntegrationType>,
+        )
 
-    const groups: SearchableOption<IntegrationType>[] = []
-
-    if (connectedApps.length) {
-      groups.push({
+    const groups: SearchableOption<TriggerIntegrationType>[] = [
+      {
         type: 'group',
         label: 'Available triggers',
-        items: connectedApps.map(buildIntegrationOption),
-      })
+        items: [
+          {
+            type: 'item',
+            value: 'latitude_chat',
+            title: 'Chat',
+            description: 'Chat with a prompt',
+            metadata: { type: 'Chat' },
+            imageIcon: { type: 'icon', name: ICONS_BY_TRIGGER.Chat! },
+          },
+          {
+            type: 'item',
+            value: 'latitude_email',
+            title: 'Email',
+            description: 'Run prompt on new emails',
+            metadata: { type: DocumentTriggerType.Email },
+            imageIcon: {
+              type: 'icon',
+              name: ICONS_BY_TRIGGER.email!,
+            },
+          },
+          {
+            type: 'item',
+            value: 'latitude_schedule',
+            title: 'Scheduled',
+            description: 'Run a prompt on a schedule',
+            metadata: { type: DocumentTriggerType.Scheduled },
+            imageIcon: {
+              type: 'icon',
+              name: ICONS_BY_TRIGGER.scheduled!,
+            },
+          },
+        ],
+      },
+    ]
+
+    if (connectedApps.length) {
+      const latitudeIntegrations =
+        groups[0]! as SearchableOptionGroup<TriggerIntegrationType>
+      latitudeIntegrations.items = [
+        ...latitudeIntegrations.items,
+        ...connectedApps.map(buildIntegrationOption),
+      ]
     }
 
     groups.push({
@@ -103,7 +153,7 @@ export function IntegrationsList({
     [loadMore, isLoadingMore, isReachingEnd, totalCount],
   )
 
-  const onSelectValue: OnSelectValue<IntegrationType> = useCallback(
+  const onSelectValue: OnSelectValue<TriggerIntegrationType> = useCallback(
     (slug, metadata) => {
       if (!slug || !metadata) return
 
@@ -114,7 +164,7 @@ export function IntegrationsList({
   )
 
   return (
-    <SearchableList<IntegrationType>
+    <SearchableList<TriggerIntegrationType>
       multiGroup
       items={optionGroups}
       onSearchChange={debouncedSetSearchQuery}

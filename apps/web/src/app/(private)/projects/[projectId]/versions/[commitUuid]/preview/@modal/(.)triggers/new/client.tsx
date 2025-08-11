@@ -9,14 +9,23 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { IntegrationsList } from './_components/IntegrationsList'
-import { TriggersList } from './_components/TriggersList'
-import { IntegrationType } from '@latitude-data/constants'
+import { PipedreamTrigger } from './_components/TriggerTypes/PipedreamTrigger'
+import { ChatTrigger } from './_components/TriggerTypes/ChatTrigger'
+import { ScheduleTrigger } from './_components/TriggerTypes/ScheduleTrigger'
+import { EmailTrigger } from './_components/TriggerTypes/EmailTrigger'
+import { DocumentTriggerType } from '@latitude-data/constants'
 import { useCallback, useState } from 'react'
 import type { DocumentTrigger } from '@latitude-data/core/browser'
 
+export type OnTriggerCreated = (dt?: DocumentTrigger) => void
+
+// TODO: Migrate chat (old share document to be a document trigger)
+// This requires a data migration although not sure how much people are using it
+export type TriggerIntegrationType = DocumentTriggerType | 'Chat'
+
 export type SelectedIntegration = {
   slug: string
-  type: IntegrationType
+  type: TriggerIntegrationType
 }
 
 function IntegrationDetail({
@@ -24,7 +33,7 @@ function IntegrationDetail({
   onTriggerCreated,
 }: {
   selectedIntegration?: SelectedIntegration | null
-  onTriggerCreated: (documentTrigger: DocumentTrigger) => void
+  onTriggerCreated: OnTriggerCreated
 }) {
   if (!selectedIntegration) {
     return (
@@ -33,15 +42,22 @@ function IntegrationDetail({
       </div>
     )
   }
+  const slug = selectedIntegration.slug
 
-  if (selectedIntegration.type !== IntegrationType.Pipedream) {
-    console.log('TODO: Implement Chat, Schedule and Email (latitude)')
-    return null
+  if (selectedIntegration.type === 'Chat') {
+    return <ChatTrigger onTriggerCreated={onTriggerCreated} />
   }
 
-  const slug = selectedIntegration.slug
+  if (selectedIntegration.type === DocumentTriggerType.Email) {
+    return <EmailTrigger onTriggerCreated={onTriggerCreated} />
+  }
+
+  if (selectedIntegration.type === DocumentTriggerType.Scheduled) {
+    return <ScheduleTrigger onTriggerCreated={onTriggerCreated} />
+  }
+
   return (
-    <TriggersList
+    <PipedreamTrigger
       key={slug}
       pipedreamSlug={slug}
       onTriggerCreated={onTriggerCreated}
@@ -61,12 +77,9 @@ export function NewTrigger() {
         .commits.detail({ uuid: commit.uuid }).preview.root,
     )
   }, [navigate, project.id, commit.uuid])
-  const onTriggerCreated = useCallback(
-    (_dt: DocumentTrigger) => {
-      onCloseModal()
-    },
-    [onCloseModal],
-  )
+  const onTriggerCreated: OnTriggerCreated = useCallback(() => {
+    onCloseModal()
+  }, [onCloseModal])
 
   return (
     <Modal

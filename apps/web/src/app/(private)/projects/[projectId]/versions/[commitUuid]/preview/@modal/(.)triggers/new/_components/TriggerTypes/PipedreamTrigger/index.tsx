@@ -5,27 +5,24 @@ import {
 } from '@latitude-data/web-ui/molecules/SearchableList'
 import { useCallback, useMemo, useState } from 'react'
 import type {
-  DocumentTrigger,
   PipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
+import { type OnTriggerCreated } from '../../../client'
 import { TriggerConfiguration } from './TriggerConfiguration'
 
 export type Trigger = PipedreamComponent<PipedreamComponentType.Trigger>
 const EMPTY_LIST: Trigger[] = []
 
-/**
- * This triggers are Pipedream triggers ONLY.
- */
-export function TriggersList({
+export function PipedreamTrigger({
   pipedreamSlug,
   onTriggerCreated,
 }: {
   pipedreamSlug: string
-  onTriggerCreated: (documentTrigger: DocumentTrigger) => void
+  onTriggerCreated: OnTriggerCreated
 }) {
   const [selectedTrigger, setTrigger] = useState<Trigger | null>(null)
   const { data: selectedPipedreamApp, isLoading } =

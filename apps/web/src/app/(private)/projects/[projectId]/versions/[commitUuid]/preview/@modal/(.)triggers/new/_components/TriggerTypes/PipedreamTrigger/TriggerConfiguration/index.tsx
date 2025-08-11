@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type {
   AppDto,
   DocumentTrigger,
@@ -17,6 +17,13 @@ import {
 import { useCreateDocumentTrigger } from './useCreateDocumentTrigger'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 
+function parseMarkdownLinks(text: string | undefined) {
+  if (!text) return ''
+  return text.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    `<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>`,
+  )
+}
 export function TriggerConfiguration({
   trigger,
   pipedreamApp,
@@ -36,12 +43,21 @@ export function TriggerConfiguration({
     payloadParameters: doc.payloadParameters,
   })
   const canCreateTrigger = account && doc.document
+  const parsedText = useMemo(
+    () => parseMarkdownLinks(trigger.description),
+    [trigger.description],
+  )
   return (
     <div className='flex flex-col gap-y-4 min-w-0'>
       <div>
-        <Text.H4>{trigger.name}</Text.H4>
-        <Text.H5 color='foregroundMuted' lineClamp={2}>
-          {trigger.description}
+        <Text.H4 display='block'>{trigger.name}</Text.H4>
+        <Text.H5 asChild color='foregroundMuted' display='block'>
+          <div
+            className='[&>a]:underline [&>a]:text-foreground'
+            dangerouslySetInnerHTML={{
+              __html: parsedText,
+            }}
+          />
         </Text.H5>
       </div>
 
