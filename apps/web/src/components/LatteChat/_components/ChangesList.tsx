@@ -1,10 +1,11 @@
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
+'use client'
+import { DocumentRoutes, ROUTES } from '$/services/routes'
 import { ModifiedDocumentType } from '@latitude-data/constants'
+import { LatteChange } from '@latitude-data/constants/latte'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
 import Link from 'next/link'
-import { DocumentRoutes, ROUTES } from '$/services/routes'
-import { LatteChange } from '@latitude-data/constants/latte'
 
 function ChangeListItem({ change }: { change: LatteChange }) {
   const path = change.current.path
@@ -73,31 +74,41 @@ export function ChangeList({
   }
 
   return (
-    <div className='w-full flex flex-col gap-2 border border-input p-2 rounded-t-md'>
+    <div className='w-full flex flex-col gap-2 border-latte-widget border-2 py-2 px-3 rounded-t-2xl'>
       <div className='w-full flex items-center justify-between'>
-        <Text.H4>Changes</Text.H4>
-        <div className='flex items-center gap-2'>
+        <Text.H4M color='latteInputForeground' userSelect={false}>
+          Changes
+        </Text.H4M>
+        <div className='flex items-center gap-4'>
           <Button
-            variant='outline'
+            variant='ghost'
+            size='none'
             onClick={undoChanges}
             disabled={disabled}
-            fancy
             iconProps={{
               name: 'undo',
               color: 'latteInputForeground',
+              className:
+                'flex-shrink-0 group-hover:text-latte-input-foreground/75 stroke-[1.5]',
             }}
+            className='text-latte-input-foreground group-hover:text-latte-input-foreground/75 font-light'
+            userSelect={false}
           >
             Undo
           </Button>
           <Button
-            variant='latte'
+            variant='ghost'
+            size='none'
             onClick={acceptChanges}
             disabled={disabled}
-            fancy
             iconProps={{
-              name: 'check',
+              name: 'checkClean',
               color: 'latteInputForeground',
+              className:
+                'flex-shrink-0 group-hover:text-latte-input-foreground/75',
             }}
+            className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
+            userSelect={false}
           >
             Accept
           </Button>

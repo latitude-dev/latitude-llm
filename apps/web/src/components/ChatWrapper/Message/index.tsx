@@ -11,19 +11,19 @@ import {
   ToolContent,
 } from '@latitude-data/constants/legacyCompiler'
 
-import { AgentToolsMap } from '@latitude-data/constants'
+import { AgentToolsMap, isSafeUrl } from '@latitude-data/constants'
+import { Badge, BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Image } from '@latitude-data/web-ui/atoms/Image'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { colors, font, TextColor } from '@latitude-data/web-ui/tokens'
+import { cn } from '@latitude-data/web-ui/utils'
 import { roleToString, roleVariant } from '..'
 import { ToolCallContent } from './ToolCall'
-import { Image } from '@latitude-data/web-ui/atoms/Image'
-import { Badge, BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { cn } from '@latitude-data/web-ui/utils'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
-import { colors, font, TextColor } from '@latitude-data/web-ui/tokens'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 
 export { roleToString, roleVariant } from './helpers'
 
@@ -518,7 +518,7 @@ function FileComponent({ src }: { src: string }) {
         wordBreak='breakAll'
         color={isHovering ? 'accentForeground' : 'foregroundMuted'}
       >
-        {src.split('/').at(-1)}
+        {src.split('/').at(-1) || 'Unnamed file'}
       </Text.H5>
     </a>
   )
@@ -589,17 +589,6 @@ function groupSegments(segments: Segment[]) {
   return groups
 }
 
-function isValidUrl(url: unknown) {
-  const isUrl =
-    url instanceof URL || (typeof url === 'string' && URL.canParse(url))
-  if (!isUrl) return false
-
-  if (url.toString().startsWith('https')) return true
-  if (url.toString().startsWith('http://localhost')) return true
-
-  return false
-}
-
 const ContentImage = memo(
   ({
     index = 0,
@@ -623,7 +612,7 @@ const ContentImage = memo(
       [image, sourceMap, parameters],
     )[0]
 
-    if (!isValidUrl(image)) {
+    if (!isSafeUrl(image)) {
       const TextComponent = size === 'small' ? Text.H6 : Text.H5
 
       return (
@@ -694,7 +683,7 @@ const ContentFile = memo(
       [file, sourceMap, parameters],
     )[0]
 
-    if (!isValidUrl(file)) {
+    if (!isSafeUrl(file)) {
       return (
         <div className='flex flex-row p-4 gap-2 bg-muted rounded-xl w-fit items-center'>
           <Icon name='fileOff' color='foregroundMuted' />

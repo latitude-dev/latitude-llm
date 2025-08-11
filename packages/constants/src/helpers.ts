@@ -65,3 +65,14 @@ export function simplifyDocument(
     isDeleted: document.deletedAt !== null,
   }
 }
+
+export function isSafeUrl(url: unknown): boolean {
+  const isUrl =
+    url instanceof URL || (typeof url === 'string' && URL.canParse(url))
+  if (!isUrl) return false
+
+  if (url.toString().startsWith('https')) return true
+  if (url.toString().startsWith('http://localhost')) return true
+
+  return false
+}

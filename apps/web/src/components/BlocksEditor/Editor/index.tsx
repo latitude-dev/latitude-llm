@@ -16,6 +16,8 @@ import { useCallback, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { BlocksEditorProps } from '../types'
 import { CodeNode } from './nodes/CodeNode'
+import { FileNode } from './nodes/FileNode'
+import { ImageNode } from './nodes/ImageNode'
 import { MessageBlockNode } from './nodes/MessageBlock'
 import { ReferenceNode } from './nodes/ReferenceNode'
 import { StepBlockNode } from './nodes/StepBlock'
@@ -93,7 +95,6 @@ export function BlocksEditor({
   prompts,
   onRequestPromptMetadata,
   onToggleDevEditor,
-  Link,
   readOnlyMessage,
   autoFocus = false,
 }: BlocksEditorProps) {
@@ -119,6 +120,8 @@ export function BlocksEditor({
         StepBlockNode,
         VariableNode,
         ReferenceNode,
+        ImageNode,
+        FileNode,
       ],
     }
   }, [readOnly, onError, initialValue])
@@ -126,7 +129,6 @@ export function BlocksEditor({
   return (
     <BlocksEditorProvider
       currentDocument={currentDocument}
-      Link={Link}
       prompts={prompts}
       readOnly={readOnly}
     >

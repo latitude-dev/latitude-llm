@@ -15,7 +15,6 @@ import {
   ReferenceLink,
   TemplateNode,
   TextBlock,
-  ToolCallBlock,
 } from './types'
 
 export function expressionToString(
@@ -280,8 +279,8 @@ export function getStepAttributes({
   const { as, isolated, ...rest } = attributes
 
   const attr: Record<string, string | boolean | object> = {}
-  if (typeof as === 'string') attr.as = as.trim()
-  if (isolated === true) attr.isolated = true
+  if (as && typeof as === 'string') attr.as = as.trim()
+  if (isolated && typeof isolated === 'boolean') attr.isolated = isolated
 
   if (Object.keys(rest).length) {
     attr.otherAttributes = rest
@@ -305,33 +304,6 @@ export function getContentFileAttributes({
   })
 
   return attributes as FileBlock['attributes']
-}
-
-export function getToolCallAttributes({
-  tag,
-  prompt,
-}: {
-  tag: ElementTag
-  prompt: string
-}) {
-  let attr: ToolCallBlock['attributes'] = {}
-  const attributes = getAttributes({
-    tag,
-    prompt,
-  })
-
-  attr.id = 'id' in attributes ? (attributes.id as string) : ''
-  attr.name = 'name' in attributes ? (attributes.name as string) : ''
-  if ('id' in attributes) {
-    delete attributes.id
-  }
-  if ('name' in attributes) {
-    delete attributes.name
-  }
-
-  attr.parameters = attributes
-
-  return attr
 }
 
 export function createTextNode({ text }: { text: string }) {

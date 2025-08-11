@@ -14,7 +14,6 @@ import {
   ICommitContextType,
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
-import Link from 'next/link'
 import { Config, scan } from 'promptl-ai'
 import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { stringify as stringifyObjectToYaml } from 'yaml'
@@ -122,7 +121,6 @@ export const PlaygroundBlocksEditor = memo(
           document={document}
           prompts={prompts}
           onError={onError}
-          Link={Link}
           onRequestPromptMetadata={onRequestPromptMetadata}
           onToggleDevEditor={toggleDevEditor}
           onChange={onChangePrompt}

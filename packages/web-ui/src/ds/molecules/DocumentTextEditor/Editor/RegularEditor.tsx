@@ -82,7 +82,6 @@ export function RegularMonacoEditor({
   // to avoid race conditions
   const [isEditorMounted, setIsEditorMounted] = useState(false)
   const { options } = useEditorOptions({
-    tabSize: 2,
     readOnly: !!readOnlyMessage,
     readOnlyMessage: readOnlyMessage
       ? { value: readOnlyMessage, supportHtml: true }

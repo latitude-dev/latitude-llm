@@ -39,6 +39,7 @@ export {
   StreamEventTypes,
   type LegacyChainEvent,
   EMAIL_REGEX,
+  isSafeUrl,
 } from '@latitude-data/constants'
 export * from '@latitude-data/constants/evaluations'
 export * from '@latitude-data/constants/tracing'

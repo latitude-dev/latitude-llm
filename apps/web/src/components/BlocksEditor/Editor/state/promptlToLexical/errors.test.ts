@@ -1,15 +1,15 @@
-import { describe, it, expect } from 'vitest'
-import { parse } from 'promptl-ai'
-import { fromAstToBlocks } from './fromAstToBlocks'
 import { AstError } from '@latitude-data/constants/promptl'
+import { parse } from 'promptl-ai'
+import { describe, expect, it } from 'vitest'
+import { fromAstToBlocks } from './fromAstToBlocks'
 import {
-  StepBlock,
-  MessageBlock,
-  ReferenceLink,
-  ToolCallBlock,
+  CodeBlock,
   FileBlock,
   ImageBlock,
+  MessageBlock,
   ParagraphBlock,
+  ReferenceLink,
+  StepBlock,
 } from './types'
 
 describe('astToSimpleBlocks with errors', () => {
@@ -108,37 +108,6 @@ describe('astToSimpleBlocks with errors', () => {
       )
       expect(promptBlock.errors?.[1]?.message).toBe(
         'Invalid location attribute',
-      )
-    })
-  })
-
-  describe('tool-call block errors', () => {
-    it('should map errors to tool-call blocks', () => {
-      const prompt = `<tool-call name="test" />`
-      const ast = parse(prompt)
-
-      const errors: AstError[] = [
-        {
-          startIndex: 0,
-          endIndex: 23,
-          start: { line: 1, column: 1 },
-          end: { line: 1, column: 24 },
-          message: 'Tool call must have an id attribute',
-          name: 'CompileError',
-        },
-      ]
-
-      const root = fromAstToBlocks({ ast, prompt, errors })
-      const blocks = root.children
-
-      expect(blocks).toHaveLength(1)
-      const paragraphBlock = blocks[0] as ParagraphBlock
-      const toolCallBlock = paragraphBlock.children[0] as ToolCallBlock
-      expect(toolCallBlock.type).toBe('tool_call')
-      expect(toolCallBlock.errors).toBeDefined()
-      expect(toolCallBlock.errors).toHaveLength(1)
-      expect(toolCallBlock.errors?.[0]?.message).toBe(
-        'Tool call must have an id attribute',
       )
     })
   })
@@ -301,7 +270,8 @@ describe('astToSimpleBlocks with errors', () => {
       expect(stepBlock.type).toBe('step')
       expect(stepBlock.errors).toBeUndefined() // No error for step itself
 
-      const userBlock = stepBlock.children[1] as MessageBlock
+      expect(stepBlock.children).toHaveLength(1)
+      const userBlock = stepBlock.children[0] as MessageBlock
       expect(userBlock.role).toBe('user')
       expect(userBlock.errors).toBeDefined()
       expect(userBlock.errors).toHaveLength(1)
@@ -340,14 +310,6 @@ Then call this tool:
           message: 'Content file must have name attribute',
           name: 'CompileError',
         },
-        {
-          startIndex: 171, // Position of tool-call (corrected from 130)
-          endIndex: 225,
-          start: { line: 8, column: 1 },
-          end: { line: 8, column: 53 },
-          message: 'Tool call must have id attribute',
-          name: 'CompileError',
-        },
       ]
 
       const root = fromAstToBlocks({ ast, prompt, errors })
@@ -355,12 +317,14 @@ Then call this tool:
 
       expect(blocks).toHaveLength(1)
       const userBlock = blocks[0] as MessageBlock
+      expect(userBlock.type).toBe('message')
       expect(userBlock.role).toBe('user')
       expect(userBlock.errors).toBeUndefined()
 
       // @ts-ignore
-      const fileBlock = userBlock.children[2].children[0] as FileBlock
+      const fileBlock = userBlock.children[1].children[0] as FileBlock
       expect(fileBlock).toBeDefined()
+      expect(fileBlock.type).toBe('content_file')
       expect(fileBlock.errors).toBeDefined()
       expect(fileBlock.errors).toHaveLength(1)
       expect(fileBlock.errors?.[0]?.message).toBe(
@@ -368,18 +332,17 @@ Then call this tool:
       )
 
       // @ts-ignore
-      const imageBlock = userBlock.children[5].children[0] as ImageBlock
+      const imageBlock = userBlock.children[4].children[0] as ImageBlock
       expect(imageBlock).toBeDefined()
+      expect(imageBlock.type).toBe('content_image')
       expect(imageBlock.errors).toBeUndefined() // No error for image
 
       // @ts-ignore
-      const toolCallBlock = userBlock.children[8].children[0] as ToolCallBlock
+      const toolCallBlock = userBlock.children[7] as CodeBlock
       expect(toolCallBlock).toBeDefined()
+      expect(toolCallBlock.type).toBe('code')
       expect(toolCallBlock.errors).toBeDefined()
-      expect(toolCallBlock.errors).toHaveLength(1)
-      expect(toolCallBlock.errors?.[0]?.message).toBe(
-        'Tool call must have id attribute',
-      )
+      expect(toolCallBlock.errors).toHaveLength(0)
     })
   })
 

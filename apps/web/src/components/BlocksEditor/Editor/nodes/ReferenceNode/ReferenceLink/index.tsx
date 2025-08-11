@@ -1,4 +1,5 @@
 import { resolveRelativePath } from '@latitude-data/constants'
+import { AstError } from '@latitude-data/constants/promptl'
 import {
   DropdownMenu,
   MenuOption,
@@ -7,11 +8,23 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
+import Link from 'next/link'
 import { EventHandler, MouseEvent, useCallback, useMemo } from 'react'
 import { triggerReferencePathUpdate } from '../../../plugins/ReferenceEditPlugin'
 import { triggerToggleDevEditor } from '../../../plugins/ReferencesPlugin'
 import { useBlocksEditorContext } from '../../../Provider'
 import { ReferenceLink as SerializedReferenceLink } from '../../../state/promptlToLexical/types'
+
+function createLinkError(message: string): AstError {
+  return {
+    startIndex: 0,
+    endIndex: 0,
+    start: { line: 0, column: 0 },
+    end: { line: 0, column: 0 },
+    message: message,
+    name: 'ReferenceLinkError',
+  }
+}
 
 function LoadingLink() {
   return (
@@ -49,6 +62,7 @@ function LinkInfo({
           ellipsis
           noWrap
           color={hasErrors ? 'destructive' : 'foreground'}
+          userSelect={false}
         >
           {path}
         </Text.H5M>
@@ -60,7 +74,13 @@ function LinkInfo({
   if (!hasErrors) return linkText
 
   return (
-    <Tooltip variant='destructive' align='start' asChild trigger={linkText}>
+    <Tooltip
+      variant='destructive'
+      align='start'
+      sideOffset={8}
+      asChild
+      trigger={linkText}
+    >
       {errors && errors.length > 0
         ? errors[0]?.message
         : 'Missing values. Click to configure'}
@@ -72,7 +92,7 @@ function ReferenceLinkReal({
   nodeKey,
   path: relativePath,
   attributes: initialAttributes,
-  errors,
+  errors: initialErrors,
   readOnly,
 }: {
   nodeKey: string
@@ -81,7 +101,7 @@ function ReferenceLinkReal({
   attributes: SerializedReferenceLink['attributes']
   readOnly?: boolean
 }) {
-  const { Link, currentDocument, prompts } = useBlocksEditorContext()
+  const { currentDocument, prompts } = useBlocksEditorContext()
 
   const promptOptions = useMemo<MenuOption[]>(
     () =>
@@ -103,9 +123,20 @@ function ReferenceLinkReal({
       (initialAttributes[k] === undefined || initialAttributes[k] === null),
   )
   const missingValues = attributeKeys.length > 0
-  const hasErrors = useMemo(() => {
-    return (errors && errors.length > 0) || missingValues
-  }, [errors, missingValues])
+  const errors = useMemo(() => {
+    const errors = [...(initialErrors || [])]
+
+    if (!url) {
+      errors.push(createLinkError('Cannot reference agentic prompts'))
+    }
+
+    if (missingValues) {
+      errors.push(createLinkError('Missing values. Click to configure'))
+    }
+
+    return errors
+  }, [initialErrors, url, missingValues])
+  const hasErrors = errors && errors.length > 0
   const onClickLink: EventHandler<MouseEvent<HTMLAnchorElement>> = useCallback(
     (event) => {
       if (hasErrors) {
@@ -118,11 +149,10 @@ function ReferenceLinkReal({
       if (!url) {
         event.preventDefault()
         event.stopPropagation()
-        alert(`No URL found for prompt at path: ${path}`)
         return
       }
     },
-    [hasErrors, url, path],
+    [hasErrors, url],
   )
 
   return (
@@ -135,7 +165,7 @@ function ReferenceLinkReal({
     >
       <Link
         onClick={onClickLink}
-        href={url!} // We hope for the best
+        href={url || '#'}
         className='inline-flex items-baseline min-w-0 flex-grow'
       >
         <LinkInfo hasErrors={hasErrors} errors={errors} path={path} />

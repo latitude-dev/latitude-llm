@@ -15,9 +15,11 @@ type Props = {
   title?: string | ReactNode
   description?: string | ReactNode
   direction?: 'row' | 'column'
+  spacing?: 'small' | 'medium'
   cta?: ReactNode
   showIcon?: boolean
   centered?: boolean
+  className?: string
 }
 
 const IconColor: Record<string, TextColor> = {
@@ -35,9 +37,11 @@ export function Alert({
   showIcon = true,
   variant = 'default',
   centered = false,
+  spacing = 'medium',
+  className,
 }: Props) {
   return (
-    <AlertRoot variant={variant}>
+    <AlertRoot variant={variant} className={className}>
       {showIcon && (
         <Icon
           name='alert'
@@ -46,10 +50,12 @@ export function Alert({
         />
       )}
       <div
-        className={cn('flex items-center gap-4 lg:gap-8 justify-between', {
+        className={cn('flex items-start justify-between', {
           'flex-row ': direction === 'row',
           'flex-col': direction === 'column',
-          'justify-center': centered,
+          'items-center justify-center': centered,
+          'gap-4 lg:gap-8': spacing === 'medium',
+          'gap-2.5 lg:gap-5': spacing === 'small',
         })}
       >
         <div

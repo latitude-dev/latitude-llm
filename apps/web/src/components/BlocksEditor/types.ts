@@ -1,8 +1,6 @@
 import { updateContentFn } from '$/hooks/useDocumentValueContext'
 import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import { ConversationMetadata } from 'promptl-ai'
-import { ComponentType, EventHandler, MouseEvent, ReactNode } from 'react'
-import type { UrlObject } from 'url'
 import { BlockRootNode } from './Editor/state/promptlToLexical/types'
 
 export type IncludedPrompt = {
@@ -23,12 +21,6 @@ export type BlocksEditorProps = {
   placeholder: string
   onToggleDevEditor: () => void
   onError: (error: Error) => void
-  Link: ComponentType<{
-    children: ReactNode
-    href: string | UrlObject
-    className?: string
-    onClick?: EventHandler<MouseEvent<HTMLAnchorElement>>
-  }>
   prompts: Record<string, IncludedPrompt>
   onRequestPromptMetadata: (
     prompt: IncludedPrompt,

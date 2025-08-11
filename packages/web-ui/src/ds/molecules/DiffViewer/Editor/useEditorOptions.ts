@@ -42,6 +42,11 @@ export function useEditorOptions(
     wordWrap: wrapText ? 'on' : 'off',
     readOnly: true,
     readOnlyMessage: '',
+    tabSize: 2,
+    insertSpaces: true,
+    trimAutoWhitespace: true,
+    cursorBlinking: 'smooth',
+    detectIndentation: false,
     ...overrides,
   } as editor.IEditorOptions
 
