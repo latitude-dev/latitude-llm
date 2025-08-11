@@ -1,11 +1,12 @@
 import { and, eq, getTableColumns } from 'drizzle-orm'
 
-import { IntegrationDto } from '../browser'
+import { IntegrationDto, PipedreamIntegration } from '../browser'
 import { LatitudeError, NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { PromisedResult } from '../lib/Transaction'
 import { integrations } from '../schema'
 import Repository from './repositoryV2'
+import { IntegrationType } from '@latitude-data/constants'
 
 const tt = getTableColumns(integrations)
 
@@ -34,5 +35,31 @@ export class IntegrationsRepository extends Repository<IntegrationDto> {
     }
 
     return Result.ok(result[0]! as IntegrationDto)
+  }
+
+  async getConnectedPipedreamApps({
+    withTools,
+    withTriggers,
+  }: {
+    withTools?: boolean
+    withTriggers?: boolean
+  } = {}) {
+    const filters = []
+
+    if (withTools !== undefined) {
+      filters.push(eq(integrations.hasTools, withTools))
+    }
+
+    if (withTriggers !== undefined) {
+      filters.push(eq(integrations.hasTriggers, withTriggers))
+    }
+
+    return this.scope.where(
+      and(
+        this.scopeFilter,
+        eq(integrations.type, IntegrationType.Pipedream),
+        ...filters,
+      ),
+    ) as Promise<PipedreamIntegration[]>
   }
 }

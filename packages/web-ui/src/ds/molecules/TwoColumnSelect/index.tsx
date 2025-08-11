@@ -24,23 +24,17 @@ function LoadingOptionSkeleton() {
   )
 }
 
+const LOADING_BLOCKS = Array.from({ length: 20 })
+
 function LoadingSelectorSkeleton() {
-  return (
-    <div className='flex flex-row w-full max-h-full overflow-hidden'>
-      <div className='flex flex-col w-1/2 max-h-full border-r border-border overflow-hidden'>
-        <LoadingOptionSkeleton />
-        <LoadingOptionSkeleton />
-        <LoadingOptionSkeleton />
-      </div>
-    </div>
-  )
+  return LOADING_BLOCKS.map((_, i) => <LoadingOptionSkeleton key={i} />)
 }
 
 export type TwoColumnSelectOption<V extends unknown = unknown> = {
   value: V
   name: string
   label: string
-  icon: IconName | JSX.Element
+  icon?: IconName | JSX.Element
   isActive?: boolean
 }
 
@@ -152,45 +146,61 @@ export function TwoColumnSelect<V extends unknown = unknown>({
     [onChange],
   )
 
-  if (loading) return <LoadingSelectorSkeleton />
-
+  const twoColumns = loading || options.length > 0
   return (
-    <div className='flex flex-row w-full max-h-full overflow-hidden relative'>
-      <div className='flex flex-col w-[55%] border-r border-border '>
-        <Command unstyled autoFocus>
-          <CommandList autoFocus maxHeight='auto'>
-            <div className='flex flex-col gap-y-1 mb-1 pl-1 pr-1 pt-1'>
-              {options.map((option, i) => (
-                <OptionItem
-                  key={i}
-                  disabled={disabled}
-                  name={option.name}
-                  value={option.value}
-                  label={option.label}
-                  icon={option.icon}
-                  isActive={option.isActive}
-                  isSelected={option.value === selectedValue}
-                  onSelect={onSelect(option.value)}
+    <div
+      className={cn('grid w-full h-full max-h-full overflow-hidden relative', {
+        'grid-cols-2': twoColumns,
+      })}
+    >
+      <div
+        className={cn('flex flex-col', {
+          'overflow-y-auto custom-scrollbar': !loading,
+          'border-r border-border': twoColumns,
+        })}
+      >
+        {loading ? (
+          <LoadingSelectorSkeleton />
+        ) : (
+          <>
+            <Command unstyled autoFocus>
+              <CommandList autoFocus maxHeight='auto'>
+                <div className='flex flex-col gap-y-1 mb-1 pl-1 pr-1 pt-1'>
+                  {options.map((option, i) => (
+                    <OptionItem
+                      key={i}
+                      disabled={disabled}
+                      name={option.name}
+                      value={option.value}
+                      label={option.label}
+                      icon={option.icon}
+                      isActive={option.isActive}
+                      isSelected={option.value === selectedValue}
+                      onSelect={onSelect(option.value)}
+                    />
+                  ))}
+                  <CommandEmpty>
+                    <Text.H6>{emptySlateLabel}</Text.H6>
+                  </CommandEmpty>
+                </div>
+              </CommandList>
+            </Command>
+            {addNew ? (
+              <div className='flex flex-col border-border border-t p-2'>
+                <AddNewItem
+                  onAddNew={addNew.onAddNew}
+                  addNewLabel={addNew.addNewLabel}
                 />
-              ))}
-              <CommandEmpty>
-                <Text.H6>{emptySlateLabel}</Text.H6>
-              </CommandEmpty>
-            </div>
-          </CommandList>
-        </Command>
-        {addNew ? (
-          <div className='flex flex-col border-border border-t p-2'>
-            <AddNewItem
-              onAddNew={addNew.onAddNew}
-              addNewLabel={addNew.addNewLabel}
-            />
-          </div>
-        ) : null}
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
-      <div className='flex flex-col w-full overflow-auto custom-scrollbar relative bg-backgroundCode'>
-        {children}
-      </div>
+      {options.length > 0 ? (
+        <div className='flex flex-col w-full overflow-auto custom-scrollbar relative bg-backgroundCode'>
+          {children}
+        </div>
+      ) : null}
     </div>
   )
 }

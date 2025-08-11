@@ -6,7 +6,6 @@ import {
   DocumentTriggersRepository,
   IntegrationsRepository,
 } from '@latitude-data/core/repositories'
-import { TriggersBlankSlate } from './_components/TriggersBlankSlate'
 
 export default async function PreviewPage({
   params,
@@ -31,15 +30,11 @@ export default async function PreviewPage({
     <div className='flex-1 min-h-0'>
       <LatteLayout>
         <div className='flex flex-col h-full p-4'>
-          {integrationTriggers.length > 0 ? (
-            <TriggersList
-              triggers={integrationTriggers}
-              // @ts-expect-error - integrations is a union type but we are only passing pipedream type integrations
-              integrations={integrations}
-            />
-          ) : (
-            <TriggersBlankSlate />
-          )}
+          <TriggersList
+            triggers={integrationTriggers}
+            // @ts-expect-error - integrations is a union type but we are only passing pipedream type integrations
+            integrations={integrations}
+          />
         </div>
       </LatteLayout>
     </div>

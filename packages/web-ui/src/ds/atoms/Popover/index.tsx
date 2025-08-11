@@ -13,7 +13,7 @@ import { zIndex } from '../../tokens/zIndex'
 
 export type PopoverContentProps = RadixPopover.PopoverContentProps & {
   inPortal?: boolean
-  size?: 'small' | 'medium' | 'large'
+  size?: 'small' | 'medium' | 'large' | 'auto'
   scrollable?: boolean
   maxHeight?: 'normal' | 'none'
   width?: number
@@ -39,6 +39,7 @@ const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
         'bg-background shadow-lg rounded-md',
         'mt-1 border border-border',
         'gap-y-4 flex flex-col',
+        'w-[var(--radix-popover-trigger-width)]',
         zIndex.popover,
         {
           'custom-scrollbar': scrollable,

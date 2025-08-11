@@ -20,6 +20,7 @@ import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { TriggersBlankSlate } from './TriggersBlankSlate'
 
 type IntegrationTrigger = Extract<
   DocumentTrigger,
@@ -51,7 +52,10 @@ export function TriggersList({
   )
   const { data: integrations } = useIntegrations({
     fallbackData: fallbackIntegrations,
+    withTriggers: true,
   })
+
+  if (integrationTriggers.length === 0) return <TriggersBlankSlate />
 
   return (
     <div className='flex-1 flex flex-col gap-6 items-start justify-start w-full h-full'>
@@ -92,7 +96,6 @@ function DeleteTriggerButton({ trigger }: { trigger: IntegrationTrigger }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { delete: deleteTrigger, isDeleting } = useDocumentTriggers(
     {
-      documentUuid: trigger.documentUuid,
       projectId: trigger.projectId,
     },
     {

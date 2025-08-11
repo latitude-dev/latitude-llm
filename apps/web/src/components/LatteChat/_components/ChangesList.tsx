@@ -1,4 +1,3 @@
-'use client'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ModifiedDocumentType } from '@latitude-data/constants'
