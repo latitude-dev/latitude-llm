@@ -3,12 +3,12 @@ import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { SpanProcessArgs } from './shared'
 
-const specification = SPAN_SPECIFICATIONS[SpanType.Segment]
-export const SegmentSpanSpecification = {
+const specification = SPAN_SPECIFICATIONS[SpanType.Prompt]
+export const PromptSpanSpecification = {
   ...specification,
   process: process,
 }
 
-async function process(_: SpanProcessArgs<SpanType.Segment>, __ = database) {
+async function process(_: SpanProcessArgs<SpanType.Prompt>, __ = database) {
   return Result.ok({})
 }

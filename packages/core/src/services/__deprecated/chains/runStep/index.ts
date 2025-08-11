@@ -9,7 +9,6 @@ import {
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
   StreamType,
-  TraceContext,
 } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
@@ -18,7 +17,6 @@ import { ChainStreamManager } from '../../../../__deprecated/lib/chainStreamMana
 import { buildMessagesFromResponse, Workspace } from '../../../../browser'
 import { LogSources } from '../../../../constants'
 import { Result } from '../../../../lib/Result'
-import { telemetry, TelemetryContext } from '../../../../telemetry'
 import { cacheChain } from '../chainCache'
 import {
   ConfigOverrides,
@@ -55,7 +53,6 @@ function assertValidStepCount({
 }
 
 export type StepProps = {
-  context: TelemetryContext
   chainStreamManager: ChainStreamManager
   workspace: Workspace
   source: LogSources
@@ -74,7 +71,6 @@ export type StepProps = {
 }
 
 export async function runStep({
-  context,
   chainStreamManager,
   workspace,
   source,
@@ -94,16 +90,12 @@ export async function runStep({
   injectAgentFinishTool = false,
 }: StepProps): Promise<{
   conversation: Conversation
-  trace: TraceContext
 }> {
-  let trace = telemetry.pause(context)
-
   if (newMessages?.length) {
     const lastResponseMessage = newMessages[0]! as AssistantMessage
     const latitudeToolResponses =
       // Built-in tools are executed after client tools
       await chainStreamManager.handleBuiltInToolCalls({
-        context: context, // Note: context from previous (maybe paused) step
         message: lastResponseMessage,
         config: previousConfig,
       })
@@ -112,13 +104,6 @@ export async function runStep({
       ...latitudeToolResponses,
       ...newMessages.slice(1),
     ]
-  }
-
-  // Note: incoming context could be from a paused or previous
-  // step, so we need to restore the original context
-  if (!telemetry.restored(context)) {
-    context = telemetry.restore(context)
-    trace = telemetry.pause(context)
   }
 
   const step = await validateChain({
@@ -138,39 +123,25 @@ export async function runStep({
     step.chainCompleted &&
     !!previousResponse // If no previous response has been generated, make an additional step
   ) {
-    chainStreamManager.done(trace)
-    return { conversation: step.conversation, trace }
+    return { conversation: step.conversation }
   }
 
-  const $step = telemetry.step(context)
-  context = $step.context
-  trace = telemetry.pause(context)
+  assertValidStepCount({ stepCount, chain, step }).unwrap()
 
-  let result
-  try {
-    assertValidStepCount({ stepCount, chain, step }).unwrap()
-
-    const isAgent = step.conversation.config.type === 'agent'
-    const enableAgentOptimization =
-      !step.conversation.config.disableAgentOptimization
-    result = await chainStreamManager.getProviderResponse({
-      context,
-      source,
-      conversation: step.conversation,
-      provider: step.provider,
-      schema: step.schema,
-      output: step.output,
-      abortSignal,
-      injectFakeAgentStartTool:
-        isAgent && injectAgentFinishTool && enableAgentOptimization,
-      injectAgentFinishTool: isAgent && injectAgentFinishTool,
-    })
-
-    $step.end()
-  } catch (error) {
-    $step.fail(error as Error)
-    throw error
-  }
+  const isAgent = step.conversation.config.type === 'agent'
+  const enableAgentOptimization =
+    !step.conversation.config.disableAgentOptimization
+  const result = await chainStreamManager.getProviderResponse({
+    source,
+    conversation: step.conversation,
+    provider: step.provider,
+    schema: step.schema,
+    output: step.output,
+    abortSignal,
+    injectFakeAgentStartTool:
+      isAgent && injectAgentFinishTool && enableAgentOptimization,
+    injectAgentFinishTool: isAgent && injectAgentFinishTool,
+  })
 
   const isPromptl = chain instanceof PromptlChain
   const hasTools = isPromptl && result.clientToolCalls.length > 0
@@ -185,19 +156,17 @@ export async function runStep({
       previousResponse: result.response,
     })
 
-    chainStreamManager.requestTools(result.clientToolCalls, trace)
-    return { conversation: step.conversation, trace }
+    chainStreamManager.requestTools(result.clientToolCalls)
+    return { conversation: step.conversation }
   }
 
   // With Legacy Compiler, we already knew whether the step was the last one BEFORE it was executed
   // FIXME: this shouldn't be inside the current step context, but it's going to be deprecated soon
   if (step.chainCompleted) {
-    chainStreamManager.done(trace)
-    return { conversation: step.conversation, trace }
+    return { conversation: step.conversation }
   }
 
   return runStep({
-    context: telemetry.resume(trace), // Note: pseudo resume the step so the recursion treats equally paused or previous steps
     chainStreamManager,
     workspace,
     source,

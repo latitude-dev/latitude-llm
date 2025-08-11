@@ -1,6 +1,4 @@
 // TODO(tracing): deprecated
-export { SegmentSource as LogSources } from './tracing'
-
 export const HEAD_COMMIT = 'live'
 
 export enum Providers {

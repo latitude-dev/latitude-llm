@@ -218,7 +218,7 @@ describe('runChain', () => {
     const { value: stream } = await testConsumeStream(result.stream)
     const error = await result.error
 
-    expect(stream.at(-3)).toEqual({
+    expect(stream.at(-2)).toEqual({
       event: StreamEventTypes.Latitude,
       data: expect.objectContaining({
         type: ChainEventTypes.ChainError,

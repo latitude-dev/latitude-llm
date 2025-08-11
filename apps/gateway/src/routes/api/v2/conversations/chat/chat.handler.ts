@@ -7,7 +7,6 @@ import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { convertToLegacyChainStream } from '@latitude-data/core/lib/streamManager/index'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { addMessagesLegacy } from '@latitude-data/core/services/__deprecated/documentLogs/addMessages/index'
-import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { captureException } from '@sentry/node'
 import { streamSSE } from 'hono/streaming'
 
@@ -21,10 +20,8 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
     stream: newStream,
     lastResponse,
     error,
-    trace,
   } = (
     await addMessagesLegacy({
-      context: BACKGROUND({ workspaceId: workspace.id }),
       workspace,
       documentLogUuid: conversationUuid,
       // @ts-expect-error: messages is Message[] from compiler
@@ -66,8 +63,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   if (awaitedError) throw awaitedError
 
   const awaitedResponse = await lastResponse
-  const awaitedTrace = await trace
-  const body = v2RunPresenter(awaitedResponse!, awaitedTrace).unwrap()
+  const body = v2RunPresenter(awaitedResponse!).unwrap()
 
   return c.json(body, 200)
 }

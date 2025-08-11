@@ -1,7 +1,7 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { Workspace } from '@latitude-data/core/browser'
-import { SegmentsRepository } from '@latitude-data/core/repositories'
+import { SpansRepository } from '@latitude-data/core/repositories'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
@@ -20,10 +20,8 @@ export const GET = errorHandler(
     ) => {
       const { conversationId } = params
 
-      const repository = new SegmentsRepository(workspace.id)
-      const traces = await repository
-        .listTracesByLog({ logUuid: conversationId })
-        .then((r) => r.unwrap())
+      const repository = new SpansRepository(workspace.id)
+      const traces = await repository.listTracesByLog(conversationId)
 
       return NextResponse.json(traces, { status: 200 })
     },

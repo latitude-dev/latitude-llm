@@ -3,7 +3,6 @@ import { ManualInstrumentation } from '$telemetry/instrumentations/manual'
 import {
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS,
-  SegmentSource,
 } from '@latitude-data/constants'
 import type * as latitude from '@latitude-data/sdk'
 import * as otel from '@opentelemetry/api'
@@ -19,12 +18,8 @@ export class LatitudeInstrumentation implements BaseInstrumentation {
   private readonly options: LatitudeInstrumentationOptions
   private readonly telemetry: ManualInstrumentation
 
-  constructor(
-    source: SegmentSource,
-    tracer: otel.Tracer,
-    options: LatitudeInstrumentationOptions,
-  ) {
-    this.telemetry = new ManualInstrumentation(source, tracer)
+  constructor(tracer: otel.Tracer, options: LatitudeInstrumentationOptions) {
+    this.telemetry = new ManualInstrumentation(tracer)
     this.options = options
   }
 

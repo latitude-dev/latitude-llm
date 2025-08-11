@@ -113,7 +113,7 @@ export async function resolveAgentsAsTools({
             document: doc,
             referenceFn,
             streamManager,
-            context: streamManager.$step!.context,
+            context: streamManager.$completion!.context,
           }),
           sourceData: {
             source: ToolSource.AgentAsTool,

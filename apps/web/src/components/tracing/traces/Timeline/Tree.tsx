@@ -128,9 +128,7 @@ const TimelineTreeItem = memo(
     toggleCollapsed: (spanId: string) => void
   }) => {
     const specification = SPAN_SPECIFICATIONS[span.type]
-
     const isExpanded = !collapsedSpans.has(span.id)
-
     const currentEndedLevels = useMemo(() => {
       if (!isLast) return ancestorEndedLevels
       const newSet = new Set(ancestorEndedLevels)

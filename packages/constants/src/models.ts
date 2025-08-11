@@ -1,6 +1,19 @@
-import { LogSources } from '.'
 import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
 import { PartialPromptConfig } from './ai'
+
+export enum LogSources {
+  API = 'api',
+  AgentAsTool = 'agent_as_tool',
+  Copilot = 'copilot',
+  EmailTrigger = 'email_trigger',
+  Evaluation = 'evaluation',
+  Experiment = 'experiment',
+  IntegrationTrigger = 'integration_trigger',
+  Playground = 'playground',
+  ScheduledTrigger = 'scheduled_trigger',
+  SharedPrompt = 'shared_prompt',
+  User = 'user',
+}
 
 export type DocumentLog = {
   id: number

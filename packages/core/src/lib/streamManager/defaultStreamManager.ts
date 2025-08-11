@@ -48,19 +48,17 @@ export class DefaultStreamManager
 
   async step(): Promise<void> {
     this.startStep()
+    this.startProviderStep({
+      config: this.config,
+      messages: this.messages,
+      provider: this.provider,
+    })
 
-    const toolsBySourceResult = await this.getToolsBySource()
-    if (toolsBySourceResult.error) {
-      this.endWithError(toolsBySourceResult.error)
-      return
-    }
-    const toolsBySource = toolsBySourceResult.unwrap()
+    const toolsBySource = await this.getToolsBySource().then((r) => r.unwrap())
     const config = this.transformPromptlToVercelToolDeclarations(
       this.config,
       toolsBySource,
     )
-
-    this.startProviderStep(config)
 
     try {
       const { response, messages, tokenUsage, finishReason } =
@@ -85,6 +83,7 @@ export class DefaultStreamManager
         finishReason: await finishReason,
       })
       this.endProviderStep({
+        responseMessages: messages,
         tokenUsage,
         response,
         finishReason: await finishReason,

@@ -10,7 +10,6 @@ import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runDocumentAtCommitLegacy } from '@latitude-data/core/services/__deprecated/commits/runDocumentAtCommit'
-import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 import { convertToLegacyChainStream } from '@latitude-data/core/__deprecated/lib/chainStreamManager/index'
 
@@ -42,7 +41,6 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
       }
 
       const { stream: newStream } = await runDocumentAtCommitLegacy({
-        context: BACKGROUND({ workspaceId: workspace.id }),
         workspace,
         document,
         commit,
