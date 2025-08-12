@@ -14,6 +14,7 @@ export type RunLatteJobData = {
   threadUuid: string
   message: string
   context: string
+  debugVersionUuid?: string
 }
 
 async function emitError({
@@ -35,7 +36,14 @@ async function emitError({
 }
 
 export const runLatteJob = async (job: Job<RunLatteJobData>) => {
-  const { workspaceId, userId, threadUuid, message, context } = job.data
+  const {
+    workspaceId,
+    userId,
+    threadUuid,
+    message,
+    context,
+    debugVersionUuid,
+  } = job.data
   const workspace = await unsafelyFindWorkspace(workspaceId).then((w) => w!)
 
   const usersScope = new UsersRepository(workspace.id)
@@ -50,7 +58,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
   }
   const user = userResult.unwrap()
 
-  const copilotResult = await getCopilotDocument()
+  const copilotResult = await getCopilotDocument(debugVersionUuid)
   if (!copilotResult.ok) {
     await emitError({
       workspaceId,

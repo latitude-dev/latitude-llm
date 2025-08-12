@@ -32,6 +32,13 @@ import {
   LatteInteractionStep,
   LatteToolStep,
 } from './types'
+import useFetcher from '../useFetcher'
+import { LatteVersion } from '@latitude-data/core/services/copilot/latte/debugVersions'
+import { ROUTES } from '$/services/routes'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import useSWR from 'swr'
+
+const EMPTY_ARRAY = [] as const
 
 /**
  * Synchronizes the Latte thread UUID with local storage on mount.
@@ -74,8 +81,14 @@ export function useSyncLatteUrlState() {
  */
 export function useLatteChatActions() {
   const latteContext = useLatteContext()
-  const { threadUuid, setThreadUuid, setIsLoading, setError, addInteractions } =
-    useLatteStore()
+  const {
+    threadUuid,
+    setThreadUuid,
+    setIsLoading,
+    setError,
+    addInteractions,
+    debugVersionUuid,
+  } = useLatteStore()
   const { execute: createNewChat } = useServerAction(createNewLatteAction, {
     onSuccess: ({ data }) => {
       setThreadUuid(data.uuid)
@@ -115,7 +128,7 @@ export function useLatteChatActions() {
           context: latteContext(),
         })
       } else {
-        createNewChat({ message, context: latteContext() })
+        createNewChat({ message, context: latteContext(), debugVersionUuid })
       }
     },
     [
@@ -125,6 +138,7 @@ export function useLatteChatActions() {
       latteContext,
       setIsLoading,
       threadUuid,
+      debugVersionUuid,
     ],
   )
 
@@ -491,4 +505,55 @@ const useLatteThreadProviderLog = () => {
   )
 
   return useMemo(() => ({ providerLog, ...rest }), [providerLog, rest])
+}
+
+/**
+ * Handles debug data
+ */
+export function useLatteDebugMode() {
+  const { debugVersionUuid, setDebugVersionUuid } = useLatteStore()
+  const { enabled } = useFeatureFlag({ featureFlag: 'latteDebugMode' })
+
+  const fetcher = useFetcher<LatteVersion[]>(
+    enabled ? ROUTES.api.latte.debug.versions.root : undefined,
+  )
+
+  const { data = EMPTY_ARRAY, isLoading } = useSWR<LatteVersion[]>(
+    ['latteDebugVersions'],
+    fetcher,
+  )
+
+  const selectedVersionUuid = useMemo(() => {
+    if (!enabled) return undefined
+    if (!data) return debugVersionUuid
+
+    if (data.some((version) => version.uuid == debugVersionUuid)) {
+      return debugVersionUuid
+    }
+
+    return data.find((version) => version.isLive)?.uuid
+  }, [enabled, debugVersionUuid, data])
+
+  useEffect(() => {
+    // When the list of versions has loaded, if the selected debugVersionUuid is not on the list, automatically unset it
+    if (isLoading) return
+    if (!debugVersionUuid) return
+
+    if (data.some((version) => version.uuid === debugVersionUuid)) {
+      return
+    }
+
+    setDebugVersionUuid(undefined)
+  }, [isLoading, debugVersionUuid, data, setDebugVersionUuid])
+
+  return useMemo(
+    () => ({
+      enabled,
+      data,
+      isLoading,
+      selectedVersionUuid,
+      setSelectedVersionUuid: setDebugVersionUuid,
+    }),
+    [enabled, data, selectedVersionUuid, isLoading, setDebugVersionUuid],
+  )
 }

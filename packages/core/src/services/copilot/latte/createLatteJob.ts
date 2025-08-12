@@ -12,12 +12,14 @@ export async function createLatteJob({
   message,
   context,
   user,
+  debugVersionUuid,
 }: {
   workspace: Workspace
   threadUuid: string
   message: string
   context: string
   user: User
+  debugVersionUuid?: string
 }): PromisedResult<undefined> {
   const supportResult = assertCopilotIsSupported()
   if (!supportResult.ok) return supportResult as ErrorResult<LatitudeError>
@@ -28,6 +30,7 @@ export async function createLatteJob({
     message,
     context,
     userId: user.id,
+    debugVersionUuid,
   } as RunLatteJobData)
 
   return Result.nil()
