@@ -77,7 +77,7 @@ function ChainResponseMessage<L extends boolean>({
                 {
                   type: 'text',
                   text: responseStream ?? '',
-                  reasoning: reasoningStream,
+                  reasoningText: reasoningStream,
                 },
               ]}
               collapsedMessage={collapsedMessage}

@@ -8,7 +8,7 @@ import {
   StreamEventTypes,
 } from '@latitude-data/core/browser'
 import { runSharedPromptAction } from '$/actions/sdk/runSharedPromptAction'
-import { readStreamableValue } from 'ai/rsc'
+import { readStreamableValue } from '@ai-sdk/rsc'
 import { SetStateAction } from '@latitude-data/web-ui/commonTypes'
 import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 
@@ -123,14 +123,14 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
           // Delta text from the provider
           if (event === StreamEventTypes.Provider) {
             if (data.type === 'text-delta') {
-              accomulatedDeltas[rollingIndex]!.deltas.push(data.textDelta)
-              response += data.textDelta
+              accomulatedDeltas[rollingIndex]!.deltas.push(data.text)
+              response += data.text
 
               setResponseStream(response)
             }
 
-            if (data.type === 'reasoning') {
-              reasoning += data.textDelta
+            if (data.type === 'reasoning-delta') {
+              reasoning += data.text
 
               setReasoningStream(reasoning)
             }

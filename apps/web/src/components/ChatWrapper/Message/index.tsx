@@ -1,5 +1,3 @@
-'use client'
-
 import { memo, ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
