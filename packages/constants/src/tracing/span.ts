@@ -142,7 +142,7 @@ export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   tokens?: {
     prompt: number
     cached: number
-    reasoning: number
+    reasoningText: number
     completion: number
   }
   cost?: number // Enriched when ingested

@@ -8,7 +8,7 @@ const toolDefinitionObject = z.record(
     description: z.string({
       required_error: 'You must provide a description for the tool',
     }),
-    parameters: z
+    inputSchema: z
       .object({
         type: z.literal('object', {
           required_error: 'Parameters must be an object',

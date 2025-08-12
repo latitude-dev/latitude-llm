@@ -22,7 +22,7 @@ type BuildMessageParams<T extends StreamType> = T extends 'object'
       type: 'text'
       data?: {
         text: string | undefined
-        reasoning?: string | undefined
+        reasoningText?: string | undefined
         toolCalls?: ToolCall[]
         toolCallResponses?: ToolCallResponse[]
       }
@@ -75,7 +75,7 @@ function buildAssistantMessage<T extends StreamType>({
 }: BuildMessageParams<T>) {
   const text = data!.text
   const object = type === 'object' ? data!.object : undefined
-  const reasoning = type === 'text' ? data!.reasoning : undefined
+  const reasoning = type === 'text' ? data!.reasoningText : undefined
   const toolCalls = type === 'text' ? (data!.toolCalls ?? []) : []
   let content: MessageContent[] = []
 

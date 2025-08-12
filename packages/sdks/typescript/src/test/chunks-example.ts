@@ -49,70 +49,80 @@ const CHUNK_EVENTS: ChainEvent[] = [
     event: StreamEventTypes.Provider,
     data: {
       type: 'text-delta',
-      textDelta: '9',
+      id: '123',
+      text: '9',
     },
   },
   {
     event: StreamEventTypes.Provider,
     data: {
       type: 'text-delta',
-      textDelta: '.',
+      id: '123',
+      text: '.',
     },
   },
   {
     event: StreamEventTypes.Provider,
     data: {
       type: 'text-delta',
-      textDelta: '9',
+      id: '123',
+      text: '9',
     },
   },
   {
     event: StreamEventTypes.Provider,
     data: {
       type: 'text-delta',
-      textDelta: ' is',
+      id: '123',
+      text: ' is',
     },
   },
   {
     event: StreamEventTypes.Provider,
     data: {
       type: 'text-delta',
-      textDelta: ' bigger',
+      id: '123',
+      text: ' bigger',
     },
   },
   {
     event: StreamEventTypes.Provider,
     data: {
       type: 'text-delta',
-      textDelta: ' than',
+      id: '123',
+      text: ' than',
     },
   },
   {
     event: StreamEventTypes.Provider,
     data: {
       type: 'text-delta',
-      textDelta: ' ',
+      id: '123',
+      text: ' ',
     },
   },
   {
     event: StreamEventTypes.Provider,
     data: {
       type: 'text-delta',
-      textDelta: '9',
+      id: '123',
+      text: '9',
     },
   },
   {
     event: StreamEventTypes.Provider,
     data: {
       type: 'text-delta',
-      textDelta: '.',
+      id: '123',
+      text: '.',
     },
   },
   {
     event: StreamEventTypes.Provider,
     data: {
       type: 'text-delta',
-      textDelta: '11',
+      id: '123',
+      text: '11',
     },
   },
   {
@@ -132,8 +142,8 @@ const CHUNK_EVENTS: ChainEvent[] = [
         },
       ],
       tokenUsage: {
-        promptTokens: 19,
-        completionTokens: 84,
+        inputTokens: 19,
+        outputTokens: 84,
         totalTokens: 103,
       },
       finishReason: 'stop',
@@ -142,8 +152,8 @@ const CHUNK_EVENTS: ChainEvent[] = [
         streamType: 'text',
         text: '9.9 is bigger than 9.11',
         usage: {
-          promptTokens: 19,
-          completionTokens: 84,
+          inputTokens: 19,
+          outputTokens: 84,
           totalTokens: 103,
         },
         toolCalls: [],
@@ -247,8 +257,8 @@ const CHUNK_EVENTS: ChainEvent[] = [
         },
       ],
       tokenUsage: {
-        promptTokens: 114,
-        completionTokens: 352,
+        inputTokens: 114,
+        outputTokens: 352,
         totalTokens: 466,
       },
       finishReason: 'stop',
@@ -257,8 +267,8 @@ const CHUNK_EVENTS: ChainEvent[] = [
         streamType: 'text',
         text: "Sure, let's break it down step by step to understand why 9.9 is greater than 9.11",
         usage: {
-          promptTokens: 114,
-          completionTokens: 352,
+          inputTokens: 114,
+          outputTokens: 352,
           totalTokens: 466,
         },
         toolCalls: [],
@@ -328,8 +338,8 @@ const CHUNK_EVENTS: ChainEvent[] = [
         },
       ],
       tokenUsage: {
-        promptTokens: 114,
-        completionTokens: 352,
+        inputTokens: 114,
+        outputTokens: 352,
         totalTokens: 466,
       },
       finishReason: 'stop',

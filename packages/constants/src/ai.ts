@@ -80,7 +80,7 @@ type BaseResponse = {
 
 export type ChainStepTextResponse = BaseResponse & {
   streamType: 'text'
-  reasoning?: string | undefined
+  reasoningText?: string | undefined
   toolCalls: ToolCall[]
 }
 
