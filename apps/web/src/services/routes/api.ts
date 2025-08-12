@@ -382,4 +382,11 @@ export const API_ROUTES = {
       }
     },
   },
+  latte: {
+    debug: {
+      versions: {
+        root: `/api/latte/debug/versions`,
+      },
+    },
+  },
 }

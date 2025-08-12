@@ -9,6 +9,7 @@ import { useTypeWriterValue } from '@latitude-data/web-ui/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import React, { KeyboardEvent, useCallback, useEffect, useState } from 'react'
 import { ChangeList } from './_components/ChangesList'
+import { LatteDebugVersionSelector } from './_components/DebugVersionSelector'
 
 const INPUT_PLACEHOLDERS = [
   'How can I see the logs of my agent?',
@@ -143,6 +144,7 @@ export function LatteChatInput({
         className={cn(
           'absolute bottom-[2px] left-3 w-[calc(100%-0.75rem-2px)] pt-2 pb-3 pr-3',
           'flex flex-row-reverse items-end justify-between bg-background rounded-br-2xl',
+          'gap-4',
         )}
       >
         <Button
@@ -163,6 +165,7 @@ export function LatteChatInput({
         >
           Send
         </Button>
+        {!inConversation && <LatteDebugVersionSelector />}
         {inConversation && (
           <Button
             variant='ghost'
@@ -177,7 +180,9 @@ export function LatteChatInput({
             className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
             userSelect={false}
           >
-            New chat
+            <Text.H5 noWrap color='latteInputForeground'>
+              New chat
+            </Text.H5>
           </Button>
         )}
       </div>

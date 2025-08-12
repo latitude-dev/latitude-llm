@@ -20,6 +20,9 @@ interface LatteState {
   changes: LatteChange[]
   latteActionsFeedbackUuid: string | undefined
 
+  // Debug state
+  debugVersionUuid: string | undefined
+
   // Actions
   setThreadUuid: (uuid: string | undefined) => void
   setIsLoading: (loading: boolean) => void
@@ -45,6 +48,7 @@ interface LatteState {
   ) => void
   removeChange: (draftUuid: string, documentUuid: string) => void
   setLatteActionsFeedbackUuid: (uuid: string | undefined) => void
+  setDebugVersionUuid: (uuid: string | undefined) => void
 
   // Reset functions
   resetChat: () => void
@@ -60,6 +64,7 @@ const useStore = create<LatteState>((set) => ({
   changes: [],
   latteActionsFeedbackUuid: undefined,
   threadUuid: undefined,
+  debugVersionUuid: undefined,
 
   // Chat actions
   setIsLoading: (loading: boolean) => set({ isLoading: loading }),
@@ -147,6 +152,9 @@ const useStore = create<LatteState>((set) => ({
 
   setLatteActionsFeedbackUuid: (uuid: string | undefined) =>
     set({ latteActionsFeedbackUuid: uuid }),
+
+  setDebugVersionUuid: (uuid: string | undefined) =>
+    set({ debugVersionUuid: uuid }),
 
   // Reset functions
   resetChat: () =>

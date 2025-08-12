@@ -11,11 +11,12 @@ export const createNewLatteAction = authProcedure
     z.object({
       message: z.string(),
       context: z.string(),
+      debugVersionUuid: z.string().optional(),
     }),
   )
   .handler(async ({ ctx, input }) => {
     const { workspace, user } = ctx
-    const { message, context } = input
+    const { message, context, debugVersionUuid } = input
 
     const thread = await createLatteThread({
       user,
@@ -28,6 +29,7 @@ export const createNewLatteAction = authProcedure
       user,
       message,
       context,
+      debugVersionUuid,
     })
 
     runResult.unwrap()

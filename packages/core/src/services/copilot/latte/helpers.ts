@@ -1,6 +1,10 @@
 import { env } from '@latitude-data/env'
 import { ErrorResult, Result, TypedResult } from '../../../lib/Result'
-import { LatitudeError, NotImplementedError } from '../../../lib/errors'
+import {
+  LatitudeError,
+  NotFoundError,
+  NotImplementedError,
+} from '../../../lib/errors'
 import {
   Project,
   Workspace,
@@ -56,7 +60,40 @@ export function assertCopilotIsSupported(): TypedResult<
   return Result.nil()
 }
 
-export async function getCopilotDocument(): PromisedResult<
+async function getCommitResult({
+  workspaceId,
+  projectId,
+  debugVersionUuid,
+}: {
+  workspaceId: number
+  projectId: number
+  debugVersionUuid?: string
+}): PromisedResult<Commit> {
+  const commitScope = new CommitsRepository(workspaceId)
+
+  if (debugVersionUuid) {
+    return commitScope.getCommitByUuid({
+      projectId,
+      uuid: debugVersionUuid,
+    })
+  }
+
+  const headCommitResult = await commitScope.getHeadCommit(projectId)
+  if (!Result.isOk(headCommitResult)) return headCommitResult
+  const headCommit = headCommitResult.unwrap()
+
+  if (!headCommit) {
+    return Result.error(
+      new NotFoundError('Live commit not found in Latte project'),
+    )
+  }
+
+  return Result.ok(headCommit)
+}
+
+export async function getCopilotDocument(
+  debugVersionUuid?: string,
+): PromisedResult<
   {
     workspace: Workspace
     project: Project
@@ -80,12 +117,15 @@ export async function getCopilotDocument(): PromisedResult<
     (w) => w!,
   )
 
-  const commitScope = new CommitsRepository(workspace.id)
-  const commitResult = await commitScope.getHeadCommit(project.id)
+  const commitResult = await getCommitResult({
+    workspaceId: workspace.id,
+    projectId: project.id,
+    debugVersionUuid,
+  })
   if (!commitResult.ok || !commitResult.value) {
     return Result.error(
       new NotImplementedError(
-        `Copilot is not supported in this environment. There is no commit for project with ID $COPILOT_PROJECT_ID`,
+        `Copilot is not supported in this environment. The desired commit does not exist in $COPILOT_PROJECT_ID`,
       ),
     )
   }
