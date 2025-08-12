@@ -1,6 +1,6 @@
 import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
 import { AIReturn } from '../../ai'
-import { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
+import { AssistantMessage, ToolCall } from '@latitude-data/constants/legacyCompiler'
 
 function parseObject(text: string) {
   const parsed = text
@@ -25,6 +25,8 @@ export async function processResponse({
   const text = await aiResult.text
   const output = await buildOutput(aiResult)
 
+  console.log("TOOL CALLS", JSON.stringify(aiResult.toolCalls, null, 2))
+
   return {
     streamType: aiResult.type,
     documentLogUuid,
@@ -36,7 +38,7 @@ export async function processResponse({
     toolCalls: (await aiResult.toolCalls).map((t) => ({
       id: t.toolCallId,
       name: t.toolName,
-      arguments: t.args,
+      arguments: t.input as unknown as ToolCall['arguments'],
     })),
   };
 }

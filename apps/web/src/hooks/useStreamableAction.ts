@@ -4,7 +4,7 @@ import {
   LegacyChainEventTypes,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
-import { readStreamableValue } from 'ai/rsc'
+import { readStreamableValue } from '@ai-sdk/rsc'
 
 type OnEventHandler = (event: string, data: any) => void
 
@@ -56,7 +56,7 @@ export function useStreamableAction<T extends (...args: any[]) => any>(
 
             case StreamEventTypes.Provider: {
               if (data.type === 'text-delta') {
-                response += data.textDelta
+                response += data.text
                 setResponseStream(response)
               }
               break

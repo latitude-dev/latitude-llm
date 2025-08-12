@@ -34,13 +34,13 @@ type AISDKProvider = typeof DEFAULT_AI_SDK_PROVIDER
 type PARTIAL_OUTPUT = object
 
 export type AIReturn<T extends StreamType> = Pick<
-  StreamTextResult<Record<string, Tool<any, any>>, PARTIAL_OUTPUT>,
+  StreamTextResult<Record<string, Tool<unknown, unknown>>, PARTIAL_OUTPUT>,
   | 'fullStream'
   | 'text'
   | 'usage'
   | 'toolCalls'
   | 'providerMetadata'
-  | 'reasoning'
+  | 'reasoningText'
   | 'finishReason'
   | 'response'
 > & {
@@ -169,7 +169,7 @@ export async function ai({
       reasoningText: result.reasoningText,
       usage: result.usage,
       toolCalls: result.toolCalls,
-      providerOptions: result.providerOptions,
+      providerMetadata: result.providerMetadata,
       sources: result.sources,
       finishReason: result.finishReason,
       response: result.response,

@@ -43,7 +43,7 @@ export function useProviderEventHandler({
 
   // Helper function to handle text-delta events
   const handleTextDelta = useCallback(
-    (data: { type: 'text-delta'; textDelta: string }) => {
+    (data: { type: 'text-delta'; text: string }) => {
       setMessages((messages) => {
         const lastMessage = messages.at(-1)
 
@@ -53,7 +53,7 @@ export function useProviderEventHandler({
             ...messages,
             {
               role: MessageRole.assistant,
-              content: [{ type: 'text', text: data.textDelta }],
+              content: [{ type: 'text', text: data.text }],
               toolCalls: [],
             },
           ]
@@ -66,7 +66,7 @@ export function useProviderEventHandler({
         if (lastContent && lastContent.type === 'text') {
           const updatedContent = [
             ...(lastMessage.content as MessageContent[]).slice(0, -1),
-            { ...lastContent, text: lastContent.text + data.textDelta },
+            { ...lastContent, text: lastContent.text + data.text },
           ]
 
           return [
@@ -85,7 +85,7 @@ export function useProviderEventHandler({
             ...lastMessage,
             content: [
               ...((lastMessage.content as MessageContent[]) || []),
-              { type: 'text', text: data.textDelta },
+              { type: 'text', text: data.text },
             ],
           },
         ]

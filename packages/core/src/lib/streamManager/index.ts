@@ -250,10 +250,10 @@ export abstract class StreamManager {
     this.$completion?.end({
       output: responseMessages,
       tokens: {
-        prompt: tokenUsage.inputTokens,
+        prompt: tokenUsage.inputTokens ?? 0,
         cached: 0, // Note: not given by Vercel AI SDK yet
-        reasoningText: 0, // Note: not given by Vercel AI SDK yet
-        completion: tokenUsage.outputTokens,
+        reasoning: 0, // Note: not given by Vercel AI SDK yet
+        completion: tokenUsage.outputTokens ?? 0,
       },
       finishReason,
     })
@@ -356,16 +356,25 @@ export abstract class StreamManager {
     this.messages.push(...messages)
     this.response = response
     this.finishReason = finishReason
-    this.tokenUsage = {
-      inputTokens: this.tokenUsage.inputTokens + tokenUsage.inputTokens,
-      outputTokens:
-        this.tokenUsage.outputTokens + tokenUsage.outputTokens,
-      totalTokens: this.tokenUsage.totalTokens + tokenUsage.totalTokens,
-    }
+    this.tokenUsage = this.sumTokenUsage(tokenUsage)
   }
 
   protected setMessages(messages: LegacyMessage[]) {
     this.messages = messages
+  }
+
+  protected sumTokenUsage(tokenUsage: LanguageModelUsage) {
+    const newInputTokens = tokenUsage.inputTokens ?? 0
+    const newOutputTokens = tokenUsage.outputTokens ?? 0
+    const newTotalTokens = tokenUsage.totalTokens ?? 0
+    const oldInputTokens = this.tokenUsage.inputTokens ?? 0
+    const oldOutputTokens = this.tokenUsage.outputTokens ?? 0
+    const oldTotalTokens = this.tokenUsage.totalTokens ?? 0
+    return {
+      inputTokens: oldInputTokens + newInputTokens,
+      outputTokens: oldOutputTokens + newOutputTokens,
+      totalTokens: oldTotalTokens + newTotalTokens,
+    }
   }
 }
 
