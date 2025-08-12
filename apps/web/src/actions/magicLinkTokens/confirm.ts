@@ -12,33 +12,33 @@ import {
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { createServerAction } from 'zsa'
+import { errorHandlingProcedure } from '../procedures'
 
-export const confirmMagicLinkTokenAction = createServerAction()
-  .input(
+export const confirmMagicLinkTokenAction = errorHandlingProcedure
+  .inputSchema(
     z.object({
       token: z.string(),
       returnTo: z.string().optional(),
     }),
   )
-  .handler(async ({ input }) => {
-    const magicLinkToken = await unsafelyFindMagicLinkByToken(input.token).then(
-      (r) => r[0],
-    )
+  .action(async ({ parsedInput }) => {
+    const magicLinkToken = await unsafelyFindMagicLinkByToken(
+      parsedInput.token,
+    ).then((r) => r[0])
     if (!magicLinkToken || !!magicLinkToken.expiredAt) {
-      if (!input.returnTo) {
+      if (!parsedInput.returnTo) {
         return redirect(ROUTES.auth.login)
       }
 
       redirect(
-        `${ROUTES.auth.login}?returnTo=${encodeURIComponent(input.returnTo)}`,
+        `${ROUTES.auth.login}?returnTo=${encodeURIComponent(parsedInput.returnTo)}`,
       )
     }
 
     const user = await unsafelyGetUser(magicLinkToken.userId)
     if (!user) throw new NotFoundError('User not found')
 
-    await confirmMagicLinkToken(input.token).then((r) => r.unwrap())
+    await confirmMagicLinkToken(parsedInput.token).then((r) => r.unwrap())
 
     const workspace = await getFirstWorkspace({ userId: user.id }).then((r) =>
       r.unwrap(),
@@ -53,9 +53,9 @@ export const confirmMagicLinkTokenAction = createServerAction()
       },
     })
 
-    if (!input.returnTo || !isLatitudeUrl(input.returnTo)) {
+    if (!parsedInput.returnTo || !isLatitudeUrl(parsedInput.returnTo)) {
       return redirect(ROUTES.dashboard.root)
     }
 
-    return redirect(input.returnTo)
+    return redirect(parsedInput.returnTo)
   })

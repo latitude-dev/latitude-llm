@@ -42,7 +42,7 @@ function resolveOpenAITools(openAITools: OpenAIToolList) {
 
   return Result.ok({
     web_search_preview: {
-      definition: openai.tools.webSearchPreview({
+      definition: openai.tools.webSearch({
         searchContextSize: tool.search_context_size,
         userLocation: tool.user_location,
       }),

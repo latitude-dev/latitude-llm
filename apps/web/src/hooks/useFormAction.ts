@@ -1,61 +1,62 @@
 import { useCallback, useState, useTransition } from 'react'
-
-import { formDataToAction } from '$/helpers/forms'
+import { FlattenedValidationErrors, ValidationErrors } from 'next-safe-action'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 import {
-  inferServerActionError,
-  inferServerActionInput,
-  inferServerActionReturnData,
-  TAnyZodSafeFunctionHandler,
-} from 'zsa'
+  type InferInputOrDefault,
+  type SuccessActionCallback,
+  ActionErrorKlass,
+  ServerErrorKlass,
+  ExecuteFn,
+} from '$/hooks/useLatitudeAction'
 
-export function useFormAction<
-  const TServerAction extends TAnyZodSafeFunctionHandler,
->(
-  exec: (
-    data: inferServerActionInput<TServerAction>,
-  ) => Promise<
-    | [inferServerActionReturnData<TServerAction>, null]
-    | [null, inferServerActionError<TServerAction>]
-  >,
+export type ActionError<S extends StandardSchemaV1 | undefined> =
+  FlattenedValidationErrors<ValidationErrors<S>>
+
+export type ErrorActionCallback<S extends StandardSchemaV1> = (
+  args: ActionErrorKlass<S> | ServerErrorKlass,
+) => void
+
+export function useFormAction<S extends StandardSchemaV1, Data>(
+  execute: ExecuteFn<S, Data>,
   {
     onSuccess = () => {},
     onError,
   }: {
-    onSuccess?: (payload: inferServerActionReturnData<TServerAction>) => void
-    onError?: (error: inferServerActionError<TServerAction>) => void
-  } = {
-    onSuccess: () => {},
-  },
+    onSuccess?: SuccessActionCallback<Data>
+    onError?: ErrorActionCallback<S>
+  } = {},
 ) {
-  const [data, setData] = useState<
-    | inferServerActionInput<TServerAction>
-    | inferServerActionReturnData<TServerAction>
-  >()
+  const [data, setData] = useState<Data | undefined>()
+  const [error, setError] = useState<
+    ActionErrorKlass<S> | ServerErrorKlass | null
+  >(null)
   const [_, startTransition] = useTransition()
-  const [error, setError] = useState<Record<string, unknown> | undefined>()
-  const _action = useCallback(
-    async (json: inferServerActionInput<TServerAction>) => {
-      const result = await exec(json)
-      const [payload, error] = result
 
-      if (error) {
-        console.error(error)
-        onError?.(error)
-        setError(error)
-      } else {
-        onSuccess(payload!)
-        setData(payload!)
+  const _action = useCallback(
+    async (json: InferInputOrDefault<S, undefined>) => {
+      const [data, err] = await execute(json)
+
+      if (err) {
+        onError?.(err)
+        setError(err)
+      } else if (data) {
+        onSuccess({ data })
+        setData(data)
       }
     },
-    [exec, setError, setData, onError, onSuccess],
+    [execute, onError, onSuccess],
   )
 
   const action = useCallback(
     async (formData: FormData) => {
-      const json = formDataToAction<typeof exec>(formData)
+      const obj: Record<string, unknown> = {}
+      formData.forEach((value, key) => {
+        obj[key] = value
+      })
+
+      const json = obj as InferInputOrDefault<S, undefined>
 
       startTransition(() => {
-        setData(json)
         _action(json)
       })
     },

@@ -6,17 +6,16 @@ import { withProject } from '../../procedures'
 import { getChangesToResetDocumentToVersion } from '@latitude-data/core/services/history/resetDocumentToVersion'
 
 export const getChangesToResetDocumentAction = withProject
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       targetDraftUuid: z.string().optional(),
       documentCommitUuid: z.string(),
       documentUuid: z.string(),
     }),
   )
-  .handler(async ({ input, ctx }) => {
+  .action(async ({ parsedInput, ctx }) => {
     const { workspace, project } = ctx
-    const { targetDraftUuid, documentCommitUuid, documentUuid } = input
+    const { targetDraftUuid, documentCommitUuid, documentUuid } = parsedInput
 
     const change = await getChangesToResetDocumentToVersion({
       workspace,

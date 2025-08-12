@@ -11,7 +11,8 @@ import {
   Message as LegacyMessage,
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
-import { FinishReason, LanguageModelUsage } from 'ai'
+import { FinishReason } from 'ai'
+import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants/ai'
 import { omit } from 'lodash-es'
 import {
   IntegrationDto,
@@ -32,10 +33,42 @@ import { ToolHandler } from './clientTools/handlers'
 import { ResolvedTools } from './resolveTools/types'
 import { createPromiseWithResolver } from './utils/createPromiseResolver'
 
-const EMPTY_USAGE = (): LanguageModelUsage => ({
+const addTokens = ({
+  attr,
+  prev,
+  next,
+}: {
+  attr: keyof LanguageModelUsage
+  prev: LanguageModelUsage | undefined
+  next: LanguageModelUsage
+}) => prev?.[attr] ?? 0 + next[attr]
+
+export const increamentTokens = ({
+  prev,
+  next,
+}: {
+  prev: LanguageModelUsage | undefined
+  next: LanguageModelUsage
+}) => {
+  return {
+    inputTokens: addTokens({ attr: 'inputTokens', prev, next }),
+    outputTokens: addTokens({ attr: 'outputTokens', prev, next }),
+    promptTokens: addTokens({ attr: 'promptTokens', prev, next }),
+    completionTokens: addTokens({ attr: 'completionTokens', prev, next }),
+    totalTokens: addTokens({ attr: 'totalTokens', prev, next }),
+    reasoningTokens: addTokens({ attr: 'reasoningTokens', prev, next }),
+    cachedInputTokens: addTokens({ attr: 'cachedInputTokens', prev, next }),
+  }
+}
+
+export const EMPTY_USAGE = (): LanguageModelUsage => ({
+  inputTokens: 0,
+  outputTokens: 0,
   promptTokens: 0,
   completionTokens: 0,
   totalTokens: 0,
+  reasoningTokens: 0,
+  cachedInputTokens: 0,
 })
 
 export type StreamManagerProps = {
@@ -375,24 +408,12 @@ export abstract class StreamManager {
     }
   }
 
-  protected incrementLogUsage(tokenUsage: LanguageModelUsage) {
-    this.logUsage = {
-      promptTokens:
-        (this.logUsage?.promptTokens ?? 0) + tokenUsage.promptTokens,
-      completionTokens:
-        (this.logUsage?.completionTokens ?? 0) + tokenUsage.completionTokens,
-      totalTokens: (this.logUsage?.totalTokens ?? 0) + tokenUsage.totalTokens,
-    }
+  protected incrementLogUsage(next: LanguageModelUsage) {
+    this.logUsage = increamentTokens({ prev: this.logUsage, next })
   }
 
-  incrementRunUsage(tokenUsage: LanguageModelUsage) {
-    this.runUsage = {
-      promptTokens:
-        (this.runUsage?.promptTokens ?? 0) + tokenUsage.promptTokens,
-      completionTokens:
-        (this.runUsage?.completionTokens ?? 0) + tokenUsage.completionTokens,
-      totalTokens: (this.runUsage?.totalTokens ?? 0) + tokenUsage.totalTokens,
-    }
+  incrementRunUsage(next: LanguageModelUsage) {
+    this.runUsage = increamentTokens({ prev: this.runUsage, next })
   }
 
   protected async updateStateFromResponse({

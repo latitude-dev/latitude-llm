@@ -19,22 +19,21 @@ const datasetInputSchema = z.object({
 })
 
 export const saveLinkedDatasetAction = withDataset
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       datasetRowId: z.number(),
-      mappedInputs: z.record(z.string()),
+      mappedInputs: z.record(z.string(), z.string()),
       inputs: z.record(datasetInputSchema),
     }),
   )
-  .handler(async ({ input, ctx }) => {
+  .action(async ({ parsedInput, ctx }) => {
     return await saveLinkedDataset({
       document: ctx.document,
       dataset: ctx.dataset,
       data: {
-        datasetRowId: input.datasetRowId,
-        mappedInputs: input.mappedInputs,
-        inputs: input.inputs,
+        datasetRowId: parsedInput.datasetRowId,
+        mappedInputs: parsedInput.mappedInputs,
+        inputs: parsedInput.inputs,
       },
     }).then((r) => r.unwrap())
   })

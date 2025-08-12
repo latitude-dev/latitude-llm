@@ -42,7 +42,7 @@ describe('createProviderLog', () => {
       model: 'gpt-4o',
       config: { model: 'gpt-4o' },
       apiKeyId,
-      usage: { promptTokens: 3, completionTokens: 7, totalTokens: 10 },
+      usage: { inputTokens: 3, outputTokens: 7, totalTokens: 10 },
       responseText: 'This is the response',
       messages: [],
       toolCalls: [],

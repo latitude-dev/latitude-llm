@@ -6,14 +6,9 @@ import { withCommit } from '$/actions/procedures'
 import { z } from 'zod'
 
 export const deleteDocumentTriggerAction = withCommit
-  .createServerAction()
-  .input(
-    z.object({
-      documentTriggerUuid: z.string(),
-    }),
-  )
-  .handler(async ({ input, ctx }) => {
-    const { documentTriggerUuid } = input
+  .inputSchema(z.object({ documentTriggerUuid: z.string() }))
+  .action(async ({ parsedInput, ctx }) => {
+    const { documentTriggerUuid } = parsedInput
     const { workspace, commit } = ctx
 
     return deleteDocumentTrigger({

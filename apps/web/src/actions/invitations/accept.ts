@@ -14,15 +14,14 @@ import { z } from 'zod'
 import { createServerAction } from 'zsa'
 
 export const acceptInvitationAction = createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       membershipToken: z.string(),
       email: z.string().optional(),
     }),
-    { type: 'formData' },
   )
-  .handler(async ({ input }) => {
-    const { membershipToken } = input
+  .action(async ({ parsedInput }) => {
+    const { membershipToken } = parsedInput
     const membership = await unsafelyFindMembershipByToken(
       membershipToken,
     ).then((r) => r.unwrap())

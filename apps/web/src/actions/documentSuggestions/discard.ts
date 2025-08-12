@@ -6,16 +6,11 @@ import { z } from 'zod'
 import { withDocument } from '../procedures'
 
 export const discardDocumentSuggestionAction = withDocument
-  .createServerAction()
-  .input(
-    z.object({
-      suggestionId: z.number(),
-    }),
-  )
-  .handler(async ({ ctx, input }) => {
+  .inputSchema(z.object({ suggestionId: z.number() }))
+  .action(async ({ ctx, parsedInput }) => {
     const repository = new DocumentSuggestionsRepository(ctx.workspace.id)
     const suggestion = await repository
-      .find(input.suggestionId)
+      .find(parsedInput.suggestionId)
       .then((r) => r.unwrap())
 
     const result = await discardDocumentSuggestion({

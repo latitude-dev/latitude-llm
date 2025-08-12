@@ -9,19 +9,18 @@ import { z } from 'zod'
 import { withDocument } from '../procedures'
 
 export const createEvaluationV2Action = withDocument
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       settings: EvaluationSettingsSchema,
       options: EvaluationOptionsSchema.partial().optional(),
     }),
   )
-  .handler(async ({ ctx, input }) => {
+  .action(async ({ ctx, parsedInput }) => {
     const result = await createEvaluationV2({
       document: ctx.document,
       commit: ctx.commit,
-      settings: input.settings,
-      options: input.options,
+      settings: parsedInput.settings,
+      options: parsedInput.options,
       workspace: ctx.workspace,
     }).then((r) => r.unwrap())
 

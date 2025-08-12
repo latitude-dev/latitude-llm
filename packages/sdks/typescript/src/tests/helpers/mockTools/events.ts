@@ -173,6 +173,8 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             promptTokens: 251,
             completionTokens: 59,
             totalTokens: 310,
+            reasoningTokens: 0,
+            cachedInputTokens: 0,
           },
           toolCalls: [
             {
@@ -203,6 +205,8 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           promptTokens: 251,
           completionTokens: 59,
           totalTokens: 310,
+          reasoningTokens: 0,
+          cachedInputTokens: 0,
         },
         finishReason: 'tool-calls',
       },
@@ -934,6 +938,8 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             promptTokens: 391,
             completionTokens: 91,
             totalTokens: 482,
+            reasoningTokens: 0,
+            cachedInputTokens: 0,
           },
           toolCalls: [
             {
@@ -967,6 +973,8 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           promptTokens: 391,
           completionTokens: 91,
           totalTokens: 482,
+          reasoningTokens: 0,
+          cachedInputTokens: 0,
         },
         finishReason: 'tool-calls',
       },
@@ -2127,6 +2135,8 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
             promptTokens: 523,
             completionTokens: 115,
             totalTokens: 638,
+            reasoningTokens: 0,
+            cachedInputTokens: 0,
           },
           toolCalls: [],
         },
@@ -2136,6 +2146,8 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           promptTokens: 523,
           completionTokens: 115,
           totalTokens: 638,
+          reasoningTokens: 0,
+          cachedInputTokens: 0,
         },
       },
     },
@@ -2407,6 +2419,8 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           promptTokens: 523,
           completionTokens: 115,
           totalTokens: 638,
+          reasoningTokens: 0,
+          cachedInputTokens: 0,
         },
         finishReason: 'stop',
         messages: [

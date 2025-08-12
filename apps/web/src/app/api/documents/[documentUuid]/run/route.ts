@@ -13,7 +13,7 @@ import { ChainEventTypes } from '@latitude-data/constants'
 const inputSchema = z.object({
   path: z.string(),
   commitUuid: z.string(),
-  parameters: z.record(z.any()),
+  parameters: z.record(z.string(), z.any()),
   stream: z.boolean().default(true),
   userMessage: z.string().optional(),
 })

@@ -7,9 +7,8 @@ import { authProcedure } from '../procedures'
 /**
  * Mark onboarding as complete
  */
-export const completeOnboardingAction = authProcedure
-  .createServerAction()
-  .handler(async ({ ctx }) => {
+export const completeOnboardingAction = authProcedure.action(
+  async ({ ctx }) => {
     const onboarding = await getWorkspaceOnboarding({
       workspace: ctx.workspace,
     }).then((r) => r.unwrap())
@@ -17,4 +16,5 @@ export const completeOnboardingAction = authProcedure
     return await markWorkspaceOnboardingComplete({
       onboarding,
     }).then((r) => r.unwrap())
-  })
+  },
+)

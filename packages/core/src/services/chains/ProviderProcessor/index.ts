@@ -4,6 +4,7 @@ import {
   AssistantMessage,
   MessageRole,
 } from '@latitude-data/constants/legacyCompiler'
+import * as vercelSdkFromV5ToV4 from '../../../lib/vercelSdkFromV5ToV4'
 
 function parseObject(text: string) {
   const parsed = text
@@ -16,6 +17,11 @@ function parseObject(text: string) {
 
 /**
  * This function is responsible for processing the AI response
+ *
+ * TODO(compiler)
+ * Remove all legacy stuff and try to use latest Vercel SDK types.
+ * The problem with that is that it will change the output of our API and
+ * SDKs.
  */
 export async function processResponse({
   aiResult,
@@ -34,13 +40,9 @@ export async function processResponse({
     text,
     object: isObject ? parseObject(text) : undefined,
     output,
-    usage: await aiResult.usage,
+    usage: await vercelSdkFromV5ToV4.convertTokenUsage(aiResult.usage),
     reasoning: await aiResult.reasoning,
-    toolCalls: (await aiResult.toolCalls).map((t) => ({
-      id: t.toolCallId,
-      name: t.toolName,
-      arguments: t.args,
-    })),
+    toolCalls: await vercelSdkFromV5ToV4.convertToolCalls(aiResult.toolCalls),
   }
 }
 
@@ -52,6 +54,9 @@ async function buildOutput(
 
   return messages.map((m) => {
     if (m.role === 'assistant') {
+      // FIXME: File content responses are wrong. Our types says the content is in
+      // m.content[0].file but Vercel SDK returns it in m.content[0].data
+      // We need to fix that in a future release
       return {
         role: 'assistant',
         content: m.content,
@@ -59,7 +64,7 @@ async function buildOutput(
     } else {
       return {
         role: 'tool',
-        content: m.content,
+        content: vercelSdkFromV5ToV4.convertMessageToolContent(m.content),
       }
     }
   })

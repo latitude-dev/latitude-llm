@@ -12,16 +12,15 @@ import { z } from 'zod'
 import { withProject } from '../procedures'
 
 export const createDraftWithPromptlUpgradeAction = withProject
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       documentUuid: z.string().optional(),
       draftUuid: z.string().optional(),
     }),
   )
-  .handler(async ({ input, ctx }) => {
+  .action(async ({ parsedInput, ctx }) => {
     const { user, workspace, project } = ctx
-    const { documentUuid, draftUuid } = input
+    const { documentUuid, draftUuid } = parsedInput
 
     let draft: Commit
 

@@ -8,24 +8,23 @@ import { z } from 'zod'
 import { withEvaluation } from '../procedures'
 
 export const annotateEvaluationV2Action = withEvaluation
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       resultScore: z.number(),
       resultMetadata: z.custom<Partial<EvaluationResultMetadata>>().optional(),
       providerLogUuid: z.string(),
     }),
   )
-  .handler(async ({ ctx, input }) => {
+  .action(async ({ ctx, parsedInput }) => {
     const providerLogsRepository = new ProviderLogsRepository(ctx.workspace.id)
     const providerLog = await providerLogsRepository
-      .findByUuid(input.providerLogUuid)
+      .findByUuid(parsedInput.providerLogUuid)
       .then((r) => r.unwrap())
       .then((r) => serializeProviderLog(r))
 
     const result = await annotateEvaluationV2({
-      resultScore: input.resultScore,
-      resultMetadata: input.resultMetadata,
+      resultScore: parsedInput.resultScore,
+      resultMetadata: parsedInput.resultMetadata,
       evaluation: ctx.evaluation,
       providerLog: providerLog,
       commit: ctx.commit,

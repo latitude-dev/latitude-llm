@@ -6,9 +6,10 @@ import { stopChatLatteAction } from '$/actions/latte/stopChat'
 import { useLatteStore } from '$/stores/latte/index'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback } from 'react'
-import { useServerAction } from 'zsa-react'
 import { useLatteContext } from './context'
 import { LatteInteraction } from './types'
+import { useAction } from 'next-safe-action/hooks'
+import { buildActionError } from '$/hooks/useLatitudeAction'
 
 /**
  * Provides chat actions for Latte conversations including creating new chats and sending messages.
@@ -30,37 +31,37 @@ export function useLatteChatActions() {
     debugVersionUuid,
     setJobId: setJobId,
   } = useLatteStore()
-  const { execute: createNewChat } = useServerAction(createNewLatteAction, {
+  const { execute: createNewChat } = useAction(createNewLatteAction, {
     onSuccess: ({ data }) => {
       setThreadUuid(data.uuid)
       setJobId(data.jobId)
     },
-    onError: ({ err }) => {
-      setError(err)
+    onError: (err) => {
+      setError(buildActionError(err.error))
       setIsBrewing(false)
     },
   })
 
-  const { execute: addMessageToExistingChat } = useServerAction(
+  const { execute: addMessageToExistingChat } = useAction(
     addMessageToLatteAction,
     {
       onSuccess: ({ data }) => {
         setJobId(data.jobId)
       },
-      onError: ({ err }) => {
-        setError(err)
+      onError: (err) => {
+        setError(buildActionError(err.error))
         setIsBrewing(false)
       },
     },
   )
 
-  const { execute: stopChat } = useServerAction(stopChatLatteAction, {
+  const { execute: stopChat } = useAction(stopChatLatteAction, {
     onSuccess: () => {
       setIsBrewing(false)
       setJobId(undefined)
     },
-    onError: ({ err }) => {
-      setError(err)
+    onError: (err) => {
+      setError(buildActionError(err.error))
       setIsBrewing(false)
       setJobId(undefined)
     },

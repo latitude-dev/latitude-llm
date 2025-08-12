@@ -6,29 +6,30 @@ import { z } from 'zod'
 import { withProject } from '../procedures'
 
 export const createDocumentVersionAction = withProject
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       commitUuid: z.string(),
       path: z.string(),
       agent: z.boolean().optional().default(false),
       content: z.string().optional(),
     }),
-    { type: 'json' },
   )
-  .handler(async ({ input, ctx }) => {
+  .action(async ({ parsedInput, ctx }) => {
     const commitsScope = new CommitsRepository(ctx.project.workspaceId)
     const commit = await commitsScope
-      .getCommitByUuid({ uuid: input.commitUuid, projectId: ctx.project.id })
+      .getCommitByUuid({
+        uuid: parsedInput.commitUuid,
+        projectId: ctx.project.id,
+      })
       .then((r) => r.unwrap())
 
     const result = await createNewDocument({
       workspace: ctx.workspace,
       user: ctx.user,
       commit,
-      path: input.path,
-      content: input.content,
-      agent: input.agent,
+      path: parsedInput.path,
+      content: parsedInput.content,
+      agent: parsedInput.agent,
       createDemoEvaluation: true,
     })
 

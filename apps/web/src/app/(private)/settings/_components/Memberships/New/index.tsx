@@ -40,7 +40,7 @@ export default function NewUser({
             type='text'
             label='Name'
             name='name'
-            defaultValue={data?.name}
+            defaultValue={data?.name ?? ''}
             placeholder='Jon Snow'
           />
           <Input

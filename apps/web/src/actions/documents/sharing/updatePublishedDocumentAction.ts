@@ -17,12 +17,11 @@ const input = z.object({
 export type UpdatePublishedDocumentInput = z.infer<typeof input>
 
 export const updatePublishedDocumentAction = withDocument
-  .createServerAction()
-  .input(input)
-  .handler(async ({ ctx, input }) => {
+  .inputSchema(input)
+  .action(async ({ ctx, parsedInput }) => {
     const repo = new PublishedDocumentRepository(ctx.workspace.id)
     const publishedDocument = await repo
-      .findByUuid(input.uuid)
+      .findByUuid(parsedInput.uuid)
       .then((r) => r.unwrap())
     return updatePublishedDocument({
       publishedDocument,

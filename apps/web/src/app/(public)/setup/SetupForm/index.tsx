@@ -30,15 +30,13 @@ export default function SetupForm({
 }) {
   const { toast } = useToast()
   const { execute, isPending } = useLatitudeAction(setupAction)
-  const { error, action, data } = useFormAction(execute, {
+  const { error, action } = useFormAction(execute, {
     onError: (err) => {
-      if (err.code === 'ERROR') {
-        toast({
-          title: 'Saving failed',
-          description: err.message,
-          variant: 'destructive',
-        })
-      }
+      toast({
+        title: 'Saving failed',
+        description: err.message,
+        variant: 'destructive',
+      })
     },
   })
   const errors = error?.fieldErrors
@@ -54,9 +52,8 @@ export default function SetupForm({
           autoComplete='name'
           label='Name'
           placeholder='Jon Snow'
-          // @ts-expect-error
           errors={errors?.name}
-          defaultValue={data?.name || name}
+          defaultValue={name}
         />
         <Input
           required
@@ -64,18 +61,16 @@ export default function SetupForm({
           autoComplete='email'
           label='Email'
           placeholder='jon@winterfell.com'
-          // @ts-expect-error
           errors={errors?.email}
-          defaultValue={data?.email || email}
+          defaultValue={email}
         />
         <Input
           required
           name='companyName'
           label='Workspace Name'
           placeholder='Acme Inc.'
-          // @ts-expect-error
           errors={errors?.companyName}
-          defaultValue={data?.companyName || companyName}
+          defaultValue={companyName}
         />
         <div className='flex flex-col gap-6'>
           <Button fullWidth isLoading={isPending} fancy>

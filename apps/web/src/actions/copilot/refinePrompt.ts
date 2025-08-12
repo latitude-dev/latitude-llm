@@ -20,14 +20,13 @@ import { z } from 'zod'
 import { withDocument } from '../procedures'
 
 export const refinePromptAction = withDocument
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       evaluationUuid: z.string().optional(),
       resultUuids: z.array(z.string()).optional(),
     }),
   )
-  .handler(async ({ ctx, input }) => {
+  .action(async ({ ctx, parsedInput }) => {
     if (!env.LATITUDE_CLOUD) {
       throw new BadRequestError(CLOUD_MESSAGES.refinePrompt)
     }
@@ -44,7 +43,7 @@ export const refinePromptAction = withDocument
       throw new BadRequestError('COPILOT_PROMPT_REFINE_PATH is not set')
     }
 
-    const { evaluationUuid, resultUuids } = input
+    const { evaluationUuid, resultUuids } = parsedInput
 
     let evaluation
     let serializedEvaluation

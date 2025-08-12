@@ -11,8 +11,7 @@ import { updateDatasetFromLogs } from '@latitude-data/core/services/datasets/cre
 const MAX_SYNC_LOGS_BATCH_SIZE = 25
 
 export const createDatasetFromLogsAction = withDocument
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       name: z.string(),
       selectionMode: z.enum(['ALL', 'ALL_EXCEPT', 'PARTIAL']),
@@ -21,13 +20,13 @@ export const createDatasetFromLogsAction = withDocument
       filterOptions: documentLogFilterOptionsSchema,
     }),
   )
-  .handler(async ({ input, ctx }) => {
+  .action(async ({ parsedInput, ctx }) => {
     if (
-      input.selectionMode === 'PARTIAL' &&
-      input.selectedDocumentLogIds.length <= MAX_SYNC_LOGS_BATCH_SIZE
+      parsedInput.selectionMode === 'PARTIAL' &&
+      parsedInput.selectedDocumentLogIds.length <= MAX_SYNC_LOGS_BATCH_SIZE
     ) {
       const dataset = await findOrCreateDataset({
-        name: input.name,
+        name: parsedInput.name,
         author: ctx.user,
         workspace: ctx.workspace,
       }).then((r) => r.unwrap())
@@ -35,7 +34,7 @@ export const createDatasetFromLogsAction = withDocument
       const result = await updateDatasetFromLogs({
         dataset,
         workspace: ctx.workspace,
-        documentLogIds: input.selectedDocumentLogIds as number[],
+        documentLogIds: parsedInput.selectedDocumentLogIds as number[],
       }).then((r) => r.unwrap())
 
       return {
@@ -47,14 +46,14 @@ export const createDatasetFromLogsAction = withDocument
     const { defaultQueue } = await queues()
 
     defaultQueue.add('createDatasetFromLogsJob', {
-      name: input.name,
+      name: parsedInput.name,
       userId: ctx.user.id,
       workspaceId: ctx.workspace.id,
       documentVersionId: ctx.document.id,
-      selectionMode: input.selectionMode,
-      selectedDocumentLogIds: input.selectedDocumentLogIds,
-      excludedDocumentLogIds: input.excludedDocumentLogIds,
-      filterOptions: input.filterOptions,
+      selectionMode: parsedInput.selectionMode,
+      selectedDocumentLogIds: parsedInput.selectedDocumentLogIds,
+      excludedDocumentLogIds: parsedInput.excludedDocumentLogIds,
+      filterOptions: parsedInput.filterOptions,
     })
 
     return {

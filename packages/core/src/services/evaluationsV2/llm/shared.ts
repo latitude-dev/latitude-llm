@@ -69,7 +69,7 @@ export async function buildLlmEvaluationRunFunction<
   evaluation: EvaluationV2<EvaluationType.Llm, M>
   prompt: string
   parameters?: Record<string, unknown>
-  schema?: z.ZodSchema
+  schema?: z.ZodType
 }) {
   let promptConfig: LatitudePromptConfig
   let promptChain: PromptlChain
@@ -127,7 +127,7 @@ export async function buildLlmEvaluationRunFunction<
 
 export async function runPrompt<
   M extends LlmEvaluationMetric,
-  S extends z.ZodSchema = z.ZodAny,
+  S extends z.ZodType = z.ZodType,
 >(
   {
     prompt,
@@ -206,8 +206,7 @@ export async function runPrompt<
     })
   }
 
-  let verdict: S extends z.ZodSchema ? z.infer<S> : unknown
-  verdict = parseVerdict(response)
+  let verdict: unknown = parseVerdict(response)
 
   if (schema) {
     const result = schema.safeParse(verdict)
