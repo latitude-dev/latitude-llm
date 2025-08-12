@@ -1,6 +1,6 @@
 import { StatusIndicator } from '$/components/PlaygroundCommon/StatusIndicator'
-import { ChatTextArea } from './ChatTextArea'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import { ChatTextArea } from './ChatTextArea'
 
 export function ChatInputBox({
   canChat,
@@ -16,7 +16,7 @@ export function ChatInputBox({
   stopStreaming: () => void
 }) {
   return (
-    <div className='flex relative flex-row w-full items-center justify-center'>
+    <div className='flex relative flex-row w-full items-center justify-center px-4'>
       <StatusIndicator
         isScrolledToBottom={false}
         usage={playground.usage}
@@ -30,7 +30,7 @@ export function ChatInputBox({
         minRows={5}
         canChat={canChat}
         clearChat={clearChat}
-        placeholder='Enter follow up message...'
+        placeholder='Ask anything'
         onSubmit={playground.submitUserMessage}
         disabled={playground.isLoading || !!playground.error}
         disableReset={playground.isLoading}

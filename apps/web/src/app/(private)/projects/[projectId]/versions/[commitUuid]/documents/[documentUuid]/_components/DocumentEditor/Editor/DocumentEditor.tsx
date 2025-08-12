@@ -199,7 +199,12 @@ function DocumentEditorContent({
             setPrompt={updateDocumentContent}
             onToggle={toggleDocumentParamsHandler}
             isExpanded={isDocumentParamsOpen}
-            expandedHeight={calcExpandedHeight(parameters)}
+            expandedHeight={
+              isPlaygroundTransitioning
+                ? calcExpandedHeight(parameters)
+                : undefined
+            }
+            maxHeight='calc((100vh / 2) - 10rem)'
           />
         </div>
         <div

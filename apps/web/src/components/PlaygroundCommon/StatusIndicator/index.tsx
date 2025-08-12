@@ -1,8 +1,8 @@
-import { LanguageModelUsage } from 'ai'
-import { AnimatedDots } from '@latitude-data/web-ui/molecules/AnimatedDots'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { AnimatedDots } from '@latitude-data/web-ui/molecules/AnimatedDots'
+import { LanguageModelUsage } from 'ai'
 
 import { FloatingElement } from './FloatingElement'
 import { TokenUsage } from './TokenUsage'
@@ -25,9 +25,10 @@ export function StatusIndicator({
   canStopStreaming?: boolean
 }) {
   const floatingProps = { isScrolledToBottom: false }
+
   if (wakingUpIntegration) {
     return (
-      <FloatingElement {...floatingProps}>
+      <FloatingElement {...floatingProps} spacing='small'>
         <div className='flex flex-row gap-2 p-1'>
           <Icon
             name='loader'
@@ -45,7 +46,7 @@ export function StatusIndicator({
 
   if (runningLatitudeTools > 0) {
     return (
-      <FloatingElement {...floatingProps}>
+      <FloatingElement {...floatingProps} spacing='small'>
         <div className='flex flex-row gap-2 p-1'>
           <Icon
             name='loader'
@@ -63,14 +64,14 @@ export function StatusIndicator({
 
   if (isStreaming) {
     return (
-      <FloatingElement {...floatingProps}>
+      <FloatingElement {...floatingProps} spacing='normal'>
         <div className='flex flex-row gap-1 p-1'>
-          <AnimatedDots color='success' />
+          <AnimatedDots color='primary' />
           {canStopStreaming && stopStreaming && (
             <Tooltip
               side='top'
               align='center'
-              sideOffset={5}
+              sideOffset={4}
               delayDuration={250}
               asChild
               trigger={
@@ -93,7 +94,7 @@ export function StatusIndicator({
   }
 
   return (
-    <FloatingElement isScrolledToBottom={isScrolledToBottom}>
+    <FloatingElement isScrolledToBottom={isScrolledToBottom} spacing='large'>
       <div className='p-2'>
         <TokenUsage usage={usage} />
       </div>

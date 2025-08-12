@@ -133,13 +133,16 @@ export default {
         },
         glow: {
           '0%': {
-            boxShadow: '0 0 20px 4px hsl(var(--latte-border) / 0.15)',
+            boxShadow:
+              '0 0 20px 4px var(--from-glow-color, hsl(var(--primary) / 0.15))',
           },
           '50%': {
-            boxShadow: '0 0 30px 8px hsl(var(--latte-border) / 0.3)',
+            boxShadow:
+              '0 0 30px 8px var(--to-glow-color, hsl(var(--primary) / 0.3))',
           },
           '100%': {
-            boxShadow: '0 0 20px 4px hsl(var(--latte-border) / 0.15)',
+            boxShadow:
+              '0 0 20px 4px var(--from-glow-color, hsl(var(--primary) / 0.15))',
           },
         },
       },

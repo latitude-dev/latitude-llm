@@ -15,6 +15,7 @@ export function CollapsibleBox({
   expandedContent,
   expandedContentHeader,
   expandedHeight,
+  maxHeight,
   initialExpanded = false,
   onToggle,
   scrollable = true,
@@ -36,6 +37,7 @@ export function CollapsibleBox({
   expandedContent?: ReactNode
   expandedContentHeader?: ReactNode
   expandedHeight?: number
+  maxHeight?: string
   initialExpanded?: boolean
   onToggle?: OnToggleFn
   isExpanded?: boolean
@@ -139,6 +141,7 @@ export function CollapsibleBox({
         })}
         style={{
           height: isExpanded ? expandedHeight : 0,
+          maxHeight: maxHeight,
           opacity: isExpanded ? 1 : 0,
         }}
       >

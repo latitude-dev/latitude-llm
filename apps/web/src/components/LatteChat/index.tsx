@@ -25,7 +25,7 @@ export function LatteChat() {
 
   const {
     isLoading,
-    resetChat,
+    resetChat: resetChatStore,
     interactions,
     error,
     changes,
@@ -35,6 +35,11 @@ export function LatteChat() {
   const { sendMessage } = useLatteChatActions()
   const { acceptChanges, undoChanges, addFeedbackToLatteChange } =
     useLatteChangeActions()
+
+  const resetChat = useCallback(() => {
+    resetChatStore()
+    addFeedbackToLatteChange('')
+  }, [resetChatStore, addFeedbackToLatteChange])
 
   const inConversation = interactions.length > 0
   const containerRef = useRef<HTMLDivElement>(null)

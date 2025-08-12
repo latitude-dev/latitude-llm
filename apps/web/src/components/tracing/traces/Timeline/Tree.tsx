@@ -180,20 +180,24 @@ const TimelineTreeItem = memo(
             selectedSpanDepth={selectedSpan?.depth}
             ancestorEndedLevels={ancestorEndedLevels}
           />
-          <Button
-            variant='ghost'
-            size='none'
-            iconProps={{
-              name: isExpanded ? 'chevronDown' : 'chevronRight',
-              color: isSelected ? 'accentForeground' : 'foregroundMuted',
-              className: 'flex-shrink-0',
-            }}
-            className='w-4 h-7'
-            onClick={(e) => {
-              e.stopPropagation()
-              if (span.children.length > 0) toggleCollapsed(span.id)
-            }}
-          />
+          {span.children.length > 0 ? (
+            <Button
+              variant='ghost'
+              size='none'
+              iconProps={{
+                name: isExpanded ? 'chevronDown' : 'chevronRight',
+                color: isSelected ? 'accentForeground' : 'foregroundMuted',
+                className: 'flex-shrink-0',
+              }}
+              className='w-4 h-7'
+              onClick={(e) => {
+                e.stopPropagation()
+                if (span.children.length > 0) toggleCollapsed(span.id)
+              }}
+            />
+          ) : (
+            <div className='-ml-1.5' />
+          )}
           <Icon
             name={specification.icon}
             size='small'

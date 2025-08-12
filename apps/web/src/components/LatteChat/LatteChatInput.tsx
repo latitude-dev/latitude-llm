@@ -118,7 +118,7 @@ export function LatteChatInput({
           'bg-background w-full px-3 pt-3 pb-14 resize-none text-sm',
           'rounded-2xl border-latte-widget border-2 shadow-sm text-muted-foreground',
           'ring-0 focus-visible:ring-0 outline-none focus-visible:outline-none',
-          'focus-visible:animate-glow custom-scrollbar scrollable-indicator',
+          'focus-visible:animate-glow focus-visible:glow-latte custom-scrollbar scrollable-indicator',
           {
             'rounded-t-none border-t-0':
               changes.length > 0 || feedbackRequested,
@@ -137,7 +137,7 @@ export function LatteChatInput({
         onChange={handleValueChange}
         onKeyDown={handleKeyDown}
         minRows={3}
-        maxRows={value === '' ? 3 : 6} // Note: fixes auto-grow with dynamic placeholder
+        maxRows={value === '' ? 3 : 9} // Note: fixes auto-grow with dynamic placeholder
       />
       <div
         className={cn(
