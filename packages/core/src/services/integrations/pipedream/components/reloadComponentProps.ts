@@ -1,4 +1,5 @@
 import {
+  BackendClient,
   ComponentId,
   ConfigurableProps,
   ConfiguredProps,
@@ -21,10 +22,12 @@ export async function reloadComponentProps({
   integration,
   componentId,
   configuredProps: configuredClientProps,
+  pipedream,
 }: {
   integration: PipedreamIntegration
   componentId: string | ComponentId
   configuredProps: ConfiguredProps<ConfigurableProps>
+  pipedream?: BackendClient
 }) {
   if (!isIntegrationConfigured(integration)) {
     return Result.error(
@@ -34,12 +37,15 @@ export async function reloadComponentProps({
     )
   }
 
-  const pipedreamEnv = getPipedreamEnvironment()
-  if (!pipedreamEnv.ok) {
-    return Result.error(pipedreamEnv.error!)
+  if (!pipedream) {
+    const pipedreamEnv = getPipedreamEnvironment()
+    if (!pipedreamEnv.ok) {
+      return Result.error(pipedreamEnv.error!)
+    }
+
+    pipedream = createBackendClient(pipedreamEnv.unwrap())
   }
 
-  const pipedream = createBackendClient(pipedreamEnv.unwrap())
   const externalUserId = integration.configuration.externalUserId
 
   const configuredPropsResult = await fillConfiguredProps({

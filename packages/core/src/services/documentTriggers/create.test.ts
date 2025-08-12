@@ -102,7 +102,7 @@ describe('createDocumentTrigger', () => {
     const result = await createDocumentTrigger({
       workspace,
       document,
-      project,
+      projectId: project.id,
       trigger: {
         type: DocumentTriggerType.Email,
         configuration: emailConfiguration,
@@ -166,7 +166,7 @@ describe('createDocumentTrigger', () => {
     const result = await createDocumentTrigger({
       workspace,
       document,
-      project,
+      projectId: project.id,
       trigger: {
         type: DocumentTriggerType.Scheduled,
         configuration: scheduledConfiguration,
@@ -215,7 +215,7 @@ describe('createDocumentTrigger', () => {
     const result = await createDocumentTrigger({
       workspace,
       document,
-      project,
+      projectId: project.id,
       trigger: {
         type: DocumentTriggerType.Email,
         configuration: emailConfiguration,

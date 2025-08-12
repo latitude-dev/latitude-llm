@@ -3,7 +3,7 @@ import {
   DocumentVersion,
   IntegrationType,
 } from '@latitude-data/constants'
-import { DocumentTrigger, Project, Workspace } from '../../browser'
+import { DocumentTrigger, Workspace } from '../../browser'
 import { BadRequestError, LatitudeError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
@@ -68,12 +68,12 @@ export async function createDocumentTrigger(
   {
     workspace,
     document,
-    project,
+    projectId,
     trigger: { type, configuration },
   }: {
     workspace: Workspace
     document: DocumentVersion
-    project: Project
+    projectId: number
     trigger: InsertDocumentTriggerWithConfiguration
   },
   transaction = new Transaction(),
@@ -97,7 +97,7 @@ export async function createDocumentTrigger(
         uuid: triggerUuid,
         workspaceId: workspace.id,
         documentUuid: document.documentUuid,
-        projectId: project.id,
+        projectId: projectId,
         triggerType: type,
         configuration: documentTriggerConfiguration.unwrap(),
       })

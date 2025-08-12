@@ -42,8 +42,11 @@ const readPrompt = defineLatteTool(
     if (!metadataResult.ok) return metadataResult as ErrorResult<LatitudeError>
     const metadatas = metadataResult.unwrap()
     const metadata = metadatas[document.path]
-
-    return Result.ok({ content: document.content, errors: metadata?.errors })
+    return Result.ok({
+      content: document.content,
+      errors: metadata?.errors,
+      parameters: metadata?.parameters,
+    })
   },
   z.object({
     projectId: z.number(),
