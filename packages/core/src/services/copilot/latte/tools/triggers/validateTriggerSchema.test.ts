@@ -1,9 +1,5 @@
 import * as factories from '@latitude-data/core/factories'
-import {
-  Providers,
-  DocumentTriggerType,
-  IntegrationType,
-} from '@latitude-data/constants'
+import { Providers, IntegrationType } from '@latitude-data/constants'
 import { describe, expect, beforeEach, it, vi } from 'vitest'
 import {
   Workspace,
@@ -12,7 +8,7 @@ import {
   PipedreamIntegration,
 } from '../../../../../browser'
 import { Result } from '../../../../../lib/Result'
-import { validateAndDeployTriggerSchema } from './validateAndDeployTriggerSchema'
+import { validateTriggerSchema } from './validateTriggerSchema'
 import { LatteToolContext } from '../types'
 import { IntegrationsRepository } from '../../../../../repositories'
 import {
@@ -21,17 +17,12 @@ import {
   UnauthorizedError,
 } from '@latitude-data/constants/errors'
 import * as pipedreamAppsModule from '../../../../integrations/pipedream/apps'
-import * as createDocumentTriggerModule from '../../../../documentTriggers'
 import * as configValidatorModule from './configValidator'
 import { BackendClient, createBackendClient } from '@pipedream/sdk'
 
 // Mock the modules
 vi.mock('../../../../integrations/pipedream/apps', () => ({
   getPipedreamEnvironment: vi.fn(),
-}))
-
-vi.mock('../../../../documentTriggers', () => ({
-  createDocumentTrigger: vi.fn(),
 }))
 
 vi.mock('./configValidator', () => ({
@@ -42,7 +33,7 @@ vi.mock('@pipedream/sdk', () => ({
   createBackendClient: vi.fn(),
 }))
 
-describe('validateAndDeployTriggerSchema', () => {
+describe('validateTriggerSchema', () => {
   let workspace: Workspace
   let commit: Commit
   let documents: DocumentVersion[]
@@ -57,9 +48,7 @@ describe('validateAndDeployTriggerSchema', () => {
   const mockGetPipedreamEnvironment = vi.mocked(
     pipedreamAppsModule.getPipedreamEnvironment,
   )
-  const mockCreateDocumentTrigger = vi.mocked(
-    createDocumentTriggerModule.createDocumentTrigger,
-  )
+
   const mockValidateLattesChoices = vi.mocked(
     configValidatorModule.validateLattesChoices,
   )
@@ -129,33 +118,10 @@ describe('validateAndDeployTriggerSchema', () => {
     )
 
     mockValidateLattesChoices.mockResolvedValue(Result.ok(true))
-
-    mockCreateDocumentTrigger.mockResolvedValue(
-      Result.ok({
-        id: 1,
-        uuid: 'trigger-uuid-123',
-        workspaceId: workspace.id,
-        projectId: commit.projectId,
-        documentUuid: documents[0]!.documentUuid,
-        triggerType: DocumentTriggerType.Integration,
-        configuration: {
-          componentId: 'slack-new-message',
-          integrationId: integration.id,
-          properties: {
-            conversations: ['AABBBCCCDDD'],
-            keyword: 'test',
-          },
-          payloadParameters: ['subject', 'body'],
-          triggerId: 'pipedream-trigger-id',
-        },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }),
-    )
   })
 
-  describe('successful validation and deployment', () => {
-    it('should validate and deploy trigger successfully', async () => {
+  describe('successful validation', () => {
+    it('should validate trigger successfully', async () => {
       // Arrange
       const params = {
         projectId: commit.projectId,
@@ -176,30 +142,15 @@ describe('validateAndDeployTriggerSchema', () => {
       )
 
       // Act
-      const result = await validateAndDeployTriggerSchema(params, context)
+      const result = await validateTriggerSchema(params, context)
 
       // Assert
       expect(Result.isOk(result)).toBe(true)
-      expect(result.unwrap()).toHaveProperty('createdDocumentTrigger')
       expect(mockValidateLattesChoices).toHaveBeenCalledWith({
         pipedream: mockPipedreamClient,
         componentId: 'slack-new-message',
         integration,
         lattesChoices: params.configuration,
-      })
-      expect(mockCreateDocumentTrigger).toHaveBeenCalledWith({
-        workspace,
-        document: documents[0],
-        projectId: commit.projectId,
-        trigger: {
-          type: DocumentTriggerType.Integration,
-          configuration: {
-            componentId: 'slack-new-message',
-            integrationId: integration.id,
-            properties: params.configuration,
-            payloadParameters: params.payloadParameters,
-          },
-        },
       })
     })
 
@@ -223,19 +174,10 @@ describe('validateAndDeployTriggerSchema', () => {
       )
 
       // Act
-      const result = await validateAndDeployTriggerSchema(params, context)
+      const result = await validateTriggerSchema(params, context)
 
       // Assert
       expect(Result.isOk(result)).toBe(true)
-      expect(mockCreateDocumentTrigger).toHaveBeenCalledWith(
-        expect.objectContaining({
-          trigger: expect.objectContaining({
-            configuration: expect.objectContaining({
-              payloadParameters: [],
-            }),
-          }),
-        }),
-      )
     })
   })
 
@@ -254,7 +196,7 @@ describe('validateAndDeployTriggerSchema', () => {
       }
 
       // Act
-      const result = await validateAndDeployTriggerSchema(params, context)
+      const result = await validateTriggerSchema(params, context)
 
       // Assert
       expect(Result.isOk(result)).toBe(false)
@@ -278,7 +220,7 @@ describe('validateAndDeployTriggerSchema', () => {
       }
 
       // Act
-      const result = await validateAndDeployTriggerSchema(params, context)
+      const result = await validateTriggerSchema(params, context)
 
       // Assert
       expect(Result.isOk(result)).toBe(false)
@@ -311,7 +253,7 @@ describe('validateAndDeployTriggerSchema', () => {
       )
 
       // Act
-      const result = await validateAndDeployTriggerSchema(params, context)
+      const result = await validateTriggerSchema(params, context)
 
       // Assert
       expect(Result.isOk(result)).toBe(false)
@@ -339,7 +281,7 @@ describe('validateAndDeployTriggerSchema', () => {
       )
 
       // Act
-      const result = await validateAndDeployTriggerSchema(params, context)
+      const result = await validateTriggerSchema(params, context)
 
       // Assert
       expect(Result.isOk(result)).toBe(false)
@@ -370,42 +312,11 @@ describe('validateAndDeployTriggerSchema', () => {
       )
 
       // Act
-      const result = await validateAndDeployTriggerSchema(params, context)
+      const result = await validateTriggerSchema(params, context)
 
       // Assert
       expect(Result.isOk(result)).toBe(false)
       expect(result.error).toBe(validationError)
-    })
-  })
-
-  describe('document trigger creation errors', () => {
-    it('should return error when document trigger creation fails', async () => {
-      // Arrange
-      const params = {
-        projectId: commit.projectId,
-        versionUuid: commit.uuid,
-        componentId: 'slack-new-message',
-        promptUuid: documents[0]!.documentUuid,
-        integrationId: integration.id,
-        configuration: {
-          conversations: ['AABBBCCCDDD'],
-          keyword: 'test',
-        },
-      }
-
-      const creationError = new Error('Failed to create document trigger')
-      mockCreateDocumentTrigger.mockResolvedValue(Result.error(creationError))
-
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.ok(integration),
-      )
-
-      // Act
-      const result = await validateAndDeployTriggerSchema(params, context)
-
-      // Assert
-      expect(Result.isOk(result)).toBe(false)
-      expect(result.error).toBe(creationError)
     })
   })
 
@@ -428,7 +339,7 @@ describe('validateAndDeployTriggerSchema', () => {
       )
 
       // Act
-      const result = await validateAndDeployTriggerSchema(params, context)
+      const result = await validateTriggerSchema(params, context)
 
       // Assert
       expect(Result.isOk(result)).toBe(true)
@@ -453,7 +364,7 @@ describe('validateAndDeployTriggerSchema', () => {
       )
 
       // Act
-      await validateAndDeployTriggerSchema(params, context)
+      await validateTriggerSchema(params, context)
 
       // Assert
       expect(mockValidateLattesChoices).toHaveBeenCalledWith({
@@ -461,46 +372,6 @@ describe('validateAndDeployTriggerSchema', () => {
         componentId: 'custom-component',
         integration,
         lattesChoices: params.configuration,
-      })
-    })
-
-    it('should pass correct trigger configuration to createDocumentTrigger', async () => {
-      // Arrange
-      const params = {
-        projectId: commit.projectId,
-        versionUuid: commit.uuid,
-        componentId: 'test-component',
-        promptUuid: documents[0]!.documentUuid,
-        integrationId: integration.id,
-        payloadParameters: ['param1', 'param2', 'param3'],
-        configuration: {
-          prop1: 'value1',
-          prop2: ['value2a', 'value2b'],
-          prop3: 42,
-        },
-      }
-
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.ok(integration),
-      )
-
-      // Act
-      await validateAndDeployTriggerSchema(params, context)
-
-      // Assert
-      expect(mockCreateDocumentTrigger).toHaveBeenCalledWith({
-        workspace,
-        document: documents[0],
-        projectId: commit.projectId,
-        trigger: {
-          type: DocumentTriggerType.Integration,
-          configuration: {
-            componentId: 'test-component',
-            integrationId: integration.id,
-            properties: params.configuration,
-            payloadParameters: params.payloadParameters,
-          },
-        },
       })
     })
   })

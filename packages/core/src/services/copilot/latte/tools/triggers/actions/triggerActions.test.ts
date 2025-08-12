@@ -1,11 +1,11 @@
 import * as factories from '@latitude-data/core/factories'
 import { Providers } from '@latitude-data/constants'
 import { describe, expect, beforeEach, it, vi } from 'vitest'
-import { Workspace } from '../../../../../browser'
-import { Result } from '../../../../../lib/Result'
+import { Workspace } from '../../../../../../browser'
+import { Result } from '../../../../../../lib/Result'
 import triggerActions from './triggerActions'
-import { LatteToolContext } from '../types'
-import { CommitsRepository } from '../../../../../repositories'
+import { LatteToolContext } from '../../types'
+import { CommitsRepository } from '../../../../../../repositories'
 import { BadRequestError } from '@latitude-data/constants/errors'
 
 const mockCommit = (mergedAt: boolean) => ({
@@ -51,6 +51,7 @@ describe('triggerActions', () => {
     const params = {
       projectId: 1,
       versionUuid: 'commit-uuid',
+      promptUuid: '1111-1111-1111-1111',
       actions: [],
     }
     const result = await triggerActions(params, {
@@ -80,6 +81,7 @@ describe('triggerActions', () => {
     const params = {
       projectId: 1,
       versionUuid: 'commit-uuid',
+      promptUuid: '1111-1111-1111-1111',
       actions: [],
     }
     const result = await triggerActions(params, {

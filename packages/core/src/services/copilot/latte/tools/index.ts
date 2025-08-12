@@ -18,10 +18,10 @@ import searchIntegrationResources from './settings/searchIntegrationResources'
 import searchIntegrationApps from './settings/searchIntegrationApps'
 import createIntegration from './settings/createIntegration'
 import { ToolHandler } from '../../../../lib/streamManager/clientTools/handlers'
-import triggerActions from './triggers/triggerActions'
+import triggerActions from './triggers/actions/triggerActions'
 import listExistingTriggers from './triggers/listExistingTriggers'
 import { getFullTriggerConfigSchema } from './triggers/getFullTriggerConfigSchema'
-import { validateAndDeployTriggerSchema } from './triggers/validateAndDeployTriggerSchema'
+import { validateTriggerSchema } from './triggers/validateTriggerSchema'
 import { LatteInvalidChoiceError } from './triggers/configValidator'
 
 export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
@@ -41,7 +41,7 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.triggerActions]: triggerActions,
   [LatteTool.listExistingTriggers]: listExistingTriggers,
   [LatteTool.getFullTriggerSchema]: getFullTriggerConfigSchema,
-  [LatteTool.validateAndDeployTriggerSchema]: validateAndDeployTriggerSchema,
+  [LatteTool.validateTriggerSchema]: validateTriggerSchema,
   [LatteTool.writePrompt]: writePrompt,
 } as const
 

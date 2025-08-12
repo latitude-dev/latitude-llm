@@ -23,7 +23,6 @@ export enum LatteTool {
   listExistingTriggers = 'list_existing_triggers',
 
   getFullTriggerSchema = 'get_full_trigger_schema',
-  // Adding only validate keyword to latte as it gets confused with the create/deploy word
-  validateAndDeployTriggerSchema = 'validate_trigger_schema',
+  validateTriggerSchema = 'validate_trigger_schema',
   triggerActions = 'trigger_actions',
 }
