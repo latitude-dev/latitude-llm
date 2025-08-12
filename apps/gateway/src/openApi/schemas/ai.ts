@@ -7,8 +7,8 @@ import {
 import { messageSchema } from '@latitude-data/core/browser'
 
 export const languageModelUsageSchema = z.object({
-  completionTokens: z.number().optional(),
-  promptTokens: z.number().optional(),
+  inputTokens: z.number().optional(),
+  outputTokens: z.number().optional(),
   totalTokens: z.number().optional(),
 })
 

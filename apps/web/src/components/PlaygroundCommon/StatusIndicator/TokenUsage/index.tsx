@@ -14,8 +14,8 @@ export function TokenUsage({ usage }: { usage?: LanguageModelUsage }) {
         <div className='cursor-pointer flex flex-row items-center gap-x-1'>
           <Text.H6M color='foregroundMuted'>
             {usage?.totalTokens ||
-              usage?.promptTokens ||
-              usage?.completionTokens ||
+              usage?.inputTokens ||
+              usage?.outputTokens ||
               0}{' '}
             tokens
           </Text.H6M>
@@ -24,8 +24,8 @@ export function TokenUsage({ usage }: { usage?: LanguageModelUsage }) {
       }
     >
       <div className='flex flex-col gap-2'>
-        <span>{usage?.promptTokens || 0} prompt tokens</span>
-        <span>{usage?.completionTokens || 0} completion tokens</span>
+        <span>{usage?.inputTokens || 0} input tokens</span>
+        <span>{usage?.outputTokens || 0} output tokens</span>
       </div>
     </Tooltip>
   )

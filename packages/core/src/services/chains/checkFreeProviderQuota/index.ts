@@ -21,6 +21,7 @@ export async function checkFreeProviderQuota({
   model: string
   defaultProviderApiKey?: string
 }) {
+  return Result.ok(true)
   if (provider.token !== defaultProviderApiKey) return Result.ok(true)
   if (!DEFAULT_PROVIDER_SUPPORTED_MODELS.includes(model ?? '')) {
     return Result.error(

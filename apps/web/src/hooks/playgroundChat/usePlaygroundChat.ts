@@ -49,8 +49,8 @@ export function usePlaygroundChat({
   const [messages, setMessages] = useState<Message[]>([])
   const [unresponedToolCalls, setUnresponedToolCalls] = useState<ToolCall[]>([])
   const [usage, setUsage] = useState<LanguageModelUsage>({
-    promptTokens: 0,
-    completionTokens: 0,
+    inputTokens: 0,
+    outputTokens: 0,
     totalTokens: 0,
   })
   const [runningLatitudeTools, setRunningLatitudeTools] = useState<number>(0)
@@ -259,8 +259,8 @@ export function usePlaygroundChat({
     setMessages([])
     setUnresponedToolCalls([])
     setUsage({
-      promptTokens: 0,
-      completionTokens: 0,
+      inputTokens: 0,
+      outputTokens: 0,
       totalTokens: 0,
     })
     setDocumentLogUuid(undefined)

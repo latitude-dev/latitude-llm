@@ -508,7 +508,7 @@ describe('POST /run', () => {
         streamType: 'object',
         object: { something: { else: 'here' } },
         text: 'Hello',
-        usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+        usage: { inputTokens: 4, outputTokens: 6, totalTokens: 10 },
         documentLogUuid: 'fake-document-log-uuid',
         providerLog: {
           messages: [
@@ -553,7 +553,7 @@ describe('POST /run', () => {
         ],
         response: {
           streamType: 'object',
-          usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+          usage: { inputTokens: 4, outputTokens: 6, totalTokens: 10 },
           text: 'Hello',
           object: { something: { else: 'here' } },
           toolCalls: [],
@@ -605,7 +605,7 @@ describe('POST /run', () => {
         streamType: 'object',
         object: { something: { else: 'here' } },
         text: 'Hello',
-        usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+        usage: { inputTokens: 4, outputTokens: 6, totalTokens: 10 },
         providerLog: {
           messages: [
             {
@@ -652,7 +652,7 @@ describe('POST /run', () => {
         streamType: 'object',
         object: { something: { else: 'here' } },
         text: 'Hello',
-        usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+        usage: { inputTokens: 4, outputTokens: 6, totalTokens: 10 },
         documentLogUuid: 'fake-document-log-uuid',
       })
 
@@ -826,7 +826,7 @@ describe('POST /run', () => {
         streamType: 'object',
         object: { something: { else: 'here' } },
         text: 'Hello',
-        usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+        usage: { inputTokens: 4, outputTokens: 6, totalTokens: 10 },
         documentLogUuid: 'fake-document-log-uuid',
         providerLog: {
           messages: [
