@@ -82,7 +82,7 @@
     "@google-cloud/aiplatform": "^3.35.0",
     "@google-cloud/vertexai": "^1.10.0",
     "@langchain/core": "^0.3.57",
-    "ai": "^4.3.16",
+    "ai": "catalog:",
     "cohere-ai": "^7.17.1",
     "langchain": "^0.3.27",
     "llamaindex": "^0.8.37",
