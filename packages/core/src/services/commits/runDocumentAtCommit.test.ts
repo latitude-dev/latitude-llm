@@ -33,14 +33,14 @@ const mocks = {
       text: Promise.resolve('Fake AI generated text'),
       providerLog: Promise.resolve({ uuid: 'fake-provider-log-uuid' }),
       usage: Promise.resolve({
-        promptTokens: 0,
-        completionTokens: 0,
+        inputTokens: 0,
+        outputTokens: 0,
         totalTokens: 0,
       }),
       toolCalls: Promise.resolve([]),
       response: Promise.resolve({ messages: [] }),
       fullStream,
-    })
+    });
   }),
 }
 
@@ -355,8 +355,8 @@ model: gpt-4o
           text: Promise.resolve('Fake AI generated text'),
           providerLog: Promise.resolve({ uuid: 'fake-provider-log-uuid' }),
           usage: Promise.resolve({
-            promptTokens: 0,
-            completionTokens: 0,
+            inputTokens: 0,
+            outputTokens: 0,
             totalTokens: 0,
           }),
           toolCalls: Promise.resolve([]),
@@ -412,12 +412,12 @@ model: gpt-4o
           fullStream,
           response: Promise.resolve({ messages: [] }),
           usage: Promise.resolve({
-            promptTokens: 0,
-            completionTokens: 0,
+            inputTokens: 0,
+            outputTokens: 0,
             totalTokens: 0,
           }),
           toolCalls: Promise.resolve([]),
-          providerMetadata: Promise.resolve({}),
+          providerOptions: Promise.resolve({}),
           finishReason: Promise.resolve('error'),
         }),
       )

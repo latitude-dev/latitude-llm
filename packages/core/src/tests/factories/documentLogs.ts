@@ -84,8 +84,8 @@ async function generateProviderLogs({
       responseText: mockedResponse,
       toolCalls: [],
       usage: {
-        promptTokens,
-        completionTokens,
+        inputTokens,
+        outputTokens,
         totalTokens: promptTokens + completionTokens,
       },
       duration: Math.floor(Math.random() * 1000),

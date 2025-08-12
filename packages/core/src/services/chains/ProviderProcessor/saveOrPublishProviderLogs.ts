@@ -105,7 +105,7 @@ export function buildProviderLogDto({
       response.streamType === 'object' ? response.object : undefined,
     responseText: response.streamType === 'text' ? response.text : undefined,
     responseReasoning:
-      response.streamType === 'text' ? response.reasoning : undefined,
+      response.streamType === 'text' ? response.reasoningText : undefined,
     toolCalls: response.streamType === 'text' ? response.toolCalls : [],
-  }
+  };
 }

@@ -43,11 +43,11 @@ export function resolveAgentReturnTool({
     [AGENT_RETURN_TOOL_NAME]: {
       definition: {
         description: AGENT_RETURN_TOOL_DESCRIPTION,
-        parameters: config.schema ?? DEFAULT_AGENT_RETURN_TOOL_SCHEMA,
+        inputSchema: config.schema ?? DEFAULT_AGENT_RETURN_TOOL_SCHEMA,
       } as ToolDefinition,
       sourceData: {
         source: ToolSource.AgentReturn,
       },
     },
-  })
+  });
 }

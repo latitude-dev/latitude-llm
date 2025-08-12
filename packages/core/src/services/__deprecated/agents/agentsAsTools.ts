@@ -80,13 +80,13 @@ export async function getToolDefinitionFromDocument({
 
   return {
     description: description ?? 'An AI agent',
-    parameters: {
+    inputSchema: {
       type: 'object',
       properties: params,
       required: Object.keys(params),
       additionalProperties: false,
     },
-  }
+  };
 }
 
 export async function buildAgentsToolsMap(

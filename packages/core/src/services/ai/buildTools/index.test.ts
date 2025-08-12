@@ -10,7 +10,7 @@ describe('buildTools', () => {
       get_weather: {
         description:
           'Obtains the weather temperature from a given location id.',
-        parameters: {
+        inputSchema: {
           type: 'object',
           additionalProperties: false,
           required: ['location_id'],
@@ -37,7 +37,7 @@ describe('buildTools', () => {
       get_weather: {
         description:
           'Obtains the weather temperature from a given location id.',
-        parameters: jsonSchema({
+        inputSchema: jsonSchema({
           type: 'object',
           additionalProperties: false,
           required: ['location_id'],

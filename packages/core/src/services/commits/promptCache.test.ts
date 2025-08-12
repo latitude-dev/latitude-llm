@@ -24,10 +24,10 @@ describe('promptCache', async () => {
   const response = {
     streamType: 'text' as const,
     text: 'cached response',
-    reasoning: undefined,
+    reasoningText: undefined,
     usage: {
-      promptTokens: 0,
-      completionTokens: 0,
+      inputTokens: 0,
+      outputTokens: 0,
       totalTokens: 0,
     },
     toolCalls: [],
@@ -132,8 +132,8 @@ describe('promptCache', async () => {
           streamType: 'text',
           text: 'cached response',
           usage: {
-            promptTokens: 0,
-            completionTokens: 0,
+            inputTokens: 0,
+            outputTokens: 0,
             totalTokens: 0,
           },
           toolCalls: [],

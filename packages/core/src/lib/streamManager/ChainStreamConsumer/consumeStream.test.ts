@@ -14,8 +14,8 @@ export class AsyncStreamIteable<T> extends ReadableStream<T> {
 }
 
 const DEFAULT_USAGE: LanguageModelUsage = {
-  promptTokens: 0,
-  completionTokens: 0,
+  inputTokens: 0,
+  outputTokens: 0,
   totalTokens: 0,
 }
 export const PARTIAL_FINISH_CHUNK = {
@@ -49,11 +49,11 @@ function buildFakeChain({
     type: 'text' as const,
     toolCalls: [] as any,
     text: new Promise<string>(() => 'text'),
-    reasoning: new Promise<string | undefined>((resolve) => resolve(undefined)),
+    reasoningText: new Promise<string | undefined>((resolve) => resolve(undefined)),
     usage: new Promise<LanguageModelUsage>(() => DEFAULT_USAGE),
     fullStream,
     providerName: Providers.OpenAI,
-    providerMetadata: new Promise<undefined>(() => undefined),
+    providerOptions: new Promise<undefined>(() => undefined),
   }
   return new Promise<void>((resolve) => {
     new ReadableStream<LegacyChainEvent>({
@@ -71,12 +71,12 @@ describe('consumeStream', () => {
   it('return finishReason and no error', async () => {
     await buildFakeChain({
       chunks: [
-        { type: 'text-delta', textDelta: 'a' },
+        { type: 'text', textDelta: 'a' },
         {
           ...PARTIAL_FINISH_CHUNK,
           type: 'finish',
           finishReason: 'stop',
-          providerMetadata: undefined,
+          providerOptions: undefined,
         },
       ],
       callback: async (controller, result) => {
@@ -92,12 +92,12 @@ describe('consumeStream', () => {
   it('return error when finishReason is error', async () => {
     await buildFakeChain({
       chunks: [
-        { type: 'text-delta', textDelta: 'a' },
+        { type: 'text', textDelta: 'a' },
         {
           ...PARTIAL_FINISH_CHUNK,
           type: 'finish',
           finishReason: 'error',
-          providerMetadata: undefined,
+          providerOptions: undefined,
         },
       ],
       callback: async (controller, result) => {
@@ -115,7 +115,7 @@ describe('consumeStream', () => {
   it('return error when type is error', async () => {
     await buildFakeChain({
       chunks: [
-        { type: 'text-delta', textDelta: 'a' },
+        { type: 'text', textDelta: 'a' },
         {
           type: 'error',
           error: new Error('an error happened'),

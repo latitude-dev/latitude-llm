@@ -32,13 +32,13 @@ export async function processResponse({
     object: isObject ? parseObject(text) : undefined,
     output,
     usage: await aiResult.usage,
-    reasoning: await aiResult.reasoning,
+    reasoningText: await aiResult.reasoningText,
     toolCalls: (await aiResult.toolCalls).map((t) => ({
       id: t.toolCallId,
       name: t.toolName,
       arguments: t.args,
     })),
-  }
+  };
 }
 
 async function buildOutput(

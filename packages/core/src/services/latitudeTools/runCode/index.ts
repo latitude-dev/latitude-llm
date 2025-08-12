@@ -71,7 +71,7 @@ export default {
       'In order to obtain results, the code must include an output statement (e.g. `print(…)` in Python, `console.log(…)` in JavaScript).\n' +
       'The executed code will be timed out after 60 seconds. This means that the code must finish execution within 60 seconds, or it will be stopped, which makes it not suitable for long-running scripts or server-side code.\n' +
       'No environment variables are available: All necessary configurations must be provided in the code itself.',
-    parameters: {
+    inputSchema: {
       type: 'object',
       properties: {
         language: {

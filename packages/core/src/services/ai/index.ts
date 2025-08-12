@@ -3,7 +3,7 @@ import { omit } from 'lodash-es'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
-  CoreMessage,
+  ModelMessage,
   jsonSchema,
   ObjectStreamPart,
   streamText as originalStreamText,
@@ -150,7 +150,7 @@ export async function ai({
       ...omit(config, ['schema']),
       model: languageModel,
       prompt,
-      messages: messages as CoreMessage[],
+      messages: messages as ModelMessage[],
       tools: toolsResult.value,
       abortSignal,
       providerOptions: config.providerOptions,
@@ -166,14 +166,14 @@ export async function ai({
       providerName: providerType,
       fullStream: result.fullStream,
       text: result.text,
-      reasoning: result.reasoning,
+      reasoningText: result.reasoningText,
       usage: result.usage,
       toolCalls: result.toolCalls,
-      providerMetadata: result.providerMetadata,
+      providerOptions: result.providerOptions,
       sources: result.sources,
       finishReason: result.finishReason,
       response: result.response,
-    })
+    });
   } catch (e) {
     return handleAICallAPIError(e)
   }

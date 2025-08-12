@@ -470,8 +470,11 @@ describe('formatContext', () => {
             { type: 'text', text: 'Summarize this file' },
             {
               type: 'file',
-              file: 'https://example.com/file.pdf',
-              mimeType: 'application/pdf',
+
+              file: {
+                file: 'https://example.com/file.pdf',
+                mimeType: 'application/pdf'
+              }
             },
           ],
         },

@@ -72,8 +72,8 @@ export class ChainStreamManager {
     errorableUuid,
     messages = [],
     tokenUsage = {
-      promptTokens: 0,
-      completionTokens: 0,
+      inputTokens: 0,
+      outputTokens: 0,
       totalTokens: 0,
     },
     promptSource,
@@ -236,9 +236,9 @@ export class ChainStreamManager {
 
     this.finishReason = response.finishReason
     this.tokenUsage = {
-      promptTokens: this.tokenUsage.promptTokens + tokenUsage.promptTokens,
-      completionTokens:
-        this.tokenUsage.completionTokens + tokenUsage.completionTokens,
+      inputTokens: this.tokenUsage.inputTokens + tokenUsage.inputTokens,
+      outputTokens:
+        this.tokenUsage.outputTokens + tokenUsage.outputTokens,
       totalTokens: this.tokenUsage.totalTokens + tokenUsage.totalTokens,
     }
     this.setLastResponse(response)
@@ -255,10 +255,11 @@ export class ChainStreamManager {
     const clientToolCalls = toolCalls.filter((toolCall) => {
       const toolSource = resolvedTools[toolCall.name]?.sourceData
       return (
+        // client must manage the agent return tool too
+        (// send known client tools
         toolSource === undefined || // send unknown tools
-        toolSource.source === ToolSource.Client || // send known client tools
-        toolSource.source === ToolSource.AgentReturn // client must manage the agent return tool too
-      )
+        toolSource.source === ToolSource.Client || toolSource.source === ToolSource.AgentReturn)
+      );
     })
 
     return {

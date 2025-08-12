@@ -109,14 +109,14 @@ describe('runPrompt', () => {
           object: { passed: true, reason: 'reason' },
           text: 'text',
           usage: {
-            promptTokens: 10,
-            completionTokens: 10,
+            inputTokens: 10,
+            outputTokens: 10,
             totalTokens: 20,
           },
           documentLogUuid: providerLog.documentLogUuid,
           providerLog: providerLog,
         }),
-      } as any
+      } as any;
     })
   })
 
@@ -187,14 +187,14 @@ describe('runPrompt', () => {
           text: 'text',
           toolCalls: [],
           usage: {
-            promptTokens: 10,
-            completionTokens: 10,
+            inputTokens: 10,
+            outputTokens: 10,
             totalTokens: 20,
           },
           documentLogUuid: providerLog.documentLogUuid,
           providerLog: providerLog,
         }),
-      } as any
+      } as any;
     })
 
     await expect(
@@ -228,14 +228,14 @@ describe('runPrompt', () => {
           object: { score: 0.5, reason: 'reason' },
           text: 'text',
           usage: {
-            promptTokens: 10,
-            completionTokens: 10,
+            inputTokens: 10,
+            outputTokens: 10,
             totalTokens: 20,
           },
           documentLogUuid: providerLog.documentLogUuid,
           providerLog: providerLog,
         }),
-      } as any
+      } as any;
     })
 
     await expect(
@@ -284,7 +284,7 @@ describe('runPrompt', () => {
         streamType: 'object',
         object: { passed: true, reason: 'reason' },
         text: 'text',
-        usage: { promptTokens: 10, completionTokens: 10, totalTokens: 20 },
+        usage: { inputTokens: 10, outputTokens: 10, totalTokens: 20 },
         documentLogUuid: resultUuid,
         providerLog: providerLog,
       },

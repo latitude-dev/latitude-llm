@@ -133,8 +133,8 @@ function adaptContentFields({
     switch (c.type) {
       case 'file': {
         const adaptedContent = {
-          ...c,
-          data: (c as any)['file'] as FilePart['data'],
+          ...c.file,
+          data: (c.file as any)['file'] as FilePart['data'],
         } as FilePart
 
         delete (adaptedContent as any)['file']
@@ -154,7 +154,7 @@ function adaptContentFields({
       }
 
       case 'text':
-        if ('reasoning' in c) delete c.reasoning
+        if ('reasoning' in c) delete c.reasoningText
         if ('isReasoning' in c) delete c.isReasoning
 
         return c
@@ -162,7 +162,7 @@ function adaptContentFields({
       default:
         return c
     }
-  })
+  });
 }
 
 /**

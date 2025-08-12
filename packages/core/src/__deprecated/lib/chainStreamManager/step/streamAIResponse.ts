@@ -111,11 +111,11 @@ export async function executeAIResponse({
     return {
       response,
       tokenUsage: {
-        promptTokens: 0,
-        completionTokens: 0,
+        inputTokens: 0,
+        outputTokens: 0,
         totalTokens: 0,
       },
-    }
+    };
   }
 
   const aiResult = await ai({

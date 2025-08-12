@@ -77,7 +77,7 @@ export default {
   method: webExtract,
   definition: (context: TelemetryContext) => ({
     description: 'Given a URL, returns the contents of the page.',
-    parameters: {
+    inputSchema: {
       type: 'object',
       properties: {
         url: {

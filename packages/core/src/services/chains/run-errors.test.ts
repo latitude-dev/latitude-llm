@@ -27,8 +27,8 @@ function buildMockAIresponse(chunks: TextStreamPart<any>[]) {
     text: new Promise((resolve) => resolve('MY TEXT')),
     usage: new Promise((resolve) =>
       resolve({
-        promptTokens: 3,
-        completionTokens: 7,
+        inputTokens: 3,
+        outputTokens: 7,
         totalTokens: 10,
       }),
     ),
@@ -41,7 +41,7 @@ function buildMockAIresponse(chunks: TextStreamPart<any>[]) {
       },
     }),
     providerName: Providers.OpenAI,
-  } as aiModule.AIReturn<'text'>)
+  } as aiModule.AIReturn<'text'>);
 }
 
 describe('run chain error handling', () => {

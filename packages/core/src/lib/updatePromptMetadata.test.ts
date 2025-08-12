@@ -397,7 +397,7 @@ Hello world
         provider: 'updated',
         model: null,
         temperature: undefined,
-        maxTokens: 1000,
+        maxOutputTokens: 1000,
       },
       { keysToBeRemovedWhenNull: ['model', 'temperature'] },
     )

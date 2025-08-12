@@ -343,8 +343,11 @@ describe('applyVercelSdkRules', () => {
         content: [
           {
             type: 'file',
-            file: 'pdf file content',
-            mimeType: 'application/pdf',
+
+            file: {
+              file: 'pdf file content',
+              mimeType: 'application/pdf'
+            }
           },
         ],
       },
@@ -361,8 +364,11 @@ describe('applyVercelSdkRules', () => {
         content: [
           {
             type: 'file',
-            data: 'pdf file content',
-            mimeType: 'application/pdf',
+
+            file: {
+              data: 'pdf file content',
+              mimeType: 'application/pdf'
+            }
           },
         ],
       },
@@ -472,7 +478,7 @@ describe('applyVercelSdkRules', () => {
             type: 'text',
             text: 'Hi there',
             isReasoning: true,
-            reasoning: 'Some reasoning',
+            reasoningText: 'Some reasoning',
           },
         ],
       },

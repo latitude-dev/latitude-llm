@@ -147,7 +147,7 @@ export async function sendWebsockets({
         })
       }
 
-      if (data.type === 'text-delta') {
+      if (data.type === 'text') {
         WebsocketClient.sendEvent('latteThreadUpdate', {
           workspaceId: workspace.id,
           data: {

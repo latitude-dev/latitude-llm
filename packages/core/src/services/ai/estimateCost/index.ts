@@ -120,7 +120,7 @@ export function estimateCost({
   provider: Providers
   model: string
 }): number {
-  const { promptTokens, completionTokens } = usage
+  const { inputTokens, outputTokens } = usage
   const costSpec = getCostPer1M({ provider, model }).cost
 
   // Guard against NaN token counts.

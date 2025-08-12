@@ -90,8 +90,8 @@ export abstract class StreamManager {
     messages = [],
     uuid = generateUUIDIdentifier(),
     tokenUsage = {
-      promptTokens: 0,
-      completionTokens: 0,
+      inputTokens: 0,
+      outputTokens: 0,
       totalTokens: 0,
     },
   }: StreamManagerProps) {
@@ -250,10 +250,10 @@ export abstract class StreamManager {
     this.$completion?.end({
       output: responseMessages,
       tokens: {
-        prompt: tokenUsage.promptTokens,
+        prompt: tokenUsage.inputTokens,
         cached: 0, // Note: not given by Vercel AI SDK yet
-        reasoning: 0, // Note: not given by Vercel AI SDK yet
-        completion: tokenUsage.completionTokens,
+        reasoningText: 0, // Note: not given by Vercel AI SDK yet
+        completion: tokenUsage.outputTokens,
       },
       finishReason,
     })
@@ -357,9 +357,9 @@ export abstract class StreamManager {
     this.response = response
     this.finishReason = finishReason
     this.tokenUsage = {
-      promptTokens: this.tokenUsage.promptTokens + tokenUsage.promptTokens,
-      completionTokens:
-        this.tokenUsage.completionTokens + tokenUsage.completionTokens,
+      inputTokens: this.tokenUsage.inputTokens + tokenUsage.inputTokens,
+      outputTokens:
+        this.tokenUsage.outputTokens + tokenUsage.outputTokens,
       totalTokens: this.tokenUsage.totalTokens + tokenUsage.totalTokens,
     }
   }

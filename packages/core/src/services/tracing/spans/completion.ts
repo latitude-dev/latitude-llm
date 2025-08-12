@@ -140,7 +140,7 @@ async function process(
   const tokens = {
     prompt: promptTokens,
     cached: cachedTokens,
-    reasoning: reasoningTokens,
+    reasoningText: reasoningTokens,
     completion: completionTokens,
   }
 
@@ -679,15 +679,15 @@ async function enrichCost(
   db = database,
 ): Promise<TypedResult<Required<CompletionSpanMetadata>['cost']>> {
   const inputTokens = tokens.prompt + tokens.cached
-  const outputTokens = tokens.reasoning + tokens.completion
+  const outputTokens = tokens.reasoningText + tokens.completion
 
   const repository = new ProviderApiKeysRepository(workspace.id, db)
   const finding = await repository.findByName(provider)
 
   let cost = estimateCost({
     usage: {
-      promptTokens: inputTokens,
-      completionTokens: outputTokens,
+      inputTokens: inputTokens,
+      outputTokens: outputTokens,
       totalTokens: inputTokens + outputTokens,
     },
     provider: finding.value?.provider ?? (provider as Providers),

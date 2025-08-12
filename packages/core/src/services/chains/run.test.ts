@@ -188,8 +188,8 @@ describe('runChain', () => {
         text: Promise.resolve(''),
         toolCalls: Promise.resolve([]),
         usage: Promise.resolve({
-          promptTokens: 0,
-          completionTokens: 0,
+          inputTokens: 0,
+          outputTokens: 0,
           totalTokens: 0,
         }),
         fullStream: new ReadableStream({
@@ -260,8 +260,8 @@ describe('runChain', () => {
           },
         ]),
         usage: Promise.resolve({
-          promptTokens: 0,
-          completionTokens: 0,
+          inputTokens: 0,
+          outputTokens: 0,
           totalTokens: 0,
         }),
         fullStream: new ReadableStream({

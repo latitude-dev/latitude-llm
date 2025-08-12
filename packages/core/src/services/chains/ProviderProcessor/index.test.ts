@@ -45,7 +45,7 @@ describe('ProviderProcessor', () => {
       generatedAt: new Date(),
       model: 'gpt-4o',
       config: { model: 'gpt-4o' },
-      usage: { promptTokens: 3, completionTokens: 7, totalTokens: 10 },
+      usage: { inputTokens: 3, outputTokens: 7, totalTokens: 10 },
       messages: [
         {
           role: MessageRole.user,
@@ -64,7 +64,7 @@ describe('ProviderProcessor', () => {
       aiResult: {
         type: 'text' as const,
         toolCalls: new Promise((resolve) => resolve([])),
-        reasoning: new Promise<string | undefined>((resolve) =>
+        reasoningText: new Promise<string | undefined>((resolve) =>
           resolve(undefined),
         ),
         text: new Promise<string>((resolve) =>
@@ -74,7 +74,7 @@ describe('ProviderProcessor', () => {
           resolve(data.usage),
         ),
         providerName: Providers.OpenAI,
-        providerMetadata: new Promise<undefined>((resolve) =>
+        providerOptions: new Promise<undefined>((resolve) =>
           resolve(undefined),
         ),
         // @ts-expect-error - mock implementation
@@ -88,10 +88,10 @@ describe('ProviderProcessor', () => {
       toolCalls: [],
       object: undefined,
       output: [],
-      reasoning: undefined,
+      reasoningText: undefined,
       usage: {
-        promptTokens: 3,
-        completionTokens: 7,
+        inputTokens: 3,
+        outputTokens: 7,
         totalTokens: 10,
       },
       documentLogUuid: data.documentLogUuid,
