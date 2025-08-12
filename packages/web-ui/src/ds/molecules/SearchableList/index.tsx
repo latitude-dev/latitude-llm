@@ -109,7 +109,7 @@ function ImageIcon({ imageIcon }: { imageIcon: OptionItem['imageIcon'] }) {
     <div
       className={cn(
         'size-10 rounded-md bg-backgroundCode flex items-center justify-center',
-        'group-aria-selected:bg-accent',
+        'group-aria-selected:bg-accent group-aria-selected:text-accent-foreground text-muted-foreground',
       )}
     >
       <Icon name={imageIcon.name} size='large' />
@@ -212,7 +212,7 @@ export type OptionItem<T extends ItemType = 'no_type'> = {
   imageIcon?: ItemIcon | ItemImage
   disabled?: boolean
 }
-type OptionGroup<T extends ItemType = 'no_type'> = {
+export type OptionGroup<T extends ItemType = 'no_type'> = {
   type: 'group'
   label: string
   items: OptionItem<T>[]

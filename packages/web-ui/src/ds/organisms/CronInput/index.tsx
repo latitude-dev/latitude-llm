@@ -33,6 +33,16 @@ const TAB_OPTIONS = [
   { label: 'Custom', value: CronTab.Custom },
 ] as TabSelectorOption<CronTab>[]
 
+export function humanizeCronValue(value: string): string {
+  try {
+    return cronstrue.toString(value, {
+      throwExceptionOnParseError: true,
+    })
+  } catch (err) {
+    return 'Invalid cron expression'
+  }
+}
+
 export function CronInput({
   label,
   description,
