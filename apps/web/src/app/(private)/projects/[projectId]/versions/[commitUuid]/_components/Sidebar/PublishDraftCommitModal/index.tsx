@@ -126,7 +126,7 @@ export default function PublishDraftCommitModal({
 
   return (
     <ConfirmModal
-      size='large'
+      size='xl'
       dismissible={!isPublishing}
       type={!isLoading && hasErrors ? 'destructive' : 'default'}
       open={!!commit}
