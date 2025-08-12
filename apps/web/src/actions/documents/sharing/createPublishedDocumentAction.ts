@@ -4,13 +4,13 @@ import { createPublishedDocument } from '@latitude-data/core/services/publishedD
 
 import { withDocument } from '../../procedures'
 
-export const createPublishedDocumentAction = withDocument
-  .createServerAction()
-  .handler(async ({ ctx }) => {
+export const createPublishedDocumentAction = withDocument.action(
+  async ({ ctx }) => {
     return createPublishedDocument({
       workspace: ctx.workspace,
       project: ctx.project,
       document: ctx.document,
       commitUuid: ctx.currentCommitUuid,
     }).then((r) => r.unwrap())
-  })
+  },
+)

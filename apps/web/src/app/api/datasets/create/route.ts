@@ -12,6 +12,7 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { z } from 'zod'
+import { flattenErrors } from '@latitude-data/core/lib/zodUtils'
 
 const MAX_SIZE_MESSAGE = `Your dataset must be less than ${MAX_SIZE}MB in size.`
 
@@ -20,7 +21,7 @@ const createDatasetSchema = (workspaceId: number) =>
     .object({
       name: z
         .string()
-        .min(1, { message: 'Name is required' })
+        .min(1, { error: 'Name is required' })
         .refine(
           async (name) => {
             const scope = new DatasetsRepository(workspaceId)
@@ -112,19 +113,10 @@ export const POST = errorHandler(
       const validation = await schema.safeParseAsync(data)
 
       if (!validation.success) {
-        const errors: Record<string, string[]> = {}
-        validation.error.issues.forEach((issue) => {
-          const path = issue.path.join('.')
-          if (!errors[path]) {
-            errors[path] = []
-          }
-          errors[path].push(issue.message)
-        })
-
         return NextResponse.json(
           {
             success: false,
-            errors,
+            errors: flattenErrors(validation),
           },
           { status: 400 },
         )

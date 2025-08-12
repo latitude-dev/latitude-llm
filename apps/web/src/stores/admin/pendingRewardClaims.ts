@@ -1,16 +1,16 @@
-import { useCallback } from 'react'
-
 import { ClaimedRewardWithUserInfo } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { fetchPendingRewardClaimsAction } from '$/actions/rewards/fetchPendingRewardClaimsAction'
 import { updateRewardClaimValidityAction } from '$/actions/rewards/updateRewardClaimValidityAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import useSWR, { SWRConfiguration } from 'swr'
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
 
 const EMPTY_ARRAY: ClaimedRewardWithUserInfo[] = []
 
-export default function usePendingRewardClaims(opts?: SWRConfiguration) {
-  const { toast } = useToast()
+export function usePendingRewardClaims(opts?: SWRConfiguration) {
+  const fetcher = useFetcher<ClaimedRewardWithUserInfo[]>(
+    ROUTES.api.admin.rewards.pending.root,
+  )
   const {
     mutate,
     data = EMPTY_ARRAY,
@@ -18,20 +18,7 @@ export default function usePendingRewardClaims(opts?: SWRConfiguration) {
     error: swrError,
   } = useSWR<ClaimedRewardWithUserInfo[]>(
     ['pendingRewardClaims'],
-    useCallback(async () => {
-      const [data, error] = await fetchPendingRewardClaimsAction()
-
-      if (error) {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        })
-      }
-      if (!data) return EMPTY_ARRAY
-
-      return data
-    }, [toast]),
+    fetcher,
     opts,
   )
 

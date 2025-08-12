@@ -285,8 +285,6 @@ export async function scanDocuments(
         agentToolsMap,
       })
 
-      // FIXME: infinite recursion
-      // @ts-ignore
       return scan({
         prompt: document.content,
         fullPath: document.path,

@@ -59,8 +59,9 @@ apps/web/scripts-dist
 
 # File uploads in development
 apps/web/uploads
+apps/web/storage
 apps/web/public/uploads
-apps/web/public/storage
+apps/web/public/files
 uploads
 storage
 

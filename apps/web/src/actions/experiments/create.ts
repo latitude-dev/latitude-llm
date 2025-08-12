@@ -1,6 +1,6 @@
 'use server'
 
-import { withDocument } from '../procedures'
+import { withDocument, withDocumentSchema } from '../procedures'
 import { createExperimentVariants } from '@latitude-data/core/services/experiments/createVariants'
 import { startExperiment } from '@latitude-data/core/services/experiments/start/index'
 import {
@@ -11,9 +11,8 @@ import { experimentVariantSchema } from '@latitude-data/constants/experiments'
 import { z } from 'zod'
 
 export const createExperimentAction = withDocument
-  .createServerAction()
-  .input(
-    z.object({
+  .inputSchema(
+    withDocumentSchema.extend({
       variants: z.array(experimentVariantSchema),
       evaluationUuids: z.array(z.string()),
       datasetId: z.number().optional(),
@@ -23,7 +22,7 @@ export const createExperimentAction = withDocument
       toRow: z.number().optional(),
     }),
   )
-  .handler(async ({ ctx, input }) => {
+  .action(async ({ ctx, parsedInput }) => {
     const {
       variants,
       evaluationUuids,
@@ -32,7 +31,7 @@ export const createExperimentAction = withDocument
       datasetLabels,
       fromRow,
       toRow,
-    } = input
+    } = parsedInput
     const datasetsScope = new DatasetsRepository(ctx.workspace.id)
     const dataset = datasetId
       ? await datasetsScope.find(datasetId).then((r) => r.unwrap())

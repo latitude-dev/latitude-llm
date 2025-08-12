@@ -5,17 +5,16 @@ import { withAdmin } from '../../procedures'
 import { createFeature } from '@latitude-data/core/services/features/create'
 
 export const createFeatureAction = withAdmin
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
-      name: z.string().min(1, { message: 'Name is required' }),
+      name: z.string().min(1, { error: 'Name is required' }),
       description: z.string().optional(),
     }),
   )
-  .handler(async ({ input }) => {
+  .action(async ({ parsedInput }) => {
     const result = await createFeature({
-      name: input.name,
-      description: input.description,
+      name: parsedInput.name,
+      description: parsedInput.description,
     })
 
     return result.unwrap()

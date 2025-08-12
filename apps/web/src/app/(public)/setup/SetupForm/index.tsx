@@ -30,7 +30,7 @@ export default function SetupForm({
 }) {
   const { toast } = useToast()
   const { execute, isPending } = useLatitudeAction(setupAction)
-  const { error, action, data } = useFormAction(execute, {
+  const { data, error, action } = useFormAction(execute, {
     onError: (err) => {
       if (err.code === 'ERROR') {
         toast({
@@ -54,7 +54,6 @@ export default function SetupForm({
           autoComplete='name'
           label='Name'
           placeholder='Jon Snow'
-          // @ts-expect-error
           errors={errors?.name}
           defaultValue={data?.name || name}
         />
@@ -64,7 +63,6 @@ export default function SetupForm({
           autoComplete='email'
           label='Email'
           placeholder='jon@winterfell.com'
-          // @ts-expect-error
           errors={errors?.email}
           defaultValue={data?.email || email}
         />
@@ -73,7 +71,6 @@ export default function SetupForm({
           name='companyName'
           label='Workspace Name'
           placeholder='Acme Inc.'
-          // @ts-expect-error
           errors={errors?.companyName}
           defaultValue={data?.companyName || companyName}
         />

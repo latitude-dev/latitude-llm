@@ -44,7 +44,7 @@ export default function UploadLogModal({
     },
   })
   const { action, error } = useFormAction(execute)
-  const errors = error?.fieldErrors as Record<string, string[]>
+  const errors = error?.fieldErrors
 
   return (
     <Modal

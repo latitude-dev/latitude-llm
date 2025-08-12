@@ -43,12 +43,12 @@ describe('deleteDraftCommitAction', () => {
 
   describe('unauthorized', () => {
     it('errors when the user is not authenticated', async () => {
-      const [_, error] = await deleteDraftCommitAction({
+      const { serverError } = await deleteDraftCommitAction({
         projectId: project.id,
         id: commit.id,
       })
 
-      expect(error!.name).toEqual('UnauthorizedError')
+      expect(serverError).toEqual('Unauthorized')
     })
   })
 
@@ -61,12 +61,12 @@ describe('deleteDraftCommitAction', () => {
     })
 
     it('returns error when project is not found', async () => {
-      const [_, error] = await deleteDraftCommitAction({
+      const { serverError } = await deleteDraftCommitAction({
         projectId: 33,
         id: commit.id,
       })
 
-      expect(error!.name).toEqual('NotFoundError')
+      expect(serverError).toEqual('Project not found')
     })
 
     it('returns error when commit does not belongs to project', async () => {
@@ -76,20 +76,20 @@ describe('deleteDraftCommitAction', () => {
         project: urelatedProject,
         user: unrelatedUser,
       })
-      const [_, error] = await deleteDraftCommitAction({
+      const { serverError } = await deleteDraftCommitAction({
         projectId: project.id,
         id: unrelatedCommit.id,
       })
 
-      expect(error!.name).toEqual('NotFoundError')
+      expect(serverError).toEqual('Commit not found')
     })
 
     it('returns error when the commit is merged', async () => {
-      const [_, error] = await deleteDraftCommitAction({
+      const { serverError } = await deleteDraftCommitAction({
         projectId: project.id,
         id: commit.id,
       })
-      expect(error!.name).toEqual('BadRequestError')
+      expect(serverError).toEqual('Cannot modify a merged commit')
     })
 
     it('returns all draft commits', async () => {
@@ -97,7 +97,7 @@ describe('deleteDraftCommitAction', () => {
         project,
         user,
       })
-      const [data] = await deleteDraftCommitAction({
+      const { data } = await deleteDraftCommitAction({
         projectId: project.id,
         id: draft.id,
       })

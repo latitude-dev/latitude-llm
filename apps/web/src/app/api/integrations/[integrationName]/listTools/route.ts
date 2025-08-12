@@ -1,10 +1,11 @@
+import { z } from 'zod'
 import { Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { listTools } from '@latitude-data/core/services/integrations/index'
-import { LatitudeTool, McpTool } from '@latitude-data/constants'
+import { LatitudeTool } from '@latitude-data/constants'
 import { getLatitudeToolDefinition } from '@latitude-data/core/services/latitudeTools/helpers'
 
 export const GET = errorHandler(
@@ -22,13 +23,15 @@ export const GET = errorHandler(
       },
     ) => {
       if (params.integrationName === 'latitude') {
-        const latitudeTools: McpTool[] = Object.values(LatitudeTool).map(
+        const latitudeTools = Object.values(LatitudeTool).map(
           (latitudeTool) => {
             const toolDefinition = getLatitudeToolDefinition(latitudeTool)!
             return {
               name: latitudeTool,
               description: toolDefinition.description,
-              inputSchema: toolDefinition.parameters,
+              inputSchema: z.toJSONSchema(
+                toolDefinition.inputSchema as z.ZodTypeAny,
+              ),
             }
           },
         )

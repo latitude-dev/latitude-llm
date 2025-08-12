@@ -1,7 +1,9 @@
-import { MAX_STEPS_CONFIG_NAME } from '@latitude-data/constants'
+import {
+  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
+  MAX_STEPS_CONFIG_NAME,
+} from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
-import { LanguageModelUsage } from 'ai'
 import { Chain as PromptlChain } from 'promptl-ai'
 import { ProviderApiKey, Workspace } from '../../browser'
 import {

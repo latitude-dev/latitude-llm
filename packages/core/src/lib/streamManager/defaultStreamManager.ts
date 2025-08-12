@@ -83,13 +83,13 @@ export class DefaultStreamManager
         response,
         messages,
         tokenUsage,
-        finishReason: await finishReason,
+        finishReason,
       })
       this.endProviderStep({
         responseMessages: messages,
         tokenUsage,
         response,
-        finishReason: await finishReason,
+        finishReason,
       })
       this.endStep()
       this.endStream()

@@ -1,18 +1,15 @@
 import { IntegrationType } from '@latitude-data/constants'
 import type { IntegrationDto, User, Workspace } from '../../browser'
 import { BadRequestError } from '../../lib/errors'
-import { ErrorResult, Result } from '../../lib/Result'
+import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { integrations } from '../../schema'
-import { deployMcpServer } from '../mcpServers/deployService'
 import {
   ExternalMcpIntegrationConfiguration,
-  HostedMcpIntegrationConfiguration,
   HostedMcpIntegrationConfigurationForm,
   PipedreamIntegrationConfiguration,
   UnconfiguredPipedreamIntegrationConfiguration,
 } from './helpers/schema'
-import { HOSTED_MCP_CONFIGS } from './hostedTypes'
 import { getApp } from './pipedream/apps'
 
 type ConfigurationFormTypeMap = {
@@ -73,51 +70,6 @@ export async function createIntegration<p extends IntegrationType>(
     return Result.error(
       new BadRequestError('Cannot create a Latitude integration'),
     )
-  }
-
-  // For MCPServer type, first deploy the server
-  if (type === IntegrationType.HostedMCP) {
-    const { env = {}, type: hostedIntegrationType } =
-      (params.configuration as HostedMcpIntegrationConfigurationForm) ?? {}
-
-    const command = HOSTED_MCP_CONFIGS[hostedIntegrationType].command
-
-    const deployResult = await deployMcpServer(
-      {
-        appName: name,
-        environmentVariables: env,
-        workspaceId: workspace.id,
-        authorId: author.id,
-        command,
-      },
-      transaction,
-    )
-
-    if (!deployResult.ok) return deployResult as ErrorResult<Error>
-
-    const mcpServer = deployResult.unwrap()
-
-    // Now create the integration with a pointer to the MCP server
-    return transaction.call(async (tx) => {
-      const result = await tx
-        .insert(integrations)
-        .values({
-          workspaceId: workspace.id,
-          name,
-          type,
-          configuration: {
-            url: mcpServer.endpoint,
-            type: hostedIntegrationType,
-          } as HostedMcpIntegrationConfiguration,
-          authorId: author.id,
-          mcpServerId: mcpServer.id,
-          hasTools: true,
-          hasTriggers: false,
-        })
-        .returning()
-
-      return Result.ok(result[0]! as IntegrationDto)
-    })
   }
 
   const componentsResult = await obtainIntegrationComponents({
