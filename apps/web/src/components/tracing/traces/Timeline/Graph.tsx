@@ -127,6 +127,7 @@ const TimelineGraphItem = memo(
                 : 'foregroundMuted'
             }
             userSelect={false}
+            noWrap={true}
           >
             {formatDuration(span.duration)}
           </Text.H6>
