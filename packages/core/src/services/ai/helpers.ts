@@ -138,17 +138,17 @@ export function createProvider({
       return Result.ok(
         createOpenAI({
           fetch: instrumentedFetch({ context }),
-          apiKey
+          apiKey,
         }),
-      );
+      )
     case Providers.Groq:
       return Result.ok(
         createOpenAI({
           fetch: instrumentedFetch({ context }),
           apiKey,
-          baseURL: GROQ_API_URL
+          baseURL: GROQ_API_URL,
         }),
-      );
+      )
     case Providers.Anthropic:
       return Result.ok(
         createAnthropic({
@@ -239,9 +239,9 @@ export function createProvider({
         createOpenAI({
           fetch: instrumentedFetch({ context }),
           apiKey,
-          baseURL: url
+          baseURL: url,
         }),
-      );
+      )
     case Providers.AmazonBedrock:
       return createAmazonBedrockProvider(
         context,

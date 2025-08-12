@@ -115,7 +115,7 @@ export async function executeAIResponse({
         outputTokens: 0,
         totalTokens: 0,
       },
-    };
+    }
   }
 
   const aiResult = await ai({

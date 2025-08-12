@@ -107,5 +107,5 @@ export function buildProviderLogDto({
     responseReasoning:
       response.streamType === 'text' ? response.reasoningText : undefined,
     toolCalls: response.streamType === 'text' ? response.toolCalls : [],
-  };
+  }
 }

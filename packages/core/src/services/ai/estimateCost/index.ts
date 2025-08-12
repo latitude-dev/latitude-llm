@@ -124,8 +124,10 @@ export function estimateCost({
   const costSpec = getCostPer1M({ provider, model }).cost
 
   // Guard against NaN token counts.
-  const validInputTokens = inputTokens === undefined || isNaN(inputTokens) ? 0 : inputTokens
-  const validOutputTokens = outputTokens === undefined || isNaN(outputTokens) ? 0 : outputTokens
+  const validInputTokens =
+    inputTokens === undefined || isNaN(inputTokens) ? 0 : inputTokens
+  const validOutputTokens =
+    outputTokens === undefined || isNaN(outputTokens) ? 0 : outputTokens
 
   const inputCost = computeCost({
     costSpec,

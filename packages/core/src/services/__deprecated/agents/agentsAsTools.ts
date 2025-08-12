@@ -86,7 +86,7 @@ export async function getToolDefinitionFromDocument({
       required: Object.keys(params),
       additionalProperties: false,
     },
-  };
+  }
 }
 
 export async function buildAgentsToolsMap(

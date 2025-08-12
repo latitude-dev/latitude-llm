@@ -40,7 +40,7 @@ const mocks = {
       toolCalls: Promise.resolve([]),
       response: Promise.resolve({ messages: [] }),
       fullStream,
-    });
+    })
   }),
 }
 

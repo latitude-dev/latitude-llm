@@ -43,7 +43,7 @@ export function useProviderEventHandler({
 
   // Helper function to handle text-delta events
   const handleTextDelta = useCallback(
-    (data: { type: 'text-delta'; text: string }) => {
+    (data: { type: 'text'; text: string }) => {
       setMessages((messages) => {
         const lastMessage = messages.at(-1)
 
@@ -343,7 +343,7 @@ export function useProviderEventHandler({
         case 'step-start':
           handleStepStart()
           break
-        case 'text-delta':
+        case 'text':
           handleTextDelta(data)
           break
         case 'tool-call':

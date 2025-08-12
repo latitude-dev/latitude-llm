@@ -473,8 +473,8 @@ describe('formatContext', () => {
 
               file: {
                 file: 'https://example.com/file.pdf',
-                mimeType: 'application/pdf'
-              }
+                mimeType: 'application/pdf',
+              },
             },
           ],
         },

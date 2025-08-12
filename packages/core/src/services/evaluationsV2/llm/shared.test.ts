@@ -116,7 +116,7 @@ describe('runPrompt', () => {
           documentLogUuid: providerLog.documentLogUuid,
           providerLog: providerLog,
         }),
-      } as any;
+      } as any
     })
   })
 
@@ -194,7 +194,7 @@ describe('runPrompt', () => {
           documentLogUuid: providerLog.documentLogUuid,
           providerLog: providerLog,
         }),
-      } as any;
+      } as any
     })
 
     await expect(
@@ -235,7 +235,7 @@ describe('runPrompt', () => {
           documentLogUuid: providerLog.documentLogUuid,
           providerLog: providerLog,
         }),
-      } as any;
+      } as any
     })
 
     await expect(

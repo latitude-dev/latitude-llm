@@ -237,8 +237,7 @@ export class ChainStreamManager {
     this.finishReason = response.finishReason
     this.tokenUsage = {
       inputTokens: this.tokenUsage.inputTokens + tokenUsage.inputTokens,
-      outputTokens:
-        this.tokenUsage.outputTokens + tokenUsage.outputTokens,
+      outputTokens: this.tokenUsage.outputTokens + tokenUsage.outputTokens,
       totalTokens: this.tokenUsage.totalTokens + tokenUsage.totalTokens,
     }
     this.setLastResponse(response)
@@ -256,10 +255,11 @@ export class ChainStreamManager {
       const toolSource = resolvedTools[toolCall.name]?.sourceData
       return (
         // client must manage the agent return tool too
-        (// send known client tools
+        // send known client tools
         toolSource === undefined || // send unknown tools
-        toolSource.source === ToolSource.Client || toolSource.source === ToolSource.AgentReturn)
-      );
+        toolSource.source === ToolSource.Client ||
+        toolSource.source === ToolSource.AgentReturn
+      )
     })
 
     return {

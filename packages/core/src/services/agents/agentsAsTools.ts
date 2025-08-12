@@ -150,7 +150,7 @@ export async function getToolDefinitionFromDocument({
         return result
       }
     },
-  };
+  }
 }
 
 export async function buildAgentsToolsMap(

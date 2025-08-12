@@ -162,7 +162,7 @@ function adaptContentFields({
       default:
         return c
     }
-  });
+  })
 }
 
 /**

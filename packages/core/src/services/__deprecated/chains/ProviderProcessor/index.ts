@@ -36,5 +36,5 @@ export async function processResponse({
       name: t.toolName,
       arguments: t.args,
     })),
-  };
+  }
 }

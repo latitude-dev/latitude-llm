@@ -41,7 +41,7 @@ function buildMockAIresponse(chunks: TextStreamPart<any>[]) {
       },
     }),
     providerName: Providers.OpenAI,
-  } as aiModule.AIReturn<'text'>);
+  } as aiModule.AIReturn<'text'>)
 }
 
 describe('run chain error handling', () => {

@@ -49,5 +49,5 @@ export function resolveAgentReturnTool({
         source: ToolSource.AgentReturn,
       },
     },
-  });
+  })
 }

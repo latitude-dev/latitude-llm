@@ -173,7 +173,7 @@ export async function ai({
       sources: result.sources,
       finishReason: result.finishReason,
       response: result.response,
-    });
+    })
   } catch (e) {
     return handleAICallAPIError(e)
   }
