@@ -17,6 +17,7 @@
     "test:watch": "TZ=UTC vitest"
   },
   "dependencies": {
+    "@ai-sdk/rsc": "^1.0.44",
     "@aws-sdk/client-s3": "3.850.0",
     "@datadog/browser-rum": "^6.21.1",
     "@intercom/messenger-js-sdk": "0.0.14",
@@ -38,10 +39,10 @@
     "@pilcrowjs/object-parser": "0.0.4",
     "@pipedream/sdk": "^2.0.0",
     "@sindresorhus/slugify": "2.2.1",
-    "@t3-oss/env-nextjs": "0.10.1",
+    "@t3-oss/env-nextjs": "0.13.8",
     "@types/diff-match-patch": "1.0.36",
     "@types/ip": "1.1.3",
-    "ai": "4.2.1",
+    "ai": "catalog:",
     "arctic": "3.6.0",
     "argon2": "0.44.0",
     "bullmq": "5.44.4",
@@ -59,6 +60,7 @@
     "monaco-editor": "0.50.0",
     "nanoid": "5.0.9",
     "next": "15.5.4",
+    "next-safe-action": "^8.0.11",
     "next-themes": "0.3.0",
     "nextjs-toploader": "1.6.12",
     "nprogress": "0.2.0",
@@ -78,9 +80,6 @@
     "use-debounce": "10.0.1",
     "yaml": "2.4.5",
     "zod": "catalog:",
-    "zod-to-json-schema": "3.24.5",
-    "zsa": "0.5.1",
-    "zsa-react": "0.2.3",
     "zustand": "4.5.6"
   },
   "devDependencies": {
@@ -93,6 +92,7 @@
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
+    "@standard-schema/spec": "^1.0.0",
     "@testing-library/dom": "^10.3.2",
     "@testing-library/react": "^16.0.0",
     "@testing-library/react-hooks": "^8.0.1",

@@ -1,21 +1,19 @@
 import { tokenizeMessages, tokenizeText } from '$/lib/tokenize'
-import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
+import {
+  ChainEvent,
+  ChainEventTypes,
+  EMPTY_USAGE,
+  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
+} from '@latitude-data/constants'
 import {
   Message,
   MessageRole,
   ToolCall,
   ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { LanguageModelUsage } from 'ai'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProviderEventHandler } from './useProviderEventHandler'
-
-const EMPTY_USAGE = (): LanguageModelUsage => ({
-  promptTokens: 0,
-  completionTokens: 0,
-  totalTokens: 0,
-})
 
 type LanguageModelUsageDelta = Pick<
   LanguageModelUsage,
@@ -59,9 +57,12 @@ export function usePlaygroundChat({
   const [error, setError] = useState<Error | undefined>()
   const [isLoading, setIsLoading] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
-  const [unrespondedToolCalls, setUnrespondedToolCalls] = useState<ToolCall[]>([]) // prettier-ignore
+  const [unrespondedToolCalls, setUnrespondedToolCalls] = useState<ToolCall[]>(
+    [],
+  )
   const [usage, setUsage] = useState<LanguageModelUsage>(EMPTY_USAGE())
-  const [usageDelta, setUsageDelta] = useState<LanguageModelUsageDelta>(EMPTY_USAGE()) // prettier-ignore
+  const [usageDelta, setUsageDelta] =
+    useState<LanguageModelUsageDelta>(EMPTY_USAGE())
   const usageDeltaRef = useRef<LanguageModelUsageDelta>(EMPTY_USAGE())
   const [runningLatitudeTools, setRunningLatitudeTools] = useState<number>(0)
   const [wakingUpIntegration, setWakingUpIntegration] = useState<string>()
@@ -73,24 +74,42 @@ export function usePlaygroundChat({
   const durationAccRef = useRef<number>(0)
 
   const incrementUsage = useCallback(
-    (incr: { promptTokens?: number; completionTokens?: number }) =>
+    (incr: {
+      promptTokens?: number
+      completionTokens?: number
+      reasoningTokens?: number
+    }) =>
       setUsage((prev) => {
         const promptTokens = Math.max(0, Math.ceil(prev.promptTokens + (incr.promptTokens ?? 0))) // prettier-ignore
+        const reasoningTokens = Math.max(0, Math.ceil(prev.reasoningTokens + (incr.reasoningTokens ?? 0))) // prettier-ignore
         const completionTokens = Math.max(0, Math.ceil(prev.completionTokens + (incr.completionTokens ?? 0))) // prettier-ignore
-        const totalTokens = promptTokens + completionTokens
-        return { promptTokens, completionTokens, totalTokens }
+        const totalTokens = promptTokens + completionTokens + reasoningTokens
+        return {
+          inputTokens: promptTokens,
+          outputTokens: completionTokens,
+          promptTokens,
+          completionTokens,
+          totalTokens,
+          reasoningTokens,
+          cachedInputTokens: 0,
+        }
       }),
     [setUsage],
   )
 
   const incrementUsageDelta = useCallback(
-    (incr: { promptTokens?: number; completionTokens?: number }) => {
+    (incr: {
+      promptTokens?: number
+      completionTokens?: number
+      reasoningTokens?: number
+    }) => {
       incrementUsage({
         promptTokens: incr.promptTokens,
         completionTokens: incr.completionTokens,
+        reasoningTokens: incr.reasoningTokens,
       })
       setUsageDelta((prev) => {
-        const promptTokens =  Math.max(0, prev.promptTokens + (incr.promptTokens ?? 0)) // prettier-ignore
+        const promptTokens = Math.max(0, prev.promptTokens + (incr.promptTokens ?? 0)) // prettier-ignore
         const completionTokens = Math.max(0, prev.completionTokens + (incr.completionTokens ?? 0)) // prettier-ignore
         return { promptTokens, completionTokens }
       })

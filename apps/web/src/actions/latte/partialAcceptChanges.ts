@@ -6,16 +6,15 @@ import { partialAcceptLatteChanges } from '@latitude-data/core/services/copilot/
 import { evaluateLatteThreadChanges } from '@latitude-data/core/services/copilot/latte/threads/evaluateChanges'
 
 export const partialAcceptLatteChangesAction = authProcedure
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       threadUuid: z.string(),
       documentUuidsToAccept: z.array(z.string()),
     }),
   )
-  .handler(async ({ ctx, input }) => {
+  .action(async ({ ctx, parsedInput }) => {
     const { workspace } = ctx
-    const { threadUuid, documentUuidsToAccept } = input
+    const { threadUuid, documentUuidsToAccept } = parsedInput
 
     const checkpoints = await partialAcceptLatteChanges({
       workspace,

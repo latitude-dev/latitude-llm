@@ -77,7 +77,7 @@ export function tagAttributeIsLiteral(tag: ElementTag, name: string): boolean {
 type YAMLItemRange = [number, number] | undefined
 export function findYAMLItemPosition(
   parent: YAMLItem,
-  path: (string | number)[],
+  path: (string | number | symbol)[],
 ): YAMLItemRange {
   const parentRange: YAMLItemRange = parent?.range
     ? [parent.range[0], parent.range[1]]

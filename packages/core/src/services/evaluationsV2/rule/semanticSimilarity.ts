@@ -109,7 +109,6 @@ async function run(
   } = await embedMany({
     model: createOpenAI({
       apiKey: env.OPENAI_API_KEY,
-      compatibility: 'strict',
     }).textEmbeddingModel('text-embedding-3-small'),
     values: [metadata.actualOutput, metadata.expectedOutput],
   })

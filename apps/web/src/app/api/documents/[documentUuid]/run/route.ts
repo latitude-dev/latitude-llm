@@ -13,7 +13,7 @@ import { ChainEventTypes } from '@latitude-data/constants'
 const inputSchema = z.object({
   path: z.string(),
   commitUuid: z.string(),
-  parameters: z.record(z.any()),
+  parameters: z.record(z.string(), z.any()),
   stream: z.boolean().default(true),
   userMessage: z.string().optional(),
 })
@@ -182,7 +182,10 @@ export const POST = errorHandler(
 
         if (error instanceof z.ZodError) {
           return NextResponse.json(
-            { message: 'Invalid input', details: error.errors },
+            {
+              message: 'Invalid input',
+              details: z.treeifyError(error),
+            },
             { status: 400 },
           )
         }

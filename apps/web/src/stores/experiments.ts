@@ -106,10 +106,9 @@ export function useExperiments(
         return experimentDtos
       },
       onError: async (error) => {
-        if (error?.err?.name === 'ZodError') return
         toast({
           title: 'Error creating experiment',
-          description: error?.err?.message,
+          description: error?.message,
           variant: 'destructive',
         })
       },

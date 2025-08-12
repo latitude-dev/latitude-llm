@@ -84,9 +84,13 @@ async function generateProviderLogs({
       responseText: mockedResponse,
       toolCalls: [],
       usage: {
+        inputTokens: promptTokens,
+        outputTokens: completionTokens,
         promptTokens,
         completionTokens,
         totalTokens: promptTokens + completionTokens,
+        reasoningTokens: 0,
+        cachedInputTokens: 0,
       },
       duration: Math.floor(Math.random() * 1000),
       source: LogSources.Playground,

@@ -362,7 +362,7 @@ describe('applyVercelSdkRules', () => {
           {
             type: 'file',
             data: 'pdf file content',
-            mimeType: 'application/pdf',
+            mediaType: 'application/pdf',
           },
         ],
       },
@@ -400,7 +400,7 @@ describe('applyVercelSdkRules', () => {
             type: 'tool-call',
             toolCallId: '123',
             toolName: 'toolName',
-            args: {
+            input: {
               arg1: 'value1',
               arg2: 'value2',
             },
@@ -441,7 +441,7 @@ describe('applyVercelSdkRules', () => {
             type: 'tool-call',
             toolCallId: '123',
             toolName: 'toolName',
-            args: {
+            input: {
               arg1: 'value1',
               arg2: 'value2',
             },
@@ -473,6 +473,7 @@ describe('applyVercelSdkRules', () => {
             text: 'Hi there',
             isReasoning: true,
             reasoning: 'Some reasoning',
+            reasoningText: 'Some reasoning',
           },
         ],
       },

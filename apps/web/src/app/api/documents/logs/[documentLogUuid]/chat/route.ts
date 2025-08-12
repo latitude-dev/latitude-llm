@@ -112,7 +112,7 @@ export const POST = errorHandler(
       } catch (error) {
         if (error instanceof z.ZodError) {
           return NextResponse.json(
-            { message: 'Invalid input', details: error.errors },
+            { message: 'Invalid input', details: z.treeifyError(error) },
             { status: 400 },
           )
         }

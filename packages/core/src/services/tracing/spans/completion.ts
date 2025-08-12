@@ -686,9 +686,13 @@ async function enrichCost(
 
   let cost = estimateCost({
     usage: {
+      inputTokens,
+      outputTokens,
       promptTokens: inputTokens,
       completionTokens: outputTokens,
       totalTokens: inputTokens + outputTokens,
+      reasoningTokens: tokens.reasoning,
+      cachedInputTokens: tokens.cached,
     },
     provider: finding.value?.provider ?? (provider as Providers),
     model: model,
