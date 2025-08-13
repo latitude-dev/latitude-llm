@@ -27,12 +27,14 @@ export function LatteDebugVersionSelector() {
   if (!enabled) return null
 
   return (
-    <Select
-      name='debugVersionUuid'
-      loading={isLoading}
-      value={selectedVersionUuid}
-      options={options}
-      onChange={setSelectedVersionUuid}
-    />
+    <div className='w-full max-w-64 overflow-hidden truncate'>
+      <Select
+        name='debugVersionUuid'
+        loading={isLoading}
+        value={selectedVersionUuid}
+        options={options}
+        onChange={setSelectedVersionUuid}
+      />
+    </div>
   )
 }

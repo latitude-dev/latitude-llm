@@ -8,7 +8,10 @@ import { useServerAction } from 'zsa-react'
 import { acceptLatteChangesAction } from '$/actions/latte/acceptChanges'
 import { addFeedbackToLatteChangeAction } from '$/actions/latte/addFeedbackToLatteChange'
 import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
+import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { trigger } from '$/lib/events'
+import { ROUTES } from '$/services/routes'
+import { useCurrentUser } from '$/stores/currentUser'
 import { useLatteStore } from '$/stores/latte'
 import useProviderLogs from '$/stores/providerLogs'
 import {
@@ -17,12 +20,15 @@ import {
   LatteTool,
 } from '@latitude-data/constants/latte'
 import { LatteThreadUpdateArgs } from '@latitude-data/core/browser'
+import { LatteVersion } from '@latitude-data/core/services/copilot/latte/debugVersions'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { sortBy } from 'lodash-es'
 import { useCallback, useEffect, useMemo } from 'react'
+import useSWR from 'swr'
+import useFetcher from '../useFetcher'
 import { useOnce } from '../useMount'
 import { useLatteContext } from './context'
 import { getDescriptionFromToolCall } from './helpers'
@@ -32,11 +38,6 @@ import {
   LatteInteractionStep,
   LatteToolStep,
 } from './types'
-import useFetcher from '../useFetcher'
-import { LatteVersion } from '@latitude-data/core/services/copilot/latte/debugVersions'
-import { ROUTES } from '$/services/routes'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
-import useSWR from 'swr'
 
 const EMPTY_ARRAY = [] as const
 
@@ -512,7 +513,12 @@ const useLatteThreadProviderLog = () => {
  */
 export function useLatteDebugMode() {
   const { debugVersionUuid, setDebugVersionUuid } = useLatteStore()
-  const { enabled } = useFeatureFlag({ featureFlag: 'latteDebugMode' })
+  const { enabled: debugModeEnabled } = useFeatureFlag({
+    featureFlag: 'latteDebugMode',
+  })
+  const { data: user } = useCurrentUser()
+
+  const enabled = debugModeEnabled && user?.admin
 
   const fetcher = useFetcher<LatteVersion[]>(
     enabled ? ROUTES.api.latte.debug.versions.root : undefined,
