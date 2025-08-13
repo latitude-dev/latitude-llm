@@ -7,7 +7,7 @@ import {
   FinishReason,
   LanguageModelUsage,
   TextStreamPart,
-  ToolContent,
+  ToolResultPart,
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
@@ -81,12 +81,44 @@ export type ChainEventDtoResponse =
   | Omit<ChainStepResponse<'text'>, 'providerLog'>
 
 export type StreamType = 'object' | 'text'
+
+// TODO(compiler)
+export type LegacyVercelSDKVersion4Usage = Pick<
+  LanguageModelUsage,
+  'reasoningTokens' | 'cachedInputTokens'
+> & {
+  /**
+   * The number of input (prompt) tokens used.
+   */
+  promptTokens: number
+  /**
+  The number of output (completion) tokens used.
+     */
+  completionTokens: number
+  /**
+  The total number of tokens as reported by the provider.
+  This number might be different from the sum of `inputTokens` and `outputTokens`
+  and e.g. include reasoning tokens or other overhead.
+     */
+  totalTokens: number
+}
+
+type LegacyVercelSDKToolResultPart = Omit<ToolResultPart, 'output'> & {
+  result: ToolResultPart['output']
+}
+
+// TODO(compiler)
+type LegacyVercelSDKVersion4ToolContent = Array<LegacyVercelSDKToolResultPart>
+
 type BaseResponse = {
   text: string
-  usage: LanguageModelUsage
+  usage: LegacyVercelSDKVersion4Usage
   documentLogUuid?: string
   providerLog?: ProviderLog
-  output?: (AssistantMessage | { role: 'tool'; content: ToolContent })[]
+  output?: (
+    | AssistantMessage
+    | { role: 'tool'; content: LegacyVercelSDKVersion4ToolContent }
+  )[]
 }
 
 export type ChainStepTextResponse = BaseResponse & {
@@ -103,8 +135,8 @@ export type ChainStepObjectResponse = BaseResponse & {
 export type ChainStepResponse<T extends StreamType> = T extends 'text'
   ? ChainStepTextResponse
   : T extends 'object'
-    ? ChainStepObjectResponse
-    : never
+  ? ChainStepObjectResponse
+  : never
 
 export enum StreamEventTypes {
   Latitude = 'latitude-event',
@@ -113,13 +145,13 @@ export enum StreamEventTypes {
 
 export type LegacyChainEvent =
   | {
-      data: LegacyLatitudeEventData
-      event: StreamEventTypes.Latitude
-    }
+    data: LegacyLatitudeEventData
+    event: StreamEventTypes.Latitude
+  }
   | {
-      data: ProviderData
-      event: StreamEventTypes.Provider
-    }
+    data: ProviderData
+    event: StreamEventTypes.Provider
+  }
 
 export type LegacyLatitudeStepEventData = {
   type: LegacyChainEventTypes.Step

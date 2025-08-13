@@ -1,5 +1,3 @@
-import { LanguageModelUsage } from 'ai'
-
 import { Providers } from '../../../browser'
 import { GROQ_MODELS } from './groq'
 import { OPENAI_MODELS } from './openai'
@@ -13,6 +11,7 @@ import { AMAZON_BEDROCK_MODELS } from './amazonBedrock'
 import { DEEPSEEK_MODELS } from './deepseek'
 import { PERPLEXITY_MODELS } from './perplexity'
 import { NON_IMPLEMENTED_COST } from './helpers'
+import { LegacyVercelSDKVersion4Usage } from '@latitude-data/constants'
 
 export type ModelCost = {
   input: number
@@ -116,19 +115,19 @@ export function estimateCost({
   provider,
   model,
 }: {
-  usage: LanguageModelUsage
+  usage: LegacyVercelSDKVersion4Usage
   provider: Providers
   model: string
 }): number {
   // TODO:: Calculate the cost for reasoning tokens and cached tokens.
   // `usage` contains `reasoningTokens` and `cachedTokens` but we
   // don't have mapped the cost for those yet.
-  const { inputTokens, outputTokens } = usage
+  const { promptTokens, completionTokens } = usage
   const costSpec = getCostPer1M({ provider, model }).cost
 
   // Guard against NaN token counts.
-  const validInputTokens = saveTokenCount(inputTokens)
-  const validOutputTokens = saveTokenCount(outputTokens)
+  const validInputTokens = isNaN(promptTokens) ? 0 : promptTokens
+  const validOutputTokens = isNaN(completionTokens) ? 0 : completionTokens
 
   const inputCost = computeCost({
     costSpec,
@@ -142,11 +141,4 @@ export function estimateCost({
   })
 
   return inputCost + outputCost
-}
-
-function saveTokenCount(amount: number | undefined) {
-  if (amount === undefined || isNaN(amount) || amount < 0) {
-    return 0
-  }
-  return amount
 }
