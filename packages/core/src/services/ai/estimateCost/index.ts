@@ -120,6 +120,9 @@ export function estimateCost({
   provider: Providers
   model: string
 }): number {
+  // TODO:: Calculate the cost for reasoning tokens and cached tokens.
+  // `usage` contains `reasoningTokens` and `cachedTokens` but we
+  // don't have mapped the cost for those yet.
   const { inputTokens, outputTokens } = usage
   const costSpec = getCostPer1M({ provider, model }).cost
 

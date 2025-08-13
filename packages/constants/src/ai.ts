@@ -58,7 +58,17 @@ export type VercelConfig = {
 
 export type PartialPromptConfig = Omit<LatitudePromptConfig, 'provider'>
 
-export type ProviderData = TextStreamPart<any>
+type ReplaceTextDelta<T> = T extends {
+  type: 'text-delta'
+  text: infer Text
+  id: infer Id
+  providerMetadata?: infer PM
+}
+  ? { type: 'text-delta'; id: Id; providerMetadata?: PM; textDelta: Text }
+  : T
+
+export type VercelChunk = TextStreamPart<any>
+export type ProviderData = ReplaceTextDelta<VercelChunk>
 
 export type ChainEventDto = ProviderData | LatitudeEventData
 
@@ -93,8 +103,8 @@ export type ChainStepObjectResponse = BaseResponse & {
 export type ChainStepResponse<T extends StreamType> = T extends 'text'
   ? ChainStepTextResponse
   : T extends 'object'
-    ? ChainStepObjectResponse
-    : never
+  ? ChainStepObjectResponse
+  : never
 
 export enum StreamEventTypes {
   Latitude = 'latitude-event',
@@ -103,13 +113,13 @@ export enum StreamEventTypes {
 
 export type LegacyChainEvent =
   | {
-      data: LegacyLatitudeEventData
-      event: StreamEventTypes.Latitude
-    }
+    data: LegacyLatitudeEventData
+    event: StreamEventTypes.Latitude
+  }
   | {
-      data: ProviderData
-      event: StreamEventTypes.Provider
-    }
+    data: ProviderData
+    event: StreamEventTypes.Provider
+  }
 
 export type LegacyLatitudeStepEventData = {
   type: LegacyChainEventTypes.Step

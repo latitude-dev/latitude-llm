@@ -10,7 +10,7 @@ import {
   StreamType,
 } from '../../../constants'
 import { AIReturn } from '../../../services/ai'
-import { ProviderData } from '@latitude-data/constants'
+import { ProviderData, VercelChunk } from '@latitude-data/constants'
 
 interface ConsumeStreamParams {
   result: AIReturn<StreamType>
@@ -36,7 +36,17 @@ export async function consumeStream({
     const { value, done } = await reader.read()
     if (done) break
 
-    const chunk = value as ProviderData
+    const vercelChunk = value as VercelChunk
+    let chunk = value as ProviderData
+
+    if (vercelChunk.type === 'text-delta') {
+      chunk = {
+        type: 'text-delta',
+        id: vercelChunk.id,
+        textDelta: vercelChunk.text,
+        providerMetadata: vercelChunk.providerMetadata,
+      } as ProviderData
+    }
 
     if (chunk.type === 'error') {
       error = createAIError(
