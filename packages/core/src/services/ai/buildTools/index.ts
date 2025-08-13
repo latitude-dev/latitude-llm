@@ -22,6 +22,7 @@ export const buildTools = (tools: VercelTools | undefined) => {
         // INFO:
         // Vercel v5 tools are defined with a `inputSchema` property
         // We were using `parameters`
+        // @ts-expect-error - Already changed in the types but we allow to pass `parameters` for backward compatibility
         const parameters = value.parameters
 
         acc[key] = compactObject({

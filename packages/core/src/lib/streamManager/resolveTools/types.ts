@@ -42,12 +42,18 @@ interface IntegrationToolSourceData extends BaseToolSourceData {
   toolName: string
 }
 
+interface ProviderToolSourceData extends BaseToolSourceData {
+  source: ToolSource.ProviderTool
+  provider: Providers
+}
+
 export type ToolSourceData =
   | ClientToolSourceData
   | LatitudeToolSourceData
   | AgentReturnToolSourceData
   | AgentAsToolSourceData
   | IntegrationToolSourceData
+  | ProviderToolSourceData
 
 type ResolvedTool = {
   definition: Tool

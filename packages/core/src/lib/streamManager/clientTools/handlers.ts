@@ -2,6 +2,7 @@ import {
   ChainStepObjectResponse,
   LogSources,
   ToolDefinition,
+  ToolExecutionOptions,
 } from '@latitude-data/constants'
 import { publisher } from '../../../events/publisher'
 import { getCopilotDataForGenerateToolResponses } from '../../../jobs/job-definitions/documents/runDocumentAtCommitWithAutoToolResponses/getCopilotData'
