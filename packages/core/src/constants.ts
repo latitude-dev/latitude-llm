@@ -9,9 +9,11 @@ import {
   EvaluationResultableType,
   LatitudeTool,
   LatitudeToolInternalName,
+  LegacyVercelSDKVersion4Usage,
   LogSources,
+  ChainStepResponse as ConstantsChainStepResponse,
 } from '@latitude-data/constants'
-import { FinishReason, LanguageModelUsage, Tool, ToolResultPart } from 'ai'
+import { FinishReason, Tool } from 'ai'
 import { z } from 'zod'
 
 import { App, ConfigurableProps, V1Component } from '@pipedream/sdk/browser'
@@ -74,13 +76,13 @@ export const HELP_CENTER = {
 export type StreamType = 'object' | 'text'
 type BaseResponse = {
   text: string
-  usage: LanguageModelUsage
+  usage: LegacyVercelSDKVersion4Usage
   finishReason?: FinishReason
   chainCompleted?: boolean
   documentLogUuid?: string
   providerLog?: ProviderLog
   // TODO(promptl): move this message type to promptl and call it ToolResultMessage
-  output?: (AssistantMessage | { role: 'tool'; content: ToolResultPart[] })[]
+  output?: ConstantsChainStepResponse<StreamType>['output'] // This is a union of AssistantMessage and ToolResultPart
 }
 
 export type ChainStepTextResponse = BaseResponse & {

@@ -54,6 +54,7 @@ export type VercelConfig = {
 
 export type PartialPromptConfig = Omit<LatitudePromptConfig, 'provider'>
 
+export type VercelChunk = TextStreamPart<any> // Original Vercel SDK v5 type
 // TODO(compiler): Remove this type when we remove the legacy Vercel SDK v4
 // Be aware that this breaks all clients (our webapp, our api and our SDKs)
 // because when streaming `text-delta` is expecting `textDelta` not what Vercel SDK v5 returns `text`
@@ -64,9 +65,23 @@ type ReplaceTextDelta<T> = T extends {
   providerMetadata?: infer PM
 }
   ? { type: 'text-delta'; id: Id; providerMetadata?: PM; textDelta: Text }
+  : T extends {
+    type: 'tool-call'
+  }
+  ? Omit<T, 'input'> & { args: Record<string, unknown> }
+  : T extends {
+    type: 'tool-result'
+  }
+  ? Omit<T, 'output' | 'input'> & {
+    args: Record<string, unknown>
+    result: any
+  }
+  : T extends {
+    type: 'reasoning-delta'
+  }
+  ? Omit<T, 'type' | 'text'> & { type: 'reasoning'; textDelta: string }
   : T
 
-export type VercelChunk = TextStreamPart<any> // Original Vercel SDK v5 type
 export type ProviderData = ReplaceTextDelta<VercelChunk>
 
 export type ChainEventDto = ProviderData | LatitudeEventData

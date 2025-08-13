@@ -1,6 +1,6 @@
 import { Conversation } from '@latitude-data/compiler'
-import { VercelConfig } from '@latitude-data/constants'
-import { FinishReason, LanguageModelUsage } from 'ai'
+import { LegacyVercelSDKVersion4Usage, VercelConfig } from '@latitude-data/constants'
+import { FinishReason } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { LogSources, ProviderApiKey, Workspace } from '../../../../browser'
 import { ChainStepResponse, StreamType } from '../../../../constants'
@@ -39,7 +39,7 @@ export async function streamAIResponse({
   ...rest
 }: StreamProps): Promise<{
   response: ChainStepResponse<StreamType>
-  tokenUsage: LanguageModelUsage
+  tokenUsage: LegacyVercelSDKVersion4Usage
 }> {
   const optimizedAgentMessages = performAgentMessagesOptimization({
     messages: conversation.messages,
@@ -55,7 +55,7 @@ export async function streamAIResponse({
   })
 }
 
-export async function executeAIResponse({
+async function executeAIResponse({
   controller,
   workspace,
   provider,
@@ -67,7 +67,7 @@ export async function executeAIResponse({
   abortSignal,
 }: StreamProps): Promise<{
   response: ChainStepResponse<StreamType>
-  tokenUsage: LanguageModelUsage
+  tokenUsage: LegacyVercelSDKVersion4Usage
 }> {
   if (abortSignal?.aborted) {
     throw new Error('Operation aborted by client')
@@ -175,6 +175,6 @@ export async function executeAIResponse({
     // TODO(compiler): fix types
     // @ts-expect-error - TODO: fix types
     response,
-    tokenUsage: await aiResult.usage,
+    tokenUsage: processedResponse.usage,
   }
 }
