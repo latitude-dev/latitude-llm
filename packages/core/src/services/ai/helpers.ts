@@ -139,8 +139,6 @@ export function createProvider({
         createOpenAI({
           fetch: instrumentedFetch({ context }),
           apiKey,
-          // Needed for OpenAI to return token usage
-          compatibility: 'strict',
         }),
       )
     case Providers.Groq:
@@ -148,7 +146,6 @@ export function createProvider({
         createOpenAI({
           fetch: instrumentedFetch({ context }),
           apiKey,
-          compatibility: 'compatible',
           baseURL: GROQ_API_URL,
         }),
       )
@@ -242,7 +239,6 @@ export function createProvider({
         createOpenAI({
           fetch: instrumentedFetch({ context }),
           apiKey,
-          compatibility: 'compatible',
           baseURL: url,
         }),
       )

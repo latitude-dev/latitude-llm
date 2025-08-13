@@ -120,12 +120,12 @@ export function estimateCost({
   provider: Providers
   model: string
 }): number {
-  const { promptTokens, completionTokens } = usage
+  const { inputTokens, outputTokens } = usage
   const costSpec = getCostPer1M({ provider, model }).cost
 
   // Guard against NaN token counts.
-  const validInputTokens = isNaN(promptTokens) ? 0 : promptTokens
-  const validOutputTokens = isNaN(completionTokens) ? 0 : completionTokens
+  const validInputTokens = saveTokenCount(inputTokens)
+  const validOutputTokens = saveTokenCount(outputTokens)
 
   const inputCost = computeCost({
     costSpec,
@@ -139,4 +139,11 @@ export function estimateCost({
   })
 
   return inputCost + outputCost
+}
+
+function saveTokenCount(amount: number | undefined) {
+  if (amount === undefined || isNaN(amount) || amount < 0) {
+    return 0
+  }
+  return amount
 }

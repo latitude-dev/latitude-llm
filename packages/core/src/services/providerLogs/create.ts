@@ -90,7 +90,7 @@ export async function createProviderLog(
         output,
         toolCalls,
         tokens: usage
-          ? isNaN(usage.totalTokens)
+          ? usage.totalTokens === undefined || isNaN(usage.totalTokens)
             ? 0
             : (usage.totalTokens ?? 0)
           : undefined,

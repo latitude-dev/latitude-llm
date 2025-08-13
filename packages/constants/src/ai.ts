@@ -32,6 +32,7 @@ export type ToolDefinition = JSONSchema7 & {
 export type VercelProviderTool = {
   type: 'provider-defined'
   id: `${string}.${string}`
+  name?: string // Optional since it can be inferred from the key
   args: Record<string, unknown>
   parameters: z.ZodObject<{}, 'strip', z.ZodTypeAny, {}, {}>
 }
