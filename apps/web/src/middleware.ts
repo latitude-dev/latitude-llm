@@ -6,18 +6,27 @@ import {
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname
-  const redirect = NextResponse.redirect
+  // Set current url in headers so downstream components can
+  // use it (yes, this is the only way to do it, Next is...)
+  const currentUrl = request.nextUrl.pathname + request.nextUrl.search
+  const headers = new Headers(request.headers)
+  headers.set('x-current-url', currentUrl)
 
-  if (isPublicPath(pathname)) return NextResponse.next()
+  const pathname = request.nextUrl.pathname
+  if (isPublicPath(pathname)) {
+    return NextResponse.next({ request: { headers } })
+  }
 
   // Skip checking DB if no session is found
   const hasSession = request.cookies.get(AUTH_COOKIE_NAME)
   if (!hasSession) {
-    return redirect(new URL(PUBLIC_ROOT_PATHS.login, request.url))
+    const loginUrl = new URL(PUBLIC_ROOT_PATHS.login, request.url)
+    return NextResponse.redirect(
+      `${loginUrl}?returnTo=${encodeURIComponent(currentUrl)}`,
+    )
   }
 
-  return NextResponse.next()
+  return NextResponse.next({ request: { headers } })
 }
 
 export const config = {

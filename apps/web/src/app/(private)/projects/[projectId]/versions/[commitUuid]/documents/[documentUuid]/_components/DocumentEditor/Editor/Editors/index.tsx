@@ -14,9 +14,11 @@ import { PlaygroundTextEditor } from '../TextEditor'
 export function Editors({
   document,
   initialDiff,
+  refinementEnabled,
 }: {
   document: DocumentVersion
   initialDiff: string | undefined
+  refinementEnabled: boolean
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -36,6 +38,7 @@ export function Editors({
   return devMode ? (
     <PlaygroundTextEditor
       copilotEnabled={false}
+      refinementEnabled={refinementEnabled}
       compileErrors={metadata?.errors}
       project={project}
       document={document}

@@ -1,12 +1,13 @@
 import { cache } from 'react'
 
-import { Workspace } from '@latitude-data/core/browser'
 import { getDataFromSession } from '$/data-access'
+import { Workspace } from '@latitude-data/core/browser'
 import { Session } from 'lucia'
 
-import { getSession } from './getSession'
 import { redirect } from 'next/navigation'
 import { ROUTES } from '../routes'
+import { getCurrentUrl } from './getCurrentUrl'
+import { getSession } from './getSession'
 
 export type SessionData = {
   session: Session
@@ -16,6 +17,16 @@ export type SessionData = {
   }
   workspace: Workspace
   impersonating?: true
+}
+
+function redirectToLogin(currentUrl?: string) {
+  if (currentUrl && !currentUrl.includes(ROUTES.auth.login)) {
+    return redirect(
+      `${ROUTES.auth.login}?returnTo=${encodeURIComponent(currentUrl)}`,
+    )
+  }
+
+  return redirect(ROUTES.auth.login)
 }
 
 /**
@@ -31,16 +42,19 @@ export type SessionData = {
  * @throws {never} - This function never throws, it redirects instead
  */
 export const getCurrentUserOrRedirect = cache(async () => {
+  const currentUrl = await getCurrentUrl()
+
   const sessionData = await getSession()
   if (!sessionData?.session) {
-    return redirect(ROUTES.auth.login)
+    return redirectToLogin(currentUrl)
   }
 
   const { user, workspace, subscriptionPlan } = await getDataFromSession(
     sessionData.session,
   )
-  if (!workspace) return redirect(ROUTES.auth.login)
-  if (!user) return redirect(ROUTES.auth.login)
+  if (!user || !workspace) {
+    return redirectToLogin(currentUrl)
+  }
 
   return {
     session: sessionData.session!,

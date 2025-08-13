@@ -20,7 +20,7 @@ export default function Error({
   return (
     <ErrorComponent
       type='red'
-      message='Something went wrong. Please, try again and if the error persists contact us.'
+      message='Please, try again and if the error persists contact us.'
     />
   )
 }

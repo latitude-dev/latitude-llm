@@ -1,6 +1,9 @@
 'use client'
 import { ReactNode } from 'react'
 
+import { setupAction } from '$/actions/user/setupAction'
+import { useFormAction } from '$/hooks/useFormAction'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -8,9 +11,6 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { setupAction } from '$/actions/user/setupAction'
-import { useFormAction } from '$/hooks/useFormAction'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 import Link from 'next/link'
 
 export default function SetupForm({
@@ -90,7 +90,10 @@ export default function SetupForm({
 
           <Button variant='outline' fullWidth asChild>
             <Link
-              href='/api/auth/google/start'
+              href={
+                '/api/auth/google/start' +
+                (returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '')
+              }
               className='flex items-center gap-2'
             >
               <Icon name='googleWorkspace' />

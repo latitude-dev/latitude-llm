@@ -54,6 +54,7 @@ export function DocumentEditor({
   documents: _documents,
   freeRunsCount,
   initialDiff,
+  refinementEnabled,
 }: DocumentEditorProps) {
   const { updateDocumentContent } = useDocumentValue()
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
@@ -170,7 +171,11 @@ export function DocumentEditor({
             freeRunsCount={freeRunsCount}
           />
           <div className='flex-1 overflow-y-auto'>
-            <Editors document={document} initialDiff={initialDiff} />
+            <Editors
+              document={document}
+              initialDiff={initialDiff}
+              refinementEnabled={refinementEnabled}
+            />
           </div>
         </div>
         <div>
@@ -270,7 +275,6 @@ function usePlaygroundLogic({
   document,
   parameters,
   setMode,
-  togglePlaygroundOpen,
   setHistoryLog,
 }: {
   commit: Commit
@@ -306,9 +310,8 @@ function usePlaygroundLogic({
 
   const clearChat = useCallback(() => {
     setMode('preview')
-    togglePlaygroundOpen()
     playground.reset()
-  }, [setMode, togglePlaygroundOpen, playground])
+  }, [setMode, playground])
 
   const stopStreaming = useCallback(() => {
     // We only clear the stream if it's the first generation as otherwise the

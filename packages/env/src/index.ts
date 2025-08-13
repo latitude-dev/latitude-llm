@@ -195,6 +195,7 @@ export const env = createEnv({
     COPILOT_PROMPT_EDITOR_COPILOT_PATH: z.string().optional(),
     COPILOT_PROMPT_DATASET_GENERATOR_PATH: z.string().optional(),
     COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH: z.string().optional(),
+    COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH: z.string().optional(),
     COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH: z.string(),
     COPILOT_GENERATE_TOOL_RESPONSES_COMMIT_UUID: z.string().optional(),
     COPILOT_PROJECT_ID: z.coerce.number().optional(),
@@ -202,6 +203,9 @@ export const env = createEnv({
     COPILOT_WORKSPACE_API_KEY: z.string().optional(),
     COPILOT_LATTE_PROMPT_PATH: z.string().optional(),
     COPILOT_LATTE_CHANGES_FEEDBACK_HITL_EVALUATION_UUID: z.string().optional(),
+
+    // Sample Agents
+    SAMPLE_AGENTS_PROJECT_ID: z.coerce.number().optional(),
 
     LOOPS_API_KEY: z.string().optional(),
     CODESANDBOX_API_KEY: z.string().optional(),

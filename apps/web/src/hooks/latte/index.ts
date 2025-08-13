@@ -111,7 +111,7 @@ export function useLatteChatActions() {
   )
 
   const sendMessage = useCallback(
-    (message: string) => {
+    async (message: string) => {
       setIsLoading(true)
 
       const newInteraction: LatteInteraction = {
@@ -122,15 +122,10 @@ export function useLatteChatActions() {
 
       addInteractions([newInteraction])
 
-      if (threadUuid) {
-        addMessageToExistingChat({
-          threadUuid,
-          message,
-          context: latteContext(),
-        })
-      } else {
-        createNewChat({ message, context: latteContext(), debugVersionUuid })
-      }
+      const context = await latteContext()
+
+      if (threadUuid) addMessageToExistingChat({ threadUuid, message, context })
+      else createNewChat({ message, context, debugVersionUuid })
     },
     [
       addInteractions,

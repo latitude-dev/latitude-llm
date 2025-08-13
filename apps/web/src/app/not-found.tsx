@@ -10,7 +10,7 @@ export default async function GlobalNoFoundPage() {
   return (
     <NotFoundPageComponent
       route={ROUTES.root}
-      label='Go to Homepage'
+      label='Go back to the homepage'
       message="We couldn't find what you are looking for. Please make sure that the page exists and try again."
     />
   )

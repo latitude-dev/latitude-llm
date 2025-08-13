@@ -31,6 +31,7 @@ export type DocumentEditorProps = {
   providerApiKeys?: ProviderApiKey[]
   freeRunsCount?: number
   copilotEnabled: boolean
+  refinementEnabled: boolean
   initialDiff?: string
 }
 
@@ -40,6 +41,7 @@ export function OldDocumentEditor({
   providerApiKeys,
   freeRunsCount,
   copilotEnabled,
+  refinementEnabled,
   initialDiff,
 }: DocumentEditorProps) {
   const { commit } = useCurrentCommit()
@@ -146,6 +148,7 @@ export function OldDocumentEditor({
                   value={value}
                   defaultValue={document.content}
                   copilotEnabled={copilotEnabled}
+                  refinementEnabled={refinementEnabled}
                   readOnlyMessage={readOnlyMessage}
                   isSaved={isSaved}
                   onChange={updateDocumentContent}

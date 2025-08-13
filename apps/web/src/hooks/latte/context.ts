@@ -3,9 +3,9 @@
 import { useCommitsFromProject } from '$/stores/commitsStore'
 import useDocumentVersions from '$/stores/documentVersions'
 import useProjects from '$/stores/projects'
-import { Commit, Project, DocumentVersion } from '@latitude-data/core/browser'
+import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import { useParams, usePathname } from 'next/navigation'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 export function useLatteContext() {
   const pathname = usePathname()
@@ -16,28 +16,59 @@ export function useLatteContext() {
     documentUuid?: string
   }>()
 
-  const { data: projects } = useProjects()
+  const { data: projects, isLoading: isLoadingProjects } = useProjects()
   const currentProject = useMemo(() => {
     if (!projectId) return undefined
     return projects?.find((p) => p.id === Number(projectId))
   }, [projects, projectId])
 
-  const { data: commits } = useCommitsFromProject(currentProject?.id)
+  const { data: commits, isLoading: isLoadingCommits } = useCommitsFromProject(
+    currentProject?.id,
+  )
   const currentCommit = useMemo(() => {
     if (!commitUuid) return undefined
     return commits?.find((c) => c.uuid === commitUuid)
   }, [commits, commitUuid])
 
-  const { data: documentVersions } = useDocumentVersions({
-    commitUuid: currentCommit?.uuid,
-    projectId: currentProject?.id,
-  })
+  const { data: documentVersions, isLoading: isLoadingDocuments } =
+    useDocumentVersions({
+      commitUuid: currentCommit?.uuid,
+      projectId: currentProject?.id,
+    })
   const currentDocument = useMemo(() => {
     if (!documentUuid) return undefined
     return documentVersions?.find((d) => d.documentUuid === documentUuid)
   }, [documentVersions, documentUuid])
 
-  return useCallback(() => {
+  // Note: using refs to track current state so it is not stale in the async callback
+  const isLoadingRef = useRef(
+    isLoadingProjects || isLoadingCommits || isLoadingDocuments,
+  )
+  useEffect(() => {
+    isLoadingRef.current =
+      isLoadingProjects || isLoadingCommits || isLoadingDocuments
+  }, [isLoadingProjects, isLoadingCommits, isLoadingDocuments])
+
+  const currentProjectRef = useRef(currentProject)
+  useEffect(() => {
+    currentProjectRef.current = currentProject
+  }, [currentProject])
+
+  const currentCommitRef = useRef(currentCommit)
+  useEffect(() => {
+    currentCommitRef.current = currentCommit
+  }, [currentCommit])
+
+  const currentDocumentRef = useRef(currentDocument)
+  useEffect(() => {
+    currentDocumentRef.current = currentDocument
+  }, [currentDocument])
+
+  return useCallback(async () => {
+    while (isLoadingRef.current) {
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+
     const meta = document.querySelector<HTMLMetaElement>(
       `meta[name="location-description"]`,
     )
@@ -45,9 +76,9 @@ export function useLatteContext() {
 
     const items = contextItems({
       pathname,
-      project: currentProject,
-      commit: currentCommit,
-      document: currentDocument,
+      project: currentProjectRef.current,
+      commit: currentCommitRef.current,
+      document: currentDocumentRef.current,
     })
 
     return `
@@ -56,7 +87,7 @@ export function useLatteContext() {
   ${items.map((item) => `<${item.name}>${item.value}</${item.name}>`).join('\n  ')}
 </context>
     `
-  }, [pathname, currentProject, currentCommit, currentDocument])
+  }, [pathname])
 }
 
 function contextItems({

@@ -1,6 +1,6 @@
+import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ErrorComponent } from '@latitude-data/web-ui/browser'
-import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
 export default function NotFound() {
@@ -11,8 +11,12 @@ export default function NotFound() {
         message='Upps! prompt not found. Check with the person who shared it with you.'
         submit={
           <Link href={ROUTES.root}>
-            <Button fancy variant='outline'>
-              Go to Homepage
+            <Button
+              variant='link'
+              iconProps={{ name: 'arrowRight', placement: 'right' }}
+              className='p-0'
+            >
+              Go back to the homepage
             </Button>
           </Link>
         }
