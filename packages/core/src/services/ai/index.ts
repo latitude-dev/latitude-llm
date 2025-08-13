@@ -48,11 +48,10 @@ type VercelAIReturn = Pick<
 
 export type AIReturn<T extends StreamType> = Omit<
   VercelAIReturn,
-  'providerMetadata' | 'reasoning' | 'reasoningText'
+  'reasoning' | 'reasoningText'
 > & {
   type: T
   providerName: Providers
-  providerOptions: VercelAIReturn['providerMetadata']
   reasoning: VercelAIReturn['reasoningText']
   object?: T extends 'object' ? PARTIAL_OUTPUT : undefined
 }
@@ -177,7 +176,7 @@ export async function ai({
       reasoning: result.reasoningText,
       usage: result.usage,
       toolCalls: result.toolCalls,
-      providerOptions: result.providerMetadata,
+      providerMetadata: result.providerMetadata,
       sources: result.sources,
       finishReason: result.finishReason,
       response: result.response,

@@ -31,7 +31,7 @@ export type ToolDefinition = JSONSchema7 & {
   }
 }
 
-export type VercelProviderTool = Tool<{}, unknown>
+export type VercelProviderTool = Tool<{}, object>
 
 export type VercelTools = Record<string, VercelProviderTool | ToolDefinition>
 
@@ -54,6 +54,9 @@ export type VercelConfig = {
 
 export type PartialPromptConfig = Omit<LatitudePromptConfig, 'provider'>
 
+// TODO(compiler): Remove this type when we remove the legacy Vercel SDK v4
+// Be aware that this breaks all clients (our webapp, our api and our SDKs)
+// because when streaming `text-delta` is expecting `textDelta` not what Vercel SDK v5 returns `text`
 type ReplaceTextDelta<T> = T extends {
   type: 'text-delta'
   text: infer Text
@@ -63,7 +66,7 @@ type ReplaceTextDelta<T> = T extends {
   ? { type: 'text-delta'; id: Id; providerMetadata?: PM; textDelta: Text }
   : T
 
-export type VercelChunk = TextStreamPart<any>
+export type VercelChunk = TextStreamPart<any> // Original Vercel SDK v5 type
 export type ProviderData = ReplaceTextDelta<VercelChunk>
 
 export type ChainEventDto = ProviderData | LatitudeEventData
