@@ -11,13 +11,16 @@ import { ROUTES } from '$/services/routes'
 import { useCommits } from '$/stores/commitsStore'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
+import { DocumentVersion } from '@latitude-data/constants'
 
 export default function DraftCommitModal({
   open,
   setOpen,
+  currentDocument,
 }: {
   open: boolean
   setOpen: (open: boolean) => void
+  currentDocument?: DocumentVersion
 }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const defaultPromptTitle = useMemo(() => new Date().toLocaleString(), [open])
@@ -26,11 +29,16 @@ export default function DraftCommitModal({
     onSuccessCreate: (draft) => {
       if (!draft) return // should never happen but it does
 
-      router.push(
-        ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: draft.uuid }).root,
-      )
+      const baseRoute = ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({ uuid: draft.uuid })
+
+      const targetRoute = currentDocument
+        ? baseRoute.documents.detail({ uuid: currentDocument.documentUuid })
+            .root
+        : baseRoute.preview.root
+
+      router.push(targetRoute)
       setOpen(false)
     },
   })

@@ -233,7 +233,11 @@ export default function CommitSelector({
           New version
         </Button>
       ) : null}
-      <CreateDraftCommitModal open={open} setOpen={setOpen} />
+      <CreateDraftCommitModal
+        open={open}
+        setOpen={setOpen}
+        currentDocument={currentDocument}
+      />
       <DeleteDraftCommitModal
         commitId={deleteCommit}
         onClose={setDeleteCommit}
