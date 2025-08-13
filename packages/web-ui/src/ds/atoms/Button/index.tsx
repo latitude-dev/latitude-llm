@@ -145,6 +145,7 @@ export type ButtonStylesProps = VariantProps<typeof buttonVariants> & {
   fullWidth?: boolean
   isLoading?: boolean
   ellipsis?: boolean
+  roundy?: boolean
 }
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
   ButtonStylesProps & {
@@ -152,6 +153,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     iconProps?: ButtonIconProps
     asChild?: boolean
     fancy?: boolean
+    roundy?: boolean
     indicator?: DotIndicatorProps
     childrenOnlyText?: boolean
     userSelect?: boolean
@@ -161,6 +163,7 @@ export function useButtonStyles({
   variant,
   size,
   fanciness,
+  roundy,
   fullWidth,
   containerClassName,
   className,
@@ -180,6 +183,7 @@ export function useButtonStyles({
           'opacity-50 cursor-not-allowed': lookDisabled,
           'overflow-hidden': ellipsis,
           'animate-pulse': isLoading,
+          '!rounded-[0.55rem]': roundy,
         },
       ),
       buttonClass: cn(
@@ -189,6 +193,7 @@ export function useButtonStyles({
           'overflow-hidden': ellipsis,
           'animate-pulse': isLoading,
           'cursor-not-allowed': lookDisabled,
+          '!rounded-[0.55rem]': roundy,
         },
       ),
       innerButtonClass: cn(
@@ -199,6 +204,7 @@ export function useButtonStyles({
           'overflow-hidden flex-grow min-w-0': ellipsis,
           'animate-pulse': isLoading,
           'cursor-not-allowed': lookDisabled,
+          '!rounded-[0.55rem]': roundy,
         },
       ),
     }
@@ -206,6 +212,7 @@ export function useButtonStyles({
     variant,
     size,
     fanciness,
+    roundy,
     containerClassName,
     className,
     innerClassName,
@@ -224,6 +231,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     variant,
     size,
     fancy,
+    roundy,
     iconProps,
     fullWidth = false,
     asChild = false,
@@ -251,6 +259,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     variant,
     size,
     fanciness,
+    roundy,
     fullWidth,
     containerClassName,
     className,

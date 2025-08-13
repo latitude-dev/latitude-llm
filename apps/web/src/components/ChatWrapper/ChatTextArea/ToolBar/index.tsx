@@ -36,18 +36,24 @@ export function ToolBar({
   return (
     <ToolBarWrapper>
       <Button
-        fancy
         variant={canChat ? 'outline' : 'default'}
         disabled={disableReset}
         onClick={clearChat}
+        fancy={true}
+        roundy={true}
       >
         Reset Chat
       </Button>
-      {canChat ? (
-        <Button fancy disabled={disabled} onClick={onSubmit}>
+      {canChat && (
+        <Button
+          disabled={disabled}
+          onClick={onSubmit}
+          fancy={true}
+          roundy={true}
+        >
           {submitLabel}
         </Button>
-      ) : null}
+      )}
     </ToolBarWrapper>
   )
 }

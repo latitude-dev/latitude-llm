@@ -158,10 +158,8 @@ export function LatteChatInput({
             placement: 'right',
           }}
           userSelect={false}
-          containerClassName='!rounded-[0.55rem]'
-          className='!rounded-[0.55rem]'
-          innerClassName='!rounded-[0.55rem]'
-          fancy
+          fancy={true}
+          roundy={true}
         >
           Send
         </Button>

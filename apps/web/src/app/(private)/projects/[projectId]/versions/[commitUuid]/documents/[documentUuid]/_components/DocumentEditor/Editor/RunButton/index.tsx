@@ -1,7 +1,7 @@
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ToolBarWrapper } from '$/components/ChatWrapper/ChatTextArea/ToolBar'
 import { ResolvedMetadata } from '$/workers/readMetadata'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { memo } from 'react'
 
 export const RunButton = memo(
@@ -31,13 +31,19 @@ export const RunButton = memo(
         ) : (
           <Button
             iconProps={{ name: 'play' }}
-            fancy
             onClick={runPromptButtonHandler}
+            fancy={true}
+            roundy={true}
           >
             Run
           </Button>
         )}
-        <Button fancy variant='outline' onClick={toggleExperimentModal}>
+        <Button
+          variant='outline'
+          onClick={toggleExperimentModal}
+          fancy={true}
+          roundy={true}
+        >
           Run experiment
         </Button>
       </ToolBarWrapper>
