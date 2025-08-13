@@ -6,6 +6,7 @@ import {
 import {
   FinishReason,
   LanguageModelUsage,
+  ModelMessage,
   TextStreamPart,
   ToolResultPart,
 } from 'ai'
@@ -251,4 +252,24 @@ export const FINISH_REASON_DETAILS = {
 export type ToolResultPayload = {
   value: unknown
   isError: boolean
+}
+
+/**
+ * Legacy type from Vercel SDK v4.
+ * Keeping this because is used in our core
+ */
+export type ToolExecutionOptions = {
+  /**
+   * The ID of the tool call. You can use it e.g. when sending tool-call related information with stream data.
+   */
+  toolCallId: string
+  /**
+   * Messages that were sent to the language model to initiate the response that contained the tool call.
+   * The messages **do not** include the system prompt nor the assistant response that contained the tool call.
+   */
+  messages: ModelMessage[]
+  /**
+   * An optional abort signal that indicates that the overall operation should be aborted.
+   */
+  abortSignal?: AbortSignal
 }

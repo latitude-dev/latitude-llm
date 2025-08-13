@@ -3,7 +3,6 @@ import {
   LogSources,
   ToolDefinition,
 } from '@latitude-data/constants'
-import { ToolExecutionOptions } from 'ai'
 import { publisher } from '../../../events/publisher'
 import { getCopilotDataForGenerateToolResponses } from '../../../jobs/job-definitions/documents/runDocumentAtCommitWithAutoToolResponses/getCopilotData'
 import { runDocumentAtCommit } from '../../../services/commits'
