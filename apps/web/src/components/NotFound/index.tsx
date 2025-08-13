@@ -18,7 +18,11 @@ export async function NotFoundPageComponent({
         message={message}
         submit={
           <Link href={route}>
-            <Button fancy variant='outline'>
+            <Button
+              variant='link'
+              iconProps={{ name: 'arrowRight', placement: 'right' }}
+              className='p-0'
+            >
               {label}
             </Button>
           </Link>

@@ -1,9 +1,9 @@
-import { UnauthorizedError } from '@latitude-data/constants/errors'
+import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
+import { CommitsRepository } from '../../../repositories'
 import { isFeatureEnabledByName } from '../../workspaceFeatures/isFeatureEnabledByName'
 import { assertCopilotIsSupported, getCopilotDocument } from './helpers'
-import { CommitsRepository } from '../../../repositories'
 
 export type LatteVersion = {
   uuid: string
@@ -27,7 +27,7 @@ async function assertLatteDebugModeIsEnabled(
 
   if (!isEnabled) {
     return Result.error(
-      new UnauthorizedError('This workspace cannot use Latte Debug Mode'),
+      new BadRequestError('This workspace cannot use Latte Debug Mode'),
     )
   }
 

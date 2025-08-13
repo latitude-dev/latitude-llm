@@ -1,10 +1,10 @@
-import { createBackendClient } from '@pipedream/sdk/server'
-import { PromisedResult } from '../../../lib/Transaction'
+import { UnprocessableEntityError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
-import { Result } from '../../../lib/Result'
-import { UnauthorizedError } from '@latitude-data/constants/errors'
+import { createBackendClient } from '@pipedream/sdk/server'
 import { Workspace } from '../../../browser'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import { Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
 
 export async function createConnectToken({
   workspace,
@@ -28,7 +28,7 @@ export async function createConnectToken({
     !PIPEDREAM_PROJECT_ID
   ) {
     return Result.error(
-      new UnauthorizedError(
+      new UnprocessableEntityError(
         'Pipedream credentials are not set. Please set PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET and PIPEDREAM_PROJECT_ID in your environment variables.',
       ),
     )

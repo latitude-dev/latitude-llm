@@ -229,7 +229,7 @@ export function DocumentRefinement({
           name: 'brain',
           size: 'small',
         }}
-        className='flex-shrink-0'
+        containerClassName='flex-shrink-0'
         onClick={() => setOpenModal(true)}
       >
         <Text.H6>Refine</Text.H6>

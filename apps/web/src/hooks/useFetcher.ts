@@ -1,7 +1,7 @@
 import { ROUTES } from '$/services/routes'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback } from 'react'
-
+import { useCurrentUrl } from './useCurrentUrl'
 import { useNavigate } from './useNavigate'
 
 type ISearchParams =
@@ -25,6 +25,7 @@ export async function handleResponse<
   toast,
   serializer,
   navigate,
+  currentUrl,
   returnRaw = false as Raw,
   onSuccess,
   onFail,
@@ -33,6 +34,7 @@ export async function handleResponse<
   returnRaw?: Raw
   toast: ReturnType<typeof useToast>['toast']
   navigate: ReturnType<typeof useNavigate>
+  currentUrl: string
   serializer?: (item: I) => R
   onSuccess?: (data: ConditionalResponse<R, Raw>) => void
   onFail?: (error: string) => void
@@ -56,7 +58,11 @@ export async function handleResponse<
         'You are not authorized to access this resource, redirecting your to the login page',
     })
 
-    navigate.push(ROUTES.auth.login)
+    if (!currentUrl.includes(ROUTES.auth.login)) {
+      navigate.push(
+        `${ROUTES.auth.login}?returnTo=${encodeURIComponent(currentUrl)}`,
+      )
+    }
   } else if (response.status >= 500) {
     if (onFail) {
       onFail('Something went wrong on the server')
@@ -91,6 +97,7 @@ export async function executeFetch<
   toast,
   serializer,
   navigate,
+  currentUrl,
   onSuccess,
   onFail,
 }: {
@@ -98,6 +105,7 @@ export async function executeFetch<
   searchParams?: ISearchParams
   toast: ReturnType<typeof useToast>['toast']
   navigate: ReturnType<typeof useNavigate>
+  currentUrl: string
   serializer?: (item: any) => any
   onSuccess?: (data: ConditionalResponse<R, Raw>) => void
   onFail?: (error: string) => void
@@ -109,6 +117,7 @@ export async function executeFetch<
     response,
     toast,
     navigate,
+    currentUrl,
     serializer,
     onSuccess,
     onFail,
@@ -137,6 +146,7 @@ export default function useFetcher<
 ) {
   const { toast } = useToast()
   const navigate = useNavigate()
+  const currentUrl = useCurrentUrl()
 
   return useCallback(async () => {
     if (!route) return fallback as R
@@ -147,6 +157,7 @@ export default function useFetcher<
       toast,
       serializer,
       navigate,
+      currentUrl,
       onSuccess,
       onFail,
     })
@@ -159,6 +170,7 @@ export default function useFetcher<
     onFail,
     onSuccess,
     navigate,
+    currentUrl,
     fallback,
   ])
 }

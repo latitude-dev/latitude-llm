@@ -41,6 +41,7 @@ export {
   type LegacyChainEvent,
   EMAIL_REGEX,
   isSafeUrl,
+  isLatitudeUrl,
 } from '@latitude-data/constants'
 export * from '@latitude-data/constants/evaluations'
 export * from '@latitude-data/constants/tracing'

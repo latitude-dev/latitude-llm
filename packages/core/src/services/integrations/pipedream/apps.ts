@@ -1,16 +1,16 @@
-import { App, BackendClient, createBackendClient } from '@pipedream/sdk/server'
-import { PromisedResult } from '../../../lib/Transaction'
-import { env } from '@latitude-data/env'
-import { Result } from '../../../lib/Result'
 import {
   BadRequestError,
-  UnauthorizedError,
+  UnprocessableEntityError,
 } from '@latitude-data/constants/errors'
+import { env } from '@latitude-data/env'
+import { App, BackendClient, createBackendClient } from '@pipedream/sdk/server'
 import {
   AppDto,
   PipedreamComponent,
   PipedreamComponentType,
 } from '../../../constants'
+import { Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
 import { fetchTriggerCounts } from './fetchTriggerCounts'
 
 const LIST_APPS_LIMIT = 64
@@ -30,7 +30,7 @@ export function getPipedreamEnvironment() {
     !PIPEDREAM_PROJECT_ID
   ) {
     return Result.error(
-      new UnauthorizedError(
+      new UnprocessableEntityError(
         'Pipedream credentials are not set. Please set PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET and PIPEDREAM_PROJECT_ID in your environment variables.',
       ),
     )
