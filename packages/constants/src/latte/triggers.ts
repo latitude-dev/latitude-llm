@@ -1,56 +1,72 @@
 import { DocumentTriggerType } from '..'
 import {
   EmailTriggerConfiguration,
+  InsertIntegrationTriggerConfiguration,
   InsertScheduledTriggerConfiguration,
 } from '../documentTriggers/schema'
 
 type LatteCreateEmailTriggerAction = {
   operation: 'create'
   triggerType: DocumentTriggerType.Email
-  promptUuid: string
   configuration: EmailTriggerConfiguration
 }
 
 type LatteCreateScheduledTriggerAction = {
   operation: 'create'
   triggerType: DocumentTriggerType.Scheduled
-  promptUuid: string
   configuration: InsertScheduledTriggerConfiguration
+}
+
+type LatteCreateIntegrationTriggerAction = {
+  operation: 'create'
+  triggerType: DocumentTriggerType.Integration
+  configuration: InsertIntegrationTriggerConfiguration
 }
 
 type LatteDeleteScheduledTriggerAction = {
   operation: 'delete'
   triggerType: DocumentTriggerType.Scheduled
-  promptUuid: string
 }
 
 type LatteDeleteEmailTriggerAction = {
   operation: 'delete'
   triggerType: DocumentTriggerType.Email
-  promptUuid: string
+}
+
+type LatteDeleteIntegrationTriggerAction = {
+  operation: 'delete'
+  triggerType: DocumentTriggerType.Integration
+  configuration: InsertIntegrationTriggerConfiguration
 }
 
 type LatteUpdateScheduledTriggerAction = {
   operation: 'update'
   triggerType: DocumentTriggerType.Scheduled
-  promptUuid: string
   configuration: InsertScheduledTriggerConfiguration
 }
 
 type LatteUpdateEmailTriggerAction = {
   operation: 'update'
   triggerType: DocumentTriggerType.Email
-  promptUuid: string
   configuration: EmailTriggerConfiguration
+}
+
+type LatteUpdateIntegrationTriggerAction = {
+  operation: 'update'
+  triggerType: DocumentTriggerType.Integration
+  configuration: InsertIntegrationTriggerConfiguration
 }
 
 export type LatteTriggerAction =
   | LatteCreateEmailTriggerAction
   | LatteCreateScheduledTriggerAction
+  | LatteCreateIntegrationTriggerAction
   | LatteDeleteScheduledTriggerAction
   | LatteDeleteEmailTriggerAction
+  | LatteDeleteIntegrationTriggerAction
   | LatteUpdateScheduledTriggerAction
   | LatteUpdateEmailTriggerAction
+  | LatteUpdateIntegrationTriggerAction
 
 export type LatteTriggerChanges = {
   projectId: number

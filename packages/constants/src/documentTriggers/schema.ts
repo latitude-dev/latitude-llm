@@ -30,7 +30,7 @@ export const integrationTriggerConfigurationSchema = z.object({
   triggerId: z.string(),
 })
 
-const insertIntegrationTriggerConfigurationSchema =
+export const insertIntegrationTriggerConfigurationSchema =
   integrationTriggerConfigurationSchema.omit({
     triggerId: true,
   })

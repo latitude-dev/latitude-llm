@@ -2,20 +2,21 @@ import { z } from 'zod'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-} from '../../../../../repositories'
-import { defineLatteTool } from '../types'
+} from '../../../../../../repositories'
+import { defineLatteTool } from '../../types'
 import { BadRequestError } from '@latitude-data/constants/errors'
-import { Result } from '../../../../../lib/Result'
-import Transaction from '../../../../../lib/Transaction'
+import { Result } from '../../../../../../lib/Result'
+import Transaction from '../../../../../../lib/Transaction'
 import executeTriggerActions from './executeTriggerActions'
 import { DocumentTriggerType, HEAD_COMMIT } from '@latitude-data/constants'
 import {
   emailTriggerConfigurationSchema,
   insertScheduledTriggerConfigurationSchema,
+  insertIntegrationTriggerConfigurationSchema,
 } from '@latitude-data/constants/documentTriggers'
 
 const triggerActions = defineLatteTool(
-  async ({ projectId, versionUuid, actions }, { workspace }) => {
+  async ({ projectId, versionUuid, promptUuid, actions }, { workspace }) => {
     const commitsScope = new CommitsRepository(workspace.id)
 
     const headCommit = await commitsScope
@@ -42,7 +43,13 @@ const triggerActions = defineLatteTool(
     return await transaction.call(async () => {
       for await (const action of actions) {
         const result = await executeTriggerActions(
-          { workspace, commit: headCommit, documents, action },
+          {
+            workspace,
+            commit: headCommit,
+            promptUuid: promptUuid,
+            documents,
+            action,
+          },
           transaction,
         )
         if (!result.ok) {
@@ -59,41 +66,51 @@ const triggerActions = defineLatteTool(
   z.object({
     projectId: z.number(),
     versionUuid: z.string(),
+    promptUuid: z.string(),
     actions: z.array(
       z.union([
         z.object({
           operation: z.literal('create'),
           triggerType: z.literal(DocumentTriggerType.Email),
-          promptUuid: z.string(),
           configuration: emailTriggerConfigurationSchema,
         }),
         z.object({
           operation: z.literal('create'),
           triggerType: z.literal(DocumentTriggerType.Scheduled),
-          promptUuid: z.string(),
           configuration: insertScheduledTriggerConfigurationSchema,
+        }),
+        z.object({
+          operation: z.literal('create'),
+          triggerType: z.literal(DocumentTriggerType.Integration),
+          configuration: insertIntegrationTriggerConfigurationSchema,
         }),
         z.object({
           operation: z.literal('delete'),
           triggerType: z.literal(DocumentTriggerType.Email),
-          promptUuid: z.string(),
         }),
         z.object({
           operation: z.literal('delete'),
           triggerType: z.literal(DocumentTriggerType.Scheduled),
-          promptUuid: z.string(),
+        }),
+        z.object({
+          operation: z.literal('delete'),
+          triggerType: z.literal(DocumentTriggerType.Integration),
+          configuration: insertIntegrationTriggerConfigurationSchema,
         }),
         z.object({
           operation: z.literal('update'),
           triggerType: z.literal(DocumentTriggerType.Email),
-          promptUuid: z.string(),
           configuration: emailTriggerConfigurationSchema,
         }),
         z.object({
           operation: z.literal('update'),
           triggerType: z.literal(DocumentTriggerType.Scheduled),
-          promptUuid: z.string(),
           configuration: insertScheduledTriggerConfigurationSchema,
+        }),
+        z.object({
+          operation: z.literal('update'),
+          triggerType: z.literal(DocumentTriggerType.Integration),
+          configuration: insertIntegrationTriggerConfigurationSchema,
         }),
       ]),
     ),

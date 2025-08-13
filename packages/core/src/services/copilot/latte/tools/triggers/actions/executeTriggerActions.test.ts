@@ -6,23 +6,24 @@ import {
   Providers,
 } from '@latitude-data/constants'
 import { describe, expect, beforeEach, it, vi } from 'vitest'
-import { Commit, Workspace } from '../../../../../browser'
-import { LatteTriggerAction } from '../../../../../../../constants/src/latte/triggers'
+import { Commit, Workspace } from '../../../../../../browser'
+import { LatteTriggerAction } from '../../../../../../../../constants/src/latte/triggers'
 import {
   EmailTriggerConfiguration,
   InsertScheduledTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
 import executeTriggerActions from './executeTriggerActions'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import * as createDocumentTriggersModule from '../../../../documentTriggers/create'
-import * as deleteDocumentTriggersModule from '../../../../documentTriggers/delete'
-import * as updateDocumentTriggersModule from '../../../../documentTriggers/update'
-import { Result } from '../../../../../lib/Result'
+import * as createDocumentTriggersModule from '../../../../../documentTriggers/create'
+import * as deleteDocumentTriggersModule from '../../../../../documentTriggers/delete'
+import * as updateDocumentTriggersModule from '../../../../../documentTriggers/update'
+import { Result } from '../../../../../../lib/Result'
 
 describe('Latte CRUD document triggers', () => {
   let workspace: Workspace
   let commit: Commit
   let documents: DocumentVersion[]
+  let promptUuid: string
   let action: LatteTriggerAction
 
   beforeEach(async () => {
@@ -43,6 +44,7 @@ describe('Latte CRUD document triggers', () => {
     workspace = project.workspace
     commit = project.commit
     documents = project.documents
+    promptUuid = documents[0]!.documentUuid
     vi.restoreAllMocks()
   })
 
@@ -51,7 +53,6 @@ describe('Latte CRUD document triggers', () => {
       // Arrange
       action = {
         operation: 'create',
-        promptUuid: documents[0]!.documentUuid,
         triggerType: DocumentTriggerType.Email,
         configuration: {
           name: 'Test Email Trigger',
@@ -70,7 +71,7 @@ describe('Latte CRUD document triggers', () => {
       const expectedLatteTriggerChanges = {
         projectId: commit.projectId,
         draftUuid: commit.uuid,
-        promptUuid: action.promptUuid,
+        promptUuid: promptUuid,
         triggerType: DocumentTriggerType.Email,
       }
 
@@ -78,6 +79,7 @@ describe('Latte CRUD document triggers', () => {
       const result = await executeTriggerActions({
         workspace,
         commit,
+        promptUuid,
         documents,
         action,
       })
@@ -91,7 +93,6 @@ describe('Latte CRUD document triggers', () => {
       // Arrange
       action = {
         operation: 'create',
-        promptUuid: 'non-existent-uuid',
         triggerType: DocumentTriggerType.Email,
         configuration: {
           name: 'Test Email Trigger',
@@ -100,13 +101,14 @@ describe('Latte CRUD document triggers', () => {
       } as LatteTriggerAction
 
       const expectedError = new NotFoundError(
-        `Document with UUID ${action.promptUuid} not found in commit ${commit.uuid}.`,
+        `Document with UUID 00000000-0000-0000-0000-000000000000 not found in commit ${commit.uuid}.`,
       )
 
       // Act
       const result = await executeTriggerActions({
         workspace,
         commit,
+        promptUuid: '00000000-0000-0000-0000-000000000000', // Non-existent UUID
         documents,
         action,
       })
@@ -120,7 +122,6 @@ describe('Latte CRUD document triggers', () => {
       // Arrange
       action = {
         operation: 'create',
-        promptUuid: documents[0]!.documentUuid,
         triggerType: DocumentTriggerType.Scheduled,
         configuration: {
           cronExpression: '* * * 9 0',
@@ -139,6 +140,7 @@ describe('Latte CRUD document triggers', () => {
       const result = await executeTriggerActions({
         workspace,
         commit,
+        promptUuid,
         documents,
         action,
       })
@@ -153,7 +155,6 @@ describe('Latte CRUD document triggers', () => {
     beforeEach(async () => {
       action = {
         operation: 'create',
-        promptUuid: documents[0]!.documentUuid,
         triggerType: DocumentTriggerType.Email,
         configuration: {
           name: 'Test Email Trigger',
@@ -164,6 +165,7 @@ describe('Latte CRUD document triggers', () => {
       await executeTriggerActions({
         workspace,
         commit,
+        promptUuid,
         documents,
         action,
       }).then((r) => r.unwrap())
@@ -173,14 +175,13 @@ describe('Latte CRUD document triggers', () => {
       // Arrange
       action = {
         operation: 'delete',
-        promptUuid: documents[0]!.documentUuid,
         triggerType: DocumentTriggerType.Email,
       } as LatteTriggerAction
 
       const expectedLatteTriggerChanges = {
         projectId: commit.projectId,
         draftUuid: commit.uuid,
-        promptUuid: action.promptUuid,
+        promptUuid: promptUuid,
         triggerType: DocumentTriggerType.Email,
       }
 
@@ -188,6 +189,7 @@ describe('Latte CRUD document triggers', () => {
       const result = await executeTriggerActions({
         workspace,
         commit,
+        promptUuid,
         documents,
         action,
       })
@@ -201,18 +203,18 @@ describe('Latte CRUD document triggers', () => {
       // Arrange
       action = {
         operation: 'delete',
-        promptUuid: '00000000-0000-0000-0000-000000000000',
         triggerType: DocumentTriggerType.Email,
       } as LatteTriggerAction
 
       const expectedError = new NotFoundError(
-        `Document with UUID ${action.promptUuid} has no document triggers.`,
+        `Document with UUID 00000000-0000-0000-0000-000000000000 has no document triggers.`,
       )
 
       // Act
       const result = await executeTriggerActions({
         workspace,
         commit,
+        promptUuid: '00000000-0000-0000-0000-000000000000', // Non-existent UUID
         documents,
         action,
       })
@@ -226,7 +228,6 @@ describe('Latte CRUD document triggers', () => {
       // Arrange
       action = {
         operation: 'delete',
-        promptUuid: documents[0]!.documentUuid,
         triggerType: DocumentTriggerType.Email,
       } as LatteTriggerAction
       const expectedError = new Error('Failed to delete document trigger')
@@ -239,9 +240,73 @@ describe('Latte CRUD document triggers', () => {
       const result = await executeTriggerActions({
         workspace,
         commit,
+        promptUuid,
         documents,
         action,
       })
+      // Assert
+      expect(result.ok).toBe(false)
+      expect(result.error).toStrictEqual(expectedError)
+    })
+
+    it('should throw error if deleting email trigger that does not exist but integration triggers do', async () => {
+      // Arrange
+      action = {
+        operation: 'delete',
+        triggerType: DocumentTriggerType.Scheduled,
+      } as LatteTriggerAction
+
+      const expectedError = new NotFoundError(
+        `scheduled trigger not found for document with UUID ${promptUuid}.`,
+      )
+
+      // Act
+      const result = await executeTriggerActions({
+        workspace,
+        commit,
+        promptUuid,
+        documents,
+        action,
+      })
+
+      // Assert
+      expect(result.error).toStrictEqual(expectedError)
+    })
+
+    it('should throw error if deleting an integration trigger that doesnt exist, but another integration trigger does', async () => {
+      // Arrange
+      await factories.createIntegrationDocumentTrigger({
+        workspaceId: workspace.id,
+        documentUuid: promptUuid,
+        integrationId: 123456789,
+        properties: {
+          componentId: 'test-component',
+          payloadParameters: [],
+        },
+      })
+
+      action = {
+        operation: 'delete',
+        triggerType: DocumentTriggerType.Integration,
+        configuration: {
+          componentId: 'non-existent-component-id',
+          integrationId: 112312312,
+          payloadParameters: [],
+        },
+      } as LatteTriggerAction
+      const expectedError = new NotFoundError(
+        `Integration trigger with ID 112312312 not found for document with UUID ${promptUuid}.`,
+      )
+
+      // Act
+      const result = await executeTriggerActions({
+        workspace,
+        commit,
+        promptUuid,
+        documents,
+        action,
+      })
+
       // Assert
       expect(result.ok).toBe(false)
       expect(result.error).toStrictEqual(expectedError)
@@ -252,7 +317,6 @@ describe('Latte CRUD document triggers', () => {
     beforeEach(async () => {
       action = {
         operation: 'create',
-        promptUuid: documents[0]!.documentUuid,
         triggerType: DocumentTriggerType.Scheduled,
         configuration: {
           cronExpression: '0 * * * *',
@@ -262,6 +326,7 @@ describe('Latte CRUD document triggers', () => {
       await executeTriggerActions({
         workspace,
         commit,
+        promptUuid,
         documents,
         action,
       }).then((r) => r.unwrap())
@@ -271,7 +336,6 @@ describe('Latte CRUD document triggers', () => {
       // Arrange
       action = {
         operation: 'update',
-        promptUuid: documents[0]!.documentUuid,
         triggerType: DocumentTriggerType.Scheduled,
         configuration: {
           cronExpression: '0 0 0 0 0',
@@ -281,7 +345,7 @@ describe('Latte CRUD document triggers', () => {
       const expectedLatteTriggerChanges = {
         projectId: commit.projectId,
         draftUuid: commit.uuid,
-        promptUuid: action.promptUuid,
+        promptUuid: promptUuid,
         triggerType: DocumentTriggerType.Scheduled,
       }
 
@@ -289,6 +353,7 @@ describe('Latte CRUD document triggers', () => {
       const result = await executeTriggerActions({
         workspace,
         commit,
+        promptUuid,
         documents,
         action,
       })
@@ -302,7 +367,6 @@ describe('Latte CRUD document triggers', () => {
       // Arrange
       action = {
         operation: 'update',
-        promptUuid: '00000000-0000-0000-0000-000000000000',
         triggerType: DocumentTriggerType.Scheduled,
         configuration: {
           cronExpression: '0 0 0 0 0',
@@ -310,13 +374,14 @@ describe('Latte CRUD document triggers', () => {
       } as LatteTriggerAction
 
       const expectedError = new NotFoundError(
-        `Document with UUID ${action.promptUuid} has no document triggers.`,
+        `Document with UUID 00000000-0000-0000-0000-000000000000 has no document triggers.`,
       )
 
       // Act
       const result = await executeTriggerActions({
         workspace,
         commit,
+        promptUuid: '00000000-0000-0000-0000-000000000000', // Non-existent UUID
         documents,
         action,
       })
@@ -331,7 +396,6 @@ describe('Latte CRUD document triggers', () => {
     // Arrange
     action = {
       operation: 'update',
-      promptUuid: documents[0]!.documentUuid,
       triggerType: DocumentTriggerType.Scheduled,
       configuration: {
         cronExpression: '0 0 0 0 0',
@@ -339,7 +403,7 @@ describe('Latte CRUD document triggers', () => {
     } as LatteTriggerAction
 
     const expectedError = new NotFoundError(
-      `Document with UUID ${action.promptUuid} has no document triggers.`,
+      `Document with UUID ${promptUuid} has no document triggers.`,
     )
 
     const expectedResultError = Result.error(expectedError)
@@ -353,6 +417,7 @@ describe('Latte CRUD document triggers', () => {
     const result = await executeTriggerActions({
       workspace,
       commit,
+      promptUuid,
       documents,
       action,
     })

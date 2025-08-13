@@ -14,16 +14,11 @@ import {
   IntegrationsRepository,
 } from '../../../../../repositories'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
-import { createDocumentTrigger } from '../../../../documentTriggers'
-import {
-  DocumentTriggerType,
-  DocumentVersion,
-  HEAD_COMMIT,
-} from '@latitude-data/constants'
+import { HEAD_COMMIT } from '@latitude-data/constants'
 import { validateLattesChoices } from './configValidator'
 import { PromisedResult } from '../../../../../lib/Transaction'
 
-export const validateAndDeployTriggerSchema = defineLatteTool(
+export const validateTriggerSchema = defineLatteTool(
   async (
     {
       projectId,
@@ -31,12 +26,11 @@ export const validateAndDeployTriggerSchema = defineLatteTool(
       componentId,
       promptUuid,
       integrationId,
-      payloadParameters,
       configuration,
     },
     { workspace },
   ) => {
-    const documentResult = await getDocumentReadyForCreatingTrigger({
+    const documentResult = await validateDocumentReadyForCreatingTrigger({
       workspaceId: workspace.id,
       projectId,
       versionUuid,
@@ -46,8 +40,6 @@ export const validateAndDeployTriggerSchema = defineLatteTool(
     if (!Result.isOk(documentResult)) {
       return documentResult
     }
-
-    const document = documentResult.unwrap()
 
     const pipedreamEnv = getPipedreamEnvironment()
     if (!pipedreamEnv.ok) {
@@ -66,6 +58,7 @@ export const validateAndDeployTriggerSchema = defineLatteTool(
     const integration = integrationResult.unwrap() as PipedreamIntegration
 
     const validatedSchema = await validateLattesChoices({
+      // TODO - find way to validate payload parameters also
       pipedream,
       componentId,
       integration,
@@ -76,28 +69,7 @@ export const validateAndDeployTriggerSchema = defineLatteTool(
       return validatedSchema
     }
 
-    const createDocumentTriggerResult = await createDocumentTrigger({
-      workspace,
-      document: document,
-      projectId: projectId,
-      trigger: {
-        type: DocumentTriggerType.Integration,
-        configuration: {
-          componentId,
-          integrationId,
-          properties: configuration,
-          payloadParameters: payloadParameters || [], // TODO - find way to validate this
-        },
-      },
-    })
-
-    if (!Result.isOk(createDocumentTriggerResult)) {
-      return createDocumentTriggerResult
-    }
-
-    const createdDocumentTrigger = createDocumentTriggerResult.unwrap()
-
-    return Result.ok({ createdDocumentTrigger })
+    return Result.ok({ validatedSchema })
   },
   z.object({
     projectId: z.number(),
@@ -105,12 +77,11 @@ export const validateAndDeployTriggerSchema = defineLatteTool(
     componentId: z.string(),
     promptUuid: z.string(),
     integrationId: z.number(),
-    payloadParameters: z.array(z.string()).optional(),
     configuration: z.record(z.any()),
   }),
 )
 
-const getDocumentReadyForCreatingTrigger = async ({
+const validateDocumentReadyForCreatingTrigger = async ({
   workspaceId,
   projectId,
   versionUuid,
@@ -120,7 +91,7 @@ const getDocumentReadyForCreatingTrigger = async ({
   projectId: number
   versionUuid: string
   promptUuid: string
-}): PromisedResult<DocumentVersion> => {
+}): PromisedResult<boolean> => {
   const commitsScope = new CommitsRepository(workspaceId)
   const headCommit = await commitsScope
     .getHeadCommit(projectId)
@@ -152,5 +123,5 @@ const getDocumentReadyForCreatingTrigger = async ({
     )
   }
 
-  return Result.ok(document)
+  return Result.ok(true)
 }
