@@ -178,4 +178,6 @@ describe('consumeStream', () => {
       },
     })
   })
+
+  // TODO: Review if we need to parse diferently reasoning chunks.
 })
