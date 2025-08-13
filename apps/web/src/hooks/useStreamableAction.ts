@@ -4,7 +4,7 @@ import {
   LegacyChainEventTypes,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
-import { readStreamableValue } from 'ai/rsc'
+import { readStreamableValue } from '@ai-sdk/rsc'
 
 type OnEventHandler = (event: string, data: any) => void
 
