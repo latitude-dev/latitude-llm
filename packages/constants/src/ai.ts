@@ -103,8 +103,8 @@ export type ChainStepObjectResponse = BaseResponse & {
 export type ChainStepResponse<T extends StreamType> = T extends 'text'
   ? ChainStepTextResponse
   : T extends 'object'
-  ? ChainStepObjectResponse
-  : never
+    ? ChainStepObjectResponse
+    : never
 
 export enum StreamEventTypes {
   Latitude = 'latitude-event',
@@ -113,13 +113,13 @@ export enum StreamEventTypes {
 
 export type LegacyChainEvent =
   | {
-    data: LegacyLatitudeEventData
-    event: StreamEventTypes.Latitude
-  }
+      data: LegacyLatitudeEventData
+      event: StreamEventTypes.Latitude
+    }
   | {
-    data: ProviderData
-    event: StreamEventTypes.Provider
-  }
+      data: ProviderData
+      event: StreamEventTypes.Provider
+    }
 
 export type LegacyLatitudeStepEventData = {
   type: LegacyChainEventTypes.Step
