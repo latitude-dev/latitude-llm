@@ -5,7 +5,6 @@ import {
   ToolCall,
   ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { LanguageModelUsage } from 'ai'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useProviderEventHandler } from './useProviderEventHandler'

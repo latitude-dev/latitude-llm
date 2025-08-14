@@ -3,17 +3,14 @@ import {
   Message,
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
-import {
-  FinishReason,
-  LanguageModelUsage,
-  ModelMessage,
-  TextStreamPart,
-  Tool,
-  ToolResultPart,
-} from 'ai'
+import { FinishReason, TextStreamPart, Tool } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
-
+import {
+  LegacyVercelSDKVersion4ToolContent,
+  LegacyVercelSDKVersion4Usage,
+  type ReplaceTextDelta,
+} from './ai/vercelSdkV5ToV4'
 import { ParameterType } from './config'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
 import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
@@ -55,32 +52,6 @@ export type VercelConfig = {
 export type PartialPromptConfig = Omit<LatitudePromptConfig, 'provider'>
 
 export type VercelChunk = TextStreamPart<any> // Original Vercel SDK v5 type
-// TODO(compiler): Remove this type when we remove the legacy Vercel SDK v4
-// Be aware that this breaks all clients (our webapp, our api and our SDKs)
-// because when streaming `text-delta` is expecting `textDelta` not what Vercel SDK v5 returns `text`
-type ReplaceTextDelta<T> = T extends {
-  type: 'text-delta'
-  text: infer Text
-  id: infer Id
-  providerMetadata?: infer PM
-}
-  ? { type: 'text-delta'; id: Id; providerMetadata?: PM; textDelta: Text }
-  : T extends {
-    type: 'tool-call'
-  }
-  ? Omit<T, 'input'> & { args: Record<string, unknown> }
-  : T extends {
-    type: 'tool-result'
-  }
-  ? Omit<T, 'output' | 'input'> & {
-    args: Record<string, unknown>
-    result: any
-  }
-  : T extends {
-    type: 'reasoning-delta'
-  }
-  ? Omit<T, 'type' | 'text'> & { type: 'reasoning'; textDelta: string }
-  : T
 
 export type ProviderData = ReplaceTextDelta<VercelChunk>
 
@@ -95,34 +66,6 @@ export type ChainEventDtoResponse =
   | Omit<ChainStepResponse<'text'>, 'providerLog'>
 
 export type StreamType = 'object' | 'text'
-
-// TODO(compiler)
-export type LegacyVercelSDKVersion4Usage = Pick<
-  LanguageModelUsage,
-  'reasoningTokens' | 'cachedInputTokens'
-> & {
-  /**
-   * The number of input (prompt) tokens used.
-   */
-  promptTokens: number
-  /**
-  The number of output (completion) tokens used.
-     */
-  completionTokens: number
-  /**
-  The total number of tokens as reported by the provider.
-  This number might be different from the sum of `inputTokens` and `outputTokens`
-  and e.g. include reasoning tokens or other overhead.
-     */
-  totalTokens: number
-}
-
-type LegacyVercelSDKToolResultPart = Omit<ToolResultPart, 'output'> & {
-  result: ToolResultPart['output']
-}
-
-// TODO(compiler)
-type LegacyVercelSDKVersion4ToolContent = Array<LegacyVercelSDKToolResultPart>
 
 type BaseResponse = {
   text: string
@@ -267,22 +210,4 @@ export type ToolResultPayload = {
   isError: boolean
 }
 
-/**
- * Legacy type from Vercel SDK v4.
- * Keeping this because is used in our core
- */
-export type ToolExecutionOptions = {
-  /**
-   * The ID of the tool call. You can use it e.g. when sending tool-call related information with stream data.
-   */
-  toolCallId: string
-  /**
-   * Messages that were sent to the language model to initiate the response that contained the tool call.
-   * The messages **do not** include the system prompt nor the assistant response that contained the tool call.
-   */
-  messages: ModelMessage[]
-  /**
-   * An optional abort signal that indicates that the overall operation should be aborted.
-   */
-  abortSignal?: AbortSignal
-}
+export * from './ai/vercelSdkV5ToV4'

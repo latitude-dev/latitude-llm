@@ -78,7 +78,10 @@ export async function streamAIResponse({
     aiResult,
     documentLogUuid,
   })
+
+  // TODO: Convert messages from Vercel SDK v5 -> v4 format
   const responseMessages = (await aiResult.response).messages as LegacyMessage[]
+
   const providerLog = await createProviderLog({
     workspace,
     finishReason: await aiResult.finishReason,
@@ -100,7 +103,7 @@ export async function streamAIResponse({
   return {
     response,
     messages: responseMessages,
-    tokenUsage: await aiResult.usage,
+    tokenUsage: processedResponse.usage,
     finishReason: aiResult.finishReason,
   }
 }

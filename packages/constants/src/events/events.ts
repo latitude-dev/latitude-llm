@@ -5,6 +5,7 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainStepResponse,
+  LegacyVercelSDKVersion4Usage,
   ProviderData,
   StreamEventTypes,
   StreamType,
@@ -52,7 +53,7 @@ export interface LatitudeProviderCompletedEventData
   extends GenericLatitudeEventData {
   type: ChainEventTypes.ProviderCompleted
   providerLogUuid: string
-  tokenUsage: LanguageModelUsage
+  tokenUsage: LegacyVercelSDKVersion4Usage
   finishReason: FinishReason
   response: ChainStepResponse<StreamType>
 }

@@ -9,7 +9,7 @@ import {
   Message as LegacyMessage,
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
-import { FinishReason, LanguageModelUsage } from 'ai'
+import { FinishReason } from 'ai'
 import {
   ChainEvent,
   ChainEventTypes,
@@ -19,6 +19,7 @@ import {
   StreamType,
   VercelConfig,
 } from '@latitude-data/constants'
+import { LegacyVercelSDKVersion4Usage } from '@latitude-data/constants/ai'
 import {
   createMcpClientManager,
   McpClientManager,
@@ -40,7 +41,7 @@ export type StreamManagerProps = {
   abortSignal?: AbortSignal
   uuid?: string
   messages?: LegacyMessage[]
-  tokenUsage?: LanguageModelUsage
+  tokenUsage?: LegacyVercelSDKVersion4Usage
   tools?: Record<string, ToolHandler>
 }
 
@@ -71,7 +72,7 @@ export abstract class StreamManager {
   private endTime: number | undefined
   private resolveDuration?: (duration: number) => void
   private resolveToolCalls?: (toolCalls: ToolCall[]) => void
-  private tokenUsage: LanguageModelUsage
+  private tokenUsage: LegacyVercelSDKVersion4Usage
   private response: ChainStepResponse<StreamType> | undefined
   private finishReason?: FinishReason
   private resolveMessages?: (messages: LegacyMessage[]) => void
@@ -93,6 +94,8 @@ export abstract class StreamManager {
       promptTokens: 0,
       completionTokens: 0,
       totalTokens: 0,
+      reasoningTokens: 0,
+      cachedInputTokens: 0,
     },
   }: StreamManagerProps) {
     this.uuid = uuid
@@ -243,7 +246,7 @@ export abstract class StreamManager {
     finishReason = 'stop',
   }: {
     responseMessages: LegacyMessage[]
-    tokenUsage: LanguageModelUsage
+    tokenUsage: LegacyVercelSDKVersion4Usage
     response: ChainStepResponse<StreamType>
     finishReason?: FinishReason
   }) {
@@ -251,8 +254,8 @@ export abstract class StreamManager {
       output: responseMessages,
       tokens: {
         prompt: tokenUsage.promptTokens,
-        cached: 0, // Note: not given by Vercel AI SDK yet
-        reasoning: 0, // Note: not given by Vercel AI SDK yet
+        cached: tokenUsage.cachedInputTokens,
+        reasoning: tokenUsage.reasoningTokens,
         completion: tokenUsage.completionTokens,
       },
       finishReason,
@@ -350,7 +353,7 @@ export abstract class StreamManager {
   }: {
     response: ChainStepResponse<StreamType>
     messages: LegacyMessage[]
-    tokenUsage: LanguageModelUsage
+    tokenUsage: LegacyVercelSDKVersion4Usage
     finishReason?: FinishReason
   }) {
     this.messages.push(...messages)
@@ -361,6 +364,10 @@ export abstract class StreamManager {
       completionTokens:
         this.tokenUsage.completionTokens + tokenUsage.completionTokens,
       totalTokens: this.tokenUsage.totalTokens + tokenUsage.totalTokens,
+      reasoningTokens:
+        this.tokenUsage.reasoningTokens + tokenUsage.reasoningTokens,
+      cachedInputTokens:
+        this.tokenUsage.cachedInputTokens + tokenUsage.cachedInputTokens,
     }
   }
 

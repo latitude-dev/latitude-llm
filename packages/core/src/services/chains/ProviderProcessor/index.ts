@@ -1,7 +1,7 @@
-import { omit } from 'lodash-es'
 import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
 import { AIReturn } from '../../ai'
 import { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
+import * as vercelSdkFromV5ToV4 from '../../../lib/vercelSdkFromV5ToV4'
 
 function parseObject(text: string) {
   const parsed = text
@@ -37,24 +37,9 @@ export async function processResponse({
     text,
     object: isObject ? parseObject(text) : undefined,
     output,
-    usage: translateUsageToLegacy(await aiResult.usage),
+    usage: await vercelSdkFromV5ToV4.convertTokenUsage(aiResult.usage),
     reasoning: await aiResult.reasoning,
-    toolCalls: (await aiResult.toolCalls).map((t) => ({
-      id: t.toolCallId,
-      name: t.toolName,
-      // Vercel SDK v4 -> v5 changed the name from `arguments` to `input`
-      arguments: t.input as Record<string, unknown>,
-    })),
-  }
-}
-
-function translateUsageToLegacy(usage: Awaited<AIReturn<StreamType>['usage']>) {
-  return {
-    promptTokens: usage.inputTokens ?? 0,
-    completionTokens: usage.outputTokens ?? 0,
-    totalTokens: usage.totalTokens ?? 0,
-    reasoningTokens: usage.reasoningTokens,
-    cachedInputTokens: usage.cachedInputTokens,
+    toolCalls: await vercelSdkFromV5ToV4.convertToolCalls(aiResult.toolCalls),
   }
 }
 
@@ -73,10 +58,7 @@ async function buildOutput(
     } else {
       return {
         role: 'tool',
-        content: m.content.map((c) => ({
-          ...omit(c, 'output'),
-          result: c.output,
-        })),
+        content: vercelSdkFromV5ToV4.convertMessageToolContent(m.content),
       }
     }
   })

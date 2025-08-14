@@ -274,7 +274,6 @@ export function useProviderEventHandler({
   // Main handler that delegates to the appropriate helper based on event type
   const handleProviderEvent = useCallback(
     (parsedEvent: ParsedEvent, data: ChainEvent['data']) => {
-      console.log("PARSED_EVENT", parsedEvent, "DATA", data)
       if (parsedEvent.event !== StreamEventTypes.Provider) return
 
       switch (data.type) {
