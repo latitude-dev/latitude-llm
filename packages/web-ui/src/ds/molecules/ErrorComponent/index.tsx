@@ -22,9 +22,14 @@ export function ErrorComponent({
         })}
       >
         <Icon name='logoMonochrome' size='xxxlarge' className='opacity-25' />
-        <Text.H5 align='center' color='foregroundMuted'>
-          {message}
-        </Text.H5>
+        <div className='flex flex-col items-center justify-center gap-y-2'>
+          <Text.H4B align='center' color='foregroundMuted'>
+            Oh no... something went wrong!
+          </Text.H4B>
+          <Text.H5 align='center' color='foregroundMuted'>
+            {message}
+          </Text.H5>
+        </div>
       </div>
       {submit}
     </div>

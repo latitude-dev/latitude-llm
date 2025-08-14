@@ -1,32 +1,47 @@
-import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
-import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
-import buildMetatags from '$/app/_lib/buildMetatags'
 import AuthFooter from '$/app/(public)/_components/Footer'
 import LoginFooter from '$/app/(public)/login/_components/LoginFooter'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { FocusLayout } from '$/components/layouts'
+import { getDataFromSession } from '$/data-access'
 import { ROUTES } from '$/services/routes'
+import { isLatitudeUrl } from '@latitude-data/constants'
+import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
+import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 import { redirect } from 'next/navigation'
 import LoginForm from './LoginForm'
-import { getDataFromSession } from '$/data-access'
 
 export const dynamic = 'force-dynamic'
 
 export const metadata = buildMetatags({
-  title: 'The Open-Source LLM Development Platform',
+  title: 'Sign in to your account',
 })
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    returnTo?: string
+  }>
+}) {
+  const { returnTo } = await searchParams
+
   const { user, workspace } = await getDataFromSession()
-  if (user && workspace) return redirect(ROUTES.dashboard.root)
+  if (user && workspace) {
+    if (!returnTo || !isLatitudeUrl(returnTo)) {
+      return redirect(ROUTES.dashboard.root)
+    }
+
+    return redirect(returnTo)
+  }
 
   return (
     <FocusLayout
       header={<FocusHeader title='Welcome to Latitude' />}
-      footer={<LoginFooter />}
+      footer={<LoginFooter returnTo={returnTo} />}
     >
       <Card background='light'>
         <CardContent standalone>
-          <LoginForm footer={<AuthFooter />} />
+          <LoginForm footer={<AuthFooter />} returnTo={returnTo} />
         </CardContent>
       </Card>
     </FocusLayout>
