@@ -18,14 +18,9 @@ async function assertLatteDebugModeIsEnabled(
     workspaceId,
     'latteDebugMode',
   )
+  if (!Result.isOk(isEnabledResult)) return isEnabledResult
 
-  // TODO: This returns `boolean | Result<boolean>` for some reason
-  const isEnabled =
-    typeof isEnabledResult === 'boolean'
-      ? isEnabledResult
-      : isEnabledResult.value
-
-  if (!isEnabled) {
+  if (!isEnabledResult.unwrap()) {
     return Result.error(
       new BadRequestError('This workspace cannot use Latte Debug Mode'),
     )
