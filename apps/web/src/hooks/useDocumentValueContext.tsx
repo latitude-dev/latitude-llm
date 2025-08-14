@@ -22,6 +22,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
@@ -36,6 +37,7 @@ type DocumentValueContextType = {
   value: string
   setValue: updateContentFn
   updateDocumentContent: updateContentFn
+  document: DocumentVersion
   isSaved: boolean
 }
 
@@ -46,16 +48,35 @@ const DocumentValueContext = createContext<
 type DocumentValueProviderProps = {
   children: ReactNode
   document: DocumentVersion
+  documents?: DocumentVersion[]
 }
 
 export function DocumentValueProvider({
   children,
-  document,
+  document: _document,
+  documents: _documents,
 }: DocumentValueProviderProps) {
-  const [value, setValue] = useState(document.content)
-
-  const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const { data: documents } = useDocumentVersions(
+    {
+      commitUuid: commit.uuid,
+      projectId: project.id,
+    },
+    {
+      fallbackData: _documents,
+      keepPreviousData: true,
+      revalidateOnMount: true,
+    },
+  )
+  const document = useMemo(
+    () =>
+      documents?.find((d) => d.documentUuid === _document.documentUuid) ??
+      _document,
+    [documents, _document],
+  )
+
+  const [value, setValue] = useState(document.content)
   const { updateContent, isUpdatingContent } = useDocumentVersions({
     commitUuid: commit.uuid,
     projectId: project.id,
@@ -111,6 +132,7 @@ export function DocumentValueProvider({
         setValue: setContentValue,
         updateDocumentContent,
         isSaved: !isUpdatingContent,
+        document,
       }}
     >
       {children}
