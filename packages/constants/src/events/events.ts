@@ -10,7 +10,7 @@ import {
   StreamEventTypes,
   StreamType,
 } from '..'
-import { FinishReason, LanguageModelUsage } from 'ai'
+import { FinishReason } from 'ai'
 import { ChainError, RunErrorCodes } from '../errors'
 
 export enum ChainEventTypes {
@@ -77,7 +77,7 @@ export interface LatitudeStepCompletedEventData
 export interface LatitudeChainCompletedEventData
   extends GenericLatitudeEventData {
   type: ChainEventTypes.ChainCompleted
-  tokenUsage: LanguageModelUsage
+  tokenUsage: LegacyVercelSDKVersion4Usage
   finishReason: FinishReason
 }
 
