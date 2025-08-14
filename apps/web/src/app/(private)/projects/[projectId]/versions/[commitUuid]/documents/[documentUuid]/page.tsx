@@ -1,7 +1,7 @@
 import {
   findCommitCached,
-  getDocumentByUuid,
-  getDocumentAtCommit,
+  getDocumentByUuidCached,
+  getDocumentsAtCommitCached,
   getProviderApiKeysCached,
 } from '$/app/(private)/_data-access'
 import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
@@ -60,12 +60,12 @@ export default async function DocumentPage({
     throw error
   }
 
-  const document = await getDocumentByUuid({
+  const document = await getDocumentByUuidCached({
     documentUuid: documentUuid,
     projectId,
     commitUuid,
   })
-  const documents = await getDocumentAtCommit({ commit })
+  const documents = await getDocumentsAtCommitCached({ commit })
   const providerApiKeys = await getProviderApiKeysCached()
   const freeRunsCount = await getFreeRuns(workspace.id)
 
