@@ -53,6 +53,12 @@ export function DocumentValueProvider({
   document,
 }: DocumentValueProviderProps) {
   const [value, setValue] = useState(document.content)
+  console.log('🐛 DocumentValueProvider mounted with:', {
+    documentUuid: document.documentUuid,
+    documentContent: document.content,
+    initialValue: value,
+    timestamp: new Date().toISOString(),
+  })
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { updateContent, isUpdatingContent } = useDocumentVersions({
@@ -71,7 +77,9 @@ export function DocumentValueProvider({
   )
   const updateDocumentContent = useDebouncedCallback(
     async (content: string, opts?: Parameters<updateContentFn>[1]) => {
+      console.log('📝 Updating document content', content, opts)
       setContentValue(content, opts)
+      console.log('✅ Document content updated', content)
 
       const [_, error] = await updateContent({
         commitUuid: commit.uuid,
@@ -79,7 +87,6 @@ export function DocumentValueProvider({
         documentUuid: document.documentUuid,
         content,
       })
-
       if (error) {
         console.error(error)
 
@@ -88,7 +95,7 @@ export function DocumentValueProvider({
           description: 'There was an error saving the document.',
           variant: 'destructive',
         })
-
+        console.error('🛠️ Error saving document:', error)
         setContentValue(document.content)
       }
     },

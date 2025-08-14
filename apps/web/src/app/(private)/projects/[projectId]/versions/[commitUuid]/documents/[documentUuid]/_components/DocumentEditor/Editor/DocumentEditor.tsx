@@ -75,6 +75,7 @@ function DocumentEditorContent({
   const { metadata } = useMetadata()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
+  console.log('👴 _document', _document)
   const { data: documents } = useDocumentVersions(
     {
       commitUuid: commit.uuid,
@@ -84,6 +85,7 @@ function DocumentEditorContent({
       fallbackData: _documents,
     },
   )
+  console.log('👦 documents', documents)
   const document = useMemo(
     () =>
       documents?.find((d) => d.documentUuid === _document.documentUuid) ??
