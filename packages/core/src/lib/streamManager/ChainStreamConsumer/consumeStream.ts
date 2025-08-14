@@ -10,7 +10,7 @@ import {
   StreamType,
 } from '../../../constants'
 import { AIReturn } from '../../../services/ai'
-import { ProviderData } from '@latitude-data/constants'
+import { ProviderData, VercelChunk } from '@latitude-data/constants'
 
 interface ConsumeStreamParams {
   result: AIReturn<StreamType>
@@ -36,9 +36,37 @@ export async function consumeStream({
     const { value, done } = await reader.read()
     if (done) break
 
-    const chunk = value as ProviderData
+    const vercelChunk = value as VercelChunk
+    let chunk = value as ProviderData
 
-    if (chunk.type === 'error') {
+    if (vercelChunk.type === 'text-delta') {
+      chunk = {
+        type: 'text-delta',
+        id: vercelChunk.id,
+        textDelta: vercelChunk.text,
+        providerMetadata: vercelChunk.providerMetadata,
+      } as ProviderData
+    } else if (vercelChunk.type === 'tool-call') {
+      chunk = {
+        type: 'tool-call',
+        toolCallId: vercelChunk.toolCallId,
+        toolName: vercelChunk.toolName,
+        args: vercelChunk.input,
+      } as ProviderData
+    } else if (vercelChunk.type === 'tool-result') {
+      chunk = {
+        type: 'tool-result',
+        toolCallId: vercelChunk.toolCallId,
+        toolName: vercelChunk.toolName,
+        args: vercelChunk.input,
+        result: vercelChunk.output,
+      } as ProviderData
+    } else if (vercelChunk.type === 'reasoning-delta') {
+      chunk = {
+        type: 'reasoning',
+        textDelta: vercelChunk.text,
+      } as ProviderData
+    } else if (chunk.type === 'error') {
       error = createAIError(
         getErrorMessage({
           error: chunk.error,
@@ -46,10 +74,8 @@ export async function consumeStream({
         }),
         getErrorCode(chunk.error),
       )
-    }
-
-    if (chunk.type === 'finish') {
-      if (chunk.finishReason === 'error' && !error) {
+    } else if (vercelChunk.type === 'finish') {
+      if (vercelChunk.finishReason === 'error' && !error) {
         error = createAIError(
           'LLM provider returned an unknown error',
           RunErrorCodes.AIRunError,

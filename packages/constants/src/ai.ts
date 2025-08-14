@@ -3,15 +3,14 @@ import {
   Message,
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
-import {
-  FinishReason,
-  LanguageModelUsage,
-  TextStreamPart,
-  ToolContent,
-} from 'ai'
+import { FinishReason, TextStreamPart, Tool } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
-
+import {
+  LegacyVercelSDKVersion4ToolContent,
+  LegacyVercelSDKVersion4Usage,
+  type ReplaceTextDelta,
+} from './ai/vercelSdkV5ToV4'
 import { ParameterType } from './config'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
 import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
@@ -29,12 +28,7 @@ export type ToolDefinition = JSONSchema7 & {
   }
 }
 
-export type VercelProviderTool = {
-  type: 'provider-defined'
-  id: `${string}.${string}`
-  args: Record<string, unknown>
-  parameters: z.ZodObject<{}, 'strip', z.ZodTypeAny, {}, {}>
-}
+export type VercelProviderTool = Tool<{}, object>
 
 export type VercelTools = Record<string, VercelProviderTool | ToolDefinition>
 
@@ -57,7 +51,9 @@ export type VercelConfig = {
 
 export type PartialPromptConfig = Omit<LatitudePromptConfig, 'provider'>
 
-export type ProviderData = TextStreamPart<any>
+export type VercelChunk = TextStreamPart<any> // Original Vercel SDK v5 type
+
+export type ProviderData = ReplaceTextDelta<VercelChunk>
 
 export type ChainEventDto = ProviderData | LatitudeEventData
 
@@ -70,12 +66,16 @@ export type ChainEventDtoResponse =
   | Omit<ChainStepResponse<'text'>, 'providerLog'>
 
 export type StreamType = 'object' | 'text'
+
 type BaseResponse = {
   text: string
-  usage: LanguageModelUsage
+  usage: LegacyVercelSDKVersion4Usage
   documentLogUuid?: string
   providerLog?: ProviderLog
-  output?: (AssistantMessage | { role: 'tool'; content: ToolContent })[]
+  output?: (
+    | AssistantMessage
+    | { role: 'tool'; content: LegacyVercelSDKVersion4ToolContent }
+  )[]
 }
 
 export type ChainStepTextResponse = BaseResponse & {
@@ -92,8 +92,8 @@ export type ChainStepObjectResponse = BaseResponse & {
 export type ChainStepResponse<T extends StreamType> = T extends 'text'
   ? ChainStepTextResponse
   : T extends 'object'
-    ? ChainStepObjectResponse
-    : never
+  ? ChainStepObjectResponse
+  : never
 
 export enum StreamEventTypes {
   Latitude = 'latitude-event',
@@ -102,13 +102,13 @@ export enum StreamEventTypes {
 
 export type LegacyChainEvent =
   | {
-      data: LegacyLatitudeEventData
-      event: StreamEventTypes.Latitude
-    }
+    data: LegacyLatitudeEventData
+    event: StreamEventTypes.Latitude
+  }
   | {
-      data: ProviderData
-      event: StreamEventTypes.Provider
-    }
+    data: ProviderData
+    event: StreamEventTypes.Provider
+  }
 
 export type LegacyLatitudeStepEventData = {
   type: LegacyChainEventTypes.Step
@@ -209,3 +209,5 @@ export type ToolResultPayload = {
   value: unknown
   isError: boolean
 }
+
+export * from './ai/vercelSdkV5ToV4'

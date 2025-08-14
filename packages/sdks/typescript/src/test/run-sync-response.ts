@@ -4,7 +4,13 @@ export const RUN_TEXT_RESPONSE = {
   response: {
     streamType: 'text' as const,
     text: 'some-text',
-    usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    usage: {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+      reasoningTokens: 0,
+      cachedInputTokens: 0,
+    },
     toolCalls: [],
   },
 }

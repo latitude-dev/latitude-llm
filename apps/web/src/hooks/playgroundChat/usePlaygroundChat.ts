@@ -1,11 +1,10 @@
-import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
+import { ChainEvent, ChainEventTypes, LegacyVercelSDKVersion4Usage } from '@latitude-data/constants'
 import {
   Message,
   MessageRole,
   ToolCall,
   ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { LanguageModelUsage } from 'ai'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useProviderEventHandler } from './useProviderEventHandler'
@@ -48,7 +47,7 @@ export function usePlaygroundChat({
   const [isLoading, setIsLoading] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [unresponedToolCalls, setUnresponedToolCalls] = useState<ToolCall[]>([])
-  const [usage, setUsage] = useState<LanguageModelUsage>({
+  const [usage, setUsage] = useState<LegacyVercelSDKVersion4Usage>({
     promptTokens: 0,
     completionTokens: 0,
     totalTokens: 0,

@@ -3,7 +3,7 @@ import { omit } from 'lodash-es'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
-  CoreMessage,
+  ModelMessage,
   jsonSchema,
   ObjectStreamPart,
   streamText as originalStreamText,
@@ -33,19 +33,26 @@ type AISDKProvider = typeof DEFAULT_AI_SDK_PROVIDER
 
 type PARTIAL_OUTPUT = object
 
-export type AIReturn<T extends StreamType> = Pick<
-  StreamTextResult<Record<string, Tool<any, any>>, PARTIAL_OUTPUT>,
+type VercelAIReturn = Pick<
+  StreamTextResult<Record<string, Tool<unknown, unknown>>, PARTIAL_OUTPUT>,
   | 'fullStream'
   | 'text'
   | 'usage'
   | 'toolCalls'
   | 'providerMetadata'
   | 'reasoning'
+  | 'reasoningText'
   | 'finishReason'
   | 'response'
+>
+
+export type AIReturn<T extends StreamType> = Omit<
+  VercelAIReturn,
+  'reasoning' | 'reasoningText'
 > & {
   type: T
   providerName: Providers
+  reasoning: VercelAIReturn['reasoningText']
   object?: T extends 'object' ? PARTIAL_OUTPUT : undefined
 }
 
@@ -150,7 +157,7 @@ export async function ai({
       ...omit(config, ['schema']),
       model: languageModel,
       prompt,
-      messages: messages as CoreMessage[],
+      messages: messages as ModelMessage[],
       tools: toolsResult.value,
       abortSignal,
       providerOptions: config.providerOptions,
@@ -166,7 +173,7 @@ export async function ai({
       providerName: providerType,
       fullStream: result.fullStream,
       text: result.text,
-      reasoning: result.reasoning,
+      reasoning: result.reasoningText,
       usage: result.usage,
       toolCalls: result.toolCalls,
       providerMetadata: result.providerMetadata,

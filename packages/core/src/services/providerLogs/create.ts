@@ -2,10 +2,10 @@ import type {
   Message as LegacyMessage,
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
-import { FinishReason, LanguageModelUsage } from 'ai'
+import { FinishReason } from 'ai'
 
 import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
-import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
+import { ChainStepResponse, LegacyVercelSDKVersion4Usage, StreamType } from '@latitude-data/constants/ai'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -22,7 +22,7 @@ export type CreateProviderLogProps = {
   model?: string
   config?: PartialConfig
   messages: LegacyMessage[]
-  usage?: LanguageModelUsage
+  usage?: LegacyVercelSDKVersion4Usage
   duration?: number
   source: LogSources
   finishReason?: FinishReason
@@ -90,7 +90,7 @@ export async function createProviderLog(
         output,
         toolCalls,
         tokens: usage
-          ? isNaN(usage.totalTokens)
+          ? usage.totalTokens === undefined || isNaN(usage.totalTokens)
             ? 0
             : (usage.totalTokens ?? 0)
           : undefined,

@@ -9,7 +9,7 @@ import {
 } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { createStreamableValue, StreamableValue } from 'ai/rsc'
+import { createStreamableValue, StreamableValue } from '@ai-sdk/rsc'
 import { ChainEvent } from '@latitude-data/constants'
 
 type AddMessagesActionProps = {

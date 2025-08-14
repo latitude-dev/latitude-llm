@@ -126,6 +126,8 @@ export function buildClientToolHandlersMap(tools: string[]) {
   }, {})
 }
 
+// FIXME: Messages are comming with different shape on Vercel SDK v5.
+// We need to handle this properly in the future.
 async function _runDocumentAtCommit(args: any) {
   const { isLegacy } = args
 

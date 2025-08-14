@@ -1,4 +1,8 @@
-import { LogSources, ToolDefinition } from '@latitude-data/constants'
+import {
+  LogSources,
+  ToolDefinition,
+  ToolExecutionOptions,
+} from '@latitude-data/constants'
 import { LatitudeError } from '../../errors'
 import { Result, TypedResult } from '../../Result'
 import { ResolvedTools, ToolSource } from './types'
@@ -9,7 +13,6 @@ import {
 import { StreamManager } from '..'
 import { telemetry, TelemetryContext } from '../../../telemetry'
 import { Tool } from 'ai'
-import { ToolExecutionOptions } from 'ai'
 import {
   awaitClientToolResult,
   mockClientToolResult,
@@ -149,7 +152,10 @@ function instrumentToolHandler(
     toolDefinition: ToolDefinition
   },
 ) {
-  return async (args: any, toolCall: ToolExecutionOptions) => {
+  return async (
+    args: Record<string, unknown>,
+    toolCall: ToolExecutionOptions,
+  ) => {
     const $tool = telemetry.tool(context, {
       name: toolName,
       call: {

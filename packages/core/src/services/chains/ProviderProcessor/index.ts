@@ -1,6 +1,7 @@
 import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
 import { AIReturn } from '../../ai'
 import { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
+import * as vercelSdkFromV5ToV4 from '../../../lib/vercelSdkFromV5ToV4'
 
 function parseObject(text: string) {
   const parsed = text
@@ -13,6 +14,11 @@ function parseObject(text: string) {
 
 /**
  * This function is responsible for processing the AI response
+ *
+ * TODO(compiler)
+ * Remove all legacy stuff and try to use latest Vercel SDK types.
+ * The problem with that is that it will change the output of our API and
+ * SDKs.
  */
 export async function processResponse({
   aiResult,
@@ -31,13 +37,9 @@ export async function processResponse({
     text,
     object: isObject ? parseObject(text) : undefined,
     output,
-    usage: await aiResult.usage,
+    usage: await vercelSdkFromV5ToV4.convertTokenUsage(aiResult.usage),
     reasoning: await aiResult.reasoning,
-    toolCalls: (await aiResult.toolCalls).map((t) => ({
-      id: t.toolCallId,
-      name: t.toolName,
-      arguments: t.args,
-    })),
+    toolCalls: await vercelSdkFromV5ToV4.convertToolCalls(aiResult.toolCalls),
   }
 }
 
@@ -56,7 +58,7 @@ async function buildOutput(
     } else {
       return {
         role: 'tool',
-        content: m.content,
+        content: vercelSdkFromV5ToV4.convertMessageToolContent(m.content),
       }
     }
   })
