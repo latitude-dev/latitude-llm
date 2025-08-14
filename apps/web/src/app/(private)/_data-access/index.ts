@@ -111,35 +111,35 @@ export const findCommitsWithDocumentChangesCached = cache(
   },
 )
 
-export const getDocumentByUuidCached = cache(
-  async ({
-    projectId,
+export const getDocumentByUuid = async ({
+  projectId,
+  documentUuid,
+  commitUuid,
+}: {
+  projectId: number
+  documentUuid: string
+  commitUuid: string
+}) => {
+  const { workspace } = await getCurrentUserOrRedirect()
+  const scope = new DocumentVersionsRepository(workspace.id)
+  const result = await scope.getDocumentAtCommit({
     documentUuid,
     commitUuid,
-  }: {
-    projectId: number
-    documentUuid: string
-    commitUuid: string
-  }) => {
-    const { workspace } = await getCurrentUserOrRedirect()
-    const scope = new DocumentVersionsRepository(workspace.id)
-    const result = await scope.getDocumentAtCommit({
-      documentUuid,
-      commitUuid,
-      projectId,
-    })
-    if (result.error) {
-      const error = result.error
-      if (error instanceof NotFoundError) {
-        return notFound()
-      }
-
-      throw error
+    projectId,
+  })
+  if (result.error) {
+    const error = result.error
+    if (error instanceof NotFoundError) {
+      return notFound()
     }
 
-    return result.unwrap()
-  },
-)
+    throw error
+  }
+
+  return result.unwrap()
+}
+
+export const getDocumentByUuidCached = cache(getDocumentByUuid)
 
 export const getDocumentByPathCached = cache(
   async ({ commit, path }: { commit: Commit; path: string }) => {
@@ -156,16 +156,16 @@ export const getDocumentByPathCached = cache(
   },
 )
 
-export const getDocumentsAtCommitCached = cache(
-  async ({ commit }: { commit: Commit }) => {
-    const { workspace } = await getCurrentUserOrRedirect()
-    const docsScope = new DocumentVersionsRepository(workspace.id)
-    const result = await docsScope.getDocumentsAtCommit(commit)
-    const documents = result.unwrap()
+export const getDocumentAtCommit = async ({ commit }: { commit: Commit }) => {
+  const { workspace } = await getCurrentUserOrRedirect()
+  const docsScope = new DocumentVersionsRepository(workspace.id)
+  const result = await docsScope.getDocumentsAtCommit(commit)
+  const documents = result.unwrap()
 
-    return documents
-  },
-)
+  return documents
+}
+
+export const getDocumentsAtCommitCached = cache(getDocumentAtCommit)
 
 export const getHeadCommitCached = cache(
   async ({
