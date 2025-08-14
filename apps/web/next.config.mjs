@@ -27,6 +27,10 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '25mb',
     },
+    staleTimes: {
+      static: 120, // default: 2 minutes. We don't really want
+      dynamic: 0, // default: 0 seconds
+    },
   },
   images: {
     remotePatterns: [new URL('https://assets.pipedream.net/**')],
