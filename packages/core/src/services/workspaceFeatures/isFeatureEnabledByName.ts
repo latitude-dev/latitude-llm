@@ -15,5 +15,6 @@ export async function isFeatureEnabledByName(
   }
 
   const feature = featureResult.value
-  return await isFeatureEnabled(workspaceId, feature.id, db)
+  const enabled = await isFeatureEnabled(workspaceId, feature.id, db)
+  return Result.ok(enabled)
 }

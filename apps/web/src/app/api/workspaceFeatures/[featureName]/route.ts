@@ -19,7 +19,7 @@ export const GET = errorHandler(
       const isEnabled = await isFeatureEnabledByName(
         workspace.id,
         params.featureName,
-      )
+      ).then((r) => r.unwrap())
 
       return NextResponse.json({ enabled: isEnabled }, { status: 200 })
     },
