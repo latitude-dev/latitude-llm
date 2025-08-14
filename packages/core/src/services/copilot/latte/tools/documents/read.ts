@@ -9,7 +9,7 @@ import { z } from 'zod'
 import { scanDocuments } from '../../helpers'
 
 const readPrompt = defineLatteTool(
-  async ({ projectId, versionUuid, path }, { workspace }) => {
+  async ({ projectId, versionUuid, path: rawPath }, { workspace }) => {
     const commitsScope = new CommitsRepository(workspace.id)
     const commitResult = await commitsScope.getCommitByUuid({
       projectId: projectId,
@@ -25,6 +25,7 @@ const readPrompt = defineLatteTool(
     }
     const documents = documentsResult.unwrap()
 
+    const path = rawPath.startsWith('/') ? rawPath.slice(1) : rawPath
     const document = documents.find((doc) => doc.path === path)
     if (!document) {
       return Result.error(
