@@ -12,7 +12,6 @@ import {
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useToggleModal } from '$/hooks/useToogleModal'
-import useDocumentVersions from '$/stores/documentVersions'
 import {
   Commit,
   DocumentVersion,
@@ -41,7 +40,10 @@ export function DocumentEditor(props: DocumentEditorProps) {
   return (
     <MetadataProvider>
       <DevModeProvider>
-        <DocumentValueProvider document={props.document}>
+        <DocumentValueProvider
+          document={props.document}
+          documents={props.documents}
+        >
           <DocumentEditorContent {...props} />
         </DocumentValueProvider>
       </DevModeProvider>
@@ -65,34 +67,14 @@ const HISTORY_ELM_HEIGHT = 44
  * @param props.initialDiff - Initial diff data for the document
  */
 function DocumentEditorContent({
-  document: _document,
-  documents: _documents,
   freeRunsCount,
   initialDiff,
 }: DocumentEditorProps) {
-  const { updateDocumentContent } = useDocumentValue()
+  const { updateDocumentContent, document } = useDocumentValue()
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const { metadata } = useMetadata()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  console.log('👴 _document', _document)
-  const { data: documents } = useDocumentVersions(
-    {
-      commitUuid: commit.uuid,
-      projectId: project.id,
-    },
-    {
-      fallbackData: _documents,
-    },
-  )
-  const document = useMemo(
-    () =>
-      documents?.find((d) => d.documentUuid === _document.documentUuid) ??
-      _document,
-    [documents, _document],
-  )
-  console.log('👦 document', document)
-
   const {
     isPlaygroundOpen,
     isPlaygroundTransitioning,
