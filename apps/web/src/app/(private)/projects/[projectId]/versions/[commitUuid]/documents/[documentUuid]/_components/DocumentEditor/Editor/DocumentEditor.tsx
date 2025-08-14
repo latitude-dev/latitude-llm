@@ -85,13 +85,14 @@ function DocumentEditorContent({
       fallbackData: _documents,
     },
   )
-  console.log('👦 documents', documents)
   const document = useMemo(
     () =>
       documents?.find((d) => d.documentUuid === _document.documentUuid) ??
       _document,
     [documents, _document],
   )
+  console.log('👦 document', document)
+
   const {
     isPlaygroundOpen,
     isPlaygroundTransitioning,
