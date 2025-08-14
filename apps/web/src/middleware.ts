@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
   if (isPublicPath(pathname)) {
-    return NextResponse.next({ headers })
+    return NextResponse.next({ request: { headers } })
   }
 
   // Skip checking DB if no session is found
@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
     )
   }
 
-  return NextResponse.next({ headers })
+  return NextResponse.next({ request: { headers } })
 }
 
 export const config = {
