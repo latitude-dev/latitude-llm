@@ -6,13 +6,7 @@ import { ToolContent } from 'ai'
 export async function convertTokenUsage(
   tokenUsage: AIReturn<StreamType>['usage'],
 ) {
-  await tokenUsage
-  return convertSyncTokenUsage()
-}
-
-export function convertSyncTokenUsage(
-  usage: Awaited<AIReturn<StreamType>['usage']>,
-) {
+  const usage = await tokenUsage
   const promptTokens = usage.inputTokens ?? 0
   const completionTokens = usage.outputTokens ?? 0
   const totalTokens = usage.totalTokens ?? promptTokens + completionTokens

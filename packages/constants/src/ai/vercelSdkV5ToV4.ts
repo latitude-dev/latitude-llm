@@ -1,8 +1,4 @@
-import {
-  LanguageModelUsage,
-  ToolResultPart,
-  ModelMessage as VercelV5Message,
-} from 'ai'
+import { ToolResultPart, ModelMessage as VercelV5Message } from 'ai'
 
 // TODO(compiler): Remove this type when we remove the legacy Vercel SDK v4
 // Be aware that this breaks all clients (our webapp, our api and our SDKs)
@@ -10,10 +6,9 @@ import {
 export type ReplaceTextDelta<T> = T extends {
   type: 'text-delta'
   text: infer Text
-  id: infer Id
   providerMetadata?: infer PM
 }
-  ? { type: 'text-delta'; id: Id; providerMetadata?: PM; textDelta: Text }
+  ? { type: 'text-delta'; providerMetadata?: PM; textDelta: Text }
   : T extends {
     type: 'tool-call'
   }
