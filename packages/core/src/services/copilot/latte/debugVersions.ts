@@ -1,9 +1,9 @@
-import { UnauthorizedError } from '@latitude-data/constants/errors'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { isFeatureEnabledByName } from '../../workspaceFeatures/isFeatureEnabledByName'
 import { assertCopilotIsSupported, getCopilotDocument } from './helpers'
 import { CommitsRepository } from '../../../repositories'
+import { ForbiddenError } from '@latitude-data/constants/errors'
 
 export type LatteVersion = {
   uuid: string
@@ -19,15 +19,10 @@ async function assertLatteDebugModeIsEnabled(
     'latteDebugMode',
   )
 
-  // TODO: This returns `boolean | Result<boolean>` for some reason
-  const isEnabled =
-    typeof isEnabledResult === 'boolean'
-      ? isEnabledResult
-      : isEnabledResult.value
-
-  if (!isEnabled) {
+  if (!Result.isOk(isEnabledResult)) return isEnabledResult
+  if (!isEnabledResult.unwrap()) {
     return Result.error(
-      new UnauthorizedError('This workspace cannot use Latte Debug Mode'),
+      new ForbiddenError('This workspace cannot use Latte Debug Mode'),
     )
   }
 
