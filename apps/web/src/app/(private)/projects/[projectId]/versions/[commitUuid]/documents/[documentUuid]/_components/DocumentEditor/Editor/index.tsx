@@ -1,16 +1,33 @@
-'use client'
-
-import useFeature from '$/stores/useFeature'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
-import { DocumentEditorProps, OldDocumentEditor } from './OldDocumentEditor'
+import { DevModeProvider } from '$/hooks/useDevMode'
 import { DocumentEditor } from './DocumentEditor'
+import { DocumentEditorProps, OldDocumentEditor } from './OldDocumentEditor'
+import { DocumentValueProvider } from '$/hooks/useDocumentValueContext'
+import { MetadataProvider } from '$/components/MetadataProvider'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 
-export default function DocumentEditorWrapper(props: DocumentEditorProps) {
-  const { data: workspace, isLoading } = useCurrentWorkspace()
-  const feature = useFeature(workspace?.id, 'latte')
+export default async function DocumentEditorWrapper(
+  props: DocumentEditorProps,
+) {
+  const { workspace } = await getCurrentUserOrRedirect()
+  const enabled = await isFeatureEnabledByName(workspace.id, 'latte').then(
+    (r) => r.unwrap(),
+  )
 
-  if (isLoading || feature.isLoading || feature.isValidating) return null
-  if (feature.isEnabled) return <DocumentEditor {...props} />
-
-  return <OldDocumentEditor {...props} />
+  return (
+    <MetadataProvider>
+      <DevModeProvider>
+        <DocumentValueProvider
+          key={props.document.content}
+          document={props.document}
+        >
+          {enabled ? (
+            <DocumentEditor {...props} />
+          ) : (
+            <OldDocumentEditor {...props} />
+          )}
+        </DocumentValueProvider>
+      </DevModeProvider>
+    </MetadataProvider>
+  )
 }

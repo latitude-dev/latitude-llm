@@ -32,14 +32,6 @@ async function getDiffFromExperimentId({
   return newValue
 }
 
-/**
- * Documentation:
- * https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config#dynamic
- *
- * NextJS is not the best. Without this the page gets cached second time the user visits it (I think)
- */
-export const dynamic = 'force-dynamic'
-
 export default async function DocumentPage({
   params,
   searchParams,

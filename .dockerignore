@@ -1,10 +1,13 @@
-.dockerignore
+**/.git/
+**/.next/
+**/dist/
+**/node_modules/
+**/docker/
+*.md
 .git
-.next
 .pnpm-store
 Dockerfile
-dist
+docker
 node_modules
 npm-debug.log
 out
-*.md

@@ -15,7 +15,7 @@ export const GET = errorHandler(
       },
     ) => {
       const result = await getLatteDebugVersions(workspace.id)
-      const latteVersions = result.error ? [] : result.unwrap()
+      const latteVersions = result.unwrap()
 
       return NextResponse.json(latteVersions, { status: 200 })
     },

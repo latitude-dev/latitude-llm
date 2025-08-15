@@ -24,9 +24,7 @@ export function LatteDebugVersionSelector() {
     [data],
   )
 
-  if (!enabled || isLoading || options.length < 1) {
-    return null
-  }
+  if (!enabled) return null
 
   return (
     <div className='w-full max-w-64 overflow-hidden truncate'>
