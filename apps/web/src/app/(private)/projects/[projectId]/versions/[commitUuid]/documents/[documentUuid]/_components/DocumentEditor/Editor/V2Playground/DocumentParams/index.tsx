@@ -26,12 +26,16 @@ import {
   UseSelectDataset,
   useSelectDataset,
 } from '../../Playground/DocumentParams/DatasetParams/useSelectDataset'
-import { HistoryLogParams } from '../../Playground/DocumentParams/HistoryLogParams'
+import {
+  HistoryLogParams,
+  MAX_HISTORY_LOGS,
+} from '../../Playground/DocumentParams/HistoryLogParams'
 import {
   UseLogHistoryParams,
   useLogHistoryParams,
 } from '../../Playground/DocumentParams/HistoryLogParams/useLogHistoryParams'
 import { ManualParams } from '../../Playground/DocumentParams/ManualParams'
+import { useMemo } from 'react'
 
 export const TABS: TabSelectorOption<InputSource>[] = [
   { label: 'Manual', value: INPUT_SOURCE.manual },
@@ -103,6 +107,11 @@ function CollapsedContentHeader({
   const isDataset =
     source === INPUT_SOURCE.dataset && datasetInfo.selectedDataset
   const isHistory = source === src.history && historyInfo.count > 0
+  const limitedTotalCount = useMemo(() => {
+    return historyInfo.count > MAX_HISTORY_LOGS
+      ? MAX_HISTORY_LOGS
+      : historyInfo.count
+  }, [historyInfo.count])
   return (
     <div className='w-full flex items-center justify-between gap-4'>
       <OpenInDocsButton route={DocsRoute.Playground} />
@@ -121,7 +130,7 @@ function CollapsedContentHeader({
           <ParametersPaginationNav
             label='history logs'
             currentIndex={historyInfo.position}
-            totalCount={historyInfo.count}
+            totalCount={limitedTotalCount}
             onPrevPage={historyInfo.onPrevPage}
             onNextPage={historyInfo.onNextPage}
           />
