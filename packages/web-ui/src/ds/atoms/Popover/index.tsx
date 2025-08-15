@@ -39,7 +39,6 @@ const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
         'bg-background shadow-lg rounded-md',
         'mt-1 border border-border',
         'gap-y-4 flex flex-col',
-        'w-[var(--radix-popover-trigger-width)]',
         zIndex.popover,
         {
           'custom-scrollbar': scrollable,
@@ -47,6 +46,7 @@ const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
           'max-w-96 p-4': size === 'medium',
           'max-w-xl p-4': size === 'large',
           'max-h-96': maxHeight === 'normal',
+          'w-[var(--radix-popover-trigger-width)]': size === 'auto',
         },
       ),
       style: {
