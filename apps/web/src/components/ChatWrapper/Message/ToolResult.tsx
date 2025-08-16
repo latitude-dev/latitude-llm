@@ -67,13 +67,13 @@ export function ToolResultContent({
       )
     }
 
-    const strResult = JSON.stringify(toolResponse.result, null, 2)
+    const strResult = JSON.stringify(result, null, 2)
     return (
       <CodeBlock
         language={strResult?.length > MAX_LENGTH_JSON_PREVIEW ? '' : 'json'}
         bgColor={toolResponse.isError ? 'bg-destructive-muted' : undefined}
       >
-        {JSON.stringify(result, null, 2)}
+        {strResult}
       </CodeBlock>
     )
   }
@@ -118,9 +118,7 @@ export function UnresolvedToolResultContent({ value }: { value: ToolContent }) {
           color={value.isError ? 'destructive' : 'foregroundMuted'}
         />
       ) : (
-        <CodeBlock language='json'>
-          {JSON.stringify(value.result, null, 2)}
-        </CodeBlock>
+        <CodeBlock language='json'>{JSON.stringify(result, null, 2)}</CodeBlock>
       )}
     </ContentCard>
   )
