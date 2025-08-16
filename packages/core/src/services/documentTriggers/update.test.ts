@@ -1,16 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTrigger, Workspace } from '../../browser'
+import { DocumentTriggerType, DocumentVersion } from '@latitude-data/constants'
+import { DocumentTrigger, Project, Workspace } from '../../browser'
 import { updateDocumentTriggerConfiguration } from './update'
 import * as buildConfigurationModule from './helpers/buildConfiguration'
 import { documentTriggers } from '../../schema'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import { and, eq } from 'drizzle-orm'
+import {
+  EmailTriggerConfiguration,
+  InsertIntegrationTriggerConfiguration,
+  InsertScheduledTriggerConfiguration,
+  IntegrationTriggerConfiguration,
+  ScheduledTriggerConfiguration,
+} from '@latitude-data/constants/documentTriggers'
 import { LatitudeError } from './../../lib/errors'
+import * as pipedreamModule from '../integrations/pipedream/triggers'
+import { Result } from '../../lib/Result'
 
 describe('updateDocumentTriggerConfiguration', () => {
   let workspace: Workspace
-  let documentTrigger: DocumentTrigger
+  let project: Project
+  let document: DocumentVersion
   let mockTx: any
   let mockUpdate: any
   let mockSet: any
@@ -24,14 +32,8 @@ describe('updateDocumentTriggerConfiguration', () => {
   beforeEach(() => {
     // Setup test data
     workspace = { id: 1 } as Workspace
-    documentTrigger = {
-      id: 2,
-      triggerType: DocumentTriggerType.Email,
-      configuration: {
-        emailWhitelist: ['old@example.com'],
-        replyWithResponse: false,
-      },
-    } as DocumentTrigger
+    project = { id: 2 } as Project
+    document = { documentUuid: 'test-doc-uuid' } as DocumentVersion
 
     // Setup mock transaction and database
     mockReturning = vi.fn()
@@ -39,6 +41,7 @@ describe('updateDocumentTriggerConfiguration', () => {
     mockSet = vi.fn().mockReturnValue({ where: mockWhere })
     mockUpdate = vi.fn().mockReturnValue({ set: mockSet })
     mockTx = { update: mockUpdate }
+
     mocks.transactionMock.prototype.call = vi.fn(
       async (fn: (tx: any) => Promise<any>) => {
         return await fn(mockTx)
@@ -55,144 +58,267 @@ describe('updateDocumentTriggerConfiguration', () => {
       ({ triggerType, configuration }) => {
         if (triggerType === DocumentTriggerType.Email) {
           return configuration as EmailTriggerConfiguration
-        } else {
+        } else if (triggerType === DocumentTriggerType.Scheduled) {
           return {
-            cronExpression: (configuration as any).cronExpression,
+            ...(configuration as InsertScheduledTriggerConfiguration),
             lastRun: new Date('2023-01-01'),
             nextRunTime: new Date('2023-01-02'),
-          }
+          } as ScheduledTriggerConfiguration
+        } else {
+          return configuration as IntegrationTriggerConfiguration
         }
       },
     )
+
+    // Reset and mock pipedream update
+    vi.spyOn(pipedreamModule, 'updatePipedreamTrigger').mockReset()
   })
 
   it('updates an email document trigger configuration successfully', async () => {
-    // Arrange
-    const newEmailConfiguration: EmailTriggerConfiguration = {
+    const emailConfiguration: EmailTriggerConfiguration = {
       emailWhitelist: ['test@example.com'],
-      replyWithResponse: true,
+      replyWithResponse: false,
     }
 
-    mockReturning.mockResolvedValue([
-      {
-        ...documentTrigger,
-        configuration: newEmailConfiguration,
-      } as DocumentTrigger,
-    ])
+    const existing: DocumentTrigger = {
+      id: 10,
+      uuid: 'existing-uuid',
+      workspaceId: workspace.id,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+      triggerType: DocumentTriggerType.Email,
+      configuration: emailConfiguration,
+      createdAt: new Date('2023-01-01'),
+      updatedAt: new Date('2023-01-01'),
+    } as unknown as DocumentTrigger
 
-    // Act
+    const updatedRow = {
+      ...existing,
+      configuration: emailConfiguration,
+    } as DocumentTrigger
+
+    mockReturning.mockResolvedValue([updatedRow])
+
     const result = await updateDocumentTriggerConfiguration({
       workspace,
-      documentTrigger,
-      configuration: newEmailConfiguration,
+      documentTrigger: existing,
+      configuration: emailConfiguration,
     })
 
-    // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
+
     expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
       expect.any(Function),
     )
-    expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
+    expect(mockUpdate).toHaveBeenCalledWith(documentTriggers)
     expect(mockSet).toHaveBeenCalledWith({
-      configuration: newEmailConfiguration,
+      configuration: emailConfiguration,
     })
-    expect(mockWhere).toHaveBeenCalledWith(
-      and(
-        eq(documentTriggers.workspaceId, workspace.id),
-        eq(documentTriggers.id, documentTrigger.id),
-      ),
-    )
     expect(buildConfigurationModule.buildConfiguration).toHaveBeenCalledWith({
-      triggerType: documentTrigger.triggerType,
-      configuration: newEmailConfiguration,
+      triggerType: DocumentTriggerType.Email,
+      configuration: emailConfiguration,
     })
-    expect(result.value).toEqual({
-      ...documentTrigger,
-      configuration: newEmailConfiguration,
-    })
+
+    expect(result.value).toEqual(updatedRow)
   })
 
   it('updates a scheduled document trigger configuration successfully', async () => {
-    // Arrange
-    const scheduledTrigger = {
-      ...documentTrigger,
-      triggerType: DocumentTriggerType.Scheduled,
-      configuration: {
-        cronExpression: '0 0 * * *',
-        lastRun: new Date('2022-01-01'),
-        nextRunTime: new Date('2022-01-02'),
-      },
-    } as DocumentTrigger
-
-    // Use any to bypass type checking for this test case
-    const newScheduledConfiguration: any = {
-      cronExpression: '0 12 * * *',
+    const scheduledConfiguration: InsertScheduledTriggerConfiguration = {
+      cronExpression: '0 0 * * *',
     }
 
-    const expectedConfiguration = {
-      cronExpression: '0 12 * * *',
+    const expectedConfiguration: ScheduledTriggerConfiguration = {
+      ...scheduledConfiguration,
       lastRun: new Date('2023-01-01'),
       nextRunTime: new Date('2023-01-02'),
     }
 
-    mockReturning.mockResolvedValue([
-      {
-        ...scheduledTrigger,
-        configuration: expectedConfiguration,
-      } as DocumentTrigger,
-    ])
+    const existing: DocumentTrigger = {
+      id: 11,
+      uuid: 'existing-uuid-2',
+      workspaceId: workspace.id,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+      triggerType: DocumentTriggerType.Scheduled,
+      configuration: expectedConfiguration,
+      createdAt: new Date('2023-01-01'),
+      updatedAt: new Date('2023-01-01'),
+    } as unknown as DocumentTrigger
 
-    // Act
+    const updatedRow = {
+      ...existing,
+      configuration: expectedConfiguration,
+    } as DocumentTrigger
+
+    mockReturning.mockResolvedValue([updatedRow])
+
     const result = await updateDocumentTriggerConfiguration({
       workspace,
-      documentTrigger: scheduledTrigger,
-      configuration: newScheduledConfiguration,
+      documentTrigger: existing,
+      configuration: scheduledConfiguration,
     })
 
-    // Assert
     expect(result.error).toBeUndefined()
     expect(result.value).toBeDefined()
+
     expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
       expect.any(Function),
     )
-    expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
+    expect(mockUpdate).toHaveBeenCalledWith(documentTriggers)
     expect(mockSet).toHaveBeenCalledWith({
       configuration: expectedConfiguration,
     })
-    expect(mockWhere).toHaveBeenCalledWith(
-      and(
-        eq(documentTriggers.workspaceId, workspace.id),
-        eq(documentTriggers.id, scheduledTrigger.id),
-      ),
-    )
     expect(buildConfigurationModule.buildConfiguration).toHaveBeenCalledWith({
-      triggerType: scheduledTrigger.triggerType,
-      configuration: newScheduledConfiguration,
+      triggerType: DocumentTriggerType.Scheduled,
+      configuration: scheduledConfiguration,
     })
-    expect(result.value).toEqual({
-      ...scheduledTrigger,
-      configuration: expectedConfiguration,
+
+    expect(result.value).toEqual(updatedRow)
+  })
+
+  it('updates an integration document trigger configuration successfully (preupdate ok)', async () => {
+    const originalIntegrationConfig: IntegrationTriggerConfiguration = {
+      integrationId: 1,
+      componentId: 'comp-1',
+      properties: { a: 1 },
+      payloadParameters: ['x'],
+      triggerId: 'trg-123',
+    }
+
+    const updatedIntegrationConfig: InsertIntegrationTriggerConfiguration = {
+      integrationId: 2,
+      componentId: 'comp-2',
+      properties: { b: 2 },
+      payloadParameters: ['y'],
+    }
+
+    const preupdatedReturnedConfig: IntegrationTriggerConfiguration = {
+      ...updatedIntegrationConfig,
+      triggerId: 'new-trg-456',
+    }
+
+    const existing: DocumentTrigger = {
+      id: 12,
+      uuid: 'existing-uuid-3',
+      workspaceId: workspace.id,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+      triggerType: DocumentTriggerType.Integration,
+      configuration: originalIntegrationConfig,
+      createdAt: new Date('2023-01-01'),
+      updatedAt: new Date('2023-01-01'),
+    } as unknown as DocumentTrigger
+
+    const updatedRow = {
+      ...existing,
+      configuration: preupdatedReturnedConfig,
+    } as DocumentTrigger
+
+    vi.mocked(pipedreamModule.updatePipedreamTrigger).mockResolvedValue(
+      Result.ok(preupdatedReturnedConfig),
+    )
+
+    mockReturning.mockResolvedValue([updatedRow])
+
+    const result = await updateDocumentTriggerConfiguration({
+      workspace,
+      documentTrigger: existing,
+      configuration: updatedIntegrationConfig,
     })
+
+    expect(result.error).toBeUndefined()
+    expect(result.value).toBeDefined()
+
+    expect(pipedreamModule.updatePipedreamTrigger).toHaveBeenCalledWith({
+      workspace,
+      trigger: existing as any,
+      updatedConfig: updatedIntegrationConfig,
+    })
+
+    expect(mockUpdate).toHaveBeenCalledWith(documentTriggers)
+    expect(mockSet).toHaveBeenCalledWith({
+      configuration: preupdatedReturnedConfig,
+    })
+    expect(buildConfigurationModule.buildConfiguration).toHaveBeenCalledWith({
+      triggerType: DocumentTriggerType.Integration,
+      configuration: preupdatedReturnedConfig,
+    })
+
+    expect(result.value).toEqual(updatedRow)
+  })
+
+  it('returns error if integration preupdate fails', async () => {
+    const originalIntegrationConfig: IntegrationTriggerConfiguration = {
+      integrationId: 1,
+      componentId: 'comp-1',
+      properties: { a: 1 },
+      payloadParameters: ['x'],
+      triggerId: 'trg-123',
+    }
+
+    const updatedIntegrationConfig: InsertIntegrationTriggerConfiguration = {
+      integrationId: 1,
+      componentId: 'comp-1',
+      properties: { a: 2 },
+      payloadParameters: ['x'],
+    }
+
+    const existing: DocumentTrigger = {
+      id: 13,
+      uuid: 'existing-uuid-4',
+      workspaceId: workspace.id,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+      triggerType: DocumentTriggerType.Integration,
+      configuration: originalIntegrationConfig,
+      createdAt: new Date('2023-01-01'),
+      updatedAt: new Date('2023-01-01'),
+    } as unknown as DocumentTrigger
+
+    const preupdateError = new Error('preupdate failed')
+
+    vi.mocked(pipedreamModule.updatePipedreamTrigger).mockResolvedValue(
+      Result.error(preupdateError),
+    )
+
+    const result = await updateDocumentTriggerConfiguration({
+      workspace,
+      documentTrigger: existing,
+      configuration: updatedIntegrationConfig,
+    })
+
+    expect(result.ok).toBeFalsy()
+    expect(result.error).toBe(preupdateError)
+    expect(mockUpdate).not.toHaveBeenCalled()
   })
 
   it('returns an error when document trigger update fails', async () => {
-    // Arrange
-    const newEmailConfiguration: EmailTriggerConfiguration = {
+    const emailConfiguration: EmailTriggerConfiguration = {
       emailWhitelist: ['test@example.com'],
       replyWithResponse: true,
     }
 
+    const existing: DocumentTrigger = {
+      id: 14,
+      uuid: 'existing-uuid-5',
+      workspaceId: workspace.id,
+      projectId: project.id,
+      documentUuid: document.documentUuid,
+      triggerType: DocumentTriggerType.Email,
+      configuration: emailConfiguration,
+      createdAt: new Date('2023-01-01'),
+      updatedAt: new Date('2023-01-01'),
+    } as unknown as DocumentTrigger
+
     mockReturning.mockResolvedValue([])
 
-    // Act
     const result = await updateDocumentTriggerConfiguration({
       workspace,
-      documentTrigger,
-      configuration: newEmailConfiguration,
+      documentTrigger: existing,
+      configuration: emailConfiguration,
     })
 
-    // Assert
     expect(result.ok).toBeFalsy()
     expect(result.error).toBeInstanceOf(LatitudeError)
     expect(result.error?.message).toBe(
@@ -201,15 +327,7 @@ describe('updateDocumentTriggerConfiguration', () => {
     expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
       expect.any(Function),
     )
-    expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
-    expect(mockSet).toHaveBeenCalledWith({
-      configuration: newEmailConfiguration,
-    })
-    expect(mockWhere).toHaveBeenCalledWith(
-      and(
-        eq(documentTriggers.workspaceId, workspace.id),
-        eq(documentTriggers.id, documentTrigger.id),
-      ),
-    )
+    expect(mockUpdate).toHaveBeenCalledWith(documentTriggers)
+    expect(mockSet).toHaveBeenCalledWith({ configuration: emailConfiguration })
   })
 })
