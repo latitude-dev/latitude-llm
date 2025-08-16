@@ -3,7 +3,7 @@ import {
   DocumentTriggerType,
   EMAIL_TRIGGER_DOMAIN,
 } from '@latitude-data/constants'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useMemo } from 'react'
@@ -12,9 +12,11 @@ import { EmailTriggerConfig } from './Config'
 export function EmailTriggerSettings({
   document,
   projectId,
+  commitUuid,
 }: {
   document: DocumentVersion
   projectId: number
+  commitUuid: string
 }) {
   const {
     data: documentTriggers,
@@ -27,12 +29,15 @@ export function EmailTriggerSettings({
     isUpdating,
   } = useDocumentTriggers({
     projectId,
+    commitUuid,
     documentUuid: document.documentUuid,
   })
 
   const emailTrigger = useMemo(
     () =>
-      documentTriggers.find((t) => t.triggerType === DocumentTriggerType.Email),
+      documentTriggers.find(
+        (t) => t.triggerType === DocumentTriggerType.Email,
+      ) as DocumentTrigger<DocumentTriggerType.Email> | undefined,
     [documentTriggers],
   )
 
@@ -46,8 +51,7 @@ export function EmailTriggerSettings({
 
       if (emailTrigger) {
         update({
-          documentUuid: document.documentUuid,
-          documentTrigger: emailTrigger,
+          documentTriggerUuid: emailTrigger.uuid,
           configuration: config,
         })
         return
@@ -55,10 +59,8 @@ export function EmailTriggerSettings({
 
       create({
         documentUuid: document.documentUuid,
-        trigger: {
-          type: DocumentTriggerType.Email,
-          configuration: config,
-        },
+        triggerType: DocumentTriggerType.Email,
+        configuration: config,
       })
     },
     [emailTrigger, create, deleteFn, update, document.documentUuid],

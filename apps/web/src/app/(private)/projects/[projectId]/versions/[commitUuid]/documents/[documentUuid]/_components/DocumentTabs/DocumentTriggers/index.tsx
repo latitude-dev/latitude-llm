@@ -16,27 +16,24 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 export function DocumentTriggersButton({
   document,
   projectId,
+  commitUuid,
 }: {
   document: DocumentVersion
   projectId: number
+  commitUuid: string
 }) {
   const { data: triggers } = useDocumentTriggers({
-    documentUuid: document.documentUuid,
     projectId,
+    commitUuid,
+    documentUuid: document.documentUuid,
   })
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [openTrigger, setOpenTrigger] = useState<
-    | Extract<DocumentTrigger, { triggerType: DocumentTriggerType.Integration }>
-    | undefined
+    DocumentTrigger<DocumentTriggerType.Integration> | undefined
   >()
   const openTriggerModal = useCallback(
-    (
-      trigger?: Extract<
-        DocumentTrigger,
-        { triggerType: DocumentTriggerType.Integration }
-      >,
-    ) => {
+    (trigger?: DocumentTrigger<DocumentTriggerType.Integration>) => {
       setOpenTrigger(trigger)
       setIsModalOpen(true)
     },
@@ -65,10 +62,14 @@ export function DocumentTriggersButton({
           </Button>
         </Popover.Trigger>
         <Popover.Content maxHeight='none' width={500} align='end'>
-          <NotEditableBanner description='Trigger settings cannot be modified in a Draft.' />
+          <NotEditableBanner
+            description='Trigger settings can only be modified in a Draft.'
+            allowOnly='drafts'
+          />
           <TriggerSettings
             document={document}
             projectId={projectId}
+            commitUuid={commitUuid}
             openTriggerModal={openTriggerModal}
           />
         </Popover.Content>
@@ -78,6 +79,7 @@ export function DocumentTriggersButton({
         onOpenChange={onModalOpenChange}
         document={document}
         projectId={projectId}
+        commitUuid={commitUuid}
         trigger={openTrigger}
       />
     </>

@@ -1,215 +1,451 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTrigger, Workspace } from '../../browser'
+import {
+  DocumentTriggerType,
+  DocumentVersion,
+  Providers,
+} from '@latitude-data/constants'
+import {
+  Commit,
+  Project,
+  Workspace,
+  User,
+  DocumentTrigger,
+} from '../../browser'
+import { Result } from '../../lib/Result'
+import * as factories from '../../tests/factories'
+import { mergeCommit } from '../commits'
+import {
+  EmailTriggerConfiguration,
+  ScheduledTriggerConfiguration,
+  IntegrationTriggerConfiguration,
+  EmailTriggerDeploymentSettings,
+  ScheduledTriggerDeploymentSettings,
+  IntegrationTriggerDeploymentSettings,
+} from '@latitude-data/constants/documentTriggers'
+import { createDocumentTrigger } from './create'
 import { updateDocumentTriggerConfiguration } from './update'
-import * as buildConfigurationModule from './helpers/buildConfiguration'
-import { documentTriggers } from '../../schema'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import { and, eq } from 'drizzle-orm'
-import { LatitudeError } from './../../lib/errors'
+import { DocumentTriggersRepository } from '../../repositories'
+import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
+
+const mocks = vi.hoisted(() => ({
+  deployDocumentTrigger: vi.fn(),
+  undeployDocumentTrigger: vi.fn(),
+}))
+
+vi.mock('./deploy', () => ({
+  deployDocumentTrigger: mocks.deployDocumentTrigger,
+  undeployDocumentTrigger: mocks.undeployDocumentTrigger,
+}))
 
 describe('updateDocumentTriggerConfiguration', () => {
   let workspace: Workspace
-  let documentTrigger: DocumentTrigger
-  let mockTx: any
-  let mockUpdate: any
-  let mockSet: any
-  let mockWhere: any
-  let mockReturning: any
+  let project: Project
+  let draft: Commit
+  let document: DocumentVersion
+  let user: User
 
-  const mocks = vi.hoisted(() => ({
-    transactionMock: vi.fn(),
-  }))
+  beforeEach(async () => {
+    vi.clearAllMocks()
 
-  beforeEach(() => {
-    // Setup test data
-    workspace = { id: 1 } as Workspace
-    documentTrigger = {
-      id: 2,
-      triggerType: DocumentTriggerType.Email,
-      configuration: {
-        emailWhitelist: ['old@example.com'],
-        replyWithResponse: false,
+    const {
+      workspace: w,
+      project: p,
+      commit: c,
+      documents,
+      user: u,
+    } = await factories.createProject({
+      providers: [{ name: 'openai', type: Providers.OpenAI }],
+      documents: {
+        foo: factories.helpers.createPrompt({ provider: 'openai' }),
       },
-    } as DocumentTrigger
+      skipMerge: true,
+    })
 
-    // Setup mock transaction and database
-    mockReturning = vi.fn()
-    mockWhere = vi.fn().mockReturnValue({ returning: mockReturning })
-    mockSet = vi.fn().mockReturnValue({ where: mockWhere })
-    mockUpdate = vi.fn().mockReturnValue({ set: mockSet })
-    mockTx = { update: mockUpdate }
-    mocks.transactionMock.prototype.call = vi.fn(
-      async (fn: (tx: any) => Promise<any>) => {
-        return await fn(mockTx)
-      },
-    )
-
-    vi.mock('./../../lib/Transaction', async (importOriginal) => ({
-      ...(await importOriginal()),
-      default: mocks.transactionMock,
-    }))
-
-    // Mock the buildConfiguration function
-    vi.spyOn(buildConfigurationModule, 'buildConfiguration').mockImplementation(
-      ({ triggerType, configuration }) => {
-        if (triggerType === DocumentTriggerType.Email) {
-          return configuration as EmailTriggerConfiguration
-        } else {
-          return {
-            cronExpression: (configuration as any).cronExpression,
-            lastRun: new Date('2023-01-01'),
-            nextRunTime: new Date('2023-01-02'),
-          }
-        }
-      },
-    )
+    workspace = w
+    project = p
+    draft = c
+    document = documents[0]!
+    user = u
   })
 
-  it('updates an email document trigger configuration successfully', async () => {
-    // Arrange
-    const newEmailConfiguration: EmailTriggerConfiguration = {
-      emailWhitelist: ['test@example.com'],
-      replyWithResponse: true,
-    }
+  it('returns error when commit is merged', async () => {
+    const merged = await mergeCommit(draft).then((r) => r.unwrap())
 
-    mockReturning.mockResolvedValue([
-      {
-        ...documentTrigger,
-        configuration: newEmailConfiguration,
-      } as DocumentTrigger,
-    ])
+    const result =
+      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+        workspace,
+        commit: merged,
+        triggerUuid: 'any-uuid',
+        configuration: { emailWhitelist: [], replyWithResponse: true },
+      })
 
-    // Act
-    const result = await updateDocumentTriggerConfiguration({
-      workspace,
-      documentTrigger,
-      configuration: newEmailConfiguration,
-    })
-
-    // Assert
-    expect(result.error).toBeUndefined()
-    expect(result.value).toBeDefined()
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
-    )
-    expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
-    expect(mockSet).toHaveBeenCalledWith({
-      configuration: newEmailConfiguration,
-    })
-    expect(mockWhere).toHaveBeenCalledWith(
-      and(
-        eq(documentTriggers.workspaceId, workspace.id),
-        eq(documentTriggers.id, documentTrigger.id),
-      ),
-    )
-    expect(buildConfigurationModule.buildConfiguration).toHaveBeenCalledWith({
-      triggerType: documentTrigger.triggerType,
-      configuration: newEmailConfiguration,
-    })
-    expect(result.value).toEqual({
-      ...documentTrigger,
-      configuration: newEmailConfiguration,
-    })
-  })
-
-  it('updates a scheduled document trigger configuration successfully', async () => {
-    // Arrange
-    const scheduledTrigger = {
-      ...documentTrigger,
-      triggerType: DocumentTriggerType.Scheduled,
-      configuration: {
-        cronExpression: '0 0 * * *',
-        lastRun: new Date('2022-01-01'),
-        nextRunTime: new Date('2022-01-02'),
-      },
-    } as DocumentTrigger
-
-    // Use any to bypass type checking for this test case
-    const newScheduledConfiguration: any = {
-      cronExpression: '0 12 * * *',
-    }
-
-    const expectedConfiguration = {
-      cronExpression: '0 12 * * *',
-      lastRun: new Date('2023-01-01'),
-      nextRunTime: new Date('2023-01-02'),
-    }
-
-    mockReturning.mockResolvedValue([
-      {
-        ...scheduledTrigger,
-        configuration: expectedConfiguration,
-      } as DocumentTrigger,
-    ])
-
-    // Act
-    const result = await updateDocumentTriggerConfiguration({
-      workspace,
-      documentTrigger: scheduledTrigger,
-      configuration: newScheduledConfiguration,
-    })
-
-    // Assert
-    expect(result.error).toBeUndefined()
-    expect(result.value).toBeDefined()
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
-    )
-    expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
-    expect(mockSet).toHaveBeenCalledWith({
-      configuration: expectedConfiguration,
-    })
-    expect(mockWhere).toHaveBeenCalledWith(
-      and(
-        eq(documentTriggers.workspaceId, workspace.id),
-        eq(documentTriggers.id, scheduledTrigger.id),
-      ),
-    )
-    expect(buildConfigurationModule.buildConfiguration).toHaveBeenCalledWith({
-      triggerType: scheduledTrigger.triggerType,
-      configuration: newScheduledConfiguration,
-    })
-    expect(result.value).toEqual({
-      ...scheduledTrigger,
-      configuration: expectedConfiguration,
-    })
-  })
-
-  it('returns an error when document trigger update fails', async () => {
-    // Arrange
-    const newEmailConfiguration: EmailTriggerConfiguration = {
-      emailWhitelist: ['test@example.com'],
-      replyWithResponse: true,
-    }
-
-    mockReturning.mockResolvedValue([])
-
-    // Act
-    const result = await updateDocumentTriggerConfiguration({
-      workspace,
-      documentTrigger,
-      configuration: newEmailConfiguration,
-    })
-
-    // Assert
     expect(result.ok).toBeFalsy()
-    expect(result.error).toBeInstanceOf(LatitudeError)
-    expect(result.error?.message).toBe(
-      'Failed to update document trigger configuration',
+    expect(result.error).toBeInstanceOf(BadRequestError)
+    expect(result.error?.message).toBe('Cannot update a merged commit')
+    expect(mocks.deployDocumentTrigger).not.toHaveBeenCalled()
+    expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
+  })
+
+  it('returns error when trigger is not found in the given commit scope', async () => {
+    const result =
+      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+        workspace,
+        commit: draft,
+        triggerUuid: 'non-existent-uuid',
+        configuration: { emailWhitelist: [], replyWithResponse: true },
+      })
+
+    expect(result.ok).toBeFalsy()
+    expect(result.error).toBeInstanceOf(NotFoundError)
+    expect(result.error?.message).toContain(
+      "Trigger with uuid 'non-existent-uuid' not found in commit",
     )
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
+    expect(mocks.deployDocumentTrigger).not.toHaveBeenCalled()
+    expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
+  })
+
+  it('returns error when trying to update a trigger from a different project', async () => {
+    const emailConfig: EmailTriggerConfiguration = {
+      name: 'Email Trigger',
+      emailWhitelist: ['a@example.com'],
+      domainWhitelist: [],
+      replyWithResponse: true,
+      parameters: {},
+    }
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({} as EmailTriggerDeploymentSettings),
     )
-    expect(mockTx.update).toHaveBeenCalledWith(documentTriggers)
-    expect(mockSet).toHaveBeenCalledWith({
-      configuration: newEmailConfiguration,
-    })
-    expect(mockWhere).toHaveBeenCalledWith(
-      and(
-        eq(documentTriggers.workspaceId, workspace.id),
-        eq(documentTriggers.id, documentTrigger.id),
+
+    // Create initial trigger in current project draft, then merge it
+    const created = await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
+      triggerType: DocumentTriggerType.Email,
+      configuration: emailConfig,
+    }).then((r) => r.unwrap())
+    await mergeCommit(draft).then((r) => r.unwrap())
+
+    // Create a different project in the same workspace and a draft commit
+    const { project: otherProject, commit: otherDraft } =
+      await factories.createProject({
+        workspace,
+        providers: [{ name: 'openai-2', type: Providers.OpenAI }],
+        documents: {
+          bar: factories.helpers.createPrompt({ provider: 'openai' }),
+        },
+        skipMerge: true,
+      })
+
+    expect(otherProject.id).not.toEqual(project.id)
+
+    const result =
+      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+        workspace,
+        commit: otherDraft,
+        triggerUuid: created.uuid,
+        configuration: { ...emailConfig, name: 'Updated' },
+      })
+
+    expect(result.ok).toBeFalsy()
+    expect(result.error).toBeInstanceOf(NotFoundError)
+    expect(result.error?.message).toContain(
+      `Trigger with uuid '${created.uuid}' not found in commit '${otherDraft.uuid}'`,
+    )
+    expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
+  })
+
+  it('undeploys and redeploys when updating an existing draft trigger (same commit)', async () => {
+    const emailConfig: EmailTriggerConfiguration = {
+      name: 'Email Trigger',
+      emailWhitelist: ['a@example.com'],
+      domainWhitelist: [],
+      replyWithResponse: true,
+      parameters: {},
+    }
+    // Initial creation deploy
+    mocks.deployDocumentTrigger.mockResolvedValueOnce(
+      Result.ok({} as EmailTriggerDeploymentSettings),
+    )
+
+    const created = await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
+      triggerType: DocumentTriggerType.Email,
+      configuration: emailConfig,
+    }).then((r) => r.unwrap())
+
+    // Update: expect undeploy then deploy
+    mocks.undeployDocumentTrigger.mockResolvedValue(
+      Result.ok(
+        created as unknown as DocumentTrigger<DocumentTriggerType.Email>,
       ),
     )
+    mocks.deployDocumentTrigger.mockResolvedValueOnce(
+      Result.ok({} as EmailTriggerDeploymentSettings),
+    )
+
+    const updatedName = 'Updated Email Trigger'
+    const result =
+      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+        workspace,
+        commit: draft,
+        triggerUuid: created.uuid,
+        configuration: { ...emailConfig, name: updatedName },
+      })
+
+    expect(result.ok).toBeTruthy()
+    expect(mocks.undeployDocumentTrigger).toHaveBeenCalledWith(
+      {
+        workspace,
+        documentTrigger: expect.objectContaining({ uuid: created.uuid }),
+      },
+      expect.any(Object),
+    )
+    expect(mocks.deployDocumentTrigger).toHaveBeenCalledWith(
+      {
+        workspace,
+        commit: draft,
+        triggerUuid: created.uuid,
+        triggerType: DocumentTriggerType.Email,
+        configuration: { ...emailConfig, name: updatedName },
+      },
+      expect.any(Object),
+    )
+
+    const triggersScope = new DocumentTriggersRepository(workspace.id)
+    const triggers = await triggersScope
+      .getTriggersInDocument({
+        documentUuid: document.documentUuid,
+        commit: draft,
+      })
+      .then((r) => r.unwrap())
+    const t = triggers.find((x) => x.uuid === created.uuid)!
+    expect(t.commitId).toEqual(draft.id)
+    expect(t.enabled).toBe(false)
+    expect(t.configuration).toEqual({ ...emailConfig, name: updatedName })
+  })
+
+  it('deploys a new version when updating from a merged trigger (no undeploy)', async () => {
+    const emailConfig: EmailTriggerConfiguration = {
+      name: 'E1',
+      emailWhitelist: ['a@example.com'],
+      domainWhitelist: [],
+      replyWithResponse: true,
+      parameters: {},
+    }
+
+    // Create in draft then merge
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({} as EmailTriggerDeploymentSettings),
+    )
+    const created = await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
+      triggerType: DocumentTriggerType.Email,
+      configuration: emailConfig,
+    }).then((r) => r.unwrap())
+    await mergeCommit(draft).then((r) => r.unwrap())
+
+    // New draft
+    const { commit: newDraft } = await factories.createDraft({ project, user })
+
+    // For update deploy
+    const newDeployment: EmailTriggerDeploymentSettings = {}
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(newDeployment))
+
+    const result =
+      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+        workspace,
+        commit: newDraft,
+        triggerUuid: created.uuid,
+        configuration: { ...emailConfig, name: 'E2' },
+      })
+
+    expect(result.ok).toBeTruthy()
+    expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
+
+    const triggersScope = new DocumentTriggersRepository(workspace.id)
+    const triggers = await triggersScope
+      .getTriggersInDocument({
+        documentUuid: document.documentUuid,
+        commit: newDraft,
+      })
+      .then((r) => r.unwrap())
+    const t = triggers.find((x) => x.uuid === created.uuid)!
+    expect(t.commitId).toEqual(newDraft.id)
+    expect(t.configuration).toEqual({ ...emailConfig, name: 'E2' })
+    expect(t.deploymentSettings).toEqual(newDeployment)
+  })
+
+  it('returns deployment error and does not create a draft version when deploy fails', async () => {
+    const emailConfig: EmailTriggerConfiguration = {
+      name: 'E1',
+      emailWhitelist: [],
+      domainWhitelist: [],
+      replyWithResponse: true,
+      parameters: {},
+    }
+
+    // Create initial (draft) trigger then merge
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({} as EmailTriggerDeploymentSettings),
+    )
+    const created = await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
+      triggerType: DocumentTriggerType.Email,
+      configuration: emailConfig,
+    }).then((r) => r.unwrap())
+    await mergeCommit(draft).then((r) => r.unwrap())
+
+    // New draft
+    const { commit: newDraft } = await factories.createDraft({ project, user })
+
+    const deploymentError = new Error('Deployment failed')
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.error(deploymentError))
+
+    const result =
+      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+        workspace,
+        commit: newDraft,
+        triggerUuid: created.uuid,
+        configuration: { ...emailConfig, name: 'E3' },
+      })
+
+    expect(result.ok).toBeFalsy()
+    expect(result.error).toBe(deploymentError)
+
+    const triggersScope = new DocumentTriggersRepository(workspace.id)
+    const triggers = await triggersScope
+      .getTriggersInDocument({
+        documentUuid: document.documentUuid,
+        commit: newDraft,
+      })
+      .then((r) => r.unwrap())
+    const t = triggers.find((x) => x.uuid === created.uuid)!
+    // Should still point to the merged version, not a new draft version
+    expect(t.commitId).not.toEqual(newDraft.id)
+  })
+
+  it('updates scheduled trigger and stores deployment dates as ISO strings', async () => {
+    const scheduledConfig: ScheduledTriggerConfiguration = {
+      cronExpression: '0 9 * * MON-FRI',
+    }
+
+    // Create an initial scheduled trigger in draft then merge it
+    const initialDeployment: ScheduledTriggerDeploymentSettings = {
+      lastRun: new Date('2023-01-01T09:00:00Z'),
+      nextRunTime: new Date('2023-01-02T09:00:00Z'),
+    }
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(initialDeployment))
+
+    const created = await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
+      triggerType: DocumentTriggerType.Scheduled,
+      configuration: scheduledConfig,
+    }).then((r) => r.unwrap())
+    await mergeCommit(draft).then((r) => r.unwrap())
+
+    // New draft and new deployment with Dates
+    const { commit: newDraft } = await factories.createDraft({ project, user })
+
+    const newDeployment: ScheduledTriggerDeploymentSettings = {
+      lastRun: new Date('2024-01-01T09:00:00Z'),
+      nextRunTime: new Date('2024-01-02T09:00:00Z'),
+    }
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(newDeployment))
+
+    const result =
+      await updateDocumentTriggerConfiguration<DocumentTriggerType.Scheduled>({
+        workspace,
+        commit: newDraft,
+        triggerUuid: created.uuid,
+        configuration: scheduledConfig,
+      })
+
+    expect(result.ok).toBeTruthy()
+
+    const triggersScope = new DocumentTriggersRepository(workspace.id)
+    const triggers = await triggersScope
+      .getTriggersInDocument({
+        documentUuid: document.documentUuid,
+        commit: newDraft,
+      })
+      .then((r) => r.unwrap())
+    const t = triggers.find((x) => x.uuid === created.uuid)!
+    expect(t.triggerType).toBe(DocumentTriggerType.Scheduled)
+    expect(t.deploymentSettings).toEqual({
+      lastRun: '2024-01-01T09:00:00.000Z',
+      nextRunTime: '2024-01-02T09:00:00.000Z',
+    })
+  })
+
+  it('updates integration trigger and persists deployment settings', async () => {
+    // Create integration trigger in draft then merge
+    const integrationConfig: IntegrationTriggerConfiguration = {
+      integrationId: 1,
+      componentId: 'webhook-component',
+      properties: { url: 'https://api.example.com/webhook' },
+      payloadParameters: ['p1'],
+    }
+    const initialDeployment: IntegrationTriggerDeploymentSettings = {
+      triggerId: 'initial-trigger',
+    }
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(initialDeployment))
+
+    const created = await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
+      triggerType: DocumentTriggerType.Integration,
+      configuration: integrationConfig,
+    }).then((r) => r.unwrap())
+    await mergeCommit(draft).then((r) => r.unwrap())
+
+    // New draft and new deployment settings
+    const { commit: newDraft } = await factories.createDraft({ project, user })
+
+    const newDeployment: IntegrationTriggerDeploymentSettings = {
+      triggerId: 'new-external-id-456',
+    }
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(newDeployment))
+
+    const result =
+      await updateDocumentTriggerConfiguration<DocumentTriggerType.Integration>(
+        {
+          workspace,
+          commit: newDraft,
+          triggerUuid: created.uuid,
+          configuration: {
+            ...integrationConfig,
+            payloadParameters: ['p1', 'p2'],
+          },
+        },
+      )
+
+    expect(result.ok).toBeTruthy()
+
+    const triggersScope = new DocumentTriggersRepository(workspace.id)
+    const triggers = await triggersScope
+      .getTriggersInDocument({
+        documentUuid: document.documentUuid,
+        commit: newDraft,
+      })
+      .then((r) => r.unwrap())
+    const t = triggers.find((x) => x.uuid === created.uuid)!
+    expect(t.triggerType).toBe(DocumentTriggerType.Integration)
+    expect(t.deploymentSettings).toEqual(newDeployment)
   })
 })

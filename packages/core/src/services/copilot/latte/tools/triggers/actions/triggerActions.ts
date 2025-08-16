@@ -11,8 +11,8 @@ import executeTriggerActions from './executeTriggerActions'
 import { DocumentTriggerType, HEAD_COMMIT } from '@latitude-data/constants'
 import {
   emailTriggerConfigurationSchema,
-  insertScheduledTriggerConfigurationSchema,
-  insertIntegrationTriggerConfigurationSchema,
+  integrationTriggerConfigurationSchema,
+  scheduledTriggerConfigurationSchema,
 } from '@latitude-data/constants/documentTriggers'
 
 const triggerActions = defineLatteTool(
@@ -77,12 +77,13 @@ const triggerActions = defineLatteTool(
         z.object({
           operation: z.literal('create'),
           triggerType: z.literal(DocumentTriggerType.Scheduled),
-          configuration: insertScheduledTriggerConfigurationSchema,
+          promptUuid: z.string(),
+          configuration: scheduledTriggerConfigurationSchema,
         }),
         z.object({
           operation: z.literal('create'),
           triggerType: z.literal(DocumentTriggerType.Integration),
-          configuration: insertIntegrationTriggerConfigurationSchema,
+          configuration: integrationTriggerConfigurationSchema,
         }),
         z.object({
           operation: z.literal('delete'),
@@ -95,7 +96,7 @@ const triggerActions = defineLatteTool(
         z.object({
           operation: z.literal('delete'),
           triggerType: z.literal(DocumentTriggerType.Integration),
-          configuration: insertIntegrationTriggerConfigurationSchema,
+          configuration: integrationTriggerConfigurationSchema,
         }),
         z.object({
           operation: z.literal('update'),
@@ -105,12 +106,13 @@ const triggerActions = defineLatteTool(
         z.object({
           operation: z.literal('update'),
           triggerType: z.literal(DocumentTriggerType.Scheduled),
-          configuration: insertScheduledTriggerConfigurationSchema,
+          promptUuid: z.string(),
+          configuration: scheduledTriggerConfigurationSchema,
         }),
         z.object({
           operation: z.literal('update'),
           triggerType: z.literal(DocumentTriggerType.Integration),
-          configuration: insertIntegrationTriggerConfigurationSchema,
+          configuration: integrationTriggerConfigurationSchema,
         }),
       ]),
     ),

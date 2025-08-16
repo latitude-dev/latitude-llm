@@ -6,12 +6,15 @@ import { v4 as uuidv4 } from 'uuid'
 import { database } from '../../client'
 import { documentTriggers } from '../../schema'
 import { createProject } from './createProject'
-import {
-  ScheduledTriggerConfiguration,
-  EmailTriggerConfiguration,
-  IntegrationTriggerConfiguration,
-} from '@latitude-data/constants/documentTriggers'
 import { DocumentTrigger } from '../../browser'
+import {
+  EmailTriggerConfiguration,
+  EmailTriggerDeploymentSettings,
+  IntegrationTriggerConfiguration,
+  IntegrationTriggerDeploymentSettings,
+  ScheduledTriggerConfiguration,
+  ScheduledTriggerDeploymentSettings,
+} from '@latitude-data/constants/documentTriggers'
 
 /**
  * Creates a scheduled document trigger in the database
@@ -19,32 +22,35 @@ import { DocumentTrigger } from '../../browser'
 export async function createScheduledDocumentTrigger({
   workspaceId,
   projectId,
+  commitId,
   documentUuid = uuidv4(),
   cronExpression = '0 * * * *', // Default: run every hour
   lastRun,
   nextRunTime,
-  parameters = {},
 }: {
   workspaceId?: number
   projectId?: number
+  commitId?: number
   documentUuid?: string
   cronExpression?: string
   lastRun?: Date
   nextRunTime?: Date
-  parameters?: Record<string, unknown>
 } = {}): Promise<DocumentTrigger> {
   // Create project if not provided
-  if (!projectId || !workspaceId) {
-    const { project } = await createProject()
+  if (!commitId || !projectId || !workspaceId) {
+    const { project, commit } = await createProject({ skipMerge: true })
     workspaceId = project.workspaceId
     projectId = project.id
+    commitId = commit.id
   }
 
   const configuration: ScheduledTriggerConfiguration = {
     cronExpression,
+  }
+
+  const deploymentSettings: ScheduledTriggerDeploymentSettings = {
     lastRun: lastRun || new Date(),
     nextRunTime,
-    parameters,
   }
 
   const [trigger] = await database
@@ -52,9 +58,11 @@ export async function createScheduledDocumentTrigger({
     .values({
       workspaceId,
       projectId,
+      commitId,
       documentUuid,
       triggerType: DocumentTriggerType.Scheduled,
       configuration,
+      deploymentSettings,
     })
     .returning()
 
@@ -67,6 +75,7 @@ export async function createScheduledDocumentTrigger({
 export async function createEmailDocumentTrigger({
   workspaceId,
   projectId,
+  commitId,
   documentUuid = uuidv4(),
   name = 'Test Email Trigger',
   replyWithResponse = true,
@@ -76,6 +85,7 @@ export async function createEmailDocumentTrigger({
 }: {
   workspaceId?: number
   projectId?: number
+  commitId?: number
   documentUuid?: string
   name?: string
   replyWithResponse?: boolean
@@ -84,10 +94,11 @@ export async function createEmailDocumentTrigger({
   parameters?: Record<string, unknown>
 } = {}) {
   // Create project if not provided
-  if (!projectId || !workspaceId) {
-    const { project } = await createProject()
+  if (!commitId || !projectId || !workspaceId) {
+    const { project, commit } = await createProject({ skipMerge: true })
     workspaceId = project.workspaceId
     projectId = project.id
+    commitId = commit.id
   }
 
   const configuration: EmailTriggerConfiguration = {
@@ -98,14 +109,18 @@ export async function createEmailDocumentTrigger({
     parameters: parameters as Record<string, DocumentTriggerParameters>,
   }
 
+  const deploymentSettings: EmailTriggerDeploymentSettings = {}
+
   const [trigger] = await database
     .insert(documentTriggers)
     .values({
       workspaceId,
+      commitId,
       projectId,
       documentUuid,
       triggerType: DocumentTriggerType.Email,
       configuration,
+      deploymentSettings,
     })
     .returning()
 
@@ -115,6 +130,7 @@ export async function createEmailDocumentTrigger({
 export async function createIntegrationDocumentTrigger({
   workspaceId,
   projectId,
+  commitId,
   componentId = 'default',
   documentUuid = uuidv4(),
   integrationId,
@@ -123,6 +139,7 @@ export async function createIntegrationDocumentTrigger({
 }: {
   workspaceId?: number
   projectId?: number
+  commitId?: number
   componentId?: string
   documentUuid?: string
   integrationId: number
@@ -130,10 +147,11 @@ export async function createIntegrationDocumentTrigger({
   payloadParameters?: string[]
 }): Promise<DocumentTrigger> {
   // Create project if not provided
-  if (!projectId || !workspaceId) {
-    const { project } = await createProject()
+  if (!commitId || !projectId || !workspaceId) {
+    const { project, commit } = await createProject({ skipMerge: true })
     workspaceId = project.workspaceId
     projectId = project.id
+    commitId = commit.id
   }
 
   const configuration: IntegrationTriggerConfiguration = {
@@ -141,6 +159,9 @@ export async function createIntegrationDocumentTrigger({
     componentId,
     properties,
     payloadParameters,
+  }
+
+  const deploymentSettings: IntegrationTriggerDeploymentSettings = {
     triggerId: uuidv4(),
   }
 
@@ -149,9 +170,11 @@ export async function createIntegrationDocumentTrigger({
     .values({
       workspaceId,
       projectId,
+      commitId,
       documentUuid,
       triggerType: DocumentTriggerType.Integration,
       configuration,
+      deploymentSettings,
     })
     .returning()
 

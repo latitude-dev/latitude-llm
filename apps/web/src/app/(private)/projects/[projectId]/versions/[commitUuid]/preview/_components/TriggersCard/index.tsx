@@ -18,13 +18,18 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ICONS_BY_TRIGGER } from '../../@modal/(.)triggers/new/_components/IntegrationsList'
 import { humanizeCronValue } from '@latitude-data/web-ui/organisms/CronInput'
+import {
+  EmailTriggerConfiguration,
+  ScheduledTriggerConfiguration,
+} from '@latitude-data/constants/documentTriggers'
 
 function DeleteTriggerButton({ trigger }: { trigger: DocumentTrigger }) {
-  const { isHead } = useCurrentCommit()
+  const { isHead, commit } = useCurrentCommit()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { delete: deleteTrigger, isDeleting } = useDocumentTriggers(
     {
       projectId: trigger.projectId,
+      commitUuid: commit.uuid,
     },
     {
       onDeleted: () => setIsModalOpen(false),
@@ -105,10 +110,7 @@ function IntegrationTriggerCard({
   integrations,
   documentName,
 }: {
-  trigger: Extract<
-    DocumentTrigger,
-    { triggerType: DocumentTriggerType.Integration }
-  >
+  trigger: DocumentTrigger<DocumentTriggerType.Integration>
   integrations: IntegrationDto[]
   documentName: string
 }) {
@@ -172,14 +174,16 @@ function NonIntegrationTriggerCard({
     }
     switch (type) {
       case DocumentTriggerType.Scheduled: {
+        const config = trigger.configuration as ScheduledTriggerConfiguration
         const humanCron = humanizeCronValue(
-          trigger.configuration.cronExpression ?? '* * * * *',
+          config.cronExpression ?? '* * * * *',
         )
         description = `${humanCron} · ${documentName}`
         break
       }
       case DocumentTriggerType.Email: {
-        const name = trigger.configuration.name
+        const config = trigger.configuration as EmailTriggerConfiguration
+        const name = config.name
         description = `${name} · ${documentName}`
         break
       }
@@ -235,7 +239,7 @@ export function TriggersCard({
   if (type === DocumentTriggerType.Integration) {
     return (
       <IntegrationTriggerCard
-        trigger={trigger}
+        trigger={trigger as DocumentTrigger<DocumentTriggerType.Integration>}
         integrations={integrations}
         documentName={documentName!}
       />

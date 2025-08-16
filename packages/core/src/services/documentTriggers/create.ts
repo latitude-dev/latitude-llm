@@ -1,135 +1,74 @@
-import {
-  DocumentTriggerType,
-  DocumentVersion,
-  IntegrationType,
-} from '@latitude-data/constants'
-import { DocumentTrigger, Workspace } from '../../browser'
+import { DocumentTriggerType, DocumentVersion } from '@latitude-data/constants'
+import { Commit, DocumentTrigger, Project, Workspace } from '../../browser'
 import { BadRequestError, LatitudeError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
-import { IntegrationsRepository } from '../../repositories'
 import { documentTriggers } from '../../schema'
-import { deployPipedreamTrigger } from '../integrations/pipedream/triggers'
-import { buildConfiguration } from './helpers/buildConfiguration'
-import {
-  DocumentTriggerConfiguration,
-  InsertDocumentTriggerWithConfiguration,
-  IntegrationTriggerConfiguration,
-} from '@latitude-data/constants/documentTriggers'
-import { database } from '../../client'
+import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { deployDocumentTrigger } from './deploy'
 
-async function completeIntegrationTriggerConfig(
+export async function createDocumentTrigger<
+  T extends DocumentTriggerType = DocumentTriggerType,
+>(
   {
     workspace,
-    triggerUuid,
+    project,
+    commit,
+    document,
+    triggerType,
     configuration,
   }: {
     workspace: Workspace
-    triggerUuid: string
-    configuration: Omit<IntegrationTriggerConfiguration, 'triggerId'>
+    project: Project
+    commit: Commit
+    document: DocumentVersion
+    triggerType: T
+    configuration: DocumentTriggerConfiguration<T>
   },
-  db = database,
-): PromisedResult<IntegrationTriggerConfiguration> {
-  const integrationsScope = new IntegrationsRepository(workspace.id, db)
-  const integrationResult = await integrationsScope.find(
-    configuration.integrationId,
-  )
-
-  if (!Result.isOk(integrationResult)) return integrationResult
-
-  const integration = integrationResult.unwrap()
-
-  if (integration.type !== IntegrationType.Pipedream) {
-    throw new BadRequestError(
-      `Integration type ${integration.type} is not supported for document triggers`,
+  transaction = new Transaction(),
+): PromisedResult<DocumentTrigger<T>> {
+  if (commit.mergedAt) {
+    return Result.error(
+      new BadRequestError('Cannot create document trigger in a merged commit'),
     )
   }
 
-  const deployResult = await deployPipedreamTrigger({
-    triggerUuid,
-    integration,
-    componentId: { key: configuration.componentId },
-    configuredProps: configuration.properties ?? {},
-  })
-  if (!Result.isOk(deployResult)) {
-    return Result.error(deployResult.error)
-  }
-
-  const { id: deployedTriggerId } = deployResult.unwrap()
-
-  return Result.ok({
-    ...configuration,
-    triggerId: deployedTriggerId,
-  })
-}
-
-export async function createDocumentTrigger(
-  {
-    workspace,
-    document,
-    projectId,
-    trigger: { type, configuration },
-  }: {
-    workspace: Workspace
-    document: DocumentVersion
-    projectId: number
-    trigger: InsertDocumentTriggerWithConfiguration
-  },
-  transaction = new Transaction(),
-): PromisedResult<DocumentTrigger> {
-  return await transaction.call(async (tx) => {
-    const triggerUuid = generateUUIDIdentifier()
-    const documentTriggerConfiguration = await getFullConfiguration({
+  const triggerUuid = generateUUIDIdentifier()
+  const deploymentSettingsResult = await deployDocumentTrigger(
+    {
       workspace,
+      commit,
       triggerUuid,
-      triggerType: type,
+      triggerType,
       configuration,
-    })
+    },
+    transaction,
+  )
+  if (!Result.isOk(deploymentSettingsResult)) return deploymentSettingsResult
+  const deploymentSettings = deploymentSettingsResult.unwrap()
 
-    if (!Result.isOk(documentTriggerConfiguration)) {
-      return documentTriggerConfiguration
-    }
-
-    const result = await tx
+  return await transaction.call(async (tx) => {
+    const [documentTrigger] = (await tx
       .insert(documentTriggers)
       .values({
         uuid: triggerUuid,
         workspaceId: workspace.id,
+        projectId: project.id,
+        commitId: commit.id,
         documentUuid: document.documentUuid,
-        projectId: projectId,
-        triggerType: type,
-        configuration: documentTriggerConfiguration.unwrap(),
+        triggerType,
+        configuration,
+        deploymentSettings,
       })
-      .returning()
+      .returning()) as DocumentTrigger<T>[]
 
-    if (!result.length) {
+    if (!documentTrigger) {
       return Result.error(
         new LatitudeError('Failed to create document trigger'),
       )
     }
 
-    return Result.ok(result[0]! as DocumentTrigger)
+    return Result.ok(documentTrigger)
   })
-}
-
-export async function getFullConfiguration({
-  workspace,
-  triggerUuid,
-  triggerType,
-  configuration,
-}: {
-  workspace: Workspace
-  triggerUuid: string
-  triggerType: DocumentTriggerType
-  configuration: InsertDocumentTriggerWithConfiguration['configuration']
-}): PromisedResult<DocumentTriggerConfiguration> {
-  if (triggerType === DocumentTriggerType.Integration) {
-    return completeIntegrationTriggerConfig({
-      workspace: workspace,
-      triggerUuid: triggerUuid,
-      configuration: configuration as IntegrationTriggerConfiguration,
-    })
-  }
-  return Result.ok(buildConfiguration({ triggerType, configuration }))
 }

@@ -3,7 +3,7 @@
 import { z } from 'zod'
 
 import { withAdmin } from '../../../procedures'
-import { handleEmailTrigger } from '../../../../../../../packages/core/src/services/documentTriggers/handlers/email'
+import { registerEmailTriggerEvent } from '@latitude-data/core/services/documentTriggers/handlers/email/registerEvent'
 
 export const manualEmailTriggerAction = withAdmin
   .createServerAction()
@@ -20,7 +20,7 @@ export const manualEmailTriggerAction = withAdmin
     }),
   )
   .handler(async ({ input }) => {
-    handleEmailTrigger({
+    registerEmailTriggerEvent({
       recipient: input.recipient,
       subject: input.subject,
       body: input.body,

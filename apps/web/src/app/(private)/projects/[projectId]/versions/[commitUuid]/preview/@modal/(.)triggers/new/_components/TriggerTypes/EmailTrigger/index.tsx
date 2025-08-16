@@ -24,11 +24,12 @@ export function EmailTrigger({
 }) {
   const { project } = useCurrentProject()
   const documentSelection = useDocumentSelection()
-  const { isHead } = useCurrentCommit()
+  const { isHead, commit } = useCurrentCommit()
   const document = documentSelection.document
   const { create, isCreating } = useDocumentTriggers(
     {
       projectId: project.id,
+      commitUuid: commit.uuid,
     },
     {
       onCreated: (trigger) => {
@@ -44,10 +45,8 @@ export function EmailTrigger({
 
       create({
         documentUuid,
-        trigger: {
-          type: DocumentTriggerType.Email,
-          configuration: config,
-        },
+        triggerType: DocumentTriggerType.Email,
+        configuration: config,
       })
     },
     [create, documentUuid],

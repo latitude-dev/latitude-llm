@@ -1,11 +1,7 @@
 import { DocumentTriggerType, DocumentVersion } from '@latitude-data/constants'
 import { Commit, DocumentTrigger, Workspace } from '../../../../../../browser'
-import {
-  InsertDocumentTriggerWithConfiguration,
-  IntegrationTriggerConfiguration,
-} from '@latitude-data/constants/documentTriggers'
+import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { Result } from '../../../../../../lib/Result'
-import { createDocumentTrigger } from '../../../../../documentTriggers'
 import Transaction, { PromisedResult } from '../../../../../../lib/Transaction'
 import {
   LatteTriggerAction,
@@ -18,6 +14,7 @@ import {
 } from '../../../../../../repositories'
 import { deleteDocumentTrigger } from '../../../../../documentTriggers/delete'
 import { updateDocumentTriggerConfiguration } from '../../../../../documentTriggers/update'
+import { createDocumentTrigger } from '../../../../../documentTriggers/create'
 
 async function executeTriggerActions(
   {
@@ -54,12 +51,11 @@ async function executeTriggerActions(
     const result = await createDocumentTrigger(
       {
         workspace,
-        projectId: project.id,
+        project,
+        commit,
         document: document,
-        trigger: {
-          type: action.triggerType,
-          configuration: action.configuration,
-        } as InsertDocumentTriggerWithConfiguration,
+        triggerType: action.triggerType,
+        configuration: action.configuration,
       },
       transaction,
     )
@@ -80,6 +76,7 @@ async function executeTriggerActions(
     const triggerResult = await getTriggerDocument(
       action,
       workspace.id,
+      commit,
       promptUuid,
     )
 
@@ -105,7 +102,8 @@ async function executeTriggerActions(
     const result = await deleteDocumentTrigger(
       {
         workspace,
-        documentTrigger,
+        commit,
+        triggerUuid: documentTrigger.uuid,
       },
       transaction,
     )
@@ -126,6 +124,7 @@ async function executeTriggerActions(
     const triggerResult = await getTriggerDocument(
       action,
       workspace.id,
+      commit,
       promptUuid,
     )
 
@@ -138,7 +137,8 @@ async function executeTriggerActions(
     const result = await updateDocumentTriggerConfiguration(
       {
         workspace,
-        documentTrigger,
+        commit,
+        triggerUuid: documentTrigger.uuid,
         configuration: action.configuration,
       },
       transaction,
@@ -163,12 +163,17 @@ export default executeTriggerActions
 async function getTriggerDocument(
   action: LatteTriggerAction,
   workspaceId: number,
+  commit: Commit,
   promptUuid: string,
 ): PromisedResult<DocumentTrigger> {
   const documentTriggersRepository = new DocumentTriggersRepository(workspaceId)
 
-  const documentTriggers =
-    await documentTriggersRepository.findByDocumentUuid(promptUuid)
+  const documentTriggers = await documentTriggersRepository
+    .getTriggersInDocument({
+      documentUuid: promptUuid,
+      commit,
+    })
+    .then((r) => r.unwrap())
 
   if (documentTriggers.length === 0) {
     return Result.error(

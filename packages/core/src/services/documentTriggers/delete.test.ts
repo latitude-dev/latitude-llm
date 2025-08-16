@@ -1,101 +1,291 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTrigger, Workspace } from '../../browser'
+import { DocumentTriggerType, Providers } from '@latitude-data/constants'
+import {
+  Commit,
+  Project,
+  Workspace,
+  DocumentTrigger,
+  DocumentVersion,
+  User,
+} from '../../browser'
+import { Result } from '../../lib/Result'
+import * as factories from '../../tests/factories'
+import { mergeCommit } from '../commits'
+import { createDocumentTrigger } from './create'
+import { updateDocumentTriggerConfiguration } from './update'
 import { deleteDocumentTrigger } from './delete'
-import { documentTriggers } from '../../schema'
-import { and, eq } from 'drizzle-orm'
-import { LatitudeError } from './../../lib/errors'
+import { DocumentTriggersRepository } from '../../repositories'
+import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 
-describe('deleteDocumentTrigger', () => {
+const mocks = vi.hoisted(() => ({
+  deployDocumentTrigger: vi.fn(),
+  undeployDocumentTrigger: vi.fn(),
+}))
+
+vi.mock('./deploy', () => ({
+  deployDocumentTrigger: mocks.deployDocumentTrigger,
+  undeployDocumentTrigger: mocks.undeployDocumentTrigger,
+}))
+
+describe.sequential('deleteDocumentTrigger', () => {
   let workspace: Workspace
-  let documentTrigger: DocumentTrigger
-  let mockTx: any
-  let mockDelete: any
-  let mockWhere: any
-  let mockReturning: any
+  let project: Project
+  let draft: Commit
+  let document: DocumentVersion
+  let user: User
 
-  const mocks = vi.hoisted(() => ({
-    transactionMock: vi.fn(),
-  }))
+  beforeEach(async () => {
+    vi.clearAllMocks()
 
-  beforeEach(() => {
-    // Setup test data
-    workspace = { id: 1 } as Workspace
-    documentTrigger = {
-      id: 2,
+    const {
+      workspace: w,
+      project: p,
+      commit: c,
+      documents,
+      user: u,
+    } = await factories.createProject({
+      providers: [{ name: 'openai', type: Providers.OpenAI }],
+      documents: {
+        foo: factories.helpers.createPrompt({ provider: 'openai' }),
+      },
+      skipMerge: true,
+    })
+
+    workspace = w
+    project = p
+    draft = c
+    document = documents[0]!
+    user = u
+  })
+
+  it('returns error when commit is merged', async () => {
+    const merged = await mergeCommit(draft).then((r) => r.unwrap())
+
+    const result = await deleteDocumentTrigger({
+      workspace,
+      commit: merged,
+      triggerUuid: 'any-uuid',
+    })
+
+    expect(result.ok).toBeFalsy()
+    expect(result.error).toBeInstanceOf(BadRequestError)
+    expect(result.error?.message).toBe('Cannot update a merged commit')
+    expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
+  })
+
+  it('returns error when trigger is not found in the given commit scope', async () => {
+    const result = await deleteDocumentTrigger({
+      workspace,
+      commit: draft,
+      triggerUuid: 'non-existent-uuid',
+    })
+
+    expect(result.ok).toBeFalsy()
+    expect(result.error).toBeInstanceOf(NotFoundError)
+    expect(result.error?.message).toContain(
+      "Trigger with uuid 'non-existent-uuid' not found in commit",
+    )
+    expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
+  })
+
+  it('undeploys and hard deletes when trigger was created in the same draft; returns null if no live exists', async () => {
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({}))
+
+    const created = await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
       triggerType: DocumentTriggerType.Email,
       configuration: {
-        emailWhitelist: ['test@example.com'],
+        name: 'Email Trigger',
+        emailWhitelist: ['a@example.com'],
+        domainWhitelist: [],
         replyWithResponse: true,
+        parameters: {},
       },
-    } as DocumentTrigger
+    }).then((r) => r.unwrap())
 
-    // Setup mock transaction and database
-    mockReturning = vi.fn()
-    mockWhere = vi.fn().mockReturnValue({ returning: mockReturning })
-    mockDelete = vi.fn().mockReturnValue({ where: mockWhere })
-    mockTx = { delete: mockDelete }
-    mocks.transactionMock.prototype.call = vi.fn(
-      async (fn: (tx: any) => Promise<any>) => {
-        return await fn(mockTx)
-      },
-    )
-
-    vi.mock('./../../lib/Transaction', async (importOriginal) => ({
-      ...(await importOriginal()),
-      default: mocks.transactionMock,
-    }))
-  })
-
-  it('deletes a document trigger successfully', async () => {
-    // Arrange
-    mockReturning.mockResolvedValue([documentTrigger])
-
-    // Act
-    const result = await deleteDocumentTrigger({
-      workspace,
-      documentTrigger,
-    })
-
-    // Assert
-    expect(result.error).toBeUndefined()
-    expect(result.value).toBeDefined()
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
-    )
-    expect(mockTx.delete).toHaveBeenCalledWith(documentTriggers)
-    expect(mockWhere).toHaveBeenCalledWith(
-      and(
-        eq(documentTriggers.workspaceId, workspace.id),
-        eq(documentTriggers.id, documentTrigger.id),
+    mocks.undeployDocumentTrigger.mockResolvedValue(
+      Result.ok(
+        created as unknown as DocumentTrigger<DocumentTriggerType.Email>,
       ),
     )
-    expect(result.value).toEqual(documentTrigger)
-  })
 
-  it('returns an error when document trigger deletion fails', async () => {
-    // Arrange
-    mockReturning.mockResolvedValue([])
-
-    // Act
-    const result = await deleteDocumentTrigger({
+    const result = await deleteDocumentTrigger<DocumentTriggerType.Email>({
       workspace,
-      documentTrigger,
+      commit: draft,
+      triggerUuid: created.uuid,
     })
 
-    // Assert
+    expect(result.ok).toBeTruthy()
+    expect(result.value).toBeNull() // no live commit yet
+    expect(mocks.undeployDocumentTrigger).toHaveBeenCalledWith(
+      {
+        workspace,
+        documentTrigger: expect.objectContaining({ uuid: created.uuid }),
+      },
+      expect.any(Object),
+    )
+
+    const triggersScope = new DocumentTriggersRepository(workspace.id)
+    const triggers = await triggersScope
+      .getTriggersInDocument({
+        documentUuid: document.documentUuid,
+        commit: draft,
+      })
+      .then((r) => r.unwrap())
+    expect(triggers.find((t) => t.uuid === created.uuid)).toBeUndefined()
+  })
+
+  it('creates a deleted draft version when only live version exists (no undeploy)', async () => {
+    // Create in draft and merge so it becomes live
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({}))
+    const created = await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
+      triggerType: DocumentTriggerType.Email,
+      configuration: {
+        name: 'E1',
+        emailWhitelist: [],
+        domainWhitelist: [],
+        replyWithResponse: true,
+        parameters: {},
+      },
+    }).then((r) => r.unwrap())
+    await mergeCommit(draft).then((r) => r.unwrap())
+
+    // New draft
+    const { commit: newDraft } = await factories.createDraft({ project, user })
+
+    const result = await deleteDocumentTrigger<DocumentTriggerType.Email>({
+      workspace,
+      commit: newDraft,
+      triggerUuid: created.uuid,
+    })
+
+    expect(result.ok).toBeTruthy()
+    expect(result.value).not.toBeNull()
+    expect(result.value?.uuid).toBe(created.uuid)
+    expect(result.value?.commitId).toBe(newDraft.id)
+    expect(result.value?.deletedAt).toBeTruthy()
+    expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
+
+    // Active triggers should exclude deleted ones
+    const triggersScope = new DocumentTriggersRepository(workspace.id)
+    const triggers = await triggersScope
+      .getTriggersInDocument({
+        documentUuid: document.documentUuid,
+        commit: newDraft,
+      })
+      .then((r) => r.unwrap())
+    expect(triggers.find((t) => t.uuid === created.uuid)).toBeUndefined()
+  })
+
+  it('undeploys current draft version and creates a deleted draft version when a live version also exists', async () => {
+    // Create in draft and merge (live exists)
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({}))
+    const created = await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
+      triggerType: DocumentTriggerType.Email,
+      configuration: {
+        name: 'E1',
+        emailWhitelist: ['a@example.com'],
+        domainWhitelist: [],
+        replyWithResponse: true,
+        parameters: {},
+      },
+    }).then((r) => r.unwrap())
+    await mergeCommit(draft).then((r) => r.unwrap())
+
+    // New draft and create a draft version (update) so undeploy path is hit
+    const { commit: newDraft } = await factories.createDraft({ project, user })
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({}))
+    await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+      workspace,
+      commit: newDraft,
+      triggerUuid: created.uuid,
+      configuration: {
+        name: 'E2',
+        emailWhitelist: ['b@example.com'],
+        domainWhitelist: [],
+        replyWithResponse: true,
+        parameters: {},
+      },
+    }).then((r) => r.unwrap())
+
+    mocks.undeployDocumentTrigger.mockResolvedValue(
+      Result.ok(
+        created as unknown as DocumentTrigger<DocumentTriggerType.Email>,
+      ),
+    )
+
+    const result = await deleteDocumentTrigger<DocumentTriggerType.Email>({
+      workspace,
+      commit: newDraft,
+      triggerUuid: created.uuid,
+    })
+
+    expect(result.ok).toBeTruthy()
+    expect(mocks.undeployDocumentTrigger).toHaveBeenCalled()
+    expect(result.value).not.toBeNull()
+    expect(result.value?.uuid).toBe(created.uuid)
+    expect(result.value?.commitId).toBe(newDraft.id)
+    expect(result.value?.deletedAt).toBeTruthy()
+
+    const triggersScope = new DocumentTriggersRepository(workspace.id)
+    const triggers = await triggersScope
+      .getTriggersInDocument({
+        documentUuid: document.documentUuid,
+        commit: newDraft,
+      })
+      .then((r) => r.unwrap())
+    expect(triggers.find((t) => t.uuid === created.uuid)).toBeUndefined()
+  })
+
+  it('propagates undeploy error and does not delete the draft record', async () => {
+    // Create in current draft
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({}))
+    const created = await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
+      triggerType: DocumentTriggerType.Email,
+      configuration: {
+        name: 'E1',
+        emailWhitelist: [],
+        domainWhitelist: [],
+        replyWithResponse: true,
+        parameters: {},
+      },
+    }).then((r) => r.unwrap())
+
+    const undeployError = new Error('Undeploy failed')
+    mocks.undeployDocumentTrigger.mockResolvedValue(Result.error(undeployError))
+
+    const result = await deleteDocumentTrigger<DocumentTriggerType.Email>({
+      workspace,
+      commit: draft,
+      triggerUuid: created.uuid,
+    })
+
     expect(result.ok).toBeFalsy()
-    expect(result.error).toBeInstanceOf(LatitudeError)
-    expect(result.error?.message).toBe('Failed to delete document trigger')
-    expect(mocks.transactionMock.prototype.call).toHaveBeenCalledWith(
-      expect.any(Function),
-    )
-    expect(mockTx.delete).toHaveBeenCalledWith(documentTriggers)
-    expect(mockWhere).toHaveBeenCalledWith(
-      and(
-        eq(documentTriggers.workspaceId, workspace.id),
-        eq(documentTriggers.id, documentTrigger.id),
-      ),
-    )
+    expect(result.error).toBe(undeployError)
+
+    const triggersScope = new DocumentTriggersRepository(workspace.id)
+    const triggers = await triggersScope
+      .getTriggersInDocument({
+        documentUuid: document.documentUuid,
+        commit: draft,
+      })
+      .then((r) => r.unwrap())
+    // Still present since deletion did not proceed
+    expect(triggers.find((t) => t.uuid === created.uuid)).toBeTruthy()
   })
 })
