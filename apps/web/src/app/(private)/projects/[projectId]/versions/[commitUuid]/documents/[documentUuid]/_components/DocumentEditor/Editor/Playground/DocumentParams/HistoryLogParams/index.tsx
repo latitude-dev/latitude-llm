@@ -25,8 +25,6 @@ import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocu
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { useLimitedHistoryLogs } from '../../../V2Playground/hooks/useLimitedHistoryLogs'
 
-export const MAX_HISTORY_LOGS = 100
-
 function DebouncedTextArea({
   input,
   setInput,

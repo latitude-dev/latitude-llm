@@ -14,7 +14,10 @@ export function DatasetSelector({
   onSelectDataset,
   parameters,
 }: ExperimentFormPayload) {
-  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
+  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets({
+    page: '1',
+    pageSize: '10000', // No pagination
+  })
 
   const selectOptions = useMemo(
     () =>
@@ -49,6 +52,7 @@ export function DatasetSelector({
             options={selectOptions}
             onChange={onSelectOption}
             value={selectedDataset?.id}
+            searchable
           />
         </div>
       )}
