@@ -1,6 +1,5 @@
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { ScheduleConfig } from './scheduleUtils'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 export function CustomScheduleForm({
   config,
@@ -8,7 +7,7 @@ export function CustomScheduleForm({
   isLoading,
 }: {
   config: ScheduleConfig
-  updateConfig: ReactStateDispatch<ScheduleConfig>
+  updateConfig: (updater: (prev: ScheduleConfig) => ScheduleConfig) => void
   isLoading: boolean
 }) {
   const handleCustomExpressionChange = (expression: string) => {

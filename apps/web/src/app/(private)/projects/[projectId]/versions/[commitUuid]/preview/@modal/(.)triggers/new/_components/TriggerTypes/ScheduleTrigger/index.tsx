@@ -1,13 +1,18 @@
-import { useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import useDocumentTriggers from '$/stores/documentTriggers'
-import { ScheduleTriggerConfig } from './Configuration'
 import { DocumentTriggerType } from '@latitude-data/constants'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { OnTriggerCreated } from '../../../client'
-import { type SavedConfig } from './Configuration/scheduleUtils'
+import {
+  DEFAULT_CONFIG,
+  type ScheduleConfig,
+  convertToCronExpression,
+} from '../../../../_components/TriggerForms/ScheduleTriggerForm/scheduleUtils'
+import { ScheduleTriggerForm } from '../../../../_components/TriggerForms/ScheduleTriggerForm'
 import {
   SelectDocument,
   useDocumentSelection,
@@ -36,18 +41,16 @@ export function ScheduleTrigger({
     },
   )
   const documentUuid = document?.documentUuid
-  const onSaveTrigger = useCallback(
-    async (config: SavedConfig) => {
-      if (!documentUuid) return
+  const [config, setConfig] = useState<ScheduleConfig>(DEFAULT_CONFIG)
+  const onCreate = useCallback(async () => {
+    if (!documentUuid) return
 
-      create({
-        documentUuid,
-        triggerType: DocumentTriggerType.Scheduled,
-        configuration: config,
-      })
-    },
-    [create, documentUuid],
-  )
+    create({
+      documentUuid,
+      triggerType: DocumentTriggerType.Scheduled,
+      configuration: { cronExpression: convertToCronExpression(config) },
+    })
+  }, [create, documentUuid, config])
 
   return (
     <TriggerWrapper
@@ -60,10 +63,16 @@ export function ScheduleTrigger({
         onSelectDocument={documentSelection.onSelectDocument}
       />
       {document ? (
-        <ScheduleTriggerConfig
-          onSaveTrigger={onSaveTrigger}
-          isCreating={isCreating}
-        />
+        <>
+          <ScheduleTriggerForm
+            config={config}
+            setConfig={setConfig}
+            isExecuting={isCreating}
+          />
+          <Button fancy onClick={onCreate} disabled={isCreating}>
+            {isCreating ? 'Creating trigger...' : 'Create trigger'}
+          </Button>
+        </>
       ) : null}
     </TriggerWrapper>
   )

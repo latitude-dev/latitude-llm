@@ -106,6 +106,8 @@ describe.sequential('deleteDocumentTrigger', () => {
       },
     }).then((r) => r.unwrap())
 
+    const deletedId = created.id
+
     mocks.undeployDocumentTrigger.mockResolvedValue(
       Result.ok(
         created as unknown as DocumentTrigger<DocumentTriggerType.Email>,
@@ -119,7 +121,8 @@ describe.sequential('deleteDocumentTrigger', () => {
     })
 
     expect(result.ok).toBeTruthy()
-    expect(result.value).toBeNull() // no live commit yet
+    expect(result.value!.id).toBe(deletedId)
+
     expect(mocks.undeployDocumentTrigger).toHaveBeenCalledWith(
       {
         workspace,

@@ -1,5 +1,4 @@
-import { useState, useCallback } from 'react'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { useCallback } from 'react'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { SimpleScheduleForm } from './SimpleScheduleForm'
@@ -7,32 +6,31 @@ import { SpecificScheduleForm } from './SpecificScheduleForm'
 import { CustomScheduleForm } from './CustomScheduleForm'
 import {
   ScheduleConfig,
-  SavedConfig,
   ScheduleType,
-  DEFAULT_CONFIG,
   convertToCronExpression,
   getScheduleDescription,
 } from './scheduleUtils'
 
-export function ScheduleTriggerConfig({
-  onSaveTrigger,
-  isCreating,
+export function ScheduleTriggerForm({
+  config,
+  setConfig,
+  isExecuting,
 }: {
-  onSaveTrigger: (config: SavedConfig) => void
-  isCreating: boolean
+  config: ScheduleConfig
+  setConfig: (updater: (prev: ScheduleConfig) => ScheduleConfig) => void
+  isExecuting: boolean
 }) {
-  const [config, setConfig] = useState<ScheduleConfig>(DEFAULT_CONFIG)
-  const handleTypeChange = useCallback((value: string) => {
-    const type = value as ScheduleType
-    setConfig((prev) => ({
-      ...prev,
-      type,
-    }))
-  }, [])
+  const handleTypeChange = useCallback(
+    (value: string) => {
+      const type = value as ScheduleType
+      setConfig((prev) => ({
+        ...prev,
+        type,
+      }))
+    },
+    [setConfig],
+  )
 
-  const handleSave = useCallback(() => {
-    onSaveTrigger({ cronExpression: convertToCronExpression(config) })
-  }, [config, onSaveTrigger])
   return (
     <>
       <Select
@@ -40,7 +38,7 @@ export function ScheduleTriggerConfig({
         name='scheduleType'
         value={config.type}
         onChange={handleTypeChange}
-        disabled={isCreating}
+        disabled={isExecuting}
         options={[
           { label: 'Simple Interval', value: 'simple' },
           { label: 'Specific Days & Times', value: 'specific' },
@@ -52,7 +50,7 @@ export function ScheduleTriggerConfig({
         <SimpleScheduleForm
           config={config}
           updateConfig={setConfig}
-          isLoading={isCreating}
+          isLoading={isExecuting}
         />
       )}
 
@@ -60,7 +58,7 @@ export function ScheduleTriggerConfig({
         <SpecificScheduleForm
           config={config}
           updateConfig={setConfig}
-          isLoading={isCreating}
+          isLoading={isExecuting}
         />
       )}
 
@@ -68,7 +66,7 @@ export function ScheduleTriggerConfig({
         <CustomScheduleForm
           config={config}
           updateConfig={setConfig}
-          isLoading={isCreating}
+          isLoading={isExecuting}
         />
       )}
 
@@ -80,10 +78,6 @@ export function ScheduleTriggerConfig({
           Cron expression: {convertToCronExpression(config)}
         </Text.H6>
       </div>
-
-      <Button fancy onClick={handleSave} disabled={isCreating}>
-        {isCreating ? 'Creating trigger...' : 'Create trigger'}
-      </Button>
     </>
   )
 }

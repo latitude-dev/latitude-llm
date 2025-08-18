@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type {
   AppDto,
   DocumentTrigger,
@@ -9,21 +9,12 @@ import { PipedreamComponentPropsForm } from '$/components/Pipedream/PipedreamPro
 import { type Trigger } from '../index'
 import { ConnectAccount } from './ConnectAccount'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import {
-  useDocumentSelection,
-  SelectDocument,
-  SelectPayloadParameters,
-} from './SelectDocument'
+import { useDocumentSelection, SelectDocument } from './SelectDocument'
 import { useCreateDocumentTrigger } from './useCreateDocumentTrigger'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { SelectPayloadParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/TriggerForms/IntegrationTriggerForm/SelectPayloadParameters'
+import { useParsedPipedreamTriggerDescription } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/TriggerForms/IntegrationTriggerForm/usePipedreamTriggerDescription'
 
-function parseMarkdownLinks(text: string | undefined) {
-  if (!text) return ''
-  return text.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    `<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>`,
-  )
-}
 export function TriggerConfiguration({
   trigger,
   pipedreamApp,
@@ -43,10 +34,9 @@ export function TriggerConfiguration({
     payloadParameters: doc.payloadParameters,
   })
   const canCreateTrigger = account && doc.document
-  const parsedText = useMemo(
-    () => parseMarkdownLinks(trigger.description),
-    [trigger.description],
-  )
+  const parsedText = useParsedPipedreamTriggerDescription({
+    pipedreamTrigger: trigger,
+  })
   return (
     <div className='flex flex-col gap-y-4 min-w-0'>
       <div>

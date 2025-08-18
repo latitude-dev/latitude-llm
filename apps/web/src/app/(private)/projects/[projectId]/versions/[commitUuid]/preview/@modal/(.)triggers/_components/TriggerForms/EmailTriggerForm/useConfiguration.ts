@@ -153,3 +153,7 @@ export function useEmailTriggerConfiguration({
     ],
   )
 }
+
+export type UseEmailTriggerConfiguration = ReturnType<
+  typeof useEmailTriggerConfiguration
+>
