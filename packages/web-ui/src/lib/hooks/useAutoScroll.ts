@@ -38,11 +38,24 @@ export function useAutoScroll(
       }
     }
 
+    const mutationObserver = new MutationObserver((mutations) => {
+      const hasContentChanges = mutations.some(
+        (mutation) =>
+          mutation.type === 'childList' || mutation.type === 'characterData',
+      )
+
+      if (hasContentChanges && isScrolledToBottom) {
+        resizeHandler()
+      }
+    })
+
     const resizeObserver = new ResizeObserver(resizeHandler)
     resizeObserver.observe(container)
-
-    const mutationObserver = new MutationObserver(resizeHandler)
-    mutationObserver.observe(container, { childList: true, subtree: true })
+    mutationObserver.observe(container, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
 
     container.addEventListener('scroll', scrollHandler)
     scrollHandler()

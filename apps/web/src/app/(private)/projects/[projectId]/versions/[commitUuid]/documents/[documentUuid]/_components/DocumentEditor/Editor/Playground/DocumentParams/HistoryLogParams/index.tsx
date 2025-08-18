@@ -18,11 +18,12 @@ import {
   asPromptLFile,
   PromptLFileParameter,
 } from '$/components/PromptLFileParameter'
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { ChangeEvent, useCallback, useEffect, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { ParametersWrapper } from '../ParametersWrapper'
 import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
+import { useLimitedHistoryLogs } from '../../../V2Playground/hooks/useLimitedHistoryLogs'
 
 export const MAX_HISTORY_LOGS = 100
 
@@ -92,9 +93,7 @@ export function HistoryLogParams({
   })
 
   const hasLogs = data.count > 0
-  const limitedTotalCount = useMemo(() => {
-    return data.count > MAX_HISTORY_LOGS ? MAX_HISTORY_LOGS : data.count
-  }, [data.count])
+  const { limitedCount, limitedPosition } = useLimitedHistoryLogs(data)
 
   return (
     <div className='flex flex-col gap-y-4'>
@@ -128,8 +127,8 @@ export function HistoryLogParams({
             <ParametersPaginationNav
               disabled={data.isLoadingLog}
               label='history logs'
-              currentIndex={data.position}
-              totalCount={limitedTotalCount}
+              currentIndex={limitedPosition}
+              totalCount={limitedCount}
               onPrevPage={data.onPrevPage}
               onNextPage={data.onNextPage}
             />

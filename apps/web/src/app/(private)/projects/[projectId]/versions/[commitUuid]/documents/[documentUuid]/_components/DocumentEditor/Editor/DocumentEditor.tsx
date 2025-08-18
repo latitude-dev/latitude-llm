@@ -128,9 +128,7 @@ function DocumentEditorContent({
   return (
     <LatteLayout>
       <div
-        className={cn('relative flex flex-col px-4 pt-6 pb-4 h-full min-h-0', {
-          'h-auto min-h-full': isPlaygroundOpen && !isPlaygroundTransitioning,
-        })}
+        className={cn('relative flex flex-col px-4 pt-6 pb-4 h-full min-h-0')}
       >
         <div className='pb-5'>
           <DocumentTabSelector
