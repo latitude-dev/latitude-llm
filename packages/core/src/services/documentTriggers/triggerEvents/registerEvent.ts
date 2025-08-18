@@ -43,11 +43,14 @@ export async function registerDocumentTriggerEvent<
       uuid: triggerUuid,
       commit,
     })
+
     if (documentTriggerResult.error) {
       return Result.error(documentTriggerResult.error)
     }
+
     documentTrigger = documentTriggerResult.unwrap() as DocumentTrigger<T>
 
+    // TODO: Implement services/documentTriggerEvents/create.ts service
     const [triggerEvent] = (await tx
       .insert(documentTriggerEvents)
       .values({

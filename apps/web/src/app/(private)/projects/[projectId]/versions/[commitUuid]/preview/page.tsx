@@ -39,15 +39,11 @@ export default async function PreviewPage({
     .then((integrations) => integrations.filter((i) => i.type === 'pipedream'))
 
   return (
-    <div className='flex-1 min-h-0'>
-      <LatteLayout>
-        <div className='flex flex-col h-full p-4'>
-          <TriggersList
-            triggers={integrationTriggers}
-            integrations={integrations}
-          />
-        </div>
-      </LatteLayout>
-    </div>
+    <LatteLayout>
+      <TriggersList
+        triggers={integrationTriggers}
+        integrations={integrations}
+      />
+    </LatteLayout>
   )
 }

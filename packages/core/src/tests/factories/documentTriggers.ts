@@ -27,6 +27,7 @@ export async function createScheduledDocumentTrigger({
   cronExpression = '0 * * * *', // Default: run every hour
   lastRun,
   nextRunTime,
+  enabled = true,
 }: {
   workspaceId?: number
   projectId?: number
@@ -35,6 +36,7 @@ export async function createScheduledDocumentTrigger({
   cronExpression?: string
   lastRun?: Date
   nextRunTime?: Date
+  enabled?: boolean
 } = {}): Promise<DocumentTrigger> {
   // Create project if not provided
   if (!commitId || !projectId || !workspaceId) {
@@ -63,6 +65,7 @@ export async function createScheduledDocumentTrigger({
       triggerType: DocumentTriggerType.Scheduled,
       configuration,
       deploymentSettings,
+      enabled,
     })
     .returning()
 
@@ -82,6 +85,7 @@ export async function createEmailDocumentTrigger({
   emailWhitelist = [],
   domainWhitelist = [],
   parameters = {},
+  enabled = true,
 }: {
   workspaceId?: number
   projectId?: number
@@ -92,6 +96,7 @@ export async function createEmailDocumentTrigger({
   emailWhitelist?: string[]
   domainWhitelist?: string[]
   parameters?: Record<string, unknown>
+  enabled?: boolean
 } = {}) {
   // Create project if not provided
   if (!commitId || !projectId || !workspaceId) {
@@ -121,6 +126,7 @@ export async function createEmailDocumentTrigger({
       triggerType: DocumentTriggerType.Email,
       configuration,
       deploymentSettings,
+      enabled,
     })
     .returning()
 

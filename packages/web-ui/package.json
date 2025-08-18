@@ -154,7 +154,7 @@
     "date-fns": "^3.6.0",
     "hsl-to-hex": "^1.0.0",
     "lodash-es": "^4.17.21",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^0.481.0",
     "monaco-editor": "^0.50.0",
     "next-themes": "^0.3.0",
     "react": "18.3.0",

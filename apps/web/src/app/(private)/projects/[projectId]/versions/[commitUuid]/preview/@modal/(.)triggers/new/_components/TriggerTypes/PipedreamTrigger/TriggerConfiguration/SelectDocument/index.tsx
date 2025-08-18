@@ -17,8 +17,12 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 export function useDocumentSelection() {
   const { project } = useCurrentProject()
   const [selectedDocumentUuid, setSelectedDocumentUuid] = useState<string>('')
+  const { commit } = useCurrentCommit()
   const [payloadParameters, setPayloadParameters] = useState<string[]>([])
-  const { data: documents } = useDocumentVersions({ projectId: project.id })
+  const { data: documents } = useDocumentVersions({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+  })
   return useMemo(() => {
     const document = documents.find(
       (d) => d.documentUuid === selectedDocumentUuid,

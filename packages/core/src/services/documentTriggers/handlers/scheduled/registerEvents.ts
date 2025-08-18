@@ -31,6 +31,7 @@ async function findScheduledTriggersDueToRun(
       .where(
         and(
           eq(documentTriggers.triggerType, DocumentTriggerType.Scheduled), // is of type schedule
+          eq(documentTriggers.enabled, true),
           isNotNull(documentTriggers.deploymentSettings), // is deployed (only Live or Drafts)
           sql`(${documentTriggers.deploymentSettings}->>'nextRunTime')::timestamptz <= ${now}::timestamptz`, // nextRunTime has already passed
         ),
@@ -44,6 +45,7 @@ async function findScheduledTriggersDueToRun(
       .where(
         and(
           eq(documentTriggers.triggerType, DocumentTriggerType.Scheduled), // is of type schedule
+          eq(documentTriggers.enabled, true), // only enabled triggers
           isNotNull(documentTriggers.deploymentSettings), // is deployed (only Live or Drafts)
           sql`${documentTriggers.deploymentSettings}->>'nextRunTime' IS NULL`, // does not have any nextRunTime configured
         ),

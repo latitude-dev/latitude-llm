@@ -10,6 +10,7 @@ import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentT
 import { useCallback, useMemo } from 'react'
 import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/triggers/updateDocumentTriggerConfigurationAction'
 import { DocumentTriggerType } from '@latitude-data/constants'
+import { toggleEnabledDocumentTriggerAction } from '$/actions/documents/triggers/toggleEnabledDocumentTriggerAction'
 
 const EMPTY_ARRAY = [] as const
 export default function useDocumentTriggers(
@@ -82,6 +83,20 @@ export default function useDocumentTriggers(
           updatedTrigger,
         ])
         onUpdated?.(updatedTrigger)
+      },
+    },
+  )
+
+  const { execute: toggleEnabled, isPending: isEnabling } = useLatitudeAction(
+    toggleEnabledDocumentTriggerAction,
+    {
+      onSuccess: ({ data: updatedTrigger }) => {
+        mutate(
+          data
+            ? data.map((t) => (t.id === updatedTrigger.id ? updatedTrigger : t))
+            : [updatedTrigger],
+          false,
+        )
       },
     },
   )
@@ -163,6 +178,8 @@ export default function useDocumentTriggers(
       isUpdating,
       delete: deleteFn,
       isDeleting,
+      toggleEnabled,
+      isEnabling,
     }),
     [
       data,
@@ -173,6 +190,8 @@ export default function useDocumentTriggers(
       isUpdating,
       deleteFn,
       isDeleting,
+      toggleEnabled,
+      isEnabling,
     ],
   )
 }
