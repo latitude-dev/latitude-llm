@@ -11,6 +11,7 @@ import { database } from '../../client'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { hashContent } from '../../lib/hashContent'
 import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { ProjectsRepository } from '../../repositories'
 import { getCopilot, runCopilot } from '../copilot'
 import { createProject } from '../projects/create'
@@ -24,6 +25,7 @@ export const CreateAgentActionSpecification = {
 async function execute(
   { parameters, user, workspace }: ActionExecuteArgs<ActionType.CreateAgent>,
   db = database,
+  tx = new Transaction(),
 ) {
   if (parameters.prompt.length < 1 || parameters.prompt.length > 2500) {
     return Result.error(
@@ -52,7 +54,7 @@ ${parameters.prompt}
   }
   name = ensuring.unwrap().name
 
-  const creating = await createProject({ name, user, workspace })
+  const creating = await createProject({ name, user, workspace }, tx)
   if (creating.error) {
     return Result.error(creating.error)
   }
@@ -84,6 +86,18 @@ async function generateAgentDetails(
     )
   }
 
+  let details: AgentDetails | undefined
+
+  const cache = await getCache()
+  try {
+    const key = generatorKey(prompt)
+    const item = await cache.get(key)
+    if (item) details = JSON.parse(item)
+  } catch (_) {
+    // Note: doing nothing
+  }
+  if (details) return Result.ok(details)
+
   if (!env.COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH) {
     return Result.error(
       new UnprocessableEntityError(
@@ -100,18 +114,6 @@ async function generateAgentDetails(
     return Result.error(getting.error)
   }
   const copilot = getting.unwrap()
-
-  let details: AgentDetails | undefined
-
-  const cache = await getCache()
-  try {
-    const key = generatorKey(prompt)
-    const item = await cache.get(key)
-    if (item) details = JSON.parse(item)
-  } catch (_) {
-    // Note: doing nothing
-  }
-  if (details) return Result.ok(details)
 
   const generating = await runCopilot({
     copilot: copilot,

@@ -2,6 +2,7 @@ import { ReplyError } from 'ioredis'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 import { cache } from '../cache'
 import { RateLimitError } from './errors'
+import { Result } from './Result'
 
 const DEFAULT_RATE_LIMIT_POINTS = 1000
 const DEFAULT_RATE_LIMIT_DURATION = 60
@@ -42,12 +43,14 @@ export default class RateLimiter {
       await this.limiter.consume(key, points)
     } catch (error) {
       if (error instanceof RateLimiterRes) {
-        throw new RateLimitError('Too many requests')
+        return Result.error(new RateLimitError('Too many requests'))
       }
 
       if (!(error instanceof ReplyError)) {
-        throw error
+        return Result.error(error as Error)
       }
     }
+
+    return Result.nil()
   }
 }

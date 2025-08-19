@@ -117,7 +117,8 @@ export function DocumentSuggestions({
             size: 'normal',
             color: 'primary',
           }}
-          containerClassName='relative flex-shrink-0'
+          className='relative'
+          containerClassName='flex-shrink-0'
         >
           <Text.H6M color='accentForeground'>
             {suggestions.length}{' '}

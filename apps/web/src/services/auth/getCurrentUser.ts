@@ -4,7 +4,7 @@ import { getDataFromSession } from '$/data-access'
 import { Workspace } from '@latitude-data/core/browser'
 import { Session } from 'lucia'
 
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { ROUTES } from '../routes'
 import { getCurrentUrl } from './getCurrentUrl'
 import { getSession } from './getSession'
@@ -20,13 +20,18 @@ export type SessionData = {
 }
 
 function redirectToLogin(currentUrl?: string) {
-  if (currentUrl && !currentUrl.includes(ROUTES.auth.login)) {
-    return redirect(
-      `${ROUTES.auth.login}?returnTo=${encodeURIComponent(currentUrl)}`,
-    )
+  if (!currentUrl) {
+    return redirect(ROUTES.auth.login)
   }
 
-  return redirect(ROUTES.auth.login)
+  // Note: this should never happen because getCurrentUserOrRedirect should not be used in the login page
+  if (currentUrl.includes(ROUTES.auth.login)) {
+    return notFound()
+  }
+
+  return redirect(
+    `${ROUTES.auth.login}?returnTo=${encodeURIComponent(currentUrl)}`,
+  )
 }
 
 /**

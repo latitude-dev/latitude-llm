@@ -5,7 +5,7 @@ import {
   Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
-import { BadRequestError } from '../../lib/errors'
+import { BadRequestError, NotFoundError } from '../../lib/errors'
 import RateLimiter from '../../lib/RateLimiter'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -32,7 +32,10 @@ export async function executeAction<T extends ActionType = ActionType>(
     period: 60,
   }),
 ) {
-  await limiter.consume(user.id)
+  const limiting = await limiter.consume(user.id)
+  if (limiting.error) {
+    return Result.error(limiting.error)
+  }
 
   const specification = ACTION_SPECIFICATIONS[type] as unknown as ActionBackendSpecification<T> // prettier-ignore
   if (!specification) {
@@ -44,15 +47,15 @@ export async function executeAction<T extends ActionType = ActionType>(
     return Result.error(new BadRequestError('Invalid action parameters'))
   }
 
+  const getting = await getWorkspaceOnboarding({ workspace })
+  if (getting.error && !(getting.error instanceof NotFoundError)) {
+    return Result.error(getting.error)
+  }
+  const onboarding = getting.value
+
   return tx.call(
     async (db) => {
-      const getting = await getWorkspaceOnboarding({ workspace }, tx)
-      if (getting.error) {
-        return Result.error(getting.error)
-      }
-      const onboarding = getting.value
-
-      if (!onboarding.completedAt) {
+      if (onboarding && !onboarding.completedAt) {
         const marking = await markWorkspaceOnboardingComplete({ onboarding }, tx) // prettier-ignore
         if (marking.error) {
           return Result.error(marking.error)
@@ -62,6 +65,7 @@ export async function executeAction<T extends ActionType = ActionType>(
       const executing = await specification.execute(
         { parameters, user, workspace },
         db,
+        tx,
       )
       if (executing.error) {
         return Result.error(executing.error)

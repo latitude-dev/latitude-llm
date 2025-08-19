@@ -80,7 +80,7 @@ export function LatteChat() {
     const { prompt } = playgroundAction
     resetPlaygroundAction()
     resetChat()
-    setTimeout(() => sendMessage(prompt))
+    setTimeout(() => sendMessage(prompt)) // Note: using empty setTimeout to execute sendMessage in the next tick
   })
 
   return (

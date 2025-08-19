@@ -7,6 +7,7 @@ import { database } from '../../client'
 import { unsafelyFindProject, unsafelyFindWorkspace } from '../../data-access'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -22,6 +23,7 @@ export const CloneAgentActionSpecification = {
 async function execute(
   { parameters, user, workspace }: ActionExecuteArgs<ActionType.CloneAgent>,
   db = database,
+  _ = new Transaction(),
 ) {
   const getting = await getSampleAgent({ documentUuid: parameters.uuid }, db)
   if (getting.error) {
@@ -37,6 +39,7 @@ async function execute(
     .join(' ')
     .trim()
 
+  // FIXME: forkDocument should receive a transaction
   const forking = await forkDocument({
     title: name || 'New Agent',
     prefix: '',

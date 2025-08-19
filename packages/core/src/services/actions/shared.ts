@@ -8,6 +8,7 @@ import {
 } from '../../browser'
 import { Database } from '../../client'
 import { TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 
 // prettier-ignore
 type ZodSchema<T = any> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny, T, T>
@@ -23,5 +24,6 @@ export type ActionBackendSpecification<T extends ActionType = ActionType> = {
   execute: (
     args: ActionExecuteArgs<T>,
     db?: Database,
+    tx?: Transaction,
   ) => Promise<TypedResult<ActionFrontendParameters<T>>>
 }
