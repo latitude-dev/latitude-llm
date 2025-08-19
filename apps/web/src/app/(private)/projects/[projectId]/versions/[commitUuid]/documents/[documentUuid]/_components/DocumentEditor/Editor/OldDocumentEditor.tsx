@@ -1,12 +1,13 @@
-'use client'
-
+import { MetadataProvider } from '$/components/MetadataProvider'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
-import { useDevMode } from '$/hooks/useDevMode'
+import { DevModeProvider, useDevMode } from '$/hooks/useDevMode'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { useDocumentValue } from '$/hooks/useDocumentValueContext'
+import {
+  DocumentValueProvider,
+  useDocumentValue,
+} from '$/hooks/useDocumentValueContext'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
-import useDocumentVersions from '$/stores/documentVersions'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
@@ -14,7 +15,6 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useMemo } from 'react'
 import { EvaluationEditorHeader } from '../../../(withTabs)/evaluations/[evaluationUuid]/editor/_components/EvaluationEditor/EditorHeader'
 import DocumentTabs from '../../DocumentTabs'
 import { PlaygroundBlocksEditor } from './BlocksEditor'
@@ -35,9 +35,22 @@ export type DocumentEditorProps = {
   initialDiff?: string
 }
 
-export function OldDocumentEditor({
-  document: _document,
-  documents: _documents,
+export function OldDocumentEditor(props: DocumentEditorProps) {
+  return (
+    <MetadataProvider>
+      <DevModeProvider>
+        <DocumentValueProvider
+          document={props.document}
+          documents={props.documents}
+        >
+          <OldDocumentEditorContent {...props} />
+        </DocumentValueProvider>
+      </DevModeProvider>
+    </MetadataProvider>
+  )
+}
+
+function OldDocumentEditorContent({
   providerApiKeys,
   freeRunsCount,
   copilotEnabled,
@@ -52,22 +65,8 @@ export function OldDocumentEditor({
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
-  const { data: documents } = useDocumentVersions(
-    {
-      commitUuid: commit.uuid,
-      projectId: project.id,
-    },
-    {
-      fallbackData: _documents,
-    },
-  )
-
-  const document = useMemo(
-    () =>
-      documents?.find((d) => d.documentUuid === _document.documentUuid) ??
-      _document,
-    [documents, _document],
-  )
+  const { document, value, setValue, updateDocumentContent, isSaved } =
+    useDocumentValue()
   const oldHeaderEditorActions = useOldEditorHeaderActions({
     project: useCurrentProject().project,
     commit: useCurrentCommit().commit,
@@ -81,7 +80,6 @@ export function OldDocumentEditor({
   })
   const isMerged = commit.mergedAt !== null
   const { devMode } = useDevMode()
-  const { value, setValue, updateDocumentContent, isSaved } = useDocumentValue()
   const { customReadOnlyMessage, highlightedCursorIndex } = useLatteStreaming({
     value,
     setValue,
