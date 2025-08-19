@@ -6,9 +6,11 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { ReactNode } from 'react'
 
-export const metadata = buildMetatags({
-  title: 'Onboarding',
-})
+export async function generateMetadata() {
+  return buildMetatags({
+    title: 'Onboarding',
+  })
+}
 
 export default async function OnboardingLayout({
   children,

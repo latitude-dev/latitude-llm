@@ -12,9 +12,11 @@ import LoginForm from './LoginForm'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata = buildMetatags({
-  title: 'Sign in to your account',
-})
+export async function generateMetadata() {
+  return buildMetatags({
+    title: 'Sign in to your account',
+  })
+}
 
 export default async function LoginPage({
   searchParams,

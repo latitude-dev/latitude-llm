@@ -9,9 +9,11 @@ import SetupForm from './SetupForm'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata = buildMetatags({
-  title: 'Create an account',
-})
+export async function generateMetadata() {
+  return buildMetatags({
+    title: 'Create an account',
+  })
+}
 
 export default async function SetupPage({
   searchParams,
