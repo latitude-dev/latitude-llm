@@ -1,12 +1,12 @@
 import { ROUTES } from '$/services/routes'
-import { redirect } from 'next/navigation'
-import { confirmMagicLinkTokenAction } from './confirm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
-import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
-import { createProject } from '@latitude-data/core/factories'
 import { User } from '@latitude-data/core/browser'
+import { createProject } from '@latitude-data/core/factories'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
+import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
+import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
+import { redirect } from 'next/navigation'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { confirmMagicLinkTokenAction } from './confirm'
 
 vi.mock('next/navigation', () => ({
   redirect: vi.fn(),
@@ -45,13 +45,27 @@ describe('confirmMagicLinkTokenAction', () => {
     expect(redirect).toHaveBeenCalledWith(ROUTES.auth.login)
   })
 
-  it('redirects to ROUTES.root when magic link exists and is not expired', async () => {
+  it('redirects to dashboard when magic link exists and is not expired', async () => {
     const token = await createMagicLinkToken({ user }).then((r) => r.unwrap())
 
     await confirmMagicLinkTokenAction({
       token: token.token,
     })
 
-    expect(redirect).toHaveBeenCalledWith(ROUTES.root)
+    expect(redirect).toHaveBeenCalledWith(ROUTES.dashboard.root)
+  })
+
+  it('redirects to returnTo when magic link exists and is not expired and has returnTo', async () => {
+    const token = await createMagicLinkToken({
+      user: user,
+      returnTo: ROUTES.projects.root,
+    }).then((r) => r.unwrap())
+
+    await confirmMagicLinkTokenAction({
+      token: token.token,
+      returnTo: ROUTES.projects.root,
+    })
+
+    expect(redirect).toHaveBeenCalledWith(ROUTES.projects.root)
   })
 })

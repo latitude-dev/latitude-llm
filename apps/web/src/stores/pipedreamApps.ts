@@ -1,10 +1,11 @@
-import { App } from '@pipedream/sdk/browser'
-import useSWRInfinite, { SWRInfiniteConfiguration } from 'swr/infinite'
-import { useMemo, useCallback } from 'react'
-import { ROUTES } from '$/services/routes'
+import { useCurrentUrl } from '$/hooks/useCurrentUrl'
 import { executeFetch } from '$/hooks/useFetcher'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { App } from '@pipedream/sdk/browser'
+import { useCallback, useMemo } from 'react'
+import useSWRInfinite, { SWRInfiniteConfiguration } from 'swr/infinite'
 
 type PipedreamApp = App & {
   triggerCount?: number
@@ -22,6 +23,7 @@ function useInfiniteFetcher<T>(
 ) {
   const { toast } = useToast()
   const navigate = useNavigate()
+  const currentUrl = useCurrentUrl()
 
   return useCallback(
     async (key: string[]) => {
@@ -32,11 +34,12 @@ function useInfiniteFetcher<T>(
         searchParams,
         toast,
         navigate,
+        currentUrl,
       })
 
       return result as T
     },
-    [route, paramExtractor, toast, navigate],
+    [route, paramExtractor, toast, navigate, currentUrl],
   )
 }
 
