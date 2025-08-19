@@ -1,15 +1,17 @@
-'use client'
-
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { LatteLayout } from '$/components/LatteLayout'
+import { MetadataProvider } from '$/components/MetadataProvider'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import { DevModeProvider } from '$/hooks/useDevMode'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { useDocumentValue } from '$/hooks/useDocumentValueContext'
+import {
+  DocumentValueProvider,
+  useDocumentValue,
+} from '$/hooks/useDocumentValueContext'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useToggleModal } from '$/hooks/useToogleModal'
-import useDocumentVersions from '$/stores/documentVersions'
 import {
   Commit,
   DocumentVersion,
@@ -34,6 +36,21 @@ import { RunButton } from './RunButton'
 import { V2Playground } from './V2Playground'
 import DocumentParams from './V2Playground/DocumentParams'
 
+export function DocumentEditor(props: DocumentEditorProps) {
+  return (
+    <MetadataProvider>
+      <DevModeProvider>
+        <DocumentValueProvider
+          document={props.document}
+          documents={props.documents}
+        >
+          <DocumentEditorContent {...props} />
+        </DocumentValueProvider>
+      </DevModeProvider>
+    </MetadataProvider>
+  )
+}
+
 const MANUAL_BASE_HEIGHT = 64
 const DATASET_BASE_HEIGHT = 64 + 49 + 16
 const HISTORY_BASE_HEIGHT = 64 + 41 + 16
@@ -49,34 +66,16 @@ const HISTORY_ELM_HEIGHT = 44
  * @param props.freeRunsCount - Number of free runs available
  * @param props.initialDiff - Initial diff data for the document
  */
-export function DocumentEditor({
-  document: _document,
-  documents: _documents,
+function DocumentEditorContent({
   freeRunsCount,
   initialDiff,
   refinementEnabled,
 }: DocumentEditorProps) {
-  const { updateDocumentContent } = useDocumentValue()
+  const { updateDocumentContent, document } = useDocumentValue()
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const { metadata } = useMetadata()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const { data: documents } = useDocumentVersions(
-    {
-      commitUuid: commit.uuid,
-      projectId: project.id,
-    },
-    {
-      fallbackData: _documents,
-    },
-  )
-  const document = useMemo(
-    () =>
-      documents?.find((d) => d.documentUuid === _document.documentUuid) ??
-      _document,
-    [documents, _document],
-  )
-
   const {
     isPlaygroundOpen,
     isPlaygroundTransitioning,
