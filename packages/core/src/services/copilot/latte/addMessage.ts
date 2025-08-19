@@ -1,21 +1,21 @@
+import { LogSources } from '@latitude-data/constants'
+import { LatitudeError } from '@latitude-data/constants/errors'
 import {
   Message,
   MessageRole,
   UserMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { LogSources } from '@latitude-data/constants'
 import { Commit, DocumentVersion, User, Workspace } from '../../../browser'
 import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
 import { documentsQueue } from '../../../jobs/queues'
-import { BACKGROUND, TelemetryContext } from '../../../telemetry'
+import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
+import { BACKGROUND, TelemetryContext } from '../../../telemetry'
+import { WebsocketClient } from '../../../websockets/workers'
 import { runDocumentAtCommit } from '../../commits'
 import { addMessages } from '../../documentLogs/addMessages/index'
-import { ErrorResult, Result } from '../../../lib/Result'
-import { LatitudeError } from '@latitude-data/constants/errors'
-import { buildToolHandlers } from './tools'
-import { WebsocketClient } from '../../../websockets/workers'
 import { assertCopilotIsSupported, sendWebsockets } from './helpers'
+import { buildToolHandlers } from './tools'
 
 export * from './threads/checkpoints/clearCheckpoints'
 export * from './threads/checkpoints/createCheckpoint'
@@ -41,6 +41,8 @@ export async function runNewLatte({
   message: string
   context: string
 }): PromisedResult<undefined> {
+  // TODO(latte): Check latte credits
+
   return generateLatteResponse({
     context: BACKGROUND({ workspaceId: copilotWorkspace.id }),
     copilotWorkspace,
@@ -51,6 +53,8 @@ export async function runNewLatte({
     threadUuid,
     initialParameters: { message, context },
   })
+
+  // TODO(latte): Consume latte credits
 }
 
 export async function addMessageToExistingLatte({
@@ -72,6 +76,8 @@ export async function addMessageToExistingLatte({
   message: string
   context: string
 }): PromisedResult<undefined> {
+  // TODO(latte): Check latte credits
+
   const userMessage: UserMessage = {
     role: MessageRole.user,
     content: [
@@ -96,6 +102,8 @@ export async function addMessageToExistingLatte({
     threadUuid,
     messages: [userMessage],
   })
+
+  // TODO(latte): Consume latte credits
 }
 
 export async function createLatteJob({
@@ -113,6 +121,8 @@ export async function createLatteJob({
 }): PromisedResult<undefined> {
   const supportResult = assertCopilotIsSupported()
   if (!supportResult.ok) return supportResult as ErrorResult<LatitudeError>
+
+  // TODO(latte): Check latte credits
 
   await documentsQueue.add('runLatteJob', {
     workspaceId: workspace.id,

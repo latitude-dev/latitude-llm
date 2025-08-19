@@ -1,28 +1,30 @@
 'use client'
 
-import { useRef, useState, useCallback } from 'react'
+import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
 import {
   DocumentTrigger,
-  IntegrationDto,
   DocumentVersion,
+  IntegrationDto,
   Project,
 } from '@latitude-data/core/browser'
-import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
-import { ROUTES } from '$/services/routes'
+import { useCallback, useRef, useState } from 'react'
+import { ChatInputBox } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/ChatInputBox'
+import { usePlaygroundLogic } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/DocumentEditor'
+import Chat from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
 import { TriggersBlankSlate } from './TriggersBlankSlate'
 import { TriggersCard } from './TriggersCard'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { usePlaygroundLogic } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/DocumentEditor'
-import { ChatInputBox } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/ChatInputBox'
-import Chat from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
-import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 
 const ADD_BUTTON_LABEL = 'Add trigger'
 
@@ -92,6 +94,7 @@ const FAKE_DOCUMENT = {
   content: '',
   path: '',
 } as DocumentVersion
+
 export function TriggersList({
   triggers: fallbackData,
   integrations: fallbackIntegrations,
@@ -126,8 +129,7 @@ export function TriggersList({
     parameters: {},
   })
 
-  // Always call usePlaygroundLogic to satisfy React hooks rules
-  const { playground, hasActiveStream, stopStreaming, clearChat } =
+  const { playground, hasActiveStream, stopStreaming, resetChat } =
     usePlaygroundLogic({
       commit,
       project,
@@ -140,7 +142,6 @@ export function TriggersList({
 
   const onRunTrigger: OnRunTriggerFn = useCallback(
     ({ document, parameters }) => {
-      console.log()
       setActiveTrigger({ document, parameters })
       setMode('chat')
     },
@@ -153,7 +154,9 @@ export function TriggersList({
     startAtBottom: mode === 'chat',
   })
 
-  if (triggers.length === 0) return <TriggersBlankSlate />
+  if (triggers.length === 0) {
+    return <TriggersBlankSlate />
+  }
 
   return (
     <div
@@ -182,7 +185,6 @@ export function TriggersList({
                 />
               ))}
             </div>
-
             <div className='flex flex-row items-center gap-x-2'>
               <CreateTriggerButton
                 projectId={project.id}
@@ -206,8 +208,7 @@ export function TriggersList({
           </div>
           <div className='sticky bottom-0 w-full bg-background pb-4'>
             <ChatInputBox
-              canChat
-              clearChat={clearChat}
+              resetChat={resetChat}
               hasActiveStream={hasActiveStream}
               playground={playground}
               stopStreaming={stopStreaming}

@@ -7,10 +7,12 @@ import { memo } from 'react'
 export const RunButton = memo(
   ({
     metadata,
+    runPromptButtonLabel,
     runPromptButtonHandler,
     toggleExperimentModal,
   }: {
     metadata: ResolvedMetadata | undefined
+    runPromptButtonLabel: string
     runPromptButtonHandler: () => void
     toggleExperimentModal: () => void
   }) => {
@@ -34,8 +36,9 @@ export const RunButton = memo(
             onClick={runPromptButtonHandler}
             fancy={true}
             roundy={true}
+            userSelect={false}
           >
-            Run
+            {runPromptButtonLabel}
           </Button>
         )}
         <Button
@@ -43,6 +46,7 @@ export const RunButton = memo(
           onClick={toggleExperimentModal}
           fancy={true}
           roundy={true}
+          userSelect={false}
         >
           Run experiment
         </Button>

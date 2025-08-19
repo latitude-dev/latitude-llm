@@ -11,30 +11,28 @@ type OnSubmit = (value: string) => void
 
 function SimpleTextArea({
   placeholder,
-  canChat,
-  clearChat,
   onSubmit,
+  onBack,
   minRows = 1,
   maxRows = 10,
-  disabled = false,
-  disableReset = false,
+  disabledSubmit = false,
+  disabledBack = false,
 }: {
   placeholder: string
-  canChat: boolean
-  clearChat: () => void
   minRows?: number
   maxRows?: number
-  disabled?: boolean
   onSubmit?: (value: string) => void
-  disableReset?: boolean
+  onBack?: () => void
+  disabledSubmit?: boolean
+  disabledBack?: boolean
 }) {
   const [value, setValue] = useState('')
   const onSubmitHandler = useCallback(() => {
-    if (disabled) return
+    if (disabledSubmit) return
     if (value === '') return
     setValue('')
     onSubmit?.(value)
-  }, [value, onSubmit, disabled])
+  }, [value, onSubmit, disabledSubmit])
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -46,31 +44,28 @@ function SimpleTextArea({
   )
   return (
     <div className='flex flex-col w-full'>
-      {canChat ? (
-        <TextArea
-          disabled={disabled}
-          className={cn(
-            'bg-background w-full p-3 resize-none text-sm rounded-2xl',
-            'border-primary/50 border-2 shadow-sm text-muted-foreground',
-            'ring-0 focus-visible:ring-0 outline-none focus-visible:outline-none',
-            'focus-visible:animate-glow focus-visible:glow-primary custom-scrollbar scrollable-indicator',
-          )}
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          minRows={minRows}
-          maxRows={maxRows}
-          autoGrow={value !== ''}
-        />
-      ) : null}
+      <TextArea
+        disabled={disabledSubmit}
+        className={cn(
+          'bg-background w-full p-3 resize-none text-sm rounded-2xl',
+          'border-primary/50 border-2 shadow-sm text-muted-foreground',
+          'ring-0 focus-visible:ring-0 outline-none focus-visible:outline-none',
+          'focus-visible:animate-glow focus-visible:glow-primary custom-scrollbar scrollable-indicator',
+        )}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        minRows={minRows}
+        maxRows={maxRows}
+        autoGrow={value !== ''}
+      />
       <div className='w-full flex justify-center -mt-8'>
         <ToolBar
-          canChat={canChat}
           onSubmit={onSubmitHandler}
-          clearChat={clearChat}
-          disabled={disabled}
-          disableReset={disableReset}
+          onBack={onBack}
+          disabledSubmit={disabledSubmit}
+          disabledBack={disabledBack}
         />
       </div>
     </div>
@@ -79,22 +74,20 @@ function SimpleTextArea({
 
 export function ChatTextArea({
   placeholder,
-  clearChat,
   onSubmit,
-  disabled = false,
-  disableReset = false,
-  canChat,
+  onBack,
+  disabledSubmit = false,
+  disabledBack = false,
   minRows = 1,
   maxRows = 10,
 }: {
   placeholder: string
-  canChat: boolean
-  clearChat: () => void
-  disabled?: boolean
-  onSubmit?: OnSubmit | OnSubmitWithTools
-  disableReset?: boolean
   minRows?: number
   maxRows?: number
+  onSubmit?: OnSubmit | OnSubmitWithTools
+  onBack?: () => void
+  disabledSubmit?: boolean
+  disabledBack?: boolean
 }) {
   return (
     <div className='flex relative w-full'>
@@ -102,11 +95,10 @@ export function ChatTextArea({
         minRows={minRows}
         maxRows={maxRows}
         placeholder={placeholder}
-        canChat={canChat}
-        clearChat={clearChat}
         onSubmit={onSubmit}
-        disabled={disabled}
-        disableReset={disableReset}
+        onBack={onBack}
+        disabledSubmit={disabledSubmit}
+        disabledBack={disabledBack}
       />
     </div>
   )

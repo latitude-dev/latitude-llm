@@ -31,10 +31,12 @@ export function useAutoScroll(
     }
 
     const resizeHandler = () => {
-      if (isScrolledToBottom) {
+      if (isScrolledToBottom && startAtBottom) {
         setTimeout(() => {
           container.scrollTop = container.scrollHeight
         }, 0)
+      } else if (!startAtBottom) {
+        container.scrollTop = 0
       }
     }
 

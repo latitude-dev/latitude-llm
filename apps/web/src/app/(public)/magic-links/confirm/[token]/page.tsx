@@ -2,10 +2,10 @@
 
 import { use, useEffect } from 'react'
 
-import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 import { confirmMagicLinkTokenAction } from '$/actions/magicLinkTokens/confirm'
 import { FocusLayout } from '$/components/layouts'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 
 export default function ConfirmMagicLink({
   params,
@@ -28,7 +28,7 @@ export default function ConfirmMagicLink({
     <FocusLayout
       header={
         <FocusHeader
-          title='Redirecting...'
+          title='You are in!'
           description='In a few seconds you will be redirected to your workspace.'
         />
       }

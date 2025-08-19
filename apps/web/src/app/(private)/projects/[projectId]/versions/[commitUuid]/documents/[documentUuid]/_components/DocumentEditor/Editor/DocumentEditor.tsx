@@ -19,12 +19,13 @@ import {
   LogSources,
   Project,
 } from '@latitude-data/core/browser'
+import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useCallback, useMemo, useState, useRef } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { DocumentTabSelector } from '../../DocumentTabs/tabs'
 import { ChatInputBox } from './ChatInputBox'
 import { AgentToolbar } from './EditorHeader/AgentToolbar'
@@ -35,7 +36,6 @@ import { useRunPlaygroundPrompt } from './Playground/hooks/useRunPlaygroundPromp
 import { RunButton } from './RunButton'
 import { V2Playground } from './V2Playground'
 import DocumentParams from './V2Playground/DocumentParams'
-import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 
 export function DocumentEditor(props: DocumentEditorProps) {
   return (
@@ -99,14 +99,26 @@ function DocumentEditorContent({
     commitVersionUuid: commit.uuid,
     document,
   })
+  const { playground, hasActiveStream, resetChat, onBack, stopStreaming } =
+    usePlaygroundLogic({
+      commit,
+      project,
+      document,
+      parameters,
+      setMode,
+      togglePlaygroundOpen,
+      setHistoryLog,
+    })
   const {
     calcExpandedHeight,
+    runPromptButtonLabel,
     runPromptButtonHandler,
     toggleDocumentParamsHandler,
   } = useEditorCallbacks({
     isPlaygroundOpen,
     togglePlaygroundOpen,
     setMode,
+    resetChat,
     parameters,
     source,
   })
@@ -116,38 +128,19 @@ function DocumentEditorContent({
       (isPlaygroundOpen && !isPlaygroundTransitioning),
     [isPlaygroundOpen, isPlaygroundTransitioning],
   )
-  const { playground, hasActiveStream, clearChat, stopStreaming } =
-    usePlaygroundLogic({
-      commit: commit as Commit,
-      project: project as Project,
-      document,
-      parameters,
-      setMode,
-      togglePlaygroundOpen,
-      setHistoryLog,
-    })
-  const containerRef = useRef<HTMLDivElement>(null)
 
-  useAutoScroll(containerRef, {
-    startAtBottom: true,
-  })
+  const containerRef = useRef<HTMLDivElement>(null)
+  useAutoScroll(containerRef, { startAtBottom: mode === 'chat' })
 
   return (
     <LatteLayout>
-      <div
-        ref={containerRef}
-        className={cn('relative flex flex-col px-4 pt-6 h-full min-h-0', {
-          'overflow-y-auto': isPlaygroundOpen && !isPlaygroundTransitioning,
-        })}
-      >
-        <div className='pb-5'>
+      <div className='relative flex flex-col pt-6 h-full min-h-0'>
+        <div className='w-full flex flex-col justify-center items-start gap-4 px-4 pb-4'>
           <DocumentTabSelector
             projectId={String(project.id)}
             commitUuid={commit.uuid}
             documentUuid={document.documentUuid}
           />
-        </div>
-        <div className='pb-4'>
           <TitleRow
             title={name}
             isAgent={metadata?.config?.type === 'agent'}
@@ -158,95 +151,106 @@ function DocumentEditorContent({
           />
         </div>
         <div
+          ref={containerRef}
           className={cn(
-            'flex flex-col gap-4 pb-4 transition-all duration-300 ease-in-out h-full min-h-0',
+            'relative flex flex-col flex-1 px-4 custom-scrollbar scrollable-indicator',
             {
-              'h-0 opacity-0 pb-0':
-                (isPlaygroundTransitioning && !isPlaygroundOpen) ||
-                (!isPlaygroundTransitioning && isPlaygroundOpen),
+              'overflow-y-auto': isPlaygroundOpen && !isPlaygroundTransitioning,
             },
           )}
         >
-          <AgentToolbar
-            isMerged={isMerged}
-            isAgent={metadata?.config?.type === 'agent'}
-            config={metadata?.config}
-            prompt={document.content}
-            onChangePrompt={updateDocumentContent}
-          />
-          <FreeRunsBanner
-            isLatitudeProvider={isLatitudeProvider}
-            freeRunsCount={freeRunsCount}
-          />
-          <div className='flex-1 overflow-y-auto'>
-            <Editors
+          <div
+            className={cn(
+              'flex flex-col gap-4 pb-4 transition-all duration-300 ease-in-out h-full min-h-0',
+              {
+                'h-0 opacity-0 pb-0':
+                  (isPlaygroundTransitioning && !isPlaygroundOpen) ||
+                  (!isPlaygroundTransitioning && isPlaygroundOpen),
+              },
+            )}
+          >
+            <AgentToolbar
+              isMerged={isMerged}
+              isAgent={metadata?.config?.type === 'agent'}
+              config={metadata?.config}
+              prompt={document.content}
+              onChangePrompt={updateDocumentContent}
+            />
+            <FreeRunsBanner
+              isLatitudeProvider={isLatitudeProvider}
+              freeRunsCount={freeRunsCount}
+            />
+            <div className='flex-1 overflow-y-auto'>
+              <Editors
+                document={document}
+                initialDiff={initialDiff}
+                refinementEnabled={refinementEnabled}
+              />
+            </div>
+          </div>
+          <div className='pb-4'>
+            <DocumentParams
+              commit={commit}
               document={document}
-              initialDiff={initialDiff}
-              refinementEnabled={refinementEnabled}
+              prompt={document.content}
+              source={source}
+              setSource={setSource}
+              setPrompt={updateDocumentContent}
+              onToggle={toggleDocumentParamsHandler}
+              isExpanded={isDocumentParamsOpen}
+              expandedHeight={
+                isPlaygroundTransitioning
+                  ? calcExpandedHeight(parameters)
+                  : undefined
+              }
+              maxHeight='calc((100vh / 2) - 10rem)'
             />
           </div>
-        </div>
-        <div className='pb-4'>
-          <DocumentParams
-            commit={commit}
-            document={document}
-            prompt={document.content}
-            source={source}
-            setSource={setSource}
-            setPrompt={updateDocumentContent}
-            onToggle={toggleDocumentParamsHandler}
-            isExpanded={isDocumentParamsOpen}
-            expandedHeight={
-              isPlaygroundTransitioning
-                ? calcExpandedHeight(parameters)
-                : undefined
-            }
-            maxHeight='calc((100vh / 2) - 10rem)'
-          />
-        </div>
-        <div
-          className={cn('flex-1 h-0 opacity-0 py-4', {
-            'h-auto opacity-1':
-              (!isPlaygroundTransitioning && isPlaygroundOpen) ||
-              (isPlaygroundTransitioning && !isPlaygroundOpen),
-          })}
-        >
-          {((isPlaygroundTransitioning && !isPlaygroundOpen) ||
-            isPlaygroundOpen) && (
-            <V2Playground
-              metadata={metadata}
-              mode={mode}
-              parameters={parameters}
-              playground={playground}
-            />
-          )}
-        </div>
-        <div
-          className={cn(
-            'sticky left-0 bottom-0 pb-4 z-[11] flex flex-row items-center justify-center bg-background',
-            {
-              'absolute left-[calc(50%-124px)]':
-                !isPlaygroundOpen ||
-                (isPlaygroundTransitioning && isPlaygroundOpen),
-            },
-          )}
-        >
-          {mode === 'preview' && (
-            <RunButton
-              metadata={metadata}
-              runPromptButtonHandler={runPromptButtonHandler}
-              toggleExperimentModal={toggleExperimentModal}
-            />
-          )}
-          {mode === 'chat' && (
-            <ChatInputBox
-              canChat
-              clearChat={clearChat}
-              hasActiveStream={hasActiveStream}
-              playground={playground}
-              stopStreaming={stopStreaming}
-            />
-          )}
+          <div
+            className={cn('flex-1 h-0 opacity-0 py-4', {
+              'h-auto opacity-1':
+                (!isPlaygroundTransitioning && isPlaygroundOpen) ||
+                (isPlaygroundTransitioning && !isPlaygroundOpen),
+            })}
+          >
+            {((isPlaygroundTransitioning && !isPlaygroundOpen) ||
+              isPlaygroundOpen) && (
+              <V2Playground
+                metadata={metadata}
+                mode={mode}
+                parameters={parameters}
+                playground={playground}
+              />
+            )}
+          </div>
+          <div
+            className={cn(
+              'sticky left-0 bottom-0 pb-4 z-[11] flex flex-row items-center justify-center bg-background',
+              {
+                'absolute left-[calc(50%-124px)]':
+                  !isPlaygroundOpen ||
+                  (isPlaygroundTransitioning && isPlaygroundOpen),
+              },
+            )}
+          >
+            {mode === 'preview' && (
+              <RunButton
+                metadata={metadata}
+                runPromptButtonLabel={runPromptButtonLabel}
+                runPromptButtonHandler={runPromptButtonHandler}
+                toggleExperimentModal={toggleExperimentModal}
+              />
+            )}
+            {mode === 'chat' && (
+              <ChatInputBox
+                onBack={onBack}
+                resetChat={resetChat}
+                hasActiveStream={hasActiveStream}
+                playground={playground}
+                stopStreaming={stopStreaming}
+              />
+            )}
+          </div>
         </div>
       </div>
       <RunExperimentModal
@@ -274,7 +278,8 @@ function DocumentEditorContent({
  * @returns Object containing playground state and control functions
  * @returns playground - The playground chat instance with message history
  * @returns hasActiveStream - Whether there's currently an active streaming response
- * @returns clearChat - Function to clear chat history and reset playground
+ * @returns resetChat - Function to reset the chat and switch to preview mode
+ * @returns onBack - Function to go back to preview mode
  * @returns stopStreaming - Function to stop current streaming and optionally clear chat
  */
 export function usePlaygroundLogic({
@@ -283,6 +288,7 @@ export function usePlaygroundLogic({
   document,
   parameters,
   setMode,
+  togglePlaygroundOpen,
   setHistoryLog,
 }: {
   commit: Commit
@@ -316,28 +322,29 @@ export function usePlaygroundLogic({
     onPromptRan,
   })
 
-  const clearChat = useCallback(() => {
+  const resetChat = useCallback(() => {
     setMode('preview')
     playground.reset()
   }, [setMode, playground])
 
+  const onBack = useCallback(() => {
+    togglePlaygroundOpen()
+    resetChat()
+  }, [togglePlaygroundOpen, resetChat])
+
   const stopStreaming = useCallback(() => {
-    // We only clear the stream if it's the first generation as otherwise the
-    // UI is in an non-obvious state for the user
-    if (abortCurrentStream() && playground.messages.length <= 1) {
-      // Only clear chat if stream was actually aborted
-      clearChat()
-    }
-  }, [abortCurrentStream, clearChat, playground.messages.length])
+    abortCurrentStream()
+  }, [abortCurrentStream])
 
   return useMemo(
     () => ({
       playground,
       hasActiveStream,
-      clearChat,
+      resetChat,
+      onBack,
       stopStreaming,
     }),
-    [playground, hasActiveStream, clearChat, stopStreaming],
+    [playground, hasActiveStream, resetChat, onBack, stopStreaming],
   )
 }
 
@@ -355,12 +362,14 @@ function useEditorCallbacks({
   isPlaygroundOpen,
   togglePlaygroundOpen,
   setMode,
+  resetChat,
   parameters,
   source,
 }: {
   isPlaygroundOpen: boolean
   togglePlaygroundOpen: () => void
   setMode: (mode: 'preview' | 'chat') => void
+  resetChat: () => void
   parameters: Record<string, any> | undefined
   source: (typeof INPUT_SOURCE)[keyof typeof INPUT_SOURCE]
 }) {
@@ -374,12 +383,13 @@ function useEditorCallbacks({
     },
     [],
   )
+  const runPromptButtonLabel = useMemo(() => {
+    return isPlaygroundOpen ? 'Run' : 'Preview'
+  }, [isPlaygroundOpen])
   const runPromptButtonHandler = useCallback(() => {
     if (!isPlaygroundOpen) {
       togglePlaygroundOpen()
-      if (Object.keys(parameters ?? {}).length === 0) {
-        setMode('chat')
-      } else {
+      if (Object.keys(parameters ?? {}).length > 0) {
         focusFirstParameterInput(parameters)
       }
     } else {
@@ -393,10 +403,10 @@ function useEditorCallbacks({
     isPlaygroundOpen,
   ])
   const toggleDocumentParamsHandler = useCallback(() => {
-    setMode('preview')
     togglePlaygroundOpen()
+    resetChat()
     focusFirstParameterInput(parameters)
-  }, [togglePlaygroundOpen, parameters, focusFirstParameterInput, setMode])
+  }, [togglePlaygroundOpen, parameters, focusFirstParameterInput, resetChat])
   const calcExpandedHeight = useCallback(
     (parameters: Record<string, unknown> | undefined) => {
       const keys = Object.keys(parameters ?? {})
@@ -424,11 +434,13 @@ function useEditorCallbacks({
     () => ({
       focusFirstParameterInput,
       calcExpandedHeight,
+      runPromptButtonLabel,
       runPromptButtonHandler,
       toggleDocumentParamsHandler,
     }),
     [
       focusFirstParameterInput,
+      runPromptButtonLabel,
       runPromptButtonHandler,
       toggleDocumentParamsHandler,
       calcExpandedHeight,

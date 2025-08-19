@@ -1,18 +1,18 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { ErrorMessage, Message } from '$/components/ChatWrapper'
+import Actions, {
+  type ActionsState,
+} from '$/components/PlaygroundCommon/Actions'
+import { usePreviewConversation } from '$/hooks/playgrounds/usePreviewConversation'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
   AppliedRules,
   LATITUDE_DOCS_URL,
   ProviderRules,
 } from '@latitude-data/core/browser'
-import { ResolvedMetadata } from '$/workers/readMetadata'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { ErrorMessage, Message } from '$/components/ChatWrapper'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
-import { usePreviewConversation } from '$/hooks/playgrounds/usePreviewConversation'
-import Actions, {
-  type ActionsState,
-} from '$/components/PlaygroundCommon/Actions'
 
 function WarningLink({ providerRule }: { providerRule: ProviderRules }) {
   const docPath = providerRule.startsWith('vertex') ? 'vertex' : providerRule

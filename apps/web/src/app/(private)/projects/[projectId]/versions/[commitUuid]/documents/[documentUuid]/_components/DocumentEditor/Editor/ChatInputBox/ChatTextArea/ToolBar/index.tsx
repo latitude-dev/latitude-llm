@@ -19,39 +19,44 @@ export function ToolBarWrapper({
 }
 
 export function ToolBar({
-  canChat,
   onSubmit,
-  clearChat,
-  disabled = false,
-  submitLabel = 'Send Message',
-  disableReset = false,
+  onBack,
+  disabledSubmit = false,
+  disabledBack = false,
 }: {
-  canChat: boolean
   onSubmit?: () => void
-  clearChat?: () => void
-  disabled?: boolean
-  submitLabel?: string
-  disableReset?: boolean
+  onBack?: () => void
+  disabledSubmit?: boolean
+  disabledBack?: boolean
 }) {
   return (
     <ToolBarWrapper>
-      <Button
-        variant={canChat ? 'outline' : 'default'}
-        disabled={disableReset}
-        onClick={clearChat}
-        fancy={true}
-        roundy={true}
-      >
-        New Chat
-      </Button>
-      {canChat && (
+      {!!onBack && (
         <Button
-          disabled={disabled}
-          onClick={onSubmit}
+          variant='outline'
+          disabled={disabledBack}
+          onClick={onBack}
           fancy={true}
           roundy={true}
+          userSelect={false}
         >
-          {submitLabel}
+          Back to editor
+        </Button>
+      )}
+      {!!onSubmit && (
+        <Button
+          disabled={disabledSubmit}
+          onClick={onSubmit}
+          iconProps={{
+            name: 'forward',
+            className: 'flex-shrink-0 rotate-180',
+            placement: 'right',
+          }}
+          fancy={true}
+          roundy={true}
+          userSelect={false}
+        >
+          Send
         </Button>
       )}
     </ToolBarWrapper>

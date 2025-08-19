@@ -36,7 +36,7 @@ export function TitleRow({
   const { devMode, setDevMode, isLoading: isLoadingDevMode } = useDevMode()
 
   return (
-    <div className='flex flex-row items-center justify-between gap-x-4 pt-px'>
+    <div className='w-full flex flex-row items-center justify-between gap-x-4 pt-px'>
       <div className='flex flex-row items-center gap-2 min-w-0'>
         <div className='flex flex-row items-center gap-x-2 min-w-0'>
           {isAgent ? (

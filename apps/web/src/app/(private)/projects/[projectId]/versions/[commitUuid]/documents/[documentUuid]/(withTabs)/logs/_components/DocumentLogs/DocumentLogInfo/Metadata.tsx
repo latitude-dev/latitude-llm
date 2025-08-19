@@ -363,7 +363,7 @@ export function DocumentLogMetadata({
       ) : null}
       {isSpanLoading ? (
         <>
-          <LineSeparator text='Log details' />
+          <LineSeparator text='Event details' />
           <div className='w-full h-full flex items-center justify-center gap-2'>
             <Icon
               name='loader'
@@ -376,7 +376,7 @@ export function DocumentLogMetadata({
       ) : (
         !!span && (
           <>
-            <LineSeparator text='Log details' />
+            <LineSeparator text='Event details' />
             <DetailsPanel
               span={{ ...span, conversationId: documentLog.uuid }}
             />
