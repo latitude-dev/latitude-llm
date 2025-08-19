@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import {
   useCurrentCommit,
   useCurrentProject,
@@ -27,14 +26,11 @@ export default function Chat({
   const runOnce = useRef(false)
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const containerRef = useRef<HTMLDivElement>(null)
   const { data: agentToolsMap } = useAgentToolsMap({
     commitUuid: commit.uuid,
     projectId: project.id,
   })
-  useAutoScroll(containerRef, {
-    startAtBottom: true,
-  })
+
   const toolContentMap = useToolContentMap(playground.messages)
   const parameterKeys = useMemo(
     () => Object.keys(parameters ?? {}),
@@ -61,7 +57,6 @@ export default function Chat({
 
       <Messages
         playground={playground}
-        containerRef={containerRef}
         parameterKeys={parameterKeys}
         expandParameters={expandParameters}
         agentToolsMap={agentToolsMap}
@@ -85,24 +80,19 @@ function Header({ expandParameters, setExpandParameters }: ActionsState) {
 
 function Messages({
   playground,
-  containerRef,
   parameterKeys,
   expandParameters,
   agentToolsMap,
   toolContentMap,
 }: {
   playground: ReturnType<typeof usePlaygroundChat>
-  containerRef: React.RefObject<HTMLDivElement>
   parameterKeys: string[]
   expandParameters: boolean
   agentToolsMap: AgentToolsMap
   toolContentMap: ReturnType<typeof useToolContentMap>
 }) {
   return (
-    <div
-      ref={containerRef}
-      className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar scrollable-indicator pb-12'
-    >
+    <div className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 pb-12'>
       <MessageList
         messages={playground.messages}
         parameters={parameterKeys}

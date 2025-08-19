@@ -24,7 +24,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, useRef } from 'react'
 import { DocumentTabSelector } from '../../DocumentTabs/tabs'
 import { ChatInputBox } from './ChatInputBox'
 import { AgentToolbar } from './EditorHeader/AgentToolbar'
@@ -35,6 +35,7 @@ import { useRunPlaygroundPrompt } from './Playground/hooks/useRunPlaygroundPromp
 import { RunButton } from './RunButton'
 import { V2Playground } from './V2Playground'
 import DocumentParams from './V2Playground/DocumentParams'
+import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 
 export function DocumentEditor(props: DocumentEditorProps) {
   return (
@@ -125,11 +126,19 @@ function DocumentEditorContent({
       togglePlaygroundOpen,
       setHistoryLog,
     })
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useAutoScroll(containerRef, {
+    startAtBottom: true,
+  })
 
   return (
     <LatteLayout>
       <div
-        className={cn('relative flex flex-col px-4 pt-6 pb-4 h-full min-h-0')}
+        ref={containerRef}
+        className={cn('relative flex flex-col px-4 pt-6 h-full min-h-0', {
+          'overflow-y-auto': isPlaygroundOpen && !isPlaygroundTransitioning,
+        })}
       >
         <div className='pb-5'>
           <DocumentTabSelector
@@ -177,7 +186,7 @@ function DocumentEditorContent({
             />
           </div>
         </div>
-        <div>
+        <div className='pb-4'>
           <DocumentParams
             commit={commit}
             document={document}
@@ -196,7 +205,7 @@ function DocumentEditorContent({
           />
         </div>
         <div
-          className={cn('flex-1 h-0 opacity-0 overflow-hidden py-4', {
+          className={cn('flex-1 h-0 opacity-0 py-4', {
             'h-auto opacity-1':
               (!isPlaygroundTransitioning && isPlaygroundOpen) ||
               (isPlaygroundTransitioning && !isPlaygroundOpen),
@@ -214,7 +223,7 @@ function DocumentEditorContent({
         </div>
         <div
           className={cn(
-            'sticky left-0 bottom-4 z-[11] flex flex-row items-center justify-center',
+            'sticky left-0 bottom-0 pb-4 z-[11] flex flex-row items-center justify-center bg-background',
             {
               'absolute left-[calc(50%-124px)]':
                 !isPlaygroundOpen ||
