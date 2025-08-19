@@ -16,7 +16,7 @@ export function ChatInputBox({
   stopStreaming: () => void
 }) {
   return (
-    <div className='flex relative flex-row w-full items-center justify-center px-4'>
+    <div className='flex relative flex-row w-full items-center justify-center'>
       <StatusIndicator
         isScrolledToBottom={false}
         usage={playground.usage}

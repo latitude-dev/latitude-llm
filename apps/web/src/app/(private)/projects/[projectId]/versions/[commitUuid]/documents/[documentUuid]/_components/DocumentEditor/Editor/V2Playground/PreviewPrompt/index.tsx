@@ -6,7 +6,6 @@ import {
 } from '@latitude-data/core/browser'
 import { ResolvedMetadata } from '$/workers/readMetadata'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { cn } from '@latitude-data/web-ui/utils'
 import { ErrorMessage, Message } from '$/components/ChatWrapper'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
@@ -73,12 +72,7 @@ export default function PreviewPrompt({
           />
         </div>
       ) : null}
-      <div
-        className={cn(
-          'flex flex-col gap-3 flex-grow flex-shrink',
-          'min-h-0 custom-scrollbar scrollable-indicator',
-        )}
-      >
+      <div className='flex flex-col gap-3 flex-grow flex-shrink min-h-0'>
         <div className='flex flex-col gap-2'>
           {preview.fixedMessages.map((message, index) => (
             <Message
