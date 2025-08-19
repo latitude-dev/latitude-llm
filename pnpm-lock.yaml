@@ -934,6 +934,9 @@ importers:
       promptl-ai:
         specifier: 'catalog:'
         version: 0.7.5(ws@8.18.2)
+      rate-limiter-flexible:
+        specifier: 5.0.3
+        version: 5.0.3
       react:
         specifier: 18.3.0
         version: 18.3.0

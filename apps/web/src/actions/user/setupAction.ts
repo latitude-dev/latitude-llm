@@ -1,9 +1,10 @@
 'use server'
 
-import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access'
 import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
+import { isLatitudeUrl } from '@latitude-data/constants'
+import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
@@ -53,5 +54,9 @@ export const setupAction = errorHandlingProcedure
       },
     })
 
-    redirect(input.returnTo ? input.returnTo : ROUTES.root)
+    if (!input.returnTo || !isLatitudeUrl(input.returnTo)) {
+      return redirect(ROUTES.dashboard.root)
+    }
+
+    return redirect(input.returnTo)
   })

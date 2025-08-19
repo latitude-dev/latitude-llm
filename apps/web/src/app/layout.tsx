@@ -20,13 +20,20 @@ export default function RootLayout({
   children: ReactNode
 }>) {
   return (
-    <html lang='en' translate='no' suppressHydrationWarning>
+    <html
+      lang='en'
+      translate='no'
+      suppressHydrationWarning
+      className='w-full h-full'
+    >
       <head>
         <meta charSet='utf-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1' />
         <link rel='icon' href='/favicon.svg' />
       </head>
-      <body className={`${fontSans.variable} ${fontMono.variable} font-sans`}>
+      <body
+        className={`w-full h-full ${fontSans.variable} ${fontMono.variable} font-sans`}
+      >
         <NextTopLoader showSpinner={false} />
         <SWRProvider config={{ revalidateOnFocus: false }}>
           <ThemeProvider

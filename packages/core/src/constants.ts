@@ -41,9 +41,11 @@ export {
   type LegacyChainEvent,
   EMAIL_REGEX,
   isSafeUrl,
+  isLatitudeUrl,
 } from '@latitude-data/constants'
 export * from '@latitude-data/constants/evaluations'
 export * from '@latitude-data/constants/tracing'
+export * from '@latitude-data/constants/actions'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
@@ -440,6 +442,7 @@ export const CLOUD_MESSAGES = {
   refinePrompt: `Prompt refiner is only available on Latitude Cloud. ${CLOUD_INFO}`,
   promptSuggestions: `Prompt suggestions are only available on Latitude Cloud. ${CLOUD_INFO}`,
   documentSuggestions: `Document suggestions are only available on Latitude Cloud. ${CLOUD_INFO}`,
+  generateAgentDetails: `Agent details generator is only available on Latitude Cloud. ${CLOUD_INFO}`,
 }
 
 export const LATITUDE_TOOLS_CONFIG_NAME = 'latitudeTools'

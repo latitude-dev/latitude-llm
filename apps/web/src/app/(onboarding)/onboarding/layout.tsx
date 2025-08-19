@@ -1,11 +1,16 @@
 'use server'
 
-import { ReactNode } from 'react'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { CSPostHogProvider, IdentifyUser } from '$/app/providers'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { redirect } from 'next/navigation'
-import { ROUTES } from '$/services/routes'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { ReactNode } from 'react'
+
+export async function generateMetadata() {
+  return buildMetatags({
+    title: 'Onboarding',
+  })
+}
 
 export default async function OnboardingLayout({
   children,
@@ -13,8 +18,6 @@ export default async function OnboardingLayout({
   children: ReactNode
 }) {
   const { workspace, user } = await getCurrentUserOrRedirect()
-
-  if (!user) return redirect(ROUTES.auth.login)
 
   return (
     <CSPostHogProvider>

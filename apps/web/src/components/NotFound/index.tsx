@@ -12,13 +12,17 @@ export async function NotFoundPageComponent({
   label: string
 }) {
   return (
-    <div className='h-screen flex items-center justify-center'>
+    <div className='h-full w-full flex items-center justify-center'>
       <ErrorComponent
         type='gray'
         message={message}
         submit={
           <Link href={route}>
-            <Button fancy variant='outline'>
+            <Button
+              variant='link'
+              iconProps={{ name: 'arrowRight', placement: 'right' }}
+              className='p-0'
+            >
               {label}
             </Button>
           </Link>

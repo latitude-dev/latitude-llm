@@ -1,10 +1,11 @@
-import { useCallback, useState } from 'react'
+import { useCurrentUrl } from '$/hooks/useCurrentUrl'
 import { executeFetch } from '$/hooks/useFetcher'
-import { Dataset } from '@latitude-data/core/browser'
-import { ROUTES } from '$/services/routes'
-import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
+import { Dataset } from '@latitude-data/core/browser'
+import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { useCallback, useState } from 'react'
 
 export type WithPositionData = {
   position: number
@@ -14,9 +15,11 @@ const buildFetcher =
   ({
     toast,
     navigate,
+    currentUrl,
   }: {
     toast: ReturnType<typeof useToast>['toast']
     navigate: ReturnType<typeof useNavigate>
+    currentUrl: string
   }) =>
   async ({
     dataset,
@@ -36,6 +39,7 @@ const buildFetcher =
       }) as Record<string, string>,
       toast,
       navigate,
+      currentUrl,
     })
 
     return response ?? { position: 1, page: 1 }
@@ -44,7 +48,8 @@ const buildFetcher =
 export function useDatasetRowPosition() {
   const { toast } = useToast()
   const navigate = useNavigate()
-  const fetchPosition = buildFetcher({ toast, navigate })
+  const currentUrl = useCurrentUrl()
+  const fetchPosition = buildFetcher({ toast, navigate, currentUrl })
   const [position, setPosition] = useState<number | undefined>(undefined)
   const [isLoadingPosition, setIsLoadingPosition] = useState(false)
   const getPosition = useCallback(

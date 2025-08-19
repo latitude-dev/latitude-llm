@@ -69,4 +69,5 @@ export const EventHandlers: IEventsHandlers = {
   spanCreated: [],
   segmentCreated: [],
   segmentUpdated: [],
+  actionExecuted: [],
 }

@@ -6,11 +6,20 @@ import {
   useLoadThreadFromProviderLogs,
   useSyncLatteUrlState,
 } from '$/hooks/latte'
+import { useOnce } from '$/hooks/useMount'
+import {
+  PlaygroundAction,
+  usePlaygroundAction,
+} from '$/hooks/usePlaygroundAction'
 import { useLatteStore } from '$/stores/latte'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
 import { useCallback, useRef, useState } from 'react'
@@ -19,6 +28,9 @@ import { LatteMessageList } from './_components/MessageList'
 import { LatteChatInput } from './LatteChatInput'
 
 export function LatteChat() {
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+
   useSyncLatteUrlState()
 
   const isLoadingThread = useLoadThreadFromProviderLogs()
@@ -56,6 +68,20 @@ export function LatteChat() {
   })
 
   const [animateLatte, setAnimateLatte] = useState(false)
+
+  const { playgroundAction, resetPlaygroundAction } = usePlaygroundAction({
+    action: PlaygroundAction.RunLatte,
+    project: project,
+    commit: commit,
+  })
+
+  useOnce(() => {
+    if (!playgroundAction) return
+    const { prompt } = playgroundAction
+    resetPlaygroundAction()
+    resetChat()
+    setTimeout(() => sendMessage(prompt)) // Note: using empty setTimeout to execute sendMessage in the next tick
+  })
 
   return (
     <div className='w-full h-full max-h-full flex flex-col items-center bg-latte-background'>

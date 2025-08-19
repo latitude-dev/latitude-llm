@@ -1,16 +1,16 @@
 'use client'
 import { ReactNode } from 'react'
 
+import { loginAction } from '$/actions/user/loginAction'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { loginAction } from '$/actions/user/loginAction'
-import { useServerAction } from 'zsa-react'
-import Link from 'next/link'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import Link from 'next/link'
+import { useServerAction } from 'zsa-react'
 
 export default function LoginForm({
   footer,
@@ -60,7 +60,10 @@ export default function LoginForm({
 
           <Button variant='outline' fullWidth asChild>
             <Link
-              href='/api/auth/google/start'
+              href={
+                '/api/auth/google/start' +
+                (returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : '')
+              }
               className='flex items-center gap-2'
             >
               <Icon name='googleWorkspace' />

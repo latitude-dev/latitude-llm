@@ -1,14 +1,15 @@
 'use server'
 
+import { getFirstWorkspace } from '$/data-access'
+import { setSession } from '$/services/auth/setSession'
+import { ROUTES } from '$/services/routes'
+import { isLatitudeUrl } from '@latitude-data/constants'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import {
   unsafelyFindMagicLinkByToken,
   unsafelyGetUser,
 } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/constants/errors'
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
-import { getFirstWorkspace } from '$/data-access'
-import { setSession } from '$/services/auth/setSession'
-import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createServerAction } from 'zsa'
@@ -25,7 +26,13 @@ export const confirmMagicLinkTokenAction = createServerAction()
       (r) => r[0],
     )
     if (!magicLinkToken || !!magicLinkToken.expiredAt) {
-      redirect(ROUTES.auth.login)
+      if (!input.returnTo) {
+        return redirect(ROUTES.auth.login)
+      }
+
+      redirect(
+        `${ROUTES.auth.login}?returnTo=${encodeURIComponent(input.returnTo)}`,
+      )
     }
 
     const user = await unsafelyGetUser(magicLinkToken.userId)
@@ -46,5 +53,9 @@ export const confirmMagicLinkTokenAction = createServerAction()
       },
     })
 
-    redirect(input.returnTo ? input.returnTo : ROUTES.root)
+    if (!input.returnTo || !isLatitudeUrl(input.returnTo)) {
+      return redirect(ROUTES.dashboard.root)
+    }
+
+    return redirect(input.returnTo)
   })

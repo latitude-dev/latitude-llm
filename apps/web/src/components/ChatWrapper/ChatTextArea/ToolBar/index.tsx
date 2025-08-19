@@ -42,7 +42,7 @@ export function ToolBar({
         fancy={true}
         roundy={true}
       >
-        Reset Chat
+        New Chat
       </Button>
       {canChat && (
         <Button

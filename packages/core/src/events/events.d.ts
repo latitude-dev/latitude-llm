@@ -70,6 +70,7 @@ export type Events =
   | 'spanCreated'
   | 'segmentCreated'
   | 'segmentUpdated'
+  | 'actionExecuted'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -509,6 +510,15 @@ export type SegmentUpdatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type ActionExecutedEvent = LatitudeEventGeneric<
+  'actionExecuted',
+  {
+    workspaceId: number
+    userEmail: string
+    actionType: string
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -553,6 +563,7 @@ export type LatitudeEvent =
   | SpanCreatedEvent
   | SegmentCreatedEvent
   | SegmentUpdatedEvent
+  | ActionExecutedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -598,4 +609,5 @@ export interface IEventsHandlers {
   spanCreated: EventHandler<SpanCreatedEvent>[]
   segmentCreated: EventHandler<SegmentCreatedEvent>[]
   segmentUpdated: EventHandler<SegmentUpdatedEvent>[]
+  actionExecuted: EventHandler<ActionExecutedEvent>[]
 }

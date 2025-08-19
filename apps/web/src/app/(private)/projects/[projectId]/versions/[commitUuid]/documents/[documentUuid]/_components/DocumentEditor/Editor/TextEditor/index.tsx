@@ -28,6 +28,7 @@ export const PlaygroundTextEditor = memo(
     value,
     defaultValue,
     copilotEnabled,
+    refinementEnabled,
     isSaved,
     readOnlyMessage,
     highlightedCursorIndex,
@@ -39,6 +40,7 @@ export const PlaygroundTextEditor = memo(
     setDiff: ReactStateDispatch<DiffOptions | undefined>
     diff: DiffOptions | undefined
     copilotEnabled: boolean
+    refinementEnabled: boolean
     value: string
     defaultValue?: string
     isSaved: boolean
@@ -124,7 +126,7 @@ export const PlaygroundTextEditor = memo(
                 document={document}
                 setDiff={setDiff}
                 setPrompt={onChange}
-                refinementEnabled={copilotEnabled}
+                refinementEnabled={refinementEnabled}
               />
               <EditorSettings copilotEnabled={copilotEnabled} />
             </>

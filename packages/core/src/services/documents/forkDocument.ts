@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import {
   Commit,
   DocumentVersion,
@@ -18,6 +18,7 @@ import { getIncludedDocuments } from './forkDocument/getIncludedDocuments'
 
 type ForkProps = {
   title: string
+  prefix?: string
   origin: {
     workspace: Workspace
     commit: Commit
@@ -32,14 +33,16 @@ type ForkProps = {
 const ATTEMPTS_BEFORE_RANDOM_SUFFIX = 4
 async function createProjectFromDocument({
   title,
+  prefix,
   workspace,
   user,
 }: {
   title: string
+  prefix: string
   workspace: Workspace
   user: User
 }) {
-  const baseName = `Copy of ${title}`
+  const baseName = `${prefix} ${title}`
   let name = baseName
   const repo = new ProjectsRepository(workspace.id)
   let attempts = 0
@@ -48,7 +51,13 @@ async function createProjectFromDocument({
     const result = await database
       .select()
       .from(repo.scope)
-      .where(eq(repo.scope._.selectedFields.name, name))
+      .where(
+        and(
+          eq(repo.scope._.selectedFields.workspaceId, workspace.id),
+          eq(repo.scope._.selectedFields.name, name),
+          isNull(repo.scope._.selectedFields.deletedAt),
+        ),
+      )
       .limit(1)
 
     if (result.length === 0) {
@@ -122,12 +131,14 @@ async function createDocuments({
 
 export async function forkDocument({
   title,
+  prefix = 'Copy of',
   origin,
   destination,
   defaultProviderName,
 }: ForkProps) {
   const { commit, project } = await createProjectFromDocument({
     title,
+    prefix,
     workspace: destination.workspace,
     user: destination.user,
   }).then((r) => r.unwrap())
