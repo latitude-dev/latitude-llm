@@ -1,9 +1,9 @@
 import { googleProvider } from '$/services/auth'
 import { setSession } from '$/services/auth/setSession'
-import { ROUTES } from '$/services/routes'
 import { isLatitudeUrl } from '@latitude-data/constants'
 import { OAuthProvider } from '@latitude-data/core/schema'
 import { findOrCreateUserFromOAuth } from '@latitude-data/core/services/auth/findOrCreateUserFromOAuth'
+import { env } from '@latitude-data/env'
 import { ObjectParser } from '@pilcrowjs/object-parser'
 import { decodeIdToken, OAuth2RequestError, OAuth2Tokens } from 'arctic'
 import { cookies } from 'next/headers'
@@ -83,10 +83,12 @@ export async function GET(request: NextRequest): Promise<Response> {
     // 5. Redirect user
     const returnTo = cookiesStore.get('returnTo')?.value ?? null
     if (!returnTo || !isLatitudeUrl(returnTo)) {
-      return NextResponse.redirect(ROUTES.dashboard.root)
+      return NextResponse.redirect(env.APP_URL)
     }
 
-    return NextResponse.redirect(returnTo)
+    return NextResponse.redirect(
+      returnTo.startsWith('/') ? env.APP_URL + returnTo : returnTo,
+    )
   } catch (e) {
     console.error('Google OAuth Callback Error:', e)
     if (e instanceof OAuth2RequestError) {
