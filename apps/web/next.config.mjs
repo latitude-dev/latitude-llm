@@ -16,7 +16,6 @@ const nextConfig = {
     '@napi-rs/canvas',
     '@sentry/nextjs',
     'bullmq',
-    'nodemailer-mailgun-transport',
     'openid-client',
     'pdfjs-dist',
     'promptl-ai',
