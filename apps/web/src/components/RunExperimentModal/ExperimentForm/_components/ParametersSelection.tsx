@@ -141,6 +141,7 @@ export function ParametersSelection({
             selectParameter(param, Number(headerIndex))
           }}
           placeholder='Select column'
+          searchable
         />
       ))}
 
