@@ -86,14 +86,16 @@ export function IntegrationsList({
         type: 'group',
         label: 'Available triggers',
         items: [
-          {
-            type: 'item',
-            value: 'latitude_chat',
-            title: 'Chat',
-            description: 'Chat with a prompt',
-            metadata: { type: 'Chat' },
-            imageIcon: { type: 'icon', name: ICONS_BY_TRIGGER.Chat! },
-          },
+          // TODO: To enable chat trigger you need to take what we did in shared documents and
+          // refactor into a document trigger. That's it. After that you just have to uncomment this. Easy no?
+          // {
+          //   type: 'item',
+          //   value: 'latitude_chat',
+          //   title: 'Chat',
+          //   description: 'Chat with a prompt',
+          //   metadata: { type: 'Chat' },
+          //   imageIcon: { type: 'icon', name: ICONS_BY_TRIGGER.Chat! },
+          // },
           {
             type: 'item',
             value: 'latitude_email',

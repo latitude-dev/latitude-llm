@@ -10,11 +10,7 @@ function capitalize(str: string) {
   return str.replace(/^\w/, (c) => c.toUpperCase())
 }
 
-export function relativeTime(date: Date | null | undefined) {
-  if (!date) return '-'
-  // NOTE: This is a dummy defense to avoid crashing on the frontend
-  if (!(date instanceof Date)) return '-'
-
+export function relativeTimeForDate(date: Date) {
   const now = new Date()
 
   if (differenceInHours(now, date) < 1) {
@@ -26,4 +22,12 @@ export function relativeTime(date: Date | null | undefined) {
   }
 
   return capitalize(format(date, 'PPpp'))
+}
+
+export function relativeTime(date: Date | null | undefined) {
+  if (!date) return '-'
+  // NOTE: This is a dummy defense to avoid crashing on the frontend
+  if (!(date instanceof Date)) return '-'
+
+  return relativeTimeForDate(date)
 }

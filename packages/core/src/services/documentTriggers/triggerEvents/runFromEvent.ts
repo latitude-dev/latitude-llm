@@ -14,50 +14,11 @@ import {
 } from '../../../repositories'
 import { ExecuteDocumentTriggerJobData } from '../../../jobs/job-definitions/documentTriggers/runDocumentTriggerEventJob'
 import { documentsQueue } from '../../../jobs/queues'
-import { getEmailTriggerEventRunParameters } from '../handlers/email/runParameters'
 import { runDocumentAtCommit } from '../../commits'
-import { BACKGROUND } from '@latitude-data/telemetry'
-import { getIntegrationTriggerEventRunParameters } from '../handlers/integration/runParameters'
+import { BACKGROUND } from '../../../telemetry'
 import { sendEmailResponse } from '../handlers/email/sendResponse'
 import { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
-
-async function getDocumentTriggerEventRunParameters<
-  T extends DocumentTriggerType,
->({
-  documentTrigger,
-  documentTriggerEvent,
-}: {
-  documentTrigger: DocumentTrigger<T>
-  documentTriggerEvent: DocumentTriggerEvent<T>
-}): PromisedResult<Record<string, unknown>> {
-  if (documentTrigger.triggerType === DocumentTriggerType.Email) {
-    return getEmailTriggerEventRunParameters({
-      documentTrigger:
-        documentTrigger as DocumentTrigger<DocumentTriggerType.Email>,
-      documentTriggerEvent:
-        documentTriggerEvent as DocumentTriggerEvent<DocumentTriggerType.Email>,
-    })
-  }
-
-  if (documentTrigger.triggerType === DocumentTriggerType.Scheduled) {
-    return Result.ok({})
-  }
-
-  if (documentTrigger.triggerType === DocumentTriggerType.Integration) {
-    return getIntegrationTriggerEventRunParameters({
-      documentTrigger:
-        documentTrigger as DocumentTrigger<DocumentTriggerType.Integration>,
-      documentTriggerEvent:
-        documentTriggerEvent as DocumentTriggerEvent<DocumentTriggerType.Integration>,
-    })
-  }
-
-  return Result.error(
-    new NotImplementedError(
-      `Trigger type '${documentTrigger.triggerType}' is not implemented`,
-    ),
-  )
-}
+import { getDocumentTriggerEventRunParameters } from './getDocumentTriggerRunParameters'
 
 function getRunSource(
   documentTrigger: DocumentTrigger,
@@ -112,19 +73,25 @@ export async function runDocumentFromTriggerEvent<
   if (!Result.isOk(documentResult)) return documentResult
   const document = documentResult.unwrap()
 
-  const parametersResult = await getDocumentTriggerEventRunParameters({
+  const parameters = getDocumentTriggerEventRunParameters({
     documentTrigger,
     documentTriggerEvent,
   })
-  if (!Result.isOk(parametersResult)) return parametersResult
-  const parameters = parametersResult.unwrap()
+
+  if (parameters === null) {
+    return Result.error(
+      new NotImplementedError(
+        `Trigger type '${documentTrigger.triggerType}' is not implemented`,
+      ),
+    )
+  }
 
   const sourceResult = getRunSource(documentTrigger)
   if (!Result.isOk(sourceResult)) return sourceResult
   const source = sourceResult.unwrap()
 
   const runResult = await runDocumentAtCommit({
-    context: BACKGROUND(),
+    context: BACKGROUND({ workspaceId: workspace.id }),
     workspace,
     document,
     parameters,

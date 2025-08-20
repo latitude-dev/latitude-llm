@@ -277,7 +277,7 @@ function DocumentEditorContent({
  * @returns clearChat - Function to clear chat history and reset playground
  * @returns stopStreaming - Function to stop current streaming and optionally clear chat
  */
-function usePlaygroundLogic({
+export function usePlaygroundLogic({
   commit,
   project,
   document,

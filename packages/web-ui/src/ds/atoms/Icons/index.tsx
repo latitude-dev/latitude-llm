@@ -36,6 +36,7 @@ import {
   CirclePlus,
   CircleStop,
   CircleUser,
+  CirclePlayIcon,
   Clock,
   Code,
   Code2,
@@ -128,6 +129,7 @@ import {
   XIcon,
   Youtube,
   Zap,
+  ClockFadingIcon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -234,6 +236,7 @@ const Icons = {
   circleUser: CircleUser,
   clipboard: Copy,
   clock: Clock,
+  clockFading: ClockFadingIcon,
   close: XIcon,
   code2: Code2,
   code: Code,
@@ -304,6 +307,7 @@ const Icons = {
   pin: Pin,
   pinOff: PinOff,
   play: Play,
+  circlePlay: CirclePlayIcon,
   postgres: Postgres,
   puzzle: Puzzle,
   radio: Radio,

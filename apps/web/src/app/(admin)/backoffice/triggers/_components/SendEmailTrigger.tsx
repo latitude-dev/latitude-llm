@@ -1,4 +1,5 @@
 'use client'
+import { EMAIL_TRIGGER_DOMAIN } from '@latitude-data/constants'
 import { manualEmailTriggerAction } from '$/actions/admin/documentTriggers/manualTrigger/email'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -68,7 +69,7 @@ export default function SendEmailTrigger() {
         <Input
           label='Receiver email'
           name='recipient'
-          placeholder='<document-uuid>@prompt.latitude.so'
+          placeholder={`<document-uuid>@${EMAIL_TRIGGER_DOMAIN}`}
         />
         <Input
           label='Subject'

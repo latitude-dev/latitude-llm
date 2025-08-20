@@ -164,6 +164,13 @@ export const API_ROUTES = {
             },
             triggers: {
               root: `${projectRoot}/commits/${commitUuid}/triggers`,
+              detail: (triggerUuid: string) => {
+                return {
+                  triggerEvents: {
+                    root: `${projectRoot}/commits/${commitUuid}/triggers/${triggerUuid}/triggerEvents`,
+                  },
+                }
+              },
             },
           }),
         },
