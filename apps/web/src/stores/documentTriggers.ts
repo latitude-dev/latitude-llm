@@ -1,4 +1,4 @@
-import { DocumentTrigger, HEAD_COMMIT } from '@latitude-data/core/browser'
+import { DocumentTrigger } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
@@ -6,16 +6,18 @@ import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { createDocumentTriggerAction } from '$/actions/documents/triggers/createDocumentTriggerAction'
 import { deleteDocumentTriggerAction } from '$/actions/documents/triggers/deleteDocumentTriggerAction'
-import {
-  DocumentTriggerConfiguration,
-  InsertDocumentTriggerWithConfiguration,
-} from '@latitude-data/constants/documentTriggers'
+import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { useCallback, useMemo } from 'react'
 import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/triggers/updateDocumentTriggerConfigurationAction'
+import { DocumentTriggerType } from '@latitude-data/constants'
 
 const EMPTY_ARRAY = [] as const
 export default function useDocumentTriggers(
-  { projectId, documentUuid }: { projectId: number; documentUuid?: string },
+  {
+    projectId,
+    commitUuid,
+    documentUuid,
+  }: { projectId: number; commitUuid: string; documentUuid?: string },
   {
     onCreated,
     onUpdated,
@@ -30,8 +32,9 @@ export default function useDocumentTriggers(
   const { toast } = useToast()
   const fetcher = useFetcher<DocumentTrigger[]>(
     documentUuid
-      ? `${ROUTES.api.projects.detail(projectId).triggers.root}?documentUuid=${documentUuid}`
-      : ROUTES.api.projects.detail(projectId).triggers.root,
+      ? `${ROUTES.api.projects.detail(projectId).commits.detail(commitUuid).triggers.root}?documentUuid=${documentUuid}`
+      : ROUTES.api.projects.detail(projectId).commits.detail(commitUuid)
+          .triggers.root,
   )
 
   const {
@@ -39,7 +42,7 @@ export default function useDocumentTriggers(
     mutate,
     isLoading,
   } = useSWR<DocumentTrigger[]>(
-    ['documentTriggers', projectId, documentUuid],
+    ['documentTriggers', projectId, commitUuid, documentUuid],
     fetcher,
     opts,
   )
@@ -100,45 +103,42 @@ export default function useDocumentTriggers(
 
   // TODO: Remove, unnecessary wrap
   const create = useCallback(
-    ({
+    <T extends DocumentTriggerType>({
       documentUuid,
-      trigger: { type, configuration },
+      triggerType,
+      configuration,
     }: {
       documentUuid: string
-      trigger: InsertDocumentTriggerWithConfiguration
+      triggerType: T
+      configuration: DocumentTriggerConfiguration<T>
     }) =>
       executeCreate({
         projectId,
         documentUuid,
-        commitUuid: HEAD_COMMIT,
-        trigger: {
-          type,
-          configuration,
-        },
+        commitUuid,
+        triggerType,
+        configuration,
       }),
-    [executeCreate, projectId],
+    [executeCreate, projectId, commitUuid],
   )
 
   // TODO: Remove, unnecessary wrap
   const update = useCallback(
-    ({
-      documentUuid,
-      documentTrigger,
+    <T extends DocumentTriggerType>({
+      documentTriggerUuid,
       configuration,
     }: {
-      documentUuid: string
-      documentTrigger: DocumentTrigger
-      configuration: DocumentTriggerConfiguration
+      documentTriggerUuid: string
+      configuration: DocumentTriggerConfiguration<T>
     }) => {
       executeUpdate({
         projectId,
-        documentUuid,
-        commitUuid: HEAD_COMMIT,
-        documentTriggerId: documentTrigger.id,
+        commitUuid,
+        documentTriggerUuid,
         configuration,
       })
     },
-    [executeUpdate, projectId],
+    [executeUpdate, projectId, commitUuid],
   )
 
   // TODO: Remove, unnecessary wrap
@@ -146,12 +146,11 @@ export default function useDocumentTriggers(
     (documentTrigger: DocumentTrigger) => {
       executeDelete({
         projectId,
-        documentUuid: documentTrigger.documentUuid,
-        commitUuid: HEAD_COMMIT,
-        documentTriggerId: documentTrigger.id,
+        commitUuid,
+        documentTriggerUuid: documentTrigger.uuid,
       })
     },
-    [executeDelete, projectId],
+    [executeDelete, projectId, commitUuid],
   )
 
   return useMemo(

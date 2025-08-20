@@ -28,20 +28,20 @@ function TabLabel({ text, isActive }: { text: string; isActive: boolean }) {
 export function TriggerSettings({
   document,
   projectId,
+  commitUuid,
   openTriggerModal,
 }: {
   document: DocumentVersion
   projectId: number
+  commitUuid: string
   openTriggerModal: (
-    trigger?: Extract<
-      DocumentTrigger,
-      { triggerType: DocumentTriggerType.Integration }
-    >,
+    trigger?: DocumentTrigger<DocumentTriggerType.Integration>,
   ) => void
 }) {
   const { data: triggers } = useDocumentTriggers({
     documentUuid: document.documentUuid,
     projectId,
+    commitUuid,
   })
 
   const { enabled: integrationTriggersEnabled } = useFeatureFlag({
@@ -101,15 +101,24 @@ export function TriggerSettings({
         onSelect={setSelectedTab}
       />
       {selectedTab === ShareSettingsTabs.Email && (
-        <EmailTriggerSettings document={document} projectId={projectId} />
+        <EmailTriggerSettings
+          document={document}
+          projectId={projectId}
+          commitUuid={commitUuid}
+        />
       )}
       {selectedTab === ShareSettingsTabs.Schedule && (
-        <ScheduleTriggerSettings document={document} projectId={projectId} />
+        <ScheduleTriggerSettings
+          document={document}
+          projectId={projectId}
+          commitUuid={commitUuid}
+        />
       )}
       {selectedTab === ShareSettingsTabs.Integrations && (
         <IntegrationTriggerSettings
           document={document}
           projectId={projectId}
+          commitUuid={commitUuid}
           openTriggerModal={openTriggerModal}
         />
       )}

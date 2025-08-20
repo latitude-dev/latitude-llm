@@ -108,9 +108,6 @@ export const API_ROUTES = {
         stats: {
           root: `${projectRoot}/stats`,
         },
-        triggers: {
-          root: `${projectRoot}/triggers`,
-        },
         commits: {
           root: `${projectRoot}/commits`,
           detail: (commitUuid: string) => ({
@@ -164,6 +161,9 @@ export const API_ROUTES = {
                   },
                 }
               },
+            },
+            triggers: {
+              root: `${projectRoot}/commits/${commitUuid}/triggers`,
             },
           }),
         },

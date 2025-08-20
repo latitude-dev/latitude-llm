@@ -7,8 +7,6 @@ const jobMappings = {
   createProviderLogJob: jobs.createProviderLogJob,
   uploadDocumentLogsJob: jobs.uploadDocumentLogsJob,
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
-  processScheduledTriggerJob: jobs.processScheduledTriggerJob,
-  runEmailTriggerJob: jobs.runEmailTriggerJob,
   downloadLogsJob: jobs.downloadLogsJob,
   createDatasetFromLogsJob: jobs.createDatasetFromLogsJob,
   notifyClientOfDatasetUpdate: jobs.notifyClientOfDatasetUpdate,

@@ -10,12 +10,13 @@ import {
   ne,
   sql,
 } from 'drizzle-orm'
-import { EvaluationV2 } from '../browser'
+import { Commit, EvaluationV2 } from '../browser'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { commits, evaluationVersions, projects } from '../schema'
 import { CommitsRepository } from './commitsRepository'
 import Repository from './repositoryV2'
+import { PromisedResult } from '../lib/Transaction'
 
 const tt = {
   ...getTableColumns(evaluationVersions),
@@ -160,5 +161,21 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
       .then((r) => r[0])
 
     return Result.ok<boolean>(!!result?.exists)
+  }
+
+  async getChangesInCommit(commit: Commit): PromisedResult<EvaluationV2[]> {
+    const result = await this.db
+      .select(tt)
+      .from(evaluationVersions)
+      .where(
+        // Not using this.scopeFilter because we want to receive deleted evaluations too
+        and(
+          eq(evaluationVersions.workspaceId, this.workspaceId),
+          eq(evaluationVersions.commitId, commit.id),
+        ),
+      )
+      .orderBy(desc(evaluationVersions.createdAt), desc(evaluationVersions.id))
+
+    return Result.ok(result)
   }
 }

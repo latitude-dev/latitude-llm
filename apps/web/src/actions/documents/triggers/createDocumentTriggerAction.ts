@@ -2,41 +2,40 @@
 
 import { createDocumentTrigger } from '@latitude-data/core/services/documentTriggers/create'
 
-import { withDocument } from '../../procedures'
+import { withCommit } from '../../procedures'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { z } from 'zod'
-import {
-  emailTriggerConfigurationSchema,
-  insertScheduledTriggerConfigurationSchema,
-  integrationTriggerConfigurationSchema,
-  InsertDocumentTriggerWithConfiguration,
-} from '@latitude-data/constants/documentTriggers'
+import { documentTriggerConfigurationSchema } from '@latitude-data/constants/documentTriggers'
+import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 
-export const createDocumentTriggerAction = withDocument
+export const createDocumentTriggerAction = withCommit
   .createServerAction()
   .input(
     z.object({
       documentUuid: z.string(),
-      trigger: z.object({
-        type: z.any(),
-        configuration: z.union([
-          insertScheduledTriggerConfigurationSchema,
-          emailTriggerConfigurationSchema,
-          integrationTriggerConfigurationSchema.omit({ triggerId: true }),
-        ]),
-      }),
+      triggerType: z.nativeEnum(DocumentTriggerType),
+      configuration: documentTriggerConfigurationSchema,
     }),
   )
   .handler(async ({ input, ctx }) => {
-    const { trigger } = input
+    const { documentUuid, triggerType, configuration } = input
+    const { workspace, project, commit } = ctx
+
+    const documentsScope = new DocumentVersionsRepository(workspace.id)
+    const document = await documentsScope
+      .getDocumentAtCommit({
+        projectId: project.id,
+        documentUuid,
+        commitUuid: commit.uuid,
+      })
+      .then((r) => r.unwrap())
 
     return createDocumentTrigger({
-      workspace: ctx.workspace,
-      projectId: ctx.project.id,
-      document: ctx.document,
-      trigger: {
-        type: trigger.type as DocumentTriggerType,
-        configuration: trigger.configuration,
-      } as InsertDocumentTriggerWithConfiguration,
+      workspace,
+      project,
+      commit,
+      document,
+      triggerType,
+      configuration,
     }).then((r) => r.unwrap())
   })

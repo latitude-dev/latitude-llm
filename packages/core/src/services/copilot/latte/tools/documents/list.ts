@@ -25,8 +25,9 @@ const listPrompts = defineLatteTool(
 
     const documentTriggerScope = new DocumentTriggersRepository(workspace.id)
 
-    const existingTriggersAtLiveCommit =
-      await documentTriggerScope.findByProjectId(commit.projectId)
+    const existingTriggersAtLiveCommit = await documentTriggerScope
+      .getTriggersInProject({ projectId, commit })
+      .then((r) => r.unwrap())
 
     const promptObjects = await Promise.all(
       documents.map(async (doc) => {

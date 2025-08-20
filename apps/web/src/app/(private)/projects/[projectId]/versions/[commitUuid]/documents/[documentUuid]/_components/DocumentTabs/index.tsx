@@ -44,6 +44,7 @@ export default function DocumentTabs({
           <DocumentTriggersButton
             document={document}
             projectId={Number(params.projectId)}
+            commitUuid={params.commitUuid}
           />
         </div>
       </div>

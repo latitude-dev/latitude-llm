@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { Project, IntegrationDto, Workspace } from '../../browser'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Project, IntegrationDto, Workspace, Commit } from '../../browser'
 import { listReferences } from './references'
 import {
   DocumentVersion,
@@ -11,17 +11,29 @@ import { Result } from '../../lib/Result'
 import { destroyIntegration } from './destroy'
 import { ForbiddenError } from '@latitude-data/constants/errors'
 
+const mocks = vi.hoisted(() => ({
+  deployDocumentTrigger: vi.fn(),
+  undeployDocumentTrigger: vi.fn(),
+}))
+
+vi.mock('../documentTriggers/deploy', () => ({
+  deployDocumentTrigger: mocks.deployDocumentTrigger,
+  undeployDocumentTrigger: mocks.undeployDocumentTrigger,
+}))
+
 describe('listReferences', () => {
   let workspace: Workspace
   let project: Project
   let document: DocumentVersion
   let integration: IntegrationDto
+  let commit: Commit
 
   beforeEach(async () => {
     const {
       workspace: createdWorkspace,
       project: createdProject,
       documents,
+      commit: createdCommit,
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
@@ -34,6 +46,7 @@ describe('listReferences', () => {
     workspace = createdWorkspace
     document = documents[0]!
     project = createdProject
+    commit = createdCommit
 
     integration = await factories.createIntegration({
       workspace,
@@ -59,6 +72,7 @@ describe('listReferences', () => {
     const trigger = await factories.createIntegrationDocumentTrigger({
       workspaceId: workspace.id,
       projectId: project.id,
+      commitId: commit.id,
       documentUuid: document.documentUuid,
       integrationId: integration.id,
     })
@@ -79,6 +93,7 @@ describe('listReferences', () => {
     await factories.createIntegrationDocumentTrigger({
       workspaceId: workspace.id,
       projectId: project.id,
+      commitId: commit.id,
       documentUuid: document.documentUuid,
       integrationId: integration.id,
     })

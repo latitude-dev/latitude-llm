@@ -14,23 +14,21 @@ import { FormEvent, useCallback, useEffect, useState } from 'react'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { TriggerTypeSelector } from './TriggerTypeSelector'
 import { IntegrationTriggerConfig } from './IntegrationTriggerConfig'
-import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 
 export function TriggerConfigModal({
   document,
   projectId,
+  commitUuid,
   trigger,
   isOpen,
   onOpenChange,
 }: {
   document: DocumentVersion
   projectId: number
-  trigger?: Extract<
-    DocumentTrigger,
-    { triggerType: DocumentTriggerType.Integration }
-  >
+  commitUuid: string
+  trigger?: DocumentTrigger<DocumentTriggerType.Integration>
   isOpen: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -39,6 +37,7 @@ export function TriggerConfigModal({
   const { create, update, isCreating, isUpdating } = useDocumentTriggers(
     {
       projectId,
+      commitUuid,
       documentUuid: document.documentUuid,
     },
     {
@@ -80,17 +79,15 @@ export function TriggerConfigModal({
     if (!integrationForTrigger) return
     if (loadingComponents || !pipedreamData) return
 
-    const triggerConfig =
-      trigger.configuration as IntegrationTriggerConfiguration
     const triggerComponent = pipedreamData.triggers.find(
-      (t) => t.key === triggerConfig.componentId,
+      (t) => t.key === trigger.configuration.componentId,
     )
 
     if (!triggerComponent) return
 
     setSelectedPair([integrationForTrigger, triggerComponent])
-    setConfiguredProps(triggerConfig.properties ?? {})
-    setPayloadParameters(triggerConfig.payloadParameters ?? [])
+    setConfiguredProps(trigger.configuration.properties ?? {})
+    setPayloadParameters(trigger.configuration.payloadParameters ?? [])
   }, [
     trigger,
     integration,
@@ -126,14 +123,12 @@ export function TriggerConfigModal({
 
       if (trigger) {
         update({
-          documentUuid: document.documentUuid,
-          documentTrigger: trigger,
+          documentTriggerUuid: trigger.uuid,
           configuration: {
             integrationId: integration.id,
             componentId: component.key,
             properties: configuredProps,
             payloadParameters,
-            triggerId: trigger.configuration.triggerId,
           },
         })
         return
@@ -141,14 +136,12 @@ export function TriggerConfigModal({
 
       create({
         documentUuid: document.documentUuid,
-        trigger: {
-          type: DocumentTriggerType.Integration,
-          configuration: {
-            integrationId: integration.id,
-            componentId: component.key,
-            properties: configuredProps,
-            payloadParameters,
-          },
+        triggerType: DocumentTriggerType.Integration,
+        configuration: {
+          integrationId: integration.id,
+          componentId: component.key,
+          properties: configuredProps,
+          payloadParameters,
         },
       })
     },

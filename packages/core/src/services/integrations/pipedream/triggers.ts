@@ -5,6 +5,7 @@ import {
   createBackendClient,
 } from '@pipedream/sdk'
 import {
+  Commit,
   DocumentTrigger,
   gatewayPath,
   PipedreamIntegration,
@@ -12,28 +13,24 @@ import {
 } from '../../../browser'
 import { getPipedreamEnvironment } from './apps'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
+import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import {
   fillConfiguredProps,
   isIntegrationConfigured,
 } from './components/fillConfiguredProps'
 import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
-import { database } from '../../../client'
 import { IntegrationsRepository } from '../../../repositories'
-import {
-  InsertIntegrationTriggerConfiguration,
-  IntegrationTriggerConfiguration,
-} from '@latitude-data/constants/documentTriggers'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
-import { isEqual } from 'lodash-es'
 
 export async function deployPipedreamTrigger({
   triggerUuid,
+  commit,
   integration,
   componentId,
   configuredProps: configuredClientProps,
 }: {
   triggerUuid: string
+  commit: Commit
   integration: PipedreamIntegration
   componentId: ComponentId
   configuredProps: ConfiguredProps<ConfigurableProps>
@@ -78,7 +75,9 @@ export async function deployPipedreamTrigger({
       triggerId: componentId,
       configuredProps,
       dynamicPropsId: reload.dynamicProps?.id,
-      webhookUrl: gatewayPath(`/webhook/integration/${triggerUuid}`),
+      webhookUrl: gatewayPath(
+        `/webhook/integration/${triggerUuid}/${commit.uuid}`,
+      ),
     })
 
     return Result.ok({ id: deployResult.data.id })
@@ -87,182 +86,25 @@ export async function deployPipedreamTrigger({
   }
 }
 
-export async function updatePipedreamTrigger(
-  {
-    workspace,
-    trigger,
-    updatedConfig,
-  }: {
-    workspace: Workspace
-    trigger: Extract<
-      DocumentTrigger,
-      { triggerType: DocumentTriggerType.Integration }
-    >
-    updatedConfig: InsertIntegrationTriggerConfiguration
-  },
-  db = database,
-): PromisedResult<IntegrationTriggerConfiguration, Error> {
-  const originalConfig = trigger.configuration
-
-  if (
-    originalConfig.integrationId === updatedConfig.integrationId &&
-    originalConfig.componentId === updatedConfig.componentId &&
-    isEqual(originalConfig.properties, updatedConfig.properties)
-  ) {
-    return Result.ok({
-      ...updatedConfig,
-      triggerId: originalConfig.triggerId,
-    })
-  }
-
-  const integrationsScope = new IntegrationsRepository(workspace.id, db)
-
-  const pipedreamEnv = getPipedreamEnvironment()
-  if (!pipedreamEnv.ok) {
-    return Result.error(pipedreamEnv.error!)
-  }
-
-  const pipedream = createBackendClient(pipedreamEnv.unwrap())
-
-  if (
-    originalConfig.integrationId === updatedConfig.integrationId &&
-    originalConfig.componentId === updatedConfig.componentId
-  ) {
-    // Same trigger, just update properties
-    const integrationResult = await integrationsScope.find(
-      originalConfig.integrationId,
-    )
-    if (!Result.isOk(integrationResult)) return integrationResult
-    const integration = integrationResult.unwrap()
-
-    if (integration.type !== IntegrationType.Pipedream) {
-      return Result.error(
-        new BadRequestError(
-          `Integration type '${integration.type}' is not supported for document triggers`,
-        ),
-      )
-    }
-
-    if (!isIntegrationConfigured(integration)) {
-      return Result.error(
-        new NotFoundError(
-          `Integration '${integration.name}' has not been configured.`,
-        ),
-      )
-    }
-
-    const newConfigPropsResult = await fillConfiguredProps({
-      pipedream,
-      integration,
-      componentId: originalConfig.componentId,
-      configuredProps: updatedConfig.properties ?? {},
-    })
-    if (!Result.isOk(newConfigPropsResult)) return newConfigPropsResult
-    const newConfiguredProps = newConfigPropsResult.unwrap()
-
-    try {
-      await pipedream.updateTrigger({
-        id: originalConfig.triggerId,
-        externalUserId: integration.configuration.externalUserId,
-        configuredProps: newConfiguredProps,
-      })
-
-      return Result.ok({
-        ...updatedConfig,
-        triggerId: originalConfig.triggerId,
-      })
-    } catch (error) {
-      return Result.error(error as Error)
-    }
-  }
-
-  // Different trigger, must destroy and deploy again
-  const oldIntegrationResult = await integrationsScope.find(
-    originalConfig.integrationId,
-  )
-  if (!Result.isOk(oldIntegrationResult)) return oldIntegrationResult
-  const oldIntegration = oldIntegrationResult.unwrap()
-
-  const newIntegrationResult = await integrationsScope.find(
-    updatedConfig.integrationId,
-  )
-  if (!Result.isOk(newIntegrationResult)) return newIntegrationResult
-  const newIntegration = newIntegrationResult.unwrap()
-
-  if (oldIntegration.type !== IntegrationType.Pipedream) {
-    return Result.error(
-      new BadRequestError(
-        `Integration type '${oldIntegration.type}' is not supported for document triggers`,
-      ),
-    )
-  }
-  if (!isIntegrationConfigured(oldIntegration)) {
-    return Result.error(
-      new NotFoundError(
-        `Integration '${oldIntegration.name}' has not been configured.`,
-      ),
-    )
-  }
-  if (newIntegration.type !== IntegrationType.Pipedream) {
-    return Result.error(
-      new BadRequestError(
-        `Integration type '${newIntegration.type}' is not supported for document triggers`,
-      ),
-    )
-  }
-  if (!isIntegrationConfigured(newIntegration)) {
-    return Result.error(
-      new NotFoundError(
-        `Integration '${newIntegration.name}' has not been configured.`,
-      ),
-    )
-  }
-
-  try {
-    await pipedream.deleteTrigger({
-      id: originalConfig.triggerId,
-      externalUserId: oldIntegration.configuration.externalUserId,
-    })
-  } catch (error) {
-    return Result.error(error as Error)
-  }
-
-  const deployResult = await deployPipedreamTrigger({
-    triggerUuid: trigger.uuid,
-    integration: newIntegration,
-    componentId: { key: updatedConfig.componentId },
-    configuredProps: updatedConfig.properties ?? {},
-  })
-
-  if (!Result.isOk(deployResult)) return deployResult
-  const deployedTrigger = deployResult.unwrap()
-
-  return Result.ok({
-    ...updatedConfig,
-    triggerId: deployedTrigger.id,
-  }) // Updated config with new deployed trigger
-}
-
 export async function destroyPipedreamTrigger(
   {
     workspace,
     documentTrigger,
   }: {
     workspace: Workspace
-    documentTrigger: Extract<
-      DocumentTrigger,
-      { triggerType: DocumentTriggerType.Integration }
-    >
+    documentTrigger: DocumentTrigger<DocumentTriggerType.Integration>
   },
-  db = database,
+  transaction = new Transaction(),
 ): PromisedResult<undefined> {
-  const integrationsScope = new IntegrationsRepository(workspace.id, db)
-  const integrationResult = await integrationsScope.find(
-    documentTrigger.configuration.integrationId,
-  )
-  if (!Result.isOk(integrationResult)) {
-    return Result.error(integrationResult.error)
+  if (!documentTrigger.deploymentSettings) {
+    return Result.nil() // Not need to undeploy if not deployed
   }
+
+  const integrationResult = await transaction.call(async (tx) => {
+    const integrationsScope = new IntegrationsRepository(workspace.id, tx)
+    return integrationsScope.find(documentTrigger.configuration.integrationId)
+  })
+  if (!Result.isOk(integrationResult)) return integrationResult
   const integration = integrationResult.unwrap()
 
   if (integration.type !== IntegrationType.Pipedream) {
@@ -289,7 +131,7 @@ export async function destroyPipedreamTrigger(
 
   try {
     await pipedream.deleteTrigger({
-      id: documentTrigger.configuration.triggerId,
+      id: documentTrigger.deploymentSettings.triggerId,
       externalUserId: integration.configuration.externalUserId,
     })
     return Result.nil()

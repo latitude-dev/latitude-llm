@@ -7,7 +7,10 @@ import type {
   PipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/browser'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 import { DocumentTriggerType } from '@latitude-data/constants'
@@ -30,22 +33,23 @@ export function useCreateDocumentTrigger({
     ConfiguredProps<ConfigurableProps>
   >({})
   const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+
   const { create: createTrigger, isCreating } = useDocumentTriggers({
     projectId: project.id,
+    commitUuid: commit.uuid,
   })
   const onCreateTrigger = useCallback(async () => {
     if (!account || !document) return
 
     const [trigger, error] = await createTrigger({
       documentUuid: document.documentUuid,
-      trigger: {
-        type: DocumentTriggerType.Integration,
-        configuration: {
-          integrationId: account.id,
-          componentId: triggerComponent.key,
-          properties: configuredProps,
-          payloadParameters,
-        },
+      triggerType: DocumentTriggerType.Integration,
+      configuration: {
+        integrationId: account.id,
+        componentId: triggerComponent.key,
+        properties: configuredProps,
+        payloadParameters,
       },
     })
 
