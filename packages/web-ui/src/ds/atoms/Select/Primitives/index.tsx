@@ -226,7 +226,8 @@ const SelectContent = forwardRef<
           className,
           {
             'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:translate-y-1 w-[var(--radix-select-trigger-width)]':
-              position === 'popper' && !maxHeightAuto && 'max-h-96',
+              position === 'popper',
+            'max-h-96': !maxHeightAuto,
           },
         )}
         {...props}
