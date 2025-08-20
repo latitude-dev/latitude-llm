@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ExperimentComparison } from '../ExperimentsComparison'
 import { EmptyPage } from './EmptyPage'
 import { useSearchParams } from 'next/navigation'
+import { MetadataProvider } from '$/components/MetadataProvider'
 
 export function ExperimentsPageContent({
   initialCount,
@@ -85,45 +86,47 @@ export function ExperimentsPageContent({
   )
 
   return (
-    <div className='w-full p-6 flex flex-col gap-4'>
-      <div className='w-full items-center justify-between flex gap-2'>
-        <Text.H4B>Experiment history</Text.H4B>
-        <Button
-          isLoading={isCreatingExperiment}
-          variant='default'
-          fancy
-          onClick={() => setIsModalOpen(true)}
-        >
-          Run Experiment
-        </Button>
-      </div>
+    <MetadataProvider>
+      <div className='w-full p-6 flex flex-col gap-4'>
+        <div className='w-full items-center justify-between flex gap-2'>
+          <Text.H4B>Experiment history</Text.H4B>
+          <Button
+            isLoading={isCreatingExperiment}
+            variant='default'
+            fancy
+            onClick={() => setIsModalOpen(true)}
+          >
+            Run Experiment
+          </Button>
+        </div>
 
-      {(count ?? initialCount) === 0 ? (
-        <EmptyPage
-          isCreatingExperiment={isCreatingExperiment}
-          setIsModalOpen={setIsModalOpen}
+        {(count ?? initialCount) === 0 ? (
+          <EmptyPage
+            isCreatingExperiment={isCreatingExperiment}
+            setIsModalOpen={setIsModalOpen}
+          />
+        ) : (
+          <>
+            <ExperimentComparison
+              selectedExperimentUuids={selectedExperimentUuids}
+              onUnselectExperiment={handleExperimentSelect}
+            />
+            <ExperimentsTable
+              count={count ?? initialCount}
+              selectedExperiments={selectedExperimentUuids}
+              onSelectExperiment={handleExperimentSelect}
+            />
+          </>
+        )}
+        <RunExperimentModal
+          project={project as Project}
+          commit={commit as Commit}
+          document={document}
+          isOpen={isModalOpen}
+          setOpen={setIsModalOpen}
+          onCreate={onCreateExperiments}
         />
-      ) : (
-        <>
-          <ExperimentComparison
-            selectedExperimentUuids={selectedExperimentUuids}
-            onUnselectExperiment={handleExperimentSelect}
-          />
-          <ExperimentsTable
-            count={count ?? initialCount}
-            selectedExperiments={selectedExperimentUuids}
-            onSelectExperiment={handleExperimentSelect}
-          />
-        </>
-      )}
-      <RunExperimentModal
-        project={project as Project}
-        commit={commit as Commit}
-        document={document}
-        isOpen={isModalOpen}
-        setOpen={setIsModalOpen}
-        onCreate={onCreateExperiments}
-      />
-    </div>
+      </div>
+    </MetadataProvider>
   )
 }
