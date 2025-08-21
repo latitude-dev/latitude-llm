@@ -4,7 +4,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import {
   ChatTextArea,
@@ -46,7 +46,6 @@ export default function Chat({
   addMessagesFn?: AddMessagesFn
 } & ActionsState) {
   const runOnce = useRef(false)
-  const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -54,10 +53,7 @@ export default function Chat({
     commitUuid: commit.uuid,
     projectId: project.id,
   })
-  useAutoScroll(containerRef, {
-    startAtBottom: true,
-    onScrollChange: setIsScrolledToBottom,
-  })
+  useAutoScroll(containerRef, { startAtBottom: true })
   const playground = usePlaygroundChat({
     runPromptFn,
     addMessagesFn,
@@ -90,14 +86,13 @@ export default function Chat({
   }, [playground.start])
 
   return (
-    <div className='flex flex-col flex-1 h-full overflow-hidden'>
-      {showHeader ? (
+    <div className='flex flex-col flex-1 h-full overflow-y-auto'>
+      {showHeader && (
         <Header
           expandParameters={expandParameters}
           setExpandParameters={setExpandParameters}
         />
-      ) : null}
-
+      )}
       <Messages
         playground={playground}
         containerRef={containerRef}
@@ -106,15 +101,15 @@ export default function Chat({
         agentToolsMap={agentToolsMap}
         toolContentMap={toolContentMap}
       />
-
-      <ChatInputBox
-        canChat={canChat}
-        clearChat={clearChat}
-        hasActiveStream={hasActiveStream}
-        isScrolledToBottom={isScrolledToBottom}
-        playground={playground}
-        stopStreaming={stopStreaming}
-      />
+      <div className='w-full pb-4 z-[11] flex items-center justify-center'>
+        <ChatInputBox
+          canChat={canChat}
+          clearChat={clearChat}
+          hasActiveStream={hasActiveStream}
+          playground={playground}
+          stopStreaming={stopStreaming}
+        />
+      </div>
     </div>
   )
 }
@@ -168,36 +163,35 @@ function ChatInputBox({
   canChat,
   clearChat,
   hasActiveStream,
-  isScrolledToBottom,
   playground,
   stopStreaming,
 }: {
   canChat: boolean
   clearChat: () => void
   hasActiveStream: () => boolean
-  isScrolledToBottom: boolean
   playground: ReturnType<typeof usePlaygroundChat>
   stopStreaming: () => void
 }) {
   return (
     <div className='flex relative flex-row w-full items-center justify-center px-4'>
       <StatusIndicator
-        isScrolledToBottom={isScrolledToBottom}
-        usage={playground.usage}
-        wakingUpIntegration={playground.wakingUpIntegration}
-        runningLatitudeTools={playground.runningLatitudeTools}
-        isStreaming={playground.isLoading}
+        playground={playground}
+        resetChat={clearChat}
         stopStreaming={stopStreaming}
         canStopStreaming={hasActiveStream() && playground.isLoading}
+        streamAborted={!hasActiveStream() && !playground.isLoading}
+        canChat={canChat}
       />
       <ChatTextArea
         minRows={5}
         canChat={canChat}
-        clearChat={clearChat}
         placeholder='Ask anything'
         onSubmit={playground.submitUserMessage}
-        disabled={playground.isLoading || !!playground.error}
-        disableReset={playground.isLoading}
+        onClear={clearChat}
+        disabledSubmit={
+          playground.isLoading || !!playground.error || !hasActiveStream()
+        }
+        disabledClear={playground.isLoading}
       />
     </div>
   )

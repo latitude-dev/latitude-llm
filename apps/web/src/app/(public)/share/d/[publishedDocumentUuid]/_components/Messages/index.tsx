@@ -110,7 +110,7 @@ export function Messages({
         {canChat ? (
           <ChatTextArea
             canChat
-            clearChat={onReset}
+            onClear={onReset}
             onSubmit={onChat}
             minRows={5}
             placeholder='Ask anything'

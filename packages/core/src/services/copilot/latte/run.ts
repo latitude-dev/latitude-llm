@@ -1,15 +1,15 @@
 import { LogSources } from '@latitude-data/constants'
+import { LatitudeError } from '@latitude-data/constants/errors'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { Commit, DocumentVersion, User, Workspace } from '../../../browser'
-import { BACKGROUND, TelemetryContext } from '../../../telemetry'
+import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
+import { BACKGROUND, TelemetryContext } from '../../../telemetry'
+import { WebsocketClient } from '../../../websockets/workers'
 import { runDocumentAtCommit } from '../../commits'
 import { addMessages } from '../../documentLogs/addMessages/index'
-import { ErrorResult, Result } from '../../../lib/Result'
-import { LatitudeError } from '@latitude-data/constants/errors'
-import { buildToolHandlers } from './tools'
-import { WebsocketClient } from '../../../websockets/workers'
 import { sendWebsockets } from './helpers'
+import { buildToolHandlers } from './tools'
 
 export async function runNewLatte({
   copilotWorkspace,
@@ -30,6 +30,8 @@ export async function runNewLatte({
   context: string
   user: User
 }): PromisedResult<undefined> {
+  // TODO(latte): Check latte credits
+
   return generateLatteResponse({
     context: BACKGROUND({ workspaceId: copilotWorkspace.id }),
     copilotWorkspace,
@@ -40,6 +42,8 @@ export async function runNewLatte({
     user,
     initialParameters: { message, context },
   })
+
+  // TODO(latte): Consume latte credits
 }
 
 async function generateLatteResponse({

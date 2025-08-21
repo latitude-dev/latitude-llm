@@ -1,3 +1,5 @@
+import { tokenizeText } from '$/lib/tokenize'
+import { ChainEvent } from '@latitude-data/constants'
 import {
   Message,
   MessageContent,
@@ -5,30 +7,35 @@ import {
   ToolCall,
   ToolRequestContent,
 } from '@latitude-data/constants/legacyCompiler'
-import { ChainEvent } from '@latitude-data/constants'
 import { StreamEventTypes } from '@latitude-data/core/browser'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import React, { useCallback } from 'react'
 
 type SetMessagesFunction = React.Dispatch<React.SetStateAction<Message[]>>
-type SetUnresponedToolCallsFunction = React.Dispatch<
+type SetUnrespondedToolCallsFunction = React.Dispatch<
   React.SetStateAction<ToolCall[]>
 >
 type SetRunningLatitudeToolsFunction = React.Dispatch<
   React.SetStateAction<number>
 >
 type AddMessagesFunction = (messages: Message[]) => void
+type IncrementUsageDeltaFunction = (incr: {
+  promptTokens?: number
+  completionTokens?: number
+}) => void
 
 export function useProviderEventHandler({
   setMessages,
-  setUnresponedToolCalls,
+  setUnrespondedToolCalls,
   setRunningLatitudeTools,
   addMessages,
+  incrementUsageDelta,
 }: {
   setMessages: SetMessagesFunction
-  setUnresponedToolCalls: SetUnresponedToolCallsFunction
+  setUnrespondedToolCalls: SetUnrespondedToolCallsFunction
   setRunningLatitudeTools: SetRunningLatitudeToolsFunction
   addMessages: AddMessagesFunction
+  incrementUsageDelta: IncrementUsageDeltaFunction
 }) {
   // Helper function to handle the step-start event
   const handleStepStart = useCallback(() => {
@@ -90,8 +97,10 @@ export function useProviderEventHandler({
           },
         ]
       })
+
+      incrementUsageDelta({ completionTokens: tokenizeText(data.textDelta) })
     },
-    [setMessages],
+    [setMessages, incrementUsageDelta],
   )
 
   // Helper function to handle tool-call events
@@ -103,7 +112,7 @@ export function useProviderEventHandler({
       args: Record<string, unknown>
     }) => {
       if (!data.toolName.startsWith('lat_')) {
-        setUnresponedToolCalls((prev) => [
+        setUnrespondedToolCalls((prev) => [
           ...prev,
           {
             id: data.toolCallId,
@@ -156,8 +165,19 @@ export function useProviderEventHandler({
           },
         ]
       })
+
+      incrementUsageDelta({
+        completionTokens: tokenizeText(
+          data.toolName + JSON.stringify(data.args),
+        ),
+      })
     },
-    [setMessages, setUnresponedToolCalls, setRunningLatitudeTools],
+    [
+      setMessages,
+      setUnrespondedToolCalls,
+      setRunningLatitudeTools,
+      incrementUsageDelta,
+    ],
   )
 
   // Helper function to handle tool-result events
@@ -267,8 +287,10 @@ export function useProviderEventHandler({
           ]
         }
       })
+
+      incrementUsageDelta({ completionTokens: tokenizeText(data.textDelta) })
     },
-    [setMessages],
+    [setMessages, incrementUsageDelta],
   )
 
   // Helper function to handle redacted-reasoning events
@@ -330,8 +352,10 @@ export function useProviderEventHandler({
           ]
         }
       })
+
+      incrementUsageDelta({ completionTokens: tokenizeText(data.data) })
     },
-    [setMessages],
+    [setMessages, incrementUsageDelta],
   )
 
   // Main handler that delegates to the appropriate helper based on event type

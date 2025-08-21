@@ -1,10 +1,10 @@
+import { LatitudeError } from '@latitude-data/constants/errors'
 import { User, Workspace } from '../../../browser'
 import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
 import { documentsQueue } from '../../../jobs/queues'
-import { assertCopilotIsSupported } from './helpers'
-import { PromisedResult } from '../../../lib/Transaction'
 import { ErrorResult, Result } from '../../../lib/Result'
-import { LatitudeError } from '@latitude-data/constants/errors'
+import { PromisedResult } from '../../../lib/Transaction'
+import { assertCopilotIsSupported } from './helpers'
 
 export async function createLatteJob({
   workspace,
@@ -23,6 +23,8 @@ export async function createLatteJob({
 }): PromisedResult<undefined> {
   const supportResult = assertCopilotIsSupported()
   if (!supportResult.ok) return supportResult as ErrorResult<LatitudeError>
+
+  // TODO(latte): Check latte credits
 
   await documentsQueue.add('runLatteJob', {
     workspaceId: workspace.id,

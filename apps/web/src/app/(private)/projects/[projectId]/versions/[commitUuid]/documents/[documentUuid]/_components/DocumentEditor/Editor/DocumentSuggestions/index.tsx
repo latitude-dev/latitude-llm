@@ -5,6 +5,7 @@ import {
 import useDocumentSuggestions from '$/stores/documentSuggestions'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -112,7 +113,7 @@ export function DocumentSuggestions({
           variant='shiny'
           size='small'
           iconProps={{
-            name: 'circleArrowUp',
+            name: 'sparkles',
             placement: 'left',
             size: 'normal',
             color: 'primary',
@@ -137,12 +138,16 @@ export function DocumentSuggestions({
       </Popover.Trigger>
       <Popover.Content
         side='top'
+        sideOffset={10}
         align='center'
         size='large'
         maxHeight='normal'
         scrollable
       >
-        <Text.H4M>Suggestions</Text.H4M>
+        <span className='flex flex-row items-center justify-start gap-2'>
+          <Icon name='sparkles' className='shrink-0 -mt-px' />
+          <Text.H4M>Suggestions</Text.H4M>
+        </span>
         <Text.H6 color='foregroundMuted'>
           Suggestions are automatically generated to improve your prompt based
           on your latest evaluations results.

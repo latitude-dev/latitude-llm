@@ -2,12 +2,15 @@ const SECONDS = 1000 // ms
 const MINUTES = 60 * SECONDS
 const HOURS = MINUTES * 60
 
-export function formatDuration(duration?: number | null) {
+export function formatDuration(
+  duration?: number | null,
+  milliseconds: boolean = true,
+) {
   if (duration === undefined || duration === null) {
     return '-'
   }
 
-  if (duration < MINUTES) {
+  if (duration < MINUTES && milliseconds) {
     return `${(duration / SECONDS).toFixed(3)}s`
   }
 

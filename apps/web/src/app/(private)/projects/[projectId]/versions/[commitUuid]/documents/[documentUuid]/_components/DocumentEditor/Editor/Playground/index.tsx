@@ -129,7 +129,7 @@ export const Playground = memo(
             />
           ) : null}
         </div>
-        <div className='h-full flex-grow flex flex-col gap-2 overflow-hidden pr-0.5'>
+        <div className='h-full flex-grow flex flex-col gap-2 overflow-y-auto pr-0.5'>
           {mode === 'preview' ? (
             <Preview
               metadata={metadata}

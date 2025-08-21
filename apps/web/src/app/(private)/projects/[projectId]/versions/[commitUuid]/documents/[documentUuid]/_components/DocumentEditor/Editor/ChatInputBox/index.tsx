@@ -3,37 +3,36 @@ import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { ChatTextArea } from './ChatTextArea'
 
 export function ChatInputBox({
-  canChat,
-  clearChat,
+  onBack,
+  resetChat,
   hasActiveStream,
   playground,
   stopStreaming,
 }: {
-  canChat: boolean
-  clearChat: () => void
+  onBack?: () => void
+  resetChat: () => void
   hasActiveStream: () => boolean
   playground: ReturnType<typeof usePlaygroundChat>
   stopStreaming: () => void
 }) {
   return (
-    <div className='flex relative flex-row w-full items-center justify-center'>
+    <div className='flex relative flex-row w-full items-center justify-center px-4'>
       <StatusIndicator
-        isScrolledToBottom={false}
-        usage={playground.usage}
-        wakingUpIntegration={playground.wakingUpIntegration}
-        runningLatitudeTools={playground.runningLatitudeTools}
-        isStreaming={playground.isLoading}
+        playground={playground}
+        resetChat={resetChat}
         stopStreaming={stopStreaming}
         canStopStreaming={hasActiveStream() && playground.isLoading}
+        streamAborted={!hasActiveStream() && !playground.isLoading}
       />
       <ChatTextArea
         minRows={5}
-        canChat={canChat}
-        clearChat={clearChat}
         placeholder='Ask anything'
         onSubmit={playground.submitUserMessage}
-        disabled={playground.isLoading || !!playground.error}
-        disableReset={playground.isLoading}
+        onBack={onBack}
+        disabledSubmit={
+          playground.isLoading || !!playground.error || !hasActiveStream()
+        }
+        disabledBack={playground.isLoading}
       />
     </div>
   )
