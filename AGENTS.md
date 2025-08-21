@@ -261,3 +261,61 @@ The TypeScript SDK is automatically published to npm and GitHub releases via `.g
 - Workflow compares `package.json` version with published npm version
 - Only publishes if versions differ
 - Supports prerelease detection (beta, alpha, rc) for GitHub release flags
+
+## Event System Patterns
+
+### Event Declaration (`packages/core/src/events/events.d.ts`)
+
+Events in Latitude follow a structured type-safe pattern:
+
+1. **Add Event Name**: Add new event name to the `Events` union type
+2. **Create Event Type**: Define event using `LatitudeEventGeneric<EventName, DataStructure>`
+3. **Add to Union**: Include in the main `LatitudeEvent` union type
+4. **Handler Interface**: Add handler to `IEventsHandlers` interface (optional for pub/sub events)
+
+Example pattern:
+
+```typescript
+// 1. Add to Events union
+export type Events = 'existingEvent' | 'myNewEvent' // Add here
+
+// 2. Define event type
+export type MyNewEvent = LatitudeEventGeneric<
+  'myNewEvent',
+  {
+    workspaceId: number
+    userId: string
+    customData: Record<string, unknown>
+  }
+>
+
+// 3. Add to LatitudeEvent union
+export type LatitudeEvent = ExistingEvent | MyNewEvent // Add here
+
+// 4. Add handler interface (if needed)
+export interface IEventsHandlers {
+  existingEvent: EventHandler<ExistingEvent>[]
+  myNewEvent: EventHandler<MyNewEvent>[] // Add here
+}
+```
+
+### Event Publishing (`packages/core/src/events/publisher.ts`)
+
+Use the publisher service to emit events:
+
+```typescript
+import { publisher } from '../../../events/publisher'
+
+// For system events (analytics, webhooks, database storage)
+publisher.publishLater({
+  type: 'myNewEvent',
+  data: {
+    workspaceId: 123,
+    userId: 'user-id',
+    customData: { key: 'value' },
+  },
+})
+
+// For real-time pub/sub events
+publisher.publish('realTimeEvent', { data: 'value' })
+```

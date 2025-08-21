@@ -15,6 +15,7 @@ import {
   mockClientToolResult,
   ToolHandler,
 } from '../clientTools/handlers'
+import { publisher } from '../../../events/publisher'
 
 type ToolTuple = [string, ToolDefinition]
 
@@ -102,12 +103,14 @@ function buildDefinition(streamManager: StreamManager) {
     const definition = { ...toolDefinition } as Tool
     if (streamManager.source === LogSources.Playground) {
       definition.execute = instrumentToolHandler(awaitClientToolResult, {
+        workspaceId: streamManager.workspace.id,
         context: streamManager.$completion!.context,
         toolDefinition,
         toolName: name,
       })
     } else if (streamManager.source === LogSources.Evaluation) {
       definition.execute = instrumentToolHandler(mockClientToolResult, {
+        workspaceId: streamManager.workspace.id,
         context: streamManager.$completion!.context,
         toolDefinition,
         toolName: name,
@@ -116,6 +119,7 @@ function buildDefinition(streamManager: StreamManager) {
       const toolHandler = streamManager.tools[name]
       if (toolHandler) {
         definition.execute = instrumentToolHandler(toolHandler, {
+          workspaceId: streamManager.workspace.id,
           context: streamManager.$completion!.context,
           toolDefinition,
           toolName: name,
@@ -140,10 +144,12 @@ function buildDefinition(streamManager: StreamManager) {
 function instrumentToolHandler(
   toolHandler: ToolHandler,
   {
+    workspaceId,
     context,
     toolName,
     toolDefinition,
   }: {
+    workspaceId: number
     context: TelemetryContext
     toolName: string
     toolDefinition: ToolDefinition
@@ -155,6 +161,15 @@ function instrumentToolHandler(
       call: {
         id: toolCall.toolCallId,
         arguments: args,
+      },
+    })
+
+    publisher.publishLater({
+      type: 'toolExecuted',
+      data: {
+        workspaceId,
+        type: 'client',
+        toolName,
       },
     })
 

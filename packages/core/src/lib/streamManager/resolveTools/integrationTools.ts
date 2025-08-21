@@ -10,6 +10,7 @@ import { callIntegrationTool } from '../../../services/integrations/McpClient/ca
 import { StreamManager } from '..'
 import { LATITUDE_TOOL_PREFIX } from '@latitude-data/constants'
 import { telemetry } from '../../../telemetry'
+import { publisher } from '../../../events/publisher'
 
 export async function resolveIntegrationTools({
   config,
@@ -126,6 +127,20 @@ async function addIntegrationTools({
             call: {
               id: toolCall.toolCallId,
               arguments: args,
+            },
+          })
+
+          publisher.publishLater({
+            type: 'toolExecuted',
+            data: {
+              workspaceId: streamManager.workspace.id,
+              type: 'integration',
+              toolName: mcpTool.name,
+              integration: {
+                id: integration.id,
+                name: integration.name,
+                type: integration.type,
+              },
             },
           })
 
