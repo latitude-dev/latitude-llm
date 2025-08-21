@@ -1,7 +1,6 @@
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Label } from '@latitude-data/web-ui/atoms/Label'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { ScheduleConfig, WeekDay, WEEKDAYS } from './scheduleUtils'
 
 export function SpecificScheduleForm({
@@ -10,7 +9,7 @@ export function SpecificScheduleForm({
   isLoading,
 }: {
   config: ScheduleConfig
-  updateConfig: ReactStateDispatch<ScheduleConfig>
+  updateConfig: (updater: (prev: ScheduleConfig) => ScheduleConfig) => void
   isLoading: boolean
 }) {
   const handleDayToggle = (day: WeekDay) => {

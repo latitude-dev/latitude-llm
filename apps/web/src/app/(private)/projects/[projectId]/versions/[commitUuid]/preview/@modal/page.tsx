@@ -1,3 +1,3 @@
-export default function ModalPage() {
+export default function NewTriggerModalPage() {
   return null
 }

@@ -150,6 +150,11 @@ export const ROUTES = {
                   new: {
                     root: `${root}/preview/triggers/new`,
                   },
+                  edit: (triggerUuid: string) => {
+                    return {
+                      root: `${root}/preview/triggers/${triggerUuid}/edit`,
+                    }
+                  },
                 },
               },
               analytics: {

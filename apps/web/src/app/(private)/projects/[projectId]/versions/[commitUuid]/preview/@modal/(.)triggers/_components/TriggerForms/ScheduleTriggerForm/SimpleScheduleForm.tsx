@@ -1,7 +1,6 @@
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { ScheduleConfig, SimpleInterval } from './scheduleUtils'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 export function SimpleScheduleForm({
   config,
@@ -9,7 +8,7 @@ export function SimpleScheduleForm({
   isLoading,
 }: {
   config: ScheduleConfig
-  updateConfig: ReactStateDispatch<ScheduleConfig>
+  updateConfig: (updater: (prev: ScheduleConfig) => ScheduleConfig) => void
   isLoading: boolean
 }) {
   const handleSimpleIntervalChange = (interval: SimpleInterval) => {

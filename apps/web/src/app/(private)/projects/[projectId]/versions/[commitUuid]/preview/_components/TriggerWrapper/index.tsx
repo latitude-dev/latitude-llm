@@ -1,4 +1,4 @@
-import { MouseEvent, ReactNode, useCallback } from 'react'
+import { MouseEvent, ReactNode, useCallback, useMemo } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -16,6 +16,8 @@ import useDocumentTriggers from '$/stores/documentTriggers'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { OnRunTriggerFn } from '../TriggersList'
+import Link from 'next/link'
+import { ROUTES } from '$/services/routes'
 
 function ToggleEnabled({
   projectId,
@@ -59,6 +61,52 @@ function ToggleEnabled({
   return toogleComp
 }
 
+function EditTriggerButton({
+  projectId,
+  commitUuid,
+  trigger,
+  isLive,
+}: {
+  projectId: number
+  commitUuid: string
+  trigger: DocumentTrigger
+  isLive: boolean
+}) {
+  const editLink = useMemo(
+    () =>
+      ROUTES.projects
+        .detail({ id: projectId })
+        .commits.detail({ uuid: commitUuid })
+        .preview.triggers.edit(trigger.uuid).root,
+    [projectId, commitUuid, trigger.uuid],
+  )
+
+  if (isLive) {
+    return (
+      <>
+        <Tooltip
+          asChild
+          trigger={
+            <Button lookDisabled variant='outline' fancy>
+              Edit
+            </Button>
+          }
+        >
+          You need to create a new version to edit triggers
+        </Tooltip>
+      </>
+    )
+  }
+
+  return (
+    <Link href={editLink}>
+      <Button fancy variant='outline'>
+        Edit
+      </Button>
+    </Link>
+  )
+}
+
 export function TriggerWrapper({
   image,
   title,
@@ -83,8 +131,7 @@ export function TriggerWrapper({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const isLive = !!commit.mergedAt
-  const canSeeEvents =
-    true || trigger.triggerType !== DocumentTriggerType.Scheduled
+  const canSeeEvents = trigger.triggerType !== DocumentTriggerType.Scheduled
   const canRunTrigger = trigger.triggerType === DocumentTriggerType.Scheduled
   const onToggleEventList = useCallback(() => {
     if (!canSeeEvents) return
@@ -106,9 +153,10 @@ export function TriggerWrapper({
     <div className='flex flex-col'>
       <div
         className={cn(
-          'cursor-pointer w-full p-4 flex flex-row justify-between items-center gap-4',
+          'w-full p-4 flex flex-row justify-between items-center gap-4',
           {
             'border-b border-border': open,
+            'cursor-pointer': canSeeEvents,
           },
         )}
         onClick={onToggleEventList}
@@ -135,6 +183,12 @@ export function TriggerWrapper({
               isLive={isLive}
               trigger={trigger}
             />
+            <EditTriggerButton
+              projectId={project.id}
+              commitUuid={commit.uuid}
+              trigger={trigger}
+              isLive={isLive}
+            />
             {canRunTrigger ? (
               <Button
                 fancy
@@ -147,10 +201,12 @@ export function TriggerWrapper({
             ) : null}
           </div>
           {canSeeEvents ? (
-            <Icon
-              name={open ? 'chevronUp' : 'chevronDown'}
-              color='foregroundMuted'
-            />
+            <div className='min-h-button flex items-center justify-center'>
+              <Icon
+                name={open ? 'chevronUp' : 'chevronDown'}
+                color='foregroundMuted'
+              />
+            </div>
           ) : null}
         </div>
       </div>
