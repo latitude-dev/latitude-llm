@@ -7,6 +7,7 @@ import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter, runPresenterLegacy } from '$/presenters/runPresenter'
 import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
+import { isAbortError } from '@latitude-data/core/lib/isAbortError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
 import { BACKGROUND } from '@latitude-data/core/telemetry'
@@ -76,17 +77,36 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
           stream.close()
         })
 
-        for await (const event of streamToGenerator(result.stream)) {
-          const data = event.data
+        try {
+          for await (const event of streamToGenerator(
+            result.stream,
+            c.req.raw.signal,
+          )) {
+            const data = event.data
 
-          stream.writeSSE({
-            id: String(id++),
-            event: event.event,
-            data: typeof data === 'string' ? data : JSON.stringify(data),
-          })
+            stream.writeSSE({
+              id: String(id++),
+              event: event.event,
+              data: typeof data === 'string' ? data : JSON.stringify(data),
+            })
+          }
+        } catch (error) {
+          // Handle abort errors gracefully - don't log them as actual errors
+          if (isAbortError(error)) {
+            // Client disconnected, close stream quietly
+            return
+          }
+
+          // Re-throw other errors to be handled by the error callback
+          throw error
         }
       },
       (error: Error) => {
+        // Don't log abort errors as they are expected when clients disconnect
+        if (isAbortError(error)) {
+          return Promise.resolve()
+        }
+
         const unknownError = getUnknownError(error)
 
         if (unknownError) {

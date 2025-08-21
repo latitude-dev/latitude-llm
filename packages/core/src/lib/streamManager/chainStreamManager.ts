@@ -8,6 +8,7 @@ import {
 import { StreamManager, StreamManagerProps } from '.'
 import { resolveToolsFromConfig } from './resolveTools'
 import { CachedApiKeys } from '../../services/chains/run'
+import { isAbortError } from '../isAbortError'
 
 /**
  * ChainStreamManager extends StreamManager to handle streaming for multi-step AI chains.
@@ -103,6 +104,12 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
 
       return this.step(responseMessages)
     } catch (e) {
+      // Handle abort errors gracefully - just end the stream without treating as error
+      if (isAbortError(e)) {
+        this.endStream()
+        return
+      }
+
       this.endWithError(e as Error)
       return
     }
