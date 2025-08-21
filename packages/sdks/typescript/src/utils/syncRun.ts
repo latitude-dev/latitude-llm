@@ -1,6 +1,7 @@
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
 import {
+  GenerationResponse,
   HandlerType,
   RunPromptOptions,
   RunSyncAPIResponse,
@@ -12,8 +13,12 @@ import {
   ApiErrorJsonResponse,
   LatitudeErrorCodes,
 } from '@latitude-data/constants/errors'
+import { AssertedStreamType } from '@latitude-data/constants'
 
-export async function syncRun<Tools extends ToolSpec>(
+export async function syncRun<
+  Tools extends ToolSpec,
+  S extends AssertedStreamType = 'text',
+>(
   path: string,
   {
     projectId,
@@ -23,10 +28,10 @@ export async function syncRun<Tools extends ToolSpec>(
     onFinished,
     onError,
     options,
-  }: RunPromptOptions<Tools> & {
+  }: RunPromptOptions<Tools, S> & {
     options: SDKOptions
   },
-) {
+): Promise<GenerationResponse<S> | undefined> {
   projectId = projectId ?? options.projectId
 
   if (!projectId) {
@@ -77,7 +82,7 @@ export async function syncRun<Tools extends ToolSpec>(
     return !onError ? Promise.reject(error) : Promise.resolve(undefined)
   }
 
-  const finalResponse = (await response.json()) as RunSyncAPIResponse
+  const finalResponse = (await response.json()) as RunSyncAPIResponse<S>
 
   onFinished?.(finalResponse)
 

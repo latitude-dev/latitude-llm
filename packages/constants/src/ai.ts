@@ -61,9 +61,13 @@ export type ProviderData = TextStreamPart<any>
 
 export type ChainEventDto = ProviderData | LatitudeEventData
 
-export type ChainCallResponseDto =
-  | Omit<ChainStepResponse<'object'>, 'documentLogUuid' | 'providerLog'>
-  | Omit<ChainStepResponse<'text'>, 'documentLogUuid' | 'providerLog'>
+export type AssertedStreamType = 'text' | Record<string | symbol, unknown>
+export type ChainCallResponseDto<S extends AssertedStreamType = 'text'> =
+  S extends 'text'
+    ? ChainStepTextResponse
+    : S extends Record<string | symbol, unknown>
+      ? ChainStepObjectResponse<S>
+      : never
 
 export type ChainEventDtoResponse =
   | Omit<ChainStepResponse<'object'>, 'providerLog'>
@@ -84,10 +88,11 @@ export type ChainStepTextResponse = BaseResponse & {
   toolCalls: ToolCall[]
 }
 
-export type ChainStepObjectResponse = BaseResponse & {
-  streamType: 'object'
-  object: any
-}
+export type ChainStepObjectResponse<S extends Record<string, unknown> = any> =
+  BaseResponse & {
+    streamType: 'object'
+    object: S
+  }
 
 export type ChainStepResponse<T extends StreamType> = T extends 'text'
   ? ChainStepTextResponse
@@ -145,13 +150,14 @@ export type LegacyLatitudeEventData =
   | LegacyLatitudeChainCompleteEventData
   | LegacyLatitudeChainErrorEventData
 
-export type RunSyncAPIResponse = {
+export type RunSyncAPIResponse<S extends AssertedStreamType = 'text'> = {
   uuid: string
   conversation: Message[]
-  response: ChainCallResponseDto
+  response: ChainCallResponseDto<S>
 }
 
-export type ChatSyncAPIResponse = RunSyncAPIResponse
+export type ChatSyncAPIResponse<S extends AssertedStreamType = 'text'> =
+  RunSyncAPIResponse<S>
 
 export const toolCallResponseSchema = z.object({
   id: z.string(),

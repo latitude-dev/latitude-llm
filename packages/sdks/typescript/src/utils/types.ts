@@ -23,6 +23,7 @@ import {
   Providers,
   RunSyncAPIResponse,
   StreamEventTypes,
+  AssertedStreamType,
 } from '@latitude-data/constants'
 import {
   AdapterMessageType,
@@ -195,13 +196,13 @@ export type HandlerConfigs = {
 export type UrlParams<H extends HandlerType> = HandlerConfigs[H]['UrlParams']
 export type BodyParams<H extends HandlerType> = HandlerConfigs[H]['BodyParams']
 
-export type StreamChainResponse = {
+export type GenerationResponse<S extends AssertedStreamType = 'text'> = {
   uuid: string
   conversation: Message[]
-  response: ChainCallResponseDto
+  response: ChainCallResponseDto<S>
 }
 
-export type StreamResponseCallbacks = {
+export type StreamResponseCallbacks<S extends AssertedStreamType = 'text'> = {
   onEvent?: ({
     event,
     data,
@@ -209,7 +210,7 @@ export type StreamResponseCallbacks = {
     event: StreamEventTypes
     data: ChainEventDto
   }) => void
-  onFinished?: (data: StreamChainResponse) => void
+  onFinished?: (data: GenerationResponse<S>) => void
   onError?: (error: LatitudeApiError) => void
 }
 
@@ -262,16 +263,18 @@ export type GetOrCreatePromptOptions = {
   prompt?: string
 }
 
-export type RunPromptOptions<Tools extends ToolSpec> =
-  StreamResponseCallbacks & {
-    projectId?: number
-    versionUuid?: string
-    customIdentifier?: string
-    parameters?: Record<string, unknown>
-    stream?: boolean
-    tools?: ToolCalledFn<Tools>
-    signal?: AbortSignal
-  }
+export type RunPromptOptions<
+  Tools extends ToolSpec,
+  S extends AssertedStreamType = 'text',
+> = StreamResponseCallbacks<S> & {
+  projectId?: number
+  versionUuid?: string
+  customIdentifier?: string
+  parameters?: Record<string, unknown>
+  stream?: boolean
+  tools?: ToolCalledFn<Tools>
+  signal?: AbortSignal
+}
 
 export type RenderPromptOptions<M extends AdapterMessageType = PromptlMessage> =
   {
@@ -297,7 +300,10 @@ export type RenderChainOptions<
   logResponses?: boolean
 }
 
-export type ChatOptions<Tools extends ToolSpec> = StreamResponseCallbacks & {
+export type ChatOptions<
+  Tools extends ToolSpec,
+  S extends AssertedStreamType = 'text',
+> = StreamResponseCallbacks<S> & {
   messages: Message[]
   stream?: boolean
   tools?: ToolCalledFn<Tools>
@@ -314,10 +320,12 @@ export type SDKOptions = {
   signal?: AbortSignal
 }
 
-export type ChatOptionsWithSDKOptions<Tools extends ToolSpec> =
-  ChatOptions<Tools> & {
-    options: SDKOptions
-  }
+export type ChatOptionsWithSDKOptions<
+  Tools extends ToolSpec,
+  S extends AssertedStreamType = 'text',
+> = ChatOptions<Tools, S> & {
+  options: SDKOptions
+}
 
 export interface EvalOptions {
   evaluationUuids?: string[]
