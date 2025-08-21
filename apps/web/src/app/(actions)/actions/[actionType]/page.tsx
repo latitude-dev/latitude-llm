@@ -5,13 +5,10 @@ import { CSPostHogProvider, IdentifyUser } from '$/app/providers'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import {
   ActionBackendParameters,
-  ActionFrontendParameters,
   ActionType,
 } from '@latitude-data/core/browser'
-import { executeAction as executeBackendAction } from '@latitude-data/core/services/actions/execute'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { FailedAction, LoadingAction } from './_components'
-import { FrontendAction } from './_lib/execute'
+import { ClientPage } from './_lib'
 
 export async function generateMetadata() {
   return buildMetatags({
@@ -30,19 +27,6 @@ export default async function Actions({
   const parameters = await searchParams
   const { workspace, user } = await getCurrentUserOrRedirect()
 
-  let result: ActionFrontendParameters | undefined
-  let error: Error | undefined
-  try {
-    result = await executeBackendAction({
-      type: type,
-      parameters: parameters,
-      user: user,
-      workspace: workspace,
-    }).then((r) => r.unwrap())
-  } catch (exception) {
-    error = exception as Error
-  }
-
   return (
     <CSPostHogProvider>
       <IdentifyUser user={user} workspace={workspace}>
@@ -50,18 +34,12 @@ export default async function Actions({
           <div className='flex flex-col items-center justify-center gap-y-8 text-muted-foreground'>
             <Icon name='logo' size='xxxlarge' />
             <div className='flex flex-col items-center justify-center gap-y-2'>
-              {error ? (
-                <FailedAction error={error} />
-              ) : result ? (
-                <FrontendAction
-                  type={type}
-                  parameters={result}
-                  user={user}
-                  workspace={workspace}
-                />
-              ) : (
-                <LoadingAction />
-              )}
+              <ClientPage
+                type={type}
+                parameters={parameters}
+                user={user}
+                workspace={workspace}
+              />
             </div>
           </div>
         </div>

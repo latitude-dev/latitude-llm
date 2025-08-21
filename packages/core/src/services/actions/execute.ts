@@ -6,7 +6,6 @@ import {
 } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, NotFoundError } from '../../lib/errors'
-import RateLimiter from '../../lib/RateLimiter'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { getWorkspaceOnboarding } from '../workspaceOnboarding/get'
@@ -27,16 +26,7 @@ export async function executeAction<T extends ActionType = ActionType>(
     workspace: Workspace
   },
   tx = new Transaction(),
-  limiter = new RateLimiter({
-    limit: 10,
-    period: 60,
-  }),
 ) {
-  const limiting = await limiter.consume(user.id)
-  if (limiting.error) {
-    return Result.error(limiting.error)
-  }
-
   const specification = ACTION_SPECIFICATIONS[type] as unknown as ActionBackendSpecification<T> // prettier-ignore
   if (!specification) {
     return Result.error(new BadRequestError('Invalid action type'))

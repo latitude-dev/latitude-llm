@@ -2,8 +2,7 @@ import * as env from '@latitude-data/env'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { ActionType, User, Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
-import { BadRequestError, RateLimitError } from '../../lib/errors'
-import RateLimiter from '../../lib/RateLimiter'
+import { BadRequestError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
 import { getWorkspaceOnboarding } from '../workspaceOnboarding/get'
 import * as onboardingServices from '../workspaceOnboarding/update'
@@ -39,28 +38,6 @@ describe('executeAction', () => {
       // Note: unset this env to not call the copilot
       LATITUDE_CLOUD: false,
     })
-  })
-
-  it('fails when rate limited', async () => {
-    await expect(
-      executeAction(
-        {
-          type: ActionType.CreateAgent,
-          parameters: { prompt: 'Create a dancing agent!' },
-          user: user,
-          workspace: workspace,
-        },
-        undefined,
-        new RateLimiter({
-          limit: 0,
-          period: 1,
-        }),
-      ).then((r) => r.unwrap()),
-    ).rejects.toThrowError(new RateLimitError('Too many requests'))
-
-    const onboarding = await getWorkspaceOnboarding({ workspace })
-    expect(onboarding.value?.completedAt).toBeFalsy()
-    expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
   it('fails when action type is not valid', async () => {

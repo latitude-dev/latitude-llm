@@ -1,42 +1,52 @@
 'use client'
 
+import { executeBackendAction as executeBackendLatitudeAction } from '$/actions/actions/execute'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useOnce } from '$/hooks/useMount'
 import { useDeferredPlaygroundAction } from '$/hooks/usePlaygroundAction'
 import {
+  ActionBackendParameters,
   ActionFrontendParameters,
   ActionType,
   User,
   Workspace,
 } from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
-import { FailedAction, LoadingAction } from '../_components'
 import { ActionFrontendSpecification } from './shared'
 import { ACTION_SPECIFICATIONS } from './specifications'
 
-export function FrontendAction<T extends ActionType = ActionType>({
+export function ClientPage<T extends ActionType = ActionType>({
   type,
   parameters,
   user,
   workspace,
 }: {
   type: T
-  parameters: ActionFrontendParameters<T>
+  parameters: ActionBackendParameters<T>
   user: User
   workspace: Workspace
 }) {
+  const { execute: executeBackendAction } = useLatitudeAction(
+    executeBackendLatitudeAction,
+    { onSuccess: () => {}, onError: () => {} },
+  )
   const { executeFrontendAction } = useFrontendAction({ user, workspace })
 
-  const [result, setResult] = useState<boolean>()
+  const [ended, setEnded] = useState<boolean>()
   const [error, setError] = useState<Error>()
   useOnce(() =>
     setTimeout(async () => {
       try {
-        await executeFrontendAction({ type, parameters })
-        setTimeout(() => setResult(true), 5000)
-      } catch (exception) {
-        setError(exception as Error)
+        const [result, error] = await executeBackendAction({ type, parameters })
+        if (error) setError(error)
+        if (result) await executeFrontendAction({ type, parameters: result })
+        setTimeout(() => setEnded(true), 5000)
+      } catch (error) {
+        setError(error as Error)
       }
     }, 1000),
   )
@@ -45,7 +55,7 @@ export function FrontendAction<T extends ActionType = ActionType>({
     <ClientOnly loader={<LoadingAction />}>
       {error ? (
         <FailedAction error={error} />
-      ) : result ? (
+      ) : ended ? (
         <FailedAction error={new Error('Action did not redirect')} />
       ) : (
         <LoadingAction />
@@ -54,7 +64,7 @@ export function FrontendAction<T extends ActionType = ActionType>({
   )
 }
 
-export function useFrontendAction({
+function useFrontendAction({
   user,
   workspace,
 }: {
@@ -94,4 +104,39 @@ export function useFrontendAction({
   )
 
   return { executeFrontendAction }
+}
+
+function FailedAction({ error }: { error: Error }) {
+  return (
+    <>
+      <div className='w-full h-full flex items-center justify-center gap-2'>
+        <Text.H4B align='center' color='destructive'>
+          Oh no... the action failed!
+        </Text.H4B>
+      </div>
+      <Text.H5 align='center' color='foregroundMuted'>
+        {error.message}
+      </Text.H5>
+    </>
+  )
+}
+
+function LoadingAction() {
+  return (
+    <>
+      <div className='w-full h-full flex items-center justify-center gap-2'>
+        <Icon
+          name='loader'
+          color='foreground'
+          className='flex-shrink-0 -mt-px animate-spin'
+        />
+        <Text.H4B align='center' color='foreground'>
+          Executing action
+        </Text.H4B>
+      </div>
+      <Text.H5 align='center' color='foregroundMuted'>
+        You should be redirected shortly
+      </Text.H5>
+    </>
+  )
 }
