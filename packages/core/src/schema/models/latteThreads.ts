@@ -30,6 +30,7 @@ export const latteThreads = latitudeSchema.table(
     ...timestamps(),
   },
   (thread) => ({
+    // FIXME: this index is duplicated because the column has already a unique constraint
     uuidIndex: uniqueIndex('latte_threads_uuid_index').on(thread.uuid),
     userWorkspaceIndex: index('latte_threads_user_workspace_index').on(
       thread.userId,

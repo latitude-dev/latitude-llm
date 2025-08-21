@@ -12,9 +12,10 @@ import type {
   EvaluationResultV2,
   EvaluationV2,
   ExperimentDto,
+  LatteChange,
+  LatteUsage,
   ProviderLogDto,
 } from '../browser'
-import { LatteChange } from '@latitude-data/constants/latte'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
@@ -120,6 +121,11 @@ type LatteThreadToolCompleted = {
   result: Record<string, unknown> | { error: { name: string; message: string } }
 }
 
+type LatteThreadUsage = {
+  type: 'usage'
+  usage: LatteUsage
+}
+
 type LatteThreadError = {
   type: 'error'
   error: { name: string; message: string }
@@ -132,6 +138,7 @@ export type LatteThreadUpdateArgs = {
   | LatteThreadResponse
   | LatteThreadToolStarted
   | LatteThreadToolCompleted
+  | LatteThreadUsage
   | LatteThreadError
 )
 

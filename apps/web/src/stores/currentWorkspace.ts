@@ -2,7 +2,7 @@ import { setDefaultProviderAction } from '$/actions/workspaces/setDefaultProvide
 import { updateWorkspaceAction } from '$/actions/workspaces/update'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { Workspace } from '@latitude-data/core/browser'
+import { WorkspaceDto } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
@@ -13,13 +13,13 @@ export default function useCurrentWorkspace(opts?: SWRConfiguration) {
   const { toast } = useToast()
 
   const route = ROUTES.api.workspaces.current
-  const fetcher = useFetcher<Workspace>(route, { fallback: null })
+  const fetcher = useFetcher<WorkspaceDto>(route, { fallback: null })
 
   const {
     data = undefined,
     mutate,
     ...rest
-  } = useSWR<Workspace>(compact(route), fetcher, opts)
+  } = useSWR<WorkspaceDto>(compact(route), fetcher, opts)
 
   const { execute: updateWorkspace } = useServerAction(updateWorkspaceAction)
   const updateName = useCallback(

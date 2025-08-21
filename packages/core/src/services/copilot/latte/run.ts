@@ -5,9 +5,12 @@ import { Commit, DocumentVersion, User, Workspace } from '../../../browser'
 import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { BACKGROUND, TelemetryContext } from '../../../telemetry'
+import { captureException } from '../../../utils/workers/sentry'
 import { WebsocketClient } from '../../../websockets/workers'
 import { runDocumentAtCommit } from '../../commits'
 import { addMessages } from '../../documentLogs/addMessages/index'
+import { checkLatteCredits } from './credits/check'
+import { consumeLatteCredits } from './credits/consume'
 import { sendWebsockets } from './helpers'
 import { buildToolHandlers } from './tools'
 
@@ -30,8 +33,6 @@ export async function runNewLatte({
   context: string
   user: User
 }): PromisedResult<undefined> {
-  // TODO(latte): Check latte credits
-
   return generateLatteResponse({
     context: BACKGROUND({ workspaceId: copilotWorkspace.id }),
     copilotWorkspace,
@@ -42,11 +43,68 @@ export async function runNewLatte({
     user,
     initialParameters: { message, context },
   })
-
-  // TODO(latte): Consume latte credits
 }
 
-async function generateLatteResponse({
+type generateLatteResponseArgs = {
+  context: TelemetryContext
+  copilotWorkspace: Workspace
+  copilotCommit: Commit
+  copilotDocument: DocumentVersion
+  clientWorkspace: Workspace
+  threadUuid: string
+  initialParameters?: { message: string; context: string } // for the first "new" request
+  messages?: Message[] // for subsequent "add" requests
+  user: User
+}
+
+async function generateLatteResponse(args: generateLatteResponseArgs) {
+  const checking = await checkLatteCredits({ workspace: args.clientWorkspace })
+  if (checking.error) {
+    return Result.error(checking.error)
+  }
+
+  let usage, error
+  try {
+    const run = await innerGenerateLatteResponse(args).then((r) => r.unwrap())
+    usage = await run.runUsage
+    error = await run.error
+  } catch (exception) {
+    error = exception as Error
+  }
+
+  const consuming = await consumeLatteCredits({
+    usage: usage ?? {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    },
+    threadUuid: args.threadUuid,
+    error: error,
+    user: args.user,
+    workspace: args.clientWorkspace,
+  }) // Note: failing silently
+  if (consuming.error) {
+    captureException(consuming.error)
+  }
+
+  if (error) {
+    WebsocketClient.sendEvent('latteThreadUpdate', {
+      workspaceId: args.clientWorkspace.id,
+      data: {
+        threadUuid: args.threadUuid,
+        type: 'error',
+        error: {
+          name: error.name,
+          message: error.message,
+        },
+      },
+    })
+  }
+
+  return Result.nil()
+}
+
+async function innerGenerateLatteResponse({
   context,
   copilotWorkspace,
   copilotCommit,
@@ -102,21 +160,5 @@ async function generateLatteResponse({
     stream: run.stream,
   })
 
-  const runError = await run.error
-  if (runError) {
-    WebsocketClient.sendEvent('latteThreadUpdate', {
-      workspaceId: clientWorkspace.id,
-      data: {
-        threadUuid,
-        type: 'error',
-        error: {
-          name: runError.name,
-          message: runError.message,
-        },
-      },
-    })
-    return Result.error(runError)
-  }
-
-  return Result.nil()
+  return Result.ok(run)
 }

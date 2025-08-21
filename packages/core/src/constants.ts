@@ -46,6 +46,7 @@ export {
 export * from '@latitude-data/constants/evaluations'
 export * from '@latitude-data/constants/tracing'
 export * from '@latitude-data/constants/actions'
+export * from '@latitude-data/constants/latte'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'

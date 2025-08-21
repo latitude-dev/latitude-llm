@@ -10,12 +10,12 @@ import { scan } from 'promptl-ai'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
+import { StreamManager } from '../../lib/streamManager'
 import { PromisedResult } from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { telemetry, TelemetryContext } from '../../telemetry'
 import { runDocumentAtCommit } from '../commits'
 import { getAgentToolName } from './helpers'
-import { StreamManager } from '../../lib/streamManager'
 
 const JSON_SCHEMA_TYPES = {
   string: 'string',
@@ -95,7 +95,8 @@ export async function getToolDefinitionFromDocument({
       })
 
       try {
-        const { response, stream, error } = await runDocumentAtCommit({
+        // prettier-ignore
+        const { response, stream, error, runUsage } = await runDocumentAtCommit({
           context: $tool.context,
           workspace,
           document,
@@ -115,6 +116,9 @@ export async function getToolDefinitionFromDocument({
         }).then((r) => r.unwrap())
 
         forwardToolEvents({ source: stream, target: streamManager.controller })
+
+        const usage = await runUsage
+        streamManager.incrementRunUsage(usage)
 
         const res = await response
         if (!res) {

@@ -390,6 +390,9 @@ export const API_ROUTES = {
     },
   },
   latte: {
+    usage: {
+      root: `/api/latte/usage`,
+    },
     debug: {
       versions: {
         root: `/api/latte/debug/versions`,

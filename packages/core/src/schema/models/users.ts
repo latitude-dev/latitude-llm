@@ -3,6 +3,7 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 
 export const users = latitudeSchema.table('users', {
+  // FIXME: why is this a text column and not a uuid or at least a varchar???
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),

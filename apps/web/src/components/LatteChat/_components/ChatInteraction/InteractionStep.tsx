@@ -51,7 +51,13 @@ export function InteractionStep({
     )
   }
 
-  return <ToolStep step={step} singleLine={singleLine} isLoading={isLoading} />
+  if (step.type === 'tool') {
+    return (
+      <ToolStep step={step} singleLine={singleLine} isLoading={isLoading} />
+    )
+  }
+
+  return null
 }
 
 function ToolStep({
