@@ -9,6 +9,8 @@ export function isAbortError(error: unknown): error is DOMException {
     (error instanceof Error &&
       error.message.includes('operation was aborted')) ||
     (error instanceof Error &&
-      error.message.includes('This operation was aborted'))
+      error.message.includes('This operation was aborted')) ||
+    (error instanceof TypeError &&
+      error.message.includes('Controller is already closed')) // If aborting the controller while consuming the stream, the enqueue will throw this error
   )
 }

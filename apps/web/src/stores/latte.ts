@@ -11,7 +11,7 @@ import { create } from 'zustand'
 
 interface LatteState {
   // Chat state
-  isLoading: boolean
+  isBrewing: boolean
   interactions: LatteInteraction[]
   error: string | undefined
   threadUuid: string | undefined
@@ -25,11 +25,14 @@ interface LatteState {
 
   // Usage state
   usage: LatteUsage | undefined
-  isLoadingUsage: boolean
+  isBrewingUsage: boolean
+
+  // BullMQ job ID to stop lattes job
+  jobId: string | undefined
 
   // Actions
   setThreadUuid: (uuid: string | undefined) => void
-  setIsLoading: (loading: boolean) => void
+  setIsBrewing: (loading: boolean) => void
   addInteractions: (interactions: LatteInteraction[]) => void
   setInteractions: (
     interactions:
@@ -55,6 +58,7 @@ interface LatteState {
   setDebugVersionUuid: (uuid: string | undefined) => void
   setUsage: (usage: LatteUsage | undefined) => void
   setIsLoadingUsage: (loading: boolean) => void
+  setJobId: (jobId: string | undefined) => void
 
   // Reset functions
   resetChat: () => void
@@ -64,7 +68,7 @@ interface LatteState {
 
 const useStore = create<LatteState>((set) => ({
   // Initial state
-  isLoading: false,
+  isBrewing: false,
   interactions: [],
   error: undefined,
   changes: [],
@@ -72,10 +76,11 @@ const useStore = create<LatteState>((set) => ({
   threadUuid: undefined,
   debugVersionUuid: undefined,
   usage: undefined,
-  isLoadingUsage: false,
+  isBrewingUsage: false,
+  jobId: undefined,
 
   // Chat actions
-  setIsLoading: (loading: boolean) => set({ isLoading: loading }),
+  setIsBrewing: (loading: boolean) => set({ isBrewing: loading }),
   setThreadUuid: (uuid: string | undefined) => set({ threadUuid: uuid }),
   addInteractions: (interactions: LatteInteraction[]) =>
     set((state) => ({
@@ -165,15 +170,18 @@ const useStore = create<LatteState>((set) => ({
     set({ debugVersionUuid: uuid }),
 
   setUsage: (usage: LatteUsage | undefined) => set({ usage }),
-  setIsLoadingUsage: (loading: boolean) => set({ isLoadingUsage: loading }),
+  setIsLoadingUsage: (loading: boolean) => set({ isBrewingUsage: loading }),
+
+  setJobId: (jobId: string | undefined) => set({ jobId: jobId }),
 
   // Reset functions
   resetChat: () =>
     set({
-      isLoading: false,
+      isBrewing: false,
       interactions: [],
       error: undefined,
       threadUuid: undefined,
+      jobId: undefined,
     }),
 
   resetChanges: () =>
@@ -184,12 +192,13 @@ const useStore = create<LatteState>((set) => ({
 
   resetAll: () =>
     set({
-      isLoading: false,
+      isBrewing: false,
       interactions: [],
       error: undefined,
       changes: [],
       latteActionsFeedbackUuid: undefined,
       threadUuid: undefined,
+      jobId: undefined,
     }),
 }))
 
@@ -201,6 +210,10 @@ export const useLatteStore = () => {
       defaultValue: undefined,
     },
   )
+  const { setValue: setStoredJobId } = useLocalStorage<string | undefined>({
+    key: AppLocalStorage.latteJobId,
+    defaultValue: undefined,
+  })
 
   const setThreadUuid = useCallback(
     (uuid: string | undefined) => {
@@ -209,17 +222,27 @@ export const useLatteStore = () => {
     },
     [store, setStoredThreadUuid],
   )
+
   const resetChat = useCallback(() => {
     store.resetChat()
     setStoredThreadUuid(undefined)
-  }, [store, setStoredThreadUuid])
+    setStoredJobId(undefined)
+  }, [store, setStoredThreadUuid, setStoredJobId])
 
+  const setJobId = useCallback(
+    (jobId: string | undefined) => {
+      store.setJobId(jobId)
+      setStoredJobId(jobId)
+    },
+    [store, setStoredJobId],
+  )
   return useMemo(
     () => ({
       ...store,
       setThreadUuid,
       resetChat,
+      setJobId: setJobId,
     }),
-    [store, setThreadUuid, resetChat],
+    [store, setThreadUuid, resetChat, setJobId],
   )
 }

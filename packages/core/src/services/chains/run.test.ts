@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const mocks = vi.hoisted(() => ({
+  v4: vi.fn(),
+}))
+
+// Mock other dependencies
+vi.mock('uuid', async (importOriginal) => ({
+  ...(await importOriginal()),
+  v4: mocks.v4,
+}))
+
 import { ChainEventTypes } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { TelemetryContext } from '@latitude-data/telemetry'
@@ -18,16 +28,8 @@ import { runChain } from './run'
 import { Result, TypedResult } from './../../lib/Result'
 import { Chain, MessageRole } from 'promptl-ai'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-
-const mocks = vi.hoisted(() => ({
-  v4: vi.fn(),
-}))
-
-// Mock other dependencies
-vi.mock('uuid', async (importOriginal) => ({
-  ...(await importOriginal()),
-  v4: mocks.v4,
-}))
+import * as consumeStreamModule from '../../lib/streamManager/ChainStreamConsumer/consumeStream'
+import * as createFakeProviderLogModule from '../../lib/streamManager/utils/createFakeProviderLog'
 
 describe('runChain', () => {
   const mockChain: Partial<Chain> = {
@@ -362,5 +364,61 @@ describe('runChain', () => {
         }),
       }),
     )
+  })
+
+  it('creates fake provider log on abort', async () => {
+    const mockAiResponse1 = createMockAiResponse('AI response 1', 10)
+    vi.spyOn(aiModule, 'ai').mockResolvedValueOnce(mockAiResponse1 as any)
+    vi.mocked(mockChain.step!)
+      .mockResolvedValueOnce({
+        completed: false,
+        messages: [
+          {
+            role: MessageRole.user,
+            // @ts-expect-error - TODO(compiler): fix types
+            content: [{ type: 'text', text: 'Step 1' }],
+          },
+        ],
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      })
+      .mockResolvedValueOnce({
+        completed: true,
+        messages: [],
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      })
+
+    const controller = new AbortController()
+
+    vi.spyOn(
+      createFakeProviderLogModule,
+      'createFakeProviderLog',
+    ).mockResolvedValue()
+
+    vi.spyOn(consumeStreamModule, 'consumeStream').mockImplementation(() => {
+      throw new DOMException('Operation aborted', 'AbortError')
+    })
+
+    setTimeout(() => {
+      controller.abort()
+    }, 100)
+
+    const run = runChain({
+      context,
+      workspace,
+      // @ts-expect-error - TODO(compiler): fix types
+      chain: mockChain,
+      globalConfig: {} as LatitudePromptConfig,
+      promptlVersion: 0,
+      providersMap,
+      source: LogSources.API,
+      errorableType: ErrorableEntity.DocumentLog,
+      promptSource,
+      abortSignal: controller.signal,
+    })
+
+    expect(run).toBeDefined()
+    await run.response
+    expect(consumeStreamModule.consumeStream).toHaveBeenCalled()
+    expect(createFakeProviderLogModule.createFakeProviderLog).toHaveBeenCalled()
   })
 })

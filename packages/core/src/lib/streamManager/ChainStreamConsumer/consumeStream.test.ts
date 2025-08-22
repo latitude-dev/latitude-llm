@@ -28,10 +28,13 @@ export const PARTIAL_FINISH_CHUNK = {
 }
 
 export type TOOLS = Record<string, Tool>
+
 type BuildChainCallback = (
   controller: ReadableStreamDefaultController<LegacyChainEvent>,
   result: AIReturn<StreamType>,
+  accumulatedText: { text: string },
 ) => Promise<void>
+
 function buildFakeChain({
   callback,
   chunks,
@@ -55,11 +58,12 @@ function buildFakeChain({
     providerName: Providers.OpenAI,
     providerMetadata: new Promise<undefined>(() => undefined),
   }
+  const accumulatedText = { text: '' }
   return new Promise<void>((resolve) => {
     new ReadableStream<LegacyChainEvent>({
       start(controller) {
         // @ts-ignore - we mock result's props
-        callback(controller, result).then(() => {
+        callback(controller, result, accumulatedText).then(() => {
           resolve()
         })
       },
@@ -69,9 +73,13 @@ function buildFakeChain({
 
 describe('consumeStream', () => {
   it('return finishReason and no error', async () => {
+    const expectedAccumulatedText = 'This is a test'
     await buildFakeChain({
       chunks: [
-        { type: 'text-delta', textDelta: 'a' },
+        { type: 'text-delta', textDelta: 'This' },
+        { type: 'text-delta', textDelta: ' is' },
+        { type: 'text-delta', textDelta: ' a' },
+        { type: 'text-delta', textDelta: ' test' },
         {
           ...PARTIAL_FINISH_CHUNK,
           type: 'finish',
@@ -79,12 +87,17 @@ describe('consumeStream', () => {
           providerMetadata: undefined,
         },
       ],
-      callback: async (controller, result) => {
-        const data = await consumeStream({ controller, result })
+      callback: async (controller, result, accumulatedText) => {
+        const data = await consumeStream({
+          controller,
+          result,
+          accumulatedText,
+        })
 
         expect(data).toEqual({
           error: undefined,
         })
+        expect(accumulatedText).toEqual({ text: expectedAccumulatedText })
       },
     })
   })
@@ -100,14 +113,19 @@ describe('consumeStream', () => {
           providerMetadata: undefined,
         },
       ],
-      callback: async (controller, result) => {
-        const data = await consumeStream({ controller, result })
+      callback: async (controller, result, accumulatedText) => {
+        const data = await consumeStream({
+          controller,
+          result,
+          accumulatedText,
+        })
         expect(data).toEqual({
           error: new ChainError({
             code: RunErrorCodes.AIRunError,
             message: 'LLM provider returned an unknown error',
           }),
         })
+        expect(accumulatedText).toEqual({ text: 'a' })
       },
     })
   })
@@ -120,15 +138,22 @@ describe('consumeStream', () => {
           type: 'error',
           error: new Error('an error happened'),
         },
+        { type: 'text-delta', textDelta: 'b' },
       ],
-      callback: async (controller, result) => {
-        const data = await consumeStream({ controller, result })
+      callback: async (controller, result, accumulatedText) => {
+        const data = await consumeStream({
+          controller,
+          result,
+          accumulatedText,
+        })
         expect(data).toEqual({
           error: new ChainError({
             code: RunErrorCodes.AIRunError,
             message: 'Openai returned this error: an error happened',
           }),
         })
+
+        expect(accumulatedText).toEqual({ text: 'ab' })
       },
     })
   })

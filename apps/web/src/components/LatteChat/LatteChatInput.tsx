@@ -33,12 +33,13 @@ export function LatteChatInput({
   acceptChanges,
   error,
   scrollToBottom,
-  isLoading,
+  isBrewing,
   inConversation,
   feedbackRequested,
   addFeedbackToLatteChange,
+  stopLatteChat,
 }: {
-  isLoading: boolean
+  isBrewing: boolean
   inConversation: boolean
   scrollToBottom: () => void
   sendMessage: (message: string) => void
@@ -52,6 +53,7 @@ export function LatteChatInput({
     feedback: string,
     evaluationResultUuid?: string,
   ) => void
+  stopLatteChat?: () => void
 }) {
   const placeholder = useTypeWriterValue(
     inConversation ? [] : INPUT_PLACEHOLDERS,
@@ -69,11 +71,11 @@ export function LatteChatInput({
   )
 
   const onSubmit = useCallback(() => {
-    if (isLoading) return
+    if (isBrewing) return
     if (value.trim() === '') return
     setValue('')
     sendMessage(value)
-  }, [value, sendMessage, isLoading])
+  }, [value, sendMessage, isBrewing])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -109,7 +111,7 @@ export function LatteChatInput({
             setAction('accept')
             acceptChanges()
           }}
-          disabled={isLoading}
+          disabled={isBrewing}
         />
       )}
       <TextArea
@@ -125,13 +127,13 @@ export function LatteChatInput({
         )}
         placeholder={
           inConversation
-            ? isLoading
+            ? isBrewing
               ? 'Brewing...'
               : 'Brew anything'
             : placeholder
         }
         autoGrow={value !== ''}
-        disabled={isLoading || !!error}
+        disabled={isBrewing || !!error}
         value={value}
         onChange={handleValueChange}
         onKeyDown={handleKeyDown}
@@ -145,42 +147,61 @@ export function LatteChatInput({
           'gap-4',
         )}
       >
-        <Button
-          variant='latte'
-          onClick={onSubmit}
-          disabled={isLoading || !!error || value.trim() === ''}
-          iconProps={{
-            name: 'forward',
-            color: 'latteInputForeground',
-            className: 'flex-shrink-0 rotate-180',
-            placement: 'right',
-          }}
-          userSelect={false}
-          fancy={true}
-          roundy={true}
-        >
-          Send
-        </Button>
-        {!inConversation && <LatteDebugVersionSelector />}
-        {inConversation && (
+        {!isBrewing && (
           <Button
-            variant='ghost'
-            size='none'
-            onClick={resetChat}
+            variant='latte'
+            onClick={onSubmit}
+            disabled={isBrewing || !!error || value.trim() === ''}
             iconProps={{
-              name: 'plus',
+              name: 'forward',
               color: 'latteInputForeground',
-              className:
-                'flex-shrink-0 group-hover:text-latte-input-foreground/75',
+              className: 'flex-shrink-0 rotate-180',
+              placement: 'right',
             }}
-            className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
             userSelect={false}
+            fancy={true}
+            roundy={true}
           >
-            <Text.H5 noWrap color='latteInputForeground'>
-              New chat
-            </Text.H5>
+            Send
           </Button>
         )}
+        {isBrewing && (
+          <Button
+            fancy
+            roundy
+            userSelect
+            variant='outlineDestructive'
+            onClick={stopLatteChat}
+            iconProps={{
+              name: 'circleStop',
+              color: 'destructive',
+              darkColor: 'foreground',
+              className: 'flex-shrink-0 rotate-180',
+              placement: 'right',
+            }}
+          >
+            Stop
+          </Button>
+        )}
+        {!inConversation && <LatteDebugVersionSelector />}
+        <Button
+          variant='ghost'
+          size='none'
+          onClick={resetChat}
+          disabled={isBrewing || !inConversation}
+          iconProps={{
+            name: 'repeat',
+            color: 'latteInputForeground',
+            className:
+              'flex-shrink-0 group-hover:text-latte-input-foreground/75',
+          }}
+          className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
+          userSelect={false}
+        >
+          <Text.H5 noWrap color='latteInputForeground'>
+            New chat
+          </Text.H5>
+        </Button>
       </div>
     </div>
   )

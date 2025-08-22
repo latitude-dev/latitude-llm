@@ -34,5 +34,5 @@ export const createNewLatteAction = authProcedure
 
     runResult.unwrap()
 
-    return { uuid: thread.uuid }
+    return { uuid: thread.uuid, jobId: runResult.value }
   })
