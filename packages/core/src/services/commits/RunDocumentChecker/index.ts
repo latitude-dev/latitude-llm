@@ -23,22 +23,26 @@ export class RunDocumentChecker {
   private errorableUuid: string
   private prompt: string
   private parameters: Record<string, unknown>
+  private userMessage?: string
 
   constructor({
     document,
     errorableUuid,
     prompt,
     parameters,
+    userMessage,
   }: {
     document: DocumentVersion
     errorableUuid: string
     prompt: string
     parameters: Record<string, unknown>
+    userMessage?: string
   }) {
     this.document = document
     this.errorableUuid = errorableUuid
     this.prompt = prompt
     this.parameters = parameters
+    this.userMessage = userMessage
   }
 
   async call() {
@@ -47,6 +51,19 @@ export class RunDocumentChecker {
 
   private async createChain() {
     try {
+      if (this.userMessage) {
+        const metadata = await scan({
+          prompt: this.prompt,
+          fullPath: this.document.path,
+        })
+
+        if (!metadata.parameters.has('LATITUDE_USER_MESSAGE')) {
+          this.prompt = `${this.prompt}\n\n<user>{{LATITUDE_USER_MESSAGE}}</user>`
+        }
+
+        this.parameters['LATITUDE_USER_MESSAGE'] = this.userMessage
+      }
+
       const ast = await parsePrompt(this.prompt).then((r) => r.unwrap())
       const metadata = await scan({
         serialized: ast,

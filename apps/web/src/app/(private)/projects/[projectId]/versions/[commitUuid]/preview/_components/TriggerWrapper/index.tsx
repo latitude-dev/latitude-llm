@@ -15,7 +15,7 @@ import {
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { OnRunTriggerFn } from '../TriggersList'
+import { OnRunTriggerFn, OnRunChatTrigger } from '../TriggersList'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 
@@ -107,6 +107,10 @@ function EditTriggerButton({
   )
 }
 
+const RUNNABLE_TRIGGERS = [
+  DocumentTriggerType.Scheduled,
+  DocumentTriggerType.Chat,
+]
 export function TriggerWrapper({
   image,
   title,
@@ -117,6 +121,7 @@ export function TriggerWrapper({
   openTriggerUuid,
   setOpenTriggerUuid,
   onRunTrigger,
+  onRunChatTrigger,
 }: {
   document: DocumentVersion
   trigger: DocumentTrigger
@@ -127,12 +132,13 @@ export function TriggerWrapper({
   openTriggerUuid: string | null
   setOpenTriggerUuid: ReactStateDispatch<string | null>
   onRunTrigger: OnRunTriggerFn
+  onRunChatTrigger: OnRunChatTrigger
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const isLive = !!commit.mergedAt
   const canSeeEvents = trigger.triggerType !== DocumentTriggerType.Scheduled
-  const canRunTrigger = trigger.triggerType === DocumentTriggerType.Scheduled
+  const canRunTrigger = RUNNABLE_TRIGGERS.includes(trigger.triggerType)
   const onToggleEventList = useCallback(() => {
     if (!canSeeEvents) return
 
@@ -146,9 +152,14 @@ export function TriggerWrapper({
   const handleRunTrigger = useCallback(() => {
     if (!canRunTrigger) return
 
+    if (trigger.triggerType === DocumentTriggerType.Chat) {
+      onRunChatTrigger({ trigger })
+      return
+    }
+
     // Schedule triggers don't have parameters
     onRunTrigger({ document, parameters: {} })
-  }, [onRunTrigger, document, canRunTrigger])
+  }, [onRunTrigger, onRunChatTrigger, trigger, document, canRunTrigger])
   return (
     <div className='flex flex-col'>
       <div

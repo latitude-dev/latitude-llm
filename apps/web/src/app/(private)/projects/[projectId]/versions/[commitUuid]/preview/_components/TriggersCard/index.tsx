@@ -19,7 +19,7 @@ import {
 import { ICONS_BY_TRIGGER } from '../../@modal/(.)triggers/new/_components/IntegrationsList'
 import { TriggerWrapper } from '../TriggerWrapper'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { OnRunTriggerFn } from '../TriggersList'
+import { OnRunTriggerFn, OnRunChatTrigger } from '../TriggersList'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 
 function IntegrationTriggerCard({
@@ -30,6 +30,7 @@ function IntegrationTriggerCard({
   openTriggerUuid,
   setOpenTriggerUuid,
   onRunTrigger,
+  onRunChatTrigger,
 }: {
   trigger: DocumentTrigger<DocumentTriggerType.Integration>
   integrations: IntegrationDto[]
@@ -38,6 +39,7 @@ function IntegrationTriggerCard({
   openTriggerUuid: string | null
   setOpenTriggerUuid: ReactStateDispatch<string | null>
   onRunTrigger: OnRunTriggerFn
+  onRunChatTrigger: OnRunChatTrigger
 }) {
   const integration = useMemo(() => {
     if (!integrations) return undefined
@@ -65,6 +67,7 @@ function IntegrationTriggerCard({
       openTriggerUuid={openTriggerUuid}
       setOpenTriggerUuid={setOpenTriggerUuid}
       onRunTrigger={onRunTrigger}
+      onRunChatTrigger={onRunChatTrigger}
       image={
         <Image
           src={integration.configuration.metadata?.imageUrl || ''}
@@ -86,6 +89,7 @@ function GenericTriggerCard({
   openTriggerUuid,
   setOpenTriggerUuid,
   onRunTrigger,
+  onRunChatTrigger,
 }: {
   trigger: DocumentTrigger
   documentName: string
@@ -93,6 +97,7 @@ function GenericTriggerCard({
   openTriggerUuid: string | null
   setOpenTriggerUuid: ReactStateDispatch<string | null>
   onRunTrigger: OnRunTriggerFn
+  onRunChatTrigger: OnRunChatTrigger
 }) {
   const info = useMemo(() => {
     const type = trigger.triggerType
@@ -105,6 +110,9 @@ function GenericTriggerCard({
         break
       case DocumentTriggerType.Email:
         title = 'Email'
+        break
+      case DocumentTriggerType.Chat:
+        title = 'Chat'
         break
       default:
         title = 'Unknown Trigger Type'
@@ -122,6 +130,10 @@ function GenericTriggerCard({
         const config = trigger.configuration as EmailTriggerConfiguration
         const name = config.name
         description = `${name} · ${documentName}`
+        break
+      }
+      case DocumentTriggerType.Chat: {
+        description = `Chat with this prompt · ${documentName}`
         break
       }
       default:
@@ -142,6 +154,7 @@ function GenericTriggerCard({
       openTriggerUuid={openTriggerUuid}
       setOpenTriggerUuid={setOpenTriggerUuid}
       onRunTrigger={onRunTrigger}
+      onRunChatTrigger={onRunChatTrigger}
       title={info.title}
       description={info.description}
       image={
@@ -167,12 +180,14 @@ export function TriggersCard({
   openTriggerUuid,
   setOpenTriggerUuid,
   onRunTrigger,
+  onRunChatTrigger,
 }: {
   trigger: DocumentTrigger
   integrations: IntegrationDto[]
   openTriggerUuid: string | null
   setOpenTriggerUuid: ReactStateDispatch<string | null>
   onRunTrigger: OnRunTriggerFn
+  onRunChatTrigger: OnRunChatTrigger
 }) {
   const type = trigger.triggerType
   const { commit } = useCurrentCommit()
@@ -206,6 +221,7 @@ export function TriggersCard({
         openTriggerUuid={openTriggerUuid}
         setOpenTriggerUuid={setOpenTriggerUuid}
         onRunTrigger={onRunTrigger}
+        onRunChatTrigger={onRunChatTrigger}
       />
     )
   }
@@ -218,6 +234,7 @@ export function TriggersCard({
       openTriggerUuid={openTriggerUuid}
       setOpenTriggerUuid={setOpenTriggerUuid}
       onRunTrigger={onRunTrigger}
+      onRunChatTrigger={onRunChatTrigger}
     />
   )
 }

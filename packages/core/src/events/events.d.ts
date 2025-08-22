@@ -294,6 +294,7 @@ export type DocumentRunRequestedEvent = LatitudeEventGeneric<
   'documentRunRequested',
   CommonDataDocumentRunRequestedEvent & {
     userEmail: string
+    userMessage?: string
   }
 >
 
