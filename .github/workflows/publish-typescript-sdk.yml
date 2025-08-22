@@ -126,6 +126,8 @@ jobs:
       - name: Create GitHub Release
         if: steps.check_version.outputs.should_publish == 'true'
         uses: softprops/action-gh-release@v2
+        permissions:
+          contents: write
         with:
           tag_name: typescript-sdk-${{ steps.get_version.outputs.version }}
           name: TypeScript SDK v${{ steps.get_version.outputs.version }}
