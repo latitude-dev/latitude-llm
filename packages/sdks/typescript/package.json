@@ -1,10 +1,15 @@
 {
   "name": "@latitude-data/sdk",
-  "version": "4.1.13",
+  "version": "4.1.14",
   "description": "Latitude SDK for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
-  "keywords": ["AI", "Prompt engineering", "sdk", "typescript"],
+  "keywords": [
+    "AI",
+    "Prompt engineering",
+    "sdk",
+    "typescript"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/typescript"
@@ -19,7 +24,9 @@
     "lint": "eslint src"
   },
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -37,7 +44,7 @@
   },
   "dependencies": {
     "eventsource-parser": "^2.0.1",
-    "node-fetch": "3.3.2",
+    "node-fetch": "2.7.0",
     "promptl-ai": "catalog:",
     "zod": "catalog:"
   },
@@ -52,7 +59,7 @@
     "@types/node": "^22.7.5",
     "@types/node-fetch": "^2.6.11",
     "msw": "^2.3.5",
-    "node-fetch": "3.3.2",
+    "node-fetch": "2.7.0",
     "rollup": "^4.21.1",
     "rollup-plugin-dts": "^6.1.1",
     "vitest": "^3.1.4"
