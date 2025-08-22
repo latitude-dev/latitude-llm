@@ -54,7 +54,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - web
+      - latitude
 
   mailpit:
     image: axllent/mailpit
@@ -64,7 +64,7 @@ services:
     profiles:
       - development
     networks:
-      - web
+      - latitude
 
   db:
     image: postgres:15.8
@@ -78,7 +78,7 @@ services:
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - ./docker/pgdata:/var/lib/postgresql/data
     networks:
-      - web
+      - latitude
 
   redis:
     image: redis
@@ -87,7 +87,7 @@ services:
     ports:
       - '6379:6379'
     networks:
-      - web
+      - latitude
 
   web:
     image: ghcr.io/latitude-dev/web:latest
@@ -123,7 +123,7 @@ services:
       - redis
       - traefik
     networks:
-      - web
+      - latitude
 
   migrations:
     image: ghcr.io/latitude-dev/migrations:latest
@@ -139,7 +139,7 @@ services:
     depends_on:
       - db
     networks:
-      - web
+      - latitude
 
   gateway:
     image: ghcr.io/latitude-dev/gateway:latest
@@ -169,7 +169,7 @@ services:
       - db
       - redis
     networks:
-      - web
+      - latitude
 
   workers:
     image: ghcr.io/latitude-dev/workers:latest
@@ -185,7 +185,7 @@ services:
       - db
       - redis
     networks:
-      - web
+      - latitude
 
   websockets:
     image: ghcr.io/latitude-dev/websockets:latest
@@ -215,11 +215,11 @@ services:
       - db
       - redis
     networks:
-      - web
+      - latitude
 
 # You need to create external network for Traefik to work (docker network create web)
 networks:
-  web:
+  latitude:
     external: true
 
 volumes:
