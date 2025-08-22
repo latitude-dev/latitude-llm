@@ -6,7 +6,6 @@ import {
 } from '$sdk/utils/types'
 import { SDK_VERSION } from '$sdk/utils/version'
 
-// TODO: Look into using native `fetch` in Node.js 18+
 import nodeFetch, { Response } from 'node-fetch'
 
 const MAX_RETRIES = 2
