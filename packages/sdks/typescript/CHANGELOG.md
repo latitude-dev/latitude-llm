@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.14] - 2025-08-22
+
+- Downgrades to node-fetch v2.x which is compatible with CommonJS environments.
+
+## [4.1.13] - 2025-08-22
+
+- Assert object return types for prompts that return structured outputs.
+
 ## [4.1.12] - 2025-07-16
 
 ### Fixed
