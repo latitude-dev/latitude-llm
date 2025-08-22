@@ -1,0 +1,226 @@
+services:
+  traefik:
+    image: traefik
+    container_name: traefik
+    restart: always
+    command:
+      --api=true
+      --ping=true
+      --providers.docker=true
+      --providers.file.directory=/etc/traefik/
+      --providers.file.watch=true
+      --api.dashboard=true
+      --api.debug=false
+      --api.insecure=${TRAEFIK_API_INSECURE:-false}
+      --metrics.prometheus=true
+      --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
+      --metrics.prometheus.addEntryPointsLabels=true
+      --entrypoints.http.address=:80
+      --entrypoints.https.address=:443
+      --entryPoints.http.forwardedHeaders.insecure
+      --entryPoints.https.forwardedHeaders.insecure
+      --certificatesresolvers.letsencryptresolver.acme.email=${TRAEFIK_ACME_EMAIL:-your@email.com}
+      --certificatesresolvers.letsencryptresolver.acme.storage=/acme/acme.json
+      --certificatesresolvers.letsencryptresolver.acme.httpchallenge.entrypoint=http
+      --log.level=INFO
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8123:8123"
+      - "8082:8082"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./acme/:/acme/
+      - ./fileprovider:/etc/traefik:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.dashboard-http-router.entrypoints=http"
+      - "traefik.http.routers.dashboard-http-router.rule=Host(`${TRAEFIK_HOST}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:${TRAEFIK_ADMIN_PASS}"
+      - "traefik.http.routers.dashboard-https-router.tls.certresolver=letsencryptresolver"
+      - "traefik.http.middlewares.dashboard-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.dashboard-http-router.middlewares=dashboard-redirect"
+      - "traefik.http.routers.dashboard-https-router.middlewares=dashboard-auth"
+      - "traefik.http.routers.dashboard-https-router.service=api@internal"
+      - "traefik.http.routers.dashboard-https-router.entrypoints=https"
+      - "traefik.http.routers.dashboard-https-router.tls=true"
+      - "traefik.http.routers.dashboard-https-router.rule=Host(`${TRAEFIK_HOST}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+    healthcheck:
+      test: ["CMD-SHELL", "traefik healthcheck --ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - latitude
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - 8025:8025
+      - 1025:1025
+    profiles:
+      - development
+    networks:
+      - latitude
+
+  db:
+    image: postgres:15.8
+    restart: always
+    container_name: latitude-llm-db
+    ports:
+      - '5432:5432'
+    env_file:
+      - .env
+    volumes:
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./docker/pgdata:/var/lib/postgresql/data
+    networks:
+      - latitude
+
+  redis:
+    image: redis
+    restart: always
+    container_name: latitude-llm-redis
+    ports:
+      - '6379:6379'
+    networks:
+      - latitude
+
+  web:
+    image: ghcr.io/latitude-dev/web:latest
+    restart: always
+    container_name: latitude-llm-web
+    platform: linux/amd64
+    env_file:
+      - .env
+    volumes:
+      - shared-storage:/app/storage/files:rw
+      - shared-storage:/app/apps/web/public/files:rw
+    environment:
+      - NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
+    build:
+      args:
+        - NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.services.web-service.loadbalancer.server.port=8080"
+      - "traefik.http.routers.web-http.entrypoints=http"
+      - "traefik.http.routers.web-http.service=web-service"
+      - "traefik.http.routers.web-http.rule=Host(`app-latitude.${APP_DOMAIN}`)"
+      - "traefik.http.routers.web-https.tls.certresolver=letsencryptresolver"
+      - "traefik.http.middlewares.web-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.web-http.middlewares=web-redirect"
+      - "traefik.http.routers.web-https.entrypoints=https"
+      - "traefik.http.routers.web-https.tls=true"
+      - "traefik.http.routers.web-https.rule=Host(`app-latitude.${APP_DOMAIN}`)"
+      - "traefik.http.routers.web-https.service=web-service"
+    depends_on:
+      - db
+      - redis
+      - traefik
+    networks:
+      - latitude
+
+  migrations:
+    image: ghcr.io/latitude-dev/migrations:latest
+    container_name: latitude-llm-migrations
+    platform: linux/amd64
+    env_file:
+      - .env
+    volumes:
+      - shared-storage:/app/storage/files:rw
+      - shared-storage:/app/apps/web/public/files:rw
+    labels:
+      - "traefik.enable=false"
+    depends_on:
+      - db
+    networks:
+      - latitude
+
+  gateway:
+    image: ghcr.io/latitude-dev/gateway:latest
+    restart: always
+    container_name: latitude-llm-gateway
+    platform: linux/amd64
+    env_file:
+      - .env
+    volumes:
+      - shared-storage:/app/storage/files:rw
+      - shared-storage:/app/apps/web/public/files:rw
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.services.gateway-service.loadbalancer.server.port=8080"
+      - "traefik.http.routers.gateway-http.entrypoints=http"
+      - "traefik.http.routers.gateway-http.service=gateway-service"
+      - "traefik.http.routers.gateway-http.rule=Host(`gateway-latitude.${APP_DOMAIN}`)"
+      - "traefik.http.routers.gateway-https.tls.certresolver=letsencryptresolver"
+      - "traefik.http.middlewares.gateway-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.gateway-http.middlewares=gateway-redirect"
+      - "traefik.http.routers.gateway-https.entrypoints=https"
+      - "traefik.http.routers.gateway-https.tls=true"
+      - "traefik.http.routers.gateway-https.rule=Host(`gateway-latitude.${APP_DOMAIN}`)"
+      - "traefik.http.routers.gateway-https.service=gateway-service"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - latitude
+
+  workers:
+    image: ghcr.io/latitude-dev/workers:latest
+    restart: always
+    container_name: latitude-llm-workers
+    platform: linux/amd64
+    env_file:
+      - .env
+    volumes:
+      - shared-storage:/app/storage/files:rw
+      - shared-storage:/app/apps/web/public/files:rw
+    depends_on:
+      - db
+      - redis
+    networks:
+      - latitude
+
+  websockets:
+    image: ghcr.io/latitude-dev/websockets:latest
+    restart: always
+    container_name: latitude-llm-websockets
+    platform: linux/amd64
+    env_file:
+      - .env
+    volumes:
+      - shared-storage:/app/storage/files:rw
+      - shared-storage:/app/apps/web/public/files:rw
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.services.websockets-service.loadbalancer.server.port=4002"
+      - "traefik.http.routers.websockets-http.entrypoints=http"
+      - "traefik.http.routers.websockets-http.service=websockets-service"
+      - "traefik.http.routers.websockets-http.rule=Host(`ws-latitude.${APP_DOMAIN}`)"
+      - "traefik.http.routers.websockets-https.tls.certresolver=letsencryptresolver"
+      - "traefik.http.middlewares.websockets-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.websockets-http.middlewares=websockets-redirect"
+      - "traefik.http.routers.websockets-https.entrypoints=https"
+      - "traefik.http.routers.websockets-https.tls=true"
+      - "traefik.http.routers.websockets-https.rule=Host(`ws-latitude.${APP_DOMAIN}`)"
+      - "traefik.http.routers.websockets-https.service=websockets-service"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - latitude
+
+# You need to create external network for Traefik to work (docker network create web)
+networks:
+  latitude:
+    external: true
+
+volumes:
+  shared-storage:
