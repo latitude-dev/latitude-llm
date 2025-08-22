@@ -72,7 +72,7 @@ export function adaptToolsConfig(
     return getOpenAIResponseTools({ clientTools, providerTools })
   }
 
-  if (adapter == Adapters.anthropic) {
+  if (adapter.type === Adapters.anthropic.type) {
     return Object.entries(clientTools).map(([name, definition]) => {
       const { parameters, ...rest } = definition
       return {
