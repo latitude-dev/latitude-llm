@@ -7,7 +7,7 @@ import {
   RunErrorCodes,
 } from '$sdk/utils/errors'
 import { nodeFetchResponseToReadableStream } from '$sdk/utils/nodeFetchResponseToReadableStream'
-import { StreamResponseCallbacks } from '$sdk/utils/types'
+import { GenerationResponse, StreamResponseCallbacks } from '$sdk/utils/types'
 import {
   ChainCallResponseDto,
   ProviderData,
@@ -15,19 +15,12 @@ import {
   ChainEventTypes,
   LatitudeEventData,
   ChainEvent,
+  AssertedStreamType,
 } from '@latitude-data/constants'
 import { ParsedEvent, ReconnectInterval } from 'eventsource-parser'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
 
-function parseJSON(line: string) {
-  try {
-    return JSON.parse(line) as ProviderData | LatitudeEventData
-  } catch (e) {
-    // do nothing
-  }
-}
-
-export async function handleStream({
+export async function handleStream<S extends AssertedStreamType = 'text'>({
   body,
   onEvent,
   onError,
@@ -35,18 +28,18 @@ export async function handleStream({
 }: Omit<StreamResponseCallbacks, 'onFinished'> & {
   body: Readable
   onToolCall: (data: ProviderData) => Promise<void>
-}) {
+}): Promise<GenerationResponse<S> | undefined> {
   let conversation: Message[] = []
   let uuid: string | undefined
-  let chainResponse: ChainCallResponseDto | undefined
+  let chainResponse: ChainCallResponseDto<S> | undefined
 
   const parser = new EventSourceParserStream()
   const stream = nodeFetchResponseToReadableStream(body, onError)
   const eventStream = stream
     .pipeThrough(new TextDecoderStream())
     .pipeThrough(parser)
-
   const reader = eventStream.getReader()
+
   try {
     while (true) {
       const { done, value } = await reader.read()
@@ -83,7 +76,7 @@ export async function handleStream({
           }
 
           if (data.type === ChainEventTypes.ProviderCompleted) {
-            chainResponse = data.response
+            chainResponse = data.response as unknown as ChainCallResponseDto<S>
           }
         } else if (parsedEvent.event === StreamEventTypes.Provider) {
           if (data.type === 'tool-call') await onToolCall(data)
@@ -127,5 +120,13 @@ export async function handleStream({
         e instanceof Error ? e.message : String(e),
       )
     }
+  }
+}
+
+function parseJSON(line: string) {
+  try {
+    return JSON.parse(line) as ProviderData | LatitudeEventData
+  } catch (e) {
+    // do nothing
   }
 }

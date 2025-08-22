@@ -14,9 +14,12 @@ import {
   ApiErrorJsonResponse,
   LatitudeErrorCodes,
 } from '@latitude-data/constants/errors'
-import { ProviderData } from '@latitude-data/constants/ai'
+import { ProviderData, AssertedStreamType } from '@latitude-data/constants/ai'
 
-export async function streamRun<Tools extends ToolSpec>(
+export async function streamRun<
+  Tools extends ToolSpec,
+  S extends AssertedStreamType = 'text',
+>(
   path: string,
   {
     projectId,
@@ -29,7 +32,7 @@ export async function streamRun<Tools extends ToolSpec>(
     onFinished,
     onError,
     options,
-  }: RunPromptOptions<Tools> & {
+  }: RunPromptOptions<Tools, S> & {
     options: SDKOptions
   },
 ) {
@@ -76,7 +79,7 @@ export async function streamRun<Tools extends ToolSpec>(
       return
     }
 
-    const finalResponse = await handleStream({
+    const finalResponse = await handleStream<S>({
       body: response.body! as Readable,
       onEvent,
       onError,
@@ -86,7 +89,10 @@ export async function streamRun<Tools extends ToolSpec>(
       }),
     })
 
+    if (!finalResponse) return
+
     onFinished?.(finalResponse)
+
     return finalResponse
   } catch (e) {
     let error = e as LatitudeApiError

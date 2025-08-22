@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/sdk",
-  "version": "4.1.12",
+  "version": "4.1.13",
   "description": "Latitude SDK for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",

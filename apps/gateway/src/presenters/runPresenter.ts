@@ -1,6 +1,7 @@
 import { captureException } from '$/common/sentry'
 import {
   AGENT_RETURN_TOOL_NAME,
+  AssertedStreamType,
   ChainStepObjectResponse,
   ChainStepTextResponse,
   RunSyncAPIResponse,
@@ -12,7 +13,10 @@ type DocumentResponse = ChainStepObjectResponse | ChainStepTextResponse
 
 export function v2RunPresenter(
   response: DocumentResponse,
-): TypedResult<Omit<RunSyncAPIResponse, 'toolRequests'>, LatitudeError> {
+): TypedResult<
+  Omit<RunSyncAPIResponse<AssertedStreamType>, 'toolRequests'>,
+  LatitudeError
+> {
   const conversation = response.providerLog?.messages
   const uuid = response.documentLogUuid
   const errorMessage = !uuid
@@ -64,7 +68,7 @@ export function runPresenterLegacy({
 }: {
   response: DocumentResponse
   toolCalls: any[]
-}): TypedResult<RunSyncAPIResponse, LatitudeError> {
+}): TypedResult<RunSyncAPIResponse<AssertedStreamType>, LatitudeError> {
   const conversation = response.providerLog?.messages
   const uuid = response.documentLogUuid
 
@@ -90,7 +94,7 @@ export function runPresenter({
   response,
 }: {
   response: DocumentResponse
-}): TypedResult<RunSyncAPIResponse, LatitudeError> {
+}): TypedResult<RunSyncAPIResponse<AssertedStreamType>, LatitudeError> {
   const conversation = response.providerLog?.messages
   const uuid = response.documentLogUuid
   const errorMessage = !uuid

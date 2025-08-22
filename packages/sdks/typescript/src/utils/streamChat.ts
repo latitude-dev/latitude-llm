@@ -14,8 +14,12 @@ import {
   ApiErrorJsonResponse,
 } from '@latitude-data/constants/errors'
 import { handleToolCallFactory, waitForTools } from './streamRun'
+import { AssertedStreamType } from '@latitude-data/constants/ai'
 
-export async function streamChat<Tools extends ToolSpec>(
+export async function streamChat<
+  Tools extends ToolSpec,
+  S extends AssertedStreamType = 'text',
+>(
   uuid: string,
   {
     messages,
@@ -24,8 +28,8 @@ export async function streamChat<Tools extends ToolSpec>(
     onError,
     tools,
     options,
-  }: ChatOptionsWithSDKOptions<Tools>,
-): Promise<ChatSyncAPIResponse | undefined> {
+  }: ChatOptionsWithSDKOptions<Tools, S>,
+): Promise<ChatSyncAPIResponse<S> | undefined> {
   try {
     const response = await makeRequest({
       method: 'POST',
@@ -49,7 +53,7 @@ export async function streamChat<Tools extends ToolSpec>(
       return !onError ? Promise.reject(error) : Promise.resolve(undefined)
     }
 
-    const finalResponse = await handleStream({
+    const finalResponse = await handleStream<S>({
       body: response.body! as Readable,
       onEvent,
       onError,
@@ -58,6 +62,8 @@ export async function streamChat<Tools extends ToolSpec>(
         options,
       }),
     })
+
+    if (!finalResponse) return
 
     onFinished?.(finalResponse)
 

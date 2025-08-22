@@ -2,6 +2,7 @@ import {
   DocumentLog,
   Providers,
   PublicManualEvaluationResultV2,
+  AssertedStreamType,
   ToolRequest,
   type ChainEventDto,
   type ToolCallResponse,
@@ -38,7 +39,7 @@ import {
   RenderToolCalledFn,
   RunPromptOptions,
   SDKOptions,
-  StreamChainResponse,
+  GenerationResponse,
   ToolHandler,
   ToolSpec,
   Version,
@@ -123,15 +124,15 @@ class Latitude {
       path: string,
       args?: GetOrCreatePromptOptions,
     ) => Promise<Prompt>
-    run: <Tools extends ToolSpec = {}>(
+    run: <S extends AssertedStreamType = 'text', Tools extends ToolSpec = {}>(
       path: string,
-      args: RunPromptOptions<Tools>,
-    ) => Promise<(StreamChainResponse & { uuid: string }) | undefined>
-    chat: <Tools extends ToolSpec = {}>(
+      args: RunPromptOptions<Tools, S>,
+    ) => Promise<GenerationResponse<S> | undefined>
+    chat: <S extends AssertedStreamType = 'text', Tools extends ToolSpec = {}>(
       uuid: string,
       messages: Message[],
-      args?: Omit<ChatOptions<Tools>, 'messages'>,
-    ) => Promise<StreamChainResponse | undefined>
+      args?: Omit<ChatOptions<Tools, S>, 'messages'>,
+    ) => Promise<GenerationResponse<S> | undefined>
     render: <M extends AdapterMessageType = PromptlMessage>(
       args: RenderPromptOptions<M>,
     ) => Promise<{ config: Config; messages: M[] }>
@@ -376,10 +377,10 @@ class Latitude {
     return (await response.json()) as Prompt
   }
 
-  private async runPrompt<Tools extends ToolSpec>(
-    path: string,
-    options: RunPromptOptions<Tools>,
-  ) {
+  private async runPrompt<
+    S extends AssertedStreamType = 'text',
+    Tools extends ToolSpec = {},
+  >(path: string, options: RunPromptOptions<Tools, S>) {
     const _options = {
       ...options,
       options: {
@@ -389,14 +390,18 @@ class Latitude {
       instrumentation: Latitude.instrumentation,
     }
 
-    if (options.stream) return streamRun(path, _options)
-    return syncRun(path, _options)
+    if (options.stream) return streamRun<Tools, S>(path, _options)
+
+    return syncRun<Tools, S>(path, _options)
   }
 
-  private async chat<Tools extends ToolSpec>(
+  private async chat<
+    S extends AssertedStreamType = 'text',
+    Tools extends ToolSpec = {},
+  >(
     uuid: string,
     messages: Message[],
-    args?: Omit<ChatOptions<Tools>, 'messages'>,
+    args?: Omit<ChatOptions<Tools, S>, 'messages'>,
   ) {
     // Note: Args is optional and messages is omitted to maintain backwards compatibility
     const options = {
@@ -409,8 +414,9 @@ class Latitude {
       instrumentation: Latitude.instrumentation,
     }
 
-    if (args?.stream) return streamChat(uuid, options)
-    return syncChat(uuid, options)
+    if (args?.stream) return streamChat<Tools, S>(uuid, options)
+
+    return syncChat<Tools, S>(uuid, options)
   }
 
   private async renderPrompt<M extends AdapterMessageType = PromptlMessage>({
@@ -851,7 +857,7 @@ export type {
   Project,
   Prompt,
   RenderToolCallDetails,
-  StreamChainResponse,
+  GenerationResponse,
   ToolCall,
   ToolCallResponse,
   ToolHandler,
