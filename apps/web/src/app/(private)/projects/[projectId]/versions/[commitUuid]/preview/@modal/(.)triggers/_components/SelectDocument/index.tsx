@@ -6,18 +6,22 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
-import { type DocumentVersion } from '@latitude-data/core/browser'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { DocumentVersion } from '@latitude-data/core/browser'
 
-export function useDocumentSelection() {
+export function useDocumentSelection({
+  initialDocumentUuid = '',
+}: { initialDocumentUuid?: string } = {}) {
   const { project } = useCurrentProject()
-  const [selectedDocumentUuid, setSelectedDocumentUuid] = useState<string>('')
+  const [selectedDocumentUuid, setSelectedDocumentUuid] =
+    useState<string>(initialDocumentUuid)
   const { commit } = useCurrentCommit()
   const [payloadParameters, setPayloadParameters] = useState<string[]>([])
   const { data: documents } = useDocumentVersions({
     projectId: project.id,
     commitUuid: commit.uuid,
   })
+
   return useMemo(() => {
     const document = documents.find(
       (d) => d.documentUuid === selectedDocumentUuid,

@@ -18,7 +18,7 @@ import { isErrorRetryable } from '../evaluationsV2/run'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import { RunDocumentChecker } from './RunDocumentChecker'
 
-type RunDocumentAtCommitArgs = {
+export type RunDocumentAtCommitArgs = {
   context: TelemetryContext
   workspace: Workspace
   commit: Commit
@@ -30,6 +30,7 @@ type RunDocumentAtCommitArgs = {
   customPrompt?: string
   experiment?: Experiment
   errorableUuid?: string
+  userMessage?: string
   abortSignal?: AbortSignal
 }
 
@@ -44,6 +45,7 @@ export async function runDocumentAtCommit({
   customPrompt,
   experiment,
   errorableUuid,
+  userMessage,
   abortSignal,
   tools = {},
 }: RunDocumentAtCommitArgs) {
@@ -79,6 +81,7 @@ export async function runDocumentAtCommit({
     errorableUuid,
     prompt: result.value,
     parameters,
+    userMessage,
   })
   const checkerResult = await checker.call()
   if (checkerResult.error) {

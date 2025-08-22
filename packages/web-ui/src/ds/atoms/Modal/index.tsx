@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  type FooterProps,
 } from './Primitives'
 
 export const ModalTrigger = DialogTrigger
@@ -55,6 +56,7 @@ export type ModalProps = {
   dismissible?: boolean
   scrollable?: boolean
   zIndex?: ZIndex
+  footerAlign?: FooterProps['align']
 }
 
 export function Modal({
@@ -71,6 +73,7 @@ export function Modal({
   dismissible = false,
   scrollable = true,
   zIndex = 'modal',
+  footerAlign = 'right',
 }: ModalProps) {
   return (
     <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
@@ -125,7 +128,9 @@ export function Modal({
                 'bg-background-gray py-6': !!footer,
               })}
             >
-              {footer ? <DialogFooter>{footer}</DialogFooter> : null}
+              {footer ? (
+                <DialogFooter align={footerAlign}>{footer}</DialogFooter>
+              ) : null}
             </div>
           ) : null}
         </div>

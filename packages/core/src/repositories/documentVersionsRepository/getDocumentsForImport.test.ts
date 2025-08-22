@@ -62,8 +62,7 @@ describe('DocumentVersionsRepository.getDocumentsForImport', () => {
 
     await updateDocument({
       commit: laterCommit,
-      // @ts-expect-error
-      document: document,
+      document,
       deletedAt: new Date(),
     })
 

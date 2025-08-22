@@ -9,11 +9,14 @@ import { PipedreamComponentPropsForm } from '$/components/Pipedream/PipedreamPro
 import { type Trigger } from '../index'
 import { ConnectAccount } from './ConnectAccount'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { useDocumentSelection, SelectDocument } from './SelectDocument'
 import { useCreateDocumentTrigger } from './useCreateDocumentTrigger'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { SelectPayloadParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/TriggerForms/IntegrationTriggerForm/SelectPayloadParameters'
 import { useParsedPipedreamTriggerDescription } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/TriggerForms/IntegrationTriggerForm/usePipedreamTriggerDescription'
+import {
+  useDocumentSelection,
+  SelectDocument,
+} from '../../../../../_components/SelectDocument'
 
 export function TriggerConfiguration({
   trigger,

@@ -13,11 +13,13 @@ export function useRunPlaygroundPrompt({
   projectId,
   document,
   parameters,
+  userMessage,
 }: {
   document: DocumentVersion
   commit: ICommitContextType['commit']
   projectId: number
   parameters: Record<string, unknown> | undefined
+  userMessage?: string
 }) {
   const { createStreamHandler, abortCurrentStream, hasActiveStream } =
     useStreamHandler()
@@ -36,6 +38,7 @@ export function useRunPlaygroundPrompt({
           commitUuid: commit.uuid,
           parameters: parameters ?? {},
           stream: true, // Explicitly request streaming
+          userMessage,
         }),
       },
     )
@@ -48,6 +51,7 @@ export function useRunPlaygroundPrompt({
     commit.uuid,
     parameters,
     createStreamHandler,
+    userMessage,
   ])
 
   const addMessagesFn = useCallback(

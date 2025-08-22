@@ -1,4 +1,8 @@
-import { BadRequestError, LatitudeError } from '@latitude-data/constants/errors'
+import {
+  BadRequestError,
+  LatitudeError,
+  NotFoundError,
+} from '@latitude-data/constants/errors'
 import { Commit, DocumentTrigger, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
@@ -6,7 +10,10 @@ import { documentTriggers } from '../../schema'
 import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { deployDocumentTrigger, undeployDocumentTrigger } from './deploy'
-import { DocumentTriggersRepository } from '../../repositories'
+import {
+  DocumentTriggersRepository,
+  DocumentVersionsRepository,
+} from '../../repositories'
 
 /**
  * Updates the configuration of a document trigger at a given commit.
@@ -24,11 +31,13 @@ export async function updateDocumentTriggerConfiguration<
     workspace,
     commit,
     triggerUuid,
+    documentUuid,
     configuration,
   }: {
     workspace: Workspace
     commit: Commit
     triggerUuid: string
+    documentUuid?: string
     configuration: DocumentTriggerConfiguration<T>
   },
   transaction = new Transaction(),
@@ -40,7 +49,27 @@ export async function updateDocumentTriggerConfiguration<
   const contextResult = await transaction.call<{
     documentTrigger: DocumentTrigger<T>
     isDraftVersion: boolean
+    documentAssigned?: string
   }>(async (tx) => {
+    if (documentUuid) {
+      const documentVersionsRepo = new DocumentVersionsRepository(
+        workspace.id,
+        tx,
+      )
+      const documentResult = await documentVersionsRepo.getDocumentAtCommit({
+        commitUuid: commit.uuid,
+        projectId: commit.projectId,
+        documentUuid,
+      })
+      if (!Result.isOk(documentResult)) {
+        return Result.error(
+          new NotFoundError(
+            `Document with uuid '${documentUuid}' not found in workspace`,
+          ),
+        )
+      }
+    }
+
     const triggersScope = new DocumentTriggersRepository(workspace.id, tx)
     const documentTriggerResult = await triggersScope.getTriggerByUuid<T>({
       uuid: triggerUuid,
@@ -58,10 +87,13 @@ export async function updateDocumentTriggerConfiguration<
     return Result.ok({
       documentTrigger,
       isDraftVersion: documentTrigger.commitId === commit.id,
+      documentAssigned: documentUuid,
     })
   })
+
   if (!Result.isOk(contextResult)) return contextResult
-  const { documentTrigger, isDraftVersion } = contextResult.unwrap()
+  const { documentTrigger, isDraftVersion, documentAssigned } =
+    contextResult.unwrap()
 
   // Phase 2: external-service operations outside of any active transaction
   if (isDraftVersion) {
@@ -95,7 +127,7 @@ export async function updateDocumentTriggerConfiguration<
         workspaceId: workspace.id,
         projectId: commit.projectId,
         uuid: triggerUuid,
-        documentUuid: documentTrigger.documentUuid,
+        documentUuid: documentAssigned || documentTrigger.documentUuid,
         triggerType: documentTrigger.triggerType,
         commitId: commit.id,
         configuration,
@@ -105,6 +137,7 @@ export async function updateDocumentTriggerConfiguration<
       .onConflictDoUpdate({
         target: [documentTriggers.uuid, documentTriggers.commitId],
         set: {
+          documentUuid: documentAssigned || documentTrigger.documentUuid,
           configuration,
           deploymentSettings,
           enabled: false,

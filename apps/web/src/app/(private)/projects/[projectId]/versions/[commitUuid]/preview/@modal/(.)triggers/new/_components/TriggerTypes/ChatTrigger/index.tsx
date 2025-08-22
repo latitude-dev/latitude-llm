@@ -1,46 +1,76 @@
-import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useCallback, useMemo } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { DocumentTriggerType } from '@latitude-data/constants'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import useDocumentTriggers from '$/stores/documentTriggers'
 import { type OnTriggerCreated } from '../../../client'
-import { PublishedDocumentPreview } from './PublishedDocumentPreview'
+import {
+  SelectDocument,
+  useDocumentSelection,
+} from '../../../../_components/SelectDocument'
+import { TriggerWrapper } from '../TriggerWrapper'
 
-const FAKE_CHAT_TRIGGER_DOCUMENT = {}
 export function ChatTrigger({
-  onTriggerCreated: _ot,
+  onTriggerCreated,
 }: {
   onTriggerCreated: OnTriggerCreated
 }) {
-  const { isHead: canEdit } = useCurrentCommit()
+  const documentSelection = useDocumentSelection()
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const document = documentSelection.document
+  const {
+    data: triggers,
+    create,
+    isCreating,
+  } = useDocumentTriggers(
+    {
+      projectId: project.id,
+      commitUuid: commit.uuid,
+    },
+    {
+      onCreated: (trigger) => {
+        onTriggerCreated(trigger)
+      },
+    },
+  )
+  const disabled = !!commit.mergedAt || isCreating
+  const documentUuid = document?.documentUuid
+  const filteredOptions = useMemo(() => {
+    const existingChatsDocumentUuids = triggers
+      .filter((t) => t.triggerType === DocumentTriggerType.Chat)
+      .map((t) => t.documentUuid)
+    return documentSelection.options.filter(
+      (o) => !existingChatsDocumentUuids.includes(o.value),
+    )
+  }, [triggers, documentSelection.options])
+  const onCreate = useCallback(() => {
+    if (!documentUuid) return
 
-  const onPublish = () => {
-    if (!canEdit) return
-
-    console.log('TODO: Refactor shared document to be a trigger document')
-  }
-  const isDisabled = !canEdit || true
+    create({
+      documentUuid,
+      triggerType: DocumentTriggerType.Chat,
+      configuration: {},
+    })
+  }, [create, documentUuid])
   return (
-    <div className='h-full flex flex-col items-center justify-center w-full p-4'>
-      <div className='flex flex-col items-center gap-y-4'>
-        <div className='flex flex-col w-full items-center'>
-          <Text.H5B>Share to the web</Text.H5B>
-          <Text.H5 color='foregroundMuted'>
-            Create a public chatbot with Latitude
-          </Text.H5>
-        </div>
-        <PublishedDocumentPreview publishedData={FAKE_CHAT_TRIGGER_DOCUMENT} />
-        <div className='max-w-[300px] w-full'>
-          <Button
-            fullWidth
-            fancy
-            variant='default'
-            isLoading={false}
-            disabled={isDisabled}
-            onClick={onPublish}
-          >
-            Share prompt
-          </Button>
-        </div>
-      </div>
-    </div>
+    <TriggerWrapper
+      title='Chat Trigger'
+      description='Allow users to chat with this prompt'
+    >
+      <SelectDocument
+        options={filteredOptions}
+        document={document}
+        onSelectDocument={documentSelection.onSelectDocument}
+      />
+      {document ? (
+        <Button variant='default' fancy onClick={onCreate} disabled={disabled}>
+          {isCreating ? 'Creating trigger...' : 'Create trigger'}
+        </Button>
+      ) : null}
+    </TriggerWrapper>
   )
 }

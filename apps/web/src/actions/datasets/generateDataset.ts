@@ -47,7 +47,7 @@ export const generateDatasetAction = authProcedure
       __internal: { source: LogSources.Playground },
     }).then((r) => r.unwrap())
 
-    const sdkResponse = await sdk.prompts.run(
+    const sdkResponse = await sdk.prompts.run<{}>(
       env.COPILOT_PROMPT_DATASET_GENERATOR_PATH,
       {
         stream: false,

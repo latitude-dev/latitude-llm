@@ -47,20 +47,30 @@ export function EditIntegrationTrigger({
     setConfiguration,
   ])
 
+  useEffect(() => {
+    // Reset payload parameters if the document changes
+    if (trigger.documentUuid !== document?.documentUuid) {
+      setPayloadParameters([])
+    }
+  }, [document.documentUuid, trigger.documentUuid])
+
   if (!valid) {
     return <Text.H5 color='destructive'>{error}</Text.H5>
   }
 
   return (
     <>
-      <Text.H5 asChild color='foregroundMuted' display='block'>
-        <div
-          className='[&>a]:underline [&>a]:text-foreground'
-          dangerouslySetInnerHTML={{
-            __html: triggerDescription,
-          }}
-        />
-      </Text.H5>
+      <div className='bg-backgroundCode flex flex-col border border-border rounded-md p-3'>
+        <Text.H4>{data.integration.name}</Text.H4>
+        <Text.H5 asChild color='foregroundMuted' display='block'>
+          <div
+            className='[&>a]:underline [&>a]:text-foreground'
+            dangerouslySetInnerHTML={{
+              __html: triggerDescription,
+            }}
+          />
+        </Text.H5>
+      </div>
       <SelectPayloadParameters
         document={document}
         payloadParameters={payloadParameters}

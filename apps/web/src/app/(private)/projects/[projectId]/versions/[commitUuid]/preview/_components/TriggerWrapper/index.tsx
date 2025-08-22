@@ -12,12 +12,14 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { OnRunTriggerFn } from '../TriggersList'
 import Link from 'next/link'
-import { ROUTES } from '$/services/routes'
+import { OnRunTriggerFn } from '../TriggersList'
+import { OnRunChatTrigger } from '../useActiveTrigger'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 
 function ToggleEnabled({
   projectId,
@@ -107,9 +109,20 @@ function EditTriggerButton({
   )
 }
 
+function isChatTrigger(
+  trigger: DocumentTrigger,
+): trigger is DocumentTrigger<DocumentTriggerType.Chat> {
+  return trigger.triggerType === DocumentTriggerType.Chat
+}
+
+const RUNNABLE_TRIGGERS = [
+  DocumentTriggerType.Scheduled,
+  DocumentTriggerType.Chat,
+]
 export function TriggerWrapper({
   image,
   title,
+  subtitle,
   description,
   descriptionLoading = false,
   trigger,
@@ -117,22 +130,25 @@ export function TriggerWrapper({
   openTriggerUuid,
   setOpenTriggerUuid,
   onRunTrigger,
+  onRunChatTrigger,
 }: {
   document: DocumentVersion
   trigger: DocumentTrigger
   title: string
+  subtitle?: string
   description: string
   descriptionLoading?: boolean
   image: ReactNode
   openTriggerUuid: string | null
   setOpenTriggerUuid: ReactStateDispatch<string | null>
   onRunTrigger: OnRunTriggerFn
+  onRunChatTrigger: OnRunChatTrigger
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const isLive = !!commit.mergedAt
-  const canSeeEvents = trigger.triggerType !== DocumentTriggerType.Scheduled
-  const canRunTrigger = trigger.triggerType === DocumentTriggerType.Scheduled
+  const canSeeEvents = !RUNNABLE_TRIGGERS.includes(trigger.triggerType)
+  const canRunTrigger = RUNNABLE_TRIGGERS.includes(trigger.triggerType)
   const onToggleEventList = useCallback(() => {
     if (!canSeeEvents) return
 
@@ -146,14 +162,19 @@ export function TriggerWrapper({
   const handleRunTrigger = useCallback(() => {
     if (!canRunTrigger) return
 
+    if (isChatTrigger(trigger)) {
+      onRunChatTrigger({ trigger, document })
+      return
+    }
+
     // Schedule triggers don't have parameters
     onRunTrigger({ document, parameters: {} })
-  }, [onRunTrigger, document, canRunTrigger])
+  }, [onRunTrigger, onRunChatTrigger, trigger, document, canRunTrigger])
   return (
     <div className='flex flex-col'>
       <div
         className={cn(
-          'w-full p-4 flex flex-row justify-between items-center gap-4',
+          'w-full p-4 flex flex-row items-start justify-between gap-4',
           {
             'border-b border-border': open,
             'cursor-pointer': canSeeEvents,
@@ -162,14 +183,29 @@ export function TriggerWrapper({
         onClick={onToggleEventList}
       >
         <div className='flex flex-row gap-4'>
-          <div className='flex-none'>{image}</div>
-          <div className='flex-1 flex flex-col gap-0'>
-            <Text.H4M>{title}</Text.H4M>
-            {descriptionLoading ? (
-              <Skeleton className='w-24 h-5' />
-            ) : (
-              <Text.H5 color='foregroundMuted'>{description}</Text.H5>
-            )}
+          <div className='flex-none'>
+            <div
+              className={cn(
+                'size-10 rounded-md bg-backgroundCode flex items-center justify-center',
+              )}
+            >
+              {image}
+            </div>
+          </div>
+          <div className='flex-1 flex flex-col gap-1'>
+            <div className='flex flex-col'>
+              <Text.H4M>{title}</Text.H4M>
+              {descriptionLoading ? (
+                <Skeleton className='w-24 h-5' />
+              ) : (
+                <Text.H5 color='foregroundMuted'>{description}</Text.H5>
+              )}
+            </div>
+            {subtitle ? (
+              <div className='flex'>
+                <Badge variant='muted'>{subtitle}</Badge>
+              </div>
+            ) : null}
           </div>
         </div>
         <div className='flex flex-row gap-x-4'>
@@ -183,12 +219,6 @@ export function TriggerWrapper({
               isLive={isLive}
               trigger={trigger}
             />
-            <EditTriggerButton
-              projectId={project.id}
-              commitUuid={commit.uuid}
-              trigger={trigger}
-              isLive={isLive}
-            />
             {canRunTrigger ? (
               <Button
                 fancy
@@ -199,6 +229,12 @@ export function TriggerWrapper({
                 Run
               </Button>
             ) : null}
+            <EditTriggerButton
+              projectId={project.id}
+              commitUuid={commit.uuid}
+              trigger={trigger}
+              isLive={isLive}
+            />
           </div>
           {canSeeEvents ? (
             <div className='min-h-button flex items-center justify-center'>

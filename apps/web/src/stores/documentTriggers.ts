@@ -12,7 +12,7 @@ import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/tr
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { toggleEnabledDocumentTriggerAction } from '$/actions/documents/triggers/toggleEnabledDocumentTriggerAction'
 
-const EMPTY_ARRAY = [] as const
+const EMPTY_ARRAY: DocumentTrigger[] = []
 export default function useDocumentTriggers(
   {
     projectId,
@@ -142,8 +142,10 @@ export default function useDocumentTriggers(
     <T extends DocumentTriggerType>({
       documentTriggerUuid,
       configuration,
+      documentUuid,
     }: {
       documentTriggerUuid: string
+      documentUuid?: string
       configuration: DocumentTriggerConfiguration<T>
     }) => {
       executeUpdate({
@@ -151,6 +153,7 @@ export default function useDocumentTriggers(
         commitUuid,
         documentTriggerUuid,
         configuration,
+        documentUuid,
       })
     },
     [executeUpdate, projectId, commitUuid],

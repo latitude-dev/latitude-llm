@@ -6,12 +6,18 @@
         "name": "next"
       }
     ],
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
     "moduleResolution": "Bundler",
     "jsx": "preserve",
-    "typeRoots": ["./node_modules/@types"],
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
     "baseUrl": ".",
     "paths": {
-      "$/*": ["./src/*"]
+      "$/*": [
+        "./src/*"
+      ]
     }
   },
   "include": [
@@ -22,5 +28,9 @@
     "next.config.js",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "./src/workers"]
+  "exclude": [
+    "node_modules",
+    "./src/workers",
+    ".next"
+  ]
 }

@@ -275,6 +275,7 @@ function DocumentEditorContent({
  * @param params.setMode - Function to switch between preview and chat modes
  * @param params.togglePlaygroundOpen - Function to toggle playground visibility
  * @param params.setHistoryLog - Function to log execution history
+ * @param params.userMessage - Inject user message into the prompt
  * @returns Object containing playground state and control functions
  * @returns playground - The playground chat instance with message history
  * @returns hasActiveStream - Whether there's currently an active streaming response
@@ -287,6 +288,7 @@ export function usePlaygroundLogic({
   project,
   document,
   parameters,
+  userMessage,
   setMode,
   togglePlaygroundOpen,
   setHistoryLog,
@@ -298,6 +300,7 @@ export function usePlaygroundLogic({
   setMode: (mode: 'preview' | 'chat') => void
   togglePlaygroundOpen: () => void
   setHistoryLog: (log: { uuid: string; source: LogSources }) => void
+  userMessage?: string
 }) {
   const onPromptRan = useCallback(
     (documentLogUuid?: string, error?: Error) => {
@@ -314,6 +317,7 @@ export function usePlaygroundLogic({
       projectId: project.id,
       document,
       parameters,
+      userMessage,
     })
 
   const playground = usePlaygroundChat({

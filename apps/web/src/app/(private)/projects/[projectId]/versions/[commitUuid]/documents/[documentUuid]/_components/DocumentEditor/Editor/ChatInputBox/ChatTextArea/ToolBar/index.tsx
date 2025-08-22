@@ -23,9 +23,11 @@ export function ToolBar({
   onBack,
   disabledSubmit = false,
   disabledBack = false,
+  onBackLabel = 'Back to editor',
 }: {
   onSubmit?: () => void
   onBack?: () => void
+  onBackLabel?: string
   disabledSubmit?: boolean
   disabledBack?: boolean
 }) {
@@ -40,7 +42,7 @@ export function ToolBar({
           roundy={true}
           userSelect={false}
         >
-          Back to editor
+          {onBackLabel}
         </Button>
       )}
       {!!onSubmit && (

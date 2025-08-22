@@ -11,6 +11,7 @@ export const updateDocumentTriggerConfigurationAction = withCommit
   .input(
     z.object({
       documentTriggerUuid: z.string(),
+      documentUuid: z.string().optional(),
       configuration: documentTriggerConfigurationSchema,
     }),
   )
@@ -22,6 +23,7 @@ export const updateDocumentTriggerConfigurationAction = withCommit
       workspace,
       commit,
       triggerUuid: documentTriggerUuid,
+      documentUuid: input.documentUuid,
       configuration,
     }).then((r) => r.unwrap())
   })

@@ -38,17 +38,17 @@ export const generateDatasetPreviewAction = authProcedure
       projectId: env.COPILOT_PROJECT_ID,
       __internal: { source: LogSources.Playground },
     }).then((r) => r.unwrap())
-    const result = await sdk.prompts.run(
-      env.COPILOT_PROMPT_DATASET_GENERATOR_PATH,
-      {
-        stream: false,
-        parameters: {
-          row_count: 10,
-          parameters: input.parameters,
-          user_message: input.description,
-        },
+    const result = await sdk.prompts.run<{
+      rows: string
+      explanation: string
+    }>(env.COPILOT_PROMPT_DATASET_GENERATOR_PATH, {
+      stream: false,
+      parameters: {
+        row_count: 10,
+        parameters: input.parameters,
+        user_message: input.description,
       },
-    )
+    })
     if (!result) {
       throw new BadRequestError(
         'Something went wrong generating the CSV preview',
