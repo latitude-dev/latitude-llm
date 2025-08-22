@@ -6,8 +6,6 @@ import {
   UserMessage,
 } from '@latitude-data/constants/legacyCompiler'
 import { Commit, DocumentVersion, User, Workspace } from '../../../browser'
-import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
-import { documentsQueue } from '../../../jobs/queues'
 import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { BACKGROUND, TelemetryContext } from '../../../telemetry'
@@ -17,9 +15,8 @@ import { runDocumentAtCommit } from '../../commits'
 import { addMessages } from '../../documentLogs/addMessages/index'
 import { checkLatteCredits } from './credits/check'
 import { consumeLatteCredits } from './credits/consume'
-import { assertCopilotIsSupported, sendWebsockets } from './helpers'
+import { sendWebsockets } from './helpers'
 import { buildToolHandlers } from './tools'
-
 export * from './threads/checkpoints/clearCheckpoints'
 export * from './threads/checkpoints/createCheckpoint'
 export * from './threads/checkpoints/undoChanges'
@@ -34,6 +31,7 @@ export async function runNewLatte({
   threadUuid,
   message,
   context,
+  abortSignal,
 }: {
   copilotWorkspace: Workspace
   copilotCommit: Commit
@@ -43,6 +41,7 @@ export async function runNewLatte({
   threadUuid: string
   message: string
   context: string
+  abortSignal?: AbortSignal
 }): PromisedResult<undefined> {
   return generateLatteResponse({
     context: BACKGROUND({ workspaceId: copilotWorkspace.id }),
@@ -53,6 +52,7 @@ export async function runNewLatte({
     user,
     threadUuid,
     initialParameters: { message, context },
+    abortSignal,
   })
 }
 
@@ -65,6 +65,7 @@ export async function addMessageToExistingLatte({
   threadUuid,
   message,
   context,
+  abortSignal,
 }: {
   copilotWorkspace: Workspace
   copilotCommit: Commit
@@ -74,6 +75,7 @@ export async function addMessageToExistingLatte({
   threadUuid: string
   message: string
   context: string
+  abortSignal?: AbortSignal
 }): PromisedResult<undefined> {
   const userMessage: UserMessage = {
     role: MessageRole.user,
@@ -98,39 +100,8 @@ export async function addMessageToExistingLatte({
     user,
     threadUuid,
     messages: [userMessage],
+    abortSignal,
   })
-}
-
-export async function createLatteJob({
-  workspace,
-  user,
-  threadUuid,
-  message,
-  context,
-}: {
-  workspace: Workspace
-  user: User
-  threadUuid: string
-  message: string
-  context: string
-}): PromisedResult<undefined> {
-  const supportResult = assertCopilotIsSupported()
-  if (!supportResult.ok) return supportResult as ErrorResult<LatitudeError>
-
-  const checking = await checkLatteCredits({ workspace })
-  if (checking.error) {
-    return Result.error(checking.error)
-  }
-
-  await documentsQueue.add('runLatteJob', {
-    workspaceId: workspace.id,
-    userId: user.id,
-    threadUuid,
-    message,
-    context,
-  } as RunLatteJobData)
-
-  return Result.nil()
 }
 
 type generateLatteResponseArgs = {
@@ -143,6 +114,7 @@ type generateLatteResponseArgs = {
   initialParameters?: { message: string; context: string } // for the first "new" request
   messages?: Message[] // for subsequent "add" requests
   user: User
+  abortSignal?: AbortSignal
 }
 
 async function generateLatteResponse(args: generateLatteResponseArgs) {
@@ -202,6 +174,7 @@ async function innerGenerateLatteResponse({
   initialParameters,
   messages,
   user,
+  abortSignal,
 }: {
   context: TelemetryContext
   copilotWorkspace: Workspace
@@ -212,6 +185,7 @@ async function innerGenerateLatteResponse({
   initialParameters?: { message: string; context: string } // for the first "new" request
   messages?: Message[] // for subsequent "add" requests
   user: User
+  abortSignal?: AbortSignal
 }) {
   const tools = buildToolHandlers({
     user,
@@ -230,6 +204,7 @@ async function innerGenerateLatteResponse({
         source: LogSources.API,
         errorableUuid: threadUuid,
         tools,
+        abortSignal,
       })
     : await addMessages({
         context: context,
@@ -238,6 +213,7 @@ async function innerGenerateLatteResponse({
         messages: messages!,
         source: LogSources.API,
         tools,
+        abortSignal,
       })
   if (!runResult.ok) return runResult as ErrorResult<LatitudeError>
   const run = runResult.unwrap()

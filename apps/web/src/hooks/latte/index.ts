@@ -38,6 +38,7 @@ import {
   LatteToolStep,
 } from './types'
 import { useLatteUsage } from './usage'
+import { abortChatLatteAction } from '$/actions/latte/abortChat'
 
 const EMPTY_ARRAY = [] as const
 
@@ -79,6 +80,7 @@ export function useSyncLatteUrlState() {
  *
  * @returns An object containing:
  *   - `sendMessage`: Function to send a message to the current or new Latte thread
+ *   - `abortChat`: Function to abort the current active Latte response
  */
 export function useLatteChatActions() {
   const latteContext = useLatteContext()
@@ -89,10 +91,13 @@ export function useLatteChatActions() {
     setError,
     addInteractions,
     debugVersionUuid,
+    setBullMqJobId,
   } = useLatteStore()
   const { execute: createNewChat } = useServerAction(createNewLatteAction, {
     onSuccess: ({ data }) => {
       setThreadUuid(data.uuid)
+      setBullMqJobId(data.jobId)
+      console.log('Created new chat', data)
     },
     onError: ({ err }) => {
       setError(err.message)
@@ -103,12 +108,28 @@ export function useLatteChatActions() {
   const { execute: addMessageToExistingChat } = useServerAction(
     addMessageToLatteAction,
     {
+      onSuccess: ({ data }) => {
+        setBullMqJobId(data.jobId)
+      },
       onError: ({ err }) => {
         setError(err.message)
         setIsLoading(false)
       },
     },
   )
+
+  const { execute: abortChat } = useServerAction(abortChatLatteAction, {
+    onSuccess: () => {
+      console.log('Chat aborted successfully')
+      setIsLoading(false)
+      setBullMqJobId(undefined)
+    },
+    onError: ({ err }) => {
+      console.error('Error aborting chat:', err)
+      setIsLoading(false)
+      setBullMqJobId(undefined)
+    },
+  })
 
   const sendMessage = useCallback(
     async (message: string) => {
@@ -138,7 +159,7 @@ export function useLatteChatActions() {
     ],
   )
 
-  return { sendMessage }
+  return { sendMessage, abortChat }
 }
 
 /**

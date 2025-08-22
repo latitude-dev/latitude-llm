@@ -6,12 +6,16 @@ import {
 import { JSONSchema7 } from 'json-schema'
 import { LogSources, ProviderApiKey, Workspace } from '../../../browser'
 import { ai } from '../../../services/ai'
-import { processResponse } from '../../../services/chains/ProviderProcessor'
+import {
+  fakeResponse,
+  processResponse,
+} from '../../../services/chains/ProviderProcessor'
 import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
 import { createProviderLog } from '../../../services/providerLogs'
 import { TelemetryContext } from '../../../telemetry'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
+import { isAbortError } from '../../isAbortError'
 
 export type ExecuteStepArgs = {
   controller: ReadableStreamDefaultController
@@ -68,11 +72,32 @@ export async function streamAIResponse({
   const checkResult = checkValidStream({ type: aiResult.type })
   if (checkResult.error) throw checkResult.error
 
-  const { error } = await consumeStream({
-    controller,
-    result: aiResult,
-  })
-  if (error) throw error
+  try {
+    await consumeStream({
+      controller,
+      result: aiResult,
+    })
+  } catch (error) {
+    if (isAbortError(error)) {
+      const response = await fakeResponse({ documentLogUuid })
+      await createProviderLog({
+        workspace,
+        ...buildProviderLogDto({
+          workspace,
+          source,
+          provider,
+          conversation: {
+            messages,
+            config,
+          },
+          stepStartTime: startTime,
+          errorableUuid: documentLogUuid,
+          response: response,
+        }),
+      }).then((r) => r.unwrap())
+    }
+    throw error
+  }
 
   const processedResponse = await processResponse({
     aiResult,

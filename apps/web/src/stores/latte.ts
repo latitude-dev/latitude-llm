@@ -27,6 +27,9 @@ interface LatteState {
   usage: LatteUsage | undefined
   isLoadingUsage: boolean
 
+  // BullMQ job ID to abort lattes job
+  bullMqJobId: string | undefined
+
   // Actions
   setThreadUuid: (uuid: string | undefined) => void
   setIsLoading: (loading: boolean) => void
@@ -55,6 +58,7 @@ interface LatteState {
   setDebugVersionUuid: (uuid: string | undefined) => void
   setUsage: (usage: LatteUsage | undefined) => void
   setIsLoadingUsage: (loading: boolean) => void
+  setBullMqJobId: (jobId: string | undefined) => void
 
   // Reset functions
   resetChat: () => void
@@ -73,6 +77,7 @@ const useStore = create<LatteState>((set) => ({
   debugVersionUuid: undefined,
   usage: undefined,
   isLoadingUsage: false,
+  bullMqJobId: undefined,
 
   // Chat actions
   setIsLoading: (loading: boolean) => set({ isLoading: loading }),
@@ -167,6 +172,8 @@ const useStore = create<LatteState>((set) => ({
   setUsage: (usage: LatteUsage | undefined) => set({ usage }),
   setIsLoadingUsage: (loading: boolean) => set({ isLoadingUsage: loading }),
 
+  setBullMqJobId: (jobId: string | undefined) => set({ bullMqJobId: jobId }),
+
   // Reset functions
   resetChat: () =>
     set({
@@ -174,6 +181,7 @@ const useStore = create<LatteState>((set) => ({
       interactions: [],
       error: undefined,
       threadUuid: undefined,
+      bullMqJobId: undefined,
     }),
 
   resetChanges: () =>
@@ -190,6 +198,7 @@ const useStore = create<LatteState>((set) => ({
       changes: [],
       latteActionsFeedbackUuid: undefined,
       threadUuid: undefined,
+      bullMqJobId: undefined,
     }),
 }))
 
@@ -201,6 +210,12 @@ export const useLatteStore = () => {
       defaultValue: undefined,
     },
   )
+  const { setValue: setStoredBullMqJobId } = useLocalStorage<
+    string | undefined
+  >({
+    key: AppLocalStorage.latteBullMqJobId,
+    defaultValue: undefined,
+  })
 
   const setThreadUuid = useCallback(
     (uuid: string | undefined) => {
@@ -209,17 +224,27 @@ export const useLatteStore = () => {
     },
     [store, setStoredThreadUuid],
   )
+
   const resetChat = useCallback(() => {
     store.resetChat()
     setStoredThreadUuid(undefined)
-  }, [store, setStoredThreadUuid])
+    setStoredBullMqJobId(undefined)
+  }, [store, setStoredThreadUuid, setStoredBullMqJobId])
 
+  const setBullMqJobId = useCallback(
+    (jobId: string | undefined) => {
+      store.setBullMqJobId(jobId)
+      setStoredBullMqJobId(jobId)
+    },
+    [store, setStoredBullMqJobId],
+  )
   return useMemo(
     () => ({
       ...store,
       setThreadUuid,
       resetChat,
+      setBullMqJobId,
     }),
-    [store, setThreadUuid, resetChat],
+    [store, setThreadUuid, resetChat, setBullMqJobId],
   )
 }

@@ -106,7 +106,6 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
     } catch (e) {
       // Handle abort errors gracefully - just end the stream without treating as error
       if (isAbortError(e)) {
-        this.endStream()
         return
       }
 

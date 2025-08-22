@@ -313,6 +313,7 @@ export abstract class StreamManager {
   protected sendEvent(event: OmittedLatitudeEventData) {
     if (!this.controller) throw new Error('Stream not started')
 
+    console.log('➡️ Emitting event', event.type)
     this.controller.enqueue({
       event: StreamEventTypes.Latitude,
       // TODO(compiler)

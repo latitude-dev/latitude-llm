@@ -1,12 +1,22 @@
 import { Job } from 'bullmq'
 
+import { LogSources } from '@latitude-data/constants'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { LatitudeError } from '../../../lib/errors'
 import { DocumentLogsRepository, UsersRepository } from '../../../repositories'
-import { addMessageToExistingLatte } from '../../../services/copilot/latte/addMessage'
-import { runNewLatte } from '../../../services/copilot/latte/run'
+import {
+  addMessageToExistingLatte,
+  runNewLatte,
+} from '../../../services/copilot/latte/addMessage'
 import { getCopilotDocument } from '../../../services/copilot/latte/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
+import {
+  clearJobCancellation,
+  isJobCancelled,
+} from '../../../services/bullmq/cancelJob'
+import { Workspace } from '../../../browser'
+import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
+import { createProviderLog } from '../../../services/providerLogs'
 
 export type RunLatteJobData = {
   workspaceId: number
@@ -45,6 +55,18 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
     debugVersionUuid,
   } = job.data
   const workspace = await unsafelyFindWorkspace(workspaceId).then((w) => w!)
+  const controller = new AbortController()
+
+  const interval = setInterval(async () => {
+    if (job.id && (await isJobCancelled(job.id))) {
+      await abortLatteJob(job.id, controller, interval)
+      return
+    }
+  }, 500)
+
+  console.log(
+    `🏃 Starting latte job for workspace ${workspaceId} thread ${threadUuid}`,
+  )
 
   const usersScope = new UsersRepository(workspace.id)
   const userResult = await usersScope.find(userId)
@@ -78,6 +100,8 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
   const documentLogResult = await documentLogsScope.findByUuid(threadUuid)
 
   if (!documentLogResult.ok) {
+    console.log('No existing chat found, creating a new one')
+    // No existing chat found
     // Chat still does not exist, we create a new one
     const runResult = await runNewLatte({
       copilotWorkspace,
@@ -88,6 +112,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
       threadUuid,
       message,
       context,
+      abortSignal: controller.signal,
     })
 
     if (!runResult.ok) {
@@ -97,7 +122,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
         error: runResult.error as LatitudeError,
       })
     }
-
+    clearInterval(interval)
     return runResult
   }
 
@@ -110,6 +135,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
     threadUuid,
     message,
     context,
+    abortSignal: controller.signal,
   })
 
   if (!runResult.ok) {
@@ -119,6 +145,19 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
       error: runResult.error as LatitudeError,
     })
   }
-
+  clearInterval(interval)
   return runResult
+}
+
+const abortLatteJob = async (
+  jobId: string,
+  controller: AbortController,
+  interval: NodeJS.Timeout,
+  // workspace: Workspace,
+  // threadUuid: string,
+) => {
+  console.log(`❌ Job ${jobId} cancelled, aborting...`)
+  clearJobCancellation(jobId)
+  controller.abort()
+  clearInterval(interval)
 }

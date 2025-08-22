@@ -39,6 +39,7 @@ export function LatteChatInput({
   inConversation,
   feedbackRequested,
   addFeedbackToLatteChange,
+  abortLatteChat,
 }: {
   isLoading: boolean
   inConversation: boolean
@@ -54,6 +55,7 @@ export function LatteChatInput({
     feedback: string,
     evaluationResultUuid?: string,
   ) => void
+  abortLatteChat?: () => void
 }) {
   const placeholder = useTypeWriterValue(
     inConversation ? [] : INPUT_PLACEHOLDERS,
@@ -180,6 +182,25 @@ export function LatteChatInput({
           >
             <Text.H5 noWrap color='latteInputForeground'>
               New chat
+            </Text.H5>
+          </Button>
+        )}
+        {inConversation && (
+          <Button
+            variant='ghost'
+            size='none'
+            onClick={abortLatteChat}
+            iconProps={{
+              name: 'plus',
+              color: 'latteInputForeground',
+              className:
+                'flex-shrink-0 group-hover:text-latte-input-foreground/75',
+            }}
+            className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
+            userSelect={false}
+          >
+            <Text.H5 noWrap color='latteInputForeground'>
+              Abort
             </Text.H5>
           </Button>
         )}

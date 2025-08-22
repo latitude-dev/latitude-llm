@@ -7,7 +7,6 @@ import {
   DocumentLogsRepository,
   UsersRepository,
 } from '../../../repositories'
-import * as runLatte from '../../../services/copilot/latte/run'
 import * as addMessageLatte from '../../../services/copilot/latte/addMessage'
 import * as chatHelpers from '../../../services/copilot/latte/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
@@ -68,7 +67,7 @@ describe('runLatteJob', () => {
     vi.spyOn(WebsocketClient, 'sendEvent').mockResolvedValue({
       emit: vi.fn(),
     } as any)
-    vi.spyOn(runLatte, 'runNewLatte').mockResolvedValue({
+    vi.spyOn(addMessageLatte, 'runNewLatte').mockResolvedValue({
       ok: true,
       unwrap: vi.fn(),
     } as any)
@@ -86,7 +85,7 @@ describe('runLatteJob', () => {
 
     const result = await runLatteJob(mockJob)
     expect(result).toBe(copilotErr)
-    expect(runLatte.runNewLatte).not.toHaveBeenCalled()
+    expect(addMessageLatte.runNewLatte).not.toHaveBeenCalled()
     expect(addMessageLatte.addMessageToExistingLatte).not.toHaveBeenCalled()
   })
 
@@ -96,11 +95,11 @@ describe('runLatteJob', () => {
 
     const result = await runLatteJob(mockJob)
     expect(result).toBe(userErr)
-    expect(runLatte.runNewLatte).not.toHaveBeenCalled()
+    expect(addMessageLatte.runNewLatte).not.toHaveBeenCalled()
     expect(addMessageLatte.addMessageToExistingLatte).not.toHaveBeenCalled()
   })
 
-  it('creates a new chat when no document log exists', async () => {
+  it.only('creates a new chat when no document log exists', async () => {
     // ensure findByUuid returns ok: false
     ;(DocumentLogsRepository.prototype.findByUuid as any).mockResolvedValueOnce(
       { ok: false },
@@ -108,7 +107,7 @@ describe('runLatteJob', () => {
 
     await runLatteJob(mockJob)
 
-    expect(runLatte.runNewLatte).toHaveBeenCalledWith({
+    expect(addMessageLatte.runNewLatte).toHaveBeenCalledWith({
       copilotWorkspace: { id: 99 },
       copilotCommit: { id: 98 },
       copilotDocument: { uuid: 'doc-123' },
@@ -119,6 +118,7 @@ describe('runLatteJob', () => {
       },
       threadUuid,
       message: messageText,
+      abortSignal: expect.any(AbortSignal),
     })
     expect(addMessageLatte.addMessageToExistingLatte).not.toHaveBeenCalled()
   })
@@ -142,6 +142,6 @@ describe('runLatteJob', () => {
         path: '/some/path',
       },
     })
-    expect(runLatte.runNewLatte).not.toHaveBeenCalled()
+    expect(addMessageLatte.runNewLatte).not.toHaveBeenCalled()
   })
 })

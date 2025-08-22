@@ -46,9 +46,10 @@ export function LatteChat() {
     changes,
     latteActionsFeedbackUuid,
     usage,
+    bullMqJobId,
   } = useLatteStore()
 
-  const { sendMessage } = useLatteChatActions()
+  const { sendMessage, abortChat } = useLatteChatActions()
   const { acceptChanges, undoChanges, addFeedbackToLatteChange } =
     useLatteChangeActions()
 
@@ -56,6 +57,11 @@ export function LatteChat() {
     resetChatStore()
     addFeedbackToLatteChange('')
   }, [resetChatStore, addFeedbackToLatteChange])
+
+  const abortLatteChat = useCallback(() => {
+    console.log('Aborting chat with job ID:', bullMqJobId)
+    abortChat({ BullMQjobId: bullMqJobId })
+  }, [abortChat, bullMqJobId])
 
   const inConversation = interactions.length > 0
   const containerRef = useRef<HTMLDivElement>(null)
@@ -186,6 +192,7 @@ export function LatteChat() {
                 isLoading={isLoading}
                 feedbackRequested={!!latteActionsFeedbackUuid}
                 addFeedbackToLatteChange={addFeedbackToLatteChange}
+                abortLatteChat={abortLatteChat}
               />
               {!!usage && !!workspace && (
                 <LatteUsageInfo
