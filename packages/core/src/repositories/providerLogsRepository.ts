@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, getTableColumns, inArray, sum } from 'drizzle-orm'
+import { diskFactory } from '../lib/disk'
 
 import { ProviderLog } from '../browser'
 import { NotFoundError } from '../lib/errors'
@@ -22,6 +23,18 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
       .$dynamic()
   }
 
+  private async hydrateLog(log: ProviderLog) {
+    if (log.payloadPath) {
+      const disk = diskFactory('private')
+      const content = await disk.get(log.payloadPath)
+      if (content) {
+        const payload = JSON.parse(content)
+        return { ...log, ...payload }
+      }
+    }
+    return log
+  }
+
   async findByUuid(uuid: string) {
     const result = await this.scope
       .where(and(this.scopeFilter, eq(providerLogs.uuid, uuid)))
@@ -33,7 +46,7 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
       )
     }
 
-    return Result.ok(result[0]!)
+    return Result.ok(await this.hydrateLog(result[0]!))
   }
 
   async findByDocumentUuid(documentUuid: string, opts: QueryOptions = {}) {
@@ -76,7 +89,7 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
       return Result.error(new NotFoundError('ProviderLog not found'))
     }
 
-    return Result.ok(result[0]!)
+    return Result.ok(await this.hydrateLog(result[0]!))
   }
 
   async findManyByDocumentLogUuid(documentLogUuids: string[]) {

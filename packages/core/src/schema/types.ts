@@ -227,10 +227,7 @@ export type EvaluationTemplateWithCategory = EvaluationTemplate & {
   category: string
 }
 
-export type ProviderLogDto = Omit<
-  ProviderLog,
-  'responseText' | 'responseObject'
-> & { response: string }
+export type ProviderLogDto = ProviderLog
 
 export type ClaimedRewardWithUserInfo = ClaimedReward & {
   workspaceName: string | null

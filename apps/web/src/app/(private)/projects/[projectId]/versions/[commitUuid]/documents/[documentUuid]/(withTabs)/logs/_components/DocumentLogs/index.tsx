@@ -81,10 +81,12 @@ export function DocumentLogs({
     serverSelectedLog,
   })
 
-  const { data: providerLogs, isLoading: isProviderLogsLoading } =
-    useProviderLogs({
-      documentLogUuid: selectedLog?.uuid,
-    })
+  const { data: providerLogs } = useProviderLogs({
+    documentLogUuid: selectedLog?.uuid,
+  })
+
+  const { data: hydratedProviderLog, isLoading: isProviderLogsLoading } =
+    useProviderLog(providerLogs?.[0]?.id)
 
   const {
     data: dailyCountNormal,
@@ -213,7 +215,7 @@ export function DocumentLogs({
           <div ref={sidebarWrapperRef}>
             <DocumentLogInfo
               documentLog={selectedLog}
-              providerLogs={providerLogs}
+              providerLogs={hydratedProviderLog ? [hydratedProviderLog] : []}
               evaluationResults={evaluationResults[selectedLog.uuid]}
               isLoading={isProviderLogsLoading || isEvaluationsLoading}
               stickyRef={stickyRef}
@@ -222,7 +224,7 @@ export function DocumentLogs({
               span={span}
               isSpanLoading={isSpanLoading}
             >
-              {manualEvaluations.length > 0 && !!responseLog && (
+              {manualEvaluations.length > 0 && !!hydratedProviderLog && (
                 <div className='w-full border-t flex flex-col gap-y-4 mt-4 pt-4'>
                   {manualEvaluations.map((evaluation) => (
                     <DocumentLogAnnotation
@@ -234,7 +236,7 @@ export function DocumentLogs({
                         )?.result
                       }
                       mutateEvaluationResults={mutateEvaluationResults}
-                      providerLog={responseLog}
+                      providerLog={hydratedProviderLog}
                       documentLog={selectedLog}
                       commit={selectedLog.commit}
                       annotateEvaluation={annotateEvaluation}

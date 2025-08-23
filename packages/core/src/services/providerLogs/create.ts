@@ -36,6 +36,8 @@ export type CreateProviderLogProps = {
   output?: ChainStepResponse<StreamType>['output']
 }
 
+import { diskFactory } from '../../lib/disk'
+
 export async function createProviderLog(
   {
     workspace,
@@ -62,6 +64,19 @@ export async function createProviderLog(
   transaction = new Transaction(),
 ) {
   return await transaction.call<ProviderLog>(async (trx) => {
+    const disk = diskFactory('private')
+    const payload = {
+      messages,
+      output,
+      responseObject,
+      responseText,
+      responseReasoning,
+      toolCalls,
+    }
+
+    const path = `${workspace.id}/${uuid}/payload.json`
+    await disk.put(path, JSON.stringify(payload))
+
     const cost =
       costInMillicents ??
       (providerType && model && usage
@@ -83,12 +98,7 @@ export async function createProviderLog(
         providerId,
         model,
         config,
-        messages,
-        responseText,
-        responseReasoning,
-        responseObject,
-        output,
-        toolCalls,
+        payloadPath: path,
         tokens: usage
           ? isNaN(usage.totalTokens)
             ? 0
