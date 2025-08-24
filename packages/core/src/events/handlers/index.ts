@@ -70,4 +70,5 @@ export const EventHandlers: IEventsHandlers = {
   segmentCreated: [],
   segmentUpdated: [],
   actionExecuted: [],
+  toolExecuted: [],
 }
