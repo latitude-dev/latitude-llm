@@ -162,7 +162,7 @@ export function TriggersList({
     <div
       ref={ref}
       className={cn(
-        'relative max-h-full h-full flex flex-col items-stretch p-12 space-y-8',
+        'relative max-h-full h-full flex flex-col items-stretch px-12 py-6  space-y-8',
         {
           'overflow-y-auto custom-scrollbar pb-0': mode === 'chat',
           'pb-4': mode === 'preview',
@@ -173,6 +173,7 @@ export function TriggersList({
       {!mode || mode === 'preview' ? (
         <>
           <div className='flex flex-col gap-6'>
+            <div>Misconfigured</div>
             <div className='flex flex-col border rounded-lg divide-y divide-border overflow-hidden'>
               {triggers.map((trigger) => (
                 <TriggersCard
