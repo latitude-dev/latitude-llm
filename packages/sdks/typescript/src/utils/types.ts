@@ -274,6 +274,7 @@ export type RunPromptOptions<
   stream?: boolean
   tools?: ToolCalledFn<Tools>
   signal?: AbortSignal
+  userMessage?: string
 }
 
 export type RenderPromptOptions<M extends AdapterMessageType = PromptlMessage> =
@@ -358,6 +359,7 @@ type RunDocumentBodyParams = {
   customIdentifier?: string
   stream?: boolean
   tools?: string[]
+  userMessage?: string
 }
 
 type ChatBodyParams = {

@@ -25,6 +25,7 @@ export async function syncRun<
     versionUuid,
     parameters,
     customIdentifier,
+    userMessage,
     onFinished,
     onError,
     options,
@@ -59,6 +60,7 @@ export async function syncRun<
       parameters,
       customIdentifier,
       tools: [],
+      userMessage,
     },
   })
 
