@@ -1,12 +1,12 @@
 import {
-  BackendClient,
-  ComponentId,
-  ConfigurableProps,
-  ConfiguredProps,
+  type BackendClient,
+  type ComponentId,
+  type ConfigurableProps,
+  type ConfiguredProps,
   createBackendClient,
 } from '@pipedream/sdk/server'
-import { PipedreamIntegration } from '../../../../browser'
-import { PipedreamIntegrationConfiguration } from '../../helpers/schema'
+import type { PipedreamIntegration } from '../../../../browser'
+import type { PipedreamIntegrationConfiguration } from '../../helpers/schema'
 import { Result } from '../../../../lib/Result'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { getPipedreamEnvironment } from '../apps'
@@ -31,9 +31,7 @@ export async function reloadComponentProps({
 }) {
   if (!isIntegrationConfigured(integration)) {
     return Result.error(
-      new NotFoundError(
-        `Integration '${integration.name}' has not been configured.`,
-      ),
+      new NotFoundError(`Integration '${integration.name}' has not been configured.`),
     )
   }
 

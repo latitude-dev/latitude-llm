@@ -1,12 +1,8 @@
 import { useState } from 'react'
-import type {
-  AppDto,
-  DocumentTrigger,
-  IntegrationDto,
-} from '@latitude-data/core/browser'
+import type { AppDto, DocumentTrigger, IntegrationDto } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { PipedreamComponentPropsForm } from '$/components/Pipedream/PipedreamPropsForm'
-import { type Trigger } from '../index'
+import type { Trigger } from '../index'
 import { ConnectAccount } from './ConnectAccount'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useDocumentSelection, SelectDocument } from './SelectDocument'
@@ -54,11 +50,7 @@ export function TriggerConfiguration({
       <hr className='border-t border-border' />
 
       <FormWrapper>
-        <ConnectAccount
-          account={account}
-          setAccount={setAccount}
-          pipedreamApp={pipedreamApp}
-        />
+        <ConnectAccount account={account} setAccount={setAccount} pipedreamApp={pipedreamApp} />
 
         {account ? (
           <SelectDocument

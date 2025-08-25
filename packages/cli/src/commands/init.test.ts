@@ -35,27 +35,16 @@ describe('InitCommand', () => {
 
     beforeEach(() => {
       // Mock the base command methods
-      vi.spyOn(initCommand as any, 'setProjectPath').mockImplementation(
-        () => {},
-      )
+      vi.spyOn(initCommand as any, 'setProjectPath').mockImplementation(() => {})
       vi.spyOn(initCommand as any, 'setClient').mockResolvedValue({})
-      vi.spyOn(initCommand as any, 'getOrPromptForApiKey').mockResolvedValue(
-        'test-api-key',
-      )
-      vi.spyOn(initCommand as any, 'handleProjectSelection').mockResolvedValue(
-        123,
-      )
+      vi.spyOn(initCommand as any, 'getOrPromptForApiKey').mockResolvedValue('test-api-key')
+      vi.spyOn(initCommand as any, 'handleProjectSelection').mockResolvedValue(123)
 
       // Mock project manager
-      vi.spyOn(
-        initCommand['projectManager'],
-        'verifyNpmProject',
-      ).mockResolvedValue(true)
+      vi.spyOn(initCommand['projectManager'], 'verifyNpmProject').mockResolvedValue(true)
 
       // Mock lock file manager
-      vi.spyOn(initCommand['lockFileManager'], 'exists').mockResolvedValue(
-        false,
-      )
+      vi.spyOn(initCommand['lockFileManager'], 'exists').mockResolvedValue(false)
       vi.spyOn(initCommand['lockFileManager'], 'write').mockResolvedValue()
     })
 
@@ -66,9 +55,7 @@ describe('InitCommand', () => {
         expect.stringContaining('Initializing Latitude project'),
       )
       expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining(
-          '✅ Latitude project initialized successfully!',
-        ),
+        expect.stringContaining('✅ Latitude project initialized successfully!'),
       )
     })
 
@@ -82,9 +69,7 @@ describe('InitCommand', () => {
         expect.objectContaining({
           type: 'confirm',
           name: 'overrideLock',
-          message: expect.stringContaining(
-            'latitude-lock.json file already exists',
-          ),
+          message: expect.stringContaining('latitude-lock.json file already exists'),
         }),
       ])
     })
@@ -95,9 +80,7 @@ describe('InitCommand', () => {
 
       await initCommand.execute(mockOptions)
 
-      expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('Init cancelled'),
-      )
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Init cancelled'))
       expect(process.exit).toHaveBeenCalledWith(0)
     })
 
@@ -108,18 +91,13 @@ describe('InitCommand', () => {
 
       await initCommand.execute(mockOptions)
 
-      expect(initCommand['handleError']).toHaveBeenCalledWith(
-        error,
-        'Initialization',
-      )
+      expect(initCommand['handleError']).toHaveBeenCalledWith(error, 'Initialization')
     })
   })
 
   describe('getOrPromptForApiKey', () => {
     it('should return existing API key if available', async () => {
-      vi.spyOn(initCommand['configManager'], 'getApiKey').mockResolvedValue(
-        'existing-key',
-      )
+      vi.spyOn(initCommand['configManager'], 'getApiKey').mockResolvedValue('existing-key')
 
       const result = await (initCommand as any).getOrPromptForApiKey()
 
@@ -127,9 +105,7 @@ describe('InitCommand', () => {
     })
 
     it('should prompt for API key if none exists', async () => {
-      vi.spyOn(initCommand['configManager'], 'getApiKey').mockRejectedValue(
-        new Error('No key'),
-      )
+      vi.spyOn(initCommand['configManager'], 'getApiKey').mockRejectedValue(new Error('No key'))
       vi.spyOn(initCommand['configManager'], 'setApiKey').mockResolvedValue()
       mockInquirer.prompt.mockResolvedValue({ apiKey: 'new-api-key' })
 
@@ -174,16 +150,11 @@ describe('InitCommand', () => {
   describe('createNewProject', () => {
     beforeEach(() => {
       mockInquirer.prompt.mockResolvedValue({ projectName: 'Test Project' })
-      vi.spyOn(
-        initCommand['projectManager'],
-        'createProject',
-      ).mockResolvedValue({
+      vi.spyOn(initCommand['projectManager'], 'createProject').mockResolvedValue({
         projectId: 123,
         versionUuid: 'test-uuid',
       })
-      vi.spyOn(initCommand as any, 'setupProjectStructure').mockResolvedValue(
-        'prompts',
-      )
+      vi.spyOn(initCommand as any, 'setupProjectStructure').mockResolvedValue('prompts')
       // @ts-expect-error - mock
       vi.spyOn(initCommand as any, 'createLockFile').mockResolvedValue()
     })
@@ -210,9 +181,7 @@ describe('InitCommand', () => {
           get: vi.fn().mockResolvedValue({ uuid: 'version-uuid' }),
         },
       } as any
-      vi.spyOn(initCommand as any, 'setupProjectStructure').mockResolvedValue(
-        'prompts',
-      )
+      vi.spyOn(initCommand as any, 'setupProjectStructure').mockResolvedValue('prompts')
       // @ts-expect-error - mock
       vi.spyOn(initCommand as any, 'pullPrompts').mockResolvedValue()
       // @ts-expect-error - mock
@@ -235,14 +204,8 @@ describe('InitCommand', () => {
 
   describe('setupProjectStructure', () => {
     beforeEach(() => {
-      vi.spyOn(
-        initCommand['promptManager'],
-        'determineRootFolder',
-      ).mockResolvedValue('prompts')
-      vi.spyOn(
-        initCommand['promptManager'],
-        'createPromptDirectory',
-      ).mockResolvedValue()
+      vi.spyOn(initCommand['promptManager'], 'determineRootFolder').mockResolvedValue('prompts')
+      vi.spyOn(initCommand['promptManager'], 'createPromptDirectory').mockResolvedValue()
       mockFs.access.mockResolvedValue(undefined)
       mockFs.readdir.mockResolvedValue([])
     })
@@ -253,9 +216,10 @@ describe('InitCommand', () => {
       const result = await (initCommand as any).setupProjectStructure()
 
       expect(result).toBe('prompts')
-      expect(
-        initCommand['promptManager'].createPromptDirectory,
-      ).toHaveBeenCalledWith(initCommand['projectPath'], 'prompts')
+      expect(initCommand['promptManager'].createPromptDirectory).toHaveBeenCalledWith(
+        initCommand['projectPath'],
+        'prompts',
+      )
     })
 
     it('should handle non-empty directory with user confirmation', async () => {

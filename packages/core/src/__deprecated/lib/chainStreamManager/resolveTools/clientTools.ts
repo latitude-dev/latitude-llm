@@ -1,10 +1,10 @@
-import { ToolDefinition } from '@latitude-data/constants'
-import { LatitudeError } from '../../../../lib/errors'
-import { Result, TypedResult } from '../../../../lib/Result'
-import { ResolvedTools, ToolSource } from './types'
+import type { ToolDefinition } from '@latitude-data/constants'
+import type { LatitudeError } from '../../../../lib/errors'
+import { Result, type TypedResult } from '../../../../lib/Result'
+import { type ResolvedTools, ToolSource } from './types'
 import {
   AI_PROVIDERS_WITH_BUILTIN_TOOLS,
-  LatitudePromptConfig,
+  type LatitudePromptConfig,
 } from '@latitude-data/constants/latitudePromptSchema'
 
 type ToolTuple = [string, ToolDefinition]
@@ -34,9 +34,7 @@ export function resolveClientTools({
   // Old schema: tools is a { [name: string]: ToolDefinition } object
   if (typeof tools === 'object' && !Array.isArray(tools) && tools !== null) {
     return Result.ok(
-      Object.fromEntries(
-        Object.entries(tools).filter(filterProviderTools).map(buildDefinition),
-      ),
+      Object.fromEntries(Object.entries(tools).filter(filterProviderTools).map(buildDefinition)),
     )
   }
 
@@ -48,9 +46,7 @@ export function resolveClientTools({
 
   return Result.ok(
     Object.fromEntries(
-      Object.entries(clientToolDefinitions)
-        .filter(filterProviderTools)
-        .map(buildDefinition),
+      Object.entries(clientToolDefinitions).filter(filterProviderTools).map(buildDefinition),
     ),
   )
 }

@@ -5,12 +5,12 @@ import {
   ATTR_OTEL_STATUS_DESCRIPTION,
 } from '@opentelemetry/semantic-conventions'
 import {
-  ApiKey,
+  type ApiKey,
   ATTR_LATITUDE_INTERNAL,
-  Otlp,
+  type Otlp,
   SpanStatus,
   SpanType,
-  Workspace,
+  type Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
@@ -83,9 +83,7 @@ export async function ingestSpans(
           captureException(enriching.error)
           continue
         }
-        span.attributes = enriching.value.filter(
-          ({ key }) => key !== ATTR_LATITUDE_INTERNAL,
-        )
+        span.attributes = enriching.value.filter(({ key }) => key !== ATTR_LATITUDE_INTERNAL)
 
         processedSpans.push({ span, scope, resource, apiKey, workspace })
       }
@@ -121,7 +119,6 @@ export async function ingestSpans(
       const processing = await processSpansBulk({ spans, apiKey, workspace })
       if (processing.error) {
         captureException(processing.error)
-        continue
       }
     }
   }

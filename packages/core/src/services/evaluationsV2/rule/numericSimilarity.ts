@@ -1,14 +1,14 @@
 import {
-  EvaluationType,
-  RuleEvaluationMetric,
+  type EvaluationType,
+  type RuleEvaluationMetric,
   RuleEvaluationNumericSimilaritySpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {
-  EvaluationMetricRunArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricRunArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 
@@ -21,10 +21,7 @@ export const RuleEvaluationNumericSimilaritySpecification = {
 async function validate(
   {
     configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.NumericSimilarity
-  >,
+  }: EvaluationMetricValidateArgs<EvaluationType.Rule, RuleEvaluationMetric.NumericSimilarity>,
   _ = database,
 ) {
   if (
@@ -32,9 +29,7 @@ async function validate(
     (configuration.minSimilarity < 0 || configuration.minSimilarity > 100)
   ) {
     return Result.error(
-      new BadRequestError(
-        'Minimum similarity must be a number between 0 and 100',
-      ),
+      new BadRequestError('Minimum similarity must be a number between 0 and 100'),
     )
   }
 
@@ -43,9 +38,7 @@ async function validate(
     (configuration.maxSimilarity < 0 || configuration.maxSimilarity > 100)
   ) {
     return Result.error(
-      new BadRequestError(
-        'Maximum similarity must be a number between 0 and 100',
-      ),
+      new BadRequestError('Maximum similarity must be a number between 0 and 100'),
     )
   }
 
@@ -55,9 +48,7 @@ async function validate(
     configuration.minSimilarity >= configuration.maxSimilarity
   ) {
     return Result.error(
-      new BadRequestError(
-        'Minimum similarity must be less than maximum similarity',
-      ),
+      new BadRequestError('Minimum similarity must be less than maximum similarity'),
     )
   }
 
@@ -79,10 +70,7 @@ async function run(
     actualOutput,
     expectedOutput,
     datasetLabel,
-  }: EvaluationMetricRunArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.NumericSimilarity
-  >,
+  }: EvaluationMetricRunArgs<EvaluationType.Rule, RuleEvaluationMetric.NumericSimilarity>,
   _ = database,
 ) {
   const metadata = {
@@ -97,12 +85,12 @@ async function run(
   }
 
   const actualNumber = Number(metadata.actualOutput)
-  if (isNaN(actualNumber)) {
+  if (Number.isNaN(actualNumber)) {
     throw new BadRequestError('Invalid numeric actual output')
   }
 
   const expectedNumber = Number(metadata.expectedOutput)
-  if (isNaN(expectedNumber)) {
+  if (Number.isNaN(expectedNumber)) {
     throw new BadRequestError('Invalid numeric expected output')
   }
 

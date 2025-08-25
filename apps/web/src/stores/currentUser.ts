@@ -4,11 +4,11 @@ import { updateUserAction } from '$/actions/user/update'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { User } from '@latitude-data/core/browser'
+import type { User } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 export function useCurrentUser(opts?: SWRConfiguration) {
   const { toast } = useToast()
@@ -16,14 +16,11 @@ export function useCurrentUser(opts?: SWRConfiguration) {
   const route = ROUTES.api.users.current
   const fetcher = useFetcher<User>(route, { fallback: null })
 
-  const {
-    data = undefined,
-    mutate,
-    ...rest
-  } = useSWR<User>(compact(route), fetcher, opts)
+  const { data = undefined, mutate, isLoading } = useSWR<User>(compact(route), fetcher, opts)
 
-  const { execute: executeUpdateEditorMode, isPending: isUpdatingEditorMode } =
-    useLatitudeAction(updateUserAction, {
+  const { execute: executeUpdateEditorMode, isPending: isUpdatingEditorMode } = useLatitudeAction(
+    updateUserAction,
+    {
       onSuccess: async ({ data: user }) => {
         mutate(user) // Note: silent update
       },
@@ -34,7 +31,8 @@ export function useCurrentUser(opts?: SWRConfiguration) {
           variant: 'destructive',
         })
       },
-    })
+    },
+  )
   const updateEditorMode = useCallback(
     async ({ devMode }: { devMode: boolean }) => {
       return await executeUpdateEditorMode({ devMode })
@@ -43,7 +41,7 @@ export function useCurrentUser(opts?: SWRConfiguration) {
   )
 
   return useMemo(
-    () => ({ data, mutate, updateEditorMode, isUpdatingEditorMode, ...rest }),
-    [data, mutate, updateEditorMode, isUpdatingEditorMode, rest],
+    () => ({ data, mutate, updateEditorMode, isUpdatingEditorMode, isLoading }),
+    [data, mutate, updateEditorMode, isUpdatingEditorMode, isLoading],
   )
 }

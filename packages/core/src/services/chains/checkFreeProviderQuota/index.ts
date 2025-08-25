@@ -4,8 +4,8 @@ import { env } from '@latitude-data/env'
 import {
   DEFAULT_PROVIDER_MAX_FREE_RUNS,
   DEFAULT_PROVIDER_SUPPORTED_MODELS,
-  ProviderApiKey,
-  Workspace,
+  type ProviderApiKey,
+  type Workspace,
 } from '../../../browser'
 import { Result } from '../../../lib/Result'
 import { incrFreeRuns } from '../../freeRunsManager'

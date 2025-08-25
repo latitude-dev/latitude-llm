@@ -1,10 +1,10 @@
 import parse from '$compiler/parser'
-import { Fragment } from '$compiler/parser/interfaces'
-import { Config, Conversation, Message } from '$compiler/types'
+import type { Fragment } from '$compiler/parser/interfaces'
+import type { Config, Conversation, Message } from '$compiler/types'
 
 import { Compile } from './compile'
 import Scope from './scope'
-import { CompileOptions } from './types'
+import type { CompileOptions } from './types'
 
 type ChainStep = {
   conversation: Conversation
@@ -57,8 +57,7 @@ export class Chain {
       ...this.options,
     })
 
-    const { completed, scopeStash, ast, messages, globalConfig, stepConfig } =
-      await compile.run()
+    const { completed, scopeStash, ast, messages, globalConfig, stepConfig } = await compile.run()
 
     this.scope = Scope.withStash(scopeStash).copy(this.scope.getPointers())
     this.ast = ast

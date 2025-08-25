@@ -1,23 +1,13 @@
-import {
-  and,
-  desc,
-  eq,
-  exists,
-  isNotNull,
-  isNull,
-  lt,
-  not,
-  or,
-} from 'drizzle-orm'
+import { and, desc, eq, exists, isNotNull, isNull, lt, not, or } from 'drizzle-orm'
 
-import { Commit, Project } from '../../browser'
+import type { Commit, Project } from '../../browser'
 import { CommitStatus, HEAD_COMMIT } from '../../constants'
-import { InferedReturnType } from '../../lib/commonTypes'
+import type { InferedReturnType } from '../../lib/commonTypes'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { documentVersions } from '../../schema'
 import RepositoryLegacy from '../repository'
-import { buildCommitsScope, columnSelection } from './utils/buildCommitsScope'
+import { buildCommitsScope, type columnSelection } from './utils/buildCommitsScope'
 import { getHeadCommitForProject } from './utils/getHeadCommit'
 
 function filterByStatusQuery({
@@ -37,19 +27,13 @@ function filterByStatusQuery({
   }
 }
 
-export class CommitsRepository extends RepositoryLegacy<
-  typeof columnSelection,
-  Commit
-> {
+export class CommitsRepository extends RepositoryLegacy<typeof columnSelection, Commit> {
   get scope() {
     return buildCommitsScope(this.workspaceId, this.db)
   }
 
   async getHeadCommit(projectId: number) {
-    return getHeadCommitForProject(
-      { projectId, commitsScope: this.scope },
-      this.db,
-    )
+    return getHeadCommitForProject({ projectId, commitsScope: this.scope }, this.db)
   }
 
   /**
@@ -58,21 +42,13 @@ export class CommitsRepository extends RepositoryLegacy<
    * @param projectId The project ID (optional)
    * @returns A Commit object
    */
-  async getCommitByUuid({
-    uuid,
-    projectId,
-  }: {
-    projectId?: number
-    uuid: string
-  }) {
+  async getCommitByUuid({ uuid, projectId }: { projectId?: number; uuid: string }) {
     if (uuid === HEAD_COMMIT) {
       if (!projectId) {
         return Result.error(new NotFoundError('Project ID is required'))
       }
 
-      const headCommit = await this.getHeadCommit(projectId).then((r) =>
-        r.unwrap(),
-      )
+      const headCommit = await this.getHeadCommit(projectId).then((r) => r.unwrap())
       if (!headCommit) {
         return Result.error(new NotFoundError('Head commit not found'))
       }
@@ -87,10 +63,7 @@ export class CommitsRepository extends RepositoryLegacy<
         .where(eq(this.scope.uuid, uuid))
         .limit(1)
       const commit = result[0]
-      if (!commit)
-        return Result.error(
-          new NotFoundError(`Commit with uuid ${uuid} not found`),
-        )
+      if (!commit) return Result.error(new NotFoundError(`Commit with uuid ${uuid} not found`))
 
       return Result.ok(commit)
     } catch (error) {
@@ -99,11 +72,7 @@ export class CommitsRepository extends RepositoryLegacy<
   }
 
   async getCommitById(id: number) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.id, id))
-      .limit(1)
+    const result = await this.db.select().from(this.scope).where(eq(this.scope.id, id)).limit(1)
     const commit = result[0]
     if (!commit) return Result.error(new NotFoundError('Commit not found'))
 
@@ -212,9 +181,7 @@ export class CommitsRepository extends RepositoryLegacy<
     return this.db
       .select()
       .from(this.scope)
-      .where(
-        and(eq(this.scope.projectId, projectId), isNull(this.scope.mergedAt)),
-      )
+      .where(and(eq(this.scope.projectId, projectId), isNull(this.scope.mergedAt)))
       .orderBy(desc(this.scope.createdAt))
   }
 

@@ -6,7 +6,7 @@ import { updateDatasetColumnAction } from '$/actions/datasets/updateColumn'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { useCallback, useState } from 'react'
 
@@ -41,31 +41,24 @@ export default function useDatasets(
     fieldErrors?: Record<string, string[]>
   } | null>(null)
 
-  const fetcher = useFetcher<Dataset[], Dataset[]>(
-    enabled ? ROUTES.api.datasets.root : undefined,
-    {
-      serializer: (rows) => rows.map(deserializeDataset),
-      searchParams: compactObject({
-        page: page ? String(page) : undefined,
-        pageSize: pageSize ? String(pageSize) : undefined,
-      }) as Record<string, string>,
-    },
-  )
+  const fetcher = useFetcher<Dataset[], Dataset[]>(enabled ? ROUTES.api.datasets.root : undefined, {
+    serializer: (rows) => rows.map(deserializeDataset),
+    searchParams: compactObject({
+      page: page ? String(page) : undefined,
+      pageSize: pageSize ? String(pageSize) : undefined,
+    }) as Record<string, string>,
+  })
 
   const {
     data = EMPTY_ARRAY,
     mutate,
     ...rest
-  } = useSWR<Dataset[]>(
-    enabled ? compact(['datasetsV2', page, pageSize]) : undefined,
-    fetcher,
-    {
-      ...opts,
-      onSuccess: (data) => {
-        onFetched?.(data)
-      },
+  } = useSWR<Dataset[]>(enabled ? compact(['datasetsV2', page, pageSize]) : undefined, fetcher, {
+    ...opts,
+    onSuccess: (data) => {
+      onFetched?.(data)
     },
-  )
+  })
 
   const createDataset = useCallback(
     async (formData: FormData) => {
@@ -104,8 +97,7 @@ export default function useDatasets(
       } catch (error) {
         toast({
           title: 'Error',
-          description:
-            error instanceof Error ? error.message : 'Failed to create dataset',
+          description: error instanceof Error ? error.message : 'Failed to create dataset',
           variant: 'destructive',
         })
       } finally {
@@ -129,15 +121,13 @@ export default function useDatasets(
     },
   })
 
-  const { execute: updateColumn, isPending: isUpdatingColumn } =
-    useLatitudeAction<typeof updateDatasetColumnAction>(
-      updateDatasetColumnAction,
-      {
-        onSuccess: ({ data: dataset }) => {
-          mutate(data.map((ds) => (ds.id === dataset.id ? dataset : ds)))
-        },
-      },
-    )
+  const { execute: updateColumn, isPending: isUpdatingColumn } = useLatitudeAction<
+    typeof updateDatasetColumnAction
+  >(updateDatasetColumnAction, {
+    onSuccess: ({ data: dataset }) => {
+      mutate(data.map((ds) => (ds.id === dataset.id ? dataset : ds)))
+    },
+  })
 
   return {
     data,

@@ -1,10 +1,7 @@
 'use server'
 
 import { BadRequestError } from '@latitude-data/constants/errors'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '@latitude-data/core/repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { updateDocument } from '@latitude-data/core/services/documents/update'
 import { z } from 'zod'
 

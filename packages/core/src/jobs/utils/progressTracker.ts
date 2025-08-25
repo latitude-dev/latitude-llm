@@ -1,4 +1,4 @@
-import { Redis } from 'ioredis'
+import type { Redis } from 'ioredis'
 import { env } from '@latitude-data/env'
 import { buildRedisConnection } from '../../redis'
 
@@ -73,15 +73,14 @@ export class ProgressTracker {
 
   async getProgress(): Promise<TrackedProgress> {
     const redis = await this.ensureConnection()
-    const [total, completed, errors, enqueued, failed, totalScore] =
-      await redis.mget([
-        this.getKey('total'),
-        this.getKey('completed'),
-        this.getKey('errors'),
-        this.getKey('enqueued'),
-        this.getKey('failed'),
-        this.getKey('totalScore'),
-      ])
+    const [total, completed, errors, enqueued, failed, totalScore] = await redis.mget([
+      this.getKey('total'),
+      this.getKey('completed'),
+      this.getKey('errors'),
+      this.getKey('enqueued'),
+      this.getKey('failed'),
+      this.getKey('totalScore'),
+    ])
 
     return {
       total: parseInt(total || '0', 10),

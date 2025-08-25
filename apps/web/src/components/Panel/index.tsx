@@ -1,5 +1,5 @@
 'use client'
-import { ReactNode, useCallback, useState } from 'react'
+import { type ReactNode, useCallback, useState } from 'react'
 
 import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -37,18 +37,15 @@ export default function Panel({
       align='end'
       trigger={
         <div
-          className={cn(
-            'h-full flex-1 flex flex-col gap-1 p-4 rounded-lg border border-border',
-            { 'cursor-default': !additionalInfo },
-          )}
+          className={cn('h-full flex-1 flex flex-col gap-1 p-4 rounded-lg border border-border', {
+            'cursor-default': !additionalInfo,
+          })}
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
         >
           <div className='flex flex-row justify-between items-center gap-1'>
             <Text.H5 color='foregroundMuted'>{label}</Text.H5>
-            {additionalInfo && (
-              <Icon name='info' className='text-muted-foreground' />
-            )}
+            {additionalInfo && <Icon name='info' className='text-muted-foreground' />}
           </div>
           {loading ? (
             <Skeleton className='w-16 mt-4' height='h4' />

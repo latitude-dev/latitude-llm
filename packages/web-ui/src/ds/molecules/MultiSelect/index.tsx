@@ -1,4 +1,4 @@
-import { forwardRef, KeyboardEvent, useEffect, useState } from 'react'
+import { forwardRef, type KeyboardEvent, useEffect, useState } from 'react'
 import { cn } from '../../../lib/utils'
 import { Badge } from '../../atoms/Badge'
 import { Checkbox } from '../../atoms/Checkbox'
@@ -13,7 +13,7 @@ import {
 import { FormField } from '../../atoms/FormField'
 import { Popover } from '../../atoms/Popover'
 import { Text } from '../../atoms/Text'
-import { Icon, IconName } from '../../atoms/Icons'
+import { Icon, type IconName } from '../../atoms/Icons'
 import { Skeleton } from '../../atoms/Skeleton'
 
 interface MultiSelectProps extends Omit<typeof FormField, 'children'> {
@@ -163,11 +163,7 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
             value={JSON.stringify(selectedValues)}
           />
 
-          <Popover.Root
-            open={isPopoverOpen}
-            onOpenChange={setIsPopoverOpen}
-            modal={modalPopover}
-          >
+          <Popover.Root open={isPopoverOpen} onOpenChange={setIsPopoverOpen} modal={modalPopover}>
             <Popover.Trigger asChild>
               <button
                 ref={ref}
@@ -192,9 +188,7 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
                             variant='muted'
                             key={value}
                             iconProps={
-                              option?.icon
-                                ? { name: option.icon, placement: 'start' }
-                                : undefined
+                              option?.icon ? { name: option.icon, placement: 'start' } : undefined
                             }
                             onClick={(event) => {
                               event.stopPropagation()
@@ -242,22 +236,14 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
                         <Icon name='close' color='foregroundMuted' />
                       </div>
                       <div className='cursor-pointer text-muted-foreground'>
-                        <Icon
-                          name='chevronsUpDown'
-                          size='normal'
-                          color='foregroundMuted'
-                        />
+                        <Icon name='chevronsUpDown' size='normal' color='foregroundMuted' />
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className='flex items-center justify-between w-full'>
                     <Text.H5>{placeholder}</Text.H5>
-                    <Icon
-                      name='chevronsUpDown'
-                      size='normal'
-                      color='foregroundMuted'
-                    />
+                    <Icon name='chevronsUpDown' size='normal' color='foregroundMuted' />
                   </div>
                 )}
               </button>
@@ -282,11 +268,7 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
                     <Text.H6>No results found.</Text.H6>
                   </CommandEmpty>
                   <CommandGroup>
-                    <CommandItem
-                      key='all'
-                      onSelect={toggleAll}
-                      className='cursor-pointer'
-                    >
+                    <CommandItem key='all' onSelect={toggleAll} className='cursor-pointer'>
                       <div>
                         <Checkbox
                           checked={selectedValues.length === options.length}

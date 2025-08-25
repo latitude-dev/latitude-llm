@@ -1,17 +1,17 @@
 import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
 import { ROUTES } from '$/services/routes'
 import { DocumentType } from '@latitude-data/core/browser'
-import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { type ParamValue } from 'next/dist/server/request/params'
+import type { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { ParamValue } from 'next/dist/server/request/params'
 import { useCallback, useMemo, useState } from 'react'
 import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper, {
-  IndentType,
-  NodeHeaderWrapperProps,
+  type IndentType,
+  type NodeHeaderWrapperProps,
 } from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
-import { Node } from '../useTree'
+import type { Node } from '../useTree'
 
 export default function DocumentHeader({
   open,
@@ -61,11 +61,7 @@ export default function DocumentHeader({
   const url = useMemo(() => {
     if (!documentUuid) return undefined
     if (!node.isPersisted) return undefined
-    if (
-      selected &&
-      !currentEvaluationUuid &&
-      window.location.pathname.endsWith(documentUuid)
-    ) {
+    if (selected && !currentEvaluationUuid && window.location.pathname.endsWith(documentUuid)) {
       return undefined
     }
 
@@ -73,13 +69,7 @@ export default function DocumentHeader({
       .detail({ id: sidebarLinkContext.projectId })
       .commits.detail({ uuid: sidebarLinkContext.commitUuid })
       .documents.detail({ uuid: documentUuid }).root
-  }, [
-    documentUuid,
-    selected,
-    node.isPersisted,
-    sidebarLinkContext,
-    currentEvaluationUuid,
-  ])
+  }, [documentUuid, selected, node.isPersisted, sidebarLinkContext, currentEvaluationUuid])
   const [isEditing, setIsEditing] = useState(node.name === ' ')
   const actions = useMemo<MenuOption[]>(
     () => [

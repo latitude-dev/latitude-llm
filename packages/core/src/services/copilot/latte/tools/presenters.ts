@@ -1,15 +1,15 @@
 import type { ConversationMetadata as PromptlMetadata } from 'promptl-ai'
 import {
-  Commit,
-  DocumentTrigger,
-  DocumentVersion,
-  IntegrationDto,
+  type Commit,
+  type DocumentTrigger,
+  type DocumentVersion,
+  type IntegrationDto,
   listModelsForProvider,
-  Project,
-  ProviderApiKey,
+  type Project,
+  type ProviderApiKey,
 } from '../../../../browser'
 import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
-import { PromisedResult } from '../../../../lib/Transaction'
+import type { PromisedResult } from '../../../../lib/Transaction'
 import { IntegrationsRepository } from '../../../../repositories'
 import { Result } from '../../../../lib/Result'
 import { env } from '@latitude-data/env'
@@ -137,17 +137,11 @@ async function triggerDocumentPresenter({
 }): PromisedResult<string[]> {
   const documentTriggerNames: string[] = []
 
-  if (
-    triggers.some((trigger) => trigger.triggerType == DocumentTriggerType.Email)
-  ) {
+  if (triggers.some((trigger) => trigger.triggerType === DocumentTriggerType.Email)) {
     documentTriggerNames.push(DocumentTriggerType.Email)
   }
 
-  if (
-    triggers.some(
-      (trigger) => trigger.triggerType == DocumentTriggerType.Scheduled,
-    )
-  ) {
+  if (triggers.some((trigger) => trigger.triggerType === DocumentTriggerType.Scheduled)) {
     documentTriggerNames.push(DocumentTriggerType.Scheduled)
   }
   const integrationTriggers = triggers.filter(
@@ -156,9 +150,7 @@ async function triggerDocumentPresenter({
 
   const integrationScope = new IntegrationsRepository(workspaceId)
   for (const trigger of integrationTriggers) {
-    const integration = await integrationScope.find(
-      trigger.configuration.integrationId,
-    )
+    const integration = await integrationScope.find(trigger.configuration.integrationId)
     if (!integration.ok) {
       return Result.error(integration.error!)
     }

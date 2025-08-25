@@ -27,7 +27,6 @@
     "build": "rollup -c",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint src",
     "tc": "tsc --noEmit"
   },
   "dependencies": {
@@ -38,7 +37,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-typescript": "^11.1.6",

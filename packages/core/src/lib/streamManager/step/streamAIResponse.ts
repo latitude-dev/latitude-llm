@@ -1,15 +1,15 @@
-import { VercelConfig } from '@latitude-data/constants'
-import {
+import type { VercelConfig } from '@latitude-data/constants'
+import type {
   Conversation,
   Message as LegacyMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { JSONSchema7 } from 'json-schema'
-import { LogSources, ProviderApiKey, Workspace } from '../../../browser'
+import type { JSONSchema7 } from 'json-schema'
+import type { LogSources, ProviderApiKey, Workspace } from '../../../browser'
 import { ai } from '../../../services/ai'
 import { processResponse } from '../../../services/chains/ProviderProcessor'
 import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
 import { createProviderLog } from '../../../services/providerLogs'
-import { TelemetryContext } from '../../../telemetry'
+import type { TelemetryContext } from '../../../telemetry'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import type { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
+import type { DocumentTriggerType } from '@latitude-data/constants'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { PipedreamComponentPropsForm } from '$/components/Pipedream/PipedreamPropsForm'
 import { useIntegrationData } from './useIntegrationData'
@@ -24,9 +24,9 @@ export function EditIntegrationTrigger({
   const [payloadParameters, setPayloadParameters] = useState<string[]>(
     trigger.configuration.payloadParameters ?? [],
   )
-  const [configuredProps, setConfiguredProps] = useState<
-    ConfiguredProps<ConfigurableProps>
-  >(trigger.configuration.properties ?? {})
+  const [configuredProps, setConfiguredProps] = useState<ConfiguredProps<ConfigurableProps>>(
+    trigger.configuration.properties ?? {},
+  )
 
   useEffect(() => {
     if (!valid || isLoading || !valid) return

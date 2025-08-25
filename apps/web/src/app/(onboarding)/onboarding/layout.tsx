@@ -4,7 +4,7 @@ import buildMetatags from '$/app/_lib/buildMetatags'
 import { CSPostHogProvider, IdentifyUser } from '$/app/providers'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 export async function generateMetadata() {
   return buildMetatags({
@@ -12,11 +12,7 @@ export async function generateMetadata() {
   })
 }
 
-export default async function OnboardingLayout({
-  children,
-}: {
-  children: ReactNode
-}) {
+export default async function OnboardingLayout({ children }: { children: ReactNode }) {
   const { workspace, user } = await getCurrentUserOrRedirect()
 
   return (

@@ -1,9 +1,6 @@
 // vitest-env.d.ts
 
-import {
-  DEFAULT_REDACT_SPAN_PROCESSOR,
-  LatitudeTelemetry,
-} from '@latitude-data/telemetry'
+import { DEFAULT_REDACT_SPAN_PROCESSOR, LatitudeTelemetry } from '@latitude-data/telemetry'
 import { afterAll, beforeEach, vi } from 'vitest'
 import * as telemetry from '../telemetry'
 import * as factories from './factories'

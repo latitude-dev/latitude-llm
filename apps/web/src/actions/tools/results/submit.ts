@@ -44,5 +44,5 @@ function buildGatewayUrl() {
   const port = env.GATEWAY_PORT
   const protocol = env.GATEWAY_SSL ? 'https' : 'http'
 
-  return `${protocol}://${host}` + (port ? `:${port}` : '')
+  return `${protocol}://${host}${port ? `:${port}` : ''}`
 }

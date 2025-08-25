@@ -1,7 +1,4 @@
-export async function* streamToGenerator<R>(
-  stream: ReadableStream<R>,
-  abortSignal?: AbortSignal,
-) {
+export async function* streamToGenerator<R>(stream: ReadableStream<R>, abortSignal?: AbortSignal) {
   const reader = stream.getReader()
 
   // Set up abort handler to cancel the reader

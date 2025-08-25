@@ -3,17 +3,14 @@ import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { ResultPanel } from '$/components/evaluations/ResultPanel'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { useEvaluationResultsV2Count } from '$/stores/evaluationResultsV2'
-import {
+import type {
   EvaluationMetric,
   EvaluationResultsV2Search,
   EvaluationResultV2WithDetails,
   EvaluationType,
 } from '@latitude-data/core/browser'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo, useRef } from 'react'
 import { EvaluationResultsTableActions } from './TableActions'
@@ -47,14 +44,13 @@ export function EvaluationResultsTable<
   const tabelRef = useRef<HTMLTableElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
 
-  const { data: count, isLoading: isCountLoading } =
-    useEvaluationResultsV2Count({
-      project: project,
-      commit: commit,
-      document: document,
-      evaluation: evaluation,
-      search: search,
-    })
+  const { data: count, isLoading: isCountLoading } = useEvaluationResultsV2Count({
+    project: project,
+    commit: commit,
+    document: document,
+    evaluation: evaluation,
+    search: search,
+  })
 
   const selectableResultIds = useMemo(
     () => results.filter((r) => !r.error).map((r) => r.uuid),

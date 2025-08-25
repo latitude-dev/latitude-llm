@@ -1,25 +1,17 @@
 import { omit } from 'lodash-es'
-import path from 'path'
+import path from 'node:path'
 
 import { and, eq, inArray, not } from 'drizzle-orm'
 import { scan } from 'promptl-ai'
 
-import { AgentToolsMap } from '@latitude-data/constants'
+import type { AgentToolsMap } from '@latitude-data/constants'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 
-import {
-  Commit,
-  DocumentVersion,
-  ProviderApiKey,
-  Workspace,
-} from '../../../browser'
+import type { Commit, DocumentVersion, ProviderApiKey, Workspace } from '../../../browser'
 import { assertCommitIsDraft } from '../../../lib/assertCommitIsDraft'
-import { Result, TypedResult } from '../../../lib/Result'
+import { Result, type TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
-import {
-  IntegrationsRepository,
-  ProviderApiKeysRepository,
-} from '../../../repositories'
+import { IntegrationsRepository, ProviderApiKeysRepository } from '../../../repositories'
 import { documentVersions } from '../../../schema'
 import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
 import { inheritDocumentRelations } from '../inheritRelations'
@@ -45,9 +37,7 @@ async function resolveDocumentChanges({
   const errors: Record<string, Error[]> = {}
 
   const getDocumentContent = async (refPath: string, from?: string) => {
-    const fullPath = path
-      .resolve(path.dirname(`/${from ?? ''}`), refPath)
-      .replace(/^\//, '')
+    const fullPath = path.resolve(path.dirname(`/${from ?? ''}`), refPath).replace(/^\//, '')
     const document = newDocuments.find((d) => d.path === fullPath)
     if (!document) return undefined
     return {
@@ -135,9 +125,7 @@ async function replaceCommitChanges(
 
     const [docsToInsert, docsToUpdate] = documentChanges.reduce(
       (acc, doc) => {
-        const existingDoc = previousDraftDocuments.find(
-          (d) => d.documentUuid === doc.documentUuid,
-        )
+        const existingDoc = previousDraftDocuments.find((d) => d.documentUuid === doc.documentUuid)
         if (existingDoc) {
           acc[1].push(doc)
         } else {
@@ -184,9 +172,7 @@ async function replaceCommitChanges(
 
     await Promise.all(
       insertedDocs.map(async (toVersion) => {
-        const fromVersion = docsToInsert.find(
-          (d) => d.documentUuid === toVersion.documentUuid,
-        )!
+        const fromVersion = docsToInsert.find((d) => d.documentUuid === toVersion.documentUuid)!
         return await inheritDocumentRelations(
           {
             fromVersion,
@@ -248,17 +234,15 @@ export async function recomputeChanges(
     const integrationsScope = new IntegrationsRepository(workspace.id, tx)
     const integrations = await integrationsScope.findAll()
     if (integrations.error) return Result.error(integrations.error)
-    if (agentToolsMapResult.error)
-      return Result.error(agentToolsMapResult.error)
+    if (agentToolsMapResult.error) return Result.error(agentToolsMapResult.error)
 
-    const { documents: documentsToUpdate, errors } =
-      await resolveDocumentChanges({
-        originalDocuments: mergedDocuments,
-        newDocuments: draftDocuments,
-        providers: providersResult.value,
-        agentToolsMap: agentToolsMapResult.value,
-        integrationNames: integrations.value.map((i) => i.name),
-      })
+    const { documents: documentsToUpdate, errors } = await resolveDocumentChanges({
+      originalDocuments: mergedDocuments,
+      newDocuments: draftDocuments,
+      providers: providersResult.value,
+      agentToolsMap: agentToolsMapResult.value,
+      integrationNames: integrations.value.map((i) => i.name),
+    })
 
     const newDraftDocuments = (
       await replaceCommitChanges(

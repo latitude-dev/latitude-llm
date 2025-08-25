@@ -1,9 +1,6 @@
-import {
-  getData,
-  publishDocumentRunRequestedEvent,
-} from '$/common/documents/getData'
+import { getData, publishDocumentRunRequestedEvent } from '$/common/documents/getData'
 import { captureException } from '$/common/sentry'
-import { AppRouteHandler } from '$/openApi/types'
+import type { AppRouteHandler } from '$/openApi/types'
 import { runPresenter, runPresenterLegacy } from '$/presenters/runPresenter'
 import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
@@ -12,10 +9,10 @@ import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
 import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
-import { RunRoute } from './run.route'
+import type { RunRoute } from './run.route'
 import {
   awaitClientToolResult,
-  ToolHandler,
+  type ToolHandler,
 } from '@latitude-data/core/lib/streamManager/clientTools/handlers'
 import { runDocumentAtCommitLegacy } from '@latitude-data/core/services/__deprecated/commits/runDocumentAtCommit'
 import { compareVersion } from '$/utils/versionComparison'
@@ -78,10 +75,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
         })
 
         try {
-          for await (const event of streamToGenerator(
-            result.stream,
-            c.req.raw.signal,
-          )) {
+          for await (const event of streamToGenerator(result.stream, c.req.raw.signal)) {
             const data = event.data
 
             stream.writeSSE({

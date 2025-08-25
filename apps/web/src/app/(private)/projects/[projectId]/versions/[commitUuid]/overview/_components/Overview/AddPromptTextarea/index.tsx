@@ -1,16 +1,13 @@
 'use client'
 
-import { ChangeEvent } from 'react'
+import type { ChangeEvent } from 'react'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
 
 export function AddPromptTextarea() {
@@ -36,12 +33,9 @@ export function AddPromptTextarea() {
       },
     },
   )
-  const onChange = useCallback(
-    (e: ChangeEvent<HTMLTextAreaElement>) => {
-      setContent(e.target.value)
-    },
-    [setContent],
-  )
+  const onChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value)
+  }, [])
   const onCreate = useCallback(() => {
     if (!content) return
     createFile({
@@ -55,9 +49,8 @@ export function AddPromptTextarea() {
         <div className='flex flex-col gap-1 px-1'>
           <Text.H4M>Paste your prompt here</Text.H4M>
           <Text.H5 color='foregroundMuted'>
-            Get started by pasting your prompt here, we'll set up an evaluation
-            based on it automatically so you can start testing at scale right
-            away.
+            Get started by pasting your prompt here, we'll set up an evaluation based on it
+            automatically so you can start testing at scale right away.
           </Text.H5>
         </div>
         <TextArea

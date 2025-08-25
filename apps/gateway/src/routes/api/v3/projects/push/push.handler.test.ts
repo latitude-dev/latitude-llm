@@ -1,32 +1,25 @@
 import app from '$/routes/app'
 import { beforeEach, describe, expect, it } from 'vitest'
-import {
-  createApiKey,
-  createDraft,
-  createProject,
-} from '@latitude-data/core/factories'
+import { createApiKey, createDraft, createProject } from '@latitude-data/core/factories'
 
 describe('POST /projects/:projectId/versions/:commitUuid/push', () => {
   describe('when unauthorized', () => {
     it('fails with 401', async () => {
-      const response = await app.request(
-        '/api/v3/projects/1/versions/commit-uuid/push',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            changes: [
-              {
-                path: 'document-path',
-                content: 'content',
-                status: 'added',
-              },
-            ],
-          }),
+      const response = await app.request('/api/v3/projects/1/versions/commit-uuid/push', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      )
+        body: JSON.stringify({
+          changes: [
+            {
+              path: 'document-path',
+              content: 'content',
+              status: 'added',
+            },
+          ],
+        }),
+      })
 
       expect(response.status).toBe(401)
     })

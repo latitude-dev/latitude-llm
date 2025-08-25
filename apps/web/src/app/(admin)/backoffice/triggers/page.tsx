@@ -6,9 +6,7 @@ import { useState } from 'react'
 import { DocumentTriggerType } from '@latitude-data/constants'
 
 export default function AdminTriggerPage() {
-  const [triggerType, setTriggerType] = useState<DocumentTriggerType>(
-    DocumentTriggerType.Email,
-  )
+  const [triggerType, setTriggerType] = useState<DocumentTriggerType>(DocumentTriggerType.Email)
 
   return (
     <div className='container flex flex-col gap-y-4'>

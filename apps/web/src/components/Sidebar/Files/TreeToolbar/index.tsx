@@ -9,7 +9,7 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 
 export enum EntityType {
   Prompt = 'prompt',
@@ -32,13 +32,8 @@ export function TreeToolbar() {
   const { addToRootFolder } = useTempNodes((s) => ({
     addToRootFolder: s.addToRootFolder,
   }))
-  const {
-    isLoading,
-    isMerged,
-    onMergeCommitClick,
-    onCreateFile,
-    onCreateAgent,
-  } = useFileTreeContext()
+  const { isLoading, isMerged, onMergeCommitClick, onCreateFile, onCreateAgent } =
+    useFileTreeContext()
   const { nodeInput, setNodeInput } = useNodeInput()
   const isFile = nodeInput ? FILE_TYPES.includes(nodeInput) : false
   const icons: IconName[] = nodeInput

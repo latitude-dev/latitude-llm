@@ -1,9 +1,9 @@
 import { ROUTES } from '$/services/routes'
 import {
-  ActionType,
+  type ActionType,
   cloneAgentActionFrontendParametersSchema,
 } from '@latitude-data/core/browser'
-import { ActionExecuteArgs } from './shared'
+import type { ActionExecuteArgs } from './shared'
 
 export const CloneAgentActionSpecification = {
   parameters: cloneAgentActionFrontendParametersSchema,
@@ -15,8 +15,6 @@ async function execute({
   router,
 }: ActionExecuteArgs<ActionType.CloneAgent>) {
   return router.push(
-    ROUTES.projects
-      .detail({ id: projectId })
-      .commits.detail({ uuid: commitUuid }).preview.root,
+    ROUTES.projects.detail({ id: projectId }).commits.detail({ uuid: commitUuid }).preview.root,
   )
 }

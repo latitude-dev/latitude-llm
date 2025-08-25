@@ -13,10 +13,7 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { DurationCell } from './DurationCell'
 import { ScoreCell } from './ScoreCell'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -33,10 +30,7 @@ import { relativeTime } from '$/lib/relativeTime'
 import { ResultsCell } from './ResultsCell'
 import { getStatus } from './shared'
 import { ExperimentStatus } from './ExperimentStatus'
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { type EventArgs, useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 
 const countLabel = (count: number): string => {
   return `${count} experiments`
@@ -90,9 +84,7 @@ export function ExperimentsTable({
         (prev) => {
           if (!prev) return prev
 
-          const prevExperimentIdx = prev.findIndex(
-            (exp) => exp.uuid === updatedExperiment.uuid,
-          )
+          const prevExperimentIdx = prev.findIndex((exp) => exp.uuid === updatedExperiment.uuid)
           if (prevExperimentIdx !== -1) {
             // Substitute the previous experiment with the updated one, without moving it in the array
             prev[prevExperimentIdx] = updatedExperiment
@@ -108,9 +100,7 @@ export function ExperimentsTable({
     },
   })
 
-  const { data: commits, isLoading: isLoadingCommits } = useCommitsFromProject(
-    project.id,
-  )
+  const { data: commits, isLoading: isLoadingCommits } = useCommitsFromProject(project.id)
 
   if (isLoading) {
     return <TableSkeleton cols={9} rows={Math.min(count, pageSize)} />
@@ -127,9 +117,7 @@ export function ExperimentsTable({
               baseUrl: ROUTES.projects
                 .detail({ id: project.id })
                 .commits.detail({ uuid: commit.uuid })
-                .documents.detail({ uuid: document.documentUuid })[
-                DocumentRoutes.experiments
-              ].root,
+                .documents.detail({ uuid: document.documentUuid })[DocumentRoutes.experiments].root,
               count: count ?? 0,
               page,
               pageSize,
@@ -163,20 +151,15 @@ export function ExperimentsTable({
           const isSelected = selectedExperiments.includes(experiment.uuid)
           const textColor = isSelected ? 'primary' : 'foreground'
 
-          const experimentCommit = commits?.find(
-            (c) => c.id === experiment.commitId,
-          )
+          const experimentCommit = commits?.find((c) => c.id === experiment.commitId)
 
           return (
             <TableRow
               key={experiment.id}
-              className={cn(
-                'border-b-[0.5px] h-12 max-h-12 border-border cursor-pointer',
-                {
-                  'animate-pulse': isRunning,
-                  'bg-accent hover:bg-accent/50': isSelected,
-                },
-              )}
+              className={cn('border-b-[0.5px] h-12 max-h-12 border-border cursor-pointer', {
+                'animate-pulse': isRunning,
+                'bg-accent hover:bg-accent/50': isSelected,
+              })}
               onClick={() => onSelectExperiment(experiment.uuid)}
             >
               <TableCell preventDefault align='left'>
@@ -220,23 +203,15 @@ export function ExperimentsTable({
                   <Skeleton height='h5' className='w-12' />
                 ) : (
                   <div className='flex flex-row gap-2 items-center min-w-0 max-w-xs'>
-                    <Badge
-                      variant={experimentCommit?.version ? 'accent' : 'muted'}
-                    >
+                    <Badge variant={experimentCommit?.version ? 'accent' : 'muted'}>
                       <Text.H6 noWrap>
-                        {experimentCommit?.version
-                          ? `v${experimentCommit.version}`
-                          : 'Draft'}
+                        {experimentCommit?.version ? `v${experimentCommit.version}` : 'Draft'}
                       </Text.H6>
                     </Badge>
                     <Text.H5
                       noWrap
                       ellipsis
-                      color={
-                        experimentCommit?.version
-                          ? 'foreground'
-                          : 'foregroundMuted'
-                      }
+                      color={experimentCommit?.version ? 'foreground' : 'foregroundMuted'}
                     >
                       {experimentCommit?.title ?? 'Removed draft'}
                     </Text.H5>

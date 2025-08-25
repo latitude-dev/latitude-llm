@@ -1,4 +1,4 @@
-import { LatteInteraction } from '$/hooks/latte/types'
+import type { LatteInteraction } from '$/hooks/latte/types'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -7,11 +7,7 @@ import { CollapsedInteractionSteps } from './CollapsedInteractionSteps'
 import { InteractionStep } from './InteractionStep'
 import { MarkdownResponse } from './MarkdownText'
 
-export function ChatInteraction({
-  interaction,
-}: {
-  interaction: LatteInteraction
-}) {
+export function ChatInteraction({ interaction }: { interaction: LatteInteraction }) {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -40,10 +36,7 @@ export function ChatInteraction({
                 <InteractionStep
                   key={i}
                   step={step}
-                  isLoading={
-                    interaction.output === undefined &&
-                    i === interaction.steps.length - 1
-                  }
+                  isLoading={interaction.output === undefined && i === interaction.steps.length - 1}
                 />
               ))
             ) : (

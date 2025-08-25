@@ -1,7 +1,7 @@
 'use client'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
-import { User } from '@latitude-data/core/browser'
+import type { User } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 

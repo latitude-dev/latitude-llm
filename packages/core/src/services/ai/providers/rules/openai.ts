@@ -1,5 +1,5 @@
-import { Message } from '@latitude-data/constants/legacyCompiler'
-import { AppliedRules, ProviderRules } from './types'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
+import { type AppliedRules, ProviderRules } from './types'
 
 /**
  * OpenAI oficial 'o1' model supports system messages.
@@ -9,7 +9,7 @@ import { AppliedRules, ProviderRules } from './types'
 function doesSupportSystemMessages(modelId: string): boolean {
   if (modelId === 'o1') return true
 
-  return modelId.startsWith('o1-') ? false : true
+  return !modelId.startsWith('o1-')
 }
 
 export function applyOpenAiRules(appliedRule: AppliedRules): AppliedRules {

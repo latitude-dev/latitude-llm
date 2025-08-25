@@ -1,12 +1,12 @@
 import { attributesToString } from './astParsingUtils'
 import {
   BLOCK_EDITOR_TYPE,
-  BlockRootNode,
-  CodeBlock,
-  ContentBlock,
-  InlineBlock,
-  ParagraphBlock,
-  StepChild,
+  type BlockRootNode,
+  type CodeBlock,
+  type ContentBlock,
+  type InlineBlock,
+  type ParagraphBlock,
+  type StepChild,
 } from './types'
 
 function contentBlockToText(child: ContentBlock): string {
@@ -162,10 +162,7 @@ export function fromBlocksToText(rootNode: BlockRootNode): string {
     // Newline rules at root level:
     // - Always append a single newline after MESSAGE or STEP blocks
     // - For other blocks, append a single newline only if there is a following block
-    if (
-      block.type === BLOCK_EDITOR_TYPE.MESSAGE ||
-      block.type === BLOCK_EDITOR_TYPE.STEP
-    ) {
+    if (block.type === BLOCK_EDITOR_TYPE.MESSAGE || block.type === BLOCK_EDITOR_TYPE.STEP) {
       parts.push('\n')
     } else if (i < rootNode.children.length - 1) {
       parts.push('\n')

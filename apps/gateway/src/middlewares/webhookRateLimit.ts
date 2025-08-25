@@ -15,9 +15,7 @@ export const webhookRateLimitMiddleware = (rateLimit: number = 10) =>
     const ip =
       c.req.header('x-forwarded-for') ||
       c.req.header('x-real-ip') ||
-      ('socket' in c.req.raw
-        ? ((c.req.raw.socket as any).remoteAddress as string)
-        : '0.0.0.0')
+      ('socket' in c.req.raw ? ((c.req.raw.socket as any).remoteAddress as string) : '0.0.0.0')
 
     if (!ip) return await next()
 
@@ -28,10 +26,7 @@ export const webhookRateLimitMiddleware = (rateLimit: number = 10) =>
       c.header('Retry-After', (result.msBeforeNext / 1000).toString())
       c.header('X-RateLimit-Limit', rateLimit.toString())
       c.header('X-RateLimit-Remaining', result.remainingPoints.toString())
-      c.header(
-        'X-RateLimit-Reset',
-        (Date.now() + result.msBeforeNext).toString(),
-      )
+      c.header('X-RateLimit-Reset', (Date.now() + result.msBeforeNext).toString())
 
       await next()
     } catch (error) {

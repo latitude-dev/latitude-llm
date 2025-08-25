@@ -1,6 +1,6 @@
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { MetadataItem } from '$/components/MetadataItem'
-import { SpanKind, SpanStatus, SpanType } from '@latitude-data/core/browser'
+import { type SpanKind, SpanStatus, type SpanType } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -11,11 +11,7 @@ import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { format } from 'date-fns'
 import { useState } from 'react'
-import {
-  DetailsPanelProps,
-  SPAN_KIND_DETAILS,
-  SPAN_STATUS_DETAILS,
-} from './shared'
+import { type DetailsPanelProps, SPAN_KIND_DETAILS, SPAN_STATUS_DETAILS } from './shared'
 import { SPAN_SPECIFICATIONS } from './specifications'
 
 function TypeBadge({ type }: { type: SpanType }) {
@@ -28,11 +24,7 @@ function TypeBadge({ type }: { type: SpanType }) {
       trigger={
         <Badge variant={specification.color.badge.filled}>
           <span className='w-full flex flex-row items-center gap-x-2'>
-            <Icon
-              name={specification.icon}
-              size='xnormal'
-              className='flex-shrink-0'
-            />
+            <Icon name={specification.icon} size='xnormal' className='flex-shrink-0' />
             {specification.name}
           </span>
         </Badge>
@@ -54,32 +46,19 @@ function KindBadge({ kind }: { kind: SpanKind }) {
   )
 }
 
-function StatusBadge({
-  status,
-  message,
-}: {
-  status: SpanStatus
-  message?: string
-}) {
+function StatusBadge({ status, message }: { status: SpanStatus; message?: string }) {
   const details = SPAN_STATUS_DETAILS[status]
   if (!details) return null
 
   return (
-    <Tooltip
-      asChild
-      trigger={
-        <Badge variant={details.color.badge.outline}>{details.name}</Badge>
-      }
-    >
+    <Tooltip asChild trigger={<Badge variant={details.color.badge.outline}>{details.name}</Badge>}>
       {details.description}
       {!!message && `: ${message}`}
     </Tooltip>
   )
 }
 
-export function DetailsPanel<T extends SpanType>({
-  span,
-}: DetailsPanelProps<T>) {
+export function DetailsPanel<T extends SpanType>({ span }: DetailsPanelProps<T>) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const specification = SPAN_SPECIFICATIONS[span.type]
@@ -122,13 +101,8 @@ export function DetailsPanel<T extends SpanType>({
           </ClickToCopy>
         </MetadataItem>
         <MetadataItem label='Duration' value={formatDuration(span.duration)} />
-        <MetadataItem
-          label='Timestamp'
-          value={format(new Date(span.startedAt), 'PPp')}
-        />
-        {!!specification.DetailsPanel && (
-          <specification.DetailsPanel span={span} />
-        )}
+        <MetadataItem label='Timestamp' value={format(new Date(span.startedAt), 'PPp')} />
+        {!!specification.DetailsPanel && <specification.DetailsPanel span={span} />}
       </div>
       {span.status === SpanStatus.Error && (
         <Alert
@@ -156,32 +130,23 @@ export function DetailsPanel<T extends SpanType>({
           scrollable={false}
           expandedContent={
             <div className='w-full flex flex-col gap-y-4'>
-              {Object.entries(span.metadata.attributes).map(
-                ([key, value], index) => (
-                  <div
-                    key={index}
-                    className='w-full flex flex-col items-start gap-y-1.5'
-                  >
-                    <span className='w-full flex truncate'>
-                      <Text.H6B noWrap ellipsis>
-                        {key}
-                      </Text.H6B>
-                    </span>
-                    <div className='w-full min-w-0 flex flex-grow'>
-                      <TextArea
-                        value={
-                          typeof value === 'string'
-                            ? value
-                            : JSON.stringify(value, null, 2)
-                        }
-                        minRows={1}
-                        maxRows={6}
-                        disabled={true}
-                      />
-                    </div>
+              {Object.entries(span.metadata.attributes).map(([key, value], index) => (
+                <div key={index} className='w-full flex flex-col items-start gap-y-1.5'>
+                  <span className='w-full flex truncate'>
+                    <Text.H6B noWrap ellipsis>
+                      {key}
+                    </Text.H6B>
+                  </span>
+                  <div className='w-full min-w-0 flex flex-grow'>
+                    <TextArea
+                      value={typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                      minRows={1}
+                      maxRows={6}
+                      disabled={true}
+                    />
                   </div>
-                ),
-              )}
+                </div>
+              ))}
             </div>
           }
         />

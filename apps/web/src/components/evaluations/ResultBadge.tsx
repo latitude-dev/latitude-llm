@@ -1,20 +1,19 @@
-import { EvaluationMetric, EvaluationType } from '@latitude-data/constants'
+import type { EvaluationMetric, EvaluationType } from '@latitude-data/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { EVALUATION_SPECIFICATIONS, ResultBadgeProps } from './index'
+import { EVALUATION_SPECIFICATIONS, type ResultBadgeProps } from './index'
 
-export default function ResultBadge<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({ evaluation, result }: ResultBadgeProps<T, M>) {
+export default function ResultBadge<T extends EvaluationType, M extends EvaluationMetric<T>>({
+  evaluation,
+  result,
+}: ResultBadgeProps<T, M>) {
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) return null
 
   if (result.error) {
     return (
       <Tooltip asChild trigger={<Badge variant='warningMuted'>Error</Badge>}>
-        Evaluation {evaluation.name} failed with the following error:{' '}
-        {result.error.message}
+        Evaluation {evaluation.name} failed with the following error: {result.error.message}
       </Tooltip>
     )
   }
@@ -33,8 +32,8 @@ export default function ResultBadge<
       }
     >
       Evaluation {evaluation.name}, with a score of {result.score} (
-      {result.metadata!.configuration.reverseScale ? 'lower' : 'higher'} is
-      better), did {result.hasPassed ? 'pass' : 'not pass'}
+      {result.metadata!.configuration.reverseScale ? 'lower' : 'higher'} is better), did{' '}
+      {result.hasPassed ? 'pass' : 'not pass'}
     </Tooltip>
   )
 }

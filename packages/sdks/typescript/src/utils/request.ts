@@ -1,12 +1,7 @@
-import {
-  BodyParams,
-  HandlerType,
-  SDKOptions,
-  UrlParams,
-} from '$sdk/utils/types'
+import type { BodyParams, HandlerType, SDKOptions, UrlParams } from '$sdk/utils/types'
 import { SDK_VERSION } from '$sdk/utils/version'
 
-import nodeFetch, { Response } from 'node-fetch'
+import nodeFetch, { type Response } from 'node-fetch'
 
 const MAX_RETRIES = 2
 

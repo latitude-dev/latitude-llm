@@ -1,12 +1,7 @@
 'use client'
 
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  DocumentVersion,
-  Project,
-  Commit,
-  Dataset,
-} from '@latitude-data/core/browser'
+import type { DocumentVersion, Project, Commit, Dataset } from '@latitude-data/core/browser'
 import { useCallback, useState } from 'react'
 import { ROUTES } from '$/services/routes'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
@@ -37,9 +32,7 @@ export function OnboardingClient({
   commit,
   dataset,
 }: OnboardingStep1ContentProps) {
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>(
-    OnboardingStep.ShowPrompt,
-  )
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>(OnboardingStep.ShowPrompt)
   const navigate = useNavigate()
   const { toast } = useToast()
   const { start, messages, activeStream } = useRunOnboardingPrompt({
@@ -49,16 +42,13 @@ export function OnboardingClient({
     setCurrentStep,
   })
 
-  const { execute: completeOnboarding } = useLatitudeAction(
-    completeOnboardingAction,
-  )
+  const { execute: completeOnboarding } = useLatitudeAction(completeOnboardingAction)
   const onCompleteOnboarding = useCallback(
     async ({ experimentUuids }: { experimentUuids: string[] }) => {
       await completeOnboarding()
       toast({
         title: 'Experiment started!',
-        description:
-          "Welcome onboard! Let's check out the results of your experiment",
+        description: "Welcome onboard! Let's check out the results of your experiment",
       })
       setTimeout(async () => {
         navigate.push(
@@ -70,14 +60,7 @@ export function OnboardingClient({
         )
       }, 1000)
     },
-    [
-      completeOnboarding,
-      navigate,
-      project.id,
-      commit.uuid,
-      document.documentUuid,
-      toast,
-    ],
+    [completeOnboarding, navigate, project.id, commit.uuid, document.documentUuid, toast],
   )
 
   return (

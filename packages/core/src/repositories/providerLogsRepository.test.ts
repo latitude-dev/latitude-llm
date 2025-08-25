@@ -1,14 +1,14 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   LogSources,
-  ProviderApiKey,
+  type ProviderApiKey,
   Providers,
-  Workspace,
+  type Workspace,
 } from '../browser'
 import { NotFoundError } from '../lib/errors'
 import * as factories from '../tests/factories'
@@ -93,8 +93,7 @@ describe('ProviderLogsRepository', () => {
         source: LogSources.Playground,
       })
 
-      const result =
-        await providerLogsRepository.findByDocumentUuid(documentUuid)
+      const result = await providerLogsRepository.findByDocumentUuid(documentUuid)
 
       expect(result.ok).toBe(true)
       expect(result.unwrap()).toContainEqual(
@@ -123,13 +122,10 @@ describe('ProviderLogsRepository', () => {
         ),
       )
 
-      const result = await providerLogsRepository.findByDocumentUuid(
-        document.documentUuid,
-        {
-          limit: 2,
-          offset: 1,
-        },
-      )
+      const result = await providerLogsRepository.findByDocumentUuid(document.documentUuid, {
+        limit: 2,
+        offset: 1,
+      })
 
       expect(result.ok).toBe(true)
       expect(result.unwrap()).toHaveLength(2)
@@ -162,9 +158,7 @@ describe('ProviderLogsRepository', () => {
         generatedAt: new Date('2024-01-02'),
       })
 
-      const result = await providerLogsRepository.findLastByDocumentLogUuid(
-        documentLog.uuid,
-      )
+      const result = await providerLogsRepository.findLastByDocumentLogUuid(documentLog.uuid)
 
       expect(result.ok).toBe(true)
       expect(result.unwrap().uuid).toBe(lastLog.uuid)
@@ -172,16 +166,14 @@ describe('ProviderLogsRepository', () => {
     })
 
     it('returns a NotFoundError when the document log is not found', async () => {
-      const result =
-        await providerLogsRepository.findLastByDocumentLogUuid(randomUUID())
+      const result = await providerLogsRepository.findLastByDocumentLogUuid(randomUUID())
 
       expect(result.ok).toBe(false)
       expect(() => result.unwrap()).toThrowError(NotFoundError)
     })
 
     it('returns an error when documentLogUuid is undefined', async () => {
-      const result =
-        await providerLogsRepository.findLastByDocumentLogUuid(undefined)
+      const result = await providerLogsRepository.findLastByDocumentLogUuid(undefined)
 
       expect(result.ok).toBe(false)
       expect(() => result.unwrap()).toThrowError(NotFoundError)
@@ -214,9 +206,7 @@ describe('ProviderLogsRepository', () => {
         generatedAt: new Date('2024-01-02'),
       })
 
-      const result = await providerLogsRepository.findByDocumentLogUuid(
-        documentLog.uuid,
-      )
+      const result = await providerLogsRepository.findByDocumentLogUuid(documentLog.uuid)
 
       expect(result.ok).toBe(true)
       const logs = result.unwrap()
@@ -244,10 +234,10 @@ describe('ProviderLogsRepository', () => {
         ),
       )
 
-      const result = await providerLogsRepository.findByDocumentLogUuid(
-        documentLog.uuid,
-        { limit: 2, offset: 1 },
-      )
+      const result = await providerLogsRepository.findByDocumentLogUuid(documentLog.uuid, {
+        limit: 2,
+        offset: 1,
+      })
 
       expect(result.ok).toBe(true)
       expect(result.unwrap()).toHaveLength(2)

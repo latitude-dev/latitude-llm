@@ -3,25 +3,17 @@ import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEdito
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { DiffViewer } from '@latitude-data/web-ui/molecules/DiffViewer'
-import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
+import { type ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
 
 function ChangeDiffPlaceholder() {
   return (
     <div className='flex flex-grow bg-secondary w-full rounded-md items-center justify-center'>
-      <Text.H6 color='foregroundMuted'>
-        Select a change to view the diff
-      </Text.H6>
+      <Text.H6 color='foregroundMuted'>Select a change to view the diff</Text.H6>
     </div>
   )
 }
 
-function DocumentDiff({
-  oldContent,
-  newContent,
-}: {
-  oldContent?: string
-  newContent?: string
-}) {
+function DocumentDiff({ oldContent, newContent }: { oldContent?: string; newContent?: string }) {
   if (oldContent === undefined || newContent === undefined) {
     return (
       <div className='flex w-full h-96'>
@@ -59,12 +51,7 @@ function UpdatedDocumentDiff({ documentUuid }: { documentUuid: string }) {
   })
   const { data: oldDocument } = useDocumentVersion(documentUuid)
 
-  return (
-    <DocumentDiff
-      oldContent={oldDocument?.content}
-      newContent={newDocument?.content}
-    />
-  )
+  return <DocumentDiff oldContent={oldDocument?.content} newContent={newDocument?.content} />
 }
 
 export function ChangeDiff({ change }: { change?: ChangedDocument }) {

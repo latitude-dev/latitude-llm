@@ -11,7 +11,7 @@ import { ROUTES } from '$/services/routes'
 import { useCommits } from '$/stores/commitsStore'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
-import { DocumentVersion } from '@latitude-data/constants'
+import type { DocumentVersion } from '@latitude-data/constants'
 
 export default function DraftCommitModal({
   open,
@@ -22,8 +22,7 @@ export default function DraftCommitModal({
   setOpen: (open: boolean) => void
   currentDocument?: DocumentVersion
 }) {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const defaultPromptTitle = useMemo(() => new Date().toLocaleString(), [open])
+  const defaultPromptTitle = useMemo(() => new Date().toLocaleString(), [])
   const { createDraft, isCreating } = useCommits({
     commitStatus: CommitStatus.Draft,
     onSuccessCreate: (draft) => {
@@ -34,8 +33,7 @@ export default function DraftCommitModal({
         .commits.detail({ uuid: draft.uuid })
 
       const targetRoute = currentDocument
-        ? baseRoute.documents.detail({ uuid: currentDocument.documentUuid })
-            .root
+        ? baseRoute.documents.detail({ uuid: currentDocument.documentUuid }).root
         : baseRoute.preview.root
 
       router.push(targetRoute)
@@ -56,12 +54,7 @@ export default function DraftCommitModal({
       footer={
         <>
           <CloseTrigger />
-          <Button
-            fancy
-            form='createDraftCommitForm'
-            type='submit'
-            disabled={isCreating}
-          >
+          <Button fancy form='createDraftCommitForm' type='submit' disabled={isCreating}>
             Create version
           </Button>
         </>

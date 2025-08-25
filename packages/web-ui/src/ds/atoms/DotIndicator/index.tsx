@@ -40,21 +40,13 @@ export type DotIndicatorProps = VariantProps<typeof indicatorVariants> & {
   pulse?: boolean
 }
 
-export function DotIndicator({
-  size,
-  variant,
-  pulse = false,
-}: DotIndicatorProps) {
+export function DotIndicator({ size, variant, pulse = false }: DotIndicatorProps) {
   return (
     <div className={cn('relative flex', indicatorWrapper({ size }))}>
       <div
-        className={cn(
-          'absolute inline-flex h-full w-full opacity-75',
-          pulseVariants({ variant }),
-          {
-            'animate-ping': pulse,
-          },
-        )}
+        className={cn('absolute inline-flex h-full w-full opacity-75', pulseVariants({ variant }), {
+          'animate-ping': pulse,
+        })}
       />
       <div className={cn(indicatorVariants({ variant, size }))} />
     </div>

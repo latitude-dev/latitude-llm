@@ -1,14 +1,14 @@
 import * as env from '@latitude-data/env'
-import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
+import { beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 import { ZodObject } from 'zod'
 import {
-  Commit,
-  DocumentVersion,
-  EvaluationSettings,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationSettings,
   EvaluationType,
   LlmEvaluationMetric,
   Providers,
-  Workspace,
+  type Workspace,
 } from '../../browser'
 import * as cache from '../../cache'
 import { Result } from '../../lib/Result'
@@ -29,10 +29,7 @@ describe('generateEvaluationV2', () => {
   let workspace: Workspace
   let commit: Commit
   let document: DocumentVersion
-  let settings: EvaluationSettings<
-    EvaluationType.Llm,
-    LlmEvaluationMetric.Rating
-  >
+  let settings: EvaluationSettings<EvaluationType.Llm, LlmEvaluationMetric.Rating>
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -44,9 +41,7 @@ describe('generateEvaluationV2', () => {
       documents,
       commit: c,
     } = await factories.createProject({
-      providers: [
-        { type: Providers.OpenAI, name: 'openai', defaultModel: 'gpt-4o' },
-      ],
+      providers: [{ type: Providers.OpenAI, name: 'openai', defaultModel: 'gpt-4o' }],
       documents: {
         prompt: factories.helpers.createPrompt({
           provider: 'openai',
@@ -101,31 +96,24 @@ describe('generateEvaluationV2', () => {
     mocks = {
       cacheGet: mockCacheGet,
       cacheSet: mockCacheSet,
-      getCopilot: vi
-        .spyOn(copilot, 'getCopilot')
-        .mockImplementation(async (_) => {
-          return Result.ok({ workspace, commit, document })
-        }),
-      runCopilot: vi
-        .spyOn(copilot, 'runCopilot')
-        .mockImplementation(async (_) => {
-          return Result.ok({
-            name: settings.name,
-            description: settings.description,
-            reverseScale: settings.configuration.reverseScale,
-            criteria: settings.configuration.criteria,
-            minRatingDescription: settings.configuration.minRatingDescription,
-            maxRatingDescription: settings.configuration.maxRatingDescription,
-          })
-        }),
+      getCopilot: vi.spyOn(copilot, 'getCopilot').mockImplementation(async (_) => {
+        return Result.ok({ workspace, commit, document })
+      }),
+      runCopilot: vi.spyOn(copilot, 'runCopilot').mockImplementation(async (_) => {
+        return Result.ok({
+          name: settings.name,
+          description: settings.description,
+          reverseScale: settings.configuration.reverseScale,
+          criteria: settings.configuration.criteria,
+          minRatingDescription: settings.configuration.minRatingDescription,
+          maxRatingDescription: settings.configuration.maxRatingDescription,
+        })
+      }),
     }
   })
 
   it('fails when no provider is available', async () => {
-    vi.spyOn(
-      providerApiKeys,
-      'findDefaultEvaluationProvider',
-    ).mockResolvedValue(Result.nil())
+    vi.spyOn(providerApiKeys, 'findDefaultEvaluationProvider').mockResolvedValue(Result.nil())
 
     await expect(
       generateEvaluationV2({
@@ -133,9 +121,7 @@ describe('generateEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
       }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new UnprocessableEntityError('No provider for evaluations available'),
-    )
+    ).rejects.toThrowError(new UnprocessableEntityError('No provider for evaluations available'))
 
     expect(mocks.getCopilot).toHaveBeenCalledOnce()
     expect(mocks.cacheGet).toHaveBeenCalledOnce()
@@ -144,10 +130,7 @@ describe('generateEvaluationV2', () => {
   })
 
   it('fails when no model is available', async () => {
-    vi.spyOn(
-      providerApiKeys,
-      'findDefaultEvaluationProvider',
-    ).mockResolvedValue(
+    vi.spyOn(providerApiKeys, 'findDefaultEvaluationProvider').mockResolvedValue(
       Result.ok({
         provider: Providers.Custom,
         defaultModel: undefined,
@@ -160,9 +143,7 @@ describe('generateEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
       }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new UnprocessableEntityError('No model for evaluations available'),
-    )
+    ).rejects.toThrowError(new UnprocessableEntityError('No model for evaluations available'))
 
     expect(mocks.getCopilot).toHaveBeenCalledOnce()
     expect(mocks.cacheGet).toHaveBeenCalledOnce()

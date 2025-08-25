@@ -2,9 +2,9 @@ import { omit } from 'lodash-es'
 
 import { and, eq, inArray, ne } from 'drizzle-orm'
 
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import type { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { EvaluationsV2Repository } from '../../repositories'
 import { documentVersions } from '../../schema'
@@ -25,10 +25,7 @@ async function findUuidsInOtherCommits({
     .select()
     .from(documentVersions)
     .where(
-      and(
-        inArray(documentVersions.documentUuid, uuids),
-        ne(documentVersions.commitId, commit.id),
-      ),
+      and(inArray(documentVersions.documentUuid, uuids), ne(documentVersions.commitId, commit.id)),
     )
 
   return docs.map((d) => d.documentUuid)
@@ -62,9 +59,7 @@ async function hardDestroyDocuments({
     .map((d) => d.documentUuid)
   if (uuids.length === 0) return
 
-  return tx
-    .delete(documentVersions)
-    .where(inArray(documentVersions.documentUuid, uuids))
+  return tx.delete(documentVersions).where(inArray(documentVersions.documentUuid, uuids))
 }
 
 async function createDocumentsAsSoftDeleted({
@@ -103,17 +98,11 @@ async function updateDocumentsAsSoftDeleted({
     .update(documentVersions)
     .set({ deletedAt: new Date() })
     .where(
-      and(
-        inArray(documentVersions.documentUuid, uuids),
-        eq(documentVersions.commitId, commit.id),
-      ),
+      and(inArray(documentVersions.documentUuid, uuids), eq(documentVersions.commitId, commit.id)),
     )
 }
 
-async function invalidateDocumentsCacheInCommit(
-  commitId: number,
-  tx = database,
-) {
+async function invalidateDocumentsCacheInCommit(commitId: number, tx = database) {
   return tx
     .update(documentVersions)
     .set({ resolvedContent: null })
@@ -154,10 +143,9 @@ export async function destroyOrSoftDeleteDocuments(
 
         await Promise.all(
           evaluations.map((evaluation) =>
-            deleteEvaluationV2(
-              { evaluation, commit, workspace },
-              transaction,
-            ).then((r) => r.unwrap()),
+            deleteEvaluationV2({ evaluation, commit, workspace }, transaction).then((r) =>
+              r.unwrap(),
+            ),
           ),
         )
       }),

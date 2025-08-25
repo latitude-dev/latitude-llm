@@ -1,7 +1,7 @@
 'use client'
 import { useMemo } from 'react'
 
-import { DailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
+import type { DailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { BarChart, ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
@@ -70,8 +70,7 @@ export function LogsOverTime({
               type: 'number',
               min: minDate,
               max: maxDate,
-              tickFormatter: (value: string | number) =>
-                formatDate(Number(value)),
+              tickFormatter: (value: string | number) => formatDate(Number(value)),
             },
             yAxis: {
               label: 'Number of logs',
@@ -93,9 +92,7 @@ export function LogsOverTime({
           }}
         />
       )}
-      {!parsedData.length && (
-        <ChartBlankSlate>No logs found so far.</ChartBlankSlate>
-      )}
+      {!parsedData.length && <ChartBlankSlate>No logs found so far.</ChartBlankSlate>}
     </ChartWrapper>
   )
 }

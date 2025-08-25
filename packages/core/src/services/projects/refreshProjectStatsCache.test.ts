@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ProjectStats, Providers } from '../../browser'
+import { type ProjectStats, Providers } from '../../browser'
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
 import { computeProjectStats } from './computeProjectStats'
@@ -25,9 +25,7 @@ describe('refreshProjectStatsCache', () => {
 
     // Assert
     expect(result.error).toBeDefined()
-    expect(result.error?.message).toContain(
-      `Project ${nonExistentProjectId} not found`,
-    )
+    expect(result.error?.message).toContain(`Project ${nonExistentProjectId} not found`)
   })
 
   it('should skip refresh if project has insufficient logs', async () => {
@@ -77,9 +75,7 @@ describe('refreshProjectStatsCache', () => {
       totalEvaluationResults: 0,
       costPerEvaluation: {},
     }
-    vi.mocked(computeProjectStats).mockResolvedValueOnce(
-      Result.ok(mockProjectStats),
-    )
+    vi.mocked(computeProjectStats).mockResolvedValueOnce(Result.ok(mockProjectStats))
 
     // Act
     const result = await refreshProjectStatsCache(project.id)

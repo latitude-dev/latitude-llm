@@ -1,10 +1,10 @@
 import { and, desc, eq, getTableColumns, isNull } from 'drizzle-orm'
-import { DocumentTriggerEvent, Commit } from '../browser'
+import type { DocumentTriggerEvent, Commit } from '../browser'
 import { documentTriggerEvents, commits } from '../schema'
 import Repository from './repositoryV2'
 import { Result } from '../lib/Result'
-import { PromisedResult } from '../lib/Transaction'
-import { LatitudeError, NotFoundError } from '@latitude-data/constants/errors'
+import type { PromisedResult } from '../lib/Transaction'
+import { type LatitudeError, NotFoundError } from '@latitude-data/constants/errors'
 
 const tt = getTableColumns(documentTriggerEvents)
 
@@ -19,10 +19,7 @@ export class DocumentTriggerEventsRepository extends Repository<DocumentTriggerE
       .from(documentTriggerEvents)
       .innerJoin(
         commits,
-        and(
-          eq(commits.id, documentTriggerEvents.commitId),
-          isNull(commits.deletedAt),
-        ),
+        and(eq(commits.id, documentTriggerEvents.commitId), isNull(commits.deletedAt)),
       )
       .where(this.scopeFilter)
       .$dynamic()
@@ -40,34 +37,23 @@ export class DocumentTriggerEventsRepository extends Repository<DocumentTriggerE
       .from(documentTriggerEvents)
       .innerJoin(
         commits,
-        and(
-          eq(commits.id, documentTriggerEvents.commitId),
-          isNull(commits.deletedAt),
-        ),
+        and(eq(commits.id, documentTriggerEvents.commitId), isNull(commits.deletedAt)),
       )
       .where(
         and(
           eq(documentTriggerEvents.workspaceId, this.workspaceId),
           commit ? eq(documentTriggerEvents.commitId, commit.id) : undefined,
-          triggerUuid
-            ? eq(documentTriggerEvents.triggerUuid, triggerUuid)
-            : undefined,
+          triggerUuid ? eq(documentTriggerEvents.triggerUuid, triggerUuid) : undefined,
         ),
       )
-      .orderBy(
-        desc(documentTriggerEvents.createdAt),
-        desc(documentTriggerEvents.id),
-      )
+      .orderBy(desc(documentTriggerEvents.createdAt), desc(documentTriggerEvents.id))
 
     const results = await query
 
     return Result.ok(results as DocumentTriggerEvent[])
   }
 
-  getAllTriggerEventsInWorkspace(): PromisedResult<
-    DocumentTriggerEvent[],
-    LatitudeError
-  > {
+  getAllTriggerEventsInWorkspace(): PromisedResult<DocumentTriggerEvent[], LatitudeError> {
     return this.getTriggerEvents()
   }
 
@@ -99,10 +85,7 @@ export class DocumentTriggerEventsRepository extends Repository<DocumentTriggerE
       .from(documentTriggerEvents)
       .innerJoin(
         commits,
-        and(
-          eq(commits.id, documentTriggerEvents.commitId),
-          isNull(commits.deletedAt),
-        ),
+        and(eq(commits.id, documentTriggerEvents.commitId), isNull(commits.deletedAt)),
       )
       .where(
         and(
@@ -113,9 +96,7 @@ export class DocumentTriggerEventsRepository extends Repository<DocumentTriggerE
 
     const event = results[0]
     if (!event) {
-      return Result.error(
-        new NotFoundError(`Trigger event with id '${id}' not found`),
-      )
+      return Result.error(new NotFoundError(`Trigger event with id '${id}' not found`))
     }
 
     return Result.ok(event as DocumentTriggerEvent)

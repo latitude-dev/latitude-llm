@@ -4,7 +4,7 @@ import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { capitalize } from 'lodash-es'
 import { useMcpServer } from '$/stores/mcpServer'
-import { McpServer } from '@latitude-data/core/browser'
+import type { McpServer } from '@latitude-data/core/browser'
 import { UpgradeLink } from '$/components/UpgradeLink'
 
 interface McpServerStatusProps {
@@ -12,18 +12,11 @@ interface McpServerStatusProps {
   short?: boolean
 }
 
-export function McpServerStatus({
-  short = false,
-  mcpServerId,
-}: McpServerStatusProps) {
-  const { data: mcpServer, isValidating } = useMcpServer(
-    mcpServerId?.toString(),
-    {
-      refreshInterval: (mcpServer) =>
-        mcpServer?.status === 'deployed' ? 1000 * 30 : 1000 * 10,
-      fallbackData: undefined,
-    },
-  )
+export function McpServerStatus({ short = false, mcpServerId }: McpServerStatusProps) {
+  const { data: mcpServer, isValidating } = useMcpServer(mcpServerId?.toString(), {
+    refreshInterval: (mcpServer) => (mcpServer?.status === 'deployed' ? 1000 * 30 : 1000 * 10),
+    fallbackData: undefined,
+  })
 
   // Determine the status variant for the dot indicator
   const getStatusVariant = (
@@ -51,17 +44,13 @@ export function McpServerStatus({
     <div className={`flex flex-col gap-1 ${isValidating ? 'opacity-50' : ''}`}>
       <div className='flex items-center gap-2'>
         <DotIndicator pulse variant={statusVariant} />
-        <StatusText
-          short={short}
-          status={mcpServer.status}
-          replicas={mcpServer.replicas}
-        />
+        <StatusText short={short} status={mcpServer.status} replicas={mcpServer.replicas} />
       </div>
 
       {!short && mcpServer.status === 'failed' && (
         <Text.H6 color='foregroundMuted'>
-          Deployment failed. Check the logs for more details. We'll
-          automatically attempt to redeploy in a few seconds.
+          Deployment failed. Check the logs for more details. We'll automatically attempt to
+          redeploy in a few seconds.
         </Text.H6>
       )}
 
@@ -87,11 +76,9 @@ const StatusText = ({
 
   if (status === 'deployed' && replicas === 0) {
     return (
-      <Tooltip
-        trigger={<Text.H5 color='foregroundMuted'>{shortText}Inactive</Text.H5>}
-      >
-        This integration has automatically been suspended due to inactivity. It
-        will automatically resume when required.
+      <Tooltip trigger={<Text.H5 color='foregroundMuted'>{shortText}Inactive</Text.H5>}>
+        This integration has automatically been suspended due to inactivity. It will automatically
+        resume when required.
         <br />
         <br />
         <UpgradeLink>

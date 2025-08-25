@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
 import { integrations } from '../../schema'
 
 export function touchIntegration(

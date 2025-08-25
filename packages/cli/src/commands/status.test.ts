@@ -63,14 +63,10 @@ describe('StatusCommand', () => {
       // Mock base command methods
       // @ts-expect-error - mock
       vi.spyOn(statusCommand as any, 'validateEnvironment').mockResolvedValue()
-      vi.spyOn(statusCommand as any, 'getLockFile').mockResolvedValue(
-        mockLockFile,
-      )
+      vi.spyOn(statusCommand as any, 'getLockFile').mockResolvedValue(mockLockFile)
       vi.spyOn(statusCommand as any, 'readLocalPrompts').mockResolvedValue([])
       vi.spyOn(statusCommand as any, 'getDiffWithRemote').mockResolvedValue([])
-      vi.spyOn(statusCommand as any, 'showChangesSummary').mockReturnValue(
-        false,
-      )
+      vi.spyOn(statusCommand as any, 'showChangesSummary').mockReturnValue(false)
 
       // Mock client
       statusCommand['client'] = {
@@ -83,31 +79,18 @@ describe('StatusCommand', () => {
     it('should execute status successfully', async () => {
       await statusCommand.execute(mockOptions)
 
-      expect(statusCommand['validateEnvironment']).toHaveBeenCalledWith(
-        mockOptions,
-      )
+      expect(statusCommand['validateEnvironment']).toHaveBeenCalledWith(mockOptions)
       expect(statusCommand['getLockFile']).toHaveBeenCalled()
-      expect(statusCommand['client']!.versions.get).toHaveBeenCalledWith(
-        123,
-        'test-version',
-      )
-      expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('Latitude Project Status'),
-      )
-      expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('Project 123'),
-      )
-      expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('Version Test Version'),
-      )
+      expect(statusCommand['client']!.versions.get).toHaveBeenCalledWith(123, 'test-version')
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Latitude Project Status'))
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Project 123'))
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Version Test Version'))
     })
 
     it('should display version description when available', async () => {
       await statusCommand.execute(mockOptions)
 
-      expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('Test version description'),
-      )
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Test version description'))
     })
 
     it('should handle missing version description', async () => {
@@ -122,9 +105,7 @@ describe('StatusCommand', () => {
 
       await statusCommand.execute(mockOptions)
 
-      expect(console.log).toHaveBeenCalledWith(
-        expect.stringContaining('Version Test Version'),
-      )
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Version Test Version'))
     })
 
     it('should show changes summary when prompts can be analyzed', async () => {
@@ -138,41 +119,32 @@ describe('StatusCommand', () => {
         },
       ]
 
-      vi.spyOn(statusCommand as any, 'getDiffWithRemote').mockResolvedValue(
-        mockDiffResults,
-      )
+      vi.spyOn(statusCommand as any, 'getDiffWithRemote').mockResolvedValue(mockDiffResults)
       vi.spyOn(statusCommand as any, 'showChangesSummary').mockReturnValue(true)
 
       await statusCommand.execute(mockOptions)
 
-      expect(statusCommand['showChangesSummary']).toHaveBeenCalledWith(
-        mockDiffResults,
-      )
+      expect(statusCommand['showChangesSummary']).toHaveBeenCalledWith(mockDiffResults)
     })
 
     it('should handle errors gracefully', async () => {
       const error = new Error('Test error')
-      vi.spyOn(statusCommand as any, 'validateEnvironment').mockRejectedValue(
-        error,
-      )
+      vi.spyOn(statusCommand as any, 'validateEnvironment').mockRejectedValue(error)
       vi.spyOn(statusCommand as any, 'handleError').mockImplementation(() => {})
 
       await statusCommand.execute(mockOptions)
 
-      expect(statusCommand['handleError']).toHaveBeenCalledWith(
-        error,
-        'Status check',
-      )
+      expect(statusCommand['handleError']).toHaveBeenCalledWith(error, 'Status check')
     })
   })
 
   describe('readLocalPrompts', () => {
     beforeEach(() => {
       statusCommand['projectPath'] = '/test/project'
-      vi.spyOn(
-        statusCommand['promptManager'],
-        'findAllPromptFiles',
-      ).mockResolvedValue(['test.promptl', 'example.js'])
+      vi.spyOn(statusCommand['promptManager'], 'findAllPromptFiles').mockResolvedValue([
+        'test.promptl',
+        'example.js',
+      ])
       vi.spyOn(statusCommand as any, 'readPromptContent')
         .mockResolvedValueOnce('promptl content')
         .mockResolvedValueOnce('js content')
@@ -184,10 +156,7 @@ describe('StatusCommand', () => {
     it('should read all local prompts successfully', async () => {
       mockFs.access.mockResolvedValue(undefined)
 
-      const result = await (statusCommand as any).readLocalPrompts(
-        'prompts',
-        true,
-      )
+      const result = await (statusCommand as any).readLocalPrompts('prompts', true)
 
       expect(result).toEqual([
         { path: 'test', content: 'promptl content' },
@@ -198,10 +167,7 @@ describe('StatusCommand', () => {
     it('should return empty array when prompts directory does not exist', async () => {
       mockFs.access.mockRejectedValue(new Error('Directory not found'))
 
-      const result = await (statusCommand as any).readLocalPrompts(
-        'prompts',
-        true,
-      )
+      const result = await (statusCommand as any).readLocalPrompts('prompts', true)
 
       expect(result).toEqual([])
       expect(console.log).toHaveBeenCalledWith(
@@ -215,10 +181,7 @@ describe('StatusCommand', () => {
         .mockResolvedValueOnce('promptl content')
         .mockRejectedValueOnce(new Error('Cannot read file'))
 
-      const result = await (statusCommand as any).readLocalPrompts(
-        'prompts',
-        true,
-      )
+      const result = await (statusCommand as any).readLocalPrompts('prompts', true)
 
       expect(result).toEqual([
         { path: 'test', content: 'promptl content' },
@@ -275,25 +238,16 @@ describe('StatusCommand', () => {
     it('should read .promptl files directly', async () => {
       mockFs.readFile.mockResolvedValue('promptl content')
 
-      const result = await (statusCommand as any).readPromptContent(
-        '/path/test.promptl',
-      )
+      const result = await (statusCommand as any).readPromptContent('/path/test.promptl')
 
-      expect(mockFs.readFile).toHaveBeenCalledWith(
-        '/path/test.promptl',
-        'utf-8',
-      )
+      expect(mockFs.readFile).toHaveBeenCalledWith('/path/test.promptl', 'utf-8')
       expect(result).toBe('promptl content')
     })
 
     it('should import JS files and extract prompt content', async () => {
-      vi.spyOn(statusCommand as any, 'importPromptFromFile').mockResolvedValue(
-        'js content',
-      )
+      vi.spyOn(statusCommand as any, 'importPromptFromFile').mockResolvedValue('js content')
 
-      const result = await (statusCommand as any).readPromptContent(
-        '/path/test.js',
-      )
+      const result = await (statusCommand as any).readPromptContent('/path/test.js')
 
       expect(result).toBe('js content')
     })
@@ -303,9 +257,9 @@ describe('StatusCommand', () => {
         new Error('Import failed'),
       )
 
-      await expect(
-        (statusCommand as any).readPromptContent('/path/test.js'),
-      ).rejects.toThrow('Cannot read prompt from /path/test.js')
+      await expect((statusCommand as any).readPromptContent('/path/test.js')).rejects.toThrow(
+        'Cannot read prompt from /path/test.js',
+      )
 
       expect(console.warn).toHaveBeenCalledWith(
         expect.stringContaining('Failed to import prompt from /path/test.js'),
@@ -315,9 +269,7 @@ describe('StatusCommand', () => {
 
   describe('convertToPromptVariableName', () => {
     it('should convert file name to camelCase', () => {
-      const result = (statusCommand as any).convertToPromptVariableName(
-        'test-prompt_name',
-      )
+      const result = (statusCommand as any).convertToPromptVariableName('test-prompt_name')
       expect(result).toBe('testPromptName')
     })
 
@@ -329,18 +281,10 @@ describe('StatusCommand', () => {
 
   describe('convertFilePathToPromptPath', () => {
     it('should remove file extensions', () => {
-      expect(
-        (statusCommand as any).convertFilePathToPromptPath('test.js'),
-      ).toBe('test')
-      expect(
-        (statusCommand as any).convertFilePathToPromptPath('test.promptl'),
-      ).toBe('test')
-      expect(
-        (statusCommand as any).convertFilePathToPromptPath('test.ts'),
-      ).toBe('test')
-      expect(
-        (statusCommand as any).convertFilePathToPromptPath('test.cjs'),
-      ).toBe('test')
+      expect((statusCommand as any).convertFilePathToPromptPath('test.js')).toBe('test')
+      expect((statusCommand as any).convertFilePathToPromptPath('test.promptl')).toBe('test')
+      expect((statusCommand as any).convertFilePathToPromptPath('test.ts')).toBe('test')
+      expect((statusCommand as any).convertFilePathToPromptPath('test.cjs')).toBe('test')
     })
   })
 })

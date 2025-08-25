@@ -11,14 +11,14 @@ const url = port
   ? `${env.GATEWAY_SSL ? 'https' : 'http'}://${env.GATEWAY_HOSTNAME}:${env.GATEWAY_PORT}`
   : `${env.GATEWAY_SSL ? 'https' : 'http'}://${env.GATEWAY_HOSTNAME}`
 
-let servers = [
+const servers = [
   {
     url,
     description: 'Latitude',
   },
 ]
 
-export const openAPIObjectConfig = {
+const openAPIObjectConfig = {
   openapi: '3.1.0',
   info: { title: 'Latitude API', version: packageJson.version },
   tags: tags,

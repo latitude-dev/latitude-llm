@@ -2,7 +2,7 @@ import { envClient } from '$/envClient'
 import { FREE_PLANS } from '@latitude-data/core/browser'
 import { useSession } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 export function UpgradeLink({ children }: { children: ReactNode }) {
   const { currentUser, workspace } = useSession()

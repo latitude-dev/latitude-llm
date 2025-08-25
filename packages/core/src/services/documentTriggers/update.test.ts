@@ -1,20 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  DocumentTriggerType,
-  DocumentVersion,
-  Providers,
-} from '@latitude-data/constants'
-import {
-  Commit,
-  Project,
-  Workspace,
-  User,
-  DocumentTrigger,
-} from '../../browser'
+import { DocumentTriggerType, type DocumentVersion, Providers } from '@latitude-data/constants'
+import type { Commit, Project, Workspace, User, DocumentTrigger } from '../../browser'
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'
-import {
+import type {
   EmailTriggerConfiguration,
   ScheduledTriggerConfiguration,
   IntegrationTriggerConfiguration,
@@ -71,13 +61,12 @@ describe('updateDocumentTriggerConfiguration', () => {
   it('returns error when commit is merged', async () => {
     const merged = await mergeCommit(draft).then((r) => r.unwrap())
 
-    const result =
-      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
-        workspace,
-        commit: merged,
-        triggerUuid: 'any-uuid',
-        configuration: { emailWhitelist: [], replyWithResponse: true },
-      })
+    const result = await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+      workspace,
+      commit: merged,
+      triggerUuid: 'any-uuid',
+      configuration: { emailWhitelist: [], replyWithResponse: true },
+    })
 
     expect(result.ok).toBeFalsy()
     expect(result.error).toBeInstanceOf(BadRequestError)
@@ -87,13 +76,12 @@ describe('updateDocumentTriggerConfiguration', () => {
   })
 
   it('returns error when trigger is not found in the given commit scope', async () => {
-    const result =
-      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
-        workspace,
-        commit: draft,
-        triggerUuid: 'non-existent-uuid',
-        configuration: { emailWhitelist: [], replyWithResponse: true },
-      })
+    const result = await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+      workspace,
+      commit: draft,
+      triggerUuid: 'non-existent-uuid',
+      configuration: { emailWhitelist: [], replyWithResponse: true },
+    })
 
     expect(result.ok).toBeFalsy()
     expect(result.error).toBeInstanceOf(NotFoundError)
@@ -112,9 +100,7 @@ describe('updateDocumentTriggerConfiguration', () => {
       replyWithResponse: true,
       parameters: {},
     }
-    mocks.deployDocumentTrigger.mockResolvedValue(
-      Result.ok({} as EmailTriggerDeploymentSettings),
-    )
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({} as EmailTriggerDeploymentSettings))
 
     // Create initial trigger in current project draft, then merge it
     const created = await createDocumentTrigger({
@@ -128,25 +114,23 @@ describe('updateDocumentTriggerConfiguration', () => {
     await mergeCommit(draft).then((r) => r.unwrap())
 
     // Create a different project in the same workspace and a draft commit
-    const { project: otherProject, commit: otherDraft } =
-      await factories.createProject({
-        workspace,
-        providers: [{ name: 'openai-2', type: Providers.OpenAI }],
-        documents: {
-          bar: factories.helpers.createPrompt({ provider: 'openai' }),
-        },
-        skipMerge: true,
-      })
+    const { project: otherProject, commit: otherDraft } = await factories.createProject({
+      workspace,
+      providers: [{ name: 'openai-2', type: Providers.OpenAI }],
+      documents: {
+        bar: factories.helpers.createPrompt({ provider: 'openai' }),
+      },
+      skipMerge: true,
+    })
 
     expect(otherProject.id).not.toEqual(project.id)
 
-    const result =
-      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
-        workspace,
-        commit: otherDraft,
-        triggerUuid: created.uuid,
-        configuration: { ...emailConfig, name: 'Updated' },
-      })
+    const result = await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+      workspace,
+      commit: otherDraft,
+      triggerUuid: created.uuid,
+      configuration: { ...emailConfig, name: 'Updated' },
+    })
 
     expect(result.ok).toBeFalsy()
     expect(result.error).toBeInstanceOf(NotFoundError)
@@ -180,22 +164,19 @@ describe('updateDocumentTriggerConfiguration', () => {
 
     // Update: expect undeploy then deploy
     mocks.undeployDocumentTrigger.mockResolvedValue(
-      Result.ok(
-        created as unknown as DocumentTrigger<DocumentTriggerType.Email>,
-      ),
+      Result.ok(created as unknown as DocumentTrigger<DocumentTriggerType.Email>),
     )
     mocks.deployDocumentTrigger.mockResolvedValueOnce(
       Result.ok({} as EmailTriggerDeploymentSettings),
     )
 
     const updatedName = 'Updated Email Trigger'
-    const result =
-      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
-        workspace,
-        commit: draft,
-        triggerUuid: created.uuid,
-        configuration: { ...emailConfig, name: updatedName },
-      })
+    const result = await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+      workspace,
+      commit: draft,
+      triggerUuid: created.uuid,
+      configuration: { ...emailConfig, name: updatedName },
+    })
 
     expect(result.ok).toBeTruthy()
     expect(mocks.undeployDocumentTrigger).toHaveBeenCalledWith(
@@ -239,9 +220,7 @@ describe('updateDocumentTriggerConfiguration', () => {
     }
 
     // Create in draft then merge
-    mocks.deployDocumentTrigger.mockResolvedValue(
-      Result.ok({} as EmailTriggerDeploymentSettings),
-    )
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({} as EmailTriggerDeploymentSettings))
     const created = await createDocumentTrigger({
       workspace,
       project,
@@ -259,13 +238,12 @@ describe('updateDocumentTriggerConfiguration', () => {
     const newDeployment: EmailTriggerDeploymentSettings = {}
     mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(newDeployment))
 
-    const result =
-      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
-        workspace,
-        commit: newDraft,
-        triggerUuid: created.uuid,
-        configuration: { ...emailConfig, name: 'E2' },
-      })
+    const result = await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+      workspace,
+      commit: newDraft,
+      triggerUuid: created.uuid,
+      configuration: { ...emailConfig, name: 'E2' },
+    })
 
     expect(result.ok).toBeTruthy()
     expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
@@ -293,9 +271,7 @@ describe('updateDocumentTriggerConfiguration', () => {
     }
 
     // Create initial (draft) trigger then merge
-    mocks.deployDocumentTrigger.mockResolvedValue(
-      Result.ok({} as EmailTriggerDeploymentSettings),
-    )
+    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({} as EmailTriggerDeploymentSettings))
     const created = await createDocumentTrigger({
       workspace,
       project,
@@ -312,13 +288,12 @@ describe('updateDocumentTriggerConfiguration', () => {
     const deploymentError = new Error('Deployment failed')
     mocks.deployDocumentTrigger.mockResolvedValue(Result.error(deploymentError))
 
-    const result =
-      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
-        workspace,
-        commit: newDraft,
-        triggerUuid: created.uuid,
-        configuration: { ...emailConfig, name: 'E3' },
-      })
+    const result = await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+      workspace,
+      commit: newDraft,
+      triggerUuid: created.uuid,
+      configuration: { ...emailConfig, name: 'E3' },
+    })
 
     expect(result.ok).toBeFalsy()
     expect(result.error).toBe(deploymentError)
@@ -366,13 +341,12 @@ describe('updateDocumentTriggerConfiguration', () => {
     }
     mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(newDeployment))
 
-    const result =
-      await updateDocumentTriggerConfiguration<DocumentTriggerType.Scheduled>({
-        workspace,
-        commit: newDraft,
-        triggerUuid: created.uuid,
-        configuration: scheduledConfig,
-      })
+    const result = await updateDocumentTriggerConfiguration<DocumentTriggerType.Scheduled>({
+      workspace,
+      commit: newDraft,
+      triggerUuid: created.uuid,
+      configuration: scheduledConfig,
+    })
 
     expect(result.ok).toBeTruthy()
 
@@ -422,18 +396,15 @@ describe('updateDocumentTriggerConfiguration', () => {
     }
     mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(newDeployment))
 
-    const result =
-      await updateDocumentTriggerConfiguration<DocumentTriggerType.Integration>(
-        {
-          workspace,
-          commit: newDraft,
-          triggerUuid: created.uuid,
-          configuration: {
-            ...integrationConfig,
-            payloadParameters: ['p1', 'p2'],
-          },
-        },
-      )
+    const result = await updateDocumentTriggerConfiguration<DocumentTriggerType.Integration>({
+      workspace,
+      commit: newDraft,
+      triggerUuid: created.uuid,
+      configuration: {
+        ...integrationConfig,
+        payloadParameters: ['p1', 'p2'],
+      },
+    })
 
     expect(result.ok).toBeTruthy()
 

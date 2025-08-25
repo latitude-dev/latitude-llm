@@ -58,8 +58,7 @@ export async function mockToolRequestsCopilot() {
       const mod = (await originalMod()) as typeof import('@latitude-data/env')
       return {
         ...mod,
-        getCopilotDataForGenerateToolResponses: async () =>
-          Result.ok(copilotData),
+        getCopilotDataForGenerateToolResponses: async () => Result.ok(copilotData),
       }
     },
   )

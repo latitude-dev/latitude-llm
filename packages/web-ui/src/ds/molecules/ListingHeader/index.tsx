@@ -1,12 +1,9 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Button, ButtonProps } from '../../atoms/Button'
+import { Button, type ButtonProps } from '../../atoms/Button'
 import { Text } from '../../atoms/Text'
-import {
-  TitleWithActions,
-  TitleWithActionsVerticalAligment,
-} from '../TitleWithActions'
+import { TitleWithActions, type TitleWithActionsVerticalAligment } from '../TitleWithActions'
 
 export function ListingButton({
   variant = 'outline',
@@ -43,14 +40,8 @@ export const TableWithHeader = ({
       })}
     >
       <div className='flex flex-col gap-y-4'>
-        <TitleWithActions
-          title={title}
-          actions={actions}
-          verticalAligment={verticalAligment}
-        />
-        {description ? (
-          <Text.H5 color='foregroundMuted'>{description}</Text.H5>
-        ) : null}
+        <TitleWithActions title={title} actions={actions} verticalAligment={verticalAligment} />
+        {description ? <Text.H5 color='foregroundMuted'>{description}</Text.H5> : null}
       </div>
       {table && (
         <div

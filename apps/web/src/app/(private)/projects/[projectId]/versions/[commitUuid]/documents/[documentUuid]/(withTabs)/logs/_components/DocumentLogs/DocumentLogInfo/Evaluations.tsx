@@ -8,21 +8,18 @@ import { MetadataItem } from '$/components/MetadataItem'
 import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
 import { ROUTES } from '$/services/routes'
 import {
-  Commit,
-  DocumentLogWithMetadataAndError,
-  DocumentVersion,
-  EvaluationMetric,
-  EvaluationResultV2,
+  type Commit,
+  type DocumentLogWithMetadataAndError,
+  type DocumentVersion,
+  type EvaluationMetric,
+  type EvaluationResultV2,
   EvaluationType,
-  ResultWithEvaluationV2,
+  type ResultWithEvaluationV2,
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  IProjectContextType,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { type IProjectContextType, useCurrentProject } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 
 type Props<
@@ -41,14 +38,13 @@ function EvaluatedLogLinkV2<
   const query = new URLSearchParams()
   query.set('resultUuid', result.uuid)
 
-  return (
+  return `${
     ROUTES.projects
       .detail({ id: project.id })
       .commits.detail({ uuid: commit.uuid })
       .documents.detail({ uuid: document.documentUuid })
-      .evaluations.detail({ uuid: evaluation.uuid }).root +
-    `?${query.toString()}`
-  )
+      .evaluations.detail({ uuid: evaluation.uuid }).root
+  }?${query.toString()}`
 }
 
 function DocumentLogEvaluationsV2<
@@ -74,16 +70,12 @@ function DocumentLogEvaluationsV2<
           <MetadataItem label='Result'>
             <ResultBadge evaluation={evaluation} result={result} />
           </MetadataItem>
-          {(evaluation.type === EvaluationType.Llm ||
-            evaluation.type === EvaluationType.Human) && (
+          {(evaluation.type === EvaluationType.Llm || evaluation.type === EvaluationType.Human) && (
             <MetadataItem
               label='Reasoning'
               value={
-                (
-                  result as EvaluationResultV2<
-                    EvaluationType.Llm | EvaluationType.Human
-                  >
-                ).metadata!.reason || 'No reason reported'
+                (result as EvaluationResultV2<EvaluationType.Llm | EvaluationType.Human>).metadata!
+                  .reason || 'No reason reported'
               }
               stacked
             />
@@ -124,10 +116,7 @@ export function DocumentLogEvaluations({
   return (
     <ul className='flex flex-col gap-4 divide-y divide-border'>
       {evaluationResults.map((item) => (
-        <li
-          key={item.result.uuid}
-          className='flex flex-col gap-2 pt-4 first:pt-0'
-        >
+        <li key={item.result.uuid} className='flex flex-col gap-2 pt-4 first:pt-0'>
           <span className='flex justify-between items-center gap-2 w-full'>
             <span className='flex justify-center items-center gap-1.5'>
               <Icon

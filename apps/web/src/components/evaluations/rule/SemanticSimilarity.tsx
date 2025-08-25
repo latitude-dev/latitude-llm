@@ -1,19 +1,15 @@
 'use client'
 
 import {
-  EvaluationType,
-  RuleEvaluationMetric,
+  type EvaluationType,
+  type RuleEvaluationMetric,
   RuleEvaluationSemanticSimilaritySpecification,
 } from '@latitude-data/constants'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { useEffect } from 'react'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 
 const specification = RuleEvaluationSemanticSimilaritySpecification
 export default {
@@ -36,14 +32,11 @@ function ConfigurationSimpleForm({
   setConfiguration,
   errors,
   disabled,
-}: ConfigurationFormProps<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.SemanticSimilarity
->) {
+}: ConfigurationFormProps<EvaluationType.Rule, RuleEvaluationMetric.SemanticSimilarity>) {
   // TODO: Do not set state in useEffects. Move this to an event handler.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   useEffect(() => {
     setConfiguration({ ...configuration, algorithm: 'cosine_distance' })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
@@ -74,10 +67,8 @@ function ConfigurationSimpleForm({
           placeholder='No minimum'
           min={0}
           max={100}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minSimilarity: value })
-          }
-          errors={errors?.['minSimilarity']}
+          onChange={(value) => setConfiguration({ ...configuration, minSimilarity: value })}
+          errors={errors?.minSimilarity}
           defaultAppearance
           className='w-full'
           disabled={disabled}
@@ -90,10 +81,8 @@ function ConfigurationSimpleForm({
           placeholder='No maximum'
           min={0}
           max={100}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxSimilarity: value })
-          }
-          errors={errors?.['maxSimilarity']}
+          onChange={(value) => setConfiguration({ ...configuration, maxSimilarity: value })}
+          errors={errors?.maxSimilarity}
           defaultAppearance
           className='w-full'
           disabled={disabled}
@@ -106,19 +95,13 @@ function ConfigurationSimpleForm({
 
 function ResultBadge({
   result,
-}: ResultBadgeProps<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.SemanticSimilarity
->) {
+}: ResultBadgeProps<EvaluationType.Rule, RuleEvaluationMetric.SemanticSimilarity>) {
   return <>{result.score!.toFixed(0)}% similar</>
 }
 
 function chartConfiguration({
   evaluation,
-}: ChartConfigurationArgs<
-  EvaluationType.Rule,
-  RuleEvaluationMetric.SemanticSimilarity
->) {
+}: ChartConfigurationArgs<EvaluationType.Rule, RuleEvaluationMetric.SemanticSimilarity>) {
   return {
     min: 0,
     max: 100,

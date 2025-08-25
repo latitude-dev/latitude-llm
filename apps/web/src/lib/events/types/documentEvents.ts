@@ -1,4 +1,4 @@
-import { ResolvedMetadata } from '$/workers/readMetadata'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
 
 export interface DocumentEvents {
   PromptMetadataChanged: {

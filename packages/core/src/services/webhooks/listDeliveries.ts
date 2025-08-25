@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { database } from '../../client'
 import { webhookDeliveries } from '../../schema/models/webhooks'
 import { Result, type TypedResult } from '../../lib/Result'
-import { type WebhookDelivery } from './types'
+import type { WebhookDelivery } from './types'
 
 export async function listWebhookDeliveries(
   webhookId: number,

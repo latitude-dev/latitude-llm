@@ -1,15 +1,11 @@
 import {
-  EvaluationSettings,
-  EvaluationType,
-  EvaluationV2,
+  type EvaluationSettings,
+  type EvaluationType,
+  type EvaluationV2,
   LlmEvaluationCustomLabeledSpecification,
-  LlmEvaluationMetric,
+  type LlmEvaluationMetric,
 } from '@latitude-data/constants'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 import LlmEvaluationCustomSpecification from './Custom'
 
 const specification = LlmEvaluationCustomLabeledSpecification
@@ -26,24 +22,15 @@ function ConfigurationSimpleForm({
   settings,
   setSettings,
   ...rest
-}: ConfigurationFormProps<
-  EvaluationType.Llm,
-  LlmEvaluationMetric.CustomLabeled
->) {
+}: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.CustomLabeled>) {
   return (
     <LlmEvaluationCustomSpecification.ConfigurationSimpleForm
       settings={
-        settings as unknown as EvaluationSettings<
-          EvaluationType.Llm,
-          LlmEvaluationMetric.Custom
-        >
+        settings as unknown as EvaluationSettings<EvaluationType.Llm, LlmEvaluationMetric.Custom>
       }
       setSettings={
         setSettings as unknown as (
-          settings: EvaluationSettings<
-            EvaluationType.Llm,
-            LlmEvaluationMetric.Custom
-          >,
+          settings: EvaluationSettings<EvaluationType.Llm, LlmEvaluationMetric.Custom>,
         ) => void
       }
       {...rest}
@@ -55,24 +42,15 @@ function ConfigurationAdvancedForm({
   settings,
   setSettings,
   ...rest
-}: ConfigurationFormProps<
-  EvaluationType.Llm,
-  LlmEvaluationMetric.CustomLabeled
->) {
+}: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.CustomLabeled>) {
   return (
     <LlmEvaluationCustomSpecification.ConfigurationAdvancedForm
       settings={
-        settings as unknown as EvaluationSettings<
-          EvaluationType.Llm,
-          LlmEvaluationMetric.Custom
-        >
+        settings as unknown as EvaluationSettings<EvaluationType.Llm, LlmEvaluationMetric.Custom>
       }
       setSettings={
         setSettings as unknown as (
-          settings: EvaluationSettings<
-            EvaluationType.Llm,
-            LlmEvaluationMetric.Custom
-          >,
+          settings: EvaluationSettings<EvaluationType.Llm, LlmEvaluationMetric.Custom>,
         ) => void
       }
       {...rest}
@@ -87,10 +65,7 @@ function ResultBadge({
   return (
     <LlmEvaluationCustomSpecification.ResultBadge
       evaluation={
-        evaluation as unknown as EvaluationV2<
-          EvaluationType.Llm,
-          LlmEvaluationMetric.Custom
-        >
+        evaluation as unknown as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric.Custom>
       }
       {...rest}
     />
@@ -100,10 +75,7 @@ function ResultBadge({
 function chartConfiguration({
   evaluation,
   ...rest
-}: ChartConfigurationArgs<
-  EvaluationType.Llm,
-  LlmEvaluationMetric.CustomLabeled
->) {
+}: ChartConfigurationArgs<EvaluationType.Llm, LlmEvaluationMetric.CustomLabeled>) {
   return LlmEvaluationCustomSpecification.chartConfiguration({
     evaluation: evaluation as unknown as EvaluationV2<
       EvaluationType.Llm,

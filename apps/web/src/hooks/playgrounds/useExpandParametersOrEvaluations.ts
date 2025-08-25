@@ -8,9 +8,7 @@ export function useExpandParametersOrEvaluations({
   initialExpanded: Section
   hasEvaluations?: boolean
 }) {
-  const [expandedSection, setExpandedSection] = useState<Section | null>(
-    initialExpanded,
-  )
+  const [expandedSection, setExpandedSection] = useState<Section | null>(initialExpanded)
   const onToggle = useCallback(
     (current: Section) => (expand: boolean) => {
       setExpandedSection(expand ? current : null)
@@ -36,12 +34,6 @@ export function useExpandParametersOrEvaluations({
       evaluationsExpanded,
       closeAll,
     }),
-    [
-      expandedSection,
-      onToggle,
-      parametersExpanded,
-      evaluationsExpanded,
-      closeAll,
-    ],
+    [expandedSection, onToggle, parametersExpanded, evaluationsExpanded, closeAll],
   )
 }

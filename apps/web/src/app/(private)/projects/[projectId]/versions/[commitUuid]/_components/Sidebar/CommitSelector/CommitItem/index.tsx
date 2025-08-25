@@ -3,19 +3,16 @@ import { useMemo } from 'react'
 
 import { ROUTES } from '$/services/routes'
 import {
-  DocumentVersion,
+  type DocumentVersion,
   HEAD_COMMIT,
-  User,
+  type User,
   type Commit,
 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useSelectedLayoutSegment } from 'next/navigation'
@@ -28,23 +25,10 @@ export enum BadgeType {
   Merged = 'merged',
 }
 
-export function BadgeCommit({
-  commit,
-  isLive,
-}: {
-  commit?: Commit
-  isLive: boolean
-}) {
-  const text = isLive
-    ? 'Live'
-    : commit?.mergedAt
-      ? `v${commit?.version}`
-      : 'Draft'
+export function BadgeCommit({ commit, isLive }: { commit?: Commit; isLive: boolean }) {
+  const text = isLive ? 'Live' : commit?.mergedAt ? `v${commit?.version}` : 'Draft'
   return (
-    <Badge
-      variant={commit?.mergedAt ? 'accent' : 'muted'}
-      className='flex-shrink-0'
-    >
+    <Badge variant={commit?.mergedAt ? 'accent' : 'muted'} className='flex-shrink-0'>
       {text}
     </Badge>
   )
@@ -84,10 +68,7 @@ export function CommitItem({
 
     if (!selectedSegment) return documentRoute.editor.root
 
-    return (
-      documentRoute[selectedSegment as 'editor' | 'logs']?.root ??
-      documentRoute.editor.root
-    )
+    return documentRoute[selectedSegment as 'editor' | 'logs']?.root ?? documentRoute.editor.root
   }, [project.id, commit, isHead, currentDocument, selectedSegment])
 
   if (!commit || !commitPath) return null
@@ -103,9 +84,7 @@ export function CommitItem({
           <Text.H5>{commit.title}</Text.H5>
           <BadgeCommit commit={commit} isLive={commit.id === headCommitId} />
         </div>
-        <Text.H6 color='foregroundMuted'>
-          {user ? user.name : 'Unknown user'}
-        </Text.H6>
+        <Text.H6 color='foregroundMuted'>{user ? user.name : 'Unknown user'}</Text.H6>
       </div>
       <div className='flex flex-row items-center gap-x-4'>
         {currentCommit.uuid !== commit.uuid && (
@@ -117,18 +96,10 @@ export function CommitItem({
         )}
         {isDraft && onCommitPublish && onCommitDelete ? (
           <>
-            <Button
-              variant='link'
-              size='none'
-              onClick={() => onCommitPublish(commit.id)}
-            >
+            <Button variant='link' size='none' onClick={() => onCommitPublish(commit.id)}>
               Publish
             </Button>
-            <Button
-              variant='link'
-              size='none'
-              onClick={() => onCommitDelete(commit.id)}
-            >
+            <Button variant='link' size='none' onClick={() => onCommitDelete(commit.id)}>
               Delete
             </Button>
           </>

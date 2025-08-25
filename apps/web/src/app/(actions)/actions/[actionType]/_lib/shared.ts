@@ -1,12 +1,12 @@
-import { useDeferredPlaygroundAction } from '$/hooks/usePlaygroundAction'
-import {
+import type { useDeferredPlaygroundAction } from '$/hooks/usePlaygroundAction'
+import type {
   ActionFrontendParameters,
   ActionType,
   User,
   Workspace,
 } from '@latitude-data/core/browser'
-import { useRouter } from 'next/navigation'
-import { z } from 'zod'
+import type { useRouter } from 'next/navigation'
+import type { z } from 'zod'
 
 // prettier-ignore
 type ZodSchema<T = any> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny, T, T>
@@ -16,12 +16,10 @@ export type ActionExecuteArgs<T extends ActionType = ActionType> = {
   user: User
   workspace: Workspace
   router: ReturnType<typeof useRouter>
-  setPlaygroundAction: ReturnType<
-    typeof useDeferredPlaygroundAction
-  >['setPlaygroundAction']
+  setPlaygroundAction: ReturnType<typeof useDeferredPlaygroundAction>['setPlaygroundAction']
 }
 
 export type ActionFrontendSpecification<T extends ActionType = ActionType> = {
   parameters: ZodSchema<ActionFrontendParameters<T>>
-  execute: (args: ActionExecuteArgs<T>) => Promise<void | never>
+  execute: (args: ActionExecuteArgs<T>) => Promise<undefined | never>
 }

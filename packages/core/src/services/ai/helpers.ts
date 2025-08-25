@@ -1,41 +1,35 @@
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { type AnthropicProvider, createAnthropic } from '@ai-sdk/anthropic'
 import { createAzure } from '@ai-sdk/azure'
-import { createDeepSeek, DeepSeekProvider } from '@ai-sdk/deepseek'
-import {
-  createGoogleGenerativeAI,
-  GoogleGenerativeAIProvider,
-} from '@ai-sdk/google'
+import { createDeepSeek, type DeepSeekProvider } from '@ai-sdk/deepseek'
+import { createGoogleGenerativeAI, type GoogleGenerativeAIProvider } from '@ai-sdk/google'
 import {
   createVertexAnthropic,
-  GoogleVertexAnthropicProvider,
+  type GoogleVertexAnthropicProvider,
 } from '@ai-sdk/google-vertex/anthropic/edge'
-import { createVertex, GoogleVertexProvider } from '@ai-sdk/google-vertex/edge'
-import { createMistral, MistralProvider } from '@ai-sdk/mistral'
+import { createVertex, type GoogleVertexProvider } from '@ai-sdk/google-vertex/edge'
+import { createMistral, type MistralProvider } from '@ai-sdk/mistral'
 import { createOpenAI, type OpenAIProvider } from '@ai-sdk/openai'
-import { createPerplexity, PerplexityProvider } from '@ai-sdk/perplexity'
-import { createXai, XaiProvider } from '@ai-sdk/xai'
-import {
-  type Message,
-  MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+import { createPerplexity, type PerplexityProvider } from '@ai-sdk/perplexity'
+import { createXai, type XaiProvider } from '@ai-sdk/xai'
+import { type Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { TelemetryContext } from '../../telemetry'
+import type { TelemetryContext } from '../../telemetry'
 
 import { Providers } from '../../constants'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 
-import { PartialPromptConfig } from '@latitude-data/constants'
-import { ProviderApiKey } from '../../browser'
+import type { PartialPromptConfig } from '@latitude-data/constants'
+import type { ProviderApiKey } from '../../browser'
 import type { ModelCost } from './estimateCost'
 import { instrumentedFetch } from './fetch'
 import {
-  AmazonBedrockConfiguration,
+  type AmazonBedrockConfiguration,
   amazonBedrockConfigurationSchema,
 } from './providers/helpers/amazonBedrock'
 import { vertexConfigurationSchema } from './providers/helpers/vertex'
 
-export { type PartialPromptConfig as PartialConfig } from '@latitude-data/constants'
+export type { PartialPromptConfig as PartialConfig } from '@latitude-data/constants'
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1'
 
@@ -79,13 +73,7 @@ function createAmazonBedrockProvider(
   )
 }
 
-function validateVertexConfig({
-  name,
-  maybeConfig,
-}: {
-  name: string
-  maybeConfig: unknown
-}) {
+function validateVertexConfig({ name, maybeConfig }: { name: string; maybeConfig: unknown }) {
   const result = vertexConfigurationSchema.safeParse(maybeConfig)
   if (result.success) {
     const config = result.data
@@ -264,9 +252,7 @@ export function createProvider({
 
 type ModelSpec = ModelCost & { hidden?: boolean }
 type ModelSpecValue<N extends string> = ModelSpec & { name: N }
-export const createModelSpec = <T extends Record<string, ModelSpec>>(
-  models: T,
-) => {
+export const createModelSpec = <T extends Record<string, ModelSpec>>(models: T) => {
   const modelSpec = Object.fromEntries(
     Object.entries(models).map(([key, value]) => {
       return [

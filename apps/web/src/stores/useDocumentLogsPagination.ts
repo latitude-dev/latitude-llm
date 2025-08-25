@@ -1,8 +1,8 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
-import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import useSWR, { SWRConfiguration } from 'swr'
+import type { DocumentLogFilterOptions } from '@latitude-data/core/browser'
+import type { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 export default function useDocumentLogsPagination(
   {
@@ -47,15 +47,7 @@ export default function useDocumentLogsPagination(
   )
 
   const { data, isLoading, error, mutate } = useSWR<IPagination>(
-    [
-      'documentLogsCount',
-      documentUuid,
-      projectId,
-      commitUuid,
-      filterOptions,
-      page,
-      pageSize,
-    ],
+    ['documentLogsCount', documentUuid, projectId, commitUuid, filterOptions, page, pageSize],
     fetcher,
     opts,
   )

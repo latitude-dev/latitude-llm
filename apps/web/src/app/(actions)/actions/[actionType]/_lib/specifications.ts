@@ -1,7 +1,7 @@
 import { ActionType } from '@latitude-data/core/browser'
 import { CloneAgentActionSpecification } from './cloneAgent'
 import { CreateAgentActionSpecification } from './createAgent'
-import { ActionFrontendSpecification } from './shared'
+import type { ActionFrontendSpecification } from './shared'
 
 export const ACTION_SPECIFICATIONS = {
   [ActionType.CreateAgent]: CreateAgentActionSpecification,

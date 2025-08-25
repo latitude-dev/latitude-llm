@@ -1,14 +1,14 @@
 import {
-  EvaluationType,
-  RuleEvaluationMetric,
+  type EvaluationType,
+  type RuleEvaluationMetric,
   RuleEvaluationExactMatchSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {
-  EvaluationMetricRunArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricRunArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 
@@ -21,10 +21,7 @@ export const RuleEvaluationExactMatchSpecification = {
 async function validate(
   {
     configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.ExactMatch
-  >,
+  }: EvaluationMetricValidateArgs<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>,
   _ = database,
 ) {
   // Note: all settings are explicitly returned to ensure we don't
@@ -43,10 +40,7 @@ async function run(
     actualOutput,
     expectedOutput,
     datasetLabel,
-  }: EvaluationMetricRunArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.ExactMatch
-  >,
+  }: EvaluationMetricRunArgs<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>,
   _ = database,
 ) {
   const metadata = {

@@ -1,4 +1,4 @@
-import { Workspace, User } from '@latitude-data/core/browser'
+import type { Workspace, User } from '@latitude-data/core/browser'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as factories from '@latitude-data/core/factories'
@@ -28,8 +28,7 @@ describe('POST handler for datasets/create', () => {
     mockUser = userData
     mockWorkspace = workspace
 
-    const csvContent =
-      'name,age,email\nJohn,25,john@example.com\nJane,30,jane@example.com'
+    const csvContent = 'name,age,email\nJohn,25,john@example.com\nJane,30,jane@example.com'
     validCsvFile = new File([csvContent], 'test.csv', { type: 'text/csv' })
 
     mockFormData = new FormData()
@@ -171,9 +170,7 @@ describe('POST handler for datasets/create', () => {
         expect(response.status).toBe(400)
         const data = await response.json()
         expect(data.success).toBe(false)
-        expect(data.errors.csvDelimiter).toContain(
-          'Choose a valid delimiter option',
-        )
+        expect(data.errors.csvDelimiter).toContain('Choose a valid delimiter option')
       })
 
       it('should return 400 if custom delimiter is selected but not provided', async () => {
@@ -200,9 +197,7 @@ describe('POST handler for datasets/create', () => {
         expect(response.status).toBe(400)
         const data = await response.json()
         expect(data.success).toBe(false)
-        expect(data.errors.csvCustomDelimiter).toContain(
-          'Custom delimiter is required',
-        )
+        expect(data.errors.csvCustomDelimiter).toContain('Custom delimiter is required')
       })
 
       it('should return 400 if file is not a CSV', async () => {
@@ -232,9 +227,7 @@ describe('POST handler for datasets/create', () => {
         expect(response.status).toBe(400)
         const data = await response.json()
         expect(data.success).toBe(false)
-        expect(data.errors.dataset_file).toContain(
-          'Your dataset must be a CSV file',
-        )
+        expect(data.errors.dataset_file).toContain('Your dataset must be a CSV file')
       })
 
       it('should return 400 if dataset name already exists', async () => {
@@ -348,14 +341,11 @@ describe('POST handler for datasets/create', () => {
 
     describe('error handling', () => {
       it('should handle createDatasetFromFile service errors', async () => {
-        vi.doMock(
-          '@latitude-data/core/services/datasets/createFromFile',
-          () => ({
-            createDatasetFromFile: vi
-              .fn()
-              .mockResolvedValue(Result.error(new Error('Service error'))),
-          }),
-        )
+        vi.doMock('@latitude-data/core/services/datasets/createFromFile', () => ({
+          createDatasetFromFile: vi
+            .fn()
+            .mockResolvedValue(Result.error(new Error('Service error'))),
+        }))
         const { POST } = await import('./route')
         const request = new NextRequest('http://localhost:3000', {
           method: 'POST',

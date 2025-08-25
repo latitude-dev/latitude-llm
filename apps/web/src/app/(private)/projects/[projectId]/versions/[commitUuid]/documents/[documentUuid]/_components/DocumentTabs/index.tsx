@@ -1,13 +1,13 @@
 'use client'
 
-import { ReactNode, useContext } from 'react'
+import { type ReactNode, useContext } from 'react'
 
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 
 import { DocumentationContext } from '../DocumentationModal'
 import { DocumentTriggersButton } from './DocumentTriggers'
 import { DocumentTabSelector } from './tabs'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { PublishDocumentButton } from './PublishDocument'
 
 export default function DocumentTabs({
@@ -37,10 +37,7 @@ export default function DocumentTabs({
           >
             Deploy this prompt
           </Button>
-          <PublishDocumentButton
-            document={document}
-            projectId={Number(params.projectId)}
-          />
+          <PublishDocumentButton document={document} projectId={Number(params.projectId)} />
           <DocumentTriggersButton
             document={document}
             projectId={Number(params.projectId)}
@@ -48,9 +45,7 @@ export default function DocumentTabs({
           />
         </div>
       </div>
-      <div className='flex-grow min-h-0 flex flex-col w-full relative'>
-        {children}
-      </div>
+      <div className='flex-grow min-h-0 flex flex-col w-full relative'>{children}</div>
     </>
   )
 }

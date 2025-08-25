@@ -8,7 +8,6 @@
     "build": "tsup --config tsup.config.ts",
     "dev": "NODE_DEBUG=latitude:debug tsx watch src/server",
     "dev:debug": "tsx watch --inspect-brk src/server",
-    "lint": "eslint src/",
     "start": "node -r module-alias/register ./dist --env=production",
     "tc": "tsc --noEmit",
     "sentry:sourcemaps": "sentry-cli sourcemaps inject --org latitude-l5 --project latitude-workers ./dist && sentry-cli sourcemaps upload --org latitude-l5 --project latitude-workers ./dist"
@@ -27,7 +26,6 @@
     "express": "4.21.2"
   },
   "devDependencies": {
-    "@latitude-data/eslint-config": "workspace:^",
     "@latitude-data/typescript-config": "workspace:^",
     "@types/express": "^4.17.21",
     "@types/node": "^22.5.1",

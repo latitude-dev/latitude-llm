@@ -1,14 +1,12 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ErrorMessage, Message } from '$/components/ChatWrapper'
-import Actions, {
-  type ActionsState,
-} from '$/components/PlaygroundCommon/Actions'
+import Actions, { type ActionsState } from '$/components/PlaygroundCommon/Actions'
 import { usePreviewConversation } from '$/hooks/playgrounds/usePreviewConversation'
-import { ResolvedMetadata } from '$/workers/readMetadata'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
 import {
-  AppliedRules,
+  type AppliedRules,
   LATITUDE_DOCS_URL,
-  ProviderRules,
+  type ProviderRules,
 } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -66,10 +64,7 @@ export default function PreviewPrompt({
       {showHeader ? (
         <div className='flex flex-row items-center justify-between w-full'>
           <Text.H6M>Preview</Text.H6M>
-          <Actions
-            expandParameters={expandParameters}
-            setExpandParameters={setExpandParameters}
-          />
+          <Actions expandParameters={expandParameters} setExpandParameters={setExpandParameters} />
         </div>
       ) : null}
       <div className='flex flex-col gap-3 flex-grow flex-shrink min-h-0'>

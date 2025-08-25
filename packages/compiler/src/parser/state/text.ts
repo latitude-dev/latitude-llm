@@ -1,5 +1,5 @@
 import { CUSTOM_TAG_START } from '$compiler/constants'
-import { type Parser } from '$compiler/parser'
+import type { Parser } from '$compiler/parser'
 import type { Text } from '$compiler/parser/interfaces'
 
 const ENDS_WITH_ESCAPE_REGEX = /(?<!\\)(\\\\)*\\$/
@@ -18,10 +18,7 @@ export function text(parser: Parser) {
       break
     }
 
-    if (
-      !isEscaping &&
-      RESERVED_DELIMITERS.some((sample) => parser.match(sample))
-    ) {
+    if (!isEscaping && RESERVED_DELIMITERS.some((sample) => parser.match(sample))) {
       break
     }
 

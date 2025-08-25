@@ -1,12 +1,8 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as dataAccess from '../../../data-access'
-import {
-  CommitsRepository,
-  DocumentLogsRepository,
-  UsersRepository,
-} from '../../../repositories'
+import { CommitsRepository, DocumentLogsRepository, UsersRepository } from '../../../repositories'
 import * as runLatte from '../../../services/copilot/latte/run'
 import * as addMessageLatte from '../../../services/copilot/latte/addMessage'
 import * as chatHelpers from '../../../services/copilot/latte/helpers'
@@ -40,12 +36,8 @@ describe('runLatteJob', () => {
     } as Job<any>
 
     // default happy-path spies
-    vi.spyOn(dataAccess, 'unsafelyFindWorkspace').mockResolvedValue(
-      workspace as any,
-    )
-    vi.spyOn(dataAccess, 'unsafelyFindProject').mockResolvedValue(
-      project as any,
-    )
+    vi.spyOn(dataAccess, 'unsafelyFindWorkspace').mockResolvedValue(workspace as any)
+    vi.spyOn(dataAccess, 'unsafelyFindProject').mockResolvedValue(project as any)
     vi.spyOn(UsersRepository.prototype, 'find').mockResolvedValue({
       ok: true,
       unwrap: () => user,
@@ -102,9 +94,7 @@ describe('runLatteJob', () => {
 
   it('creates a new chat when no document log exists', async () => {
     // ensure findByUuid returns ok: false
-    ;(DocumentLogsRepository.prototype.findByUuid as any).mockResolvedValueOnce(
-      { ok: false },
-    )
+    ;(DocumentLogsRepository.prototype.findByUuid as any).mockResolvedValueOnce({ ok: false })
 
     await runLatteJob(mockJob)
 
@@ -124,9 +114,7 @@ describe('runLatteJob', () => {
   })
 
   it('appends a message when the document log already exists', async () => {
-    ;(DocumentLogsRepository.prototype.findByUuid as any).mockResolvedValueOnce(
-      { ok: true },
-    )
+    ;(DocumentLogsRepository.prototype.findByUuid as any).mockResolvedValueOnce({ ok: true })
 
     await runLatteJob(mockJob)
 

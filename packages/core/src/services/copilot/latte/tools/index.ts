@@ -1,6 +1,6 @@
 import { LatteTool } from '@latitude-data/constants/latte'
-import { User, Workspace } from '../../../../browser'
-import { Result, TypedResult } from '../../../../lib/Result'
+import type { User, Workspace } from '../../../../browser'
+import { Result, type TypedResult } from '../../../../lib/Result'
 import type { LatteToolFn } from './types'
 
 import listDrafts from './commits/list'
@@ -17,7 +17,7 @@ import think from './general/think'
 import searchIntegrationResources from './settings/searchIntegrationResources'
 import searchIntegrationApps from './settings/searchIntegrationApps'
 import createIntegration from './settings/createIntegration'
-import { ToolHandler } from '../../../../lib/streamManager/clientTools/handlers'
+import type { ToolHandler } from '../../../../lib/streamManager/clientTools/handlers'
 import triggerActions from './triggers/actions/triggerActions'
 import listExistingTriggers from './triggers/listExistingTriggers'
 import { getFullTriggerConfigSchema } from './triggers/getFullTriggerConfigSchema'
@@ -54,10 +54,7 @@ export function buildToolHandlers({
   threadUuid: string
   user: User
 }): Record<LatteTool, ToolHandler> {
-  const latteToolEntries = Object.entries(LATTE_TOOLS) as [
-    LatteTool,
-    LatteToolFn<any>,
-  ][]
+  const latteToolEntries = Object.entries(LATTE_TOOLS) as [LatteTool, LatteToolFn<any>][]
   return latteToolEntries.reduce(
     (acc, [toolName, toolFn]) => {
       acc[toolName] = async ({ args, context, toolCall }) => {
@@ -75,9 +72,7 @@ export function buildToolHandlers({
           result = Result.error(error as Error)
         }
 
-        return Result.isOk(result)
-          ? result.value
-          : { error: serializeError(result.error) }
+        return Result.isOk(result) ? result.value : { error: serializeError(result.error) }
       }
       return acc
     },

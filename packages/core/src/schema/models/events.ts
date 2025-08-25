@@ -8,9 +8,7 @@ export const events = latitudeSchema.table(
   'events',
   {
     id: bigserial('id', { mode: 'number' }),
-    workspaceId: bigint('workspace_id', { mode: 'number' }).references(
-      () => workspaces.id,
-    ),
+    workspaceId: bigint('workspace_id', { mode: 'number' }).references(() => workspaces.id),
     type: varchar('type', { length: 256 }).notNull(),
     data: jsonb('data').notNull(),
     ...timestamps(),

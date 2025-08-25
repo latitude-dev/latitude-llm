@@ -20,8 +20,7 @@
     "build": "NODE_ENV=production rollup -c ./rollup.config.mjs",
     "test": "vitest run --pool=forks",
     "test:watch": "vitest",
-    "tc": "tsc --noEmit",
-    "lint": "eslint src"
+    "tc": "tsc --noEmit"
   },
   "type": "module",
   "files": [
@@ -66,7 +65,6 @@
   },
   "devDependencies": {
     "@latitude-data/constants": "workspace:*",
-    "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@rollup/plugin-alias": "^5.1.1",
     "@rollup/plugin-replace": "^6.0.2",

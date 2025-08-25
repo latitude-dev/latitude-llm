@@ -1,29 +1,16 @@
-import {
-  UseDocumentParameters,
-  useDocumentParameters,
-} from '$/hooks/useDocumentParameters'
-import {
-  DocumentVersion,
-  INPUT_SOURCE,
-  InputSource,
-} from '@latitude-data/core/browser'
+import type { UseDocumentParameters, useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { type DocumentVersion, INPUT_SOURCE, type InputSource } from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
-import {
-  TabSelector,
-  TabSelectorOption,
-} from '@latitude-data/web-ui/molecules/TabSelector'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
-import { OnToggleFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { TabSelector, type TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
+import type { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { OnToggleFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 
 import { DatasetParams } from './DatasetParams'
-import {
-  UseSelectDataset,
-  useSelectDataset,
-} from './DatasetParams/useSelectDataset'
+import { type UseSelectDataset, useSelectDataset } from './DatasetParams/useSelectDataset'
 import { HistoryLogParams } from './HistoryLogParams'
 import {
-  UseLogHistoryParams,
+  type UseLogHistoryParams,
   useLogHistoryParams,
 } from './HistoryLogParams/useLogHistoryParams'
 import { ManualParams } from './ManualParams'
@@ -64,42 +51,23 @@ function ParamsTabs({
 }: ContentProps) {
   return (
     <div className='w-full flex flex-col gap-4'>
-      <TabSelector<InputSource>
-        fullWidth
-        options={TABS}
-        selected={source}
-        onSelect={setSource}
-      />
+      <TabSelector<InputSource> fullWidth options={TABS} selected={source} onSelect={setSource} />
       {source === INPUT_SOURCE.manual && (
-        <ManualParams
-          document={document}
-          commit={commit}
-          prompt={prompt}
-          setPrompt={setPrompt}
-        />
+        <ManualParams document={document} commit={commit} prompt={prompt} setPrompt={setPrompt} />
       )}
       {source === INPUT_SOURCE.dataset && (
         <DatasetParams data={datasetInfo} document={document} commit={commit} />
       )}
       {source === INPUT_SOURCE.history && (
-        <HistoryLogParams
-          data={historyInfo}
-          document={document}
-          commit={commit}
-        />
+        <HistoryLogParams data={historyInfo} document={document} commit={commit} />
       )}
     </div>
   )
 }
 
-function CollapsedContentHeader({
-  source,
-  datasetInfo,
-  historyInfo,
-}: ContentProps) {
+function CollapsedContentHeader({ source, datasetInfo, historyInfo }: ContentProps) {
   const src = INPUT_SOURCE
-  const isDataset =
-    source === INPUT_SOURCE.dataset && datasetInfo.selectedDataset
+  const isDataset = source === INPUT_SOURCE.dataset && datasetInfo.selectedDataset
   const isHistory = source === src.history && historyInfo.count > 0
   return (
     <div className='w-full flex items-center justify-between gap-4'>

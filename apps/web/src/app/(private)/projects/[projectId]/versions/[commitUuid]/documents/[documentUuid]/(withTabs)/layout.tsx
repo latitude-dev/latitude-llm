@@ -1,5 +1,5 @@
 import { getDocumentByUuidCached } from '$/app/(private)/_data-access'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import DocumentTabs from '../_components/DocumentTabs'
 
 export default async function WithTabsLayout({

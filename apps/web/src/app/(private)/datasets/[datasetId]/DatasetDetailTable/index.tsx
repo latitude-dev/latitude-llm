@@ -3,7 +3,7 @@
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { ROUTES } from '$/services/routes'
 import useDatasetRows from '$/stores/datasetRows'
-import { DatasetRow, Dataset } from '@latitude-data/core/browser'
+import type { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -19,7 +19,7 @@ import { useDatasetRowsSocket } from './useDatasetRowsSocket'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { format } from 'date-fns'
 
-export const DeletedDatasetAlert = ({ deletedAt }: { deletedAt: Date }) => {
+const DeletedDatasetAlert = ({ deletedAt }: { deletedAt: Date }) => {
   return (
     <Alert
       title='This dataset has been deleted'
@@ -34,13 +34,7 @@ const DataGrid = dynamic(() => import('./DataGrid'), {
   loading: () => <TableSkeleton rows={8} cols={5} maxHeight={320} />,
 })
 
-function DatasetBlankSlate({
-  onClick,
-  isCreating,
-}: {
-  onClick: () => void
-  isCreating: boolean
-}) {
+function DatasetBlankSlate({ onClick, isCreating }: { onClick: () => void; isCreating: boolean }) {
   return (
     <TableBlankSlate
       description='This dataset is empty'
@@ -61,7 +55,7 @@ function DatasetBlankSlate({
   )
 }
 
-export const ROWS_PAGE_SIZE = '100'
+const ROWS_PAGE_SIZE = '100'
 export function DatasetDetailTable({
   dataset,
   rows: serverDatasetRows,
@@ -129,49 +123,32 @@ export function DatasetDetailTable({
       takeVertialSpace
       title={dataset.name}
       description={
-        dataset.deletedAt ? (
-          <DeletedDatasetAlert deletedAt={dataset.deletedAt} />
-        ) : undefined
+        dataset.deletedAt ? <DeletedDatasetAlert deletedAt={dataset.deletedAt} /> : undefined
       }
       actions={
         <>
           {isProcessing ? (
             <div className='flex flex-row items-center space-x-2'>
-              <Icon
-                name='loader'
-                spin
-                spinSpeed='fast'
-                size='large'
-                color='primary'
-              />
-              <Text.H6 color='foregroundMuted'>
-                {processedRowsCount} rows processed...
-              </Text.H6>
+              <Icon name='loader' spin spinSpeed='fast' size='large' color='primary' />
+              <Text.H6 color='foregroundMuted'>{processedRowsCount} rows processed...</Text.H6>
             </div>
           ) : null}
-          <Button
-            variant='outline'
-            fancy
-            onClick={onClick}
-            disabled={isCreating}
-          >
+          <Button variant='outline' fancy onClick={onClick} disabled={isCreating}>
             {isCreating ? 'Creating...' : 'Create a row'}
           </Button>
         </>
       }
       table={
-        <>
-          {rows.length > 0 ? (
-            <DataGrid
-              {...props}
-              updateRows={updateRows}
-              deleteRows={deleteRows}
-              isDeleting={isDeleting}
-            />
-          ) : (
-            <DatasetBlankSlate onClick={onClick} isCreating={isCreating} />
-          )}
-        </>
+        rows.length > 0 ? (
+          <DataGrid
+            {...props}
+            updateRows={updateRows}
+            deleteRows={deleteRows}
+            isDeleting={isDeleting}
+          />
+        ) : (
+          <DatasetBlankSlate onClick={onClick} isCreating={isCreating} />
+        )
       }
     />
   )

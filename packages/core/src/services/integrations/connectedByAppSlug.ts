@@ -1,6 +1,6 @@
-import {
-  type PipedreamIntegration,
-  type PipedreamIntegrationWithAcountCount,
+import type {
+  PipedreamIntegration,
+  PipedreamIntegrationWithAcountCount,
   Workspace,
 } from '@latitude-data/core/browser'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
@@ -10,10 +10,7 @@ import { fetchTriggerCounts } from './pipedream/fetchTriggerCounts'
 function mergeConnectedAppsBySlug(
   connectedApps: PipedreamIntegration[],
 ): PipedreamIntegrationWithAcountCount[] {
-  const appMap = new Map<
-    string,
-    { app: PipedreamIntegration; accountCount: number }
-  >()
+  const appMap = new Map<string, { app: PipedreamIntegration; accountCount: number }>()
 
   for (const app of connectedApps) {
     const appName = app.configuration.appName

@@ -7,11 +7,12 @@ import {
   MenuOption,
   useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin'
-import { $insertNodes, LexicalEditor, TextNode } from 'lexical'
-import { ConversationMetadata } from 'promptl-ai'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { $insertNodes, type LexicalEditor, TextNode } from 'lexical'
+import type { ConversationMetadata } from 'promptl-ai'
+import type React from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { BlocksEditorProps, IncludedPrompt } from '../../types'
+import type { BlocksEditorProps, IncludedPrompt } from '../../types'
 import { ReferenceNode } from '../nodes/ReferenceNode'
 
 export function buildReferencePath(path: string): string {
@@ -50,18 +51,13 @@ export function EventListeners({
 }) {
   useEffect(() => {
     const abortController = new AbortController()
-    document.addEventListener(
-      CUSTOM_EVENTS.GO_TO_DEV_EDITOR,
-      onToggleDevEditor,
-      { signal: abortController.signal },
-    )
+    document.addEventListener(CUSTOM_EVENTS.GO_TO_DEV_EDITOR, onToggleDevEditor, {
+      signal: abortController.signal,
+    })
 
     return () => {
       abortController.abort()
-      document.removeEventListener(
-        CUSTOM_EVENTS.GO_TO_DEV_EDITOR,
-        onToggleDevEditor,
-      )
+      document.removeEventListener(CUSTOM_EVENTS.GO_TO_DEV_EDITOR, onToggleDevEditor)
     }
   }, [onToggleDevEditor])
 
@@ -87,18 +83,13 @@ function ReferencePickerMenuItem({
         },
       )}
       ref={option.setRefElement}
-      role='option'
       aria-selected={isSelected}
       id={`typeahead-item-${index}`}
       onMouseEnter={onMouseEnter}
       onClick={onClick}
     >
       <Icon name='file' color='foregroundMuted' />
-      <Text.H5
-        color={isSelected ? 'accentForeground' : 'foregroundMuted'}
-        noWrap
-        ellipsis
-      >
+      <Text.H5 color={isSelected ? 'accentForeground' : 'foregroundMuted'} noWrap ellipsis>
         {option.label}
       </Text.H5>
     </li>
@@ -106,9 +97,7 @@ function ReferencePickerMenuItem({
 }
 
 export function buildEmptyAttributes(metadata: ConversationMetadata) {
-  return Object.fromEntries(
-    Array.from(metadata.parameters).map((key) => [key, undefined]),
-  )
+  return Object.fromEntries(Array.from(metadata.parameters).map((key) => [key, undefined]))
 }
 
 export function ReferencesPlugin({
@@ -128,10 +117,7 @@ export function ReferencesPlugin({
   })
 
   const allOptions = useMemo(
-    () =>
-      Object.entries(prompts).map(
-        ([path, prompt]) => new ReferencePickerOption(path, prompt),
-      ),
+    () => Object.entries(prompts).map(([path, prompt]) => new ReferencePickerOption(path, prompt)),
     [prompts],
   )
 

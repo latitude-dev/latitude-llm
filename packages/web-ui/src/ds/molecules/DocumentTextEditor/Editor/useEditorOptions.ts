@@ -1,9 +1,6 @@
-import { type editor } from 'monaco-editor'
+import type { editor } from 'monaco-editor'
 
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '../../../../lib/hooks/useLocalStorage'
+import { AppLocalStorage, useLocalStorage } from '../../../../lib/hooks/useLocalStorage'
 
 export function useEditorOptions(
   overrides:

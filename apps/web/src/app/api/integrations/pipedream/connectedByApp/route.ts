@@ -1,7 +1,7 @@
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { listConnectedIntegrationsByApp } from '@latitude-data/core/services/integrations/connectedByAppSlug'
 
 type ListArguments = Parameters<typeof listConnectedIntegrationsByApp>[0]
@@ -19,7 +19,7 @@ export const GET = errorHandler(
       const { searchParams } = new URL(request.url)
       const withTools = searchParams.get('withTools') || undefined
       const withTriggers = searchParams.get('withTriggers') || undefined
-      let args: ListArguments = { workspace }
+      const args: ListArguments = { workspace }
 
       if (withTools !== undefined) {
         args.withTools = withTools === 'true'
@@ -29,9 +29,7 @@ export const GET = errorHandler(
         args.withTriggers = withTriggers === 'true'
       }
 
-      const integrations = await listConnectedIntegrationsByApp(args).then(
-        (r) => r.unwrap(),
-      )
+      const integrations = await listConnectedIntegrationsByApp(args).then((r) => r.unwrap())
       return NextResponse.json(integrations, { status: 200 })
     },
   ),

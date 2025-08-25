@@ -1,14 +1,14 @@
-import { z } from 'zod'
-import {
+import type { z } from 'zod'
+import type {
   ActionBackendParameters,
   ActionFrontendParameters,
   ActionType,
   User,
   Workspace,
 } from '../../browser'
-import { Database } from '../../client'
-import { TypedResult } from '../../lib/Result'
-import Transaction from '../../lib/Transaction'
+import type { Database } from '../../client'
+import type { TypedResult } from '../../lib/Result'
+import type Transaction from '../../lib/Transaction'
 
 // prettier-ignore
 type ZodSchema<T = any> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny, T, T>

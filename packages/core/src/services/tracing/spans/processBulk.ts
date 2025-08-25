@@ -18,11 +18,11 @@ import {
   AI_OPERATION_ID_VALUE_STREAM_OBJECT,
   AI_OPERATION_ID_VALUE_STREAM_TEXT,
   AI_OPERATION_ID_VALUE_TOOL,
-  ApiKey,
+  type ApiKey,
   ATTR_AI_OPERATION_ID,
   ATTR_LATITUDE_TYPE,
   ATTR_LLM_REQUEST_TYPE,
-  BaseSpanMetadata,
+  type BaseSpanMetadata,
   GEN_AI_OPERATION_NAME_VALUE_COMPLETION,
   GEN_AI_OPERATION_NAME_VALUE_EMBEDDING,
   GEN_AI_OPERATION_NAME_VALUE_RERANKING,
@@ -33,23 +33,23 @@ import {
   LLM_REQUEST_TYPE_VALUE_EMBEDDING,
   LLM_REQUEST_TYPE_VALUE_RERANK,
   Otlp,
-  Span,
+  type Span,
   SPAN_METADATA_STORAGE_KEY,
-  SpanAttribute,
-  SpanEvent,
+  type SpanAttribute,
+  type SpanEvent,
   SpanKind,
-  SpanLink,
-  SpanMetadata,
+  type SpanLink,
+  type SpanMetadata,
   SpanStatus,
   SpanType,
-  Workspace,
+  type Workspace,
 } from '../../../browser'
 import { cache as redis } from '../../../cache'
 import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
-import { diskFactory, DiskWrapper } from '../../../lib/disk'
+import { diskFactory, type DiskWrapper } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'
-import { Result, TypedResult } from '../../../lib/Result'
+import { Result, type TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import { SpansRepository } from '../../../repositories'
 import { spans } from '../../../schema'
@@ -102,9 +102,7 @@ export async function processSpansBulk(
     traceId: span.traceId,
   }))
   const existingSpans = await getExistingBatch({ spanIds, workspace })
-  const existingSpanSet = new Set(
-    existingSpans.map((span) => `${span.traceId}-${span.id}`),
-  )
+  const existingSpanSet = new Set(existingSpans.map((span) => `${span.traceId}-${span.id}`))
 
   // Process each span to extract basic information
   for (const spanData of spansData) {
@@ -203,7 +201,7 @@ export async function processSpansBulk(
       console.error('Error extracting span error:', extractingse.error)
       continue
     }
-    if (extractingse.value != undefined) {
+    if (extractingse.value !== undefined) {
       status = SpanStatus.Error
       message = extractingse.value?.slice(0, 256) || undefined
     }
@@ -229,10 +227,7 @@ export async function processSpansBulk(
       workspace,
     })
     if (processing.error) {
-      console.error(
-        'Error processing span with specification:',
-        processing.error,
-      )
+      console.error('Error processing span with specification:', processing.error)
       continue
     }
     metadata = { ...metadata, ...processing.value }
@@ -270,9 +265,7 @@ export async function processSpansBulk(
       parentId: processed.parentId,
       workspaceId: workspace.id,
       apiKeyId: apiKey.id,
-      documentLogUuid: processed.attributes.documentLogUuid as
-        | string
-        | undefined,
+      documentLogUuid: processed.attributes.documentLogUuid as string | undefined,
       name: processed.name,
       kind: processed.kind,
       type: processed.type,
@@ -370,11 +363,7 @@ async function saveMetadataBatch(
   const promises: Promise<void>[] = []
 
   for (const metadata of metadatas) {
-    const key = SPAN_METADATA_STORAGE_KEY(
-      workspace.id,
-      metadata.traceId,
-      metadata.spanId,
-    )
+    const key = SPAN_METADATA_STORAGE_KEY(workspace.id, metadata.traceId, metadata.spanId)
 
     const promise = (async () => {
       try {
@@ -393,22 +382,20 @@ async function saveMetadataBatch(
   return Result.nil()
 }
 
-function convertSpanAttribute(
-  attribute: Otlp.AttributeValue,
-): TypedResult<SpanAttribute> {
-  if (attribute.stringValue != undefined) {
+function convertSpanAttribute(attribute: Otlp.AttributeValue): TypedResult<SpanAttribute> {
+  if (attribute.stringValue !== undefined) {
     return Result.ok(attribute.stringValue)
   }
 
-  if (attribute.intValue != undefined) {
+  if (attribute.intValue !== undefined) {
     return Result.ok(attribute.intValue)
   }
 
-  if (attribute.boolValue != undefined) {
+  if (attribute.boolValue !== undefined) {
     return Result.ok(attribute.boolValue)
   }
 
-  if (attribute.arrayValue != undefined) {
+  if (attribute.arrayValue !== undefined) {
     const values = attribute.arrayValue.values.map(convertSpanAttribute)
     if (values.some((v) => v.error)) return Result.error(values[0]!.error!)
 
@@ -432,9 +419,7 @@ export function convertSpanAttributes(
   return Result.ok(result)
 }
 
-export function extractSpanType(
-  attributes: Record<string, SpanAttribute>,
-): TypedResult<SpanType> {
+export function extractSpanType(attributes: Record<string, SpanAttribute>): TypedResult<SpanType> {
   const type = String(attributes[ATTR_LATITUDE_TYPE] ?? '')
   switch (type) {
     case SpanType.Tool:
@@ -497,9 +482,7 @@ export function extractSpanType(
   return Result.ok(SpanType.Unknown)
 }
 
-export function convertSpanStatus(
-  status: Otlp.Status,
-): TypedResult<SpanStatus> {
+export function convertSpanStatus(status: Otlp.Status): TypedResult<SpanStatus> {
   switch (status.code) {
     case Otlp.StatusCode.Ok:
       return Result.ok(SpanStatus.Ok)

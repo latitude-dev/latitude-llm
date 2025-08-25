@@ -1,11 +1,8 @@
-import { Commit, Workspace } from '@latitude-data/core/browser'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '@latitude-data/core/repositories'
+import type { Commit, Workspace } from '@latitude-data/core/browser'
+import { CommitsRepository, DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { documentVersionPresenter } from '@latitude-data/core/services/providerLogs/documentVersionPresenter'
 import { findCommitById } from '@latitude-data/core/data-access/commits'
 import { BadRequestError, NotFoundError } from '@latitude-data/core/lib/errors'
@@ -33,9 +30,7 @@ export const GET = errorHandler(
       let commit: Commit | undefined
       if (commitUuid) {
         const commitsScope = new CommitsRepository(workspace.id)
-        commit = await commitsScope
-          .getCommitByUuid({ uuid: commitUuid })
-          .then((r) => r.unwrap())
+        commit = await commitsScope.getCommitByUuid({ uuid: commitUuid }).then((r) => r.unwrap())
       }
 
       const docsScope = new DocumentVersionsRepository(workspace.id)

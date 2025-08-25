@@ -1,7 +1,7 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 
 import { unsafelyFindWorkspace } from '../../../data-access'
-import { LatitudeError } from '../../../lib/errors'
+import type { LatitudeError } from '../../../lib/errors'
 import { DocumentLogsRepository, UsersRepository } from '../../../repositories'
 import { addMessageToExistingLatte } from '../../../services/copilot/latte/addMessage'
 import { runNewLatte } from '../../../services/copilot/latte/run'
@@ -36,14 +36,7 @@ async function emitError({
 }
 
 export const runLatteJob = async (job: Job<RunLatteJobData>) => {
-  const {
-    workspaceId,
-    userId,
-    threadUuid,
-    message,
-    context,
-    debugVersionUuid,
-  } = job.data
+  const { workspaceId, userId, threadUuid, message, context, debugVersionUuid } = job.data
   const workspace = await unsafelyFindWorkspace(workspaceId).then((w) => w!)
 
   const usersScope = new UsersRepository(workspace.id)

@@ -1,5 +1,5 @@
-import { FormEvent, useCallback } from 'react'
-import { App } from '@pipedream/sdk/browser'
+import { type FormEvent, useCallback } from 'react'
+import type { App } from '@pipedream/sdk/browser'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { useConnectToPipedreamApp } from '$/hooks/useConnectToPipedreamApp'
@@ -7,10 +7,9 @@ import { IntegrationType } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import useIntegrations from '$/stores/integrations'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { IntegrationDto } from '@latitude-data/core/browser'
+import type { IntegrationDto } from '@latitude-data/core/browser'
 
-const NO_TOKEN_MSG =
-  'Authentication token not available. Please wait a few seconds and try again.'
+const NO_TOKEN_MSG = 'Authentication token not available. Please wait a few seconds and try again.'
 
 /**
  * This connection is only for triggers.
@@ -38,8 +37,7 @@ export function PipedreamConnect({
     async (e: FormEvent) => {
       e.preventDefault()
 
-      const integrationName = (e.target as HTMLFormElement).integrationName
-        .value
+      const integrationName = (e.target as HTMLFormElement).integrationName.value
 
       if (!externalUserId) {
         toast({
@@ -72,9 +70,7 @@ export function PipedreamConnect({
       if (createError || !integration) {
         toast({
           title: 'Error creating integration',
-          description: createError
-            ? createError.message
-            : 'Unknown error occurred',
+          description: createError ? createError.message : 'Unknown error occurred',
           variant: 'destructive',
         })
       }
@@ -97,23 +93,11 @@ export function PipedreamConnect({
           />
           <div className='flex flex-row gap-x-2'>
             {showCancel ? (
-              <Button
-                fullWidth
-                size='small'
-                variant='outline'
-                type='button'
-                onClick={onCancel}
-              >
+              <Button fullWidth size='small' variant='outline' type='button' onClick={onCancel}>
                 Cancel
               </Button>
             ) : null}
-            <Button
-              fullWidth
-              fancy
-              size='small'
-              type='submit'
-              disabled={!externalUserId}
-            >
+            <Button fullWidth fancy size='small' type='submit' disabled={!externalUserId}>
               Connect
             </Button>
           </div>

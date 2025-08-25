@@ -2,12 +2,12 @@ import { useCurrentUrl } from '$/hooks/useCurrentUrl'
 import { executeFetch } from '$/hooks/useFetcher'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import { Dataset } from '@latitude-data/core/browser'
+import type { Dataset } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useState } from 'react'
 
-export type WithPositionData = {
+type WithPositionData = {
   position: number
   page: number
 }
@@ -21,13 +21,7 @@ const buildFetcher =
     navigate: ReturnType<typeof useNavigate>
     currentUrl: string
   }) =>
-  async ({
-    dataset,
-    datasetRowId,
-  }: {
-    dataset: Dataset | null
-    datasetRowId?: number
-  }) => {
+  async ({ dataset, datasetRowId }: { dataset: Dataset | null; datasetRowId?: number }) => {
     if (!dataset) return undefined
     if (!dataset || !datasetRowId) return { position: 1, page: 1 }
 
@@ -53,19 +47,13 @@ export function useDatasetRowPosition() {
   const [position, setPosition] = useState<number | undefined>(undefined)
   const [isLoadingPosition, setIsLoadingPosition] = useState(false)
   const getPosition = useCallback(
-    async ({
-      dataset,
-      datasetRowId,
-    }: {
-      dataset: Dataset | null
-      datasetRowId?: number
-    }) => {
+    async ({ dataset, datasetRowId }: { dataset: Dataset | null; datasetRowId?: number }) => {
       setIsLoadingPosition(true)
       const position = await fetchPosition({ dataset, datasetRowId })
       setPosition(position?.position)
       setIsLoadingPosition(false)
     },
-    [fetchPosition, setPosition],
+    [fetchPosition],
   )
 
   return { position, getPosition, isLoadingPosition, setPosition }

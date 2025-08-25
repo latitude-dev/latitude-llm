@@ -1,7 +1,7 @@
 import * as k8s from '@kubernetes/client-node'
-import { Writable } from 'stream'
-import { McpServer } from '../../browser'
-import { Result, TypedResult } from '../../lib/Result'
+import { Writable } from 'node:stream'
+import type { McpServer } from '../../browser'
+import { Result, type TypedResult } from '../../lib/Result'
 import { getK8sClient } from '../k8s/k8sClient'
 
 /**
@@ -62,9 +62,7 @@ export async function getLogs(
 
     // If no pods are found, return an error
     if (!podsResponse.items || podsResponse.items.length === 0) {
-      return Result.error(
-        new Error(`No pods found for MCP server ${mcpServer.name}`),
-      )
+      return Result.error(new Error(`No pods found for MCP server ${mcpServer.name}`))
     }
 
     // Get the first pod (we could potentially get logs from all pods)
@@ -76,9 +74,7 @@ export async function getLogs(
     // Get the container name (usually the first container)
     const containerName = pod.spec?.containers[0]?.name
     if (!containerName)
-      return Result.error(
-        new Error(`No container name found for MCP server ${mcpServer.name}`),
-      )
+      return Result.error(new Error(`No container name found for MCP server ${mcpServer.name}`))
 
     // Create a string to store the logs
     let logs = ''
@@ -114,8 +110,6 @@ export async function getLogs(
 
     return Result.ok(logResult)
   } catch (error) {
-    return Result.error(
-      error instanceof Error ? error : new Error(String(error)),
-    )
+    return Result.error(error instanceof Error ? error : new Error(String(error)))
   }
 }

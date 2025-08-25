@@ -1,12 +1,8 @@
 import { createRowsFromUploadedDataset } from '../../services/datasetRows/createRowsFromUploadedDataset'
 import { WebsocketClient } from '../../websockets/workers'
-import { DatasetV2CreatedEvent } from '../events'
+import type { DatasetV2CreatedEvent } from '../events'
 
-export async function createDatasetRowsJob({
-  data: event,
-}: {
-  data: DatasetV2CreatedEvent
-}) {
+export async function createDatasetRowsJob({ data: event }: { data: DatasetV2CreatedEvent }) {
   return await createRowsFromUploadedDataset({
     event,
     onRowsCreated: ({ rows }) => {

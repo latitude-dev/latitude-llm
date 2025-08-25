@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 
 import { createWebhook as createWebhookFn } from '../../services/webhooks/createWebhook'
-import { CreateWebhookParams } from '../../services/webhooks/types'
+import type { CreateWebhookParams } from '../../services/webhooks/types'
 
 export type ICreateWebhook = {
   name?: string

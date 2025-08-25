@@ -1,15 +1,15 @@
-import { DocumentTrigger } from '@latitude-data/core/browser'
+import type { DocumentTrigger } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import { createDocumentTriggerAction } from '$/actions/documents/triggers/createDocumentTriggerAction'
 import { deleteDocumentTriggerAction } from '$/actions/documents/triggers/deleteDocumentTriggerAction'
-import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { useCallback, useMemo } from 'react'
 import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/triggers/updateDocumentTriggerConfigurationAction'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import type { DocumentTriggerType } from '@latitude-data/constants'
 import { toggleEnabledDocumentTriggerAction } from '$/actions/documents/triggers/toggleEnabledDocumentTriggerAction'
 
 const EMPTY_ARRAY = [] as const
@@ -34,8 +34,7 @@ export default function useDocumentTriggers(
   const fetcher = useFetcher<DocumentTrigger[]>(
     documentUuid
       ? `${ROUTES.api.projects.detail(projectId).commits.detail(commitUuid).triggers.root}?documentUuid=${documentUuid}`
-      : ROUTES.api.projects.detail(projectId).commits.detail(commitUuid)
-          .triggers.root,
+      : ROUTES.api.projects.detail(projectId).commits.detail(commitUuid).triggers.root,
   )
 
   const {
@@ -78,10 +77,7 @@ export default function useDocumentTriggers(
           description: 'Updated the document trigger successfully.',
         })
 
-        mutate([
-          ...data.filter((t) => t.id !== updatedTrigger.id),
-          updatedTrigger,
-        ])
+        mutate([...data.filter((t) => t.id !== updatedTrigger.id), updatedTrigger])
         onUpdated?.(updatedTrigger)
       },
     },

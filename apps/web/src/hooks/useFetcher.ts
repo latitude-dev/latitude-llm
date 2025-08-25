@@ -4,23 +4,13 @@ import { useCallback } from 'react'
 import { useCurrentUrl } from './useCurrentUrl'
 import { useNavigate } from './useNavigate'
 
-type ISearchParams =
-  | Record<string, string>
-  | string[][]
-  | string
-  | URLSearchParams
-  | undefined
+type ISearchParams = Record<string, string> | string[][] | string | URLSearchParams | undefined
 
-type ConditionalResponse<
-  R extends unknown,
-  Raw extends boolean,
-> = Raw extends true ? Response | void : R | void
+type ConditionalResponse<R, Raw extends boolean> = Raw extends true
+  ? Response | undefined
+  : R | undefined
 
-export async function handleResponse<
-  R extends unknown = unknown,
-  I extends unknown = unknown,
-  Raw extends boolean = false,
->({
+export async function handleResponse<R = unknown, I = unknown, Raw extends boolean = false>({
   response,
   toast,
   serializer,
@@ -59,9 +49,7 @@ export async function handleResponse<
     })
 
     if (!currentUrl.includes(ROUTES.auth.login)) {
-      navigate.push(
-        `${ROUTES.auth.login}?returnTo=${encodeURIComponent(currentUrl)}`,
-      )
+      navigate.push(`${ROUTES.auth.login}?returnTo=${encodeURIComponent(currentUrl)}`)
     }
   } else if (response.status >= 500) {
     if (onFail) {
@@ -87,11 +75,7 @@ export async function handleResponse<
   }
 }
 
-export async function executeFetch<
-  R extends unknown = unknown,
-  I extends unknown = unknown,
-  Raw extends boolean = false,
->({
+export async function executeFetch<R = unknown, I = unknown, Raw extends boolean = false>({
   route,
   searchParams,
   toast,
@@ -124,11 +108,7 @@ export async function executeFetch<
   })
 }
 
-export default function useFetcher<
-  R extends unknown = unknown,
-  I extends unknown = unknown,
-  Raw extends boolean = false,
->(
+export default function useFetcher<R = unknown, I = unknown, Raw extends boolean = false>(
   route?: string,
   {
     fallback = [],
@@ -162,24 +142,12 @@ export default function useFetcher<
       onFail,
     })
     return response as R
-  }, [
-    route,
-    searchParams,
-    toast,
-    serializer,
-    onFail,
-    onSuccess,
-    navigate,
-    currentUrl,
-    fallback,
-  ])
+  }, [route, searchParams, toast, serializer, onFail, onSuccess, navigate, currentUrl, fallback])
 }
 
 function buildRoute(route: string, searchParams?: ISearchParams) {
   if (!searchParams) return route
 
   const params = new URLSearchParams(searchParams)
-  return route.toString() + '?' + params.toString()
+  return `${route.toString()}?${params.toString()}`
 }
-
-export type UseFetcherArgs = Parameters<typeof useFetcher>

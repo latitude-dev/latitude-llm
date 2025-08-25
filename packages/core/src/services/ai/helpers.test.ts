@@ -1,8 +1,8 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Providers, User, Workspace } from '../../browser'
+import { Providers, type User, type Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
-import { TelemetryContext } from '../../telemetry'
+import type { TelemetryContext } from '../../telemetry'
 import * as factories from '../../tests/factories'
 import { createProvider as createProviderGlobal } from './helpers'
 

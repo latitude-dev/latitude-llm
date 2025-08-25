@@ -1,4 +1,4 @@
-import {
+import type {
   BackendClient,
   ComponentId,
   ConfigurableProp,
@@ -7,11 +7,11 @@ import {
   ConfiguredProps,
 } from '@pipedream/sdk/server'
 import { Result } from '../../../../lib/Result'
-import { PipedreamIntegration } from '../../../../browser'
+import type { PipedreamIntegration } from '../../../../browser'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
-import { PromisedResult } from '../../../../lib/Transaction'
+import type { PromisedResult } from '../../../../lib/Transaction'
 import { env } from '@latitude-data/env'
-import { PipedreamIntegrationConfiguration } from '../../helpers/schema'
+import type { PipedreamIntegrationConfiguration } from '../../helpers/schema'
 
 export function isIntegrationConfigured<T extends PipedreamIntegration>(
   integration: T,
@@ -58,9 +58,7 @@ export async function fillConfiguredProps({
 }): PromisedResult<ConfiguredProps<ConfigurableProps>> {
   if (!isIntegrationConfigured(integration)) {
     return Result.error(
-      new NotFoundError(
-        `Integration '${integration.name}' has not been configured.`,
-      ),
+      new NotFoundError(`Integration '${integration.name}' has not been configured.`),
     )
   }
 
@@ -74,13 +72,9 @@ export async function fillConfiguredProps({
       (prop: ConfigurableProp) => prop.type === 'app',
     )
 
-    if (
-      appProps.some((prop) => prop.app !== integration.configuration.appName)
-    ) {
+    if (appProps.some((prop) => prop.app !== integration.configuration.appName)) {
       return Result.error(
-        new BadRequestError(
-          'Component is not configurable for this integration.',
-        ),
+        new BadRequestError('Component is not configurable for this integration.'),
       )
     }
 

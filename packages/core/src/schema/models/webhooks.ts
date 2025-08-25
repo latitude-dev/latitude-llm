@@ -1,14 +1,6 @@
-import {
-  bigint,
-  bigserial,
-  boolean,
-  index,
-  text,
-  timestamp,
-  varchar,
-} from 'drizzle-orm/pg-core'
+import { bigint, bigserial, boolean, index, text, timestamp, varchar } from 'drizzle-orm/pg-core'
 
-import { Events } from '../../events/events'
+import type { Events } from '../../events/events'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { workspaces } from './workspaces'
@@ -46,19 +38,13 @@ export const webhookDeliveries = latitudeSchema.table(
     responseStatus: bigint('response_status', { mode: 'number' }),
     responseBody: text('response_body'),
     errorMessage: text('error_message'),
-    attemptCount: bigint('attempt_count', { mode: 'number' })
-      .notNull()
-      .default(1),
+    attemptCount: bigint('attempt_count', { mode: 'number' }).notNull().default(1),
     nextRetryAt: timestamp('next_retry_at'),
     ...timestamps(),
   },
   (table) => ({
-    webhookIdIdx: index('webhook_deliveries_webhook_id_idx').on(
-      table.webhookId,
-    ),
+    webhookIdIdx: index('webhook_deliveries_webhook_id_idx').on(table.webhookId),
     statusIdx: index('webhook_deliveries_status_idx').on(table.status),
-    nextRetryAtIdx: index('webhook_deliveries_next_retry_at_idx').on(
-      table.nextRetryAt,
-    ),
+    nextRetryAtIdx: index('webhook_deliveries_next_retry_at_idx').on(table.nextRetryAt),
   }),
 )

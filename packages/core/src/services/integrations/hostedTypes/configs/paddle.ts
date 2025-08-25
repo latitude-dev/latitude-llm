@@ -1,4 +1,4 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 import { npxCommand } from '../utils'
 
 const PADDLE_MCP_CONFIG: HostedIntegrationConfig = {

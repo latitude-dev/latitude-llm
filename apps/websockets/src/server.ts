@@ -1,10 +1,10 @@
-import http from 'http'
+import http from 'node:http'
 
 import {
   TOKEN_TYPES,
-  WebClientToServerEvents,
-  WebServerToClientEvents,
-  WebSocketData,
+  type WebClientToServerEvents,
+  type WebServerToClientEvents,
+  type WebSocketData,
 } from '@latitude-data/core/browser'
 import {
   buildWorkspaceRoom,
@@ -14,7 +14,7 @@ import {
 import { env } from '@latitude-data/env'
 import cookieParser from 'cookie-parser'
 import express from 'express'
-import { Namespace, Server, Socket } from 'socket.io'
+import { type Namespace, Server, type Socket } from 'socket.io'
 
 function parseCookie(cookieString: string): Record<string, string> {
   return cookieString.split(';').reduce(
@@ -81,12 +81,8 @@ io.on('connection', (socket: Socket) => {
   socket.disconnect()
 })
 
-const web: Namespace<
-  WebClientToServerEvents,
-  WebServerToClientEvents,
-  {},
-  WebSocketData
-> = io.of('/web')
+const web: Namespace<WebClientToServerEvents, WebServerToClientEvents, {}, WebSocketData> =
+  io.of('/web')
 
 web.use(async (socket, next) => {
   try {
@@ -117,17 +113,14 @@ web.use(async (socket, next) => {
     }
 
     return next()
-  } catch (err) {
+  } catch (_err) {
     return next(new Error('AUTH_ERROR: Verification failed'))
   }
 })
 
 web.on('connection', (socket) => {
   socket.on('joinWorkspace', ({ workspaceId, userId }) => {
-    if (
-      socket.data.userId === userId &&
-      socket.data.workspaceId === workspaceId
-    ) {
+    if (socket.data.userId === userId && socket.data.workspaceId === workspaceId) {
       const room = buildWorkspaceRoom({ workspaceId })
       socket.join(room)
     }

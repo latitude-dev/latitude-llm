@@ -49,9 +49,7 @@ describe('PushCommand', () => {
       // Mock base command methods
       // @ts-expect-error - mock
       vi.spyOn(pushCommand as any, 'validateEnvironment').mockResolvedValue()
-      vi.spyOn(pushCommand as any, 'getLockFile').mockResolvedValue(
-        mockLockFile,
-      )
+      vi.spyOn(pushCommand as any, 'getLockFile').mockResolvedValue(mockLockFile)
       vi.spyOn(pushCommand as any, 'readLocalPrompts').mockResolvedValue([])
       vi.spyOn(pushCommand as any, 'getDiffWithRemote').mockResolvedValue([])
       // @ts-expect-error - mock
@@ -61,22 +59,15 @@ describe('PushCommand', () => {
     it('should execute push successfully', async () => {
       await pushCommand.execute(mockOptions)
 
-      expect(pushCommand['validateEnvironment']).toHaveBeenCalledWith(
-        mockOptions,
-      )
+      expect(pushCommand['validateEnvironment']).toHaveBeenCalledWith(mockOptions)
       expect(pushCommand['getLockFile']).toHaveBeenCalled()
-      expect(pushCommand['readLocalPrompts']).toHaveBeenCalledWith(
-        'prompts',
-        true,
-      )
+      expect(pushCommand['readLocalPrompts']).toHaveBeenCalledWith('prompts', true)
       expect(pushCommand['displayDiffSummary']).toHaveBeenCalled()
     })
 
     it('should handle errors gracefully', async () => {
       const error = new Error('Test error')
-      vi.spyOn(pushCommand as any, 'validateEnvironment').mockRejectedValue(
-        error,
-      )
+      vi.spyOn(pushCommand as any, 'validateEnvironment').mockRejectedValue(error)
       vi.spyOn(pushCommand as any, 'handleError').mockImplementation(() => {})
 
       await pushCommand.execute(mockOptions)
@@ -88,10 +79,10 @@ describe('PushCommand', () => {
   describe('readLocalPrompts', () => {
     beforeEach(() => {
       pushCommand['projectPath'] = '/test/project'
-      vi.spyOn(
-        pushCommand['promptManager'],
-        'findAllPromptFiles',
-      ).mockResolvedValue(['test.promptl', 'example.js'])
+      vi.spyOn(pushCommand['promptManager'], 'findAllPromptFiles').mockResolvedValue([
+        'test.promptl',
+        'example.js',
+      ])
       vi.spyOn(pushCommand as any, 'readPromptContent')
         .mockResolvedValueOnce('promptl content')
         .mockResolvedValueOnce('js content')
@@ -103,10 +94,7 @@ describe('PushCommand', () => {
     it('should read all local prompts successfully', async () => {
       mockFs.access.mockResolvedValue(undefined)
 
-      const result = await (pushCommand as any).readLocalPrompts(
-        'prompts',
-        true,
-      )
+      const result = await (pushCommand as any).readLocalPrompts('prompts', true)
 
       expect(result).toEqual([
         { path: 'test', content: 'promptl content' },
@@ -117,10 +105,7 @@ describe('PushCommand', () => {
     it('should return empty array when prompts directory does not exist', async () => {
       mockFs.access.mockRejectedValue(new Error('Directory not found'))
 
-      const result = await (pushCommand as any).readLocalPrompts(
-        'prompts',
-        true,
-      )
+      const result = await (pushCommand as any).readLocalPrompts('prompts', true)
 
       expect(result).toEqual([])
       expect(console.log).toHaveBeenCalledWith(
@@ -134,10 +119,7 @@ describe('PushCommand', () => {
         .mockResolvedValueOnce('promptl content')
         .mockRejectedValueOnce(new Error('Cannot read file'))
 
-      const result = await (pushCommand as any).readLocalPrompts(
-        'prompts',
-        true,
-      )
+      const result = await (pushCommand as any).readLocalPrompts('prompts', true)
 
       expect(result).toEqual([
         { path: 'test', content: 'promptl content' },
@@ -167,11 +149,7 @@ describe('PushCommand', () => {
     it('should get diff with remote prompts', async () => {
       const localPrompts = [{ path: 'test.promptl', content: 'local content' }]
 
-      const result = await (pushCommand as any).getDiffWithRemote(
-        123,
-        'test-version',
-        localPrompts,
-      )
+      const result = await (pushCommand as any).getDiffWithRemote(123, 'test-version', localPrompts)
 
       expect(pushCommand['client']!.prompts.getAll).toHaveBeenCalledWith({
         projectId: 123,
@@ -184,9 +162,9 @@ describe('PushCommand', () => {
       const error = new Error('API error')
       pushCommand['client']!.prompts.getAll = vi.fn().mockRejectedValue(error)
 
-      await expect(
-        (pushCommand as any).getDiffWithRemote(123, 'test-version', []),
-      ).rejects.toThrow('Failed to compute diff: API error')
+      await expect((pushCommand as any).getDiffWithRemote(123, 'test-version', [])).rejects.toThrow(
+        'Failed to compute diff: API error',
+      )
     })
   })
 
@@ -214,16 +192,9 @@ describe('PushCommand', () => {
         },
       ]
 
-      await (pushCommand as any).displayDiffSummary(
-        mockDiffResults,
-        mockOptions,
-      )
+      await (pushCommand as any).displayDiffSummary(mockDiffResults, mockOptions)
 
-      expect(pushCommand['handleUserChoice']).toHaveBeenCalledWith(
-        mockDiffResults,
-        false,
-        false,
-      )
+      expect(pushCommand['handleUserChoice']).toHaveBeenCalledWith(mockDiffResults, false, false)
       expect(pushCommand['executePush']).toHaveBeenCalledWith(mockDiffResults)
     })
 
@@ -240,10 +211,7 @@ describe('PushCommand', () => {
 
       vi.spyOn(pushCommand as any, 'handleUserChoice').mockResolvedValue(false)
 
-      await (pushCommand as any).displayDiffSummary(
-        mockDiffResults,
-        mockOptions,
-      )
+      await (pushCommand as any).displayDiffSummary(mockDiffResults, mockOptions)
 
       expect(pushCommand['executePush']).not.toHaveBeenCalled()
     })
@@ -285,18 +253,14 @@ describe('PushCommand', () => {
 
       await (pushCommand as any).executePush(mockDiffResults)
 
-      expect(pushCommand['client']!.versions.push).toHaveBeenCalledWith(
-        123,
-        'test-version',
-        [
-          {
-            path: 'test.promptl',
-            content: 'new content',
-            status: 'modified',
-            contentHash: 'hash123',
-          },
-        ],
-      )
+      expect(pushCommand['client']!.versions.push).toHaveBeenCalledWith(123, 'test-version', [
+        {
+          path: 'test.promptl',
+          content: 'new content',
+          status: 'modified',
+          contentHash: 'hash123',
+        },
+      ])
       expect(console.log).toHaveBeenCalledWith(
         expect.stringContaining('Successfully pushed changes'),
       )
@@ -316,13 +280,9 @@ describe('PushCommand', () => {
         },
       ]
 
-      await expect(
-        (pushCommand as any).executePush(mockDiffResults),
-      ).rejects.toThrow(error)
+      await expect((pushCommand as any).executePush(mockDiffResults)).rejects.toThrow(error)
 
-      expect(console.error).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to push changes'),
-      )
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Failed to push changes'))
     })
   })
 
@@ -330,25 +290,16 @@ describe('PushCommand', () => {
     it('should read .promptl files directly', async () => {
       mockFs.readFile.mockResolvedValue('promptl content')
 
-      const result = await (pushCommand as any).readPromptContent(
-        '/path/test.promptl',
-      )
+      const result = await (pushCommand as any).readPromptContent('/path/test.promptl')
 
-      expect(mockFs.readFile).toHaveBeenCalledWith(
-        '/path/test.promptl',
-        'utf-8',
-      )
+      expect(mockFs.readFile).toHaveBeenCalledWith('/path/test.promptl', 'utf-8')
       expect(result).toBe('promptl content')
     })
 
     it('should import JS files and extract prompt content', async () => {
-      vi.spyOn(pushCommand as any, 'importPromptFromFile').mockResolvedValue(
-        'js content',
-      )
+      vi.spyOn(pushCommand as any, 'importPromptFromFile').mockResolvedValue('js content')
 
-      const result = await (pushCommand as any).readPromptContent(
-        '/path/test.js',
-      )
+      const result = await (pushCommand as any).readPromptContent('/path/test.js')
 
       expect(result).toBe('js content')
     })
@@ -356,9 +307,7 @@ describe('PushCommand', () => {
 
   describe('convertToPromptVariableName', () => {
     it('should convert file name to camelCase', () => {
-      const result = (pushCommand as any).convertToPromptVariableName(
-        'test-prompt_name',
-      )
+      const result = (pushCommand as any).convertToPromptVariableName('test-prompt_name')
       expect(result).toBe('testPromptName')
     })
 
@@ -370,18 +319,10 @@ describe('PushCommand', () => {
 
   describe('convertFilePathToPromptPath', () => {
     it('should remove file extensions', () => {
-      expect((pushCommand as any).convertFilePathToPromptPath('test.js')).toBe(
-        'test',
-      )
-      expect(
-        (pushCommand as any).convertFilePathToPromptPath('test.promptl'),
-      ).toBe('test')
-      expect((pushCommand as any).convertFilePathToPromptPath('test.ts')).toBe(
-        'test',
-      )
-      expect((pushCommand as any).convertFilePathToPromptPath('test.cjs')).toBe(
-        'test',
-      )
+      expect((pushCommand as any).convertFilePathToPromptPath('test.js')).toBe('test')
+      expect((pushCommand as any).convertFilePathToPromptPath('test.promptl')).toBe('test')
+      expect((pushCommand as any).convertFilePathToPromptPath('test.ts')).toBe('test')
+      expect((pushCommand as any).convertFilePathToPromptPath('test.cjs')).toBe('test')
     })
   })
 })

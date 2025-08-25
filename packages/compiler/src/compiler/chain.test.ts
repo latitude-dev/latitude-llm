@@ -1,11 +1,11 @@
 import { CHAIN_STEP_TAG } from '$compiler/constants'
 import CompileError from '$compiler/error/error'
 import {
-  AssistantMessage,
-  Conversation,
+  type AssistantMessage,
+  type Conversation,
   MessageRole,
-  TextContent,
-  UserMessage,
+  type TextContent,
+  type UserMessage,
 } from '$compiler/types'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -39,7 +39,7 @@ async function complete({
   maxSteps?: number
 }): Promise<Conversation> {
   let steps = 0
-  let response: string | undefined = undefined
+  let response: string | undefined 
   while (true) {
     const { completed, conversation } = await chain.step(response)
     if (completed) return conversation
@@ -110,21 +110,15 @@ describe('chain', async () => {
 
     const userMessage = conversation.messages[1]! as UserMessage
     expect(userMessage.role).toBe('user')
-    expect((userMessage.content[0]! as TextContent).text).toBe(
-      'User message: 1',
-    )
+    expect((userMessage.content[0]! as TextContent).text).toBe('User message: 1')
 
     const userMessage2 = conversation.messages[2]! as UserMessage
     expect(userMessage2.role).toBe('user')
-    expect((userMessage2.content[0]! as TextContent).text).toBe(
-      'User message: 2',
-    )
+    expect((userMessage2.content[0]! as TextContent).text).toBe('User message: 2')
 
     const userMessage3 = conversation.messages[3]! as UserMessage
     expect(userMessage3.role).toBe('user')
-    expect((userMessage3.content[0]! as TextContent).text).toBe(
-      'User message: 3',
-    )
+    expect((userMessage3.content[0]! as TextContent).text).toBe('User message: 3')
 
     const assistantMessage = conversation.messages[4]! as AssistantMessage
     expect(assistantMessage.role).toBe('assistant')
@@ -150,8 +144,7 @@ describe('chain', async () => {
       parameters: {},
     })
 
-    const { completed: completed1, conversation: conversation1 } =
-      await chain.step()
+    const { completed: completed1, conversation: conversation1 } = await chain.step()
 
     expect(completed1).toBe(false)
     expect(conversation1.messages.length).toBe(1)
@@ -165,8 +158,7 @@ describe('chain', async () => {
       ],
     })
 
-    const { completed: completed2, conversation: conversation2 } =
-      await chain.step('response')
+    const { completed: completed2, conversation: conversation2 } = await chain.step('response')
 
     expect(completed2).toBe(true)
     expect(conversation2.messages.length).toBe(3)
@@ -223,9 +215,7 @@ describe('chain', async () => {
 
     const action = () => chain.step('')
     const error = await getExpectedError(action, Error)
-    expect(error.message).toBe(
-      'A response is not allowed before the chain has started',
-    )
+    expect(error.message).toBe('A response is not allowed before the chain has started')
   })
 
   it('fails when calling step after the chain has completed', async () => {
@@ -403,15 +393,9 @@ describe('chain', async () => {
 
     const conversation = await complete({ chain, maxSteps: 5 })
     expect(conversation.messages.length).toBe(7)
-    expect((conversation.messages[0]!.content[0]! as TextContent).text).toBe(
-      '0',
-    )
-    expect((conversation.messages[2]!.content[0]! as TextContent).text).toBe(
-      '1',
-    )
-    expect((conversation.messages[4]!.content[0]! as TextContent).text).toBe(
-      '2',
-    )
+    expect((conversation.messages[0]!.content[0]! as TextContent).text).toBe('0')
+    expect((conversation.messages[2]!.content[0]! as TextContent).text).toBe('1')
+    expect((conversation.messages[4]!.content[0]! as TextContent).text).toBe('2')
     expect(conversation.messages[6]).toEqual({
       role: MessageRole.system,
       content: [
@@ -469,9 +453,7 @@ describe('chain', async () => {
     })
 
     const conversation = await complete({ chain })
-    const userMessages = conversation.messages.filter(
-      (m) => m.role === MessageRole.user,
-    )
+    const userMessages = conversation.messages.filter((m) => m.role === MessageRole.user)
     const userMessageText = userMessages
       .map((m) => m.content.map((c) => (c as TextContent).text).join(' '))
       .join('\n')

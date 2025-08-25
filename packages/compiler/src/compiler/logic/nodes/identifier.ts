@@ -1,7 +1,4 @@
-import type {
-  ResolveNodeProps,
-  UpdateScopeContextProps,
-} from '$compiler/compiler/logic/types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '$compiler/compiler/logic/types'
 import errors from '$compiler/error/errors'
 import type { Identifier } from 'estree'
 
@@ -9,11 +6,7 @@ import type { Identifier } from 'estree'
  * ### Identifier
  * Represents a variable from the scope.
  */
-export async function resolve({
-  node,
-  scope,
-  raiseError,
-}: ResolveNodeProps<Identifier>) {
+export async function resolve({ node, scope, raiseError }: ResolveNodeProps<Identifier>) {
   if (!scope.exists(node.name)) {
     raiseError(errors.variableNotDeclared(node.name), node)
   }

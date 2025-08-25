@@ -1,12 +1,12 @@
 'use client'
 
-import { MutableRefObject, useCallback, useEffect, useState } from 'react'
+import { type MutableRefObject, useCallback, useEffect, useState } from 'react'
 
-import Editor, { Monaco } from '@monaco-editor/react'
+import Editor, { type Monaco } from '@monaco-editor/react'
 import { MarkerSeverity, Range, Selection, type editor } from 'monaco-editor'
 
 import { TextEditorPlaceholder } from '../../TextEditorPlaceholder'
-import { DocumentError } from '../types'
+import type { DocumentError } from '../types'
 import { registerActions } from './actions'
 import { registerAutocompleteParameters } from './autocompleParamaters'
 import { EditorWrapper } from './EditorWrapper'
@@ -83,9 +83,7 @@ export function RegularMonacoEditor({
   const [isEditorMounted, setIsEditorMounted] = useState(false)
   const { options } = useEditorOptions({
     readOnly: !!readOnlyMessage,
-    readOnlyMessage: readOnlyMessage
-      ? { value: readOnlyMessage, supportHtml: true }
-      : undefined,
+    readOnlyMessage: readOnlyMessage ? { value: readOnlyMessage, supportHtml: true } : undefined,
   })
 
   const handleEditorDidMount = useCallback(
@@ -106,15 +104,7 @@ export function RegularMonacoEditor({
       registerAutoClosingTags(editor, monaco)
       setIsEditorMounted(true)
     },
-    [
-      autoFocus,
-      editorRef,
-      monacoRef,
-      setIsEditorMounted,
-      autoCompleteParameters,
-      language,
-      registerAutoClosingTags,
-    ],
+    [autoFocus, editorRef, monacoRef, autoCompleteParameters, language, registerAutoClosingTags],
   )
 
   useEffect(() => {

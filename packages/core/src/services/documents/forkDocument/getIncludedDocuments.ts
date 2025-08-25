@@ -1,7 +1,7 @@
 import { resolveRelativePath } from '@latitude-data/constants'
-import { ConversationMetadata as LegacyMetadata } from '@latitude-data/constants/legacyCompiler'
-import { ConversationMetadata as PromptlMetadata } from 'promptl-ai'
-import { Commit, DocumentVersion, Workspace } from '../../../browser'
+import type { ConversationMetadata as LegacyMetadata } from '@latitude-data/constants/legacyCompiler'
+import type { ConversationMetadata as PromptlMetadata } from 'promptl-ai'
+import type { Commit, DocumentVersion, Workspace } from '../../../browser'
 import { NotFoundError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { DocumentVersionsRepository } from '../../../repositories'
@@ -25,9 +25,7 @@ function getIncludedAgentsPaths({
     resolveRelativePath(relativePath, documentPath),
   )
 
-  const notEvaluatedAgentPaths = agentsFullPaths.filter(
-    (path) => !acc.includes(path),
-  )
+  const notEvaluatedAgentPaths = agentsFullPaths.filter((path) => !acc.includes(path))
   acc.push(...notEvaluatedAgentPaths)
 
   notEvaluatedAgentPaths.forEach((path) => {
@@ -64,9 +62,7 @@ export async function getIncludedDocuments({
   const referencedPaths = Array.from(metadata.includedPromptPaths)
   const includedPaths = [...includedAgentsPaths, ...referencedPaths]
   const documentScope = new DocumentVersionsRepository(workspace.id)
-  const allDocs = await documentScope
-    .getDocumentsAtCommit(commit)
-    .then((r) => r.unwrap())
+  const allDocs = await documentScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
   const includedDocs = allDocs.filter((doc) => includedPaths.includes(doc.path))
 

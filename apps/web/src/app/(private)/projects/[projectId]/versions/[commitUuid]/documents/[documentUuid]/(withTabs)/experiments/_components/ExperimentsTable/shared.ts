@@ -1,6 +1,6 @@
-import { ExperimentDto } from '@latitude-data/core/browser'
+import type { ExperimentDto } from '@latitude-data/core/browser'
 
-export type ExperimentStatus = {
+type ExperimentStatus = {
   isPending: boolean
   isRunning: boolean
   isFinished: boolean

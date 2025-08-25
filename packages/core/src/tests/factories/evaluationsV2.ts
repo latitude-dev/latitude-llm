@@ -1,14 +1,14 @@
 import { eq } from 'drizzle-orm'
 import {
-  Commit,
-  DocumentVersion,
-  EvaluationMetric,
-  EvaluationOptions,
-  EvaluationSettings,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationMetric,
+  type EvaluationOptions,
+  type EvaluationSettings,
   EvaluationType,
-  EvaluationV2,
+  type EvaluationV2,
   RuleEvaluationMetric,
-  Workspace,
+  type Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { evaluationVersions } from '../../schema'
@@ -26,23 +26,17 @@ type CreateEvaluationV2Args<
 } & Partial<EvaluationSettings<T, M>> &
   Partial<EvaluationOptions>
 
-// prettier-ignore
-// eslint-disable-next-line no-redeclare
 export async function createEvaluationV2(
   args: Omit<CreateEvaluationV2Args, 'type' | 'metric' | 'configuration'>,
 ): Promise<EvaluationV2<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>>
 
-// prettier-ignore
-// eslint-disable-next-line no-redeclare
 export async function createEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
-  args: CreateEvaluationV2Args<T, M>
+  args: CreateEvaluationV2Args<T, M>,
 ): Promise<EvaluationV2<T, M>>
 
-// eslint-disable-next-line no-redeclare
-export async function createEvaluationV2<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->(args: CreateEvaluationV2Args<T, M>): Promise<EvaluationV2<T, M>> {
+export async function createEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
+  args: CreateEvaluationV2Args<T, M>,
+): Promise<EvaluationV2<T, M>> {
   const { evaluation } = await createEvaluationSvc({
     document: args.document,
     commit: args.commit,

@@ -4,13 +4,13 @@ import { APICallError, RetryError } from 'ai'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
-  LegacyChainEvent,
-  Providers,
+  type LegacyChainEvent,
+  type Providers,
   StreamEventTypes,
-  StreamType,
+  type StreamType,
 } from '../../../constants'
-import { AIReturn } from '../../../services/ai'
-import { ProviderData } from '@latitude-data/constants'
+import type { AIReturn } from '../../../services/ai'
+import type { ProviderData } from '@latitude-data/constants'
 
 interface ConsumeStreamParams {
   result: AIReturn<StreamType>
@@ -50,10 +50,7 @@ export async function consumeStream({
 
     if (chunk.type === 'finish') {
       if (chunk.finishReason === 'error' && !error) {
-        error = createAIError(
-          'LLM provider returned an unknown error',
-          RunErrorCodes.AIRunError,
-        )
+        error = createAIError('LLM provider returned an unknown error', RunErrorCodes.AIRunError)
       }
     }
 
@@ -84,10 +81,7 @@ function getErrorCode(error: unknown) {
   return RunErrorCodes.AIRunError
 }
 
-function enqueueChainEvent(
-  controller: ReadableStreamDefaultController,
-  event: LegacyChainEvent,
-) {
+function enqueueChainEvent(controller: ReadableStreamDefaultController, event: LegacyChainEvent) {
   controller.enqueue(event)
 }
 
@@ -125,7 +119,7 @@ function getErrorMessage({
           return item.error.message
         })
         .join(', ')}`
-    } catch (e) {
+    } catch (_e) {
       return `${intro}: ${error.message}`
     }
   }
@@ -136,7 +130,7 @@ function getErrorMessage({
 
   try {
     return `${intro}: ${JSON.stringify(error)}`
-  } catch (e) {
+  } catch (_e) {
     return `${intro}: Unknown error`
   }
 }

@@ -34,9 +34,7 @@ export function SelectableCard({
           {title.length > 30 ? `${title.slice(0, 30)}...` : title}
         </Text.H5M>
         {description.length > 0 && (
-          <Text.H6 color={selected ? 'accentForeground' : 'foregroundMuted'}>
-            {description}
-          </Text.H6>
+          <Text.H6 color={selected ? 'accentForeground' : 'foregroundMuted'}>{description}</Text.H6>
         )}
       </div>
     </div>

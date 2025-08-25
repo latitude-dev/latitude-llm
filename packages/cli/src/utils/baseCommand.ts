@@ -1,14 +1,14 @@
-import * as path from 'path'
+import * as path from 'node:path'
 import { Latitude } from '@latitude-data/sdk'
 import chalk from 'chalk'
 import inquirer from 'inquirer'
-import { CommonOptions } from '../types'
+import type { CommonOptions } from '../types'
 import { validateEnvironment } from './environmentValidator'
 import { ConfigManager } from './configManager'
 import { LockFileManager } from './lockFileManager'
 import { PromptManager } from './promptManager'
 import { ProjectManager } from './projectManager'
-import { DiffResult } from './computePromptDiff'
+import type { DiffResult } from './computePromptDiff'
 
 /**
  * Base class for all Latitude CLI commands
@@ -38,10 +38,7 @@ export abstract class BaseCommand {
 
   protected async setClient(options?: CommonOptions) {
     if (!this.client) {
-      this.client = this.createLatitudeClient(
-        await this.configManager.getApiKey(),
-        options,
-      )
+      this.client = this.createLatitudeClient(await this.configManager.getApiKey(), options)
     }
 
     return this.client
@@ -58,10 +55,7 @@ export abstract class BaseCommand {
    * Creates a Latitude client with the appropriate configuration
    * Includes optional config for development environments
    */
-  protected createLatitudeClient(
-    apiKey: string,
-    options?: CommonOptions,
-  ): Latitude {
+  protected createLatitudeClient(apiKey: string, options?: CommonOptions): Latitude {
     if (process.env.NODE_ENV === 'development' || options?.dev) {
       return new Latitude(apiKey, {
         __internal: {
@@ -81,19 +75,12 @@ export abstract class BaseCommand {
    * Validate the environment before executing a command
    * Checks for latitude-lock.json file and optionally for a valid npm project
    */
-  protected async validateEnvironment(
-    options: CommonOptions,
-    checkLockFile = true,
-  ): Promise<void> {
+  protected async validateEnvironment(options: CommonOptions, checkLockFile = true): Promise<void> {
     this.setProjectPath(options)
 
     await this.setClient(options)
     await this.detectModuleFormat()
-    await validateEnvironment(
-      this.projectPath,
-      this.lockFileManager,
-      checkLockFile,
-    )
+    await validateEnvironment(this.projectPath, this.lockFileManager, checkLockFile)
   }
 
   /**
@@ -102,9 +89,7 @@ export abstract class BaseCommand {
   protected async getLockFile() {
     const lockFile = await this.lockFileManager.read(this.projectPath)
     if (!lockFile) {
-      throw new Error(
-        '❌ No latitude-lock.json file found. Please run "latitude init" first.',
-      )
+      throw new Error('❌ No latitude-lock.json file found. Please run "latitude init" first.')
     }
     return lockFile
   }
@@ -129,13 +114,8 @@ export abstract class BaseCommand {
    * @param changes The diff results to display
    * @param isPull Whether this is for a pull operation (affects the display)
    */
-  protected async showDetailedDiffs(
-    changes: DiffResult[],
-    isPull: boolean = false,
-  ): Promise<void> {
-    const changesWithContent = changes.filter(
-      (result) => result.status !== 'unchanged',
-    )
+  protected async showDetailedDiffs(changes: DiffResult[], isPull: boolean = false): Promise<void> {
+    const changesWithContent = changes.filter((result) => result.status !== 'unchanged')
 
     if (changesWithContent.length === 0) {
       console.log(chalk.yellow('No changes to display.'))
@@ -148,9 +128,7 @@ export abstract class BaseCommand {
     // Add a header for each file and its diff content
     for (const change of changesWithContent) {
       allDiffs.push(`\n${'='.repeat(60)}`)
-      allDiffs.push(
-        `File: ${chalk.bold(change.path)} (${chalk.cyan(change.status)})`,
-      )
+      allDiffs.push(`File: ${chalk.bold(change.path)} (${chalk.cyan(change.status)})`)
       allDiffs.push('='.repeat(60))
 
       const localLabel = isPull ? 'Local (will be replaced)' : 'Local'
@@ -166,9 +144,7 @@ export abstract class BaseCommand {
           allDiffs.push(chalk.green(`+${line}`))
         }
       } else if (change.status === 'deleted') {
-        const deletedLabel = isPull
-          ? 'Local prompt to be deleted:'
-          : 'Deleted prompt:'
+        const deletedLabel = isPull ? 'Local prompt to be deleted:' : 'Deleted prompt:'
         allDiffs.push(`${chalk.red('D')} ${deletedLabel}`)
 
         // Format the entire deleted file as removed lines
@@ -242,7 +218,7 @@ export abstract class BaseCommand {
 
     try {
       // Only import fs/promises when needed
-      const fs = await import('fs/promises')
+      const fs = await import('node:fs/promises')
 
       // Write the content to the temp file
       await fs.writeFile(tempFile, content)
@@ -264,7 +240,7 @@ export abstract class BaseCommand {
       const pagerArgs = [...pagerParts.slice(1), tempFile]
 
       // Use spawn instead of exec for better terminal handling
-      const { spawn } = await import('child_process')
+      const { spawn } = await import('node:child_process')
       const child = spawn(pagerCmd!, pagerArgs, {
         stdio: 'inherit', // Attach to parent's stdio
         shell: true,
@@ -295,14 +271,10 @@ export abstract class BaseCommand {
     diffResults: DiffResult[],
     showPushMessage: boolean = false,
   ): boolean {
-    const changes = diffResults.filter(
-      (result) => result.status !== 'unchanged',
-    )
+    const changes = diffResults.filter((result) => result.status !== 'unchanged')
 
     if (changes.length === 0) {
-      console.log(
-        `\n${chalk.green('✓')} No changes detected. Local prompts are up to date.`,
-      )
+      console.log(`\n${chalk.green('✓')} No changes detected. Local prompts are up to date.`)
       return false
     }
 
@@ -315,23 +287,17 @@ export abstract class BaseCommand {
 
     if (added.length > 0) {
       console.log(`${chalk.green('A')} Added (${added.length}):`)
-      added.forEach((change) =>
-        console.log(`  ${chalk.green('+')} ${change.path}`),
-      )
+      added.forEach((change) => console.log(`  ${chalk.green('+')} ${change.path}`))
     }
 
     if (modified.length > 0) {
       console.log(`${chalk.yellow('M')} Modified (${modified.length}):`)
-      modified.forEach((change) =>
-        console.log(`  ${chalk.yellow('~')} ${change.path}`),
-      )
+      modified.forEach((change) => console.log(`  ${chalk.yellow('~')} ${change.path}`))
     }
 
     if (deleted.length > 0) {
       console.log(`${chalk.red('D')} Deleted (${deleted.length}):`)
-      deleted.forEach((change) =>
-        console.log(`  ${chalk.red('-')} ${change.path}`),
-      )
+      deleted.forEach((change) => console.log(`  ${chalk.red('-')} ${change.path}`))
     }
 
     if (showPushMessage) {
@@ -378,17 +344,11 @@ export abstract class BaseCommand {
         console.log(`${chalk.red('✖')} Operation cancelled.`)
         return false
       case 'details': {
-        const changes = diffResults.filter(
-          (result) => result.status !== 'unchanged',
-        )
+        const changes = diffResults.filter((result) => result.status !== 'unchanged')
         // Show detailed diffs for all changed files
         await this.showDetailedDiffs(changes, isPull)
         // After showing details, ask again
-        return await this.handleUserChoice(
-          diffResults,
-          isPull,
-          skipConfirmation,
-        )
+        return await this.handleUserChoice(diffResults, isPull, skipConfirmation)
       }
       case 'accept':
         return true

@@ -1,8 +1,8 @@
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
-  ChainEvent,
+  type ChainEvent,
   ChainEventTypes,
-  LatitudeProviderCompletedEventData,
+  type LatitudeProviderCompletedEventData,
   StreamEventTypes,
 } from '@latitude-data/constants'
 

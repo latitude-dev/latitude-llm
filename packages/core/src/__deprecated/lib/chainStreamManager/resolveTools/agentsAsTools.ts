@@ -1,16 +1,12 @@
-import { resolveRelativePath, ToolDefinition } from '@latitude-data/constants'
-import {
-  BadRequestError,
-  LatitudeError,
-  NotFoundError,
-} from '../../../../lib/errors'
-import { PromisedResult } from '../../../../lib/Transaction'
-import { Result, TypedResult } from '../../../../lib/Result'
-import { ResolvedTools, ToolSource, ToolSourceData } from './types'
-import { DocumentVersion, PromptSource, Workspace } from '../../../../browser'
+import { resolveRelativePath, type ToolDefinition } from '@latitude-data/constants'
+import { BadRequestError, type LatitudeError, NotFoundError } from '../../../../lib/errors'
+import type { PromisedResult } from '../../../../lib/Transaction'
+import { Result, type TypedResult } from '../../../../lib/Result'
+import { type ResolvedTools, ToolSource, type ToolSourceData } from './types'
+import type { DocumentVersion, PromptSource, Workspace } from '../../../../browser'
 import { DocumentVersionsRepository } from '../../../../repositories'
 import { getAgentToolName } from '../../../../services/agents/helpers'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { getToolDefinitionFromDocument } from '../../../../services/__deprecated/agents/agentsAsTools'
 
 function findAgentDocs({
@@ -34,14 +30,10 @@ function findAgentDocs({
   )
 
   if (notfoundPaths.length) {
-    return Result.error(
-      new NotFoundError(`Documents not found: '${notfoundPaths.join("', '")}'`),
-    )
+    return Result.error(new NotFoundError(`Documents not found: '${notfoundPaths.join("', '")}'`))
   }
 
-  const notActuallyAgents = agentDocs.filter(
-    (doc) => doc.documentType !== 'agent',
-  )
+  const notActuallyAgents = agentDocs.filter((doc) => doc.documentType !== 'agent')
   if (notActuallyAgents.length) {
     return Result.error(
       new BadRequestError(
@@ -72,9 +64,7 @@ export async function resolveAgentsAsTools({
 
   // Only if the prompt source is a document
   if (!('commit' in promptSource)) {
-    return Result.error(
-      new BadRequestError('Sub agents are not supported in this context'),
-    )
+    return Result.error(new BadRequestError('Sub agents are not supported in this context'))
   }
 
   const docsScope = new DocumentVersionsRepository(workspace.id)

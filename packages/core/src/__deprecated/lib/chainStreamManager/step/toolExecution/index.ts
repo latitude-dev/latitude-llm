@@ -1,18 +1,18 @@
-import { ToolCall, ToolMessage } from '@latitude-data/compiler'
-import { ChainStreamManager } from '../..'
-import { Workspace } from '../../../../../browser'
-import { PromptSource } from '../../../../../constants'
-import { createMcpClientManager } from '../../../../../services/integrations/McpClient/McpClientManager'
+import type { ToolCall, ToolMessage } from '@latitude-data/compiler'
+import type { ChainStreamManager } from '../..'
+import type { Workspace } from '../../../../../browser'
+import type { PromptSource } from '../../../../../constants'
+import type { createMcpClientManager } from '../../../../../services/integrations/McpClient/McpClientManager'
 import { buildToolMessage } from '../../../../../services/latitudeTools/helpers'
 import { Result } from '../../../../../lib/Result'
-import { PromisedResult } from '../../../../../lib/Transaction'
+import type { PromisedResult } from '../../../../../lib/Transaction'
 import { NotFoundError } from '../../../../../lib/errors'
-import { ResolvedTools, ToolSource } from '../../resolveTools/types'
+import { type ResolvedTools, ToolSource } from '../../resolveTools/types'
 import { getAgentReturnToolCallsResults } from './agentReturn'
 import { getAgentsAsToolCallsResults } from './agentsAsTools'
 import { getIntegrationToolCallResults } from './integrationTools'
 import { getLatitudeCallResults } from './latitudeTools'
-import { ToolResponsesArgs } from './types'
+import type { ToolResponsesArgs } from './types'
 
 export function getBuiltInToolCallResponses({
   workspace,
@@ -104,22 +104,10 @@ export function getBuiltInToolCallResponses({
     })
   }
 
-  const latitudeToolResults = executeTools(
-    getLatitudeCallResults,
-    latitudeToolCalls,
-  )
-  const agentToolResults = executeTools(
-    getAgentReturnToolCallsResults,
-    agentReturnToolCalls,
-  )
-  const agentAsToolResults = executeTools(
-    getAgentsAsToolCallsResults,
-    agentAsToolCalls,
-  )
-  const integrationToolResults = executeTools(
-    getIntegrationToolCallResults,
-    integrationToolCalls,
-  )
+  const latitudeToolResults = executeTools(getLatitudeCallResults, latitudeToolCalls)
+  const agentToolResults = executeTools(getAgentReturnToolCallsResults, agentReturnToolCalls)
+  const agentAsToolResults = executeTools(getAgentsAsToolCallsResults, agentAsToolCalls)
+  const integrationToolResults = executeTools(getIntegrationToolCallResults, integrationToolCalls)
   const otherToolResults = executeTools(
     ({ toolCalls }) =>
       toolCalls.map(async (toolCall) =>

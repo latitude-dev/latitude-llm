@@ -1,16 +1,13 @@
-import { Commit, Workspace, DocumentVersion } from '../../../../../../browser'
-import { LatteChange, LatteEditAction } from '@latitude-data/constants/latte'
-import Transaction, { PromisedResult } from '../../../../../../lib/Transaction'
+import type { Commit, Workspace, DocumentVersion } from '../../../../../../browser'
+import type { LatteChange, LatteEditAction } from '@latitude-data/constants/latte'
+import Transaction, { type PromisedResult } from '../../../../../../lib/Transaction'
 import { executeEditAction } from './handleAction'
 import { Result } from '../../../../../../lib/Result'
 import { WebsocketClient } from '../../../../../../websockets/workers'
 import { createLatteThreadCheckpoints } from '../../../threads/checkpoints/createCheckpoint'
-import {
-  DocumentVersionsRepository,
-  LatteThreadsRepository,
-} from '../../../../../../repositories'
+import { DocumentVersionsRepository, LatteThreadsRepository } from '../../../../../../repositories'
 import { scanDocuments } from '../../../helpers'
-import { ConversationMetadata } from '@latitude-data/compiler'
+import type { ConversationMetadata } from '@latitude-data/compiler'
 
 export async function executeLatteActions({
   workspace,
@@ -35,8 +32,7 @@ export async function executeLatteActions({
   // 5. return updated documents and errors
 
   const threadsScope = new LatteThreadsRepository(workspace.id)
-  const threadCheckpointsResult =
-    await threadsScope.findAllCheckpoints(threadUuid)
+  const threadCheckpointsResult = await threadsScope.findAllCheckpoints(threadUuid)
   if (!Result.isOk(threadCheckpointsResult)) {
     return threadCheckpointsResult
   }
@@ -48,10 +44,7 @@ export async function executeLatteActions({
     // Update all documents requested
     const latteChanges: LatteChange[] = []
     for await (const action of actions) {
-      const result = await executeEditAction(
-        { workspace, commit, documents, action },
-        transaction,
-      )
+      const result = await executeEditAction({ workspace, commit, documents, action }, transaction)
       if (!result.ok) {
         return Result.error(result.error!)
       }
@@ -100,9 +93,7 @@ export async function executeLatteActions({
 
     // Scan the updated project for errors
     const documentsScope = new DocumentVersionsRepository(workspace.id, tx)
-    const newDocuments = await documentsScope
-      .getDocumentsAtCommit(commit)
-      .then((r) => r.unwrap())
+    const newDocuments = await documentsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
     const metadatasResult = await scanDocuments(
       {

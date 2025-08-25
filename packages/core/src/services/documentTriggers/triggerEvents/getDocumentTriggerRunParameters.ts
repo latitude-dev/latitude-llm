@@ -1,8 +1,5 @@
-import {
-  DocumentTriggerType,
-  DocumentTriggerParameters,
-} from '@latitude-data/constants'
-import { DocumentTrigger, DocumentTriggerEvent } from '../../../browser'
+import { DocumentTriggerType, DocumentTriggerParameters } from '@latitude-data/constants'
+import type { DocumentTrigger, DocumentTriggerEvent } from '../../../browser'
 
 function getEmailTriggerEventRunParameters({
   documentTrigger,
@@ -49,9 +46,7 @@ function getIntegrationTriggerEventRunParameters({
   )
 }
 
-export function getDocumentTriggerEventRunParameters<
-  T extends DocumentTriggerType,
->({
+export function getDocumentTriggerEventRunParameters<T extends DocumentTriggerType>({
   documentTrigger,
   documentTriggerEvent,
 }: {
@@ -62,17 +57,14 @@ export function getDocumentTriggerEventRunParameters<
 
   if (documentTrigger.triggerType === DocumentTriggerType.Email) {
     return getEmailTriggerEventRunParameters({
-      documentTrigger:
-        documentTrigger as DocumentTrigger<DocumentTriggerType.Email>,
-      documentTriggerEvent:
-        documentTriggerEvent as DocumentTriggerEvent<DocumentTriggerType.Email>,
+      documentTrigger: documentTrigger as DocumentTrigger<DocumentTriggerType.Email>,
+      documentTriggerEvent: documentTriggerEvent as DocumentTriggerEvent<DocumentTriggerType.Email>,
     })
   }
 
   if (documentTrigger.triggerType === DocumentTriggerType.Integration) {
     return getIntegrationTriggerEventRunParameters({
-      documentTrigger:
-        documentTrigger as DocumentTrigger<DocumentTriggerType.Integration>,
+      documentTrigger: documentTrigger as DocumentTrigger<DocumentTriggerType.Integration>,
       documentTriggerEvent:
         documentTriggerEvent as DocumentTriggerEvent<DocumentTriggerType.Integration>,
     })

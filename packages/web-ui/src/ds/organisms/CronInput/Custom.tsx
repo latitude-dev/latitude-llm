@@ -3,7 +3,7 @@ import { Input } from '../../atoms/Input'
 import { Text } from '../../atoms/Text'
 import { Button } from '../../atoms/Button'
 import { cn } from '../../../lib/utils'
-import { CronValue } from './utils'
+import type { CronValue } from './utils'
 
 const FIELDS = [
   {
@@ -104,9 +104,7 @@ export function CustomCronInput({
               key={action.value}
               variant='outline'
               className='bg-muted'
-              onClick={() =>
-                handleChange(FIELDS[activeIndex]!.key, action.value)
-              }
+              onClick={() => handleChange(FIELDS[activeIndex]!.key, action.value)}
             >
               <Text.H6 color='foregroundMuted'>{action.label}</Text.H6>
             </Button>

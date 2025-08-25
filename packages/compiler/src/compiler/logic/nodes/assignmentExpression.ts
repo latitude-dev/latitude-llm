@@ -1,15 +1,7 @@
 import { ASSIGNMENT_OPERATOR_METHODS } from '$compiler/compiler/logic/operators'
-import type {
-  ResolveNodeProps,
-  UpdateScopeContextProps,
-} from '$compiler/compiler/logic/types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '$compiler/compiler/logic/types'
 import errors from '$compiler/error/errors'
-import type {
-  AssignmentExpression,
-  AssignmentOperator,
-  Identifier,
-  MemberExpression,
-} from 'estree'
+import type { AssignmentExpression, AssignmentOperator, Identifier, MemberExpression } from 'estree'
 
 import { resolveLogicNode, updateScopeContextForNode } from '..'
 
@@ -82,14 +74,12 @@ async function assignToVariable({
 }) {
   const assignedVariableName = node.name
 
-  if (assignmentOperator != '=' && !scope.exists(assignedVariableName)) {
+  if (assignmentOperator !== '=' && !scope.exists(assignedVariableName)) {
     raiseError(errors.variableNotDeclared(assignedVariableName), node)
   }
 
   const updatedValue = assignmentMethod(
-    scope.exists(assignedVariableName)
-      ? scope.get(assignedVariableName)
-      : undefined,
+    scope.exists(assignedVariableName) ? scope.get(assignedVariableName) : undefined,
     assignmentValue,
   )
 
@@ -123,7 +113,7 @@ async function assignToProperty({
       : (node.property as Identifier).name
   ) as string
 
-  if (assignmentOperator != '=' && !(property in object)) {
+  if (assignmentOperator !== '=' && !(property in object)) {
     raiseError(errors.propertyNotExists(property), node)
   }
 
@@ -148,7 +138,7 @@ export function updateScopeContext({
   if (node.left.type === 'Identifier') {
     // Variable assignment
     const assignedVariableName = (node.left as Identifier).name
-    if (assignmentOperator != '=') {
+    if (assignmentOperator !== '=') {
       // Update an existing variable
       if (!scopeContext.definedVariables.has(assignedVariableName)) {
         scopeContext.usedUndefinedVariables.add(assignedVariableName)

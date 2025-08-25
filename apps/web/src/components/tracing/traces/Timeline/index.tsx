@@ -1,4 +1,4 @@
-import { AssembledSpan, AssembledTrace } from '@latitude-data/core/browser'
+import type { AssembledSpan, AssembledTrace } from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -32,7 +32,7 @@ export function Timeline({
     const graphRect = graphRef.current.getBoundingClientRect()
     setTreeWidth(Math.max(treeRect.width, TREE_MIN_WIDTH) - 0.5)
     setGraphWidth(Math.max(graphRect.width, GRAPH_MIN_WIDTH) + 0.5)
-  }, [setTreeWidth, setGraphWidth])
+  }, [])
   useEffect(() => {
     if (!treeRef.current || !graphRef.current) return
     const resizeObserver = new ResizeObserver(updateWidth)
@@ -42,10 +42,7 @@ export function Timeline({
   }, [updateWidth])
 
   const [selectedSpan, setSelectedSpan] = useState<AssembledSpan>()
-  const selectSpan = useCallback(
-    (span?: AssembledSpan) => setSelectedSpan(span),
-    [setSelectedSpan],
-  )
+  const selectSpan = useCallback((span?: AssembledSpan) => setSelectedSpan(span), [])
   useEffect(() => {
     if (!selectedSpan) onSelectedSpan?.(undefined)
     else {
@@ -66,7 +63,7 @@ export function Timeline({
         else newSet.add(spanId)
         return newSet
       }),
-    [setCollapsedSpans],
+    [],
   )
 
   if (trace.children.length < 1) {
@@ -110,21 +107,14 @@ export function Timeline({
         }
       />
       <div className='w-full h-8 flex items-center justify-center sticky bottom-0'>
-        <div
-          className='w-full h-full bg-transparent'
-          style={{ width: treeWidth }}
-        >
+        <div className='w-full h-full bg-transparent' style={{ width: treeWidth }}>
           {/* Empty space matching the tree pane */}
         </div>
         <div
           className='w-full h-full bg-secondary border-t border-l border-border pb-2'
           style={{ width: graphWidth }}
         >
-          <TimelineScale
-            duration={trace.duration}
-            width={graphWidth}
-            minWidth={GRAPH_MIN_WIDTH}
-          />
+          <TimelineScale duration={trace.duration} width={graphWidth} minWidth={GRAPH_MIN_WIDTH} />
         </div>
       </div>
     </div>

@@ -1,34 +1,21 @@
-import { Readable } from 'stream'
+import type { Readable } from 'node:stream'
 
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { handleStream } from '$sdk/utils/handleStream'
 import { makeRequest } from '$sdk/utils/request'
 import {
-  ChatOptionsWithSDKOptions,
-  ChatSyncAPIResponse,
+  type ChatOptionsWithSDKOptions,
+  type ChatSyncAPIResponse,
   HandlerType,
-  ToolSpec,
+  type ToolSpec,
 } from '$sdk/utils/types'
-import {
-  ApiErrorCodes,
-  ApiErrorJsonResponse,
-} from '@latitude-data/constants/errors'
+import { ApiErrorCodes, type ApiErrorJsonResponse } from '@latitude-data/constants/errors'
 import { handleToolCallFactory, waitForTools } from './streamRun'
-import { AssertedStreamType } from '@latitude-data/constants/ai'
+import type { AssertedStreamType } from '@latitude-data/constants/ai'
 
-export async function streamChat<
-  Tools extends ToolSpec,
-  S extends AssertedStreamType = 'text',
->(
+export async function streamChat<Tools extends ToolSpec, S extends AssertedStreamType = 'text'>(
   uuid: string,
-  {
-    messages,
-    onEvent,
-    onFinished,
-    onError,
-    tools,
-    options,
-  }: ChatOptionsWithSDKOptions<Tools, S>,
+  { messages, onEvent, onFinished, onError, tools, options }: ChatOptionsWithSDKOptions<Tools, S>,
 ): Promise<ChatSyncAPIResponse<S> | undefined> {
   try {
     const response = await makeRequest({

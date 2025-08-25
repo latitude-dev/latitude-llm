@@ -1,32 +1,21 @@
-import {
-  LatitudeTool,
-  LatitudeToolInternalName,
-} from '@latitude-data/constants'
-import { CoreToolMessage, Tool } from 'ai'
-import { AssistantMessage, MessageRole } from 'promptl-ai'
-import { LatitudeToolCall } from '../../constants'
-import { TypedResult } from '../../lib/Result'
-import { TelemetryContext } from '../../telemetry'
+import { LatitudeTool, LatitudeToolInternalName } from '@latitude-data/constants'
+import type { CoreToolMessage, Tool } from 'ai'
+import { type AssistantMessage, MessageRole } from 'promptl-ai'
+import type { LatitudeToolCall } from '../../constants'
+import type { TypedResult } from '../../lib/Result'
+import type { TelemetryContext } from '../../telemetry'
 import { LATITUDE_TOOLS } from './tools'
 
-export const getLatitudeToolName = (
-  internalName: LatitudeToolInternalName,
-): LatitudeTool => {
+export const getLatitudeToolName = (internalName: LatitudeToolInternalName): LatitudeTool => {
   const toolKey = Object.entries(LatitudeToolInternalName).find(
     ([_, val]) => val === internalName,
   )![0]!
   return LatitudeTool[toolKey as keyof typeof LatitudeTool]
 }
 
-export const getLatitudeToolInternalName = (
-  tool: LatitudeTool,
-): LatitudeToolInternalName => {
-  const toolKey = Object.entries(LatitudeTool).find(
-    ([_, val]) => val === tool,
-  )![0]!
-  return LatitudeToolInternalName[
-    toolKey as keyof typeof LatitudeToolInternalName
-  ]
+export const getLatitudeToolInternalName = (tool: LatitudeTool): LatitudeToolInternalName => {
+  const toolKey = Object.entries(LatitudeTool).find(([_, val]) => val === tool)![0]!
+  return LatitudeToolInternalName[toolKey as keyof typeof LatitudeToolInternalName]
 }
 
 export function getLatitudeToolCallsFromAssistantMessage(

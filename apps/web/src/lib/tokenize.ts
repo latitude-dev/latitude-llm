@@ -1,4 +1,4 @@
-import { Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 
 export function tokenizeBytes(bytes: number) {
   return Math.ceil(bytes / 4)

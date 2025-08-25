@@ -1,19 +1,15 @@
 import { formatCount } from '$/lib/formatCount'
 import {
-  EvaluationType,
-  LlmEvaluationMetric,
+  type EvaluationType,
+  type LlmEvaluationMetric,
   LlmEvaluationRatingSpecification,
 } from '@latitude-data/constants'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 
 const specification = LlmEvaluationRatingSpecification
 export default {
@@ -41,10 +37,8 @@ function ConfigurationSimpleForm({
         placeholder='Judge the engagement of the response'
         minRows={2}
         maxRows={4}
-        onChange={(e) =>
-          setConfiguration({ ...configuration, criteria: e.target.value })
-        }
-        errors={errors?.['criteria']}
+        onChange={(e) => setConfiguration({ ...configuration, criteria: e.target.value })}
+        errors={errors?.criteria}
         className='w-full'
         disabled={disabled}
         required
@@ -62,7 +56,7 @@ function ConfigurationSimpleForm({
             if (value === undefined) return
             setConfiguration({ ...configuration, minRating: value })
           }}
-          errors={errors?.['minRating']}
+          errors={errors?.minRating}
           defaultAppearance
           className='w-full'
           fieldClassName='w-1/6'
@@ -79,7 +73,7 @@ function ConfigurationSimpleForm({
               minRatingDescription: e.target.value,
             })
           }
-          errors={errors?.['minRatingDescription']}
+          errors={errors?.minRatingDescription}
           className='w-full'
           disabled={disabled}
           required
@@ -98,7 +92,7 @@ function ConfigurationSimpleForm({
             if (value === undefined) return
             setConfiguration({ ...configuration, maxRating: value })
           }}
-          errors={errors?.['maxRating']}
+          errors={errors?.maxRating}
           defaultAppearance
           className='w-full'
           fieldClassName='w-1/6'
@@ -115,7 +109,7 @@ function ConfigurationSimpleForm({
               maxRatingDescription: e.target.value,
             })
           }
-          errors={errors?.['maxRatingDescription']}
+          errors={errors?.maxRatingDescription}
           className='w-full'
           disabled={disabled}
           required
@@ -132,51 +126,43 @@ function ConfigurationAdvancedForm({
   disabled,
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Rating>) {
   return (
-    <>
-      <FormFieldGroup
-        layout='horizontal'
-        description='The minimum and maximum rating threshold of the response'
-      >
-        <NumberInput
-          value={configuration.minThreshold ?? undefined}
-          name='minThreshold'
-          label='Minimum threshold'
-          placeholder='No minimum'
-          min={configuration.minRating}
-          max={configuration.maxRating}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minThreshold: value })
-          }
-          errors={errors?.['minThreshold']}
-          defaultAppearance
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-        <NumberInput
-          value={configuration.maxThreshold ?? undefined}
-          name='maxThreshold'
-          label='Maximum threshold'
-          placeholder='No maximum'
-          min={configuration.minRating}
-          max={configuration.maxRating}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxThreshold: value })
-          }
-          errors={errors?.['maxThreshold']}
-          defaultAppearance
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-      </FormFieldGroup>
-    </>
+    <FormFieldGroup
+      layout='horizontal'
+      description='The minimum and maximum rating threshold of the response'
+    >
+      <NumberInput
+        value={configuration.minThreshold ?? undefined}
+        name='minThreshold'
+        label='Minimum threshold'
+        placeholder='No minimum'
+        min={configuration.minRating}
+        max={configuration.maxRating}
+        onChange={(value) => setConfiguration({ ...configuration, minThreshold: value })}
+        errors={errors?.minThreshold}
+        defaultAppearance
+        className='w-full'
+        disabled={disabled}
+        required
+      />
+      <NumberInput
+        value={configuration.maxThreshold ?? undefined}
+        name='maxThreshold'
+        label='Maximum threshold'
+        placeholder='No maximum'
+        min={configuration.minRating}
+        max={configuration.maxRating}
+        onChange={(value) => setConfiguration({ ...configuration, maxThreshold: value })}
+        errors={errors?.maxThreshold}
+        defaultAppearance
+        className='w-full'
+        disabled={disabled}
+        required
+      />
+    </FormFieldGroup>
   )
 }
 
-function ResultBadge({
-  result,
-}: ResultBadgeProps<EvaluationType.Llm, LlmEvaluationMetric.Rating>) {
+function ResultBadge({ result }: ResultBadgeProps<EvaluationType.Llm, LlmEvaluationMetric.Rating>) {
   return <>{formatCount(result.score!)}</>
 }
 

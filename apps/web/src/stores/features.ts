@@ -4,7 +4,7 @@ import { destroyFeatureAction } from '$/actions/admin/features/destroy'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import { useMemo } from 'react'
 
 type Feature = {
@@ -19,33 +19,27 @@ export default function useFeatures(opts?: SWRConfiguration) {
   const { toast } = useToast()
   const key = 'api/features'
   const fetcher = useFetcher<Feature[]>(ROUTES.api.admin.features.root)
-  const { data = [], mutate, ...rest } = useSWR<Feature[]>(key, fetcher, opts)
+  const { data = [], mutate, isLoading } = useSWR<Feature[]>(key, fetcher, opts)
 
-  const { execute: create, isPending: isCreating } = useLatitudeAction(
-    createFeatureAction,
-    {
-      onSuccess: async ({ data: feature }) => {
-        toast({
-          title: 'Success',
-          description: `Feature "${feature.name}" created successfully`,
-        })
-        mutate([...data, feature])
-      },
+  const { execute: create, isPending: isCreating } = useLatitudeAction(createFeatureAction, {
+    onSuccess: async ({ data: feature }) => {
+      toast({
+        title: 'Success',
+        description: `Feature "${feature.name}" created successfully`,
+      })
+      mutate([...data, feature])
     },
-  )
+  })
 
-  const { execute: destroy, isPending: isDestroying } = useLatitudeAction(
-    destroyFeatureAction,
-    {
-      onSuccess: async ({ data: feature }) => {
-        toast({
-          title: 'Success',
-          description: `Feature "${feature.name}" deleted successfully`,
-        })
-        mutate(data.filter((item) => item.id !== feature.id))
-      },
+  const { execute: destroy, isPending: isDestroying } = useLatitudeAction(destroyFeatureAction, {
+    onSuccess: async ({ data: feature }) => {
+      toast({
+        title: 'Success',
+        description: `Feature "${feature.name}" deleted successfully`,
+      })
+      mutate(data.filter((item) => item.id !== feature.id))
     },
-  )
+  })
 
   return useMemo(
     () => ({
@@ -55,8 +49,8 @@ export default function useFeatures(opts?: SWRConfiguration) {
       destroy,
       isDestroying,
       mutate,
-      ...rest,
+      isLoading,
     }),
-    [data, create, isCreating, destroy, isDestroying, mutate, rest],
+    [data, create, isCreating, destroy, isDestroying, mutate, isLoading],
   )
 }

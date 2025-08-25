@@ -5,7 +5,7 @@ import { inviteUserAction } from '$/actions/user/invite'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 type SerializedUser = Omit<User, 'createdAt' | 'updatedAt' | 'confirmedAt'> & {
   createdAt: Date

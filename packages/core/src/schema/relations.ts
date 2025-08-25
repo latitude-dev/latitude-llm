@@ -90,19 +90,16 @@ export const commitRelations = relations(commits, ({ one }) => ({
   }),
 }))
 
-export const connectedEvaluationRelations = relations(
-  connectedEvaluations,
-  ({ one }) => ({
-    document: one(documentVersions, {
-      fields: [connectedEvaluations.documentUuid],
-      references: [documentVersions.documentUuid],
-    }),
-    evaluation: one(evaluations, {
-      fields: [connectedEvaluations.evaluationId],
-      references: [evaluations.id],
-    }),
+export const connectedEvaluationRelations = relations(connectedEvaluations, ({ one }) => ({
+  document: one(documentVersions, {
+    fields: [connectedEvaluations.documentUuid],
+    references: [documentVersions.documentUuid],
   }),
-)
+  evaluation: one(evaluations, {
+    fields: [connectedEvaluations.evaluationId],
+    references: [evaluations.id],
+  }),
+}))
 
 export const documentLogsRelations = relations(documentLogs, ({ one }) => ({
   commit: one(commits, {
@@ -111,33 +108,27 @@ export const documentLogsRelations = relations(documentLogs, ({ one }) => ({
   }),
 }))
 
-export const documentVersionRelations = relations(
-  documentVersions,
-  ({ one }) => ({
-    commit: one(commits, {
-      fields: [documentVersions.commitId],
-      references: [commits.id],
-    }),
+export const documentVersionRelations = relations(documentVersions, ({ one }) => ({
+  commit: one(commits, {
+    fields: [documentVersions.commitId],
+    references: [commits.id],
   }),
-)
+}))
 
-export const evaluationResultRelations = relations(
-  evaluationResults,
-  ({ one }) => ({
-    evaluation: one(evaluations, {
-      fields: [evaluationResults.evaluationId],
-      references: [evaluations.id],
-    }),
-    documentLog: one(documentLogs, {
-      fields: [evaluationResults.documentLogId],
-      references: [documentLogs.id],
-    }),
-    providerLog: one(providerLogs, {
-      fields: [evaluationResults.providerLogId],
-      references: [providerLogs.id],
-    }),
+export const evaluationResultRelations = relations(evaluationResults, ({ one }) => ({
+  evaluation: one(evaluations, {
+    fields: [evaluationResults.evaluationId],
+    references: [evaluations.id],
   }),
-)
+  documentLog: one(documentLogs, {
+    fields: [evaluationResults.documentLogId],
+    references: [documentLogs.id],
+  }),
+  providerLog: one(providerLogs, {
+    fields: [evaluationResults.providerLogId],
+    references: [providerLogs.id],
+  }),
+}))
 
 export const evaluationRelations = relations(evaluations, ({ one }) => ({
   workspace: one(workspaces, {
@@ -211,19 +202,16 @@ export const membershipRelations = relations(memberships, ({ one }) => ({
   }),
 }))
 
-export const providerApiKeysRelations = relations(
-  providerApiKeys,
-  ({ one }) => ({
-    author: one(users, {
-      fields: [providerApiKeys.authorId],
-      references: [users.id],
-    }),
-    workspace: one(workspaces, {
-      fields: [providerApiKeys.workspaceId],
-      references: [workspaces.id],
-    }),
+export const providerApiKeysRelations = relations(providerApiKeys, ({ one }) => ({
+  author: one(users, {
+    fields: [providerApiKeys.authorId],
+    references: [users.id],
   }),
-)
+  workspace: one(workspaces, {
+    fields: [providerApiKeys.workspaceId],
+    references: [workspaces.id],
+  }),
+}))
 
 export const providerLogsRelations = relations(providerLogs, ({ one }) => ({
   provider: one(providerApiKeys, {
@@ -236,15 +224,12 @@ export const providerLogsRelations = relations(providerLogs, ({ one }) => ({
   }),
 }))
 
-export const magicLinkTokensRelations = relations(
-  magicLinkTokens,
-  ({ one }) => ({
-    user: one(users, {
-      fields: [magicLinkTokens.userId],
-      references: [users.id],
-    }),
+export const magicLinkTokensRelations = relations(magicLinkTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [magicLinkTokens.userId],
+    references: [users.id],
   }),
-)
+}))
 
 export const datasetsRelations = relations(datasets, ({ one }) => ({
   author: one(users, {

@@ -1,5 +1,5 @@
-import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
-import { PartialPromptConfig } from './ai'
+import type { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import type { PartialPromptConfig } from './ai'
 
 export enum LogSources {
   API = 'api',

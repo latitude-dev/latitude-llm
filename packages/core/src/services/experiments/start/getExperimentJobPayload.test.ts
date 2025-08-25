@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  EvaluationV2,
+  type Commit,
+  type Dataset,
+  type DocumentVersion,
+  type EvaluationV2,
   Providers,
-  Workspace,
+  type Workspace,
 } from '../../../browser'
 import * as factories from '../../../tests/factories'
 import { getExperimentJobPayload } from './getExperimentJobPayload'
@@ -48,11 +48,7 @@ describe('getExperimentJobPayload', () => {
       author: user,
       fileContent: factories.generateCsvContent({
         headers: ['a', 'b', 'c'],
-        rows: Array.from({ length: 50 }).map((_, i) => [
-          `a${i}`,
-          `b${i}`,
-          `c${i}`,
-        ]),
+        rows: Array.from({ length: 50 }).map((_, i) => [`a${i}`, `b${i}`, `c${i}`]),
       }),
     })
     dataset = createdDataset

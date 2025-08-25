@@ -1,9 +1,9 @@
 import { IntegrationType } from '@latitude-data/constants'
-import { IntegrationDto, PipedreamIntegration } from '../../../browser'
+import type { IntegrationDto, PipedreamIntegration } from '../../../browser'
 import { LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { StreamManager } from '../../../lib/streamManager'
-import { PromisedResult } from '../../../lib/Transaction'
+import type { StreamManager } from '../../../lib/streamManager'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { runAction } from '../pipedream/components/runAction'
 import { touchIntegration } from '../touch'
 
@@ -57,10 +57,7 @@ export async function callIntegrationTool({
     return Result.error(new LatitudeError('MCP Client Manager not provided'))
   }
 
-  const clientResult = await streamManager.mcpClientManager.getClient(
-    integration,
-    streamManager,
-  )
+  const clientResult = await streamManager.mcpClientManager.getClient(integration, streamManager)
   if (clientResult.error) {
     return clientResult
   }
@@ -80,9 +77,7 @@ export async function callIntegrationTool({
     const content = parseToolResultContent(result.content)
     if (result.isError) {
       return Result.error(
-        new LatitudeError(
-          typeof content === 'string' ? content : JSON.stringify(content),
-        ),
+        new LatitudeError(typeof content === 'string' ? content : JSON.stringify(content)),
       )
     }
 

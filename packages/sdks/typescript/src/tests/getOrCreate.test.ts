@@ -1,23 +1,11 @@
 import { Latitude, LogSources } from '$sdk/index'
 import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
 import { setupServer } from 'msw/node'
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
-import {
-  mock200Response,
-  mock502Response,
-  mockRequest,
-} from './helpers/getOrCreate'
+import { mock200Response, mock502Response, mockRequest } from './helpers/getOrCreate'
 
-let FAKE_API_KEY = 'fake-api-key'
+const FAKE_API_KEY = 'fake-api-key'
 let sdk: Latitude
 
 const server = setupServer()
@@ -35,13 +23,12 @@ describe('/get-or-create', () => {
   it(
     'makes request with version uuid set',
     server.boundary(async () => {
-      const { mockAuthHeader, mockUrl, mockBody, projectId, versionUuid } =
-        mockRequest({
-          server,
-          apiVersion: 'v3',
-          projectId: 31,
-          versionUuid: 'fake-version-uuid',
-        })
+      const { mockAuthHeader, mockUrl, mockBody, projectId, versionUuid } = mockRequest({
+        server,
+        apiVersion: 'v3',
+        projectId: 31,
+        versionUuid: 'fake-version-uuid',
+      })
 
       await sdk.prompts.getOrCreate('fake-document-path', {
         projectId,

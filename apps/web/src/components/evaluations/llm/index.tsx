@@ -7,27 +7,24 @@ import useProviders from '$/stores/providerApiKeys'
 import { useProviderLog } from '$/stores/providerLogs'
 import {
   buildConversation,
-  EvaluationResultV2,
-  EvaluationType,
+  type EvaluationResultV2,
+  type EvaluationType,
   LLM_EVALUATION_PROMPT_PARAMETERS,
   LlmEvaluationMetric,
   LlmEvaluationSpecification,
   Providers,
 } from '@latitude-data/core/browser'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { TableCell, TableHead } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { useMemo } from 'react'
-import {
+import type {
   ChartConfigurationArgs,
   ConfigurationFormProps,
   EvaluationMetricFrontendSpecification,
@@ -43,7 +40,6 @@ import LlmEvaluationCustomLabeledSpecification from './CustomLabeled'
 import LlmEvaluationRatingSpecification from './Rating'
 import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
 
-// prettier-ignore
 const METRICS: {
   [M in LlmEvaluationMetric]: EvaluationMetricFrontendSpecification<EvaluationType.Llm, M>
 } = {
@@ -116,10 +112,8 @@ function ConfigurationSimpleForm<M extends LlmEvaluationMetric>({
           label='Provider'
           placeholder='Select a provider'
           options={providerOptions}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, provider: value })
-          }
-          errors={errors?.['provider']}
+          onChange={(value) => setConfiguration({ ...configuration, provider: value })}
+          errors={errors?.provider}
           loading={isLoading}
           disabled={isDisabled || !providerOptions.length}
           required
@@ -130,10 +124,8 @@ function ConfigurationSimpleForm<M extends LlmEvaluationMetric>({
             name='model'
             label='Model'
             placeholder='Custom model'
-            onChange={(e) =>
-              setConfiguration({ ...configuration, model: e.target.value })
-            }
-            errors={errors?.['model']}
+            onChange={(e) => setConfiguration({ ...configuration, model: e.target.value })}
+            errors={errors?.model}
             className='w-full px-3'
             disabled={isDisabled}
             required
@@ -145,10 +137,8 @@ function ConfigurationSimpleForm<M extends LlmEvaluationMetric>({
             label='Model'
             placeholder='Select a model'
             options={modelOptions}
-            onChange={(value) =>
-              setConfiguration({ ...configuration, model: value })
-            }
-            errors={errors?.['model']}
+            onChange={(value) => setConfiguration({ ...configuration, model: value })}
+            errors={errors?.model}
             loading={isLoading}
             disabled={isDisabled || !modelOptions.length}
             required
@@ -194,11 +184,7 @@ function ResultBadge<M extends LlmEvaluationMetric>({
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) return null
 
-  return (
-    <>
-      <metricSpecification.ResultBadge {...rest} />
-    </>
-  )
+  return <metricSpecification.ResultBadge {...rest} />
 }
 
 function ResultRowHeaders<M extends LlmEvaluationMetric>({
@@ -214,9 +200,7 @@ function ResultRowHeaders<M extends LlmEvaluationMetric>({
     <>
       <TableHead>Cost</TableHead>
       <TableHead>Tokens</TableHead>
-      {!!metricSpecification.ResultRowHeaders && (
-        <metricSpecification.ResultRowHeaders {...rest} />
-      )}
+      {!!metricSpecification.ResultRowHeaders && <metricSpecification.ResultRowHeaders {...rest} />}
     </>
   )
 }
@@ -238,45 +222,30 @@ function ResultRowCells<M extends LlmEvaluationMetric>({
         {result.error ? (
           <Text.H5 color={color}>-</Text.H5>
         ) : (
-          <Text.H5 color={color}>
-            {formatCostInMillicents(result.metadata!.cost)}
-          </Text.H5>
+          <Text.H5 color={color}>{formatCostInMillicents(result.metadata!.cost)}</Text.H5>
         )}
       </TableCell>
       <TableCell>
         {result.error ? (
           <Text.H5 color={color}>-</Text.H5>
         ) : (
-          <Text.H5 color={color}>
-            {formatCount(result.metadata!.tokens)}
-          </Text.H5>
+          <Text.H5 color={color}>{formatCount(result.metadata!.tokens)}</Text.H5>
         )}
       </TableCell>
       {!!metricSpecification.ResultRowCells && (
-        <metricSpecification.ResultRowCells
-          result={result}
-          color={color}
-          {...rest}
-        />
+        <metricSpecification.ResultRowCells result={result} color={color} {...rest} />
       )}
     </>
   )
 }
 
-function resultPanelTabs<M extends LlmEvaluationMetric>({
-  metric,
-}: {
-  metric: M
-}) {
+function resultPanelTabs<M extends LlmEvaluationMetric>({ metric }: { metric: M }) {
   const metricSpecification = METRICS[metric]
   if (!metricSpecification) {
     throw new Error('Invalid evaluation metric')
   }
 
-  return [
-    { label: 'Messages', value: 'messages' },
-    ...(metricSpecification.resultPanelTabs ?? []),
-  ]
+  return [{ label: 'Messages', value: 'messages' }, ...(metricSpecification.resultPanelTabs ?? [])]
 }
 
 function ResultPanelMetadata<M extends LlmEvaluationMetric>({
@@ -293,27 +262,15 @@ function ResultPanelMetadata<M extends LlmEvaluationMetric>({
     <>
       {!result.error && (
         <>
-          <MetadataItem
-            label='Provider'
-            value={result.metadata!.configuration.provider}
-          />
-          <MetadataItem
-            label='Model'
-            value={result.metadata!.configuration.model}
-          />
+          <MetadataItem label='Provider' value={result.metadata!.configuration.provider} />
+          <MetadataItem label='Model' value={result.metadata!.configuration.model} />
           <MetadataItem
             label='Cost'
             value={formatCostInMillicents(result.metadata!.cost)}
             tooltip="We estimate the cost based on the token usage and your provider's pricing. Actual cost may vary."
           />
-          <MetadataItem
-            label='Tokens'
-            value={result.metadata!.tokens.toString()}
-          />
-          <MetadataItem
-            label='Duration'
-            value={formatDuration(result.metadata!.duration)}
-          />
+          <MetadataItem label='Tokens' value={result.metadata!.tokens.toString()} />
+          <MetadataItem label='Duration' value={formatDuration(result.metadata!.duration)} />
         </>
       )}
       {!!metricSpecification.ResultPanelMetadata && (
@@ -371,11 +328,10 @@ function ResultPanelMessages<M extends LlmEvaluationMetric>({
     [conversation],
   )
 
-  const { value: expandParameters, setValue: setExpandParameters } =
-    useLocalStorage({
-      key: AppLocalStorage.expandParameters,
-      defaultValue: false,
-    })
+  const { value: expandParameters, setValue: setExpandParameters } = useLocalStorage({
+    key: AppLocalStorage.expandParameters,
+    defaultValue: false,
+  })
 
   if (result.error) {
     return (
@@ -416,10 +372,7 @@ function ResultPanelMessages<M extends LlmEvaluationMetric>({
         {sourceMapAvailable && (
           <div className='flex flex-row gap-2 items-center'>
             <Text.H6M>Expand parameters</Text.H6M>
-            <SwitchToggle
-              checked={expandParameters}
-              onCheckedChange={setExpandParameters}
-            />
+            <SwitchToggle checked={expandParameters} onCheckedChange={setExpandParameters} />
           </div>
         )}
       </div>

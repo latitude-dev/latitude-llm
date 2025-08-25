@@ -1,6 +1,6 @@
 'use client'
 
-import { CustomComponentPropsWithRef, ElementRef, forwardRef } from 'react'
+import { type CustomComponentPropsWithRef, type ElementRef, forwardRef } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import * as LabelPrimitive from '@radix-ui/react-label'
 
@@ -28,21 +28,20 @@ const labelVariants = cva(
   },
 )
 
-export type LabelProps = CustomComponentPropsWithRef<
-  typeof LabelPrimitive.Root
-> &
+export type LabelProps = CustomComponentPropsWithRef<typeof LabelPrimitive.Root> &
   VariantProps<typeof labelVariants>
-const Label = forwardRef<ElementRef<typeof LabelPrimitive.Root>, LabelProps>(
-  function Label({ className, variant, ...props }, _ref) {
-    return (
-      <LabelPrimitive.Root
-        ref={props.ref}
-        className={cn(labelVariants({ variant }), className)}
-        {...props}
-      />
-    )
-  },
-)
+const Label = forwardRef<ElementRef<typeof LabelPrimitive.Root>, LabelProps>(function Label(
+  { className, variant, ...props },
+  _ref,
+) {
+  return (
+    <LabelPrimitive.Root
+      ref={props.ref}
+      className={cn(labelVariants({ variant }), className)}
+      {...props}
+    />
+  )
+})
 
 const BatchLabel = ({ children, ...rest }: LabelProps) => (
   <Label {...rest}>
@@ -82,16 +81,10 @@ export function TooltipLabel({
       trigger={
         <div className={cn({ 'inline-flex': inline })}>
           <div className='flex flex-row gap-1 items-center'>
-            <LabelComponent
-              variant={error ? 'destructive' : 'default'}
-              {...rest}
-            >
+            <LabelComponent variant={error ? 'destructive' : 'default'} {...rest}>
               {children}
             </LabelComponent>
-            <Icon
-              name='info'
-              color={error ? 'destructive' : 'foregroundMuted'}
-            />
+            <Icon name='info' color={error ? 'destructive' : 'foregroundMuted'} />
           </div>
         </div>
       }

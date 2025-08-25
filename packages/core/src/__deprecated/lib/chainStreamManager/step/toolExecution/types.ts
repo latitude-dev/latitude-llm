@@ -1,8 +1,8 @@
-import { ToolCall } from '@latitude-data/compiler'
-import { PromptSource, Workspace } from '../../../../../browser'
-import { ResolvedTools } from '../../resolveTools/types'
-import { createMcpClientManager } from '../../../../../services/integrations/McpClient/McpClientManager'
-import { ChainStreamManager } from '../..'
+import type { ToolCall } from '@latitude-data/compiler'
+import type { PromptSource, Workspace } from '../../../../../browser'
+import type { ResolvedTools } from '../../resolveTools/types'
+import type { createMcpClientManager } from '../../../../../services/integrations/McpClient/McpClientManager'
+import type { ChainStreamManager } from '../..'
 
 export type ToolResponsesArgs = {
   workspace: Workspace

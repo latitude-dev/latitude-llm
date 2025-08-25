@@ -1,14 +1,12 @@
-import { JSONSchema7 } from 'json-schema'
-import { ConfigurableProp } from '@pipedream/sdk'
+import type { JSONSchema7 } from 'json-schema'
+import type { ConfigurableProp } from '@pipedream/sdk'
 
 const getOptions = <T>(prop: ConfigurableProp): T[] | undefined => {
   if (!('options' in prop) || !prop.options) return
 
   // If options are label/value objects, take .value
   if (typeof prop.options[0] === 'object' && 'value' in prop.options[0]) {
-    return (prop.options as Array<{ label: string; value: T }>).map(
-      (o) => o.value,
-    )
+    return (prop.options as Array<{ label: string; value: T }>).map((o) => o.value)
   }
   return prop.options as T[]
 }

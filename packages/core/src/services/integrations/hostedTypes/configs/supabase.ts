@@ -1,9 +1,8 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 import { npxCommand } from '../utils'
 
 export default {
-  description:
-    'This integration enables read only access to a Supabase database.',
+  description: 'This integration enables read only access to a Supabase database.',
   command: npxCommand({
     package: '@supabase/mcp-server-supabase@latest',
     args: '--access-token $SUPABASE_ACCESS_TOKEN',

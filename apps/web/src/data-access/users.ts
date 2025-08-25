@@ -1,20 +1,17 @@
 import { database, utils } from '@latitude-data/core/client'
-import {
-  unsafelyFindWorkspace,
-  unsafelyGetUser,
-} from '@latitude-data/core/data-access'
+import { unsafelyFindWorkspace, unsafelyGetUser } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
-import { PromisedResult } from '@latitude-data/core/lib/Transaction'
+import type { PromisedResult } from '@latitude-data/core/lib/Transaction'
 import { users } from '@latitude-data/core/schema'
 import { getFirstWorkspace } from '$/data-access/workspaces'
 import {
   SubscriptionPlan,
   SubscriptionPlans,
-  User,
-  Workspace,
+  type User,
+  type Workspace,
 } from '@latitude-data/core/browser'
-import { Session } from 'lucia'
+import type { Session } from 'lucia'
 import { getSession } from '$/services/auth/getSession'
 
 function notFoundWithEmail(email: string | undefined | null) {
@@ -49,9 +46,7 @@ export async function getUserFromCredentials({
   })
 }
 
-export function getPlanFromSubscriptionSlug(
-  slug: SubscriptionPlan | undefined,
-) {
+export function getPlanFromSubscriptionSlug(slug: SubscriptionPlan | undefined) {
   const plan = slug || SubscriptionPlan.HobbyV2
   const planData = SubscriptionPlans[plan]
   return { ...planData, plan }

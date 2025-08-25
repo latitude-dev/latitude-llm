@@ -1,4 +1,4 @@
-import { WebhookPayload } from './types'
+import type { WebhookPayload } from './types'
 
 export interface WebhookSendOptions {
   url: string

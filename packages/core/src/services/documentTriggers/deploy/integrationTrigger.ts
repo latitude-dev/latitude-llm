@@ -1,6 +1,6 @@
-import { IntegrationType, DocumentTriggerType } from '@latitude-data/constants'
-import { Commit, Workspace, DocumentTrigger } from '../../../browser'
-import Transaction, { PromisedResult } from '../../../lib/Transaction'
+import { IntegrationType, type DocumentTriggerType } from '@latitude-data/constants'
+import type { Commit, Workspace, DocumentTrigger } from '../../../browser'
+import Transaction, { type PromisedResult } from '../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../lib/Result'
 import {
@@ -9,7 +9,7 @@ import {
 } from '../../integrations/pipedream/triggers'
 import { IntegrationsRepository } from '../../../repositories'
 
-import {
+import type {
   IntegrationTriggerConfiguration,
   IntegrationTriggerDeploymentSettings,
 } from '@latitude-data/constants/documentTriggers'

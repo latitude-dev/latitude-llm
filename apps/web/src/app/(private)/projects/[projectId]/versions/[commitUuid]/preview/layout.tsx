@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import ProjectLayout from '../_components/ProjectLayout'
 
 export default async function PreviewPage({

@@ -2,13 +2,13 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { ROUTES } from '$/services/routes'
 import {
-  Workspace,
+  type Workspace,
   evaluationResultsV2SearchFromQueryParams,
   evaluationResultsV2SearchToQueryParams,
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
   authHandler(

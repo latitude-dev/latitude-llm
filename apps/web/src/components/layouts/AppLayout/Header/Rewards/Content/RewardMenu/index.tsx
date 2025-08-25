@@ -1,7 +1,7 @@
 'use client'
 import { useMemo } from 'react'
 
-import { RewardType } from '@latitude-data/core/browser'
+import type { RewardType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import useRewards from '$/stores/rewards'
@@ -9,13 +9,7 @@ import useRewards from '$/stores/rewards'
 import { REWARD_CONFIGS } from './RewardConfigs'
 import { RewardMenuBase } from './RewardMenuBase'
 
-export function RewardMenu({
-  type,
-  onClose,
-}: {
-  type: RewardType
-  onClose: () => void
-}) {
+export function RewardMenu({ type, onClose }: { type: RewardType; onClose: () => void }) {
   const { data: claimedRewards, claimReward } = useRewards()
 
   const claimedRewardData = useMemo(() => {

@@ -9,11 +9,7 @@ import { ErrorComponent } from '@latitude-data/web-ui/browser'
 import * as Sentry from '@sentry/nextjs'
 import Link from 'next/link'
 
-export default function GlobalError({
-  error,
-}: {
-  error: Error & { digest?: string }
-}) {
+export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
   useEffect(() => {
     Sentry.captureException(error)
   }, [error])
@@ -25,9 +21,7 @@ export default function GlobalError({
         <meta name='viewport' content='width=device-width, initial-scale=1' />
         <link rel='icon' href='/favicon.svg' />
       </head>
-      <body
-        className={`w-full h-full ${fontSans.variable} ${fontMono.variable} font-sans`}
-      >
+      <body className={`w-full h-full ${fontSans.variable} ${fontMono.variable} font-sans`}>
         <ErrorComponent
           message={error.message}
           type='red'

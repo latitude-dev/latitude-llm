@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { env } from '@latitude-data/env'
 import {
@@ -46,10 +46,7 @@ export default function PlainLayout({
         <Tailwind>
           <Section className='bg-white rounded-lg'>
             {title && (
-              <Heading
-                as='h1'
-                className='text-gray-900 text-2xl font-bold mb-4 p-0'
-              >
+              <Heading as='h1' className='text-gray-900 text-2xl font-bold mb-4 p-0'>
                 {title}
               </Heading>
             )}

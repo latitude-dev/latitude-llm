@@ -1,5 +1,5 @@
-import { ColumnsSelection, eq, inArray } from 'drizzle-orm'
-import { PgSelect, SubqueryWithSelection } from 'drizzle-orm/pg-core'
+import { type ColumnsSelection, eq, inArray } from 'drizzle-orm'
+import type { PgSelect, SubqueryWithSelection } from 'drizzle-orm/pg-core'
 
 import { database } from '../client'
 import { NotFoundError } from '@latitude-data/constants/errors'

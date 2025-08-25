@@ -1,11 +1,4 @@
-import {
-  isAfter,
-  isBefore,
-  isToday,
-  parseJSON,
-  startOfDay,
-  subDays,
-} from 'date-fns'
+import { isAfter, isBefore, isToday, parseJSON, startOfDay, subDays } from 'date-fns'
 import {
   and,
   asc,
@@ -22,24 +15,18 @@ import {
 } from 'drizzle-orm'
 import {
   EVALUATION_RESULT_RECENCY_DAYS,
-  EvaluationResultsV2Search,
-  EvaluationResultV2,
-  EvaluationResultV2WithDetails,
+  type EvaluationResultsV2Search,
+  type EvaluationResultV2,
+  type EvaluationResultV2WithDetails,
   EvaluationType,
-  EvaluationV2Stats,
+  type EvaluationV2Stats,
   MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
-  ResultWithEvaluationV2,
+  type ResultWithEvaluationV2,
 } from '../browser'
 import { NotFoundError } from '../lib/errors'
 import { calculateOffset } from '../lib/pagination/index'
 import { Result } from '../lib/Result'
-import {
-  commits,
-  datasetRows,
-  datasets,
-  evaluationResultsV2,
-  providerLogs,
-} from '../schema'
+import { commits, datasetRows, datasets, evaluationResultsV2, providerLogs } from '../schema'
 import serializeProviderLog from '../services/providerLogs/serialize'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'
@@ -56,10 +43,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .select(tt)
       .from(evaluationResultsV2)
       .where(this.scopeFilter)
-      .orderBy(
-        desc(evaluationResultsV2.createdAt),
-        desc(evaluationResultsV2.id),
-      )
+      .orderBy(desc(evaluationResultsV2.createdAt), desc(evaluationResultsV2.id))
       .$dynamic()
   }
 
@@ -71,9 +55,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     if (!result) {
       return Result.error(
-        new NotFoundError(
-          `Record with uuid ${uuid} not found in ${this.scope._.tableName}`,
-        ),
+        new NotFoundError(`Record with uuid ${uuid} not found in ${this.scope._.tableName}`),
       )
     }
 
@@ -138,9 +120,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     if (filters?.experimentIds !== undefined) {
       if (filters.experimentIds.length > 0) {
-        filter.push(
-          inArray(evaluationResultsV2.experimentId, filters.experimentIds),
-        )
+        filter.push(inArray(evaluationResultsV2.experimentId, filters.experimentIds))
       } else filter.push(isNull(evaluationResultsV2.experimentId))
     }
 
@@ -180,36 +160,22 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
       .leftJoin(datasets, eq(datasets.id, evaluationResultsV2.datasetId))
-      .leftJoin(
-        datasetRows,
-        eq(datasetRows.id, evaluationResultsV2.evaluatedRowId),
-      )
-      .innerJoin(
-        providerLogs,
-        eq(providerLogs.id, evaluationResultsV2.evaluatedLogId),
-      )
+      .leftJoin(datasetRows, eq(datasetRows.id, evaluationResultsV2.evaluatedRowId))
+      .innerJoin(providerLogs, eq(providerLogs.id, evaluationResultsV2.evaluatedLogId))
       .where(filter)
       .$dynamic()
 
     if (params.orders?.recency === 'asc') {
-      query = query.orderBy(
-        asc(evaluationResultsV2.createdAt),
-        asc(evaluationResultsV2.id),
-      )
+      query = query.orderBy(asc(evaluationResultsV2.createdAt), asc(evaluationResultsV2.id))
     }
 
     if (params.orders?.recency === 'desc') {
-      query = query.orderBy(
-        desc(evaluationResultsV2.createdAt),
-        desc(evaluationResultsV2.id),
-      )
+      query = query.orderBy(desc(evaluationResultsV2.createdAt), desc(evaluationResultsV2.id))
     }
 
     query = query
       .limit(params.pagination.pageSize)
-      .offset(
-        calculateOffset(params.pagination.page, params.pagination.pageSize),
-      )
+      .offset(calculateOffset(params.pagination.page, params.pagination.pageSize))
 
     const results = await query.then((results) =>
       results.map((result) => ({
@@ -218,9 +184,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       })),
     )
 
-    return Result.ok<EvaluationResultV2WithDetails[]>(
-      results as EvaluationResultV2WithDetails[],
-    )
+    return Result.ok<EvaluationResultV2WithDetails[]>(results as EvaluationResultV2WithDetails[])
   }
 
   async countListByEvaluation({
@@ -257,12 +221,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         createdAt: evaluationResultsV2.createdAt,
       })
       .from(evaluationResultsV2)
-      .where(
-        and(
-          this.scopeFilter,
-          eq(evaluationResultsV2.uuid, params.pagination.resultUuid!),
-        ),
-      )
+      .where(and(this.scopeFilter, eq(evaluationResultsV2.uuid, params.pagination.resultUuid!)))
       .then((r) => r[0])
     if (!result) return Result.ok(undefined)
 
@@ -308,10 +267,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     evaluationUuid: string
     params: EvaluationResultsV2Search
   }) {
-    const evaluationsRepository = new EvaluationsV2Repository(
-      this.workspaceId,
-      this.db,
-    )
+    const evaluationsRepository = new EvaluationsV2Repository(this.workspaceId, this.db)
     const evaluation = await evaluationsRepository
       .getAtCommitByDocument({
         projectId: projectId,
@@ -325,9 +281,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     const stats = {
       totalResults: sql`count(*)`.mapWith(Number).as('total_results'),
-      averageScore: sql`avg(${evaluationResultsV2.score})`
-        .mapWith(Number)
-        .as('average_score'),
+      averageScore: sql`avg(${evaluationResultsV2.score})`.mapWith(Number).as('average_score'),
       totalTokens:
         evaluation.type === EvaluationType.Llm
           ? sql`sum((${evaluationResultsV2.metadata}->>'tokens')::bigint)`
@@ -369,27 +323,22 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
           .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
           .where(filter)
           .groupBy(sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`)
-          .orderBy(
-            asc(sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`),
-          )
+          .orderBy(asc(sql`DATE_TRUNC('day', ${evaluationResultsV2.createdAt})`))
 
         // Note: average score is being computed as a running average
         let runningResults = 0
         let runningScore = 0
         for (let i = 0; i < dailyStats.length; i++) {
           runningResults += dailyStats[i]!.totalResults
-          runningScore +=
-            dailyStats[i]!.averageScore * dailyStats[i]!.totalResults
+          runningScore += dailyStats[i]!.averageScore * dailyStats[i]!.totalResults
           dailyStats[i]!.averageScore = runningScore / runningResults
         }
 
         // Note: extending the running average to today when applies
         if (
           (!dailyStats.at(-1)?.date || !isToday(dailyStats.at(-1)!.date)) &&
-          (!params.filters?.createdAt?.from ||
-            isBefore(params.filters.createdAt.from, now)) &&
-          (!params.filters?.createdAt?.to ||
-            isAfter(params.filters.createdAt.to, now))
+          (!params.filters?.createdAt?.from || isBefore(params.filters.createdAt.from, now)) &&
+          (!params.filters?.createdAt?.to || isAfter(params.filters.createdAt.to, now))
         ) {
           dailyStats.push({
             date: startOfDay(now),
@@ -447,10 +396,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       })
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
-      .innerJoin(
-        providerLogs,
-        eq(providerLogs.id, evaluationResultsV2.evaluatedLogId),
-      )
+      .innerJoin(providerLogs, eq(providerLogs.id, evaluationResultsV2.evaluatedLogId))
       .where(
         and(
           this.scopeFilter,
@@ -459,15 +405,9 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
           inArray(providerLogs.documentLogUuid, documentLogUuids),
         ),
       )
-      .orderBy(
-        desc(evaluationResultsV2.createdAt),
-        desc(evaluationResultsV2.id),
-      )
+      .orderBy(desc(evaluationResultsV2.createdAt), desc(evaluationResultsV2.id))
 
-    const evaluationsRepository = new EvaluationsV2Repository(
-      this.workspaceId,
-      this.db,
-    )
+    const evaluationsRepository = new EvaluationsV2Repository(this.workspaceId, this.db)
     const commitUuids = [...new Set(results.map((r) => r.commitUuid))]
     const evaluationsByCommit = Object.fromEntries(
       await Promise.all(
@@ -500,9 +440,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       ]
     }
 
-    return Result.ok<Record<string, ResultWithEvaluationV2[]>>(
-      resultsByDocumentLog,
-    )
+    return Result.ok<Record<string, ResultWithEvaluationV2[]>>(resultsByDocumentLog)
   }
 
   async countSinceDate(since: Date) {
@@ -539,10 +477,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
           sql`${evaluationResultsV2.usedForSuggestion} IS NOT TRUE`,
           isNull(evaluationResultsV2.error),
           sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
-          gte(
-            evaluationResultsV2.createdAt,
-            subDays(new Date(), EVALUATION_RESULT_RECENCY_DAYS),
-          ),
+          gte(evaluationResultsV2.createdAt, subDays(new Date(), EVALUATION_RESULT_RECENCY_DAYS)),
         ),
       )
       .orderBy(

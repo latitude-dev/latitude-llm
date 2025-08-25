@@ -1,10 +1,10 @@
-import { StreamManager, StreamManagerProps } from '.'
-import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
-import { Output, streamAIResponse } from './step/streamAIResponse'
+import { StreamManager, type StreamManagerProps } from '.'
+import type { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
+import { type Output, streamAIResponse } from './step/streamAIResponse'
 import { resolveToolsFromConfig } from './resolveTools'
-import { ValidatedChainStep } from '../../services/chains/ChainValidator'
-import { ProviderApiKey } from '../../browser'
-import { JSONSchema7 } from 'json-schema'
+import type { ValidatedChainStep } from '../../services/chains/ChainValidator'
+import type { ProviderApiKey } from '../../browser'
+import type { JSONSchema7 } from 'json-schema'
 
 /**
  * DefaultStreamManager implements a simple single-step streaming strategy.
@@ -16,10 +16,7 @@ import { JSONSchema7 } from 'json-schema'
  * - Has a simpler implementation of step() without recursion
  * - Configuration is fixed at instantiation rather than generated dynamically
  */
-export class DefaultStreamManager
-  extends StreamManager
-  implements StreamManager
-{
+export class DefaultStreamManager extends StreamManager implements StreamManager {
   private config: ValidatedChainStep['config']
   private provider: ProviderApiKey
   private output: Output
@@ -55,26 +52,22 @@ export class DefaultStreamManager
     })
 
     const toolsBySource = await this.getToolsBySource().then((r) => r.unwrap())
-    const config = this.transformPromptlToVercelToolDeclarations(
-      this.config,
-      toolsBySource,
-    )
+    const config = this.transformPromptlToVercelToolDeclarations(this.config, toolsBySource)
 
     try {
-      const { response, messages, tokenUsage, finishReason } =
-        await streamAIResponse({
-          config,
-          context: this.$context,
-          abortSignal: this.abortSignal,
-          controller: this.controller!,
-          documentLogUuid: this.uuid,
-          messages: this.messages,
-          output: this.output,
-          provider: this.provider,
-          schema: this.schema,
-          source: this.source,
-          workspace: this.workspace,
-        })
+      const { response, messages, tokenUsage, finishReason } = await streamAIResponse({
+        config,
+        context: this.$context,
+        abortSignal: this.abortSignal,
+        controller: this.controller!,
+        documentLogUuid: this.uuid,
+        messages: this.messages,
+        output: this.output,
+        provider: this.provider,
+        schema: this.schema,
+        source: this.source,
+        workspace: this.workspace,
+      })
 
       this.updateStateFromResponse({
         response,

@@ -1,7 +1,7 @@
 import { and, count, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import {
-  DocumentLogFilterOptions,
-  DocumentLogsAggregations,
+  type DocumentLogFilterOptions,
+  type DocumentLogsAggregations,
   ErrorableEntity,
 } from '../../browser'
 import { database } from '../../client'
@@ -55,8 +55,7 @@ export async function computeDocumentLogsAggregations(
 
   const documentLogAggregations = db
     .select({
-      averageDuration:
-        sql<number>`coalesce(avg(${documentLogs.duration}), 0)`.mapWith(Number),
+      averageDuration: sql<number>`coalesce(avg(${documentLogs.duration}), 0)`.mapWith(Number),
       medianDuration: sql<number>`
         COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${documentLogs.duration}), 0)
       `.mapWith(Number),
@@ -80,27 +79,18 @@ export async function computeDocumentLogsAggregations(
 
   const providerLogAggregations = db
     .select({
-      totalTokens:
-        sql<number>`coalesce(sum(${providerLogs.tokens}), 0)`.mapWith(Number),
+      totalTokens: sql<number>`coalesce(sum(${providerLogs.tokens}), 0)`.mapWith(Number),
       totalCostInMillicents:
-        sql<number>`coalesce(sum(${providerLogs.costInMillicents}), 0)`.mapWith(
-          Number,
-        ),
-      averageTokens:
-        sql<number>`coalesce(avg(${providerLogs.tokens}), 0)`.mapWith(Number),
+        sql<number>`coalesce(sum(${providerLogs.costInMillicents}), 0)`.mapWith(Number),
+      averageTokens: sql<number>`coalesce(avg(${providerLogs.tokens}), 0)`.mapWith(Number),
       averageCostInMillicents:
-        sql<number>`coalesce(avg(${providerLogs.costInMillicents}), 0)`.mapWith(
-          Number,
-        ),
+        sql<number>`coalesce(avg(${providerLogs.costInMillicents}), 0)`.mapWith(Number),
       medianCostInMillicents: sql<number>`
         COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ${providerLogs.costInMillicents}), 0)
       `.mapWith(Number),
     })
     .from(providerLogs)
-    .innerJoin(
-      documentLogs,
-      eq(documentLogs.uuid, providerLogs.documentLogUuid),
-    )
+    .innerJoin(documentLogs, eq(documentLogs.uuid, providerLogs.documentLogUuid))
     .where(
       and(
         isNotNull(providerLogs.tokens),
@@ -131,11 +121,7 @@ export async function computeDocumentLogsAggregations(
       medianCostInMillicents,
     },
     { totalCount },
-  ] = await Promise.all([
-    documentLogAggregations,
-    providerLogAggregations,
-    totalCountPromise,
-  ])
+  ] = await Promise.all([documentLogAggregations, providerLogAggregations, totalCountPromise])
 
   return Result.ok<DocumentLogsAggregations>({
     totalCount,

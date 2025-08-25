@@ -1,5 +1,5 @@
-import { PipedreamIntegration } from '../../../browser'
-import { PromisedResult } from '../../../lib/Transaction'
+import type { PipedreamIntegration } from '../../../browser'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { getApp } from './apps'
 import { Result } from '../../../lib/Result'
 

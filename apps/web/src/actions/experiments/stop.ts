@@ -15,12 +15,8 @@ export const stopExperimentAction = withDocument
   .handler(async ({ ctx, input }) => {
     const { experimentUuid } = input
     const experimentsScope = new ExperimentsRepository(ctx.workspace.id)
-    const experiment = await experimentsScope
-      .findByUuid(experimentUuid)
-      .then((r) => r.unwrap())
+    const experiment = await experimentsScope.findByUuid(experimentUuid).then((r) => r.unwrap())
 
-    const updatedExperiment = await completeExperiment(experiment).then((r) =>
-      r.unwrap(),
-    )
+    const updatedExperiment = await completeExperiment(experiment).then((r) => r.unwrap())
     return updatedExperiment
   })

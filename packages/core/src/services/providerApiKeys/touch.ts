@@ -5,10 +5,7 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { providerApiKeys } from '../../schema'
 
-export function touchProviderApiKey(
-  id: number,
-  transaction = new Transaction(),
-) {
+export function touchProviderApiKey(id: number, transaction = new Transaction()) {
   return transaction.call(async (tx) => {
     const result = await tx
       .update(providerApiKeys)

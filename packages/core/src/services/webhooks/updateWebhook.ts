@@ -4,7 +4,7 @@ import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
 import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { webhooks } from '../../schema/models/webhooks'
-import { type UpdateWebhookParams, type Webhook } from './types'
+import type { UpdateWebhookParams, Webhook } from './types'
 
 export async function updateWebhook(
   params: UpdateWebhookParams,
@@ -43,15 +43,10 @@ export async function updateWebhook(
 
   if (!Result.isOk(result)) {
     const error = result.error
-    if (
-      error instanceof NotFoundError ||
-      error instanceof UnprocessableEntityError
-    ) {
+    if (error instanceof NotFoundError || error instanceof UnprocessableEntityError) {
       return Result.error(error)
     }
-    return Result.error(
-      new UnprocessableEntityError('Failed to update webhook'),
-    )
+    return Result.error(new UnprocessableEntityError('Failed to update webhook'))
   }
 
   return result

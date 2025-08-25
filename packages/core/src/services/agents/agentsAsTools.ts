@@ -1,21 +1,17 @@
-import {
-  AgentToolsMap,
-  ChainEvent,
-  StreamEventTypes,
-} from '@latitude-data/constants'
+import { type AgentToolsMap, type ChainEvent, StreamEventTypes } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { Tool } from 'ai'
-import { JSONSchema7, JSONSchema7TypeName } from 'json-schema'
+import type { Tool } from 'ai'
+import type { JSONSchema7, JSONSchema7TypeName } from 'json-schema'
 import { scan } from 'promptl-ai'
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import type { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { PromisedResult } from '../../lib/Transaction'
+import type { PromisedResult } from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
-import { telemetry, TelemetryContext } from '../../telemetry'
+import { telemetry, type TelemetryContext } from '../../telemetry'
 import { runDocumentAtCommit } from '../commits'
 import { getAgentToolName } from './helpers'
-import { StreamManager } from '../../lib/streamManager'
+import type { StreamManager } from '../../lib/streamManager'
 
 const JSON_SCHEMA_TYPES = {
   string: 'string',
@@ -57,20 +53,20 @@ export async function getToolDefinitionFromDocument({
     referenceFn,
   })
 
-  const description = metadata.config['description'] as string | undefined
+  const description = metadata.config.description as string | undefined
   const params = Object.fromEntries(
-    Object.entries(
-      (metadata.config['parameters'] ?? {}) as Record<string, JSONSchema7>,
-    ).map(([key, schema]) => [
-      key,
-      {
-        ...schema,
-        type:
-          schema.type && !Array.isArray(schema.type)
-            ? (JSON_SCHEMA_TYPES[schema.type] ?? 'string')
-            : schema.type,
-      },
-    ]),
+    Object.entries((metadata.config.parameters ?? {}) as Record<string, JSONSchema7>).map(
+      ([key, schema]) => [
+        key,
+        {
+          ...schema,
+          type:
+            schema.type && !Array.isArray(schema.type)
+              ? (JSON_SCHEMA_TYPES[schema.type] ?? 'string')
+              : schema.type,
+        },
+      ],
+    ),
   ) as Record<string, JSONSchema7>
   metadata.parameters.forEach((param) => {
     if (param in params) return

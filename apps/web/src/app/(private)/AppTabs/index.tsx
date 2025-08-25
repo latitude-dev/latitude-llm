@@ -3,7 +3,7 @@
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useSelectedPath } from '$/hooks/useSelectedPath'
-import { DocumentRoutes } from '$/services/routes'
+import type { DocumentRoutes } from '$/services/routes'
 import { MAIN_NAV_LINKS } from '../_lib/constants'
 
 export function AppTabs() {

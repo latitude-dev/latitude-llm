@@ -8,19 +8,19 @@ import {
 import {
   $getSelection,
   $isRangeSelection,
-  BaseSelection,
-  ElementNode,
-  LexicalEditor,
-  TextNode,
+  type BaseSelection,
+  type ElementNode,
+  type LexicalEditor,
+  type TextNode,
 } from 'lexical'
-import { JSX, useCallback, useMemo, useState } from 'react'
+import { type JSX, useCallback, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { $isMessageBlockNode } from '../../nodes/MessageBlock'
 import { $isStepBlockNode } from '../../nodes/StepBlock'
 import { ComponentPickerMenuItem, filterGroups, flattenGroups } from './Item'
 import {
-  ComponentPickerOption,
-  PickerGroup,
+  type ComponentPickerOption,
+  type PickerGroup,
   useGroupedOptions,
 } from './useGroupedOptions'
 
@@ -98,7 +98,7 @@ export function TypeaheadMenuPlugin(): JSX.Element {
         })
         const { isInsideStepBlock, isInsideMessageBlock } = context
 
-        let baseOptions = allGroups.filter((option) => {
+        const baseOptions = allGroups.filter((option) => {
           if (option.key === 'steps') {
             const shouldShow = !isInsideStepBlock && !isInsideMessageBlock
             return shouldShow

@@ -4,22 +4,15 @@ import {
   $createParagraphNode,
   $createTextNode,
   $nodesOfType,
-  EditorConfig,
+  type EditorConfig,
   ElementNode,
-  LexicalNode,
-  NodeKey,
-  SerializedLexicalNode,
+  type LexicalNode,
+  type NodeKey,
+  type SerializedLexicalNode,
 } from 'lexical'
-import { Root } from 'react-dom/client'
-import {
-  BLOCK_EDITOR_TYPE,
-  StepBlock,
-} from '../../state/promptlToLexical/types'
-import {
-  createReactDivWrapper,
-  replaceReactRoot,
-  VERTICAL_SPACE_CLASS,
-} from '../utils'
+import type { Root } from 'react-dom/client'
+import { BLOCK_EDITOR_TYPE, type StepBlock } from '../../state/promptlToLexical/types'
+import { createReactDivWrapper, replaceReactRoot, VERTICAL_SPACE_CLASS } from '../utils'
 import { StepHeader } from './StepHeader'
 
 interface SerializedStepBlock extends Omit<StepBlock, 'children'> {
@@ -209,16 +202,12 @@ export class StepBlockNode extends ElementNode {
   }
 
   getDOMSlot(element: HTMLElement) {
-    const contentArea = element.querySelector(
-      '[data-content-area="true"]',
-    ) as HTMLElement
+    const contentArea = element.querySelector('[data-content-area="true"]') as HTMLElement
     return super.getDOMSlot(element).withElement(contentArea)
   }
 }
 
-export function $isStepBlockNode(
-  node: LexicalNode | null | undefined,
-): node is StepBlockNode {
+export function $isStepBlockNode(node: LexicalNode | null | undefined): node is StepBlockNode {
   return node instanceof StepBlockNode
 }
 

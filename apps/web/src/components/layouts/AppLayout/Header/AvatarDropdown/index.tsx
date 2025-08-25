@@ -1,11 +1,11 @@
 import { logoutAction } from '$/actions/user/logoutAction'
 import { ROUTES } from '$/services/routes'
-import { User } from '@latitude-data/core/browser'
+import type { User } from '@latitude-data/core/browser'
 import { Avatar } from '@latitude-data/web-ui/atoms/Avatar'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
-  MenuOption,
+  type MenuOption,
 } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { getUserInfoFromSession } from '@latitude-data/web-ui/getUserInfoFromSession'
 import { useRouter } from 'next/navigation'
@@ -27,7 +27,7 @@ export default function AvatarDropdown({
     await logoutAction()
   }, [])
 
-  let options = useMemo(
+  const options = useMemo(
     () =>
       [
         ...(currentUser?.email
@@ -64,11 +64,7 @@ export default function AvatarDropdown({
     <DropdownMenu
       trigger={() => (
         <DropdownMenuTrigger>
-          <Avatar
-            alt={info.name}
-            fallback={info.fallback}
-            className='w-6 h-6'
-          />
+          <Avatar alt={info.name} fallback={info.fallback} className='w-6 h-6' />
         </DropdownMenuTrigger>
       )}
       options={options}

@@ -1,9 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import {
-  BadRequestError,
-  UnprocessableEntityError,
-} from '@latitude-data/constants/errors'
+import { BadRequestError, UnprocessableEntityError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import { handleSubscriptionUpdate } from '@latitude-data/core/services/billing/handleSubscriptionUpdate'
 import { errorHandler } from '$/middlewares/errorHandler'
@@ -12,9 +9,7 @@ export const POST = errorHandler(async (req: NextRequest) => {
   const stripeSecretKey = env.STRIPE_SECRET_KEY
   const webhookSecret = env.STRIPE_WEBHOOK_SECRET
   if (!stripeSecretKey) {
-    throw new UnprocessableEntityError(
-      'Stripe SDK not initialized. Server configuration error.',
-    )
+    throw new UnprocessableEntityError('Stripe SDK not initialized. Server configuration error.')
   }
 
   const stripe = stripeSecretKey
@@ -24,9 +19,7 @@ export const POST = errorHandler(async (req: NextRequest) => {
     : undefined
 
   if (!stripe) {
-    throw new UnprocessableEntityError(
-      'Stripe SDK not initialized. Server configuration error.',
-    )
+    throw new UnprocessableEntityError('Stripe SDK not initialized. Server configuration error.')
   }
 
   if (!webhookSecret) {

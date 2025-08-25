@@ -1,11 +1,11 @@
 import { useCallback } from 'react'
 
-import { ClaimedRewardWithUserInfo } from '@latitude-data/core/browser'
+import type { ClaimedRewardWithUserInfo } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { fetchPendingRewardClaimsAction } from '$/actions/rewards/fetchPendingRewardClaimsAction'
 import { updateRewardClaimValidityAction } from '$/actions/rewards/updateRewardClaimValidityAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 const EMPTY_ARRAY: ClaimedRewardWithUserInfo[] = []
 
@@ -35,14 +35,11 @@ export default function usePendingRewardClaims(opts?: SWRConfiguration) {
     opts,
   )
 
-  const { execute: updateRewardClaim } = useLatitudeAction(
-    updateRewardClaimValidityAction,
-    {
-      onSuccess: ({ data: claimedReward }) => {
-        mutate((prev) => prev?.filter((r) => r.id !== claimedReward?.id))
-      },
+  const { execute: updateRewardClaim } = useLatitudeAction(updateRewardClaimValidityAction, {
+    onSuccess: ({ data: claimedReward }) => {
+      mutate((prev) => prev?.filter((r) => r.id !== claimedReward?.id))
     },
-  )
+  })
 
   return { data, isLoading, error: swrError, updateRewardClaim }
 }

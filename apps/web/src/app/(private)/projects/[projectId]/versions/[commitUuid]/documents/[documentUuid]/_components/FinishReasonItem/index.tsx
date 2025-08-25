@@ -1,7 +1,7 @@
 import { MetadataItemTooltip } from '$/components/MetadataItem'
-import { ProviderLogDto } from '@latitude-data/core/browser'
+import type { ProviderLogDto } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { FinishReason } from 'ai'
+import type { FinishReason } from 'ai'
 
 const REASONS_FINISH: Record<FinishReason, string> = {
   stop: 'This indicates that the response ended because it reached a stopping point naturally.',
@@ -24,11 +24,7 @@ const ERROR_FINISH_REASON: FinishReason[] = [
   'length',
 ]
 
-export function FinishReasonItem({
-  providerLog,
-}: {
-  providerLog: ProviderLogDto
-}) {
+export function FinishReasonItem({ providerLog }: { providerLog: ProviderLogDto }) {
   const finishReason = providerLog.finishReason as FinishReason
   const color = ERROR_FINISH_REASON.includes(finishReason)
     ? 'destructiveMutedForeground'

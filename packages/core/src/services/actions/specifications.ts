@@ -1,7 +1,7 @@
 import { ActionType } from '../../browser'
 import { CloneAgentActionSpecification } from './cloneAgent'
 import { CreateAgentActionSpecification } from './createAgent'
-import { ActionBackendSpecification } from './shared'
+import type { ActionBackendSpecification } from './shared'
 
 export const ACTION_SPECIFICATIONS = {
   [ActionType.CreateAgent]: CreateAgentActionSpecification,

@@ -1,6 +1,6 @@
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
-import {
+import type {
   DocumentVersion,
   EvaluationType,
   EvaluationV2,
@@ -8,15 +8,12 @@ import {
 } from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import {
-  CollapsibleBox,
-  OnToggleFn,
-} from '@latitude-data/web-ui/molecules/CollapsibleBox'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import { CollapsibleBox, type OnToggleFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import type { ICommitContextType } from '@latitude-data/web-ui/providers'
 import { HistoryLogParams } from './HistoryLogParams'
-import { UseLogHistoryParams } from './HistoryLogParams/useLogHistoryParams'
+import type { UseLogHistoryParams } from './HistoryLogParams/useLogHistoryParams'
 
-export type Props = {
+type Props = {
   document: DocumentVersion
   commit: ICommitContextType['commit']
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>

@@ -1,21 +1,18 @@
-import { ToolCallReference } from '$compiler/compiler/types'
-import {
-  CUSTOM_MESSAGE_ROLE_ATTR,
-  CUSTOM_MESSAGE_TAG,
-} from '$compiler/constants'
+import type { ToolCallReference } from '$compiler/compiler/types'
+import { CUSTOM_MESSAGE_ROLE_ATTR, CUSTOM_MESSAGE_TAG } from '$compiler/constants'
 import errors from '$compiler/error/errors'
-import { MessageTag } from '$compiler/parser/interfaces'
+import type { MessageTag } from '$compiler/parser/interfaces'
 import {
-  AssistantMessage,
-  Message,
-  MessageContent,
+  type AssistantMessage,
+  type Message,
+  type MessageContent,
   MessageRole,
-  SystemMessage,
-  ToolMessage,
-  UserMessage,
+  type SystemMessage,
+  type ToolMessage,
+  type UserMessage,
 } from '$compiler/types'
 
-import { CompileNodeContext } from '../../types'
+import type { CompileNodeContext } from '../../types'
 
 export async function compile(
   props: CompileNodeContext<MessageTag>,

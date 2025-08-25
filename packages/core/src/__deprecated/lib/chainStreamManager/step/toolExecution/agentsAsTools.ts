@@ -1,12 +1,12 @@
-import { ToolCall } from '@latitude-data/compiler'
+import type { ToolCall } from '@latitude-data/compiler'
 import { AGENT_RETURN_TOOL_NAME, LogSources } from '@latitude-data/constants'
 import { DocumentVersionsRepository } from '../../../../../repositories'
 import { runDocumentAtCommitLegacy } from '../../../../../services/__deprecated/commits/runDocumentAtCommit'
 import { BadRequestError, NotFoundError } from '../../../../../lib/errors'
 import { Result } from '../../../../../lib/Result'
-import { PromisedResult } from '../../../../../lib/Transaction'
+import type { PromisedResult } from '../../../../../lib/Transaction'
 import { ToolSource } from '../../resolveTools/types'
-import { ToolResponsesArgs } from './types'
+import type { ToolResponsesArgs } from './types'
 
 export function getAgentsAsToolCallsResults({
   workspace,
@@ -21,9 +21,7 @@ export function getAgentsAsToolCallsResults({
   }
 
   const docsScope = new DocumentVersionsRepository(workspace.id)
-  const promisedAllDocsResult = docsScope.getDocumentsAtCommit(
-    promptSource.commit,
-  )
+  const promisedAllDocsResult = docsScope.getDocumentsAtCommit(promptSource.commit)
 
   return toolCalls.map(async (toolCall) => {
     const allDocsResult = await promisedAllDocsResult
@@ -56,10 +54,7 @@ export function getAgentsAsToolCallsResults({
 
     const resultToolCalls = await result.unwrap().toolCalls
     const [agentToolCalls, otherToolCalls] = resultToolCalls.reduce(
-      (
-        [agentToolCalls, otherToolCalls]: [ToolCall[], ToolCall[]],
-        toolCall,
-      ) => {
+      ([agentToolCalls, otherToolCalls]: [ToolCall[], ToolCall[]], toolCall) => {
         if (toolCall.name === AGENT_RETURN_TOOL_NAME) {
           return [[...agentToolCalls, toolCall], otherToolCalls]
         } else {

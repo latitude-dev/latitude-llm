@@ -1,10 +1,10 @@
 import * as factories from '@latitude-data/core/factories'
 import { Providers } from '@latitude-data/constants'
 import { describe, expect, beforeEach, it, vi } from 'vitest'
-import { Workspace } from '../../../../../../browser'
+import type { Workspace } from '../../../../../../browser'
 import { Result } from '../../../../../../lib/Result'
 import triggerActions from './triggerActions'
-import { LatteToolContext } from '../../types'
+import type { LatteToolContext } from '../../types'
 import { CommitsRepository } from '../../../../../../repositories'
 import { BadRequestError } from '@latitude-data/constants/errors'
 

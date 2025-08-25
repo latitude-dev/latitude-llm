@@ -13,10 +13,7 @@ export const findLastProviderLogFromDocumentLogUuid = async (
   })
 }
 
-export const unsafelyFindProviderLogByUuid = async (
-  providerLogUuid: string,
-  db = database,
-) => {
+export const unsafelyFindProviderLogByUuid = async (providerLogUuid: string, db = database) => {
   const result = await db
     .select()
     .from(providerLogs)

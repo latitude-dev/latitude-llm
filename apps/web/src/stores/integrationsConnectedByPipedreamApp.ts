@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import type { PipedreamIntegrationWithCounts } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
@@ -19,7 +19,7 @@ export default function useConnectedIntegrationsByPipedreamApp({
   withTools?: boolean
   withTriggers?: boolean
 } = {}) {
-  let searchParams: Record<string, string> = {}
+  const searchParams: Record<string, string> = {}
   if (withTools !== undefined) {
     searchParams.withTools = withTools ? 'true' : 'false'
   }
@@ -32,14 +32,8 @@ export default function useConnectedIntegrationsByPipedreamApp({
       searchParams,
     },
   )
-  const { data = EMPTY_ARRAY, isLoading } = useSWR<
-    PipedreamIntegrationWithCounts[]
-  >(
-    [
-      'connectedIntegrationsByPipedreamApp',
-      withTools ?? false,
-      withTriggers ?? false,
-    ],
+  const { data = EMPTY_ARRAY, isLoading } = useSWR<PipedreamIntegrationWithCounts[]>(
+    ['connectedIntegrationsByPipedreamApp', withTools ?? false, withTriggers ?? false],
     fetcher,
     opts,
   )

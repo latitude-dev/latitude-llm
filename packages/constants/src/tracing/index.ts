@@ -58,8 +58,8 @@ export const ATTR_GEN_AI_RESPONSE_MESSAGES = 'gen_ai.response.messages'
 
 export const ATTR_GEN_AI_USAGE_PROMPT_TOKENS = 'gen_ai.usage.prompt_tokens'
 export const ATTR_GEN_AI_USAGE_CACHED_TOKENS = 'gen_ai.usage.cached_tokens'
-export const ATTR_GEN_AI_USAGE_REASONING_TOKENS = 'gen_ai.usage.reasoning_tokens' // prettier-ignore
-export const ATTR_GEN_AI_USAGE_COMPLETION_TOKENS = 'gen_ai.usage.completion_tokens' // prettier-ignore
+export const ATTR_GEN_AI_USAGE_REASONING_TOKENS = 'gen_ai.usage.reasoning_tokens'
+export const ATTR_GEN_AI_USAGE_COMPLETION_TOKENS = 'gen_ai.usage.completion_tokens'
 
 export const ATTR_GEN_AI_PROMPTS = 'gen_ai.prompt' // gen_ai.prompt.{index}.{role/content/...}
 export const ATTR_GEN_AI_COMPLETIONS = 'gen_ai.completion' // gen_ai.completion.{index}.{role/content/...}
@@ -75,7 +75,7 @@ export const ATTR_GEN_AI_MESSAGE_TOOL_CALLS_ARGUMENTS = 'arguments'
 
 export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP = 'stop'
 export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_LENGTH = 'length'
-export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_CONTENT_FILTER = 'content_filter' // prettier-ignore
+export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_CONTENT_FILTER = 'content_filter'
 export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS = 'tool_calls'
 export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_ERROR = 'error'
 export const GEN_AI_RESPONSE_FINISH_REASON_VALUE_OTHER = 'other'
@@ -108,11 +108,15 @@ export const ATTR_LLM_SYSTEM = 'llm.system'
 export const ATTR_LLM_MODEL_NAME = 'llm.model_name'
 
 export const ATTR_LLM_TOKEN_COUNT_PROMPT = 'llm.token_count.prompt'
-export const ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_INPUT = 'llm.token_count.prompt_details.cache_input' // prettier-ignore
-export const ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_READ = 'llm.token_count.prompt_details.cache_read' // prettier-ignore
-export const ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_WRITE = 'llm.token_count.prompt_details.cache_write' // prettier-ignore
-export const ATTR_LLM_TOKEN_COUNT_COMPLETION_DETAILS_REASONING = 'llm.token_count.completion_details.reasoning' // prettier-ignore
-export const ATTR_LLM_TOKEN_COUNT_COMPLETION = 'llm.token_count.completion' // prettier-ignore
+export const ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_INPUT =
+  'llm.token_count.prompt_details.cache_input'
+export const ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_READ =
+  'llm.token_count.prompt_details.cache_read'
+export const ATTR_LLM_TOKEN_COUNT_PROMPT_DETAILS_CACHE_WRITE =
+  'llm.token_count.prompt_details.cache_write'
+export const ATTR_LLM_TOKEN_COUNT_COMPLETION_DETAILS_REASONING =
+  'llm.token_count.completion_details.reasoning'
+export const ATTR_LLM_TOKEN_COUNT_COMPLETION = 'llm.token_count.completion'
 
 export const ATTR_LLM_INVOCATION_PARAMETERS = 'llm.invocation_parameters'
 
@@ -129,8 +133,9 @@ export const LLM_REQUEST_TYPE_VALUE_CHAT = 'chat'
 export const LLM_REQUEST_TYPE_VALUE_EMBEDDING = 'embedding'
 export const LLM_REQUEST_TYPE_VALUE_RERANK = 'rerank'
 
-export const ATTR_GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS = 'gen_ai.usage.cache_creation_input_tokens' // prettier-ignore
-export const ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS = 'gen_ai.usage.cache_read_input_tokens' // prettier-ignore
+export const ATTR_GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS =
+  'gen_ai.usage.cache_creation_input_tokens'
+export const ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS = 'gen_ai.usage.cache_read_input_tokens'
 
 export const ATTR_LLM_RESPONSE_FINISH_REASON = 'llm.response.finish_reason'
 export const ATTR_LLM_RESPONSE_STOP_REASON = 'llm.response.stop_reason'
@@ -274,7 +279,6 @@ export type SpanIngestionData = {
   spans: Otlp.ResourceSpan[]
 }
 
-// prettier-ignore
 export const SPAN_INGESTION_STORAGE_KEY = (
   ingestionId: string, // Note: using single id to avoid dangling folders
 ) => encodeURI(`ingest/traces/${ingestionId}`)
@@ -285,7 +289,6 @@ export type SpanProcessingData = {
   resource: Otlp.Resource
 }
 
-// prettier-ignore
 export const SPAN_PROCESSING_STORAGE_KEY = (
   processingId: string, // Note: using single id to avoid dangling folders
 ) => encodeURI(`process/traces/${processingId}`)

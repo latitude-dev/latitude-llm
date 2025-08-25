@@ -1,6 +1,6 @@
 import { ModifiedDocumentType } from '@latitude-data/core/browser'
-import { IconName } from '../../atoms/Icons'
-import { TextColor } from '../../tokens'
+import type { IconName } from '../../atoms/Icons'
+import type { TextColor } from '../../tokens'
 
 export const MODIFICATION_ICONS: Record<ModifiedDocumentType, IconName> = {
   [ModifiedDocumentType.Created]: 'addSquare',
@@ -21,10 +21,7 @@ export const MODIFICATION_BACKGROUNDS: Record<ModifiedDocumentType, string> = {
   [ModifiedDocumentType.Deleted]: 'bg-destructive/10',
 }
 
-export const MODIFICATION_BACKGROUNDS_HOVER: Record<
-  ModifiedDocumentType,
-  string
-> = {
+export const MODIFICATION_BACKGROUNDS_HOVER: Record<ModifiedDocumentType, string> = {
   [ModifiedDocumentType.Created]: 'hover:bg-success/10',
   [ModifiedDocumentType.Updated]: 'hover:bg-accent-foreground/5',
   [ModifiedDocumentType.UpdatedPath]: 'hover:bg-accent-foreground/5',

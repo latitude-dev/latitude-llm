@@ -1,26 +1,26 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
-  Commit,
-  Dataset,
-  DatasetRow,
-  DocumentLog,
-  DocumentVersion,
+  type Commit,
+  type Dataset,
+  type DatasetRow,
+  type DocumentLog,
+  type DocumentVersion,
   EVALUATION_SCORE_SCALE,
-  EvaluationConfiguration,
-  EvaluationMetric,
-  EvaluationMetricSpecification,
-  EvaluationResultMetadata,
-  EvaluationResultValue,
-  EvaluationSettings,
-  EvaluationSpecification,
-  EvaluationType,
-  EvaluationV2,
-  ProviderApiKey,
-  ProviderLogDto,
-  Workspace,
+  type EvaluationConfiguration,
+  type EvaluationMetric,
+  type EvaluationMetricSpecification,
+  type EvaluationResultMetadata,
+  type EvaluationResultValue,
+  type EvaluationSettings,
+  type EvaluationSpecification,
+  type EvaluationType,
+  type EvaluationV2,
+  type ProviderApiKey,
+  type ProviderLogDto,
+  type Workspace,
 } from '../../browser'
-import { Database } from '../../client'
-import { TypedResult } from '../../lib/Result'
+import type { Database } from '../../client'
+import type { TypedResult } from '../../lib/Result'
 
 export type EvaluationMetricValidateArgs<
   T extends EvaluationType = EvaluationType,
@@ -89,10 +89,7 @@ export type EvaluationMetricBackendSpecification<
     args: EvaluationMetricValidateArgs<T, M>,
     db?: Database,
   ) => Promise<TypedResult<EvaluationConfiguration<T, M>>>
-  run?: (
-    args: EvaluationMetricRunArgs<T, M>,
-    db?: Database,
-  ) => Promise<EvaluationResultValue<T, M>>
+  run?: (args: EvaluationMetricRunArgs<T, M>, db?: Database) => Promise<EvaluationResultValue<T, M>>
   annotate?: (
     args: EvaluationMetricAnnotateArgs<T, M>,
     db?: Database,
@@ -103,9 +100,10 @@ export type EvaluationMetricBackendSpecification<
   ) => Promise<TypedResult<EvaluationSettings>>
 }
 
-export type EvaluationBackendSpecification<
-  T extends EvaluationType = EvaluationType,
-> = Omit<EvaluationSpecification<T>, 'metrics'> & {
+export type EvaluationBackendSpecification<T extends EvaluationType = EvaluationType> = Omit<
+  EvaluationSpecification<T>,
+  'metrics'
+> & {
   validate: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     args: EvaluationMetricValidateArgs<T, M> & { metric: M },
     db?: Database,

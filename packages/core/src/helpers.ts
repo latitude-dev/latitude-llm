@@ -1,16 +1,12 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
   buildResponseMessage,
-  ChainStepResponse,
-  StreamType,
+  type ChainStepResponse,
+  type StreamType,
 } from '@latitude-data/constants'
 import { parseISO } from 'date-fns'
-import { ProviderLogDto } from './browser'
-import {
-  DEFAULT_PAGINATION_SIZE,
-  type CsvData,
-  type DateRange,
-} from './constants'
+import type { ProviderLogDto } from './browser'
+import { DEFAULT_PAGINATION_SIZE, type CsvData, type DateRange } from './constants'
 import type { QueryParams } from './lib/pagination'
 import { env } from '@latitude-data/env'
 
@@ -26,9 +22,7 @@ export function gatewayPath(pathname: string) {
   const port = env.GATEWAY_PORT ? `:${env.GATEWAY_PORT}` : ''
   const hostname = env.GATEWAY_HOSTNAME
 
-  const pathnameWithLeadingSlash = pathname.startsWith('/')
-    ? pathname
-    : `/${pathname}`
+  const pathnameWithLeadingSlash = pathname.startsWith('/') ? pathname : `/${pathname}`
 
   return `${protocol}://${hostname}${port}${pathnameWithLeadingSlash}`
 }
@@ -195,13 +189,8 @@ export function evaluationResultsV2SearchFromQueryParams(params: QueryParams) {
       .map(Number)
   }
 
-  if (
-    params.experimentIds !== undefined &&
-    typeof params.experimentIds === 'string'
-  ) {
-    search.filters!.experimentIds = [
-      ...new Set(params.experimentIds.split(',')),
-    ]
+  if (params.experimentIds !== undefined && typeof params.experimentIds === 'string') {
+    search.filters!.experimentIds = [...new Set(params.experimentIds.split(','))]
       .filter(Boolean)
       .map(Number)
   }
@@ -247,9 +236,7 @@ export function evaluationResultsV2SearchFromQueryParams(params: QueryParams) {
   return search
 }
 
-export function evaluationResultsV2SearchToQueryParams(
-  search: EvaluationResultsV2Search,
-) {
+export function evaluationResultsV2SearchToQueryParams(search: EvaluationResultsV2Search) {
   const params = new URLSearchParams()
 
   if (search.filters?.commitIds !== undefined) {
@@ -258,9 +245,7 @@ export function evaluationResultsV2SearchToQueryParams(
   }
 
   if (search.filters?.experimentIds !== undefined) {
-    const experimentIds = [...new Set(search.filters.experimentIds)].filter(
-      Boolean,
-    )
+    const experimentIds = [...new Set(search.filters.experimentIds)].filter(Boolean)
     params.set('experimentIds', experimentIds.join(','))
   }
 

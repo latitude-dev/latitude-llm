@@ -1,5 +1,5 @@
-import { Job } from 'bullmq'
-import { SPAN_INGESTION_STORAGE_KEY, SpanIngestionData } from '../../../browser'
+import type { Job } from 'bullmq'
+import { SPAN_INGESTION_STORAGE_KEY, type SpanIngestionData } from '../../../browser'
 import { diskFactory } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { ingestSpans } from '../../../services/tracing/spans/ingest'

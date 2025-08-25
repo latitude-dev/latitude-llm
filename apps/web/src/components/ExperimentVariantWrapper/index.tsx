@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { cn } from '@latitude-data/web-ui/utils'
 
 export function ExperimentVariantWrapper({

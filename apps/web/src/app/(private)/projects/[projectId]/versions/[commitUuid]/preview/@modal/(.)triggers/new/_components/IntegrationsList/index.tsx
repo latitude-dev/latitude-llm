@@ -1,8 +1,8 @@
 import {
   SearchableList,
-  Option as SearchableOption,
-  OptionItem as SearchableOptionItem,
-  OptionGroup as SearchableOptionGroup,
+  type Option as SearchableOption,
+  type OptionItem as SearchableOptionItem,
+  type OptionGroup as SearchableOptionGroup,
   type OnSelectValue,
 } from '@latitude-data/web-ui/molecules/SearchableList'
 import usePipedreamApps from '$/stores/pipedreamApps'
@@ -10,14 +10,12 @@ import { useCallback, useMemo, useState } from 'react'
 import useConnectedIntegrationsByPipedreamApp from '$/stores/integrationsConnectedByPipedreamApp'
 import { useDebouncedCallback } from 'use-debounce'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { SelectedIntegration, TriggerIntegrationType } from '../../client'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { SelectedIntegration, TriggerIntegrationType } from '../../client'
 import { buildIntegrationOption } from './utils'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 
-export const ICONS_BY_TRIGGER: Partial<
-  Record<TriggerIntegrationType, IconName>
-> = {
+export const ICONS_BY_TRIGGER: Partial<Record<TriggerIntegrationType, IconName>> = {
   Chat: 'chat',
   [DocumentTriggerType.Scheduled]: 'clock',
   [DocumentTriggerType.Email]: 'mail',
@@ -46,9 +44,7 @@ export function IntegrationsList({
 
   const isLoading = isLoadingPipedreamApps || isLoadingConnectedIntegrations
 
-  const optionGroups = useMemo<
-    SearchableOption<TriggerIntegrationType>[]
-  >(() => {
+  const optionGroups = useMemo<SearchableOption<TriggerIntegrationType>[]>(() => {
     if (isLoadingPipedreamApps && isLoadingConnectedIntegrations) return []
 
     const connectedSlugs = connectedApps.reduce(
@@ -61,25 +57,24 @@ export function IntegrationsList({
       {} as Record<string, string>,
     )
 
-    const availableApps: SearchableOptionItem<TriggerIntegrationType>[] =
-      pipedreamApps
-        .filter((app) => !connectedSlugs[app.name_slug])
-        .map(
-          (app) =>
-            ({
-              type: 'item',
-              value: app.name_slug,
-              keywords: [app.name, app.name_slug],
-              metadata: { type: DocumentTriggerType.Integration },
-              title: app.name,
-              description: `${app.triggerCount} triggers`,
-              imageIcon: {
-                type: 'image',
-                src: app.img_src,
-                alt: app.name,
-              },
-            }) satisfies SearchableOptionItem<TriggerIntegrationType>,
-        )
+    const availableApps: SearchableOptionItem<TriggerIntegrationType>[] = pipedreamApps
+      .filter((app) => !connectedSlugs[app.name_slug])
+      .map(
+        (app) =>
+          ({
+            type: 'item',
+            value: app.name_slug,
+            keywords: [app.name, app.name_slug],
+            metadata: { type: DocumentTriggerType.Integration },
+            title: app.name,
+            description: `${app.triggerCount} triggers`,
+            imageIcon: {
+              type: 'image',
+              src: app.img_src,
+              alt: app.name,
+            },
+          }) satisfies SearchableOptionItem<TriggerIntegrationType>,
+      )
 
     const groups: SearchableOption<TriggerIntegrationType>[] = [
       {
@@ -123,8 +118,7 @@ export function IntegrationsList({
     ]
 
     if (connectedApps.length) {
-      const latitudeIntegrations =
-        groups[0]! as SearchableOptionGroup<TriggerIntegrationType>
+      const latitudeIntegrations = groups[0]! as SearchableOptionGroup<TriggerIntegrationType>
       latitudeIntegrations.items = [
         ...latitudeIntegrations.items,
         ...connectedApps.map(buildIntegrationOption),
@@ -139,12 +133,7 @@ export function IntegrationsList({
     })
 
     return groups
-  }, [
-    pipedreamApps,
-    connectedApps,
-    isLoadingPipedreamApps,
-    isLoadingConnectedIntegrations,
-  ])
+  }, [pipedreamApps, connectedApps, isLoadingPipedreamApps, isLoadingConnectedIntegrations])
   const infiniteScroll = useMemo(
     () => ({
       onReachBottom: loadMore,
@@ -162,7 +151,7 @@ export function IntegrationsList({
       setSelectedValue(slug)
       onSelectIntegration({ slug, type: metadata.type })
     },
-    [onSelectIntegration, setSelectedValue],
+    [onSelectIntegration],
   )
 
   return (

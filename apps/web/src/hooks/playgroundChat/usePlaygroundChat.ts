@@ -1,13 +1,13 @@
 import { tokenizeMessages, tokenizeText } from '$/lib/tokenize'
-import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
+import { type ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 import {
-  Message,
+  type Message,
   MessageRole,
-  ToolCall,
-  ToolMessage,
+  type ToolCall,
+  type ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { LanguageModelUsage } from 'ai'
-import { ParsedEvent } from 'eventsource-parser/stream'
+import type { LanguageModelUsage } from 'ai'
+import type { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProviderEventHandler } from './useProviderEventHandler'
 
@@ -17,10 +17,7 @@ const EMPTY_USAGE = (): LanguageModelUsage => ({
   totalTokens: 0,
 })
 
-type LanguageModelUsageDelta = Pick<
-  LanguageModelUsage,
-  'promptTokens' | 'completionTokens'
->
+type LanguageModelUsageDelta = Pick<LanguageModelUsage, 'promptTokens' | 'completionTokens'>
 
 function buildMessage({ input }: { input: string | ToolMessage[] }) {
   if (typeof input === 'string') {
@@ -75,17 +72,13 @@ export function usePlaygroundChat({
   const incrementUsage = useCallback(
     (incr: { promptTokens?: number; completionTokens?: number }) =>
       setUsage((prev) => {
-        const promptTokens = Math.ceil(
-          prev.promptTokens + (incr.promptTokens ?? 0),
-        )
-        const completionTokens = Math.ceil(
-          prev.completionTokens + (incr.completionTokens ?? 0),
-        )
+        const promptTokens = Math.ceil(prev.promptTokens + (incr.promptTokens ?? 0))
+        const completionTokens = Math.ceil(prev.completionTokens + (incr.completionTokens ?? 0))
         const totalTokens = promptTokens + completionTokens
 
         return { promptTokens, completionTokens, totalTokens }
       }),
-    [setUsage],
+    [],
   )
 
   const incrementUsageDelta = useCallback(
@@ -100,13 +93,13 @@ export function usePlaygroundChat({
         return { promptTokens, completionTokens }
       })
     },
-    [incrementUsage, setUsageDelta],
+    [incrementUsage],
   )
 
   const resetUsageDelta = useCallback(() => {
     usageDeltaRef.current = EMPTY_USAGE()
     setUsageDelta(EMPTY_USAGE())
-  }, [setUsageDelta])
+  }, [])
 
   useEffect(() => {
     usageDeltaRef.current = usageDelta
@@ -116,8 +109,7 @@ export function usePlaygroundChat({
     (usage: LanguageModelUsage) => {
       incrementUsage({
         promptTokens: usage.promptTokens - usageDeltaRef.current.promptTokens,
-        completionTokens:
-          usage.completionTokens - usageDeltaRef.current.completionTokens,
+        completionTokens: usage.completionTokens - usageDeltaRef.current.completionTokens,
       })
       resetUsageDelta()
     },
@@ -151,7 +143,7 @@ export function usePlaygroundChat({
     startedAtRef.current = null
     durationAccRef.current = 0
     setDuration(0)
-  }, [setDuration])
+  }, [])
 
   // Note: cleaning up timer on unmount
   useEffect(() => resetTimer, [resetTimer])
@@ -161,23 +153,17 @@ export function usePlaygroundChat({
     if (!isLoading) stopTimer()
   }, [isLoading, stopTimer])
 
-  const addMessages = useCallback(
-    (m: Message[]) => {
-      setMessages((prev) => [...prev, ...m])
-    },
-    [setMessages],
-  )
+  const addMessages = useCallback((m: Message[]) => {
+    setMessages((prev) => [...prev, ...m])
+  }, [])
 
-  const handleIntegrationEvent = useCallback(
-    (data: ChainEvent['data']) => {
-      if (data.type === ChainEventTypes.IntegrationWakingUp) {
-        setWakingUpIntegration(data.integrationName)
-      } else {
-        setWakingUpIntegration(undefined)
-      }
-    },
-    [setWakingUpIntegration],
-  )
+  const handleIntegrationEvent = useCallback((data: ChainEvent['data']) => {
+    if (data.type === ChainEventTypes.IntegrationWakingUp) {
+      setWakingUpIntegration(data.integrationName)
+    } else {
+      setWakingUpIntegration(undefined)
+    }
+  }, [])
 
   // Use the provider event handler hook
   const { handleProviderEvent } = useProviderEventHandler({
@@ -217,9 +203,7 @@ export function usePlaygroundChat({
 
       if (data.type === ChainEventTypes.ToolResult) {
         incrementUsageDelta({
-          promptTokens: tokenizeText(
-            data.toolName + JSON.stringify(data.result),
-          ),
+          promptTokens: tokenizeText(data.toolName + JSON.stringify(data.result)),
         })
       }
 
@@ -238,27 +222,14 @@ export function usePlaygroundChat({
         throw data.error
       }
     },
-    [
-      setMessages,
-      resetUsageDelta,
-      incrementUsageDelta,
-      syncUsage,
-      setProvider,
-      setModel,
-      setRunningLatitudeTools,
-      startTimer,
-      stopTimer,
-    ],
+    [resetUsageDelta, incrementUsageDelta, syncUsage, startTimer, stopTimer],
   )
 
-  const handleGenericStreamError = useCallback(
-    (parsedEvent: ParsedEvent, data: Error) => {
-      if (parsedEvent.event !== 'error') return
+  const handleGenericStreamError = useCallback((parsedEvent: ParsedEvent, data: Error) => {
+    if (parsedEvent.event !== 'error') return
 
-      setError(data)
-    },
-    [setError],
-  )
+    setError(data)
+  }, [])
 
   const parseEvent = useCallback((value: ParsedEvent) => {
     const parsedEvent = value as ParsedEvent
@@ -269,15 +240,12 @@ export function usePlaygroundChat({
     return { parsedEvent, data }
   }, [])
 
-  const setDocumentLogUuidd = useCallback(
-    (data: ChainEvent['data']) => {
-      if ('uuid' in data) {
-        setDocumentLogUuid(data.uuid)
-        return data.uuid
-      }
-    },
-    [setDocumentLogUuid],
-  )
+  const setDocumentLogUuidd = useCallback((data: ChainEvent['data']) => {
+    if ('uuid' in data) {
+      setDocumentLogUuid(data.uuid)
+      return data.uuid
+    }
+  }, [])
 
   const handleStream = useCallback(
     async (
@@ -322,8 +290,6 @@ export function usePlaygroundChat({
       handleProviderEvent,
       handleGenericStreamError,
       parseEvent,
-      setError,
-      setIsLoading,
     ],
   )
 
@@ -332,9 +298,7 @@ export function usePlaygroundChat({
       if (!addMessagesFn) return
       if (!documentLogUuid) {
         // This should not happen
-        setError(
-          new Error('Tried to chat over a conversation that has not started'),
-        )
+        setError(new Error('Tried to chat over a conversation that has not started'))
         return
       }
 
@@ -349,9 +313,7 @@ export function usePlaygroundChat({
         // Remove unresponded tool calls
         const respondedToolCallIds = newMessages.reduce((acc, message) => {
           if (message.role !== MessageRole.tool) return acc
-          const toolResponseContents = message.content.filter(
-            (c) => c.type === 'tool-result',
-          )
+          const toolResponseContents = message.content.filter((c) => c.type === 'tool-result')
           return [...acc, ...toolResponseContents.map((c) => c.toolCallId)]
         }, [] as string[])
         respondedToolCalls = unrespondedToolCalls.filter((toolCall) => {
@@ -379,13 +341,7 @@ export function usePlaygroundChat({
         setError(error as Error)
       }
     },
-    [
-      addMessagesFn,
-      documentLogUuid,
-      unrespondedToolCalls,
-      handleStream,
-      addMessages,
-    ],
+    [addMessagesFn, documentLogUuid, unrespondedToolCalls, handleStream, addMessages],
   )
 
   const start = useCallback(async () => {
@@ -412,19 +368,7 @@ export function usePlaygroundChat({
     setProvider(undefined)
     setModel(undefined)
     resetTimer()
-  }, [
-    setMessages,
-    setUnrespondedToolCalls,
-    setUsage,
-    resetUsageDelta,
-    setDocumentLogUuid,
-    setError,
-    setIsLoading,
-    setWakingUpIntegration,
-    setProvider,
-    setModel,
-    resetTimer,
-  ])
+  }, [resetUsageDelta, resetTimer])
 
   return useMemo(
     () => ({

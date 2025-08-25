@@ -1,8 +1,4 @@
-import {
-  LATITUDE_DOCS_URL,
-  LATITUDE_EMAIL,
-  LATITUDE_SLACK_URL,
-} from '@latitude-data/core/browser'
+import { LATITUDE_DOCS_URL, LATITUDE_EMAIL, LATITUDE_SLACK_URL } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export default function AuthFooter() {

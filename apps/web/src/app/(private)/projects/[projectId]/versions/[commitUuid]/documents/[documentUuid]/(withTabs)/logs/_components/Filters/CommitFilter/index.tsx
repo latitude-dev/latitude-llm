@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 
 import { useCommits } from '$/stores/commitsStore'
-import { Commit } from '@latitude-data/core/browser'
+import type { Commit } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -37,9 +37,7 @@ function CommitCheckbox({
       onClick={onSelect}
       label={
         <div className='flex flex-row w-full justify-start gap-2'>
-          {commit.version !== undefined && (
-            <BadgeCommit commit={commit} isLive={false} />
-          )}
+          {commit.version !== undefined && <BadgeCommit commit={commit} isLive={false} />}
           <Text.H5 noWrap ellipsis>
             {commit.title}
           </Text.H5>
@@ -117,9 +115,7 @@ export function CommitFilter({
     if (selectedCommitsIds.length > 1) {
       return `${selectedCommitsIds.length} versions`
     }
-    const selectedCommit = commits.find(
-      (commit) => commit.id === selectedCommitsIds[0],
-    )
+    const selectedCommit = commits.find((commit) => commit.id === selectedCommitsIds[0])
     return selectedCommit?.title ?? '1 version'
   }, [isDefault, selectedCommitsIds, commits])
 
@@ -129,17 +125,11 @@ export function CommitFilter({
   })
 
   return (
-    <FilterButton
-      label={filterLabel}
-      color={filterColor.color}
-      darkColor={filterColor.darkColor}
-    >
+    <FilterButton label={filterLabel} color={filterColor.color} darkColor={filterColor.darkColor}>
       <div className='flex flex-row gap-4 w-full flex-nowrap'>
         <Checkbox
           checked={headerState}
-          onClick={() =>
-            onSelectCommits(headerState ? [] : commits.map((c) => c.id))
-          }
+          onClick={() => onSelectCommits(headerState ? [] : commits.map((c) => c.id))}
           label={
             <Text.H5 noWrap ellipsis>
               {selectedCommitsIds.length} selected
@@ -147,12 +137,7 @@ export function CommitFilter({
           }
           disabled={disabled}
         />
-        <Button
-          size='none'
-          variant='link'
-          onClick={reset}
-          disabled={disabled || isDefault}
-        >
+        <Button size='none' variant='link' onClick={reset} disabled={disabled || isDefault}>
           Reset
         </Button>
       </div>

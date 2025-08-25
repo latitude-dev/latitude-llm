@@ -1,27 +1,20 @@
 import { env } from '$telemetry/env'
 import {
-  BaseInstrumentation,
+  type BaseInstrumentation,
   LatitudeInstrumentation,
-  LatitudeInstrumentationOptions,
+  type LatitudeInstrumentationOptions,
   ManualInstrumentation,
-  PromptSpanOptions,
-  StartCompletionSpanOptions,
-  StartHttpSpanOptions,
-  StartSpanOptions,
-  StartToolSpanOptions,
+  type PromptSpanOptions,
+  type StartCompletionSpanOptions,
+  type StartHttpSpanOptions,
+  type StartSpanOptions,
+  type StartToolSpanOptions,
 } from '$telemetry/instrumentations'
 import { DEFAULT_REDACT_SPAN_PROCESSOR } from '$telemetry/sdk/redact'
-import {
-  InstrumentationScope,
-  SCOPE_LATITUDE,
-  TraceContext,
-} from '@latitude-data/constants'
+import { InstrumentationScope, SCOPE_LATITUDE, type TraceContext } from '@latitude-data/constants'
 import * as otel from '@opentelemetry/api'
-import { context, propagation, TextMapPropagator } from '@opentelemetry/api'
-import {
-  ALLOW_ALL_BAGGAGE_KEYS,
-  BaggageSpanProcessor,
-} from '@opentelemetry/baggage-span-processor'
+import { context, propagation, type TextMapPropagator } from '@opentelemetry/api'
+import { ALLOW_ALL_BAGGAGE_KEYS, BaggageSpanProcessor } from '@opentelemetry/baggage-span-processor'
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks'
 import {
   CompositePropagator,
@@ -35,8 +28,8 @@ import {
   BatchSpanProcessor,
   NodeTracerProvider,
   SimpleSpanProcessor,
-  SpanExporter,
-  SpanProcessor,
+  type SpanExporter,
+  type SpanProcessor,
 } from '@opentelemetry/sdk-trace-node'
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
 import { AnthropicInstrumentation } from '@traceloop/instrumentation-anthropic'
@@ -119,9 +112,7 @@ export enum Instrumentation {
 
 export type TelemetryOptions = {
   instrumentations?: {
-    [Instrumentation.Latitude]?:
-      | typeof latitude.Latitude
-      | LatitudeInstrumentationOptions
+    [Instrumentation.Latitude]?: typeof latitude.Latitude | LatitudeInstrumentationOptions
     [Instrumentation.OpenAI]?: typeof openai.OpenAI
     [Instrumentation.Anthropic]?: typeof anthropic
     [Instrumentation.AzureOpenAI]?: typeof azure
@@ -159,9 +150,7 @@ export class LatitudeTelemetry {
       this.options.exporter = DEFAULT_SPAN_EXPORTER(apiKey)
     }
 
-    context.setGlobalContextManager(
-      new AsyncLocalStorageContextManager().enable(),
-    )
+    context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable())
 
     propagation.setGlobalPropagator(
       new CompositePropagator({
@@ -178,9 +167,7 @@ export class LatitudeTelemetry {
     })
 
     // Note: important, must run before the exporter span processors
-    this.provider.addSpanProcessor(
-      new BaggageSpanProcessor(ALLOW_ALL_BAGGAGE_KEYS),
-    )
+    this.provider.addSpanProcessor(new BaggageSpanProcessor(ALLOW_ALL_BAGGAGE_KEYS))
 
     if (this.options.processors) {
       this.options.processors.forEach((processor) => {
@@ -191,13 +178,9 @@ export class LatitudeTelemetry {
     }
 
     if (this.options.disableBatch) {
-      this.provider.addSpanProcessor(
-        new SimpleSpanProcessor(this.options.exporter),
-      )
+      this.provider.addSpanProcessor(new SimpleSpanProcessor(this.options.exporter))
     } else {
-      this.provider.addSpanProcessor(
-        new BatchSpanProcessor(this.options.exporter),
-      )
+      this.provider.addSpanProcessor(new BatchSpanProcessor(this.options.exporter))
     }
 
     this.provider.register()

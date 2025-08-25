@@ -2,13 +2,13 @@ import { env } from '@latitude-data/env'
 import { z } from 'zod'
 import {
   CLOUD_MESSAGES,
-  Commit,
-  DocumentVersion,
-  EvaluationSettings,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationSettings,
   EvaluationType,
   findFirstModelForProvider,
   LlmEvaluationMetric,
-  Workspace,
+  type Workspace,
 } from '../../browser'
 import { cache as getCache } from '../../cache'
 import { database } from '../../client'
@@ -48,9 +48,7 @@ export async function generateEvaluationV2(
   }
 
   if (!env.COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH) {
-    return Result.error(
-      new Error('COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH is not set'),
-    )
+    return Result.error(new Error('COPILOT_PROMPT_EVALUATION_GENERATOR_V2_PATH is not set'))
   }
 
   const copilot = await getCopilot(
@@ -58,9 +56,7 @@ export async function generateEvaluationV2(
     db,
   ).then((r) => r.unwrap())
 
-  let settings:
-    | EvaluationSettings<EvaluationType.Llm, LlmEvaluationMetric.Rating>
-    | undefined
+  let settings: EvaluationSettings<EvaluationType.Llm, LlmEvaluationMetric.Rating> | undefined
 
   const cache = await getCache()
   try {
@@ -72,13 +68,9 @@ export async function generateEvaluationV2(
   }
   if (settings) return Result.ok({ settings })
 
-  const provider = await findDefaultEvaluationProvider(workspace, db).then(
-    (r) => r.unwrap(),
-  )
+  const provider = await findDefaultEvaluationProvider(workspace, db).then((r) => r.unwrap())
   if (!provider) {
-    return Result.error(
-      new UnprocessableEntityError('No provider for evaluations available'),
-    )
+    return Result.error(new UnprocessableEntityError('No provider for evaluations available'))
   }
 
   const model = findFirstModelForProvider({
@@ -86,9 +78,7 @@ export async function generateEvaluationV2(
     defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
   })
   if (!model) {
-    return Result.error(
-      new UnprocessableEntityError('No model for evaluations available'),
-    )
+    return Result.error(new UnprocessableEntityError('No model for evaluations available'))
   }
 
   const result = await runCopilot({

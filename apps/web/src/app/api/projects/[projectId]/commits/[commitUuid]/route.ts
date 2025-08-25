@@ -1,13 +1,10 @@
 'use server'
 
-import { Workspace } from '@latitude-data/core/browser'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '@latitude-data/core/repositories'
+import type { Workspace } from '@latitude-data/core/browser'
+import { CommitsRepository, DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
   authHandler(
@@ -35,9 +32,7 @@ export const GET = errorHandler(
         .getCommitByUuid({ uuid: commitUuid, projectId: Number(projectId) })
         .then((r) => r.unwrap())
       const docsScope = new DocumentVersionsRepository(workspace.id)
-      const documents = await docsScope
-        .getDocumentsAtCommit(commit)
-        .then((r) => r.unwrap())
+      const documents = await docsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
       return NextResponse.json(documents, { status: 200 })
     },

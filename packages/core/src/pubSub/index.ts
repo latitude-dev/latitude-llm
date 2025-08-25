@@ -1,5 +1,5 @@
 import { env } from '@latitude-data/env'
-import { QueueEvents, QueueEventsListener, QueueEventsProducer } from 'bullmq'
+import { QueueEvents, type QueueEventsListener, QueueEventsProducer } from 'bullmq'
 
 const options = {
   connection: {

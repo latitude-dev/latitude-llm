@@ -2,17 +2,12 @@
 
 import { useLatteDebugMode } from '$/hooks/latte'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
-import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { useMemo } from 'react'
 
 export function LatteDebugVersionSelector() {
-  const {
-    enabled,
-    isLoading,
-    data,
-    selectedVersionUuid,
-    setSelectedVersionUuid,
-  } = useLatteDebugMode()
+  const { enabled, isLoading, data, selectedVersionUuid, setSelectedVersionUuid } =
+    useLatteDebugMode()
 
   const options = useMemo<SelectOption<string>[]>(
     () =>

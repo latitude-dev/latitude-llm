@@ -1,6 +1,6 @@
 import { formatCount } from '$/lib/formatCount'
 import {
-  EvaluationType,
+  type EvaluationType,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationCustomSpecification,
   LlmEvaluationMetric,
@@ -8,15 +8,11 @@ import {
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { FormField } from '@latitude-data/web-ui/atoms/FormField'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { useEffect } from 'react'
-import {
-  ChartConfigurationArgs,
-  ConfigurationFormProps,
-  ResultBadgeProps,
-} from '../index'
+import type { ChartConfigurationArgs, ConfigurationFormProps, ResultBadgeProps } from '../index'
 
 const specification = LlmEvaluationCustomSpecification
 export default {
@@ -38,6 +34,7 @@ function ConfigurationSimpleForm({
   disabled,
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
   // FIXME: Do not use useEffect to set local state. Move this to an event handler.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   useEffect(() => {
     if (mode !== 'create') return
     if (!configuration.provider || !configuration.model) return
@@ -81,7 +78,6 @@ ${
 `.trim(),
       }),
     )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, configuration.provider, configuration.model, settings.metric])
 
   return (
@@ -90,7 +86,7 @@ ${
         <FormField
           label='Prompt'
           description='The custom evaluation prompt the LLM will use to judge against'
-          errors={errors?.['prompt']}
+          errors={errors?.prompt}
         >
           <Alert
             variant='default'
@@ -134,7 +130,7 @@ ${
             if (value === undefined) return
             setConfiguration({ ...configuration, minScore: value })
           }}
-          errors={errors?.['minScore']}
+          errors={errors?.minScore}
           defaultAppearance
           className='w-full'
           disabled={disabled}
@@ -149,7 +145,7 @@ ${
             if (value === undefined) return
             setConfiguration({ ...configuration, maxScore: value })
           }}
-          errors={errors?.['maxScore']}
+          errors={errors?.maxScore}
           defaultAppearance
           className='w-full'
           disabled={disabled}
@@ -167,51 +163,43 @@ function ConfigurationAdvancedForm({
   disabled,
 }: ConfigurationFormProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
   return (
-    <>
-      <FormFieldGroup
-        layout='horizontal'
-        description='The minimum and maximum score threshold of the response'
-      >
-        <NumberInput
-          value={configuration.minThreshold ?? undefined}
-          name='minThreshold'
-          label='Minimum threshold'
-          placeholder='No minimum'
-          min={configuration.minScore}
-          max={configuration.maxScore}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minThreshold: value })
-          }
-          errors={errors?.['minThreshold']}
-          defaultAppearance
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-        <NumberInput
-          value={configuration.maxThreshold ?? undefined}
-          name='maxThreshold'
-          label='Maximum threshold'
-          placeholder='No maximum'
-          min={configuration.minScore}
-          max={configuration.maxScore}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxThreshold: value })
-          }
-          errors={errors?.['maxThreshold']}
-          defaultAppearance
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-      </FormFieldGroup>
-    </>
+    <FormFieldGroup
+      layout='horizontal'
+      description='The minimum and maximum score threshold of the response'
+    >
+      <NumberInput
+        value={configuration.minThreshold ?? undefined}
+        name='minThreshold'
+        label='Minimum threshold'
+        placeholder='No minimum'
+        min={configuration.minScore}
+        max={configuration.maxScore}
+        onChange={(value) => setConfiguration({ ...configuration, minThreshold: value })}
+        errors={errors?.minThreshold}
+        defaultAppearance
+        className='w-full'
+        disabled={disabled}
+        required
+      />
+      <NumberInput
+        value={configuration.maxThreshold ?? undefined}
+        name='maxThreshold'
+        label='Maximum threshold'
+        placeholder='No maximum'
+        min={configuration.minScore}
+        max={configuration.maxScore}
+        onChange={(value) => setConfiguration({ ...configuration, maxThreshold: value })}
+        errors={errors?.maxThreshold}
+        defaultAppearance
+        className='w-full'
+        disabled={disabled}
+        required
+      />
+    </FormFieldGroup>
   )
 }
 
-function ResultBadge({
-  result,
-}: ResultBadgeProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
+function ResultBadge({ result }: ResultBadgeProps<EvaluationType.Llm, LlmEvaluationMetric.Custom>) {
   return <>{formatCount(result.score!)}</>
 }
 

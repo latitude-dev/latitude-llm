@@ -1,18 +1,10 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import { Latitude, LogSources } from '$sdk/index'
 import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 const latitudeApiKey = randomUUID()
 
@@ -71,14 +63,9 @@ describe('evaluations', () => {
         evaluationUuid: 'eval-uuid',
       })
 
-      const result = await sdk.evaluations.annotate(
-        'conversation-uuid',
-        5,
-        'eval-uuid',
-        {
-          reason: 'Test reason',
-        },
-      )
+      const result = await sdk.evaluations.annotate('conversation-uuid', 5, 'eval-uuid', {
+        reason: 'Test reason',
+      })
 
       expect(result).toEqual(mockResponse)
       expect(mockAuthHeader).toHaveBeenCalledWith(`Bearer ${latitudeApiKey}`)
@@ -101,15 +88,10 @@ describe('evaluations', () => {
         evaluationUuid: 'eval-uuid',
       })
 
-      const result = await sdk.evaluations.annotate(
-        'conversation-uuid',
-        5,
-        'eval-uuid',
-        {
-          reason: 'Test reason',
-          versionUuid: 'eval-version-uuid',
-        },
-      )
+      const result = await sdk.evaluations.annotate('conversation-uuid', 5, 'eval-uuid', {
+        reason: 'Test reason',
+        versionUuid: 'eval-version-uuid',
+      })
 
       expect(result).toEqual(mockResponse)
       expect(mockAuthHeader).toHaveBeenCalledWith(`Bearer ${latitudeApiKey}`)

@@ -2,18 +2,15 @@ import { useCallback, useMemo, useRef } from 'react'
 
 import { useDatasetUtils } from '$/hooks/useDocumentParameters/datasetUtils'
 import {
-  DocumentLog,
-  DocumentVersion,
+  type DocumentLog,
+  type DocumentVersion,
   INPUT_SOURCE,
-  Inputs,
-  InputSource,
+  type Inputs,
+  type InputSource,
   LogSources,
-  PlaygroundInput,
+  type PlaygroundInput,
 } from '@latitude-data/core/browser'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { detectParamChanges } from './detectParameterChanges'
 import { useMetadataParameters } from './metadataParametersStore'
@@ -26,7 +23,7 @@ import {
   recalculateAllInputs,
   updateInputsState,
 } from './utils'
-import { type ResolvedMetadata } from '$/workers/readMetadata'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
 import { useEvents } from '$/lib/events'
 
 function convertToParams(inputs: Inputs<InputSource>) {
@@ -34,7 +31,7 @@ function convertToParams(inputs: Inputs<InputSource>) {
     Object.entries(inputs).map(([key, input]) => {
       try {
         return [key, JSON.parse(input.value)]
-      } catch (e) {
+      } catch (_e) {
         return [key, input?.value?.toString?.()]
       }
     }),
@@ -49,8 +46,7 @@ export function useDocumentParameters({
   document: DocumentVersion
   commitVersionUuid: string
 }) {
-  const { metadataParameters, setParameters, emptyInputs } =
-    useMetadataParameters()
+  const { metadataParameters, setParameters, emptyInputs } = useMetadataParameters()
   const { project } = useCurrentProject()
   const projectId = project.id
   const commitUuid = commitVersionUuid
@@ -63,7 +59,7 @@ export function useDocumentParameters({
   const inputs = allInputs[key] ?? EMPTY_INPUTS
   const source = inputs.source
   const dsId = document.datasetV2Id
-  let inputsBySource = getInputsBySource({
+  const inputsBySource = getInputsBySource({
     source,
     inputs,
     datasetId: dsId,
@@ -106,11 +102,7 @@ export function useDocumentParameters({
   )
 
   const setInput = useCallback(
-    <S extends InputSource>(
-      currentSource: S,
-      value: PlaygroundInput<S>,
-      param: string,
-    ) => {
+    <S extends InputSource>(currentSource: S, value: PlaygroundInput<S>, param: string) => {
       switch (currentSource) {
         case INPUT_SOURCE.manual: {
           setManualInputs({ ...inputsBySource, [param]: value })
@@ -221,9 +213,7 @@ export function useDocumentParameters({
             },
             datasetV2: {
               datasetId: dsId,
-              fallbackInputs: dsId
-                ? prevInputs?.datasetV2?.[dsId]?.inputs
-                : undefined,
+              fallbackInputs: dsId ? prevInputs?.datasetV2?.[dsId]?.inputs : undefined,
             },
           },
         })
@@ -273,29 +263,25 @@ export function useDocumentParameters({
       setSource,
       setInput,
       manual: {
-        inputs: inputs['manual'].inputs,
+        inputs: inputs.manual.inputs,
         setInput: setManualInput,
         setInputs: setManualInputs,
       },
       datasetV2: {
         isAssigning,
         assignedDatasets: inputs.datasetV2 ?? {},
-        datasetRowId: dsId
-          ? inputs?.datasetV2?.[dsId]?.datasetRowId
-          : undefined,
+        datasetRowId: dsId ? inputs?.datasetV2?.[dsId]?.datasetRowId : undefined,
         inputs: dsId
           ? (inputs.datasetV2?.[dsId]?.inputs ?? emptyInputs.datasetV2)
           : emptyInputs.datasetV2,
-        mappedInputs: dsId
-          ? (inputs.datasetV2?.[dsId]?.mappedInputs ?? {})
-          : {},
+        mappedInputs: dsId ? (inputs.datasetV2?.[dsId]?.mappedInputs ?? {}) : {},
         setDataset,
         copyToManual: copyDatasetToManual,
       },
       history: {
-        logUuid: inputs['history'].logUuid,
-        inputs: inputs['history'].inputs,
-        force: inputs['history'].force,
+        logUuid: inputs.history.logUuid,
+        inputs: inputs.history.inputs,
+        force: inputs.history.force,
         setInput: setHistoryInput,
         setInputs: setHistoryInputs,
         setHistoryLog,

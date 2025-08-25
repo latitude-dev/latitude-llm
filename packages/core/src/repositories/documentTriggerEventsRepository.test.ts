@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { Commit, Project, Providers, User, Workspace } from '../browser'
-import { EmailTriggerEventPayload } from '@latitude-data/constants/documentTriggers'
+import { type Commit, type Project, Providers, type User, type Workspace } from '../browser'
+import type { EmailTriggerEventPayload } from '@latitude-data/constants/documentTriggers'
 import * as factories from '../tests/factories'
 import { DocumentTriggerEventsRepository } from './documentTriggerEventsRepository'
 import { database } from '../client'
@@ -53,19 +53,17 @@ describe('DocumentTriggerEventsRepository', () => {
         triggerUuid: uuidv4(),
       })
 
-      const scheduledEvent =
-        await factories.createScheduledDocumentTriggerEvent({
-          workspaceId: workspace.id,
-          commitId: commit.id,
-          triggerUuid: uuidv4(),
-        })
+      const scheduledEvent = await factories.createScheduledDocumentTriggerEvent({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        triggerUuid: uuidv4(),
+      })
 
-      const integrationEvent =
-        await factories.createIntegrationDocumentTriggerEvent({
-          workspaceId: workspace.id,
-          commitId: commit.id,
-          triggerUuid: uuidv4(),
-        })
+      const integrationEvent = await factories.createIntegrationDocumentTriggerEvent({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        triggerUuid: uuidv4(),
+      })
 
       const result = await repo.getAllTriggerEventsInWorkspace()
       const events = result.unwrap()
@@ -110,9 +108,7 @@ describe('DocumentTriggerEventsRepository', () => {
 
       // Since database timestamps might be the same, check that events with same timestamps
       // are at least ordered consistently by id (newer IDs should come first when timestamps are equal)
-      const sortedByIdDesc = [thirdEvent, secondEvent, firstEvent].sort(
-        (a, b) => b.id - a.id,
-      )
+      const sortedByIdDesc = [thirdEvent, secondEvent, firstEvent].sort((a, b) => b.id - a.id)
       const expectedOrder = sortedByIdDesc.map((e) => e.id)
       const actualOrder = events.map((e) => e.id)
 
@@ -129,13 +125,12 @@ describe('DocumentTriggerEventsRepository', () => {
       })
 
       // Create event in different workspace
-      const { workspace: otherWorkspace, commit: otherCommit } =
-        await factories.createProject({
-          providers: [{ name: 'openai2', type: Providers.OpenAI }],
-          documents: {
-            doc1: factories.helpers.createPrompt({ provider: 'openai2' }),
-          },
-        })
+      const { workspace: otherWorkspace, commit: otherCommit } = await factories.createProject({
+        providers: [{ name: 'openai2', type: Providers.OpenAI }],
+        documents: {
+          doc1: factories.helpers.createPrompt({ provider: 'openai2' }),
+        },
+      })
 
       await factories.createEmailDocumentTriggerEvent({
         workspaceId: otherWorkspace.id,
@@ -215,9 +210,7 @@ describe('DocumentTriggerEventsRepository', () => {
       const events = result.unwrap()
 
       expect(events).toHaveLength(2)
-      expect(events.map((e) => e.id).sort()).toEqual(
-        [event1.id, event2.id].sort(),
-      )
+      expect(events.map((e) => e.id).sort()).toEqual([event1.id, event2.id].sort())
       expect(events.every((e) => e.triggerUuid === trigger1Uuid)).toBe(true)
     })
 
@@ -243,14 +236,10 @@ describe('DocumentTriggerEventsRepository', () => {
       expect(events).toHaveLength(2)
 
       // Verify timestamps are in descending order (newest first)
-      expect(events[0]!.createdAt.getTime()).toBeGreaterThanOrEqual(
-        events[1]!.createdAt.getTime(),
-      )
+      expect(events[0]!.createdAt.getTime()).toBeGreaterThanOrEqual(events[1]!.createdAt.getTime())
 
       // Check that events are ordered consistently (newer IDs first when timestamps are equal)
-      const sortedByIdDesc = [secondEvent, firstEvent].sort(
-        (a, b) => b.id - a.id,
-      )
+      const sortedByIdDesc = [secondEvent, firstEvent].sort((a, b) => b.id - a.id)
       const expectedOrder = sortedByIdDesc.map((e) => e.id)
       const actualOrder = events.map((e) => e.id)
 
@@ -262,13 +251,11 @@ describe('DocumentTriggerEventsRepository', () => {
       const triggerUuid = uuidv4()
 
       // Create event in main commit
-      const eventInMainCommit = await factories.createEmailDocumentTriggerEvent(
-        {
-          workspaceId: workspace.id,
-          commitId: commit.id,
-          triggerUuid,
-        },
-      )
+      const eventInMainCommit = await factories.createEmailDocumentTriggerEvent({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        triggerUuid,
+      })
 
       // Create new draft and add another event for same trigger
       const { commit: draftCommit } = await factories.createDraft({
@@ -307,13 +294,11 @@ describe('DocumentTriggerEventsRepository', () => {
       const triggerUuid = uuidv4()
 
       // Create event in main commit
-      const eventInMainCommit = await factories.createEmailDocumentTriggerEvent(
-        {
-          workspaceId: workspace.id,
-          commitId: commit.id,
-          triggerUuid,
-        },
-      )
+      const eventInMainCommit = await factories.createEmailDocumentTriggerEvent({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        triggerUuid,
+      })
 
       // Create new draft and add another event for same trigger
       const { commit: draftCommit } = await factories.createDraft({
@@ -332,9 +317,7 @@ describe('DocumentTriggerEventsRepository', () => {
       const events = result.unwrap()
 
       expect(events).toHaveLength(2)
-      expect(events.map((e) => e.id).sort()).toEqual(
-        [eventInMainCommit.id, eventInDraft.id].sort(),
-      )
+      expect(events.map((e) => e.id).sort()).toEqual([eventInMainCommit.id, eventInDraft.id].sort())
     })
   })
 
@@ -356,23 +339,21 @@ describe('DocumentTriggerEventsRepository', () => {
         },
       })
 
-      const scheduledEvent =
-        await factories.createScheduledDocumentTriggerEvent({
-          workspaceId: workspace.id,
-          commitId: commit.id,
-          triggerUuid,
-        })
+      const scheduledEvent = await factories.createScheduledDocumentTriggerEvent({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        triggerUuid,
+      })
 
-      const integrationEvent =
-        await factories.createIntegrationDocumentTriggerEvent({
-          workspaceId: workspace.id,
-          commitId: commit.id,
-          triggerUuid,
-          payload: {
-            customField: 'integration data',
-            timestamp: new Date().toISOString(),
-          },
-        })
+      const integrationEvent = await factories.createIntegrationDocumentTriggerEvent({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        triggerUuid,
+        payload: {
+          customField: 'integration data',
+          timestamp: new Date().toISOString(),
+        },
+      })
 
       const allEvents = await repo.getAllTriggerEventsInWorkspace()
       const events = allEvents.unwrap()
@@ -393,16 +374,12 @@ describe('DocumentTriggerEventsRepository', () => {
       const scheduledResult = await repo.getTriggerEventById({
         id: scheduledEvent.id,
       })
-      expect(scheduledResult.unwrap().triggerType).toBe(
-        DocumentTriggerType.Scheduled,
-      )
+      expect(scheduledResult.unwrap().triggerType).toBe(DocumentTriggerType.Scheduled)
 
       const integrationResult = await repo.getTriggerEventById({
         id: integrationEvent.id,
       })
-      expect(integrationResult.unwrap().triggerType).toBe(
-        DocumentTriggerType.Integration,
-      )
+      expect(integrationResult.unwrap().triggerType).toBe(DocumentTriggerType.Integration)
     })
 
     it('handles events with documentLogUuid references', async () => {
@@ -424,13 +401,11 @@ describe('DocumentTriggerEventsRepository', () => {
       // Create events in different commits of the same project
       const triggerUuid = uuidv4()
 
-      const eventInMainCommit = await factories.createEmailDocumentTriggerEvent(
-        {
-          workspaceId: workspace.id,
-          commitId: commit.id,
-          triggerUuid,
-        },
-      )
+      const eventInMainCommit = await factories.createEmailDocumentTriggerEvent({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        triggerUuid,
+      })
 
       const { commit: draftCommit } = await factories.createDraft({
         project,
@@ -451,12 +426,11 @@ describe('DocumentTriggerEventsRepository', () => {
         },
       })
 
-      const eventInProject2 =
-        await factories.createIntegrationDocumentTriggerEvent({
-          workspaceId: workspace.id,
-          commitId: commit2.id,
-          triggerUuid: uuidv4(), // Different trigger
-        })
+      const eventInProject2 = await factories.createIntegrationDocumentTriggerEvent({
+        workspaceId: workspace.id,
+        commitId: commit2.id,
+        triggerUuid: uuidv4(), // Different trigger
+      })
 
       // Get all events in workspace
       const allEventsResult = await repo.getAllTriggerEventsInWorkspace()

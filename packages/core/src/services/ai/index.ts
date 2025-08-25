@@ -3,27 +3,27 @@ import { omit } from 'lodash-es'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
-  CoreMessage,
+  type CoreMessage,
   jsonSchema,
-  ObjectStreamPart,
+  type ObjectStreamPart,
   streamText as originalStreamText,
   Output,
   smoothStream,
-  StreamTextResult,
-  TextStreamPart,
-  Tool,
+  type StreamTextResult,
+  type TextStreamPart,
+  type Tool,
 } from 'ai'
-import { JSONSchema7 } from 'json-schema'
+import type { JSONSchema7 } from 'json-schema'
 
-import { VercelConfig } from '@latitude-data/constants'
-import { ProviderApiKey, StreamType } from '../../browser'
-import { Result, TypedResult } from '../../lib/Result'
-import { TelemetryContext } from '../../telemetry'
+import type { VercelConfig } from '@latitude-data/constants'
+import type { ProviderApiKey, StreamType } from '../../browser'
+import { Result, type TypedResult } from '../../lib/Result'
+import type { TelemetryContext } from '../../telemetry'
 import { buildTools } from './buildTools'
 import { getLanguageModel } from './getLanguageModel'
 import { handleAICallAPIError } from './handleError'
 import { createProvider } from './helpers'
-import { Providers } from './providers/models'
+import type { Providers } from './providers/models'
 import { applyAllRules } from './providers/rules'
 
 const DEFAULT_AI_SDK_PROVIDER = {
@@ -49,15 +49,11 @@ export type AIReturn<T extends StreamType> = Pick<
   object?: T extends 'object' ? PARTIAL_OUTPUT : undefined
 }
 
-export type StreamChunk =
-  | TextStreamPart<Record<string, Tool>>
-  | ObjectStreamPart<unknown>
+export type StreamChunk = TextStreamPart<Record<string, Tool>> | ObjectStreamPart<unknown>
 
 export type ObjectOutput = 'object' | 'array' | 'no-schema' | undefined
 
-export type ToolSchema<
-  T extends Record<string, { type: string; description: string }> = {},
-> = {
+export type ToolSchema<T extends Record<string, { type: string; description: string }> = {}> = {
   description: string
   parameters: {
     type: 'object'
@@ -89,9 +85,7 @@ export async function ai({
   TypedResult<
     AIReturn<StreamType>,
     ChainError<
-      | RunErrorCodes.AIProviderConfigError
-      | RunErrorCodes.AIRunError
-      | RunErrorCodes.Unknown
+      RunErrorCodes.AIProviderConfigError | RunErrorCodes.AIRunError | RunErrorCodes.Unknown
     >
   >
 > {
@@ -156,9 +150,7 @@ export async function ai({
       providerOptions: config.providerOptions,
       experimental_telemetry: { isEnabled: false }, // Note: avoid conflicts with our own telemetry
       experimental_transform: smoothStream(),
-      experimental_output: useSchema
-        ? Output.object({ schema: jsonSchema(schema) })
-        : undefined,
+      experimental_output: useSchema ? Output.object({ schema: jsonSchema(schema) }) : undefined,
     })
 
     return Result.ok({

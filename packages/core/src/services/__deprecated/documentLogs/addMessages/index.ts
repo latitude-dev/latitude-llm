@@ -1,7 +1,7 @@
-import { type Message } from '@latitude-data/compiler'
+import type { Message } from '@latitude-data/compiler'
 
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { LogSources, Workspace } from '../../../../browser'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { LogSources, Workspace } from '../../../../browser'
 import { Result } from '../../../../lib/Result'
 import {
   CommitsRepository,
@@ -41,8 +41,7 @@ async function retrieveData({
   const document = documentResult.value
 
   const providerLogRepo = new ProviderLogsRepository(workspace.id)
-  const providerLogResult =
-    await providerLogRepo.findLastByDocumentLogUuid(documentLogUuid)
+  const providerLogResult = await providerLogRepo.findLastByDocumentLogUuid(documentLogUuid)
   if (providerLogResult.error) return providerLogResult
   const providerLog = providerLogResult.value
 

@@ -1,16 +1,11 @@
-import {
-  ActionBackendParameters,
-  ActionType,
-  User,
-  Workspace,
-} from '../../browser'
+import type { ActionBackendParameters, ActionType, User, Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { getWorkspaceOnboarding } from '../workspaceOnboarding/get'
 import { markWorkspaceOnboardingComplete } from '../workspaceOnboarding/update'
-import { ActionBackendSpecification } from './shared'
+import type { ActionBackendSpecification } from './shared'
 import { ACTION_SPECIFICATIONS } from './specifications'
 
 export async function executeAction<T extends ActionType = ActionType>(
@@ -52,11 +47,7 @@ export async function executeAction<T extends ActionType = ActionType>(
         }
       }
 
-      const executing = await specification.execute(
-        { parameters, user, workspace },
-        db,
-        tx,
-      )
+      const executing = await specification.execute({ parameters, user, workspace }, db, tx)
       if (executing.error) {
         return Result.error(executing.error)
       }

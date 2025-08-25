@@ -5,7 +5,7 @@ import {
   CommandList,
 } from '@latitude-data/web-ui/atoms/Command'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import type { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -56,7 +56,7 @@ export function ModelSelector({
       setSearchQuery(newValue)
       onSearchChange(newValue)
     },
-    [setSearchQuery, onSearchChange],
+    [onSearchChange],
   )
 
   // Enhanced options that include current search as custom option when needed
@@ -67,8 +67,7 @@ export function ModelSelector({
     // add the search term as a custom option
     if (searchQuery.trim() && isCustom) {
       const existingOption = baseOptions.find(
-        (option) =>
-          option.value === searchQuery || option.label === searchQuery,
+        (option) => option.value === searchQuery || option.label === searchQuery,
       )
       if (!existingOption) {
         baseOptions.unshift({
@@ -81,9 +80,7 @@ export function ModelSelector({
 
     // Always ensure the current value is available as an option
     if (inputValue?.trim()) {
-      const existingOption = baseOptions.find(
-        (option) => option.value === inputValue,
-      )
+      const existingOption = baseOptions.find((option) => option.value === inputValue)
       if (!existingOption) {
         baseOptions.unshift({
           value: inputValue,
@@ -132,23 +129,15 @@ export function ModelSelector({
             key={option.label}
             value={option.label}
             onSelect={onSelect(option.label)}
-            className={cn(
-              'cursor-pointer flex items-center gap-2',
-              'w-full justify-between',
-              {
-                '!bg-accent': option.value === inputValue,
-              },
-            )}
+            className={cn('cursor-pointer flex items-center gap-2', 'w-full justify-between', {
+              '!bg-accent': option.value === inputValue,
+            })}
           >
             <Text.H6 isItalic={option.custom}>{option.label}</Text.H6>
             {option.custom && option.value === searchQuery && (
               <span className='flex items-center gap-1'>
                 <Text.H6 color='accentForeground'>use</Text.H6>
-                <Icon
-                  name='arrowRight'
-                  color='accentForeground'
-                  className='flex-shrink-0'
-                />
+                <Icon name='arrowRight' color='accentForeground' className='flex-shrink-0' />
               </span>
             )}
           </CommandItem>

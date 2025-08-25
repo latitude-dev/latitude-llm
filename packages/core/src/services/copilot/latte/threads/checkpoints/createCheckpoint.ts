@@ -1,6 +1,6 @@
-import { DocumentVersion, LatteThreadCheckpoint } from '../../../../../browser'
+import type { DocumentVersion, LatteThreadCheckpoint } from '../../../../../browser'
 import { Result } from '../../../../../lib/Result'
-import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../../../../lib/Transaction'
 import { latteThreadCheckpoints } from '../../../../../schema'
 
 export function createLatteThreadCheckpoints(
@@ -29,9 +29,7 @@ export function createLatteThreadCheckpoints(
       .returning()
 
     if (newCheckpoints.length !== Object.keys(checkpoints).length) {
-      return Result.error(
-        new Error('Failed to create latte thread checkpoints'),
-      )
+      return Result.error(new Error('Failed to create latte thread checkpoints'))
     }
 
     return Result.ok(newCheckpoints)

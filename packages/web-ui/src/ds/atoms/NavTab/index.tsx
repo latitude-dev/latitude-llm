@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Slot } from '@radix-ui/react-slot'
 
 import { cn } from '../../../lib/utils'
@@ -11,12 +11,7 @@ type INavTabItem = {
   asChild?: boolean
 }
 
-function NavTabItem({
-  onClick,
-  label,
-  asChild = false,
-  selected,
-}: INavTabItem) {
+function NavTabItem({ onClick, label, asChild = false, selected }: INavTabItem) {
   const Comp = asChild ? Slot : 'div'
 
   return (
@@ -26,9 +21,7 @@ function NavTabItem({
           'bg-muted': selected,
         })}
       >
-        <Text.H5M color={selected ? 'foreground' : 'foregroundMuted'}>
-          {label}
-        </Text.H5M>
+        <Text.H5M color={selected ? 'foreground' : 'foregroundMuted'}>{label}</Text.H5M>
       </div>
     </Comp>
   )

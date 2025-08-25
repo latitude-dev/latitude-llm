@@ -2,10 +2,10 @@ import { createExperimentAction } from '$/actions/experiments'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { Experiment, ExperimentDto } from '@latitude-data/core/browser'
+import type { Experiment, ExperimentDto } from '@latitude-data/core/browser'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 const EMPTY_ARRAY: [] = []
 
@@ -33,8 +33,7 @@ export function useExperiments(
   )
 
   const countFetcher = useFetcher<number>(
-    ROUTES.api.projects.detail(projectId).documents.detail(documentUuid)
-      .experiments.count,
+    ROUTES.api.projects.detail(projectId).documents.detail(documentUuid).experiments.count,
   )
 
   const {
@@ -53,68 +52,63 @@ export function useExperiments(
     opts,
   )
 
-  const { execute: create, isPending: isCreating } = useLatitudeAction(
-    createExperimentAction,
-    {
-      onSuccess: async ({ data: experiments }: { data: Experiment[] }) => {
-        mutateCount((prev) => (prev ?? 0) + experiments.length, {
-          revalidate: false,
-        })
+  const { execute: create, isPending: isCreating } = useLatitudeAction(createExperimentAction, {
+    onSuccess: async ({ data: experiments }: { data: Experiment[] }) => {
+      mutateCount((prev) => (prev ?? 0) + experiments.length, {
+        revalidate: false,
+      })
 
-        const experimentDtos = experiments.map(
-          (experiment) =>
-            ({
-              ...experiment,
-              results: {
-                passed: 0,
-                failed: 0,
-                errors: 0,
-                totalScore: 0,
-              },
-            }) as ExperimentDto,
+      const experimentDtos = experiments.map(
+        (experiment) =>
+          ({
+            ...experiment,
+            results: {
+              passed: 0,
+              failed: 0,
+              errors: 0,
+              totalScore: 0,
+            },
+          }) as ExperimentDto,
+      )
+
+      if (page === 1) {
+        mutate(
+          (prev) => {
+            const newArray = prev ? [...prev] : []
+            experimentDtos.forEach((experimentDto) => {
+              const prevExperiment = prev?.find((exp) => exp.uuid === experimentDto.uuid)
+
+              if (prevExperiment) {
+                // this might happen due to race conditions with the experimentStatus websocket
+              }
+              newArray.unshift(experimentDto)
+            })
+
+            return newArray
+          },
+          {
+            revalidate: false,
+          },
         )
+      }
 
-        if (page === 1) {
-          mutate(
-            (prev) => {
-              const newArray = prev ? [...prev] : []
-              experimentDtos.forEach((experimentDto) => {
-                const prevExperiment = prev?.find(
-                  (exp) => exp.uuid === experimentDto.uuid,
-                )
+      toast({
+        title: 'Experiments created successfully',
+        description: `Experiments created successfully`,
+      })
 
-                if (prevExperiment) {
-                  // this might happen due to race conditions with the experimentStatus websocket
-                }
-                newArray.unshift(experimentDto)
-              })
-
-              return newArray
-            },
-            {
-              revalidate: false,
-            },
-          )
-        }
-
-        toast({
-          title: 'Experiments created successfully',
-          description: `Experiments created successfully`,
-        })
-
-        opts?.onCreate?.(experimentDtos)
-        return experimentDtos
-      },
-      onError: async (error) => {
-        if (error?.err?.name === 'ZodError') return
-        toast({
-          title: 'Error creating experiment',
-          description: error?.err?.message,
-          variant: 'destructive',
-        })
-      },
+      opts?.onCreate?.(experimentDtos)
+      return experimentDtos
     },
-  )
+    onError: async (error) => {
+      if (error?.err?.name === 'ZodError') return
+      toast({
+        title: 'Error creating experiment',
+        description: error?.err?.message,
+        variant: 'destructive',
+      })
+    },
+  })
 
   return useMemo(
     () => ({

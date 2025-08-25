@@ -11,9 +11,7 @@ export async function findOnboardingDataset(workspaceId: number) {
 
     const dataset = datasets[0]
     if (!dataset) {
-      return Result.error(
-        new NotFoundError('Onboarding dataset not found in the workspace'),
-      )
+      return Result.error(new NotFoundError('Onboarding dataset not found in the workspace'))
     }
 
     return Result.ok(dataset)

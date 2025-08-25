@@ -1,14 +1,14 @@
 import { z } from '@hono/zod-openapi'
 import { ParameterType } from '@latitude-data/constants'
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   Providers,
-  Workspace,
+  type Workspace,
 } from '@latitude-data/core/browser'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
-import { ConversationMetadata } from 'promptl-ai'
+import type { ConversationMetadata } from 'promptl-ai'
 
 export const documentPresenterSchema = z.object({
   versionUuid: z.string(),
@@ -33,10 +33,8 @@ export function documentPresenterWithProviderAndMetadata({
   provider: Providers | undefined
   commit: Commit
 }) {
-  const configParams = (metadata?.config['parameters'] ?? {}) as Parameters
-  const rawParams = metadata?.parameters
-    ? Array.from(metadata.parameters.values())
-    : []
+  const configParams = (metadata?.config.parameters ?? {}) as Parameters
+  const rawParams = metadata?.parameters ? Array.from(metadata.parameters.values()) : []
   const parameters =
     rawParams.length > 0
       ? rawParams.reduce(
@@ -79,7 +77,7 @@ export async function documentPresenter({
 
   const metadata = metadataResult.ok ? metadataResult.unwrap() : undefined
 
-  let provider: Providers | undefined = undefined
+  let provider: Providers | undefined
   if (metadata) {
     const providerName = metadata.config.provider as string
 

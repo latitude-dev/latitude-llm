@@ -1,7 +1,7 @@
 import type { Commit, DocumentVersion } from '../../browser'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { BadRequestError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { updateDocument } from './update'
@@ -25,18 +25,14 @@ export async function renameDocumentPaths(
 
     if (oldPath.endsWith('/') !== newPath.endsWith('/')) {
       return Result.error(
-        new BadRequestError(
-          'Trying to rename a folder as a document or vice versa',
-        ),
+        new BadRequestError('Trying to rename a folder as a document or vice versa'),
       )
     }
 
     const workspace = await findWorkspaceFromCommit(commit, tx)
     const docsScope = new DocumentVersionsRepository(workspace!.id, tx)
 
-    const currentDocs = await docsScope
-      .getDocumentsAtCommit(commit)
-      .then((r) => r.unwrap())
+    const currentDocs = await docsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
     const docsToUpdate = currentDocs.filter((d) =>
       oldPath.endsWith('/') ? d.path.startsWith(oldPath) : d.path === oldPath,

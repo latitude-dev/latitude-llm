@@ -1,27 +1,17 @@
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 
-import { Commit, Workspace } from '../../browser'
+import type { Commit, Workspace } from '../../browser'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import {
-  LatitudeError,
-  NotFoundError,
-  UnprocessableEntityError,
-} from '../../lib/errors'
+import { LatitudeError, NotFoundError, UnprocessableEntityError } from '../../lib/errors'
 import { commits } from '../../schema'
 import { recomputeChanges } from '../documents'
 import { pingProjectUpdate } from '../projects'
 import { handleTriggerMerge } from '../documentTriggers/handleMerge'
-import {
-  DocumentTriggersRepository,
-  EvaluationsV2Repository,
-} from '../../repositories'
+import { DocumentTriggersRepository, EvaluationsV2Repository } from '../../repositories'
 
-export async function mergeCommit(
-  commit: Commit,
-  transaction = new Transaction(),
-) {
+export async function mergeCommit(commit: Commit, transaction = new Transaction()) {
   const mergedAt = new Date()
 
   // Phase 1: requirements validation in a short transaction
@@ -37,11 +27,7 @@ export async function mergeCommit(
         ),
       )
     if (otherCommits.length > 0) {
-      return Result.error(
-        new LatitudeError(
-          'Commit publish the version time conflict, try again',
-        ),
-      )
+      return Result.error(new LatitudeError('Commit publish the version time conflict, try again'))
     }
 
     const workspace = await findWorkspaceFromCommit(commit, tx)
@@ -49,49 +35,35 @@ export async function mergeCommit(
       return Result.error(new NotFoundError('Workspace not found'))
     }
 
-    const recomputedResults = await recomputeChanges(
-      { draft: commit, workspace },
-      transaction,
-    )
+    const recomputedResults = await recomputeChanges({ draft: commit, workspace }, transaction)
     if (recomputedResults.error) return recomputedResults
     const documentChanges = recomputedResults.unwrap().changedDocuments
 
     if (Object.keys(recomputedResults.value.errors).length > 0) {
       return Result.error(
-        new UnprocessableEntityError(
-          'There are errors in the updated documents in this version',
-          {
-            [commit.id]: [
-              'There are errors in the updated documents in this version',
-            ],
-          },
-        ),
+        new UnprocessableEntityError('There are errors in the updated documents in this version', {
+          [commit.id]: ['There are errors in the updated documents in this version'],
+        }),
       )
     }
 
     const evaluationsScope = new EvaluationsV2Repository(workspace.id, tx)
-    const evaluationChangesResult =
-      await evaluationsScope.getChangesInCommit(commit)
+    const evaluationChangesResult = await evaluationsScope.getChangesInCommit(commit)
     if (!Result.isOk(evaluationChangesResult)) return evaluationChangesResult
     const evaluationChanges = evaluationChangesResult.unwrap()
 
     const triggersScope = new DocumentTriggersRepository(workspace.id, tx)
-    const triggerChangesResult =
-      await triggersScope.getTriggerUpdatesInDraft(commit)
+    const triggerChangesResult = await triggersScope.getTriggerUpdatesInDraft(commit)
     if (!Result.isOk(triggerChangesResult)) return triggerChangesResult
     const triggerChanges = triggerChangesResult.unwrap()
 
-    const totalChanges =
-      evaluationChanges.length + triggerChanges.length + documentChanges.length
+    const totalChanges = evaluationChanges.length + triggerChanges.length + documentChanges.length
 
     if (totalChanges === 0) {
       return Result.error(
-        new UnprocessableEntityError(
-          'Cannot publish a version with no changes.',
-          {
-            [commit.id]: ['Cannot publish a version with no changes.'],
-          },
-        ),
+        new UnprocessableEntityError('Cannot publish a version with no changes.', {
+          [commit.id]: ['Cannot publish a version with no changes.'],
+        }),
       )
     }
 
@@ -114,10 +86,7 @@ export async function mergeCommit(
   // Phase 3: finalize merge in a new short transaction
   return transaction.call<Commit>(async (tx) => {
     const lastMergedCommit = await tx.query.commits.findFirst({
-      where: and(
-        isNotNull(commits.version),
-        eq(commits.projectId, commit.projectId),
-      ),
+      where: and(isNotNull(commits.version), eq(commits.projectId, commit.projectId)),
       orderBy: desc(commits.version),
     })
     const version = (lastMergedCommit?.version ?? 0) + 1

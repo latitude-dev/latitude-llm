@@ -1,5 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm'
-import { Dataset, DatasetRow } from '../../browser'
+import type { Dataset, DatasetRow } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { datasetRows } from '../../schema'
@@ -13,12 +13,7 @@ export const deleteManyRows = async (
     const rowIds = rows.map((row) => row.id)
     const deletedRows = await trx
       .delete(datasetRows)
-      .where(
-        and(
-          eq(datasetRows.datasetId, dataset.id),
-          inArray(datasetRows.id, rowIds),
-        ),
-      )
+      .where(and(eq(datasetRows.datasetId, dataset.id), inArray(datasetRows.id, rowIds)))
       .returning()
 
     return Result.ok(deletedRows)

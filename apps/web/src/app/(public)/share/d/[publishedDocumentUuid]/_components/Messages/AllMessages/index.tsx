@@ -1,7 +1,7 @@
 import { ErrorMessage, MessageList } from '$/components/ChatWrapper'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { MessageSkeleton } from '$/components/ChatWrapper'
-import {
+import type {
   Conversation,
   Message as ConversationMessage,
 } from '@latitude-data/constants/legacyCompiler'
@@ -29,14 +29,11 @@ export function AllMessages({
   isLoadingPrompt: boolean
 }) {
   const toolContentMap = useToolContentMap(messages)
-  if (isLoadingPrompt) return <MessageSkeleton role='assistant' />
+  if (isLoadingPrompt) return <MessageSkeleton messageRole='assistant' />
 
   return (
     <>
-      <MessageList
-        messages={messages.slice(0, chainLength - 1)}
-        toolContentMap={toolContentMap}
-      />
+      <MessageList messages={messages.slice(0, chainLength - 1)} toolContentMap={toolContentMap} />
       {error ? (
         <ErrorMessage error={error} />
       ) : (
@@ -52,10 +49,7 @@ export function AllMessages({
         <ErrorMessage error={error} />
       ) : (
         <>
-          <ExpandMessages
-            isExpanded
-            onToggleShowPromptMessages={setPromptVisibility}
-          />
+          <ExpandMessages isExpanded onToggleShowPromptMessages={setPromptVisibility} />
           <MessageList
             messages={messages.slice(chainLength - 1, chainLength) ?? []}
             toolContentMap={toolContentMap}

@@ -1,10 +1,10 @@
 'use client'
-import { useDraggable } from '@latitude-data/web-ui/hooks/useDnD'
-import { ReactNode, RefObject, useEffect, useRef, useState } from 'react'
+import type { useDraggable } from '@latitude-data/web-ui/hooks/useDnD'
+import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, type IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import type { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -76,20 +76,18 @@ function NodeHeaderWrapper({
   const [tmpName, setTmpName] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
   const [nodeRef, isHovered] = useHover()
-  const { error, inputValue, onInputChange, onInputKeyDown } = useNodeValidator(
-    {
-      name,
-      inputRef: inputRef as RefObject<HTMLInputElement>,
-      isEditing,
-      setIsEditing,
-      saveValue: ({ path }) => {
-        setTmpName(path)
-        onSaveValue({ path })
-      },
-      saveAndAddOther: onSaveValueAndTab,
-      leaveWithoutSave: onLeaveWithoutSave,
+  const { error, inputValue, onInputChange, onInputKeyDown } = useNodeValidator({
+    name,
+    inputRef: inputRef as RefObject<HTMLInputElement>,
+    isEditing,
+    setIsEditing,
+    saveValue: ({ path }) => {
+      setTmpName(path)
+      onSaveValue({ path })
     },
-  )
+    saveAndAddOther: onSaveValueAndTab,
+    leaveWithoutSave: onLeaveWithoutSave,
+  })
   // Litle trick to focus the input after the component is mounted
   // We wait some time to focus the input to avoid the focus being stolen
   // by the click event in the menu item that created this node.
@@ -101,23 +99,20 @@ function NodeHeaderWrapper({
     return () => {
       clearTimeout(timeout)
     }
-  }, [inputRef])
+  }, [])
   const showActions = !isEditing && actions && actions.length > 0
-  const { color, selectedBackgroundColor, selectedBackgroundColorHover } =
-    useModifiedColors({ changeType })
+  const { color, selectedBackgroundColor, selectedBackgroundColorHover } = useModifiedColors({
+    changeType,
+  })
   const changeIcon = changeType ? MODIFICATION_ICONS[changeType] : undefined
   const ItemComponent = url ? Link : 'div'
   const itemSelected = selected && !childrenSelected
   return (
     <div
-      tabIndex={0}
       ref={nodeRef as RefObject<HTMLDivElement>}
-      className={cn(
-        'max-w-full group/row flex flex-col my-0.5 cursor-pointer',
-        {
-          [selectedBackgroundColor]: selected,
-        },
-      )}
+      className={cn('max-w-full group/row flex flex-col my-0.5 cursor-pointer', {
+        [selectedBackgroundColor]: selected,
+      })}
     >
       <div
         className={cn('w-full flex flex-row gap-x-2 items-center', {
@@ -129,13 +124,10 @@ function NodeHeaderWrapper({
         <ItemComponent
           href={url ?? '#'}
           onClick={onClick}
-          className={cn(
-            'relative min-w-0 flex-grow flex flex-row items-center py-0.5',
-            {
-              'cursor-pointer': !draggble?.isDragging,
-              'cursor-grab': canDrag && draggble?.isDragging,
-            },
-          )}
+          className={cn('relative min-w-0 flex-grow flex flex-row items-center py-0.5', {
+            'cursor-pointer': !draggble?.isDragging,
+            'cursor-grab': canDrag && draggble?.isDragging,
+          })}
           ref={draggble?.setNodeRef}
           {...(draggble ? draggble.listeners : {})}
           {...(draggble ? draggble.attributes : {})}
@@ -145,10 +137,7 @@ function NodeHeaderWrapper({
               <Icon name='gridVertical' color='foregroundMuted' />
             </div>
           ) : null}
-          <IndentationBar
-            indentation={indentation}
-            hasChildren={open && hasChildren}
-          />
+          <IndentationBar indentation={indentation} hasChildren={open && hasChildren} />
           <div className='flex flex-row items-center gap-x-1 mr-2'>
             {icons.map((icon, index) => (
               <Icon key={index} name={icon} color={color} />
@@ -182,12 +171,7 @@ function NodeHeaderWrapper({
                 />
               </div>
             ) : (
-              <div
-                className={cn(
-                  'flex-grow flex-shrink truncate',
-                  colors.textColors[color],
-                )}
-              >
+              <div className={cn('flex-grow flex-shrink truncate', colors.textColors[color])}>
                 <Text.H5M ellipsis noWrap userSelect={false} color={color}>
                   {name && name !== ' ' ? name : tmpName}
                 </Text.H5M>

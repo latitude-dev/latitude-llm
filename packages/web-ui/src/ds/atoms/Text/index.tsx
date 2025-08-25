@@ -1,13 +1,7 @@
-import {
-  Children,
-  forwardRef,
-  memo,
-  ReactNode,
-  type ForwardRefExoticComponent,
-} from 'react'
+import { Children, forwardRef, memo, type ReactNode, type ForwardRefExoticComponent } from 'react'
 import { Slot } from '@radix-ui/react-slot'
 
-import { ExtendsUnion } from '@latitude-data/core/lib/commonTypes'
+import type { ExtendsUnion } from '@latitude-data/core/lib/commonTypes'
 
 import { CurrentTheme } from '../../../constants'
 import { cn } from '../../../lib/utils'
@@ -16,7 +10,7 @@ import {
   font,
   opacity,
   overflow as overflowOptions,
-  TextAlign,
+  type TextAlign,
   whiteSpace as whiteSpaceOptions,
   wordBreak as wordBreakOptions,
   type FontSize,
@@ -100,8 +94,7 @@ const TextAtom = memo(
     ref,
   ) {
     const isDark = theme === CurrentTheme.Dark
-    const colorClass =
-      colors.textColors[isDark && darkColor ? darkColor : color]
+    const colorClass = colors.textColors[isDark && darkColor ? darkColor : color]
     const sizeClass = font.size[size]
     const weightClass = font.weight[weight]
     const spacingClass = font.spacing[spacing]
@@ -150,147 +143,86 @@ const TextAtom = memo(
 )
 
 namespace Text {
-  export const H1: ForwardRefExoticComponent<Common> = forwardRef<
-    HTMLSpanElement,
-    Common
-  >(function H1(props, ref) {
-    return <TextAtom ref={ref} size='h1' {...props} />
+  export const H1: ForwardRefExoticComponent<Common> = forwardRef<HTMLSpanElement, Common>(
+    function H1(props, ref) {
+      return <TextAtom ref={ref} size='h1' {...props} />
+    },
+  )
+
+  export const H1B = forwardRef<HTMLSpanElement, Common>(function H1(props, ref) {
+    return <TextAtom ref={ref} size='h1' weight='bold' {...props} />
   })
 
-  export const H1B = forwardRef<HTMLSpanElement, Common>(
-    function H1(props, ref) {
-      return <TextAtom ref={ref} size='h1' weight='bold' {...props} />
-    },
-  )
+  export const H2 = forwardRef<HTMLSpanElement, Common>(function H2(props, ref) {
+    return <TextAtom ref={ref} size='h2' {...props} />
+  })
 
-  export const H2 = forwardRef<HTMLSpanElement, Common>(
-    function H2(props, ref) {
-      return <TextAtom ref={ref} size='h2' {...props} />
-    },
-  )
+  export const H2B = forwardRef<HTMLSpanElement, Common>(function H2B(props, ref) {
+    return <TextAtom ref={ref} size='h2' weight='bold' {...props} />
+  })
 
-  export const H2B = forwardRef<HTMLSpanElement, Common>(
-    function H2B(props, ref) {
-      return <TextAtom ref={ref} size='h2' weight='bold' {...props} />
-    },
-  )
+  export const H3 = forwardRef<HTMLSpanElement, Common>(function H3(props, ref) {
+    return <TextAtom ref={ref} size='h3' {...props} />
+  })
 
-  export const H3 = forwardRef<HTMLSpanElement, Common>(
-    function H3(props, ref) {
-      return <TextAtom ref={ref} size='h3' {...props} />
-    },
-  )
+  export const H3M = forwardRef<HTMLSpanElement, Common>(function H3M(props, ref) {
+    return <TextAtom ref={ref} size='h3' weight='medium' {...props} />
+  })
 
-  export const H3M = forwardRef<HTMLSpanElement, Common>(
-    function H3M(props, ref) {
-      return <TextAtom ref={ref} size='h3' weight='medium' {...props} />
-    },
-  )
+  export const H3B = forwardRef<HTMLSpanElement, Common>(function H3B(props, ref) {
+    return <TextAtom ref={ref} size='h3' weight='bold' {...props} />
+  })
 
-  export const H3B = forwardRef<HTMLSpanElement, Common>(
-    function H3B(props, ref) {
-      return <TextAtom ref={ref} size='h3' weight='bold' {...props} />
-    },
-  )
+  export const H4 = forwardRef<HTMLSpanElement, Common>(function H4(props, ref) {
+    return <TextAtom ref={ref} size='h4' {...props} />
+  })
 
-  export const H4 = forwardRef<HTMLSpanElement, Common>(
-    function H4(props, ref) {
-      return <TextAtom ref={ref} size='h4' {...props} />
-    },
-  )
+  export const H4M = forwardRef<HTMLSpanElement, Common>(function H4M(props, ref) {
+    return <TextAtom ref={ref} size='h4' weight='medium' {...props} />
+  })
 
-  export const H4M = forwardRef<HTMLSpanElement, Common>(
-    function H4M(props, ref) {
-      return <TextAtom ref={ref} size='h4' weight='medium' {...props} />
-    },
-  )
+  export const H4B = forwardRef<HTMLSpanElement, Common>(function H4B(props, ref) {
+    return <TextAtom ref={ref} size='h4' weight='semibold' {...props} />
+  })
 
-  export const H4B = forwardRef<HTMLSpanElement, Common>(
-    function H4B(props, ref) {
-      return <TextAtom ref={ref} size='h4' weight='semibold' {...props} />
-    },
-  )
+  export const H5 = forwardRef<HTMLSpanElement, Common>(function H5(props, ref) {
+    return <TextAtom ref={ref} size='h5' {...props} />
+  })
 
-  export const H5 = forwardRef<HTMLSpanElement, Common>(
-    function H5(props, ref) {
-      return <TextAtom ref={ref} size='h5' {...props} />
-    },
-  )
+  export const H5M = forwardRef<HTMLSpanElement, Common>(function H5M(props, ref) {
+    return <TextAtom ref={ref} size='h5' weight='medium' {...props} />
+  })
+  export const H5B = forwardRef<HTMLSpanElement, Common>(function H5B(props, ref) {
+    return <TextAtom ref={ref} size='h5' weight='semibold' {...props} />
+  })
 
-  export const H5M = forwardRef<HTMLSpanElement, Common>(
-    function H5M(props, ref) {
-      return <TextAtom ref={ref} size='h5' weight='medium' {...props} />
-    },
-  )
-  export const H5B = forwardRef<HTMLSpanElement, Common>(
-    function H5B(props, ref) {
-      return <TextAtom ref={ref} size='h5' weight='semibold' {...props} />
-    },
-  )
+  export const H6 = forwardRef<HTMLSpanElement, Common>(function H6(props, ref) {
+    return <TextAtom ref={ref} size='h6' {...props} />
+  })
 
-  export const H6 = forwardRef<HTMLSpanElement, Common>(
-    function H6(props, ref) {
-      return <TextAtom ref={ref} size='h6' {...props} />
-    },
-  )
+  export const H6M = forwardRef<HTMLSpanElement, Common>(function H6M(props, ref) {
+    return <TextAtom ref={ref} size='h6' weight='medium' {...props} />
+  })
+  export const H6B = forwardRef<HTMLSpanElement, Common>(function H6B(props, ref) {
+    return <TextAtom ref={ref} size='h6' weight='semibold' {...props} />
+  })
 
-  export const H6M = forwardRef<HTMLSpanElement, Common>(
-    function H6M(props, ref) {
-      return <TextAtom ref={ref} size='h6' weight='medium' {...props} />
-    },
-  )
-  export const H6B = forwardRef<HTMLSpanElement, Common>(
-    function H6B(props, ref) {
-      return <TextAtom ref={ref} size='h6' weight='semibold' {...props} />
-    },
-  )
-
-  export const H6C = forwardRef<HTMLSpanElement, Common>(
-    function H6C(props, ref) {
-      return (
-        <TextAtom
-          ref={ref}
-          uppercase
-          size='h6'
-          spacing='wide'
-          weight='bold'
-          {...props}
-        />
-      )
-    },
-  )
+  export const H6C = forwardRef<HTMLSpanElement, Common>(function H6C(props, ref) {
+    return <TextAtom ref={ref} uppercase size='h6' spacing='wide' weight='bold' {...props} />
+  })
 
   // H7
-  export const H7 = forwardRef<HTMLSpanElement, Common>(
-    function H7(props, ref) {
-      return (
-        <TextAtom ref={ref} size='h7' spacing='wide' weight='bold' {...props} />
-      )
-    },
-  )
+  export const H7 = forwardRef<HTMLSpanElement, Common>(function H7(props, ref) {
+    return <TextAtom ref={ref} size='h7' spacing='wide' weight='bold' {...props} />
+  })
 
-  export const H7C = forwardRef<HTMLSpanElement, Common>(
-    function H7C(props, ref) {
-      return (
-        <TextAtom
-          ref={ref}
-          uppercase
-          size='h7'
-          spacing='wide'
-          weight='bold'
-          {...props}
-        />
-      )
-    },
-  )
+  export const H7C = forwardRef<HTMLSpanElement, Common>(function H7C(props, ref) {
+    return <TextAtom ref={ref} uppercase size='h7' spacing='wide' weight='bold' {...props} />
+  })
 
-  export const H8 = forwardRef<HTMLSpanElement, Common>(
-    function H8(props, ref) {
-      return (
-        <TextAtom ref={ref} size='h8' spacing='wide' weight='bold' {...props} />
-      )
-    },
-  )
+  export const H8 = forwardRef<HTMLSpanElement, Common>(function H8(props, ref) {
+    return <TextAtom ref={ref} size='h8' spacing='wide' weight='bold' {...props} />
+  })
 
   export type MonoProps = {
     children: ReactNode

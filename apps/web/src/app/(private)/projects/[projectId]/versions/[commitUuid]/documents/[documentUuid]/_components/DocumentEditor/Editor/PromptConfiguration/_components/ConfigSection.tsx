@@ -1,15 +1,9 @@
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, type IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
-export function ConfigSection({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
+export function ConfigSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className='flex flex-col gap-2'>
       <Text.H4B>{title}</Text.H4B>
@@ -35,9 +29,7 @@ export function ConfigElement({
 }) {
   return (
     <div className='flex flex-row gap-2'>
-      <div className='min-w-4 pt-0.5'>
-        {icon && <Icon name={icon} color='foregroundMuted' />}
-      </div>
+      <div className='min-w-4 pt-0.5'>{icon && <Icon name={icon} color='foregroundMuted' />}</div>
       <div className='flex flex-col gap-1 w-full'>
         <div className='flex flex-row items-center gap-2'>
           <div className='flex flex-row gap-2 items-center w-full'>
@@ -59,9 +51,7 @@ export function ConfigElement({
               </Tooltip>
             )}
           </div>
-          {descriptionCanOverflowInput && (
-            <div className='w-fit'>{children}</div>
-          )}
+          {descriptionCanOverflowInput && <div className='w-fit'>{children}</div>}
         </div>
         {summary && <Text.H6 color='foregroundMuted'>{summary}</Text.H6>}
       </div>

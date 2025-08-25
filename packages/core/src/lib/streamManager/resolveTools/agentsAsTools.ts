@@ -1,15 +1,15 @@
 import { resolveRelativePath } from '@latitude-data/constants'
-import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
-import { PromisedResult } from '../../Transaction'
-import { Result, TypedResult } from '../../Result'
-import { ResolvedTools, ToolSource, ToolSourceData } from './types'
-import { DocumentVersion } from '../../../browser'
+import { BadRequestError, type LatitudeError, NotFoundError } from '../../errors'
+import type { PromisedResult } from '../../Transaction'
+import { Result, type TypedResult } from '../../Result'
+import { type ResolvedTools, ToolSource, type ToolSourceData } from './types'
+import type { DocumentVersion } from '../../../browser'
 import { DocumentVersionsRepository } from '../../../repositories'
 import { getAgentToolName } from '../../../services/agents/helpers'
 import { getToolDefinitionFromDocument } from '../../../services/agents/agentsAsTools'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { Tool } from 'ai'
-import { StreamManager } from '..'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { Tool } from 'ai'
+import type { StreamManager } from '..'
 
 function findAgentDocs({
   agentPaths,
@@ -32,14 +32,10 @@ function findAgentDocs({
   )
 
   if (notfoundPaths.length) {
-    return Result.error(
-      new NotFoundError(`Documents not found: '${notfoundPaths.join("', '")}'`),
-    )
+    return Result.error(new NotFoundError(`Documents not found: '${notfoundPaths.join("', '")}'`))
   }
 
-  const notActuallyAgents = agentDocs.filter(
-    (doc) => doc.documentType !== 'agent',
-  )
+  const notActuallyAgents = agentDocs.filter((doc) => doc.documentType !== 'agent')
   if (notActuallyAgents.length) {
     return Result.error(
       new BadRequestError(
@@ -68,9 +64,7 @@ export async function resolveAgentsAsTools({
 
   // Only if the prompt source is a document
   if (!('commit' in promptSource)) {
-    return Result.error(
-      new BadRequestError('Sub agents are not supported in this context'),
-    )
+    return Result.error(new BadRequestError('Sub agents are not supported in this context'))
   }
 
   const docsScope = new DocumentVersionsRepository(workspace.id)
@@ -99,30 +93,28 @@ export async function resolveAgentsAsTools({
   }
 
   const agentDocs = agentDocsResult.unwrap()
-  const resolvedToolsEntries: [
-    string,
-    { definition: Tool; sourceData: ToolSourceData },
-  ][] = await Promise.all(
-    agentDocs.map(async (doc) => {
-      return [
-        getAgentToolName(doc.path),
-        {
-          definition: await getToolDefinitionFromDocument({
-            workspace,
-            commit: promptSource.commit,
-            document: doc,
-            referenceFn,
-            streamManager,
-            context: streamManager.$completion!.context,
-          }),
-          sourceData: {
-            source: ToolSource.AgentAsTool,
-            agentPath: doc.path,
+  const resolvedToolsEntries: [string, { definition: Tool; sourceData: ToolSourceData }][] =
+    await Promise.all(
+      agentDocs.map(async (doc) => {
+        return [
+          getAgentToolName(doc.path),
+          {
+            definition: await getToolDefinitionFromDocument({
+              workspace,
+              commit: promptSource.commit,
+              document: doc,
+              referenceFn,
+              streamManager,
+              context: streamManager.$completion!.context,
+            }),
+            sourceData: {
+              source: ToolSource.AgentAsTool,
+              agentPath: doc.path,
+            },
           },
-        },
-      ]
-    }),
-  )
+        ]
+      }),
+    )
 
   return Result.ok(Object.fromEntries(resolvedToolsEntries))
 }

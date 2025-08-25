@@ -1,13 +1,13 @@
-import { Experiment } from '../../../browser'
+import type { Experiment } from '../../../browser'
 import { LatitudeError } from '../../../lib/errors'
-import { Workspace } from '../../../browser'
+import type { Workspace } from '../../../browser'
 import { documentsQueue } from '../../../jobs/queues'
 import { experiments } from '../../../schema'
 import { eq } from 'drizzle-orm'
 import { getExperimentJobPayload } from './getExperimentJobPayload'
-import Transaction, { PromisedResult } from '../../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'
-import { RunDocumentForExperimentJobData } from '../../../jobs/job-definitions'
+import type { RunDocumentForExperimentJobData } from '../../../jobs/job-definitions'
 
 export async function startExperiment(
   {

@@ -1,8 +1,5 @@
 import { useMemo } from 'react'
-import type {
-  PipedreamComponent,
-  PipedreamComponentType,
-} from '@latitude-data/core/browser'
+import type { PipedreamComponent, PipedreamComponentType } from '@latitude-data/core/browser'
 
 function parseMarkdownLinks(text: string | undefined) {
   if (!text) return ''

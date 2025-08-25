@@ -57,7 +57,7 @@ export const WEEKDAYS: { label: string; value: WeekDay }[] = [
 ]
 
 // Map weekday names to cron day numbers (0-6, where 0 is Sunday)
-export const WEEKDAY_TO_CRON: Record<WeekDay, number> = {
+const WEEKDAY_TO_CRON: Record<WeekDay, number> = {
   sunday: 0,
   monday: 1,
   tuesday: 2,
@@ -134,12 +134,9 @@ export const getScheduleDescription = (config: ScheduleConfig): string => {
     return `Custom schedule: ${config.custom.expression}`
   } else if (config.type === 'specific' && config.specific) {
     const { days, time, interval } = config.specific
-    const dayNames = days
-      .map((day) => day.charAt(0).toUpperCase() + day.slice(1))
-      .join(', ')
+    const dayNames = days.map((day) => day.charAt(0).toUpperCase() + day.slice(1)).join(', ')
 
-    const intervalText =
-      interval > 1 ? `every ${interval} occurrences` : 'every occurrence'
+    const intervalText = interval > 1 ? `every ${interval} occurrences` : 'every occurrence'
 
     return `At ${time} on ${dayNames}, ${intervalText}`
   }

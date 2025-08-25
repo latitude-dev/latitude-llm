@@ -43,8 +43,7 @@ export default {
   }),
   invalidElsePlacementOutsideIf: {
     code: 'invalid-else-placement',
-    message:
-      'Cannot have an {:else} block outside an {#if ...} or {#each ...} block',
+    message: 'Cannot have an {:else} block outside an {#if ...} or {#each ...} block',
   },
   expectedBlockType: {
     code: 'expected-block-type',

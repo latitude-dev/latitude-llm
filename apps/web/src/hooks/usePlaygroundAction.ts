@@ -1,11 +1,8 @@
 'use client'
 
 import { ROUTES } from '$/services/routes'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
-import {
-  AppLocalStorage,
-  useLocalStorage,
-} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import type { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
+import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { omit } from 'lodash-es'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useState } from 'react'
@@ -34,9 +31,7 @@ type playgroundAction<A extends PlaygroundAction = PlaygroundAction> = {
 }
 type PlaygroundActions = { [key: string]: playgroundAction }
 
-export function usePlaygroundAction<
-  A extends PlaygroundAction = PlaygroundAction,
->({
+export function usePlaygroundAction<A extends PlaygroundAction = PlaygroundAction>({
   action: actionType,
   project,
   commit,
@@ -49,9 +44,7 @@ export function usePlaygroundAction<
 }) {
   const navigate = useRouter()
 
-  const base = ROUTES.projects
-    .detail({ id: project.id })
-    .commits.detail({ uuid: commit.uuid })
+  const base = ROUTES.projects.detail({ id: project.id }).commits.detail({ uuid: commit.uuid })
   const route = document
     ? base.documents.detail({ uuid: document.documentUuid }).root
     : base.preview.root
@@ -106,15 +99,7 @@ export function usePlaygroundAction<
     setAction(undefined)
     if (clean) setPlaygroundActions(omit(playgroundActions, actionId))
     navigate.replace(route)
-  }, [
-    action,
-    actionId,
-    setAction,
-    playgroundActions,
-    setPlaygroundActions,
-    navigate,
-    route,
-  ])
+  }, [action, actionId, playgroundActions, setPlaygroundActions, navigate, route])
 
   return {
     playgroundAction: action,
@@ -157,9 +142,7 @@ export function useDeferredPlaygroundAction() {
           documentUuid: document?.documentUuid,
         },
       })
-      const base = ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({ uuid: commit.uuid })
+      const base = ROUTES.projects.detail({ id: project.id }).commits.detail({ uuid: commit.uuid })
       const route = document
         ? base.documents.detail({ uuid: document.documentUuid }).root
         : base.preview.root

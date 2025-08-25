@@ -2,19 +2,16 @@ import {
   type BlockRootNode,
   BlocksEditor,
   BlocksEditorPlaceholder,
-  IncludedPrompt,
+  type IncludedPrompt,
 } from '$/components/BlocksEditor'
 import { useDevMode } from '$/hooks/useDevMode'
-import { updateContentFn } from '$/hooks/useDocumentValueContext'
+import type { updateContentFn } from '$/hooks/useDocumentValueContext'
 import { useEvents } from '$/lib/events'
 import useDocumentVersions from '$/stores/documentVersions'
-import { type DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
-import { Config, scan } from 'promptl-ai'
+import type { ICommitContextType, IProjectContextType } from '@latitude-data/web-ui/providers'
+import { type Config, scan } from 'promptl-ai'
 import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { stringify as stringifyObjectToYaml } from 'yaml'
 import { useIncludabledPrompts } from './useIncludabledPrompts'

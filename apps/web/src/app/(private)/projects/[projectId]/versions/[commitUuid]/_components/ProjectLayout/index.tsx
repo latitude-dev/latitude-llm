@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import type { DocumentVersion } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
@@ -8,10 +8,7 @@ import {
   MIN_SIDEBAR_WIDTH_PX,
   ResizableGroups,
 } from '$/app/_lib/getResizablePanelGroupData'
-import {
-  findCommitCached,
-  findProjectCached,
-} from '$/app/(private)/_data-access'
+import { findCommitCached, findProjectCached } from '$/app/(private)/_data-access'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
@@ -31,6 +28,7 @@ export default async function ProjectLayout({
   document?: DocumentVersion
 }) {
   const session = await getCurrentUserOrRedirect()
+  // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
   let project
   try {
     project = await findProjectCached({
@@ -53,17 +51,14 @@ export default async function ProjectLayout({
   })
   const resizableId = ResizableGroups.DocumentSidebar
   const sidebarWidth =
-    (await getResizablePanelGroupData({ group: resizableId })) ??
-    MIN_SIDEBAR_WIDTH_PX
+    (await getResizablePanelGroupData({ group: resizableId })) ?? MIN_SIDEBAR_WIDTH_PX
 
   return (
     <ProjectSidebarLayout
       resizableId={resizableId}
       sidebarWidth={sidebarWidth}
       minSidebarWidth={MIN_SIDEBAR_WIDTH_PX}
-      sidebar={
-        <Sidebar project={project} commit={commit} currentDocument={document} />
-      }
+      sidebar={<Sidebar project={project} commit={commit} currentDocument={document} />}
     >
       <LastSeenCommitCookie
         projectId={project.id}

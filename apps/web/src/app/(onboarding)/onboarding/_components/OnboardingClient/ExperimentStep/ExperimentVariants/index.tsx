@@ -1,10 +1,10 @@
-import { ChangeEvent, useCallback } from 'react'
+import { type ChangeEvent, useCallback } from 'react'
 import { ExperimentVariantWrapper } from '$/components/ExperimentVariantWrapper'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import type { ExperimentVariant } from '@latitude-data/constants/experiments'
-import { type Variants } from '../index'
+import type { Variants } from '../index'
 import useModelOptions from '$/hooks/useModelOptions'
 import { Providers } from '@latitude-data/constants'
 import { envClient } from '$/envClient'
@@ -74,16 +74,8 @@ export function ExperimentVariants({
 }) {
   return (
     <div className='w-full flex flex-row gap-2'>
-      <VariantItem
-        position='first'
-        variant={firstVariant}
-        setVariants={setVariants}
-      />
-      <VariantItem
-        position='second'
-        variant={secondVariant}
-        setVariants={setVariants}
-      />
+      <VariantItem position='first' variant={firstVariant} setVariants={setVariants} />
+      <VariantItem position='second' variant={secondVariant} setVariants={setVariants} />
     </div>
   )
 }

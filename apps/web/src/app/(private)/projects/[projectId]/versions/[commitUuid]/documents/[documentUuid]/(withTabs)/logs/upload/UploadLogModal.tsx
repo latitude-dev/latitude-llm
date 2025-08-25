@@ -36,8 +36,7 @@ export default function UploadLogModal({
     onSuccess: () => {
       toast({
         title: 'Logs uploaded successfully',
-        description:
-          'Logs will be processed and will shortly appear in the logs table',
+        description: 'Logs will be processed and will shortly appear in the logs table',
       })
 
       navigate.push(returnRoute)
@@ -56,12 +55,7 @@ export default function UploadLogModal({
       footer={
         <>
           <CloseTrigger />
-          <Button
-            disabled={isPending}
-            fancy
-            form='uploadLogsForm'
-            type='submit'
-          >
+          <Button disabled={isPending} fancy form='uploadLogsForm' type='submit'>
             Upload logs
           </Button>
         </>
@@ -109,6 +103,7 @@ export default function UploadLogModal({
                     target='_blank'
                     className='text-sm whitespace-nowrap text-accent-foreground underline'
                     href='https://docs.google.com/spreadsheets/d/1uxmUW2XhcqRB_cK0SBmHzUfa9xMqVzKZ0eT8umO8pr8/edit?usp=sharing'
+                    rel='noopener'
                   >
                     Example csv
                   </a>

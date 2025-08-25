@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import type { DocumentTriggerType } from '@latitude-data/constants'
 import { ScheduleTriggerForm } from '../../../../_components/TriggerForms/ScheduleTriggerForm'
 import {
   DEFAULT_CONFIG,

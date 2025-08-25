@@ -1,6 +1,6 @@
 import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 
-import { User } from '../browser'
+import type { User } from '../browser'
 import { databaseErrorCodes, UnprocessableEntityError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { memberships, users } from '../schema'
@@ -18,10 +18,7 @@ export class UsersRepository extends RepositoryLegacy<typeof tt, User> {
       .from(users)
       .innerJoin(
         memberships,
-        and(
-          eq(memberships.userId, users.id),
-          eq(memberships.workspaceId, this.workspaceId),
-        ),
+        and(eq(memberships.userId, users.id), eq(memberships.workspaceId, this.workspaceId)),
       )
       .as('usersScope')
   }
@@ -42,9 +39,7 @@ export class UsersRepository extends RepositoryLegacy<typeof tt, User> {
           `)
     } catch (error: any) {
       if (error?.code === databaseErrorCodes.lockNotAvailable) {
-        return Result.error(
-          new UnprocessableEntityError('Cannot obtain lock on user'),
-        )
+        return Result.error(new UnprocessableEntityError('Cannot obtain lock on user'))
       }
       return Result.error(error as Error)
     }

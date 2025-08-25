@@ -1,10 +1,10 @@
 import { BadRequestError, LatitudeError } from '@latitude-data/constants/errors'
-import { Commit, DocumentTrigger, Workspace } from '../../browser'
+import type { Commit, DocumentTrigger, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
 import { documentTriggers } from '../../schema'
-import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import type { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { DocumentTriggerType } from '@latitude-data/constants'
 import { deployDocumentTrigger, undeployDocumentTrigger } from './deploy'
 import { DocumentTriggersRepository } from '../../repositories'
 
@@ -17,9 +17,7 @@ import { DocumentTriggersRepository } from '../../repositories'
  * The trigger must exist and be available from the given commit.
  * The commit must not be merged.
  */
-export async function updateDocumentTriggerConfiguration<
-  T extends DocumentTriggerType,
->(
+export async function updateDocumentTriggerConfiguration<T extends DocumentTriggerType>(
   {
     workspace,
     commit,
@@ -50,9 +48,7 @@ export async function updateDocumentTriggerConfiguration<
     const documentTrigger = documentTriggerResult.unwrap()
 
     if (commit.projectId !== documentTrigger.projectId) {
-      return Result.error(
-        new BadRequestError('Cannot update a trigger from a different project'),
-      )
+      return Result.error(new BadRequestError('Cannot update a trigger from a different project'))
     }
 
     return Result.ok({
@@ -113,9 +109,7 @@ export async function updateDocumentTriggerConfiguration<
       .returning()) as DocumentTrigger<T>[]
 
     if (!upsertResult) {
-      return Result.error(
-        new LatitudeError('Failed to update document trigger configuration'),
-      )
+      return Result.error(new LatitudeError('Failed to update document trigger configuration'))
     }
 
     return Result.ok(upsertResult)

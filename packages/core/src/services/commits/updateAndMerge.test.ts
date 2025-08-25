@@ -5,8 +5,7 @@ import { updateAndMergeCommit } from './updateAndMerge'
 
 describe('updateAndMergeCommit', () => {
   it('updates and merges a draft commit', async (ctx) => {
-    const { project, workspace, user, providers } =
-      await ctx.factories.createProject()
+    const { project, workspace, user, providers } = await ctx.factories.createProject()
     const { commit: draft } = await ctx.factories.createDraft({ project, user })
 
     await ctx.factories.createDocumentVersion({
@@ -29,9 +28,7 @@ describe('updateAndMergeCommit', () => {
     expect(mergedCommit.mergedAt).toBeTruthy()
     expect(mergedCommit.version).toBe(1)
 
-    const headCommit = await findHeadCommit({ projectId: project.id }).then(
-      (r) => r.unwrap(),
-    )
+    const headCommit = await findHeadCommit({ projectId: project.id }).then((r) => r.unwrap())
     expect(headCommit.id).toBe(mergedCommit.id)
   })
 
@@ -47,8 +44,7 @@ describe('updateAndMergeCommit', () => {
   })
 
   it('merges without updates if no data is provided', async (ctx) => {
-    const { project, workspace, user, providers } =
-      await ctx.factories.createProject()
+    const { project, workspace, user, providers } = await ctx.factories.createProject()
     const { commit: draft } = await ctx.factories.createDraft({ project, user })
 
     await ctx.factories.createDocumentVersion({

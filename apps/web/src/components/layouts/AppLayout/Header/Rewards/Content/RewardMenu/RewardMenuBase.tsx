@@ -1,13 +1,13 @@
-import { ReactNode, useCallback, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useMemo, useState } from 'react'
 
-import { ClaimedReward, RewardType } from '@latitude-data/core/browser'
+import { type ClaimedReward, RewardType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
-import { ZodType } from 'zod'
+import type { ZodType } from 'zod'
 
 import { Step } from './Step'
 
@@ -41,11 +41,7 @@ type RewardMenuBaseProps = {
   config: RewardConfig
 }
 
-export function RewardMenuBase({
-  claimedRewardData,
-  claimReward,
-  config,
-}: RewardMenuBaseProps) {
+export function RewardMenuBase({ claimedRewardData, claimReward, config }: RewardMenuBaseProps) {
   const { type, referenceSchema, placeholder, steps } = config
 
   const [reference, setReference] = useState(claimedRewardData?.reference ?? '')
@@ -103,15 +99,14 @@ export function RewardMenuBase({
         <Step number={index + 1} key={index}>
           {step.title}
           {step.content}
-          {step.links &&
-            step.links.map((link, idx) => (
-              <Link href={link.href} key={idx}>
-                <Button variant='link' className='p-0'>
-                  <Text.H5 color='accentForeground'>{link.text}</Text.H5>
-                  <Icon color='accentForeground' name='externalLink' />
-                </Button>
-              </Link>
-            ))}
+          {step.links?.map((link, idx) => (
+            <Link href={link.href} key={idx}>
+              <Button variant='link' className='p-0'>
+                <Text.H5 color='accentForeground'>{link.text}</Text.H5>
+                <Icon color='accentForeground' name='externalLink' />
+              </Button>
+            </Link>
+          ))}
           {step.input && (
             <>
               <Input
@@ -121,9 +116,7 @@ export function RewardMenuBase({
                 placeholder={placeholder}
                 className={cn({ 'border-destructive': inputError })}
               />
-              {!!inputError && (
-                <Text.H6 color='destructive'>{inputError}</Text.H6>
-              )}
+              {!!inputError && <Text.H6 color='destructive'>{inputError}</Text.H6>}
             </>
           )}
         </Step>
@@ -131,8 +124,7 @@ export function RewardMenuBase({
       <div className='flex w-full justify-end'>
         <Button fancy disabled={buttonDisabled} onClick={claimFn}>
           {buttonDisabled
-            ? (config.buttonConfig?.alreadyClamedLabel ??
-              'Reward already claimed')
+            ? (config.buttonConfig?.alreadyClamedLabel ?? 'Reward already claimed')
             : (config.buttonConfig?.claimLabel ?? 'Claim reward')}
         </Button>
       </div>

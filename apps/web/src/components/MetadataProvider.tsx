@@ -2,7 +2,8 @@
 
 import { useMetadataStore } from '$/hooks/useMetadata'
 import { trigger } from '$/lib/events'
-import React, { useEffect } from 'react'
+import type React from 'react'
+import { useEffect } from 'react'
 
 let workerPath: string | null = null
 

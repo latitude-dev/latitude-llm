@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 
 import { applyProviderRules } from '.'
 import { Providers } from '../models'
-import { AppliedRules, ProviderRules } from './types'
+import { type AppliedRules, ProviderRules } from './types'
 
 const providerType = Providers.Google
 

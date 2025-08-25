@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { useNavigate } from '$/hooks/useNavigate'
 import { BackofficeRoutes, ROUTES } from '$/services/routes'
@@ -45,11 +45,7 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
           }}
         />
         <Link href={ROUTES.dashboard.root}>
-          <Button
-            variant='link'
-            size='none'
-            iconProps={{ name: 'arrowRight', placement: 'right' }}
-          >
+          <Button variant='link' size='none' iconProps={{ name: 'arrowRight', placement: 'right' }}>
             Go back
           </Button>
         </Link>

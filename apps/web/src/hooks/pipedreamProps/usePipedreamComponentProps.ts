@@ -1,10 +1,6 @@
 import { reloadPipedreamComponentPropsAction } from '$/actions/integrations/pipedream/reloadComponentProps'
-import { IntegrationDto, PipedreamComponent } from '@latitude-data/core/browser'
-import {
-  ConfigurableProp,
-  ConfigurableProps,
-  ConfiguredProps,
-} from '@pipedream/sdk/browser'
+import type { IntegrationDto, PipedreamComponent } from '@latitude-data/core/browser'
+import type { ConfigurableProp, ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 import { useCallback, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { useServerAction } from 'zsa-react'
@@ -29,48 +25,35 @@ export function usePipedreamComponentProps({
 }) {
   const [props, setProps] = useState<ConfigurableProps>(
     // some props are configured in the backend, or not configured at all
-    component.configurable_props.filter(
-      (p) => !IGNORED_PROP_TYPES.includes(p.type),
-    ),
+    component.configurable_props.filter((p) => !IGNORED_PROP_TYPES.includes(p.type)),
   )
 
-  const { execute, isPending } = useServerAction(
-    reloadPipedreamComponentPropsAction,
-    {
-      onSuccess: ({ data }) => {
-        setProps(
-          // some props are configured in the backend, or not configured at all
-          data.dynamicProps.configurableProps.filter(
-            (p) => !IGNORED_PROP_TYPES.includes(p.type),
-          ),
-        )
-      },
+  const { execute, isPending } = useServerAction(reloadPipedreamComponentPropsAction, {
+    onSuccess: ({ data }) => {
+      setProps(
+        // some props are configured in the backend, or not configured at all
+        data.dynamicProps.configurableProps.filter((p) => !IGNORED_PROP_TYPES.includes(p.type)),
+      )
     },
-  )
+  })
   const debouncedExecute = useDebouncedCallback(execute, 500, {
     leading: false,
     trailing: true,
   })
 
-  const [values, setValues] = useState<ConfiguredProps<ConfigurableProps>>(
-    () => {
-      // If initial values are provided, check if some defined props have the reloadProps attribute and run an initial reload
-      const reloadProps = props.filter((p) => p.reloadProps)
-      if (
-        Object.keys(defaultValues).some((key) =>
-          reloadProps.some((p) => p.name === key),
-        )
-      ) {
-        debouncedExecute({
-          integrationName: integration.name,
-          componentId: component.key,
-          configuredProps: defaultValues,
-        })
-      }
+  const [values, setValues] = useState<ConfiguredProps<ConfigurableProps>>(() => {
+    // If initial values are provided, check if some defined props have the reloadProps attribute and run an initial reload
+    const reloadProps = props.filter((p) => p.reloadProps)
+    if (Object.keys(defaultValues).some((key) => reloadProps.some((p) => p.name === key))) {
+      debouncedExecute({
+        integrationName: integration.name,
+        componentId: component.key,
+        configuredProps: defaultValues,
+      })
+    }
 
-      return defaultValues
-    },
-  )
+    return defaultValues
+  })
 
   const setValue = useCallback(
     (propName: string, value: any) => {

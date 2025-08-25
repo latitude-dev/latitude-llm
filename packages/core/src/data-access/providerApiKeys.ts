@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { ProviderApiKey } from '../browser'
+import type { ProviderApiKey } from '../browser'
 import { database } from '../client'
 import { providerApiKeys } from '../schema'
 

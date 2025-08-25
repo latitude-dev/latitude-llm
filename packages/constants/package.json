@@ -7,7 +7,6 @@
   "description": "Common constants without any dependencies",
   "type": "module",
   "scripts": {
-    "lint": "eslint src",
     "tc": "tsc --noEmit"
   },
   "exports": {
@@ -27,7 +26,6 @@
     "./documentTriggers": "./src/documentTriggers/schema.ts"
   },
   "devDependencies": {
-    "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@types/json-schema": "^7.0.15"
   },

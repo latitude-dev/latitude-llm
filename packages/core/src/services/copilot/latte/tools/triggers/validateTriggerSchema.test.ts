@@ -1,7 +1,7 @@
 import * as factories from '@latitude-data/core/factories'
 import { Providers, IntegrationType } from '@latitude-data/constants'
 import { describe, expect, beforeEach, it, vi } from 'vitest'
-import {
+import type {
   Workspace,
   Commit,
   DocumentVersion,
@@ -9,16 +9,12 @@ import {
 } from '../../../../../browser'
 import { Result } from '../../../../../lib/Result'
 import { validateTriggerSchema } from './validateTriggerSchema'
-import { LatteToolContext } from '../types'
+import type { LatteToolContext } from '../types'
 import { IntegrationsRepository } from '../../../../../repositories'
-import {
-  BadRequestError,
-  NotFoundError,
-  UnauthorizedError,
-} from '@latitude-data/constants/errors'
+import { BadRequestError, NotFoundError, UnauthorizedError } from '@latitude-data/constants/errors'
 import * as pipedreamAppsModule from '../../../../integrations/pipedream/apps'
 import * as configValidatorModule from './configValidator'
-import { BackendClient, createBackendClient } from '@pipedream/sdk'
+import { type BackendClient, createBackendClient } from '@pipedream/sdk'
 
 // Mock the modules
 vi.mock('../../../../integrations/pipedream/apps', () => ({
@@ -45,13 +41,9 @@ describe('validateTriggerSchema', () => {
     configureComponent: vi.fn(),
   }
 
-  const mockGetPipedreamEnvironment = vi.mocked(
-    pipedreamAppsModule.getPipedreamEnvironment,
-  )
+  const mockGetPipedreamEnvironment = vi.mocked(pipedreamAppsModule.getPipedreamEnvironment)
 
-  const mockValidateLattesChoices = vi.mocked(
-    configValidatorModule.validateLattesChoices,
-  )
+  const mockValidateLattesChoices = vi.mocked(configValidatorModule.validateLattesChoices)
   const mockCreateBackendClient = vi.mocked(createBackendClient)
 
   beforeEach(async () => {
@@ -113,9 +105,7 @@ describe('validateTriggerSchema', () => {
       }),
     )
 
-    mockCreateBackendClient.mockReturnValue(
-      mockPipedreamClient as BackendClient,
-    )
+    mockCreateBackendClient.mockReturnValue(mockPipedreamClient as BackendClient)
 
     mockValidateLattesChoices.mockResolvedValue(Result.ok(true))
   })
@@ -137,9 +127,7 @@ describe('validateTriggerSchema', () => {
       }
 
       // Mock successful integration retrieval
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.ok(integration),
-      )
+      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(Result.ok(integration))
 
       // Act
       const result = await validateTriggerSchema(params, context)
@@ -169,9 +157,7 @@ describe('validateTriggerSchema', () => {
       }
 
       // Mock successful integration retrieval
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.ok(integration),
-      )
+      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(Result.ok(integration))
 
       // Act
       const result = await validateTriggerSchema(params, context)
@@ -201,9 +187,7 @@ describe('validateTriggerSchema', () => {
       // Assert
       expect(Result.isOk(result)).toBe(false)
       expect(result.error).toBeInstanceOf(NotFoundError)
-      expect(result.error?.message).toContain(
-        'Document with UUID non-existent-uuid not found',
-      )
+      expect(result.error?.message).toContain('Document with UUID non-existent-uuid not found')
     })
 
     it('should return error when trying to create trigger on draft commit', async () => {
@@ -225,9 +209,7 @@ describe('validateTriggerSchema', () => {
       // Assert
       expect(Result.isOk(result)).toBe(false)
       expect(result.error).toBeInstanceOf(BadRequestError)
-      expect(result.error?.message).toContain(
-        'Cannot create triggers on a draft commit',
-      )
+      expect(result.error?.message).toContain('Cannot create triggers on a draft commit')
     })
   })
 
@@ -245,12 +227,8 @@ describe('validateTriggerSchema', () => {
         },
       }
 
-      const environmentError = new UnauthorizedError(
-        'Pipedream environment not configured',
-      )
-      mockGetPipedreamEnvironment.mockReturnValue(
-        Result.error(environmentError),
-      )
+      const environmentError = new UnauthorizedError('Pipedream environment not configured')
+      mockGetPipedreamEnvironment.mockReturnValue(Result.error(environmentError))
 
       // Act
       const result = await validateTriggerSchema(params, context)
@@ -307,9 +285,7 @@ describe('validateTriggerSchema', () => {
       const validationError = new Error('Invalid configuration choices')
       mockValidateLattesChoices.mockResolvedValue(Result.error(validationError))
 
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.ok(integration),
-      )
+      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(Result.ok(integration))
 
       // Act
       const result = await validateTriggerSchema(params, context)
@@ -334,9 +310,7 @@ describe('validateTriggerSchema', () => {
         },
       }
 
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.ok(integration),
-      )
+      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(Result.ok(integration))
 
       // Act
       const result = await validateTriggerSchema(params, context)
@@ -359,9 +333,7 @@ describe('validateTriggerSchema', () => {
         },
       }
 
-      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(
-        Result.ok(integration),
-      )
+      vi.spyOn(IntegrationsRepository.prototype, 'find').mockResolvedValue(Result.ok(integration))
 
       // Act
       await validateTriggerSchema(params, context)

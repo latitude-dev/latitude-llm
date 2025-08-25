@@ -3,9 +3,10 @@
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import React, { lazy, useEffect, useState } from 'react'
-import { BlockRootNode } from './Editor/state/promptlToLexical/types'
-import { BlocksEditorProps, IncludedPrompt } from './types'
+import type React from 'react'
+import { lazy, useEffect, useState } from 'react'
+import type { BlockRootNode } from './Editor/state/promptlToLexical/types'
+import type { BlocksEditorProps, IncludedPrompt } from './types'
 
 const BlocksEditor = lazy(() =>
   import('./Editor/index').then(

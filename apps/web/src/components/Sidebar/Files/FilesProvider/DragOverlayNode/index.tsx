@@ -1,11 +1,7 @@
 import { createPortal } from 'react-dom'
-import {
-  type Active,
-  DragOverlay,
-  useDndContext,
-} from '@latitude-data/web-ui/hooks/useDnD'
+import { type Active, DragOverlay, useDndContext } from '@latitude-data/web-ui/hooks/useDnD'
 import { cn } from '@latitude-data/web-ui/utils'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, type IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export type DraggableAndDroppableData = {
@@ -20,9 +16,7 @@ function DraggableNodeVisual({ active }: { active: Active | null }) {
 
   const currentData = active.data.current
   const currentRect = active.rect.current ? active.rect.current : null
-  const data = currentData
-    ? (currentData as DraggableAndDroppableData)
-    : undefined
+  const data = currentData ? (currentData as DraggableAndDroppableData) : undefined
   const iconName: IconName = data?.isFile ? 'file' : 'folderClose'
   if (!data || !currentRect) return null
 

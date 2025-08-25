@@ -1,4 +1,4 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 import { uvxCommand } from '../utils'
 
 export default {
@@ -21,6 +21,5 @@ export default {
       required: true,
     },
   },
-  envSource:
-    'https://www.tinybird.co/docs/get-started/administration/auth-tokens#create-a-token',
+  envSource: 'https://www.tinybird.co/docs/get-started/administration/auth-tokens#create-a-token',
 } satisfies HostedIntegrationConfig

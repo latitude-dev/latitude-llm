@@ -7,12 +7,9 @@ import type {
   PipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/browser'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import useDocumentTriggers from '$/stores/documentTriggers'
-import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
+import type { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 import { DocumentTriggerType } from '@latitude-data/constants'
 
 export function useCreateDocumentTrigger({
@@ -29,9 +26,7 @@ export function useCreateDocumentTrigger({
   document?: DocumentVersion
 }) {
   const { toast } = useToast()
-  const [configuredProps, setConfiguredProps] = useState<
-    ConfiguredProps<ConfigurableProps>
-  >({})
+  const [configuredProps, setConfiguredProps] = useState<ConfiguredProps<ConfigurableProps>>({})
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
 
@@ -81,6 +76,6 @@ export function useCreateDocumentTrigger({
       onCreateTrigger,
       isCreating,
     }),
-    [setConfiguredProps, onCreateTrigger, isCreating, configuredProps],
+    [onCreateTrigger, isCreating, configuredProps],
   )
 }

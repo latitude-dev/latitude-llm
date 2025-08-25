@@ -1,6 +1,6 @@
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { useMemo } from 'react'
 import { TriggersBlankSlate } from './BlankSlate'
 import { IntegrationTriggerList } from './TriggerList'
@@ -14,9 +14,7 @@ export function IntegrationTriggerSettings({
   document: DocumentVersion
   projectId: number
   commitUuid: string
-  openTriggerModal: (
-    trigger?: DocumentTrigger<DocumentTriggerType.Integration>,
-  ) => void
+  openTriggerModal: (trigger?: DocumentTrigger<DocumentTriggerType.Integration>) => void
 }) {
   const { data: documentTriggers, isLoading } = useDocumentTriggers({
     projectId,
@@ -37,10 +35,7 @@ export function IntegrationTriggerSettings({
       {!integrationTriggers.length || isLoading ? (
         <TriggersBlankSlate openTriggerModal={openTriggerModal} />
       ) : (
-        <IntegrationTriggerList
-          triggers={integrationTriggers}
-          onOpenTrigger={openTriggerModal}
-        />
+        <IntegrationTriggerList triggers={integrationTriggers} onOpenTrigger={openTriggerModal} />
       )}
     </div>
   )

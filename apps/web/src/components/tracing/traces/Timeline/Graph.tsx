@@ -1,9 +1,9 @@
 import { formatDuration } from '$/app/_lib/formatUtils'
 import {
-  AssembledSpan,
-  AssembledTrace,
+  type AssembledSpan,
+  type AssembledTrace,
   SpanStatus,
-  SpanType,
+  type SpanType,
 } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { colors } from '@latitude-data/web-ui/tokens'
@@ -107,8 +107,7 @@ const TimelineGraphItem = memo(
           className={cn(
             'absolute h-5 rounded-md cursor-pointer border top-1 hover:opacity-80',
             colorScheme.background,
-            colorScheme.border +
-              (isSelected || isCollapsed ? ' border-2' : '/10'),
+            colorScheme.border + (isSelected || isCollapsed ? ' border-2' : '/10'),
           )}
           style={barStyle}
           onClick={() => {
@@ -116,15 +115,10 @@ const TimelineGraphItem = memo(
             else selectSpan(span)
           }}
         />
-        <div
-          className='absolute flex items-center top-1 h-5'
-          style={labelStyle}
-        >
+        <div className='absolute flex items-center top-1 h-5' style={labelStyle}>
           <Text.H6
             color={
-              isSelected && labelStyle.isVisuallyInside
-                ? 'accentForeground'
-                : 'foregroundMuted'
+              isSelected && labelStyle.isVisuallyInside ? 'accentForeground' : 'foregroundMuted'
             }
             userSelect={false}
             noWrap={true}
@@ -177,10 +171,7 @@ export function TimelineGraph({
   return (
     <div className='w-full h-full flex flex-col pt-2'>
       <div className='w-full h-full overflow-x-auto'>
-        <div
-          className='flex flex-col h-full'
-          style={{ minWidth: `${minWidth}px` }}
-        >
+        <div className='flex flex-col h-full' style={{ minWidth: `${minWidth}px` }}>
           <div className='flex-1'>
             <div className='relative w-full'>
               {spans.map((span) => (

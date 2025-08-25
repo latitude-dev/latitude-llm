@@ -1,4 +1,4 @@
-import { Fragment } from '$compiler/parser/interfaces'
+import type { Fragment } from '$compiler/parser/interfaces'
 import { locate } from 'locate-character'
 
 export interface Position {
@@ -50,9 +50,7 @@ function getCodeFrame(
       const lineNum = String(i + frameStart + 1).padStart(digits, ' ')
       if (isErrorLine) {
         const indicator =
-          ' '.repeat(
-            digits + 2 + tabsToSpaces(str.slice(0, startColumn)).length,
-          ) +
+          ' '.repeat(digits + 2 + tabsToSpaces(str.slice(0, startColumn)).length) +
           '^' +
           '~'.repeat(endColumn ? Math.max(0, endColumn - startColumn - 1) : 0)
         return `${lineNum}: ${tabsToSpaces(str)}\n\n${indicator}`
@@ -77,12 +75,7 @@ export function error(message: string, props: CompileErrorProps): never {
   error.start = start
   error.end = end
   error.pos = props.start
-  error.frame = getCodeFrame(
-    props.source,
-    (start?.line ?? 1) - 1,
-    start?.column ?? 0,
-    end?.column,
-  )
+  error.frame = getCodeFrame(props.source, (start?.line ?? 1) - 1, start?.column ?? 0, end?.column)
   error.fragment = props.fragment
   throw error
 }

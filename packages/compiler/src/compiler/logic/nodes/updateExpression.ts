@@ -1,11 +1,5 @@
-import {
-  resolveLogicNode,
-  updateScopeContextForNode,
-} from '$compiler/compiler/logic'
-import type {
-  ResolveNodeProps,
-  UpdateScopeContextProps,
-} from '$compiler/compiler/logic/types'
+import { resolveLogicNode, updateScopeContextForNode } from '$compiler/compiler/logic'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '$compiler/compiler/logic/types'
 import errors from '$compiler/error/errors'
 import type { AssignmentExpression, UpdateExpression } from 'estree'
 
@@ -75,10 +69,7 @@ export async function resolve({
   return node.prefix ? updatedValue : originalValue
 }
 
-export function updateScopeContext({
-  node,
-  ...props
-}: UpdateScopeContextProps<UpdateExpression>) {
+export function updateScopeContext({ node, ...props }: UpdateScopeContextProps<UpdateExpression>) {
   const updateOperator = node.operator
   if (!['++', '--'].includes(updateOperator)) {
     props.raiseError(errors.unsupportedOperator(updateOperator), node)

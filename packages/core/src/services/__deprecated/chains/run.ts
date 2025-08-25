@@ -1,18 +1,14 @@
-import {
-  Conversation,
-  Chain as LegacyChain,
-  Message,
-} from '@latitude-data/compiler'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { Chain as PromptlChain } from 'promptl-ai'
+import type { Conversation, Chain as LegacyChain, Message } from '@latitude-data/compiler'
+import type { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import type { Chain as PromptlChain } from 'promptl-ai'
 
 import { MAX_STEPS_CONFIG_NAME } from '@latitude-data/constants'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { LanguageModelUsage } from 'ai'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { LanguageModelUsage } from 'ai'
 import { ChainStreamManager } from '../../../__deprecated/lib/chainStreamManager'
 import { createChainRunError } from '../../../__deprecated/lib/chainStreamManager/ChainErrors'
-import { ProviderApiKey, Workspace } from '../../../browser'
-import {
+import type { ProviderApiKey, Workspace } from '../../../browser'
+import type {
   ChainStepResponse,
   ErrorableEntity,
   LogSources,
@@ -20,8 +16,8 @@ import {
   StreamType,
 } from '../../../constants'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
-import { TypedResult } from '../../../lib/Result'
-import { ConfigOverrides } from './ChainValidator'
+import type { TypedResult } from '../../../lib/Result'
+import type { ConfigOverrides } from './ChainValidator'
 import { runStep } from './runStep'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
@@ -54,10 +50,7 @@ type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
   removeSchema?: boolean
   abortSignal?: AbortSignal
 }
-export type RunChainArgs<
-  T extends boolean,
-  C extends SomeChain,
-> = T extends true
+export type RunChainArgs<T extends boolean, C extends SomeChain> = T extends true
   ? CommonArgs<T, C> & {
       errorableType: ErrorableEntity
     }

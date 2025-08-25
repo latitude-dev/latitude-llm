@@ -50,16 +50,13 @@ describe('POST /projects/:projectId/versions', () => {
 
     it('succeeds when creating a new commit', async () => {
       const commitName = `Test Commit ${Date.now()}`
-      const response = await app.request(
-        `/api/v3/projects/${projectId}/versions`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            name: commitName,
-          }),
-        },
-      )
+      const response = await app.request(`/api/v3/projects/${projectId}/versions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          name: commitName,
+        }),
+      })
 
       expect(response.status).toBe(200)
       const commit = await response.json()
@@ -102,14 +99,11 @@ describe('POST /projects/:projectId/versions', () => {
     })
 
     it('fails when commit name is missing', async () => {
-      const response = await app.request(
-        `/api/v3/projects/${projectId}/versions`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({}),
-        },
-      )
+      const response = await app.request(`/api/v3/projects/${projectId}/versions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({}),
+      })
 
       expect(response.status).toBe(400)
     })

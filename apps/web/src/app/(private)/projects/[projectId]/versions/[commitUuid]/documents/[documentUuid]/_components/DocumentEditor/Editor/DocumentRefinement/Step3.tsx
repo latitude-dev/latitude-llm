@@ -1,11 +1,8 @@
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType, IProjectContextType } from '@latitude-data/web-ui/providers'
 import { useEffect } from 'react'
 
 export function Step3({
@@ -17,9 +14,9 @@ export function Step3({
   refine: () => Promise<void>
 }) {
   // FIXME: Do not run side effects on useEffect, move to event handler.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   useEffect(() => {
     refine()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

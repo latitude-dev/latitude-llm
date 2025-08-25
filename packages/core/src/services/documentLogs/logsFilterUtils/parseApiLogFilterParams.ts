@@ -1,5 +1,5 @@
-import { Cursor } from '../../../browser'
-import { DEFAULT_PAGINATION_SIZE, LogSources } from '../../../constants'
+import type { Cursor } from '../../../browser'
+import { DEFAULT_PAGINATION_SIZE, type LogSources } from '../../../constants'
 import {
   parseSafeCreatedAtRange,
   parseSafeCustomIdentifier,
@@ -10,7 +10,7 @@ export function parsePage(page: string | null): string {
   if (!page) return '1'
 
   const parsed = parseInt(page, 10)
-  if (isNaN(parsed)) return '1'
+  if (Number.isNaN(parsed)) return '1'
 
   return parsed < 1 ? '1' : parsed.toString()
 }
@@ -19,7 +19,7 @@ function parsePageSize(pageSize: string | null): string {
   if (!pageSize) return String(DEFAULT_PAGINATION_SIZE)
 
   const parsed = parseInt(pageSize, 10)
-  if (isNaN(parsed)) return String(DEFAULT_PAGINATION_SIZE)
+  if (Number.isNaN(parsed)) return String(DEFAULT_PAGINATION_SIZE)
 
   return parsed < 1 ? String(DEFAULT_PAGINATION_SIZE) : parsed.toString()
 }
@@ -32,9 +32,7 @@ function parseLogSources(logSources: string | undefined) {
   return (logSources?.split?.(',') as LogSources[]) ?? []
 }
 
-export function parseSafeFrom(
-  from: string | null,
-): Cursor<string, number> | null {
+export function parseSafeFrom(from: string | null): Cursor<string, number> | null {
   if (!from) return null
 
   try {
@@ -44,11 +42,7 @@ export function parseSafeFrom(
   }
 }
 
-export function parseApiDocumentLogParams({
-  searchParams,
-}: {
-  searchParams: URLSearchParams
-}) {
+export function parseApiDocumentLogParams({ searchParams }: { searchParams: URLSearchParams }) {
   const params = Object.fromEntries(searchParams.entries())
   const commitIds = parseCommitIds(params.commitIds)
   const logSources = parseLogSources(params.logSources)
@@ -68,8 +62,7 @@ export function parseApiDocumentLogParams({
   }
 
   const isEmptyResponse =
-    filterOptions.commitIds.length === 0 ||
-    filterOptions.logSources.length === 0
+    filterOptions.commitIds.length === 0 || filterOptions.logSources.length === 0
 
   return {
     excludeErrors,

@@ -16,13 +16,13 @@ import type {
   TemplateNode,
   ToolCallTag,
 } from '$compiler/parser/interfaces'
-import { Config, ConversationMetadata, MessageRole } from '$compiler/types'
-import { Node as LogicalExpression } from 'estree'
-import yaml, { Node as YAMLItem } from 'yaml'
+import { type Config, type ConversationMetadata, MessageRole } from '$compiler/types'
+import type { Node as LogicalExpression } from 'estree'
+import yaml, { type Node as YAMLItem } from 'yaml'
 import { z } from 'zod'
 
 import { updateScopeContextForNode } from './logic'
-import { ScopeContext } from './scope'
+import type { ScopeContext } from './scope'
 import {
   findYAMLItemPosition,
   isChainStepTag,
@@ -43,10 +43,7 @@ export type Document = {
   path: string
   content: string
 }
-export type ReferencePromptFn = (
-  path: string,
-  from?: string,
-) => Promise<Document | undefined>
+export type ReferencePromptFn = (path: string, from?: string) => Promise<Document | undefined>
 
 export class ReadMetadata {
   includedPromptPaths: Set<string>
@@ -92,9 +89,7 @@ export class ReadMetadata {
 
   async run(): Promise<ConversationMetadata> {
     const scopeContext = {
-      onlyPredefinedVariables: this.withParameters
-        ? new Set(this.withParameters)
-        : undefined,
+      onlyPredefinedVariables: this.withParameters ? new Set(this.withParameters) : undefined,
       usedUndefinedVariables: new Set<string>(),
       definedVariables: new Set<string>(),
     }
@@ -127,10 +122,7 @@ export class ReadMetadata {
 
     const resolvedPrompt =
       Object.keys(this.config ?? {}).length > 0
-        ? '---\n' +
-          yaml.stringify(this.config, { indent: 2 }) +
-          '---\n' +
-          this.resolvedPrompt
+        ? '---\n' + yaml.stringify(this.config, { indent: 2 }) + '---\n' + this.resolvedPrompt
         : this.resolvedPrompt
 
     const setConfig = (config: Config) => {
@@ -250,8 +242,7 @@ export class ReadMetadata {
       /* Remove from the resolved prompt */
       const start = node.start! + this.resolvedPromptOffset
       const end = node.end! + this.resolvedPromptOffset
-      this.resolvedPrompt =
-        this.resolvedPrompt.slice(0, start) + this.resolvedPrompt.slice(end)
+      this.resolvedPrompt = this.resolvedPrompt.slice(0, start) + this.resolvedPrompt.slice(end)
       this.resolvedPromptOffset -= end - start
     }
 
@@ -293,17 +284,10 @@ export class ReadMetadata {
           err.errors.forEach((error) => {
             const issue = error.message
 
-            const range = findYAMLItemPosition(
-              parsedYaml.contents as YAMLItem,
-              error.path,
-            )
+            const range = findYAMLItemPosition(parsedYaml.contents as YAMLItem, error.path)
 
-            const errorStart = range
-              ? node.start! + CONFIG_START_OFFSET + range[0]
-              : node.start!
-            const errorEnd = range
-              ? node.start! + CONFIG_START_OFFSET + range[1] + 1
-              : node.end!
+            const errorStart = range ? node.start! + CONFIG_START_OFFSET + range[0] : node.start!
+            const errorEnd = range ? node.start! + CONFIG_START_OFFSET + range[1] + 1 : node.end!
 
             this.baseNodeError(errors.invalidConfig(issue), node, {
               start: errorStart,
@@ -376,17 +360,11 @@ export class ReadMetadata {
       const contextVarName = node.context.name
       const indexVarName = node.index?.name
       if (scopeContext.definedVariables.has(contextVarName)) {
-        this.expressionError(
-          errors.variableAlreadyDeclared(contextVarName),
-          node.context,
-        )
+        this.expressionError(errors.variableAlreadyDeclared(contextVarName), node.context)
         return
       }
       if (indexVarName && scopeContext.definedVariables.has(indexVarName)) {
-        this.expressionError(
-          errors.variableAlreadyDeclared(indexVarName),
-          node.index!,
-        )
+        this.expressionError(errors.variableAlreadyDeclared(indexVarName), node.index!)
         return
       }
 
@@ -501,10 +479,7 @@ export class ReadMetadata {
           })
         }
 
-        if (
-          role !== MessageRole.assistant &&
-          this.accumulatedToolCalls.length > 0
-        ) {
+        if (role !== MessageRole.assistant && this.accumulatedToolCalls.length > 0) {
           this.accumulatedToolCalls.forEach((toolCallNode) => {
             this.baseNodeError(errors.invalidToolCallPlacement, toolCallNode)
             return
@@ -564,10 +539,7 @@ export class ReadMetadata {
             return
           }
 
-          const refDocument = await this.referenceFn(
-            refPromptPath,
-            this.fullPath,
-          )
+          const refDocument = await this.referenceFn(refPromptPath, this.fullPath)
 
           if (!refDocument) {
             this.baseNodeError(errors.referenceNotFound, node)
@@ -597,14 +569,8 @@ export class ReadMetadata {
             }
           })
           refPromptMetadata.errors.forEach((error: CompileError) => {
-            if (
-              error.code === 'reference-error' ||
-              error.code === 'circular-reference'
-            ) {
-              this.baseNodeError(
-                { code: error.code, message: error.message },
-                node,
-              )
+            if (error.code === 'reference-error' || error.code === 'circular-reference') {
+              this.baseNodeError({ code: error.code, message: error.message }, node)
               return
             }
             this.baseNodeError(errors.referenceError(error), node)
@@ -684,14 +650,11 @@ export class ReadMetadata {
   ): void {
     const source = (node.loc?.source ?? this.rawText)!.split('\n')
     const start =
-      source
-        .slice(0, node.loc?.start.line! - 1)
-        .reduce((acc, line) => acc + line.length + 1, 0) +
+      source.slice(0, node.loc?.start.line! - 1).reduce((acc, line) => acc + line.length + 1, 0) +
       node.loc?.start.column!
     const end =
-      source
-        .slice(0, node.loc?.end.line! - 1)
-        .reduce((acc, line) => acc + line.length + 1, 0) + node.loc?.end.column!
+      source.slice(0, node.loc?.end.line! - 1).reduce((acc, line) => acc + line.length + 1, 0) +
+      node.loc?.end.column!
 
     try {
       error(message, {

@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   EvaluationType,
-  EvaluationV2,
+  type EvaluationV2,
   LlmEvaluationMetric,
-  ProviderApiKey,
+  type ProviderApiKey,
   Providers,
-  Workspace,
+  type Workspace,
 } from '../../browser'
 import { BadRequestError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
@@ -96,9 +96,7 @@ describe('cloneEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
       }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new BadRequestError('Cloning is not supported for this evaluation'),
-    )
+    ).rejects.toThrowError(new BadRequestError('Cloning is not supported for this evaluation'))
   })
 
   it('fails when type and metric cloning fails', async () => {
@@ -134,9 +132,7 @@ describe('cloneEvaluationV2', () => {
           expectedOutput: evaluation.configuration.expectedOutput,
           provider: evaluation.configuration.provider,
           model: evaluation.configuration.model,
-          prompt: expect.stringContaining(
-            buildPrompt({ ...evaluation.configuration, provider }),
-          ),
+          prompt: expect.stringContaining(buildPrompt({ ...evaluation.configuration, provider })),
           minScore: evaluation.configuration.minRating,
           maxScore: evaluation.configuration.maxRating,
           minThreshold: evaluation.configuration.minThreshold,

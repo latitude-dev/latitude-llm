@@ -1,5 +1,5 @@
 'use client'
-import { ReactNode, useMemo } from 'react'
+import { type ReactNode, useMemo } from 'react'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CircularProgress } from '@latitude-data/web-ui/atoms/CircularProgress'
@@ -7,12 +7,8 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { CircularProgressProps } from '@latitude-data/web-ui/atoms/CircularProgress'
-import {
-  SubscriptionPlan,
-  FREE_PLANS,
-  WorkspaceUsage,
-} from '@latitude-data/core/browser'
+import type { CircularProgressProps } from '@latitude-data/web-ui/atoms/CircularProgress'
+import { SubscriptionPlan, FREE_PLANS, type WorkspaceUsage } from '@latitude-data/core/browser'
 
 export function SubscriptionBadge({
   subscription: { name, plan },
@@ -25,11 +21,7 @@ export function SubscriptionBadge({
   }
 }) {
   const isFree = FREE_PLANS.includes(plan)
-  return (
-    <Badge variant={isFree ? 'muted' : 'success'}>
-      {showPlanSlug ? plan : name}
-    </Badge>
-  )
+  return <Badge variant={isFree ? 'muted' : 'success'}>{showPlanSlug ? plan : name}</Badge>
 }
 
 function runsDescription({ ratio, max }: { ratio: number; max: number }) {
@@ -43,13 +35,7 @@ function runsDescription({ ratio, max }: { ratio: number; max: number }) {
   return `Your plan has included ${max} runs. You can upgrade your plan to get more runs.`
 }
 
-function membersDescription({
-  members,
-  maxMembers,
-}: {
-  members: number
-  maxMembers: number
-}) {
+function membersDescription({ members, maxMembers }: { members: number; maxMembers: number }) {
   if (members >= maxMembers) {
     return `You have reached the maximum number of members for your current plan. (${maxMembers} members allowed)`
   }
@@ -92,22 +78,12 @@ function UsageIndicatorCircle({
     )
   }
 
-  const color = overlimits
-    ? 'white'
-    : ratio < 0.75
-      ? 'primary'
-      : 'warningMutedForeground'
+  const color = overlimits ? 'white' : ratio < 0.75 ? 'primary' : 'warningMutedForeground'
 
   return <CircularProgress value={ratio} color={color} {...props} />
 }
 
-function LoadingText({
-  isLoading,
-  children,
-}: {
-  isLoading: boolean
-  children: ReactNode
-}) {
+function LoadingText({ isLoading, children }: { isLoading: boolean; children: ReactNode }) {
   if (isLoading) {
     return <Skeleton className='w-20 h-4 animate-pulse' />
   }
@@ -123,13 +99,7 @@ export function UsageIndicatorPopover({
   children,
   workspaceUsage,
   subscription,
-  calculatedUsage: {
-    isOverlimits,
-    isOverlimitsRuns,
-    isOverlimitsMembers,
-    ratio,
-    max,
-  },
+  calculatedUsage: { isOverlimits, isOverlimitsRuns, isOverlimitsMembers, ratio, max },
   isLoading = false,
 }: {
   children?: ReactNode
@@ -158,9 +128,7 @@ export function UsageIndicatorPopover({
     () => (workspaceUsage ? runsDescription({ ratio, max }) : undefined),
     [workspaceUsage, ratio, max],
   )
-  const isFree = [SubscriptionPlan.HobbyV1, SubscriptionPlan.HobbyV2].includes(
-    subscription.plan,
-  )
+  const isFree = [SubscriptionPlan.HobbyV1, SubscriptionPlan.HobbyV2].includes(subscription.plan)
 
   return (
     <Popover.Root>
@@ -181,10 +149,7 @@ export function UsageIndicatorPopover({
               />
             )}
             <LoadingText isLoading={isLoading}>
-              <Text.H6
-                noWrap
-                color={isOverlimits && isFree ? 'white' : 'foreground'}
-              >
+              <Text.H6 noWrap color={isOverlimits && isFree ? 'white' : 'foreground'}>
                 {isOverlimits && isFree
                   ? 'Over limits'
                   : `${workspaceUsage?.usage} / ${workspaceUsage?.max}`}
@@ -194,87 +159,71 @@ export function UsageIndicatorPopover({
         </Button>
       </Popover.Trigger>
       <Popover.Content side='bottom' align='end' size='medium'>
-        <>
-          <div className='flex flex-col gap-y-3'>
-            <div className='flex flex-col gap-y-2'>
-              <div className='flex flex-row items-center gap-x-2'>
-                {isOverlimitsRuns && isFree ? (
-                  <Icon
-                    name='alert'
-                    color='destructive'
-                    size='large'
-                    darkColor='foreground'
-                  />
-                ) : (
-                  <UsageIndicatorCircle
-                    workspaceUsage={workspaceUsage}
-                    size={20}
-                    isLoading={isLoading}
-                    className='overflow-clip'
-                    showBackground
-                  />
-                )}
-                <LoadingText isLoading={isLoading}>
-                  <div className='flex flex-row w-full items-center gap-2'>
-                    <Text.H4 color='foreground'>
-                      {workspaceUsage?.usage}
-                    </Text.H4>
-                    <Text.H4 color='foregroundMuted' noWrap>
-                      {' '}
-                      / {workspaceUsage?.max} runs
-                    </Text.H4>
-                    <div className='w-full flex items-center justify-end'>
-                      <SubscriptionBadge subscription={subscription} />
-                    </div>
-                  </div>
-                </LoadingText>
-              </div>
-              {runsText ? (
-                <Text.H6 display='block'>{runsText}</Text.H6>
+        <div className='flex flex-col gap-y-3'>
+          <div className='flex flex-col gap-y-2'>
+            <div className='flex flex-row items-center gap-x-2'>
+              {isOverlimitsRuns && isFree ? (
+                <Icon name='alert' color='destructive' size='large' darkColor='foreground' />
               ) : (
-                <div className='w-full flex flex-col gap-1'>
-                  <Skeleton className='w-full h-3 animate-pulse' />
-                  <Skeleton className='w-full h-3 animate-pulse' />
-                  <Skeleton className='w-[40%] h-3 animate-pulse' />
-                </div>
+                <UsageIndicatorCircle
+                  workspaceUsage={workspaceUsage}
+                  size={20}
+                  isLoading={isLoading}
+                  className='overflow-clip'
+                  showBackground
+                />
               )}
-            </div>
-            <hr className='w-full border-border mt-2 mb-1' />
-            <div className='flex flex-col gap-y-2'>
-              <div className='flex flex-row items-center gap-x-2'>
-                {isOverlimitsMembers && isFree ? (
-                  <Icon
-                    name='alert'
-                    color='destructive'
-                    size='large'
-                    darkColor='foreground'
-                  />
-                ) : null}
-                <LoadingText isLoading={isLoading}>
-                  <div className='flex flex-row w-full items-center gap-2'>
-                    <Text.H4 color='foreground'>
-                      {workspaceUsage?.members}
-                    </Text.H4>
-                    <Text.H4 color='foregroundMuted' noWrap>
-                      {' '}
-                      / {workspaceUsage?.maxMembers} members
-                    </Text.H4>
+              <LoadingText isLoading={isLoading}>
+                <div className='flex flex-row w-full items-center gap-2'>
+                  <Text.H4 color='foreground'>{workspaceUsage?.usage}</Text.H4>
+                  <Text.H4 color='foregroundMuted' noWrap>
+                    {' '}
+                    / {workspaceUsage?.max} runs
+                  </Text.H4>
+                  <div className='w-full flex items-center justify-end'>
+                    <SubscriptionBadge subscription={subscription} />
                   </div>
-                </LoadingText>
-              </div>
-              {membersText ? (
-                <Text.H6 display='block'>{membersText}</Text.H6>
-              ) : (
-                <div className='w-full flex flex-col gap-1'>
-                  <Skeleton className='w-full h-3 animate-pulse' />
-                  <Skeleton className='w-full h-3 animate-pulse' />
-                  <Skeleton className='w-[40%] h-3 animate-pulse' />
                 </div>
-              )}
+              </LoadingText>
             </div>
+            {runsText ? (
+              <Text.H6 display='block'>{runsText}</Text.H6>
+            ) : (
+              <div className='w-full flex flex-col gap-1'>
+                <Skeleton className='w-full h-3 animate-pulse' />
+                <Skeleton className='w-full h-3 animate-pulse' />
+                <Skeleton className='w-[40%] h-3 animate-pulse' />
+              </div>
+            )}
           </div>
-          {children ? <div className='flex flex-row'>{children}</div> : null}
-        </>
+          <hr className='w-full border-border mt-2 mb-1' />
+          <div className='flex flex-col gap-y-2'>
+            <div className='flex flex-row items-center gap-x-2'>
+              {isOverlimitsMembers && isFree ? (
+                <Icon name='alert' color='destructive' size='large' darkColor='foreground' />
+              ) : null}
+              <LoadingText isLoading={isLoading}>
+                <div className='flex flex-row w-full items-center gap-2'>
+                  <Text.H4 color='foreground'>{workspaceUsage?.members}</Text.H4>
+                  <Text.H4 color='foregroundMuted' noWrap>
+                    {' '}
+                    / {workspaceUsage?.maxMembers} members
+                  </Text.H4>
+                </div>
+              </LoadingText>
+            </div>
+            {membersText ? (
+              <Text.H6 display='block'>{membersText}</Text.H6>
+            ) : (
+              <div className='w-full flex flex-col gap-1'>
+                <Skeleton className='w-full h-3 animate-pulse' />
+                <Skeleton className='w-full h-3 animate-pulse' />
+                <Skeleton className='w-[40%] h-3 animate-pulse' />
+              </div>
+            )}
+          </div>
+        </div>
+        {children ? <div className='flex flex-row'>{children}</div> : null}
       </Popover.Content>
     </Popover.Root>
   )

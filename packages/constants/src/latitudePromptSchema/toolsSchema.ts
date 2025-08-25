@@ -28,26 +28,21 @@ const getCustomToolErrorMessage = ({
   toolId: string
   integrationNames?: string[]
 }) => {
-  const [toolSource, toolName, ...other] = toolId
-    .split('/')
-    .map((s) => s.trim())
+  const [toolSource, toolName, ...other] = toolId.split('/').map((s) => s.trim())
   if (!toolSource || !toolName || other.length) {
     return `Invalid tool ID: '${toolId}'`
   }
 
   if (toolSource === 'latitude') {
     const toolName = toolId.slice('latitude:'.length)
-    if (
-      toolName === '*' ||
-      Object.values(LatitudeTool).includes(toolName as LatitudeTool)
-    ) {
+    if (toolName === '*' || Object.values(LatitudeTool).includes(toolName as LatitudeTool)) {
       return undefined
     }
 
     return `There is no Latitude tool with the name '${toolName}'`
   }
 
-  if (integrationNames && integrationNames.includes(toolSource)) {
+  if (integrationNames?.includes(toolSource)) {
     return undefined
   }
 
@@ -60,28 +55,18 @@ const PROVIDERS_WITH_TOOLS = {
 
 export const AI_PROVIDERS_WITH_BUILTIN_TOOLS = Object.keys(PROVIDERS_WITH_TOOLS)
 
-export function buildToolsSchema({
-  integrationNames,
-}: {
-  integrationNames?: string[]
-}) {
+export function buildToolsSchema({ integrationNames }: { integrationNames?: string[] }) {
   const latitudeToolSchema = z.string().refine(
-    (toolId) =>
-      getCustomToolErrorMessage({ toolId, integrationNames }) === undefined,
+    (toolId) => getCustomToolErrorMessage({ toolId, integrationNames }) === undefined,
     (toolId) => ({
       message: getCustomToolErrorMessage({ toolId, integrationNames }),
     }),
   )
-  const providersSchema = z.record(
-    z.literal(PROVIDERS_WITH_TOOLS.openai),
-    openAIToolsList,
-  )
+  const providersSchema = z.record(z.literal(PROVIDERS_WITH_TOOLS.openai), openAIToolsList)
 
   return z.union([
     toolDefinitionObject, // Old schema
     providersSchema,
-    z.array(
-      z.union([toolDefinitionObject, latitudeToolSchema, providersSchema]),
-    ),
+    z.array(z.union([toolDefinitionObject, latitudeToolSchema, providersSchema])),
   ])
 }

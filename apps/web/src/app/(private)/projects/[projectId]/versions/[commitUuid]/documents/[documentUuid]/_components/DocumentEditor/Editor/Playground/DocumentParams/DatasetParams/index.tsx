@@ -1,22 +1,19 @@
 import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import Link from 'next/link'
 
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { InputMapper } from './InputsMapper'
-import { type OnSelectRowCellFn } from './InputsMapper/InputsMapperItem'
-import { type UseSelectDataset } from './useSelectDataset'
+import type { OnSelectRowCellFn } from './InputsMapper/InputsMapperItem'
+import type { UseSelectDataset } from './useSelectDataset'
 
 function BlankSlate() {
   return (
-    <Link
-      href={ROUTES.datasets.root()}
-      className='flex flex-row items-center gap-1'
-    >
+    <Link href={ROUTES.datasets.root()} className='flex flex-row items-center gap-1'>
       <Button iconProps={{ name: 'externalLink' }} variant='link'>
         Manage datasets
       </Button>
@@ -41,9 +38,7 @@ export function DatasetParams({
         <Select
           width='auto'
           name='datasetId'
-          placeholder={
-            data.loadingState.datasets ? 'Loading...' : 'Select dataset'
-          }
+          placeholder={data.loadingState.datasets ? 'Loading...' : 'Select dataset'}
           disabled={data.loadingState.datasets || !data.datasetOptions.length}
           options={data.datasetOptions}
           onChange={data.onSelectDataset}
@@ -52,23 +47,17 @@ export function DatasetParams({
         <div className='min-w-0'>
           {isLoading ? (
             <Skeleton height='h5' className='w-40 min-w-0' />
+          ) : data.selectedDataset && data.position !== undefined ? (
+            <ParametersPaginationNav
+              currentIndex={data.position}
+              totalCount={data.count}
+              onPrevPage={data.onPrevPage}
+              onNextPage={data.onNextPage}
+              disabled={data.loadingState.position || data.loadingState.rows}
+              label='rows in dataset'
+            />
           ) : (
-            <>
-              {data.selectedDataset && data.position !== undefined ? (
-                <ParametersPaginationNav
-                  currentIndex={data.position}
-                  totalCount={data.count}
-                  onPrevPage={data.onPrevPage}
-                  onNextPage={data.onNextPage}
-                  disabled={
-                    data.loadingState.position || data.loadingState.rows
-                  }
-                  label='rows in dataset'
-                />
-              ) : (
-                <BlankSlate />
-              )}
-            </>
+            <BlankSlate />
           )}
         </div>
       </div>

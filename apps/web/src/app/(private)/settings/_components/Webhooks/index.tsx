@@ -44,9 +44,7 @@ export default function Webhooks() {
       .filter(Boolean)
       .join(', ')
 
-    return projectNames.length > 50
-      ? `${projectNames.slice(0, 47)}...`
-      : projectNames
+    return projectNames.length > 50 ? `${projectNames.slice(0, 47)}...` : projectNames
   }
 
   const renderTable = () => {
@@ -141,23 +139,21 @@ export default function Webhooks() {
   }
 
   return (
-    <>
-      <TableWithHeader
-        title={
-          <div className='flex flex-row items-center gap-2'>
-            <Text.H4B>Webhooks</Text.H4B>
-            <OpenInDocsButton route={DocsRoute.Webhooks} />
-          </div>
-        }
-        actions={
-          <Link href={ROUTES.settings.webhooks.new.root}>
-            <Button fancy variant='outline'>
-              Create webhook
-            </Button>
-          </Link>
-        }
-        table={renderTable()}
-      />
-    </>
+    <TableWithHeader
+      title={
+        <div className='flex flex-row items-center gap-2'>
+          <Text.H4B>Webhooks</Text.H4B>
+          <OpenInDocsButton route={DocsRoute.Webhooks} />
+        </div>
+      }
+      actions={
+        <Link href={ROUTES.settings.webhooks.new.root}>
+          <Button fancy variant='outline'>
+            Create webhook
+          </Button>
+        </Link>
+      }
+      table={renderTable()}
+    />
   )
 }

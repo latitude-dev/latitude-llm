@@ -2,11 +2,7 @@ import type { JSX } from 'react'
 
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { eventFiles } from '@lexical/rich-text'
-import {
-  calculateZoomLevel,
-  isHTMLElement,
-  mergeRegister,
-} from '@lexical/utils'
+import { calculateZoomLevel, isHTMLElement, mergeRegister } from '@lexical/utils'
 import {
   $getNearestNodeFromDOMNode,
   $getNodeByKey,
@@ -16,12 +12,13 @@ import {
   COMMAND_PRIORITY_LOW,
   DRAGOVER_COMMAND,
   DROP_COMMAND,
-  LexicalEditor,
-  LexicalNode,
+  type LexicalEditor,
+  type LexicalNode,
 } from 'lexical'
-import React, {
-  DragEvent as ReactDragEvent,
-  ReactNode,
+import type React from 'react'
+import {
+  type DragEvent as ReactDragEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useRef,
@@ -32,11 +29,7 @@ import { createPortal } from 'react-dom'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Point } from './shared/point'
 import { Rectangle } from './shared/rect'
-import {
-  getCollapsedMargins,
-  hideTargetLine,
-  setTargetLine,
-} from './targetLine'
+import { getCollapsedMargins, hideTargetLine, setTargetLine } from './targetLine'
 
 const DRAG_DATA_FORMAT = 'application/x-lexical-drag-block'
 
@@ -127,13 +120,9 @@ function getBlockElement(
   editor.getEditorState().read(() => {
     if (useEdgeAsDefault) {
       const [firstNode, lastNode] = [
-        topLevelNodeKeys[0]
-          ? editor.getElementByKey(topLevelNodeKeys[0])
-          : null,
+        topLevelNodeKeys[0] ? editor.getElementByKey(topLevelNodeKeys[0]) : null,
         topLevelNodeKeys.length > 0
-          ? editor.getElementByKey(
-              topLevelNodeKeys[topLevelNodeKeys.length - 1]!,
-            )
+          ? editor.getElementByKey(topLevelNodeKeys[topLevelNodeKeys.length - 1]!)
           : null,
       ]
 
@@ -226,10 +215,7 @@ function getAnyBlockElement(
   if (editorElement.isEqualNode(currentElement)) return null
 
   while (currentElement) {
-    if (
-      currentElement.tagName === 'P' ||
-      currentElement.hasAttribute('data-block-type')
-    ) {
+    if (currentElement.tagName === 'P' || currentElement.hasAttribute('data-block-type')) {
       candidates.push(currentElement)
     }
     currentElement = currentElement.parentElement
@@ -284,10 +270,10 @@ function setMenuPosition(
   const floatingElemRect = floatingElem.getBoundingClientRect()
   const anchorElementRect = anchorElem.getBoundingClientRect()
 
-  let topOffset = 0
+  const topOffset = 0
   let targetCalculateHeight: number = parseInt(targetStyle.lineHeight, 10)
 
-  if (isNaN(targetCalculateHeight)) {
+  if (Number.isNaN(targetCalculateHeight)) {
     targetCalculateHeight = targetRect.bottom - targetRect.top
   }
   const top =
@@ -302,15 +288,9 @@ function setMenuPosition(
   floatingElem.style.transform = `translate(${left}px, ${top}px)`
 }
 
-function setDragImage(
-  dataTransfer: DataTransfer,
-  draggableBlockElem: HTMLElement,
-) {
+function setDragImage(dataTransfer: DataTransfer, draggableBlockElem: HTMLElement) {
   const dragImg = document.createElement('div')
-  dragImg.className = cn(
-    'border border-primary/90 bg-primary/40',
-    'rounded pointer-events-none',
-  )
+  dragImg.className = cn('border border-primary/90 bg-primary/40', 'rounded pointer-events-none')
   dragImg.style.width = `${draggableBlockElem.offsetWidth}px`
   dragImg.style.height = `${draggableBlockElem.offsetHeight}px`
 
@@ -339,8 +319,7 @@ function useDraggableBlockMenu(
   const scrollerElem = anchorElem.parentElement
 
   const isDraggingBlockRef = useRef<boolean>(false)
-  const [draggableBlockElem, setDraggableBlockElemState] =
-    useState<HTMLElement | null>(null)
+  const [draggableBlockElem, setDraggableBlockElemState] = useState<HTMLElement | null>(null)
 
   const setDraggableBlockElem = useCallback(
     (elem: HTMLElement | null) => {
@@ -384,23 +363,11 @@ function useDraggableBlockMenu(
         scrollerElem.removeEventListener('mouseleave', onMouseLeave)
       }
     }
-  }, [
-    scrollerElem,
-    anchorElem,
-    editor,
-    isOnMenu,
-    setDraggableBlockElem,
-    canDropInside,
-  ])
+  }, [scrollerElem, anchorElem, editor, isOnMenu, setDraggableBlockElem])
 
   useEffect(() => {
     if (menuRef.current) {
-      setMenuPosition(
-        draggableBlockElem,
-        menuRef.current,
-        anchorElem,
-        menuComponentWidth,
-      )
+      setMenuPosition(draggableBlockElem, menuRef.current, anchorElem, menuComponentWidth)
     }
   }, [anchorElem, draggableBlockElem, menuRef, menuComponentWidth])
 
@@ -411,10 +378,7 @@ function useDraggableBlockMenu(
       targetBlockElem: HTMLElement,
       targetNode: LexicalNode,
       canDropInside?: (node: LexicalNode) => boolean,
-      validateDrop?: (
-        draggedNode: LexicalNode,
-        targetNode: LexicalNode,
-      ) => boolean,
+      validateDrop?: (draggedNode: LexicalNode, targetNode: LexicalNode) => boolean,
       draggedNode?: LexicalNode,
       isHoveringOutsideContent?: boolean,
     ): {
@@ -427,8 +391,7 @@ function useDraggableBlockMenu(
         let isValidDrop = false
 
         // Check if the target is the custom block itself (empty content area)
-        const isTargetCustomBlock =
-          targetBlockElem.hasAttribute('data-block-type')
+        const isTargetCustomBlock = targetBlockElem.hasAttribute('data-block-type')
 
         if (isTargetCustomBlock) {
           // Hovering outside content of empty custom block - use "inside" mode
@@ -469,9 +432,8 @@ function useDraggableBlockMenu(
       }
 
       // Check if we can drop inside the container
-      const canDropInsideTarget = canDropInside && canDropInside(targetNode)
-      const isValidInsideDrop =
-        canDropInsideTarget && validateDrop(draggedNode, targetNode)
+      const canDropInsideTarget = canDropInside?.(targetNode)
+      const isValidInsideDrop = canDropInsideTarget && validateDrop(draggedNode, targetNode)
 
       if (isValidInsideDrop) {
         // Expand the inside drop zone significantly to reduce jumping
@@ -540,17 +502,13 @@ function useDraggableBlockMenu(
 
           if (firstElement) {
             // Found existing content - target the first element for "before" mode
-            const firstNode = $getNearestNodeFromDOMNode(
-              firstElement as HTMLElement,
-            )
+            const firstNode = $getNearestNodeFromDOMNode(firstElement as HTMLElement)
             if (firstNode) {
               targetBlockElem = editor.getElementByKey(firstNode.getKey())
             }
           } else {
             // No content in the area - target the custom block itself for "inside" mode
-            const customBlockNode = $getNearestNodeFromDOMNode(
-              customBlock as HTMLElement,
-            )
+            const customBlockNode = $getNearestNodeFromDOMNode(customBlock as HTMLElement)
             if (customBlockNode) {
               targetBlockElem = editor.getElementByKey(customBlockNode.getKey())
             }
@@ -559,9 +517,7 @@ function useDraggableBlockMenu(
 
         // Fallback: if content area not found, use the custom block
         if (!targetBlockElem) {
-          const customBlockNode = $getNearestNodeFromDOMNode(
-            customBlock as HTMLElement,
-          )
+          const customBlockNode = $getNearestNodeFromDOMNode(customBlock as HTMLElement)
           if (customBlockNode) {
             targetBlockElem = editor.getElementByKey(customBlockNode.getKey())
           }
@@ -577,10 +533,7 @@ function useDraggableBlockMenu(
       if (!targetBlockElem || !targetLineElem) return false
 
       // Avoid showing drop indicator when target is the same as or inside the draggable element
-      if (
-        targetBlockElem === draggableBlockElem ||
-        (draggableBlockElem && draggableBlockElem.contains(targetBlockElem))
-      ) {
+      if (targetBlockElem === draggableBlockElem || draggableBlockElem?.contains(targetBlockElem)) {
         hideTargetLine(targetLineElem)
         return false
       }
@@ -598,8 +551,7 @@ function useDraggableBlockMenu(
           // This handles reordering within the same container
           const isDroppingOnSelf = draggedNode === targetNode
           const isReorderingWithinParent =
-            isDroppingOnSelf &&
-            draggedNode.getParent() === targetNode.getParent()
+            isDroppingOnSelf && draggedNode.getParent() === targetNode.getParent()
 
           if (draggedNode !== targetNode || isReorderingWithinParent) {
             // Calculate the drop mode and get validation info
@@ -616,13 +568,7 @@ function useDraggableBlockMenu(
             if (isValidDrop) {
               showDropIndicator = true
 
-              setTargetLine(
-                targetLineElem,
-                targetBlockElem,
-                mouseY,
-                anchorElem,
-                dropMode,
-              )
+              setTargetLine(targetLineElem, targetBlockElem, mouseY, anchorElem, dropMode)
             }
           }
         }
@@ -646,8 +592,7 @@ function useDraggableBlockMenu(
         return false
       }
       const { target, dataTransfer, pageY } = event
-      const dragData =
-        dataTransfer != null ? dataTransfer.getData(DRAG_DATA_FORMAT) : ''
+      const dragData = dataTransfer != null ? dataTransfer.getData(DRAG_DATA_FORMAT) : ''
       const draggedNode = $getNodeByKey(dragData)
       if (!draggedNode) {
         return false
@@ -674,16 +619,12 @@ function useDraggableBlockMenu(
       }
 
       // Avoid dropping on the same element as or inside the draggable element
-      if (
-        targetBlockElem === draggableBlockElem ||
-        (draggableBlockElem && draggableBlockElem.contains(targetBlockElem))
-      ) {
+      if (targetBlockElem === draggableBlockElem || draggableBlockElem?.contains(targetBlockElem)) {
         return true // Consume the event but don't perform the drop
       }
 
       // Use the precise target if available, otherwise get from the element
-      const targetNode =
-        preciseTargetNode || $getNearestNodeFromDOMNode(targetBlockElem)
+      const targetNode = preciseTargetNode || $getNearestNodeFromDOMNode(targetBlockElem)
       if (!targetNode) {
         return false
       }
@@ -741,11 +682,7 @@ function useDraggableBlockMenu(
             const draggedIndex = children.indexOf(draggedNode)
 
             // Only proceed if we're actually changing position
-            if (
-              targetIndex !== -1 &&
-              draggedIndex !== -1 &&
-              draggedIndex !== targetIndex - 1
-            ) {
+            if (targetIndex !== -1 && draggedIndex !== -1 && draggedIndex !== targetIndex - 1) {
               // For moving to the beginning, ensure we don't skip if target is first element
               if (targetIndex === 0 || draggedIndex > targetIndex) {
                 draggedNode.remove()
@@ -767,11 +704,7 @@ function useDraggableBlockMenu(
             const draggedIndex = children.indexOf(draggedNode)
 
             // Only proceed if we're actually changing position
-            if (
-              targetIndex !== -1 &&
-              draggedIndex !== -1 &&
-              draggedIndex !== targetIndex + 1
-            ) {
+            if (targetIndex !== -1 && draggedIndex !== -1 && draggedIndex !== targetIndex + 1) {
               draggedNode.remove()
               targetNode.insertAfter(draggedNode)
             }

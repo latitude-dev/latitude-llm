@@ -1,19 +1,16 @@
 import useDocumentTriggerEvents from '$/stores/documentTriggerEvents'
-import {
+import type {
   DocumentTrigger,
   DocumentTriggerEvent,
   DocumentVersion,
 } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { relativeTimeForDate } from '$/lib/relativeTime'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { OnRunTriggerFn } from '../TriggersList'
+import type { OnRunTriggerFn } from '../TriggersList'
 import { useCallback } from 'react'
 import { getDocumentTriggerEventRunParameters } from '@latitude-data/core/services/documentTriggers/triggerEvents/getDocumentTriggerRunParameters'
 
@@ -26,12 +23,7 @@ function LoadingTriggerEvents() {
         <li key={i}>
           <div className='flex items-center justify-between p-4'>
             <Skeleton height='h5' className='w-40' />
-            <Button
-              fancy
-              variant='outline'
-              iconProps={{ name: 'circlePlay' }}
-              disabled
-            >
+            <Button fancy variant='outline' iconProps={{ name: 'circlePlay' }} disabled>
               Run
             </Button>
           </div>
@@ -48,8 +40,8 @@ function TriggerEventsEmptyState() {
         <Icon name='clockFading' size='large' color='foregroundMuted' />
         <Text.H5M>Waiting for events...</Text.H5M>
         <Text.H5 centered color='foregroundMuted'>
-          To use this trigger to preview your agent, perform the action that
-          triggers New user mention
+          To use this trigger to preview your agent, perform the action that triggers New user
+          mention
         </Text.H5>
       </div>
     </div>

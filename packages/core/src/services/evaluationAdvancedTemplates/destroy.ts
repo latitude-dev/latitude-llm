@@ -4,10 +4,7 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { evaluationAdvancedTemplates } from '../../schema'
 
-export function destroyEvaluationTemplate(
-  { id }: { id: number },
-  transaction = new Transaction(),
-) {
+export function destroyEvaluationTemplate({ id }: { id: number }, transaction = new Transaction()) {
   return transaction.call(async (tx) => {
     const result = await tx
       .delete(evaluationAdvancedTemplates)

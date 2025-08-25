@@ -7,19 +7,13 @@ import {
   useSyncLatteUrlState,
 } from '$/hooks/latte'
 import { useOnce } from '$/hooks/useMount'
-import {
-  PlaygroundAction,
-  usePlaygroundAction,
-} from '$/hooks/usePlaygroundAction'
+import { PlaygroundAction, usePlaygroundAction } from '$/hooks/usePlaygroundAction'
 import { useLatteStore } from '$/stores/latte'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
 import { useCallback, useRef, useState } from 'react'
@@ -45,8 +39,7 @@ export function LatteChat() {
   } = useLatteStore()
 
   const { sendMessage } = useLatteChatActions()
-  const { acceptChanges, undoChanges, addFeedbackToLatteChange } =
-    useLatteChangeActions()
+  const { acceptChanges, undoChanges, addFeedbackToLatteChange } = useLatteChangeActions()
 
   const resetChat = useCallback(() => {
     resetChatStore()
@@ -109,9 +102,7 @@ export function LatteChat() {
                       unoptimized
                     />
                     <div className='flex flex-col items-center justify-center gap-2'>
-                      <Text.H3M centered>
-                        What do you want to automate today?
-                      </Text.H3M>
+                      <Text.H3M centered>What do you want to automate today?</Text.H3M>
                       <Text.H5 color='foregroundMuted' centered>
                         Chat with Latte to build and improve your agent
                       </Text.H5>

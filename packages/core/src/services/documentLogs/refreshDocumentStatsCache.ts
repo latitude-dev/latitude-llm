@@ -8,10 +8,7 @@ import {
   STATS_CACHING_THRESHOLD,
 } from '../../constants'
 import { Result } from '../../lib/Result'
-import {
-  DocumentLogsRepository,
-  DocumentVersionsRepository,
-} from '../../repositories'
+import { DocumentLogsRepository, DocumentVersionsRepository } from '../../repositories'
 import { commits, documentLogs, documentVersions, projects } from '../../schema'
 import { computeDocumentLogsAggregations } from './computeDocumentLogsAggregations'
 import { computeDocumentLogsDailyCount } from './computeDocumentLogsDailyCount'
@@ -24,10 +21,7 @@ async function countByDocument(documentUuid: string, db = database) {
     .then((r) => r[0]?.count ?? 0)
 }
 
-export async function refreshDocumentStatsCache(
-  documentUuid: string,
-  db = database,
-) {
+export async function refreshDocumentStatsCache(documentUuid: string, db = database) {
   try {
     const project = await db
       .select(getTableColumns(projects))
@@ -38,15 +32,10 @@ export async function refreshDocumentStatsCache(
       .limit(1)
       .then((result) => result[0])
     if (!project) {
-      return Result.error(
-        new Error(`Project not found for document ${documentUuid}`),
-      )
+      return Result.error(new Error(`Project not found for document ${documentUuid}`))
     }
 
-    const documentsRepository = new DocumentVersionsRepository(
-      project.workspaceId,
-      db,
-    )
+    const documentsRepository = new DocumentVersionsRepository(project.workspaceId, db)
     const document = await documentsRepository.getSomeDocumentByUuid({
       projectId: project.id,
       documentUuid: documentUuid,
@@ -76,17 +65,9 @@ export async function refreshDocumentStatsCache(
 
     const [aggregations, dailyCount] = await Promise.all([
       // Compute the aggregations
-      (async () =>
-        computeDocumentLogsAggregations(
-          { projectId: project.id, documentUuid },
-          db,
-        ))(),
+      (async () => computeDocumentLogsAggregations({ projectId: project.id, documentUuid }, db))(),
       // Compute the daily count
-      (async () =>
-        computeDocumentLogsDailyCount(
-          { projectId: project.id, documentUuid },
-          db,
-        ))(),
+      (async () => computeDocumentLogsDailyCount({ projectId: project.id, documentUuid }, db))(),
     ])
     if (aggregations.error) return Result.error(aggregations.error)
     if (dailyCount.error) return Result.error(dailyCount.error)

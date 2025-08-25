@@ -1,8 +1,5 @@
 import type { ApiKey, Workspace } from '@latitude-data/core/browser'
-import {
-  unsafelyFindWorkspace,
-  unsafelyGetApiKeyByToken,
-} from '@latitude-data/core/data-access'
+import { unsafelyFindWorkspace, unsafelyGetApiKeyByToken } from '@latitude-data/core/data-access'
 import { bearerAuth } from 'hono/bearer-auth'
 
 declare module 'hono' {
@@ -19,16 +16,14 @@ const authMiddleware = () =>
         const apiKeyResult = await unsafelyGetApiKeyByToken({ token })
         if (apiKeyResult.error) return false
 
-        const workspace = await unsafelyFindWorkspace(
-          apiKeyResult.value.workspaceId,
-        )
+        const workspace = await unsafelyFindWorkspace(apiKeyResult.value.workspaceId)
         if (!workspace) return false
 
         c.set('workspace', workspace)
         c.set('apiKey', apiKeyResult.value)
 
         return true
-      } catch (error) {
+      } catch (_error) {
         return false
       }
     },

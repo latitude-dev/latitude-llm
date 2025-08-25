@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority'
-import { forwardRef, HTMLAttributes } from 'react'
+import { forwardRef, type HTMLAttributes } from 'react'
 
 import { cn } from '../../../../lib/utils'
 
@@ -24,46 +24,31 @@ const alertVariants = cva(
   },
 )
 
-export type AlertProps = HTMLAttributes<HTMLDivElement> &
-  VariantProps<typeof alertVariants>
+export type AlertProps = HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
 
 const AlertRoot = forwardRef<HTMLDivElement, AlertProps>(
   ({ className, variant, ...props }, ref) => (
-    <div
-      ref={ref}
-      role='alert'
-      className={cn(alertVariants({ variant }), className)}
-      {...props}
-    />
+    <div ref={ref} role='alert' className={cn(alertVariants({ variant }), className)} {...props} />
   ),
 )
 AlertRoot.displayName = 'AlertRoot'
 
-const AlertTitle = forwardRef<
-  HTMLParagraphElement,
-  HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h5
-    ref={ref}
-    className={cn('font-medium leading-none tracking-tight', className)}
-    {...props}
-  />
-))
+const AlertTitle = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLHeadingElement>>(
+  ({ className, ...props }, ref) => (
+    <h5 ref={ref} className={cn('font-medium leading-none tracking-tight', className)} {...props} />
+  ),
+)
 AlertTitle.displayName = 'AlertTitle'
 
-const AlertDescription = forwardRef<
-  HTMLParagraphElement,
-  HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      'text-sm [&_p]:leading-relaxed whitespace-pre-wrap',
-      className,
-    )}
-    {...props}
-  />
-))
+const AlertDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLParagraphElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn('text-sm [&_p]:leading-relaxed whitespace-pre-wrap', className)}
+      {...props}
+    />
+  ),
+)
 AlertDescription.displayName = 'AlertDescription'
 
 export { AlertDescription, AlertRoot, AlertTitle }

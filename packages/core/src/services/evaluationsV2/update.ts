@@ -1,5 +1,5 @@
 import { isEqual } from 'lodash-es'
-import {
+import type {
   Commit,
   EvaluationMetric,
   EvaluationOptions,
@@ -17,10 +17,7 @@ import { DocumentVersionsRepository } from '../../repositories'
 import { evaluationVersions } from '../../schema'
 import { validateEvaluationV2 } from './validate'
 
-export async function updateEvaluationV2<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->(
+export async function updateEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
   {
     evaluation,
     commit,
@@ -61,19 +58,18 @@ export async function updateEvaluationV2<
     if (!options) options = {}
     options = compactObject(options)
 
-    const { settings: vSettings, options: vOptions } =
-      await validateEvaluationV2(
-        {
-          mode: 'update',
-          evaluation: evaluation,
-          settings: { ...evaluation, ...settings },
-          options: { ...evaluation, ...options },
-          document: document,
-          commit: commit,
-          workspace: workspace,
-        },
-        tx,
-      ).then((r) => r.unwrap())
+    const { settings: vSettings, options: vOptions } = await validateEvaluationV2(
+      {
+        mode: 'update',
+        evaluation: evaluation,
+        settings: { ...evaluation, ...settings },
+        options: { ...evaluation, ...options },
+        document: document,
+        commit: commit,
+        workspace: workspace,
+      },
+      tx,
+    ).then((r) => r.unwrap())
     settings = vSettings
     options = vOptions
 
@@ -88,10 +84,7 @@ export async function updateEvaluationV2<
         updatedAt: new Date(),
       })
       .onConflictDoUpdate({
-        target: [
-          evaluationVersions.commitId,
-          evaluationVersions.evaluationUuid,
-        ],
+        target: [evaluationVersions.commitId, evaluationVersions.evaluationUuid],
         set: { ...settings, ...options, updatedAt: new Date() },
       })
       .returning()

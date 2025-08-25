@@ -1,15 +1,15 @@
 import { readMetadata } from '@latitude-data/compiler'
 import {
-  AgentToolsMap,
+  type AgentToolsMap,
   resolveRelativePath,
-  ToolDefinition,
+  type ToolDefinition,
 } from '@latitude-data/constants'
-import { JSONSchema7, JSONSchema7TypeName } from 'json-schema'
+import type { JSONSchema7, JSONSchema7TypeName } from 'json-schema'
 import { scan } from 'promptl-ai'
-import { Commit, DocumentVersion, Workspace } from '../../../browser'
+import type { Commit, DocumentVersion, Workspace } from '../../../browser'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../../repositories'
 import { getAgentToolName } from './helpers'
 
@@ -58,20 +58,20 @@ export async function getToolDefinitionFromDocument({
     referenceFn,
   })
 
-  const description = metadata.config['description'] as string | undefined
+  const description = metadata.config.description as string | undefined
   const params = Object.fromEntries(
-    Object.entries(
-      (metadata.config['parameters'] ?? {}) as Record<string, JSONSchema7>,
-    ).map(([key, schema]) => [
-      key,
-      {
-        ...schema,
-        type:
-          schema.type && !Array.isArray(schema.type)
-            ? (JSON_SCHEMA_TYPES[schema.type] ?? 'string')
-            : schema.type,
-      },
-    ]),
+    Object.entries((metadata.config.parameters ?? {}) as Record<string, JSONSchema7>).map(
+      ([key, schema]) => [
+        key,
+        {
+          ...schema,
+          type:
+            schema.type && !Array.isArray(schema.type)
+              ? (JSON_SCHEMA_TYPES[schema.type] ?? 'string')
+              : schema.type,
+        },
+      ],
+    ),
   ) as Record<string, JSONSchema7>
   metadata.parameters.forEach((param) => {
     if (param in params) return

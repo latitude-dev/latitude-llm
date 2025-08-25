@@ -1,9 +1,8 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 import { npxCommand } from '../utils'
 
 export default {
-  description:
-    'Integration for interacting with the EverArt API, enabling the generation of art.',
+  description: 'Integration for interacting with the EverArt API, enabling the generation of art.',
   command: npxCommand({
     package: '@modelcontextprotocol/server-everart',
   }),

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { Container } from '@latitude-data/web-ui/atoms/Container'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
@@ -45,9 +45,7 @@ export default async function DashboardLayout({
                 description='There are no projects yet. Create one to start adding your prompts.'
                 link={
                   <Link href={ROUTES.dashboard.projects.new.root}>
-                    <TableBlankSlate.Button>
-                      Create your first project
-                    </TableBlankSlate.Button>
+                    <TableBlankSlate.Button>Create your first project</TableBlankSlate.Button>
                   </Link>
                 }
               />

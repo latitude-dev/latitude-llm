@@ -1,33 +1,20 @@
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { type EventArgs, useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import {
+import type {
   DocumentLogWithMetadata,
   DocumentVersion,
   EvaluationResultV2,
   EvaluationV2,
 } from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
-import {
-  CollapsibleBox,
-  OnToggleFn,
-} from '@latitude-data/web-ui/molecules/CollapsibleBox'
-import {
-  ICommitContextType,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { CollapsibleBox, type OnToggleFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { type ICommitContextType, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  CollapsedContentHeader,
-  ExpandedContent,
-  ExpandedContentHeader,
-} from './BoxContent'
-import { Snapshot } from './shared'
+import { CollapsedContentHeader, ExpandedContent, ExpandedContentHeader } from './BoxContent'
+import type { Snapshot } from './shared'
 
 const useEvaluationResultsV2Socket = ({
   evaluations,
@@ -39,9 +26,7 @@ const useEvaluationResultsV2Socket = ({
   const onMessage = useCallback(
     (args: EventArgs<'evaluationResultV2Created'>) => {
       if (!args) return
-      const evaluation = evaluations.find(
-        (e) => e.versionId === args.evaluation.versionId,
-      )
+      const evaluation = evaluations.find((e) => e.versionId === args.evaluation.versionId)
       if (!evaluation) return
 
       mutate(
@@ -79,16 +64,18 @@ export default function DocumentEvaluations({
   isLoading: boolean
 }) {
   const { project } = useCurrentProject()
-  const { data: evaluations, isLoading: isEvaluationsV2Loading } =
-    useEvaluationsV2({ project, commit, document })
+  const { data: evaluations, isLoading: isEvaluationsV2Loading } = useEvaluationsV2({
+    project,
+    commit,
+    document,
+  })
 
-  const { data: evaluationResultsV2, mutate } =
-    useEvaluationResultsV2ByDocumentLogs({
-      project: project,
-      commit: commit,
-      document: document,
-      documentLogUuids: documentLog ? [documentLog.uuid] : [],
-    })
+  const { data: evaluationResultsV2, mutate } = useEvaluationResultsV2ByDocumentLogs({
+    project: project,
+    commit: commit,
+    document: document,
+    documentLogUuids: documentLog ? [documentLog.uuid] : [],
+  })
 
   useEvaluationResultsV2Socket({ evaluations, mutate })
 
@@ -106,8 +93,8 @@ export default function DocumentEvaluations({
     )
   }, [evaluationResultsV2, documentLog])
 
-  /* eslint-disable react-hooks/exhaustive-deps */
   const [snapshot, setSnapshot] = useState<Snapshot>()
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   useEffect(() => {
     if (!documentLog || snapshot?.documentLog.id === documentLog.id) return
     setSnapshot({

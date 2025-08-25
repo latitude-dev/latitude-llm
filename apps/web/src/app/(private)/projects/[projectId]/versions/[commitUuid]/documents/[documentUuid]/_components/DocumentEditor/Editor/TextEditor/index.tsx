@@ -2,15 +2,12 @@ import { requestSuggestionAction } from '$/actions/copilot/requestSuggestion'
 import { publishEventAction } from '$/actions/events/publishEventAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import type { AstError } from '@latitude-data/constants/promptl'
-import { DocumentVersion } from '@latitude-data/core/browser'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { DocumentVersion } from '@latitude-data/core/browser'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
 import type { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType, IProjectContextType } from '@latitude-data/web-ui/providers'
 import { memo, Suspense, useCallback } from 'react'
 import { DocumentRefinement } from '../DocumentRefinement'
 import { DocumentSuggestions } from '../DocumentSuggestions'
@@ -49,38 +46,32 @@ export const PlaygroundTextEditor = memo(
     highlightedCursorIndex?: number
   }) => {
     const { execute: publishEvent } = useLatitudeAction(publishEventAction)
-    const {
-      execute: executeRequestSuggestionAction,
-      isPending: isCopilotLoading,
-    } = useLatitudeAction(requestSuggestionAction, {
-      onSuccess: ({
-        data: suggestion,
-      }: {
-        data: { code: string; response: string } | null
-      }) => {
-        if (!suggestion) return
+    const { execute: executeRequestSuggestionAction, isPending: isCopilotLoading } =
+      useLatitudeAction(requestSuggestionAction, {
+        onSuccess: ({ data: suggestion }: { data: { code: string; response: string } | null }) => {
+          if (!suggestion) return
 
-        setDiff({
-          newValue: suggestion.code,
-          description: suggestion.response,
-          onAccept: (newValue: string) => {
-            setDiff(undefined)
-            publishEvent({
-              eventType: 'copilotSuggestionApplied',
-              payload: {
-                projectId: project.id,
-                commitUuid: commit.uuid,
-                documentUuid: document.documentUuid,
-              },
-            })
-            onChange(newValue)
-          },
-          onReject: () => {
-            setDiff(undefined)
-          },
-        })
-      },
-    })
+          setDiff({
+            newValue: suggestion.code,
+            description: suggestion.response,
+            onAccept: (newValue: string) => {
+              setDiff(undefined)
+              publishEvent({
+                eventType: 'copilotSuggestionApplied',
+                payload: {
+                  projectId: project.id,
+                  commitUuid: commit.uuid,
+                  documentUuid: document.documentUuid,
+                },
+              })
+              onChange(newValue)
+            },
+            onReject: () => {
+              setDiff(undefined)
+            },
+          })
+        },
+      })
     const requestSuggestion = useCallback(
       (prompt: string) => {
         executeRequestSuggestionAction({
@@ -90,12 +81,7 @@ export const PlaygroundTextEditor = memo(
           request: prompt,
         })
       },
-      [
-        executeRequestSuggestionAction,
-        commit.uuid,
-        project.id,
-        document.documentUuid,
-      ],
+      [executeRequestSuggestionAction, commit.uuid, project.id, document.documentUuid],
     )
 
     return (

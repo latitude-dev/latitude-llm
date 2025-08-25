@@ -1,13 +1,13 @@
 import {
-  AssembledSpan,
-  AssembledTrace,
+  type AssembledSpan,
+  type AssembledTrace,
   SpanStatus,
-  SpanType,
+  type SpanType,
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TextColor } from '@latitude-data/web-ui/tokens'
+import type { TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import { memo, useMemo } from 'react'
 import { SPAN_COLORS } from '../../spans/shared'
@@ -78,14 +78,11 @@ const IndentationBar = memo(
           const isCurrentLevel = currentLevel === depth
           const hasEndedAtThisLevel = ancestorEndedLevels.has(currentLevel)
           const showCurve = isCurrentLevel && isLast
-          const shouldShowLine =
-            !hasEndedAtThisLevel && (isCurrentLevel || currentLevel < depth)
+          const shouldShowLine = !hasEndedAtThisLevel && (isCurrentLevel || currentLevel < depth)
 
           const isThisLevelSelected = isSelected && isCurrentLevel
           const isThisLevelFromSelectedSpan =
-            selectedSpanDepth !== undefined &&
-            currentLevel > selectedSpanDepth &&
-            isParentSelected
+            selectedSpanDepth !== undefined && currentLevel > selectedSpanDepth && isParentSelected
 
           return (
             <div key={index} className='h-7 w-4'>
@@ -222,9 +219,7 @@ const TimelineTreeItem = memo(
               isFirst={index === 0}
               isLast={index === span.children.length - 1}
               isSelected={selectedSpan?.id === child.id}
-              isParentSelected={
-                isParentSelected || selectedSpan?.id === span.id
-              }
+              isParentSelected={isParentSelected || selectedSpan?.id === span.id}
               selectedSpan={selectedSpan}
               selectSpan={selectSpan}
               collapsedSpans={collapsedSpans}

@@ -1,14 +1,8 @@
 'use client'
-import {
-  createContext,
-  ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-} from 'react'
+import { createContext, type ReactNode, useCallback, useContext, useEffect } from 'react'
 
 import { refreshWebesocketTokenAction } from '$/actions/user/refreshWebsocketTokenAction'
-import {
+import type {
   WebClientToServerEvents,
   WebServerToClientEvents,
   Workspace,
@@ -36,16 +30,9 @@ function useJoinWorkspace({ connection }: { connection: IWebsocketConfig }) {
   )
 }
 
-export function useSocketConnection({
-  socketServer,
-}: {
-  socketServer: string
-}) {
+function useSocketConnection({ socketServer }: { socketServer: string }) {
   const { toast } = useToast()
-  const connection = useSocket<
-    WebServerToClientEvents,
-    WebClientToServerEvents
-  >(
+  const connection = useSocket<WebServerToClientEvents, WebClientToServerEvents>(
     `${socketServer}/web`, // namespace
     {
       path: '/websocket', // Socket server endpoint
@@ -59,7 +46,7 @@ export function useSocketConnection({
       try {
         const [data] = await refreshWebesocketTokenAction()
 
-        if (data && data.success) {
+        if (data?.success) {
           connection.socket.connect()
         } else {
           toast({
@@ -78,9 +65,7 @@ export function useSocketConnection({
 }
 
 type IWebsocketConfig = ReturnType<typeof useSocketConnection>
-const WebsocketConfigContext = createContext<IWebsocketConfig>(
-  {} as IWebsocketConfig,
-)
+const WebsocketConfigContext = createContext<IWebsocketConfig>({} as IWebsocketConfig)
 
 export const LatitudeWebsocketsProvider = ({
   workspace,
@@ -99,9 +84,7 @@ export const LatitudeWebsocketsProvider = ({
     joinWorkspace(workspace)
   }, [connection.connected, joinWorkspace, workspace])
   return (
-    <WebsocketConfigContext.Provider value={connection}>
-      {children}
-    </WebsocketConfigContext.Provider>
+    <WebsocketConfigContext.Provider value={connection}>{children}</WebsocketConfigContext.Provider>
   )
 }
 
@@ -109,9 +92,7 @@ export const useWebsocketConfig = () => {
   const context = useContext(WebsocketConfigContext)
 
   if (!context) {
-    throw new Error(
-      'useWebsocketConfig must be used within a WebsocketProvider',
-    )
+    throw new Error('useWebsocketConfig must be used within a WebsocketProvider')
   }
 
   return context

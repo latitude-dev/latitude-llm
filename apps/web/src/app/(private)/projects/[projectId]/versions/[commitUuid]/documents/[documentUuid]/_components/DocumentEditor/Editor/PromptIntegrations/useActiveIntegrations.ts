@@ -1,6 +1,6 @@
-import { ToolsItem } from '@latitude-data/constants'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { IntegrationDto } from '@latitude-data/core/browser'
+import type { ToolsItem } from '@latitude-data/constants'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { IntegrationDto } from '@latitude-data/core/browser'
 import { useCallback, useState } from 'react'
 import { useEvents } from '$/lib/events'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
@@ -12,12 +12,9 @@ export type ActiveIntegrations = Record<string, true | string[]> // true means '
 export function useActiveIntegrations({ prompt }: { prompt: string }) {
   const { data: integrations, isLoading } = useIntegrations()
   const { updateDocumentContent } = useDocumentValue()
-  const [promptConfig, setPromptConfig] = useState<LatitudePromptConfig>(
-    {} as LatitudePromptConfig,
-  )
+  const [promptConfig, setPromptConfig] = useState<LatitudePromptConfig>({} as LatitudePromptConfig)
   const [isInitialized, setInitialized] = useState(false)
-  const [activeIntegrations, setActiveIntegrations] =
-    useState<ActiveIntegrations>({})
+  const [activeIntegrations, setActiveIntegrations] = useState<ActiveIntegrations>({})
   const addIntegrationTool = useCallback(
     (integrationName: string, toolName: string) => {
       // Local state
@@ -43,11 +40,7 @@ export function useActiveIntegrations({ prompt }: { prompt: string }) {
   )
 
   const removeIntegrationTool = useCallback(
-    (
-      integrationName: string,
-      toolName: string,
-      integrationToolNames: string[],
-    ) => {
+    (integrationName: string, toolName: string, integrationToolNames: string[]) => {
       // Local state
       setActiveIntegrations((prev) => {
         return removeIntegrationFromActiveIntegrations({
@@ -101,10 +94,7 @@ export function useActiveIntegrations({ prompt }: { prompt: string }) {
 }
 
 function isValidIntegration(name: string, integrations: IntegrationDto[]) {
-  return (
-    name === 'latitude' ||
-    integrations.some((integration) => integration.name === name)
-  )
+  return name === 'latitude' || integrations.some((integration) => integration.name === name)
 }
 
 function readActiveIntegrations({
@@ -161,8 +151,7 @@ function removeIntegrationFromActiveIntegrations({
     return { ...activeIntegrations, [integrationName]: remainingTools }
   }
 
-  if (!Array.isArray(activeIntegrations[integrationName]))
-    return activeIntegrations
+  if (!Array.isArray(activeIntegrations[integrationName])) return activeIntegrations
   const remaining = (activeIntegrations[integrationName] as string[]).filter(
     (tn) => tn !== toolName,
   )
@@ -197,9 +186,7 @@ function addIntegrationToActiveIntegrations({
   return {
     ...activeIntegrations,
     [integrationName]:
-      toolName === '*'
-        ? true
-        : [...(Array.isArray(existing) ? existing : []), toolName],
+      toolName === '*' ? true : [...(Array.isArray(existing) ? existing : []), toolName],
   } satisfies ActiveIntegrations
 }
 
@@ -223,12 +210,8 @@ function updateExistingToolsFromConfig({
   toolName: string
 }) {
   const tools = (normalizeIntegrations(currentTools) as ToolsItem[]) ?? []
-  const clientTools = tools.filter(
-    (tool: ToolsItem) => typeof tool !== 'string',
-  )
-  const integrationTools = tools.filter(
-    (tool: ToolsItem) => typeof tool === 'string',
-  )
+  const clientTools = tools.filter((tool: ToolsItem) => typeof tool !== 'string')
+  const integrationTools = tools.filter((tool: ToolsItem) => typeof tool === 'string')
   if (integrationTools.includes(`${integrationName}/*`)) return tools
   if (integrationTools.includes(`${integrationName}/${toolName}`)) return tools
 
@@ -276,7 +259,5 @@ function removeToolsFromConfigTools({
       if (integrationToolsToAdd.includes(toolName ?? '*')) return false
       return toolName !== removedToolName
     })
-    .concat(
-      integrationToolsToAdd.map((tn) => `${removedIntegrationName}/${tn}`),
-    )
+    .concat(integrationToolsToAdd.map((tn) => `${removedIntegrationName}/${tn}`))
 }

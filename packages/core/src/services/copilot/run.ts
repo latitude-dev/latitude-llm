@@ -1,10 +1,10 @@
-import { z } from 'zod'
+import type { z } from 'zod'
 import { LogSources } from '../../browser'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { BACKGROUND } from '../../telemetry'
 import { runDocumentAtCommit } from '../commits/runDocumentAtCommit'
-import { Copilot } from './shared'
+import type { Copilot } from './shared'
 
 export async function runCopilot<S extends z.ZodSchema = z.ZodAny>({
   copilot,
@@ -29,9 +29,7 @@ export async function runCopilot<S extends z.ZodSchema = z.ZodAny>({
 
   const response = await result.lastResponse
   if (response?.streamType !== 'object') {
-    return Result.error(
-      new UnprocessableEntityError('Copilot response is not an object'),
-    )
+    return Result.error(new UnprocessableEntityError('Copilot response is not an object'))
   }
 
   let output: S extends z.ZodSchema ? z.infer<S> : unknown = response.object

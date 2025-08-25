@@ -1,4 +1,4 @@
-import { ParameterType } from '@latitude-data/constants'
+import type { ParameterType } from '@latitude-data/constants'
 
 export const INPUT_SOURCE = {
   manual: 'manual',
@@ -12,8 +12,7 @@ const LOCAL_INPUT_SOURCE = {
   dataset: 'dataset',
   datasetV2: 'datasetV2',
 } as const
-export type LocalInputSource =
-  (typeof LOCAL_INPUT_SOURCE)[keyof typeof LOCAL_INPUT_SOURCE]
+export type LocalInputSource = (typeof LOCAL_INPUT_SOURCE)[keyof typeof LOCAL_INPUT_SOURCE]
 
 export type InputSource = (typeof INPUT_SOURCE)[keyof typeof INPUT_SOURCE]
 type PlaygroundInputMetadata = {
@@ -25,28 +24,24 @@ type LocalPlaygroundInput<_S extends LocalInputSource = 'manual'> = {
   value: string
   metadata: PlaygroundInputMetadata
 }
-export type PlaygroundInput<S extends Omit<InputSource, 'datasetV2'>> =
-  S extends 'dataset'
+export type PlaygroundInput<S extends Omit<InputSource, 'datasetV2'>> = S extends 'dataset'
+  ? {
+      value: string
+      metadata: PlaygroundInputMetadata & { includeInPrompt: boolean }
+    }
+  : S extends 'datasetV2'
     ? {
         value: string
         metadata: PlaygroundInputMetadata & { includeInPrompt: boolean }
       }
-    : S extends 'datasetV2'
-      ? {
-          value: string
-          metadata: PlaygroundInputMetadata & { includeInPrompt: boolean }
-        }
-      : LocalPlaygroundInput<LocalInputSource>
+    : LocalPlaygroundInput<LocalInputSource>
 
 type ManualInput = PlaygroundInput<'manual'>
 type DatasetInput = PlaygroundInput<'dataset'>
 type HistoryInput = PlaygroundInput<'history'>
 
 export type Inputs<S extends InputSource> = Record<string, PlaygroundInput<S>>
-export type LocalInputs<S extends LocalInputSource> = Record<
-  string,
-  LocalPlaygroundInput<S>
->
+export type LocalInputs<S extends LocalInputSource> = Record<string, LocalPlaygroundInput<S>>
 
 export type LinkedDataset = {
   rowIndex: number | undefined

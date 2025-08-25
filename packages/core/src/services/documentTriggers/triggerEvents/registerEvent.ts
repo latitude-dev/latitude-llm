@@ -1,12 +1,7 @@
-import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  Commit,
-  DocumentTrigger,
-  DocumentTriggerEvent,
-  Workspace,
-} from '../../../browser'
-import { DocumentTriggerEventPayload } from '@latitude-data/constants/documentTriggers'
-import Transaction, { PromisedResult } from '../../../lib/Transaction'
+import type { DocumentTriggerType } from '@latitude-data/constants'
+import type { Commit, DocumentTrigger, DocumentTriggerEvent, Workspace } from '../../../browser'
+import type { DocumentTriggerEventPayload } from '@latitude-data/constants/documentTriggers'
+import Transaction, { type PromisedResult } from '../../../lib/Transaction'
 import { documentTriggerEvents } from '../../../schema'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { Result } from '../../../lib/Result'
@@ -16,9 +11,7 @@ import { enqueueRunDocumentFromTriggerEventJob } from './runFromEvent'
 /**
  * Registers and incoming document trigger event, and enqueues a job to execute the trigger if the trigger is enabled.
  */
-export async function registerDocumentTriggerEvent<
-  T extends DocumentTriggerType,
->(
+export async function registerDocumentTriggerEvent<T extends DocumentTriggerType>(
   {
     workspace,
     triggerUuid,
@@ -35,10 +28,7 @@ export async function registerDocumentTriggerEvent<
   let documentTrigger: DocumentTrigger<T> | undefined
 
   const documentTriggerEventResult = await transaction.call(async (tx) => {
-    const documentTriggerScope = new DocumentTriggersRepository(
-      workspace.id,
-      tx,
-    )
+    const documentTriggerScope = new DocumentTriggersRepository(workspace.id, tx)
     const documentTriggerResult = await documentTriggerScope.getTriggerByUuid({
       uuid: triggerUuid,
       commit,
@@ -74,11 +64,10 @@ export async function registerDocumentTriggerEvent<
 
   // If enabled, run the trigger event automatically
   if (documentTrigger?.enabled) {
-    const executeDocumentTriggerEventResult =
-      await enqueueRunDocumentFromTriggerEventJob({
-        workspace,
-        documentTriggerEvent,
-      })
+    const executeDocumentTriggerEventResult = await enqueueRunDocumentFromTriggerEventJob({
+      workspace,
+      documentTriggerEvent,
+    })
 
     if (executeDocumentTriggerEventResult.error) {
       return executeDocumentTriggerEventResult

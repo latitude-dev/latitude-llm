@@ -1,4 +1,4 @@
-import { NewExport, Workspace } from '../../browser'
+import type { NewExport, Workspace } from '../../browser'
 import { latitudeExports } from '../../schema'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -29,10 +29,7 @@ export async function findOrCreateExport(
       fileKey,
     }
 
-    const [newExport] = await tx
-      .insert(latitudeExports)
-      .values(newExportData)
-      .returning()
+    const [newExport] = await tx.insert(latitudeExports).values(newExportData).returning()
 
     if (!newExport) {
       throw new Error('Failed to create export')

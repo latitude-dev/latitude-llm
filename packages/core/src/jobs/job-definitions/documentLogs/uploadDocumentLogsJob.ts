@@ -1,7 +1,7 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 
-import { Commit } from '../../../browser'
-import { LogSources, messagesSchema } from '../../../constants'
+import type { Commit } from '../../../browser'
+import { type LogSources, messagesSchema } from '../../../constants'
 import { defaultQueue } from '../../queues'
 
 export type UploadDocumentLogsJobData = {
@@ -12,9 +12,7 @@ export type UploadDocumentLogsJobData = {
   csv: { data: { record: string[] }[] }
 }
 
-export const uploadDocumentLogsJob = async (
-  job: Job<UploadDocumentLogsJobData>,
-) => {
+export const uploadDocumentLogsJob = async (job: Job<UploadDocumentLogsJobData>) => {
   const { workspaceId, source, documentUuid, commit, csv } = job.data
 
   csv.data.forEach((row) => {
@@ -34,8 +32,7 @@ export const uploadDocumentLogsJob = async (
       messages: response ? messages : messages.slice(0, -1),
       responseText:
         response ??
-        (messages[messages.length - 1].content?.text ||
-          messages[messages.length - 1].content),
+        (messages[messages.length - 1].content?.text || messages[messages.length - 1].content),
     })
   })
 }

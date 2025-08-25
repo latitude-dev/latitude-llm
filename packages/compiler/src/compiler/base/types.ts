@@ -1,6 +1,7 @@
-import Scope, { ScopePointers } from '$compiler/compiler/scope'
-import { TemplateNode } from '$compiler/parser/interfaces'
-import {
+import type Scope from '$compiler/compiler/scope'
+import type { ScopePointers } from '$compiler/compiler/scope'
+import type { TemplateNode } from '$compiler/parser/interfaces'
+import type {
   AssistantMessage,
   Config,
   Message,
@@ -9,7 +10,7 @@ import {
 } from '$compiler/types'
 import type { Node as LogicalExpression } from 'estree'
 
-import { ResolveBaseNodeProps, ToolCallReference } from '../types'
+import type { ResolveBaseNodeProps, ToolCallReference } from '../types'
 
 export enum NodeType {
   Literal = 'Literal',
@@ -46,10 +47,7 @@ export type TemplateNodeWithStatus = TemplateNode & {
 export type CompileNodeContext<N extends TemplateNode> = {
   node: N
   scope: Scope
-  resolveExpression: (
-    expression: LogicalExpression,
-    scope: Scope,
-  ) => Promise<unknown>
+  resolveExpression: (expression: LogicalExpression, scope: Scope) => Promise<unknown>
   resolveBaseNode: (props: ResolveBaseNodeProps<TemplateNode>) => Promise<void>
   baseNodeError: RaiseErrorFn<never, TemplateNode>
   expressionError: RaiseErrorFn<never, LogicalExpression>

@@ -1,13 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
-import { AppDto, IntegrationDto } from '@latitude-data/core/browser'
+import type { AppDto, IntegrationDto } from '@latitude-data/core/browser'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IntegrationType } from '@latitude-data/constants'
-import {
-  Select,
-  type SelectOption,
-  type SelectProps,
-} from '@latitude-data/web-ui/atoms/Select'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { Select, type SelectOption, type SelectProps } from '@latitude-data/web-ui/atoms/Select'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import useIntegrations from '$/stores/integrations'
 import { PipedreamConnect } from './PipedreamConnect'
 
@@ -62,7 +58,7 @@ export function ConnectAccount({
       label: 'Connect a new account',
       onClick: () => setShowConnect(true),
     }),
-    [setShowConnect],
+    [],
   )
 
   const onCancel = useCallback(() => {
@@ -77,8 +73,7 @@ export function ConnectAccount({
     },
     [setAccount],
   )
-  const showConnectAccount =
-    (!isLoading && accounts.length === 0) || showConnect
+  const showConnectAccount = (!isLoading && accounts.length === 0) || showConnect
 
   return (
     <FormFieldGroup

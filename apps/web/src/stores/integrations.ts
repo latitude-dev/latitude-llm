@@ -9,7 +9,7 @@ import { scaleUpMcpServerAction } from '$/actions/integrations/scaleUp'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 import { IntegrationType } from '@latitude-data/constants'
 import { useMemo } from 'react'
 
@@ -49,14 +49,9 @@ export default function useIntegrations({
   const {
     data = EMPTY_ARRAY,
     mutate,
-    ...rest
+    isLoading,
   } = useSWR<IntegrationDto[]>(
-    [
-      'integrations',
-      includeLatitudeTools ?? false,
-      withTools ?? false,
-      withTriggers ?? false,
-    ],
+    ['integrations', includeLatitudeTools ?? false, withTools ?? false, withTriggers ?? false],
     fetcher,
     opts,
   )
@@ -99,31 +94,24 @@ export default function useIntegrations({
         })
 
         mutate(
-          data.map((item) =>
-            item.id === mcpServer.id ? { ...item, mcpServer: mcpServer } : item,
-          ),
+          data.map((item) => (item.id === mcpServer.id ? { ...item, mcpServer: mcpServer } : item)),
         )
       },
     },
   )
 
-  const { execute: scaleUp, isPending: isScalingUp } = useLatitudeAction(
-    scaleUpMcpServerAction,
-    {
-      onSuccess: async ({ data: mcpServer }) => {
-        toast({
-          title: 'Success',
-          description: 'MCP server scaled up successfully',
-        })
+  const { execute: scaleUp, isPending: isScalingUp } = useLatitudeAction(scaleUpMcpServerAction, {
+    onSuccess: async ({ data: mcpServer }) => {
+      toast({
+        title: 'Success',
+        description: 'MCP server scaled up successfully',
+      })
 
-        mutate(
-          data.map((item) =>
-            item.id === mcpServer.id ? { ...item, mcpServer: mcpServer } : item,
-          ),
-        )
-      },
+      mutate(
+        data.map((item) => (item.id === mcpServer.id ? { ...item, mcpServer: mcpServer } : item)),
+      )
     },
-  )
+  })
 
   return useMemo(
     () => ({
@@ -138,7 +126,7 @@ export default function useIntegrations({
       scaleUp,
       isScalingUp,
       mutate,
-      ...rest,
+      isLoading,
     }),
     [
       data,
@@ -152,7 +140,7 @@ export default function useIntegrations({
       scaleUp,
       isScalingUp,
       mutate,
-      rest,
+      isLoading,
     ],
   )
 }

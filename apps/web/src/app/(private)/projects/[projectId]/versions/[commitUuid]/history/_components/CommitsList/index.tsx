@@ -1,4 +1,4 @@
-import { Commit } from '@latitude-data/core/browser'
+import type { Commit } from '@latitude-data/core/browser'
 import { BadgeCommit } from '../../../_components/Sidebar/CommitSelector/CommitItem'
 import { cn } from '@latitude-data/web-ui/utils'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
@@ -8,7 +8,7 @@ import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedToolt
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import useUsers from '$/stores/users'
 import { relativeTime } from '$/lib/relativeTime'
-import { ReactNode, useMemo } from 'react'
+import { type ReactNode, useMemo } from 'react'
 import { useCommitActions } from './commitActions'
 
 function CommitItem({
@@ -24,8 +24,7 @@ function CommitItem({
 }) {
   const { data: users } = useUsers()
   const userName = useMemo(
-    () =>
-      users?.find((user) => user.id === commit.userId)?.name ?? 'Unknown user',
+    () => users?.find((user) => user.id === commit.userId)?.name ?? 'Unknown user',
     [users, commit.userId],
   )
   const { getChangesToRevert, getChangesToReset } = useCommitActions({
@@ -72,8 +71,7 @@ function CommitItem({
             {
               label: 'Reset project to this version',
               onClick: getChangesToReset,
-              disabled:
-                !currentCommit.mergedAt && commit.id === currentCommit.id,
+              disabled: !currentCommit.mergedAt && commit.id === currentCommit.id,
             },
           ]}
         />
@@ -128,9 +126,7 @@ export function CommitsList({
 
   return (
     <div className='flex w-full h-full flex-col custom-scrollbar'>
-      {!!banner && (
-        <div className='py-2 px-2 border-b border-border'>{banner}</div>
-      )}
+      {!!banner && <div className='py-2 px-2 border-b border-border'>{banner}</div>}
       {commits.map((commit) => (
         <CommitItem
           key={commit.id}

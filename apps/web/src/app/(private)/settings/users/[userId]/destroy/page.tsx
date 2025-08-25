@@ -7,11 +7,7 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useUsers from '$/stores/users'
 
-export default function DestroyUserMembership({
-  params,
-}: {
-  params: Promise<{ userId: string }>
-}) {
+export default function DestroyUserMembership({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = use(params)
   const navigate = useNavigate()
   const { data, destroy } = useUsers()
@@ -23,9 +19,7 @@ export default function DestroyUserMembership({
     <DestroyModal
       title='Remove user'
       description={`Are you sure you want to remove ${user?.name} from this workspace? You will be able to invite them again.`}
-      onOpenChange={(open: boolean) =>
-        !open && navigate.push(ROUTES.settings.root)
-      }
+      onOpenChange={(open: boolean) => !open && navigate.push(ROUTES.settings.root)}
       action={destroy}
       submitStr={`Remove ${user?.name}`}
       model={user}

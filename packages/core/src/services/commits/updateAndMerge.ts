@@ -1,6 +1,6 @@
-import { Commit } from '../../browser'
+import type { Commit } from '../../browser'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
-import { TypedResult } from '../../lib/Result'
+import type { TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { mergeCommit } from './merge'
 import { updateCommit } from './update'

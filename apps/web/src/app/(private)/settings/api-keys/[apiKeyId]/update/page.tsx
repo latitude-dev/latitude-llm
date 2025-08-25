@@ -9,11 +9,7 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { use, useCallback, useMemo } from 'react'
 import { useFormAction } from '$/hooks/useFormAction'
 
-export default function UpdateApiKeyPage({
-  params,
-}: {
-  params: Promise<{ apiKeyId: string }>
-}) {
+export default function UpdateApiKeyPage({ params }: { params: Promise<{ apiKeyId: string }> }) {
   const { apiKeyId } = use(params)
   const navigate = useNavigate()
 
@@ -23,10 +19,7 @@ export default function UpdateApiKeyPage({
       navigate.push(ROUTES.settings.root)
     },
   })
-  const apiKey = useMemo(
-    () => apiKeys.find((k) => k.id === Number(apiKeyId)),
-    [apiKeys, apiKeyId],
-  )
+  const apiKey = useMemo(() => apiKeys.find((k) => k.id === Number(apiKeyId)), [apiKeys, apiKeyId])
 
   const onCancel = useCallback(() => {
     navigate.push(ROUTES.settings.root)
@@ -41,20 +34,10 @@ export default function UpdateApiKeyPage({
       description='Update the name for your API key'
       footer={
         <div className='flex flex-row gap-2'>
-          <Button
-            fancy
-            variant='outline'
-            onClick={onCancel}
-            disabled={isUpdating}
-          >
+          <Button fancy variant='outline' onClick={onCancel} disabled={isUpdating}>
             Cancel
           </Button>
-          <Button
-            fancy
-            type='submit'
-            form='update-api-key-form'
-            disabled={isUpdating}
-          >
+          <Button fancy type='submit' form='update-api-key-form' disabled={isUpdating}>
             {isUpdating ? 'Updating...' : 'Update API Key'}
           </Button>
         </div>

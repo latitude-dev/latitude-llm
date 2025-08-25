@@ -1,9 +1,9 @@
 'use client'
 
-import { MutableRefObject, useCallback, useEffect } from 'react'
+import { type MutableRefObject, useCallback, useEffect } from 'react'
 
-import { DiffEditor, Monaco } from '@monaco-editor/react'
-import { type editor } from 'monaco-editor'
+import { DiffEditor, type Monaco } from '@monaco-editor/react'
+import type { editor } from 'monaco-editor'
 
 import { TextEditorPlaceholder } from '../../TextEditorPlaceholder'
 import { EditorWrapper } from './EditorWrapper'

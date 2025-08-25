@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react'
 import { Button } from '../../atoms/Button'
 import { FormField } from '../../atoms/FormField'
 import { Popover } from '../../atoms/Popover'
-import { TabSelector, TabSelectorOption } from '../../molecules/TabSelector'
+import { TabSelector, type TabSelectorOption } from '../../molecules/TabSelector'
 import { Text } from '../../atoms/Text'
 import cronstrue from 'cronstrue'
 import { Icon } from '../../atoms/Icons'
@@ -12,7 +12,7 @@ import { IntervalCronInput } from './Interval'
 import { ScheduleCronInput } from './Schedule'
 import { CustomCronInput } from './Custom'
 import {
-  CronValue,
+  type CronValue,
   parseCronValue,
   formatCronValue,
   isIntervalCron,
@@ -38,7 +38,7 @@ export function humanizeCronValue(value: string): string {
     return cronstrue.toString(value, {
       throwExceptionOnParseError: true,
     })
-  } catch (err) {
+  } catch (_err) {
     return 'Invalid cron expression'
   }
 }
@@ -67,9 +67,7 @@ export function CronInput({
   const [localValue, setLocalValue] = useState<CronValue>(() =>
     parseCronValue(value ?? '* * * * *'),
   )
-  const [stringValue, setStringValue] = useState<string>(
-    () => value ?? '* * * * *',
-  )
+  const [stringValue, setStringValue] = useState<string>(() => value ?? '* * * * *')
   const [humanReadableValue, setHumanReadableValue] = useState<string>(() =>
     cronstrue.toString(value ?? '* * * * *'),
   )
@@ -107,14 +105,7 @@ export function CronInput({
 
   return (
     <>
-      <input
-        type='text'
-        name={name}
-        value={stringValue}
-        readOnly
-        hidden
-        required={required}
-      />
+      <input type='text' name={name} value={stringValue} readOnly hidden required={required} />
       <FormField label={label} description={description} errors={errors}>
         <Popover.Root
           onOpenChange={(open) => {
@@ -131,28 +122,15 @@ export function CronInput({
               fullWidth={fullWidth}
             >
               <div className='w-full flex items-center gap-2 max-w-full overflow-hidden truncate'>
-                <Icon
-                  name='repeat'
-                  color='foregroundMuted'
-                  className='min-w-4'
-                />
+                <Icon name='repeat' color='foregroundMuted' className='min-w-4' />
                 <Text.H5 color='foregroundMuted' noWrap ellipsis>
                   {humanReadableValue}
                 </Text.H5>
               </div>
             </Button>
           </Popover.Trigger>
-          <Popover.Content
-            side='bottom'
-            align='start'
-            size='large'
-            className='w-[600px]'
-          >
-            <TabSelector
-              options={TAB_OPTIONS}
-              selected={selectedTab}
-              onSelect={setSelectedTab}
-            />
+          <Popover.Content side='bottom' align='start' size='large' className='w-[600px]'>
+            <TabSelector options={TAB_OPTIONS} selected={selectedTab} onSelect={setSelectedTab} />
             {selectedTab === CronTab.Interval && (
               <IntervalCronInput value={localValue} onChange={handleChange} />
             )}

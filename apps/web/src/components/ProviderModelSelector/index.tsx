@@ -2,32 +2,26 @@ import { envClient } from '$/envClient'
 import { getModelOptionsForProvider } from '$/hooks/useModelOptions'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useEvents } from '$/lib/events'
-import {
-  ICON_BY_LLM_PROVIDER,
-  LABEL_BY_LLM_PROVIDER,
-} from '$/lib/providerIcons'
+import { ICON_BY_LLM_PROVIDER, LABEL_BY_LLM_PROVIDER } from '$/lib/providerIcons'
 import { ROUTES } from '$/services/routes'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
-import { SerializedProviderApiKey } from '$/stores/providerApiKeys'
+import type { SerializedProviderApiKey } from '$/stores/providerApiKeys'
 import {
   findFirstModelForProvider,
-  ProviderApiKey,
+  type ProviderApiKey,
   Providers,
 } from '@latitude-data/core/browser'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
-import {
-  Popover,
-  type PopoverContentProps,
-} from '@latitude-data/web-ui/atoms/Popover'
+import { Icon, type IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Popover, type PopoverContentProps } from '@latitude-data/web-ui/atoms/Popover'
 import {
   TwoColumnSelect,
-  TwoColumnSelectOption,
+  type TwoColumnSelectOption,
 } from '@latitude-data/web-ui/molecules/TwoColumnSelect'
 import { useCallback, useMemo, useState } from 'react'
-import { ModelOption, ModelSelector } from './ModelSelector'
+import { type ModelOption, ModelSelector } from './ModelSelector'
 import { sortProviders } from './sortProviders'
 
 function getProviderIcon({
@@ -268,12 +262,7 @@ export function ProviderModelSelector({
           }}
         >
           <div className='flex flex-row items-center gap-x-2 max-w-64'>
-            <Icon
-              name={iconName}
-              spin={spin}
-              color='foregroundMuted'
-              className='flex-none'
-            />
+            <Icon name={iconName} spin={spin} color='foregroundMuted' className='flex-none' />
             <span className='flex-1 whitespace-nowrap'>{providerLabel}</span>
             {model ? (
               <Badge ellipsis noWrap variant='accent'>

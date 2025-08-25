@@ -1,19 +1,13 @@
 'use server'
 
 import { z } from 'zod'
-import {
-  DATASET_COLUMN_ROLES,
-  DatasetColumnRole,
-} from '@latitude-data/core/browser'
+import { DATASET_COLUMN_ROLES, type DatasetColumnRole } from '@latitude-data/core/browser'
 import { updateDatasetColumn } from '@latitude-data/core/services/datasets/updateColumn'
 import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { authProcedure } from '../procedures'
 
 const datasetColumnRoleSchema = z.enum(
-  Object.values(DATASET_COLUMN_ROLES) as [
-    DatasetColumnRole,
-    ...DatasetColumnRole[],
-  ],
+  Object.values(DATASET_COLUMN_ROLES) as [DatasetColumnRole, ...DatasetColumnRole[]],
 )
 export const updateDatasetColumnAction = authProcedure
   .createServerAction()

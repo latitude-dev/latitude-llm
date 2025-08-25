@@ -2,7 +2,7 @@
 
 import useFeature from '$/stores/useFeature'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
-import { DocumentEditorProps, OldDocumentEditor } from './OldDocumentEditor'
+import { type DocumentEditorProps, OldDocumentEditor } from './OldDocumentEditor'
 import { DocumentEditor } from './DocumentEditor'
 
 export default function DocumentEditorWrapper(props: DocumentEditorProps) {

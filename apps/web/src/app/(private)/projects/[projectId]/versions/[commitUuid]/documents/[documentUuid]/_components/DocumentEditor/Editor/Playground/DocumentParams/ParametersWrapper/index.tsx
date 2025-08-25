@@ -1,9 +1,9 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '@latitude-data/web-ui/providers'
 
 export function ParametersWrapper({
   document,
@@ -23,18 +23,14 @@ export function ParametersWrapper({
       <div className='flex flex-col gap-3'>
         {metadataParameters === undefined ? (
           <Text.H6 color='foregroundMuted'>Loading..</Text.H6>
+        ) : metadataParameters.length > 0 ? (
+          <div className='grid grid-cols-[auto_1fr] gap-y-3'>
+            {children({ metadataParameters })}
+          </div>
         ) : (
-          <>
-            {metadataParameters.length > 0 ? (
-              <div className='grid grid-cols-[auto_1fr] gap-y-3'>
-                {children({ metadataParameters })}
-              </div>
-            ) : (
-              <Text.H6 color='foregroundMuted'>
-                No inputs. Use &#123;&#123;input_name&#125;&#125; to insert.
-              </Text.H6>
-            )}
-          </>
+          <Text.H6 color='foregroundMuted'>
+            No inputs. Use &#123;&#123;input_name&#125;&#125; to insert.
+          </Text.H6>
         )}
       </div>
     </ClientOnly>

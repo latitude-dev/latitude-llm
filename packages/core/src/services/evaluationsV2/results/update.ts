@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm'
-import {
+import type {
   Commit,
   EvaluationMetric,
   EvaluationResultV2,
@@ -38,10 +38,7 @@ export async function updateEvaluationResultV2<
         updatedAt: new Date(),
       })
       .where(
-        and(
-          eq(evaluationResultsV2.workspaceId, workspace.id),
-          eq(evaluationResultsV2.uuid, uuid),
-        ),
+        and(eq(evaluationResultsV2.workspaceId, workspace.id), eq(evaluationResultsV2.uuid, uuid)),
       )
       .returning()
       .then((r) => r[0]!)) as EvaluationResultV2<T, M>

@@ -33,9 +33,7 @@ export const setupAction = errorHandlingProcedure
               !email.match(/^[^+]+\+\d+@[A-Z0-9.-]+$/i),
             { message: 'Email is not valid' },
           ),
-        companyName: z
-          .string()
-          .min(1, { message: 'Workspace name is a required field' }),
+        companyName: z.string().min(1, { message: 'Workspace name is a required field' }),
       })
     },
     { type: 'formData' },

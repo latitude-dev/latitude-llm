@@ -1,12 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 
-import {
-  DocumentVersion,
-  LinkedDataset,
-  User,
-  Workspace,
-  type Commit,
-} from '../../browser'
+import type { DocumentVersion, LinkedDataset, User, Workspace, Commit } from '../../browser'
 import { database } from '../../client'
 import { documentVersions } from '../../schema'
 import { destroyDocument } from '../../services/documents'
@@ -28,10 +22,7 @@ export async function markAsSoftDelete(
     .update(documentVersions)
     .set({ deletedAt: new Date() })
     .where(
-      and(
-        eq(documentVersions.documentUuid, documentUuid),
-        eq(documentVersions.commitId, commitId),
-      ),
+      and(eq(documentVersions.documentUuid, documentUuid), eq(documentVersions.commitId, commitId)),
     )
 }
 

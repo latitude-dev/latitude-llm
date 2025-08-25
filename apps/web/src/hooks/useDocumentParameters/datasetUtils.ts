@@ -1,11 +1,8 @@
 import { useCallback } from 'react'
-import { DocumentVersion, LinkedDatasetRow } from '@latitude-data/core/browser'
-import {
-  getDocState,
-  InputsByDocument,
-} from '$/hooks/useDocumentParameters/utils'
+import type { DocumentVersion, LinkedDatasetRow } from '@latitude-data/core/browser'
+import { getDocState, type InputsByDocument } from '$/hooks/useDocumentParameters/utils'
 import useDocumentVersions from '$/stores/documentVersions'
-import { useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
+import type { useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
 
 export function useDatasetUtils({
   key,
@@ -22,12 +19,10 @@ export function useDatasetUtils({
   allInputs: ReturnType<typeof useLocalStorage<InputsByDocument>>['value']
   setValue: ReturnType<typeof useLocalStorage<InputsByDocument>>['setValue']
 }) {
-  const { saveLinkedDataset, assignDataset, isAssigning } = useDocumentVersions(
-    {
-      projectId,
-      commitUuid,
-    },
-  )
+  const { saveLinkedDataset, assignDataset, isAssigning } = useDocumentVersions({
+    projectId,
+    commitUuid,
+  })
   const setDatasetMappedInputs = useCallback(
     ({
       datasetId,
@@ -42,8 +37,8 @@ export function useDatasetUtils({
     }) => {
       setValue((oldState) => {
         const { state, doc } = getDocState(oldState, key)
-        const prevDatasetState = doc['datasetV2'] ?? {}
-        const prevSource = doc['datasetV2']?.[datasetId] ?? {
+        const prevDatasetState = doc.datasetV2 ?? {}
+        const prevSource = doc.datasetV2?.[datasetId] ?? {
           datasetRowId: nextDatasetRowId,
           inputs: nextInputs ?? {},
           mappedInputs: nextMappedInputs ?? {},
@@ -95,7 +90,7 @@ export function useDatasetUtils({
       if (!data || !data?.datasetRowId) return
 
       const { doc } = getDocState(allInputs, key)
-      const datasetDoc = doc['datasetV2']?.[datasetId] ?? {
+      const datasetDoc = doc.datasetV2?.[datasetId] ?? {
         datasetRowId: data?.datasetRowId,
         inputs: data?.inputs ?? {},
         mappedInputs: data?.mappedInputs ?? {},

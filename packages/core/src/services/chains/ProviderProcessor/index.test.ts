@@ -1,12 +1,12 @@
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import * as factories from '../../../tests/factories'
-import { LanguageModelUsage } from 'ai'
+import type { LanguageModelUsage } from 'ai'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { processResponse } from '.'
 import { LogSources, Providers } from '../../../constants'
 import { generateUUIDIdentifier } from './../../../lib/generateUUID'
-import { buildProviderLogDto } from './saveOrPublishProviderLogs'
+import type { buildProviderLogDto } from './saveOrPublishProviderLogs'
 
 let data: ReturnType<typeof buildProviderLogDto>
 
@@ -64,19 +64,11 @@ describe('ProviderProcessor', () => {
       aiResult: {
         type: 'text' as const,
         toolCalls: new Promise((resolve) => resolve([])),
-        reasoning: new Promise<string | undefined>((resolve) =>
-          resolve(undefined),
-        ),
-        text: new Promise<string>((resolve) =>
-          resolve(data.responseText as string),
-        ),
-        usage: new Promise<LanguageModelUsage>((resolve) =>
-          resolve(data.usage),
-        ),
+        reasoning: new Promise<string | undefined>((resolve) => resolve(undefined)),
+        text: new Promise<string>((resolve) => resolve(data.responseText as string)),
+        usage: new Promise<LanguageModelUsage>((resolve) => resolve(data.usage)),
         providerName: Providers.OpenAI,
-        providerMetadata: new Promise<undefined>((resolve) =>
-          resolve(undefined),
-        ),
+        providerMetadata: new Promise<undefined>((resolve) => resolve(undefined)),
         // @ts-expect-error - mock implementation
         response: new Promise((resolve) => resolve({})),
       },

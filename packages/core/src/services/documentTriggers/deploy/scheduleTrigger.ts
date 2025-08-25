@@ -1,5 +1,5 @@
-import { Result, TypedResult } from '../../../lib/Result'
-import {
+import { Result, type TypedResult } from '../../../lib/Result'
+import type {
   ScheduledTriggerConfiguration,
   ScheduledTriggerDeploymentSettings,
 } from '@latitude-data/constants/documentTriggers'

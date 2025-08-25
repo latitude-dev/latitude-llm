@@ -1,4 +1,4 @@
-import { HostedIntegrationConfig } from '../types'
+import type { HostedIntegrationConfig } from '../types'
 import { uvxCommand } from '../utils'
 
 const MONDAY_MCP_CONFIG: HostedIntegrationConfig = {
@@ -21,8 +21,7 @@ const MONDAY_MCP_CONFIG: HostedIntegrationConfig = {
       required: true,
     },
   },
-  envSource:
-    'https://developer.monday.com/api-reference/docs/authentication#developer-tab',
+  envSource: 'https://developer.monday.com/api-reference/docs/authentication#developer-tab',
 }
 
 export default MONDAY_MCP_CONFIG

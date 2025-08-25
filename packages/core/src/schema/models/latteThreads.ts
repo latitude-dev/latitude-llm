@@ -1,12 +1,5 @@
 import { sql } from 'drizzle-orm'
-import {
-  bigint,
-  bigserial,
-  index,
-  text,
-  uniqueIndex,
-  uuid,
-} from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
@@ -17,10 +10,7 @@ export const latteThreads = latitudeSchema.table(
   'latte_threads',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
-    uuid: uuid('uuid')
-      .notNull()
-      .unique()
-      .default(sql`gen_random_uuid()`), // Points to a document log uuid
+    uuid: uuid('uuid').notNull().unique().default(sql`gen_random_uuid()`), // Points to a document log uuid
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),

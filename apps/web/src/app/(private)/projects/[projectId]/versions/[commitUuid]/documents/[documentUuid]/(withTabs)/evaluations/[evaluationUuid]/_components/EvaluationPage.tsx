@@ -2,28 +2,22 @@
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { type EventArgs, useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { RealtimeToggle } from '$/components/RealtimeToggle'
 import { useEvaluationResultsV2 } from '$/stores/evaluationResultsV2'
 import { useEvaluationV2Stats } from '$/stores/evaluationsV2'
 import {
-  EvaluationMetric,
-  EvaluationResultsV2Search,
+  type EvaluationMetric,
+  type EvaluationResultsV2Search,
   evaluationResultsV2SearchToQueryParams,
-  EvaluationResultV2WithDetails,
-  EvaluationType,
-  EvaluationV2,
+  type EvaluationResultV2WithDetails,
+  type EvaluationType,
+  type EvaluationV2,
 } from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useState } from 'react'
 import { useDebounce, useDebouncedCallback } from 'use-debounce'
 import { EvaluationTitle } from '../../_components/EvaluationTitle'
@@ -201,10 +195,7 @@ export function EvaluationPage<
         <EvaluationScaleInfo evaluation={evaluation} />
         <div className='flex items-center gap-4'>
           <EvaluationFilters search={search} setSearch={setSearch} />
-          <RealtimeToggle
-            enabled={realtimeEnabled}
-            setEnabled={setRealtimeEnabled}
-          />
+          <RealtimeToggle enabled={realtimeEnabled} setEnabled={setRealtimeEnabled} />
         </div>
       </div>
       <EvaluationStats stats={stats} isLoading={isLoadingStats} />

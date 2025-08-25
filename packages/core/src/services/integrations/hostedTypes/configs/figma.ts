@@ -14,6 +14,5 @@ export default {
       required: true,
     },
   },
-  envSource:
-    'https://help.figma.com/hc/en-us/articles/8085703771159-Manage-personal-access-tokens',
+  envSource: 'https://help.figma.com/hc/en-us/articles/8085703771159-Manage-personal-access-tokens',
 }

@@ -1,5 +1,5 @@
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { ScheduleConfig } from './scheduleUtils'
+import type { ScheduleConfig } from './scheduleUtils'
 
 export function CustomScheduleForm({
   config,

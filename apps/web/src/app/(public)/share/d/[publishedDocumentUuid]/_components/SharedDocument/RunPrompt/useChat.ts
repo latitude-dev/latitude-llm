@@ -1,16 +1,13 @@
 import { addSharedMessagesAction } from '$/actions/sdk/addSharedMessagesAction'
 import {
-  Message as ConversationMessage,
+  type Message as ConversationMessage,
   MessageRole,
 } from '@latitude-data/constants/legacyCompiler'
-import {
-  PublishedDocument,
-  StreamEventTypes,
-} from '@latitude-data/core/browser'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { type PublishedDocument, StreamEventTypes } from '@latitude-data/core/browser'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCallback } from 'react'
 import { readStreamableValue } from 'ai/rsc'
-import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
+import { type ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 
 export function useChat({
   shared,

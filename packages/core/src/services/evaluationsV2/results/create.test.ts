@@ -1,15 +1,15 @@
 import { desc, eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
+import { beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 import {
-  Commit,
-  DocumentVersion,
-  EvaluationResultValue,
-  EvaluationType,
-  EvaluationV2,
-  ProviderLogDto,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationResultValue,
+  type EvaluationType,
+  type EvaluationV2,
+  type ProviderLogDto,
   Providers,
-  RuleEvaluationMetric,
-  Workspace,
+  type RuleEvaluationMetric,
+  type Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
@@ -27,15 +27,9 @@ describe('createEvaluationResultV2', () => {
   let workspace: Workspace
   let commit: Commit
   let document: DocumentVersion
-  let evaluation: EvaluationV2<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.ExactMatch
-  >
+  let evaluation: EvaluationV2<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>
   let providerLog: ProviderLogDto
-  let value: EvaluationResultValue<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.ExactMatch
-  >
+  let value: EvaluationResultValue<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -66,7 +60,7 @@ describe('createEvaluationResultV2', () => {
       workspace: workspace,
     })
 
-    const { providerLogs: providerLogs } = await factories.createDocumentLog({
+    const { providerLogs } = await factories.createDocumentLog({
       document: document,
       commit: commit,
     })
@@ -86,9 +80,7 @@ describe('createEvaluationResultV2', () => {
     }
 
     mocks = {
-      publisher: vi
-        .spyOn(publisher, 'publishLater')
-        .mockImplementation(async () => {}),
+      publisher: vi.spyOn(publisher, 'publishLater').mockImplementation(async () => {}),
     }
   })
 
@@ -105,12 +97,9 @@ describe('createEvaluationResultV2', () => {
         workspace: workspace,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new UnprocessableEntityError(
-        'invalid input syntax for type uuid: "uuid"',
-        {
-          details: 'invalid input syntax for type uuid: "uuid"',
-        },
-      ),
+      new UnprocessableEntityError('invalid input syntax for type uuid: "uuid"', {
+        details: 'invalid input syntax for type uuid: "uuid"',
+      }),
     )
 
     expect(mocks.publisher).not.toHaveBeenCalled()

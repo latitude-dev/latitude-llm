@@ -1,20 +1,12 @@
-import {
-  and,
-  eq,
-  getTableColumns,
-  isNotNull,
-  isNull,
-  lte,
-  max,
-} from 'drizzle-orm'
+import { and, eq, getTableColumns, isNotNull, isNull, lte, max } from 'drizzle-orm'
 
-import { Commit, DocumentTrigger } from '../browser'
+import type { Commit, DocumentTrigger } from '../browser'
 import { commits, documentTriggers } from '../schema'
 import Repository from './repositoryV2'
 import { Result } from '../lib/Result'
-import { PromisedResult } from '../lib/Transaction'
-import { LatitudeError, NotFoundError } from '@latitude-data/constants/errors'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import type { PromisedResult } from '../lib/Transaction'
+import { type LatitudeError, NotFoundError } from '@latitude-data/constants/errors'
+import type { DocumentTriggerType } from '@latitude-data/constants'
 
 function mergeTriggers(
   publishedTriggers: DocumentTrigger[],
@@ -48,13 +40,7 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
     return this.db
       .select(tt)
       .from(documentTriggers)
-      .innerJoin(
-        commits,
-        and(
-          eq(commits.id, documentTriggers.commitId),
-          isNull(commits.deletedAt),
-        ),
-      )
+      .innerJoin(commits, and(eq(commits.id, documentTriggers.commitId), isNull(commits.deletedAt)))
       .where(this.scopeFilter)
       .$dynamic()
   }
@@ -139,10 +125,7 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
     return Result.ok(activeTriggers)
   }
 
-  getAllActiveTriggersInWorkspace(): PromisedResult<
-    DocumentTrigger[],
-    LatitudeError
-  > {
+  getAllActiveTriggersInWorkspace(): PromisedResult<DocumentTrigger[], LatitudeError> {
     return this.getTriggers()
   }
 
@@ -167,9 +150,7 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
     if (!Result.isOk(result)) return result
     const triggers = result.unwrap()
 
-    return Result.ok(
-      triggers.filter((trigger) => trigger.documentUuid === documentUuid),
-    )
+    return Result.ok(triggers.filter((trigger) => trigger.documentUuid === documentUuid))
   }
 
   async getTriggerByUuid<T extends DocumentTriggerType>({
@@ -195,9 +176,7 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
     return Result.ok(trigger as DocumentTrigger<T>)
   }
 
-  async getTriggerUpdatesInDraft(
-    draft: Commit,
-  ): PromisedResult<DocumentTrigger[], LatitudeError> {
+  async getTriggerUpdatesInDraft(draft: Commit): PromisedResult<DocumentTrigger[], LatitudeError> {
     const results = await this.db
       .select(tt)
       .from(documentTriggers)

@@ -1,8 +1,8 @@
 import { env } from '@latitude-data/env'
-import os from 'os'
+import os from 'node:os'
 import Piscina from 'piscina'
 import { parse, type Fragment } from 'promptl-ai'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import { OverloadedError } from '@latitude-data/constants/errors'
 
 let pool: Piscina | undefined
@@ -22,9 +22,7 @@ if (env.NODE_ENV !== 'test') {
   }
 }
 
-export async function parsePrompt(
-  prompt: string,
-): Promise<TypedResult<Fragment, Error>> {
+export async function parsePrompt(prompt: string): Promise<TypedResult<Fragment, Error>> {
   try {
     if (!pool) return Result.ok(parse(prompt))
     if (pool.queueSize >= pool.options.maxQueue) {

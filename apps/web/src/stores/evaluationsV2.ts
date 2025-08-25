@@ -12,23 +12,23 @@ import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import {
-  Commit,
-  DocumentVersion,
-  EvaluationMetric,
-  EvaluationOptions,
-  EvaluationResultMetadata,
-  EvaluationResultsV2Search,
+  type Commit,
+  type DocumentVersion,
+  type EvaluationMetric,
+  type EvaluationOptions,
+  type EvaluationResultMetadata,
+  type EvaluationResultsV2Search,
   evaluationResultsV2SearchToQueryParams,
-  EvaluationSettings,
-  EvaluationType,
-  EvaluationV2,
-  EvaluationV2Stats,
-  Project,
+  type EvaluationSettings,
+  type EvaluationType,
+  type EvaluationV2,
+  type EvaluationV2Stats,
+  type Project,
 } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact, isEmpty } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 export function useEvaluationsV2(
   {
@@ -56,39 +56,33 @@ export function useEvaluationsV2(
   const {
     data = [],
     mutate,
-    ...rest
+    isLoading,
   } = useSWR<EvaluationV2[]>(
-    compact([
-      'evaluationsV2',
-      project.id,
-      commit.uuid,
-      document.commitId,
-      document.documentUuid,
-    ]),
+    compact(['evaluationsV2', project.id, commit.uuid, document.commitId, document.documentUuid]),
     fetcher,
     opts,
   )
 
-  const {
-    execute: executeCreateEvaluationV2,
-    isPending: isCreatingEvaluation,
-  } = useLatitudeAction(createEvaluationV2Action, {
-    onSuccess: async ({ data: { evaluation } }) => {
-      mutate((prev) => [evaluation, ...(prev ?? [])])
-      toast({
-        title: 'Evaluation created successfully',
-        description: `Evaluation ${evaluation.name} created successfully`,
-      })
+  const { execute: executeCreateEvaluationV2, isPending: isCreatingEvaluation } = useLatitudeAction(
+    createEvaluationV2Action,
+    {
+      onSuccess: async ({ data: { evaluation } }) => {
+        mutate((prev) => [evaluation, ...(prev ?? [])])
+        toast({
+          title: 'Evaluation created successfully',
+          description: `Evaluation ${evaluation.name} created successfully`,
+        })
+      },
+      onError: async (error) => {
+        if (error?.err?.name === 'ZodError') return
+        toast({
+          title: 'Error creating evaluation',
+          description: error?.err?.message,
+          variant: 'destructive',
+        })
+      },
     },
-    onError: async (error) => {
-      if (error?.err?.name === 'ZodError') return
-      toast({
-        title: 'Error creating evaluation',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
-    },
-  })
+  )
   const createEvaluation = useCallback(
     async ({
       settings,
@@ -108,34 +102,34 @@ export function useEvaluationsV2(
     [project, commit, document, executeCreateEvaluationV2],
   )
 
-  const {
-    execute: executeUpdateEvaluationV2,
-    isPending: isUpdatingEvaluation,
-  } = useLatitudeAction(updateEvaluationV2Action, {
-    onSuccess: async ({ data: { evaluation } }) => {
-      mutate(
-        (prev) =>
-          prev?.map((e) => {
-            if (e.uuid !== evaluation.uuid) return e
-            return evaluation
-          }) ?? [],
-      )
-      if (!notifyUpdate) return
-      toast({
-        title: 'Evaluation updated successfully',
-        description: `Evaluation ${evaluation.name} updated successfully`,
-      })
+  const { execute: executeUpdateEvaluationV2, isPending: isUpdatingEvaluation } = useLatitudeAction(
+    updateEvaluationV2Action,
+    {
+      onSuccess: async ({ data: { evaluation } }) => {
+        mutate(
+          (prev) =>
+            prev?.map((e) => {
+              if (e.uuid !== evaluation.uuid) return e
+              return evaluation
+            }) ?? [],
+        )
+        if (!notifyUpdate) return
+        toast({
+          title: 'Evaluation updated successfully',
+          description: `Evaluation ${evaluation.name} updated successfully`,
+        })
+      },
+      onError: async (error) => {
+        if (!notifyUpdate) return
+        if (error?.err?.name === 'ZodError') return
+        toast({
+          title: 'Error updating evaluation',
+          description: error?.err?.message,
+          variant: 'destructive',
+        })
+      },
     },
-    onError: async (error) => {
-      if (!notifyUpdate) return
-      if (error?.err?.name === 'ZodError') return
-      toast({
-        title: 'Error updating evaluation',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
-    },
-  })
+  )
   const updateEvaluation = useCallback(
     async ({
       evaluationUuid,
@@ -158,26 +152,26 @@ export function useEvaluationsV2(
     [project, commit, document, executeUpdateEvaluationV2],
   )
 
-  const {
-    execute: executeDeleteEvaluationV2,
-    isPending: isDeletingEvaluation,
-  } = useLatitudeAction(deleteEvaluationV2Action, {
-    onSuccess: async ({ data: { evaluation } }) => {
-      mutate((prev) => prev?.filter((e) => e.uuid !== evaluation.uuid) ?? [])
-      toast({
-        title: 'Evaluation deleted successfully',
-        description: `Evaluation ${evaluation.name} deleted successfully`,
-      })
+  const { execute: executeDeleteEvaluationV2, isPending: isDeletingEvaluation } = useLatitudeAction(
+    deleteEvaluationV2Action,
+    {
+      onSuccess: async ({ data: { evaluation } }) => {
+        mutate((prev) => prev?.filter((e) => e.uuid !== evaluation.uuid) ?? [])
+        toast({
+          title: 'Evaluation deleted successfully',
+          description: `Evaluation ${evaluation.name} deleted successfully`,
+        })
+      },
+      onError: async (error) => {
+        if (error?.err?.name === 'ZodError') return
+        toast({
+          title: 'Error deleting evaluation',
+          description: error?.err?.message,
+          variant: 'destructive',
+        })
+      },
     },
-    onError: async (error) => {
-      if (error?.err?.name === 'ZodError') return
-      toast({
-        title: 'Error deleting evaluation',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
-    },
-  })
+  )
   const deleteEvaluation = useCallback(
     async ({ evaluationUuid }: { evaluationUuid: string }) => {
       return await executeDeleteEvaluationV2({
@@ -190,25 +184,23 @@ export function useEvaluationsV2(
     [project, commit, document, executeDeleteEvaluationV2],
   )
 
-  const {
-    execute: executeGenerateEvaluationV2,
-    isPending: isGeneratingEvaluation,
-  } = useLatitudeAction(generateEvaluationV2Action, {
-    onSuccess: async ({ data: { settings } }) => {
-      toast({
-        title: 'Evaluation generated successfully',
-        description: `Evaluation ${settings.name} generated successfully`,
-      })
-    },
-    onError: async (error) => {
-      if (error?.err?.name === 'ZodError') return
-      toast({
-        title: 'Error generating evaluation',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
-    },
-  })
+  const { execute: executeGenerateEvaluationV2, isPending: isGeneratingEvaluation } =
+    useLatitudeAction(generateEvaluationV2Action, {
+      onSuccess: async ({ data: { settings } }) => {
+        toast({
+          title: 'Evaluation generated successfully',
+          description: `Evaluation ${settings.name} generated successfully`,
+        })
+      },
+      onError: async (error) => {
+        if (error?.err?.name === 'ZodError') return
+        toast({
+          title: 'Error generating evaluation',
+          description: error?.err?.message,
+          variant: 'destructive',
+        })
+      },
+    })
   const generateEvaluation = useCallback(
     async ({ instructions }: { instructions?: string }) => {
       return await executeGenerateEvaluationV2({
@@ -221,8 +213,9 @@ export function useEvaluationsV2(
     [project, commit, document, executeGenerateEvaluationV2],
   )
 
-  const { execute: executeCloneEvaluationV2, isPending: isCloningEvaluation } =
-    useLatitudeAction(cloneEvaluationV2Action, {
+  const { execute: executeCloneEvaluationV2, isPending: isCloningEvaluation } = useLatitudeAction(
+    cloneEvaluationV2Action,
+    {
       onSuccess: async ({ data: { evaluation } }) => {
         mutate((prev) => [evaluation, ...(prev ?? [])])
         toast({
@@ -238,7 +231,8 @@ export function useEvaluationsV2(
           variant: 'destructive',
         })
       },
-    })
+    },
+  )
   const cloneEvaluation = useCallback(
     async ({ evaluationUuid }: { evaluationUuid: string }) => {
       return await executeCloneEvaluationV2({
@@ -251,25 +245,23 @@ export function useEvaluationsV2(
     [project, commit, document, executeCloneEvaluationV2],
   )
 
-  const {
-    execute: executeAnnotateEvaluationV2,
-    isPending: isAnnotatingEvaluation,
-  } = useLatitudeAction(annotateEvaluationV2Action, {
-    onSuccess: async ({ data: { result } }) => {
-      toast({
-        title: 'Evaluation annotated successfully',
-        description: `Evaluation annotated successfully with a ${result.hasPassed ? 'passed' : 'failed'} result`,
-      })
-    },
-    onError: async (error) => {
-      if (error?.err?.name === 'ZodError') return
-      toast({
-        title: 'Error annotating evaluation',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
-    },
-  })
+  const { execute: executeAnnotateEvaluationV2, isPending: isAnnotatingEvaluation } =
+    useLatitudeAction(annotateEvaluationV2Action, {
+      onSuccess: async ({ data: { result } }) => {
+        toast({
+          title: 'Evaluation annotated successfully',
+          description: `Evaluation annotated successfully with a ${result.hasPassed ? 'passed' : 'failed'} result`,
+        })
+      },
+      onError: async (error) => {
+        if (error?.err?.name === 'ZodError') return
+        toast({
+          title: 'Error annotating evaluation',
+          description: error?.err?.message,
+          variant: 'destructive',
+        })
+      },
+    })
   const annotateEvaluation = useCallback(
     async ({
       evaluationUuid,
@@ -311,7 +303,7 @@ export function useEvaluationsV2(
       isCloningEvaluation,
       annotateEvaluation,
       isAnnotatingEvaluation,
-      ...rest,
+      isLoading,
     }),
     [
       data,
@@ -328,7 +320,7 @@ export function useEvaluationsV2(
       isCloningEvaluation,
       annotateEvaluation,
       isAnnotatingEvaluation,
-      rest,
+      isLoading,
     ],
   )
 }

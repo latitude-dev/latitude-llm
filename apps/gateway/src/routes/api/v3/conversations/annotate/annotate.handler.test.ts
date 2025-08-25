@@ -6,15 +6,15 @@ import {
   createEvaluationV2,
   helpers,
 } from '@latitude-data/core/factories'
-import { MessageRole, Message } from '@latitude-data/constants/legacyCompiler'
+import { MessageRole, type Message } from '@latitude-data/constants/legacyCompiler'
 import {
   LogSources,
   Providers,
   EvaluationType,
   HumanEvaluationMetric,
-  ApiKey,
-  EvaluationV2,
-  DocumentLog,
+  type ApiKey,
+  type EvaluationV2,
+  type DocumentLog,
 } from '@latitude-data/core/browser'
 import app from '$/routes/app'
 import { describe, expect, it } from 'vitest'
@@ -67,11 +67,7 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
 
   // Helper function to create basic test setup with project, API key, etc.
   async function createTestSetup(options: TestSetupOptions = {}) {
-    const {
-      providerLogOptions = {},
-      evaluationOptions = {},
-      documentOptions = {},
-    } = options
+    const { providerLogOptions = {}, evaluationOptions = {}, documentOptions = {} } = options
 
     // Create project with document
     const { providers, workspace, commit, documents } = await createProject({
@@ -225,8 +221,7 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
     })
 
     it('succeeds with HEAD_COMMIT when version not specified', async () => {
-      const { documentLog, evaluation, apiKey, commit } =
-        await createTestSetup()
+      const { documentLog, evaluation, apiKey, commit } = await createTestSetup()
 
       // Make the request without specifying version (should use HEAD_COMMIT)
       const res = await makeAnnotateRequest({ documentLog, evaluation, apiKey })
@@ -253,8 +248,7 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
     })
 
     it('returns correct data with custom score and metadata', async () => {
-      const { documentLog, evaluation, apiKey, commit } =
-        await createTestSetup()
+      const { documentLog, evaluation, apiKey, commit } = await createTestSetup()
 
       const customRequestBody = {
         score: 2,

@@ -1,6 +1,6 @@
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
-import { ScheduleConfig, SimpleInterval } from './scheduleUtils'
+import type { ScheduleConfig, SimpleInterval } from './scheduleUtils'
 
 export function SimpleScheduleForm({
   config,
@@ -38,9 +38,7 @@ export function SimpleScheduleForm({
         label='Every'
         min={1}
         value={config.simple?.value || 1}
-        onChange={(e) =>
-          handleSimpleValueChange(parseInt(e.target.value, 10) || 1)
-        }
+        onChange={(e) => handleSimpleValueChange(parseInt(e.target.value, 10) || 1)}
         disabled={isLoading}
       />
 

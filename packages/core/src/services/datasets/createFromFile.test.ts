@@ -1,16 +1,16 @@
 import { beforeEach, afterAll, describe, expect, it, vi } from 'vitest'
 
-import { User, Workspace } from '../../browser'
+import type { User, Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
 import * as syncReadCsv from '../../lib/readCsv'
 import getTestDisk from '../../tests/testDrive'
 import { createTestCsvFile } from '../datasetRows/testHelper'
 import * as factories from '../../tests/factories'
 import { createDatasetFromFile } from './createFromFile'
-import { hashAlgorithmArgs } from './utils'
+import type { hashAlgorithmArgs } from './utils'
 import { BadRequestError } from './../../lib/errors'
 import { diskFactory } from './../../lib/disk'
-import { DiskWrapper } from './../../lib/disk'
+import type { DiskWrapper } from './../../lib/disk'
 import { Result } from './../../lib/Result'
 
 // @ts-expect-error - Mock
@@ -87,9 +87,7 @@ describe('createDatasetFromFile', () => {
   it('expects nanoid to be called with the correct length', async () => {
     vi.resetModules()
     const mod = await import('./createFromFile')
-    const nanoidHashAlgorithm = await import('./utils').then(
-      (m) => m.nanoidHashAlgorithm,
-    )
+    const nanoidHashAlgorithm = await import('./utils').then((m) => m.nanoidHashAlgorithm)
     await mod.createDatasetFromFile({
       author: user,
       workspace,
@@ -123,9 +121,7 @@ describe('createDatasetFromFile', () => {
     })
 
     expect(result.error).toBeInstanceOf(BadRequestError)
-    expect(result.error?.message).toBe(
-      'A dataset with this name already exists',
-    )
+    expect(result.error?.message).toBe('A dataset with this name already exists')
   })
 
   it('handles CSV with no headers', async () => {
@@ -190,9 +186,7 @@ describe('createDatasetFromFile', () => {
     })
 
     it('handles disk upload errors', async () => {
-      vi.spyOn(disk, 'putFile').mockResolvedValue(
-        Result.error(new Error('Upload failed')),
-      )
+      vi.spyOn(disk, 'putFile').mockResolvedValue(Result.error(new Error('Upload failed')))
 
       const result = await createDatasetFromFile({
         author: user,

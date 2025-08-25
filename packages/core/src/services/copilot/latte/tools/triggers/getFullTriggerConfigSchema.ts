@@ -4,12 +4,12 @@ import { Result } from '../../../../../lib/Result'
 import { getPipedreamEnvironment } from '../../../../integrations/pipedream/apps'
 import { createBackendClient } from '@pipedream/sdk'
 import { IntegrationsRepository } from '../../../../../repositories'
-import {
+import type {
   ConfigurablePropWithRemoteOptions,
   PipedreamIntegration,
 } from '../../../../../browser'
 import { fetchFullConfigSchema } from './fetchFullConfigSchema'
-import { PromisedResult } from '../../../../../lib/Transaction'
+import type { PromisedResult } from '../../../../../lib/Transaction'
 
 export const getFullTriggerConfigSchema = defineLatteTool(
   async (

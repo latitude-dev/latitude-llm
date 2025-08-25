@@ -14,28 +14,18 @@ export function RewardsContent() {
 
   const isLaunchDaySignupClaimed = useMemo(() => {
     if (isLoading || !claimedRewards) return false
-    return claimedRewards.some(
-      (r) => r.rewardType === RewardType.SignupLaunchDay,
-    )
+    return claimedRewards.some((r) => r.rewardType === RewardType.SignupLaunchDay)
   }, [isLoading, claimedRewards])
 
   const [selectedType, setSelectedType] = useState<RewardType>()
 
   if (selectedType) {
-    return (
-      <RewardMenu
-        type={selectedType}
-        onClose={() => setSelectedType(undefined)}
-      />
-    )
+    return <RewardMenu type={selectedType} onClose={() => setSelectedType(undefined)} />
   }
 
   return (
     <>
-      <Text.H5>
-        Get rewards and extend your runs limit forever by completing these
-        actions
-      </Text.H5>
+      <Text.H5>Get rewards and extend your runs limit forever by completing these actions</Text.H5>
       <RewardItem
         description='Give us a Github star'
         type={RewardType.GithubStar}
@@ -62,10 +52,7 @@ export function RewardsContent() {
         onClick={() => setSelectedType(RewardType.GithubIssue)}
       />
       {isLaunchDaySignupClaimed && (
-        <RewardItem
-          description='Signed up on the launch day'
-          type={RewardType.SignupLaunchDay}
-        />
+        <RewardItem description='Signed up on the launch day' type={RewardType.SignupLaunchDay} />
       )}
     </>
   )

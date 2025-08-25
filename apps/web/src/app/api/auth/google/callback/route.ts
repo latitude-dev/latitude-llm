@@ -5,9 +5,9 @@ import { OAuthProvider } from '@latitude-data/core/schema'
 import { findOrCreateUserFromOAuth } from '@latitude-data/core/services/auth/findOrCreateUserFromOAuth'
 import { env } from '@latitude-data/env'
 import { ObjectParser } from '@pilcrowjs/object-parser'
-import { decodeIdToken, OAuth2RequestError, OAuth2Tokens } from 'arctic'
+import { decodeIdToken, OAuth2RequestError, type OAuth2Tokens } from 'arctic'
 import { cookies } from 'next/headers'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest): Promise<Response> {
   const url = new URL(request.url)
@@ -18,13 +18,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   const codeVerifier = cookiesStore.get('google_code_verifier')?.value ?? null
 
   // 1. Validate state
-  if (
-    !code ||
-    !state ||
-    !storedState ||
-    state !== storedState ||
-    !codeVerifier
-  ) {
+  if (!code || !state || !storedState || state !== storedState || !codeVerifier) {
     return new Response('Invalid OAuth state or code', { status: 400 })
   }
 
@@ -32,10 +26,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     // 2. Validate code and get tokens/user info
     let tokens: OAuth2Tokens
     try {
-      tokens = await googleProvider.validateAuthorizationCode(
-        code,
-        codeVerifier,
-      )
+      tokens = await googleProvider.validateAuthorizationCode(code, codeVerifier)
     } catch {
       return new Response('Please restart the process.', {
         status: 400,
@@ -57,10 +48,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     })
 
     if (userResult.error) {
-      console.error(
-        'Failed to find or create user from OAuth:',
-        userResult.error,
-      )
+      console.error('Failed to find or create user from OAuth:', userResult.error)
       return new Response('Failed to process user information', { status: 500 })
     }
 
@@ -86,9 +74,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       return NextResponse.redirect(env.APP_URL)
     }
 
-    return NextResponse.redirect(
-      returnTo.startsWith('/') ? env.APP_URL + returnTo : returnTo,
-    )
+    return NextResponse.redirect(returnTo.startsWith('/') ? env.APP_URL + returnTo : returnTo)
   } catch (e) {
     console.error('Google OAuth Callback Error:', e)
     if (e instanceof OAuth2RequestError) {

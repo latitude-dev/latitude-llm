@@ -11,9 +11,7 @@ export function createApiKey(
 ) {
   return transaction.call(async (tx) => {
     const token =
-      env.NODE_ENV === 'development'
-        ? env.TEST_LATITUDE_API_KEY
-        : generateUUIDIdentifier()
+      env.NODE_ENV === 'development' ? env.TEST_LATITUDE_API_KEY : generateUUIDIdentifier()
     const result = await tx
       .insert(apiKeys)
       .values({ workspaceId: workspace.id, name, token })

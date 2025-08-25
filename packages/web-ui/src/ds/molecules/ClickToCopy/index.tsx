@@ -1,5 +1,5 @@
 'use client'
-import { ReactNode, useCallback } from 'react'
+import { type ReactNode, useCallback } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Icon } from '../../atoms/Icons'
@@ -41,9 +41,7 @@ export function ClickToCopy({
           })}
         >
           {children}
-          {showIcon && (
-            <Icon name='clipboard' className='text-muted-foreground' />
-          )}
+          {showIcon && <Icon name='clipboard' className='text-muted-foreground' />}
         </div>
       }
     >

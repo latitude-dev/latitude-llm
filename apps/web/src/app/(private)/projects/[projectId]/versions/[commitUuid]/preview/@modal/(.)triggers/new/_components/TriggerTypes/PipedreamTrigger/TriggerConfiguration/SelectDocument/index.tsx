@@ -1,13 +1,10 @@
 import { useMemo, useState } from 'react'
 import useDocumentVersions from '$/stores/documentVersions'
 import { DocumentType } from '@latitude-data/constants'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
-import { type DocumentVersion } from '@latitude-data/core/browser'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { DocumentVersion } from '@latitude-data/core/browser'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 export function useDocumentSelection() {
   const { project } = useCurrentProject()
@@ -19,9 +16,7 @@ export function useDocumentSelection() {
     commitUuid: commit.uuid,
   })
   return useMemo(() => {
-    const document = documents.find(
-      (d) => d.documentUuid === selectedDocumentUuid,
-    )
+    const document = documents.find((d) => d.documentUuid === selectedDocumentUuid)
     return {
       document,
       payloadParameters,

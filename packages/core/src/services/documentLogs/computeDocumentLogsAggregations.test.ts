@@ -2,13 +2,13 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   ErrorableEntity,
   LOG_SOURCES,
-  Project,
+  type Project,
   Providers,
-  User,
+  type User,
 } from '../../browser'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogsAggregations } from './computeDocumentLogsAggregations'

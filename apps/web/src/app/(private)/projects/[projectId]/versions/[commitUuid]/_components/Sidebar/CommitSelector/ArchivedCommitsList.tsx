@@ -2,15 +2,11 @@
 
 import { useMemo } from 'react'
 
-import {
-  Commit,
-  CommitStatus,
-  DocumentVersion,
-} from '@latitude-data/core/browser'
+import { type Commit, CommitStatus, type DocumentVersion } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCommits } from '$/stores/commitsStore'
 
-import { CommitItem, CommitItemSkeleton, SimpleUser } from './CommitItem'
+import { CommitItem, CommitItemSkeleton, type SimpleUser } from './CommitItem'
 import { CommitItemsWrapper } from './CommitItemsWrapper'
 
 export function ArchivedCommitsList({
@@ -26,10 +22,7 @@ export function ArchivedCommitsList({
     commitStatus: CommitStatus.Merged,
   })
 
-  const commits = useMemo(
-    () => data.filter((c) => c.id != headCommit?.id),
-    [data, headCommit],
-  )
+  const commits = useMemo(() => data.filter((c) => c.id !== headCommit?.id), [data, headCommit])
 
   if (isLoading) {
     return (
@@ -43,9 +36,7 @@ export function ArchivedCommitsList({
 
   if (!commits?.length) {
     return (
-      <Text.H6 color='foregroundMuted'>
-        There are no archived versions on this project yet.
-      </Text.H6>
+      <Text.H6 color='foregroundMuted'>There are no archived versions on this project yet.</Text.H6>
     )
   }
 

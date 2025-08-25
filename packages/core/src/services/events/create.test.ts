@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
-import { LatitudeEvent } from '../../events/events'
+import type { LatitudeEvent } from '../../events/events'
 import { createProject } from '../../tests/factories'
 import { createEvent } from './create'
 

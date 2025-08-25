@@ -40,29 +40,26 @@ describe('getDocumentsAtCommit', () => {
   })
 
   it('get docs from HEAD without soft deleted', async (ctx) => {
-    const { commit, project, documents, user } =
-      await ctx.factories.createProject({
-        providers: [{ type: Providers.OpenAI, name: 'openai' }],
-        documents: {
-          doc1: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Doc 1',
-          }),
-          doc2: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Doc 2',
-          }),
-        },
-      })
+    const { commit, project, documents, user } = await ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        doc1: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Doc 1',
+        }),
+        doc2: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Doc 2',
+        }),
+      },
+    })
     const documentsScope = new DocumentVersionsRepository(project.workspaceId)
     const { commit: draft } = await factories.createDraft({ project, user })
     await factories.markAsSoftDelete({
       documentUuid: documents.find((d) => d.path === 'doc2')!.documentUuid,
       commitId: commit.id,
     })
-    const filteredDocs = await documentsScope
-      .getDocumentsAtCommit(draft)
-      .then((r) => r.unwrap())
+    const filteredDocs = await documentsScope.getDocumentsAtCommit(draft).then((r) => r.unwrap())
     const contents = filteredDocs.map((d) => d.content)
     expect(contents.length).toBe(1)
     expect(contents[0]).toContain('Doc 1')
@@ -70,8 +67,7 @@ describe('getDocumentsAtCommit', () => {
 
   describe('documents for each commit', () => {
     beforeEach(async (ctx) => {
-      const { project, user, workspace, providers } =
-        await ctx.factories.createProject()
+      const { project, user, workspace, providers } = await ctx.factories.createProject()
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
       const { commit: commit1 } = await factories.createDraft({ project, user })
       const { commit: commit2 } = await factories.createDraft({ project, user })
@@ -126,9 +122,7 @@ describe('getDocumentsAtCommit', () => {
     it('get docs from version 1', async () => {
       const { project, commit } = documentsByContent.VERSION_1!
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
-      const documents = await documentsScope
-        .getDocumentsAtCommit(commit)
-        .then((r) => r.unwrap())
+      const documents = await documentsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
       expect(documents.length).toBe(1)
       expect(documents[0]!.content).toContain('VERSION_1')
@@ -137,9 +131,7 @@ describe('getDocumentsAtCommit', () => {
     it('get docs from version 2', async () => {
       const { project, commit } = documentsByContent.VERSION_2!
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
-      const documents = await documentsScope
-        .getDocumentsAtCommit(commit)
-        .then((r) => r.unwrap())
+      const documents = await documentsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
       expect(documents.length).toBe(1)
       expect(documents[0]!.content).toContain('VERSION_2')
@@ -148,9 +140,7 @@ describe('getDocumentsAtCommit', () => {
     it('get docs from version 3', async () => {
       const { project, commit } = documentsByContent.VERSION_3_draft!
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
-      const documents = await documentsScope
-        .getDocumentsAtCommit(commit)
-        .then((r) => r.unwrap())
+      const documents = await documentsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
       expect(documents.length).toBe(1)
       expect(documents[0]!.content).toContain('VERSION_3_draft')
@@ -166,9 +156,7 @@ describe('getDocumentsAtCommit', () => {
           uuid: HEAD_COMMIT,
         })
         .then((r) => r.unwrap())
-      const documents = await documentsScope
-        .getDocumentsAtCommit(commit)
-        .then((r) => r.unwrap())
+      const documents = await documentsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
       expect(documents.length).toBe(1)
       expect(documents[0]!.content).toContain('VERSION_2')
@@ -177,8 +165,7 @@ describe('getDocumentsAtCommit', () => {
 
   describe('documents from previous commits', () => {
     beforeEach(async (ctx) => {
-      const { project, user, workspace, providers } =
-        await ctx.factories.createProject()
+      const { project, user, workspace, providers } = await ctx.factories.createProject()
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
 
       // Doc 1
@@ -239,38 +226,26 @@ describe('getDocumentsAtCommit', () => {
 
     it('get docs from commit 1', async () => {
       const { commit, documentsScope } = documentsByContent.commit1!
-      const documents = await documentsScope
-        .getDocumentsAtCommit(commit)
-        .then((r) => r.unwrap())
+      const documents = await documentsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
-      const contents = documents
-        .sort((a, b) => a.path.localeCompare(b.path))
-        .map((d) => d.content)
+      const contents = documents.sort((a, b) => a.path.localeCompare(b.path)).map((d) => d.content)
       expect(contents[0]).toContain('Doc_1_commit_1')
     })
 
     it('get docs from commit 2', async () => {
       const { documentsScope, commit } = documentsByContent.commit2!
-      const documents = await documentsScope
-        .getDocumentsAtCommit(commit)
-        .then((r) => r.unwrap())
+      const documents = await documentsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
-      const contents = documents
-        .sort((a, b) => a.path.localeCompare(b.path))
-        .map((d) => d.content)
+      const contents = documents.sort((a, b) => a.path.localeCompare(b.path)).map((d) => d.content)
       expect(contents[0]).toContain('Doc_1_commit_1')
       expect(contents[1]).toContain('Doc_2_commit_2')
     })
 
     it('get docs from commit 3', async () => {
       const { documentsScope, commit } = documentsByContent.commit3!
-      const documents = await documentsScope
-        .getDocumentsAtCommit(commit)
-        .then((r) => r.unwrap())
+      const documents = await documentsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
-      const contents = documents
-        .sort((a, b) => a.path.localeCompare(b.path))
-        .map((d) => d.content)
+      const contents = documents.sort((a, b) => a.path.localeCompare(b.path)).map((d) => d.content)
       expect(contents[0]).toContain('Doc_1_commit_1')
       expect(contents[1]).toContain('Doc_2_commit_3_draft')
     })
@@ -284,13 +259,9 @@ describe('getDocumentsAtCommit', () => {
           uuid: HEAD_COMMIT,
         })
         .then((r) => r.unwrap())
-      const documents = await documentsScope
-        .getDocumentsAtCommit(commit)
-        .then((r) => r.unwrap())
+      const documents = await documentsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
-      const contents = documents
-        .sort((a, b) => a.path.localeCompare(b.path))
-        .map((d) => d.content)
+      const contents = documents.sort((a, b) => a.path.localeCompare(b.path)).map((d) => d.content)
       expect(contents[0]).toContain('Doc_1_commit_1')
       expect(contents[1]).toContain('Doc_2_commit_2')
     })

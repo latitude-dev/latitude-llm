@@ -52,12 +52,7 @@ export default function NewWebhook() {
           <Input required label='Name' name='name' />
           <div className='flex gap-2 items-end'>
             <div className='flex-1'>
-              <Input
-                required
-                label='URL'
-                name='url'
-                onChange={(e) => setUrl(e.target.value)}
-              />
+              <Input required label='URL' name='url' onChange={(e) => setUrl(e.target.value)} />
             </div>
             <Button
               fancy

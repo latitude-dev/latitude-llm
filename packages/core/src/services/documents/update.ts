@@ -3,29 +3,23 @@ import { omit } from 'lodash-es'
 import { eq } from 'drizzle-orm'
 
 import { scan } from 'promptl-ai'
-import { Commit, DocumentType, DocumentVersion } from '../../browser'
+import { type Commit, DocumentType, type DocumentVersion } from '../../browser'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError, NotFoundError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories/documentVersionsRepository'
 import { documentVersions } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 import { inheritDocumentRelations } from './inheritRelations'
 
-export async function getDocumentType({
-  content,
-}: {
-  content: string
-}): Promise<DocumentType> {
+export async function getDocumentType({ content }: { content: string }): Promise<DocumentType> {
   if (!content || !content.trim().length) return DocumentType.Prompt
 
   try {
     const metadata = await scan({ prompt: content })
-    const documentTypeConfig = metadata.config['type'] as
-      | DocumentType
-      | undefined
+    const documentTypeConfig = metadata.config.type as DocumentType | undefined
     if (!documentTypeConfig) return DocumentType.Prompt
     if (Object.values(DocumentType).includes(documentTypeConfig)) {
       return documentTypeConfig
@@ -82,14 +76,8 @@ export async function updateDocument(
     }
 
     if (path !== undefined) {
-      if (
-        documents.find(
-          (d) => d.path === path && d.documentUuid !== doc.documentUuid,
-        )
-      ) {
-        return Result.error(
-          new BadRequestError('A document with the same path already exists'),
-        )
+      if (documents.find((d) => d.path === path && d.documentUuid !== doc.documentUuid)) {
+        return Result.error(new BadRequestError('A document with the same path already exists'))
       }
     }
 

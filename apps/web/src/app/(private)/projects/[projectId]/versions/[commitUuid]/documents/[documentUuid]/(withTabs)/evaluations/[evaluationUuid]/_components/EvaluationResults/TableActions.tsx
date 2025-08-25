@@ -1,17 +1,11 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
-import {
-  PlaygroundAction,
-  usePlaygroundAction,
-} from '$/hooks/usePlaygroundAction'
-import { useSelectableRows } from '$/hooks/useSelectableRows'
-import { EvaluationMetric, EvaluationType } from '@latitude-data/core/browser'
+import { PlaygroundAction, usePlaygroundAction } from '$/hooks/usePlaygroundAction'
+import type { useSelectableRows } from '$/hooks/useSelectableRows'
+import type { EvaluationMetric, EvaluationType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 
 export function EvaluationResultsTableActions<
   T extends EvaluationType = EvaluationType,
@@ -37,8 +31,7 @@ export function EvaluationResultsTableActions<
     document: document,
   })
 
-  const isDisabled =
-    isLoading || !refinementEnabled || !selectableState.selectedCount
+  const isDisabled = isLoading || !refinementEnabled || !selectableState.selectedCount
 
   return (
     <div className='flex justify-center sticky bottom-4 pointer-events-none'>
@@ -56,11 +49,7 @@ export function EvaluationResultsTableActions<
           >
             Refine prompt
           </Button>
-          <Button
-            fancy
-            variant='outline'
-            onClick={() => selectableState.clearSelections()}
-          >
+          <Button fancy variant='outline' onClick={() => selectableState.clearSelections()}>
             Clear selection
           </Button>
         </div>

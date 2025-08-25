@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { $getNodeByKey } from 'lexical'
-import { MessageBlockType } from '../state/promptlToLexical/types'
+import type { MessageBlockType } from '../state/promptlToLexical/types'
 import { $isMessageBlockNode } from '../nodes/MessageBlock'
 
 export function MessageEditPlugin() {
@@ -53,10 +53,7 @@ export function MessageEditPlugin() {
   return null
 }
 
-export function triggerMessageRoleUpdate(
-  nodeKey: string,
-  newRole: MessageBlockType,
-) {
+export function triggerMessageRoleUpdate(nodeKey: string, newRole: MessageBlockType) {
   const event = new CustomEvent('message-role-update', {
     detail: { nodeKey, newRole },
   })

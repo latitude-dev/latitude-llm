@@ -1,8 +1,8 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
-import { DailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
-import useSWR, { SWRConfiguration } from 'swr'
+import type { DocumentLogFilterOptions } from '@latitude-data/core/browser'
+import type { DailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 export default function useDocumentLogsDailyCount(
   {

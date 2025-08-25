@@ -1,8 +1,8 @@
 import { nanoid } from 'nanoid'
 
-import { Dataset, DatasetRow } from '../../browser'
-import { DATASET_COLUMN_ROLES, DatasetColumnRole } from '../../constants'
-import { type Column } from '../../schema'
+import type { Dataset, DatasetRow } from '../../browser'
+import { DATASET_COLUMN_ROLES, type DatasetColumnRole } from '../../constants'
+import type { Column } from '../../schema'
 
 export type HashAlgorithmFn = (args: { columnName: string }) => string
 export type hashAlgorithmArgs = Parameters<HashAlgorithmFn>[0]
@@ -21,16 +21,8 @@ type ColumnArgs = Omit<Column, 'identifier' | 'role'> & {
 
 const buildColumn =
   (hashAlgorithm: HashAlgorithmFn) =>
-  ({
-    column,
-    existingColumns,
-  }: {
-    column: ColumnArgs
-    existingColumns: Column[]
-  }) => {
-    const existingColumnIndex = existingColumns.findIndex(
-      (col) => col.name === column.name,
-    )
+  ({ column, existingColumns }: { column: ColumnArgs; existingColumns: Column[] }) => {
+    const existingColumnIndex = existingColumns.findIndex((col) => col.name === column.name)
     if (existingColumnIndex !== -1) {
       // NOTE: Mutate columns
       const col = existingColumns[existingColumnIndex]!
@@ -126,7 +118,7 @@ export function getColumnData({
 
   try {
     return JSON.stringify(data)
-  } catch (error) {
+  } catch (_error) {
     return data.toString()
   }
 }

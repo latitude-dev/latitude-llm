@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType, Providers } from '@latitude-data/constants'
-import {
+import type {
   Commit,
   Project,
   Workspace,
@@ -109,9 +109,7 @@ describe.sequential('deleteDocumentTrigger', () => {
     const deletedId = created.id
 
     mocks.undeployDocumentTrigger.mockResolvedValue(
-      Result.ok(
-        created as unknown as DocumentTrigger<DocumentTriggerType.Email>,
-      ),
+      Result.ok(created as unknown as DocumentTrigger<DocumentTriggerType.Email>),
     )
 
     const result = await deleteDocumentTrigger<DocumentTriggerType.Email>({
@@ -223,9 +221,7 @@ describe.sequential('deleteDocumentTrigger', () => {
     }).then((r) => r.unwrap())
 
     mocks.undeployDocumentTrigger.mockResolvedValue(
-      Result.ok(
-        created as unknown as DocumentTrigger<DocumentTriggerType.Email>,
-      ),
+      Result.ok(created as unknown as DocumentTrigger<DocumentTriggerType.Email>),
     )
 
     const result = await deleteDocumentTrigger<DocumentTriggerType.Email>({

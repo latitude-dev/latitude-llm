@@ -1,21 +1,18 @@
-import { MouseEvent, ReactNode, useCallback, useMemo } from 'react'
+import { type MouseEvent, type ReactNode, useCallback, useMemo } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { cn } from '@latitude-data/web-ui/utils'
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { TriggerEventsList } from '../TriggerEventsList'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { OnRunTriggerFn } from '../TriggersList'
+import type { OnRunTriggerFn } from '../TriggersList'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 
@@ -83,18 +80,16 @@ function EditTriggerButton({
 
   if (isLive) {
     return (
-      <>
-        <Tooltip
-          asChild
-          trigger={
-            <Button lookDisabled variant='outline' fancy>
-              Edit
-            </Button>
-          }
-        >
-          You need to create a new version to edit triggers
-        </Tooltip>
-      </>
+      <Tooltip
+        asChild
+        trigger={
+          <Button lookDisabled variant='outline' fancy>
+            Edit
+          </Button>
+        }
+      >
+        You need to create a new version to edit triggers
+      </Tooltip>
     )
   }
 
@@ -152,13 +147,10 @@ export function TriggerWrapper({
   return (
     <div className='flex flex-col'>
       <div
-        className={cn(
-          'w-full p-4 flex flex-row justify-between items-center gap-4',
-          {
-            'border-b border-border': open,
-            'cursor-pointer': canSeeEvents,
-          },
-        )}
+        className={cn('w-full p-4 flex flex-row justify-between items-center gap-4', {
+          'border-b border-border': open,
+          'cursor-pointer': canSeeEvents,
+        })}
         onClick={onToggleEventList}
       >
         <div className='flex flex-row gap-4'>
@@ -173,10 +165,7 @@ export function TriggerWrapper({
           </div>
         </div>
         <div className='flex flex-row gap-x-4'>
-          <div
-            onClick={avoidOpenEvents}
-            className='flex flex-row items-center gap-x-4 '
-          >
+          <div onClick={avoidOpenEvents} className='flex flex-row items-center gap-x-4 '>
             <ToggleEnabled
               projectId={project.id}
               commitUuid={commit.uuid}
@@ -202,20 +191,13 @@ export function TriggerWrapper({
           </div>
           {canSeeEvents ? (
             <div className='min-h-button flex items-center justify-center'>
-              <Icon
-                name={open ? 'chevronUp' : 'chevronDown'}
-                color='foregroundMuted'
-              />
+              <Icon name={open ? 'chevronUp' : 'chevronDown'} color='foregroundMuted' />
             </div>
           ) : null}
         </div>
       </div>
       {open ? (
-        <TriggerEventsList
-          document={document}
-          trigger={trigger}
-          onRunTrigger={onRunTrigger}
-        />
+        <TriggerEventsList document={document} trigger={trigger} onRunTrigger={onRunTrigger} />
       ) : null}
     </div>
   )

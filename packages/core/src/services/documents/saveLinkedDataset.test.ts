@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { DatasetRow, Dataset, DocumentVersion } from '../../browser'
+import type { DatasetRow, Dataset, DocumentVersion } from '../../browser'
 import { Providers } from '../../constants'
 import * as factories from '../../tests/factories'
 import { saveLinkedDataset } from './saveLinkedDataset'

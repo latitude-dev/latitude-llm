@@ -1,8 +1,8 @@
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, type IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 function Whitelist({
   items,
@@ -23,11 +23,7 @@ function Whitelist({
           {item}
         </Text.H6>
       </div>
-      <Button
-        variant='ghost'
-        onClick={() => onRemove(item)}
-        iconProps={{ name: 'close' }}
-      />
+      <Button variant='ghost' onClick={() => onRemove(item)} iconProps={{ name: 'close' }} />
     </div>
   ))
 }
@@ -73,21 +69,15 @@ export function EmailsWhitelist({
       <Whitelist
         items={emailWhitelist}
         icon='circleUser'
-        onRemove={(item) =>
-          setEmailWhitelist((prev) => prev.filter((e) => e !== item))
-        }
+        onRemove={(item) => setEmailWhitelist((prev) => prev.filter((e) => e !== item))}
       />
       <Whitelist
         items={domainWhitelist}
         icon='atSign'
-        onRemove={(item) =>
-          setDomainWhitelist((prev) => prev.filter((e) => e !== item))
-        }
+        onRemove={(item) => setDomainWhitelist((prev) => prev.filter((e) => e !== item))}
       />
       {!emailWhitelist.length && !domainWhitelist.length && (
-        <Text.H6 color='foregroundMuted'>
-          No emails or domains added to the whitelist
-        </Text.H6>
+        <Text.H6 color='foregroundMuted'>No emails or domains added to the whitelist</Text.H6>
       )}
     </div>
   )

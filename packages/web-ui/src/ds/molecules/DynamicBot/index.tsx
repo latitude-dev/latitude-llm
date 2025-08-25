@@ -1,17 +1,13 @@
 'use client'
 import { useCallback, useRef, useState } from 'react'
-import { colors, TextColor } from '../../tokens'
+import { colors, type TextColor } from '../../tokens'
 import { cn } from '../../../lib/utils'
 import { useCursorPosition } from './hooks/followCursor'
 import { DynamicBotEyes } from './Eyes'
-import { EyeBehaviourSettings } from './hooks/eyeBehaviour'
-import { BotEmotion } from './types'
-import {
-  STROKE_LINECAP,
-  STROKE_LINEJOIN,
-  OUTER_STROKE_WIDTH,
-} from './constants'
-import { AntennaSettings, DynamicBotAntenna } from './Antenna'
+import type { EyeBehaviourSettings } from './hooks/eyeBehaviour'
+import type { BotEmotion } from './types'
+import { STROKE_LINECAP, STROKE_LINEJOIN, OUTER_STROKE_WIDTH } from './constants'
+import { type AntennaSettings, DynamicBotAntenna } from './Antenna'
 import { DynamicBotMouth } from './Mouth'
 import { useFollowedPosition } from './hooks/useFollowedPosition'
 
@@ -48,13 +44,7 @@ export function DynamicBot({
   })
 
   return (
-    <div
-      className={cn(
-        'w-8 h-8 relative flex items-center justify-center',
-        className,
-      )}
-      ref={ref}
-    >
+    <div className={cn('w-8 h-8 relative flex items-center justify-center', className)} ref={ref}>
       <svg
         className={cn({
           [colors.textColors[color!]]: color,
@@ -104,14 +94,11 @@ export function useDynamicBotEmotion({
   const [mainEmotion, setMainEmotion] = useState<BotEmotion>(initialEmotion)
   const [timedEmotion, setTimedEmotion] = useState<BotEmotion | undefined>()
 
-  const reactWithEmotion = useCallback(
-    async (emotion: BotEmotion, duration: number = 2_000) => {
-      setTimedEmotion(emotion)
-      await wait(duration)
-      setTimedEmotion(undefined)
-    },
-    [],
-  )
+  const reactWithEmotion = useCallback(async (emotion: BotEmotion, duration: number = 2_000) => {
+    setTimedEmotion(emotion)
+    await wait(duration)
+    setTimedEmotion(undefined)
+  }, [])
 
   return {
     emotion: timedEmotion ?? mainEmotion,

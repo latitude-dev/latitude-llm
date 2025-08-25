@@ -1,11 +1,7 @@
 import app from '$/routes/app'
 import { Providers } from '@latitude-data/constants'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
-import {
-  createDraft,
-  createProject,
-  helpers,
-} from '@latitude-data/core/factories'
+import { createDraft, createProject, helpers } from '@latitude-data/core/factories'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -16,16 +12,13 @@ vi.mock('$/jobs', () => ({
 describe('POST /documents', () => {
   describe('unauthorized', () => {
     it('fails', async () => {
-      const res = await app.request(
-        '/api/v3/projects/1/versions/asldkfjhsadl/documents',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            path: 'path/to/document',
-            prompt: 'Test prompt',
-          }),
-        },
-      )
+      const res = await app.request('/api/v3/projects/1/versions/asldkfjhsadl/documents', {
+        method: 'POST',
+        body: JSON.stringify({
+          path: 'path/to/document',
+          prompt: 'Test prompt',
+        }),
+      })
 
       expect(res.status).toBe(401)
     })

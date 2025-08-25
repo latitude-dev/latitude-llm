@@ -1,7 +1,7 @@
 'use client'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
-import { Membership, User } from '@latitude-data/core/browser'
+import type { Membership, User } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -19,42 +19,32 @@ export default function InvitationForm({
   footer: ReactNode
 }) {
   const { toast } = useToast()
-  const { isPending, error, executeFormAction } = useServerAction(
-    acceptInvitationAction,
-    {
-      onError: ({ err }) => {
-        if (err.code === 'ERROR') {
-          toast({
-            title: 'Saving failed',
-            description: err.message,
-            variant: 'destructive',
-          })
-        }
-      },
+  const { isPending, error, executeFormAction } = useServerAction(acceptInvitationAction, {
+    onError: ({ err }) => {
+      if (err.code === 'ERROR') {
+        toast({
+          title: 'Saving failed',
+          description: err.message,
+          variant: 'destructive',
+        })
+      }
     },
-  )
+  })
   const errors = error?.fieldErrors
 
   return (
     <form action={executeFormAction}>
       <FormWrapper>
-        <Input
-          hidden
-          readOnly
-          name='membershipToken'
-          value={membership.invitationToken}
-        />
+        <Input hidden readOnly name='membershipToken' value={membership.invitationToken} />
         {!user.confirmedAt && (
-          <>
-            <Input
-              disabled
-              value={user.email}
-              type='email'
-              name='email'
-              label='Email'
-              errors={errors?.email}
-            />
-          </>
+          <Input
+            disabled
+            value={user.email}
+            type='email'
+            name='email'
+            label='Email'
+            errors={errors?.email}
+          />
         )}
         <Button fullWidth isLoading={isPending}>
           Accept Invitation

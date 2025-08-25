@@ -1,9 +1,9 @@
 'use client'
 
-import { ToolMessage } from '@latitude-data/constants/legacyCompiler'
+import type { ToolMessage } from '@latitude-data/constants/legacyCompiler'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { cn } from '@latitude-data/web-ui/utils'
-import { KeyboardEvent, useCallback, useState } from 'react'
+import { type KeyboardEvent, useCallback, useState } from 'react'
 import { ToolBar } from './ToolBar'
 
 type OnSubmitWithTools = (value: string | ToolMessage[]) => void

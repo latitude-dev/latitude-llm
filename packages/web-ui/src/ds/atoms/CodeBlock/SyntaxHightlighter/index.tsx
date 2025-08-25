@@ -1,13 +1,7 @@
 'use client'
 
-import React, {
-  lazy,
-  ComponentProps,
-  Suspense,
-  useEffect,
-  useState,
-  useMemo,
-} from 'react'
+import type React from 'react'
+import { lazy, type ComponentProps, Suspense, useEffect, useState, useMemo } from 'react'
 import { cn } from '../../../../lib/utils'
 import { CurrentTheme } from '../../../../constants'
 
@@ -21,12 +15,7 @@ type Props = Omit<ComponentProps<typeof LazyPrism>, 'style'> & {
   currentTheme: string | undefined
 }
 
-export function SyntaxHighlighter({
-  children,
-  className,
-  language,
-  currentTheme,
-}: Props) {
+export function SyntaxHighlighter({ children, className, language, currentTheme }: Props) {
   const [style, setStyle] = useState<PrismThemeStyle>(undefined)
   useEffect(() => {
     let active = true
@@ -34,13 +23,9 @@ export function SyntaxHighlighter({
     const loadTheme = async () => {
       let themeModule
       if (currentTheme === CurrentTheme.Dark) {
-        themeModule = await import(
-          'react-syntax-highlighter/dist/esm/styles/prism/one-dark'
-        )
+        themeModule = await import('react-syntax-highlighter/dist/esm/styles/prism/one-dark')
       } else {
-        themeModule = await import(
-          'react-syntax-highlighter/dist/esm/styles/prism/one-light'
-        )
+        themeModule = await import('react-syntax-highlighter/dist/esm/styles/prism/one-light')
       }
 
       if (active) {
@@ -55,9 +40,7 @@ export function SyntaxHighlighter({
   }, [currentTheme])
 
   return (
-    <Suspense
-      fallback={<div className='p-4 text-sm text-muted'>Loading code...</div>}
-    >
+    <Suspense fallback={<div className='p-4 text-sm text-muted'>Loading code...</div>}>
       <LazyPrism
         className={cn('text-sm', className)}
         language={language}

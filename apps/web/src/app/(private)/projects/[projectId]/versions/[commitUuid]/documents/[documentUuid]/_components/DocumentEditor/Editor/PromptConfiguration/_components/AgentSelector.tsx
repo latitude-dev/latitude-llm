@@ -1,5 +1,5 @@
 import { FilePathSelector } from '@latitude-data/web-ui/molecules/FilepathSelector'
-import { PromptConfigurationProps, useLatitudeAgentsConfig } from '../utils'
+import { type PromptConfigurationProps, useLatitudeAgentsConfig } from '../utils'
 import { useMemo } from 'react'
 
 export function SubAgentSelector({
@@ -8,8 +8,11 @@ export function SubAgentSelector({
   disabled,
   canUseSubagents,
 }: PromptConfigurationProps) {
-  const { selectedAgents, availableAgents, toggleAgent } =
-    useLatitudeAgentsConfig({ config, setConfig, canUseSubagents })
+  const { selectedAgents, availableAgents, toggleAgent } = useLatitudeAgentsConfig({
+    config,
+    setConfig,
+    canUseSubagents,
+  })
 
   const label = useMemo(() => {
     if (!selectedAgents.length) return 'No agents selected'

@@ -1,5 +1,5 @@
 import { env } from '@latitude-data/env'
-import { JobsOptions, Queue } from 'bullmq'
+import { type JobsOptions, Queue } from 'bullmq'
 import { Queues } from './types'
 
 const DEFAULT_JOB_OPTIONS: JobsOptions = {
@@ -26,15 +26,9 @@ export const evaluationsQueue = new Queue(Queues.evaluationsQueue, options)
 export const eventHandlersQueue = new Queue(Queues.eventHandlersQueue, options)
 export const eventsQueue = new Queue(Queues.eventsQueue, options)
 // FIXME: Not used
-export const liveEvaluationsQueue = new Queue(
-  Queues.liveEvaluationsQueue,
-  options,
-)
+export const liveEvaluationsQueue = new Queue(Queues.liveEvaluationsQueue, options)
 export const maintenanceQueue = new Queue(Queues.maintenanceQueue, options)
 export const webhooksQueue = new Queue(Queues.webhooksQueue, options)
 export const documentsQueue = new Queue(Queues.documentsQueue, options)
-export const documentSuggestionsQueue = new Queue(
-  Queues.documentSuggestionsQueue,
-  options,
-)
+export const documentSuggestionsQueue = new Queue(Queues.documentSuggestionsQueue, options)
 export const tracingQueue = new Queue(Queues.tracingQueue, options)

@@ -1,8 +1,8 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTrigger, DocumentTriggerEvent } from '../../../../browser'
+import type { DocumentTrigger, DocumentTriggerEvent } from '../../../../browser'
 import { database } from '../../../../client'
-import { ErrorResult, Result } from '../../../../lib/Result'
-import Transaction, { PromisedResult } from '../../../../lib/Transaction'
+import { type ErrorResult, Result } from '../../../../lib/Result'
+import Transaction, { type PromisedResult } from '../../../../lib/Transaction'
 import { documentTriggers } from '../../../../schema'
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { checkCronExpression, getNextRunTime } from '../../helpers/cronHelper'
@@ -74,15 +74,10 @@ async function registerSingleScheduledTriggerEvent(
   transaction = new Transaction(),
 ): PromisedResult<DocumentTriggerEvent<DocumentTriggerType.Scheduled>> {
   return transaction.call(async (tx) => {
-    const workspace = await unsafelyFindWorkspace(
-      documentTrigger.workspaceId,
-      tx,
-    )
+    const workspace = await unsafelyFindWorkspace(documentTrigger.workspaceId, tx)
     if (!workspace) {
       return Result.error(
-        new NotFoundError(
-          `Workspace with ID '${documentTrigger.workspaceId}' not found`,
-        ),
+        new NotFoundError(`Workspace with ID '${documentTrigger.workspaceId}' not found`),
       )
     }
 
@@ -98,9 +93,7 @@ async function registerSingleScheduledTriggerEvent(
       // However, the trigger's associated commit may not be the Live commit,
       // but rather just the last merged commit where it has been updated.
       // Thus, we need to find the Live commit
-      const liveCommitResult = await commitsScope.getHeadCommit(
-        documentTrigger.projectId,
-      )
+      const liveCommitResult = await commitsScope.getHeadCommit(documentTrigger.projectId)
       if (!Result.isOk(liveCommitResult)) return liveCommitResult
       const liveCommit = liveCommitResult.unwrap()
       eventCommit = liveCommit!
@@ -125,9 +118,7 @@ async function registerSingleScheduledTriggerEvent(
       .returning()) as DocumentTrigger<DocumentTriggerType.Scheduled>[]
 
     if (!updatedScheduledTrigger) {
-      return Result.error(
-        new NotFoundError(`Scheduled Document Trigger was not found`),
-      )
+      return Result.error(new NotFoundError(`Scheduled Document Trigger was not found`))
     }
 
     // Then, we register the event. If registering the event fails, the
@@ -160,14 +151,10 @@ export async function findAndRegisterScheduledTriggerEvents(
 
   const triggersDueToRun = triggersDueToRunResult.unwrap()
   const results = await Promise.all(
-    triggersDueToRun.map((documentTrigger) =>
-      registerSingleScheduledTriggerEvent(documentTrigger),
-    ),
+    triggersDueToRun.map((documentTrigger) => registerSingleScheduledTriggerEvent(documentTrigger)),
   )
 
-  const errors = results.filter(
-    (result) => !Result.isOk(result),
-  ) as ErrorResult<Error>[]
+  const errors = results.filter((result) => !Result.isOk(result)) as ErrorResult<Error>[]
 
   if (errors.length) {
     return errors[0]!

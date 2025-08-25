@@ -1,9 +1,5 @@
-import {
-  NodeType,
-  ResolveNodeProps,
-  UpdateScopeContextProps,
-} from '$compiler/compiler/logic/types'
-import { Node } from 'estree'
+import { NodeType, type ResolveNodeProps, type UpdateScopeContextProps } from '$compiler/compiler/logic/types'
+import type { Node } from 'estree'
 
 import {
   resolve as resolveArrayExpression,
@@ -67,8 +63,7 @@ export const nodeResolvers: Record<NodeType, ResolveNodeFn> = {
   [NodeType.BinaryExpression]: resolveBinaryExpression as ResolveNodeFn,
   [NodeType.CallExpression]: resolveCallExpression as ResolveNodeFn,
   [NodeType.ChainExpression]: resolveChainExpression as ResolveNodeFn,
-  [NodeType.ConditionalExpression]:
-    resolveConditionalExpression as ResolveNodeFn,
+  [NodeType.ConditionalExpression]: resolveConditionalExpression as ResolveNodeFn,
   [NodeType.Identifier]: resolveIdentifier as ResolveNodeFn,
   [NodeType.Literal]: resolveLiteral as ResolveNodeFn,
   [NodeType.LogicalExpression]: resolveBinaryExpression as ResolveNodeFn,
@@ -79,26 +74,19 @@ export const nodeResolvers: Record<NodeType, ResolveNodeFn> = {
   [NodeType.UpdateExpression]: resolveUpdateExpression as ResolveNodeFn,
 }
 
-export const updateScopeContextResolvers: Record<
-  NodeType,
-  UpdateScopeContextFn
-> = {
+export const updateScopeContextResolvers: Record<NodeType, UpdateScopeContextFn> = {
   [NodeType.ArrayExpression]: updateArrayScopeContext as UpdateScopeContextFn,
-  [NodeType.AssignmentExpression]:
-    updateAssignmentScopeContext as UpdateScopeContextFn,
+  [NodeType.AssignmentExpression]: updateAssignmentScopeContext as UpdateScopeContextFn,
   [NodeType.BinaryExpression]: updateBinaryScopeContext as UpdateScopeContextFn,
   [NodeType.CallExpression]: updateCallScopeContext as UpdateScopeContextFn,
   [NodeType.ChainExpression]: updateChainScopeContext as UpdateScopeContextFn,
-  [NodeType.ConditionalExpression]:
-    updateConditionalScopeContext as UpdateScopeContextFn,
+  [NodeType.ConditionalExpression]: updateConditionalScopeContext as UpdateScopeContextFn,
   [NodeType.Identifier]: updateIdentifierScopeContext as UpdateScopeContextFn,
   [NodeType.Literal]: updateLiteralScopeContext as UpdateScopeContextFn,
-  [NodeType.LogicalExpression]:
-    updateBinaryScopeContext as UpdateScopeContextFn,
+  [NodeType.LogicalExpression]: updateBinaryScopeContext as UpdateScopeContextFn,
   [NodeType.ObjectExpression]: updateObjectScopeContext as UpdateScopeContextFn,
   [NodeType.MemberExpression]: updateMemberScopeContext as UpdateScopeContextFn,
-  [NodeType.SequenceExpression]:
-    updateSequenceScopeContext as UpdateScopeContextFn,
+  [NodeType.SequenceExpression]: updateSequenceScopeContext as UpdateScopeContextFn,
   [NodeType.UnaryExpression]: updateUnaryScopeContext as UpdateScopeContextFn,
   [NodeType.UpdateExpression]: updateUpdateScopeContext as UpdateScopeContextFn,
 }

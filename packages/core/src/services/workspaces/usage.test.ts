@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { WorkspaceDto } from '../../browser'
+import type { WorkspaceDto } from '../../browser'
 import { Providers } from '../../constants'
 import { deleteCommitDraft } from '../commits'
 import { computeWorkspaceUsage } from './usage'
@@ -48,8 +48,7 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV2,
-            providerLog:
-              documentLogs[idx % documentLogs.length]!.providerLogs[0]!,
+            providerLog: documentLogs[idx % documentLogs.length]!.providerLogs[0]!,
             commit: commit,
             workspace: workspace,
           }),
@@ -123,8 +122,7 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV21,
-            providerLog:
-              documentLogs1[idx % documentLogs1.length]!.providerLogs[0]!,
+            providerLog: documentLogs1[idx % documentLogs1.length]!.providerLogs[0]!,
             commit: commit1,
             workspace: workspace1,
           }),
@@ -148,8 +146,7 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV22,
-            providerLog:
-              documentLogs2[idx % documentLogs2.length]!.providerLogs[0]!,
+            providerLog: documentLogs2[idx % documentLogs2.length]!.providerLogs[0]!,
             commit: commit2,
             workspace: workspace2,
           }),
@@ -162,9 +159,7 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace1.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(
-      documentLogs1.length + evaluationResultsV21.length,
-    )
+    expect(result.usage).toBe(documentLogs1.length + evaluationResultsV21.length)
   })
 
   it('calculates usage correctly when there are no evaluation results or document logs', async (ctx) => {
@@ -209,13 +204,12 @@ describe('computeWorkspaceUsage', () => {
     })
 
     const workspace = wsp as WorkspaceDto
-    const { commit: commit2, documents: documents2 } =
-      await ctx.factories.createProject({
-        workspace,
-        documents: {
-          bar: ctx.factories.helpers.createPrompt({ provider: 'test' }),
-        },
-      })
+    const { commit: commit2, documents: documents2 } = await ctx.factories.createProject({
+      workspace,
+      documents: {
+        bar: ctx.factories.helpers.createPrompt({ provider: 'test' }),
+      },
+    })
 
     const NUM_DOC_LOGS_PER_PROJECT = 5
     const NUM_EVAL_LOGS_PER_PROJECT = 5
@@ -261,8 +255,7 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV21,
-            providerLog:
-              document1Logs[idx % document1Logs.length]!.providerLogs[0]!,
+            providerLog: document1Logs[idx % document1Logs.length]!.providerLogs[0]!,
             commit: commit1,
             workspace: workspace,
           }),
@@ -275,8 +268,7 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV22,
-            providerLog:
-              document2Logs[idx % document2Logs.length]!.providerLogs[0]!,
+            providerLog: document2Logs[idx % document2Logs.length]!.providerLogs[0]!,
             commit: commit2,
             workspace: workspace,
           }),
@@ -284,10 +276,7 @@ describe('computeWorkspaceUsage', () => {
     )
 
     const documentLogs = [...document1Logs, ...document2Logs]
-    const evaluationResultsV2 = [
-      ...evaluationResultsV21,
-      ...evaluationResultsV22,
-    ]
+    const evaluationResultsV2 = [...evaluationResultsV21, ...evaluationResultsV22]
     const result = await computeWorkspaceUsage({
       id: workspace.id,
       currentSubscriptionCreatedAt: workspace.currentSubscription.createdAt,
@@ -341,8 +330,7 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV2,
-            providerLog:
-              documentLogs[idx % documentLogs.length]!.providerLogs[0]!,
+            providerLog: documentLogs[idx % documentLogs.length]!.providerLogs[0]!,
             commit: draft,
             workspace: workspace,
           }),
@@ -436,8 +424,7 @@ describe('computeWorkspaceUsage', () => {
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV2,
             providerLog:
-              notIncludedDocumentLogs[idx % notIncludedDocumentLogs.length]!
-                .providerLogs[0]!,
+              notIncludedDocumentLogs[idx % notIncludedDocumentLogs.length]!.providerLogs[0]!,
             commit: commit,
             workspace: workspace,
             createdAt: dateBeforeLastRenewal,
@@ -473,9 +460,7 @@ describe('computeWorkspaceUsage', () => {
           )
           ctx.factories.createEvaluationResultV2({
             evaluation: evaluationV2,
-            providerLog:
-              includedDocumentLogs[idx % includedDocumentLogs.length]!
-                .providerLogs[0]!,
+            providerLog: includedDocumentLogs[idx % includedDocumentLogs.length]!.providerLogs[0]!,
             commit: commit,
             workspace: workspace,
             createdAt: dateAfterLastRenewal,
@@ -489,8 +474,6 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(
-      includedDocumentLogs.length + includedEvaluationResultsV2.length,
-    )
+    expect(result.usage).toBe(includedDocumentLogs.length + includedEvaluationResultsV2.length)
   })
 })

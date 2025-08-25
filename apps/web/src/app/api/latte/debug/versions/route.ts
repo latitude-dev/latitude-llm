@@ -1,6 +1,6 @@
-import { Workspace } from '@latitude-data/core/browser'
+import type { Workspace } from '@latitude-data/core/browser'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { getLatteDebugVersions } from '@latitude-data/core/services/copilot/latte/debugVersions'
 import { adminHandler } from '$/middlewares/adminHandler'
 

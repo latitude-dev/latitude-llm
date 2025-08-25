@@ -30,7 +30,7 @@ export function resolveRelativePath(refPath: string, from?: string): string {
 
 export function createRelativePath(refPath: string, from?: string): string {
   if (!from) {
-    return '/' + refPath
+    return `/${refPath}`
   }
 
   const refSegments = refPath.split('/')
@@ -45,19 +45,15 @@ export function createRelativePath(refPath: string, from?: string): string {
     commonSegments.push(refSegments[i])
   }
 
-  const upSegments = currentSegments
-    .slice(commonSegments.length)
-    .map(() => '..')
+  const upSegments = currentSegments.slice(commonSegments.length).map(() => '..')
   const downSegments = refSegments.slice(commonSegments.length)
 
   const fullRefPath = [...upSegments, ...downSegments].join('/')
 
-  return refPath.length < fullRefPath.length ? '/' + refPath : fullRefPath
+  return refPath.length < fullRefPath.length ? `/${refPath}` : fullRefPath
 }
 
-export function simplifyDocument(
-  document: DocumentVersion,
-): SimplifiedDocumentVersion {
+export function simplifyDocument(document: DocumentVersion): SimplifiedDocumentVersion {
   return {
     documentUuid: document.documentUuid,
     path: document.path,
@@ -68,8 +64,7 @@ export function simplifyDocument(
 
 export function isSafeUrl(url: unknown): url is string | URL {
   const isUrl =
-    url instanceof URL ||
-    (typeof url === 'string' && (url.startsWith('/') || URL.canParse(url)))
+    url instanceof URL || (typeof url === 'string' && (url.startsWith('/') || URL.canParse(url)))
   if (!isUrl) return false
 
   if (url.toString().startsWith('/')) return true

@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Project, IntegrationDto, Workspace, Commit } from '../../browser'
+import type { Project, IntegrationDto, Workspace, Commit } from '../../browser'
 import { listReferences } from './references'
-import {
-  DocumentVersion,
-  IntegrationType,
-  Providers,
-} from '@latitude-data/constants'
+import { type DocumentVersion, IntegrationType, Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { Result } from '../../lib/Result'
 import { destroyIntegration } from './destroy'

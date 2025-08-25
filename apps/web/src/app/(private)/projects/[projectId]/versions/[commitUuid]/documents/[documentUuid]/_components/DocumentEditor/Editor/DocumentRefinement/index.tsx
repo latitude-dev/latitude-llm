@@ -1,18 +1,12 @@
-import {
-  PlaygroundAction,
-  usePlaygroundAction,
-} from '$/hooks/usePlaygroundAction'
+import { PlaygroundAction, usePlaygroundAction } from '$/hooks/usePlaygroundAction'
 import { useRefiner } from '$/hooks/useRefiner'
 import { ROUTES } from '$/services/routes'
-import { DocumentVersion, EvaluationV2 } from '@latitude-data/core/browser'
+import type { DocumentVersion, EvaluationV2 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import type { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType, IProjectContextType } from '@latitude-data/web-ui/providers'
 import { useRouter } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
 import { Step1 } from './Step1'
@@ -47,17 +41,12 @@ export function DocumentRefinement({
   const cancelled = useRef(!openModal)
   cancelled.current = !openModal
 
-  const { refinePrompt, refineApply } = useRefiner(
-    { project, commit, document },
-    cancelled,
-  )
+  const { refinePrompt, refineApply } = useRefiner({ project, commit, document }, cancelled)
 
   const [evaluationUuid, setEvaluationUuid] = useState<string | undefined>(
     playgroundAction?.evaluationUuid,
   )
-  const [resultUuids, setResultUuids] = useState<string[]>(
-    playgroundAction?.resultUuids || [],
-  )
+  const [resultUuids, setResultUuids] = useState<string[]>(playgroundAction?.resultUuids || [])
 
   const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationV2>()
   const [selectedResultUuids, setSelectedResultUuids] = useState<string[]>([])
@@ -68,18 +57,12 @@ export function DocumentRefinement({
     setResultUuids([])
     setSelectedEvaluation(undefined)
     setSelectedResultUuids([])
-  }, [
-    resetPlaygroundAction,
-    setEvaluationUuid,
-    setResultUuids,
-    setSelectedEvaluation,
-    setSelectedResultUuids,
-  ])
+  }, [resetPlaygroundAction])
 
   const close = useCallback(() => {
     setOpenModal(false)
     reset()
-  }, [setOpenModal, reset])
+  }, [reset])
 
   const refine = useCallback(async () => {
     const [refinement, error] = await refinePrompt({
@@ -119,7 +102,6 @@ export function DocumentRefinement({
     evaluationUuid,
     resultUuids,
     refinePrompt,
-    cancelled,
     setDiff,
     setPrompt,
     refineApply,
@@ -129,6 +111,7 @@ export function DocumentRefinement({
     router,
   ])
 
+  // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
   let step
   if (resultUuids.length > 0) {
     step = {
@@ -136,14 +119,7 @@ export function DocumentRefinement({
       title: 'Generating prompt suggestion',
       description:
         'We are reviewing evaluations with poor results, to identify why the prompt failed, and propose suitable modifications.',
-      content: (
-        <Step3
-          project={project}
-          commit={commit}
-          document={document}
-          refine={refine}
-        />
-      ),
+      content: <Step3 project={project} commit={commit} document={document} refine={refine} />,
       footer: (
         <Button variant='outline' fancy onClick={close}>
           Close

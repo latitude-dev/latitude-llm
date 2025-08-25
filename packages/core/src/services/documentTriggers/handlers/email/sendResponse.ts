@@ -1,20 +1,10 @@
-import {
-  DocumentTriggerType,
-  EMAIL_TRIGGER_DOMAIN,
-} from '@latitude-data/constants'
-import {
-  Commit,
-  DocumentTrigger,
-  DocumentTriggerEvent,
-} from '../../../../browser'
+import { type DocumentTriggerType, EMAIL_TRIGGER_DOMAIN } from '@latitude-data/constants'
+import type { Commit, DocumentTrigger, DocumentTriggerEvent } from '../../../../browser'
 import { DocumentTriggerMailer } from '../../../../mailers'
 import type { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
-import { Result, TypedResult } from '../../../../lib/Result'
-import { PromisedResult } from '../../../../lib/Transaction'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../../../repositories'
+import { Result, type TypedResult } from '../../../../lib/Result'
+import type { PromisedResult } from '../../../../lib/Transaction'
+import { CommitsRepository, DocumentVersionsRepository } from '../../../../repositories'
 
 async function getTriggerName({
   documentTrigger,
@@ -63,15 +53,11 @@ export async function sendEmailResponse({
     return Result.nil()
   }
 
-  const { parentMessageIds, messageId, senderEmail, subject } =
-    documentTriggerEvent.payload
+  const { parentMessageIds, messageId, senderEmail, subject } = documentTriggerEvent.payload
 
   const from = `${JSON.stringify(name)} <${documentTrigger.documentUuid}@${EMAIL_TRIGGER_DOMAIN}>`
 
-  const references = [
-    ...(parentMessageIds ?? []),
-    ...(messageId ? [messageId] : []),
-  ].join(' ')
+  const references = [...(parentMessageIds ?? []), ...(messageId ? [messageId] : [])].join(' ')
 
   const headers = documentTriggerEvent.payload.messageId
     ? {
@@ -90,7 +76,7 @@ export async function sendEmailResponse({
     from,
     inReplyTo: messageId,
     references,
-    subject: 'Re: ' + subject,
+    subject: `Re: ${subject}`,
     headers,
   })
 

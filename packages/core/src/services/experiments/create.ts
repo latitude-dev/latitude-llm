@@ -1,10 +1,10 @@
-import { Dataset, Experiment } from '../../browser'
-import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
+import type { Dataset, Experiment } from '../../browser'
+import type { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
 import { scanDocumentContent } from '../documents'
 import { experiments } from '../../schema'
 import { DatasetRowsRepository } from '../../repositories'
 import { assertEvaluationRequirements } from './assertRequirements'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
 import { Result } from '../../lib/Result'
 import { BadRequestError, LatitudeError } from '../../lib/errors'
 import { database } from '../../client'
@@ -119,16 +119,12 @@ export async function createExperiment(
 
     if (!!promptMetadata.parameters.length && !dataset) {
       return Result.error(
-        new BadRequestError(
-          'A dataset is required when the prompt contains parameters',
-        ),
+        new BadRequestError('A dataset is required when the prompt contains parameters'),
       )
     }
 
     const datasetRowsScope = new DatasetRowsRepository(workspace.id, tx)
-    const countResult = dataset
-      ? await datasetRowsScope.getCountByDataset(dataset.id)
-      : undefined
+    const countResult = dataset ? await datasetRowsScope.getCountByDataset(dataset.id) : undefined
     const rowCount = countResult?.[0]?.count
 
     const result = await tx

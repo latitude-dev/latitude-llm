@@ -5,7 +5,7 @@ import { discardDocumentSuggestionAction } from '$/actions/documentSuggestions/d
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import {
+import type {
   Commit,
   DocumentSuggestionWithDetails,
   DocumentVersion,
@@ -14,7 +14,7 @@ import {
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact } from 'lodash-es'
 import { useCallback } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR, { type SWRConfiguration } from 'swr'
 
 export default function useDocumentSuggestions(
   {
@@ -53,29 +53,21 @@ export default function useDocumentSuggestions(
     opts,
   )
 
-  const {
-    execute: executeApplyDocumentSuggestion,
-    isPending: isApplyingDocumentSuggestion,
-  } = useLatitudeAction(applyDocumentSuggestionAction, {
-    onSuccess: async ({ data: { suggestion } }) => {
-      mutate((prev) => prev?.filter((s) => s.id !== suggestion.id))
-    },
-    onError: async (error) => {
-      toast({
-        title: 'Error applying suggestion',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
-    },
-  })
+  const { execute: executeApplyDocumentSuggestion, isPending: isApplyingDocumentSuggestion } =
+    useLatitudeAction(applyDocumentSuggestionAction, {
+      onSuccess: async ({ data: { suggestion } }) => {
+        mutate((prev) => prev?.filter((s) => s.id !== suggestion.id))
+      },
+      onError: async (error) => {
+        toast({
+          title: 'Error applying suggestion',
+          description: error?.err?.message,
+          variant: 'destructive',
+        })
+      },
+    })
   const applyDocumentSuggestion = useCallback(
-    async ({
-      suggestionId,
-      prompt,
-    }: {
-      suggestionId: number
-      prompt?: string
-    }) => {
+    async ({ suggestionId, prompt }: { suggestionId: number; prompt?: string }) => {
       const [result, error] = await executeApplyDocumentSuggestion({
         projectId: project.id,
         commitUuid: commit.uuid,
@@ -89,21 +81,19 @@ export default function useDocumentSuggestions(
     [project, commit, document, executeApplyDocumentSuggestion],
   )
 
-  const {
-    execute: executeDiscardDocumentSuggestion,
-    isPending: isDiscardingDocumentSuggestion,
-  } = useLatitudeAction(discardDocumentSuggestionAction, {
-    onSuccess: async ({ data: { suggestion } }) => {
-      mutate((prev) => prev?.filter((s) => s.id !== suggestion.id))
-    },
-    onError: async (error) => {
-      toast({
-        title: 'Error discarding suggestion',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
-    },
-  })
+  const { execute: executeDiscardDocumentSuggestion, isPending: isDiscardingDocumentSuggestion } =
+    useLatitudeAction(discardDocumentSuggestionAction, {
+      onSuccess: async ({ data: { suggestion } }) => {
+        mutate((prev) => prev?.filter((s) => s.id !== suggestion.id))
+      },
+      onError: async (error) => {
+        toast({
+          title: 'Error discarding suggestion',
+          description: error?.err?.message,
+          variant: 'destructive',
+        })
+      },
+    })
   const discardDocumentSuggestion = useCallback(
     async ({ suggestionId }: { suggestionId: number }) => {
       const [result, error] = await executeDiscardDocumentSuggestion({

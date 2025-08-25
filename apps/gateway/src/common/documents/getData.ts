@@ -1,12 +1,7 @@
 import { omit } from 'lodash-es'
 
-import { Message } from '@latitude-data/constants/legacyCompiler'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  type Workspace,
-} from '@latitude-data/core/browser'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
+import type { Commit, DocumentVersion, Project, Workspace } from '@latitude-data/core/browser'
 import { findFirstUserInWorkspace } from '@latitude-data/core/data-access'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { BadRequestError } from '@latitude-data/constants/errors'
@@ -17,14 +12,14 @@ import {
   ProjectsRepository,
   ProviderApiKeysRepository,
 } from '@latitude-data/core/repositories'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import {
-  ChainCallResponseDto,
-  LegacyChainEvent,
+  type ChainCallResponseDto,
+  type LegacyChainEvent,
   LegacyChainEventTypes,
-  LegacyEventData,
-  LegacyLatitudeEventData,
-  Providers,
+  type LegacyEventData,
+  type LegacyLatitudeEventData,
+  type Providers,
   StreamEventTypes,
 } from '@latitude-data/constants'
 import { getDocumentMetadata } from '@latitude-data/core/services/documents/scan'
@@ -43,7 +38,7 @@ async function getProjectByVersionData({
   const commitsScope = new CommitsRepository(workspace.id)
 
   const pid = Number(projectId)
-  if (isNaN(pid)) {
+  if (Number.isNaN(pid)) {
     return Result.error(new BadRequestError(`Invalid project id ${projectId}`))
   }
 
@@ -112,9 +107,7 @@ export async function getAllDocumentsAtCommitWithMetadata({
 
   return Result.ok(
     docs.map((document) => {
-      const doc = docsWithMetadata.find(
-        (d) => d.document.documentUuid === document.documentUuid,
-      )
+      const doc = docsWithMetadata.find((d) => d.document.documentUuid === document.documentUuid)
       const provider = doc?.metadata?.config?.provider
       return documentPresenterWithProviderAndMetadata({
         document,

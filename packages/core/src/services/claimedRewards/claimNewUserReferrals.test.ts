@@ -10,12 +10,9 @@ import { claimNewUserReferrals } from './claimNewUserReferrals'
 describe('claimNewUserReferrals', () => {
   it('accepts all pending referral reward claims for the specified email', async (ctx) => {
     const email = 'test@example.com'
-    const { workspace: workspace1, user: user1 } =
-      await ctx.factories.createProject()
-    const { workspace: workspace2, user: user2 } =
-      await ctx.factories.createProject()
-    const { workspace: workspace3, user: user3 } =
-      await ctx.factories.createProject()
+    const { workspace: workspace1, user: user1 } = await ctx.factories.createProject()
+    const { workspace: workspace2, user: user2 } = await ctx.factories.createProject()
+    const { workspace: workspace3, user: user3 } = await ctx.factories.createProject()
 
     await claimReward({
       workspace: workspace1,

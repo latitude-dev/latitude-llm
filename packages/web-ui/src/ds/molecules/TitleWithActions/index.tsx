@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Text } from '../../atoms/Text'
@@ -22,9 +22,7 @@ export const TitleWithActions = ({
     >
       {typeof title === 'string' ? <Text.H4B>{title}</Text.H4B> : title}
       {actions ? (
-        <div className='flex gap-1 flex-grow shrink-0 justify-end gap-x-2'>
-          {actions}
-        </div>
+        <div className='flex gap-1 flex-grow shrink-0 justify-end gap-x-2'>{actions}</div>
       ) : null}
     </div>
   )

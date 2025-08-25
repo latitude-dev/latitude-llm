@@ -1,4 +1,4 @@
-import { Membership, User, Workspace } from '../../browser'
+import type { Membership, User, Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -34,13 +34,7 @@ export const createMembership = async (
   return result
 }
 
-const publishEvent = ({
-  membership,
-  author,
-}: {
-  membership: Membership
-  author?: User
-}) => {
+const publishEvent = ({ membership, author }: { membership: Membership; author?: User }) => {
   publisher.publishLater({
     type: 'membershipCreated',
     data: {

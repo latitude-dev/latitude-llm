@@ -1,17 +1,15 @@
-import { ReactNode, useRef } from 'react'
+import { type ReactNode, useRef } from 'react'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ErrorMessage, Message } from '$/components/ChatWrapper'
 import { ToolBarWrapper } from '$/components/ChatWrapper/ChatTextArea/ToolBar'
-import Actions, {
-  type ActionsState,
-} from '$/components/PlaygroundCommon/Actions'
+import Actions, { type ActionsState } from '$/components/PlaygroundCommon/Actions'
 import { usePreviewConversation } from '$/hooks/playgrounds/usePreviewConversation'
-import { ResolvedMetadata } from '$/workers/readMetadata'
+import type { ResolvedMetadata } from '$/workers/readMetadata'
 import {
-  AppliedRules,
+  type AppliedRules,
   LATITUDE_DOCS_URL,
-  ProviderRules,
+  type ProviderRules,
 } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -79,10 +77,7 @@ export default function PreviewPrompt({
       {showHeader ? (
         <div className='flex flex-row items-center justify-between w-full'>
           <Text.H6M>Preview</Text.H6M>
-          <Actions
-            expandParameters={expandParameters}
-            setExpandParameters={setExpandParameters}
-          />
+          <Actions expandParameters={expandParameters} setExpandParameters={setExpandParameters} />
         </div>
       ) : null}
       <div
@@ -120,12 +115,7 @@ export default function PreviewPrompt({
               side='bottom'
               asChild
               trigger={
-                <Button
-                  iconProps={{ name: 'play' }}
-                  fancy={true}
-                  roundy={true}
-                  disabled
-                >
+                <Button iconProps={{ name: 'play' }} fancy={true} roundy={true} disabled>
                   Run
                 </Button>
               }
@@ -133,12 +123,7 @@ export default function PreviewPrompt({
               There are errors in your prompt. Please fix them before running.
             </Tooltip>
           ) : (
-            <Button
-              iconProps={{ name: 'play' }}
-              fancy={true}
-              roundy={true}
-              onClick={runPrompt}
-            >
+            <Button iconProps={{ name: 'play' }} fancy={true} roundy={true} onClick={runPrompt}>
               Run
             </Button>
           )}

@@ -1,5 +1,5 @@
 'use client'
-import { ReactNode, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { isString } from 'lodash-es'
 
 import { Button } from '@latitude-data/web-ui/atoms/Button'

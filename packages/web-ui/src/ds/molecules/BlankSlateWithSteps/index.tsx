@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Badge } from '../../atoms/Badge'
@@ -84,9 +84,7 @@ export function BlankSlateWithSteps({
           {description}
         </Text.H5>
       </div>
-      <div className='flex flex-row flex-wrap justify-center gap-12 px-8 pt-12'>
-        {children}
-      </div>
+      <div className='flex flex-row flex-wrap justify-center gap-12 px-8 pt-12'>{children}</div>
     </div>
   )
 }

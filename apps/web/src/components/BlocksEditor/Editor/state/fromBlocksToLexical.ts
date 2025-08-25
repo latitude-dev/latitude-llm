@@ -1,5 +1,5 @@
-import { LexicalEditor } from 'lexical'
-import { BlockRootNode } from './promptlToLexical/types'
+import type { LexicalEditor } from 'lexical'
+import type { BlockRootNode } from './promptlToLexical/types'
 
 type NodeWithReadOnly = { readOnly?: boolean; children?: NodeWithReadOnly[] }
 

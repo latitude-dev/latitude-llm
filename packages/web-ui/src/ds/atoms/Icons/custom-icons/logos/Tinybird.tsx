@@ -1,4 +1,4 @@
-import { type LucideProps } from 'lucide-react'
+import type { LucideProps } from 'lucide-react'
 
 export default function Tinybird(props: LucideProps) {
   return (
@@ -14,10 +14,7 @@ export default function Tinybird(props: LucideProps) {
         d='M63.0002 8.136L44.2682 3L37.6802 17.724L63.0002 8.136ZM45.0842 44.448L27.9362 38.316L17.8682 63L45.0842 44.448Z'
         fill='currentColor'
       />
-      <path
-        d='M3 29.3896L45.084 44.4496L51.984 12.2656L3 29.3896Z'
-        fill='currentColor'
-      />
+      <path d='M3 29.3896L45.084 44.4496L51.984 12.2656L3 29.3896Z' fill='currentColor' />
     </svg>
   )
 }

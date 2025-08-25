@@ -3,23 +3,21 @@ import { camelCase, kebabCase } from 'lodash-es'
 import {
   BLOCK_EDITOR_TYPE,
   BLOCK_WITH_CHILDREN,
-  BlockAttributes,
-  BlockWithChildren,
+  type BlockAttributes,
+  type BlockWithChildren,
   CONTENT_BLOCK,
   type ContentBlockType,
   type ElementTag,
-  FileBlock,
+  type FileBlock,
   MESSAGE_BLOCK,
   type MessageBlockType,
   type MustacheTag,
-  ReferenceLink,
-  TemplateNode,
-  TextBlock,
+  type ReferenceLink,
+  type TemplateNode,
+  type TextBlock,
 } from './types'
 
-export function expressionToString(
-  expression: MustacheTag['expression'],
-): string {
+export function expressionToString(expression: MustacheTag['expression']): string {
   if (expression.type === 'Identifier') {
     return expression.name
   }
@@ -70,10 +68,7 @@ export function extractTextContent(nodes: TemplateNode[] | undefined): string {
   return nodes.map((node) => nodeToText(node)).join('')
 }
 
-export function isAttributeLiteral(
-  node: ElementTag,
-  attribute: string,
-): boolean {
+export function isAttributeLiteral(node: ElementTag, attribute: string): boolean {
   const attr = node.attributes.find(({ name }) => name === attribute)
   return (
     !attr ||
@@ -84,13 +79,7 @@ export function isAttributeLiteral(
   )
 }
 
-export function getPromptAttributes({
-  tag,
-  prompt,
-}: {
-  tag: ElementTag
-  prompt: string
-}) {
+export function getPromptAttributes({ tag, prompt }: { tag: ElementTag; prompt: string }) {
   const attributes = getAttributes({
     tag,
     prompt,
@@ -105,23 +94,16 @@ export function getPromptAttributes({
   return attributes as ReferenceLink['attributes']
 }
 
-export function isConfigNode(
-  node: TemplateNode | undefined,
-): node is ElementTag {
+export function isConfigNode(node: TemplateNode | undefined): node is ElementTag {
   if (!node) return false
 
   return node.type === 'Config'
 }
 
-export function isBlockWithChildren(
-  node: TemplateNode | undefined,
-): node is ElementTag {
+export function isBlockWithChildren(node: TemplateNode | undefined): node is ElementTag {
   if (!node) return false
 
-  return (
-    node.type === 'ElementTag' &&
-    BLOCK_WITH_CHILDREN.includes(node.name as BlockWithChildren)
-  )
+  return node.type === 'ElementTag' && BLOCK_WITH_CHILDREN.includes(node.name as BlockWithChildren)
 }
 
 export function isStepBlock(node: TemplateNode): node is ElementTag {
@@ -138,21 +120,13 @@ export function isReferenceLink(node: TemplateNode): node is ElementTag {
 }
 
 export function isMessageBlock(node: TemplateNode): node is ElementTag {
-  return (
-    node.type === 'ElementTag' &&
-    MESSAGE_BLOCK.includes(node.name as MessageBlockType)
-  )
+  return node.type === 'ElementTag' && MESSAGE_BLOCK.includes(node.name as MessageBlockType)
 }
 
-export function isContentBlock(
-  node: TemplateNode | undefined,
-): node is ElementTag {
+export function isContentBlock(node: TemplateNode | undefined): node is ElementTag {
   if (!node) return false
 
-  return (
-    node.type === 'ElementTag' &&
-    CONTENT_BLOCK.includes(node.name as ContentBlockType)
-  )
+  return node.type === 'ElementTag' && CONTENT_BLOCK.includes(node.name as ContentBlockType)
 }
 
 export function isVariable(node: TemplateNode) {
@@ -203,9 +177,7 @@ function getAttributes({
   shouldCamelCase?: string[]
 }) {
   return tag.attributes.reduce((acc, attr) => {
-    const name = shouldCamelCase.includes(attr.name)
-      ? camelCase(attr.name)
-      : attr.name
+    const name = shouldCamelCase.includes(attr.name) ? camelCase(attr.name) : attr.name
 
     if (Array.isArray(attr.value)) {
       const firstNode = attr.value[0]!
@@ -263,13 +235,7 @@ export function attributesToString({
   return stepAttrs.length > 0 ? ` ${stepAttrs.join(' ')}` : ''
 }
 
-export function getStepAttributes({
-  tag,
-  prompt,
-}: {
-  tag: ElementTag
-  prompt: string
-}) {
+export function getStepAttributes({ tag, prompt }: { tag: ElementTag; prompt: string }) {
   const attributes = getAttributes({
     tag,
     prompt,
@@ -291,13 +257,7 @@ export function getStepAttributes({
   return attr
 }
 
-export function getContentFileAttributes({
-  tag,
-  prompt,
-}: {
-  tag: ElementTag
-  prompt: string
-}) {
+export function getContentFileAttributes({ tag, prompt }: { tag: ElementTag; prompt: string }) {
   const attributes = getAttributes({
     tag,
     prompt,

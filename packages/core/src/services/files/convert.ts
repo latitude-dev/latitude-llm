@@ -1,7 +1,7 @@
 // @ts-expect-error istextorbinary is not typed
 import { isText } from 'istextorbinary'
 import { parseOfficeAsync } from 'officeparser'
-import path from 'path'
+import path from 'node:path'
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs'
 // @ts-expect-error force webpack to include the sandbox
 import * as _pdfjsSandbox from 'pdfjs-dist/legacy/build/pdf.sandbox.mjs'
@@ -10,16 +10,14 @@ import * as _pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs'
 import type { TextItem } from 'pdfjs-dist/types/src/display/api'
 import { MAX_UPLOAD_SIZE_IN_MB } from '../../constants'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 
 // @ts-expect-error force webpack to include the sandbox
 const __pdfjsSandbox = _pdfjsSandbox
 // @ts-expect-error force webpack to include the worker
 const __pdfjsWorker = _pdfjsWorker
 
-export async function convertFile(
-  file: File,
-): Promise<TypedResult<string, Error>> {
+export async function convertFile(file: File): Promise<TypedResult<string, Error>> {
   const extension = path.extname(file.name).toLowerCase()
 
   if (file.size === 0) {
@@ -53,19 +51,14 @@ export async function convertFile(
         break
       default:
         if (!isText(file.name, buffer)) {
-          return Result.error(
-            new BadRequestError(`Unsupported file type: ${extension}`),
-          )
+          return Result.error(new BadRequestError(`Unsupported file type: ${extension}`))
         }
         content = buffer.toString()
         break
     }
-  } catch (error) {
+  } catch (_error) {
     return Result.error(
-      new UnprocessableEntityError(
-        `Failed to convert ${extension} file to text`,
-        {},
-      ),
+      new UnprocessableEntityError(`Failed to convert ${extension} file to text`, {}),
     )
   }
 
@@ -83,22 +76,20 @@ async function convertPdfFile(buffer: Buffer) {
     .getDocument(new Uint8Array(buffer))
     .promise.then((document) =>
       Promise.all(
-        Array.from({ length: document.numPages }, (_, index) => index + 1).map(
-          (pageNr) =>
-            document.getPage(pageNr).then((page) => page.getTextContent()),
+        Array.from({ length: document.numPages }, (_, index) => index + 1).map((pageNr) =>
+          document.getPage(pageNr).then((page) => page.getTextContent()),
         ),
       ),
     )
     .then((textContentArray) => {
       return textContentArray
-        .map((textContent) => textContent.items)
-        .flat()
-        .filter((item) => (item as TextItem).str != '')
+        .flatMap((textContent) => textContent.items)
+        .filter((item) => (item as TextItem).str !== '')
         .reduce(
           (a, v) => ({
             text:
               a.text +
-              ((v as TextItem).transform[5] != a.transform5 ? '\n' : '') +
+              ((v as TextItem).transform[5] !== a.transform5 ? '\n' : '') +
               (v as TextItem).str,
             transform5: (v as TextItem).transform[5],
           }),

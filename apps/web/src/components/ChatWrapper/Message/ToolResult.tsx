@@ -1,19 +1,16 @@
-import { ToolContent } from '@latitude-data/constants/legacyCompiler'
-import { CardTextContent, ContentCard } from './ContentCard'
-import { ReactNode, useMemo } from 'react'
+import type { ToolContent } from '@latitude-data/constants/legacyCompiler'
+import { type ReactNode, useMemo } from 'react'
 import { CollapsibleContent } from './LatitudeTools/CollapsibleContent'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TextColor } from '@latitude-data/web-ui/tokens'
+import type { TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 
 // If the JSON is too long we don't parse it with CodeBlock component in order to avoid performance issues
 const MAX_LENGTH_JSON_PREVIEW = 10000
 
-function getResult<S extends boolean>(
-  value: unknown,
-): [S extends true ? string : unknown, S] {
+function getResult<S extends boolean>(value: unknown): [S extends true ? string : unknown, S] {
   if (typeof value !== 'string') {
     return [value, false] as [S extends true ? string : unknown, S]
   }
@@ -29,7 +26,7 @@ function getResult<S extends boolean>(
   return [stringValue, true] as [S extends true ? string : unknown, S]
 }
 
-export function LoadingToolResultContent({
+function LoadingToolResultContent({
   loadingMessage = 'Waiting for tool response...',
 }: {
   loadingMessage?: string
@@ -49,10 +46,7 @@ export function ToolResultContent({
   toolResponse: ToolContent
   color?: TextColor
 }) {
-  const [result, isString] = useMemo(
-    () => getResult(toolResponse.result),
-    [toolResponse.result],
-  )
+  const [result, isString] = useMemo(() => getResult(toolResponse.result), [toolResponse.result])
   const fgColor = toolResponse.isError ? 'destructiveMutedForeground' : color
   const renderContent = () => {
     if (isString) {
@@ -90,38 +84,4 @@ export function ToolResultFooter({
 }) {
   if (children) return children
   return <LoadingToolResultContent loadingMessage={loadingMessage} />
-}
-
-/**
- * Used to display the contents from Tool Messages which toolCallIds are not found in the conversation
- */
-export function UnresolvedToolResultContent({ value }: { value: ToolContent }) {
-  const [result, isString] = useMemo(
-    () => getResult(value.result),
-    [value.result],
-  )
-
-  const bgColor = value.isError ? 'bg-destructive' : 'bg-muted'
-  const fgColor = value.isError ? 'destructiveForeground' : 'foregroundMuted'
-
-  return (
-    <ContentCard
-      label={value.toolName}
-      icon='terminal'
-      bgColor={bgColor}
-      fgColor={fgColor}
-      info={value.toolCallId}
-    >
-      {isString ? (
-        <CardTextContent
-          value={result as string}
-          color={value.isError ? 'destructive' : 'foregroundMuted'}
-        />
-      ) : (
-        <CodeBlock language='json'>
-          {JSON.stringify(value.result, null, 2)}
-        </CodeBlock>
-      )}
-    </ContentCard>
-  )
 }

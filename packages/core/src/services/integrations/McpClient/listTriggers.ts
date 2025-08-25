@@ -1,10 +1,7 @@
 import { IntegrationType } from '@latitude-data/constants'
-import { IntegrationDto } from '../../../browser'
-import { PromisedResult } from '../../../lib/Transaction'
-import {
-  LatitudeError,
-  NotImplementedError,
-} from '@latitude-data/constants/errors'
+import type { IntegrationDto } from '../../../browser'
+import type { PromisedResult } from '../../../lib/Transaction'
+import { LatitudeError, NotImplementedError } from '@latitude-data/constants/errors'
 import { Result } from '../../../lib/Result'
 import { listPipedreamIntegrationTriggers } from '../pipedream/listTriggers'
 

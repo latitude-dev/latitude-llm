@@ -1,10 +1,7 @@
-import { Commit, DraftChange, Project, User, Workspace } from '../../browser'
+import type { Commit, DraftChange, Project, User, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
-import Transaction, { PromisedResult } from '../../lib/Transaction'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../repositories'
+import Transaction, { type PromisedResult } from '../../lib/Transaction'
+import { CommitsRepository, DocumentVersionsRepository } from '../../repositories'
 import { createCommit } from '../commits'
 import { computeChangesToRevertCommit } from '../commits/computeRevertChanges'
 import { updateDocument } from '../documents'
@@ -22,9 +19,7 @@ async function fetchCommitReversionDetails({
 }) {
   try {
     const commitScope = new CommitsRepository(workspace.id)
-    const headCommit = await commitScope
-      .getHeadCommit(project.id)
-      .then((r) => r.unwrap()!)
+    const headCommit = await commitScope.getHeadCommit(project.id).then((r) => r.unwrap()!)
 
     const targetDraft = targetDraftUuid
       ? await commitScope
@@ -40,16 +35,12 @@ async function fetchCommitReversionDetails({
 
     const docsScope = new DocumentVersionsRepository(workspace.id)
 
-    const draftDocuments = await docsScope
-      .getDocumentsAtCommit(targetDraft)
-      .then((r) => r.unwrap())
+    const draftDocuments = await docsScope.getDocumentsAtCommit(targetDraft).then((r) => r.unwrap())
     const changedDocuments = await docsScope
       .getDocumentsAtCommit(changedCommit)
       .then((r) => r.unwrap())
     const originalDocuments = originalCommit
-      ? await docsScope
-          .getDocumentsAtCommit(originalCommit)
-          .then((r) => r.unwrap())
+      ? await docsScope.getDocumentsAtCommit(originalCommit).then((r) => r.unwrap())
       : []
 
     return Result.ok({
@@ -108,36 +99,20 @@ export async function getChangesToRevertCommit({
     const isCreated = change.deletedAt === null
     const isDeleted = !isCreated && change.deletedAt !== undefined
 
-    const draftDocument = draftDocuments.find(
-      (d) => d.documentUuid === change.documentUuid!,
-    )
-    const changedDocument = changedDocuments.find(
-      (d) => d.documentUuid === change.documentUuid!,
-    )
-    const originalDocument = originalDocuments.find(
-      (d) => d.documentUuid === change.documentUuid!,
-    )
+    const draftDocument = draftDocuments.find((d) => d.documentUuid === change.documentUuid!)
+    const changedDocument = changedDocuments.find((d) => d.documentUuid === change.documentUuid!)
+    const originalDocument = originalDocuments.find((d) => d.documentUuid === change.documentUuid!)
 
     const newDocumentPath =
-      change.path ??
-      draftDocument?.path ??
-      changedDocument?.path ??
-      originalDocument!.path
+      change.path ?? draftDocument?.path ?? changedDocument?.path ?? originalDocument!.path
 
     const oldDocumentPath =
-      draftDocument?.path ??
-      originalDocument?.path ??
-      changedDocument?.path ??
-      newDocumentPath
+      draftDocument?.path ?? originalDocument?.path ?? changedDocument?.path ?? newDocumentPath
 
     const previousContent =
-      draftDocument?.content ??
-      changedDocument?.content ??
-      originalDocument?.content
+      draftDocument?.content ?? changedDocument?.content ?? originalDocument?.content
 
-    const newContent = isDeleted
-      ? undefined
-      : (change.content ?? previousContent)
+    const newContent = isDeleted ? undefined : (change.content ?? previousContent)
 
     const oldCOntent = isCreated ? undefined : previousContent
 
@@ -180,13 +155,8 @@ export async function revertCommit(
     return Result.error(commitRevisionDetauls.error)
   }
 
-  const {
-    targetDraft,
-    changedCommit,
-    originalCommit,
-    changedDocuments,
-    originalDocuments,
-  } = commitRevisionDetauls.unwrap()
+  const { targetDraft, changedCommit, originalCommit, changedDocuments, originalDocuments } =
+    commitRevisionDetauls.unwrap()
 
   return transaction.call(async (trx) => {
     const changes = await computeChangesToRevertCommit(
@@ -220,10 +190,10 @@ export async function revertCommit(
     const computedChanges = await Promise.all(
       changes.value.map((documentVersionChanges) => {
         const changedDocument = changedDocuments.find(
-          (d) => d.documentUuid == documentVersionChanges.documentUuid!,
+          (d) => d.documentUuid === documentVersionChanges.documentUuid!,
         )
         const originalDocument = originalDocuments.find(
-          (d) => d.documentUuid == documentVersionChanges.documentUuid!,
+          (d) => d.documentUuid === documentVersionChanges.documentUuid!,
         )
 
         return updateDocument(

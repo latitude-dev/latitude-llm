@@ -1,15 +1,15 @@
 import { parseSSE } from '$sdk/utils/parseSSE'
-import { ToolCalledFn } from '$sdk/utils/types'
+import type { ToolCalledFn } from '$sdk/utils/types'
 import {
-  ChainEventDto,
+  type ChainEventDto,
   ChainEventTypes,
-  LatitudeEventData,
-  LatitudeProviderCompletedEventData,
-  StreamEventTypes,
+  type LatitudeEventData,
+  type LatitudeProviderCompletedEventData,
+  type StreamEventTypes,
 } from '@latitude-data/constants'
-import { type Message } from '@latitude-data/constants/legacyCompiler'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { http, HttpResponse } from 'msw'
-import { setupServer } from 'msw/node'
+import type { setupServer } from 'msw/node'
 import { vi } from 'vitest'
 import { TOOL_EVENTS, TOOL_EVENTS_OBJECT, TOOLS_DOCUMENT_UUID } from './events'
 
@@ -47,9 +47,9 @@ type StreamEvent = { event: StreamEventTypes; data: ChainEventDto }
 function findCompleteChainEvent(events: StreamEvent[]) {
   const reversedEvents = [...events].reverse()
   const lastResponse = (
-    reversedEvents.find(
-      (event) => event.data.type === ChainEventTypes.ProviderCompleted,
-    )?.data as LatitudeProviderCompletedEventData | undefined
+    reversedEvents.find((event) => event.data.type === ChainEventTypes.ProviderCompleted)?.data as
+      | LatitudeProviderCompletedEventData
+      | undefined
   )?.response
 
   const lastEvent = reversedEvents[0]!.data as LatitudeEventData
@@ -71,9 +71,7 @@ function getStep(body: ExpectedBody) {
     const content = m.content
     if (!Array.isArray(content)) return false
 
-    return content.find(
-      (c) => 'toolName' in c && c.toolName === 'get_coordinates',
-    )
+    return content.find((c) => 'toolName' in c && c.toolName === 'get_coordinates')
   })
 
   return { isFirstStep, firstStep, lastStep }
@@ -81,8 +79,8 @@ function getStep(body: ExpectedBody) {
 
 export function mockToolsServers() {
   function setupStreamToolServer(server: ReturnType<typeof setupServer>) {
-    let mockRunBody = vi.fn()
-    let mockChatBody = vi.fn()
+    const mockRunBody = vi.fn()
+    const mockChatBody = vi.fn()
     server.use(
       http.post(
         'http://localhost:8787/api/v3/projects/123/versions/live/documents/run',
@@ -102,9 +100,7 @@ export function mockToolsServers() {
         async (info) => {
           const body = await parseBody(info.request.body!)
           mockChatBody({ body })
-          const { isFirstStep, firstStep, lastStep } = getStep(
-            body as ExpectedBody,
-          )
+          const { isFirstStep, firstStep, lastStep } = getStep(body as ExpectedBody)
 
           const chunks = isFirstStep ? firstStep : lastStep
           const stream = await buildStream(chunks)
@@ -120,17 +116,15 @@ export function mockToolsServers() {
   }
 
   function setupSyncToolsServer(server: ReturnType<typeof setupServer>) {
-    let mockRunBody = vi.fn()
-    let mockChatBody = vi.fn()
+    const mockRunBody = vi.fn()
+    const mockChatBody = vi.fn()
     server.use(
       http.post(
         'http://localhost:8787/api/v3/projects/123/versions/live/documents/run',
         async (info) => {
           const body = await parseBody(info.request.body!)
           mockRunBody({ body })
-          const result = findCompleteChainEvent(
-            TOOL_EVENTS_OBJECT.runEvents as StreamEvent[],
-          )!
+          const result = findCompleteChainEvent(TOOL_EVENTS_OBJECT.runEvents as StreamEvent[])!
 
           return HttpResponse.json(result)
         },
@@ -196,9 +190,7 @@ export function buildMockTools(): ToolCalledFn<MockedTools> {
       return 'do-nothing'
     },
     get_coordinates: async ({ location }) => {
-      const { latitude, longitude } = LOCATIONS.find(
-        (loc) => loc.name === location,
-      )!
+      const { latitude, longitude } = LOCATIONS.find((loc) => loc.name === location)!
       return { latitude, longitude }
     },
     get_weather: async ({ latitude, longitude }) => {

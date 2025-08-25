@@ -1,8 +1,8 @@
-import { AppDto, type IntegrationDto } from '@latitude-data/core/browser'
+import type { AppDto, IntegrationDto } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
-import { IntegrationType, McpTool } from '@latitude-data/constants'
+import useSWR, { type SWRConfiguration } from 'swr'
+import { IntegrationType, type McpTool } from '@latitude-data/constants'
 import { useMemo } from 'react'
 
 const EMPTY_ARRAY: McpTool[] = []
@@ -11,22 +11,13 @@ export type McpToolDto = McpTool & {
   displayName?: string
 }
 
-type ToolResponse =
-  | { data: McpTool[]; ok: true }
-  | { errorMessage: string; ok: false }
+type ToolResponse = { data: McpTool[]; ok: true } | { errorMessage: string; ok: false }
 
-type AppResponse =
-  | { data: AppDto; ok: true }
-  | { errorMessage: string; ok: false }
+type AppResponse = { data: AppDto; ok: true } | { errorMessage: string; ok: false }
 
-export default function useIntegrationTools(
-  integration?: IntegrationDto,
-  opts?: SWRConfiguration,
-) {
+export default function useIntegrationTools(integration?: IntegrationDto, opts?: SWRConfiguration) {
   const fetcher = useFetcher<McpTool[], ToolResponse>(
-    integration
-      ? ROUTES.api.integrations.detail(integration.name).listTools.root
-      : undefined,
+    integration ? ROUTES.api.integrations.detail(integration.name).listTools.root : undefined,
     {
       serializer: (response) => {
         if (!response.ok) {
@@ -46,9 +37,7 @@ export default function useIntegrationTools(
 
   const displayNameFetcher = useFetcher<AppDto | undefined, AppResponse>(
     integration?.type === IntegrationType.Pipedream
-      ? ROUTES.api.integrations.pipedream.detail(
-          integration.configuration.appName,
-        ).root
+      ? ROUTES.api.integrations.pipedream.detail(integration.configuration.appName).root
       : undefined,
     {
       serializer: (response) => {
@@ -68,9 +57,7 @@ export default function useIntegrationTools(
     if (!appData) return toolsData
 
     return toolsData.map((tool) => {
-      const displayName = appData.tools?.find(
-        (action) => action.key === tool.name,
-      )?.name
+      const displayName = appData.tools?.find((action) => action.key === tool.name)?.name
 
       if (!displayName) return tool
       return {

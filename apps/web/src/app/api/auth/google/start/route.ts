@@ -2,7 +2,7 @@ import { googleProvider } from '$/services/auth'
 import { env } from '@latitude-data/env'
 import { generateCodeVerifier, generateState } from 'arctic'
 import { cookies } from 'next/headers'
-import { NextRequest, NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams

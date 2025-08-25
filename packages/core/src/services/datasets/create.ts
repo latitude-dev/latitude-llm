@@ -1,12 +1,12 @@
 import pg from 'pg'
-import { User, Workspace } from '../../browser'
+import type { User, Workspace } from '../../browser'
 import { BadRequestError, databaseErrorCodes } from '../../lib/errors'
 import { syncReadCsv } from '../../lib/readCsv'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { datasets } from '../../schema'
-import { Column } from '../../schema/models/datasets'
-import { buildColumns, HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
+import type { Column } from '../../schema/models/datasets'
+import { buildColumns, type HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 const { DatabaseError } = pg
 
 export async function getCsvAndBuildColumns({
@@ -32,9 +32,7 @@ export async function getCsvAndBuildColumns({
   }
 
   if ([...uniqueHeaders].some((h) => h.length === 0)) {
-    return Result.error(
-      new BadRequestError('CSV header cannot be an empty string'),
-    )
+    return Result.error(new BadRequestError('CSV header cannot be an empty string'))
   }
 
   const columns: Column[] = []

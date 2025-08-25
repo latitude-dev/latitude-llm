@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { wait } from '../utils'
-import { EyeDirection } from '../types'
+import type { EyeDirection } from '../types'
 
 export type EyeBehaviourSettings = {
   minTimeBetweenBlinks?: number
@@ -32,8 +32,7 @@ export function useEyeBehaviour({
       await wait(blinkDuration)
       setIsBlinking(false)
       await wait(
-        Math.random() * (maxTimeBetweenBlinks - minTimeBetweenBlinks) +
-          minTimeBetweenBlinks,
+        Math.random() * (maxTimeBetweenBlinks - minTimeBetweenBlinks) + minTimeBetweenBlinks,
       )
       nextBlink()
     }

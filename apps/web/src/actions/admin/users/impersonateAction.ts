@@ -16,9 +16,7 @@ export const impersonateAction = withAdmin
     }),
   )
   .handler(async ({ input }) => {
-    const { user, workspace } = await getUserFromCredentials(input).then((r) =>
-      r.unwrap(),
-    )
+    const { user, workspace } = await getUserFromCredentials(input).then((r) => r.unwrap())
     await setSession({
       sessionData: {
         impersonating: true,

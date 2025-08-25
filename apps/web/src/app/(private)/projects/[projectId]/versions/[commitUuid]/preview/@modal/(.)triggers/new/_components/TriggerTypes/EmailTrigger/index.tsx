@@ -1,12 +1,9 @@
 import { useCallback } from 'react'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
-import { type OnTriggerCreated } from '../../../client'
+import type { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
+import type { OnTriggerCreated } from '../../../client'
 import {
   SelectDocument,
   useDocumentSelection,
@@ -14,11 +11,7 @@ import {
 import { TriggerWrapper } from '../TriggerWrapper'
 import { EmailTriggerConfig } from './Configuration'
 
-export function EmailTrigger({
-  onTriggerCreated,
-}: {
-  onTriggerCreated: OnTriggerCreated
-}) {
+export function EmailTrigger({ onTriggerCreated }: { onTriggerCreated: OnTriggerCreated }) {
   const { project } = useCurrentProject()
   const documentSelection = useDocumentSelection()
   const { isHead, commit } = useCurrentCommit()

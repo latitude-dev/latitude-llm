@@ -1,4 +1,4 @@
-import { CastingContext } from 'csv-parse'
+import type { CastingContext } from 'csv-parse'
 import { isValid, parse } from 'date-fns'
 
 const DATE_ONLY_FORMATS = [
@@ -55,13 +55,12 @@ function tryParseDate({
 export function castCell(value: string, _context: CastingContext) {
   const trimmed = value.trim().toLowerCase()
 
-  if (trimmed === '' || ['null', 'undefined', 'nil'].includes(trimmed))
-    return null
+  if (trimmed === '' || ['null', 'undefined', 'nil'].includes(trimmed)) return null
   if (trimmed === 'true') return true
   if (trimmed === 'false') return false
 
   const num = Number(value)
-  if (!isNaN(num)) return num
+  if (!Number.isNaN(num)) return num
 
   // JSON parse
   if (

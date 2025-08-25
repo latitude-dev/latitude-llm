@@ -1,4 +1,4 @@
-import { Instrumentation, Latitude } from '$sdk/index'
+import type { Instrumentation, Latitude } from '$sdk/index'
 import { vi } from 'vitest'
 
 export class MockInstrumentation implements Instrumentation {

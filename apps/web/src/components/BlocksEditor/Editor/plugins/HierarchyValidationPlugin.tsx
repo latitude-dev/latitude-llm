@@ -1,5 +1,5 @@
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getRoot, $isElementNode, LexicalNode } from 'lexical'
+import { $getRoot, $isElementNode, type LexicalNode } from 'lexical'
 import { useEffect } from 'react'
 import { $isMessageBlockNode } from '../nodes/MessageBlock'
 import { $isStepBlockNode } from '../nodes/StepBlock'

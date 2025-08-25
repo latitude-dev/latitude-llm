@@ -1,4 +1,4 @@
-import { IEventsHandlers } from '../events'
+import type { IEventsHandlers } from '../events'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
 import { createLoopsContact } from './createLoopsContact'
@@ -28,10 +28,7 @@ export const EventHandlers: IEventsHandlers = {
   documentCreated: [],
   documentLogCreated: [evaluateLiveLogJob, notifyToClientDocumentLogCreatedJob],
   experimentVariantsCreated: [],
-  documentSuggestionCreated: [
-    notifyClientOfDocumentSuggestionCreated,
-    sendSuggestionNotification,
-  ],
+  documentSuggestionCreated: [notifyClientOfDocumentSuggestionCreated, sendSuggestionNotification],
   documentSuggestionApplied: [],
   documentSuggestionDiscarded: [],
   exportReady: [notifyClientOfExportReady],

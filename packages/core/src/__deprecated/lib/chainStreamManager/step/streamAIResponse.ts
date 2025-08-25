@@ -1,19 +1,16 @@
-import { Conversation } from '@latitude-data/compiler'
-import { VercelConfig } from '@latitude-data/constants'
-import { FinishReason, LanguageModelUsage } from 'ai'
-import { JSONSchema7 } from 'json-schema'
-import { LogSources, ProviderApiKey, Workspace } from '../../../../browser'
-import { ChainStepResponse, StreamType } from '../../../../constants'
+import type { Conversation } from '@latitude-data/compiler'
+import type { VercelConfig } from '@latitude-data/constants'
+import type { FinishReason, LanguageModelUsage } from 'ai'
+import type { JSONSchema7 } from 'json-schema'
+import type { LogSources, ProviderApiKey, Workspace } from '../../../../browser'
+import type { ChainStepResponse, StreamType } from '../../../../constants'
 import { ai } from '../../../../services/ai'
 import { processResponse } from '../../../../services/chains/ProviderProcessor'
 import {
   buildProviderLogDto,
   saveOrPublishProviderLogs,
 } from '../../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
-import {
-  getCachedResponse,
-  setCachedResponse,
-} from '../../../../services/commits/promptCache'
+import { getCachedResponse, setCachedResponse } from '../../../../services/commits/promptCache'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
 import { performAgentMessagesOptimization } from './agentOptimization'
@@ -87,9 +84,7 @@ export async function executeAIResponse({
     const providerLog = await saveOrPublishProviderLogs({
       workspace,
       finishReason:
-        'finishReason' in cachedResponse
-          ? (cachedResponse.finishReason as FinishReason)
-          : 'stop',
+        'finishReason' in cachedResponse ? (cachedResponse.finishReason as FinishReason) : 'stop',
       data: buildProviderLogDto({
         workspace,
         source,

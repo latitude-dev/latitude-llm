@@ -1,9 +1,10 @@
 'use client'
 
-import React, { lazy, useEffect, useState } from 'react'
+import type React from 'react'
+import { lazy, useEffect, useState } from 'react'
 import { TextEditorPlaceholder } from '../TextEditorPlaceholder'
 import { EditorReadOnlyBanner } from './ReadOnlyMessage'
-import { DocumentTextEditorProps } from './types'
+import type { DocumentTextEditorProps } from './types'
 
 const DocumentTextEditor = lazy(() =>
   import('./Editor/index').then(

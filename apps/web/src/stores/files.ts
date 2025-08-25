@@ -12,8 +12,9 @@ import { uploadFileAction } from '$/actions/files/upload'
 export default function useFiles() {
   const { toast } = useToast()
 
-  const { execute: executeUploadFile, isPending: isUploadingFile } =
-    useLatitudeAction(uploadFileAction, {
+  const { execute: executeUploadFile, isPending: isUploadingFile } = useLatitudeAction(
+    uploadFileAction,
+    {
       onSuccess: async () => {
         toast({
           title: 'Hooray! 🎉',
@@ -27,10 +28,12 @@ export default function useFiles() {
           variant: 'destructive',
         })
       },
-    })
+    },
+  )
 
-  const { execute: executeConvertFile, isPending: isConvertingFile } =
-    useLatitudeAction(convertFileAction, {
+  const { execute: executeConvertFile, isPending: isConvertingFile } = useLatitudeAction(
+    convertFileAction,
+    {
       onSuccess: async () => {
         toast({
           title: 'Hooray! 🎉',
@@ -44,7 +47,8 @@ export default function useFiles() {
           variant: 'destructive',
         })
       },
-    })
+    },
+  )
 
   const uploadFile = useCallback(
     async ({ file }: { file: File }) => {

@@ -1,5 +1,5 @@
 import { ROUTES } from '$/services/routes'
-import { User } from '@latitude-data/core/browser'
+import type { User } from '@latitude-data/core/browser'
 import { createProject } from '@latitude-data/core/factories'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'

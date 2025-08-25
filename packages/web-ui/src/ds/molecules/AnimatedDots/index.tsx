@@ -1,9 +1,7 @@
 import { Text } from '../../atoms/Text'
-import { TextColor } from '../../tokens'
+import type { TextColor } from '../../tokens'
 
-export function AnimatedDots(
-  { color }: { color?: TextColor } = { color: 'foregroundMuted' },
-) {
+export function AnimatedDots({ color }: { color?: TextColor } = { color: 'foregroundMuted' }) {
   return (
     <span className='flex flex-row items-center justify-center'>
       <Text.H6M color={color} userSelect={false}>

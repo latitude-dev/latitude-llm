@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { ApiKey } from '../../browser'
+import type { ApiKey } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { apiKeys } from '../../schema'

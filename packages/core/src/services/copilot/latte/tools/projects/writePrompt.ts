@@ -1,19 +1,13 @@
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../lib/Result'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../../../../repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '../../../../../repositories'
 import { defineLatteTool } from '../types'
-import { LatteEditAction } from '@latitude-data/constants/latte'
+import type { LatteEditAction } from '@latitude-data/constants/latte'
 import { z } from 'zod'
 import { executeLatteActions } from './latteActions/executeActions'
 
 const writePrompt = defineLatteTool(
-  async (
-    { projectId, draftUuid, path: rawPath, content },
-    { workspace, threadUuid },
-  ) => {
+  async ({ projectId, draftUuid, path: rawPath, content }, { workspace, threadUuid }) => {
     const commitsScope = new CommitsRepository(workspace.id)
     const commitResult = await commitsScope.getCommitByUuid({
       projectId: projectId,
@@ -31,9 +25,7 @@ const writePrompt = defineLatteTool(
     }
 
     const documentsScope = new DocumentVersionsRepository(workspace.id)
-    const documents = await documentsScope
-      .getDocumentsAtCommit(commit)
-      .then((r) => r.unwrap())
+    const documents = await documentsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
     const path = rawPath.startsWith('/') ? rawPath.slice(1) : rawPath
     const document = documents.find((doc) => doc.path === path)
 
@@ -65,17 +57,13 @@ const writePrompt = defineLatteTool(
 
     if (changes.length !== 1) {
       return Result.error(
-        new BadRequestError(
-          `Expected exactly one document change, but got ${changes.length}.`,
-        ),
+        new BadRequestError(`Expected exactly one document change, but got ${changes.length}.`),
       )
     }
 
     const metadata = metadatas[path]
     if (!metadata) {
-      return Result.error(
-        new BadRequestError(`No metadata found for path: ${path}`),
-      )
+      return Result.error(new BadRequestError(`No metadata found for path: ${path}`))
     }
 
     const updatedDocument = changes[0]!

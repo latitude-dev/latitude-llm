@@ -8,15 +8,11 @@ import type { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
-import {
-  ClientDatasetRow,
-  serializeRow,
-  serializeRows,
-} from './rowSerializationHelpers'
+import useSWR, { type SWRConfiguration } from 'swr'
+import { type ClientDatasetRow, serializeRow, serializeRows } from './rowSerializationHelpers'
 
-export const DATASET_ROWS_ROUTE = ROUTES.api.datasetsRows.root
-export function buildDatasetRowKey({
+const DATASET_ROWS_ROUTE = ROUTES.api.datasetsRows.root
+function buildDatasetRowKey({
   datasetId,
   page,
   pageSize,
@@ -94,22 +90,19 @@ export default function useDatasetRows(
     onSuccess,
   })
 
-  const { execute: update, isPending: isUpdating } = useLatitudeAction(
-    updateDatasetRowAction,
-    {
-      onSuccess: ({ data: updatedRows }) => {
-        if (!updatedRows || !updatedRows.length || !dataset) return
+  const { execute: update, isPending: isUpdating } = useLatitudeAction(updateDatasetRowAction, {
+    onSuccess: ({ data: updatedRows }) => {
+      if (!updatedRows || !updatedRows.length || !dataset) return
 
-        const prevRows = data
-        const updatedRowsMap = new Map()
+      const prevRows = data
+      const updatedRowsMap = new Map()
 
-        updatedRows.forEach((row) => {
-          updatedRowsMap.set(row.id, serializeRow({ row }))
-        })
-        mutate(prevRows.map((row) => updatedRowsMap.get(row.id) || row))
-      },
+      updatedRows.forEach((row) => {
+        updatedRowsMap.set(row.id, serializeRow({ row }))
+      })
+      mutate(prevRows.map((row) => updatedRowsMap.get(row.id) || row))
     },
-  )
+  })
   const updateRows = useCallback(
     ({ rows }: { rows: ClientDatasetRow[] }) => {
       if (!dataset) return
@@ -124,33 +117,22 @@ export default function useDatasetRows(
     [update, dataset],
   )
 
-  const { execute: deleteRows, isPending: isDeleting } = useLatitudeAction(
-    deleteRowsAction,
-    {
-      onSuccess: ({ data: deletedRows }) => {
-        if (!deletedRows || !deletedRows.length || !dataset) return
+  const { execute: deleteRows, isPending: isDeleting } = useLatitudeAction(deleteRowsAction, {
+    onSuccess: ({ data: deletedRows }) => {
+      if (!deletedRows || !deletedRows.length || !dataset) return
 
-        mutate(
-          data.filter(
-            (row) =>
-              !deletedRows.some((deletedRow) => deletedRow.id === row.id),
-          ),
-        )
-      },
+      mutate(data.filter((row) => !deletedRows.some((deletedRow) => deletedRow.id === row.id)))
     },
-  )
+  })
 
-  const { execute: createRow, isPending: isCreating } = useLatitudeAction(
-    createDatasetRowAction,
-    {
-      onSuccess: ({ data: createdRow }) => {
-        if (!createdRow || !dataset) return
+  const { execute: createRow, isPending: isCreating } = useLatitudeAction(createDatasetRowAction, {
+    onSuccess: ({ data: createdRow }) => {
+      if (!createdRow || !dataset) return
 
-        const row = serializeRow({ row: createdRow })
-        mutate([row, ...data])
-      },
+      const row = serializeRow({ row: createdRow })
+      mutate([row, ...data])
     },
-  )
+  })
 
   return {
     data,

@@ -1,9 +1,9 @@
-import { LatitudeError } from '@latitude-data/constants/errors'
-import { User, Workspace } from '../../../browser'
-import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
+import type { LatitudeError } from '@latitude-data/constants/errors'
+import type { User, Workspace } from '../../../browser'
+import type { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
 import { documentsQueue } from '../../../jobs/queues'
-import { ErrorResult, Result } from '../../../lib/Result'
-import { PromisedResult } from '../../../lib/Transaction'
+import { type ErrorResult, Result } from '../../../lib/Result'
+import type { PromisedResult } from '../../../lib/Transaction'
 import { assertCopilotIsSupported } from './helpers'
 
 export async function createLatteJob({

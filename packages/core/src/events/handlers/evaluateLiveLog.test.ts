@@ -1,14 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { evaluateLiveLogJob } from './evaluateLiveLog'
 import { DocumentLogsRepository } from '../../repositories'
-import { DocumentLogCreatedEvent } from '../events'
+import type { DocumentLogCreatedEvent } from '../events'
 import * as dataAccess from '../../data-access'
 import { NotFoundError } from '@latitude-data/constants/errors'
 
-const findWorkspaceFromDocumentLog = vi.spyOn(
-  dataAccess,
-  'findWorkspaceFromDocumentLog',
-)
+const findWorkspaceFromDocumentLog = vi.spyOn(dataAccess, 'findWorkspaceFromDocumentLog')
 
 vi.mock('../../repositories', () => ({
   DocumentLogsRepository: vi.fn(),

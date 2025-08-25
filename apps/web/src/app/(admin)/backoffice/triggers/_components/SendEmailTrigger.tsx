@@ -6,7 +6,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import { ChangeEvent, FormEvent, useCallback, useState } from 'react'
+import { type ChangeEvent, type FormEvent, useCallback, useState } from 'react'
 
 export default function SendEmailTrigger() {
   const { execute, isPending } = useLatitudeAction(manualEmailTriggerAction)
@@ -60,22 +60,14 @@ export default function SendEmailTrigger() {
       <FormWrapper>
         <div className='flex flex-row w-full gap-4'>
           <Input label='Sender name' name='senderName' placeholder='John Doe' />
-          <Input
-            label='Sender email'
-            name='senderEmail'
-            placeholder='user@latitude.so'
-          />
+          <Input label='Sender email' name='senderEmail' placeholder='user@latitude.so' />
         </div>
         <Input
           label='Receiver email'
           name='recipient'
           placeholder={`<document-uuid>@${EMAIL_TRIGGER_DOMAIN}`}
         />
-        <Input
-          label='Subject'
-          name='subject'
-          placeholder='Subject of the email'
-        />
+        <Input label='Subject' name='subject' placeholder='Subject of the email' />
         <Input
           label='Message ID (optional)'
           name='messageId'
@@ -86,11 +78,7 @@ export default function SendEmailTrigger() {
           name='references'
           placeholder='Optional list of past message IDs – Used to add follow-up messages to a previous conversation'
         />
-        <TextArea
-          label='Content'
-          name='content'
-          placeholder='Content of the email'
-        />
+        <TextArea label='Content' name='content' placeholder='Content of the email' />
         <Input
           type='file'
           label='Attachments'

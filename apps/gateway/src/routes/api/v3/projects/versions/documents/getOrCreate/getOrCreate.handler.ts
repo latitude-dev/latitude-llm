@@ -1,4 +1,4 @@
-import { Commit, Workspace } from '@latitude-data/core/browser'
+import type { Commit, Workspace } from '@latitude-data/core/browser'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -6,8 +6,8 @@ import {
 } from '@latitude-data/core/repositories'
 import { createNewDocument } from '@latitude-data/core/services/documents/create'
 import { documentPresenter } from '$/presenters/documentPresenter'
-import { AppRouteHandler } from '$/openApi/types'
-import { GetOrCreateRoute } from './getOrCreate.route'
+import type { AppRouteHandler } from '$/openApi/types'
+import type { GetOrCreateRoute } from './getOrCreate.route'
 
 async function getOrCreateDocument({
   workspace,
@@ -33,9 +33,7 @@ async function getOrCreateDocument({
 }
 
 // @ts-expect-error: Types are not working as expected
-export const getOrCreateHandler: AppRouteHandler<GetOrCreateRoute> = async (
-  c,
-) => {
+export const getOrCreateHandler: AppRouteHandler<GetOrCreateRoute> = async (c) => {
   const workspace = c.get('workspace')
   const { projectId, versionUuid } = c.req.valid('param')
   const { path, prompt } = c.req.valid('json')
@@ -43,9 +41,7 @@ export const getOrCreateHandler: AppRouteHandler<GetOrCreateRoute> = async (
   const projectsScope = new ProjectsRepository(workspace.id)
   const commitsScope = new CommitsRepository(workspace.id)
 
-  const project = await projectsScope
-    .getProjectById(Number(projectId!))
-    .then((r) => r.unwrap())
+  const project = await projectsScope.getProjectById(Number(projectId!)).then((r) => r.unwrap())
 
   const commit = await commitsScope
     .getCommitByUuid({

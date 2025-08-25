@@ -6,11 +6,7 @@ import { ModifiedDocumentType } from '@latitude-data/core/browser'
 type TmpFoldersState = {
   tmpFolders: Record<string, Node[]>
   addToRootFolder: (args: { path: string }) => void
-  addFolder: (args: {
-    parentPath: string
-    parentId: string
-    isFile: boolean
-  }) => void
+  addFolder: (args: { parentPath: string; parentId: string; isFile: boolean }) => void
   updateFolder: (args: { id: string; path: string }) => void
   updateFolderAndAddOther: (args: {
     id: string
@@ -88,11 +84,7 @@ function cloneNode(node: Node) {
   return clonedNode
 }
 
-function findAndReplaceParentNodeInRootNode(
-  rootNode: Node,
-  node: Node,
-  replaceNode: Node,
-) {
+function findAndReplaceParentNodeInRootNode(rootNode: Node, node: Node, replaceNode: Node) {
   if (rootNode.id === node.id) return replaceNode
 
   const children = rootNode.children.map((child) =>
@@ -121,7 +113,7 @@ export const useTempNodes = create<TmpFoldersState>((set, get) => ({
       return {
         tmpFolders: {
           ...state.tmpFolders,
-          ['']: [node, ...existingNodes],
+          '': [node, ...existingNodes],
         },
       }
     })
@@ -145,25 +137,15 @@ export const useTempNodes = create<TmpFoldersState>((set, get) => ({
         node.parent = parentClone
         parentClone.children = [node, ...(parentNode.children || [])]
         const rootParent = findRootParent(node)
-        const newRootNode = findAndReplaceParentNodeInRootNode(
-          rootParent,
-          parentNode,
-          parentClone,
-        )
+        const newRootNode = findAndReplaceParentNodeInRootNode(rootParent, parentNode, parentClone)
 
-        const rootParentPath = newRootNode.path
-          .split('/')
-          .slice(0, -1)
-          .join('/')
+        const rootParentPath = newRootNode.path.split('/').slice(0, -1).join('/')
         const rootTmpFolder = state.tmpFolders[rootParentPath]!
 
         return {
           tmpFolders: {
             ...state.tmpFolders,
-            [rootParentPath]: insertItemInTheirPosition(
-              rootTmpFolder,
-              newRootNode,
-            ),
+            [rootParentPath]: insertItemInTheirPosition(rootTmpFolder, newRootNode),
           },
         }
       }
@@ -244,11 +226,7 @@ export const useTempNodes = create<TmpFoldersState>((set, get) => ({
         ...(parentClone.children.slice(idx + 1) ?? []),
       ]
       const rootParent = findRootParent(node)
-      const newRootNode = findAndReplaceParentNodeInRootNode(
-        rootParent,
-        parentNode,
-        parentClone,
-      )
+      const newRootNode = findAndReplaceParentNodeInRootNode(rootParent, parentNode, parentClone)
 
       const rootParentPath = newRootNode.path.split('/').slice(0, -1).join('/')
       const rootTmpFolder = state.tmpFolders[rootParentPath]!
@@ -256,10 +234,7 @@ export const useTempNodes = create<TmpFoldersState>((set, get) => ({
       return {
         tmpFolders: {
           ...state.tmpFolders,
-          [rootParentPath]: insertItemInTheirPosition(
-            rootTmpFolder,
-            newRootNode,
-          ),
+          [rootParentPath]: insertItemInTheirPosition(rootTmpFolder, newRootNode),
         },
       }
     })

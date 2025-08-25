@@ -1,21 +1,17 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import { touchApiKeyJob } from './touchApiKeyJob'
-import { ProviderLogCreatedEvent } from '../events'
+import type { ProviderLogCreatedEvent } from '../events'
 import * as apiKeyService from '../../services/apiKeys/touch'
 import * as cacheModule from '../../cache'
-import {
-  createDocumentLog,
-  createProject,
-  helpers,
-} from '../../tests/factories'
+import { createDocumentLog, createProject, helpers } from '../../tests/factories'
 import { createProviderLog } from '../../tests/factories/providerLogs'
 import { createApiKey } from '../../tests/factories/apiKeys'
 import {
-  ApiKey,
-  DocumentLog,
-  ProviderApiKey,
+  type ApiKey,
+  type DocumentLog,
+  type ProviderApiKey,
   Providers,
-  Workspace,
+  type Workspace,
 } from '../../browser'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 

@@ -1,17 +1,13 @@
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { ConfigElement, ConfigSection } from './_components/ConfigSection'
-import { PromptConfigurationProps, useConfigValue } from './utils'
+import { type PromptConfigurationProps, useConfigValue } from './utils'
 import {
   ABSOLUTE_MAX_STEPS,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
 } from '@latitude-data/constants'
 
-export function LimitSettings({
-  config,
-  setConfig,
-  disabled,
-}: PromptConfigurationProps) {
+export function LimitSettings({ config, setConfig, disabled }: PromptConfigurationProps) {
   const { value: maxSteps, setValue: setMaxSteps } = useConfigValue<number>({
     config,
     setConfig,
@@ -30,7 +26,7 @@ export function LimitSettings({
       <ConfigElement
         label='Max steps'
         icon='listVideo'
-        summary={`The maximum number of steps the ${config['type'] === 'agent' ? 'agent' : 'chain'} can execute.`}
+        summary={`The maximum number of steps the ${config.type === 'agent' ? 'agent' : 'chain'} can execute.`}
         description={`The maximum number of steps that can be executed upon running the prompt.
           If the prompt reaches the maximum number of steps, it will stop executing and return an error.
           This is useful to prevent infinite loops or to limit the amount of work the AI can do.`}
@@ -46,10 +42,7 @@ export function LimitSettings({
               setMaxSteps(
                 e.target.value === ''
                   ? undefined
-                  : Math.min(
-                      ABSOLUTE_MAX_STEPS,
-                      Math.max(1, parseInt(e.target.value, 10)),
-                    ),
+                  : Math.min(ABSOLUTE_MAX_STEPS, Math.max(1, parseInt(e.target.value, 10))),
               )
             }
           />
@@ -69,8 +62,7 @@ export function LimitSettings({
             value={maxTokens}
             min={0}
             onChange={(e) => {
-              const newValue =
-                e.target.value === '' ? 0 : parseInt(e.target.value, 10)
+              const newValue = e.target.value === '' ? 0 : parseInt(e.target.value, 10)
               setMaxTokens(newValue ? newValue : undefined)
             }}
           />

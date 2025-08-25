@@ -9,35 +9,28 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { cn } from '@latitude-data/web-ui/utils'
-import { Config } from 'promptl-ai'
+import type { Config } from 'promptl-ai'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  UseLatitudeAgentsConfig,
+  type UseLatitudeAgentsConfig,
   useLatitudeAgentsConfig,
 } from '../../PromptConfiguration/utils'
 import { IntegrationsList } from '../../PromptIntegrations/IntegrationsList'
 import { ItemWrapper } from '../../PromptIntegrations/IntegrationTools'
 import {
-  ActiveIntegrations,
+  type ActiveIntegrations,
   useActiveIntegrations,
 } from '../../PromptIntegrations/useActiveIntegrations'
-import { EditorHeaderProps } from '../index'
+import type { EditorHeaderProps } from '../index'
 
-const singularPluralLabel = (c: number, s: string, p: string) =>
-  c === 1 ? `1 ${s}` : `${c} ${p}`
+const singularPluralLabel = (c: number, s: string, p: string) => (c === 1 ? `1 ${s}` : `${c} ${p}`)
 
-export const TAB_SECTIONS = {
+const TAB_SECTIONS = {
   tools: 'tools',
   subAgents: 'subAgents',
 } as const
-export type TabSection = (typeof TAB_SECTIONS)[keyof typeof TAB_SECTIONS]
-function useTabs({
-  toolsCount,
-  subAgentsCount,
-}: {
-  toolsCount: number
-  subAgentsCount: number
-}) {
+type TabSection = (typeof TAB_SECTIONS)[keyof typeof TAB_SECTIONS]
+function useTabs({ toolsCount, subAgentsCount }: { toolsCount: number; subAgentsCount: number }) {
   const [selected, setTab] = useState<TabSection>(TAB_SECTIONS.tools)
   return useMemo(() => {
     return {
@@ -54,7 +47,7 @@ function useTabs({
         },
       ],
     }
-  }, [toolsCount, subAgentsCount, selected, setTab])
+  }, [toolsCount, subAgentsCount, selected])
 }
 
 function useCounters({
@@ -81,10 +74,7 @@ function useCounters({
     prompt,
   })
   const toolsCount = Object.keys(activeIntegrations).length
-  const toolsLabel =
-    toolsCount > 0
-      ? singularPluralLabel(toolsCount, 'Tool', 'Tools')
-      : 'No tools'
+  const toolsLabel = toolsCount > 0 ? singularPluralLabel(toolsCount, 'Tool', 'Tools') : 'No tools'
 
   const subAgents = useLatitudeAgentsConfig({
     config,
@@ -106,15 +96,7 @@ function useCounters({
       subAgents,
       isLoading: !isInitialized || isLoading || subAgents.isLoading,
     }),
-    [
-      toolsLabel,
-      toolsCount,
-      subAgentsLabel,
-      subAgentsCount,
-      subAgents,
-      isInitialized,
-      isLoading,
-    ],
+    [toolsLabel, toolsCount, subAgentsLabel, subAgentsCount, subAgents, isInitialized, isLoading],
   )
 }
 
@@ -186,10 +168,9 @@ function Content({
     includeLatitudeTools: true,
     withTools: true,
   })
-  const { activeIntegrations, addIntegrationTool, removeIntegrationTool } =
-    useActiveIntegrations({
-      prompt,
-    })
+  const { activeIntegrations, addIntegrationTool, removeIntegrationTool } = useActiveIntegrations({
+    prompt,
+  })
 
   return (
     <>
@@ -252,9 +233,7 @@ export function AgentToolbar({
     async (checked: boolean) => {
       setAgent(checked)
       setIsExpanded(checked)
-      onChangePrompt(
-        updatePromptMetadata(prompt, handleAgentChange({ checked, config })),
-      )
+      onChangePrompt(updatePromptMetadata(prompt, handleAgentChange({ checked, config })))
     },
     [config, prompt, onChangePrompt],
   )
@@ -293,11 +272,7 @@ export function AgentToolbar({
           title={
             <div className='flex items-center gap-x-2'>
               <Text.H5 userSelect={false}>Agent</Text.H5>
-              <SwitchToggle
-                checked={agent}
-                onCheckedChange={onAgentToggle}
-                disabled={isMerged}
-              />
+              <SwitchToggle checked={agent} onCheckedChange={onAgentToggle} disabled={isMerged} />
               <Tooltip trigger={<Icon name='info' color='foregroundMuted' />}>
                 Make the prompt an agent to use tools and other agents
               </Tooltip>

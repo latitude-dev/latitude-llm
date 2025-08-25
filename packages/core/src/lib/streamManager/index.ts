@@ -1,36 +1,33 @@
-import {
+import type {
   IntegrationDto,
   LogSources,
   PromptSource,
   ProviderApiKey,
   Workspace,
 } from '../../browser'
+import type { Message as LegacyMessage, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import type { FinishReason, LanguageModelUsage } from 'ai'
 import {
-  Message as LegacyMessage,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
-import { FinishReason, LanguageModelUsage } from 'ai'
-import {
-  ChainEvent,
+  type ChainEvent,
   ChainEventTypes,
-  ChainStepResponse,
-  OmittedLatitudeEventData,
+  type ChainStepResponse,
+  type OmittedLatitudeEventData,
   StreamEventTypes,
-  StreamType,
-  VercelConfig,
+  type StreamType,
+  type VercelConfig,
 } from '@latitude-data/constants'
 import {
   createMcpClientManager,
-  McpClientManager,
+  type McpClientManager,
 } from '../../services/integrations/McpClient/McpClientManager'
 import { ChainError, RunErrorCodes } from '../errors'
 import { generateUUIDIdentifier } from '../generateUUID'
 import { createPromiseWithResolver } from './utils/createPromiseResolver'
-import { ValidatedChainStep } from '../../services/chains/ChainValidator'
+import type { ValidatedChainStep } from '../../services/chains/ChainValidator'
 import { omit } from 'lodash-es'
-import { ResolvedTools } from './resolveTools/types'
-import { telemetry, TelemetryContext } from '../../telemetry'
-import { ToolHandler } from './clientTools/handlers'
+import type { ResolvedTools } from './resolveTools/types'
+import { telemetry, type TelemetryContext } from '../../telemetry'
+import type { ToolHandler } from './clientTools/handlers'
 
 export type StreamManagerProps = {
   workspace: Workspace
@@ -76,9 +73,7 @@ export abstract class StreamManager {
   private finishReason?: FinishReason
   private resolveMessages?: (messages: LegacyMessage[]) => void
   private resolveError?: (error: ChainError<RunErrorCodes> | undefined) => void
-  private resolveResponse?: (
-    response: ChainStepResponse<StreamType> | undefined,
-  ) => void
+  private resolveResponse?: (response: ChainStepResponse<StreamType> | undefined) => void
 
   constructor({
     workspace,
@@ -132,9 +127,7 @@ export abstract class StreamManager {
       error = new ChainError({
         code: RunErrorCodes.Unknown,
         message: (error as Error).message,
-        details: (error as Error).stack
-          ? { stack: (error as Error).stack! }
-          : undefined,
+        details: (error as Error).stack ? { stack: (error as Error).stack! } : undefined,
       })
     }
 
@@ -172,8 +165,7 @@ export abstract class StreamManager {
   }
 
   prepare() {
-    const { response, messages, toolCalls, error, duration } =
-      this.initializePromisedValues()
+    const { response, messages, toolCalls, error, duration } = this.initializePromisedValues()
 
     return {
       response,
@@ -284,10 +276,7 @@ export abstract class StreamManager {
     toolsBySource: ResolvedTools,
   ) {
     const tools = Object.fromEntries(
-      Object.entries(toolsBySource).map(([name, { definition }]) => [
-        name,
-        definition,
-      ]),
+      Object.entries(toolsBySource).map(([name, { definition }]) => [name, definition]),
     )
 
     return {
@@ -322,13 +311,9 @@ export abstract class StreamManager {
   }
 
   protected initializePromisedValues() {
-    const [messages, resolveMessages] =
-      createPromiseWithResolver<LegacyMessage[]>()
-    const [error, resolveError] = createPromiseWithResolver<
-      ChainError<RunErrorCodes> | undefined
-    >()
-    const [toolCalls, resolveToolCalls] =
-      createPromiseWithResolver<ToolCall[]>()
+    const [messages, resolveMessages] = createPromiseWithResolver<LegacyMessage[]>()
+    const [error, resolveError] = createPromiseWithResolver<ChainError<RunErrorCodes> | undefined>()
+    const [toolCalls, resolveToolCalls] = createPromiseWithResolver<ToolCall[]>()
     const [response, resolveResponse] = createPromiseWithResolver<
       ChainStepResponse<StreamType> | undefined
     >()
@@ -358,8 +343,7 @@ export abstract class StreamManager {
     this.finishReason = finishReason
     this.tokenUsage = {
       promptTokens: this.tokenUsage.promptTokens + tokenUsage.promptTokens,
-      completionTokens:
-        this.tokenUsage.completionTokens + tokenUsage.completionTokens,
+      completionTokens: this.tokenUsage.completionTokens + tokenUsage.completionTokens,
       totalTokens: this.tokenUsage.totalTokens + tokenUsage.totalTokens,
     }
   }

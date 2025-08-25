@@ -1,15 +1,11 @@
 'use client'
 import { PromptHeader } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Header'
-import { PublishedDocument } from '@latitude-data/core/browser'
+import type { PublishedDocument } from '@latitude-data/core/browser'
 import { Container } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Container'
 import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import {
-  CardDescription,
-  CardTitle,
-  CardHeader,
-} from '@latitude-data/web-ui/atoms/Card'
+import { CardDescription, CardTitle, CardHeader } from '@latitude-data/web-ui/atoms/Card'
 import { ForkButton } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/ForkButton'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
@@ -31,10 +27,7 @@ export function ForkDocument({ shared }: { shared: PublishedDocument }) {
               </CardHeader>
               <CardContent className='flex flex-row gap-x-4'>
                 <Button variant='outline' fullWidth asChild>
-                  <Link
-                    href={back}
-                    className='flex flex-row items-center gap-x-2'
-                  >
+                  <Link href={back} className='flex flex-row items-center gap-x-2'>
                     <Icon name='chevronLeft' />
                     <span>Back to Prompt</span>
                   </Link>

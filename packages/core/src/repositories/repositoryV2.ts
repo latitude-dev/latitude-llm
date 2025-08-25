@@ -1,5 +1,5 @@
-import { and, eq, inArray, SQL } from 'drizzle-orm'
-import { PgSelect } from 'drizzle-orm/pg-core'
+import { and, eq, inArray, type SQL } from 'drizzle-orm'
+import type { PgSelect } from 'drizzle-orm/pg-core'
 
 import { database } from '../client'
 import { NotFoundError } from '../lib/errors'
@@ -42,9 +42,7 @@ export default abstract class Repository<T extends Record<string, unknown>> {
 
     if (!result[0]) {
       const table = this.scope._.tableName
-      return Result.error(
-        new NotFoundError(`Record with id ${id} not found in ${table}`),
-      )
+      return Result.error(new NotFoundError(`Record with id ${id} not found in ${table}`))
     }
 
     return Result.ok(result[0]! as T)
@@ -59,9 +57,7 @@ export default abstract class Repository<T extends Record<string, unknown>> {
     } = {},
   ) {
     const result = await this.scope
-      .where(
-        and(this.scopeFilter, inArray(this.scope._.selectedFields.id, ids)),
-      )
+      .where(and(this.scopeFilter, inArray(this.scope._.selectedFields.id, ids)))
       .orderBy(...(ordering ?? []))
       .limit(ids.length)
     return Result.ok(result as T[])

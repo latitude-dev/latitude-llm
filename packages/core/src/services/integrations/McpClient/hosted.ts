@@ -2,16 +2,16 @@ import { IntegrationType } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
-import { IntegrationDto, McpServer } from '../../../browser'
+import type { IntegrationDto, McpServer } from '../../../browser'
 import { publisher } from '../../../events/publisher'
 import { maintenanceQueue } from '../../../jobs/queues'
-import { Result, TypedResult } from '../../../lib/Result'
-import { StreamManager } from '../../../lib/streamManager'
+import { Result, type TypedResult } from '../../../lib/Result'
+import type { StreamManager } from '../../../lib/streamManager'
 import { McpServerRepository } from '../../../repositories'
 import { scaleMcpServer } from '../../mcpServers/scaleService'
 import {
   DEFAULT_RETRY_CONFIG,
-  McpClientConnection,
+  type McpClientConnection,
   McpConnectionError,
   normalizeMcpUrl,
   retryWithBackoff,
@@ -28,9 +28,7 @@ async function ensureMcpServerScaled(
 
   if (!Result.isOk(mcpServerResult)) {
     return Result.error(
-      new McpConnectionError(
-        `Failed to find MCP server: ${mcpServerResult.error.message}`,
-      ),
+      new McpConnectionError(`Failed to find MCP server: ${mcpServerResult.error.message}`),
     )
   }
 
@@ -51,9 +49,7 @@ async function ensureMcpServerScaled(
       )
 
       return Result.error(
-        new McpConnectionError(
-          `Failed to scale up MCP server: ${scaleResult.error.message}`,
-        ),
+        new McpConnectionError(`Failed to scale up MCP server: ${scaleResult.error.message}`),
       )
     }
 
@@ -73,9 +69,7 @@ async function updateMcpServerLastUsed(
 
   if (!Result.isOk(mcpServerResult)) {
     return Result.error(
-      new McpConnectionError(
-        `Failed to find MCP server: ${mcpServerResult.error.message}`,
-      ),
+      new McpConnectionError(`Failed to find MCP server: ${mcpServerResult.error.message}`),
     )
   }
 
@@ -109,9 +103,7 @@ export async function createAndConnectHostedMcpClient(
   const { configuration } = integration
   if (!configuration?.url) {
     return Result.error(
-      new McpConnectionError(
-        'MCP server URL not found in integration configuration',
-      ),
+      new McpConnectionError('MCP server URL not found in integration configuration'),
     )
   }
 
@@ -140,8 +132,7 @@ export async function createAndConnectHostedMcpClient(
     },
     {
       ...DEFAULT_RETRY_CONFIG,
-      startupTimeout:
-        scaleResult.value !== undefined ? GRACE_PERIOD : undefined, // 10 second startup timeout if server was scaled up
+      startupTimeout: scaleResult.value !== undefined ? GRACE_PERIOD : undefined, // 10 second startup timeout if server was scaled up
     },
   )
 

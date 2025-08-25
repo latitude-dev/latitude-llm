@@ -1,6 +1,6 @@
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 
-import { User } from '@latitude-data/core/browser'
+import type { User } from '@latitude-data/core/browser'
 import { env } from '@latitude-data/env'
 
 function getCredentials() {
@@ -22,10 +22,7 @@ export function createSupportUserIdentity(user: User) {
 
   const { appId, secretKey } = credentials
   const identifier = user.email
-  const userHash = crypto
-    .createHmac('sha256', secretKey)
-    .update(identifier)
-    .digest('hex')
+  const userHash = crypto.createHmac('sha256', secretKey).update(identifier).digest('hex')
   return {
     appId,
     userHash,

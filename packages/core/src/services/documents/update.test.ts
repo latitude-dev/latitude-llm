@@ -1,30 +1,26 @@
 import { describe, expect, it } from 'vitest'
 
 import { Providers } from '../../constants'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '../../repositories'
 import { recomputeChanges } from './recomputeChanges'
 import { updateDocument } from './update'
 
 describe('updateDocument', () => {
   it('modifies a document that was created in a previous commit', async (ctx) => {
-    const { workspace, project, user, documents } =
-      await ctx.factories.createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-          },
-        ],
-        documents: {
-          doc1: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Doc 1 commit 1',
-          }),
+    const { workspace, project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
         },
-      })
+      ],
+      documents: {
+        doc1: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Doc 1 commit 1',
+        }),
+      },
+    })
 
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const { commit } = await ctx.factories.createDraft({ project, user })
@@ -40,9 +36,7 @@ describe('updateDocument', () => {
 
     await recomputeChanges({ draft: commit, workspace })
 
-    const changedDocuments = await docsScope
-      .listCommitChanges(commit)
-      .then((r) => r.unwrap())
+    const changedDocuments = await docsScope.listCommitChanges(commit).then((r) => r.unwrap())
 
     expect(changedDocuments.length).toBe(1)
     expect(changedDocuments[0]!.path).toBe('doc1')
@@ -50,8 +44,7 @@ describe('updateDocument', () => {
   })
 
   it('modifies a document that was created in the same commit', async (ctx) => {
-    const { workspace, project, user, providers } =
-      await ctx.factories.createProject()
+    const { workspace, project, user, providers } = await ctx.factories.createProject()
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const { commit } = await ctx.factories.createDraft({ project, user })
     const { documentVersion: doc } = await ctx.factories.createDocumentVersion({
@@ -76,9 +69,7 @@ describe('updateDocument', () => {
 
     await recomputeChanges({ draft: commit, workspace })
 
-    const changedDocuments = await docsScope
-      .listCommitChanges(commit)
-      .then((r) => r.unwrap())
+    const changedDocuments = await docsScope.listCommitChanges(commit).then((r) => r.unwrap())
 
     expect(changedDocuments.length).toBe(1)
     expect(changedDocuments[0]!.path).toBe('doc1')
@@ -86,27 +77,26 @@ describe('updateDocument', () => {
   })
 
   it('modifying a document creates a change to all other documents that reference it', async (ctx) => {
-    const { workspace, project, user, documents } =
-      await ctx.factories.createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-          },
-        ],
-        documents: {
-          referenced: {
-            doc: ctx.factories.helpers.createPrompt({
-              provider: 'openai',
-              content: 'The document that is being referenced',
-            }),
-          },
-          unmodified: ctx.factories.helpers.createPrompt({
+    const { workspace, project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
+        },
+      ],
+      documents: {
+        referenced: {
+          doc: ctx.factories.helpers.createPrompt({
             provider: 'openai',
-            content: '<prompt path="referenced/doc" />',
+            content: 'The document that is being referenced',
           }),
         },
-      })
+        unmodified: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: '<prompt path="referenced/doc" />',
+        }),
+      },
+    })
 
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const referencedDoc = documents.find((d) => d.path === 'referenced/doc')!
@@ -123,39 +113,34 @@ describe('updateDocument', () => {
 
     await recomputeChanges({ draft, workspace })
 
-    const changedDocuments = await docsScope
-      .listCommitChanges(draft)
-      .then((r) => r.unwrap())
+    const changedDocuments = await docsScope.listCommitChanges(draft).then((r) => r.unwrap())
 
     expect(changedDocuments.length).toBe(2)
-    expect(
-      changedDocuments.find((d) => d.path === 'referenced/doc'),
-    ).toBeDefined()
+    expect(changedDocuments.find((d) => d.path === 'referenced/doc')).toBeDefined()
     expect(changedDocuments.find((d) => d.path === 'unmodified')).toBeDefined()
   })
 
   it('renaming a document creates a change to all other documents that reference it', async (ctx) => {
-    const { workspace, project, user, documents } =
-      await ctx.factories.createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-          },
-        ],
-        documents: {
-          referenced: {
-            doc: ctx.factories.helpers.createPrompt({
-              provider: 'openai',
-              content: 'The document that is being referenced',
-            }),
-          },
-          main: ctx.factories.helpers.createPrompt({
+    const { workspace, project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
+        },
+      ],
+      documents: {
+        referenced: {
+          doc: ctx.factories.helpers.createPrompt({
             provider: 'openai',
-            content: '<prompt path="referenced/doc" />',
+            content: 'The document that is being referenced',
           }),
         },
-      })
+        main: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: '<prompt path="referenced/doc" />',
+        }),
+      },
+    })
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const refDoc = documents.find((d) => d.path === 'referenced/doc')!
 
@@ -169,39 +154,34 @@ describe('updateDocument', () => {
 
     await recomputeChanges({ draft: commit, workspace })
 
-    const changedDocuments = await docsScope
-      .listCommitChanges(commit)
-      .then((r) => r.unwrap())
+    const changedDocuments = await docsScope.listCommitChanges(commit).then((r) => r.unwrap())
 
     expect(changedDocuments.length).toBe(2)
-    expect(
-      changedDocuments.find((d) => d.path === 'referenced/doc2'),
-    ).toBeDefined()
+    expect(changedDocuments.find((d) => d.path === 'referenced/doc2')).toBeDefined()
     expect(changedDocuments.find((d) => d.path === 'main')).toBeDefined()
   })
 
   it('undoing a change to a document removes it from the list of changed documents', async (ctx) => {
-    const { workspace, project, user, documents } =
-      await ctx.factories.createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-          },
-        ],
-        documents: {
-          referenced: {
-            doc: ctx.factories.helpers.createPrompt({
-              provider: 'openai',
-              content: 'The document that is being referenced',
-            }),
-          },
-          unmodified: ctx.factories.helpers.createPrompt({
+    const { workspace, project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
+        },
+      ],
+      documents: {
+        referenced: {
+          doc: ctx.factories.helpers.createPrompt({
             provider: 'openai',
-            content: '<prompt path="referenced/doc" />',
+            content: 'The document that is being referenced',
           }),
         },
-      })
+        unmodified: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: '<prompt path="referenced/doc" />',
+        }),
+      },
+    })
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const referencedDoc = documents.find((d) => d.path === 'referenced/doc')!
 
@@ -218,14 +198,10 @@ describe('updateDocument', () => {
 
     await recomputeChanges({ draft: commit, workspace })
 
-    const changedDocuments = await docsScope
-      .listCommitChanges(commit)
-      .then((r) => r.unwrap())
+    const changedDocuments = await docsScope.listCommitChanges(commit).then((r) => r.unwrap())
 
     expect(changedDocuments.length).toBe(2)
-    expect(
-      changedDocuments.find((d) => d.path === 'referenced/doc'),
-    ).toBeDefined()
+    expect(changedDocuments.find((d) => d.path === 'referenced/doc')).toBeDefined()
     expect(changedDocuments.find((d) => d.path === 'unmodified')).toBeDefined()
 
     await updateDocument({
@@ -236,9 +212,7 @@ describe('updateDocument', () => {
 
     await recomputeChanges({ draft: commit, workspace })
 
-    const changedDocuments2 = await docsScope
-      .listCommitChanges(commit)
-      .then((r) => r.unwrap())
+    const changedDocuments2 = await docsScope.listCommitChanges(commit).then((r) => r.unwrap())
 
     expect(changedDocuments2.length).toBe(0)
   })
@@ -273,9 +247,7 @@ describe('updateDocument', () => {
     })
 
     expect(updateResult.ok).toBe(false)
-    expect(updateResult.error!.message).toBe(
-      'A document with the same path already exists',
-    )
+    expect(updateResult.error!.message).toBe('A document with the same path already exists')
   })
 
   it('fails when trying to create a document in a merged commit', async (ctx) => {
@@ -295,9 +267,7 @@ describe('updateDocument', () => {
     })
     const commitsScope = new CommitsRepository(project.workspaceId)
 
-    const commit = await commitsScope
-      .getHeadCommit(project.id)
-      .then((r) => r.unwrap())
+    const commit = await commitsScope.getHeadCommit(project.id).then((r) => r.unwrap())
     const fooDoc = documents.find((d) => d.path === 'foo')!
 
     const result = await updateDocument({
@@ -314,25 +284,24 @@ describe('updateDocument', () => {
   })
 
   it('invalidates the resolvedContent for all documents in the commit', async (ctx) => {
-    const { workspace, project, user, documents } =
-      await ctx.factories.createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-          },
-        ],
-        documents: {
-          doc1: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Doc 1',
-          }),
-          doc2: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Doc 2',
-          }),
+    const { workspace, project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
         },
-      })
+      ],
+      documents: {
+        doc1: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Doc 1',
+        }),
+        doc2: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Doc 2',
+        }),
+      },
+    })
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
 
     const { commit } = await ctx.factories.createDraft({ project, user })
@@ -359,15 +328,9 @@ describe('updateDocument', () => {
       }),
     }).then((r) => r.unwrap())
 
-    const commitDocs = await docsScope
-      .getDocumentsAtCommit(commit)
-      .then((r) => r.unwrap())
+    const commitDocs = await docsScope.getDocumentsAtCommit(commit).then((r) => r.unwrap())
 
-    expect(commitDocs.find((d) => d.path === 'doc1')!.resolvedContent).toBe(
-      null,
-    )
-    expect(commitDocs.find((d) => d.path === 'doc2')!.resolvedContent).toBe(
-      null,
-    )
+    expect(commitDocs.find((d) => d.path === 'doc1')!.resolvedContent).toBe(null)
+    expect(commitDocs.find((d) => d.path === 'doc2')!.resolvedContent).toBe(null)
   })
 })

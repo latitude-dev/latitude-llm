@@ -2,9 +2,9 @@ import { beforeAll, expect, describe, it, vi } from 'vitest'
 import getTestDisk from '../../tests/testDrive'
 import { createDatasetFromFile } from '../datasets/createFromFile'
 import * as factories from '../../tests/factories'
-import { Dataset, User, Workspace } from '../../browser'
+import type { Dataset, User, Workspace } from '../../browser'
 import { createRowsFromUploadedDataset } from './createRowsFromUploadedDataset'
-import { DatasetV2CreatedEvent } from '../../events/events'
+import type { DatasetV2CreatedEvent } from '../../events/events'
 import { DatasetRowsRepository, DatasetsRepository } from '../../repositories'
 import { createTestCsvFile } from './testHelper'
 
@@ -189,9 +189,7 @@ describe('createRowsFromUploadedDataset', () => {
     const rowData = rows.map((r) => r.rowData)
 
     const datasetRepo = new DatasetsRepository(workspace.id)
-    const freshDataset = await datasetRepo
-      .find(dataset.id)
-      .then((r) => r.unwrap())
+    const freshDataset = await datasetRepo.find(dataset.id).then((r) => r.unwrap())
     const columns = freshDataset.columns
     const name = columns.find((c) => c.name === 'name')!.identifier
     const surname = columns.find((c) => c.name === 'surname')!.identifier
@@ -199,9 +197,7 @@ describe('createRowsFromUploadedDataset', () => {
     const jsonCol = columns.find((c) => c.name === 'json_data')!.identifier
     const nullCol = columns.find((c) => c.name === 'nullColumn')!.identifier
     const emptyCol = columns.find((c) => c.name === 'emptyColumn')!.identifier
-    const booleanCol = columns.find(
-      (c) => c.name === 'booleanColumn',
-    )!.identifier
+    const booleanCol = columns.find((c) => c.name === 'booleanColumn')!.identifier
     const dateCol = columns.find((c) => c.name === 'dateColumn')!.identifier
     const floatCol = columns.find((c) => c.name === 'floatColumn')!.identifier
 

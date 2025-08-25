@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { Providers, User, Workspace } from '../../browser'
+import { Providers, type User, type Workspace } from '../../browser'
 import { WorkspacesRepository } from '../../repositories'
 import { createProject, createProviderApiKey } from '../../tests/factories'
 import { updateWorkspace } from './update'

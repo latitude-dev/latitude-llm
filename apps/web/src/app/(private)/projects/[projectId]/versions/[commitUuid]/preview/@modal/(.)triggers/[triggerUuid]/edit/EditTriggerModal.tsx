@@ -3,22 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import {
-  ConfirmModal,
-  Modal,
-  CloseTrigger,
-} from '@latitude-data/web-ui/atoms/Modal'
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
+import { ConfirmModal, Modal, CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
+import type { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import useDocumentTriggers from '$/stores/documentTriggers'
-import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { DeleteTriggerBanner } from './_components/DeleteTriggerBanner'
 import { EditScheduleTrigger } from './_components/ScheduleTrigger'
 import { EditEmailTrigger } from './_components/EmailTrigger'
@@ -30,16 +23,13 @@ function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
   const navigate = useNavigate()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { data: documents, isLoading: isLoadingDocuments } =
-    useDocumentVersions({
-      commitUuid: commit.uuid,
-      projectId: project.id,
-    })
+  const { data: documents, isLoading: isLoadingDocuments } = useDocumentVersions({
+    commitUuid: commit.uuid,
+    projectId: project.id,
+  })
   const previewPath = useMemo(
     () =>
-      ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({ uuid: commit.uuid }).preview.root,
+      ROUTES.projects.detail({ id: project.id }).commits.detail({ uuid: commit.uuid }).preview.root,
     [project.id, commit.uuid],
   )
   const onCloseModal = useCallback(() => {
@@ -63,9 +53,7 @@ function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
   return useMemo(() => {
     const trigger = data.find((trigger) => trigger.uuid === triggerUuid)
     const document = trigger
-      ? (documents ?? [])?.find(
-          (doc) => doc.documentUuid === trigger.documentUuid,
-        )
+      ? (documents ?? [])?.find((doc) => doc.documentUuid === trigger.documentUuid)
       : null
     return {
       trigger,
@@ -76,16 +64,7 @@ function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
       update,
       isUpdating,
     }
-  }, [
-    data,
-    update,
-    triggerUuid,
-    isLoading,
-    onCloseModal,
-    isUpdating,
-    commit.mergedAt,
-    documents,
-  ])
+  }, [data, update, triggerUuid, isLoading, onCloseModal, isUpdating, commit.mergedAt, documents])
 }
 
 function LoadingTrigger() {
@@ -103,50 +82,31 @@ export type EditTriggerProps<T extends DocumentTriggerType> = {
   isUpdating: boolean
 }
 
-function EditTrigger<T extends DocumentTriggerType>(
-  props: EditTriggerProps<T>,
-) {
+function EditTrigger<T extends DocumentTriggerType>(props: EditTriggerProps<T>) {
   const type = props.trigger.triggerType
 
   if (type === DocumentTriggerType.Email) {
-    return (
-      <EditEmailTrigger
-        {...(props as EditTriggerProps<DocumentTriggerType.Email>)}
-      />
-    )
+    return <EditEmailTrigger {...(props as EditTriggerProps<DocumentTriggerType.Email>)} />
   }
 
   if (type === DocumentTriggerType.Integration) {
     return (
-      <EditIntegrationTrigger
-        {...(props as EditTriggerProps<DocumentTriggerType.Integration>)}
-      />
+      <EditIntegrationTrigger {...(props as EditTriggerProps<DocumentTriggerType.Integration>)} />
     )
   }
 
   if (type === DocumentTriggerType.Scheduled) {
-    return (
-      <EditScheduleTrigger
-        {...(props as EditTriggerProps<DocumentTriggerType.Scheduled>)}
-      />
-    )
+    return <EditScheduleTrigger {...(props as EditTriggerProps<DocumentTriggerType.Scheduled>)} />
   }
 
   return <Text.H5>Unsupported trigger type: {type}</Text.H5>
 }
 
 export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
-  const {
-    update,
-    trigger,
-    document,
-    isLive,
-    onCloseModal,
-    isLoading,
-    isUpdating,
-  } = useDocumentTrigger({
-    triggerUuid,
-  })
+  const { update, trigger, document, isLive, onCloseModal, isLoading, isUpdating } =
+    useDocumentTrigger({
+      triggerUuid,
+    })
 
   const [configuration, setTriggerConfiguration] =
     useState<DocumentTriggerConfiguration<DocumentTriggerType> | null>(null)
@@ -179,11 +139,7 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
         footer={
           <>
             <CloseTrigger />
-            <Button
-              disabled={!configuration || isUpdating}
-              fancy
-              onClick={onUpdate}
-            >
+            <Button disabled={!configuration || isUpdating} fancy onClick={onUpdate}>
               Update trigger
             </Button>
           </>
@@ -220,8 +176,7 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
       onConfirm={onCloseModal}
       confirm={{
         label: 'Back to preview',
-        description:
-          'Live triggers cannot be edited. Create a new version to delete this trigger.',
+        description: 'Live triggers cannot be edited. Create a new version to delete this trigger.',
       }}
     />
   )

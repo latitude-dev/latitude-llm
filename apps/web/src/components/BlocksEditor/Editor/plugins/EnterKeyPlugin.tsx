@@ -54,8 +54,7 @@ export function EnterKeyPlugin(): null {
           const children = blockNode.getChildren()
 
           const lastChild = children[children.length - 1]
-          const secondLastChild =
-            children.length > 1 ? children[children.length - 2] : null
+          const secondLastChild = children.length > 1 ? children[children.length - 2] : null
 
           // Check if current position is at the end of the last paragraph
           if ($isParagraphNode(anchorNode) && anchorNode === lastChild) {
@@ -89,10 +88,7 @@ export function EnterKeyPlugin(): null {
           let blockNode = null
 
           while (currentNode) {
-            if (
-              $isMessageBlockNode(currentNode) ||
-              $isStepBlockNode(currentNode)
-            ) {
+            if ($isMessageBlockNode(currentNode) || $isStepBlockNode(currentNode)) {
               blockNode = currentNode
               break
             }

@@ -143,9 +143,7 @@ describe('testWebhookEndpoint', () => {
     const result = await testWebhookEndpoint({ url: mockUrl })
 
     expect(result.ok).toBe(false)
-    expect(result.error?.message).toBe(
-      'Rate limit exceeded. Please try again later.',
-    )
+    expect(result.error?.message).toBe('Rate limit exceeded. Please try again later.')
   })
 
   it('handles server errors (500+)', async () => {

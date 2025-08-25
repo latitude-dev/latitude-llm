@@ -26,9 +26,7 @@ describe('renameDocumentPaths', () => {
     expect(result.ok).toBeTruthy()
 
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
-    const docs = await docsScope
-      .getDocumentsAtCommit(draft)
-      .then((r) => r.unwrap())
+    const docs = await docsScope.getDocumentsAtCommit(draft).then((r) => r.unwrap())
     const paths = docs.map((d) => d.path).sort()
     expect(paths).toEqual(['a/b/c', 'new/path'])
   })
@@ -53,9 +51,7 @@ describe('renameDocumentPaths', () => {
     expect(result.ok).toBeTruthy()
 
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
-    const docs = await docsScope
-      .getDocumentsAtCommit(draft)
-      .then((r) => r.unwrap())
+    const docs = await docsScope.getDocumentsAtCommit(draft).then((r) => r.unwrap())
     const paths = docs.map((d) => d.path).sort()
     expect(paths).toEqual(['newpath/c', 'newpath/c/d', 'not/affected'])
   })

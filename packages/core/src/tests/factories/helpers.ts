@@ -1,8 +1,8 @@
 import { stringify as stringifyObjectToYaml } from 'yaml'
 import { faker } from '@faker-js/faker'
 
-import { ProviderApiKey } from '../../browser'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { ProviderApiKey } from '../../browser'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 const randomSentence = () => {
   const randomSentenceGenerators = [
@@ -12,9 +12,7 @@ const randomSentence = () => {
     faker.lorem.sentence,
   ]
 
-  return randomSentenceGenerators[
-    Math.floor(Math.random() * randomSentenceGenerators.length)
-  ]!()
+  return randomSentenceGenerators[Math.floor(Math.random() * randomSentenceGenerators.length)]!()
 }
 
 type ExtraConfig = Omit<LatitudePromptConfig, 'provider' | 'model'>

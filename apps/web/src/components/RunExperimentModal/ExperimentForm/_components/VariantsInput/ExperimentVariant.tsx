@@ -3,11 +3,8 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useCallback } from 'react'
-import { ExperimentFormPayload } from '../../useExperimentFormPayload'
-import {
-  VariantPromptSettings,
-  VariantPromptSettingsPlaceholder,
-} from './PromptSettings'
+import type { ExperimentFormPayload } from '../../useExperimentFormPayload'
+import { VariantPromptSettings, VariantPromptSettingsPlaceholder } from './PromptSettings'
 import { ExperimentVariantWrapper } from '$/components/ExperimentVariantWrapper'
 
 export function NewVariantCard({ onClick }: { onClick: () => void }) {

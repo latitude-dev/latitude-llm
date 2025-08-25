@@ -1,8 +1,8 @@
 'use client'
 
-import { ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
 
-import { ToastActionElement, ToastProps } from './index'
+import type { ToastActionElement, ToastProps } from './index'
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
@@ -81,9 +81,7 @@ export const reducer = (state: State, action: Action): State => {
     case 'UPDATE_TOAST':
       return {
         ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t,
-        ),
+        toasts: state.toasts.map((t) => (t.id === action.toast.id ? { ...t, ...action.toast } : t)),
       }
 
     case 'DISMISS_TOAST': {
@@ -178,14 +176,13 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, [])
 
   return useMemo(
     () => ({
       ...state,
       toast,
-      dismiss: (toastId?: string) =>
-        dispatch({ type: 'DISMISS_TOAST', toastId }),
+      dismiss: (toastId?: string) => dispatch({ type: 'DISMISS_TOAST', toastId }),
     }),
     [state],
   )

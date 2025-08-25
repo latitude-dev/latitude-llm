@@ -1,8 +1,8 @@
 import { and, eq } from 'drizzle-orm'
-import { Dataset } from '../../browser'
+import type { Dataset } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { DatasetRowData, datasetRows } from '../../schema'
+import { type DatasetRowData, datasetRows } from '../../schema'
 export const updateDatasetRow = async (
   {
     dataset,
@@ -25,12 +25,7 @@ export const updateDatasetRow = async (
       const result = await trx
         .update(datasetRows)
         .set({ rowData: row.rowData })
-        .where(
-          and(
-            eq(datasetRows.id, row.rowId),
-            eq(datasetRows.datasetId, dataset.id),
-          ),
-        )
+        .where(and(eq(datasetRows.id, row.rowId), eq(datasetRows.datasetId, dataset.id)))
         .returning()
 
       const updatedRow = result[0]!

@@ -1,5 +1,5 @@
-import * as otel from '@opentelemetry/api'
-import { ReadableSpan, SpanProcessor } from '@opentelemetry/sdk-trace-node'
+import type * as otel from '@opentelemetry/api'
+import type { ReadableSpan, SpanProcessor } from '@opentelemetry/sdk-trace-node'
 
 export interface RedactSpanProcessorOptions {
   attributes: (string | RegExp)[]

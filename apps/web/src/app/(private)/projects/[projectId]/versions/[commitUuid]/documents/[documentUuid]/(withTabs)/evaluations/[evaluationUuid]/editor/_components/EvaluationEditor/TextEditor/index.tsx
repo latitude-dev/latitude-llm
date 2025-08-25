@@ -5,8 +5,7 @@ import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentText
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
 import { Suspense } from 'react'
 
-const DEFAULT_PARAMETERS =
-  LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
+const DEFAULT_PARAMETERS = LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]
 const ALLOWED_PARAMETERS = [
   ...DEFAULT_PARAMETERS,
   'messages.all',
@@ -52,9 +51,7 @@ export function TextEditor({
         defaultValue={defaultValue}
         compileErrors={compileErrors}
         onChange={onChange}
-        readOnlyMessage={
-          isMerged ? 'Create a draft to edit this evaluation.' : undefined
-        }
+        readOnlyMessage={isMerged ? 'Create a draft to edit this evaluation.' : undefined}
         isSaved={isSaved}
         actionButtons={<EditorSettings copilotEnabled={copilotEnabled} />}
       />

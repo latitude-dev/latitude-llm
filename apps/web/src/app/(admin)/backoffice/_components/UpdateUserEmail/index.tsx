@@ -5,7 +5,7 @@ import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { FormEvent, useCallback } from 'react'
+import { type FormEvent, useCallback } from 'react'
 export function UpdateUserEmail() {
   const router = useNavigate()
   const { execute, isPending } = useLatitudeAction(updateUserAction)
@@ -26,11 +26,7 @@ export function UpdateUserEmail() {
   return (
     <form onSubmit={handleSubmit}>
       <FormWrapper>
-        <Input
-          label='User email'
-          name='userEmail'
-          placeholder='Current user email'
-        />
+        <Input label='User email' name='userEmail' placeholder='Current user email' />
         <Input label='New email' name='email' placeholder='New user email' />
         <Button type='submit' disabled={isPending}>
           Update

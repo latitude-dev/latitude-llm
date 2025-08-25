@@ -1,16 +1,16 @@
 import {
-  Commit,
+  type Commit,
   ErrorableEntity,
-  Experiment,
-  LogSources,
+  type Experiment,
+  type LogSources,
   type DocumentVersion,
   type Workspace,
 } from '../../browser'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import { createChainRunError } from '../../lib/streamManager/ChainErrors'
-import { ToolHandler } from '../../lib/streamManager/clientTools/handlers'
-import { telemetry, TelemetryContext } from '../../telemetry'
+import type { ToolHandler } from '../../lib/streamManager/clientTools/handlers'
+import { telemetry, type TelemetryContext } from '../../telemetry'
 import { runChain } from '../chains/run'
 import { createDocumentLog } from '../documentLogs/create'
 import { getResolvedContent } from '../documents'

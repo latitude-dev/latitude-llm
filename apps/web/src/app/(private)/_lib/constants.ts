@@ -1,12 +1,9 @@
-import {
-  LATITUDE_DOCS_URL,
-  LATITUDE_HELP_URL,
-} from '@latitude-data/core/browser'
+import { LATITUDE_DOCS_URL, LATITUDE_SLACK_URL } from '@latitude-data/core/browser'
 import { ROUTES } from '$/services/routes'
 
 export const NAV_LINKS = [
   { label: 'Docs', href: LATITUDE_DOCS_URL },
-  { label: 'Community', href: LATITUDE_HELP_URL },
+  { label: 'Community', href: LATITUDE_SLACK_URL },
 ]
 
 export const MAIN_NAV_LINKS = [

@@ -15,9 +15,7 @@ export const destroyProviderApiKeyAction = authProcedure
     }),
   )
   .handler(async ({ input, ctx }) => {
-    const providerApiKeysRepository = new ProviderApiKeysRepository(
-      ctx.workspace.id,
-    )
+    const providerApiKeysRepository = new ProviderApiKeysRepository(ctx.workspace.id)
     const apiKeyProvider = await providerApiKeysRepository
       .find(Number(input.id))
       .then((r) => r.unwrap())

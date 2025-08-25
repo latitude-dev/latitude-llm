@@ -43,12 +43,9 @@ describe('autoScaleInactiveServers', () => {
     expect(result.value).toBe(1)
 
     // Verify job was enqueued with correct parameters
-    expect(mocks.maintenanceQueue).toHaveBeenCalledWith(
-      'scaleDownMcpServerJob',
-      {
-        mcpServerId: server.id,
-      },
-    )
+    expect(mocks.maintenanceQueue).toHaveBeenCalledWith('scaleDownMcpServerJob', {
+      mcpServerId: server.id,
+    })
   })
 
   it('should enqueue scale down jobs for inactive servers on hobby v2 plan workspaces', async () => {
@@ -75,12 +72,9 @@ describe('autoScaleInactiveServers', () => {
     expect(result.value).toBe(1)
 
     // Verify job was enqueued with correct parameters
-    expect(mocks.maintenanceQueue).toHaveBeenCalledWith(
-      'scaleDownMcpServerJob',
-      {
-        mcpServerId: server.id,
-      },
-    )
+    expect(mocks.maintenanceQueue).toHaveBeenCalledWith('scaleDownMcpServerJob', {
+      mcpServerId: server.id,
+    })
   })
 
   it('should not enqueue jobs for servers on non-hobby plans', async () => {
@@ -216,9 +210,7 @@ describe('autoScaleInactiveServers', () => {
     })
 
     // Mock job queue to throw an error
-    mocks.maintenanceQueue.mockRejectedValueOnce(
-      new Error('Failed to enqueue job'),
-    )
+    mocks.maintenanceQueue.mockRejectedValueOnce(new Error('Failed to enqueue job'))
 
     // Run the auto-scale function
     const result = await autoScaleInactiveServers()

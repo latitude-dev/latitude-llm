@@ -1,5 +1,5 @@
 'use client'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { loginAction } from '$/actions/user/loginAction'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -12,13 +12,7 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import Link from 'next/link'
 import { useServerAction } from 'zsa-react'
 
-export default function LoginForm({
-  footer,
-  returnTo,
-}: {
-  footer: ReactNode
-  returnTo?: string
-}) {
+export default function LoginForm({ footer, returnTo }: { footer: ReactNode; returnTo?: string }) {
   const { toast } = useToast()
   const { isPending, error, executeFormAction } = useServerAction(loginAction, {
     onError: ({ err }) => {

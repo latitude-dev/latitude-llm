@@ -4,16 +4,14 @@ export type Create<T> = { [P in keyof T]?: T[P] }
 import { database } from '../../client'
 import { subscriptions } from '../../schema/models/subscriptions'
 import { SubscriptionPlan } from '../../plans'
-import { Subscription, Workspace } from '../../browser'
+import type { Subscription, Workspace } from '../../browser'
 
 export type CreateSubscriptionProps = Create<Subscription> & {
   workspaceId: Workspace['id']
   plan?: SubscriptionPlan
 }
 
-export async function createSubscription(
-  props: CreateSubscriptionProps,
-): Promise<Subscription> {
+export async function createSubscription(props: CreateSubscriptionProps): Promise<Subscription> {
   const { workspaceId, plan, ...rest } = props
 
   const [newSubscription] = await database

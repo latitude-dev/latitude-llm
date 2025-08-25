@@ -17,9 +17,7 @@ export const updateWorkspaceAction = authProcedure
   .handler(async ({ input, ctx }) => {
     const userId = ctx.session.userId
     const workspacesScope = new WorkspacesRepository(userId)
-    const workspace = await workspacesScope
-      .find(input.workspaceId)
-      .then((r) => r.unwrap())
+    const workspace = await workspacesScope.find(input.workspaceId).then((r) => r.unwrap())
 
     const updatedWorkspace = await updateWorkspace(workspace, {
       name: input.name,

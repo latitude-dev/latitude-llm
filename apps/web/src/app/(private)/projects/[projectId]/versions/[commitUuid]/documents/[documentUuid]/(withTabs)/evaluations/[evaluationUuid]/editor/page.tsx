@@ -7,12 +7,9 @@ import {
 import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import {
-  EvaluationType,
-  LlmEvaluationMetric,
-} from '@latitude-data/core/browser'
+import { EvaluationType, LlmEvaluationMetric } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
-import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
+import type { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
 import { env } from '@latitude-data/env'
 import { redirect } from 'next/navigation'
@@ -37,12 +34,7 @@ export default async function EvaluationEditorPage({
   }>
   searchParams: Promise<QueryParams>
 }) {
-  const {
-    projectId: pjid,
-    commitUuid,
-    documentUuid,
-    evaluationUuid,
-  } = await params
+  const { projectId: pjid, commitUuid, documentUuid, evaluationUuid } = await params
   const projectId = Number(pjid)
   const queryParams = await searchParams
   const document = await getDocumentByUuidCached({
@@ -52,6 +44,7 @@ export default async function EvaluationEditorPage({
   })
   const providerApiKeys = await getProviderApiKeysCached()
   const { workspace } = await getCurrentUserOrRedirect()
+  // biome-ignore lint/suspicious/noImplicitAnyLet: ignored using `--suppress`
   let commit
   try {
     commit = await findCommitCached({ projectId, uuid: commitUuid })
@@ -72,7 +65,7 @@ export default async function EvaluationEditorPage({
   })
 
   const hasEditor =
-    evaluation.type == EvaluationType.Llm &&
+    evaluation.type === EvaluationType.Llm &&
     evaluation.metric.startsWith(LlmEvaluationMetric.Custom)
 
   if (!hasEditor) {
@@ -87,7 +80,7 @@ export default async function EvaluationEditorPage({
 
   const logUuid = queryParams[LOG_UUID_PARAM]?.toString()
 
-  let selectedDocumentLogUuid: string | undefined = undefined
+  let selectedDocumentLogUuid: string | undefined
 
   if (logUuid) {
     const logsRepo = new DocumentLogsRepository(workspace.id)

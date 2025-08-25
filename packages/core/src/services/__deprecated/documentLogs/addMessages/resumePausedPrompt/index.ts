@@ -1,19 +1,15 @@
-import { Message } from '@latitude-data/compiler'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { Chain as PromptlChain } from 'promptl-ai'
+import type { Message } from '@latitude-data/compiler'
+import type { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import type { Chain as PromptlChain } from 'promptl-ai'
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   ErrorableEntity,
-  LogSources,
-  Workspace,
+  type LogSources,
+  type Workspace,
   buildMessagesFromResponse,
 } from '../../../../../browser'
-import {
-  ChainStepResponse,
-  DocumentType,
-  StreamType,
-} from '../../../../../constants'
+import { type ChainStepResponse, DocumentType, type StreamType } from '../../../../../constants'
 import { Result } from '../../../../../lib/Result'
 import { deleteCachedChain } from '../../../../chains/chainCache'
 import { getResolvedContent } from '../../../../documents'
@@ -71,8 +67,7 @@ export async function resumePausedPrompt({
   })
   const errorableUuid = documentLogUuid
 
-  const runFn =
-    document.documentType === DocumentType.Agent ? runAgent : runChain
+  const runFn = document.documentType === DocumentType.Agent ? runAgent : runChain
 
   const runResult = runFn({
     generateUUID: () => errorableUuid,

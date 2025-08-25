@@ -1,11 +1,11 @@
 import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
-import {
+import type {
   Message as ConversationMessage,
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
 import { ROUTES } from '$/services/routes'
-import { DocumentVersion, TraceContext } from '@latitude-data/core/browser'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { DocumentVersion, TraceContext } from '@latitude-data/core/browser'
+import type { ICommitContextType } from '@latitude-data/web-ui/providers'
 import { useCallback, useMemo } from 'react'
 
 export function useRunPlaygroundPrompt({
@@ -19,26 +19,22 @@ export function useRunPlaygroundPrompt({
   projectId: number
   parameters: Record<string, unknown> | undefined
 }) {
-  const { createStreamHandler, abortCurrentStream, hasActiveStream } =
-    useStreamHandler()
+  const { createStreamHandler, abortCurrentStream, hasActiveStream } = useStreamHandler()
   const runPromptFn = useCallback(async () => {
-    const response = await fetch(
-      ROUTES.api.documents.detail(document.documentUuid).run,
-      {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          path: document.path,
-          projectId: projectId,
-          commitUuid: commit.uuid,
-          parameters: parameters ?? {},
-          stream: true, // Explicitly request streaming
-        }),
+    const response = await fetch(ROUTES.api.documents.detail(document.documentUuid).run, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    )
+      body: JSON.stringify({
+        path: document.path,
+        projectId: projectId,
+        commitUuid: commit.uuid,
+        parameters: parameters ?? {},
+        stream: true, // Explicitly request streaming
+      }),
+    })
 
     return createStreamHandler(response)
   }, [
@@ -62,17 +58,14 @@ export function useRunPlaygroundPrompt({
       toolCalls?: ToolCall[]
       trace?: TraceContext
     }) => {
-      const response = await fetch(
-        ROUTES.api.documents.logs.detail(documentLogUuid).chat,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ messages, toolCalls, trace }),
+      const response = await fetch(ROUTES.api.documents.logs.detail(documentLogUuid).chat, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      )
+        body: JSON.stringify({ messages, toolCalls, trace }),
+      })
 
       return createStreamHandler(response)
     },

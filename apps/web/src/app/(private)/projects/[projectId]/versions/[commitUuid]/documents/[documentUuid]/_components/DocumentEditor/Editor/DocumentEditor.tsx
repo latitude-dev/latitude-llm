@@ -5,25 +5,19 @@ import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { DevModeProvider } from '$/hooks/useDevMode'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import {
-  DocumentValueProvider,
-  useDocumentValue,
-} from '$/hooks/useDocumentValueContext'
+import { DocumentValueProvider, useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import {
-  Commit,
-  DocumentVersion,
+  type Commit,
+  type DocumentVersion,
   INPUT_SOURCE,
   LogSources,
-  Project,
+  type Project,
 } from '@latitude-data/core/browser'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { DocumentTabSelector } from '../../DocumentTabs/tabs'
@@ -31,7 +25,7 @@ import { ChatInputBox } from './ChatInputBox'
 import { AgentToolbar } from './EditorHeader/AgentToolbar'
 import { TitleRow } from './EditorHeader/TitleRow'
 import { Editors } from './Editors'
-import { DocumentEditorProps } from './OldDocumentEditor'
+import type { DocumentEditorProps } from './OldDocumentEditor'
 import { useRunPlaygroundPrompt } from './Playground/hooks/useRunPlaygroundPrompt'
 import { RunButton } from './RunButton'
 import { V2Playground } from './V2Playground'
@@ -41,10 +35,7 @@ export function DocumentEditor(props: DocumentEditorProps) {
   return (
     <MetadataProvider>
       <DevModeProvider>
-        <DocumentValueProvider
-          document={props.document}
-          documents={props.documents}
-        >
+        <DocumentValueProvider document={props.document} documents={props.documents}>
           <DocumentEditorContent {...props} />
         </DocumentValueProvider>
       </DevModeProvider>
@@ -84,10 +75,7 @@ function DocumentEditorContent({
     togglePlaygroundOpen,
     toggleExperimentModal,
   } = useToggleStates()
-  const name = useMemo(
-    () => document.path.split('/').pop() ?? document.path,
-    [document.path],
-  )
+  const name = useMemo(() => document.path.split('/').pop() ?? document.path, [document.path])
   const isMerged = useMemo(() => commit.mergedAt !== null, [commit.mergedAt])
   const isLatitudeProvider = useIsLatitudeProvider({ metadata })
   const {
@@ -99,16 +87,15 @@ function DocumentEditorContent({
     commitVersionUuid: commit.uuid,
     document,
   })
-  const { playground, hasActiveStream, resetChat, onBack, stopStreaming } =
-    usePlaygroundLogic({
-      commit,
-      project,
-      document,
-      parameters,
-      setMode,
-      togglePlaygroundOpen,
-      setHistoryLog,
-    })
+  const { playground, hasActiveStream, resetChat, onBack, stopStreaming } = usePlaygroundLogic({
+    commit,
+    project,
+    document,
+    parameters,
+    setMode,
+    togglePlaygroundOpen,
+    setHistoryLog,
+  })
   const {
     calcExpandedHeight,
     runPromptButtonLabel,
@@ -176,10 +163,7 @@ function DocumentEditorContent({
               prompt={document.content}
               onChangePrompt={updateDocumentContent}
             />
-            <FreeRunsBanner
-              isLatitudeProvider={isLatitudeProvider}
-              freeRunsCount={freeRunsCount}
-            />
+            <FreeRunsBanner isLatitudeProvider={isLatitudeProvider} freeRunsCount={freeRunsCount} />
             <div className='flex-1 overflow-y-auto'>
               <Editors
                 document={document}
@@ -199,9 +183,7 @@ function DocumentEditorContent({
               onToggle={toggleDocumentParamsHandler}
               isExpanded={isDocumentParamsOpen}
               expandedHeight={
-                isPlaygroundTransitioning
-                  ? calcExpandedHeight(parameters)
-                  : undefined
+                isPlaygroundTransitioning ? calcExpandedHeight(parameters) : undefined
               }
               maxHeight='calc((100vh / 2) - 10rem)'
             />
@@ -213,8 +195,7 @@ function DocumentEditorContent({
                 (isPlaygroundTransitioning && !isPlaygroundOpen),
             })}
           >
-            {((isPlaygroundTransitioning && !isPlaygroundOpen) ||
-              isPlaygroundOpen) && (
+            {((isPlaygroundTransitioning && !isPlaygroundOpen) || isPlaygroundOpen) && (
               <V2Playground
                 metadata={metadata}
                 mode={mode}
@@ -228,8 +209,7 @@ function DocumentEditorContent({
               'sticky left-0 bottom-0 pb-4 z-[11] flex flex-row items-center justify-center bg-background',
               {
                 'absolute left-[calc(50%-124px)]':
-                  !isPlaygroundOpen ||
-                  (isPlaygroundTransitioning && isPlaygroundOpen),
+                  !isPlaygroundOpen || (isPlaygroundTransitioning && isPlaygroundOpen),
               },
             )}
           >
@@ -373,16 +353,13 @@ function useEditorCallbacks({
   parameters: Record<string, any> | undefined
   source: (typeof INPUT_SOURCE)[keyof typeof INPUT_SOURCE]
 }) {
-  const focusFirstParameterInput = useCallback(
-    (parameters: Record<string, unknown> = {}) => {
-      const inputElement = window.document.querySelector(
-        `[name="${Object.keys(parameters ?? {})[0]}"]`,
-      )
-      // @ts-expect-error - TS is wrong? the inputElement has a focus method
-      if (inputElement) inputElement.focus()
-    },
-    [],
-  )
+  const focusFirstParameterInput = useCallback((parameters: Record<string, unknown> = {}) => {
+    const inputElement = window.document.querySelector(
+      `[name="${Object.keys(parameters ?? {})[0]}"]`,
+    )
+    // @ts-expect-error - TS is wrong? the inputElement has a focus method
+    if (inputElement) inputElement.focus()
+  }, [])
   const runPromptButtonLabel = useMemo(() => {
     return isPlaygroundOpen ? 'Run' : 'Preview'
   }, [isPlaygroundOpen])
@@ -395,13 +372,7 @@ function useEditorCallbacks({
     } else {
       setMode('chat')
     }
-  }, [
-    setMode,
-    togglePlaygroundOpen,
-    parameters,
-    focusFirstParameterInput,
-    isPlaygroundOpen,
-  ])
+  }, [setMode, togglePlaygroundOpen, parameters, focusFirstParameterInput, isPlaygroundOpen])
   const toggleDocumentParamsHandler = useCallback(() => {
     togglePlaygroundOpen()
     resetChat()
@@ -453,14 +424,10 @@ function useEditorCallbacks({
  * @returns Object containing playground and modal state management functions
  */
 function useToggleStates() {
-  const { open: isPlaygroundOpen, onOpenChange: _togglePlaygroundOpen } =
+  const { open: isPlaygroundOpen, onOpenChange: _togglePlaygroundOpen } = useToggleModal()
+  const { open: isPlaygroundTransitioning, onOpenChange: togglePLaygroundTransitioning } =
     useToggleModal()
-  const {
-    open: isPlaygroundTransitioning,
-    onOpenChange: togglePLaygroundTransitioning,
-  } = useToggleModal()
-  const { open: isExperimentModalOpen, onOpenChange: toggleExperimentModal } =
-    useToggleModal()
+  const { open: isExperimentModalOpen, onOpenChange: toggleExperimentModal } = useToggleModal()
   const togglePlaygroundOpen = useCallback(() => {
     togglePLaygroundTransitioning()
     setTimeout(() => {

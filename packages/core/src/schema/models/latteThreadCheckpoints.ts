@@ -2,7 +2,7 @@ import { bigint, bigserial, index, jsonb, uuid } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { latteThreads } from './latteThreads'
-import { DocumentVersion } from '../types'
+import type { DocumentVersion } from '../types'
 import { commits } from './commits'
 
 export const latteThreadCheckpoints = latitudeSchema.table(
@@ -19,11 +19,7 @@ export const latteThreadCheckpoints = latitudeSchema.table(
     data: jsonb('data').$type<DocumentVersion>(),
   },
   (thread) => ({
-    commitIdIndex: index('latte_thread_checkpoints_commit_id_index').on(
-      thread.commitId,
-    ),
-    threadUuidIndex: index('latte_thread_checkpoints_thread_uuid_index').on(
-      thread.threadUuid,
-    ),
+    commitIdIndex: index('latte_thread_checkpoints_commit_id_index').on(thread.commitId),
+    threadUuidIndex: index('latte_thread_checkpoints_thread_uuid_index').on(thread.threadUuid),
   }),
 )

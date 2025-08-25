@@ -1,5 +1,5 @@
-import { resolve } from 'path'
-import { cwd } from 'process'
+import { resolve } from 'node:path'
+import { cwd } from 'node:process'
 
 import { createEnv } from '@t3-oss/env-core'
 import dotenv, { type DotenvPopulateInput } from 'dotenv'
@@ -8,8 +8,7 @@ import z from 'zod'
 const environment = process.env.NODE_ENV || 'development'
 const UPLOADS_PATH = 'uploads'
 
-const buildPublicWebPath = (rootPath: string) =>
-  `${rootPath}/apps/web/public/${UPLOADS_PATH}`
+const buildPublicWebPath = (rootPath: string) => `${rootPath}/apps/web/public/${UPLOADS_PATH}`
 
 /**
  * Dear developer. You only need to do this once.
@@ -52,10 +51,7 @@ if (environment === 'development' || environment === 'test') {
   const pathToEnv = resolve(cwd(), `../../.env.${environment}`)
 
   dotenv.config({ path: pathToEnv })
-  const {
-    storagePath: FILES_STORAGE_PATH,
-    publicStoragePath: PUBLIC_FILES_STORAGE_PATH,
-  } =
+  const { storagePath: FILES_STORAGE_PATH, publicStoragePath: PUBLIC_FILES_STORAGE_PATH } =
     environment === 'development' ? buildDevStoragePaths() : TEST_STORAGE_PATHS
 
   dotenv.populate(
@@ -106,8 +102,7 @@ if (environment === 'development' || environment === 'test') {
 }
 
 export const env = createEnv({
-  skipValidation:
-    process.env.BUILDING_CONTAINER == 'true' || process.env.NODE_ENV === 'test',
+  skipValidation: process.env.BUILDING_CONTAINER === 'true' || process.env.NODE_ENV === 'test',
   server: {
     NODE_ENV: z.string(),
 
@@ -225,10 +220,7 @@ export const env = createEnv({
     SMTP_SECURE: z.coerce.boolean().optional().default(true),
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
-    MAIL_TRANSPORT: z
-      .enum(['mailpit', 'mailgun', 'smtp'])
-      .optional()
-      .default('mailpit'),
+    MAIL_TRANSPORT: z.enum(['mailpit', 'mailgun', 'smtp']).optional().default('mailpit'),
 
     // Workers
     WORKERS_HOST: z.string().optional(),
@@ -284,10 +276,7 @@ export const env = createEnv({
       ),
 
     // Workspaces in dev mode are created with this default workspace API key
-    TEST_LATITUDE_API_KEY: z
-      .string()
-      .optional()
-      .default('709a3398-ed26-4e77-beef-90ed288cdd0a'),
+    TEST_LATITUDE_API_KEY: z.string().optional().default('709a3398-ed26-4e77-beef-90ed288cdd0a'),
   },
   runtimeEnv: {
     ...process.env,
@@ -303,13 +292,10 @@ export const env = createEnv({
     LATITUDE_CLOUD: process.env.LATITUDE_CLOUD === 'true',
     LATITUDE_CLOUD_PAYMENT_URL: process.env.LATITUDE_CLOUD_PAYMENT_URL,
     OPT_OUT_ANALYTICS: process.env.OPT_OUT_ANALYTICS === 'true',
-    DISABLE_EMAIL_AUTHENTICATION:
-      process.env.DISABLE_EMAIL_AUTHENTICATION === 'true',
+    DISABLE_EMAIL_AUTHENTICATION: process.env.DISABLE_EMAIL_AUTHENTICATION === 'true',
     ENABLE_ALL_FLAGS: process.env.ENABLE_ALL_FLAGS === 'true',
     COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH:
-      process.env.COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH ??
-      'tool-responses-generator',
-    DEFAULT_PROVIDER_API_KEY:
-      process.env.DEFAULT_PROVIDER_API_KEY ?? 'default_api_key',
+      process.env.COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH ?? 'tool-responses-generator',
+    DEFAULT_PROVIDER_API_KEY: process.env.DEFAULT_PROVIDER_API_KEY ?? 'default_api_key',
   },
 })

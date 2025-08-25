@@ -32,9 +32,7 @@ export function RootDatasetHeader({
   })
   const onOpenChange = useCallback(
     (modal: 'new' | 'generate') => (newOpen: boolean) => {
-      modal === 'new'
-        ? newDataset.onOpenChange(newOpen)
-        : generateModal.onOpenChange(newOpen)
+      modal === 'new' ? newDataset.onOpenChange(newOpen) : generateModal.onOpenChange(newOpen)
       if (!newOpen) {
         navigate.replace(ROUTES.datasets.root())
       }
@@ -55,14 +53,9 @@ export function RootDatasetHeader({
           Generate dataset
         </TableWithHeader.Button>
       ) : null}
-      <TableWithHeader.Button onClick={onOpen('new')}>
-        Upload dataset
-      </TableWithHeader.Button>
+      <TableWithHeader.Button onClick={onOpen('new')}>Upload dataset</TableWithHeader.Button>
 
-      <NewDatasetModal
-        open={newDataset.open}
-        onOpenChange={onOpenChange('new')}
-      />
+      <NewDatasetModal open={newDataset.open} onOpenChange={onOpenChange('new')} />
       <GenerateDatasetCloudModal
         isCloud={isCloud}
         open={generateModal.open}

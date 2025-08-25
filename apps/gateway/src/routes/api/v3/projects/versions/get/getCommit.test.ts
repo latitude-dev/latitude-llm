@@ -1,7 +1,7 @@
 import app from '$/routes/app'
 import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import { createProject } from '@latitude-data/core/factories'
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 describe('GET /projects/{projectId}/versions/{commitUuid}', () => {

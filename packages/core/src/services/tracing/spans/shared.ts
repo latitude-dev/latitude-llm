@@ -1,4 +1,4 @@
-import {
+import type {
   ApiKey,
   BaseSpanMetadata,
   Otlp,
@@ -9,8 +9,8 @@ import {
   SpanType,
   Workspace,
 } from '../../../browser'
-import { Database } from '../../../client'
-import { TypedResult } from '../../../lib/Result'
+import type { Database } from '../../../client'
+import type { TypedResult } from '../../../lib/Result'
 
 export type SpanProcessArgs<T extends SpanType = SpanType> = {
   attributes: Record<string, SpanAttribute>
@@ -21,13 +21,12 @@ export type SpanProcessArgs<T extends SpanType = SpanType> = {
   _type?: T // TODO(tracing): required for type inference, remove this when something in the specification uses the type
 }
 
-export type SpanBackendSpecification<T extends SpanType = SpanType> =
-  SpanSpecification<T> & {
-    process: (
-      args: SpanProcessArgs<T>,
-      db?: Database,
-    ) => Promise<TypedResult<Omit<SpanMetadata<T>, keyof BaseSpanMetadata<T>>>>
-  }
+export type SpanBackendSpecification<T extends SpanType = SpanType> = SpanSpecification<T> & {
+  process: (
+    args: SpanProcessArgs<T>,
+    db?: Database,
+  ) => Promise<TypedResult<Omit<SpanMetadata<T>, keyof BaseSpanMetadata<T>>>>
+}
 
 export function convertTimestamp(timestamp: string): Date {
   const nanoseconds = BigInt(timestamp)
@@ -40,10 +39,10 @@ function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.toLowerCase().slice(1)
 }
 
-type CamelCaseable = string | string[] | Record<string, unknown> // prettier-ignore
-export function toCamelCase(value: string): string // prettier-ignore
-export function toCamelCase(value: string[]): string[] // prettier-ignore
-export function toCamelCase<V = unknown>(value: Record<string, V>): Record<string, V> // prettier-ignore
+type CamelCaseable = string | string[] | Record<string, unknown>
+export function toCamelCase(value: string): string
+export function toCamelCase(value: string[]): string[]
+export function toCamelCase<V = unknown>(value: Record<string, V>): Record<string, V>
 export function toCamelCase(value: CamelCaseable): CamelCaseable {
   if (value === null || value === undefined) {
     return ''
@@ -83,7 +82,7 @@ export function setField(object: any, path: string, value: any) {
 
   let current = object
   for (const [index, part] of parts.entries()) {
-    const key = isNaN(Number(part)) ? part : Number(part)
+    const key = Number.isNaN(Number(part)) ? part : Number(part)
     if (typeof key === 'number' && (key < 0 || key > SPARSE_LIMIT)) {
       throw new Error('Field path is too sparse')
     }
@@ -92,7 +91,7 @@ export function setField(object: any, path: string, value: any) {
     else {
       if (!(key in current) || typeof current[key] !== 'object') {
         const nextPart = parts[index + 1]
-        current[key] = !isNaN(Number(nextPart)) ? [] : {}
+        current[key] = !Number.isNaN(Number(nextPart)) ? [] : {}
       }
       current = current[key]
     }

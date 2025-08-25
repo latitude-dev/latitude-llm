@@ -1,13 +1,7 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
-import {
-  createRelativePath,
-  resolveRelativePath,
-} from '@latitude-data/constants'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { createRelativePath, resolveRelativePath } from '@latitude-data/constants'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export type PromptConfigurationProps = {
@@ -76,10 +70,7 @@ function getSelectedRelativePath({
   })[0]
 }
 
-export const useLatitudeAgentsConfig = ({
-  config,
-  setConfig,
-}: PromptConfigurationProps) => {
+export const useLatitudeAgentsConfig = ({ config, setConfig }: PromptConfigurationProps) => {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
@@ -91,14 +82,10 @@ export const useLatitudeAgentsConfig = ({
 
   const availableAgents = useMemo(() => {
     if (!agentToolsMap) return []
-    return Object.values(agentToolsMap).filter(
-      (agentPath) => agentPath !== document.path,
-    )
+    return Object.values(agentToolsMap).filter((agentPath) => agentPath !== document.path)
   }, [agentToolsMap, document.path])
 
-  const { value: selectedAgents, setValue: setSelectedAgents } = useConfigValue<
-    string[]
-  >({
+  const { value: selectedAgents, setValue: setSelectedAgents } = useConfigValue<string[]>({
     config,
     setConfig,
     key: 'agents',
@@ -121,18 +108,11 @@ export const useLatitudeAgentsConfig = ({
       })
 
       if (selectedPath) {
-        setSelectedAgents(
-          selectedAgents.filter(
-            (relativePath) => relativePath !== selectedPath,
-          ),
-        )
+        setSelectedAgents(selectedAgents.filter((relativePath) => relativePath !== selectedPath))
         return
       }
 
-      const selectedRelativePath = createRelativePath(
-        agentFullPath,
-        document.path,
-      )
+      const selectedRelativePath = createRelativePath(agentFullPath, document.path)
       setSelectedAgents([...selectedAgents, selectedRelativePath])
     },
     [selectedAgents, setSelectedAgents, document.path],

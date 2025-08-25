@@ -4,7 +4,7 @@ import { executeBackendAction as executeBackendLatitudeAction } from '$/actions/
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useOnce } from '$/hooks/useMount'
 import { useDeferredPlaygroundAction } from '$/hooks/usePlaygroundAction'
-import {
+import type {
   ActionBackendParameters,
   ActionFrontendParameters,
   ActionType,
@@ -16,7 +16,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
-import { ActionFrontendSpecification } from './shared'
+import type { ActionFrontendSpecification } from './shared'
 import { ACTION_SPECIFICATIONS } from './specifications'
 
 export function ClientPage<T extends ActionType = ActionType>({
@@ -30,10 +30,10 @@ export function ClientPage<T extends ActionType = ActionType>({
   user: User
   workspace: Workspace
 }) {
-  const { execute: executeBackendAction } = useLatitudeAction(
-    executeBackendLatitudeAction,
-    { onSuccess: () => {}, onError: () => {} },
-  )
+  const { execute: executeBackendAction } = useLatitudeAction(executeBackendLatitudeAction, {
+    onSuccess: () => {},
+    onError: () => {},
+  })
   const { executeFrontendAction } = useFrontendAction({ user, workspace })
 
   const [ended, setEnded] = useState<boolean>()
@@ -64,13 +64,7 @@ export function ClientPage<T extends ActionType = ActionType>({
   )
 }
 
-function useFrontendAction({
-  user,
-  workspace,
-}: {
-  user: User
-  workspace: Workspace
-}) {
+function useFrontendAction({ user, workspace }: { user: User; workspace: Workspace }) {
   const router = useRouter()
   const { setPlaygroundAction } = useDeferredPlaygroundAction()
 
@@ -125,11 +119,7 @@ function LoadingAction() {
   return (
     <>
       <div className='w-full h-full flex items-center justify-center gap-2'>
-        <Icon
-          name='loader'
-          color='foreground'
-          className='flex-shrink-0 -mt-px animate-spin'
-        />
+        <Icon name='loader' color='foreground' className='flex-shrink-0 -mt-px animate-spin' />
         <Text.H4B align='center' color='foreground'>
           Executing action
         </Text.H4B>

@@ -1,10 +1,7 @@
 import useDocumentTriggers from '$/stores/documentTriggers'
-import {
-  DocumentTriggerType,
-  EMAIL_TRIGGER_DOMAIN,
-} from '@latitude-data/constants'
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { DocumentTriggerType, EMAIL_TRIGGER_DOMAIN } from '@latitude-data/constants'
+import type { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
+import type { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useMemo } from 'react'
 import { EmailTriggerConfig } from './Config'
@@ -35,9 +32,9 @@ export function EmailTriggerSettings({
 
   const emailTrigger = useMemo(
     () =>
-      documentTriggers.find(
-        (t) => t.triggerType === DocumentTriggerType.Email,
-      ) as DocumentTrigger<DocumentTriggerType.Email> | undefined,
+      documentTriggers.find((t) => t.triggerType === DocumentTriggerType.Email) as
+        | DocumentTrigger<DocumentTriggerType.Email>
+        | undefined,
     [documentTriggers],
   )
 
@@ -71,8 +68,7 @@ export function EmailTriggerSettings({
   return (
     <div className='flex flex-col gap-4'>
       <Text.H5 color='foregroundMuted'>
-        Enables running this prompt when a user sends an email to a specific
-        address.
+        Enables running this prompt when a user sends an email to a specific address.
       </Text.H5>
       <EmailTriggerConfig
         emailTriggerConfig={emailTrigger?.configuration}

@@ -1,7 +1,4 @@
-import {
-  UsageIndicatorPopover,
-  type UsageSubscription,
-} from '$/components/UsageIndicatorPopover'
+import { UsageIndicatorPopover, type UsageSubscription } from '$/components/UsageIndicatorPopover'
 import { calcualteUsage } from '$/lib/usageUtils'
 import { computeWorkspaceUsage } from '@latitude-data/core/services/workspaces/usage'
 import type { GetUsageOverviewRow } from '@latitude-data/core/services/workspaces/usageOverview/getUsageOverview'
@@ -13,9 +10,7 @@ export async function UsageCell({
   subscription: UsageSubscription
 }) {
   if (!usageOverview.subscriptionCreatedAt) {
-    throw new Error(
-      `Missing subscriptionCreatedAt for workspace ${usageOverview.workspaceId}`,
-    )
+    throw new Error(`Missing subscriptionCreatedAt for workspace ${usageOverview.workspaceId}`)
   }
 
   const usage = await computeWorkspaceUsage({

@@ -1,19 +1,16 @@
 import { resolveRelativePath } from '@latitude-data/constants'
-import { AstError } from '@latitude-data/constants/promptl'
-import {
-  DropdownMenu,
-  MenuOption,
-} from '@latitude-data/web-ui/atoms/DropdownMenu'
+import type { AstError } from '@latitude-data/constants/promptl'
+import { DropdownMenu, type MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
-import { EventHandler, MouseEvent, useCallback, useMemo } from 'react'
+import { type EventHandler, type MouseEvent, useCallback, useMemo } from 'react'
 import { triggerReferencePathUpdate } from '../../../plugins/ReferenceEditPlugin'
 import { triggerToggleDevEditor } from '../../../plugins/ReferencesPlugin'
 import { useBlocksEditorContext } from '../../../Provider'
-import { ReferenceLink as SerializedReferenceLink } from '../../../state/promptlToLexical/types'
+import type { ReferenceLink as SerializedReferenceLink } from '../../../state/promptlToLexical/types'
 
 function createLinkError(message: string): AstError {
   return {
@@ -74,16 +71,8 @@ function LinkInfo({
   if (!hasErrors) return linkText
 
   return (
-    <Tooltip
-      variant='destructive'
-      align='start'
-      sideOffset={8}
-      asChild
-      trigger={linkText}
-    >
-      {errors && errors.length > 0
-        ? errors[0]?.message
-        : 'Missing values. Click to configure'}
+    <Tooltip variant='destructive' align='start' sideOffset={8} asChild trigger={linkText}>
+      {errors && errors.length > 0 ? errors[0]?.message : 'Missing values. Click to configure'}
     </Tooltip>
   )
 }
@@ -118,9 +107,7 @@ function ReferenceLinkReal({
   const path = resolveRelativePath(relativePath, currentDocument.path)
   const url = prompts[path]?.url
   const attributeKeys = Object.keys(initialAttributes).filter(
-    (k) =>
-      k !== 'path' &&
-      (initialAttributes[k] === undefined || initialAttributes[k] === null),
+    (k) => k !== 'path' && (initialAttributes[k] === undefined || initialAttributes[k] === null),
   )
   const missingValues = attributeKeys.length > 0
   const errors = useMemo(() => {

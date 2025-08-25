@@ -1,25 +1,19 @@
 import { env } from '@latitude-data/env'
-import {
-  Commit,
-  DocumentVersion,
-  HEAD_COMMIT,
-  Workspace,
-} from '../../../../browser'
-import {
-  unsafelyFindWorkspace,
-  unsafelyGetApiKeyByToken,
-} from '../../../../data-access'
+import { type Commit, type DocumentVersion, HEAD_COMMIT, type Workspace } from '../../../../browser'
+import { unsafelyFindWorkspace, unsafelyGetApiKeyByToken } from '../../../../data-access'
 import { Result } from '../../../../lib/Result'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../../../repositories'
+import { CommitsRepository, DocumentVersionsRepository } from '../../../../repositories'
+
+type AutogenerateToolResponseCopilotData = {
+  workspace: Workspace
+  commit: Commit
+  document: DocumentVersion
+}
 
 function getCopilotCredentials() {
   const apiKey = env.COPILOT_WORKSPACE_API_KEY
   const projectId = env.COPILOT_PROJECT_ID
-  const generateToolResponsesPath =
-    env.COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH
+  const generateToolResponsesPath = env.COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH
   if (!apiKey) {
     return Result.error(new Error('COPILOT_WORKSPACE_API_KEY is not set'))
   }
@@ -38,14 +32,7 @@ function buildError({ data }: { data: string }) {
   )
 }
 
-export type AutogenerateToolResponseCopilotData = {
-  workspace: Workspace
-  commit: Commit
-  document: DocumentVersion
-}
-
-let CACHED_COPILOT_DATA: AutogenerateToolResponseCopilotData | undefined =
-  undefined
+let CACHED_COPILOT_DATA: AutogenerateToolResponseCopilotData | undefined
 
 export async function getCopilotDataForGenerateToolResponses() {
   if (CACHED_COPILOT_DATA !== undefined) return Result.ok(CACHED_COPILOT_DATA)
@@ -53,11 +40,7 @@ export async function getCopilotDataForGenerateToolResponses() {
   const credentialsResult = getCopilotCredentials()
   if (credentialsResult.error) return credentialsResult
 
-  const {
-    apiKey: token,
-    projectId,
-    generateToolResponsesPath,
-  } = credentialsResult.value
+  const { apiKey: token, projectId, generateToolResponsesPath } = credentialsResult.value
   const apiKeyResult = await unsafelyGetApiKeyByToken({
     token,
   })

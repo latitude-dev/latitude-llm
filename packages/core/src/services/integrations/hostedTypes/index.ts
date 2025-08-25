@@ -1,5 +1,5 @@
 import { HostedIntegrationType } from '@latitude-data/constants'
-import { HostedIntegrationConfig } from './types'
+import type { HostedIntegrationConfig } from './types'
 import SLACK_MCP_CONFIG from './configs/slack'
 import STRIPE_MCP_CONFIG from './configs/stripe'
 import GITHUB_MCP_CONFIG from './configs/github'
@@ -81,10 +81,7 @@ import READWISE_MCP_CONFIG from './configs/readwise'
 import AIRBNB_MCP_CONFIG from './configs/airbnb'
 import MINTLIFY_MCP_CONFIG from './configs/mintlify'
 
-export const HOSTED_MCP_CONFIGS: Record<
-  HostedIntegrationType,
-  HostedIntegrationConfig
-> = {
+export const HOSTED_MCP_CONFIGS: Record<HostedIntegrationType, HostedIntegrationConfig> = {
   [HostedIntegrationType.Slack]: SLACK_MCP_CONFIG,
   [HostedIntegrationType.Stripe]: STRIPE_MCP_CONFIG,
   [HostedIntegrationType.Github]: GITHUB_MCP_CONFIG,
@@ -140,8 +137,7 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.Firecrawl]: FIRECRAWL_MCP_CONFIG,
   [HostedIntegrationType.Graphlit]: GRAPHLIT_MCP_CONFIG,
   [HostedIntegrationType.Heroku]: HEROKU_MCP_CONFIG,
-  [HostedIntegrationType.IntegrationAppHubspot]:
-    INTEGRATION_APP_HUBSPOT_MCP_CONFIG,
+  [HostedIntegrationType.IntegrationAppHubspot]: INTEGRATION_APP_HUBSPOT_MCP_CONFIG,
   [HostedIntegrationType.LaraTranslate]: LARA_TRANSLATE_MCP_CONFIG,
   [HostedIntegrationType.Logfire]: LOGFIRE_MCP_CONFIG,
   [HostedIntegrationType.Langfuse]: LANGFUSE_MCP_CONFIG,

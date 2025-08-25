@@ -3,24 +3,20 @@ import {
   $applyNodeReplacement,
   $createParagraphNode,
   $createTextNode,
-  EditorConfig,
+  type EditorConfig,
   ElementNode,
-  LexicalNode,
-  NodeKey,
-  SerializedLexicalNode,
+  type LexicalNode,
+  type NodeKey,
+  type SerializedLexicalNode,
 } from 'lexical'
-import { Root } from 'react-dom/client'
+import type { Root } from 'react-dom/client'
 import {
   BLOCK_EDITOR_TYPE,
-  MessageBlock,
-  MessageBlockType,
+  type MessageBlock,
+  type MessageBlockType,
 } from '../../state/promptlToLexical/types'
 import { $isStepBlockNode } from '../StepBlock'
-import {
-  createReactDivWrapper,
-  replaceReactRoot,
-  VERTICAL_SPACE_CLASS,
-} from '../utils'
+import { createReactDivWrapper, replaceReactRoot, VERTICAL_SPACE_CLASS } from '../utils'
 import { MessageHeader } from './MessageHeader'
 
 interface SerializedMessageBlock extends Omit<MessageBlock, 'children'> {
@@ -41,11 +37,7 @@ export class MessageBlockNode extends ElementNode {
     return new MessageBlockNode(node.__role, node.__readOnly, node.__key)
   }
 
-  constructor(
-    role: MessageBlockType = 'user',
-    readOnly?: boolean,
-    key?: NodeKey,
-  ) {
+  constructor(role: MessageBlockType = 'user', readOnly?: boolean, key?: NodeKey) {
     super(key)
     this.__role = role
     this.__readOnly = readOnly
@@ -97,11 +89,7 @@ export class MessageBlockNode extends ElementNode {
 
   __renderHeader(root: Root) {
     root.render(
-      <MessageHeader
-        nodeKey={this.getKey()}
-        role={this.getRole()}
-        readOnly={this.getReadOnly()}
-      />,
+      <MessageHeader nodeKey={this.getKey()} role={this.getRole()} readOnly={this.getReadOnly()} />,
     )
   }
 
@@ -167,9 +155,7 @@ export class MessageBlockNode extends ElementNode {
   }
 
   getDOMSlot(element: HTMLElement) {
-    const contentArea = element.querySelector(
-      '[data-content-area="true"]',
-    ) as HTMLElement
+    const contentArea = element.querySelector('[data-content-area="true"]') as HTMLElement
     return super.getDOMSlot(element).withElement(contentArea)
   }
 }

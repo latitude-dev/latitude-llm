@@ -51,19 +51,16 @@ describe('notifyToClientDocumentLogCreatedJob', () => {
     // @ts-ignore
     await notifyToClientDocumentLogCreatedJob({ data: event })
 
-    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
-      'documentLogCreated',
-      {
+    expect(WebsocketClient.sendEvent).toHaveBeenCalledWith('documentLogCreated', {
+      workspaceId: workspace.id,
+      data: {
         workspaceId: workspace.id,
-        data: {
-          workspaceId: workspace.id,
-          documentUuid: documentLog.documentUuid,
-          documentLogId: documentLog.id,
-          commitUuid: commit.uuid,
-          documentLogWithMetadata: expect.any(Object),
-        },
+        documentUuid: documentLog.documentUuid,
+        documentLogId: documentLog.id,
+        commitUuid: commit.uuid,
+        documentLogWithMetadata: expect.any(Object),
       },
-    )
+    })
   })
 
   it('should handle document logs with errors', async () => {

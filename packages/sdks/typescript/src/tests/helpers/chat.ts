@@ -1,9 +1,9 @@
 import { CHUNKS, FINAL_RESPONSE } from '$sdk/test/chunks-example'
 import { ApiErrorCodes } from '$sdk/utils/errors'
 import { parseSSE } from '$sdk/utils/parseSSE'
-import { ChatSyncAPIResponse, SdkApiVersion } from '$sdk/utils/types'
+import type { ChatSyncAPIResponse, SdkApiVersion } from '$sdk/utils/types'
 import { http, HttpResponse } from 'msw'
-import { setupServer } from 'msw/node'
+import type { setupServer } from 'msw/node'
 import { vi } from 'vitest'
 
 type Server = ReturnType<typeof setupServer>
@@ -79,9 +79,7 @@ export function mockStreamResponse({
             CHUNKS.forEach((chunk, index) => {
               // @ts-expect-error
               const { event, data } = parseSSE(chunk)
-              controller.enqueue(
-                encoder.encode(`event: ${event}\ndata: ${data}\n\n`),
-              )
+              controller.enqueue(encoder.encode(`event: ${event}\ndata: ${data}\n\n`))
               if (index === CHUNKS.length - 1) {
                 controller.close()
               }

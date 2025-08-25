@@ -31,10 +31,7 @@ export const captureException = (error: Error) => {
   }
 }
 
-export const captureMessage = (
-  message: string,
-  severity?: Sentry.SeverityLevel,
-) => {
+export const captureMessage = (message: string, severity?: Sentry.SeverityLevel) => {
   const s = initSentry()
 
   if (s) {

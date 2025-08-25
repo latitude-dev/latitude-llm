@@ -62,9 +62,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
         },
       },
     })
-    expect(result).toBe(
-      `${mockPath}?createdAt=${formatISO(fromDate)},${formatISO(toDate)}`,
-    )
+    expect(result).toBe(`${mockPath}?createdAt=${formatISO(fromDate)},${formatISO(toDate)}`)
   })
 
   it('should handle filterOptions with empty commitIds and logSources', () => {
@@ -112,9 +110,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
         },
       },
     })
-    expect(result).toBe(
-      `${mockPath}?customIdentifier=th%C3%ADs%20sh%C3%B3%C3%B9ld%20be%20encoded`,
-    )
+    expect(result).toBe(`${mockPath}?customIdentifier=th%C3%ADs%20sh%C3%B3%C3%B9ld%20be%20encoded`)
   })
 
   it('should handle mixed parameters', () => {

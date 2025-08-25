@@ -1,8 +1,8 @@
 'use client'
 
-import { ReactNode, useEffect } from 'react'
+import { type ReactNode, useEffect } from 'react'
 
-import { User, Workspace } from '@latitude-data/core/browser'
+import type { User, Workspace } from '@latitude-data/core/browser'
 import { envClient } from '$/envClient'
 import posthog from 'posthog-js'
 import { PostHogProvider, usePostHog } from 'posthog-js/react'

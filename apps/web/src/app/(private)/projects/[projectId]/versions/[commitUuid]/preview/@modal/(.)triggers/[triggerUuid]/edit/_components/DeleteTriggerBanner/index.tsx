@@ -1,12 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
+import type { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
 
@@ -25,10 +22,7 @@ export function DeleteTriggerBanner({
   document: DocumentVersion
   onCloseModal: () => void
 }) {
-  const documentName = useMemo(
-    () => document.path.split('/').pop() || 'this document',
-    [document],
-  )
+  const documentName = useMemo(() => document.path.split('/').pop() || 'this document', [document])
   const triggerTypeName = TYPE_NAMES[trigger.triggerType] || 'Trigger'
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -55,10 +49,7 @@ export function DeleteTriggerBanner({
         <div className='flex flex-col gap-4'>
           <Text.H4M>Are you sure you want to delete this trigger?</Text.H4M>
           <div className='flex justify-end gap-x-4'>
-            <Button
-              variant='outline'
-              onClick={() => setIsDeleteExpanded(false)}
-            >
+            <Button variant='outline' onClick={() => setIsDeleteExpanded(false)}>
               Cancel
             </Button>
             <Button

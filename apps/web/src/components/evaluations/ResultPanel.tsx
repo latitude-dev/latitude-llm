@@ -14,13 +14,13 @@ import useDatasetRowPosition from '$/stores/datasetRows/position'
 import useDocumentLog from '$/stores/documentLogWithMetadata'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
-  Commit,
-  Dataset,
-  DatasetRow,
-  DocumentLog,
-  DocumentVersion,
-  EvaluationMetric,
-  EvaluationResultV2,
+  type Commit,
+  type Dataset,
+  type DatasetRow,
+  type DocumentLog,
+  type DocumentVersion,
+  type EvaluationMetric,
+  type EvaluationResultV2,
   EvaluationType,
   baseEvaluationConfiguration,
 } from '@latitude-data/core/browser'
@@ -33,15 +33,12 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import {
-  IProjectContextType,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { type IProjectContextType, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { format } from 'date-fns'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
+import { EVALUATION_SPECIFICATIONS, type ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
 
 const PARSING_FORMAT_LABELS = baseEvaluationConfiguration.shape.actualOutput
@@ -55,8 +52,7 @@ const PARSING_FORMAT_LABELS = baseEvaluationConfiguration.shape.actualOutput
   )
 
 const DataGrid = dynamic(
-  () =>
-    import('$/app/(private)/datasets/[datasetId]/DatasetDetailTable/DataGrid'),
+  () => import('$/app/(private)/datasets/[datasetId]/DatasetDetailTable/DataGrid'),
   {
     ssr: false,
     loading: () => <TableSkeleton rows={8} cols={5} maxHeight={320} />,
@@ -140,10 +136,7 @@ function EvaluatedDatasetRowModal({
   )
 }
 
-function ResultPanelMetadata<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({
+function ResultPanelMetadata<T extends EvaluationType, M extends EvaluationMetric<T>>({
   evaluation,
   result,
   commit,
@@ -166,10 +159,7 @@ function ResultPanelMetadata<
           </Text.H5>
         </ClickToCopy>
       </MetadataItem>
-      <MetadataItem
-        label='Timestamp'
-        value={format(new Date(result.createdAt), 'PPp')}
-      />
+      <MetadataItem label='Timestamp' value={format(new Date(result.createdAt), 'PPp')} />
       <MetadataItem label='Version'>
         <ClickToCopy copyValue={commit.uuid}>
           <Text.H5 align='right' color='foregroundMuted'>
@@ -193,8 +183,7 @@ function ResultPanelMetadata<
           >
             <div className='flex flex-col gap-2'>
               {ACCESSIBLE_OUTPUT_FORMATS.includes(
-                result.metadata!.configuration.actualOutput?.parsingFormat ||
-                  'string',
+                result.metadata!.configuration.actualOutput?.parsingFormat || 'string',
               ) ? (
                 <Text.H6 color='foregroundMuted' noWrap ellipsis>
                   Parsed from{' '}
@@ -203,8 +192,7 @@ function ResultPanelMetadata<
                       result.metadata!.configuration.actualOutput!.parsingFormat
                     ]
                   }
-                  {!!result.metadata!.configuration.actualOutput
-                    ?.fieldAccessor &&
+                  {!!result.metadata!.configuration.actualOutput?.fieldAccessor &&
                     ` using field '${result.metadata!.configuration.actualOutput!.fieldAccessor}'`}
                 </Text.H6>
               ) : (
@@ -254,16 +242,12 @@ function ResultPanelMetadata<
           <MetadataItem label='Result'>
             <ResultBadge evaluation={evaluation} result={result} />
           </MetadataItem>
-          {(evaluation.type === EvaluationType.Llm ||
-            evaluation.type === EvaluationType.Human) && (
+          {(evaluation.type === EvaluationType.Llm || evaluation.type === EvaluationType.Human) && (
             <MetadataItem
               label='Reasoning'
               value={
-                (
-                  result as EvaluationResultV2<
-                    EvaluationType.Llm | EvaluationType.Human
-                  >
-                ).metadata!.reason || 'No reason reported'
+                (result as EvaluationResultV2<EvaluationType.Llm | EvaluationType.Human>).metadata!
+                  .reason || 'No reason reported'
               }
               stacked
             />
@@ -309,13 +293,12 @@ function EvaluatedDocumentLogLink({
   const query = new URLSearchParams()
   query.set('logUuid', documentLog.uuid)
 
-  return (
+  return `${
     ROUTES.projects
       .detail({ id: project.id })
       .commits.detail({ uuid: commit.uuid })
-      .documents.detail({ uuid: document.documentUuid }).logs.root +
-    `?${query.toString()}`
-  )
+      .documents.detail({ uuid: document.documentUuid }).logs.root
+  }?${query.toString()}`
 }
 
 function ResultPanelLoading() {
@@ -332,10 +315,7 @@ function ResultPanelLoading() {
   )
 }
 
-export function ResultPanel<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
->({
+export function ResultPanel<T extends EvaluationType, M extends EvaluationMetric<T>>({
   evaluation,
   result,
   commit,
@@ -363,10 +343,9 @@ export function ResultPanel<
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
 
-  const {
-    data: evaluatedDocumentLog,
-    isLoading: isLoadingEvaluatedDocumentLog,
-  } = useDocumentLog({ documentLogUuid: evaluatedProviderLog.documentLogUuid })
+  const { data: evaluatedDocumentLog, isLoading: isLoadingEvaluatedDocumentLog } = useDocumentLog({
+    documentLogUuid: evaluatedProviderLog.documentLogUuid,
+  })
 
   const isLoading = isLoadingEvaluatedDocumentLog || !evaluatedDocumentLog
 

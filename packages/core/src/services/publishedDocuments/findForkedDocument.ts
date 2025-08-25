@@ -1,4 +1,4 @@
-import { Workspace } from '../../browser'
+import type { Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import {
   CommitsRepository,

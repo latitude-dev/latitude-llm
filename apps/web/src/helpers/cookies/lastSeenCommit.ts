@@ -1,2 +1,1 @@
-export const lastSeenCommitCookieName = (projectId: number) =>
-  `last-seen-commit-${projectId}`
+export const lastSeenCommitCookieName = (projectId: number) => `last-seen-commit-${projectId}`

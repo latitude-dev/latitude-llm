@@ -11,11 +11,7 @@ export const getChangedDocumentsInDraftAction = withProject
   .input(z.object({ id: z.number() }))
   .handler(async ({ input, ctx }) => {
     const commitScope = new CommitsRepository(ctx.workspace.id)
-    const commit = await commitScope
-      .getCommitById(input.id)
-      .then((r) => r.unwrap())
+    const commit = await commitScope.getCommitById(input.id).then((r) => r.unwrap())
 
-    return getCommitChanges({ commit, workspace: ctx.workspace }).then((r) =>
-      r.unwrap(),
-    )
+    return getCommitChanges({ commit, workspace: ctx.workspace }).then((r) => r.unwrap())
   })

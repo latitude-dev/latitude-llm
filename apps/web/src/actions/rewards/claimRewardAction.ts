@@ -1,6 +1,6 @@
 'use server'
 
-import { ClaimedReward, RewardType } from '@latitude-data/core/browser'
+import { type ClaimedReward, RewardType } from '@latitude-data/core/browser'
 import { claimReward } from '@latitude-data/core/services/claimedRewards/claim'
 import { z } from 'zod'
 

@@ -2,17 +2,17 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useUsers from '$/stores/users'
 import { DocumentTriggerParameters } from '@latitude-data/constants'
-import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import type { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CopyButton } from '@latitude-data/web-ui/atoms/CopyButton'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, type IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
-import { ReactNode, useCallback, useState } from 'react'
+import { type ReactNode, useCallback, useState } from 'react'
 
 enum EmailAvailabilityOptions {
   Public = 'public',
@@ -20,10 +20,7 @@ enum EmailAvailabilityOptions {
   Disabled = 'disabled',
 }
 
-const AVAILABILITY_OPTIONS: Record<
-  EmailAvailabilityOptions,
-  { label: string; icon: IconName }
-> = {
+const AVAILABILITY_OPTIONS: Record<EmailAvailabilityOptions, { label: string; icon: IconName }> = {
   [EmailAvailabilityOptions.Disabled]: { label: 'Disabled', icon: 'close' },
   [EmailAvailabilityOptions.Private]: {
     label: 'Only selected emails and domains',
@@ -53,11 +50,7 @@ function Whitelist({
           {item}
         </Text.H6>
       </div>
-      <Button
-        variant='ghost'
-        onClick={() => onRemove(item)}
-        iconProps={{ name: 'close' }}
-      />
+      <Button variant='ghost' onClick={() => onRemove(item)} iconProps={{ name: 'close' }} />
     </div>
   ))
 }
@@ -88,17 +81,13 @@ function ParameterSelects({
 
         return (
           <div className='flex gap-2 items-center' key={paramName}>
-            <Badge
-              variant={value ? 'accent' : 'muted'}
-            >{`{{${paramName}}}`}</Badge>
+            <Badge variant={value ? 'accent' : 'muted'}>{`{{${paramName}}}`}</Badge>
             <Select
               name={paramName}
-              options={Object.entries(PARAMETER_OPTIONS).map(
-                ([key, value]) => ({
-                  value: key,
-                  label: value,
-                }),
-              )}
+              options={Object.entries(PARAMETER_OPTIONS).map(([key, value]) => ({
+                value: key,
+                label: value,
+              }))}
               disabled={disabled}
               value={value}
               onChange={(newValue) => {
@@ -163,9 +152,9 @@ export function EmailTriggerConfig({
   const [name, setName] = useState<string>(
     emailTriggerConfig?.name ?? document.path.split('/').at(-1)!,
   )
-  const [parameters, setParameters] = useState<
-    Record<string, DocumentTriggerParameters>
-  >(emailTriggerConfig?.parameters ?? {})
+  const [parameters, setParameters] = useState<Record<string, DocumentTriggerParameters>>(
+    emailTriggerConfig?.parameters ?? {},
+  )
 
   const [emailInput, setEmailInput] = useState('')
   const onAddEmail = useCallback(() => {
@@ -182,16 +171,15 @@ export function EmailTriggerConfig({
     setEmailInput('')
   }, [emailInput])
 
-  const [emailAvailability, _setEmailAvailability] =
-    useState<EmailAvailabilityOptions>(
-      emailTriggerConfig
-        ? (emailTriggerConfig.emailWhitelist?.length ?? 0) +
-            (emailTriggerConfig.domainWhitelist?.length ?? 0) >
-          0
-          ? EmailAvailabilityOptions.Private
-          : EmailAvailabilityOptions.Public
-        : EmailAvailabilityOptions.Disabled,
-    )
+  const [emailAvailability, _setEmailAvailability] = useState<EmailAvailabilityOptions>(
+    emailTriggerConfig
+      ? (emailTriggerConfig.emailWhitelist?.length ?? 0) +
+          (emailTriggerConfig.domainWhitelist?.length ?? 0) >
+        0
+        ? EmailAvailabilityOptions.Private
+        : EmailAvailabilityOptions.Public
+      : EmailAvailabilityOptions.Disabled,
+  )
 
   const setEmailEvailability = useCallback(
     (value: EmailAvailabilityOptions) => {
@@ -243,9 +231,7 @@ export function EmailTriggerConfig({
             icon: <Icon name={value.icon} />,
           }))}
           value={emailAvailability}
-          onChange={(value) =>
-            setEmailEvailability(value as EmailAvailabilityOptions)
-          }
+          onChange={(value) => setEmailEvailability(value as EmailAvailabilityOptions)}
         />
         {emailAvailability === EmailAvailabilityOptions.Private && (
           <div className='flex flex-col gap-2'>
@@ -270,21 +256,15 @@ export function EmailTriggerConfig({
             <Whitelist
               items={emailWhitelist}
               icon='circleUser'
-              onRemove={(item) =>
-                setEmailWhitelist((prev) => prev.filter((e) => e !== item))
-              }
+              onRemove={(item) => setEmailWhitelist((prev) => prev.filter((e) => e !== item))}
             />
             <Whitelist
               items={domainWhitelist}
               icon='atSign'
-              onRemove={(item) =>
-                setDomainWhitelist((prev) => prev.filter((e) => e !== item))
-              }
+              onRemove={(item) => setDomainWhitelist((prev) => prev.filter((e) => e !== item))}
             />
             {!emailWhitelist.length && !domainWhitelist.length && (
-              <Text.H6 color='foregroundMuted'>
-                No emails or domains added to the whitelist
-              </Text.H6>
+              <Text.H6 color='foregroundMuted'>No emails or domains added to the whitelist</Text.H6>
             )}
           </div>
         )}

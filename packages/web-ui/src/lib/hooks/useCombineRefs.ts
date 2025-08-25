@@ -1,4 +1,4 @@
-import { ForwardedRef, useCallback, useRef } from 'react'
+import { type ForwardedRef, useCallback, useRef } from 'react'
 
 type OptionalRef<T> = ForwardedRef<T> | undefined
 
@@ -20,7 +20,7 @@ export function useCombinedRefs<T>(...refs: OptionalRef<T>[]) {
         const ref = refs[index]
         const prev = previousRefs.current[index]
 
-        if (prev != ref) setRef(prev, null)
+        if (prev !== ref) setRef(prev, null)
 
         setRef(ref, value)
       }
@@ -33,7 +33,8 @@ export function useCombinedRefs<T>(...refs: OptionalRef<T>[]) {
       previousRefs.current = refs
     },
     // This is a legitimate use case where we need to depend on the dynamic refs array
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
     refs,
   )
 }

@@ -1,11 +1,11 @@
 import { CodeSandbox, type Sandbox } from '@codesandbox/sdk'
 import { env } from '@latitude-data/env'
-import { BadRequestError, LatitudeError } from '../../../lib/errors'
-import { Result, TypedResult } from '../../../lib/Result'
-import { CodeRunResult } from './types.js'
+import { BadRequestError, type LatitudeError } from '../../../lib/errors'
+import { Result, type TypedResult } from '../../../lib/Result'
+import type { CodeRunResult } from './types.js'
 
 export function normalizedResult(result: CodeRunResult): CodeRunResult {
-  const ansiEscapeCodes = new RegExp(String.raw`\x1b\[[0-9;]*m`, 'g')
+  const ansiEscapeCodes = /\x1b\[[0-9;]*m/g
   return {
     ...result,
     output: result.output.replace(ansiEscapeCodes, ''),
@@ -25,10 +25,7 @@ async function createSandbox() {
   }
 }
 
-export const withSafeSandbox = async <
-  V,
-  T extends TypedResult<V, LatitudeError>,
->(
+export const withSafeSandbox = async <V, T extends TypedResult<V, LatitudeError>>(
   fn: (sandbox: Sandbox) => Promise<T>,
   maxTime: number = 60_000,
 ): Promise<T> => {
@@ -39,9 +36,7 @@ export const withSafeSandbox = async <
   const timeoutPromise = new Promise<T>((resolve) => {
     setTimeout(() => {
       resolve(
-        Result.error(
-          new BadRequestError(`Code execution timed out after ${maxTime} ms.`),
-        ) as T,
+        Result.error(new BadRequestError(`Code execution timed out after ${maxTime} ms.`)) as T,
       )
     }, maxTime)
   })

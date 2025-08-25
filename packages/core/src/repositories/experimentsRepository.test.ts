@@ -1,15 +1,15 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  EvaluationV2,
-  ProviderApiKey,
+  type Commit,
+  type Dataset,
+  type DocumentVersion,
+  type EvaluationV2,
+  type ProviderApiKey,
   Providers,
-  Workspace,
+  type Workspace,
 } from '../browser'
 import { NotFoundError } from '../lib/errors'
 import * as factories from '../tests/factories'
@@ -58,11 +58,7 @@ describe('ExperimentsRepository', () => {
       author: user,
       fileContent: factories.generateCsvContent({
         headers: ['a', 'b', 'c'],
-        rows: Array.from({ length: 50 }).map((_, i) => [
-          `a${i}`,
-          `b${i}`,
-          `c${i}`,
-        ]),
+        rows: Array.from({ length: 50 }).map((_, i) => [`a${i}`, `b${i}`, `c${i}`]),
       }),
     })
     dataset = createdDataset
@@ -170,12 +166,8 @@ describe('ExperimentsRepository', () => {
       expect(results).toBeDefined()
       expect(results.length).toBe(2)
 
-      const experiment1Result = results.find(
-        (experiment) => experiment.id === experiment1.id,
-      )
-      const experiment2Result = results.find(
-        (experiment) => experiment.id === experiment2.id,
-      )
+      const experiment1Result = results.find((experiment) => experiment.id === experiment1.id)
+      const experiment2Result = results.find((experiment) => experiment.id === experiment2.id)
       expect(experiment1Result).toBeDefined()
       expect(experiment2Result).toBeDefined()
 
@@ -187,9 +179,7 @@ describe('ExperimentsRepository', () => {
 
       expect(experiment2Result?.results.passed).toBe(1 * evaluations.length)
       expect(experiment2Result?.results.failed).toBe(0)
-      expect(experiment2Result?.results.totalScore).toBe(
-        40 * evaluations.length,
-      )
+      expect(experiment2Result?.results.totalScore).toBe(40 * evaluations.length)
     })
 
     it('returns an empty array if no experiments are found', async () => {
@@ -268,9 +258,7 @@ describe('ExperimentsRepository', () => {
       expect(experimentResult.name).toBe(experiment.name)
       expect(experimentResult.results.passed).toBe(3 * evaluations.length)
       expect(experimentResult.results.failed).toBe(0)
-      expect(experimentResult.results.totalScore).toBe(
-        (10 + 20 + 40) * evaluations.length,
-      )
+      expect(experimentResult.results.totalScore).toBe((10 + 20 + 40) * evaluations.length)
     })
 
     it('throws NotFoundError if the experiment is not found', async () => {

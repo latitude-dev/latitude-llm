@@ -1,6 +1,6 @@
 'use client'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { DocsRoute } from './routes'
+import type { DocsRoute } from './routes'
 import { useDocs } from './Provider'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useState } from 'react'

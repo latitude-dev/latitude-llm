@@ -1,8 +1,8 @@
 import { cache } from 'react'
 
 import { getDataFromSession } from '$/data-access'
-import { Workspace } from '@latitude-data/core/browser'
-import { Session } from 'lucia'
+import type { Workspace } from '@latitude-data/core/browser'
+import type { Session } from 'lucia'
 
 import { notFound, redirect } from 'next/navigation'
 import { ROUTES } from '../routes'
@@ -29,9 +29,7 @@ function redirectToLogin(currentUrl?: string) {
     return notFound()
   }
 
-  return redirect(
-    `${ROUTES.auth.login}?returnTo=${encodeURIComponent(currentUrl)}`,
-  )
+  return redirect(`${ROUTES.auth.login}?returnTo=${encodeURIComponent(currentUrl)}`)
 }
 
 /**
@@ -54,9 +52,7 @@ export const getCurrentUserOrRedirect = cache(async () => {
     return redirectToLogin(currentUrl)
   }
 
-  const { user, workspace, subscriptionPlan } = await getDataFromSession(
-    sessionData.session,
-  )
+  const { user, workspace, subscriptionPlan } = await getDataFromSession(sessionData.session)
   if (!user || !workspace) {
     return redirectToLogin(currentUrl)
   }

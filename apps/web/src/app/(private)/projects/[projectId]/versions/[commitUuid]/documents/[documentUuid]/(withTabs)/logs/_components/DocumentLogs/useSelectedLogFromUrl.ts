@@ -1,4 +1,4 @@
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/browser'
+import type { DocumentLogWithMetadataAndError } from '@latitude-data/core/browser'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -18,9 +18,9 @@ export function useSelectedLogFromUrl({
 }) {
   const searchParams = useSearchParams()
 
-  const [selectedLog, setSelectedLog] = useState<
-    DocumentLogWithMetadataAndError | undefined
-  >(serverSelectedLog)
+  const [selectedLog, setSelectedLog] = useState<DocumentLogWithMetadataAndError | undefined>(
+    serverSelectedLog,
+  )
 
   useEffect(() => {
     const newSearchParams = new URLSearchParams(searchParams.toString())
@@ -43,6 +43,6 @@ export function useSelectedLogFromUrl({
       selectedLog,
       setSelectedLog,
     }),
-    [selectedLog, setSelectedLog],
+    [selectedLog],
   )
 }

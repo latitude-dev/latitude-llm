@@ -1,5 +1,5 @@
 import { createRouter } from '$/openApi/createApp'
-import { OpenAPIHono } from '@hono/zod-openapi'
+import type { OpenAPIHono } from '@hono/zod-openapi'
 import { emailWebhookHandler, emailWebhookRoute } from './email'
 import {
   integrationLegacyWebhookHandler,

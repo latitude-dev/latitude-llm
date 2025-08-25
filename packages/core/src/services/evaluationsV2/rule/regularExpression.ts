@@ -1,15 +1,15 @@
 import safeRegex from 'safe-regex'
 import {
-  EvaluationType,
-  RuleEvaluationMetric,
+  type EvaluationType,
+  type RuleEvaluationMetric,
   RuleEvaluationRegularExpressionSpecification as specification,
 } from '../../../browser'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {
-  EvaluationMetricRunArgs,
-  EvaluationMetricValidateArgs,
+  type EvaluationMetricRunArgs,
+  type EvaluationMetricValidateArgs,
   normalizeScore,
 } from '../shared'
 
@@ -24,10 +24,7 @@ const PATTERN_COMPLEXITY_LIMIT = 25
 async function validate(
   {
     configuration,
-  }: EvaluationMetricValidateArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.RegularExpression
-  >,
+  }: EvaluationMetricValidateArgs<EvaluationType.Rule, RuleEvaluationMetric.RegularExpression>,
   _ = database,
 ) {
   configuration.pattern = configuration.pattern.trim()
@@ -59,10 +56,7 @@ async function run(
   {
     evaluation,
     actualOutput,
-  }: EvaluationMetricRunArgs<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.RegularExpression
-  >,
+  }: EvaluationMetricRunArgs<EvaluationType.Rule, RuleEvaluationMetric.RegularExpression>,
   _ = database,
 ) {
   const metadata = {

@@ -1,28 +1,9 @@
-import {
-  and,
-  count,
-  desc,
-  eq,
-  getTableColumns,
-  isNotNull,
-  isNull,
-  sql,
-  sum,
-} from 'drizzle-orm'
+import { and, count, desc, eq, getTableColumns, isNotNull, isNull, sql, sum } from 'drizzle-orm'
 
-import {
-  ConnectedEvaluation,
-  DocumentVersion,
-  EvaluationDto,
-} from '../../browser'
-import { LatitudeError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
-import {
-  connectedEvaluations,
-  documentLogs,
-  evaluations,
-  providerLogs,
-} from '../../schema'
+import type { ConnectedEvaluation, DocumentVersion, EvaluationDto } from '../../browser'
+import type { LatitudeError } from '../../lib/errors'
+import { Result, type TypedResult } from '../../lib/Result'
+import { connectedEvaluations, documentLogs, evaluations, providerLogs } from '../../schema'
 import { DocumentVersionsRepository } from '../documentVersionsRepository'
 import { EvaluationResultsRepository } from '../evaluationResultsRepository'
 import { EvaluationsRepository } from '../evaluationsRepository'
@@ -55,45 +36,30 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
       .from(connectedEvaluations)
       .innerJoin(
         evaluations,
-        and(
-          isNull(evaluations.deletedAt),
-          eq(connectedEvaluations.evaluationId, evaluations.id),
-        ),
+        and(isNull(evaluations.deletedAt), eq(connectedEvaluations.evaluationId, evaluations.id)),
       )
       .where(eq(evaluations.workspaceId, this.workspaceId))
       .as('connectedEvaluationsScope')
   }
 
   async findByEvaluationId(id: number) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.evaluationId, id))
+    const result = await this.db.select().from(this.scope).where(eq(this.scope.evaluationId, id))
 
     return Result.ok(result)
   }
 
   async filterByDocumentUuid(uuid: string) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.documentUuid, uuid))
+    const result = await this.db.select().from(this.scope).where(eq(this.scope.documentUuid, uuid))
 
     return Result.ok(result)
   }
 
-  async findByDocumentAndEvaluation(
-    documentUuid: string,
-    evaluationId: number,
-  ) {
+  async findByDocumentAndEvaluation(documentUuid: string, evaluationId: number) {
     const result = await this.db
       .select()
       .from(this.scope)
       .where(
-        and(
-          eq(this.scope.documentUuid, documentUuid),
-          eq(this.scope.evaluationId, evaluationId),
-        ),
+        and(eq(this.scope.documentUuid, documentUuid), eq(this.scope.evaluationId, evaluationId)),
       )
 
     return Result.ok(result[0])
@@ -102,10 +68,7 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
   async filterWithDetailsByDocumentUuid(
     uuid: string,
   ): Promise<TypedResult<ConnectedEvaluationWithDetails[], LatitudeError>> {
-    const evaluationsScope = new EvaluationsRepository(
-      this.workspaceId,
-      this.db,
-    )
+    const evaluationsScope = new EvaluationsRepository(this.workspaceId, this.db)
 
     const result = await this.db
       .select({
@@ -116,10 +79,7 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
         },
       })
       .from(this.scope)
-      .innerJoin(
-        evaluationsScope.scope,
-        eq(evaluationsScope.scope.id, this.scope.evaluationId),
-      )
+      .innerJoin(evaluationsScope.scope, eq(evaluationsScope.scope.id, this.scope.evaluationId))
       .where(eq(this.scope.documentUuid, uuid))
 
     return Result.ok(result as ConnectedEvaluationWithDetails[])
@@ -128,14 +88,8 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
   async getConnectedDocumentsWithMetadata(
     evaluationId: number,
   ): Promise<TypedResult<ConnectedDocumentWithMetadata[], LatitudeError>> {
-    const documentVersionsScope = new DocumentVersionsRepository(
-      this.workspaceId,
-      this.db,
-    )
-    const evaluationsScope = new EvaluationsRepository(
-      this.workspaceId,
-      this.db,
-    )
+    const documentVersionsScope = new DocumentVersionsRepository(this.workspaceId, this.db)
+    const evaluationsScope = new EvaluationsRepository(this.workspaceId, this.db)
 
     const lastVersionOfEachDocument = this.db // Last version of each (merged) document
       .$with('last_version_of_each_document')
@@ -159,19 +113,11 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
         .select({
           ...lastVersionOfEachDocument._.selectedFields,
           evaluationUuid: evaluationsScope.scope.uuid,
-          evaluationId: sql`${evaluationsScope.scope.id}`
-            .mapWith(Number)
-            .as('evaluation_id'),
+          evaluationId: sql`${evaluationsScope.scope.id}`.mapWith(Number).as('evaluation_id'),
         })
         .from(lastVersionOfEachDocument)
-        .innerJoin(
-          this.scope,
-          eq(this.scope.documentUuid, lastVersionOfEachDocument.documentUuid),
-        )
-        .innerJoin(
-          evaluationsScope.scope,
-          eq(evaluationsScope.scope.id, this.scope.evaluationId),
-        )
+        .innerJoin(this.scope, eq(this.scope.documentUuid, lastVersionOfEachDocument.documentUuid))
+        .innerJoin(evaluationsScope.scope, eq(evaluationsScope.scope.id, this.scope.evaluationId))
         .where(
           and(
             eq(this.scope.evaluationId, evaluationId),
@@ -182,43 +128,32 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
 
     const { scope } = new EvaluationResultsRepository(this.workspaceId, this.db)
     const evaluationResultsScope = scope.as('evaluation_results_repo')
-    const selectedEvaluationResults = this.db
-      .$with('selected_evaluation_results')
-      .as(
-        this.db
-          .select({
-            ...evaluationResultsScope._.selectedFields,
-            ...getTableColumns(documentLogs),
-            ...getTableColumns(providerLogs),
-          })
-          .from(evaluationResultsScope)
-          .innerJoin(
-            documentLogs,
-            eq(documentLogs.id, evaluationResultsScope.documentLogId),
-          )
-          .innerJoin(
-            providerLogs,
-            eq(providerLogs.id, evaluationResultsScope.evaluationProviderLogId),
-          )
-          .where(eq(evaluationResultsScope.evaluationId, evaluationId)),
-      )
+    const selectedEvaluationResults = this.db.$with('selected_evaluation_results').as(
+      this.db
+        .select({
+          ...evaluationResultsScope._.selectedFields,
+          ...getTableColumns(documentLogs),
+          ...getTableColumns(providerLogs),
+        })
+        .from(evaluationResultsScope)
+        .innerJoin(documentLogs, eq(documentLogs.id, evaluationResultsScope.documentLogId))
+        .innerJoin(
+          providerLogs,
+          eq(providerLogs.id, evaluationResultsScope.evaluationProviderLogId),
+        )
+        .where(eq(evaluationResultsScope.evaluationId, evaluationId)),
+    )
 
     const aggregatedResults = this.db
       .with(selectedEvaluationResults)
       .select({
         documentUuid: selectedEvaluationResults.documentUuid,
-        evaluationLogs: count(selectedEvaluationResults.id).as(
-          'evaluation_logs',
-        ),
+        evaluationLogs: count(selectedEvaluationResults.id).as('evaluation_logs'),
         totalTokens: sum(selectedEvaluationResults.tokens).as('total_tokens'),
-        costInMillicents: sum(selectedEvaluationResults.costInMillicents).as(
-          'cost_in_millicents',
-        ),
+        costInMillicents: sum(selectedEvaluationResults.costInMillicents).as('cost_in_millicents'),
         modalValue: sql<
           string | null
-        >`MODE() WITHIN GROUP (ORDER BY ${selectedEvaluationResults.result})`.as(
-          'modal_value',
-        ),
+        >`MODE() WITHIN GROUP (ORDER BY ${selectedEvaluationResults.result})`.as('modal_value'),
       })
       .from(selectedEvaluationResults)
       .groupBy(selectedEvaluationResults.documentUuid)
@@ -229,21 +164,14 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
         .with(aggregatedResults, selectedEvaluationResults)
         .select({
           documentUuid: aggregatedResults.documentUuid,
-          modalValueCount: count(selectedEvaluationResults.id).as(
-            'modal_value_count',
-          ),
+          modalValueCount: count(selectedEvaluationResults.id).as('modal_value_count'),
         })
         .from(aggregatedResults)
         .innerJoin(
           selectedEvaluationResults,
-          eq(
-            aggregatedResults.documentUuid,
-            selectedEvaluationResults.documentUuid,
-          ),
+          eq(aggregatedResults.documentUuid, selectedEvaluationResults.documentUuid),
         )
-        .where(
-          eq(selectedEvaluationResults.result, aggregatedResults.modalValue),
-        )
+        .where(eq(selectedEvaluationResults.result, aggregatedResults.modalValue))
         .groupBy(aggregatedResults.documentUuid),
     )
 
@@ -251,34 +179,28 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
       .with(connectedDocuments, aggregatedResults, modalValueCount)
       .select({
         ...connectedDocuments._.selectedFields,
-        evaluationLogs:
-          sql<number>`COALESCE(${aggregatedResults.evaluationLogs}, 0)`
-            .mapWith(Number)
-            .as('evaluation_logs'),
+        evaluationLogs: sql<number>`COALESCE(${aggregatedResults.evaluationLogs}, 0)`
+          .mapWith(Number)
+          .as('evaluation_logs'),
         totalTokens: sql<number>`COALESCE(${aggregatedResults.totalTokens}, 0)`
           .mapWith(Number)
           .as('total_tokens'),
-        costInMillicents:
-          sql<number>`COALESCE(${aggregatedResults.costInMillicents}, 0)`
-            .mapWith(Number)
-            .as('cost_in_millicents'),
-        modalValue: sql<
-          string | null
-        >`COALESCE(${aggregatedResults.modalValue}, NULL)`.as('modal_value'),
-        modalValueCount:
-          sql<number>`COALESCE(${modalValueCount.modalValueCount}, 0)`
-            .mapWith(Number)
-            .as('modal_value_count'),
+        costInMillicents: sql<number>`COALESCE(${aggregatedResults.costInMillicents}, 0)`
+          .mapWith(Number)
+          .as('cost_in_millicents'),
+        modalValue: sql<string | null>`COALESCE(${aggregatedResults.modalValue}, NULL)`.as(
+          'modal_value',
+        ),
+        modalValueCount: sql<number>`COALESCE(${modalValueCount.modalValueCount}, 0)`
+          .mapWith(Number)
+          .as('modal_value_count'),
       })
       .from(connectedDocuments)
       .leftJoin(
         aggregatedResults,
         eq(connectedDocuments.documentUuid, aggregatedResults.documentUuid),
       )
-      .leftJoin(
-        modalValueCount,
-        eq(connectedDocuments.documentUuid, modalValueCount.documentUuid),
-      )
+      .leftJoin(modalValueCount, eq(connectedDocuments.documentUuid, modalValueCount.documentUuid))
 
     return Result.ok(result)
   }

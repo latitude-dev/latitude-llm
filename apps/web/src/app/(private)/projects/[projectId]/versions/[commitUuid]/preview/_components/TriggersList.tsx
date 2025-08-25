@@ -3,7 +3,7 @@
 import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
-import {
+import type {
   DocumentTrigger,
   DocumentVersion,
   IntegrationDto,
@@ -13,10 +13,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useCallback, useRef, useState } from 'react'
@@ -39,27 +36,24 @@ function CreateTriggerButton({
 }) {
   if (!canCreate) {
     return (
-      <>
-        <Tooltip
-          asChild
-          trigger={
-            <Button lookDisabled variant='outline' fancy>
-              {ADD_BUTTON_LABEL}
-            </Button>
-          }
-        >
-          You need to create a new version to add new triggers
-        </Tooltip>
-      </>
+      <Tooltip
+        asChild
+        trigger={
+          <Button lookDisabled variant='outline' fancy>
+            {ADD_BUTTON_LABEL}
+          </Button>
+        }
+      >
+        You need to create a new version to add new triggers
+      </Tooltip>
     )
   }
 
   return (
     <Link
       href={
-        ROUTES.projects
-          .detail({ id: projectId })
-          .commits.detail({ uuid: commitUuid }).preview.triggers.new.root
+        ROUTES.projects.detail({ id: projectId }).commits.detail({ uuid: commitUuid }).preview
+          .triggers.new.root
       }
     >
       <Button variant='outline' fancy>
@@ -129,24 +123,20 @@ export function TriggersList({
     parameters: {},
   })
 
-  const { playground, hasActiveStream, stopStreaming, resetChat } =
-    usePlaygroundLogic({
-      commit,
-      project,
-      document: activeTrigger.document,
-      parameters: activeTrigger.parameters,
-      setMode,
-      togglePlaygroundOpen: () => {},
-      setHistoryLog: () => {},
-    })
+  const { playground, hasActiveStream, stopStreaming, resetChat } = usePlaygroundLogic({
+    commit,
+    project,
+    document: activeTrigger.document,
+    parameters: activeTrigger.parameters,
+    setMode,
+    togglePlaygroundOpen: () => {},
+    setHistoryLog: () => {},
+  })
 
-  const onRunTrigger: OnRunTriggerFn = useCallback(
-    ({ document, parameters }) => {
-      setActiveTrigger({ document, parameters })
-      setMode('chat')
-    },
-    [setActiveTrigger, setMode],
-  )
+  const onRunTrigger: OnRunTriggerFn = useCallback(({ document, parameters }) => {
+    setActiveTrigger({ document, parameters })
+    setMode('chat')
+  }, [])
 
   const ref = useRef<HTMLDivElement>(null)
 
@@ -161,39 +151,34 @@ export function TriggersList({
   return (
     <div
       ref={ref}
-      className={cn(
-        'relative max-h-full h-full flex flex-col items-stretch p-12 space-y-8',
-        {
-          'overflow-y-auto custom-scrollbar pb-0': mode === 'chat',
-          'pb-4': mode === 'preview',
-        },
-      )}
+      className={cn('relative max-h-full h-full flex flex-col items-stretch p-12 space-y-8', {
+        'overflow-y-auto custom-scrollbar pb-0': mode === 'chat',
+        'pb-4': mode === 'preview',
+      })}
     >
       <TriggersHeader project={project} />
       {!mode || mode === 'preview' ? (
-        <>
-          <div className='flex flex-col gap-6'>
-            <div className='flex flex-col border rounded-lg divide-y divide-border overflow-hidden'>
-              {triggers.map((trigger) => (
-                <TriggersCard
-                  key={trigger.uuid}
-                  trigger={trigger}
-                  integrations={integrations}
-                  openTriggerUuid={openTriggerUuid}
-                  setOpenTriggerUuid={setOpenTriggerUuid}
-                  onRunTrigger={onRunTrigger}
-                />
-              ))}
-            </div>
-            <div className='flex flex-row items-center gap-x-2'>
-              <CreateTriggerButton
-                projectId={project.id}
-                commitUuid={commit.uuid}
-                canCreate={!commit.mergedAt}
+        <div className='flex flex-col gap-6'>
+          <div className='flex flex-col border rounded-lg divide-y divide-border overflow-hidden'>
+            {triggers.map((trigger) => (
+              <TriggersCard
+                key={trigger.uuid}
+                trigger={trigger}
+                integrations={integrations}
+                openTriggerUuid={openTriggerUuid}
+                setOpenTriggerUuid={setOpenTriggerUuid}
+                onRunTrigger={onRunTrigger}
               />
-            </div>
+            ))}
           </div>
-        </>
+          <div className='flex flex-row items-center gap-x-2'>
+            <CreateTriggerButton
+              projectId={project.id}
+              commitUuid={commit.uuid}
+              canCreate={!commit.mergedAt}
+            />
+          </div>
+        </div>
       ) : null}
       {mode === 'chat' && activeTrigger ? (
         <>

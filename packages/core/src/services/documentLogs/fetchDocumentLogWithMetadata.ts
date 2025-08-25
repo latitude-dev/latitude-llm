@@ -1,8 +1,8 @@
-import { DocumentLog } from '@latitude-data/constants'
-import { DocumentLogWithMetadataAndError } from '../../browser'
+import type { DocumentLog } from '@latitude-data/constants'
+import type { DocumentLogWithMetadataAndError } from '../../browser'
 import { database } from '../../client'
 import { NotFoundError } from '../../lib/errors'
-import { Result, TypedResult } from '../../lib/Result'
+import { Result, type TypedResult } from '../../lib/Result'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
 import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 
@@ -13,9 +13,7 @@ function throwNotFound({
   identifier: string | number | undefined
   type: 'id' | 'uuid'
 }) {
-  return Result.error(
-    new NotFoundError(`Document Log not found with ${type}: ${identifier}`),
-  )
+  return Result.error(new NotFoundError(`Document Log not found with ${type}: ${identifier}`))
 }
 
 export async function fetchDocumentLogWithMetadata(
@@ -35,7 +33,7 @@ export async function fetchDocumentLogWithMetadata(
   if (identifier === undefined) return throwNotFound({ identifier, type })
 
   const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspaceId, db)
-  let documentLog: DocumentLog | undefined = undefined
+  let documentLog: DocumentLog | undefined
   if (documentLogUuid) {
     documentLog = await repo.findByUuid(documentLogUuid).then((r) => r.unwrap())
   } else if (documentLogId) {
@@ -44,10 +42,9 @@ export async function fetchDocumentLogWithMetadata(
   if (!documentLog) return throwNotFound({ identifier, type })
 
   // TODO: change this
-  const documentLogWithMetadata = await computeDocumentLogWithMetadata(
-    documentLog,
-    db,
-  ).then((r) => r.unwrap())
+  const documentLogWithMetadata = await computeDocumentLogWithMetadata(documentLog, db).then((r) =>
+    r.unwrap(),
+  )
 
   return Result.ok(documentLogWithMetadata)
 }

@@ -1,23 +1,20 @@
 import { tokenizeText } from '$/lib/tokenize'
-import { ChainEvent } from '@latitude-data/constants'
+import type { ChainEvent } from '@latitude-data/constants'
 import {
-  Message,
-  MessageContent,
+  type Message,
+  type MessageContent,
   MessageRole,
-  ToolCall,
-  ToolRequestContent,
+  type ToolCall,
+  type ToolRequestContent,
 } from '@latitude-data/constants/legacyCompiler'
 import { StreamEventTypes } from '@latitude-data/core/browser'
-import { ParsedEvent } from 'eventsource-parser/stream'
-import React, { useCallback } from 'react'
+import type { ParsedEvent } from 'eventsource-parser/stream'
+import type React from 'react'
+import { useCallback } from 'react'
 
 type SetMessagesFunction = React.Dispatch<React.SetStateAction<Message[]>>
-type SetUnrespondedToolCallsFunction = React.Dispatch<
-  React.SetStateAction<ToolCall[]>
->
-type SetRunningLatitudeToolsFunction = React.Dispatch<
-  React.SetStateAction<number>
->
+type SetUnrespondedToolCallsFunction = React.Dispatch<React.SetStateAction<ToolCall[]>>
+type SetRunningLatitudeToolsFunction = React.Dispatch<React.SetStateAction<number>>
 type AddMessagesFunction = (messages: Message[]) => void
 type IncrementUsageDeltaFunction = (incr: {
   promptTokens?: number
@@ -150,10 +147,7 @@ export function useProviderEventHandler({
           ...messages.slice(0, -1),
           {
             ...lastMessage,
-            content: [
-              ...((lastMessage.content as MessageContent[]) || []),
-              data,
-            ],
+            content: [...((lastMessage.content as MessageContent[]) || []), data],
             toolCalls: [
               ...(lastMessage.toolCalls || []),
               {
@@ -167,17 +161,10 @@ export function useProviderEventHandler({
       })
 
       incrementUsageDelta({
-        completionTokens: tokenizeText(
-          data.toolName + JSON.stringify(data.args),
-        ),
+        completionTokens: tokenizeText(data.toolName + JSON.stringify(data.args)),
       })
     },
-    [
-      setMessages,
-      setUnrespondedToolCalls,
-      setRunningLatitudeTools,
-      incrementUsageDelta,
-    ],
+    [setMessages, setUnrespondedToolCalls, setRunningLatitudeTools, incrementUsageDelta],
   )
 
   // Helper function to handle tool-result events
@@ -201,9 +188,7 @@ export function useProviderEventHandler({
             {
               ...lastMessage,
               content: [
-                ...((lastMessage.content as
-                  | MessageContent[]
-                  | ToolRequestContent[]) ?? []),
+                ...((lastMessage.content as MessageContent[] | ToolRequestContent[]) ?? []),
                 data,
               ],
             },
@@ -306,10 +291,7 @@ export function useProviderEventHandler({
               ...messages.slice(0, -1),
               {
                 ...lastMessage,
-                content: [
-                  ...((lastMessage.content as MessageContent[]) || []),
-                  data,
-                ],
+                content: [...((lastMessage.content as MessageContent[]) || []), data],
               },
             ]
           } else if (lastContent.type !== 'redacted-reasoning') {
@@ -317,10 +299,7 @@ export function useProviderEventHandler({
               ...messages.slice(0, -1),
               {
                 ...lastMessage,
-                content: [
-                  ...((lastMessage.content as MessageContent[]) || []),
-                  data,
-                ],
+                content: [...((lastMessage.content as MessageContent[]) || []), data],
               },
             ]
           } else {
@@ -344,10 +323,7 @@ export function useProviderEventHandler({
             {
               role: MessageRole.assistant,
               toolCalls: [],
-              content: [
-                ...((lastMessage.content as MessageContent[]) || []),
-                data,
-              ],
+              content: [...((lastMessage.content as MessageContent[]) || []), data],
             },
           ]
         }

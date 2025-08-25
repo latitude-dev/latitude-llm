@@ -7,12 +7,12 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
-import { PublishedDocument } from '@latitude-data/core/browser'
+import type { PublishedDocument } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { ButtonProps } from '@latitude-data/web-ui/atoms/Button'
+import type { ButtonProps } from '@latitude-data/web-ui/atoms/Button'
 import { useMaybeSession } from '@latitude-data/web-ui/providers'
-import { MouseEvent, useCallback, useState } from 'react'
+import { type MouseEvent, useCallback, useState } from 'react'
 
 export function ForkButton({
   shared,
@@ -27,19 +27,16 @@ export function ForkButton({
   const [form, setForm] = useState<'login' | 'signup'>('signup')
   const { open, onOpen, onOpenChange } = useToggleModal()
   const router = useNavigate()
-  const { execute: fork, isPending: isForking } = useLatitudeAction(
-    forkDocumentAction,
-    {
-      onSuccess: ({ data: { project, commit, document } }) => {
-        const forkedUrl = ROUTES.share.document(shared.uuid!).forked({
-          projectId: project.id,
-          commitUuid: commit.uuid,
-          documentUuid: document.documentUuid,
-        }).root
-        router.push(forkedUrl)
-      },
+  const { execute: fork, isPending: isForking } = useLatitudeAction(forkDocumentAction, {
+    onSuccess: ({ data: { project, commit, document } }) => {
+      const forkedUrl = ROUTES.share.document(shared.uuid!).forked({
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+      }).root
+      router.push(forkedUrl)
     },
-  )
+  })
   const sharedUuid = shared.uuid!
   const onForkClick = useCallback(() => {
     if (!currentUser) {
@@ -89,22 +86,14 @@ export function ForkButton({
         size='small'
         title={form === 'signup' ? 'Sign up' : 'Log in'}
         description={
-          form === 'signup'
-            ? 'Sign up to copy this prompt'
-            : 'Log in to copy this prompt'
+          form === 'signup' ? 'Sign up to copy this prompt' : 'Log in to copy this prompt'
         }
       >
         {form === 'signup' ? (
-          <SetupForm
-            returnTo={returnTo}
-            footer={<SignupFooter onClickLogin={onClickLogin} />}
-          />
+          <SetupForm returnTo={returnTo} footer={<SignupFooter onClickLogin={onClickLogin} />} />
         ) : null}
         {form === 'login' ? (
-          <LoginForm
-            returnTo={returnTo}
-            footer={<LoginFooter onClickSignup={onClickSignup} />}
-          />
+          <LoginForm returnTo={returnTo} footer={<LoginFooter onClickSignup={onClickSignup} />} />
         ) : null}
       </Modal>
     </>

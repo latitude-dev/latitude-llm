@@ -3,11 +3,11 @@
 import useIntegrations from '$/stores/integrations'
 import { IntegrationType } from '@latitude-data/constants'
 import type { PipedreamIntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, type IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
 import { LatitudeLogo } from '@latitude-data/web-ui/atoms/Icons/custom-icons'
-import { ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
 
 type ImagePreview = {
   type: 'image'
@@ -45,7 +45,7 @@ type CarouselProps<T> = {
   className?: string
 }
 
-export function SlidingCarousel<T>({
+function SlidingCarousel<T>({
   items,
   renderItem,
   interval = 2000,
@@ -76,18 +76,14 @@ export function SlidingCarousel<T>({
     <div className={`relative overflow-hidden ${className}`}>
       <div
         className={`absolute inset-0 flex items-center justify-center ${
-          isAnimating
-            ? 'transition-transform duration-500 -translate-y-full'
-            : 'translate-y-0'
+          isAnimating ? 'transition-transform duration-500 -translate-y-full' : 'translate-y-0'
         }`}
       >
         {renderItem(items[currentIndex]!)}
       </div>
       <div
         className={`absolute inset-0 flex items-center justify-center ${
-          isAnimating
-            ? 'transition-transform duration-500 translate-y-0'
-            : 'translate-y-full'
+          isAnimating ? 'transition-transform duration-500 translate-y-0' : 'translate-y-full'
         }`}
       >
         {renderItem(items[nextIndex]!)}
@@ -103,17 +99,12 @@ function IntegrationsPreview() {
     return [
       ...(integrations?.length > 1 ? [] : DEFAULT_ITEMS),
       ...integrations
-        .filter(
-          (i) =>
-            i.type === IntegrationType.Pipedream &&
-            !!i.configuration.metadata?.imageUrl,
-        )
+        .filter((i) => i.type === IntegrationType.Pipedream && !!i.configuration.metadata?.imageUrl)
         .map(
           (i) =>
             ({
               type: 'image',
-              src: (i.configuration as PipedreamIntegrationConfiguration)
-                .metadata!.imageUrl!,
+              src: (i.configuration as PipedreamIntegrationConfiguration).metadata!.imageUrl!,
             }) as ImagePreview,
         ),
     ]
@@ -121,15 +112,7 @@ function IntegrationsPreview() {
 
   const renderItem = (item: IntegrationPreviewItem) => {
     if (item.type === 'image') {
-      return (
-        <Image
-          src={item.src}
-          alt='Integration Preview'
-          width={24}
-          height={24}
-          unoptimized
-        />
-      )
+      return <Image src={item.src} alt='Integration Preview' width={24} height={24} unoptimized />
     }
 
     return <Icon name={item.name} size='large' color='primary' />

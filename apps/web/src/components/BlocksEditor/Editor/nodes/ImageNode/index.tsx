@@ -3,11 +3,8 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Image } from '@latitude-data/web-ui/atoms/Image'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DecoratorNode } from 'lexical'
-import { JSX } from 'react'
-import {
-  BLOCK_EDITOR_TYPE,
-  ImageBlock,
-} from '../../state/promptlToLexical/types'
+import type { JSX } from 'react'
+import { BLOCK_EDITOR_TYPE, type ImageBlock } from '../../state/promptlToLexical/types'
 
 function ImageComponent({ src }: { src: string }) {
   if (!isSafeUrl(src)) {
@@ -26,12 +23,7 @@ function ImageComponent({ src }: { src: string }) {
     )
   }
 
-  return (
-    <Image
-      src={src}
-      className='max-h-72 min-w-[20.5rem] w-fit object-contain rounded-xl'
-    />
-  )
+  return <Image src={src} className='max-h-72 min-w-[20.5rem] w-fit object-contain rounded-xl' />
 }
 
 export class ImageNode extends DecoratorNode<JSX.Element> {

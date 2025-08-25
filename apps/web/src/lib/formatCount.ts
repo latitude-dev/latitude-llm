@@ -2,7 +2,7 @@ const units = ['', 'K', 'M', 'B', 'T']
 const unitSize = 1000
 
 export function formatCount(count: number): string {
-  if (count < 0) return '-' + formatCount(-count)
+  if (count < 0) return `-${formatCount(-count)}`
   if (count < unitSize) return count.toString()
 
   let unitIndex = 0

@@ -1,13 +1,9 @@
 import { getUnsafeIp } from '$/helpers/ip'
 import { DatasetsRepository } from '@latitude-data/core/repositories'
-import { Dataset } from '@latitude-data/core/browser'
+import type { Dataset } from '@latitude-data/core/browser'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { cache } from '@latitude-data/core/cache'
-import {
-  LatitudeError,
-  RateLimitError,
-  UnauthorizedError,
-} from '@latitude-data/constants/errors'
+import { LatitudeError, RateLimitError, UnauthorizedError } from '@latitude-data/constants/errors'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -19,7 +15,7 @@ import { ReplyError } from 'ioredis'
 import { headers } from 'next/headers'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 import { z } from 'zod'
-import { createServerActionProcedure, TAnyCompleteProcedure } from 'zsa'
+import { createServerActionProcedure, type TAnyCompleteProcedure } from 'zsa'
 import { getDataFromSession } from '$/data-access'
 
 const DEFAULT_RATE_LIMIT_POINTS = 1000
@@ -45,49 +41,47 @@ export const errorHandlingProcedure = createServerActionProcedure()
   })
   .handler((ctx) => ({ ...ctx }))
 
-export const maybeAuthProcedure = createServerActionProcedure(
-  errorHandlingProcedure,
-).handler(async () => {
-  const data = await getDataFromSession()
-  if (!data.user || !data.workspace) {
-    return {}
-  }
+export const maybeAuthProcedure = createServerActionProcedure(errorHandlingProcedure).handler(
+  async () => {
+    const data = await getDataFromSession()
+    if (!data.user || !data.workspace) {
+      return {}
+    }
 
-  return {
-    session: data.session,
-    workspace: data.workspace,
-    user: data.user,
-  }
-})
+    return {
+      session: data.session,
+      workspace: data.workspace,
+      user: data.user,
+    }
+  },
+)
 
-export const authProcedure = createServerActionProcedure(
-  errorHandlingProcedure,
-).handler(async () => {
-  const data = await getDataFromSession()
-  if (!data.user || !data.workspace) {
-    throw new UnauthorizedError('Unauthorized')
-  }
+export const authProcedure = createServerActionProcedure(errorHandlingProcedure).handler(
+  async () => {
+    const data = await getDataFromSession()
+    if (!data.user || !data.workspace) {
+      throw new UnauthorizedError('Unauthorized')
+    }
 
-  return {
-    session: data.session,
-    workspace: data.workspace,
-    user: data.user,
-  }
-})
+    return {
+      session: data.session,
+      workspace: data.workspace,
+      user: data.user,
+    }
+  },
+)
 
 export const withProject = createServerActionProcedure(authProcedure)
   .input(z.object({ projectId: z.number().or(z.string()) }))
   .handler(async ({ input, ctx }) => {
     const { workspace } = ctx
     const projectScope = new ProjectsRepository(workspace.id)
-    const project = (
-      await projectScope.getProjectById(Number(input.projectId))
-    ).unwrap()
+    const project = (await projectScope.getProjectById(Number(input.projectId))).unwrap()
 
     return { ...ctx, project }
   })
 
-export const withCommit = createServerActionProcedure(withProject)
+const withCommit = createServerActionProcedure(withProject)
   .input(z.object({ commitUuid: z.string() }))
   .handler(async ({ input, ctx }) => {
     const repository = new CommitsRepository(ctx.workspace.id)
@@ -132,13 +126,11 @@ export const withEvaluation = createServerActionProcedure(withDocument)
     return { ...ctx, evaluation }
   })
 
-export const withAdmin = createServerActionProcedure(authProcedure).handler(
-  async ({ ctx }) => {
-    if (!ctx.user.admin) throw new UnauthorizedError('Unauthorized')
+export const withAdmin = createServerActionProcedure(authProcedure).handler(async ({ ctx }) => {
+  if (!ctx.user.admin) throw new UnauthorizedError('Unauthorized')
 
-    return ctx
-  },
-)
+  return ctx
+})
 
 export async function withRateLimit<T extends TAnyCompleteProcedure>(
   procedure: T,
@@ -156,25 +148,23 @@ export async function withRateLimit<T extends TAnyCompleteProcedure>(
     duration: period,
   })
 
-  return createServerActionProcedure(procedure).handler(
-    async ({ ctx, ...rest }) => {
-      const key = ctx.user?.id || getUnsafeIp(await headers()) || 'unknown'
+  return createServerActionProcedure(procedure).handler(async ({ ctx, ...rest }) => {
+    const key = ctx.user?.id || getUnsafeIp(await headers()) || 'unknown'
 
-      try {
-        await rateLimiter.consume(key)
-      } catch (error) {
-        if (error instanceof RateLimiterRes) {
-          throw new RateLimitError('Too many requests')
-        }
-
-        if (!(error instanceof ReplyError)) {
-          throw error
-        }
+    try {
+      await rateLimiter.consume(key)
+    } catch (error) {
+      if (error instanceof RateLimiterRes) {
+        throw new RateLimitError('Too many requests')
       }
 
-      return { ...ctx, ...rest }
-    },
-  ) as T
+      if (!(error instanceof ReplyError)) {
+        throw error
+      }
+    }
+
+    return { ...ctx, ...rest }
+  }) as T
 }
 
 export const withDataset = createServerActionProcedure(withDocument)

@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 import * as factories from '../../../../../tests/factories'
 import { createNewDocument, updateDocument } from '../../../../documents'
 import { DocumentVersionsRepository } from '../../../../../repositories'
-import { LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
+import { type LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
 import { LATTE_TOOLS } from '../../tools'
 import { createLatteThread } from '../createThread'
 import { undoLatteThreadChanges } from './undoChanges'
-import { DocumentVersion } from '../../../../../browser'
+import type { DocumentVersion } from '../../../../../browser'
 import { WebsocketClient } from '../../../../../websockets/workers'
 import { deleteCommitDraft } from '../../../../commits'
 
@@ -32,17 +32,14 @@ describe('undo latte changes', () => {
       [ + ] update/edited: THIS TEXT SHOULD NOT BE HERE
       [ + ] update/unedited: This prompt should not appear in the draft changes.
     */
-    const { workspace, documents, project, user } =
-      await factories.createProject({
-        documents: {
-          'delete/edited': 'THIS TEXT SHOULD NOT BE HERE',
-          'delete/unedited':
-            'This prompt should not appear in the draft changes.',
-          'update/edited': 'THIS TEXT SHOULD NOT BE HERE',
-          'update/unedited':
-            'This prompt should not appear in the draft changes.',
-        },
-      })
+    const { workspace, documents, project, user } = await factories.createProject({
+      documents: {
+        'delete/edited': 'THIS TEXT SHOULD NOT BE HERE',
+        'delete/unedited': 'This prompt should not appear in the draft changes.',
+        'update/edited': 'THIS TEXT SHOULD NOT BE HERE',
+        'update/unedited': 'This prompt should not appear in the draft changes.',
+      },
+    })
 
     /*
     DRAFT INITIAL STATE:
@@ -119,9 +116,7 @@ describe('undo latte changes', () => {
       }),
     ]
 
-    const thread = await createLatteThread({ user, workspace }).then((r) =>
-      r.unwrap(),
-    )
+    const thread = await createLatteThread({ user, workspace }).then((r) => r.unwrap())
 
     await LATTE_TOOLS[LatteTool.editProject](
       {
@@ -150,9 +145,7 @@ describe('undo latte changes', () => {
       [ - ] delete/new
     */
 
-    const changesAfterLatte = await documentsScope
-      .listCommitChanges(draft)
-      .then((r) => r.unwrap())
+    const changesAfterLatte = await documentsScope.listCommitChanges(draft).then((r) => r.unwrap())
 
     expect(changesAfterLatte.length).toEqual(7)
     expectPrompt(changesAfterLatte, 'create/new', {
@@ -170,8 +163,7 @@ describe('undo latte changes', () => {
       deletedAt: null,
     })
     expectPrompt(changesAfterLatte, 'update/unedited', {
-      content:
-        'This prompt should not appear in the draft changes.\nLatte was here',
+      content: 'This prompt should not appear in the draft changes.\nLatte was here',
       deletedAt: null,
     })
     expectPrompt(changesAfterLatte, 'delete/edited', {
@@ -197,9 +189,7 @@ describe('undo latte changes', () => {
       [ + ] update/new: This prompt should appear in the draft changes, as "new", but without Latte's sign.
     */
     await undoLatteThreadChanges({ workspace, threadUuid: thread.uuid })
-    const changesAfterUndo = await documentsScope
-      .listCommitChanges(draft)
-      .then((r) => r.unwrap())
+    const changesAfterUndo = await documentsScope.listCommitChanges(draft).then((r) => r.unwrap())
     expect(changesAfterUndo.length).toEqual(4)
     expectPrompt(changesAfterUndo, 'delete/edited', {
       content:
@@ -232,9 +222,7 @@ describe('undo latte changes', () => {
       })
 
       const { commit: draft } = await factories.createDraft({ project, user })
-      const thread = await createLatteThread({ user, workspace }).then((r) =>
-        r.unwrap(),
-      )
+      const thread = await createLatteThread({ user, workspace }).then((r) => r.unwrap())
       await LATTE_TOOLS[LatteTool.editProject](
         {
           projectId: project.id,

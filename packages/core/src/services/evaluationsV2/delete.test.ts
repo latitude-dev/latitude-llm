@@ -1,14 +1,14 @@
 import { desc, eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
+import { beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 import {
-  Commit,
-  EvaluationType,
-  EvaluationV2,
-  Project,
+  type Commit,
+  type EvaluationType,
+  type EvaluationV2,
+  type Project,
   Providers,
-  RuleEvaluationMetric,
-  User,
-  Workspace,
+  type RuleEvaluationMetric,
+  type User,
+  type Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
@@ -28,10 +28,7 @@ describe('deleteEvaluationV2', () => {
   let project: Project
   let user: User
   let commit: Commit
-  let evaluation: EvaluationV2<
-    EvaluationType.Rule,
-    RuleEvaluationMetric.ExactMatch
-  >
+  let evaluation: EvaluationV2<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -67,9 +64,7 @@ describe('deleteEvaluationV2', () => {
     })
 
     mocks = {
-      publisher: vi
-        .spyOn(publisher, 'publishLater')
-        .mockImplementation(async () => {}),
+      publisher: vi.spyOn(publisher, 'publishLater').mockImplementation(async () => {}),
     }
   })
 

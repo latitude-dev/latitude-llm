@@ -1,16 +1,14 @@
 import { useCallback, useState, useTransition } from 'react'
 
 import { formDataToAction } from '$/helpers/forms'
-import {
+import type {
   inferServerActionError,
   inferServerActionInput,
   inferServerActionReturnData,
   TAnyZodSafeFunctionHandler,
 } from 'zsa'
 
-export function useFormAction<
-  const TServerAction extends TAnyZodSafeFunctionHandler,
->(
+export function useFormAction<const TServerAction extends TAnyZodSafeFunctionHandler>(
   exec: (
     data: inferServerActionInput<TServerAction>,
   ) => Promise<
@@ -28,8 +26,7 @@ export function useFormAction<
   },
 ) {
   const [data, setData] = useState<
-    | inferServerActionInput<TServerAction>
-    | inferServerActionReturnData<TServerAction>
+    inferServerActionInput<TServerAction> | inferServerActionReturnData<TServerAction>
   >()
   const [_, startTransition] = useTransition()
   const [error, setError] = useState<Record<string, unknown> | undefined>()
@@ -47,7 +44,7 @@ export function useFormAction<
         setData(payload!)
       }
     },
-    [exec, setError, setData, onError, onSuccess],
+    [exec, onError, onSuccess],
   )
 
   const action = useCallback(

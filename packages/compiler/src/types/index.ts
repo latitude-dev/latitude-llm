@@ -1,6 +1,6 @@
-import CompileError from '$compiler/error/error'
+import type CompileError from '$compiler/error/error'
 
-import { Message } from './message'
+import type { Message } from './message'
 
 export type Config = Record<string, unknown>
 

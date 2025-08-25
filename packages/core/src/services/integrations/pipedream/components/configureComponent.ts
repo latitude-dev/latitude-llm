@@ -1,11 +1,11 @@
 import {
-  ComponentId,
-  ConfigurableProps,
-  ConfiguredProps,
+  type ComponentId,
+  type ConfigurableProps,
+  type ConfiguredProps,
   createBackendClient,
 } from '@pipedream/sdk/server'
-import { IntegrationDto } from '../../../../browser'
-import { IntegrationType } from '@latitude-data/constants'
+import type { IntegrationDto } from '../../../../browser'
+import type { IntegrationType } from '@latitude-data/constants'
 import { Result } from '../../../../lib/Result'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { getPipedreamEnvironment } from '../apps'
@@ -33,9 +33,7 @@ export async function configureComponent({
 }) {
   if (!isIntegrationConfigured(integration)) {
     return Result.error(
-      new NotFoundError(
-        `Integration '${integration.name}' has not been configured.`,
-      ),
+      new NotFoundError(`Integration '${integration.name}' has not been configured.`),
     )
   }
 

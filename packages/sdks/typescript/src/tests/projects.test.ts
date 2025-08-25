@@ -1,14 +1,6 @@
 import { Latitude } from '$sdk/index'
 import { setupServer } from 'msw/node'
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import {
   mockGetAllProjectsRequest,
@@ -18,7 +10,7 @@ import {
   mockProjectsError,
 } from './helpers/projects'
 
-let FAKE_API_KEY = 'fake-api-key'
+const FAKE_API_KEY = 'fake-api-key'
 let sdk: Latitude
 
 const server = setupServer()
@@ -71,9 +63,7 @@ describe('projects', () => {
           await sdk.projects.getAll()
         } catch (error) {
           // @ts-expect-error - mock error
-          expect(error.message).toEqual(
-            'Unexpected API Error: 500 Something went wrong',
-          )
+          expect(error.message).toEqual('Unexpected API Error: 500 Something went wrong')
         }
       }),
     )
@@ -101,9 +91,7 @@ describe('projects', () => {
           apiVersion: 'v3',
         })
         await sdk.projects.create(projectName)
-        expect(mockBody).toHaveBeenCalledWith(
-          expect.objectContaining({ name: projectName }),
-        )
+        expect(mockBody).toHaveBeenCalledWith(expect.objectContaining({ name: projectName }))
       }),
     )
 
@@ -134,9 +122,7 @@ describe('projects', () => {
           await sdk.projects.create('Test Project')
         } catch (error) {
           // @ts-expect-error - mock error
-          expect(error.message).toEqual(
-            'Unexpected API Error: 500 Something went wrong',
-          )
+          expect(error.message).toEqual('Unexpected API Error: 500 Something went wrong')
         }
       }),
     )

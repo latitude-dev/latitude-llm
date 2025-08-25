@@ -1,5 +1,5 @@
-import { FinishReason } from 'ai'
-import { Message } from 'promptl-ai'
+import type { FinishReason } from 'ai'
+import type { Message } from 'promptl-ai'
 
 export enum SpanKind {
   Internal = 'internal',
@@ -165,21 +165,24 @@ export type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> & {
 }
 
 // prettier-ignore
-export type SpanMetadata<T extends SpanType = SpanType> =
-  T extends SpanType.Tool ? ToolSpanMetadata :
-  T extends SpanType.Completion ? CompletionSpanMetadata :
-  T extends SpanType.Embedding ? BaseSpanMetadata<T> :
-  T extends SpanType.Retrieval ? BaseSpanMetadata<T> :
-  T extends SpanType.Reranking ? BaseSpanMetadata<T> :
-  T extends SpanType.Http ? HttpSpanMetadata :
-  T extends SpanType.Unknown ? BaseSpanMetadata<T> :
-  never;
+export type SpanMetadata<T extends SpanType = SpanType> = T extends SpanType.Tool
+  ? ToolSpanMetadata
+  : T extends SpanType.Completion
+    ? CompletionSpanMetadata
+    : T extends SpanType.Embedding
+      ? BaseSpanMetadata<T>
+      : T extends SpanType.Retrieval
+        ? BaseSpanMetadata<T>
+        : T extends SpanType.Reranking
+          ? BaseSpanMetadata<T>
+          : T extends SpanType.Http
+            ? HttpSpanMetadata
+            : T extends SpanType.Unknown
+              ? BaseSpanMetadata<T>
+              : never
 
-export const SPAN_METADATA_STORAGE_KEY = (
-  workspaceId: number,
-  traceId: string,
-  spanId: string,
-) => encodeURI(`workspaces/${workspaceId}/traces/${traceId}/${spanId}`)
+export const SPAN_METADATA_STORAGE_KEY = (workspaceId: number, traceId: string, spanId: string) =>
+  encodeURI(`workspaces/${workspaceId}/traces/${traceId}/${spanId}`)
 export const SPAN_METADATA_CACHE_TTL = 24 * 60 * 60 // 1 day
 
 export type Span<T extends SpanType = SpanType> = {

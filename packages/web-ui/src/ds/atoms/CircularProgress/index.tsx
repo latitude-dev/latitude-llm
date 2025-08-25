@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { colors, TextColor } from '../../tokens'
+import { colors, type TextColor } from '../../tokens'
 
 export type CircularProgressProps = {
   value: number
@@ -30,14 +30,12 @@ export function CircularProgress({
   // prop wherever it is set
   useEffect(() => {
     if (animateOnMount) setValue(valueProp)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [animateOnMount])
+  }, [animateOnMount, valueProp])
 
   // FIXME: Do not use useEffect to set state, instead add a dealy to the value
   // prop wherever it is set
   useEffect(() => {
     setValue(valueProp)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valueProp])
 
   const radius = (size - strokeWidth) / 2

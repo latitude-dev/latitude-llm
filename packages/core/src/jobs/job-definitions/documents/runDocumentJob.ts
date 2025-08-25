@@ -1,6 +1,6 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 
 import { LogSources } from '@latitude-data/constants'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'

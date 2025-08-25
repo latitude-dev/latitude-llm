@@ -1,8 +1,8 @@
 'use client'
-import { MouseEvent, ReactNode, useCallback, useState } from 'react'
+import { type MouseEvent, type ReactNode, useCallback, useState } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Button, ButtonProps } from '../Button'
+import { Button, type ButtonProps } from '../Button'
 import { Icon, type IconProps } from '../Icons'
 import { Text } from '../Text'
 
@@ -30,10 +30,7 @@ export const TriggerButton = ({
 }: TriggerButtonProps) => {
   const className = !buttonProps.indicator ? (cln ?? 'w-8 px-1') : cln
   return (
-    <DropdownMenuTrigger
-      asChild
-      className='flex focus:outline-none cursor-pointer'
-    >
+    <DropdownMenuTrigger asChild className='flex focus:outline-none cursor-pointer'>
       <Button
         asChild
         fullWidth={false}
@@ -102,9 +99,7 @@ function DropdownItem({
       </div>
       {shortcut && <DropdownMenuShortcut>{shortcut}</DropdownMenuShortcut>}
       {checked !== undefined && (
-        <div className='flex items-center'>
-          {checked ? <Icon name='checkClean' /> : null}
-        </div>
+        <div className='flex items-center'>{checked ? <Icon name='checkClean' /> : null}</div>
       )}
     </DropdownMenuItem>
   )
@@ -138,9 +133,7 @@ export function DropdownMenu({
 }: Props) {
   const [open, setOpen] = useState(false)
   const triggerProps =
-    typeof triggerButtonProps === 'function'
-      ? triggerButtonProps(open)
-      : triggerButtonProps
+    typeof triggerButtonProps === 'function' ? triggerButtonProps(open) : triggerButtonProps
   const closeDropdown = useCallback(() => {
     setOpen(false)
   }, [])
@@ -185,11 +178,7 @@ export function DropdownMenu({
           {options
             .filter((option) => !option.hidden)
             .map((option, index) => (
-              <DropdownItem
-                key={index}
-                {...option}
-                closeDropdown={closeDropdown}
-              />
+              <DropdownItem key={index} {...option} closeDropdown={closeDropdown} />
             ))}
         </DropdownMenuContent>
       </DropdownMenuPortal>

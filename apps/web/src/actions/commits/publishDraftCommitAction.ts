@@ -18,9 +18,7 @@ export const publishDraftCommitAction = withProject
   )
   .handler(async ({ input, ctx }) => {
     const commitScope = new CommitsRepository(ctx.workspace.id)
-    const commit = await commitScope
-      .getCommitById(input.id)
-      .then((r) => r.unwrap())
+    const commit = await commitScope.getCommitById(input.id).then((r) => r.unwrap())
 
     const merged = await updateAndMergeCommit(commit, {
       title: input.title,

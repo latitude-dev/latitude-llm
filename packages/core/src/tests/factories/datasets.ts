@@ -1,14 +1,14 @@
 import { faker } from '@faker-js/faker'
 
-import { User, Workspace } from '../../browser'
-import { DatasetV2CreatedEvent } from '../../events/events'
-import { DiskWrapper } from '../../lib/disk'
+import type { User, Workspace } from '../../browser'
+import type { DatasetV2CreatedEvent } from '../../events/events'
+import type { DiskWrapper } from '../../lib/disk'
 import { createRowsFromUploadedDataset } from '../../services/datasetRows/createRowsFromUploadedDataset'
 import { createTestCsvFile } from '../../services/datasetRows/testHelper'
 import { createDatasetFromFile as createDatasetFromFileFn } from '../../services/datasets/createFromFile'
-import { HashAlgorithmFn } from '../../services/datasets/utils'
+import type { HashAlgorithmFn } from '../../services/datasets/utils'
 import getTestDisk from '../testDrive'
-import { createWorkspace, ICreateWorkspace } from './workspaces'
+import { createWorkspace, type ICreateWorkspace } from './workspaces'
 
 const defaultTestDisk = getTestDisk()
 
@@ -26,10 +26,7 @@ export function generateCsvContent({
   headers?: string[]
   rows?: string[][]
 }): string {
-  return [
-    headers.join(delimiter),
-    ...rows.map((row) => row.join(delimiter)),
-  ].join('\n')
+  return [headers.join(delimiter), ...rows.map((row) => row.join(delimiter))].join('\n')
 }
 
 export type ICreateDatasetV2 = {
@@ -62,8 +59,7 @@ export async function createDataset(datasetData: Props) {
   const { name = randomName } = datasetData
 
   const csvDelimiter = datasetData.csvDelimiter ?? ','
-  const fileContent =
-    datasetData.fileContent ?? generateCsvContent({ delimiter: csvDelimiter })
+  const fileContent = datasetData.fileContent ?? generateCsvContent({ delimiter: csvDelimiter })
 
   const { file } = await createTestCsvFile({ fileContent, name })
   const result = await createDatasetFromFileFn({

@@ -1,5 +1,5 @@
-import { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
-import { ToolContent } from '@latitude-data/constants/legacyCompiler'
+import type { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
+import type { ToolContent } from '@latitude-data/constants/legacyCompiler'
 import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 import { useMemo } from 'react'
 import { ContentCard } from '../ContentCard'
@@ -35,18 +35,14 @@ export function CodeLatitudeToolCallContent({
       bgColor='bg-success'
       fgColor='successForeground'
       info={toolCallId}
-      separatorColor={
-        toolResponse?.isError ? 'destructiveMutedForeground' : undefined
-      }
+      separatorColor={toolResponse?.isError ? 'destructiveMutedForeground' : undefined}
       resultFooter={
         <ToolResultFooter loadingMessage='Running code...'>
           {toolResponse && <ToolResultContent toolResponse={toolResponse} />}
         </ToolResultFooter>
       }
     >
-      <CodeBlock language={args.language}>
-        {useMemo(() => value, [value])}
-      </CodeBlock>
+      <CodeBlock language={args.language}>{useMemo(() => value, [value])}</CodeBlock>
     </ContentCard>
   )
 }

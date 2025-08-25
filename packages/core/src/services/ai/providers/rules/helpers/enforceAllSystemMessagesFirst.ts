@@ -1,9 +1,6 @@
-import type {
-  Message,
-  MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
+import type { Message, MessageRole } from '@latitude-data/constants/legacyCompiler'
 
-import { AppliedRules, ProviderRules } from '../types'
+import type { AppliedRules, ProviderRules } from '../types'
 
 const SYSTEM_ROLE = 'system'
 
@@ -15,17 +12,13 @@ export function enforceAllSystemMessagesFirst(
   },
 ): AppliedRules {
   const messages = appliedRule.messages
-  const firstNonSystemMessageIndex = messages.findIndex(
-    (m) => m.role !== SYSTEM_ROLE,
-  )
+  const firstNonSystemMessageIndex = messages.findIndex((m) => m.role !== SYSTEM_ROLE)
 
   if (firstNonSystemMessageIndex === -1) {
     return appliedRule
   }
 
-  const messagesAfterFirstNonSystemMessage = messages.slice(
-    firstNonSystemMessageIndex,
-  )
+  const messagesAfterFirstNonSystemMessage = messages.slice(firstNonSystemMessageIndex)
   if (!messagesAfterFirstNonSystemMessage.some((m) => m.role === SYSTEM_ROLE)) {
     return appliedRule
   }
@@ -47,9 +40,7 @@ export function enforceAllSystemMessagesFirst(
       return {
         ...m,
         role: 'user' as MessageRole,
-        content: Array.isArray(m.content)
-          ? m.content
-          : [{ type: 'text', text: m.content }],
+        content: Array.isArray(m.content) ? m.content : [{ type: 'text', text: m.content }],
       } as Message
     }),
   }

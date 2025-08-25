@@ -12,9 +12,7 @@ const hasS3 = process.env.S3_BUCKET
 
 const redColor = (text: string) => `\x1b[31m${text}\x1b[0m`
 const blueColor = (text: string) => `\x1b[34m${text}\x1b[0m`
-const label = hasS3
-  ? redColor(`latitude (production)`)
-  : blueColor(`latitude (development)`)
+const label = hasS3 ? redColor(`latitude (production)`) : blueColor(`latitude (development)`)
 
 const r = repl.start({
   prompt: `${label} `,

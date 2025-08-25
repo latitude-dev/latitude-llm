@@ -1,8 +1,8 @@
 'use client'
 
-import { memo, ReactNode, useEffect, useMemo, useState } from 'react'
+import { memo, type ReactNode, useEffect, useMemo, useState } from 'react'
 
-import {
+import type {
   FileContent,
   ImageContent,
   MessageContent,
@@ -11,23 +11,23 @@ import {
   ToolContent,
 } from '@latitude-data/constants/legacyCompiler'
 
-import { AgentToolsMap, isSafeUrl } from '@latitude-data/constants'
-import { Badge, BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
+import { type AgentToolsMap, isSafeUrl } from '@latitude-data/constants'
+import { Badge, type BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon, type IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Image } from '@latitude-data/web-ui/atoms/Image'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { colors, font, TextColor } from '@latitude-data/web-ui/tokens'
+import { colors, font, type TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import { roleToString, roleVariant } from '..'
 import { ToolCallContent } from './ToolCall'
 
 export { roleToString, roleVariant } from './helpers'
 
-export type MessageProps = {
+type MessageProps = {
   role: string
   content: MessageContent[] | string
   className?: string
@@ -129,23 +129,11 @@ export function MessageItemContent({
   toolContentMap?: Record<string, ToolContent>
 }) {
   if (collapsedMessage)
-    return (
-      <Content
-        value='...'
-        color='foregroundMuted'
-        size={size}
-        agentToolsMap={agentToolsMap}
-      />
-    )
+    return <Content value='...' color='foregroundMuted' size={size} agentToolsMap={agentToolsMap} />
 
   if (typeof content === 'string')
     return (
-      <Content
-        value={content}
-        color='foregroundMuted'
-        size={size}
-        agentToolsMap={agentToolsMap}
-      />
+      <Content value={content} color='foregroundMuted' size={size} agentToolsMap={agentToolsMap} />
     )
 
   return content.map((c, idx) => (
@@ -164,11 +152,11 @@ export function MessageItemContent({
   ))
 }
 
-export function MessageSkeleton({ role }: { role: string }) {
+export function MessageSkeleton({ messageRole }: { messageRole: string }) {
   return (
     <div className='flex flex-col gap-1 w-full items-start animate-pulse'>
       <div>
-        <Badge variant={roleVariant(role)}>{roleToString(role)}</Badge>
+        <Badge variant={roleVariant(messageRole)}>{roleToString(messageRole)}</Badge>
       </div>
       <div className='flex flex-row items-stretch gap-4 pl-4 w-full'>
         <div className='flex-shrink-0 bg-muted w-1 rounded-lg' />
@@ -208,9 +196,7 @@ const Content = ({
       return (
         <div key={`${index}`} className='py-2 max-w-full'>
           <div className='overflow-hidden rounded-xl w-full'>
-            <CodeBlock language='json'>
-              {JSON.stringify(parsedValue, null, 2)}
-            </CodeBlock>
+            <CodeBlock language='json'>{JSON.stringify(parsedValue, null, 2)}</CodeBlock>
           </div>
         </div>
       )
@@ -235,9 +221,7 @@ const Content = ({
       return (
         <div key={`${index}`} className='py-2 max-w-full'>
           <div className='overflow-hidden rounded-xl w-full'>
-            <CodeBlock language='json'>
-              {JSON.stringify(parsedValue, null, 2)}
-            </CodeBlock>
+            <CodeBlock language='json'>{JSON.stringify(parsedValue, null, 2)}</CodeBlock>
           </div>
         </div>
       )
@@ -256,8 +240,7 @@ const Content = ({
     }
   }
 
-  if (value.type === 'reasoning')
-    return <ContentReasoning reasoning={value.text} />
+  if (value.type === 'reasoning') return <ContentReasoning reasoning={value.text} />
 
   if (value.type === 'image') {
     return (
@@ -347,16 +330,11 @@ const ContentText = memo(
       >
         {group.length > 0
           ? group.map((segment, segmentIndex) => (
-              <span
-                key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}
-              >
+              <span key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}>
                 {typeof segment === 'string' ? (
                   segment
                 ) : (
-                  <ReferenceComponent
-                    reference={segment}
-                    collapseParameters={collapseParameters}
-                  />
+                  <ReferenceComponent reference={segment} collapseParameters={collapseParameters} />
                 )}
               </span>
             ))
@@ -397,10 +375,7 @@ function Reasoning({
             </Text.H6>
           </div>
           <div className='opacity-50'>
-            <Icon
-              name={collapsed ? 'chevronDown' : 'chevronUp'}
-              color='foregroundMuted'
-            />
+            <Icon name={collapsed ? 'chevronDown' : 'chevronUp'} color='foregroundMuted' />
           </div>
         </div>
       </Button>
@@ -441,10 +416,7 @@ function ReferenceComponent({
             </Badge>
           ) : (
             <span
-              className={cn(
-                colors.textColors.accentForeground,
-                'cursor-pointer',
-              )}
+              className={cn(colors.textColors.accentForeground, 'cursor-pointer')}
               onClick={() => setCollapseReference(!collapseReference)}
             >
               (...)
@@ -452,14 +424,9 @@ function ReferenceComponent({
           )
         }
       >
-        {reference.type === 'text' && (
-          <div className='line-clamp-6'>{reference.content}</div>
-        )}
+        {reference.type === 'text' && <div className='line-clamp-6'>{reference.content}</div>}
         {reference.type === 'image' && (
-          <Image
-            src={reference.content}
-            className='max-h-72 rounded-xl w-fit object-contain'
-          />
+          <Image src={reference.content} className='max-h-72 rounded-xl w-fit object-contain' />
         )}
         {reference.type === 'file' && <FileComponent src={reference.content} />}
       </Tooltip>
@@ -482,9 +449,7 @@ function ReferenceComponent({
           {reference.type === 'image' && (
             <Image src={reference.content} className='max-h-72 rounded-xl' />
           )}
-          {reference.type === 'file' && (
-            <FileComponent src={reference.content} />
-          )}
+          {reference.type === 'file' && <FileComponent src={reference.content} />}
         </span>
       }
     >
@@ -530,13 +495,11 @@ function computeSegments(
   sourceMap: PromptlSourceRef[],
   parameters: string[],
 ): Segment[] {
-  let segments: Segment[] = []
+  const segments: Segment[] = []
   if (!source) return segments
 
   // Filter source map references without value
-  sourceMap = sourceMap.filter(
-    (ref) => source.slice(ref.start, ref.end).trim().length > 0,
-  )
+  sourceMap = sourceMap.filter((ref) => source.slice(ref.start, ref.end).trim().length > 0)
 
   // Sort source map to ensure references are ordered
   sourceMap = sourceMap.sort((a, b) => a.start - b.start)
@@ -547,18 +510,14 @@ function computeSegments(
   for (let i = 0; i < sourceMap.length; i++) {
     segments.push({
       identifier:
-        sourceMap[i]!.identifier &&
-        parameters.includes(sourceMap[i]!.identifier!)
+        sourceMap[i]!.identifier && parameters.includes(sourceMap[i]!.identifier!)
           ? sourceMap[i]!.identifier!
           : undefined,
       content: source.slice(sourceMap[i]!.start, sourceMap[i]!.end),
       type: type,
     })
 
-    const nextSegment = source.slice(
-      sourceMap[i]!.end,
-      sourceMap[i + 1]?.start ?? source.length,
-    )
+    const nextSegment = source.slice(sourceMap[i]!.end, sourceMap[i + 1]?.start ?? source.length)
     if (nextSegment.length > 0) segments.push(nextSegment)
   }
 
@@ -566,7 +525,7 @@ function computeSegments(
 }
 
 function groupSegments(segments: Segment[]) {
-  let groups: Segment[][] = []
+  const groups: Segment[][] = []
   let currentGroup: Segment[] = []
 
   for (const segment of segments) {
@@ -618,11 +577,7 @@ const ContentImage = memo(
       return (
         <div className='flex flex-row p-4 gap-2 bg-muted rounded-xl w-fit items-center'>
           <Icon name='imageOff' color='foregroundMuted' />
-          <TextComponent
-            color={color}
-            whiteSpace='preWrap'
-            wordBreak='breakAll'
-          >
+          <TextComponent color={color} whiteSpace='preWrap' wordBreak='breakAll'>
             {'<Image preview unavailable>'}
           </TextComponent>
         </div>
@@ -632,28 +587,15 @@ const ContentImage = memo(
     const TextComponent = size === 'small' ? Text.H6 : Text.H5
 
     if (!segment || typeof segment === 'string') {
-      return (
-        <Image
-          src={image.toString()}
-          className='max-h-72 rounded-xl w-fit object-contain'
-        />
-      )
+      return <Image src={image.toString()} className='max-h-72 rounded-xl w-fit object-contain' />
     }
 
     return (
-      <TextComponent
-        key={index}
-        color={color}
-        whiteSpace='preWrap'
-        wordBreak='breakAll'
-      >
+      <TextComponent key={index} color={color} whiteSpace='preWrap' wordBreak='breakAll'>
         {typeof segment === 'string' ? (
           segment
         ) : (
-          <ReferenceComponent
-            reference={segment}
-            collapseParameters={collapseParameters}
-          />
+          <ReferenceComponent reference={segment} collapseParameters={collapseParameters} />
         )}
       </TextComponent>
     )
@@ -701,16 +643,8 @@ const ContentFile = memo(
     }
 
     return (
-      <TextComponent
-        color={color}
-        whiteSpace='preWrap'
-        wordBreak='breakAll'
-        key={`${index}`}
-      >
-        <ReferenceComponent
-          reference={segment}
-          collapseParameters={collapseParameters}
-        />
+      <TextComponent color={color} whiteSpace='preWrap' wordBreak='breakAll' key={`${index}`}>
+        <ReferenceComponent reference={segment} collapseParameters={collapseParameters} />
       </TextComponent>
     )
   },

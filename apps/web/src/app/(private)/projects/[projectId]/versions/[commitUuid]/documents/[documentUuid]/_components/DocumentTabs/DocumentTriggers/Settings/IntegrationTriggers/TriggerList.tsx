@@ -1,8 +1,8 @@
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
-import { DocumentTriggerType } from '@latitude-data/constants'
-import {
+import type { DocumentTriggerType } from '@latitude-data/constants'
+import type {
   DocumentTrigger,
   PipedreamComponent,
   PipedreamIntegration,
@@ -11,10 +11,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
@@ -84,9 +81,7 @@ function DeleteTriggerButton({
       >
         <div className='p-4 bg-destructive-muted rounded flex flex-col gap-2'>
           <div className='flex items-center justify-between'>
-            <Text.H5B color='destructiveMutedForeground'>
-              {component?.name}
-            </Text.H5B>
+            <Text.H5B color='destructiveMutedForeground'>{component?.name}</Text.H5B>
           </div>
           <div className='flex items-center gap-2'>
             <Image
@@ -111,19 +106,16 @@ function IntegrationTriggerItem({
   trigger: DocumentTrigger<DocumentTriggerType.Integration>
   onClick: () => void
 }) {
-  const { data: integrations, isLoading: isLoadingIntegrations } =
-    useIntegrations()
+  const { data: integrations, isLoading: isLoadingIntegrations } = useIntegrations()
 
   const integration = useMemo(() => {
     if (!integrations) return undefined
-    return integrations.find(
-      (i) => i.id === trigger.configuration.integrationId,
-    ) as PipedreamIntegration | undefined
+    return integrations.find((i) => i.id === trigger.configuration.integrationId) as
+      | PipedreamIntegration
+      | undefined
   }, [integrations, trigger.configuration.integrationId])
 
-  const { data: app, isLoading: isLoadingApp } = usePipedreamApp(
-    integration?.configuration.appName,
-  )
+  const { data: app, isLoading: isLoadingApp } = usePipedreamApp(integration?.configuration.appName)
 
   const component = useMemo(() => {
     if (!app?.triggers) return undefined
@@ -144,19 +136,12 @@ function IntegrationTriggerItem({
 
   return (
     <div
-      className={cn(
-        'p-4 bg-muted hover:bg-accent rounded cursor-pointer',
-        'flex flex-col gap-2',
-      )}
+      className={cn('p-4 bg-muted hover:bg-accent rounded cursor-pointer', 'flex flex-col gap-2')}
       onClick={onClick}
     >
       <div className='flex items-center justify-between'>
         <Text.H5B>{component?.name}</Text.H5B>
-        <DeleteTriggerButton
-          trigger={trigger}
-          integration={integration}
-          component={component}
-        />
+        <DeleteTriggerButton trigger={trigger} integration={integration} component={component} />
       </div>
       <div className='flex items-center gap-2'>
         <Image
@@ -177,9 +162,7 @@ export function IntegrationTriggerList({
   onOpenTrigger,
 }: {
   triggers: DocumentTrigger<DocumentTriggerType.Integration>[]
-  onOpenTrigger: (
-    trigger?: DocumentTrigger<DocumentTriggerType.Integration>,
-  ) => void
+  onOpenTrigger: (trigger?: DocumentTrigger<DocumentTriggerType.Integration>) => void
 }) {
   const { commit } = useCurrentCommit()
   const disabled = !!commit.mergedAt

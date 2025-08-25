@@ -1,16 +1,16 @@
 import { formatCount } from '$/lib/formatCount'
 import {
-  EvaluationType,
-  HumanEvaluationMetric,
+  type EvaluationType,
+  type HumanEvaluationMetric,
   HumanEvaluationRatingSpecification,
 } from '@latitude-data/constants'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import type { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
 import { useMemo } from 'react'
-import {
+import type {
   AnnotationFormProps,
   ChartConfigurationArgs,
   ConfigurationFormProps,
@@ -49,7 +49,7 @@ function ConfigurationSimpleForm({
             if (value === undefined) return
             setConfiguration({ ...configuration, minRating: value })
           }}
-          errors={errors?.['minRating']}
+          errors={errors?.minRating}
           defaultAppearance
           className='w-full'
           fieldClassName='w-1/6'
@@ -66,7 +66,7 @@ function ConfigurationSimpleForm({
               minRatingDescription: e.target.value,
             })
           }
-          errors={errors?.['minRatingDescription']}
+          errors={errors?.minRatingDescription}
           className='w-full'
           disabled={disabled}
           required
@@ -85,7 +85,7 @@ function ConfigurationSimpleForm({
             if (value === undefined) return
             setConfiguration({ ...configuration, maxRating: value })
           }}
-          errors={errors?.['maxRating']}
+          errors={errors?.maxRating}
           defaultAppearance
           className='w-full'
           fieldClassName='w-1/6'
@@ -102,7 +102,7 @@ function ConfigurationSimpleForm({
               maxRatingDescription: e.target.value,
             })
           }
-          errors={errors?.['maxRatingDescription']}
+          errors={errors?.maxRatingDescription}
           className='w-full'
           disabled={disabled}
           required
@@ -119,45 +119,39 @@ function ConfigurationAdvancedForm({
   disabled,
 }: ConfigurationFormProps<EvaluationType.Human, HumanEvaluationMetric.Rating>) {
   return (
-    <>
-      <FormFieldGroup
-        layout='horizontal'
-        description='The minimum and maximum rating threshold of the response'
-      >
-        <NumberInput
-          value={configuration.minThreshold ?? undefined}
-          name='minThreshold'
-          label='Minimum threshold'
-          placeholder='No minimum'
-          min={configuration.minRating}
-          max={configuration.maxRating}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, minThreshold: value })
-          }
-          errors={errors?.['minThreshold']}
-          defaultAppearance
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-        <NumberInput
-          value={configuration.maxThreshold ?? undefined}
-          name='maxThreshold'
-          label='Maximum threshold'
-          placeholder='No maximum'
-          min={configuration.minRating}
-          max={configuration.maxRating}
-          onChange={(value) =>
-            setConfiguration({ ...configuration, maxThreshold: value })
-          }
-          errors={errors?.['maxThreshold']}
-          defaultAppearance
-          className='w-full'
-          disabled={disabled}
-          required
-        />
-      </FormFieldGroup>
-    </>
+    <FormFieldGroup
+      layout='horizontal'
+      description='The minimum and maximum rating threshold of the response'
+    >
+      <NumberInput
+        value={configuration.minThreshold ?? undefined}
+        name='minThreshold'
+        label='Minimum threshold'
+        placeholder='No minimum'
+        min={configuration.minRating}
+        max={configuration.maxRating}
+        onChange={(value) => setConfiguration({ ...configuration, minThreshold: value })}
+        errors={errors?.minThreshold}
+        defaultAppearance
+        className='w-full'
+        disabled={disabled}
+        required
+      />
+      <NumberInput
+        value={configuration.maxThreshold ?? undefined}
+        name='maxThreshold'
+        label='Maximum threshold'
+        placeholder='No maximum'
+        min={configuration.minRating}
+        max={configuration.maxRating}
+        onChange={(value) => setConfiguration({ ...configuration, maxThreshold: value })}
+        errors={errors?.maxThreshold}
+        defaultAppearance
+        className='w-full'
+        disabled={disabled}
+        required
+      />
+    </FormFieldGroup>
   )
 }
 
@@ -173,19 +167,13 @@ function AnnotationForm({
   setResultScore,
   disabled,
 }: AnnotationFormProps<EvaluationType.Human, HumanEvaluationMetric.Rating>) {
-  const range = Math.abs(
-    evaluation.configuration.maxRating - evaluation.configuration.minRating,
-  )
+  const range = Math.abs(evaluation.configuration.maxRating - evaluation.configuration.minRating)
 
   const options = useMemo(() => {
     if (range > 6) return []
 
     const options = []
-    for (
-      let i = evaluation.configuration.minRating;
-      i <= evaluation.configuration.maxRating;
-      i++
-    ) {
+    for (let i = evaluation.configuration.minRating; i <= evaluation.configuration.maxRating; i++) {
       options.push({
         label: i.toString(),
         value: i,

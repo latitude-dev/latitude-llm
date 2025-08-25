@@ -5,13 +5,7 @@ import { ROUTES } from '$/routes'
 import { createRoute, z } from '@hono/zod-openapi'
 import { documentParamsSchema } from '../paramsSchema'
 
-function getOrCreateRouteFactory({
-  path,
-  tags,
-}: {
-  path: string
-  tags: string[]
-}) {
+function getOrCreateRouteFactory({ path, tags }: { path: string; tags: string[] }) {
   return createRoute({
     operationId: 'getOrCreateDocument',
     method: http.Methods.POST,

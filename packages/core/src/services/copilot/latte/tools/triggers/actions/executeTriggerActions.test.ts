@@ -2,13 +2,13 @@ import * as factories from '@latitude-data/core/factories'
 import {
   DocumentTriggerParameters,
   DocumentTriggerType,
-  DocumentVersion,
+  type DocumentVersion,
   Providers,
 } from '@latitude-data/constants'
 import { describe, expect, beforeEach, it, vi } from 'vitest'
-import { Commit, Workspace } from '../../../../../../browser'
-import { LatteTriggerAction } from '../../../../../../../../constants/src/latte/triggers'
-import {
+import type { Commit, Workspace } from '../../../../../../browser'
+import type { LatteTriggerAction } from '../../../../../../../../constants/src/latte/triggers'
+import type {
   EmailTriggerConfiguration,
   ScheduledTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
@@ -132,10 +132,9 @@ describe('Latte CRUD document triggers', () => {
       const expectedError = new Error('Failed to create scheduled trigger')
       const expectedResultError = Result.error(expectedError)
 
-      vi.spyOn(
-        createDocumentTriggersModule,
-        'createDocumentTrigger',
-      ).mockResolvedValue(expectedResultError)
+      vi.spyOn(createDocumentTriggersModule, 'createDocumentTrigger').mockResolvedValue(
+        expectedResultError,
+      )
 
       // Act
       const result = await executeTriggerActions({
@@ -233,10 +232,9 @@ describe('Latte CRUD document triggers', () => {
       } as LatteTriggerAction
       const expectedError = new Error('Failed to delete document trigger')
       const expectedResultError = Result.error(expectedError)
-      vi.spyOn(
-        deleteDocumentTriggersModule,
-        'deleteDocumentTrigger',
-      ).mockResolvedValue(expectedResultError)
+      vi.spyOn(deleteDocumentTriggersModule, 'deleteDocumentTrigger').mockResolvedValue(
+        expectedResultError,
+      )
       // Act
       const result = await executeTriggerActions({
         workspace,
@@ -409,10 +407,9 @@ describe('Latte CRUD document triggers', () => {
 
     const expectedResultError = Result.error(expectedError)
 
-    vi.spyOn(
-      updateDocumentTriggersModule,
-      'updateDocumentTriggerConfiguration',
-    ).mockResolvedValue(expectedResultError)
+    vi.spyOn(updateDocumentTriggersModule, 'updateDocumentTriggerConfiguration').mockResolvedValue(
+      expectedResultError,
+    )
 
     // Act
     const result = await executeTriggerActions({

@@ -1,11 +1,7 @@
+import type { BackendClient, ConfigurableProp, ConfiguredProps } from '@pipedream/sdk'
 import {
-  BackendClient,
-  ConfigurableProp,
-  ConfiguredProps,
-} from '@pipedream/sdk'
-import {
-  ConfigurablePropWithRemoteOptions,
-  PipedreamIntegration,
+  type ConfigurablePropWithRemoteOptions,
+  type PipedreamIntegration,
   RemoteOptions,
 } from '../../../../../browser'
 import { Result } from '../../../../../lib/Result'
@@ -14,7 +10,7 @@ import {
   fillConfiguredProps,
   isIntegrationConfigured,
 } from '../../../../integrations/pipedream/components/fillConfiguredProps'
-import { PromisedResult } from '../../../../../lib/Transaction'
+import type { PromisedResult } from '../../../../../lib/Transaction'
 
 const DYNAMIC_PROP_PREFIXES = ['$.discord.', '$.airtable.'] as const
 
@@ -41,9 +37,9 @@ export async function fetchFullConfigSchema({
       typeof componentId === 'string' ? { key: componentId } : componentId,
     )
 
-    const relevantLatteProps = (
-      component.configurable_props as ConfigurableProp[]
-    ).filter((prop) => !IRRELEVANT_PROP_TYPES.includes(prop.type))
+    const relevantLatteProps = (component.configurable_props as ConfigurableProp[]).filter(
+      (prop) => !IRRELEVANT_PROP_TYPES.includes(prop.type),
+    )
 
     if (!isIntegrationConfigured(integration)) {
       // We still want to return the initial schema to Latte if integration is not configured, so it can fill what it can

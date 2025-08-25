@@ -1,20 +1,11 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
-import { ProviderLogCreatedEvent } from '../events'
+import type { ProviderLogCreatedEvent } from '../events'
 import * as providerApiKeyService from '../../services/providerApiKeys/touch'
 import * as cacheModule from '../../cache'
-import {
-  createDocumentLog,
-  createProject,
-  helpers,
-} from '../../tests/factories'
+import { createDocumentLog, createProject, helpers } from '../../tests/factories'
 import { createProviderLog } from '../../tests/factories/providerLogs'
-import {
-  DocumentLog,
-  ProviderApiKey,
-  Providers,
-  Workspace,
-} from '../../browser'
+import { type DocumentLog, type ProviderApiKey, Providers, type Workspace } from '../../browser'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 
 vi.mock('../../services/providerApiKeys/touch', () => ({
@@ -32,10 +23,7 @@ describe('touchProviderApiKeyJob', () => {
 
   const mockRedisGet = vi.fn()
   const mockRedisSet = vi.fn()
-  const mockTouchProviderApiKey = vi.spyOn(
-    providerApiKeyService,
-    'touchProviderApiKey',
-  )
+  const mockTouchProviderApiKey = vi.spyOn(providerApiKeyService, 'touchProviderApiKey')
 
   beforeAll(async () => {
     const {
@@ -100,9 +88,7 @@ describe('touchProviderApiKeyJob', () => {
     await touchProviderApiKeyJob({ data: event })
 
     // Verify Redis get was called but not set
-    expect(mockRedisGet).toHaveBeenCalledWith(
-      `touch_provider_api_key:${provider.id}`,
-    )
+    expect(mockRedisGet).toHaveBeenCalledWith(`touch_provider_api_key:${provider.id}`)
     expect(mockTouchProviderApiKey).not.toHaveBeenCalled()
     expect(mockRedisSet).not.toHaveBeenCalled()
   })
@@ -138,9 +124,7 @@ describe('touchProviderApiKeyJob', () => {
     await touchProviderApiKeyJob({ data: event })
 
     // Verify Redis and touchProviderApiKey were called
-    expect(mockRedisGet).toHaveBeenCalledWith(
-      `touch_provider_api_key:${provider.id}`,
-    )
+    expect(mockRedisGet).toHaveBeenCalledWith(`touch_provider_api_key:${provider.id}`)
     expect(mockTouchProviderApiKey).toHaveBeenCalledWith(provider.id)
     expect(mockRedisSet).toHaveBeenCalledWith(
       `touch_provider_api_key:${provider.id}`,
@@ -178,9 +162,7 @@ describe('touchProviderApiKeyJob', () => {
     await touchProviderApiKeyJob({ data: event })
 
     // Verify Redis and touchProviderApiKey were called
-    expect(mockRedisGet).toHaveBeenCalledWith(
-      `touch_provider_api_key:${provider.id}`,
-    )
+    expect(mockRedisGet).toHaveBeenCalledWith(`touch_provider_api_key:${provider.id}`)
     expect(mockTouchProviderApiKey).toHaveBeenCalledWith(provider.id)
     expect(mockRedisSet).not.toHaveBeenCalled()
   })

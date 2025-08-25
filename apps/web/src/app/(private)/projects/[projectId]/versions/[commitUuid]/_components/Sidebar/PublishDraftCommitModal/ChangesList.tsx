@@ -1,7 +1,7 @@
-import { Commit } from '@latitude-data/core/browser'
+import type { Commit } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { TruncatedTooltip } from '@latitude-data/web-ui/molecules/TruncatedTooltip'
@@ -10,7 +10,7 @@ import { useCurrentTheme } from '$/hooks/useCurrentTheme'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import useDocumentVersion from '$/stores/useDocumentVersion'
-import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
+import { type ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
 
 function ChangeWithErrors({
   change,
@@ -26,10 +26,7 @@ function ChangeWithErrors({
   const theme = useCurrentTheme()
   return (
     <li className='w-full flex flex-row items-center justify-between gap-1 min-h-8 px-2'>
-      <Icon
-        name='alert'
-        className='flex-shrink-0 text-destructive-muted-foreground'
-      />
+      <Icon name='alert' className='flex-shrink-0 text-destructive-muted-foreground' />
       <div className='flex-grow truncate'>
         <Link
           onClick={() => onClose(null)}
@@ -71,9 +68,7 @@ function Change({
   onSelect: () => void
 }) {
   const { data: prevDocument } = useDocumentVersion(
-    change.changeType === ModifiedDocumentType.UpdatedPath
-      ? change.documentUuid
-      : null,
+    change.changeType === ModifiedDocumentType.UpdatedPath ? change.documentUuid : null,
   )
 
   return (
@@ -121,32 +116,17 @@ export function ChangesList({
     >
       <Text.H5M>Changes</Text.H5M>
       <ul
-        className={cn(
-          'min-w-0 flex flex-col border rounded-md custom-scrollbar h-56 p-1',
-          {
-            'border-border': !hasErrors,
-            'border-destructive dark:border-foreground': hasErrors,
-          },
-        )}
+        className={cn('min-w-0 flex flex-col border rounded-md custom-scrollbar h-56 p-1', {
+          'border-border': !hasErrors,
+          'border-destructive dark:border-foreground': hasErrors,
+        })}
       >
         {isLoading ? (
           <>
-            <DocumentChangeSkeleton
-              width={62}
-              changeType={ModifiedDocumentType.Deleted}
-            />
-            <DocumentChangeSkeleton
-              width={87}
-              changeType={ModifiedDocumentType.Updated}
-            />
-            <DocumentChangeSkeleton
-              width={23}
-              changeType={ModifiedDocumentType.Created}
-            />
-            <DocumentChangeSkeleton
-              width={67}
-              changeType={ModifiedDocumentType.Updated}
-            />
+            <DocumentChangeSkeleton width={62} changeType={ModifiedDocumentType.Deleted} />
+            <DocumentChangeSkeleton width={87} changeType={ModifiedDocumentType.Updated} />
+            <DocumentChangeSkeleton width={23} changeType={ModifiedDocumentType.Created} />
+            <DocumentChangeSkeleton width={67} changeType={ModifiedDocumentType.Updated} />
           </>
         ) : (
           <>

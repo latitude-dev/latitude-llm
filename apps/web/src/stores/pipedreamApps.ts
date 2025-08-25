@@ -3,9 +3,9 @@ import { executeFetch } from '$/hooks/useFetcher'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { App } from '@pipedream/sdk/browser'
+import type { App } from '@pipedream/sdk/browser'
 import { useCallback, useMemo } from 'react'
-import useSWRInfinite, { SWRInfiniteConfiguration } from 'swr/infinite'
+import useSWRInfinite, { type SWRInfiniteConfiguration } from 'swr/infinite'
 
 type PipedreamApp = App & {
   triggerCount?: number
@@ -44,10 +44,7 @@ function useInfiniteFetcher<T>(
 }
 
 export default function usePipedreamApps(
-  {
-    query,
-    withTriggers = false,
-  }: { query?: string; withTriggers?: boolean } = {},
+  { query, withTriggers = false }: { query?: string; withTriggers?: boolean } = {},
   opts?: SWRInfiniteConfiguration<PipedreamAppsResponse, any>,
 ) {
   const hasTriggers = withTriggers ? 'true' : 'false'
@@ -63,12 +60,7 @@ export default function usePipedreamApps(
         return null
       }
 
-      return [
-        'pipedream-apps',
-        hasTriggers,
-        query || '',
-        previousPageData.cursor,
-      ] as const
+      return ['pipedream-apps', hasTriggers, query || '', previousPageData.cursor] as const
     },
     [hasTriggers, query],
   )
@@ -88,16 +80,8 @@ export default function usePipedreamApps(
     }, []),
   )
 
-  const {
-    data,
-    error,
-    mutate,
-    size,
-    setSize,
-    isValidating,
-    isLoading,
-    ...rest
-  } = useSWRInfinite<PipedreamAppsResponse>(getKey, fetcher, opts)
+  const { data, error, mutate, size, setSize, isValidating, isLoading } =
+    useSWRInfinite<PipedreamAppsResponse>(getKey, fetcher, opts)
 
   const flattenedData = useMemo(() => {
     if (!data) return []
@@ -143,7 +127,6 @@ export default function usePipedreamApps(
       isLoadingMore,
       isReachingEnd,
       totalCount,
-      ...rest,
     }),
     [
       flattenedData,
@@ -157,7 +140,6 @@ export default function usePipedreamApps(
       isLoadingMore,
       isReachingEnd,
       totalCount,
-      rest,
     ],
   )
 }

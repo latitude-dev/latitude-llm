@@ -1,5 +1,5 @@
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
-import { ProjectStats } from '@latitude-data/core/browser'
+import type { ProjectStats } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { EvaluationStats } from './EvaluationStats'
@@ -7,18 +7,9 @@ import { LogsOverTime } from './LogsOverTime'
 import { ModelCharts } from './ModelCharts'
 import Panel from '$/components/Panel'
 
-export function StatsPanels({
-  stats,
-  isLoading,
-}: {
-  stats?: ProjectStats
-  isLoading: boolean
-}) {
+export function StatsPanels({ stats, isLoading }: { stats?: ProjectStats; isLoading: boolean }) {
   const totalCost = stats
-    ? Object.values(stats.costPerModel ?? {}).reduce<number>(
-        (acc, curr) => acc + curr,
-        0,
-      )
+    ? Object.values(stats.costPerModel ?? {}).reduce<number>((acc, curr) => acc + curr, 0)
     : 0
 
   return (
@@ -26,10 +17,7 @@ export function StatsPanels({
       <div className='flex flex-col gap-4'>
         <Text.H5>Logs</Text.H5>
         <div className='grid grid-cols-3 gap-4'>
-          <LogsOverTime
-            data={stats?.rollingDocumentLogs}
-            isLoading={isLoading}
-          />
+          <LogsOverTime data={stats?.rollingDocumentLogs} isLoading={isLoading} />
           <div className='grid grid-cols-1 gap-4'>
             <Panel
               label='Prompts'

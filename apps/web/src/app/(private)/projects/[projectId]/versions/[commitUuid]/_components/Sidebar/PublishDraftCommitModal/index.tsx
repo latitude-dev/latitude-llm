@@ -4,7 +4,7 @@ import { CommitStatus } from '@latitude-data/core/browser'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
@@ -13,9 +13,9 @@ import { ROUTES } from '$/services/routes'
 import { useCommits } from '$/stores/commitsStore'
 import { useRouter } from 'next/navigation'
 import { useServerAction } from 'zsa-react'
-import { ChangesList, GroupedChanges } from './ChangesList'
+import { ChangesList, type GroupedChanges } from './ChangesList'
 import { ChangeDiff } from './ChangeDiff'
-import { ChangedDocument } from '@latitude-data/constants'
+import type { ChangedDocument } from '@latitude-data/constants'
 
 function confirmDescription({
   isLoading,
@@ -57,10 +57,7 @@ export default function PublishDraftCommitModal({
       onClose(null)
     },
   })
-  const commit = useMemo(
-    () => data.find((c) => c.id === commitId),
-    [commitId, data],
-  )
+  const commit = useMemo(() => data.find((c) => c.id === commitId), [commitId, data])
   const { project } = useCurrentProject()
   const router = useRouter()
   const {
@@ -85,6 +82,7 @@ export default function PublishDraftCommitModal({
   }, [commit])
 
   // FIXME: Do not use useEffect to set state.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   useEffect(() => {
     async function load() {
       if (!commitId) return
@@ -119,7 +117,6 @@ export default function PublishDraftCommitModal({
     }
 
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commitId, project.id])
   const anyChanges = changes.length > 0
   const hasErrors = !anyChanges || groups.errors.length > 0

@@ -1,6 +1,6 @@
 import { PipedreamComponentPropsForm } from '$/components/Pipedream/PipedreamPropsForm'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import {
+import type {
   DocumentVersion,
   IntegrationDto,
   PipedreamComponent,
@@ -9,9 +9,9 @@ import {
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
-import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
+import type { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 
 function ParameterSelects({
   document,
@@ -46,17 +46,10 @@ function ParameterSelects({
         </Text.H6>
       )}
       {parameterNames.map((paramName) => {
-        const value = payloadParameters.includes(paramName)
-          ? 'payload'
-          : undefined
+        const value = payloadParameters.includes(paramName) ? 'payload' : undefined
         return (
           <div className='flex gap-2 items-center' key={paramName}>
-            <Badge
-              variant={value ? 'accent' : 'muted'}
-              noWrap
-              ellipsis
-              className='min-w-24'
-            >
+            <Badge variant={value ? 'accent' : 'muted'} noWrap ellipsis className='min-w-24'>
               {`{{${paramName}}}`}
             </Badge>
             <Select
@@ -78,9 +71,9 @@ function ParameterSelects({
       })}
       {parameterNames.length > 0 && (
         <Text.H6 color='foregroundMuted' isItalic>
-          Note: "Payload" refers to the data received from the trigger event. We
-          currently do not know the exact structure of this data, so you may
-          need to test your trigger to see what data is available.
+          Note: "Payload" refers to the data received from the trigger event. We currently do not
+          know the exact structure of this data, so you may need to test your trigger to see what
+          data is available.
         </Text.H6>
       )}
     </div>

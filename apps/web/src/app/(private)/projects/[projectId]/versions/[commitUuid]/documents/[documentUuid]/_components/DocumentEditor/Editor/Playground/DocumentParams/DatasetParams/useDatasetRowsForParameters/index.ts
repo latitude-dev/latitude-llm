@@ -2,18 +2,18 @@ import { useCallback, useEffect, useMemo } from 'react'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import useDatasetRows from '$/stores/datasetRows'
 import {
-  DatasetRow,
-  Dataset,
-  DocumentVersion,
-  Inputs,
-  LinkedDatasetRow,
+  type DatasetRow,
+  type Dataset,
+  type DocumentVersion,
+  type Inputs,
+  type LinkedDatasetRow,
   parseRowCell,
 } from '@latitude-data/core/browser'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import type { SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import type { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useMetadataParameters } from '$/hooks/useDocumentParameters/metadataParametersStore'
-import { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
+import type { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
 
 function mapDatasetColumnsToParameters({
   parameters,
@@ -44,7 +44,7 @@ function resolveDatasetDataRow({
   dataset: Dataset
   emptyInputs: Inputs<'datasetV2'> | undefined
 }): LinkedDatasetRow {
-  let linkedDatasetRow: LinkedDatasetRow = {
+  const linkedDatasetRow: LinkedDatasetRow = {
     datasetRowId,
     inputs: {},
     mappedInputs: {},
@@ -75,24 +75,30 @@ function mapInputs({
   mappedInputs: Record<string, string>
   row: DatasetRow
 }) {
-  const mapped = Object.entries(mappedInputs).reduce((acc, [key, value]) => {
-    const rawCell = row.rowData[value] ?? ''
-    const cell = parseRowCell({ cell: rawCell })
-    acc[key] = {
-      value: cell,
-      metadata: {
-        includeInPrompt: true,
-      },
-    }
-    return acc
-  }, {} as Inputs<'datasetV2'>)
+  const mapped = Object.entries(mappedInputs).reduce(
+    (acc, [key, value]) => {
+      const rawCell = row.rowData[value] ?? ''
+      const cell = parseRowCell({ cell: rawCell })
+      acc[key] = {
+        value: cell,
+        metadata: {
+          includeInPrompt: true,
+        },
+      }
+      return acc
+    },
+    {} as Inputs<'datasetV2'>,
+  )
 
-  return Object.entries(inputs).reduce((acc, [key, value]) => {
-    const newInput = mapped[key]
-    const newValue = newInput ? newInput : value
-    acc[key] = newValue
-    return acc
-  }, {} as Inputs<'datasetV2'>)
+  return Object.entries(inputs).reduce(
+    (acc, [key, value]) => {
+      const newInput = mapped[key]
+      const newValue = newInput ? newInput : value
+      acc[key] = newValue
+      return acc
+    },
+    {} as Inputs<'datasetV2'>,
+  )
 }
 
 /**
@@ -116,19 +122,17 @@ export function useDatasetRowsForParameters({
   const emptyInputs = useMetadataParameters().emptyInputs?.datasetV2
   const dataset = useMemo(() => originalDataset, [originalDataset])
   const rowCellOptions = useMemo<SelectOption<string>[]>(
-    () =>
-      dataset?.columns.map((c) => ({ value: c.identifier, label: c.name })) ??
-      [],
+    () => dataset?.columns.map((c) => ({ value: c.identifier, label: c.name })) ?? [],
     [dataset],
   )
-  const { data: count, isLoading: isLoadingDatasetRowsCount } =
-    useDatasetRowsCount({ dataset })
+  const { data: count, isLoading: isLoadingDatasetRowsCount } = useDatasetRowsCount({ dataset })
 
   const { metadataParameters, datasetV2: ds } = useDocumentParameters({
     document,
     commitVersionUuid,
   })
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   const onRowsFetched = useCallback(
     async (data: ClientDatasetRow[]) => {
       const row = data[0]
@@ -160,7 +164,7 @@ export function useDatasetRowsForParameters({
       })
     },
     // FIXME: Fixing this dependency array declaration causes an infinite loop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [
       emptyInputs,
       ds.setDataset,
@@ -184,6 +188,7 @@ export function useDatasetRowsForParameters({
   )
 
   const datasetRow = datasetRows?.[0]
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   const updatePosition = useCallback(
     (position: number) => {
       if (isLoadingRow) return
@@ -191,7 +196,7 @@ export function useDatasetRowsForParameters({
       setPosition(position)
     },
     // FIXME: Fixing this dependency array declaration causes an infinite loop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [isLoadingRow],
   )
 
@@ -205,6 +210,7 @@ export function useDatasetRowsForParameters({
     [updatePosition],
   )
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   const onSelectRowCell = useCallback(
     (param: string) => (columnIdentifier: string) => {
       if (!dataset || !datasetRow) return
@@ -226,15 +232,15 @@ export function useDatasetRowsForParameters({
       })
     },
     // FIXME: Fixing this dependency array declaration causes an infinite loop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [ds.setDataset, ds.inputs, ds.mappedInputs, dataset?.id, datasetRow],
   )
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: ignored using `--suppress`
   useEffect(() => {
     // React to fresh fetched rows
     onRowsFetched(datasetRows ?? [])
     // FIXME: Fixing this dependency array declaration causes an infinite loop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datasetRows])
 
   return {

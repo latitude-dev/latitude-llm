@@ -1,11 +1,11 @@
 'use client'
 
 import {
-  ChangeEvent,
-  DragEvent,
+  type ChangeEvent,
+  type DragEvent,
   forwardRef,
-  InputHTMLAttributes,
-  JSX,
+  type InputHTMLAttributes,
+  type JSX,
   useCallback,
   useRef,
   useState,
@@ -13,10 +13,7 @@ import {
 
 import { useCombinedRefs } from '../../../lib/hooks/useCombineRefs'
 
-export type DropzoneProps = Omit<
-  InputHTMLAttributes<HTMLInputElement>,
-  'onChange' | 'children'
-> & {
+export type DropzoneProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'children'> & {
   onChange?: (files: FileList | null) => void
   children: ({ isDragging }: { isDragging: boolean }) => JSX.Element
 }
@@ -67,11 +64,7 @@ export const Dropzone = forwardRef<HTMLInputElement, DropzoneProps>(
     }
 
     return (
-      <div
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        onDragLeave={handleDragLeave}
-      >
+      <div onDragOver={handleDragOver} onDrop={handleDrop} onDragLeave={handleDragLeave}>
         {children({ isDragging })}
         <input
           ref={combineRef}

@@ -3,8 +3,8 @@ import { resolveRelativePath } from '@latitude-data/constants'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 import type { AstError } from '@latitude-data/constants/promptl'
 import {
-  CompileError as PromptlCompileError,
-  ConversationMetadata as PromptlConversationMetadata,
+  type CompileError as PromptlCompileError,
+  type ConversationMetadata as PromptlConversationMetadata,
   scan,
 } from 'promptl-ai'
 import type { BlockRootNode } from '../components/BlocksEditor/Editor/state/promptlToLexical/fromAstToBlocks'
@@ -73,7 +73,7 @@ function handleMetadata({
     } satisfies AstError
   })
 
-  let rootBlock: BlockRootNode | undefined = undefined
+  let rootBlock: BlockRootNode | undefined
   if (metadata.ast) {
     rootBlock = fromAstToBlocks({ ast: metadata.ast, prompt, errors })
   }
@@ -89,7 +89,7 @@ function handleMetadata({
 
 export type ResolvedMetadata = Awaited<ReturnType<typeof handleMetadata>>
 
-self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
+self.onmessage = async (event: { data: ReadMetadataWorkerProps }) => {
   const {
     prompt,
     document,
@@ -102,10 +102,7 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
     ...rest
   } = event.data
 
-  const referenceFn =
-    document && documents
-      ? readDocument(document, documents, prompt)
-      : undefined
+  const referenceFn = document && documents ? readDocument(document, documents, prompt) : undefined
   const configSchema = providerNames
     ? latitudePromptConfigSchema({
         providerNames,

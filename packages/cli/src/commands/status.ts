@@ -1,17 +1,17 @@
-import { Command } from 'commander'
+import type { Command } from 'commander'
 import chalk from 'chalk'
-import { StatusOptions } from '../types'
+import type { StatusOptions } from '../types'
 import { BaseCommand } from '../utils/baseCommand'
 import { registerCommand } from '../utils/commandRegistrar'
 import {
   computePromptDiff,
-  DiffResult,
-  IncomingPrompt,
-  OriginPrompt,
+  type DiffResult,
+  type IncomingPrompt,
+  type OriginPrompt,
 } from '../utils/computePromptDiff'
 import { hashContent } from '../utils/hashContent'
-import * as path from 'path'
-import * as fs from 'fs/promises'
+import * as path from 'node:path'
+import * as fs from 'node:fs/promises'
 
 /**
  * Handles displaying the current status of a Latitude project
@@ -29,10 +29,7 @@ export class StatusCommand extends BaseCommand {
       const lockFile = await this.getLockFile()
 
       // Get version details from SDK
-      const versionDetails = await this.client!.versions.get(
-        lockFile.projectId,
-        lockFile.version,
-      )
+      const versionDetails = await this.client!.versions.get(lockFile.projectId, lockFile.version)
 
       // Display project status with improved formatting
       console.log(chalk.blue.bold('\n📊 Latitude Project Status'))
@@ -50,10 +47,7 @@ export class StatusCommand extends BaseCommand {
       // Count prompt files
       try {
         //// Read local prompts and get diff with remote
-        const localPrompts = await this.readLocalPrompts(
-          lockFile.rootFolder,
-          !!lockFile.npm,
-        )
+        const localPrompts = await this.readLocalPrompts(lockFile.rootFolder, !!lockFile.npm)
         const diffResults = await this.getDiffWithRemote(
           lockFile.projectId,
           lockFile.version,
@@ -62,10 +56,8 @@ export class StatusCommand extends BaseCommand {
 
         // Display diff summary
         this.showChangesSummary(diffResults)
-      } catch (error) {
-        console.log(
-          `${chalk.yellow('Prompt Files:')}     ${chalk.red('Unable to determine')}`,
-        )
+      } catch (_error) {
+        console.log(`${chalk.yellow('Prompt Files:')}     ${chalk.red('Unable to determine')}`)
       }
     } catch (error: any) {
       this.handleError(error, 'Status check')
@@ -132,10 +124,8 @@ export class StatusCommand extends BaseCommand {
     ) {
       try {
         return await this.importPromptFromFile(filePath)
-      } catch (error) {
-        console.warn(
-          chalk.yellow(`Failed to import prompt from ${filePath}, skipping...`),
-        )
+      } catch (_error) {
+        console.warn(chalk.yellow(`Failed to import prompt from ${filePath}, skipping...`))
         // If import fails, we assume the prompt is not valid/available
         throw new Error(`Cannot read prompt from ${filePath}`)
       }
@@ -148,11 +138,7 @@ export class StatusCommand extends BaseCommand {
 
     // Skip TypeScript files for now as they need compilation
     if (filePath.endsWith('.ts')) {
-      console.warn(
-        chalk.yellow(
-          `TypeScript files not supported yet, skipping ${filePath}`,
-        ),
-      )
+      console.warn(chalk.yellow(`TypeScript files not supported yet, skipping ${filePath}`))
       throw new Error(`TypeScript files not supported yet`)
     }
 
@@ -224,20 +210,16 @@ export class StatusCommand extends BaseCommand {
       })
 
       // Map remote prompts to our interface
-      const mappedRemotePrompts: OriginPrompt[] = remotePrompts.map(
-        (prompt) => ({
-          path: prompt.path,
-          content: prompt.content,
-          contentHash: hashContent(prompt.content),
-        }),
-      )
+      const mappedRemotePrompts: OriginPrompt[] = remotePrompts.map((prompt) => ({
+        path: prompt.path,
+        content: prompt.content,
+        contentHash: hashContent(prompt.content),
+      }))
 
       // Compute diff locally
       return computePromptDiff(localPrompts, mappedRemotePrompts)
     } catch (error: any) {
-      throw new Error(
-        `Failed to compute diff: ${error.message || String(error)}`,
-      )
+      throw new Error(`Failed to compute diff: ${error.message || String(error)}`)
     }
   }
 }

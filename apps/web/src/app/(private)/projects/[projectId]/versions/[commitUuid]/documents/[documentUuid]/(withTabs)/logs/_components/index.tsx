@@ -1,10 +1,7 @@
 'use client'
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { type EventArgs, useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { RealtimeToggle } from '$/components/RealtimeToggle'
 import { ROUTES } from '$/services/routes'
 import { useCommits } from '$/stores/commitsStore'
@@ -13,7 +10,7 @@ import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
 import useDocumentLogsLimited from '$/stores/documentLogsLimited'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import {
+import type {
   DocumentLogFilterOptions,
   DocumentLogsLimitedView,
   DocumentLogWithMetadataAndError,
@@ -23,10 +20,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
@@ -121,17 +115,16 @@ export function DocumentLogsPage({
   )
 
   const [limitedCursor, setLimitedCursor] = useState<string | null>(from)
-  const { data: documentLogsLimited, mutate: mutateLimited } =
-    useDocumentLogsLimited(
-      {
-        documentUuid: document.documentUuid,
-        projectId: project.id,
-        from: limitedCursor,
-        filters: debouncedFilterOptions,
-        disable: !limitedView,
-      },
-      { fallbackData: { items: serverDocumentLogs, next: null } },
-    )
+  const { data: documentLogsLimited, mutate: mutateLimited } = useDocumentLogsLimited(
+    {
+      documentUuid: document.documentUuid,
+      projectId: project.id,
+      from: limitedCursor,
+      filters: debouncedFilterOptions,
+      disable: !limitedView,
+    },
+    { fallbackData: { items: serverDocumentLogs, next: null } },
+  )
 
   // Prefetching the next logs
   useDocumentLogsLimited({
@@ -157,9 +150,7 @@ export function DocumentLogsPage({
       ) => {
         return mutateLimited((current) => {
           const result = fn(current?.items)
-          return result
-            ? { items: result, next: current?.next ?? null }
-            : current
+          return result ? { items: result, next: current?.next ?? null } : current
         }, options)
       }) as ReturnType<typeof useDocumentLogs<false>>['mutate']
     }
@@ -197,8 +188,7 @@ export function DocumentLogsPage({
     isAnnotatingEvaluation,
   } = useEvaluationsV2({ project, commit, document })
 
-  const isEvaluationsLoading =
-    isEvaluationResultsV2Loading || isEvaluationsV2Loading
+  const isEvaluationsLoading = isEvaluationResultsV2Loading || isEvaluationsV2Loading
 
   const [realtimeEnabled, setRealtimeEnabled] = useState(!limitedView)
   useDocumentLogSocket(document.documentUuid, mutate, realtimeEnabled)
@@ -215,12 +205,7 @@ export function DocumentLogsPage({
                   <Text.H4B color='foreground'>Logs</Text.H4B>
                   <span className='flex flex-row items-center gap-1'>
                     <Text.H6 color='foreground'>(limited)</Text.H6>
-                    <Icon
-                      name='info'
-                      size='small'
-                      color='foreground'
-                      className='flex-shrink-0'
-                    />
+                    <Icon name='info' size='small' color='foreground' className='flex-shrink-0' />
                   </span>
                 </span>
               }
@@ -228,8 +213,8 @@ export function DocumentLogsPage({
               align='center'
               side='top'
             >
-              Statistics are limited, approximated, and cannot be filtered due
-              to the large number of logs.
+              Statistics are limited, approximated, and cannot be filtered due to the large number
+              of logs.
             </Tooltip>
           ) : (
             'Logs'
@@ -254,10 +239,7 @@ export function DocumentLogsPage({
                 Upload logs
               </Button>
             </Link>
-            <RealtimeToggle
-              enabled={realtimeEnabled}
-              setEnabled={setRealtimeEnabled}
-            />
+            <RealtimeToggle enabled={realtimeEnabled} setEnabled={setRealtimeEnabled} />
           </>
         }
         table={

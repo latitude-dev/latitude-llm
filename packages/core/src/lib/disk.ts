@@ -1,16 +1,15 @@
-import { Readable } from 'stream'
+import { Readable } from 'node:stream'
 
 import { env } from '@latitude-data/env'
 import { Disk, errors } from 'flydrive'
 import { FSDriver } from 'flydrive/drivers/fs'
 import { S3Driver } from 'flydrive/drivers/s3'
-import { SignedURLOptions, WriteOptions } from 'flydrive/types'
+import type { SignedURLOptions, WriteOptions } from 'flydrive/types'
 
 import { Result } from './Result'
 
-const generateUrl =
-  (baseUrl: string, publicPath: string) => async (key: string) =>
-    `${baseUrl}/${publicPath}/${key}`
+const generateUrl = (baseUrl: string, publicPath: string) => async (key: string) =>
+  `${baseUrl}/${publicPath}/${key}`
 
 /**
  * These env variables are set in production.
@@ -136,10 +135,7 @@ export class DiskWrapper {
       // For streams, we'll only set contentLength if it's explicitly provided
       // or if the stream has a reliable readableLength
       const streamOptions = { ...options }
-      if (
-        contents.readableLength !== undefined &&
-        contents.readableLength > 0
-      ) {
+      if (contents.readableLength !== undefined && contents.readableLength > 0) {
         streamOptions.contentLength = contents.readableLength
       }
 

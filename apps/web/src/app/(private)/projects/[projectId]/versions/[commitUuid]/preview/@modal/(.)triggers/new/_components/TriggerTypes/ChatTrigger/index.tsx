@@ -1,15 +1,11 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
-import { type OnTriggerCreated } from '../../../client'
+import type { OnTriggerCreated } from '../../../client'
 import { PublishedDocumentPreview } from './PublishedDocumentPreview'
 
 const FAKE_CHAT_TRIGGER_DOCUMENT = {}
-export function ChatTrigger({
-  onTriggerCreated: _ot,
-}: {
-  onTriggerCreated: OnTriggerCreated
-}) {
+export function ChatTrigger({ onTriggerCreated: _ot }: { onTriggerCreated: OnTriggerCreated }) {
   const { isHead: canEdit } = useCurrentCommit()
 
   const onPublish = () => {
@@ -23,9 +19,7 @@ export function ChatTrigger({
       <div className='flex flex-col items-center gap-y-4'>
         <div className='flex flex-col w-full items-center'>
           <Text.H5B>Share to the web</Text.H5B>
-          <Text.H5 color='foregroundMuted'>
-            Create a public chatbot with Latitude
-          </Text.H5>
+          <Text.H5 color='foregroundMuted'>Create a public chatbot with Latitude</Text.H5>
         </div>
         <PublishedDocumentPreview publishedData={FAKE_CHAT_TRIGGER_DOCUMENT} />
         <div className='max-w-[300px] w-full'>

@@ -1,5 +1,5 @@
 import { setDOMUnmanaged } from 'lexical'
-import { createRoot, Root } from 'react-dom/client'
+import { createRoot, type Root } from 'react-dom/client'
 export const VERTICAL_SPACE_CLASS = 'space-y-2'
 
 export interface HeaderDivWithRoot extends HTMLDivElement {
