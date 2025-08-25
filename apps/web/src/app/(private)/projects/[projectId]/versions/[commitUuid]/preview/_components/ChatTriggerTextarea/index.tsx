@@ -5,7 +5,9 @@ import useDocumentVersions from '$/stores/documentVersions'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { ParameterInput } from '$/components/ParameterInput'
@@ -148,37 +150,50 @@ export function ChatTriggerTextarea({
   if (!document) return null
 
   return (
-    <div
-      className={cn(
-        'rounded-2xl border-2 border-border shadow-sm bg-background',
-        'focus-within:animate-glow focus-within:glow-primary focus-within:border-primary/50',
-      )}
-    >
-      <div className='border-b border-border p-3'>
-        <DocumentParameters document={document} setParameters={setParameters} />
+    <div className='bg-background flex flex-col gap-y-4'>
+      <div className='flex flex-row items-center justify-between gap-x-4'>
+        <div className='flex-grow'>
+          <Text.H4M>Start a new conversation</Text.H4M>
+        </div>
+        <div className='flex-shrink-0'>
+          <Select placeholder='Select a document' options={[]} />
+        </div>
       </div>
-      <div className='p-3'>
-        <TextArea
-          ref={ref}
-          variant='unstyled'
-          placeholder='Type your message here'
-          minRows={1}
-          className={cn(
-            'bg-background w-full p-3 resize-none text-sm rounded-xl',
-            'border-none outline-none ring-0',
-            'custom-scrollbar scrollable-indicator',
-          )}
-        />
-        <div className='flex justify-end p-3'>
-          <Button
-            fancy
-            roundy
-            variant='default'
-            iconProps={{ name: 'circlePlay' }}
-            onClick={handleRunTrigger}
-          >
-            Run
-          </Button>
+      <div
+        className={cn(
+          'rounded-2xl border-2 border-border shadow-sm bg-background',
+          'focus-within:animate-glow focus-within:glow-primary focus-within:border-primary/50',
+        )}
+      >
+        <div className='border-b border-border p-3'>
+          <DocumentParameters
+            document={document}
+            setParameters={setParameters}
+          />
+        </div>
+        <div className='p-3'>
+          <TextArea
+            ref={ref}
+            variant='unstyled'
+            placeholder='Type your message here'
+            minRows={1}
+            className={cn(
+              'bg-background w-full p-3 resize-none text-sm rounded-xl',
+              'border-none outline-none ring-0',
+              'custom-scrollbar scrollable-indicator',
+            )}
+          />
+          <div className='flex justify-end p-3'>
+            <Button
+              fancy
+              roundy
+              variant='default'
+              iconProps={{ name: 'circlePlay' }}
+              onClick={handleRunTrigger}
+            >
+              Run
+            </Button>
+          </div>
         </div>
       </div>
     </div>

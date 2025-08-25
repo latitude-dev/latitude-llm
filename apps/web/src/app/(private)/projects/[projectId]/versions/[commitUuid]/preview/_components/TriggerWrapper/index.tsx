@@ -107,6 +107,12 @@ function EditTriggerButton({
   )
 }
 
+function isChatTrigger(
+  trigger: DocumentTrigger,
+): trigger is DocumentTrigger<DocumentTriggerType.Chat> {
+  return trigger.triggerType === DocumentTriggerType.Chat
+}
+
 const RUNNABLE_TRIGGERS = [
   DocumentTriggerType.Scheduled,
   DocumentTriggerType.Chat,
@@ -137,7 +143,7 @@ export function TriggerWrapper({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const isLive = !!commit.mergedAt
-  const canSeeEvents = trigger.triggerType !== DocumentTriggerType.Scheduled
+  const canSeeEvents = !RUNNABLE_TRIGGERS.includes(trigger.triggerType)
   const canRunTrigger = RUNNABLE_TRIGGERS.includes(trigger.triggerType)
   const onToggleEventList = useCallback(() => {
     if (!canSeeEvents) return
@@ -152,8 +158,8 @@ export function TriggerWrapper({
   const handleRunTrigger = useCallback(() => {
     if (!canRunTrigger) return
 
-    if (trigger.triggerType === DocumentTriggerType.Chat) {
-      onRunChatTrigger({ trigger })
+    if (isChatTrigger(trigger)) {
+      onRunChatTrigger({ trigger: trigger })
       return
     }
 
@@ -194,12 +200,6 @@ export function TriggerWrapper({
               isLive={isLive}
               trigger={trigger}
             />
-            <EditTriggerButton
-              projectId={project.id}
-              commitUuid={commit.uuid}
-              trigger={trigger}
-              isLive={isLive}
-            />
             {canRunTrigger ? (
               <Button
                 fancy
@@ -210,6 +210,12 @@ export function TriggerWrapper({
                 Run
               </Button>
             ) : null}
+            <EditTriggerButton
+              projectId={project.id}
+              commitUuid={commit.uuid}
+              trigger={trigger}
+              isLive={isLive}
+            />
           </div>
           {canSeeEvents ? (
             <div className='min-h-button flex items-center justify-center'>
