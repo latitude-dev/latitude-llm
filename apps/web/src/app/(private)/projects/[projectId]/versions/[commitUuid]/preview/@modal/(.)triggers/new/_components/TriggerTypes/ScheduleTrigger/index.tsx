@@ -16,7 +16,7 @@ import { ScheduleTriggerForm } from '../../../../_components/TriggerForms/Schedu
 import {
   SelectDocument,
   useDocumentSelection,
-} from '../PipedreamTrigger/TriggerConfiguration/SelectDocument'
+} from '../../../../_components/SelectDocument'
 import { TriggerWrapper } from '../TriggerWrapper'
 
 export function ScheduleTrigger({

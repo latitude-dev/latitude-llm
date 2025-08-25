@@ -108,6 +108,8 @@ function EditTrigger<T extends DocumentTriggerType>(
 ) {
   const type = props.trigger.triggerType
 
+  if (type === DocumentTriggerType.Chat) return null
+
   if (type === DocumentTriggerType.Email) {
     return (
       <EditEmailTrigger
@@ -168,6 +170,24 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
     onCloseModal()
   }, [trigger, isLoading, onCloseModal])
 
+  const footer = useMemo(() => {
+    if (!trigger || trigger?.triggerType === DocumentTriggerType.Chat) {
+      return null
+    }
+    return (
+      <>
+        <CloseTrigger />
+        <Button
+          disabled={!configuration || isUpdating}
+          fancy
+          onClick={onUpdate}
+        >
+          Update trigger
+        </Button>
+      </>
+    )
+  }, [trigger, isUpdating, configuration, onUpdate])
+
   if (!isLive) {
     return (
       <Modal
@@ -176,18 +196,7 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
         title='Edit trigger'
         description='Edit the trigger configuration'
         onOpenChange={onCloseModal}
-        footer={
-          <>
-            <CloseTrigger />
-            <Button
-              disabled={!configuration || isUpdating}
-              fancy
-              onClick={onUpdate}
-            >
-              Update trigger
-            </Button>
-          </>
-        }
+        footer={footer}
       >
         {isLoading ? <LoadingTrigger /> : null}
         {trigger && document ? (

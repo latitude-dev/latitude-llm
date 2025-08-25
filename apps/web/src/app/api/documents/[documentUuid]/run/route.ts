@@ -1,4 +1,4 @@
-import { LogSources } from '@latitude-data/core/browser'
+import { LogSources, User, Workspace } from '@latitude-data/core/browser'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -15,6 +15,7 @@ const inputSchema = z.object({
   commitUuid: z.string(),
   parameters: z.record(z.any()),
   stream: z.boolean().default(true),
+  userMessage: z.string().optional(),
 })
 
 export const POST = errorHandler(
@@ -28,14 +29,15 @@ export const POST = errorHandler(
         params: {
           documentUuid: string
         }
-        workspace: any
-        user: any
+        workspace: Workspace
+        user: User
       },
     ) => {
       const body = await req.json()
 
       try {
-        const { path, commitUuid, parameters } = inputSchema.parse(body)
+        const { path, commitUuid, parameters, userMessage } =
+          inputSchema.parse(body)
         const projectId = Number(body.projectId)
 
         // Publish document run event
@@ -48,6 +50,7 @@ export const POST = errorHandler(
             parameters,
             workspaceId: workspace.id,
             userEmail: user.email,
+            userMessage,
           },
         })
 
@@ -120,6 +123,7 @@ export const POST = errorHandler(
             stream: true,
             versionUuid: commitUuid,
             parameters,
+            userMessage,
             onEvent: async (event) => {
               try {
                 if (event.data.type === ChainEventTypes.ChainError) {

@@ -14,6 +14,7 @@ const TYPE_NAMES: Record<DocumentTrigger['triggerType'], string> = {
   [DocumentTriggerType.Scheduled]: 'Scheduled',
   [DocumentTriggerType.Email]: 'Email',
   [DocumentTriggerType.Integration]: 'Integration',
+  [DocumentTriggerType.Chat]: 'Chat',
 }
 
 export function DeleteTriggerBanner({

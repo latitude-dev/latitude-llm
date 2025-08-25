@@ -10,7 +10,7 @@ import { type OnTriggerCreated } from '../../../client'
 import {
   SelectDocument,
   useDocumentSelection,
-} from '../PipedreamTrigger/TriggerConfiguration/SelectDocument'
+} from '../../../../_components/SelectDocument'
 import { TriggerWrapper } from '../TriggerWrapper'
 import { EmailTriggerConfig } from './Configuration'
 
@@ -21,7 +21,7 @@ export function EmailTrigger({
 }) {
   const { project } = useCurrentProject()
   const documentSelection = useDocumentSelection()
-  const { isHead, commit } = useCurrentCommit()
+  const { commit } = useCurrentCommit()
   const document = documentSelection.document
   const { create, isCreating } = useDocumentTriggers(
     {
@@ -34,7 +34,7 @@ export function EmailTrigger({
       },
     },
   )
-  const disabled = isHead || isCreating
+  const disabled = !!commit.mergedAt || isCreating
   const documentUuid = document?.documentUuid
   const onCreateEmailTrigger = useCallback(
     (config: EmailTriggerConfiguration) => {

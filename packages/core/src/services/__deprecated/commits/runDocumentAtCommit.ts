@@ -61,6 +61,19 @@ async function createDocumentRunResult({
   }).then((r) => r.unwrap())
 }
 
+export type RunDocumentAtCommitLegacyArgs = {
+  workspace: Workspace
+  commit: Commit
+  document: DocumentVersion
+  parameters: Record<string, unknown>
+  customIdentifier?: string
+  source: LogSources
+  abortSignal?: AbortSignal
+  customPrompt?: string
+  experiment?: Experiment
+  errorableUuid?: string
+}
+
 export async function runDocumentAtCommitLegacy({
   workspace,
   document,
@@ -72,18 +85,7 @@ export async function runDocumentAtCommitLegacy({
   customPrompt,
   experiment,
   errorableUuid,
-}: {
-  workspace: Workspace
-  commit: Commit
-  document: DocumentVersion
-  parameters: Record<string, unknown>
-  customIdentifier?: string
-  source: LogSources
-  abortSignal?: AbortSignal
-  customPrompt?: string
-  experiment?: Experiment
-  errorableUuid?: string
-}) {
+}: RunDocumentAtCommitLegacyArgs) {
   const errorableType = ErrorableEntity.DocumentLog
   errorableUuid = errorableUuid ?? generateUUIDIdentifier()
   const providersMap = await buildProvidersMap({
