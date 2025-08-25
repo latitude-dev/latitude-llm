@@ -71,14 +71,16 @@ async function buildOutput(
  **/
 export async function fakeResponse({
   documentLogUuid,
+  accumulatedText,
 }: {
   documentLogUuid?: string
+  accumulatedText: { text: string }
 }): Promise<ChainStepResponse<StreamType>> {
   return {
     streamType: 'text',
     documentLogUuid,
-    text: 'This is a fake response due to an error in the stream',
-    output: [fake_assistant_message],
+    text: accumulatedText.text,
+    output: [fake_assistant_message(accumulatedText.text)],
     usage: nullLanguageModelUse,
     reasoning: undefined,
     toolCalls: [],
@@ -91,13 +93,15 @@ const nullLanguageModelUse = {
   totalTokens: 0,
 }
 
-const fake_assistant_message: AssistantMessage = {
-  role: MessageRole.assistant,
-  content: [
-    {
-      type: 'text',
-      text: 'This is a fake response due to an error in the stream.',
-    },
-  ],
-  toolCalls: [],
+const fake_assistant_message = (accumulatedText: string): AssistantMessage => {
+  return {
+    role: MessageRole.assistant,
+    content: [
+      {
+        type: 'text',
+        text: accumulatedText,
+      },
+    ],
+    toolCalls: [],
+  }
 }

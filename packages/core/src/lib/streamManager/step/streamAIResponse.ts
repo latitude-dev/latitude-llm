@@ -72,14 +72,19 @@ export async function streamAIResponse({
   const checkResult = checkValidStream({ type: aiResult.type })
   if (checkResult.error) throw checkResult.error
 
+  const accumulatedText = { text: '' }
   try {
     await consumeStream({
       controller,
       result: aiResult,
+      accumulatedText,
     })
   } catch (error) {
     if (isAbortError(error)) {
-      const response = await fakeResponse({ documentLogUuid })
+      const response = await fakeResponse({
+        documentLogUuid,
+        accumulatedText,
+      })
       await createProviderLog({
         workspace,
         ...buildProviderLogDto({

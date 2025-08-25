@@ -1,6 +1,5 @@
 import { Job } from 'bullmq'
 
-import { LogSources } from '@latitude-data/constants'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { LatitudeError } from '../../../lib/errors'
 import { DocumentLogsRepository, UsersRepository } from '../../../repositories'
@@ -14,9 +13,6 @@ import {
   clearJobCancellation,
   isJobCancelled,
 } from '../../../services/bullmq/cancelJob'
-import { Workspace } from '../../../browser'
-import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
-import { createProviderLog } from '../../../services/providerLogs'
 
 export type RunLatteJobData = {
   workspaceId: number
@@ -60,13 +56,8 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
   const interval = setInterval(async () => {
     if (job.id && (await isJobCancelled(job.id))) {
       await abortLatteJob(job.id, controller, interval)
-      return
     }
   }, 500)
-
-  console.log(
-    `🏃 Starting latte job for workspace ${workspaceId} thread ${threadUuid}`,
-  )
 
   const usersScope = new UsersRepository(workspace.id)
   const userResult = await usersScope.find(userId)
@@ -153,10 +144,7 @@ const abortLatteJob = async (
   jobId: string,
   controller: AbortController,
   interval: NodeJS.Timeout,
-  // workspace: Workspace,
-  // threadUuid: string,
 ) => {
-  console.log(`❌ Job ${jobId} cancelled, aborting...`)
   clearJobCancellation(jobId)
   controller.abort()
   clearInterval(interval)
