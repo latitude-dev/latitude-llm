@@ -54,11 +54,14 @@ export function StatusIndicator({
         <Icon name='loader' color='foregroundMuted' className='animate-spin' />
       )}
       {!!playground.duration && (
-        <StatusInfo
-          usage={playground.usage}
-          cost={cost}
-          duration={playground.duration}
-        />
+        <>
+          <StatusInfo
+            usage={playground.usage}
+            cost={cost}
+            duration={playground.duration}
+          />
+          <Separator orientation='vertical' className='self-stretch h-auto' />
+        </>
       )}
       <InnerIndicator playground={playground} {...rest} />
     </div>
@@ -80,7 +83,6 @@ function InnerIndicator({
   if (wakingUpIntegration) {
     return (
       <>
-        <Separator orientation='vertical' className='self-stretch h-auto' />
         <Text.H6 color='foregroundMuted'>
           Waking up <Text.H6B color='primary'>{wakingUpIntegration}</Text.H6B>{' '}
           integration
@@ -92,7 +94,6 @@ function InnerIndicator({
   if (runningLatitudeTools > 0) {
     return (
       <>
-        <Separator orientation='vertical' className='self-stretch h-auto' />
         <Text.H6 color='foregroundMuted'>
           Running <Text.H6B color='primary'>{runningLatitudeTools}</Text.H6B>{' '}
           {runningLatitudeTools === 1 ? 'tool' : 'tools'}
@@ -104,7 +105,6 @@ function InnerIndicator({
   if (isStreaming && canStopStreaming && stopStreaming) {
     return (
       <>
-        <Separator orientation='vertical' className='self-stretch h-auto' />
         <Button variant='ghost' size='none' onClick={stopStreaming}>
           <Text.H6M color='destructive'>Stop run</Text.H6M>
         </Button>
@@ -115,7 +115,6 @@ function InnerIndicator({
   if (!isStreaming) {
     return (
       <>
-        <Separator orientation='vertical' className='self-stretch h-auto' />
         {streamAborted || streamError ? (
           <Tooltip
             asChild

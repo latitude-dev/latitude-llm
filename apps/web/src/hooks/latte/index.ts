@@ -1,14 +1,12 @@
 'use client'
 
-import { addMessageToLatteAction } from '$/actions/latte/addMessage'
-import { createNewLatteAction } from '$/actions/latte/new'
-import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
-import { useServerAction } from 'zsa-react'
-
 import { acceptLatteChangesAction } from '$/actions/latte/acceptChanges'
 import { addFeedbackToLatteChangeAction } from '$/actions/latte/addFeedbackToLatteChange'
+import { addMessageToLatteAction } from '$/actions/latte/addMessage'
 import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
+import { createNewLatteAction } from '$/actions/latte/new'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { trigger } from '$/lib/events'
 import { ROUTES } from '$/services/routes'
 import { useCurrentUser } from '$/stores/currentUser'
@@ -28,6 +26,7 @@ import {
 import { sortBy } from 'lodash-es'
 import { useCallback, useEffect, useMemo } from 'react'
 import useSWR from 'swr'
+import { useServerAction } from 'zsa-react'
 import useFetcher from '../useFetcher'
 import { useOnce } from '../useMount'
 import { useLatteContext } from './context'
@@ -38,6 +37,7 @@ import {
   LatteInteractionStep,
   LatteToolStep,
 } from './types'
+import { useLatteUsage } from './usage'
 
 const EMPTY_ARRAY = [] as const
 
@@ -255,8 +255,27 @@ export function useLatteChangeActions() {
  * and tool starts, updating the interactions state accordingly.
  */
 export function useLatteThreadUpdates() {
-  const { threadUuid, setInteractions, setIsLoading, setError } =
-    useLatteStore()
+  const {
+    threadUuid,
+    setInteractions,
+    setIsLoading,
+    setError,
+    setUsage,
+    setIsLoadingUsage,
+  } = useLatteStore()
+
+  const {
+    data: usage,
+    isLoading: isLoadingUsage,
+    isValidating: isValidatingUsage,
+    mutate: mutateUsage,
+  } = useLatteUsage()
+  useEffect(() => setUsage(usage), [usage, setUsage])
+  useEffect(
+    () => setIsLoadingUsage(isLoadingUsage || isValidatingUsage),
+    [isLoadingUsage, isValidatingUsage, setIsLoadingUsage],
+  )
+
   const handleThreadUpdate = useCallback(
     (update: LatteThreadUpdateArgs) => {
       const currentTimeAsString = new Date().toString()
@@ -275,6 +294,10 @@ export function useLatteThreadUpdates() {
         setError(update.error.message)
         setIsLoading(false)
         return
+      }
+
+      if (update.type === 'usage') {
+        mutateUsage(update.usage)
       }
 
       // React strict mode will call this function twice. this fixes that.
@@ -359,7 +382,7 @@ export function useLatteThreadUpdates() {
         return [...otherInteractions, lastInteraction]
       })
     },
-    [threadUuid, setInteractions, setIsLoading, setError],
+    [threadUuid, setInteractions, setIsLoading, setError, mutateUsage],
   )
 
   useSockets({

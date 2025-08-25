@@ -9,8 +9,10 @@ import { MarkdownResponse } from './MarkdownText'
 
 export function ChatInteraction({
   interaction,
+  isStreaming,
 }: {
   interaction: LatteInteraction
+  isStreaming?: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -22,7 +24,7 @@ export function ChatInteraction({
         </Text.H5>
       </div>
 
-      {interaction.steps.length > 0 || !interaction.output ? (
+      {interaction.steps.length > 0 || (!interaction.output && isStreaming) ? (
         <div
           className='flex flex-row items-start gap-2 hover:opacity-80 cursor-pointer'
           onClick={() => setIsOpen((prev) => !prev)}

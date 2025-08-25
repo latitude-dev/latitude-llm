@@ -26,6 +26,7 @@ export async function createWorkspace(
   const result = await createWorkspaceFn({
     name: name ?? randomName,
     user: userData,
+    subscriptionPlan: workspaceData.subscriptionPlan,
     createdAt: workspaceData.createdAt,
   })
   const workspace = result.unwrap()

@@ -72,6 +72,7 @@ export * from './models/events'
 // Latte
 export * from './models/latteThreads'
 export * from './models/latteThreadCheckpoints'
+export * from './models/latteRequests'
 
 // Feature toggles
 export * from './models/features'

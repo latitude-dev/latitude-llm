@@ -1,16 +1,4 @@
 import {
-  IntegrationDto,
-  LogSources,
-  PromptSource,
-  ProviderApiKey,
-  Workspace,
-} from '../../browser'
-import {
-  Message as LegacyMessage,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
-import { FinishReason, LanguageModelUsage } from 'ai'
-import {
   ChainEvent,
   ChainEventTypes,
   ChainStepResponse,
@@ -20,17 +8,35 @@ import {
   VercelConfig,
 } from '@latitude-data/constants'
 import {
+  Message as LegacyMessage,
+  ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
+import { FinishReason, LanguageModelUsage } from 'ai'
+import { omit } from 'lodash-es'
+import {
+  IntegrationDto,
+  LogSources,
+  PromptSource,
+  ProviderApiKey,
+  Workspace,
+} from '../../browser'
+import { ValidatedChainStep } from '../../services/chains/ChainValidator'
+import {
   createMcpClientManager,
   McpClientManager,
 } from '../../services/integrations/McpClient/McpClientManager'
+import { telemetry, TelemetryContext } from '../../telemetry'
 import { ChainError, RunErrorCodes } from '../errors'
 import { generateUUIDIdentifier } from '../generateUUID'
-import { createPromiseWithResolver } from './utils/createPromiseResolver'
-import { ValidatedChainStep } from '../../services/chains/ChainValidator'
-import { omit } from 'lodash-es'
-import { ResolvedTools } from './resolveTools/types'
-import { telemetry, TelemetryContext } from '../../telemetry'
 import { ToolHandler } from './clientTools/handlers'
+import { ResolvedTools } from './resolveTools/types'
+import { createPromiseWithResolver } from './utils/createPromiseResolver'
+
+const EMPTY_USAGE = (): LanguageModelUsage => ({
+  promptTokens: 0,
+  completionTokens: 0,
+  totalTokens: 0,
+})
 
 export type StreamManagerProps = {
   workspace: Workspace
@@ -71,7 +77,10 @@ export abstract class StreamManager {
   private endTime: number | undefined
   private resolveDuration?: (duration: number) => void
   private resolveToolCalls?: (toolCalls: ToolCall[]) => void
-  private tokenUsage: LanguageModelUsage
+  private logUsage: LanguageModelUsage | undefined
+  private runUsage: LanguageModelUsage | undefined
+  private resolveLogUsage?: (usage: LanguageModelUsage) => void
+  private resolveRunUsage?: (usage: LanguageModelUsage) => void
   private response: ChainStepResponse<StreamType> | undefined
   private finishReason?: FinishReason
   private resolveMessages?: (messages: LegacyMessage[]) => void
@@ -89,16 +98,10 @@ export abstract class StreamManager {
     tools = {},
     messages = [],
     uuid = generateUUIDIdentifier(),
-    tokenUsage = {
-      promptTokens: 0,
-      completionTokens: 0,
-      totalTokens: 0,
-    },
   }: StreamManagerProps) {
     this.uuid = uuid
     this.workspace = workspace
     this.messages = messages
-    this.tokenUsage = tokenUsage
     this.promptSource = promptSource
     this.mcpClientManager = createMcpClientManager()
     this.source = source
@@ -172,8 +175,15 @@ export abstract class StreamManager {
   }
 
   prepare() {
-    const { response, messages, toolCalls, error, duration } =
-      this.initializePromisedValues()
+    const {
+      response,
+      messages,
+      toolCalls,
+      error,
+      duration,
+      logUsage,
+      runUsage,
+    } = this.initializePromisedValues()
 
     return {
       response,
@@ -181,6 +191,8 @@ export abstract class StreamManager {
       toolCalls,
       error,
       duration,
+      logUsage,
+      runUsage,
       stream: this.stream,
       start: this.start.bind(this),
     }
@@ -207,11 +219,13 @@ export abstract class StreamManager {
     this.resolveError?.(this.error)
     this.resolveToolCalls?.(this.response?.providerLog?.toolCalls ?? [])
     this.resolveDuration?.(this.endTime! - this.startTime!)
+    this.resolveLogUsage?.(this.logUsage ?? EMPTY_USAGE())
+    this.resolveRunUsage?.(this.runUsage ?? EMPTY_USAGE())
 
     this.sendEvent({
       type: ChainEventTypes.ChainCompleted,
       finishReason: this.finishReason ?? 'stop',
-      tokenUsage: this.tokenUsage,
+      tokenUsage: this.logUsage ?? EMPTY_USAGE(),
     })
 
     this.controller?.close()
@@ -333,13 +347,47 @@ export abstract class StreamManager {
       ChainStepResponse<StreamType> | undefined
     >()
     const [duration, resolveDuration] = createPromiseWithResolver<number>()
+    const [logUsage, resolveLogUsage] =
+      createPromiseWithResolver<LanguageModelUsage>()
+    const [runUsage, resolveRunUsage] =
+      createPromiseWithResolver<LanguageModelUsage>()
     this.resolveToolCalls = resolveToolCalls
     this.resolveMessages = resolveMessages
     this.resolveError = resolveError
     this.resolveResponse = resolveResponse
     this.resolveDuration = resolveDuration
+    this.resolveLogUsage = resolveLogUsage
+    this.resolveRunUsage = resolveRunUsage
 
-    return { messages, response, toolCalls, error, duration }
+    return {
+      messages,
+      response,
+      toolCalls,
+      error,
+      duration,
+      logUsage,
+      runUsage,
+    }
+  }
+
+  protected incrementLogUsage(tokenUsage: LanguageModelUsage) {
+    this.logUsage = {
+      promptTokens:
+        (this.logUsage?.promptTokens ?? 0) + tokenUsage.promptTokens,
+      completionTokens:
+        (this.logUsage?.completionTokens ?? 0) + tokenUsage.completionTokens,
+      totalTokens: (this.logUsage?.totalTokens ?? 0) + tokenUsage.totalTokens,
+    }
+  }
+
+  incrementRunUsage(tokenUsage: LanguageModelUsage) {
+    this.runUsage = {
+      promptTokens:
+        (this.runUsage?.promptTokens ?? 0) + tokenUsage.promptTokens,
+      completionTokens:
+        (this.runUsage?.completionTokens ?? 0) + tokenUsage.completionTokens,
+      totalTokens: (this.runUsage?.totalTokens ?? 0) + tokenUsage.totalTokens,
+    }
   }
 
   protected async updateStateFromResponse({
@@ -356,12 +404,8 @@ export abstract class StreamManager {
     this.messages.push(...messages)
     this.response = response
     this.finishReason = finishReason
-    this.tokenUsage = {
-      promptTokens: this.tokenUsage.promptTokens + tokenUsage.promptTokens,
-      completionTokens:
-        this.tokenUsage.completionTokens + tokenUsage.completionTokens,
-      totalTokens: this.tokenUsage.totalTokens + tokenUsage.totalTokens,
-    }
+    this.incrementLogUsage(tokenUsage)
+    this.incrementRunUsage(tokenUsage)
   }
 
   protected setMessages(messages: LegacyMessage[]) {

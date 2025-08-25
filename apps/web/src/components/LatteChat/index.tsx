@@ -11,6 +11,7 @@ import {
   PlaygroundAction,
   usePlaygroundAction,
 } from '$/hooks/usePlaygroundAction'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { useLatteStore } from '$/stores/latte'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -24,10 +25,12 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
 import { useCallback, useRef, useState } from 'react'
 import { ChatSkeleton } from './_components/ChatSkeleton'
+import { LatteUsageInfo } from './_components/LatteUsageInfo'
 import { LatteMessageList } from './_components/MessageList'
 import { LatteChatInput } from './LatteChatInput'
 
 export function LatteChat() {
+  const { data: workspace } = useCurrentWorkspace()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
 
@@ -42,6 +45,7 @@ export function LatteChat() {
     error,
     changes,
     latteActionsFeedbackUuid,
+    usage,
   } = useLatteStore()
 
   const { sendMessage } = useLatteChatActions()
@@ -133,9 +137,12 @@ export function LatteChat() {
                 </div>
               ) : (
                 <>
-                  <LatteMessageList interactions={interactions} />
+                  <LatteMessageList
+                    interactions={interactions}
+                    isStreaming={isLoading}
+                  />
                   {error && (
-                    <div className='w-full max-w-[600px]'>
+                    <div className='w-full px-8'>
                       <Alert
                         variant='destructive'
                         direction='column'
@@ -166,7 +173,7 @@ export function LatteChat() {
               ))}
           </div>
           {inConversation && (
-            <div className='w-full p-8'>
+            <div className='w-full p-8 flex flex-col gap-4 items-center justify-center'>
               <LatteChatInput
                 inConversation
                 sendMessage={sendMessage}
@@ -180,6 +187,12 @@ export function LatteChat() {
                 feedbackRequested={!!latteActionsFeedbackUuid}
                 addFeedbackToLatteChange={addFeedbackToLatteChange}
               />
+              {!!usage && !!workspace && (
+                <LatteUsageInfo
+                  usage={usage}
+                  plan={workspace.currentSubscription.plan}
+                />
+              )}
             </div>
           )}
         </div>

@@ -75,14 +75,9 @@ export function usePlaygroundChat({
   const incrementUsage = useCallback(
     (incr: { promptTokens?: number; completionTokens?: number }) =>
       setUsage((prev) => {
-        const promptTokens = Math.ceil(
-          prev.promptTokens + (incr.promptTokens ?? 0),
-        )
-        const completionTokens = Math.ceil(
-          prev.completionTokens + (incr.completionTokens ?? 0),
-        )
+        const promptTokens = Math.max(0, Math.ceil(prev.promptTokens + (incr.promptTokens ?? 0))) // prettier-ignore
+        const completionTokens = Math.max(0, Math.ceil(prev.completionTokens + (incr.completionTokens ?? 0))) // prettier-ignore
         const totalTokens = promptTokens + completionTokens
-
         return { promptTokens, completionTokens, totalTokens }
       }),
     [setUsage],
@@ -95,8 +90,8 @@ export function usePlaygroundChat({
         completionTokens: incr.completionTokens,
       })
       setUsageDelta((prev) => {
-        const promptTokens = prev.promptTokens + (incr.promptTokens ?? 0)
-        const completionTokens = prev.completionTokens + (incr.completionTokens ?? 0) // prettier-ignore
+        const promptTokens =  Math.max(0, prev.promptTokens + (incr.promptTokens ?? 0)) // prettier-ignore
+        const completionTokens = Math.max(0, prev.completionTokens + (incr.completionTokens ?? 0)) // prettier-ignore
         return { promptTokens, completionTokens }
       })
     },
@@ -208,7 +203,9 @@ export function usePlaygroundChat({
       }
 
       if (data.type === ChainEventTypes.ProviderCompleted) {
-        syncUsage(data.tokenUsage)
+        // Note: for some reason some providers return an empty token usage,
+        // so instead of showing 0 tokens, keep the approximation as is
+        if (data.tokenUsage.totalTokens) syncUsage(data.tokenUsage)
       }
 
       if (data.type === ChainEventTypes.ToolsStarted) {

@@ -1,13 +1,13 @@
 'use client'
 
-import { create } from 'zustand'
 import { LatteInteraction } from '$/hooks/latte/types'
-import { LatteChange } from '@latitude-data/constants/latte'
-import { useCallback, useMemo } from 'react'
+import { LatteChange, LatteUsage } from '@latitude-data/constants/latte'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { useCallback, useMemo } from 'react'
+import { create } from 'zustand'
 
 interface LatteState {
   // Chat state
@@ -22,6 +22,10 @@ interface LatteState {
 
   // Debug state
   debugVersionUuid: string | undefined
+
+  // Usage state
+  usage: LatteUsage | undefined
+  isLoadingUsage: boolean
 
   // Actions
   setThreadUuid: (uuid: string | undefined) => void
@@ -49,6 +53,8 @@ interface LatteState {
   removeChange: (draftUuid: string, documentUuid: string) => void
   setLatteActionsFeedbackUuid: (uuid: string | undefined) => void
   setDebugVersionUuid: (uuid: string | undefined) => void
+  setUsage: (usage: LatteUsage | undefined) => void
+  setIsLoadingUsage: (loading: boolean) => void
 
   // Reset functions
   resetChat: () => void
@@ -65,6 +71,8 @@ const useStore = create<LatteState>((set) => ({
   latteActionsFeedbackUuid: undefined,
   threadUuid: undefined,
   debugVersionUuid: undefined,
+  usage: undefined,
+  isLoadingUsage: false,
 
   // Chat actions
   setIsLoading: (loading: boolean) => set({ isLoading: loading }),
@@ -155,6 +163,9 @@ const useStore = create<LatteState>((set) => ({
 
   setDebugVersionUuid: (uuid: string | undefined) =>
     set({ debugVersionUuid: uuid }),
+
+  setUsage: (usage: LatteUsage | undefined) => set({ usage }),
+  setIsLoadingUsage: (loading: boolean) => set({ isLoadingUsage: loading }),
 
   // Reset functions
   resetChat: () =>

@@ -31,13 +31,15 @@ import {
   CircleChevronLeft,
   CircleChevronRight,
   CircleDollarSign,
+  CircleGauge,
   CircleHelp,
   CircleIcon,
+  CirclePlayIcon,
   CirclePlus,
   CircleStop,
   CircleUser,
-  CirclePlayIcon,
   Clock,
+  ClockFadingIcon,
   Code,
   Code2,
   Copy,
@@ -129,7 +131,6 @@ import {
   XIcon,
   Youtube,
   Zap,
-  ClockFadingIcon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -369,6 +370,7 @@ const Icons = {
   rectangleHorizontal: RectangleHorizontal,
   expand: Expand,
   forward: Forward,
+  circleGauge: CircleGauge,
 }
 
 export type IconName = keyof typeof Icons

@@ -90,10 +90,7 @@ export const evaluationResultsV2 = latitudeSchema.table(
     ).on(table.evaluatedLogId, table.evaluationUuid),
     createdAtBrinIdx: index('evaluation_results_v2_created_at_brin_idx')
       .using('brin', sql`${table.createdAt}`)
-      .with({
-        pages_per_range: 32,
-        autosummarize: true,
-      })
+      .with({ pages_per_range: 32, autosummarize: true })
       .concurrently(),
   }),
 )
