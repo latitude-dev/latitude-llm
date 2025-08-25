@@ -144,6 +144,33 @@ describe('/run', () => {
     )
 
     it(
+      'sends userMessage in request body when provided',
+      server.boundary(async () => {
+        const { mockBody } = mockRequest({
+          server,
+          apiVersion: 'v3',
+          version: 'SOME_UUID',
+          projectId: '123',
+        })
+        await sdk.prompts.run('path/to/document', {
+          projectId,
+          versionUuid: 'SOME_UUID',
+          parameters: { foo: 'bar' },
+          userMessage: 'Hello, this is a test message',
+          stream: true,
+        })
+        expect(mockBody).toHaveBeenCalledWith({
+          path: 'path/to/document',
+          parameters: { foo: 'bar' },
+          userMessage: 'Hello, this is a test message',
+          tools: [],
+          stream: true,
+          __internal: { source: LogSources.API },
+        })
+      }),
+    )
+
+    it(
       'send data onMessage callback',
       server.boundary(async () => {
         const onMessageMock = vi.fn()
@@ -337,6 +364,34 @@ data: ${JSON.stringify({
           path: 'path/to/document',
           parameters: { foo: 'bar', lol: 'foo' },
           customIdentifier: 'miau',
+          stream: false,
+          tools: [],
+          __internal: { source: LogSources.API },
+        })
+      }),
+    )
+
+    it(
+      'sends userMessage in request body when provided (non-streaming)',
+      server.boundary(async () => {
+        const { mockBody } = mockRequest({
+          server,
+          apiVersion: 'v3',
+          version: 'SOME_UUID',
+          projectId: '123',
+          fakeResponse: RUN_TEXT_RESPONSE,
+        })
+        await sdk.prompts.run('path/to/document', {
+          projectId,
+          versionUuid: 'SOME_UUID',
+          parameters: { foo: 'bar' },
+          userMessage: 'Hello, this is a test message for non-streaming',
+          stream: false,
+        })
+        expect(mockBody).toHaveBeenCalledWith({
+          path: 'path/to/document',
+          parameters: { foo: 'bar' },
+          userMessage: 'Hello, this is a test message for non-streaming',
           stream: false,
           tools: [],
           __internal: { source: LogSources.API },

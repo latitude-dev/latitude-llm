@@ -28,6 +28,7 @@ export async function streamRun<
     stream = false,
     tools,
     customIdentifier,
+    userMessage,
     onEvent,
     onFinished,
     onError,
@@ -63,6 +64,7 @@ export async function streamRun<
         parameters,
         customIdentifier,
         tools: waitForTools(tools),
+        userMessage,
       },
     })
 
@@ -143,8 +145,8 @@ export function handleToolCallFactory<T extends ToolSpec>({
 
     if (!response.ok) {
       const json = (await response.json()) as ApiErrorJsonResponse
-      const message = `Failed to execute tool ${data.toolName}. 
-Latitude API returned the following error: 
+      const message = `Failed to execute tool ${data.toolName}.
+Latitude API returned the following error:
 
 ${json.message}`
 
