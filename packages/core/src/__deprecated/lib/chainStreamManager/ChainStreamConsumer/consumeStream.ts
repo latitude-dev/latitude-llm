@@ -1,17 +1,17 @@
 import { capitalize } from 'lodash-es'
 
-import { APICallError, FinishReason, RetryError } from 'ai'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { APICallError, FinishReason, RetryError } from 'ai'
 
+import { ProviderData } from '@latitude-data/constants'
 import {
   LegacyChainEvent,
   Providers,
   StreamEventTypes,
   StreamType,
 } from '../../../../constants'
-import { AIReturn } from '../../../../services/ai'
-import { ProviderData } from '@latitude-data/constants'
 import { streamToGenerator } from '../../../../lib/streamToGenerator'
+import { AIReturn } from '../../../../services/ai'
 
 interface ConsumeStreamParams {
   result: AIReturn<StreamType>
@@ -112,7 +112,7 @@ function getErrorMessage({
   error: unknown
   providerName: Providers
 }): string {
-  const intro = `${capitalize(providerName)} returned this error`
+  const intro = `${providerName.toLowerCase() === Providers.Custom ? 'Custom provider' : capitalize(providerName)} returned this error`
   if (error instanceof APICallError) {
     try {
       const body = error.responseBody ? JSON.parse(error.responseBody) : null

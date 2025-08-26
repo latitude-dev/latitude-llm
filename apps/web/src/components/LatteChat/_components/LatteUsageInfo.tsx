@@ -57,7 +57,7 @@ export function LatteUsageInfo({
       <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
         <Popover.Trigger asChild>
           <span
-            className='flex items-center justify-center gap-2 select-none cursor-pointer truncate hover:opacity-80 transition-opacity'
+            className='flex items-center justify-center gap-2 select-none cursor-pointer truncate hover:opacity-60 transition-opacity'
             onClick={() => setIsOpen(!isOpen)}
           >
             <Icon
@@ -95,8 +95,8 @@ export function LatteUsageInfo({
             <div className='w-full flex flex-col items-start justify-center gap-1.5'>
               {usage.included === 'unlimited' ? (
                 <Text.H6 color='foregroundMuted' noWrap ellipsis>
-                  <b>{formatCount(usage.billable + usage.unbillable)}</b>
-                  used credits (unlimited)
+                  <b>{formatCount(usage.billable + usage.unbillable)}</b> used
+                  credits (unlimited)
                 </Text.H6>
               ) : (
                 <Text.H6 color='foregroundMuted' noWrap ellipsis>

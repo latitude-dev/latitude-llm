@@ -33,6 +33,7 @@ import { ReferencesPlugin } from './plugins/ReferencesPlugin'
 import { StepEditPlugin } from './plugins/StepEditPlugin'
 import { SyncChangesPlugin } from './plugins/SyncChangesPlugin'
 import { TypeaheadMenuPlugin } from './plugins/TypeaheadMenuPlugin'
+import { VariableEditPlugin } from './plugins/VariableEditPlugin'
 import { VariableMenuPlugin } from './plugins/VariablesMenuPlugin'
 import { VariableTransformPlugin } from './plugins/VariableTransformPlugin'
 import { BlocksEditorProvider } from './Provider'
@@ -205,15 +206,13 @@ export function BlocksEditor({
             onRequestPromptMetadata={onRequestPromptMetadata}
           />
           <HierarchyValidationPlugin />
+          <VariableEditPlugin />
           <VariableTransformPlugin />
           <HistoryPlugin />
-
           {!readOnly && floatingAnchorElem && (
             <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
           )}
-
           {autoFocus && <AutoFocusPlugin />}
-
           <OnChangeHandler onChange={onChange} />
           <SyncChangesPlugin
             project={project}
