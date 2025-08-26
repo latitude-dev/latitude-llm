@@ -21,7 +21,8 @@ const buttonContainerVariants = cva(
         destructive:
           'bg-destructive-muted-foreground hover:bg-destructive-muted-foreground/90',
         outline: 'bg-secondary hover:bg-secondary/60',
-        secondary: 'bg-secondary hover:bg-secondary/80',
+        outlineDestructive: 'bg-destructive-muted',
+        secondary: 'bg-secondary hover:bg-secondary/80 ',
         ghost: 'shadow-none bg-transparent',
         link: 'bg-transparent shadow-none underline-offset-4 hover:underline',
         linkOutline: 'shadow-none underline-offset-4 hover:underline',
@@ -40,6 +41,12 @@ const buttonContainerVariants = cva(
         variant: 'outline',
         fanciness: 'fancy',
         className: 'shadow-[inset_0px_0px_0px_1px_hsl(var(--input))]',
+      },
+      {
+        variant: 'outlineDestructive',
+        fanciness: 'fancy',
+        className:
+          'shadow-[inset_0px_0px_0px_1px_hsl(var(--destructive)_/_0.5)] dark:shadow-[inset_0px_0px_0px_1px_hsl(var(--foreground))]',
       },
       {
         variant: 'latte',
@@ -71,6 +78,7 @@ const buttonVariants = cva(
           'bg-destructive text-destructive-foreground group-hover:bg-destructive/90',
         outline:
           'border border-input bg-background group-hover:bg-secondary group-hover:text-secondary-foreground/80',
+        outlineDestructive: 'border border-destructive text-destructive dark:text-foreground',
         secondary:
           'bg-secondary text-secondary-foreground group-hover:bg-secondary/80',
         ghost: 'shadow-none bg-transparent text-muted-foreground',
@@ -110,6 +118,12 @@ const buttonVariants = cva(
         variant: 'outline',
         fanciness: 'fancy',
         className: 'shadow-[inset_0px_0px_0px_1px_hsl(var(--input))]',
+      },
+      {
+        variant: 'outlineDestructive',
+        fanciness: 'fancy',
+        className:
+          'bg-white/90 dark:bg-transparent shadow-[inset_0px_0px_0px_1px_hsl(var(--destructive)_/_0.5)] dark:shadow-[inset_0px_0px_0px_1px_hsl(var(--foreground))]',
       },
       {
         size: 'default',
