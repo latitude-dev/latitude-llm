@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ChainEventTypes } from '@latitude-data/constants'
-import { APICallError, RetryError } from 'ai'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import { APICallError } from 'ai'
 import { LogSources, Providers, StreamEventTypes } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { ProviderLogsRepository } from '../../repositories'
@@ -328,40 +329,15 @@ model: gpt-4o
     })
 
     it('Does not create a document log when rate limited', async () => {
-      const fullStream = new ReadableStream({
-        start(controller) {
-          controller.enqueue({
-            type: 'error',
-            error: new RetryError({
-              message: 'wat',
-              reason: 'maxRetriesExceeded',
-              errors: [
-                new APICallError({
-                  statusCode: 429,
-                  message: 'wat',
-                  url: 'http://localhost:3000',
-                  requestBodyValues: {},
-                }),
-              ],
-            }),
-          })
-          controller.close()
-        },
-      })
+      const streamAIResponseSpy = vi.spyOn(
+        await import('../../lib/streamManager/step/streamAIResponse'),
+        'streamAIResponse',
+      )
 
-      mocks.runAi.mockResolvedValueOnce(
-        Result.ok({
-          type: 'text',
-          text: Promise.resolve('Fake AI generated text'),
-          providerLog: Promise.resolve({ uuid: 'fake-provider-log-uuid' }),
-          usage: Promise.resolve({
-            promptTokens: 0,
-            completionTokens: 0,
-            totalTokens: 0,
-          }),
-          toolCalls: Promise.resolve([]),
-          fullStream,
-          response: Promise.resolve({ messages: [] }),
+      streamAIResponseSpy.mockRejectedValueOnce(
+        new ChainError({
+          code: RunErrorCodes.RateLimit,
+          message: 'Rate limit exceeded',
         }),
       )
 
@@ -383,6 +359,9 @@ model: gpt-4o
       await lastResponse
 
       expect(createDocumentLogSpy).not.toHaveBeenCalled()
+
+      // Restore the spy
+      streamAIResponseSpy.mockRestore()
     })
 
     it('creates a run_error instance when there is an error', async () => {
