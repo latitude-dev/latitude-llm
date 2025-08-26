@@ -57,7 +57,12 @@ describe('setDocumentTriggerEnabled', () => {
     user = u
 
     // Default deploy behavior for create
-    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({}))
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({
+        deploymentSettings: {},
+        triggerStatus: 'deployed',
+      }),
+    )
   })
 
   it('returns error when commit is not live', async () => {

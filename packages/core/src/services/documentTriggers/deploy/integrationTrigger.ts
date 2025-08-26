@@ -1,4 +1,8 @@
-import { IntegrationType, DocumentTriggerType } from '@latitude-data/constants'
+import {
+  IntegrationType,
+  DocumentTriggerType,
+  DocumentTriggerStatus,
+} from '@latitude-data/constants'
 import { Commit, Workspace, DocumentTrigger } from '../../../browser'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
@@ -13,6 +17,7 @@ import {
   IntegrationTriggerConfiguration,
   IntegrationTriggerDeploymentSettings,
 } from '@latitude-data/constants/documentTriggers'
+import { isIntegrationConfigured } from '../../integrations/pipedream/components/fillConfiguredProps'
 
 /**
  * Important Note:
@@ -32,7 +37,10 @@ export async function deployIntegrationTrigger(
     configuration: IntegrationTriggerConfiguration
   },
   transaction = new Transaction(),
-): PromisedResult<IntegrationTriggerDeploymentSettings> {
+): PromisedResult<{
+  deploymentSettings: IntegrationTriggerDeploymentSettings
+  triggerStatus: DocumentTriggerStatus
+}> {
   const integrationResult = await transaction.call(async (tx) => {
     const integrationsScope = new IntegrationsRepository(workspace.id, tx)
     return integrationsScope.find(configuration.integrationId)
@@ -48,6 +56,14 @@ export async function deployIntegrationTrigger(
     )
   }
 
+  if (!isIntegrationConfigured(integration)) {
+    // Integration is not configured, we cannot deploy the trigger
+    return Result.ok({
+      deploymentSettings: {} as IntegrationTriggerDeploymentSettings,
+      triggerStatus: DocumentTriggerStatus.Pending,
+    })
+  }
+
   const deploymentResult = await deployPipedreamTrigger({
     triggerUuid,
     commit,
@@ -60,7 +76,10 @@ export async function deployIntegrationTrigger(
   const { id: triggerId } = deploymentResult.unwrap()
 
   return Result.ok({
-    triggerId,
+    deploymentSettings: {
+      triggerId,
+    },
+    triggerStatus: DocumentTriggerStatus.Deployed,
   })
 }
 

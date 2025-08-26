@@ -118,7 +118,7 @@ export async function updateDocumentTriggerConfiguration<
     transaction,
   )
   if (!Result.isOk(deployResult)) return deployResult
-  const deploymentSettings = deployResult.unwrap()
+  const { deploymentSettings, triggerStatus } = deployResult.unwrap()
 
   return transaction.call(async (tx) => {
     const [upsertResult] = (await tx
@@ -132,6 +132,7 @@ export async function updateDocumentTriggerConfiguration<
         commitId: commit.id,
         configuration,
         deploymentSettings,
+        triggerStatus,
         enabled: false,
       })
       .onConflictDoUpdate({
@@ -140,6 +141,7 @@ export async function updateDocumentTriggerConfiguration<
           documentUuid: documentAssigned || documentTrigger.documentUuid,
           configuration,
           deploymentSettings,
+          triggerStatus,
           enabled: false,
         },
       })

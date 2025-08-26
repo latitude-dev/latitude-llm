@@ -225,7 +225,10 @@ describe('updateDocumentTriggerConfiguration', () => {
       parameters: {},
     }
     mocks.deployDocumentTrigger.mockResolvedValue(
-      Result.ok({} as EmailTriggerDeploymentSettings),
+      Result.ok({
+        deploymentSettings: {} as EmailTriggerDeploymentSettings,
+        triggerStatus: 'deployed',
+      }),
     )
 
     // Create initial trigger in current project draft, then merge it
@@ -278,7 +281,10 @@ describe('updateDocumentTriggerConfiguration', () => {
     }
     // Initial creation deploy
     mocks.deployDocumentTrigger.mockResolvedValueOnce(
-      Result.ok({} as EmailTriggerDeploymentSettings),
+      Result.ok({
+        deploymentSettings: {} as EmailTriggerDeploymentSettings,
+        triggerStatus: 'deployed',
+      }),
     )
 
     const created = await createDocumentTrigger({
@@ -297,7 +303,10 @@ describe('updateDocumentTriggerConfiguration', () => {
       ),
     )
     mocks.deployDocumentTrigger.mockResolvedValueOnce(
-      Result.ok({} as EmailTriggerDeploymentSettings),
+      Result.ok({
+        deploymentSettings: {} as EmailTriggerDeploymentSettings,
+        triggerStatus: 'deployed',
+      }),
     )
 
     const updatedName = 'Updated Email Trigger'
@@ -352,7 +361,10 @@ describe('updateDocumentTriggerConfiguration', () => {
 
     // Create in draft then merge
     mocks.deployDocumentTrigger.mockResolvedValue(
-      Result.ok({} as EmailTriggerDeploymentSettings),
+      Result.ok({
+        deploymentSettings: {} as EmailTriggerDeploymentSettings,
+        triggerStatus: 'deployed',
+      }),
     )
     const created = await createDocumentTrigger({
       workspace,
@@ -369,7 +381,12 @@ describe('updateDocumentTriggerConfiguration', () => {
 
     // For update deploy
     const newDeployment: EmailTriggerDeploymentSettings = {}
-    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(newDeployment))
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({
+        deploymentSettings: newDeployment,
+        triggerStatus: 'deployed',
+      }),
+    )
 
     const result =
       await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
@@ -406,7 +423,10 @@ describe('updateDocumentTriggerConfiguration', () => {
 
     // Create initial (draft) trigger then merge
     mocks.deployDocumentTrigger.mockResolvedValue(
-      Result.ok({} as EmailTriggerDeploymentSettings),
+      Result.ok({
+        deploymentSettings: {} as EmailTriggerDeploymentSettings,
+        triggerStatus: 'deployed',
+      }),
     )
     const created = await createDocumentTrigger({
       workspace,
@@ -457,7 +477,12 @@ describe('updateDocumentTriggerConfiguration', () => {
       lastRun: new Date('2023-01-01T09:00:00Z'),
       nextRunTime: new Date('2023-01-02T09:00:00Z'),
     }
-    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(initialDeployment))
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({
+        deploymentSettings: initialDeployment,
+        triggerStatus: 'deployed',
+      }),
+    )
 
     const created = await createDocumentTrigger({
       workspace,
@@ -476,7 +501,12 @@ describe('updateDocumentTriggerConfiguration', () => {
       lastRun: new Date('2024-01-01T09:00:00Z'),
       nextRunTime: new Date('2024-01-02T09:00:00Z'),
     }
-    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(newDeployment))
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({
+        deploymentSettings: newDeployment,
+        triggerStatus: 'deployed',
+      }),
+    )
 
     const result =
       await updateDocumentTriggerConfiguration<DocumentTriggerType.Scheduled>({
@@ -514,7 +544,12 @@ describe('updateDocumentTriggerConfiguration', () => {
     const initialDeployment: IntegrationTriggerDeploymentSettings = {
       triggerId: 'initial-trigger',
     }
-    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(initialDeployment))
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({
+        deploymentSettings: initialDeployment,
+        triggerStatus: 'deployed',
+      }),
+    )
 
     const created = await createDocumentTrigger({
       workspace,
@@ -532,7 +567,12 @@ describe('updateDocumentTriggerConfiguration', () => {
     const newDeployment: IntegrationTriggerDeploymentSettings = {
       triggerId: 'new-external-id-456',
     }
-    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok(newDeployment))
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({
+        deploymentSettings: newDeployment,
+        triggerStatus: 'deployed',
+      }),
+    )
 
     const result =
       await updateDocumentTriggerConfiguration<DocumentTriggerType.Integration>(

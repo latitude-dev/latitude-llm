@@ -29,6 +29,12 @@ export enum DocumentTriggerType {
   Chat = 'chat',
 }
 
+export enum DocumentTriggerStatus {
+  Pending = 'pending',
+  Deployed = 'deployed',
+  Deprecated = 'deprecated',
+}
+
 export enum DocumentTriggerParameters {
   SenderEmail = 'senderEmail',
   SenderName = 'senderName',

@@ -7,8 +7,14 @@ import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { UnconfiguredIntegrations } from './UnconfiguredIntegrations'
+import { IntegrationDto } from '@latitude-data/core/schema/types'
 
-export function TriggersBlankSlate() {
+export function TriggersBlankSlate({
+  integrations,
+}: {
+  integrations: IntegrationDto[]
+}) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
 
@@ -20,6 +26,9 @@ export function TriggersBlankSlate() {
           Add triggers to run this project from a chat box, an event, a
           schedule…
         </Text.H5>
+      </div>
+      <div className='w-full px-12'>
+        <UnconfiguredIntegrations integrations={integrations} />
       </div>
       <TriggersPreview />
       <Link

@@ -15,7 +15,10 @@ import {
 import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import {
+  DocumentTriggerStatus,
+  DocumentTriggerType,
+} from '@latitude-data/constants'
 import Link from 'next/link'
 import { OnRunTriggerFn } from '../TriggersList'
 import { OnRunChatTrigger } from '../useActiveTrigger'
@@ -147,8 +150,12 @@ export function TriggerWrapper({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const isLive = !!commit.mergedAt
-  const canSeeEvents = !RUNNABLE_TRIGGERS.includes(trigger.triggerType)
+  const canSeeEvents =
+    !RUNNABLE_TRIGGERS.includes(trigger.triggerType) &&
+    trigger.triggerStatus !== DocumentTriggerStatus.Pending
   const canRunTrigger = RUNNABLE_TRIGGERS.includes(trigger.triggerType)
+  const canEnable = trigger.triggerStatus === DocumentTriggerStatus.Deployed
+
   const onToggleEventList = useCallback(() => {
     if (!canSeeEvents) return
 
@@ -177,6 +184,8 @@ export function TriggerWrapper({
           'w-full p-4 flex flex-row items-start justify-between gap-4',
           {
             'border-b border-border': open,
+            'bg-latte-background':
+              trigger.triggerStatus === DocumentTriggerStatus.Pending,
             'cursor-pointer': canSeeEvents,
           },
         )}
@@ -195,7 +204,11 @@ export function TriggerWrapper({
           <div className='flex-1 flex flex-col gap-1'>
             <div className='flex flex-col'>
               <Text.H4M>{title}</Text.H4M>
-              {descriptionLoading ? (
+              {trigger.triggerStatus === DocumentTriggerStatus.Pending ? (
+                <Text.H5 color='latteOutputForeground'>
+                  Requires additional configuration
+                </Text.H5>
+              ) : descriptionLoading ? (
                 <Skeleton className='w-24 h-5' />
               ) : (
                 <Text.H5 color='foregroundMuted'>{description}</Text.H5>
@@ -213,12 +226,14 @@ export function TriggerWrapper({
             onClick={avoidOpenEvents}
             className='flex flex-row items-center gap-x-4 '
           >
-            <ToggleEnabled
-              projectId={project.id}
-              commitUuid={commit.uuid}
-              isLive={isLive}
-              trigger={trigger}
-            />
+            {canEnable ? (
+              <ToggleEnabled
+                projectId={project.id}
+                commitUuid={commit.uuid}
+                isLive={isLive}
+                trigger={trigger}
+              />
+            ) : null}
             {canRunTrigger ? (
               <Button
                 fancy

@@ -63,6 +63,7 @@ export async function createScheduledDocumentTrigger({
       commitId,
       documentUuid,
       triggerType: DocumentTriggerType.Scheduled,
+      triggerStatus: 'deployed',
       configuration,
       deploymentSettings,
       enabled,
@@ -124,6 +125,7 @@ export async function createEmailDocumentTrigger({
       projectId,
       documentUuid,
       triggerType: DocumentTriggerType.Email,
+      triggerStatus: 'deployed',
       configuration,
       deploymentSettings,
       enabled,
@@ -179,6 +181,7 @@ export async function createIntegrationDocumentTrigger({
       commitId,
       documentUuid,
       triggerType: DocumentTriggerType.Integration,
+      triggerStatus: 'deployed',
       configuration,
       deploymentSettings,
     })

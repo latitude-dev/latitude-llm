@@ -4,14 +4,21 @@ import {
   ScheduledTriggerDeploymentSettings,
 } from '@latitude-data/constants/documentTriggers'
 import { getNextRunTime } from '../helpers/cronHelper'
+import { DocumentTriggerStatus } from '@latitude-data/constants'
 
 export function deployScheduledTrigger({
   configuration,
 }: {
   configuration: ScheduledTriggerConfiguration
-}): TypedResult<ScheduledTriggerDeploymentSettings> {
+}): TypedResult<{
+  deploymentSettings: ScheduledTriggerDeploymentSettings
+  triggerStatus: DocumentTriggerStatus
+}> {
   return Result.ok({
-    lastRun: new Date(),
-    nextRunTime: getNextRunTime(configuration.cronExpression) ?? undefined,
+    deploymentSettings: {
+      lastRun: new Date(),
+      nextRunTime: getNextRunTime(configuration.cronExpression) ?? undefined,
+    },
+    triggerStatus: DocumentTriggerStatus.Deployed,
   })
 }

@@ -15,6 +15,33 @@ import { useMemo } from 'react'
 
 const EMPTY_ARRAY: IntegrationDto[] = []
 
+function filterIntegrations({
+  integrations,
+  includeLatitudeTools,
+  withTools,
+  withTriggers,
+}: {
+  integrations: IntegrationDto[]
+  includeLatitudeTools?: boolean
+  withTools?: boolean
+  withTriggers?: boolean
+}) {
+  return integrations.filter((item) => {
+    if (!includeLatitudeTools && item.type === IntegrationType.Latitude) {
+      return false
+    }
+
+    if (withTools !== undefined && item.hasTools !== withTools) {
+      return false
+    }
+    if (withTriggers !== undefined && item.hasTriggers !== withTriggers) {
+      return false
+    }
+
+    return true
+  })
+}
+
 export default function useIntegrations({
   includeLatitudeTools,
   withTools,
@@ -27,38 +54,23 @@ export default function useIntegrations({
 } = {}) {
   const { toast } = useToast()
   const fetcher = useFetcher(ROUTES.api.integrations.root, {
-    serializer: (rows: IntegrationDto[]) =>
-      rows
-        .map(deserialize)
-        .filter((item) => {
-          if (!includeLatitudeTools && item.type === IntegrationType.Latitude) {
-            return false
-          }
-
-          if (withTools !== undefined && item.hasTools !== withTools) {
-            return false
-          }
-          if (withTriggers !== undefined && item.hasTriggers !== withTriggers) {
-            return false
-          }
-
-          return true
-        })
-        .sort((a, b) => a.id - b.id),
+    serializer: (rows: IntegrationDto[]) => rows.map(deserialize),
   })
   const {
-    data = EMPTY_ARRAY,
+    data: unfilteredIntegrations = EMPTY_ARRAY,
     mutate,
     ...rest
-  } = useSWR<IntegrationDto[]>(
-    [
-      'integrations',
-      includeLatitudeTools ?? false,
-      withTools ?? false,
-      withTriggers ?? false,
-    ],
-    fetcher,
-    opts,
+  } = useSWR<IntegrationDto[]>(['integrations'], fetcher, opts)
+
+  const data = useMemo(
+    () =>
+      filterIntegrations({
+        integrations: unfilteredIntegrations,
+        includeLatitudeTools,
+        withTools,
+        withTriggers,
+      }),
+    [unfilteredIntegrations, includeLatitudeTools, withTools, withTriggers],
   )
 
   const {
@@ -72,7 +84,7 @@ export default function useIntegrations({
         description: `${integration.name} created successfully`,
       })
 
-      mutate([...data, integration])
+      mutate([...unfilteredIntegrations, integration])
     },
   })
 
@@ -99,7 +111,7 @@ export default function useIntegrations({
         })
 
         mutate(
-          data.map((item) =>
+          unfilteredIntegrations.map((item) =>
             item.id === mcpServer.id ? { ...item, mcpServer: mcpServer } : item,
           ),
         )
@@ -117,7 +129,7 @@ export default function useIntegrations({
         })
 
         mutate(
-          data.map((item) =>
+          unfilteredIntegrations.map((item) =>
             item.id === mcpServer.id ? { ...item, mcpServer: mcpServer } : item,
           ),
         )

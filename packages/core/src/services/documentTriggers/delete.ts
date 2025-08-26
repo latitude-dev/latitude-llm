@@ -7,7 +7,10 @@ import { Commit, DocumentTrigger, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { documentTriggers } from '../../schema'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import {
+  DocumentTriggerType,
+  DocumentTriggerStatus,
+} from '@latitude-data/constants'
 import { undeployDocumentTrigger } from './deploy'
 import {
   CommitsRepository,
@@ -165,6 +168,8 @@ export async function deleteDocumentTrigger<T extends DocumentTriggerType>(
 
           commitId: commit.id,
           deletedAt: new Date(),
+          triggerStatus: DocumentTriggerStatus.Deprecated,
+          deploymentSettings: null,
         })
         .returning()) as DocumentTrigger<T>[]
 

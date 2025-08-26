@@ -6,7 +6,10 @@ import {
 import { Commit, DocumentTrigger, Workspace } from '../../browser'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { Result, TypedResult } from '../../lib/Result'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import {
+  DocumentTriggerStatus,
+  DocumentTriggerType,
+} from '@latitude-data/constants'
 import {
   deployIntegrationTrigger,
   undeployIntegrationTrigger,
@@ -39,7 +42,10 @@ export async function deployDocumentTrigger<T extends DocumentTriggerType>(
     configuration: DocumentTriggerConfiguration<T>
   },
   transaction = new Transaction(),
-): PromisedResult<DocumentTriggerDeploymentSettings<T>> {
+): PromisedResult<{
+  deploymentSettings: DocumentTriggerDeploymentSettings<T>
+  triggerStatus: DocumentTriggerStatus
+}> {
   if (commit.mergedAt) {
     return Result.error(
       new BadRequestError(
@@ -59,25 +65,34 @@ export async function deployDocumentTrigger<T extends DocumentTriggerType>(
             configuration as DocumentTriggerConfiguration<DocumentTriggerType.Integration>,
         },
         transaction,
-      ) as PromisedResult<DocumentTriggerDeploymentSettings<T>> // Typescript doesn't infer the type correctly with generics T-T
+      ) as PromisedResult<{
+        deploymentSettings: DocumentTriggerDeploymentSettings<T>
+        triggerStatus: DocumentTriggerStatus
+      }> // Typescript doesn't infer the type correctly with generics T-T
 
     case DocumentTriggerType.Scheduled:
       return deployScheduledTrigger({
         configuration:
           configuration as DocumentTriggerConfiguration<DocumentTriggerType.Scheduled>,
-      }) as TypedResult<DocumentTriggerDeploymentSettings<T>>
+      }) as TypedResult<{
+        deploymentSettings: DocumentTriggerDeploymentSettings<T>
+        triggerStatus: DocumentTriggerStatus
+      }>
 
     case DocumentTriggerType.Email:
       // Email triggers do not require deployment, they are always ready to use.
-      return Result.ok(
-        {} as DocumentTriggerDeploymentSettings<DocumentTriggerType.Email>,
-      ) as TypedResult<DocumentTriggerDeploymentSettings<T>>
+      return Result.ok({
+        deploymentSettings: {} as DocumentTriggerDeploymentSettings<T>,
+        triggerStatus: DocumentTriggerStatus.Deployed,
+      })
 
     case DocumentTriggerType.Chat:
       // Chat triggers do not require deployment, they are always ready to use.
-      return Result.ok(
-        {} as DocumentTriggerDeploymentSettings<DocumentTriggerType.Chat>,
-      ) as TypedResult<DocumentTriggerDeploymentSettings<T>>
+      return Result.ok({
+        deploymentSettings: {} as DocumentTriggerDeploymentSettings<T>,
+        triggerStatus: DocumentTriggerStatus.Deployed,
+      })
+
     default:
       return Result.error(
         new NotImplementedError(
@@ -103,6 +118,11 @@ export async function undeployDocumentTrigger<T extends DocumentTriggerType>(
   transaction = new Transaction(),
 ): PromisedResult<DocumentTrigger<T>> {
   let undeployResult: TypedResult<undefined>
+
+  if (documentTrigger.triggerStatus !== DocumentTriggerStatus.Deployed) {
+    // Trigger is already not deployed, nothing to do
+    return Result.ok(documentTrigger)
+  }
 
   switch (documentTrigger.triggerType) {
     case DocumentTriggerType.Integration:
@@ -138,6 +158,7 @@ export async function undeployDocumentTrigger<T extends DocumentTriggerType>(
       .update(documentTriggers)
       .set({
         deploymentSettings: null,
+        triggerStatus: DocumentTriggerStatus.Deprecated,
       })
       .where(eq(documentTriggers.id, documentTrigger.id))
       .returning()

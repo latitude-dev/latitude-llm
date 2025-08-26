@@ -27,6 +27,7 @@ import { TriggersBlankSlate } from './TriggersBlankSlate'
 import { TriggersCard } from './TriggersCard'
 import { ChatTriggerTextarea } from './ChatTriggerTextarea'
 import { useActiveChatTrigger } from './useActiveTrigger'
+import { UnconfiguredIntegrations } from './UnconfiguredIntegrations'
 
 const ADD_BUTTON_LABEL = 'Add trigger'
 
@@ -168,7 +169,7 @@ export function TriggersList({
   })
 
   if (triggers.length === 0) {
-    return <TriggersBlankSlate />
+    return <TriggersBlankSlate integrations={integrations} />
   }
 
   return (
@@ -186,6 +187,8 @@ export function TriggersList({
         <>
           <div className='flex-1 min-h-0'>
             <div className='flex flex-col gap-6'>
+              <UnconfiguredIntegrations integrations={integrations} />
+
               <div className='flex flex-col border rounded-lg divide-y divide-border overflow-hidden'>
                 {triggers.map((trigger) => (
                   <TriggersCard
