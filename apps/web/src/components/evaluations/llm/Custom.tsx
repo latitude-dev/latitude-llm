@@ -49,7 +49,7 @@ ${LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION}
 ---
 provider: ${configuration.provider}
 model: ${configuration.model}
-temperature: 0.7
+temperature: ${configuration.model.toLowerCase().startsWith('gpt-5') ? 1 : 0.7}
 ---
 
 You're an expert LLM-as-a-judge evaluator. Your task is to judge whether the response, from another LLM model (the assistant), follows the given instructions.

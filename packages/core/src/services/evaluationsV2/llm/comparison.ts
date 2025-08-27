@@ -122,7 +122,7 @@ export function buildPrompt({
 ---
 provider: ${provider.name}
 model: ${model}
-temperature: 0.7
+temperature: ${model.toLowerCase().startsWith('gpt-5') ? 1 : 0.7}
 ---
 
 You're an expert LLM-as-a-judge evaluator. Your task is to judge how well the response, from another LLM model (the assistant), compares to the expected output, following the criteria:
