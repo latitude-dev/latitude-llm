@@ -89,7 +89,12 @@ describe.sequential('deleteDocumentTrigger', () => {
   })
 
   it('undeploys and hard deletes when trigger was created in the same draft; returns null if no live exists', async () => {
-    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({}))
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({
+        deploymentSettings: {},
+        triggerStatus: 'deployed',
+      }),
+    )
 
     const created = await createDocumentTrigger({
       workspace,
@@ -143,7 +148,12 @@ describe.sequential('deleteDocumentTrigger', () => {
 
   it('creates a deleted draft version when only live version exists (no undeploy)', async () => {
     // Create in draft and merge so it becomes live
-    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({}))
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({
+        deploymentSettings: {},
+        triggerStatus: 'deployed',
+      }),
+    )
     const created = await createDocumentTrigger({
       workspace,
       project,
@@ -189,7 +199,12 @@ describe.sequential('deleteDocumentTrigger', () => {
 
   it('undeploys current draft version and creates a deleted draft version when a live version also exists', async () => {
     // Create in draft and merge (live exists)
-    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({}))
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({
+        deploymentSettings: {},
+        triggerStatus: 'deployed',
+      }),
+    )
     const created = await createDocumentTrigger({
       workspace,
       project,
@@ -208,7 +223,12 @@ describe.sequential('deleteDocumentTrigger', () => {
 
     // New draft and create a draft version (update) so undeploy path is hit
     const { commit: newDraft } = await factories.createDraft({ project, user })
-    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({}))
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({
+        deploymentSettings: {},
+        triggerStatus: 'deployed',
+      }),
+    )
     await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
       workspace,
       commit: newDraft,
@@ -253,7 +273,12 @@ describe.sequential('deleteDocumentTrigger', () => {
 
   it('propagates undeploy error and does not delete the draft record', async () => {
     // Create in current draft
-    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({}))
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({
+        deploymentSettings: {},
+        triggerStatus: 'deployed',
+      }),
+    )
     const created = await createDocumentTrigger({
       workspace,
       project,

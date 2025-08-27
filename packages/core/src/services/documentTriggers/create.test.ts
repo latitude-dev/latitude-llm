@@ -144,7 +144,10 @@ describe('createDocumentTrigger', () => {
       const deploymentSettings: EmailTriggerDeploymentSettings = {}
 
       mocks.deployDocumentTrigger.mockResolvedValue(
-        Result.ok(deploymentSettings),
+        Result.ok({
+          deploymentSettings,
+          triggerStatus: 'deployed',
+        }),
       )
 
       // Act
@@ -192,7 +195,10 @@ describe('createDocumentTrigger', () => {
       }
 
       mocks.deployDocumentTrigger.mockResolvedValue(
-        Result.ok(deploymentSettings),
+        Result.ok({
+          deploymentSettings,
+          triggerStatus: 'deployed',
+        }),
       )
 
       // Act
@@ -246,7 +252,10 @@ describe('createDocumentTrigger', () => {
       }
 
       mocks.deployDocumentTrigger.mockResolvedValue(
-        Result.ok(deploymentSettings),
+        Result.ok({
+          deploymentSettings,
+          triggerStatus: 'deployed',
+        }),
       )
 
       // Act

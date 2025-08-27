@@ -69,6 +69,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Test Email Trigger',
             replyWithResponse: true,
@@ -84,6 +85,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
+          triggerStatus: 'deployed',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -112,6 +114,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Test Email Trigger',
             replyWithResponse: true,
@@ -143,6 +146,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Original Trigger',
             replyWithResponse: true,
@@ -166,6 +170,7 @@ describe('DocumentTriggersRepository', () => {
         commitId: newDraft.id,
         documentUuid: document.documentUuid,
         triggerType: DocumentTriggerType.Email,
+        triggerStatus: 'deployed',
         configuration: {
           name: 'Updated Trigger',
           replyWithResponse: true,
@@ -190,6 +195,7 @@ describe('DocumentTriggersRepository', () => {
         commitId: draft.id,
         documentUuid: document.documentUuid,
         triggerType: DocumentTriggerType.Email,
+        triggerStatus: 'deployed',
         configuration: {
           name: 'Test Email Trigger',
           replyWithResponse: true,
@@ -215,6 +221,7 @@ describe('DocumentTriggersRepository', () => {
         commitId: otherCommit.id,
         documentUuid: otherDocuments[0]!.documentUuid,
         triggerType: DocumentTriggerType.Email,
+        triggerStatus: 'deployed',
         configuration: {
           name: 'Other Trigger',
           replyWithResponse: true,
@@ -250,6 +257,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Project 1 Trigger',
             replyWithResponse: true,
@@ -276,6 +284,7 @@ describe('DocumentTriggersRepository', () => {
         commitId: draft2.id,
         documentUuid: documents2[0]!.documentUuid,
         triggerType: DocumentTriggerType.Email,
+        triggerStatus: 'deployed',
         configuration: {
           name: 'Project 2 Trigger',
           replyWithResponse: true,
@@ -303,6 +312,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Original Trigger',
             replyWithResponse: true,
@@ -327,6 +337,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: newDraft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
+          triggerStatus: 'deployed',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -379,6 +390,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Doc 1 Trigger',
             replyWithResponse: true,
@@ -392,6 +404,7 @@ describe('DocumentTriggersRepository', () => {
         commitId: draft.id,
         documentUuid: document2Uuid,
         triggerType: DocumentTriggerType.Scheduled,
+        triggerStatus: 'deployed',
         configuration: {
           cronExpression: '0 * * * *',
         },
@@ -420,6 +433,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Original Trigger',
             replyWithResponse: true,
@@ -444,6 +458,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: newDraft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
+          triggerStatus: 'deployed',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -483,6 +498,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Original Name',
             replyWithResponse: true,
@@ -506,6 +522,7 @@ describe('DocumentTriggersRepository', () => {
         commitId: newDraft.id,
         documentUuid: document.documentUuid,
         triggerType: DocumentTriggerType.Email,
+        triggerStatus: 'deployed',
         configuration: {
           name: 'Updated Name',
           replyWithResponse: false,
@@ -568,6 +585,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Test Trigger',
             replyWithResponse: true,
@@ -595,6 +613,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
+          triggerStatus: 'deployed',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -622,6 +641,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Original',
             replyWithResponse: true,
@@ -645,6 +665,7 @@ describe('DocumentTriggersRepository', () => {
         commitId: newDraft.id,
         documentUuid: document.documentUuid,
         triggerType: DocumentTriggerType.Email,
+        triggerStatus: 'deployed',
         configuration: {
           name: 'Updated',
           replyWithResponse: true,
@@ -674,6 +695,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Test Trigger',
             replyWithResponse: true,
@@ -718,6 +740,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: otherCommit.id, // Use the actual commit id
           documentUuid: otherDocuments[0]!.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Other Workspace Trigger',
             replyWithResponse: true,
@@ -744,6 +767,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Version 1',
             replyWithResponse: true,
@@ -774,6 +798,7 @@ describe('DocumentTriggersRepository', () => {
         commitId: draft2.id,
         documentUuid: document.documentUuid,
         triggerType: DocumentTriggerType.Scheduled,
+        triggerStatus: 'deployed',
         configuration: {
           cronExpression: '0 9 * * *',
         },
@@ -816,6 +841,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
           configuration: {
             name: 'Email Trigger',
             replyWithResponse: true,
@@ -831,6 +857,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
+          triggerStatus: 'deployed',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -845,6 +872,7 @@ describe('DocumentTriggersRepository', () => {
           commitId: draft.id,
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Integration,
+          triggerStatus: 'deployed',
           configuration: {
             integrationId: 123,
             componentId: 'webhook-component',

@@ -7,6 +7,7 @@ import {
   DocumentTriggersRepository,
 } from '../../repositories'
 import { undeployDocumentTrigger } from './deploy'
+import { DocumentTriggerStatus } from '@latitude-data/constants'
 
 /**
  * Handles the merge of a commit that contains document triggers.
@@ -27,7 +28,7 @@ export async function handleTriggerMerge(
     return Result.error(new BadRequestError('Cannot merge a merged draft'))
   }
 
-  const liveTriggersToUndeployResult = await transaction.call(async (tx) => {
+  const triggersToUpdateResult = await transaction.call(async (tx) => {
     const triggersScope = new DocumentTriggersRepository(workspace.id, tx)
     const commitsScope = new CommitsRepository(workspace.id, tx)
 
@@ -35,12 +36,17 @@ export async function handleTriggerMerge(
     if (!Result.isOk(liveCommitResult)) return liveCommitResult
 
     const liveCommit = liveCommitResult.unwrap()
-    if (!liveCommit) return Result.ok([]) // No live commit, no triggers to undeploy
 
     const triggerUpdatesResult =
       await triggersScope.getTriggerUpdatesInDraft(draft)
     if (!Result.isOk(triggerUpdatesResult)) return triggerUpdatesResult
     const triggerUpdates = triggerUpdatesResult.unwrap()
+
+    if (!liveCommit)
+      return Result.ok({
+        updatedTriggers: triggerUpdates,
+        liveTriggersToUndeploy: [], // No live commit, no triggers to undeploy
+      })
 
     const triggersAtLiveResult = await triggersScope.getTriggersInProject({
       projectId: draft.projectId,
@@ -48,18 +54,35 @@ export async function handleTriggerMerge(
     })
     const triggersAtLive = triggersAtLiveResult.unwrap()
 
-    return Result.ok(
-      triggersAtLive.filter((trigger) =>
-        triggerUpdates.some((update) => update.uuid === trigger.uuid),
-      ),
+    const liveTriggersToUndeploy = triggersAtLive.filter((trigger) =>
+      triggerUpdates.some((update) => update.uuid === trigger.uuid),
     )
+
+    return Result.ok({
+      updatedTriggers: triggerUpdates,
+      liveTriggersToUndeploy,
+    })
   })
 
-  if (!Result.isOk(liveTriggersToUndeployResult)) {
-    return liveTriggersToUndeployResult
+  if (!Result.isOk(triggersToUpdateResult)) {
+    return triggersToUpdateResult
   }
 
-  const liveTriggersToUndeploy = liveTriggersToUndeployResult.unwrap()
+  const { updatedTriggers, liveTriggersToUndeploy } =
+    triggersToUpdateResult.unwrap()
+
+  if (
+    updatedTriggers.some(
+      (trigger) => trigger.triggerStatus === DocumentTriggerStatus.Pending,
+    )
+  ) {
+    return Result.error(
+      new BadRequestError(
+        'Cannot merge a commit that contains pending triggers',
+      ),
+    )
+  }
+
   for await (const liveTriggerToUndeploy of liveTriggersToUndeploy) {
     const undeployResult = await undeployDocumentTrigger(
       {

@@ -15,6 +15,7 @@ import {
   isIntegrationConfigured,
 } from '../../../../integrations/pipedream/components/fillConfiguredProps'
 import { PromisedResult } from '../../../../../lib/Transaction'
+import { omit } from 'lodash-es'
 
 const DYNAMIC_PROP_PREFIXES = ['$.discord.', '$.airtable.'] as const
 
@@ -26,6 +27,18 @@ export const IRRELEVANT_PROP_TYPES = [
   '$.interface.http',
   '$.interface.db',
 ]
+
+function unconfiguredProps(
+  initialProps: ConfigurableProp[],
+): ConfigurableProp[] {
+  return initialProps.map((prop) => {
+    return {
+      // TODO: Test whether to remove remoteOptions attributes or filter out the options completely
+      ...omit(prop, ['remoteOptions', 'reloadProps']),
+      optional: true,
+    } as ConfigurableProp
+  })
+}
 
 export async function fetchFullConfigSchema({
   pipedream,
@@ -47,7 +60,7 @@ export async function fetchFullConfigSchema({
 
     if (!isIntegrationConfigured(integration)) {
       // We still want to return the initial schema to Latte if integration is not configured, so it can fill what it can
-      return Result.ok(relevantLatteProps)
+      return Result.ok(unconfiguredProps(relevantLatteProps))
     }
 
     const externalUserId = integration.configuration.externalUserId

@@ -13,7 +13,10 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { projects } from './projects'
 import { workspaces } from './workspaces'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import {
+  DocumentTriggerStatus,
+  DocumentTriggerType,
+} from '@latitude-data/constants'
 import {
   DocumentTriggerConfiguration,
   DocumentTriggerDeploymentSettings,
@@ -24,6 +27,11 @@ import { commits } from './commits'
 export const documentTriggerTypeEnum = latitudeSchema.enum(
   'document_trigger_types',
   Object.values(DocumentTriggerType) as [string, ...string[]],
+)
+
+export const documentTriggerStatusEnum = latitudeSchema.enum(
+  'document_trigger_status',
+  Object.values(DocumentTriggerStatus) as [string, ...string[]],
 )
 
 export const documentTriggers = latitudeSchema.table(
@@ -43,6 +51,9 @@ export const documentTriggers = latitudeSchema.table(
       .notNull()
       .references(() => commits.id, { onDelete: 'cascade' }),
     documentUuid: uuid('document_uuid').notNull(),
+    triggerStatus: documentTriggerStatusEnum('trigger_status')
+      .notNull()
+      .default(DocumentTriggerStatus.Pending),
     triggerType: documentTriggerTypeEnum('trigger_type').notNull(),
     configuration: jsonb('configuration')
       .$type<DocumentTriggerConfiguration<DocumentTriggerType>>()

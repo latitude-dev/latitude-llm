@@ -46,7 +46,8 @@ export async function createDocumentTrigger<
     transaction,
   )
   if (!Result.isOk(deploymentSettingsResult)) return deploymentSettingsResult
-  const deploymentSettings = deploymentSettingsResult.unwrap()
+  const { deploymentSettings, triggerStatus } =
+    deploymentSettingsResult.unwrap()
 
   return await transaction.call(async (tx) => {
     const [documentTrigger] = (await tx
@@ -60,6 +61,7 @@ export async function createDocumentTrigger<
         triggerType,
         configuration,
         deploymentSettings,
+        triggerStatus,
       })
       .returning()) as DocumentTrigger<T>[]
 

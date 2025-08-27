@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DocumentTriggerType, Providers } from '@latitude-data/constants'
+import {
+  DocumentTriggerType,
+  Providers,
+  IntegrationType,
+} from '@latitude-data/constants'
 import {
   Commit,
   Project,
@@ -60,7 +64,12 @@ describe('handleTriggerMerge', () => {
       mocks.undeployDocumentTrigger,
     )
 
-    mocks.deployDocumentTrigger.mockResolvedValue(Result.ok({}))
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({
+        deploymentSettings: {},
+        triggerStatus: 'deployed',
+      }),
+    )
   })
 
   it('returns error when called with a merged draft', async () => {
@@ -155,5 +164,57 @@ describe('handleTriggerMerge', () => {
       },
       expect.any(Object),
     )
+  })
+
+  it('fails to merge when commit contains pending triggers', async () => {
+    // Create an unconfigured Pipedream integration (missing connectionId)
+    const { createIntegration } = await import('../../tests/factories')
+    const integration = await createIntegration({
+      workspace,
+      type: IntegrationType.Pipedream,
+      configuration: {
+        appName: 'slack',
+        // Missing connectionId makes it unconfigured
+      },
+    })
+
+    // Create a trigger directly in the database with pending status to bypass mocks
+    const { database } = await import('../../client')
+    const { documentTriggers } = await import('../../schema')
+    const { v4: uuidv4 } = await import('uuid')
+
+    const triggerUuid = uuidv4()
+    const [trigger] = await database
+      .insert(documentTriggers)
+      .values({
+        uuid: triggerUuid,
+        workspaceId: workspace.id,
+        projectId: project.id,
+        commitId: draft.id,
+        documentUuid: document.documentUuid,
+        triggerType: DocumentTriggerType.Integration,
+        triggerStatus: 'pending', // Explicitly set to pending
+        configuration: {
+          integrationId: integration.id,
+          componentId: 'slack.functions.send_message_to_channel',
+          properties: {},
+          payloadParameters: [],
+        },
+        deploymentSettings: null,
+        enabled: false,
+      })
+      .returning()
+
+    // Verify the trigger has pending status
+    expect(trigger!.triggerStatus).toBe('pending')
+
+    const { handleTriggerMerge } = await import('./handleMerge')
+    const result = await handleTriggerMerge({ workspace, draft })
+
+    expect(result.ok).toBeFalsy()
+    expect(result.error?.message).toBe(
+      'Cannot merge a commit that contains pending triggers',
+    )
+    expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
   })
 })
