@@ -1,4 +1,3 @@
-import { and, eq, isNull } from 'drizzle-orm'
 import {
   Commit,
   DocumentVersion,
@@ -6,14 +5,13 @@ import {
   User,
   Workspace,
 } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
-import { ProjectsRepository } from '../../repositories'
-import { createProject } from '../projects/create'
 import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
 import { createNewDocument } from './create'
 import { buildDocuments } from './forkDocument/buildDocuments'
+import { cloneDocumentTriggers } from './forkDocument/cloneTriggers'
+import { createForkProject } from './forkDocument/createProject'
 import { getIncludedDocuments } from './forkDocument/getIncludedDocuments'
 
 type ForkProps = {
@@ -29,49 +27,6 @@ type ForkProps = {
     user: User
   }
   defaultProviderName?: string
-}
-const ATTEMPTS_BEFORE_RANDOM_SUFFIX = 4
-async function createProjectFromDocument({
-  title,
-  prefix,
-  workspace,
-  user,
-}: {
-  title: string
-  prefix: string
-  workspace: Workspace
-  user: User
-}) {
-  const baseName = `${prefix} ${title}`
-  let name = baseName
-  const repo = new ProjectsRepository(workspace.id)
-  let attempts = 0
-
-  while (attempts < ATTEMPTS_BEFORE_RANDOM_SUFFIX) {
-    const result = await database
-      .select()
-      .from(repo.scope)
-      .where(
-        and(
-          eq(repo.scope._.selectedFields.workspaceId, workspace.id),
-          eq(repo.scope._.selectedFields.name, name),
-          isNull(repo.scope._.selectedFields.deletedAt),
-        ),
-      )
-      .limit(1)
-
-    if (result.length === 0) {
-      return createProject({ name, workspace, user })
-    }
-
-    attempts++
-    name = `${baseName} (${attempts})`
-  }
-
-  const randomSuffix = Math.floor(Math.random() * 1000)
-  name = `${baseName} #${randomSuffix}`
-
-  return createProject({ name, workspace, user })
 }
 
 async function createDocuments({
@@ -136,7 +91,7 @@ export async function forkDocument({
   destination,
   defaultProviderName,
 }: ForkProps) {
-  const { commit, project } = await createProjectFromDocument({
+  const { commit, project } = await createForkProject({
     title,
     prefix,
     workspace: destination.workspace,
@@ -179,5 +134,16 @@ export async function forkDocument({
     },
   }).then((r) => r.unwrap())
 
-  return Result.ok({ project, commit, document: copiedDocument })
+  const triggers = await cloneDocumentTriggers({
+    originWorkspace: origin.workspace,
+    originCommit: origin.commit,
+    originDocument: origin.document,
+    targetWorkspace: destination.workspace,
+    targetProject: project,
+    targetCommit: commit,
+    targetDocument: copiedDocument,
+    targetUser: destination.user,
+  }).then((r) => r.unwrap())
+
+  return Result.ok({ project, commit, document: copiedDocument, triggers })
 }
