@@ -38,6 +38,7 @@ export function LatteChatInput({
   feedbackRequested,
   addFeedbackToLatteChange,
   stopLatteChat,
+  setShowThinking,
 }: {
   isBrewing: boolean
   inConversation: boolean
@@ -54,6 +55,7 @@ export function LatteChatInput({
     evaluationResultUuid?: string,
   ) => void
   stopLatteChat?: () => void
+  setShowThinking: (value: boolean) => void
 }) {
   const placeholder = useTypeWriterValue(
     inConversation ? [] : INPUT_PLACEHOLDERS,
@@ -75,7 +77,8 @@ export function LatteChatInput({
     if (value.trim() === '') return
     setValue('')
     sendMessage(value)
-  }, [value, sendMessage, isBrewing])
+    setShowThinking(false)
+  }, [value, sendMessage, isBrewing, setShowThinking])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {

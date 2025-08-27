@@ -1,18 +1,20 @@
 import { LatteInteraction } from '$/hooks/latte/types'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { cn } from '@latitude-data/web-ui/utils'
 import { useState } from 'react'
 import { CollapsedInteractionSteps } from './CollapsedInteractionSteps'
-import { InteractionStep } from './InteractionStep'
 import { MarkdownResponse } from './MarkdownText'
+import { UncollapsedInteractionSteps } from './UnCollapsedInteractionSteps'
 
 export function ChatInteraction({
   interaction,
-  isStreaming,
+  isBrewing,
+  lastInteraction,
+  showThinking,
 }: {
   interaction: LatteInteraction
-  isStreaming?: boolean
+  isBrewing?: boolean
+  lastInteraction: boolean
+  showThinking: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -24,37 +26,27 @@ export function ChatInteraction({
         </Text.H5>
       </div>
 
-      {interaction.steps.length > 0 || (!interaction.output && isStreaming) ? (
+      {interaction.steps.length > 0 || (!interaction.output && isBrewing) ? (
         <div
           className='flex flex-row items-start gap-2 hover:opacity-80 cursor-pointer'
           onClick={() => setIsOpen((prev) => !prev)}
         >
-          <Icon
-            name='chevronRight'
-            color='latteOutputForegroundMuted'
-            className={cn('transition-all min-w-4 mt-0.5', {
-              'rotate-90': isOpen,
-            })}
-          />
-          <div className='flex flex-col gap-4 flex-grow max-w-[75%]'>
-            {isOpen && interaction.steps.length > 0 ? (
-              interaction.steps.map((step, i) => (
-                <InteractionStep
-                  key={i}
-                  step={step}
-                  isLoading={
-                    interaction.output === undefined &&
-                    i === interaction.steps.length - 1
-                  }
-                />
-              ))
-            ) : (
-              <CollapsedInteractionSteps
-                steps={interaction.steps}
-                isLoading={interaction.output === undefined}
-              />
-            )}
-          </div>
+          {isOpen && interaction.steps.length > 0 ? (
+            <UncollapsedInteractionSteps
+              interaction={interaction}
+              isLoading={interaction.output === undefined}
+              isOpen={isOpen}
+              showThinking={showThinking}
+            />
+          ) : (
+            <CollapsedInteractionSteps
+              steps={interaction.steps}
+              isLoading={interaction.output === undefined}
+              lastInteraction={lastInteraction}
+              isOpen={isOpen}
+              showThinking={showThinking}
+            />
+          )}
         </div>
       ) : null}
 
