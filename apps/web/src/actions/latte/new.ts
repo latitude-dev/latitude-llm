@@ -1,11 +1,16 @@
 'use server'
 
-import { z } from 'zod'
-import { authProcedure } from '$/actions/procedures'
 import { createLatteJob } from '@latitude-data/core/services/copilot/latte/createLatteJob'
 import { createLatteThread } from '@latitude-data/core/services/copilot/latte/threads/createThread'
+import { z } from 'zod'
+import { authProcedure, withRateLimit } from '../procedures'
 
-export const createNewLatteAction = authProcedure
+export const createNewLatteAction = (
+  await withRateLimit(authProcedure, {
+    limit: 10,
+    period: 60,
+  })
+)
   .createServerAction()
   .input(
     z.object({
