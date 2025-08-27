@@ -25,7 +25,7 @@ interface LatteState {
 
   // Usage state
   usage: LatteUsage | undefined
-  isBrewingUsage: boolean
+  isLoadingUsage: boolean
 
   // BullMQ job ID to stop lattes job
   jobId: string | undefined
@@ -76,7 +76,7 @@ const useStore = create<LatteState>((set) => ({
   threadUuid: undefined,
   debugVersionUuid: undefined,
   usage: undefined,
-  isBrewingUsage: false,
+  isLoadingUsage: false,
   jobId: undefined,
 
   // Chat actions
@@ -170,7 +170,7 @@ const useStore = create<LatteState>((set) => ({
     set({ debugVersionUuid: uuid }),
 
   setUsage: (usage: LatteUsage | undefined) => set({ usage }),
-  setIsLoadingUsage: (loading: boolean) => set({ isBrewingUsage: loading }),
+  setIsLoadingUsage: (loading: boolean) => set({ isLoadingUsage: loading }),
 
   setJobId: (jobId: string | undefined) => set({ jobId: jobId }),
 

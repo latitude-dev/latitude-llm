@@ -190,7 +190,7 @@ export function LatteChatInput({
           onClick={resetChat}
           disabled={isBrewing || !inConversation}
           iconProps={{
-            name: 'repeat',
+            name: 'rotate',
             color: 'latteInputForeground',
             className:
               'flex-shrink-0 group-hover:text-latte-input-foreground/75',
