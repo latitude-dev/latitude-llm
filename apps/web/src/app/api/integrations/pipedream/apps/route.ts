@@ -9,7 +9,13 @@ export const GET = errorHandler(
     const query = searchParams.get('query') || undefined
     const cursor = searchParams.get('cursor') || undefined
     const withTriggers = searchParams.get('withTriggers') === 'true'
-    const result = await listApps({ query, cursor, withTriggers })
+    const withTools = searchParams.get('withTools') === 'true'
+    const result = await listApps({
+      query,
+      cursor,
+      withTriggers,
+      withTools,
+    })
 
     return NextResponse.json(result.unwrap(), { status: 200 })
   }),

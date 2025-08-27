@@ -47,15 +47,27 @@ export default function usePipedreamApps(
   {
     query,
     withTriggers = false,
-  }: { query?: string; withTriggers?: boolean } = {},
+    withTools = false,
+  }: {
+    query?: string
+    withTriggers?: boolean
+    withTools?: boolean
+  } = {},
   opts?: SWRInfiniteConfiguration<PipedreamAppsResponse, any>,
 ) {
   const hasTriggers = withTriggers ? 'true' : 'false'
+  const hasTools = withTools ? 'true' : 'false'
 
   const getKey = useCallback(
     (pageIndex: number, previousPageData: PipedreamAppsResponse | null) => {
       if (pageIndex === 0) {
-        return ['pipedream-apps', hasTriggers, query || '', ''] as const
+        return [
+          'pipedream-apps',
+          hasTriggers,
+          hasTools,
+          query || '',
+          '',
+        ] as const
       }
 
       // If previous page data is empty or doesn't have a cursor, we've reached the end
@@ -66,11 +78,12 @@ export default function usePipedreamApps(
       return [
         'pipedream-apps',
         hasTriggers,
+        hasTools,
         query || '',
         previousPageData.cursor,
       ] as const
     },
-    [hasTriggers, query],
+    [hasTriggers, hasTools, query],
   )
 
   // Use the reusable infinite fetcher hook
@@ -79,10 +92,11 @@ export default function usePipedreamApps(
     useCallback((key: string[]) => {
       const searchParams: Record<string, string> = {}
 
-      // Extract params from key: [cacheName, withTriggers, query, cursor]
+      // Extract params from key: [cacheName, withTriggers, withTools, query, cursor]
       if (key[1]) searchParams.withTriggers = key[1]
-      if (key[2]) searchParams.query = key[2]
-      if (key[3]) searchParams.cursor = key[3]
+      if (key[2]) searchParams.withTools = key[2]
+      if (key[3]) searchParams.query = key[3]
+      if (key[4]) searchParams.cursor = key[4]
 
       return searchParams
     }, []),
