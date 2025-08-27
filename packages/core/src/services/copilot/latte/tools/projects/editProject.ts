@@ -10,11 +10,11 @@ import { executeLatteActions } from './latteActions/executeActions'
 import { CompileError } from '@latitude-data/compiler'
 
 const editProject = defineLatteTool(
-  async ({ projectId, draftUuid, actions }, { workspace, threadUuid }) => {
+  async ({ projectId, versionUuid, actions }, { workspace, threadUuid }) => {
     const commitsScope = new CommitsRepository(workspace.id)
     const commitResult = await commitsScope.getCommitByUuid({
       projectId: projectId,
-      uuid: draftUuid,
+      uuid: versionUuid,
     })
     if (!commitResult.ok) return commitResult
     const commit = commitResult.unwrap()
@@ -53,7 +53,7 @@ const editProject = defineLatteTool(
   },
   z.object({
     projectId: z.number(),
-    draftUuid: z.string(),
+    versionUuid: z.string(),
     actions: z.array(
       z.union([
         z.object({

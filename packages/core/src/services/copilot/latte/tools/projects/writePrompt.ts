@@ -11,13 +11,13 @@ import { executeLatteActions } from './latteActions/executeActions'
 
 const writePrompt = defineLatteTool(
   async (
-    { projectId, draftUuid, path: rawPath, content },
+    { projectId, versionUuid, path: rawPath, content },
     { workspace, threadUuid },
   ) => {
     const commitsScope = new CommitsRepository(workspace.id)
     const commitResult = await commitsScope.getCommitByUuid({
       projectId: projectId,
-      uuid: draftUuid,
+      uuid: versionUuid,
     })
     if (!commitResult.ok) return commitResult
     const commit = commitResult.unwrap()
@@ -90,7 +90,7 @@ const writePrompt = defineLatteTool(
   },
   z.object({
     projectId: z.number(),
-    draftUuid: z.string(),
+    versionUuid: z.string(),
     path: z.string(),
     content: z.string(),
   }),

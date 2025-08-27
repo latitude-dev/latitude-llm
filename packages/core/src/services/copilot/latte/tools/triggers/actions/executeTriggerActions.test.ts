@@ -71,7 +71,7 @@ describe('Latte CRUD document triggers', () => {
 
       const expectedLatteTriggerChanges = {
         projectId: commit.projectId,
-        draftUuid: commit.uuid,
+        versionUuid: commit.uuid,
         promptUuid: promptUuid,
         triggerType: DocumentTriggerType.Email,
       }
@@ -181,7 +181,7 @@ describe('Latte CRUD document triggers', () => {
 
       const expectedLatteTriggerChanges = {
         projectId: commit.projectId,
-        draftUuid: commit.uuid,
+        versionUuid: commit.uuid,
         promptUuid: promptUuid,
         triggerType: DocumentTriggerType.Email,
       }
@@ -345,7 +345,7 @@ describe('Latte CRUD document triggers', () => {
 
       const expectedLatteTriggerChanges = {
         projectId: commit.projectId,
-        draftUuid: commit.uuid,
+        versionUuid: commit.uuid,
         promptUuid: promptUuid,
         triggerType: DocumentTriggerType.Scheduled,
       }

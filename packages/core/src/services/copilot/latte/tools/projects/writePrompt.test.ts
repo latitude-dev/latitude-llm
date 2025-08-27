@@ -54,7 +54,7 @@ describe('writePrompt', () => {
     const result = await writePrompt(
       {
         projectId: project.id,
-        draftUuid: draft.uuid,
+        versionUuid: draft.uuid,
         path,
         content,
       },
@@ -91,7 +91,7 @@ describe('writePrompt', () => {
     const result = await writePrompt(
       {
         projectId: project.id,
-        draftUuid: draft.uuid,
+        versionUuid: draft.uuid,
         path,
         content: newContent,
       },
@@ -128,7 +128,7 @@ temperature: wrong
     const result = await writePrompt(
       {
         projectId: project.id,
-        draftUuid: draft.uuid,
+        versionUuid: draft.uuid,
         path,
         content,
       },
@@ -161,7 +161,7 @@ Parameter 2: {{ bar }}
     const result = await writePrompt(
       {
         projectId: project.id,
-        draftUuid: draft.uuid,
+        versionUuid: draft.uuid,
         path,
         content,
       },
