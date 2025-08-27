@@ -36,19 +36,20 @@ export function LatteChat() {
 
   useSyncLatteUrlState()
 
-  const isLoadingThread = useLoadThreadFromProviderLogs()
+  const isBrewingThread = useLoadThreadFromProviderLogs()
 
   const {
-    isLoading,
+    isBrewing,
     resetChat: resetChatStore,
     interactions,
     error,
     changes,
     latteActionsFeedbackUuid,
     usage,
+    jobId,
   } = useLatteStore()
 
-  const { sendMessage } = useLatteChatActions()
+  const { sendMessage, stopChat } = useLatteChatActions()
   const { acceptChanges, undoChanges, addFeedbackToLatteChange } =
     useLatteChangeActions()
 
@@ -56,6 +57,10 @@ export function LatteChat() {
     resetChatStore()
     addFeedbackToLatteChange('')
   }, [resetChatStore, addFeedbackToLatteChange])
+
+  const stopLatteChat = useCallback(() => {
+    stopChat({ jobId: jobId })
+  }, [stopChat, jobId])
 
   const inConversation = interactions.length > 0
   const containerRef = useRef<HTMLDivElement>(null)
@@ -95,8 +100,8 @@ export function LatteChat() {
             className='w-full h-full overflow-hidden custom-scrollbar flex flex-col gap-4 items-center shadow-sm pb-8'
             ref={containerRef}
           >
-            {isLoadingThread && !isLoading && <ChatSkeleton />}
-            {!isLoadingThread &&
+            {isBrewingThread && !isBrewing && <ChatSkeleton />}
+            {!isBrewingThread &&
               (!inConversation ? (
                 <div className='flex flex-col items-center justify-center h-full gap-8 min-w-[50%] p-8'>
                   <div className='flex flex-col items-center justify-center gap-6'>
@@ -130,7 +135,7 @@ export function LatteChat() {
                     error={error}
                     inConversation={false}
                     scrollToBottom={scrollToBottom}
-                    isLoading={isLoading}
+                    isBrewing={isBrewing}
                     feedbackRequested={!!latteActionsFeedbackUuid}
                     addFeedbackToLatteChange={addFeedbackToLatteChange}
                   />
@@ -139,7 +144,7 @@ export function LatteChat() {
                 <>
                   <LatteMessageList
                     interactions={interactions}
-                    isStreaming={isLoading}
+                    isStreaming={isBrewing}
                   />
                   {error && (
                     <div className='w-full px-8'>
@@ -183,9 +188,10 @@ export function LatteChat() {
                 acceptChanges={acceptChanges}
                 error={error}
                 scrollToBottom={scrollToBottom}
-                isLoading={isLoading}
+                isBrewing={isBrewing}
                 feedbackRequested={!!latteActionsFeedbackUuid}
                 addFeedbackToLatteChange={addFeedbackToLatteChange}
+                stopLatteChat={stopLatteChat}
               />
               {!!usage && !!workspace && (
                 <LatteUsageInfo

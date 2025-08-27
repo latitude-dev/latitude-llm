@@ -3,8 +3,8 @@
 import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
 import { LatteThreadsRepository } from '@latitude-data/core/repositories'
-import { createLatteJob } from '@latitude-data/core/services/copilot/latte/addMessage'
 import { NotFoundError } from '@latitude-data/constants/errors'
+import { createLatteJob } from '@latitude-data/core/services/copilot/latte/createLatteJob'
 
 export const addMessageToLatteAction = authProcedure
   .createServerAction()
@@ -38,5 +38,5 @@ export const addMessageToLatteAction = authProcedure
 
     runResult.unwrap()
 
-    return { uuid: thread.uuid }
+    return { uuid: thread.uuid, jobId: runResult.value }
   })

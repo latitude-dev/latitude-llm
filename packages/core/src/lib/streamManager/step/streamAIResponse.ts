@@ -12,6 +12,8 @@ import { createProviderLog } from '../../../services/providerLogs'
 import { TelemetryContext } from '../../../telemetry'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
+import { isAbortError } from '../../isAbortError'
+import { createFakeProviderLog } from '../utils/createFakeProviderLog'
 
 export type ExecuteStepArgs = {
   controller: ReadableStreamDefaultController
@@ -64,15 +66,33 @@ export async function streamAIResponse({
     output,
     abortSignal,
   }).then((r) => r.unwrap())
-
   const checkResult = checkValidStream({ type: aiResult.type })
   if (checkResult.error) throw checkResult.error
-
-  const { error } = await consumeStream({
-    controller,
-    result: aiResult,
-  })
-  if (error) throw error
+  const accumulatedText = { text: '' }
+  let chunkError
+  try {
+    const resultStream = await consumeStream({
+      controller,
+      result: aiResult,
+      accumulatedText,
+    })
+    chunkError = resultStream.error
+  } catch (error) {
+    if (isAbortError(error)) {
+      await createFakeProviderLog({
+        documentLogUuid,
+        accumulatedText,
+        workspace,
+        source,
+        provider,
+        config,
+        messages,
+        startTime,
+      })
+    }
+    throw error
+  }
+  if (chunkError) throw chunkError
 
   const processedResponse = await processResponse({
     aiResult,

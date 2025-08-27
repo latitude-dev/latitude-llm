@@ -15,6 +15,7 @@ import { AIReturn } from '../../../services/ai'
 interface ConsumeStreamParams {
   result: AIReturn<StreamType>
   controller: ReadableStreamDefaultController
+  accumulatedText: { text: string }
 }
 
 type NoRunError = object
@@ -27,6 +28,7 @@ interface ConsumeStreamResult {
 export async function consumeStream({
   controller,
   result,
+  accumulatedText: _accumulatedText,
 }: ConsumeStreamParams): Promise<ConsumeStreamResult> {
   let error: ChainError<PosibleErrorCode, NoRunError> | undefined
 
@@ -56,7 +58,7 @@ export async function consumeStream({
         )
       }
     }
-
+    if (chunk.type == 'text-delta') _accumulatedText.text += chunk.textDelta
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Provider,
       data: chunk,

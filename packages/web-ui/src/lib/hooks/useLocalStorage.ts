@@ -19,6 +19,7 @@ export enum AppLocalStorage {
   playgroundActions = 'playgroundActions',
   expandParameters = 'expandParameters',
   latteThreadUuid = 'latteThreadUuid',
+  latteJobId = 'latteJobId',
 }
 
 export const isLocalStorageAvailable = (() => {

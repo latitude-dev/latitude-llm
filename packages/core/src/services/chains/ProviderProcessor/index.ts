@@ -1,6 +1,9 @@
 import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
 import { AIReturn } from '../../ai'
-import { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
+import {
+  AssistantMessage,
+  MessageRole,
+} from '@latitude-data/constants/legacyCompiler'
 
 function parseObject(text: string) {
   const parsed = text
@@ -60,4 +63,45 @@ async function buildOutput(
       }
     }
   })
+}
+
+/**
+ * When a assistant message is stopped by the user, we must create a uncomplete provider log with the information we
+ * have to keep the message chain alive
+ **/
+export async function fakeResponse({
+  documentLogUuid,
+  accumulatedText,
+}: {
+  documentLogUuid?: string
+  accumulatedText: { text: string }
+}): Promise<ChainStepResponse<StreamType>> {
+  return {
+    streamType: 'text',
+    documentLogUuid,
+    text: accumulatedText.text,
+    output: [fakeAssistantMessage(accumulatedText.text)],
+    usage: nullLanguageModelUse,
+    reasoning: undefined,
+    toolCalls: [],
+  }
+}
+
+const nullLanguageModelUse = {
+  promptTokens: 0,
+  completionTokens: 0,
+  totalTokens: 0,
+}
+
+const fakeAssistantMessage = (accumulatedText: string): AssistantMessage => {
+  return {
+    role: MessageRole.assistant,
+    content: [
+      {
+        type: 'text',
+        text: accumulatedText,
+      },
+    ],
+    toolCalls: [],
+  }
 }

@@ -21,7 +21,7 @@ export async function createLatteJob({
   context: string
   user: User
   debugVersionUuid?: string
-}): PromisedResult<undefined> {
+}): PromisedResult<string> {
   const supportResult = assertCopilotIsSupported()
   if (!supportResult.ok) return supportResult as ErrorResult<LatitudeError>
 
@@ -30,7 +30,7 @@ export async function createLatteJob({
     return Result.error(checking.error)
   }
 
-  await documentsQueue.add('runLatteJob', {
+  const job = await documentsQueue.add('runLatteJob', {
     workspaceId: workspace.id,
     threadUuid,
     message,
@@ -39,5 +39,11 @@ export async function createLatteJob({
     debugVersionUuid,
   } as RunLatteJobData)
 
-  return Result.nil()
+  if (!job.id) {
+    return Result.error(
+      new LatitudeError('Latte job creation failed due to missing job ID'),
+    )
+  }
+
+  return Result.ok(job.id)
 }

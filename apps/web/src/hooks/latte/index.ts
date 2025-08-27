@@ -38,6 +38,7 @@ import {
   LatteToolStep,
 } from './types'
 import { useLatteUsage } from './usage'
+import { stopChatLatteAction } from '$/actions/latte/stopChat'
 
 const EMPTY_ARRAY = [] as const
 
@@ -79,40 +80,58 @@ export function useSyncLatteUrlState() {
  *
  * @returns An object containing:
  *   - `sendMessage`: Function to send a message to the current or new Latte thread
+ *   - `stopChat`: Function to stop the current active Latte response
  */
 export function useLatteChatActions() {
   const latteContext = useLatteContext()
   const {
     threadUuid,
     setThreadUuid,
-    setIsLoading,
+    setIsBrewing,
     setError,
     addInteractions,
     debugVersionUuid,
+    setJobId: setJobId,
   } = useLatteStore()
   const { execute: createNewChat } = useServerAction(createNewLatteAction, {
     onSuccess: ({ data }) => {
       setThreadUuid(data.uuid)
+      setJobId(data.jobId)
     },
     onError: ({ err }) => {
       setError(err.message)
-      setIsLoading(false)
+      setIsBrewing(false)
     },
   })
 
   const { execute: addMessageToExistingChat } = useServerAction(
     addMessageToLatteAction,
     {
+      onSuccess: ({ data }) => {
+        setJobId(data.jobId)
+      },
       onError: ({ err }) => {
         setError(err.message)
-        setIsLoading(false)
+        setIsBrewing(false)
       },
     },
   )
 
+  const { execute: stopChat } = useServerAction(stopChatLatteAction, {
+    onSuccess: () => {
+      setIsBrewing(false)
+      setJobId(undefined)
+    },
+    onError: ({ err }) => {
+      setError(err.message)
+      setIsBrewing(false)
+      setJobId(undefined)
+    },
+  })
+
   const sendMessage = useCallback(
     async (message: string) => {
-      setIsLoading(true)
+      setIsBrewing(true)
 
       const newInteraction: LatteInteraction = {
         input: message,
@@ -132,13 +151,13 @@ export function useLatteChatActions() {
       addMessageToExistingChat,
       createNewChat,
       latteContext,
-      setIsLoading,
+      setIsBrewing,
       threadUuid,
       debugVersionUuid,
     ],
   )
 
-  return { sendMessage }
+  return { sendMessage, stopChat }
 }
 
 /**
@@ -155,7 +174,7 @@ export function useLatteChangeActions() {
     changes,
     setChanges,
     setLatteActionsFeedbackUuid,
-    setIsLoading,
+    setIsBrewing,
     setError,
   } = useLatteStore()
 
@@ -164,12 +183,12 @@ export function useLatteChangeActions() {
     {
       onSuccess: ({ data: { evaluationUuid } }) => {
         setChanges([])
-        setIsLoading(false)
+        setIsBrewing(false)
         setLatteActionsFeedbackUuid(evaluationUuid)
       },
       onError: ({ err }) => {
         setError(err.message)
-        setIsLoading(false)
+        setIsBrewing(false)
       },
     },
   )
@@ -188,12 +207,12 @@ export function useLatteChangeActions() {
         })
         // Clear changes state
         setChanges([])
-        setIsLoading(false)
+        setIsBrewing(false)
         setLatteActionsFeedbackUuid(evaluationUuid)
       },
       onError: ({ err }) => {
         setError(err.message)
-        setIsLoading(false)
+        setIsBrewing(false)
       },
     },
   )
@@ -202,26 +221,26 @@ export function useLatteChangeActions() {
     addFeedbackToLatteChangeAction,
     {
       onSuccess: () => {
-        setIsLoading(false)
+        setIsBrewing(false)
       },
       onError: ({ err }) => {
         setError(err.message)
-        setIsLoading(false)
+        setIsBrewing(false)
       },
     },
   )
 
   const acceptChanges = useCallback(() => {
     if (!threadUuid) return
-    setIsLoading(true)
+    setIsBrewing(true)
     executeAcceptChanges({ threadUuid })
-  }, [threadUuid, executeAcceptChanges, setIsLoading])
+  }, [threadUuid, executeAcceptChanges, setIsBrewing])
 
   const undoChanges = useCallback(() => {
     if (!threadUuid) return
-    setIsLoading(true)
+    setIsBrewing(true)
     executeUndoChanges({ threadUuid })
-  }, [threadUuid, executeUndoChanges, setIsLoading])
+  }, [threadUuid, executeUndoChanges, setIsBrewing])
 
   const addFeedbackToLatteChange = useCallback(
     (feedback: string, evaluationResultUuid?: string) => {
@@ -229,7 +248,7 @@ export function useLatteChangeActions() {
 
       if (!evaluationResultUuid) return
       if (feedback.trim() === '') return
-      setIsLoading(true)
+      setIsBrewing(true)
       executeAddFeedbackToLatteChange({
         content: feedback,
         evaluationResultUuid,
@@ -238,7 +257,7 @@ export function useLatteChangeActions() {
     [
       executeAddFeedbackToLatteChange,
       setLatteActionsFeedbackUuid,
-      setIsLoading,
+      setIsBrewing,
     ],
   )
 
@@ -258,7 +277,7 @@ export function useLatteThreadUpdates() {
   const {
     threadUuid,
     setInteractions,
-    setIsLoading,
+    setIsBrewing,
     setError,
     setUsage,
     setIsLoadingUsage,
@@ -292,7 +311,7 @@ export function useLatteThreadUpdates() {
 
       if (update.type === 'error') {
         setError(update.error.message)
-        setIsLoading(false)
+        setIsBrewing(false)
         return
       }
 
@@ -314,7 +333,7 @@ export function useLatteThreadUpdates() {
 
         if (update.type === 'fullResponse') {
           lastInteraction.output = update.response
-          setIsLoading(false)
+          setIsBrewing(false)
         }
 
         if (update.type === 'responseDelta') {
@@ -382,7 +401,7 @@ export function useLatteThreadUpdates() {
         return [...otherInteractions, lastInteraction]
       })
     },
-    [threadUuid, setInteractions, setIsLoading, setError, mutateUsage],
+    [threadUuid, setInteractions, setIsBrewing, setError, mutateUsage],
   )
 
   useSockets({
