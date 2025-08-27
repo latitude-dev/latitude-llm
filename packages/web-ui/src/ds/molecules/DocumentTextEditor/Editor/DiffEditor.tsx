@@ -16,10 +16,12 @@ export function MonacoDiffEditor({
   editorRef,
   oldValue,
   newValue,
+  readOnlyMessage,
 }: {
   editorRef: MutableRefObject<editor.IStandaloneDiffEditor | null>
   oldValue: string
   newValue: string
+  readOnlyMessage?: string
 }) {
   const { monacoRef, handleEditorWillMount } = useMonacoSetup()
   const { options } = useEditorOptions({
@@ -30,6 +32,10 @@ export function MonacoDiffEditor({
       verticalScrollbarSize: 0,
       verticalSliderSize: 0,
     },
+    readOnly: !!readOnlyMessage,
+    readOnlyMessage: readOnlyMessage
+      ? { value: readOnlyMessage, supportHtml: true }
+      : undefined,
   })
 
   const handleEditorDidMount = useCallback(

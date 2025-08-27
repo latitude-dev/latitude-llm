@@ -3,10 +3,11 @@ import { ReactNode } from 'react'
 import { AstError } from '@latitude-data/constants/promptl'
 
 export type DiffOptions = {
+  oldValue?: string
   newValue: string
   description?: string
-  onAccept: (newValue: string) => void
-  onReject: () => void
+  onAccept?: (newValue: string) => void
+  onReject?: () => void
 }
 
 export type DocumentTextEditorProps = {

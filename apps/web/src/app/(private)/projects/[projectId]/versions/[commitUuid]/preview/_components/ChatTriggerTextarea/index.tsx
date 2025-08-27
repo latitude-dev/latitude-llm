@@ -1,36 +1,36 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  KeyboardEvent,
-} from 'react'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-  Commit,
-  Project,
-} from '@latitude-data/core/browser'
-import { DocumentTriggerType, ParameterType } from '@latitude-data/constants'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
-import { cn } from '@latitude-data/web-ui/utils'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
-import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import { font } from '@latitude-data/web-ui/tokens'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { ParameterInput } from '$/components/ParameterInput'
 import {
   UseDocumentParameters,
   useDocumentParameters,
 } from '$/hooks/useDocumentParameters'
 import useDocumentTriggers from '$/stores/documentTriggers'
-import { ParameterInput } from '$/components/ParameterInput'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { OnRunTriggerFn } from '../TriggersList'
-import { PromptLFile } from 'promptl-ai'
 import useDocumentVersions from '$/stores/documentVersions'
+import { DocumentTriggerType, ParameterType } from '@latitude-data/constants'
+import {
+  Commit,
+  DocumentTrigger,
+  DocumentVersion,
+  Project,
+} from '@latitude-data/core/browser'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { font } from '@latitude-data/web-ui/tokens'
+import { cn } from '@latitude-data/web-ui/utils'
+import { PromptLFile } from 'promptl-ai'
+import {
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import { OnRunTriggerFn } from '../TriggersList'
 
 /**
  * Utility to convert localhost URLs to Cloudflare tunnel URLs for testing
@@ -281,7 +281,7 @@ export function ChatTriggerTextarea({
             ref={ref}
             variant='unstyled'
             size='none'
-            placeholder='Type your message here'
+            placeholder='Ask anything'
             minRows={1}
             onKeyDown={handleKeyDown}
             className={cn(

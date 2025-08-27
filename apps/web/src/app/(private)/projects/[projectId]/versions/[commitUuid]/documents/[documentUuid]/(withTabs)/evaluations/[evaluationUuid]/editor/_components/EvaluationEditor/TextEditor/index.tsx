@@ -53,7 +53,9 @@ export function TextEditor({
         compileErrors={compileErrors}
         onChange={onChange}
         readOnlyMessage={
-          isMerged ? 'Create a draft to edit this evaluation.' : undefined
+          isMerged
+            ? 'Version published. Create a draft to edit this evaluation.'
+            : undefined
         }
         isSaved={isSaved}
         actionButtons={<EditorSettings copilotEnabled={copilotEnabled} />}

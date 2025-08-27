@@ -1,30 +1,31 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
-import { MetadataProvider } from '$/components/MetadataProvider'
-import { ConfirmModal, Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
-import useDocumentTriggers from '$/stores/documentTriggers'
-import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import { DocumentTriggerType } from '@latitude-data/constants'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { EditScheduleTrigger } from './_components/ScheduleTrigger'
-import { EditEmailTrigger } from './_components/EmailTrigger'
-import { EditIntegrationTrigger } from './_components/IntegrationTrigger'
-import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
-import useDocumentVersions from '$/stores/documentVersions'
 import {
   SelectDocument,
   useDocumentSelection,
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/SelectDocument'
+import { MetadataProvider } from '$/components/MetadataProvider'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
+import useDocumentTriggers from '$/stores/documentTriggers'
+import useDocumentVersions from '$/stores/documentVersions'
+import { DocumentTriggerType } from '@latitude-data/constants'
+import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
+import { ConfirmModal, Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { EditEmailTrigger } from './_components/EmailTrigger'
+import { EditIntegrationTrigger } from './_components/IntegrationTrigger'
+import { EditScheduleTrigger } from './_components/ScheduleTrigger'
 
 function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
   const navigate = useNavigate()
@@ -201,7 +202,7 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
         <Modal
           open
           dismissible
-          title='Edit trigger'
+          title={`Edit ${trigger?.triggerType} trigger`}
           description='Edit the trigger configuration'
           onOpenChange={onCloseModal}
           footerAlign='justify'
@@ -213,10 +214,10 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
                 variant='outlineDestructive'
                 onClick={onDeleteTrigger}
               >
-                {isDeleting ? 'Deleting...' : 'Delete Trigger'}
+                {isDeleting ? 'Deleting...' : 'Delete'}
               </Button>
               <Button disabled={isUpdating} fancy onClick={onUpdate}>
-                Update trigger
+                Update
               </Button>
             </>
           }
@@ -248,14 +249,18 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
       open
       dismissible
       type='default'
-      title='Edit trigger'
+      title={`Edit ${trigger?.triggerType} trigger`}
       description='Edit the trigger configuration'
       onConfirm={onCloseModal}
       confirm={{
         label: 'Back to preview',
-        description:
-          'Live triggers cannot be edited. Create a new version to delete this trigger.',
       }}
-    />
+    >
+      <Alert
+        variant='warning'
+        title='Version published'
+        description='Triggers cannot be modified in a published commit. Create a draft to edit the trigger.'
+      />
+    </ConfirmModal>
   )
 }

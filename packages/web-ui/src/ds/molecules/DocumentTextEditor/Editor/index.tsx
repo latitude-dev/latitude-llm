@@ -1,10 +1,9 @@
 'use client'
-import { CheckCircle2, LoaderCircle } from 'lucide-react'
-import { useCallback, useMemo, useRef, useState } from 'react'
 
-import { MarkerSeverity, type editor } from 'monaco-editor'
 import { AstError } from '@latitude-data/constants/promptl'
-
+import { CheckCircle2, LoaderCircle } from 'lucide-react'
+import { MarkerSeverity, type editor } from 'monaco-editor'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   AppLocalStorage,
   useLocalStorage,
@@ -12,11 +11,11 @@ import {
 import { cn } from '../../../../lib/utils'
 import { Button } from '../../../atoms/Button'
 import { Text } from '../../../atoms/Text'
+import { EditorReadOnlyBanner } from '../ReadOnlyMessage'
 import { type DocumentError, type DocumentTextEditorProps } from '../types'
 import { CopilotSection } from './CopilotSection'
 import { MonacoDiffEditor } from './DiffEditor'
 import { RegularMonacoEditor } from './RegularEditor'
-import { EditorReadOnlyBanner } from '../ReadOnlyMessage'
 
 const NO_ERRORS: AstError[] = []
 export function DocumentTextEditor({
@@ -78,7 +77,7 @@ export function DocumentTextEditor({
   const [isDiscardingDiff, setIsDiscardingDiff] = useState(false)
 
   const handleAcceptDiff = useCallback(async () => {
-    if (!diff) return
+    if (!diff?.onAccept) return
     if (!diffEditorRef.current) return
 
     const newValue = diffEditorRef.current.getModifiedEditor().getValue()
@@ -89,7 +88,7 @@ export function DocumentTextEditor({
   }, [diff])
 
   const handleRejectDiff = useCallback(async () => {
-    if (!diff) return
+    if (!diff?.onReject) return
     if (!diffEditorRef.current) return
 
     setIsDiscardingDiff(true)
@@ -115,8 +114,12 @@ export function DocumentTextEditor({
       {diff ? (
         <MonacoDiffEditor
           editorRef={diffEditorRef}
-          oldValue={value}
+          oldValue={diff.oldValue ?? value}
           newValue={diff.newValue}
+          readOnlyMessage={
+            readOnlyMessage ||
+            (copilot?.isLoading ? 'Copilot is thinking...' : undefined)
+          }
         />
       ) : (
         <RegularMonacoEditor
@@ -138,30 +141,34 @@ export function DocumentTextEditor({
           highlightedCursorIndex={highlightedCursorIndex}
         />
       )}
-      {diff && (
+      {!!diff && (!!diff.onAccept || !!diff.onReject) && (
         <div className='flex w-full px-2'>
           <div className='flex flex-col w-full items-center gap-2 bg-background border border-border rounded-md p-2'>
-            {diff.description && (
+            {!!diff.description && (
               <div className='w-full max-h-24 overflow-y-auto custom-scrollbar px-2'>
                 <Text.H5 color='foregroundMuted'>{diff.description}</Text.H5>
               </div>
             )}
             <div className='flex flex-row gap-2 w-full justify-end'>
-              <Button
-                variant='outline'
-                fancy
-                onClick={handleRejectDiff}
-                disabled={isDiscardingDiff || isApplyingDiff}
-              >
-                {isDiscardingDiff ? 'Discarding...' : 'Discard'}
-              </Button>
-              <Button
-                fancy
-                onClick={handleAcceptDiff}
-                disabled={isApplyingDiff || isDiscardingDiff}
-              >
-                {isApplyingDiff ? 'Applying...' : 'Apply'}
-              </Button>
+              {!!diff.onReject && (
+                <Button
+                  variant='outline'
+                  fancy
+                  onClick={handleRejectDiff}
+                  disabled={isDiscardingDiff || isApplyingDiff}
+                >
+                  {isDiscardingDiff ? 'Discarding...' : 'Discard'}
+                </Button>
+              )}
+              {!!diff.onAccept && (
+                <Button
+                  fancy
+                  onClick={handleAcceptDiff}
+                  disabled={isApplyingDiff || isDiscardingDiff}
+                >
+                  {isApplyingDiff ? 'Applying...' : 'Apply'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -210,7 +217,11 @@ export function DocumentTextEditor({
             </Button>
           )}
         </div>
-        <div className='flex flex-row items-center gap-2'>{actionButtons}</div>
+        {!diff && (
+          <div className='flex flex-row items-center gap-2'>
+            {actionButtons}
+          </div>
+        )}
       </div>
     </div>
   )

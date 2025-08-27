@@ -134,18 +134,17 @@ export function Step2({
   if (!results.length) {
     return (
       <TableBlankSlate
-        description='No logs evaluated in this version yet. Evaluate some logs to refine the prompt.'
+        description='There are no logs evaluated in this version yet. You need to evaluate some logs to refine the prompt.'
         link={
           <Link
             href={
               ROUTES.projects
                 .detail({ id: project.id })
                 .commits.detail({ uuid: commit.uuid })
-                .documents.detail({ uuid: document.documentUuid }).evaluations
-                .root
+                .documents.detail({ uuid: document.documentUuid }).logs.root
             }
           >
-            <Button>Add an evaluation</Button>
+            <Button>Evaluate logs</Button>
           </Link>
         }
       />

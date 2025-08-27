@@ -5,6 +5,7 @@ import { addFeedbackToLatteChangeAction } from '$/actions/latte/addFeedbackToLat
 import { addMessageToLatteAction } from '$/actions/latte/addMessage'
 import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
 import { createNewLatteAction } from '$/actions/latte/new'
+import { stopChatLatteAction } from '$/actions/latte/stopChat'
 import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { trigger } from '$/lib/events'
@@ -38,7 +39,6 @@ import {
   LatteToolStep,
 } from './types'
 import { useLatteUsage } from './usage'
-import { stopChatLatteAction } from '$/actions/latte/stopChat'
 
 const EMPTY_ARRAY = [] as const
 
@@ -182,6 +182,7 @@ export function useLatteChangeActions() {
     acceptLatteChangesAction,
     {
       onSuccess: ({ data: { evaluationUuid } }) => {
+        trigger('LatteChangesAccepted', { changes })
         setChanges([])
         setIsBrewing(false)
         setLatteActionsFeedbackUuid(evaluationUuid)
@@ -197,6 +198,7 @@ export function useLatteChangeActions() {
     discardLatteChangesActions,
     {
       onSuccess: ({ data: { evaluationUuid } }) => {
+        trigger('LatteChangesRejected', { changes })
         // Undo changes in the UI
         trigger('LatteProjectChanges', {
           changes: changes.map((c) => ({
@@ -262,6 +264,7 @@ export function useLatteChangeActions() {
   )
 
   return {
+    changes,
     acceptChanges,
     undoChanges,
     addFeedbackToLatteChange,
@@ -428,10 +431,7 @@ export function useLatteProjectChanges() {
       }
       const { threadUuid: incomingThreadUuid, changes: newChanges } = msg
 
-      trigger('LatteProjectChanges', {
-        changes: newChanges,
-        simulateStreaming: true,
-      })
+      trigger('LatteProjectChanges', { changes: newChanges })
       if (!threadUuid || threadUuid !== incomingThreadUuid) return
 
       setLatteActionsFeedbackUuid(undefined)

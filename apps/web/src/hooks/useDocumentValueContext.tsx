@@ -1,5 +1,6 @@
 'use client'
 
+import { useLatteChangeActions } from '$/hooks/latte'
 import { useDevMode } from '$/hooks/useDevMode'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -12,6 +13,7 @@ import useProviderApiKeys from '$/stores/providerApiKeys'
 import useFeature from '$/stores/useFeature'
 import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import type { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import {
   useCurrentCommit,
   useCurrentProject,
@@ -23,6 +25,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
@@ -39,6 +42,7 @@ type DocumentValueContextType = {
   updateDocumentContent: updateContentFn
   document: DocumentVersion
   isSaved: boolean
+  diff: DiffOptions | undefined
 }
 
 const DocumentValueContext = createContext<
@@ -58,6 +62,7 @@ export function DocumentValueProvider({
 }: DocumentValueProviderProps) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
+  const { devMode, setDevMode } = useDevMode()
   const { data: documents } = useDocumentVersions(
     {
       commitUuid: commit.uuid,
@@ -102,8 +107,6 @@ export function DocumentValueProvider({
         content,
       })
       if (error) {
-        console.error(error)
-
         toast({
           title: 'Error saving document',
           description: 'There was an error saving the document.',
@@ -116,14 +119,24 @@ export function DocumentValueProvider({
     { leading: false, trailing: true },
   )
 
-  useSyncLatteChanges({
-    document,
+  const { diff } = useSyncLatteChanges({
+    content: value,
     updateContent: setContentValue,
-    commit,
-    project,
-    newLatte,
+    document: document,
+    commit: commit,
+    project: project,
+    devMode: devMode,
+    setDevMode: setDevMode,
+    newLatte: newLatte,
   })
-  useRefreshPromptMetadata({ value, document, commit, project, origin })
+  useRefreshPromptMetadata({
+    value: value,
+    document: document,
+    commit: commit,
+    project: project,
+    devMode: devMode,
+    origin: origin,
+  })
 
   return (
     <DocumentValueContext.Provider
@@ -133,6 +146,7 @@ export function DocumentValueProvider({
         updateDocumentContent,
         isSaved: !isUpdatingContent,
         document,
+        diff,
       }}
     >
       {children}
@@ -152,19 +166,72 @@ export function useDocumentValue() {
 }
 
 function useSyncLatteChanges({
+  content,
+  updateContent,
   document,
   commit,
   project,
-  updateContent,
+  devMode,
+  setDevMode,
   newLatte,
 }: {
+  content: string
+  updateContent: updateContentFn
   document: DocumentVersion
   commit: Commit
   project: Project
-  updateContent: updateContentFn
+  devMode: boolean
+  setDevMode: (devMode: boolean) => void
   newLatte: boolean
 }) {
   const router = useNavigate()
+
+  const [diff, setDiff] = useState<DiffOptions>()
+  const { changes } = useLatteChangeActions()
+  const change = useMemo(() => {
+    const change = changes.find(
+      (change) =>
+        change.draftUuid === commit.uuid &&
+        change.current.documentUuid === document.documentUuid,
+    )
+
+    if (!change) {
+      return undefined
+    }
+
+    if (change.current.deletedAt) {
+      return undefined
+    }
+
+    if (change.previous?.content === content) {
+      return undefined
+    }
+
+    return change
+  }, [content, changes, commit, document])
+  useEffect(() => {
+    if (!change) {
+      setDiff(undefined)
+    } else {
+      setDiff({
+        oldValue: change.previous?.content ?? '',
+        newValue: content,
+      })
+    }
+  }, [content, change, setDiff])
+
+  const simpleMode = useRef<boolean>()
+  const goToDevEditor = useCallback(() => {
+    if (devMode) return
+    simpleMode.current = true
+    setDevMode(true)
+  }, [devMode, setDevMode])
+  const backToPrevEditor = useCallback(() => {
+    if (!simpleMode.current) return
+    simpleMode.current = false
+    setDevMode(false)
+  }, [setDevMode])
+
   useEvents(
     {
       onLatteProjectChanges: ({ changes }) => {
@@ -185,11 +252,16 @@ function useSyncLatteChanges({
 
         if (updatedDocument.content !== document.content) {
           updateContent(updatedDocument.content, { origin: 'latteCopilot' })
+          goToDevEditor()
         }
       },
+      onLatteChangesAccepted: () => backToPrevEditor(),
+      onLatteChangesRejected: () => backToPrevEditor(),
     },
     [document.documentUuid, document.commitId],
   )
+
+  return { diff }
 }
 
 export function useRefreshPromptMetadata({
@@ -197,16 +269,17 @@ export function useRefreshPromptMetadata({
   document,
   commit,
   project,
+  devMode,
   origin,
 }: {
   value: string
   document: DocumentVersion
   commit: Commit
   project: Project
+  devMode: boolean
   origin?: string
 }) {
   const { updateMetadata } = useMetadata()
-  const { devMode } = useDevMode()
   const { data: integrations } = useIntegrations()
   const { data: providers } = useProviderApiKeys()
   const { data: documents } = useDocumentVersions({

@@ -15,12 +15,12 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import { useMemo } from 'react'
 import { EvaluationEditorHeader } from '../../../(withTabs)/evaluations/[evaluationUuid]/editor/_components/EvaluationEditor/EditorHeader'
 import DocumentTabs from '../../DocumentTabs'
 import { PlaygroundBlocksEditor } from './BlocksEditor'
 import { EditorHeader } from './EditorHeader'
 import { useDiffState } from './hooks/useDiffState'
-import { useLatteStreaming } from './hooks/useLatteStreaming'
 import { useOldEditorHeaderActions } from './hooks/useOldEditorHeaderActions'
 import { Playground } from './Playground'
 import { PlaygroundTextEditor } from './TextEditor'
@@ -65,8 +65,13 @@ function OldDocumentEditorContent({
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
-  const { document, value, setValue, updateDocumentContent, isSaved } =
-    useDocumentValue()
+  const {
+    document,
+    value,
+    updateDocumentContent,
+    isSaved,
+    diff: latteDiff,
+  } = useDocumentValue()
   const oldHeaderEditorActions = useOldEditorHeaderActions({
     project: useCurrentProject().project,
     commit: useCurrentCommit().commit,
@@ -80,15 +85,23 @@ function OldDocumentEditorContent({
   })
   const isMerged = commit.mergedAt !== null
   const { devMode } = useDevMode()
-  const { customReadOnlyMessage, highlightedCursorIndex } = useLatteStreaming({
-    value,
-    setValue,
-  })
-  const { diff, setDiff } = useDiffState(initialDiff, updateDocumentContent)
+  const { diff: editorDiff, setDiff: setEditorDiff } = useDiffState(
+    initialDiff,
+    updateDocumentContent,
+  )
   const name = document.path.split('/').pop() ?? document.path
-  const readOnlyMessage = isMerged
-    ? 'Create a draft to edit documents.'
-    : customReadOnlyMessage
+  const readOnlyMessage = useMemo(() => {
+    if (isMerged) {
+      return 'Version published. Create a draft to edit documents.'
+    }
+
+    if (latteDiff) {
+      return 'Keep or undo changes to edit documents.'
+    }
+
+    return undefined
+  }, [isMerged, latteDiff])
+  const diff = editorDiff ?? latteDiff
 
   return (
     <DocumentTabs
@@ -141,7 +154,7 @@ function OldDocumentEditorContent({
                   project={project}
                   document={document}
                   commit={commit}
-                  setDiff={setDiff}
+                  setDiff={setEditorDiff}
                   diff={diff}
                   value={value}
                   defaultValue={document.content}
@@ -150,7 +163,6 @@ function OldDocumentEditorContent({
                   readOnlyMessage={readOnlyMessage}
                   isSaved={isSaved}
                   onChange={updateDocumentContent}
-                  highlightedCursorIndex={highlightedCursorIndex}
                 />
               ) : (
                 <PlaygroundBlocksEditor

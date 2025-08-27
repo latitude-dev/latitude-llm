@@ -78,7 +78,7 @@ export function customDiff(
   dmp.diff_cleanupEfficiency(diffs)
 
   const customDiffs: CustomDiffAction[] = []
-  for (let i = 0; i < diffs.length - 1; i++) {
+  for (let i = 0; i < diffs.length; i++) {
     const [op, text] = diffs[i]!
 
     // If this diff is a delete and the next one is an insert,

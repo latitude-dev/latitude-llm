@@ -9,6 +9,7 @@ describe('customDiff', () => {
     expect(result).toEqual([
       { type: CustomDiffType.EQUAL, length: 6 },
       { type: CustomDiffType.INSERT, text: 'Beautiful ', length: 10 },
+      { type: CustomDiffType.EQUAL, length: 5 },
     ])
   })
 
@@ -19,6 +20,7 @@ describe('customDiff', () => {
     expect(result).toEqual([
       { type: CustomDiffType.EQUAL, length: 6 },
       { type: CustomDiffType.DELETE, length: 10 },
+      { type: CustomDiffType.EQUAL, length: 5 },
     ])
   })
 
@@ -29,6 +31,7 @@ describe('customDiff', () => {
     expect(result).toEqual([
       { type: CustomDiffType.EQUAL, length: 6 },
       { type: CustomDiffType.REPLACE, text: 'B', length: 1 },
+      { type: CustomDiffType.EQUAL, length: 6 },
     ])
   })
 
@@ -40,6 +43,7 @@ describe('customDiff', () => {
       { type: CustomDiffType.EQUAL, length: 11 },
       { type: CustomDiffType.DELETE, length: 2 },
       { type: CustomDiffType.REPLACE, text: 'Alex', length: 4 },
+      { type: CustomDiffType.EQUAL, length: 1 },
     ])
   })
 
@@ -51,6 +55,7 @@ describe('customDiff', () => {
       { type: CustomDiffType.EQUAL, length: 11 },
       { type: CustomDiffType.REPLACE, text: 'Carl', length: 4 },
       { type: CustomDiffType.INSERT, text: 'os', length: 2 },
+      { type: CustomDiffType.EQUAL, length: 1 },
     ])
   })
 })

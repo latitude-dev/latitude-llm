@@ -1,28 +1,28 @@
-import { MouseEvent, ReactNode, useCallback, useMemo } from 'react'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { cn } from '@latitude-data/web-ui/utils'
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
-import { TriggerEventsList } from '../TriggerEventsList'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
 import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import {
   DocumentTriggerStatus,
   DocumentTriggerType,
 } from '@latitude-data/constants'
+import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
+import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
+import { MouseEvent, ReactNode, useCallback, useMemo } from 'react'
+import { TriggerEventsList } from '../TriggerEventsList'
 import { OnRunTriggerFn } from '../TriggersList'
 import { OnRunChatTrigger } from '../useActiveTrigger'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 
 function ToggleEnabled({
   projectId,
@@ -97,7 +97,7 @@ function EditTriggerButton({
             </Button>
           }
         >
-          You need to create a new version to edit triggers
+          Version published. Create a draft to edit triggers.
         </Tooltip>
       </>
     )
