@@ -21,6 +21,7 @@ coverage
 # Turbo
 .turbo
 .tsbuildinfo
+tsconfig.tsbuildinfo
 
 # Vim shit
 *.py-E
