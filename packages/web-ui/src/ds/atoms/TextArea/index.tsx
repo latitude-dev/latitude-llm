@@ -71,7 +71,7 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
             'custom-scrollbar',
             {
               'border-red-500 focus-visible:ring-red-500': errors,
-              // Account for inner textara padding
+              // Account for inner textarea padding
               '!min-h-[calc(100%-theme(spacing.6))]': autoGrow,
             },
           )}

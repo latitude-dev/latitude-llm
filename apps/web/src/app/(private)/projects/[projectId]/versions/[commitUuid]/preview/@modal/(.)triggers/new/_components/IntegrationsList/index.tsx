@@ -98,7 +98,7 @@ export function IntegrationsList({
             type: 'item',
             value: 'latitude_email',
             title: 'Email',
-            description: 'Run prompt on new emails',
+            description: 'Run a prompt on new emails',
             metadata: { type: DocumentTriggerType.Email },
             imageIcon: {
               type: 'icon',

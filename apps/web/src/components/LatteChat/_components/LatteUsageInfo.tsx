@@ -103,8 +103,9 @@ export function LatteUsageInfo({
                   <b>{formatCount(usage.billable)}</b>
                   <span className='mx-0.5'>/</span>
                   {formatCount(usage.included)} included credits
-                  {!!usage.unbillable &&
-                    ` (+${formatCount(usage.unbillable)} bonus)`}
+                  {/* TODO(credits): Uncomment this when clients are informed about */}
+                  {/* {!!usage.unbillable &&
+                    ` (+${formatCount(usage.unbillable)} bonus)`} */}
                 </Text.H6>
               )}
               <UsageBar incurring={incurring} unbillable={usage.unbillable} />
@@ -140,7 +141,6 @@ export function LatteUsageInfo({
 
 function UsageBar({
   incurring: incurringMaybeOverflowing,
-  unbillable,
 }: {
   incurring: number
   unbillable: number
@@ -149,9 +149,10 @@ function UsageBar({
     return Math.max(0, Math.min(100, incurringMaybeOverflowing))
   }, [incurringMaybeOverflowing])
 
-  const bonus = useMemo(() => {
-    return Math.max(0, Math.min(100, unbillable * 3))
-  }, [unbillable])
+  // TODO(credits): Uncomment this when clients are informed about
+  // const bonus = useMemo(() => {
+  //   return Math.max(0, Math.min(100, unbillable * 3))
+  // }, [unbillable])
 
   return (
     <div className='max-w-[300px] flex items-center justify-start gap-1 overflow-hidden rounded-full shrink-0'>
@@ -169,12 +170,13 @@ function UsageBar({
           />
         )}
       </div>
-      {bonus > 0 && (
+      {/* TODO(credits): Uncomment this when clients are informed about */}
+      {/* {bonus > 0 && (
         <div
           className='h-1 bg-success-muted-foreground/60 rounded-full'
           style={{ width: `${bonus}px` }}
         />
-      )}
+      )} */}
     </div>
   )
 }

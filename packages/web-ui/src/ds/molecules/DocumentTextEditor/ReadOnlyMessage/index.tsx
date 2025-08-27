@@ -19,7 +19,7 @@ export function EditorReadOnlyBanner({
     >
       <Icon name='lock' color='foregroundMuted' />
       <Text.H6 color='foregroundMuted' userSelect={false}>
-        Version published. {readOnlyMessage}
+        {readOnlyMessage}
       </Text.H6>
     </div>
   )

@@ -132,7 +132,6 @@ export function LatteChatInput({
               : 'Brew anything'
             : placeholder
         }
-        autoGrow={value !== ''}
         disabled={isBrewing || !!error}
         value={value}
         onChange={handleValueChange}
@@ -184,22 +183,24 @@ export function LatteChatInput({
           </Button>
         )}
         {!inConversation && <LatteDebugVersionSelector />}
-        <Button
-          variant='ghost'
-          size='none'
-          onClick={resetChat}
-          disabled={isBrewing || !inConversation}
-          iconProps={{
-            name: 'rotate',
-            color: 'latteInputForeground',
-            className:
-              'flex-shrink-0 group-hover:text-latte-input-foreground/75 -mt-px',
-          }}
-          className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
-          userSelect={false}
-        >
-          New chat
-        </Button>
+        {inConversation && (
+          <Button
+            variant='ghost'
+            size='none'
+            onClick={resetChat}
+            disabled={isBrewing || !inConversation}
+            iconProps={{
+              name: 'rotate',
+              color: 'latteInputForeground',
+              className:
+                'flex-shrink-0 group-hover:text-latte-input-foreground/75 -mt-px',
+            }}
+            className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
+            userSelect={false}
+          >
+            New chat
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -264,7 +265,7 @@ function LatteChangesFeedback({
   }, [value, handleSubmit, hasAutoSubmitted])
 
   return (
-    <div className='flex flex-col gap-2 border-latte-widget pt-3 pb-2 px-3 rounded-t-2xl relative overflow-hidden'>
+    <div className='flex flex-col gap-2 border border-latte-widget pt-3 pb-2 px-3 rounded-t-2xl relative overflow-hidden'>
       {isTimerActive && (
         <div
           className='absolute bottom-0 left-0 h-0.5 bg-latte-widget transition-all duration-100 ease-out'

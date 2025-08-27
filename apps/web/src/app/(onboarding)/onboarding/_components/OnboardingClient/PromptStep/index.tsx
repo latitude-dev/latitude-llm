@@ -1,13 +1,12 @@
-import Link from 'next/link'
-import { LATITUDE_DOCS_URL } from '@latitude-data/core/browser'
-import { cn } from '@latitude-data/web-ui/utils'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
-import { DocumentVersion } from '@latitude-data/core/browser'
-import { OnboardingStep } from '../index'
 import { MessageList } from '$/components/ChatWrapper'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Message } from '@latitude-data/constants/legacyCompiler'
+import { DocumentVersion, LATITUDE_DOCS_URL } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
+import { cn } from '@latitude-data/web-ui/utils'
+import Link from 'next/link'
+import { OnboardingStep } from '../index'
 
 export function OnboardingPromptStep({
   document,
@@ -55,7 +54,7 @@ export function OnboardingPromptStep({
         </div>
         <div className='h-[340px]'>
           <DocumentTextEditor
-            readOnlyMessage=' ' //
+            readOnlyMessage=' '
             value={document.content}
             path={document.path}
             isSaved={true}

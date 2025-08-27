@@ -51,7 +51,7 @@ function SimpleTextArea({
           disabled={disabledSubmit}
           className={cn(
             'bg-background w-full p-3 resize-none text-sm rounded-2xl',
-            'border-primary/50 border-2 shadow-sm text-muted-foreground',
+            'border-primary/50 border shadow-sm text-muted-foreground',
             'ring-0 focus-visible:ring-0 outline-none focus-visible:outline-none',
             'focus-visible:animate-glow focus-visible:glow-primary custom-scrollbar scrollable-indicator',
           )}

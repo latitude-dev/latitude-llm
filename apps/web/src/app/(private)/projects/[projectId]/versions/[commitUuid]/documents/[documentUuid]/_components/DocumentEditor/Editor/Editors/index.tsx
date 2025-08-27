@@ -6,9 +6,9 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import { useMemo } from 'react'
 import { PlaygroundBlocksEditor } from '../BlocksEditor'
 import { useDiffState } from '../hooks/useDiffState'
-import { useLatteStreaming } from '../hooks/useLatteStreaming'
 import { PlaygroundTextEditor } from '../TextEditor'
 
 export function Editors({
@@ -24,16 +24,30 @@ export function Editors({
   const { commit } = useCurrentCommit()
   const { devMode } = useDevMode()
   const { metadata } = useMetadata()
-  const { value, setValue, updateDocumentContent, isSaved } = useDocumentValue()
-  const { customReadOnlyMessage, highlightedCursorIndex } = useLatteStreaming({
+  const {
     value,
-    setValue,
-  })
-  const { diff, setDiff } = useDiffState(initialDiff, updateDocumentContent)
-  const readOnlyMessage =
-    commit.mergedAt !== null
-      ? 'Create a draft to edit documents.'
-      : customReadOnlyMessage
+    updateDocumentContent,
+    isSaved,
+    diff: latteDiff,
+  } = useDocumentValue()
+  const { diff: editorDiff, setDiff: setEditorDiff } = useDiffState(
+    initialDiff,
+    updateDocumentContent,
+  )
+
+  const readOnlyMessage = useMemo(() => {
+    if (commit.mergedAt !== null) {
+      return 'Version published. Create a draft to edit documents.'
+    }
+
+    if (latteDiff) {
+      return 'Keep or undo changes to edit documents.'
+    }
+
+    return undefined
+  }, [commit.mergedAt, latteDiff])
+
+  const diff = editorDiff ?? latteDiff
 
   return devMode ? (
     <PlaygroundTextEditor
@@ -43,14 +57,13 @@ export function Editors({
       project={project}
       document={document}
       commit={commit}
-      setDiff={setDiff}
+      setDiff={setEditorDiff}
       diff={diff}
       value={value}
       defaultValue={document.content}
       readOnlyMessage={readOnlyMessage}
       isSaved={isSaved}
       onChange={updateDocumentContent}
-      highlightedCursorIndex={highlightedCursorIndex}
     />
   ) : (
     <PlaygroundBlocksEditor

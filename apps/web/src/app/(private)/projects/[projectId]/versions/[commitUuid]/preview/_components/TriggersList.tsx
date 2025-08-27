@@ -1,6 +1,5 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
 import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
@@ -20,14 +19,15 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
+import { useCallback, useRef, useState } from 'react'
 import { ChatInputBox } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/ChatInputBox'
 import { usePlaygroundLogic } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/DocumentEditor'
 import Chat from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
+import { ChatTriggerTextarea } from './ChatTriggerTextarea'
 import { TriggersBlankSlate } from './TriggersBlankSlate'
 import { TriggersCard } from './TriggersCard'
-import { ChatTriggerTextarea } from './ChatTriggerTextarea'
-import { useActiveChatTrigger } from './useActiveTrigger'
 import { UnconfiguredIntegrations } from './UnconfiguredIntegrations'
+import { useActiveChatTrigger } from './useActiveTrigger'
 
 const ADD_BUTTON_LABEL = 'Add trigger'
 
@@ -72,13 +72,21 @@ function CreateTriggerButton({
   )
 }
 
-function TriggersHeader({ project }: { project: Project }) {
+function TriggersHeader({
+  project,
+  mode,
+}: {
+  project: Project
+  mode: 'preview' | 'chat'
+}) {
   return (
     <div className='flex flex-col gap-2 items-start justify-start'>
       <Text.H3M>{project.name}</Text.H3M>
-      <Text.H5 color='foregroundMuted'>
-        Choose a trigger to preview or start chatting with your agent
-      </Text.H5>
+      {mode === 'preview' && (
+        <Text.H5 color='foregroundMuted'>
+          Choose a trigger to preview or start chatting with your agent
+        </Text.H5>
+      )}
     </div>
   )
 }
@@ -179,7 +187,7 @@ export function TriggersList({
         'overflow-y-auto custom-scrollbar pb-0': mode === 'chat',
       })}
     >
-      <TriggersHeader project={project} />
+      <TriggersHeader project={project} mode={mode} />
       {mode === 'preview' ? (
         <>
           <div className='flex-1 min-h-0'>
@@ -230,7 +238,7 @@ export function TriggersList({
               hasActiveStream={hasActiveStream}
               playground={playground}
               stopStreaming={stopStreaming}
-              placeholder='Continue the conversation...'
+              placeholder='Ask anything'
               onBack={() => {
                 setMode('preview')
               }}

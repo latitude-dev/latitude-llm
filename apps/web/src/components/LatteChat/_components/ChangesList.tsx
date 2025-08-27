@@ -74,7 +74,7 @@ export function ChangeList({
   }
 
   return (
-    <div className='w-full flex flex-col gap-2 border-latte-widget border-2 py-2 px-3 rounded-t-2xl'>
+    <div className='w-full flex flex-col gap-2 border-latte-widget border py-2 px-3 rounded-t-2xl'>
       <div className='w-full flex items-center justify-between'>
         <Text.H4M color='latteInputForeground' userSelect={false}>
           Changes
@@ -110,7 +110,7 @@ export function ChangeList({
             className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
             userSelect={false}
           >
-            Accept
+            Keep
           </Button>
         </div>
       </div>
