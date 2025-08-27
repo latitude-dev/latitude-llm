@@ -48,7 +48,7 @@ export function DocumentChange({
       fullWidth
       variant='ghost'
       onClick={onClick}
-      className={cn('min-h-8 rounded-md', {
+      className={cn('min-h-10 rounded-md', {
         [hoverBgColor]: !isSelected && (isHovered || isMenuOpen),
         [selectedBackground]: isSelected,
       })}

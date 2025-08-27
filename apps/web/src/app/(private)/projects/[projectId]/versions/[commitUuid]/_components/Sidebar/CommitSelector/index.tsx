@@ -242,10 +242,12 @@ export default function CommitSelector({
         commitId={deleteCommit}
         onClose={setDeleteCommit}
       />
-      <PublishDraftCommitModal
-        commitId={publishCommit}
-        onClose={setPublishCommit}
-      />
+      {publishCommit ? (
+        <PublishDraftCommitModal
+          commitId={publishCommit}
+          onClose={setPublishCommit}
+        />
+      ) : null}
     </div>
   )
 }

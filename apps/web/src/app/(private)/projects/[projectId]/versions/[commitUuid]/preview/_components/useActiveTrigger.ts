@@ -7,6 +7,7 @@ import {
   DocumentVersion,
   Project,
 } from '@latitude-data/core/browser'
+import { useMetadata } from '$/hooks/useMetadata'
 
 type ActiveChatTrigger = {
   document: DocumentVersion
@@ -27,6 +28,7 @@ export function useActiveChatTrigger({
   commit: Commit
   project: Project
 }) {
+  const { updateMetadata } = useMetadata()
   const [chatBoxFocused, setChatBoxFocused] = useState(false)
   const { data: documents } = useDocumentVersions({
     projectId: project.id,
@@ -35,9 +37,25 @@ export function useActiveChatTrigger({
 
   const [activeChatTrigger, setActiveChatTrigger] =
     useState<ActiveChatTrigger>()
+
+  const activateTrigger = useCallback(
+    ({ trigger, document }: ActiveChatTrigger) => {
+      updateMetadata({
+        promptlVersion: document.promptlVersion,
+        prompt: document.content,
+        document,
+      })
+      setActiveChatTrigger({
+        trigger,
+        document,
+      })
+    },
+    [updateMetadata],
+  )
   const onRunChatTrigger: OnRunChatTrigger = useCallback(
     ({ trigger, document }) => {
-      setActiveChatTrigger({ trigger, document })
+      console.log('Running chat trigger', trigger.uuid)
+      activateTrigger({ trigger, document })
       setChatBoxFocused(true)
 
       // After half a second reset focus to false to be able to focus again.
@@ -47,16 +65,26 @@ export function useActiveChatTrigger({
 
       return () => clearTimeout(timer)
     },
-    [],
+    [activateTrigger],
   )
 
-  useEffect(() => {
-    const chatTriggers = triggers.filter(
-      (t): t is DocumentTrigger<DocumentTriggerType.Chat> =>
-        t.triggerType === DocumentTriggerType.Chat,
-    )
+  const chatTriggers = useMemo(
+    () =>
+      triggers.filter(
+        (t): t is DocumentTrigger<DocumentTriggerType.Chat> =>
+          t.triggerType === DocumentTriggerType.Chat,
+      ),
+    [triggers],
+  )
+  const firstChatTrigger = chatTriggers[0]
 
-    // --- Case 1: no chat triggers at all ---
+  /**
+   * This nasty useEffect is here to react to triggers deletion and creation
+   * If a chat trigger is created and is the first we want to be active. In the same way
+   * if a chat trigger is deleted we want to mark active as `undefined`
+   */
+  useEffect(() => {
+    // --- Case 0: no chat triggers at all ---
     if (chatTriggers.length === 0) {
       if (activeChatTrigger) {
         setActiveChatTrigger(undefined)
@@ -81,7 +109,7 @@ export function useActiveChatTrigger({
         (d) => d.documentUuid === activeChatTrigger.trigger.documentUuid,
       )
       if (newDoc && newDoc !== activeChatTrigger.document) {
-        setActiveChatTrigger({
+        activateTrigger({
           trigger: activeChatTrigger.trigger,
           document: newDoc,
         })
@@ -89,14 +117,21 @@ export function useActiveChatTrigger({
       return
     }
 
-    // --- Case 3: no active trigger yet → pick one automatically ---
-    const first = chatTriggers[0]
-    const doc = documents.find((d) => d.documentUuid === first.documentUuid)
+    const doc = documents.find(
+      (d) => d.documentUuid === firstChatTrigger.documentUuid,
+    )
 
     if (doc) {
-      setActiveChatTrigger({ trigger: first, document: doc })
+      // --- Case 3: no active trigger yet → pick one automatically ---
+      activateTrigger({ trigger: firstChatTrigger, document: doc })
     }
-  }, [documents, triggers, activeChatTrigger])
+  }, [
+    documents,
+    chatTriggers,
+    firstChatTrigger,
+    activeChatTrigger,
+    activateTrigger,
+  ])
 
   const onChange = useCallback(
     (newTriggerUuid: string) => {
@@ -112,9 +147,9 @@ export function useActiveChatTrigger({
       )
       if (!doc) return null
 
-      setActiveChatTrigger({ trigger: chatTrigger, document: doc })
+      activateTrigger({ trigger: chatTrigger, document: doc })
     },
-    [documents, triggers],
+    [documents, triggers, activateTrigger],
   )
 
   return useMemo(() => {

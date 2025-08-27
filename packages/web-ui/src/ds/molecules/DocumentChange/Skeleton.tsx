@@ -12,7 +12,7 @@ export function DocumentChangeSkeleton({
 }) {
   const icon = MODIFICATION_ICONS[changeType]
   return (
-    <li className='w-full flex flex-row items-center gap-x-1 px-2 min-h-8'>
+    <div className='w-full flex flex-row items-center gap-x-1 px-2 min-h-8'>
       <Icon
         name={icon as IconName}
         className='flex-shrink-0 w-4 h-4 text-gray-400 animate-pulse'
@@ -23,6 +23,6 @@ export function DocumentChangeSkeleton({
           style={{ width: `${width}%` }}
         />
       </div>
-    </li>
+    </div>
   )
 }

@@ -203,7 +203,9 @@ export function TriggerWrapper({
           </div>
           <div className='flex flex-col gap-1 min-w-0'>
             <div className='flex flex-col min-w-0'>
-              <Text.H4M ellipsis noWrap>{title}</Text.H4M>
+              <Text.H4M ellipsis noWrap>
+                {title}
+              </Text.H4M>
               {trigger.triggerStatus === DocumentTriggerStatus.Pending ? (
                 <Text.H5 color='latteOutputForeground' ellipsis noWrap>
                   Requires additional configuration
@@ -211,7 +213,9 @@ export function TriggerWrapper({
               ) : descriptionLoading ? (
                 <Skeleton className='w-24 h-5' />
               ) : (
-                <Text.H5 color='foregroundMuted' ellipsis noWrap>{description}</Text.H5>
+                <Text.H5 color='foregroundMuted' ellipsis noWrap>
+                  {description}
+                </Text.H5>
               )}
             </div>
             {subtitle ? (

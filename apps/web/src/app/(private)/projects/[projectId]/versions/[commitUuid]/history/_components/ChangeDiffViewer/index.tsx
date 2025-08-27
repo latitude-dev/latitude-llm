@@ -11,16 +11,16 @@ export function ChangeDiffViewer({
   commit?: Commit
   documentUuid?: string
 }) {
-  const { data: changes, isLoading: isChangeListLoading } =
-    useCommitsChanges(commit)
+  const { data: changes, isLoading: isChangeListLoading } = useCommitsChanges({
+    commit,
+  })
   const { data: diff, isLoading: isDiffLoading } = useDocumentDiff({
     commit,
     documentUuid,
   })
-
-  if (!changes?.find((change) => change.documentUuid === documentUuid)) {
-    return <div className='w-full h-full rounded-md bg-secondary' />
-  }
+  const document = changes.documents.all.find(
+    (change) => change.documentUuid === documentUuid,
+  )
 
   if (isChangeListLoading || isDiffLoading) {
     return (
@@ -28,6 +28,10 @@ export function ChangeDiffViewer({
         <TextEditorPlaceholder />
       </div>
     )
+  }
+
+  if (!document) {
+    return <div className='w-full h-full rounded-md bg-secondary' />
   }
 
   return <DiffViewer {...diff} />

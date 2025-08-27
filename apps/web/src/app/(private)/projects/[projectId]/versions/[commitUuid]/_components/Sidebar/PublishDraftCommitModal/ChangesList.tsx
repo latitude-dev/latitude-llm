@@ -10,7 +10,11 @@ import { useCurrentTheme } from '$/hooks/useCurrentTheme'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import useDocumentVersion from '$/stores/useDocumentVersion'
-import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
+import {
+  ChangedDocument,
+  type CommitChanges,
+  ModifiedDocumentType,
+} from '@latitude-data/constants'
 
 function ChangeWithErrors({
   change,
@@ -25,7 +29,7 @@ function ChangeWithErrors({
 }) {
   const theme = useCurrentTheme()
   return (
-    <li className='w-full flex flex-row items-center justify-between gap-1 min-h-8 px-2'>
+    <div className='w-full flex flex-row items-center justify-between gap-1 min-h-8 px-2'>
       <Icon
         name='alert'
         className='flex-shrink-0 text-destructive-muted-foreground'
@@ -57,7 +61,7 @@ function ChangeWithErrors({
           </TruncatedTooltip>
         </Link>
       </div>
-    </li>
+    </div>
   )
 }
 
@@ -77,60 +81,62 @@ function Change({
   )
 
   return (
-    <li>
-      <DocumentChange
-        path={change.path}
-        changeType={change.changeType}
-        oldPath={prevDocument?.path}
-        isSelected={isSelected}
-        onClick={onSelect}
-      />
-    </li>
+    <DocumentChange
+      path={change.path}
+      changeType={change.changeType}
+      oldPath={prevDocument?.path}
+      isSelected={isSelected}
+      onClick={onSelect}
+    />
   )
 }
 
 export type GroupedChanges = Record<'errors' | 'clean', ChangedDocument[]>
+
 export function ChangesList({
   anyChanges,
   selected,
   onSelect,
-  commit,
   projectId,
+  commit,
+  changes,
   isLoading,
-  groups,
-  hasErrors,
   onClose,
 }: {
   anyChanges: boolean
   selected?: ChangedDocument
   onSelect: ReactStateDispatch<ChangedDocument | undefined>
   commit: Commit | undefined
+  changes: CommitChanges
   projectId: number
   isLoading: boolean
-  groups: GroupedChanges
-  hasErrors: boolean
   onClose: ReactStateDispatch<number | null>
 }) {
-  const bothGroups = groups.errors.length > 0 && groups.clean.length > 0
+  const hasErrors = !isLoading && changes?.documents?.hasErrors
+  const allDocuments = changes?.documents?.all ?? []
+  const erroredDocuments = changes?.documents?.errors ?? []
+  const cleanDocuments = changes?.documents?.clean ?? []
+
   return (
     <div
-      className={cn('overflow-hidden h-full', {
+      className={cn('overflow-hidden', {
         'flex flex-col gap-y-1': !isLoading && anyChanges,
         hidden: !isLoading && !anyChanges,
       })}
     >
-      <Text.H5M>Changes</Text.H5M>
+      <Text.H5M>Prompt changes</Text.H5M>
       <ul
         className={cn(
-          'min-w-0 flex flex-col border rounded-md custom-scrollbar h-56 p-1',
+          'min-w-0 flex flex-col border rounded-md custom-scrollbar p-1',
+          'gap-y-2 divide-y divide-border overflow-y-auto',
           {
-            'border-border': !hasErrors,
+            'border-border': hasErrors,
             'border-destructive dark:border-foreground': hasErrors,
           },
         )}
       >
         {isLoading ? (
-          <>
+          <li>
             <DocumentChangeSkeleton
               width={62}
               changeType={ModifiedDocumentType.Deleted}
@@ -147,32 +153,38 @@ export function ChangesList({
               width={67}
               changeType={ModifiedDocumentType.Updated}
             />
-          </>
+          </li>
         ) : (
           <>
-            {groups.errors.map((c) => (
-              <ChangeWithErrors
-                key={c.documentUuid}
-                change={c}
-                projectId={projectId}
-                commit={commit}
-                onClose={onClose}
-              />
-            ))}
-
-            {bothGroups ? (
-              <div className='py-2 h-px w-full flex items-center'>
-                <div className='w-full h-px bg-border' />
+            {!allDocuments.length ? (
+              <div className='p-2'>
+                <Text.H5M color='foregroundMuted'>No changes</Text.H5M>
               </div>
             ) : null}
+            {erroredDocuments.map((c, i) => (
+              <li key={c.documentUuid} className={cn({ 'pt-2': i !== 0 })}>
+                <ChangeWithErrors
+                  change={c}
+                  projectId={projectId}
+                  commit={commit}
+                  onClose={onClose}
+                />
+              </li>
+            ))}
 
-            {groups.clean.map((c) => (
-              <Change
+            {cleanDocuments.map((c, i) => (
+              <li
                 key={c.documentUuid}
-                change={c}
-                isSelected={selected?.documentUuid === c.documentUuid}
-                onSelect={() => onSelect(c)}
-              />
+                className={cn({
+                  'pt-2': i !== 0 || erroredDocuments.length > 0,
+                })}
+              >
+                <Change
+                  change={c}
+                  isSelected={selected?.documentUuid === c.documentUuid}
+                  onSelect={() => onSelect(c)}
+                />
+              </li>
             ))}
           </>
         )}

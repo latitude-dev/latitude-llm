@@ -161,11 +161,13 @@ export function ConfirmModal({
   onCancel,
   children,
   dismissible,
+  scrollable,
   ...rest
 }: ConfirmModalProps) {
   return (
     <Modal
       dismissible={dismissible}
+      scrollable={scrollable}
       {...rest}
       footer={
         <div className='flex justify-end space-x-2'>
@@ -188,7 +190,9 @@ export function ConfirmModal({
         </div>
       }
     >
-      <div className='flex flex-col gap-y-4'>
+      <div
+        className={cn('flex flex-col gap-y-4', { 'pb-6 h-full': !scrollable })}
+      >
         {children}
         {confirm.description || confirm.title ? (
           <Alert

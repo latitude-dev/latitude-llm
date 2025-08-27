@@ -74,7 +74,7 @@ function IntegrationTriggerCard({
           src={integration.configuration.metadata?.imageUrl || ''}
           alt={`${integration.name} icon`}
           width={24}
-          height={24}
+          height={40}
           className='rounded'
           unoptimized
         />

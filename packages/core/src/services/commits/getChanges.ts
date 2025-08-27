@@ -1,4 +1,8 @@
-import { ChangedDocument } from '@latitude-data/constants'
+import {
+  ChangedDocument,
+  CommitChanges,
+  DocumentTriggerStatus,
+} from '@latitude-data/constants'
 import type { CompileError } from 'promptl-ai'
 import {
   Commit,
@@ -13,6 +17,7 @@ import {
   DocumentVersionsRepository,
 } from '../../repositories'
 import { recomputeChanges } from '../documents'
+import { getCommitTriggerChanges } from '../documentTriggers/changes/getTriggerChanges'
 
 type DocumentErrors = { [documentUuid: string]: CompileError[] }
 
@@ -93,35 +98,85 @@ async function getDraftChanges(
 export async function getCommitChanges(
   { workspace, commit }: { workspace: Workspace; commit: Commit },
   transaction = new Transaction(),
-): PromisedResult<ChangedDocument[]> {
+): PromisedResult<CommitChanges> {
   return transaction.call(async (tx) => {
-    if (!commit.mergedAt)
-      return getDraftChanges({ workspace, draft: commit }, transaction)
+    // Get document changes
+    let documentChanges: ChangedDocument[]
+    if (!commit.mergedAt) {
+      const draftResult = await getDraftChanges(
+        { workspace, draft: commit },
+        transaction,
+      )
+      if (draftResult.error) return Result.error(draftResult.error)
+      documentChanges = draftResult.value
+    } else {
+      const commitsRepository = new CommitsRepository(workspace.id, tx)
+      const previousCommit = await commitsRepository.getPreviousCommit(commit)
+      const documentsRepository = new DocumentVersionsRepository(
+        workspace.id,
+        tx,
+      )
 
-    const commitsRepository = new CommitsRepository(workspace.id, tx)
-    const previousCommit = await commitsRepository.getPreviousCommit(commit)
-    const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
+      const currentCommitChanges =
+        await documentsRepository.listCommitChanges(commit)
+      if (currentCommitChanges.error) {
+        return Result.error(currentCommitChanges.error)
+      }
 
-    const currentCommitChanges =
-      await documentsRepository.listCommitChanges(commit)
-    if (currentCommitChanges.error) {
-      return Result.error(currentCommitChanges.error)
-    }
+      const previousCommitDocuments = previousCommit
+        ? await documentsRepository.getDocumentsAtCommit(previousCommit)
+        : Result.ok([])
 
-    const previousCommitDocuments = previousCommit
-      ? await documentsRepository.getDocumentsAtCommit(previousCommit)
-      : Result.ok([])
+      if (previousCommitDocuments.error) {
+        return Result.error(previousCommitDocuments.error)
+      }
 
-    if (previousCommitDocuments.error) {
-      return Result.error(previousCommitDocuments.error)
-    }
-
-    return Result.ok(
-      changesPresenter({
+      documentChanges = changesPresenter({
         currentCommitChanges: currentCommitChanges.value,
         previousCommitDocuments: previousCommitDocuments.value,
         errors: {},
-      }),
+      })
+    }
+
+    // Get trigger changes
+    const triggerChangesResult = await getCommitTriggerChanges(
+      { workspace, commit },
+      transaction,
     )
+    if (triggerChangesResult.error)
+      return Result.error(triggerChangesResult.error)
+
+    // Separate documents by error status
+    const documentsWithErrors = documentChanges.filter((doc) => doc.errors > 0)
+    const documentsWithoutErrors = documentChanges.filter(
+      (doc) => doc.errors === 0,
+    )
+
+    const allTriggers = triggerChangesResult.value
+    const cleanTriggers = allTriggers.filter(
+      (trigger) => trigger.status !== DocumentTriggerStatus.Pending,
+    )
+    const pendingTriggers = allTriggers.filter(
+      (trigger) => trigger.status === DocumentTriggerStatus.Pending,
+    )
+
+    const hasErrors = documentsWithErrors.length > 0
+    const hasPending = pendingTriggers.length > 0
+    return Result.ok({
+      anyChanges: allTriggers.length > 0 || documentChanges.length > 0,
+      hasIssues: hasErrors || hasPending,
+      documents: {
+        hasErrors,
+        all: documentChanges,
+        clean: documentsWithoutErrors,
+        errors: documentsWithErrors,
+      },
+      triggers: {
+        hasPending,
+        all: allTriggers,
+        clean: cleanTriggers,
+        pending: pendingTriggers,
+      },
+    })
   })
 }

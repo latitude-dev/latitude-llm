@@ -5,34 +5,50 @@ import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { getChangedDocumentsInDraftAction } from '$/actions/commits/getChangedDocumentsInDraftAction'
 import { ROUTES } from '$/services/routes'
 import { useCommits } from '$/stores/commitsStore'
 import { useRouter } from 'next/navigation'
-import { useServerAction } from 'zsa-react'
-import { ChangesList, GroupedChanges } from './ChangesList'
+import { useCommitsChanges } from '$/stores/commitChanges'
+import { ChangedDocument, type CommitChanges } from '@latitude-data/constants'
+import { ChangesList } from './ChangesList'
 import { ChangeDiff } from './ChangeDiff'
-import { ChangedDocument } from '@latitude-data/constants'
+import { TriggerChangesList } from './TriggerChangesList'
+
+function BlankSlateSelection() {
+  return (
+    <div className='flex flex-grow bg-secondary w-full rounded-md items-center justify-center'>
+      <Text.H6 color='foregroundMuted'>
+        Select a change to view the diff
+      </Text.H6>
+    </div>
+  )
+}
 
 function confirmDescription({
   isLoading,
-  anyChanges,
-  hasErrors,
+  changes,
   title,
 }: {
-  anyChanges: boolean
-  hasErrors: boolean
+  changes: CommitChanges
   isLoading: boolean
   title: string
 }) {
   if (isLoading) return undefined
-  if (!anyChanges) return 'No changes to publish.'
+  if (!changes.anyChanges) return 'No changes to publish.'
   if (!title.trim()) return 'Please provide a version name.'
-  if (hasErrors)
+
+  if (changes.documents.hasErrors) {
     return 'Some documents has errors, please click on those documents to see the errors.'
+  }
+
+  if (changes.triggers.hasPending) {
+    return `There are triggers that needs to be configured before publishing.`
+  }
+
   return 'Publishing a new version will update all your prompts in production.'
 }
 
@@ -63,20 +79,10 @@ export default function PublishDraftCommitModal({
   )
   const { project } = useCurrentProject()
   const router = useRouter()
-  const {
-    data: changes = [],
-    execute: getChanges,
-    isPending: isLoading,
-  } = useServerAction(getChangedDocumentsInDraftAction)
-  const [groups, setGroups] = useState<GroupedChanges>({
-    errors: [],
-    clean: [],
-  })
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-
   const [selectedChange, setSelectedChange] = useState<ChangedDocument>()
-
+  const { data: changes, isLoading } = useCommitsChanges({ commit })
   useEffect(() => {
     if (commit) {
       setTitle(commit.title || '')
@@ -84,51 +90,17 @@ export default function PublishDraftCommitModal({
     }
   }, [commit])
 
-  // FIXME: Do not use useEffect to set state.
-  useEffect(() => {
-    async function load() {
-      if (!commitId) return
-
-      const [data, error] = await getChanges({
-        projectId: project.id,
-        id: commitId,
-      })
-
-      if (error) {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        })
-        return
-      }
-      if (!data) return // should not happen but it does
-
-      setGroups(
-        data.reduce(
-          (acc, c) => {
-            acc[c.errors > 0 ? 'errors' : 'clean'].push(c)
-            return acc
-          },
-          {
-            errors: [] as ChangedDocument[],
-            clean: [] as ChangedDocument[],
-          } as GroupedChanges,
-        ),
-      )
-    }
-
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [commitId, project.id])
-  const anyChanges = changes.length > 0
-  const hasErrors = !anyChanges || groups.errors.length > 0
+  const anyChanges = changes.anyChanges
+  const somethingSelected = !!selectedChange
+  const hasErrors = (!isLoading && changes.hasIssues) || !anyChanges
 
   return (
     <ConfirmModal
       size='xl'
+      height='screen'
+      scrollable={false}
       dismissible={!isPublishing}
-      type={!isLoading && hasErrors ? 'destructive' : 'default'}
+      type={hasErrors ? 'destructive' : 'default'}
       open={!!commit}
       title='Publish new version'
       description='Publishing the version will lock the contents of all prompts. Review the changes carefully before publishing.'
@@ -143,18 +115,17 @@ export default function PublishDraftCommitModal({
       }
       confirm={{
         label: isLoading ? 'Validating...' : 'Publish to production',
-        description: confirmDescription({
-          isLoading,
-          anyChanges,
-          hasErrors,
-          title,
-        }),
-        disabled: isLoading || hasErrors || !title.trim(),
+        description: confirmDescription({ isLoading, changes, title }),
+        disabled:
+          isLoading ||
+          !changes.anyChanges ||
+          changes.hasIssues ||
+          !title.trim(),
         isConfirming: isPublishing,
       }}
     >
-      <div className='flex flex-row gap-2 h-full'>
-        <div className='flex flex-col gap-4 min-w-60 h-full'>
+      <div className='flex flex-row gap-4 h-full divide-x divide-border'>
+        <div className='flex flex-col gap-4 min-w-64 max-w-64 h-full'>
           <FormWrapper>
             <Input
               required
@@ -168,7 +139,7 @@ export default function PublishDraftCommitModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder='Enter version description'
-              rows={4}
+              minRows={2}
               className='resize-none'
             />
           </FormWrapper>
@@ -179,15 +150,20 @@ export default function PublishDraftCommitModal({
             commit={commit}
             projectId={project.id}
             isLoading={isLoading}
-            groups={groups}
-            hasErrors={!isLoading && hasErrors}
+            changes={changes}
+            onClose={onClose}
+          />
+          <TriggerChangesList
+            isLoading={isLoading}
+            changes={changes}
             onClose={onClose}
           />
         </div>
 
-        <div className='flex flex-grow flex-shrink-0 w-[1px] max-w-[1px] bg-border' />
-
-        <ChangeDiff change={selectedChange} />
+        <div className='pl-4 flex flex-col w-full'>
+          {!somethingSelected ? <BlankSlateSelection /> : null}
+          {selectedChange ? <ChangeDiff change={selectedChange} /> : null}
+        </div>
       </div>
     </ConfirmModal>
   )

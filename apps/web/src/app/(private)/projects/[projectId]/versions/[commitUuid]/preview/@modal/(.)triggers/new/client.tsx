@@ -15,7 +15,6 @@ import { ChatTrigger } from './_components/TriggerTypes/ChatTrigger'
 import { ScheduleTrigger } from './_components/TriggerTypes/ScheduleTrigger'
 import { EmailTrigger } from './_components/TriggerTypes/EmailTrigger'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { MetadataProvider } from '$/components/MetadataProvider'
 import type { DocumentTrigger } from '@latitude-data/core/browser'
 
 export type OnTriggerCreated = (dt?: DocumentTrigger) => void
@@ -83,27 +82,25 @@ export function NewTrigger() {
   }, [onCloseModal])
 
   return (
-    <MetadataProvider>
-      <Modal
-        open
-        dismissible
-        scrollable={false}
-        size='xl'
-        height='screen'
-        title='Add new trigger'
-        description='Add a new trigger to run this project automatically'
-        onOpenChange={onCloseModal}
-      >
-        <div className='grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-6 w-full h-full min-h-0 pb-6'>
-          <IntegrationsList onSelectIntegration={setSelected} />
-          <div className='border border-border rounded-lg min-h-0 bg-secondary overflow-hidden'>
-            <IntegrationDetail
-              selectedIntegration={selected}
-              onTriggerCreated={onTriggerCreated}
-            />
-          </div>
+    <Modal
+      open
+      dismissible
+      scrollable={false}
+      size='xl'
+      height='screen'
+      title='Add new trigger'
+      description='Add a new trigger to run this project automatically'
+      onOpenChange={onCloseModal}
+    >
+      <div className='grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-6 w-full h-full min-h-0 pb-6'>
+        <IntegrationsList onSelectIntegration={setSelected} />
+        <div className='border border-border rounded-lg min-h-0 bg-secondary overflow-hidden'>
+          <IntegrationDetail
+            selectedIntegration={selected}
+            onTriggerCreated={onTriggerCreated}
+          />
         </div>
-      </Modal>
-    </MetadataProvider>
+      </div>
+    </Modal>
   )
 }
