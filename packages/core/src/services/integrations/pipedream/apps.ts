@@ -9,7 +9,7 @@ import {
   PipedreamComponent,
   PipedreamComponentType,
 } from '../../../constants'
-import { Result } from '../../../lib/Result'
+import { Result, TypedResult } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { fetchTriggerCounts } from './fetchTriggerCounts'
 
@@ -58,17 +58,20 @@ export async function listApps({
   query,
   cursor,
   withTriggers: hasTriggers = false,
+  withTools: hasComponents = false,
+  pipedreamClientBuilder = buildPipedreamClient,
 }: {
   query?: string
   cursor?: string
   withTriggers?: boolean
+  withTools?: boolean
+  pipedreamClientBuilder?: () => TypedResult<BackendClient, Error>
 } = {}): PromisedResult<{
   apps: App[]
   totalCount: number
   cursor: string
-  withTriggers?: boolean
 }> {
-  const pipedreamResult = buildPipedreamClient()
+  const pipedreamResult = pipedreamClientBuilder()
 
   if (pipedreamResult.error) {
     return Result.error(pipedreamResult.error)
@@ -77,12 +80,25 @@ export async function listApps({
   const pipedream = pipedreamResult.value
 
   try {
-    const apps = await pipedream.getApps({
+    const appsParams: {
+      q?: string
+      limit: number
+      after?: string
+      hasComponents?: boolean
+      hasTriggers?: boolean
+    } = {
       q: query,
       limit: LIST_APPS_LIMIT,
       after: cursor,
       hasTriggers,
-    })
+    }
+
+    // Only include hasComponents if it's true
+    if (hasComponents) {
+      appsParams.hasComponents = true
+    }
+
+    const apps = await pipedream.getApps(appsParams)
     let appsList: App[] = apps.data
 
     if (hasTriggers) {

@@ -22,6 +22,7 @@ export function AppSelector({
       cursor: string | undefined
     }) => {
       const params = new URLSearchParams()
+      params.append('withTools', 'true')
       if (query) params.append('query', query)
       if (cursor) params.append('cursor', cursor)
 

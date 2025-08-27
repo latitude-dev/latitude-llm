@@ -175,15 +175,12 @@ export function TriggersList({
   return (
     <div
       ref={ref}
-      className={cn(
-        'relative max-h-full h-full flex flex-col items-stretch p-12 space-y-8',
-        {
-          'overflow-y-auto custom-scrollbar pb-0': mode === 'chat',
-        },
-      )}
+      className={cn('relative max-h-full h-full flex flex-col p-12 space-y-8', {
+        'overflow-y-auto custom-scrollbar pb-0': mode === 'chat',
+      })}
     >
       <TriggersHeader project={project} />
-      {!mode || mode === 'preview' ? (
+      {mode === 'preview' ? (
         <>
           <div className='flex-1 min-h-0'>
             <div className='flex flex-col gap-6'>
