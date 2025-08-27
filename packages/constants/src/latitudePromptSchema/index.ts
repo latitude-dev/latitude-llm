@@ -38,11 +38,13 @@ export function latitudePromptConfigSchema({
   noOutputSchemaConfig?: { message: string }
 }): z.ZodTypeAny {
   const tools = buildToolsSchema({ integrationNames })
-  const outputSchema = noOutputSchemaConfig
-    ? z.never({ message: noOutputSchemaConfig?.message }).optional()
-    : zodJsonSchema.optional()
 
-  const agentsConfigSchema =
+  // Opaque early to avoid recursive type expansion
+  const outputSchema: z.ZodTypeAny = noOutputSchemaConfig
+    ? z.never({ message: noOutputSchemaConfig?.message }).optional()
+    : (zodJsonSchema.optional() as unknown as z.ZodTypeAny)
+
+  const agentsConfigSchema: z.ZodTypeAny =
     fullPath && agentToolsMap
       ? z.array(
         z.string().refine(
@@ -63,6 +65,7 @@ export function latitudePromptConfigSchema({
   const LATITUDE_DOC =
     'https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts'
 
+  // 👇 Cast the whole schema to ZodTypeAny so TS won’t expand it
   const latitudePromptConfig = z.object({
     provider: z
       .string({
@@ -98,12 +101,9 @@ export function latitudePromptConfigSchema({
     tools: tools.optional(),
     agents: agentsConfigSchema.optional(),
 
-    // ⚠️ keep runtime validation, but don’t `infer` this
     schema: outputSchema,
-
     azure: azureConfigSchema.optional(),
-
-  }) as unknown as z.ZodType<LatitudePromptConfig>
+  }) as unknown as z.ZodTypeAny
 
   return latitudePromptConfig
 }
@@ -149,7 +149,7 @@ export type LatitudePromptConfig = {
     }
   >
   [MAX_STEPS_CONFIG_NAME]?: number
-  tools?: unknown // keep loose if you don’t need autocomplete
+  tools?: unknown
   agents?: string[]
   schema?: JSONSchema7
   azure?: AzureConfig

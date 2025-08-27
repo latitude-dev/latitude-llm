@@ -1,9 +1,9 @@
 import { setDOMUnmanaged } from 'lexical'
-import { createRoot, Root } from 'react-dom/client'
+import { createRoot } from 'react-dom/client'
 export const VERTICAL_SPACE_CLASS = 'space-y-2'
 
 export interface HeaderDivWithRoot extends HTMLDivElement {
-  __reactHeaderRoot__?: Root
+  __reactHeaderRoot__?: unknown
 }
 
 export function createReactDivWrapper({
@@ -32,11 +32,9 @@ export function replaceReactRoot({
 }: {
   className: string
   dom: HTMLElement
-  onRender: (root: Root) => void
+  onRender: (root: unknown) => void
 }) {
   const div = dom.querySelector(`.${className}`) as HeaderDivWithRoot
-  const root = div.__reactHeaderRoot__ as Root | undefined
-  if (root) {
-    onRender(root)
-  }
+  const root = div.__reactHeaderRoot__
+  if (root) onRender(root)
 }

@@ -17,7 +17,11 @@ const JSON_ENUM_VALUES = z.union([
   z.null(),
 ])
 
-export const zodJsonSchema: z.ZodType<unknown> = z.lazy(() =>
+/**
+ * This is a recursive Zod schema that validates a JSON Schema object.
+ * We want to validate on runtime but we type as any to avoid infinite recursion in Typescript.
+ */
+const _zodJsonSchema: z.ZodTypeAny = z.lazy(() =>
   z
     .object({
       // Meta‐Keywords
@@ -60,33 +64,33 @@ export const zodJsonSchema: z.ZodType<unknown> = z.lazy(() =>
       uniqueItems: z.boolean().optional(),
 
       items: z
-        .union([zodJsonSchema, z.array(zodJsonSchema).nonempty()])
+        .union([_zodJsonSchema, z.array(_zodJsonSchema).nonempty()])
         .optional(),
-      additionalItems: z.union([z.boolean(), zodJsonSchema]).optional(),
-      contains: zodJsonSchema.optional(),
+      additionalItems: z.union([z.boolean(), _zodJsonSchema]).optional(),
+      contains: _zodJsonSchema.optional(),
 
       // Object validation
       maxProperties: z.number().int().min(0).optional(),
       minProperties: z.number().int().min(0).optional(),
       required: z.array(z.string()).optional(),
-      properties: z.record(zodJsonSchema).optional(),
-      patternProperties: z.record(zodJsonSchema).optional(),
-      additionalProperties: z.union([z.boolean(), zodJsonSchema]).optional(),
+      properties: z.record(_zodJsonSchema).optional(),
+      patternProperties: z.record(_zodJsonSchema).optional(),
+      additionalProperties: z.union([z.boolean(), _zodJsonSchema]).optional(),
       dependencies: z
-        .record(z.union([z.array(z.string()).nonempty(), zodJsonSchema]))
+        .record(z.union([z.array(z.string()).nonempty(), _zodJsonSchema]))
         .optional(),
-      propertyNames: zodJsonSchema.optional(),
+      propertyNames: _zodJsonSchema.optional(),
 
       // Combining / Logic keywords
-      allOf: z.array(zodJsonSchema).optional(),
-      anyOf: z.array(zodJsonSchema).optional(),
-      oneOf: z.array(zodJsonSchema).optional(),
-      not: zodJsonSchema.optional(),
+      allOf: z.array(_zodJsonSchema).optional(),
+      anyOf: z.array(_zodJsonSchema).optional(),
+      oneOf: z.array(_zodJsonSchema).optional(),
+      not: _zodJsonSchema.optional(),
 
       //? Conditional (draft‐07+):
-      // if: zodJsonSchema.optional(),
-      // then: zodJsonSchema.optional(),
-      // else: zodJsonSchema.optional(),
+      // if: _zodJsonSchema.optional(),
+      // then: _zodJsonSchema.optional(),
+      // else: _zodJsonSchema.optional(),
 
       // Annotations
       readOnly: z.boolean().optional(),
@@ -94,8 +98,8 @@ export const zodJsonSchema: z.ZodType<unknown> = z.lazy(() =>
       deprecated: z.boolean().optional(),
 
       // Definitions / $defs
-      definitions: z.record(zodJsonSchema).optional(),
-      $defs: z.record(zodJsonSchema).optional(),
+      definitions: z.record(_zodJsonSchema).optional(),
+      $defs: z.record(_zodJsonSchema).optional(),
     })
     .superRefine((obj, ctx) => {
       // 1) items requires type: array
@@ -185,3 +189,6 @@ export const zodJsonSchema: z.ZodType<unknown> = z.lazy(() =>
       }
     }),
 )
+
+// Opaque export avoid Typescript that cause infinite recursion
+export const zodJsonSchema = _zodJsonSchema as unknown as z.ZodTypeAny
