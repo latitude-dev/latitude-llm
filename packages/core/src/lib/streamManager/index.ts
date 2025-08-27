@@ -65,13 +65,13 @@ export abstract class StreamManager {
   public tools: Record<string, ToolHandler>
   public uuid: string
   public workspace: Workspace
+  public abortSignal?: AbortSignal
 
   public $context: TelemetryContext
   public $completion: ReturnType<typeof telemetry.completion> | undefined
 
   protected messages: LegacyMessage[]
   protected error: ChainError<RunErrorCodes> | undefined
-  protected abortSignal?: AbortSignal
 
   private startTime: number | undefined
   private endTime: number | undefined
