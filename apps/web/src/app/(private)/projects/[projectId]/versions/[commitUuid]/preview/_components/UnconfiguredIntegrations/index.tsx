@@ -1,6 +1,7 @@
 import { useConfigureIntegrationAccount } from '$/hooks/useConfigureIntegrationAccount'
-import { IntegrationType } from '@latitude-data/constants'
+import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
 import {
+  DocumentTrigger,
   IntegrationDto,
   PipedreamIntegration,
 } from '@latitude-data/core/schema/types'
@@ -52,17 +53,28 @@ export function UnconfiguredIntegration({
 
 export function UnconfiguredIntegrations({
   integrations,
+  triggers,
 }: {
   integrations: IntegrationDto[]
+  triggers: DocumentTrigger[]
 }) {
+  const integrationTriggers = useMemo(() => {
+    return triggers.filter(
+      (trigger) => trigger.triggerType === DocumentTriggerType.Integration,
+    ) as DocumentTrigger<DocumentTriggerType.Integration>[]
+  }, [triggers])
+
   const unconfiguredIntegrations = useMemo(
     () =>
       integrations.filter(
         (integration) =>
           integration.type === IntegrationType.Pipedream &&
-          !isIntegrationConfigured(integration),
+          !isIntegrationConfigured(integration) &&
+          integrationTriggers.some(
+            (trigger) => trigger.configuration.integrationId === integration.id,
+          ),
       ) as PipedreamIntegration[],
-    [integrations],
+    [integrations, integrationTriggers],
   )
 
   if (unconfiguredIntegrations.length === 0) return null
