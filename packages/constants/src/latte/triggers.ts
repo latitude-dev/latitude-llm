@@ -72,7 +72,7 @@ export type LatteTriggerAction =
 
 export type LatteTriggerChanges = {
   projectId: number
-  draftUuid: string
+  versionUuid: string
   promptUuid: string
   triggerType: DocumentTriggerType
 }

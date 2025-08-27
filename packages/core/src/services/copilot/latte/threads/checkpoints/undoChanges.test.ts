@@ -126,7 +126,7 @@ describe('undo latte changes', () => {
     await LATTE_TOOLS[LatteTool.editProject](
       {
         projectId: project.id,
-        draftUuid: draft.uuid,
+        versionUuid: draft.uuid,
         actions,
       },
       {
@@ -238,7 +238,7 @@ describe('undo latte changes', () => {
       await LATTE_TOOLS[LatteTool.editProject](
         {
           projectId: project.id,
-          draftUuid: draft.uuid,
+          versionUuid: draft.uuid,
           actions: [
             {
               type: 'prompt',

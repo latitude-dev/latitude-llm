@@ -66,7 +66,7 @@ async function executeTriggerActions(
 
     return Result.ok({
       projectId: commit.projectId,
-      draftUuid: commit.uuid,
+      versionUuid: commit.uuid,
       promptUuid: promptUuid,
       triggerType: action.triggerType,
     })
@@ -114,7 +114,7 @@ async function executeTriggerActions(
 
     return Result.ok({
       projectId: commit.projectId,
-      draftUuid: commit.uuid,
+      versionUuid: commit.uuid,
       promptUuid: promptUuid,
       triggerType: action.triggerType,
     })
@@ -150,7 +150,7 @@ async function executeTriggerActions(
 
     return Result.ok({
       projectId: commit.projectId,
-      draftUuid: commit.uuid,
+      versionUuid: commit.uuid,
       promptUuid: promptUuid,
       triggerType: action.triggerType,
     })

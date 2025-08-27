@@ -193,14 +193,12 @@ export function LatteChatInput({
             name: 'rotate',
             color: 'latteInputForeground',
             className:
-              'flex-shrink-0 group-hover:text-latte-input-foreground/75',
+              'flex-shrink-0 group-hover:text-latte-input-foreground/75 -mt-px',
           }}
           className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
           userSelect={false}
         >
-          <Text.H5 noWrap color='latteInputForeground'>
-            New chat
-          </Text.H5>
+          New chat
         </Button>
       </div>
     </div>

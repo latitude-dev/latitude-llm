@@ -59,7 +59,7 @@ const triggerActions = defineLatteTool(
 
       return Result.ok({
         projectId: headCommit.projectId,
-        draftUuid: headCommit.uuid,
+        versionUuid: headCommit.uuid,
       })
     })
   },
