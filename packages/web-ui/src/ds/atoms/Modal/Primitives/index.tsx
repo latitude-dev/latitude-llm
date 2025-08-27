@@ -5,6 +5,7 @@ import {
   ElementRef,
   forwardRef,
   HTMLAttributes,
+  ReactNode,
   useCallback,
 } from 'react'
 import { X } from 'lucide-react'
@@ -138,17 +139,22 @@ const DialogHeader = ({
 )
 DialogHeader.displayName = 'DialogHeader'
 
-const DialogFooter = ({
-  className,
-  ...props
-}: HTMLAttributes<HTMLDivElement>) => (
+export type FooterProps = {
+  children: ReactNode
+  align?: 'right' | 'justify'
+}
+const DialogFooter = ({ children, align = 'right' }: FooterProps) => (
   <div
     className={cn(
       'flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2',
-      className,
+      {
+        'sm:justify-end': align === 'right',
+        'sm:justify-between': align === 'justify',
+      },
     )}
-    {...props}
-  />
+  >
+    {children}
+  </div>
 )
 DialogFooter.displayName = 'DialogFooter'
 

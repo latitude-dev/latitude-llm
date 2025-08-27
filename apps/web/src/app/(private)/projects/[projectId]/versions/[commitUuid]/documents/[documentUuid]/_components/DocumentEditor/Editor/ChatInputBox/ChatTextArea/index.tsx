@@ -13,6 +13,7 @@ function SimpleTextArea({
   placeholder,
   onSubmit,
   onBack,
+  onBackLabel,
   minRows = 1,
   maxRows = 10,
   disabledSubmit = false,
@@ -23,6 +24,7 @@ function SimpleTextArea({
   maxRows?: number
   onSubmit?: (value: string) => void
   onBack?: () => void
+  onBackLabel?: string
   disabledSubmit?: boolean
   disabledBack?: boolean
 }) {
@@ -64,6 +66,7 @@ function SimpleTextArea({
         <ToolBar
           onSubmit={onSubmitHandler}
           onBack={onBack}
+          onBackLabel={onBackLabel}
           disabledSubmit={disabledSubmit}
           disabledBack={disabledBack}
         />
@@ -76,6 +79,7 @@ export function ChatTextArea({
   placeholder,
   onSubmit,
   onBack,
+  onBackLabel,
   disabledSubmit = false,
   disabledBack = false,
   minRows = 1,
@@ -86,6 +90,7 @@ export function ChatTextArea({
   maxRows?: number
   onSubmit?: OnSubmit | OnSubmitWithTools
   onBack?: () => void
+  onBackLabel?: string
   disabledSubmit?: boolean
   disabledBack?: boolean
 }) {
@@ -97,6 +102,7 @@ export function ChatTextArea({
         placeholder={placeholder}
         onSubmit={onSubmit}
         onBack={onBack}
+        onBackLabel={onBackLabel}
         disabledSubmit={disabledSubmit}
         disabledBack={disabledBack}
       />

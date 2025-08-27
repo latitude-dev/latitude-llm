@@ -4,12 +4,16 @@ import { ChatTextArea } from './ChatTextArea'
 
 export function ChatInputBox({
   onBack,
+  onBackLabel,
   resetChat,
   hasActiveStream,
   playground,
   stopStreaming,
+  placeholder = 'Ask anything',
 }: {
   onBack?: () => void
+  onBackLabel?: string
+  placeholder?: string
   resetChat: () => void
   hasActiveStream: () => boolean
   playground: ReturnType<typeof usePlaygroundChat>
@@ -26,9 +30,10 @@ export function ChatInputBox({
       />
       <ChatTextArea
         minRows={5}
-        placeholder='Ask anything'
+        placeholder={placeholder}
         onSubmit={playground.submitUserMessage}
         onBack={onBack}
+        onBackLabel={onBackLabel}
         disabledSubmit={
           playground.isLoading || !!playground.error || !hasActiveStream()
         }

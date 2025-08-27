@@ -1,5 +1,3 @@
-'use client'
-
 import { LatteChange } from '@latitude-data/constants/latte'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -117,7 +115,7 @@ export function LatteChatInput({
       <TextArea
         className={cn(
           'bg-background w-full px-3 pt-3 pb-14 resize-none text-sm',
-          'rounded-2xl border-latte-widget border-2 shadow-sm text-muted-foreground',
+          'rounded-2xl border-latte-widget border shadow-sm text-muted-foreground',
           'ring-0 focus-visible:ring-0 outline-none focus-visible:outline-none',
           'focus-visible:animate-glow focus-visible:glow-latte custom-scrollbar scrollable-indicator',
           {
@@ -247,7 +245,7 @@ function LatteChangesFeedback({
   }, [value, handleSubmit, hasAutoSubmitted])
 
   return (
-    <div className='flex flex-col gap-2 border-latte-widget border-2 pt-3 pb-2 px-3 rounded-t-2xl relative overflow-hidden'>
+    <div className='flex flex-col gap-2 border-latte-widget pt-3 pb-2 px-3 rounded-t-2xl relative overflow-hidden'>
       {isTimerActive && (
         <div
           className='absolute bottom-0 left-0 h-0.5 bg-latte-widget transition-all duration-100 ease-out'
@@ -276,7 +274,7 @@ function LatteChangesFeedback({
           onKeyDown={handleKeyDown}
           placeholder='Your feedback...'
           className={cn(
-            'w-full text-sm text-muted-foreground border-2 border-latte-widget',
+            'w-full text-sm text-muted-foreground border border-latte-widget',
             'focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none',
           )}
         />

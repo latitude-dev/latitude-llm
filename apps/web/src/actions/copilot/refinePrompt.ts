@@ -88,7 +88,10 @@ export const refinePromptAction = withDocument
       projectId: env.COPILOT_PROJECT_ID,
     }).then((r) => r.unwrap())
 
-    const result = await sdk.prompts.run(env.COPILOT_PROMPT_REFINE_PATH, {
+    const result = await sdk.prompts.run<{
+      prompt: string
+      summary: string
+    }>(env.COPILOT_PROMPT_REFINE_PATH, {
       stream: false,
       parameters: {
         prompt: ctx.document.content,

@@ -10,14 +10,20 @@ import { FormField } from '../FormField'
 import { type FormFieldProps } from '../FormField'
 import { INPUT_BASE_CLASSES, INPUT_VARIANT_SIZE } from '../Input'
 
-const inputVariants = cva(cn(INPUT_BASE_CLASSES), {
+const inputVariants = cva('', {
   variants: {
+    variant: {
+      default: INPUT_BASE_CLASSES,
+      unstyled: '',
+    },
     size: {
       normal: INPUT_VARIANT_SIZE.normal,
       small: INPUT_VARIANT_SIZE.small,
+      none: '',
     },
   },
   defaultVariants: {
+    variant: 'default',
     size: 'normal',
   },
 })
@@ -41,6 +47,7 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
       maxRows,
       placeholder,
       autoGrow = false,
+      variant = 'default',
       ...props
     },
     ref,
@@ -59,7 +66,7 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           maxRows={maxRows}
           placeholder={placeholder}
           className={cn(
-            inputVariants({ size }),
+            inputVariants({ variant, size }),
             className,
             'custom-scrollbar',
             {

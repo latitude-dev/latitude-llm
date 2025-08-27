@@ -421,4 +421,102 @@ model: gpt-4o
       expect(createChainRunErrorSpy).toHaveBeenCalled()
     })
   })
+
+  describe('with userMessage', () => {
+    it('injects userMessage into the prompt', async () => {
+      const { context, workspace, document, commit } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
+
+      const userMessage = 'Please answer in French'
+      const { lastResponse } = await runDocumentAtCommit({
+        context,
+        workspace,
+        document,
+        commit,
+        parameters: {},
+        source: LogSources.API,
+        userMessage,
+      }).then((r) => r.unwrap())
+
+      await lastResponse // wait for the chain to finish
+
+      // Verify that AI was called and the user message was included in one of the calls
+      expect(aiSpy).toHaveBeenCalled()
+
+      // Check if any AI call includes the user message
+      const calls = aiSpy.mock.calls
+      let foundUserMessage = false
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      calls.forEach((call: any) => {
+        const messages = call[0].messages
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const userMessages = messages.filter((msg: any) => msg.role === 'user')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        userMessages.forEach((msg: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if (
+            msg.content.some(
+              (content: any) =>
+                content.text &&
+                content.text.includes('Please answer in French'),
+            )
+          ) {
+            foundUserMessage = true
+          }
+        })
+      })
+
+      expect(foundUserMessage).toBe(true)
+    })
+
+    it('works without userMessage', async () => {
+      const { context, workspace, document, commit } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
+
+      const { lastResponse } = await runDocumentAtCommit({
+        context,
+        workspace,
+        document,
+        commit,
+        parameters: {},
+        source: LogSources.API,
+        // No userMessage provided
+      }).then((r) => r.unwrap())
+
+      await lastResponse // wait for the chain to finish
+
+      // Verify that AI was called but no extra user messages were added
+      expect(aiSpy).toHaveBeenCalled()
+
+      // Check that no calls include our test user messages
+      const calls = aiSpy.mock.calls
+      let foundExtraUserMessage = false
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      calls.forEach((call: any) => {
+        const messages = call[0].messages
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const userMessages = messages.filter((msg: any) => msg.role === 'user')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        userMessages.forEach((msg: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if (
+            msg.content.some(
+              (content: any) =>
+                content.text &&
+                (content.text.includes('Please answer in French') ||
+                  content.text.includes('Please respond in Spanish')),
+            )
+          ) {
+            foundExtraUserMessage = true
+          }
+        })
+      })
+
+      expect(foundExtraUserMessage).toBe(false)
+    })
+  })
 })

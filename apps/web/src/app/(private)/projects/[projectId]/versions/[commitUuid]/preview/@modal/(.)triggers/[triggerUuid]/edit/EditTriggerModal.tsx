@@ -3,11 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import {
-  ConfirmModal,
-  Modal,
-  CloseTrigger,
-} from '@latitude-data/web-ui/atoms/Modal'
+import { MetadataProvider } from '$/components/MetadataProvider'
+import { ConfirmModal, Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -19,12 +16,15 @@ import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { DeleteTriggerBanner } from './_components/DeleteTriggerBanner'
 import { EditScheduleTrigger } from './_components/ScheduleTrigger'
 import { EditEmailTrigger } from './_components/EmailTrigger'
 import { EditIntegrationTrigger } from './_components/IntegrationTrigger'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import useDocumentVersions from '$/stores/documentVersions'
+import {
+  SelectDocument,
+  useDocumentSelection,
+} from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/SelectDocument'
 
 function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
   const navigate = useNavigate()
@@ -50,6 +50,8 @@ function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
     isUpdating,
     data,
     isLoading: isLoadingTriggers,
+    delete: deleteTrigger,
+    isDeleting,
   } = useDocumentTriggers(
     {
       projectId: project.id,
@@ -57,6 +59,7 @@ function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
     },
     {
       onUpdated: onCloseModal,
+      onDeleted: onCloseModal,
     },
   )
   const isLoading = isLoadingTriggers || isLoadingDocuments
@@ -75,6 +78,12 @@ function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
       onCloseModal,
       update,
       isUpdating,
+      onDeleteTrigger: () => {
+        if (!trigger) return
+
+        deleteTrigger(trigger)
+      },
+      isDeleting,
     }
   }, [
     data,
@@ -85,6 +94,8 @@ function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
     isUpdating,
     commit.mergedAt,
     documents,
+    deleteTrigger,
+    isDeleting,
   ])
 }
 
@@ -107,6 +118,8 @@ function EditTrigger<T extends DocumentTriggerType>(
   props: EditTriggerProps<T>,
 ) {
   const type = props.trigger.triggerType
+
+  if (type === DocumentTriggerType.Chat) return null
 
   if (type === DocumentTriggerType.Email) {
     return (
@@ -144,21 +157,35 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
     onCloseModal,
     isLoading,
     isUpdating,
+    onDeleteTrigger,
+    isDeleting,
   } = useDocumentTrigger({
     triggerUuid,
   })
 
   const [configuration, setTriggerConfiguration] =
     useState<DocumentTriggerConfiguration<DocumentTriggerType> | null>(null)
-
+  const docSelection = useDocumentSelection({
+    initialDocumentUuid: trigger?.documentUuid,
+  })
   const onUpdate = useCallback(() => {
-    if (!trigger || !configuration) return
+    if (!trigger) return
 
-    update({
+    let data: {
+      documentTriggerUuid: string
+      configuration: DocumentTriggerConfiguration<DocumentTriggerType>
+      documentUuid?: string
+    } = {
       documentTriggerUuid: trigger.uuid,
-      configuration,
-    })
-  }, [trigger, configuration, update])
+      configuration: configuration ?? trigger.configuration,
+    }
+
+    if (docSelection.document) {
+      data = { ...data, documentUuid: docSelection.document.documentUuid }
+    }
+
+    update(data)
+  }, [trigger, configuration, update, docSelection.document])
 
   useEffect(() => {
     if (isLoading) return
@@ -170,42 +197,48 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
 
   if (!isLive) {
     return (
-      <Modal
-        open
-        dismissible
-        title='Edit trigger'
-        description='Edit the trigger configuration'
-        onOpenChange={onCloseModal}
-        footer={
-          <>
-            <CloseTrigger />
-            <Button
-              disabled={!configuration || isUpdating}
-              fancy
-              onClick={onUpdate}
-            >
-              Update trigger
-            </Button>
-          </>
-        }
-      >
-        {isLoading ? <LoadingTrigger /> : null}
-        {trigger && document ? (
-          <FormWrapper>
-            <DeleteTriggerBanner
-              document={document}
-              trigger={trigger}
-              onCloseModal={onCloseModal}
-            />
-            <EditTrigger
-              trigger={trigger}
-              document={document}
-              setConfiguration={setTriggerConfiguration}
-              isUpdating={isUpdating}
-            />
-          </FormWrapper>
-        ) : null}
-      </Modal>
+      <MetadataProvider>
+        <Modal
+          open
+          dismissible
+          title='Edit trigger'
+          description='Edit the trigger configuration'
+          onOpenChange={onCloseModal}
+          footerAlign='justify'
+          footer={
+            <>
+              <Button
+                fancy
+                disabled={isDeleting}
+                variant='outlineDestructive'
+                onClick={onDeleteTrigger}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Trigger'}
+              </Button>
+              <Button disabled={isUpdating} fancy onClick={onUpdate}>
+                Update trigger
+              </Button>
+            </>
+          }
+        >
+          {isLoading ? <LoadingTrigger /> : null}
+          {trigger && document ? (
+            <FormWrapper>
+              <SelectDocument
+                onSelectDocument={docSelection.onSelectDocument}
+                options={docSelection.options}
+                document={docSelection.document}
+              />
+              <EditTrigger
+                trigger={trigger}
+                document={docSelection.document ?? document}
+                setConfiguration={setTriggerConfiguration}
+                isUpdating={isUpdating}
+              />
+            </FormWrapper>
+          ) : null}
+        </Modal>
+      </MetadataProvider>
     )
   }
 

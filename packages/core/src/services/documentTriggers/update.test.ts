@@ -86,6 +86,118 @@ describe('updateDocumentTriggerConfiguration', () => {
     expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
   })
 
+  it('returns error when documentUuid is provided but does not exist in workspace', async () => {
+    const result =
+      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+        workspace,
+        commit: draft,
+        triggerUuid: 'any-uuid',
+        documentUuid: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', // Valid UUID format that doesn't exist
+        configuration: { emailWhitelist: [], replyWithResponse: true },
+      })
+
+    expect(result.ok).toBeFalsy()
+    expect(result.error).toBeInstanceOf(NotFoundError)
+    expect(result.error?.message).toContain(
+      "Document with uuid 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' not found in workspace",
+    )
+    expect(mocks.deployDocumentTrigger).not.toHaveBeenCalled()
+    expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
+  })
+
+  it('returns error when documentUuid belongs to a different workspace', async () => {
+    // Create a document in a different workspace
+    const { documents: otherDocuments } = await factories.createProject({
+      providers: [{ name: 'openai', type: Providers.OpenAI }],
+      documents: {
+        other: factories.helpers.createPrompt({ provider: 'openai' }),
+      },
+    })
+
+    const otherDocument = otherDocuments[0]!
+
+    const result =
+      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+        workspace,
+        commit: draft,
+        triggerUuid: 'any-uuid',
+        documentUuid: otherDocument.documentUuid,
+        configuration: { emailWhitelist: [], replyWithResponse: true },
+      })
+
+    expect(result.ok).toBeFalsy()
+    expect(result.error).toBeInstanceOf(NotFoundError)
+    expect(result.error?.message).toContain(
+      `Document with uuid '${otherDocument.documentUuid}' not found in workspace`,
+    )
+    expect(mocks.deployDocumentTrigger).not.toHaveBeenCalled()
+    expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
+  })
+
+  it('successfully updates and changes documentUuid when provided', async () => {
+    const emailConfig: EmailTriggerConfiguration = {
+      name: 'Email Trigger',
+      emailWhitelist: ['a@example.com'],
+      domainWhitelist: [],
+      replyWithResponse: true,
+      parameters: {},
+    }
+    mocks.deployDocumentTrigger.mockResolvedValue(
+      Result.ok({} as EmailTriggerDeploymentSettings),
+    )
+
+    // Create initial trigger
+    const created = await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
+      triggerType: DocumentTriggerType.Email,
+      configuration: emailConfig,
+    }).then((r) => r.unwrap())
+
+    // Create a second document to assign the trigger to
+    const { documentVersion: newDocument } =
+      await factories.createDocumentVersion({
+        workspace,
+        user,
+        commit: draft,
+        path: 'new-document',
+        content: 'New document content',
+      })
+
+    // Update with new documentUuid
+    mocks.undeployDocumentTrigger.mockResolvedValue(
+      Result.ok(
+        created as unknown as DocumentTrigger<DocumentTriggerType.Email>,
+      ),
+    )
+    mocks.deployDocumentTrigger.mockResolvedValueOnce(
+      Result.ok({} as EmailTriggerDeploymentSettings),
+    )
+
+    const result =
+      await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({
+        workspace,
+        commit: draft,
+        triggerUuid: created.uuid,
+        documentUuid: newDocument.documentUuid,
+        configuration: emailConfig,
+      })
+
+    expect(result.ok).toBeTruthy()
+
+    const triggersScope = new DocumentTriggersRepository(workspace.id)
+    const triggers = await triggersScope
+      .getTriggersInDocument({
+        documentUuid: newDocument.documentUuid,
+        commit: draft,
+      })
+      .then((r) => r.unwrap())
+    const updatedTrigger = triggers.find((x) => x.uuid === created.uuid)!
+    expect(updatedTrigger.documentUuid).toEqual(newDocument.documentUuid)
+  })
+
   it('returns error when trigger is not found in the given commit scope', async () => {
     const result =
       await updateDocumentTriggerConfiguration<DocumentTriggerType.Email>({

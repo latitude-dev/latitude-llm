@@ -40,6 +40,13 @@ export function EditEmailTrigger({
     config.name,
     setConfiguration,
   ])
+  const setParameters = config.setParameters
+
+  useEffect(() => {
+    if (document.documentUuid !== trigger.documentUuid) {
+      setParameters({})
+    }
+  }, [document.documentUuid, trigger.documentUuid, setParameters])
 
   return (
     <EmailTriggerForm

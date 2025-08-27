@@ -6,17 +6,12 @@ import { type ChainEventDto, type Message } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { createStreamableValue } from 'ai/rsc'
 import { findSharedDocumentCached } from '$/app/(public)/_data_access'
-import { AddMessagesResponse } from '$/actions/sdk/addMessagesAction'
 
 type AddMessagesActionProps = {
   publishedDocumentUuid: string
   documentLogUuid: string
   messages: Message[]
 }
-export type AddMessagesActionFn = (
-  _: AddMessagesActionProps,
-) => AddMessagesResponse
-
 export async function addSharedMessagesAction({
   publishedDocumentUuid,
   documentLogUuid,

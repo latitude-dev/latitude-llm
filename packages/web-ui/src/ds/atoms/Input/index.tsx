@@ -14,7 +14,7 @@ export const INPUT_BASE_CLASSES = [
   font.size.h5,
 ]
 export const INPUT_VARIANT_SIZE = {
-  normal: 'px-2 py-1  focus-visible:ring-offset-2',
+  normal: 'px-2 py-1 focus-visible:ring-offset-2',
   small: 'px-1 rounded-sm focus-visible:ring-offset-1',
 }
 

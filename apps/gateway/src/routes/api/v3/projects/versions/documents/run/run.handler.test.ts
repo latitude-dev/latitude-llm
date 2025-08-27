@@ -206,7 +206,7 @@ describe('POST /run', () => {
         tools: {},
         source: LogSources.Playground,
         abortSignal: expect.anything(),
-        isLegacy: false,
+        userMessage: undefined,
       })
     })
 
@@ -476,7 +476,7 @@ describe('POST /run', () => {
         tools: {},
         source: LogSources.Playground,
         abortSignal: expect.anything(),
-        isLegacy: false,
+        userMessage: undefined,
       })
     })
 
@@ -765,9 +765,9 @@ describe('POST /run', () => {
         commit,
         parameters: {},
         tools: {},
+        userMessage: undefined,
         source: LogSources.API,
         abortSignal: expect.anything(),
-        isLegacy: false,
       })
       expect(mocks.runDocumentAtCommitLegacy).not.toHaveBeenCalled()
     })
@@ -802,15 +802,12 @@ describe('POST /run', () => {
       })
 
       expect(mocks.runDocumentAtCommitLegacy).toHaveBeenCalledWith({
-        context: expect.anything(),
         workspace,
         document: expect.anything(),
         commit,
         parameters: {},
-        tools: {},
         source: LogSources.API,
         abortSignal: expect.anything(),
-        isLegacy: true,
       })
       expect(mocks.runDocumentAtCommit).not.toHaveBeenCalled()
     })
@@ -874,15 +871,12 @@ describe('POST /run', () => {
       })
 
       expect(mocks.runDocumentAtCommitLegacy).toHaveBeenCalledWith({
-        context: expect.anything(),
         workspace,
         document: expect.anything(),
         commit,
         parameters: {},
-        tools: {},
         source: LogSources.API,
         abortSignal: expect.anything(),
-        isLegacy: true,
       })
 
       expect(response.status).toBe(200)
@@ -931,10 +925,10 @@ describe('POST /run', () => {
         document: expect.anything(),
         commit,
         parameters: {},
+        userMessage: undefined,
         tools: {},
         source: LogSources.API,
         abortSignal: expect.anything(),
-        isLegacy: false,
       })
       expect(mocks.runDocumentAtCommitLegacy).not.toHaveBeenCalled()
     })

@@ -21,7 +21,7 @@
     "@latitude-data/constants": "workspace:*",
     "@latitude-data/core": "workspace:*",
     "@latitude-data/env": "workspace:^",
-    "@latitude-data/sdk": "5.0.0-beta.1",
+    "@latitude-data/sdk": "5.0.0-beta.2",
     "@latitude-data/socket.io-react-hook": "2.4.5",
     "@latitude-data/telemetry": "workspace:*",
     "@latitude-data/web-ui": "workspace:*",

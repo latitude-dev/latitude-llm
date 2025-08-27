@@ -1,10 +1,6 @@
 'use server'
 
-import {
-  ChainStepResponse,
-  CLOUD_MESSAGES,
-  PROVIDER_MODELS,
-} from '@latitude-data/core/browser'
+import { CLOUD_MESSAGES, PROVIDER_MODELS } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import {
@@ -73,7 +69,7 @@ export const requestSuggestionAction = authProcedure
       projectId: env.COPILOT_PROJECT_ID,
     }).then((r) => r.unwrap())
 
-    const result = await sdk.prompts.run(
+    const result = await sdk.prompts.run<{ code: string; response: string }>(
       env.COPILOT_PROMPT_EDITOR_COPILOT_PATH,
       {
         stream: false,
@@ -98,6 +94,6 @@ export const requestSuggestionAction = authProcedure
       },
     })
 
-    const resultResponse = result.response as ChainStepResponse<'object'>
+    const resultResponse = result.response
     return resultResponse.object
   })

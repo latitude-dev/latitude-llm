@@ -2,28 +2,15 @@
 
 import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
-import {
-  type ChainEventDto,
-  type Message,
-  type StreamChainResponse,
-} from '@latitude-data/sdk'
+import { type ChainEventDto, type Message } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { createStreamableValue, StreamableValue } from 'ai/rsc'
-import { ChainEvent } from '@latitude-data/constants'
+import { createStreamableValue } from 'ai/rsc'
 
 type AddMessagesActionProps = {
   documentLogUuid: string
   messages: Message[]
 }
-export type AddMessagesResponse = Promise<{
-  output: StreamableValue<ChainEvent>
-  response: Promise<StreamChainResponse | undefined>
-}>
-export type AddMessagesActionFn = (
-  _: AddMessagesActionProps,
-) => AddMessagesResponse
-
 export async function addMessagesAction({
   documentLogUuid,
   messages,

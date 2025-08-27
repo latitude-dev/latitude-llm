@@ -26,6 +26,7 @@ export enum DocumentTriggerType {
   Email = 'email',
   Scheduled = 'scheduled',
   Integration = 'integration',
+  Chat = 'chat',
 }
 
 export enum DocumentTriggerParameters {

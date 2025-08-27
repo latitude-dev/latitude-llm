@@ -9,7 +9,10 @@ import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
-import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
+import {
+  runDocumentAtCommit,
+  type RunDocumentAtCommitArgs,
+} from '@latitude-data/core/services/commits/runDocumentAtCommit'
 import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 import { RunRoute } from './run.route'
@@ -17,7 +20,10 @@ import {
   awaitClientToolResult,
   ToolHandler,
 } from '@latitude-data/core/lib/streamManager/clientTools/handlers'
-import { runDocumentAtCommitLegacy } from '@latitude-data/core/services/__deprecated/commits/runDocumentAtCommit'
+import {
+  runDocumentAtCommitLegacy,
+  type RunDocumentAtCommitLegacyArgs,
+} from '@latitude-data/core/services/__deprecated/commits/runDocumentAtCommit'
 import { compareVersion } from '$/utils/versionComparison'
 
 // https://github.com/honojs/middleware/issues/735
@@ -31,6 +37,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     customIdentifier,
     tools,
     stream: useSSE,
+    userMessage,
     __internal,
   } = c.req.valid('json')
   const workspace = c.get('workspace')
@@ -54,18 +61,31 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   const sdkVersion = c.req.header('X-Latitude-SDK-Version')
   const isLegacy = !compareVersion(sdkVersion, '5.0.0')
 
-  const result = await _runDocumentAtCommit({
-    context: BACKGROUND({ workspaceId: workspace.id }),
+  const legacyArgs = {
     workspace,
     document,
     commit,
     parameters,
     customIdentifier,
-    tools: useSSE ? buildClientToolHandlersMap(tools) : {},
     source: __internal?.source ?? LogSources.API,
     abortSignal: c.req.raw.signal,
-    isLegacy,
-  }).then((r) => r.unwrap())
+  }
+  const result = await _runDocumentAtCommit(
+    isLegacy
+      ? {
+          isLegacy: true,
+          data: legacyArgs,
+        }
+      : {
+          isLegacy: false,
+          data: {
+            ...legacyArgs,
+            context: BACKGROUND({ workspaceId: workspace.id }),
+            tools: useSSE ? buildClientToolHandlersMap(tools ?? []) : {},
+            userMessage,
+          },
+        },
+  ).then((r) => r.unwrap())
 
   if (useSSE) {
     return streamSSE(
@@ -146,12 +166,19 @@ export function buildClientToolHandlersMap(tools: string[]) {
   }, {})
 }
 
-async function _runDocumentAtCommit(args: any) {
+type RunDocumentArgs<T extends boolean> = T extends true
+  ? { isLegacy: true; data: RunDocumentAtCommitLegacyArgs }
+  : T extends false
+    ? { isLegacy: false; data: RunDocumentAtCommitArgs }
+    : never
+async function _runDocumentAtCommit<T extends boolean>(
+  args: RunDocumentArgs<T>,
+) {
   const { isLegacy } = args
 
   if (isLegacy) {
-    return runDocumentAtCommitLegacy(args)
+    return runDocumentAtCommitLegacy(args.data)
   } else {
-    return runDocumentAtCommit(args)
+    return runDocumentAtCommit(args.data)
   }
 }
