@@ -11,7 +11,7 @@
     "dev:local": "USE_LOCALHOST=true pnpm run dev",
     "lint": "eslint src/",
     "start": "next start",
-    "tc": "tsc --noEmit",
+    "tc": "tsc --noEmit --extendedDiagnostics",
     "test": "TZ=UTC vitest --run",
     "test:watch": "TZ=UTC vitest"
   },
