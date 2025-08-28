@@ -61,7 +61,6 @@ interface LatteState {
   setJobId: (jobId: string | undefined) => void
 
   // Reset functions
-  resetChat: () => void
   resetChanges: () => void
   resetAll: () => void
 }
@@ -175,15 +174,6 @@ const useStore = create<LatteState>((set) => ({
   setJobId: (jobId: string | undefined) => set({ jobId: jobId }),
 
   // Reset functions
-  resetChat: () =>
-    set({
-      isBrewing: false,
-      interactions: [],
-      error: undefined,
-      threadUuid: undefined,
-      jobId: undefined,
-    }),
-
   resetChanges: () =>
     set({
       changes: [],
@@ -192,13 +182,13 @@ const useStore = create<LatteState>((set) => ({
 
   resetAll: () =>
     set({
-      isBrewing: false,
-      interactions: [],
-      error: undefined,
       changes: [],
       latteActionsFeedbackUuid: undefined,
       threadUuid: undefined,
       jobId: undefined,
+      interactions: [],
+      isBrewing: false,
+      error: undefined,
     }),
 }))
 
@@ -223,12 +213,6 @@ export const useLatteStore = () => {
     [store, setStoredThreadUuid],
   )
 
-  const resetChat = useCallback(() => {
-    store.resetChat()
-    setStoredThreadUuid(undefined)
-    setStoredJobId(undefined)
-  }, [store, setStoredThreadUuid, setStoredJobId])
-
   const setJobId = useCallback(
     (jobId: string | undefined) => {
       store.setJobId(jobId)
@@ -240,9 +224,8 @@ export const useLatteStore = () => {
     () => ({
       ...store,
       setThreadUuid,
-      resetChat,
       setJobId: setJobId,
     }),
-    [store, setThreadUuid, resetChat, setJobId],
+    [store, setThreadUuid, setJobId],
   )
 }
