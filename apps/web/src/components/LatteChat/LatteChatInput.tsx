@@ -195,7 +195,7 @@ export function LatteChatInput({
               className:
                 'flex-shrink-0 group-hover:text-latte-input-foreground/75 -mt-px',
             }}
-            className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
+            className='text-latte-input-foreground group-hover:text-latte-input-foreground/75 ml-1'
             userSelect={false}
           >
             New chat

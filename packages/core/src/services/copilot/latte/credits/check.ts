@@ -1,5 +1,6 @@
 import {
   LATTE_MINIMUM_CREDITS_PER_REQUEST,
+  LATTE_NOT_ENOUGH_CREDITS_ERROR,
   Workspace,
 } from '../../../../browser'
 import { UnprocessableEntityError } from '../../../../lib/errors'
@@ -33,7 +34,7 @@ export async function checkLatteCredits(
 
   if (usage.billable + credits > usage.included) {
     return Result.error(
-      new UnprocessableEntityError('Not enough Latte credits'),
+      new UnprocessableEntityError(LATTE_NOT_ENOUGH_CREDITS_ERROR),
     )
   }
 
