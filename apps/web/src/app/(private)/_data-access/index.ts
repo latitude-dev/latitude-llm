@@ -1,5 +1,6 @@
 import { cache } from 'react'
 
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import {
   DOCUMENT_STATS_CACHE_KEY,
   DocumentLogsLimitedView,
@@ -25,8 +26,8 @@ import {
   ProviderApiKeysRepository,
   ProviderLogsRepository,
 } from '@latitude-data/core/repositories/index'
+import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { notFound } from 'next/navigation'
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 
 export const getFirstProjectCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
@@ -200,6 +201,7 @@ export const getDocumentsFromMergedCommitsCache = cache(
   },
 )
 
+// TODO(evalsv2): Remove deprecated
 export const getEvaluationByUuidCached = cache(async (uuid: string) => {
   const { workspace } = await getCurrentUserOrRedirect()
   const evaluationScope = new EvaluationsRepository(workspace.id)
@@ -209,6 +211,7 @@ export const getEvaluationByUuidCached = cache(async (uuid: string) => {
   return evaluation
 })
 
+// TODO(evalsv2): Remove deprecated
 export const getEvaluationByIdCached = cache(async (id: number) => {
   const { workspace } = await getCurrentUserOrRedirect()
   const evaluationScope = new EvaluationsRepository(workspace.id)
@@ -282,6 +285,7 @@ export const getProviderLogCached = cache(async (uuid: string) => {
   return await scope.findByUuid(uuid).then((r) => r.unwrap())
 })
 
+// TODO(evalsv2): Remove deprecated
 export const getEvaluationsByDocumentUuidCached = cache(
   async (documentUuid: string) => {
     const { workspace } = await getCurrentUserOrRedirect()
@@ -387,4 +391,13 @@ export const getProviderApiKeysCached = cache(async () => {
   const scope = new ProviderApiKeysRepository(workspace.id)
   const result = await scope.findAll()
   return result.unwrap()
+})
+
+export const isFeatureEnabledCached = cache(async (feature: string) => {
+  const { workspace } = await getCurrentUserOrRedirect()
+  const enabled = await isFeatureEnabledByName(workspace.id, feature).then(
+    (r) => r.unwrap(),
+  )
+
+  return enabled
 })

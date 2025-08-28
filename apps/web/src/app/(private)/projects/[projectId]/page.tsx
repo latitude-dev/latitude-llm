@@ -1,8 +1,9 @@
-import { type Project } from '@latitude-data/core/browser'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+'use server'
+
 import {
   findCommitsByProjectCached,
   findProjectCached,
+  isFeatureEnabledCached,
 } from '$/app/(private)/_data-access'
 import { lastSeenCommitCookieName } from '$/helpers/cookies/lastSeenCommit'
 import {
@@ -10,9 +11,10 @@ import {
   getCurrentUserOrRedirect,
 } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
+import { type Project } from '@latitude-data/core/browser'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { cookies } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
-
 import { getRedirectUrl } from './utils'
 
 const PROJECT_ROUTE = ROUTES.projects.detail
@@ -39,6 +41,7 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
     const commits = await findCommitsByProjectCached({
       projectId: project.id,
     })
+    const latteEnabled = await isFeatureEnabledCached('latte')
 
     url = getRedirectUrl({
       commits,
@@ -46,6 +49,7 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
       lastSeenCommitUuid,
       lastSeenDocumentUuid,
       PROJECT_ROUTE,
+      latteEnabled,
     })
   } catch (error) {
     if (error instanceof NotFoundError) {

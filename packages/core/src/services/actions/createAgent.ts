@@ -15,6 +15,7 @@ import Transaction from '../../lib/Transaction'
 import { ProjectsRepository } from '../../repositories'
 import { getCopilot, runCopilot } from '../copilot'
 import { createProject } from '../projects/create'
+import { isFeatureEnabledByName } from '../workspaceFeatures/isFeatureEnabledByName'
 import { ActionExecuteArgs } from './shared'
 
 export const CreateAgentActionSpecification = {
@@ -27,6 +28,18 @@ async function execute(
   db = database,
   tx = new Transaction(),
 ) {
+  const featuring = await isFeatureEnabledByName(workspace.id, 'latte')
+  if (featuring.error) {
+    return Result.error(featuring.error)
+  }
+
+  const enabled = featuring.unwrap()
+  if (!enabled) {
+    return Result.error(
+      new UnprocessableEntityError('Latte is not enabled for this workspace'),
+    )
+  }
+
   if (parameters.prompt.length < 1 || parameters.prompt.length > 2500) {
     return Result.error(
       new BadRequestError('Prompt must be between 1 and 2500 characters'),

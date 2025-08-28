@@ -7,6 +7,7 @@ type GetCommitUrlParams = {
   lastSeenCommitUuid: string | undefined
   lastSeenDocumentUuid?: string | undefined
   PROJECT_ROUTE: any // Replace 'any' with the actual type of PROJECT_ROUTE
+  latteEnabled?: boolean
 }
 
 export function getRedirectUrl({
@@ -15,6 +16,7 @@ export function getRedirectUrl({
   lastSeenCommitUuid,
   lastSeenDocumentUuid,
   PROJECT_ROUTE,
+  latteEnabled,
 }: GetCommitUrlParams): string {
   const url = getCommitUrl({
     commits,
@@ -24,6 +26,10 @@ export function getRedirectUrl({
   })
 
   if (!lastSeenDocumentUuid) {
+    if (latteEnabled) {
+      return url.preview.root
+    }
+
     return url.overview.root
   } else {
     return url.documents.detail({ uuid: lastSeenDocumentUuid }).root
