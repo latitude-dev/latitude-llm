@@ -23,6 +23,7 @@ describe('executeAction', () => {
 
     const { workspace: w, userData: u } = await factories.createWorkspace({
       onboarding: true,
+      features: ['latte'],
     })
     workspace = w
     user = u

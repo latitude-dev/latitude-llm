@@ -1,7 +1,9 @@
 import { faker } from '@faker-js/faker'
 
 import { SubscriptionPlan, type User } from '../../browser'
+import { createFeature } from '../../services/features/create'
 import { createMembership } from '../../services/memberships/create'
+import { toggleWorkspaceFeature } from '../../services/workspaceFeatures/toggle'
 import { createWorkspaceOnboarding } from '../../services/workspaceOnboarding'
 import { createWorkspace as createWorkspaceFn } from '../../services/workspaces/create'
 import { createUser, type ICreateUser } from './users'
@@ -12,6 +14,7 @@ export type ICreateWorkspace = {
   createdAt?: Date
   subscriptionPlan?: SubscriptionPlan
   onboarding?: boolean
+  features?: string[]
 }
 export async function createWorkspace(
   workspaceData: Partial<ICreateWorkspace> = {},
@@ -34,6 +37,15 @@ export async function createWorkspace(
 
   if (workspaceData.onboarding) {
     await createWorkspaceOnboarding({ workspace }).then((r) => r.unwrap())
+  }
+
+  if (workspaceData.features) {
+    for (const name of workspaceData.features) {
+      const feature = await createFeature({ name }).then((r) => r.unwrap())
+      await toggleWorkspaceFeature(workspace.id, feature.id, true).then((r) =>
+        r.unwrap(),
+      )
+    }
   }
 
   return { workspace, userData }

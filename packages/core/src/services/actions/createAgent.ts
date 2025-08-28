@@ -28,7 +28,7 @@ async function execute(
   db = database,
   tx = new Transaction(),
 ) {
-  const featuring = await isFeatureEnabledByName(workspace.id, 'latte')
+  const featuring = await isFeatureEnabledByName(workspace.id, 'latte', db)
   if (featuring.error) {
     return Result.error(featuring.error)
   }
