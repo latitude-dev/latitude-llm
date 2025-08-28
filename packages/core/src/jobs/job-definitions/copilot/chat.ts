@@ -1,6 +1,7 @@
 import { Job } from 'bullmq'
 
 import { unsafelyFindWorkspace } from '../../../data-access'
+import { clearCancelJobFlag, isJobCancelled } from '../../../lib/cancelJobs'
 import { LatitudeError } from '../../../lib/errors'
 import { DocumentLogsRepository, UsersRepository } from '../../../repositories'
 import {
@@ -9,7 +10,6 @@ import {
 } from '../../../services/copilot/latte/addMessage'
 import { getCopilotDocument } from '../../../services/copilot/latte/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
-import { clearCancelJobFlag, isJobCancelled } from '../../../lib/cancelJobs'
 
 export type RunLatteJobData = {
   workspaceId: number
@@ -87,7 +87,6 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
 
     const documentLogsScope = new DocumentLogsRepository(copilotWorkspace.id)
     const documentLogResult = await documentLogsScope.findByUuid(threadUuid)
-
     if (!documentLogResult.ok) {
       // Chat still does not exist, we create a new one
       const runResult = await runNewLatte({
@@ -101,7 +100,6 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
         context,
         abortSignal: controller.signal,
       })
-
       if (!runResult.ok) {
         await emitError({
           workspaceId,
@@ -109,6 +107,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
           error: runResult.error as LatitudeError,
         })
       }
+
       return runResult
     }
 
@@ -123,7 +122,6 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
       context,
       abortSignal: controller.signal,
     })
-
     if (!runResult.ok) {
       await emitError({
         workspaceId,
@@ -131,6 +129,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
         error: runResult.error as LatitudeError,
       })
     }
+
     return runResult
   } finally {
     clearInterval(interval)
