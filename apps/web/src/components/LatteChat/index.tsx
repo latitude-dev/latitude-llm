@@ -45,7 +45,7 @@ export function LatteChat() {
 
   const {
     isBrewing,
-    resetChat: resetChatStore,
+    resetAll,
     interactions,
     error,
     changes,
@@ -59,9 +59,9 @@ export function LatteChat() {
     useLatteChangeActions()
 
   const resetChat = useCallback(() => {
-    resetChatStore()
     addFeedbackToLatteChange('')
-  }, [resetChatStore, addFeedbackToLatteChange])
+    resetAll()
+  }, [resetAll, addFeedbackToLatteChange])
 
   const stopLatteChat = useCallback(() => {
     stopChat({ jobId: jobId })
