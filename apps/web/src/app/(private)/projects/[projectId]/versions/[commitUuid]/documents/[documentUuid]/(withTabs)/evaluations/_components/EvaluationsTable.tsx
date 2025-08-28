@@ -222,7 +222,7 @@ function EvaluationsTableBlankSlate({
       >
         <iframe
           className='w-full aspect-video rounded-md'
-          src={`https://www.youtube.com/embed/cTs-qfO6H-8`}
+          src='https://www.youtube.com/embed/cTs-qfO6H-8'
           allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
           allowFullScreen
           title='How to evaluate your prompts using LLMs and Latitude.so'
@@ -240,8 +240,8 @@ function EvaluationsTableBlankSlate({
               {generatorEnabled
                 ? `
 ---
-  provider: OpenAI
-  model: gpt-4o
+provider: OpenAI
+model: GPT-5
 ---
 This is just a placeholder for the evaluation prompt because generating it takes a bit longer than we'd like. Click the button to actually generate the evaluation, it's free as this one is on us.
 
@@ -249,10 +249,10 @@ Don't rawdog your prompts!
             `.trim()
                 : `
 ---
-  provider: OpenAI
-  model: gpt-4o
+provider: OpenAI
+model: GPT-5
 ---
-This is just a placeholder for the evaluation prompt because the evaluation generator is disabled. If it were enabled, you could click the button to actually generate the evaluation.
+This is just a placeholder for the evaluation prompt because the evaluation generator is disabled. If it was enabled, you could click the button to actually generate the evaluation.
 
 Don't rawdog your prompts!
             `.trim()}

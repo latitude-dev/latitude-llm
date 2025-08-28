@@ -1,5 +1,5 @@
-import { DocumentBlankSlateLayout } from '../../../../../../_components/DocumentBlankSlateLayout'
 import { BlankSlateButton } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/_components/BlankSlateButton'
+import { DocumentBlankSlateLayout } from '../../../../../../_components/DocumentBlankSlateLayout'
 
 export function DocumentLogBlankSlate({ uploadUrl }: { uploadUrl: string }) {
   return (
@@ -10,7 +10,7 @@ export function DocumentLogBlankSlate({ uploadUrl }: { uploadUrl: string }) {
       <BlankSlateButton
         href={uploadUrl}
         title='Upload logs'
-        description='Upload logs from your local machine to the project.'
+        description='Upload logs from your local machine to the project'
       />
     </DocumentBlankSlateLayout>
   )

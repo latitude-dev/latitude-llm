@@ -2,8 +2,8 @@ import { ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Badge } from '../../atoms/Badge'
-import { Text } from '../../atoms/Text'
 import { Skeleton } from '../../atoms/Skeleton'
+import { Text } from '../../atoms/Text'
 
 export function BlankSlateStep({
   number,
@@ -71,13 +71,20 @@ export function BlankSlateWithSteps({
   title,
   description,
   children,
+  className,
 }: {
   title: string
   description: string
   children?: ReactNode
+  className?: string
 }) {
   return (
-    <div className='rounded-lg w-full py-16 flex flex-col gap-4 items-center justify-center bg-gradient-to-b from-secondary to-transparent'>
+    <div
+      className={cn(
+        'rounded-lg w-full py-16 flex flex-col gap-4 items-center justify-center bg-gradient-to-b from-secondary to-transparent',
+        className,
+      )}
+    >
       <div className='max-w-md flex flex-col items-center gap-2'>
         <Text.H4B>{title}</Text.H4B>
         <Text.H5 align='center' display='block' color='foregroundMuted'>
