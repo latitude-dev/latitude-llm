@@ -41,7 +41,7 @@ export function LatteChat() {
 
   useSyncLatteUrlState()
 
-  const isBrewingThread = useLoadThreadFromProviderLogs()
+  const isLoadingThread = useLoadThreadFromProviderLogs()
 
   const {
     isBrewing,
@@ -105,8 +105,8 @@ export function LatteChat() {
             className='w-full h-full overflow-hidden custom-scrollbar flex flex-col gap-4 items-center shadow-sm pb-8'
             ref={containerRef}
           >
-            {isBrewingThread && !isBrewing && <ChatSkeleton />}
-            {!isBrewingThread &&
+            {isLoadingThread && !isBrewing && <ChatSkeleton />}
+            {!isLoadingThread &&
               (!inConversation ? (
                 <div className='flex flex-col items-center justify-center h-full gap-8 min-w-[50%] p-8'>
                   <div className='flex flex-col items-center justify-center gap-6'>

@@ -38,6 +38,7 @@ import {
   CirclePlus,
   CircleStop,
   CircleUser,
+  CircleX,
   Clock,
   ClockFadingIcon,
   Code,
@@ -371,6 +372,7 @@ const Icons = {
   expand: Expand,
   forward: Forward,
   circleGauge: CircleGauge,
+  circleX: CircleX,
 }
 
 export type IconName = keyof typeof Icons

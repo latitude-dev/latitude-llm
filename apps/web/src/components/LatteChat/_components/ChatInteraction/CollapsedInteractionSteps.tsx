@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
 import { LatteInteractionStep } from '$/hooks/latte/types'
+import { useEffect, useState } from 'react'
 import { InteractionStep } from './InteractionStep'
 
 const STEP_LINE_HEIGHT = 1.25 // rem
@@ -7,9 +7,11 @@ const STEP_LINE_HEIGHT = 1.25 // rem
 export const CollapsedInteractionSteps = ({
   steps,
   isLoading = false,
+  isStreaming = false,
 }: {
   steps: LatteInteractionStep[]
   isLoading?: boolean
+  isStreaming?: boolean
 }) => {
   const [currentLine, setCurrentLine] = useState(steps.length)
 
@@ -30,6 +32,7 @@ export const CollapsedInteractionSteps = ({
           key={-1}
           step={undefined}
           isLoading={isLoading}
+          isStreaming={isStreaming}
           singleLine
         />{' '}
         {steps.map((step, index) => (
@@ -37,6 +40,7 @@ export const CollapsedInteractionSteps = ({
             key={index}
             step={step}
             isLoading={isLoading && index === steps.length - 1}
+            isStreaming={isStreaming}
             singleLine
           />
         ))}

@@ -2,15 +2,18 @@ import { LatteInteractionStep } from '$/hooks/latte/types'
 import { LatteEditAction } from '@latitude-data/constants/latte'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useMemo } from 'react'
 
 export function InteractionStep({
   step,
   singleLine,
   isLoading = false,
+  isStreaming = false,
 }: {
   step?: LatteInteractionStep
   singleLine?: boolean
   isLoading?: boolean
+  isStreaming?: boolean
 }) {
   if (!step) {
     return (
@@ -21,7 +24,7 @@ export function InteractionStep({
         userSelect={false}
         animate
       >
-        Brewing...
+        {isStreaming ? 'Brewing...' : 'Stopped'}
       </Text.H5>
     )
   }
@@ -34,7 +37,7 @@ export function InteractionStep({
         ellipsis={singleLine}
         whiteSpace='preWrap'
         userSelect={false}
-        animate={isLoading}
+        animate={isLoading && isStreaming}
       >
         {step.content}
       </Text.H5>
@@ -47,13 +50,19 @@ export function InteractionStep({
         step={step}
         singleLine={singleLine}
         isLoading={isLoading}
+        isStreaming={isStreaming}
       />
     )
   }
 
   if (step.type === 'tool') {
     return (
-      <ToolStep step={step} singleLine={singleLine} isLoading={isLoading} />
+      <ToolStep
+        step={step}
+        singleLine={singleLine}
+        isLoading={isLoading}
+        isStreaming={isStreaming}
+      />
     )
   }
 
@@ -64,16 +73,34 @@ function ToolStep({
   step,
   singleLine,
   isLoading,
+  isStreaming,
 }: {
   step: Extract<LatteInteractionStep, { type: 'tool' }>
   singleLine?: boolean
   isLoading?: boolean
+  isStreaming?: boolean
 }) {
+  const icon = useMemo(() => {
+    if (step.customIcon) {
+      return step.customIcon
+    }
+
+    if (step.finished) {
+      return 'check'
+    }
+
+    if (!isStreaming) {
+      return 'circleX'
+    }
+
+    return 'loader'
+  }, [step.customIcon, step.finished, isStreaming])
+
   return (
     <div className='flex flex-row gap-2 items-start max-w-full'>
       <Icon
-        name={step.customIcon ?? (step.finished ? 'check' : 'loader')}
-        spin={!step.customIcon && !step.finished}
+        name={icon}
+        spin={icon === 'loader'}
         color='latteOutputForegroundMuted'
         className='min-w-4 mt-0.5'
       />
@@ -82,7 +109,7 @@ function ToolStep({
         ellipsis={singleLine}
         color='latteOutputForegroundMuted'
         userSelect={false}
-        animate={isLoading}
+        animate={isLoading && isStreaming}
       >
         {step.finished
           ? (step.finishedDescription ?? step.activeDescription)
@@ -126,10 +153,12 @@ function EditActionStep({
   step,
   singleLine,
   isLoading,
+  isStreaming,
 }: {
   step: Extract<LatteInteractionStep, { type: 'action' }>
   singleLine?: boolean
   isLoading?: boolean
+  isStreaming?: boolean
 }) {
   const { icon, operationDescription } = editAction(step.action)
 
@@ -144,7 +173,7 @@ function EditActionStep({
         noWrap={singleLine}
         ellipsis={singleLine}
         color='latteOutputForegroundMuted'
-        animate={isLoading}
+        animate={isLoading && isStreaming}
         userSelect={false}
       >
         {operationDescription}

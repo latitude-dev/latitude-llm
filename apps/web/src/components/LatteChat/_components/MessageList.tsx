@@ -14,7 +14,10 @@ export function LatteMessageList({
         <ChatInteraction
           key={i}
           interaction={interaction}
-          isStreaming={isStreaming}
+          isLoading={
+            interaction.output === undefined && i === interactions.length - 1
+          }
+          isStreaming={isStreaming && i === interactions.length - 1}
         />
       ))}
     </div>

@@ -9,9 +9,11 @@ import { MarkdownResponse } from './MarkdownText'
 
 export function ChatInteraction({
   interaction,
+  isLoading,
   isStreaming,
 }: {
   interaction: LatteInteraction
+  isLoading?: boolean
   isStreaming?: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -42,16 +44,15 @@ export function ChatInteraction({
                 <InteractionStep
                   key={i}
                   step={step}
-                  isLoading={
-                    interaction.output === undefined &&
-                    i === interaction.steps.length - 1
-                  }
+                  isLoading={isLoading && i === interaction.steps.length - 1}
+                  isStreaming={isStreaming}
                 />
               ))
             ) : (
               <CollapsedInteractionSteps
                 steps={interaction.steps}
-                isLoading={interaction.output === undefined}
+                isLoading={isLoading}
+                isStreaming={isStreaming}
               />
             )}
           </div>
