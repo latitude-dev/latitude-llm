@@ -220,12 +220,20 @@ export const useLatteStore = () => {
     },
     [store, setStoredJobId],
   )
+
+  const resetAll = useCallback(() => {
+    store.resetAll()
+    setStoredThreadUuid(undefined)
+    setStoredJobId(undefined)
+  }, [store, setStoredThreadUuid, setStoredJobId])
+
   return useMemo(
     () => ({
       ...store,
       setThreadUuid,
-      setJobId: setJobId,
+      setJobId,
+      resetAll,
     }),
-    [store, setThreadUuid, setJobId],
+    [store, setThreadUuid, setJobId, resetAll],
   )
 }
