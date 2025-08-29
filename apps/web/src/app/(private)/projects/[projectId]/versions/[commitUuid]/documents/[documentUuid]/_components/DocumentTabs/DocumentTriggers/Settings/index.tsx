@@ -1,14 +1,14 @@
+import useDocumentTriggers from '$/stores/documentTriggers'
+import useFeature from '$/stores/useFeature'
+import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
-import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useState } from 'react'
+import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
+import { useEffect, useState } from 'react'
 import { EmailTriggerSettings } from './EmailTrigger'
-import useDocumentTriggers from '$/stores/documentTriggers'
-import { DocumentTriggerType } from '@latitude-data/constants'
-import { ScheduleTriggerSettings } from './ScheduleTrigger'
 import { IntegrationTriggerSettings } from './IntegrationTriggers'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
+import { ScheduleTriggerSettings } from './ScheduleTrigger'
 
 enum ShareSettingsTabs {
   Email = 'email',
@@ -44,14 +44,19 @@ export function TriggerSettings({
     commitUuid,
   })
 
-  const { enabled: integrationTriggersEnabled } = useFeatureFlag({
-    featureFlag: 'integrationTriggers',
-  })
+  const { isEnabled: integrationTriggersEnabled } = useFeature(
+    'integrationTriggers',
+  )
 
-  const [selectedTab, setSelectedTab] = useState<ShareSettingsTabs>(
-    integrationTriggersEnabled
-      ? ShareSettingsTabs.Integrations
-      : ShareSettingsTabs.Email,
+  const [selectedTab, setSelectedTab] = useState<ShareSettingsTabs>()
+  useEffect(
+    () =>
+      setSelectedTab(
+        integrationTriggersEnabled
+          ? ShareSettingsTabs.Integrations
+          : ShareSettingsTabs.Email,
+      ),
+    [integrationTriggersEnabled],
   )
 
   return (

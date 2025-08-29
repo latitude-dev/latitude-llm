@@ -1,5 +1,4 @@
 import { MetadataProvider } from '$/components/MetadataProvider'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { DevModeProvider, useDevMode } from '$/hooks/useDevMode'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import {
@@ -9,6 +8,7 @@ import {
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
 import useProviderApiKeys from '$/stores/providerApiKeys'
+import useFeature from '$/stores/useFeature'
 import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import {
@@ -59,9 +59,7 @@ function OldDocumentEditorContent({
 }: DocumentEditorProps) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const { enabled: blocksEditorEnabled } = useFeatureFlag({
-    featureFlag: 'blocksEditor',
-  })
+  const { isEnabled: blocksEditorEnabled } = useFeature('blocksEditor')
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })

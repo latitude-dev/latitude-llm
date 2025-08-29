@@ -1,7 +1,7 @@
 import { ProviderModelSelector } from '$/components/ProviderModelSelector'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useDevMode } from '$/hooks/useDevMode'
 import useProviderApiKeys from '$/stores/providerApiKeys'
+import useFeature from '$/stores/useFeature'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -28,9 +28,7 @@ export function TitleRow({
   onChangePrompt: EditorHeaderProps['onChangePrompt']
   isMerged: EditorHeaderProps['isMerged']
 }) {
-  const { enabled: blocksEditorEnabled } = useFeatureFlag({
-    featureFlag: 'blocksEditor',
-  })
+  const { isEnabled: blocksEditorEnabled } = useFeature('blocksEditor')
 
   const { data: providers } = useProviderApiKeys()
   const { devMode, setDevMode, isLoading: isLoadingDevMode } = useDevMode()

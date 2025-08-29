@@ -14,9 +14,7 @@ export function LatteMessageList({
         <ChatInteraction
           key={i}
           interaction={interaction}
-          isLoading={
-            interaction.output === undefined && i === interactions.length - 1
-          }
+          isLoading={i === interactions.length - 1}
           isStreaming={isStreaming && i === interactions.length - 1}
         />
       ))}
