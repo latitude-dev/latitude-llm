@@ -76,6 +76,8 @@ const SplitHandle =
     )
   }
 
+export { SplitHandle }
+
 export function ResizablePane({
   direction,
   reversed = false,

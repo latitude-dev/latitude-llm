@@ -25,7 +25,6 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { cn } from '@latitude-data/web-ui/utils'
 import { useSearchParams } from 'next/navigation'
 import { useMemo, useRef, useState } from 'react'
 import { LogsOverTime } from '../../../../../../overview/_components/Overview/LogsOverTime'
@@ -34,6 +33,7 @@ import { DocumentLogInfo } from './DocumentLogInfo'
 import { DocumentLogAnnotation } from './DocumentLogInfo/Annotation'
 import { DocumentLogsTable } from './DocumentLogsTable'
 import { DownloadLogsButton } from './DownloadLogsButton'
+import { ResizableLayout } from './ResizableLayout'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
 import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
 import { useSelectedLogFromUrl } from './useSelectedLogFromUrl'
@@ -188,98 +188,101 @@ export function DocumentLogs({
         />
       </div>
 
-      <div
-        className={cn('gap-x-4 grid pb-6', {
-          'grid-cols-1': !selectedLog,
-          'grid-cols-2 xl:grid-cols-[2fr_1fr]': selectedLog,
-        })}
-      >
-        <DocumentLogsTable
-          ref={stickyRef}
-          documentLogs={documentLogs}
-          pagination={pagination}
-          evaluationResults={evaluationResults}
-          evaluations={evaluations}
-          selectedLog={selectedLog}
-          setSelectedLog={setSelectedLog}
-          isLoading={isEvaluationsLoading}
-          selectableState={selectableState}
-          limitedView={limitedView}
-          limitedCursor={limitedCursor}
-          setLimitedCursor={setLimitedCursor}
-          onSelectedSpan={setSelectedSpan}
-        />
-        {selectedLog && (
-          <div ref={sidebarWrapperRef}>
-            <DocumentLogInfo
-              documentLog={selectedLog}
-              providerLogs={providerLogs}
-              evaluationResults={evaluationResults[selectedLog.uuid]}
-              isLoading={isProviderLogsLoading || isEvaluationsLoading}
-              stickyRef={stickyRef}
-              sidebarWrapperRef={sidebarWrapperRef}
-              offset={{ top: 12, bottom: 12 }}
-              span={span}
-              isSpanLoading={isSpanLoading}
-            >
-              {manualEvaluations.length > 0 && !!responseLog && (
-                <div className='w-full border-t flex flex-col gap-y-4 mt-4 pt-4'>
-                  {manualEvaluations.map((evaluation) => (
-                    <DocumentLogAnnotation
-                      key={evaluation.uuid}
-                      evaluation={evaluation}
-                      result={
-                        evaluationResults[selectedLog.uuid]?.find(
-                          (r) => r.evaluation.uuid === evaluation.uuid,
-                        )?.result
-                      }
-                      mutateEvaluationResults={mutateEvaluationResults}
-                      providerLog={responseLog}
-                      documentLog={selectedLog}
-                      commit={selectedLog.commit}
-                      annotateEvaluation={annotateEvaluation}
-                      isAnnotatingEvaluation={isAnnotatingEvaluation}
+      <div className='flex flex-col flex-grow min-h-0 relative'>
+        <ResizableLayout
+          rightPaneRef={sidebarWrapperRef}
+          showRightPane={!!selectedLog}
+          leftPane={
+            <DocumentLogsTable
+              ref={stickyRef}
+              documentLogs={documentLogs}
+              pagination={pagination}
+              evaluationResults={evaluationResults}
+              evaluations={evaluations}
+              selectedLog={selectedLog}
+              setSelectedLog={setSelectedLog}
+              isLoading={isEvaluationsLoading}
+              selectableState={selectableState}
+              limitedView={limitedView}
+              limitedCursor={limitedCursor}
+              setLimitedCursor={setLimitedCursor}
+              onSelectedSpan={setSelectedSpan}
+            />
+          }
+          floatingPanel={
+            <div className='flex justify-center sticky bottom-4 pointer-events-none'>
+              <FloatingPanel visible={selectableState.selectedCount > 0}>
+                <div className='flex flex-row items-center gap-x-4'>
+                  <div className='flex flex-row gap-x-2'>
+                    <Button
+                      fancy
+                      disabled={selectableState.selectedCount === 0}
+                      onClick={previewLogsState.onClickShowPreview}
+                    >
+                      Add {selectableState.selectedCount} logs to dataset
+                    </Button>
+                    <DownloadLogsButton
+                      filterOptions={documentLogFilterOptions}
+                      selectableState={selectableState}
                     />
-                  ))}
+                  </div>
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <Button
+                        iconProps={{
+                          name: 'close',
+                        }}
+                        className='p-0'
+                        variant='ghost'
+                        onClick={selectableState.clearSelections}
+                      />
+                    }
+                  >
+                    Clear selection
+                  </Tooltip>
                 </div>
-              )}
-            </DocumentLogInfo>
-          </div>
-        )}
-        <div className='flex justify-center sticky bottom-4 pointer-events-none'>
-          <FloatingPanel visible={selectableState.selectedCount > 0}>
-            <div className='flex flex-row items-center gap-x-4'>
-              <div className='flex flex-row gap-x-2'>
-                <Button
-                  fancy
-                  disabled={selectableState.selectedCount === 0}
-                  onClick={previewLogsState.onClickShowPreview}
-                >
-                  Add {selectableState.selectedCount} logs to dataset
-                </Button>
-                <DownloadLogsButton
-                  filterOptions={documentLogFilterOptions}
-                  selectableState={selectableState}
-                />
-              </div>
-              <Tooltip
-                asChild
-                trigger={
-                  <Button
-                    iconProps={{
-                      name: 'close',
-                    }}
-                    className='p-0'
-                    variant='ghost'
-                    onClick={selectableState.clearSelections}
-                  />
-                }
-              >
-                Clear selection
-              </Tooltip>
+              </FloatingPanel>
             </div>
-          </FloatingPanel>
-        </div>
+          }
+          rightPane={
+            selectedLog ? (
+              <DocumentLogInfo
+                documentLog={selectedLog}
+                providerLogs={providerLogs}
+                evaluationResults={evaluationResults[selectedLog.uuid]}
+                isLoading={isProviderLogsLoading || isEvaluationsLoading}
+                stickyRef={stickyRef}
+                sidebarWrapperRef={sidebarWrapperRef}
+                offset={{ top: 12, bottom: 12 }}
+                span={span}
+                isSpanLoading={isSpanLoading}
+              >
+                {manualEvaluations.length > 0 && !!responseLog && (
+                  <div className='w-full border-t flex flex-col gap-y-4 mt-4 pt-4'>
+                    {manualEvaluations.map((evaluation) => (
+                      <DocumentLogAnnotation
+                        key={evaluation.uuid}
+                        evaluation={evaluation}
+                        result={
+                          evaluationResults[selectedLog.uuid]?.find(
+                            (r) => r.evaluation.uuid === evaluation.uuid,
+                          )?.result
+                        }
+                        mutateEvaluationResults={mutateEvaluationResults}
+                        providerLog={responseLog}
+                        documentLog={selectedLog}
+                        commit={selectedLog.commit}
+                        annotateEvaluation={annotateEvaluation}
+                        isAnnotatingEvaluation={isAnnotatingEvaluation}
+                      />
+                    ))}
+                  </div>
+                )}
+              </DocumentLogInfo>
+            ) : null
+          }
+        />
         <SaveLogsAsDatasetModal {...previewLogsState} />
       </div>
     </div>
