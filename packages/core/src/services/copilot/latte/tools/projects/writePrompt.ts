@@ -84,6 +84,7 @@ const writePrompt = defineLatteTool(
     return Result.ok({
       success: true,
       promptUuid: documentUuid,
+      promptHref: `/projects/${projectId}/versions/${versionUuid}/documents/${documentUuid}`,
       parameters: Array.from(metadata.parameters ?? []),
       includedAgents: metadata.config.agents,
       includedPrompts: Array.from(metadata.includedPromptPaths ?? []),
