@@ -18,7 +18,11 @@ export default function useDocumentTriggers(
     projectId,
     commitUuid,
     documentUuid,
-  }: { projectId: number; commitUuid: string; documentUuid?: string },
+  }: {
+    projectId: number
+    commitUuid: string
+    documentUuid?: string
+  },
   {
     onCreated,
     onUpdated,
@@ -31,12 +35,15 @@ export default function useDocumentTriggers(
   } = {},
 ) {
   const { toast } = useToast()
-  const fetcher = useFetcher<DocumentTrigger[]>(
-    documentUuid
-      ? `${ROUTES.api.projects.detail(projectId).commits.detail(commitUuid).triggers.root}?documentUuid=${documentUuid}`
-      : ROUTES.api.projects.detail(projectId).commits.detail(commitUuid)
-          .triggers.root,
-  )
+  const apiRoute = ROUTES.api.projects
+    .detail(projectId)
+    .commits.detail(commitUuid).triggers.root
+  const searchParams: Record<string, string> = documentUuid
+    ? { documentUuid }
+    : {}
+  const fetcher = useFetcher<DocumentTrigger[]>(apiRoute, {
+    searchParams,
+  })
 
   const {
     data = EMPTY_ARRAY,

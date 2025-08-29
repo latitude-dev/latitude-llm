@@ -217,4 +217,141 @@ describe('handleTriggerMerge', () => {
     )
     expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
   })
+
+  it('successfully merges when commit contains deleted triggers', async () => {
+    // Create a trigger and publish to live
+    const { createDocumentTrigger } = await import('./create')
+    const trigger = await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
+      triggerType: DocumentTriggerType.Email,
+      configuration: {
+        name: 'ToDelete',
+        emailWhitelist: ['delete@example.com'],
+        domainWhitelist: [],
+        replyWithResponse: true,
+        parameters: {},
+      },
+    }).then((r) => r.unwrap())
+
+    const { mergeCommit } = await import('../commits')
+    await mergeCommit(draft).then((r) => r.unwrap())
+
+    // New draft where we delete the trigger
+    const { commit: newDraft } = await factories.createDraft({ project, user })
+
+    const { deleteDocumentTrigger } = await import('./delete')
+    mocks.undeployDocumentTrigger.mockResolvedValue(
+      Result.ok(trigger as DocumentTrigger<DocumentTriggerType.Email>),
+    )
+
+    await deleteDocumentTrigger<DocumentTriggerType.Email>({
+      workspace,
+      commit: newDraft,
+      triggerUuid: trigger.uuid,
+    }).then((r) => r.unwrap())
+
+    // Now try to merge - this should succeed despite having a deleted trigger
+    const { handleTriggerMerge } = await import('./handleMerge')
+    const result = await handleTriggerMerge({ workspace, draft: newDraft })
+
+    expect(result.ok).toBeTruthy()
+    expect(result.value).toBeUndefined()
+  })
+
+  it('successfully merges when commit contains both pending triggers (deleted) and valid triggers', async () => {
+    // Create a valid trigger first and merge it to live
+    const { createDocumentTrigger } = await import('./create')
+    await createDocumentTrigger({
+      workspace,
+      project,
+      commit: draft,
+      document,
+      triggerType: DocumentTriggerType.Email,
+      configuration: {
+        name: 'ValidTrigger',
+        emailWhitelist: ['valid@example.com'],
+        domainWhitelist: [],
+        replyWithResponse: true,
+        parameters: {},
+      },
+    }).then((r) => r.unwrap())
+
+    // Merge to live
+    const { mergeCommit } = await import('../commits')
+    await mergeCommit(draft).then((r) => r.unwrap())
+
+    // Create new draft
+    const { commit: newDraft } = await factories.createDraft({ project, user })
+
+    // Create an unconfigured integration in the new draft (will create pending trigger)
+    const { createIntegration } = await import('../../tests/factories')
+    const integration = await createIntegration({
+      workspace,
+      type: IntegrationType.Pipedream,
+      configuration: {
+        appName: 'slack',
+        // Missing connectionId makes it unconfigured
+      },
+    })
+
+    // Create a pending integration trigger directly in the new draft
+    const { database } = await import('../../client')
+    const { documentTriggers } = await import('../../schema')
+    const { v4: uuidv4 } = await import('uuid')
+
+    const pendingTriggerUuid = uuidv4()
+    await database.insert(documentTriggers).values({
+      uuid: pendingTriggerUuid,
+      workspaceId: workspace.id,
+      projectId: project.id,
+      commitId: newDraft.id,
+      documentUuid: document.documentUuid,
+      triggerType: DocumentTriggerType.Integration,
+      triggerStatus: 'pending',
+      configuration: {
+        integrationId: integration.id,
+        componentId: 'slack.functions.send_message_to_channel',
+        properties: {},
+        payloadParameters: [],
+      },
+      deploymentSettings: null,
+      enabled: false,
+    })
+
+    // Now delete the pending trigger (mark it as deleted)
+    const { eq } = await import('drizzle-orm')
+    await database
+      .update(documentTriggers)
+      .set({
+        deletedAt: new Date(),
+        triggerStatus: 'deprecated',
+      })
+      .where(eq(documentTriggers.uuid, pendingTriggerUuid))
+
+    // Add another valid deployed trigger to the same draft
+    await createDocumentTrigger({
+      workspace,
+      project,
+      commit: newDraft,
+      document,
+      triggerType: DocumentTriggerType.Email,
+      configuration: {
+        name: 'AnotherValidTrigger',
+        emailWhitelist: ['another@example.com'],
+        domainWhitelist: [],
+        replyWithResponse: true,
+        parameters: {},
+      },
+    }).then((r) => r.unwrap())
+
+    // Now try to merge - should succeed because the pending trigger is deleted
+    const { handleTriggerMerge } = await import('./handleMerge')
+    const result = await handleTriggerMerge({ workspace, draft: newDraft })
+
+    expect(result.ok).toBeTruthy()
+    expect(result.value).toBeUndefined()
+  })
 })

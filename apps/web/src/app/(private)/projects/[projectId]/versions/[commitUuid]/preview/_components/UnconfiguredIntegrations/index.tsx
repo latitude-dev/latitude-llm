@@ -66,14 +66,15 @@ export function UnconfiguredIntegrations({
 
   const unconfiguredIntegrations = useMemo(
     () =>
-      integrations.filter(
-        (integration) =>
+      integrations.filter((integration) => {
+        return (
           integration.type === IntegrationType.Pipedream &&
           !isIntegrationConfigured(integration) &&
           integrationTriggers.some(
             (trigger) => trigger.configuration.integrationId === integration.id,
-          ),
-      ) as PipedreamIntegration[],
+          )
+        )
+      }) as PipedreamIntegration[],
     [integrations, integrationTriggers],
   )
 

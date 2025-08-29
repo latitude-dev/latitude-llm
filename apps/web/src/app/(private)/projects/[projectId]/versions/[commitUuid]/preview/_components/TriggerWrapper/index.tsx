@@ -191,7 +191,7 @@ export function TriggerWrapper({
         )}
         onClick={onToggleEventList}
       >
-        <div className='flex flex-row gap-4'>
+        <div className='flex flex-row gap-4 min-w-0'>
           <div className='flex-none'>
             <div
               className={cn(
@@ -201,17 +201,21 @@ export function TriggerWrapper({
               {image}
             </div>
           </div>
-          <div className='flex-1 flex flex-col gap-1'>
-            <div className='flex flex-col'>
-              <Text.H4M>{title}</Text.H4M>
+          <div className='flex flex-col gap-1 min-w-0'>
+            <div className='flex flex-col min-w-0'>
+              <Text.H4M ellipsis noWrap>
+                {title}
+              </Text.H4M>
               {trigger.triggerStatus === DocumentTriggerStatus.Pending ? (
-                <Text.H5 color='latteOutputForeground'>
+                <Text.H5 color='latteOutputForeground' ellipsis noWrap>
                   Requires additional configuration
                 </Text.H5>
               ) : descriptionLoading ? (
                 <Skeleton className='w-24 h-5' />
               ) : (
-                <Text.H5 color='foregroundMuted'>{description}</Text.H5>
+                <Text.H5 color='foregroundMuted' ellipsis noWrap>
+                  {description}
+                </Text.H5>
               )}
             </div>
             {subtitle ? (
@@ -221,7 +225,7 @@ export function TriggerWrapper({
             ) : null}
           </div>
         </div>
-        <div className='flex flex-row gap-x-4'>
+        <div className='flex-1 flex flex-row justify-end gap-x-4'>
           <div
             onClick={avoidOpenEvents}
             className='flex flex-row items-center gap-x-4 '

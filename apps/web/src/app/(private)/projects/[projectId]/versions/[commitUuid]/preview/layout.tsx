@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import ProjectLayout from '../_components/ProjectLayout'
+import { MetadataProvider } from '$/components/MetadataProvider'
 
 export default async function PreviewPage({
   children,
@@ -14,8 +15,10 @@ export default async function PreviewPage({
 
   return (
     <ProjectLayout projectId={Number(projectId)} commitUuid={commitUuid}>
-      {modal}
-      {children}
+      <MetadataProvider>
+        {modal}
+        {children}
+      </MetadataProvider>
     </ProjectLayout>
   )
 }

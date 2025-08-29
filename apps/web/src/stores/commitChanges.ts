@@ -2,10 +2,31 @@ import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { Commit } from '@latitude-data/core/browser'
-import { ChangedDocument } from '@latitude-data/constants'
+import { CommitChanges } from '@latitude-data/constants'
+
+const NO_CHANGES = {
+  anyChanges: false,
+  hasIssues: false,
+  documents: {
+    hasErrors: false,
+    all: [],
+    clean: [],
+    errors: [],
+  },
+  triggers: {
+    hasPending: false,
+    all: [],
+    clean: [],
+    pending: [],
+  },
+} satisfies CommitChanges
 
 export function useCommitsChanges(
-  commit?: Commit,
+  {
+    commit,
+  }: {
+    commit?: Commit
+  },
   opts: SWRConfiguration = {},
 ) {
   const route = commit
@@ -13,16 +34,16 @@ export function useCommitsChanges(
         .changes.root
     : undefined
 
-  const fetcher = useFetcher<ChangedDocument[]>(route)
+  const fetcher = useFetcher<CommitChanges>(route)
 
-  const { data = [], ...rest } = useSWR<ChangedDocument[]>(
+  const { data = NO_CHANGES, ...rest } = useSWR<CommitChanges>(
     ['commitChanges', commit?.projectId, commit?.uuid],
     fetcher,
     opts,
   )
 
   return {
-    data: data ?? [],
+    data: data ?? NO_CHANGES,
     ...rest,
   }
 }

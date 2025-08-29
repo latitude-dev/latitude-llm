@@ -167,22 +167,24 @@ export function HistoryActionModal() {
           <div className='flex flex-col w-full'>
             {isLoading ? (
               <ul>
-                <DocumentChangeSkeleton
-                  width={62}
-                  changeType={ModifiedDocumentType.Deleted}
-                />
-                <DocumentChangeSkeleton
-                  width={87}
-                  changeType={ModifiedDocumentType.Updated}
-                />
-                <DocumentChangeSkeleton
-                  width={23}
-                  changeType={ModifiedDocumentType.Created}
-                />
-                <DocumentChangeSkeleton
-                  width={67}
-                  changeType={ModifiedDocumentType.Updated}
-                />
+                <li>
+                  <DocumentChangeSkeleton
+                    width={62}
+                    changeType={ModifiedDocumentType.Deleted}
+                  />
+                  <DocumentChangeSkeleton
+                    width={87}
+                    changeType={ModifiedDocumentType.Updated}
+                  />
+                  <DocumentChangeSkeleton
+                    width={23}
+                    changeType={ModifiedDocumentType.Created}
+                  />
+                  <DocumentChangeSkeleton
+                    width={67}
+                    changeType={ModifiedDocumentType.Updated}
+                  />
+                </li>
               </ul>
             ) : (
               changes?.map((change, i) => {

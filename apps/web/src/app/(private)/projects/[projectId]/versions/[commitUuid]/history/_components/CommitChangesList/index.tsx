@@ -11,10 +11,12 @@ import {
 import { useDocumentDiff } from '$/stores/documentDiff'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
+import { useCurrentTheme } from '$/hooks/useCurrentTheme'
 import { useDocumentActions } from './documentActions'
 import useDocumentVersions from '$/stores/documentVersions'
-import { useMemo } from 'react'
+import { ReactNode, useMemo } from 'react'
 import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
+import { CleanTriggers } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/Sidebar/PublishDraftCommitModal/TriggerChangesList'
 
 function useCanRevert({
   commit,
@@ -202,6 +204,23 @@ function Change({
   )
 }
 
+function ChangeList({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) {
+  return (
+    <div className='flex flex-col gap-y-2'>
+      <div className='px-2'>
+        <Text.H4M>{title}</Text.H4M>
+      </div>
+      {children}
+    </div>
+  )
+}
+
 export function CommitChangesList({
   commit,
   selectedDocumentUuid,
@@ -213,13 +232,14 @@ export function CommitChangesList({
   selectDocumentUuid: (documentUuid: string) => void
   currentDocumentUuid?: string
 }) {
-  const { data: changes, isLoading } = useCommitsChanges(commit)
+  const { data: changes, isLoading } = useCommitsChanges({ commit })
   const { commit: currentCommit } = useCurrentCommit()
+  const theme = useCurrentTheme()
 
   if (!commit) {
     return (
       <div className='w-full h-full flex flex-col items-center justify-center '>
-        <Text.H5M color='foregroundMuted'>No commit selected</Text.H5M>
+        <Text.H3M color='foregroundMuted'>No commit selected</Text.H3M>
       </div>
     )
   }
@@ -228,7 +248,7 @@ export function CommitChangesList({
     <div className='w-full h-full overflow-hidden'>
       <ul className='flex flex-col custom-scrollbar gap-1 pt-4 px-2'>
         {isLoading ? (
-          <>
+          <li>
             <DocumentChangeSkeleton
               width={62}
               changeType={ModifiedDocumentType.Deleted}
@@ -245,26 +265,42 @@ export function CommitChangesList({
               width={67}
               changeType={ModifiedDocumentType.Updated}
             />
-          </>
+          </li>
         ) : (
-          <>
-            {changes.length ? (
-              changes.map((change) => (
-                <Change
-                  key={change.documentUuid}
-                  commit={commit}
-                  change={change}
-                  isSelected={selectedDocumentUuid === change.documentUuid}
-                  onSelect={() => selectDocumentUuid(change.documentUuid)}
-                  isDimmed={
-                    currentDocumentUuid !== undefined &&
-                    currentDocumentUuid !== change.documentUuid
-                  }
-                  isCurrentDraft={
-                    !commit.mergedAt && commit.id === currentCommit.id
-                  }
-                />
-              ))
+          <div className='space-y-8'>
+            {changes.anyChanges ? (
+              <>
+                {changes.triggers.clean.length > 0 ? (
+                  <ChangeList title='Trigger changes'>
+                    <CleanTriggers
+                      changes={changes.triggers.clean}
+                      theme={theme}
+                    />
+                  </ChangeList>
+                ) : null}
+                {changes.documents.clean.length > 0 ? (
+                  <ChangeList title='Prompt changes'>
+                    {changes.documents.clean.map((change) => (
+                      <Change
+                        key={change.documentUuid}
+                        commit={commit}
+                        change={change}
+                        isSelected={
+                          selectedDocumentUuid === change.documentUuid
+                        }
+                        onSelect={() => selectDocumentUuid(change.documentUuid)}
+                        isDimmed={
+                          currentDocumentUuid !== undefined &&
+                          currentDocumentUuid !== change.documentUuid
+                        }
+                        isCurrentDraft={
+                          !commit.mergedAt && commit.id === currentCommit.id
+                        }
+                      />
+                    ))}
+                  </ChangeList>
+                ) : null}
+              </>
             ) : (
               <div className='w-full h-full flex flex-col items-center justify-center p-4'>
                 <Text.H5 color='foregroundMuted'>
@@ -272,7 +308,7 @@ export function CommitChangesList({
                 </Text.H5>
               </div>
             )}
-          </>
+          </div>
         )}
       </ul>
     </div>

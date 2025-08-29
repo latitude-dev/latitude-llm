@@ -4,7 +4,6 @@ import {
   SelectDocument,
   useDocumentSelection,
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/SelectDocument'
-import { MetadataProvider } from '$/components/MetadataProvider'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
@@ -198,48 +197,46 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
 
   if (!isLive) {
     return (
-      <MetadataProvider>
-        <Modal
-          open
-          dismissible
-          title={`Edit ${trigger?.triggerType} trigger`}
-          description='Edit the trigger configuration'
-          onOpenChange={onCloseModal}
-          footerAlign='justify'
-          footer={
-            <>
-              <Button
-                fancy
-                disabled={isDeleting}
-                variant='outlineDestructive'
-                onClick={onDeleteTrigger}
-              >
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </Button>
-              <Button disabled={isUpdating} fancy onClick={onUpdate}>
-                Update
-              </Button>
-            </>
-          }
-        >
-          {isLoading ? <LoadingTrigger /> : null}
-          {trigger && document ? (
-            <FormWrapper>
-              <SelectDocument
-                onSelectDocument={docSelection.onSelectDocument}
-                options={docSelection.options}
-                document={docSelection.document}
-              />
-              <EditTrigger
-                trigger={trigger}
-                document={docSelection.document ?? document}
-                setConfiguration={setTriggerConfiguration}
-                isUpdating={isUpdating}
-              />
-            </FormWrapper>
-          ) : null}
-        </Modal>
-      </MetadataProvider>
+      <Modal
+        open
+        dismissible
+        title={`Edit ${trigger?.triggerType} trigger`}
+        description='Edit the trigger configuration'
+        onOpenChange={onCloseModal}
+        footerAlign='justify'
+        footer={
+          <>
+            <Button
+              fancy
+              disabled={isDeleting}
+              variant='outlineDestructive'
+              onClick={onDeleteTrigger}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+            <Button disabled={isUpdating} fancy onClick={onUpdate}>
+              Update
+            </Button>
+          </>
+        }
+      >
+        {isLoading ? <LoadingTrigger /> : null}
+        {trigger && document ? (
+          <FormWrapper>
+            <SelectDocument
+              onSelectDocument={docSelection.onSelectDocument}
+              options={docSelection.options}
+              document={docSelection.document}
+            />
+            <EditTrigger
+              trigger={trigger}
+              document={docSelection.document ?? document}
+              setConfiguration={setTriggerConfiguration}
+              isUpdating={isUpdating}
+            />
+          </FormWrapper>
+        ) : null}
+      </Modal>
     )
   }
 

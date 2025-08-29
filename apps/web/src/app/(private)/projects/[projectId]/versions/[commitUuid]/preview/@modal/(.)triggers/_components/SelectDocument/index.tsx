@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import useDocumentVersions from '$/stores/documentVersions'
 import { DocumentType } from '@latitude-data/constants'
 import {
@@ -8,6 +8,7 @@ import {
 import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { DocumentVersion } from '@latitude-data/core/browser'
+import { useMetadata } from '$/hooks/useMetadata'
 
 export function useDocumentSelection({
   initialDocumentUuid = '',
@@ -49,6 +50,17 @@ export function SelectDocument({
   options: SelectOption<string>[]
   onSelectDocument: ReactStateDispatch<string>
 }) {
+  const { updateMetadata } = useMetadata()
+  useEffect(() => {
+    if (!document) return
+
+    updateMetadata({
+      promptlVersion: document.promptlVersion,
+      prompt: document.content,
+      document,
+    })
+  }, [document, updateMetadata])
+
   return (
     <Select
       name='prompt'

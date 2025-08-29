@@ -100,6 +100,7 @@ async function resolveDocumentChanges({
 
   return { documents: changedDocuments, errors }
 }
+
 async function replaceCommitChanges(
   {
     commit,
