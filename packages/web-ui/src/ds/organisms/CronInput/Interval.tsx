@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, ChangeEvent, useMemo, useState } from 'react'
 import { Input } from '../../atoms/Input'
-import { Select } from '../../atoms/Select'
+import { Select, type SelectOption } from '../../atoms/Select'
 import { Text } from '../../atoms/Text'
 import { CronValue } from './utils'
 
@@ -19,6 +19,7 @@ function getInitialType(value: CronValue): 'minutes' | 'hours' | 'days' {
   return 'minutes'
 }
 
+type IntervalType = 'minutes' | 'hours' | 'days'
 export function IntervalCronInput({
   value,
   onChange,
@@ -29,39 +30,67 @@ export function IntervalCronInput({
   const [intervalValue, setIntervalValue] = useState(() =>
     getInitialValue(value),
   )
-  const [intervalType, setIntervalType] = useState<
-    'minutes' | 'hours' | 'days'
-  >(() => getInitialType(value))
+  const [intervalType, setIntervalType] = useState<IntervalType>(() =>
+    getInitialType(value),
+  )
 
-  useEffect(() => {
-    const cronPart = intervalValue > 1 ? `*/${intervalValue}` : '*'
+  const changeCron = useCallback(
+    ({ newValue, newType }: { newValue: number; newType: IntervalType }) => {
+      const cronPart = newValue > 1 ? `*/${newValue}` : '*'
 
-    if (intervalType === 'minutes') {
-      onChange({
-        minutes: cronPart,
-        hours: '*',
-        dayOfMonth: '*',
-        month: '*',
-        dayOfWeek: '*',
-      })
-    } else if (intervalType === 'hours') {
-      onChange({
-        minutes: '0',
-        hours: cronPart,
-        dayOfMonth: '*',
-        month: '*',
-        dayOfWeek: '*',
-      })
-    } else {
-      onChange({
-        minutes: '0',
-        hours: '0',
-        dayOfMonth: cronPart,
-        month: '*',
-        dayOfWeek: '*',
-      })
-    }
-  }, [intervalValue, intervalType, onChange])
+      if (newType === 'minutes') {
+        onChange({
+          minutes: cronPart,
+          hours: '*',
+          dayOfMonth: '*',
+          month: '*',
+          dayOfWeek: '*',
+        })
+      } else if (newType === 'hours') {
+        onChange({
+          minutes: '0',
+          hours: cronPart,
+          dayOfMonth: '*',
+          month: '*',
+          dayOfWeek: '*',
+        })
+      } else {
+        onChange({
+          minutes: '0',
+          hours: '0',
+          dayOfMonth: cronPart,
+          month: '*',
+          dayOfWeek: '*',
+        })
+      }
+    },
+    [onChange],
+  )
+
+  const onChangeValue = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const value = Number(e.target.value)
+      setIntervalValue(value)
+      changeCron({ newValue: value, newType: intervalType })
+    },
+    [setIntervalValue, intervalType, changeCron],
+  )
+
+  const intervalOptions = useMemo<SelectOption<IntervalType>[]>(
+    () => [
+      { label: intervalValue > 1 ? 'minutes' : 'minute', value: 'minutes' },
+      { label: intervalValue > 1 ? 'hours' : 'hour', value: 'hours' },
+      { label: intervalValue > 1 ? 'days' : 'day', value: 'days' },
+    ],
+    [intervalValue],
+  )
+  const onChangeInterval = useCallback(
+    (type: IntervalType) => {
+      setIntervalType(type)
+      changeCron({ newValue: intervalValue, newType: type })
+    },
+    [setIntervalType, intervalValue, changeCron],
+  )
 
   return (
     <div className='flex items-center gap-4'>
@@ -70,20 +99,16 @@ export function IntervalCronInput({
         <Input
           type='number'
           value={intervalValue}
-          onChange={(e) => setIntervalValue(Number(e.target.value))}
+          onChange={onChangeValue}
           min={1}
           className='w-16'
         />
       </div>
-      <Select
+      <Select<IntervalType>
         value={intervalType}
         name='intervalType'
-        options={[
-          { label: intervalValue > 1 ? 'minutes' : 'minute', value: 'minutes' },
-          { label: intervalValue > 1 ? 'hours' : 'hour', value: 'hours' },
-          { label: intervalValue > 1 ? 'days' : 'day', value: 'days' },
-        ]}
-        onChange={(v) => setIntervalType(v as 'minutes' | 'hours' | 'days')}
+        options={intervalOptions}
+        onChange={onChangeInterval}
       />
     </div>
   )
