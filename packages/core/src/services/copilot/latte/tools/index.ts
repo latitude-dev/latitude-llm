@@ -8,6 +8,7 @@ import listPrompts from './documents/list'
 import readPrompt from './documents/read'
 import editProject from './projects/editProject'
 import writePrompt from './projects/writePrompt'
+import deletePrompt from './projects/deletePrompt'
 import listProjects from './projects/list'
 import listIntegrations from './settings/listIntegrations'
 import listIntegrationTools from './settings/listIntegrationTools'
@@ -31,6 +32,7 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.listPrompts]: listPrompts,
   [LatteTool.readPrompt]: readPrompt,
   [LatteTool.editProject]: editProject,
+  [LatteTool.deletePrompt]: deletePrompt,
   [LatteTool.listProviders]: listProviders,
   [LatteTool.listIntegrations]: listIntegrations,
   [LatteTool.listIntegrationTools]: listIntegrationTools,
