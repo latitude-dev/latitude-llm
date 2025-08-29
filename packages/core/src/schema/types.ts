@@ -227,6 +227,28 @@ export type EvaluationTemplateWithCategory = EvaluationTemplate & {
   category: string
 }
 
+export type ProviderLogFileData = {
+  config?: ProviderLog['config']
+  messages: ProviderLog['messages']
+  output?: ProviderLog['output']
+  responseObject?: ProviderLog['responseObject']
+  responseText?: ProviderLog['responseText']
+  responseReasoning?: ProviderLog['responseReasoning']
+  toolCalls: ProviderLog['toolCalls']
+}
+
+export type HydratedProviderLog = Omit<
+  ProviderLog,
+  | 'config'
+  | 'messages'
+  | 'output'
+  | 'responseObject'
+  | 'responseText'
+  | 'responseReasoning'
+  | 'toolCalls'
+> &
+  ProviderLogFileData
+
 export type ProviderLogDto = Omit<
   ProviderLog,
   'responseText' | 'responseObject'

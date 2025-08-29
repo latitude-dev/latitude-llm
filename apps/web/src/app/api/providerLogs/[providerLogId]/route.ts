@@ -27,13 +27,29 @@ export const GET = errorHandler(
       }
 
       const providerLogsScope = new ProviderLogsRepository(workspace.id)
-      const providerLog = await providerLogsScope
-        .find(Number(providerLogId))
-        .then((r) => r.unwrap())
+      const providerLogResult = await providerLogsScope.find(
+        Number(providerLogId),
+      )
 
-      return NextResponse.json(serializeProviderLog(providerLog), {
-        status: 200,
-      })
+      if (providerLogResult.error) {
+        return NextResponse.json(
+          { message: 'Provider log not found' },
+          { status: 404 },
+        )
+      }
+
+      // Hydrate single provider logs with file storage data
+      const hydratedResult = await providerLogsScope.hydrateProviderLog(
+        providerLogResult.unwrap(),
+      )
+      const hydratedProviderLog = hydratedResult.unwrap()
+
+      return NextResponse.json(
+        serializeProviderLog(hydratedProviderLog as any),
+        {
+          status: 200,
+        },
+      )
     },
   ),
 )

@@ -1,6 +1,11 @@
 import { and, asc, desc, eq, getTableColumns, inArray, sum } from 'drizzle-orm'
 
-import { ProviderLog } from '../browser'
+import {
+  HydratedProviderLog,
+  ProviderLog,
+  ProviderLogFileData,
+} from '../browser'
+import { diskFactory } from '../lib/disk'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { documentLogs, providerLogs } from '../schema'
@@ -22,6 +27,45 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
       .$dynamic()
   }
 
+  async hydrateProviderLog(providerLog: ProviderLog) {
+    if (!providerLog.fileKey) {
+      // Fallback to existing columns for backwards compatibility
+      return Result.ok({
+        ...providerLog,
+        config: providerLog.config,
+        messages: providerLog.messages,
+        output: providerLog.output,
+        responseObject: providerLog.responseObject,
+        responseText: providerLog.responseText,
+        responseReasoning: providerLog.responseReasoning,
+        toolCalls: providerLog.toolCalls,
+      } as HydratedProviderLog)
+    }
+
+    try {
+      const disk = diskFactory('private')
+      const fileContent = await disk.get(providerLog.fileKey)
+      const fileData: ProviderLogFileData = JSON.parse(fileContent)
+
+      return Result.ok({
+        ...providerLog,
+        ...fileData,
+      } as HydratedProviderLog)
+    } catch (error) {
+      // Fallback to existing columns if file storage fails
+      return Result.ok({
+        ...providerLog,
+        config: providerLog.config,
+        messages: providerLog.messages,
+        output: providerLog.output,
+        responseObject: providerLog.responseObject,
+        responseText: providerLog.responseText,
+        responseReasoning: providerLog.responseReasoning,
+        toolCalls: providerLog.toolCalls,
+      } as HydratedProviderLog)
+    }
+  }
+
   async findByUuid(uuid: string) {
     const result = await this.scope
       .where(and(this.scopeFilter, eq(providerLogs.uuid, uuid)))
@@ -34,6 +78,15 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
     }
 
     return Result.ok(result[0]!)
+  }
+
+  async findHydratedByUuid(uuid: string) {
+    const result = await this.findByUuid(uuid)
+    if (result.error) {
+      return result
+    }
+
+    return this.hydrateProviderLog(result.unwrap())
   }
 
   async findByDocumentUuid(documentUuid: string, opts: QueryOptions = {}) {
@@ -77,6 +130,15 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
     }
 
     return Result.ok(result[0]!)
+  }
+
+  async findLastHydratedByDocumentLogUuid(documentLogUuid: string | undefined) {
+    const result = await this.findLastByDocumentLogUuid(documentLogUuid)
+    if (result.error) {
+      return result
+    }
+
+    return this.hydrateProviderLog(result.unwrap())
   }
 
   async findManyByDocumentLogUuid(documentLogUuids: string[]) {
