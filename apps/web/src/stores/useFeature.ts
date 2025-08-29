@@ -8,17 +8,13 @@ type FeatureStatus = {
 }
 
 export default function useFeature(
-  workspaceId: number | undefined,
   featureName: string,
   opts?: SWRConfiguration,
 ) {
-  const key =
-    workspaceId && featureName ? `api/workspaceFeatures/${featureName}` : null
+  const key = featureName ? `api/workspaceFeatures/${featureName}` : null
 
   const fetcher = useFetcher<FeatureStatus>(
-    workspaceId && featureName
-      ? API_ROUTES.workspaceFeatures.byName(featureName)
-      : '',
+    featureName ? API_ROUTES.workspaceFeatures.byName(featureName) : '',
   )
 
   const { data, isLoading, ...rest } = useSWR<FeatureStatus>(key, fetcher, {

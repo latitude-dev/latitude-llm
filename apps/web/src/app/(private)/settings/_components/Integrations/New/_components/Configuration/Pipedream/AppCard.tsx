@@ -1,18 +1,18 @@
 'use client'
-import Image from 'next/image'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import type { App } from '@pipedream/sdk/browser'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
-import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import useFeature from '$/stores/useFeature'
 import {
   PipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/browser'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import type { App } from '@pipedream/sdk/browser'
+import Image from 'next/image'
 import { ReactNode } from 'react'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 
 function AppComponent({ component }: { component: PipedreamComponent }) {
   return (
@@ -98,10 +98,14 @@ function AppComponentsCard<C extends PipedreamComponentType>({
 }
 
 function AppComponents({ app }: { app: App }) {
-  const { data, isLoading } = usePipedreamApp(app.name_slug)
-  const { enabled: isIntegrationTriggersEnabled } = useFeatureFlag({
-    featureFlag: 'integrationTriggers',
-  })
+  const { data, isLoading: isLoadingPipedreamApp } = usePipedreamApp(
+    app.name_slug,
+  )
+  const {
+    isEnabled: isIntegrationTriggersEnabled,
+    isLoading: isLoadingFeatureFlag,
+  } = useFeature('integrationTriggers')
+  const isLoading = isLoadingPipedreamApp || isLoadingFeatureFlag
 
   return (
     <div className='flex flex-col gap-4'>

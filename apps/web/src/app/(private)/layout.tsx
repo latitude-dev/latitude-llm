@@ -15,8 +15,6 @@ import { env } from '@latitude-data/env'
 import { SessionProvider } from '@latitude-data/web-ui/browser'
 import { redirect } from 'next/navigation'
 
-import { FeatureFlagProvider } from '$/components/Providers/FeatureFlags'
-import { getFeatureFlagsForWorkspaceCached } from '$/components/Providers/FeatureFlags/getFeatureFlagsForWorkspace'
 import { CSPostHogProvider, IdentifyUser } from '../providers'
 import { NAV_LINKS } from './_lib/constants'
 
@@ -36,7 +34,6 @@ export default async function PrivateLayout({
   if (!completed) redirect(ROUTES.onboarding.root)
 
   const supportIdentity = createSupportUserIdentity(user)
-  const featureFlags = getFeatureFlagsForWorkspaceCached({ workspace })
   const cloudInfo = env.LATITUDE_CLOUD_PAYMENT_URL
     ? { paymentUrl: env.LATITUDE_CLOUD_PAYMENT_URL }
     : undefined
@@ -52,21 +49,19 @@ export default async function PrivateLayout({
               workspace={workspace}
               subscriptionPlan={subscriptionPlan}
             >
-              <FeatureFlagProvider featureFlags={featureFlags}>
-                <LatitudeWebsocketsProvider
-                  workspace={workspace}
-                  socketServer={env.WEBSOCKETS_SERVER}
+              <LatitudeWebsocketsProvider
+                workspace={workspace}
+                socketServer={env.WEBSOCKETS_SERVER}
+              >
+                <AppLayout
+                  currentUser={user}
+                  navigationLinks={NAV_LINKS}
+                  cloudInfo={cloudInfo}
+                  isCloud={isCloud}
                 >
-                  <AppLayout
-                    currentUser={user}
-                    navigationLinks={NAV_LINKS}
-                    cloudInfo={cloudInfo}
-                    isCloud={isCloud}
-                  >
-                    {children}
-                  </AppLayout>
-                </LatitudeWebsocketsProvider>
-              </FeatureFlagProvider>
+                  {children}
+                </AppLayout>
+              </LatitudeWebsocketsProvider>
             </SessionProvider>
           </SocketIOProvider>
         </IntercomProvider>

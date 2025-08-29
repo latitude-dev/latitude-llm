@@ -3,12 +3,12 @@
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { KeysetTablePaginationFooter } from '$/components/TablePaginationFooter/KeysetTablePaginationFooter'
 import { OnSelectedSpanFn } from '$/components/tracing/traces/Timeline'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
+import useFeature from '$/stores/useFeature'
 import {
   DocumentLogsLimitedView,
   DocumentLogWithMetadataAndError,
@@ -147,9 +147,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
     },
     ref,
   ) {
-    const { enabled: tracingEnabled } = useFeatureFlag({
-      featureFlag: 'tracing',
-    })
+    const { isEnabled: tracingEnabled } = useFeature('tracing')
 
     const queryParams =
       typeof window !== 'undefined' ? window.location.search : undefined

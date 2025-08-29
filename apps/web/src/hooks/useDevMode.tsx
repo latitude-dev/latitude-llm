@@ -1,7 +1,7 @@
 'use client'
 
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useCurrentUser } from '$/stores/currentUser'
+import useFeature from '$/stores/useFeature'
 import { createContext, useCallback, useContext, type ReactNode } from 'react'
 
 type DevModeContextType = {
@@ -17,9 +17,8 @@ type DevModeProviderProps = {
 }
 
 export function DevModeProvider({ children }: DevModeProviderProps) {
-  const { enabled: blocksEditorEnabled } = useFeatureFlag({
-    featureFlag: 'blocksEditor',
-  })
+  const { isEnabled: blocksEditorEnabled, isLoading: isLoadingFeatureFlag } =
+    useFeature('blocksEditor')
 
   const {
     data: user,
@@ -36,7 +35,8 @@ export function DevModeProvider({ children }: DevModeProviderProps) {
     },
     [blocksEditorEnabled, updateEditorMode],
   )
-  const isLoading = isLoadingUser || isUpdatingEditorMode
+  const isLoading =
+    isLoadingUser || isLoadingFeatureFlag || isUpdatingEditorMode
 
   return (
     <DevModeContext.Provider value={{ devMode, setDevMode, isLoading }}>

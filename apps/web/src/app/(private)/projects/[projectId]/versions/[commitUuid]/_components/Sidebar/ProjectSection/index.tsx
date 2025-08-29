@@ -42,7 +42,7 @@ export default function ProjectSection({
   project: Project
   commit: Commit
 }) {
-  const feature = useFeature(project.workspaceId, 'latte')
+  const feature = useFeature('latte')
   let PROJECT_ROUTES: ProjectRoute[] = []
   if (feature.isEnabled) {
     PROJECT_ROUTES = [

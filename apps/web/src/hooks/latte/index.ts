@@ -6,13 +6,13 @@ import { addMessageToLatteAction } from '$/actions/latte/addMessage'
 import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
 import { createNewLatteAction } from '$/actions/latte/new'
 import { stopChatLatteAction } from '$/actions/latte/stopChat'
-import { useFeatureFlag } from '$/components/Providers/FeatureFlags'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { trigger } from '$/lib/events'
 import { ROUTES } from '$/services/routes'
 import { useCurrentUser } from '$/stores/currentUser'
 import { useLatteStore } from '$/stores/latte'
 import useProviderLogs from '$/stores/providerLogs'
+import useFeature from '$/stores/useFeature'
 import {
   LatteChange,
   LatteEditAction,
@@ -550,10 +550,9 @@ const useLatteThreadProviderLog = () => {
  */
 export function useLatteDebugMode() {
   const { debugVersionUuid, setDebugVersionUuid } = useLatteStore()
-  const { enabled: debugModeEnabled } = useFeatureFlag({
-    featureFlag: 'latteDebugMode',
-  })
-  const { data: user } = useCurrentUser()
+  const { isEnabled: debugModeEnabled, isLoading: isLoadingFeatureFlag } =
+    useFeature('latteDebugMode')
+  const { data: user, isLoading: isLoadingUser } = useCurrentUser()
 
   const enabled = debugModeEnabled && user?.admin
 
@@ -561,10 +560,12 @@ export function useLatteDebugMode() {
     enabled ? ROUTES.api.latte.debug.versions.root : undefined,
   )
 
-  const { data = EMPTY_ARRAY, isLoading } = useSWR<LatteVersion[]>(
-    ['latteDebugVersions'],
-    fetcher,
-  )
+  const { data = EMPTY_ARRAY, isLoading: isLoadingLatteDebugVersions } = useSWR<
+    LatteVersion[]
+  >(['latteDebugVersions'], fetcher)
+
+  const isLoading =
+    isLoadingUser || isLoadingFeatureFlag || isLoadingLatteDebugVersions
 
   const selectedVersionUuid = useMemo(() => {
     if (!enabled) return undefined

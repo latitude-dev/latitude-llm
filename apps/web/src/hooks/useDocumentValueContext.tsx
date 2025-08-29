@@ -87,7 +87,7 @@ export function DocumentValueProvider({
     projectId: project.id,
   })
   const { toast } = useToast()
-  const { isEnabled: newLatte } = useFeature(project.workspaceId, 'latte')
+  const { isEnabled: newLatte } = useFeature('latte')
   const [origin, setOrigin] = useState<string>()
   const setContentValue = useCallback(
     (content: string, opts?: Parameters<updateContentFn>[1]) => {
