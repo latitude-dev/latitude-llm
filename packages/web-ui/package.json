@@ -51,6 +51,7 @@
     "./atoms/Popover": "./src/ds/atoms/Popover/index.tsx",
     "./atoms/Progress": "./src/ds/atoms/Progress/index.tsx",
     "./atoms/RadioButtonsInput": "./src/ds/atoms/RadioButtonsInput/index.tsx",
+    "./atoms/Resizable": "./src/ds/atoms/Resizable/index.tsx",
     "./atoms/Select": "./src/ds/atoms/Select/index.tsx",
     "./atoms/Separator": "./src/ds/atoms/Separator/index.tsx",
     "./atoms/Skeleton": "./src/ds/atoms/Skeleton/index.tsx",
