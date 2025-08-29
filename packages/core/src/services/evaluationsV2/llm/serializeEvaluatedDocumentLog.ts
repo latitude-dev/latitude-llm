@@ -19,10 +19,10 @@ export async function serializeEvaluatedDocumentLog({
   providerLogs: ProviderLog[]
   configuration?: ActualOutputConfiguration
 }): Promise<EvaluatedDocumentLog> {
-  const aggregatedProviderLog = serializeAggregatedProviderLog({
+  const aggregatedProviderLog = await serializeAggregatedProviderLog({
     documentLog,
     providerLogs,
-  }).unwrap()
+  }).then((r) => r.unwrap())
   const providerLog = serializeProviderLog(
     providerLogs[providerLogs.length - 1]!,
   )

@@ -54,7 +54,7 @@ export function buildMessagesFromResponse<T extends StreamType>({
             data: {
               text: response.text,
               reasoning: response.reasoning,
-              toolCalls: response.toolCalls,
+              toolCalls: response.toolCalls ?? undefined,
             },
           })
         : undefined
@@ -74,7 +74,7 @@ export function buildAllMessagesFromResponse<T extends StreamType>({
 }
 
 export function buildConversation(providerLog: ProviderLogDto) {
-  const messages: Message[] = [...providerLog.messages]
+  const messages: Message[] = [...(providerLog.messages ?? [])]
 
   if (providerLog.output) {
     messages.push(...(providerLog.output as Message[]))
@@ -86,7 +86,7 @@ export function buildConversation(providerLog: ProviderLogDto) {
     data: {
       text: providerLog.response,
       reasoning: providerLog.responseReasoning ?? undefined,
-      toolCalls: providerLog.toolCalls,
+      toolCalls: providerLog.toolCalls ?? undefined,
     },
   })
   if (message) {

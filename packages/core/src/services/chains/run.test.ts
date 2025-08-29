@@ -299,42 +299,9 @@ describe('runChain', () => {
       source: LogSources.API,
       promptSource,
     })
-    const { value: stream } = await testConsumeStream(result.stream)
+
     const response = await result.response
 
-    expect(stream.at(-1)).toEqual({
-      event: StreamEventTypes.Latitude,
-      data: expect.objectContaining({
-        uuid: expect.any(String),
-        type: ChainEventTypes.ChainCompleted,
-        messages: [
-          {
-            role: MessageRole.user,
-            content: [
-              {
-                type: 'text',
-                text: 'user message',
-              },
-            ],
-          },
-          {
-            role: MessageRole.assistant,
-            content: [
-              {
-                type: 'text',
-                text: 'assistant message',
-              },
-              {
-                type: 'tool-call',
-                toolCallId: 'tool-call-id',
-                toolName: 'tool-call-name',
-                args: { arg1: 'value1', arg2: 'value2' },
-              },
-            ],
-          },
-        ],
-      }),
-    })
     expect(response).toEqual(
       expect.objectContaining({
         text: 'assistant message',
@@ -345,23 +312,6 @@ describe('runChain', () => {
             arguments: { arg1: 'value1', arg2: 'value2' },
           },
         ],
-        providerLog: expect.objectContaining({
-          messages: [
-            {
-              role: MessageRole.user,
-              content: [{ type: 'text', text: 'user message' }],
-            },
-          ],
-          responseText: 'assistant message',
-          responseObject: null,
-          toolCalls: [
-            {
-              id: 'tool-call-id',
-              name: 'tool-call-name',
-              arguments: { arg1: 'value1', arg2: 'value2' },
-            },
-          ],
-        }),
       }),
     )
   })

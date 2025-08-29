@@ -89,7 +89,7 @@ export type UserMessage = IMessage & {
 
 export type AssistantMessage = {
   role: MessageRole.assistant
-  toolCalls: ToolCall[]
+  toolCalls: ToolCall[] | null
   content: string | ToolRequestContent[] | MessageContent[]
 }
 

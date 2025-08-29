@@ -43,12 +43,12 @@ export const providerLogs = latitudeSchema.table(
     model: varchar('model'),
     finishReason: varchar('finish_reason').default('stop'),
     config: json('config').$type<PartialConfig>(),
-    messages: json('messages').$type<Message[]>().notNull(),
+    messages: json('messages').$type<Message[]>().default([]),
     output: json('output').$type<ChainStepResponse<StreamType>['output']>(),
     responseObject: jsonb('response_object').$type<unknown>(),
     responseText: text('response_text').$type<string>(),
     responseReasoning: text('response_reasoning').$type<string>(),
-    toolCalls: json('tool_calls').$type<ToolCall[]>().notNull().default([]),
+    toolCalls: json('tool_calls').$type<ToolCall[]>().default([]),
     tokens: bigint('tokens', { mode: 'number' }),
     costInMillicents: integer('cost_in_millicents').notNull().default(0),
     duration: bigint('duration', { mode: 'number' }), // in milliseconds!
@@ -61,6 +61,7 @@ export const providerLogs = latitudeSchema.table(
       },
     ),
     generatedAt: timestamp('generated_at', { mode: 'date' }),
+    fileKey: varchar('file_key'), // Key for file storage containing JSON data
     ...timestamps(),
   },
   (table) => ({

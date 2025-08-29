@@ -11,6 +11,7 @@ import { DocumentLogsWithMetadataAndErrorsRepository } from '../../../repositori
 import { Column, DatasetRowData, documentLogs } from '../../../schema'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from '../../datasets/utils'
 import { buildProviderLogResponse } from '../../providerLogs'
+import { hydrateProviderLog } from '../../providerLogs/hydrate'
 import { buildColumns, FixedColumnsByName } from './buildColumns'
 
 export type ExportedDocumentLogs = {
@@ -47,24 +48,27 @@ async function findExpectedOutputs({
     logs.map((log) => log.uuid),
   )
 
-  return providers.reduce(
-    (acc, provider) => {
-      if (!provider.documentLogUuid) return acc
-      if (provider.generatedAt === null) return acc
+  const expectedOutputs = new Map<string, ExpectedOutputByLog>()
 
-      const existing = acc.get(provider.documentLogUuid)
-      if (existing && existing.generatedAt > provider.generatedAt) return acc
+  for (const provider of providers) {
+    if (!provider.documentLogUuid) continue
+    if (provider.generatedAt === null) continue
 
-      const output = buildProviderLogResponse(provider)
+    const existing = expectedOutputs.get(provider.documentLogUuid)
+    if (existing && existing.generatedAt > provider.generatedAt) continue
 
-      acc.set(provider.documentLogUuid, {
-        output,
-        generatedAt: provider.generatedAt,
-      })
-      return acc
-    },
-    new Map() as Map<string, ExpectedOutputByLog>,
-  )
+    const hydratedProvider = await hydrateProviderLog(provider)
+    if (hydratedProvider.error) continue
+
+    const output = buildProviderLogResponse(hydratedProvider.unwrap())
+
+    expectedOutputs.set(provider.documentLogUuid, {
+      output,
+      generatedAt: provider.generatedAt,
+    })
+  }
+
+  return expectedOutputs
 }
 
 function buildRow({

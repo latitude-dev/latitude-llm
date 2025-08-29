@@ -85,7 +85,7 @@ type BaseResponse = {
 export type ChainStepTextResponse = BaseResponse & {
   streamType: 'text'
   reasoning?: string | undefined
-  toolCalls: ToolCall[]
+  toolCalls: ToolCall[] | null
 }
 
 export type ChainStepObjectResponse<S extends Record<string, unknown> = any> =

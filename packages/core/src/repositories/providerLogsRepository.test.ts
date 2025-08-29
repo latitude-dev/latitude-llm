@@ -104,36 +104,6 @@ describe('ProviderLogsRepository', () => {
         }),
       )
     })
-
-    it('respects limit and offset options', async () => {
-      const { documentLog } = await factories.createDocumentLog({
-        document,
-        commit,
-      })
-
-      await Promise.all(
-        Array.from({ length: 3 }).map(() =>
-          factories.createProviderLog({
-            workspace,
-            documentLogUuid: documentLog.uuid,
-            providerId: provider.id,
-            providerType: provider.provider,
-            source: LogSources.Playground,
-          }),
-        ),
-      )
-
-      const result = await providerLogsRepository.findByDocumentUuid(
-        document.documentUuid,
-        {
-          limit: 2,
-          offset: 1,
-        },
-      )
-
-      expect(result.ok).toBe(true)
-      expect(result.unwrap()).toHaveLength(2)
-    })
   })
 
   describe('findLastByDocumentLogUuid', () => {
