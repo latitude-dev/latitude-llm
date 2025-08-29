@@ -85,6 +85,8 @@ const writePrompt = defineLatteTool(
       success: true,
       promptUuid: documentUuid,
       parameters: Array.from(metadata.parameters ?? []),
+      includedAgents: metadata.config.agents,
+      includedPrompts: Array.from(metadata.includedPromptPaths ?? []),
       syntaxErrors: metadata.errors,
     })
   },
