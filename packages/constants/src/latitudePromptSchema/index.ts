@@ -61,14 +61,14 @@ export function latitudePromptConfigSchema({
   return z.object({
     provider: z
       .string({
-        required_error: ``,
+        required_error: '',
         message: `You must select a provider.\nFor example: 'provider: ${providerNames[0] ?? '<your-provider-name>'}'. Read more here: ${LATITUDE_DOC}`,
       })
       .refine((p) => providerNames.includes(p), {
         message: `Provider not available. You must use one of the following:\n${providerNames.map((p) => `'${p}'`).join(', ')}`,
       }),
     model: z.string({
-      required_error: `"model" attribute is required. Read more here: ${LATITUDE_DOC}`,
+      required_error: `The model attribute is required. Read more here: ${LATITUDE_DOC}`,
     }),
     temperature: z.number().min(0).max(2).optional(),
     type: z.enum(['agent']).optional(),
@@ -84,6 +84,13 @@ export function latitudePromptConfigSchema({
     [MAX_STEPS_CONFIG_NAME]: z.number().min(1).max(150).optional(),
     tools: tools.optional(),
     agents: agentsConfigSchema.optional(),
+    subagents: z
+      .any()
+      .refine(() => false, {
+        message:
+          'Subagents attribute does not exist. Use agents attribute instead',
+      })
+      .optional(),
     schema: outputSchema,
     azure: azureConfigSchema.optional(),
   })
@@ -91,16 +98,16 @@ export function latitudePromptConfigSchema({
 
 export const azureConfig = azureConfigSchema
 export type { AzureConfig } from './providers/azure'
-export { AI_PROVIDERS_WITH_BUILTIN_TOOLS } from './toolsSchema'
 export {
-  WebSearchToolSchema,
-  FileSearchToolSchema,
   ComputerCallSchema,
+  FileSearchToolSchema,
   openAIToolsList,
-  type OpenAIWebSearchTool,
+  WebSearchToolSchema,
   type OpenAIFilesSearchTool,
+  type OpenAIWebSearchTool,
 } from './providers/openai'
 export type { OpenAIToolList } from './providers/openai'
+export { AI_PROVIDERS_WITH_BUILTIN_TOOLS } from './toolsSchema'
 type InferredSchema = z.infer<
   Omit<ReturnType<typeof latitudePromptConfigSchema>, 'schema'>
 >

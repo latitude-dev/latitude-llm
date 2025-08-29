@@ -1,10 +1,10 @@
-import { Text } from '../../atoms/Text'
-import { Input } from '../../atoms/Input'
-import { Button } from '../../atoms/Button'
 import { KeyboardEvent, useCallback, useState } from 'react'
-import { Icon, IconName } from '../../atoms/Icons'
-import { TextArea } from '../../atoms/TextArea'
 import { cn } from '../../../lib/utils'
+import { Button } from '../../atoms/Button'
+import { Icon, IconName } from '../../atoms/Icons'
+import { Input } from '../../atoms/Input'
+import { Text } from '../../atoms/Text'
+import { TextArea } from '../../atoms/TextArea'
 
 function InputElement({
   className,
@@ -102,7 +102,7 @@ export function MultipleInput<
         | KeyboardEvent<HTMLInputElement>
         | KeyboardEvent<HTMLTextAreaElement>,
     ) => {
-      if (event.key === 'Enter' && !event.shiftKey) {
+      if ((event.key === 'Enter' || event.key === ',') && !event.shiftKey) {
         acceptInputValue()
         event.preventDefault()
       }
