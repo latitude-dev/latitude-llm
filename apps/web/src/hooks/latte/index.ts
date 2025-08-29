@@ -204,7 +204,10 @@ export function useLatteChangeActions() {
           changes: changes.map((c) => ({
             ...c,
             previous: c.current,
-            current: c.previous ?? { ...c.current, isDeleted: true },
+            current: c.previous ?? {
+              ...c.current,
+              deletedAt: new Date(),
+            },
           })),
         })
         // Clear changes state
