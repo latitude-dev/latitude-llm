@@ -49,10 +49,7 @@ export function LatteChatInput({
   acceptChanges: () => void
   undoChanges: () => void
   feedbackRequested?: boolean
-  addFeedbackToLatteChange?: (
-    feedback: string,
-    evaluationResultUuid?: string,
-  ) => void
+  addFeedbackToLatteChange?: (feedback: string) => void
   stopLatteChat?: () => void
 }) {
   const placeholder = useTypeWriterValue(
