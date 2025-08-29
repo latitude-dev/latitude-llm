@@ -21,7 +21,11 @@ export function ChatInteraction({
   return (
     <div className='flex flex-col justify-center gap-4 w-full relative'>
       <div className='flex flex-col justify-center p-4 gap-2 bg-latte-input rounded-2xl ml-auto max-w-[75%]'>
-        <Text.H5 color='latteInputForeground' whiteSpace='preWrap'>
+        <Text.H5
+          color='latteInputForeground'
+          whiteSpace='preWrap'
+          wordBreak='breakWord'
+        >
           {interaction.input}
         </Text.H5>
       </div>
