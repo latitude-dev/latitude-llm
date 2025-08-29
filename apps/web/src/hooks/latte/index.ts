@@ -173,6 +173,7 @@ export function useLatteChangeActions() {
     threadUuid,
     changes,
     setChanges,
+    latteActionsFeedbackUuid,
     setLatteActionsFeedbackUuid,
     setIsBrewing,
     setError,
@@ -248,21 +249,23 @@ export function useLatteChangeActions() {
   }, [threadUuid, executeUndoChanges, setIsBrewing])
 
   const addFeedbackToLatteChange = useCallback(
-    (feedback: string, evaluationResultUuid?: string) => {
-      setLatteActionsFeedbackUuid(undefined)
-
-      if (!evaluationResultUuid) return
+    (feedback: string) => {
+      if (!latteActionsFeedbackUuid) return
       if (feedback.trim() === '') return
+
       setIsBrewing(true)
       executeAddFeedbackToLatteChange({
         content: feedback,
-        evaluationResultUuid,
+        evaluationResultUuid: latteActionsFeedbackUuid,
       })
+
+      setLatteActionsFeedbackUuid(undefined)
     },
     [
       executeAddFeedbackToLatteChange,
       setLatteActionsFeedbackUuid,
       setIsBrewing,
+      latteActionsFeedbackUuid,
     ],
   )
 
