@@ -13,7 +13,10 @@ import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'
 import { createDocumentTrigger } from './create'
 import { updateDocumentTriggerConfiguration } from './update'
-import { deleteDocumentTrigger } from './delete'
+import {
+  deleteDocumentTrigger,
+  deleteAllDocumentTriggersFromCommit,
+} from './delete'
 import { DocumentTriggersRepository } from '../../repositories'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 
@@ -36,6 +39,7 @@ describe.sequential('deleteDocumentTrigger', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    vi.resetAllMocks()
 
     const {
       workspace: w,
@@ -315,5 +319,152 @@ describe.sequential('deleteDocumentTrigger', () => {
       .then((r) => r.unwrap())
     // Still present since deletion did not proceed
     expect(triggers.find((t) => t.uuid === created.uuid)).toBeTruthy()
+  })
+
+  describe('delete all triggers from commit', () => {
+    it('returns ok and hard deletes all triggers in the draft commit', async () => {
+      mocks.deployDocumentTrigger.mockResolvedValue(
+        Result.ok({
+          deploymentSettings: {},
+          triggerStatus: 'deployed',
+        }),
+      )
+      // Create two triggers in the draft commit
+      const created1 = await createDocumentTrigger({
+        workspace,
+        project,
+        commit: draft,
+        document,
+        triggerType: DocumentTriggerType.Email,
+        configuration: {
+          name: 'Email Trigger 1',
+          emailWhitelist: ['a@example.com'],
+          domainWhitelist: [],
+          replyWithResponse: true,
+          parameters: {},
+        },
+      }).then((r) => r.unwrap())
+
+      const created2 = await createDocumentTrigger({
+        workspace,
+        project,
+        commit: draft,
+        document,
+        triggerType: DocumentTriggerType.Chat,
+        configuration: {},
+      }).then((r) => r.unwrap())
+
+      mocks.undeployDocumentTrigger.mockResolvedValue(
+        Result.ok(
+          created1 as unknown as DocumentTrigger<DocumentTriggerType.Email>,
+        ),
+      )
+
+      mocks.undeployDocumentTrigger.mockResolvedValue(
+        Result.ok(
+          created2 as unknown as DocumentTrigger<DocumentTriggerType.Chat>,
+        ),
+      )
+
+      const result = await deleteAllDocumentTriggersFromCommit({
+        workspace,
+        commit: draft,
+      })
+
+      expect(result.ok).toBeTruthy()
+
+      const triggersScope = new DocumentTriggersRepository(workspace.id)
+      const triggers = await triggersScope
+        .getTriggersInDocument({
+          documentUuid: document.documentUuid,
+          commit: draft,
+        })
+        .then((r) => r.unwrap())
+      expect(triggers.find((t) => t.uuid === created1.uuid)).toBeUndefined()
+      expect(triggers.find((t) => t.uuid === created2.uuid)).toBeUndefined()
+    })
+
+    it('returns ok when there are no triggers in the commit', async () => {
+      const result = await deleteAllDocumentTriggersFromCommit({
+        workspace,
+        commit: draft,
+      })
+      expect(result.ok).toBeTruthy()
+    })
+
+    it('deletes only triggers in the given commit, not in other commits', async () => {
+      mocks.deployDocumentTrigger.mockResolvedValue(
+        Result.ok({
+          deploymentSettings: {},
+          triggerStatus: 'deployed',
+        }),
+      )
+
+      const createdDraft = await createDocumentTrigger({
+        workspace,
+        project,
+        commit: draft,
+        document,
+        triggerType: DocumentTriggerType.Email,
+        configuration: {
+          name: 'Draft Trigger',
+          emailWhitelist: [],
+          domainWhitelist: [],
+          replyWithResponse: true,
+          parameters: {},
+        },
+      }).then((r) => r.unwrap())
+
+      // Merge draft to create a live commit
+      const merged = await mergeCommit(draft).then((r) => r.unwrap())
+
+      // Create a new draft and a trigger in the new draft
+      const { commit: newDraft } = await factories.createDraft({
+        project,
+        user,
+      })
+      const createdNewDraft = await createDocumentTrigger({
+        workspace,
+        project,
+        commit: newDraft,
+        document,
+        triggerType: DocumentTriggerType.Chat,
+        configuration: {},
+      }).then((r) => r.unwrap())
+
+      mocks.undeployDocumentTrigger.mockResolvedValue(
+        Result.ok(
+          createdNewDraft as unknown as DocumentTrigger<DocumentTriggerType.Email>,
+        ),
+      )
+
+      const result = await deleteAllDocumentTriggersFromCommit({
+        workspace,
+        commit: newDraft,
+      })
+      expect(result.ok).toBeTruthy()
+
+      const triggersScope = new DocumentTriggersRepository(workspace.id)
+      const triggersInNewDraft = await triggersScope
+        .getTriggersInDocument({
+          documentUuid: document.documentUuid,
+          commit: newDraft,
+        })
+        .then((r) => r.unwrap())
+      expect(
+        triggersInNewDraft.find((t) => t.uuid === createdNewDraft.uuid),
+      ).toBeUndefined()
+
+      // The trigger in the merged commit should still exist
+      const triggersInMerged = await triggersScope
+        .getTriggersInDocument({
+          documentUuid: document.documentUuid,
+          commit: merged,
+        })
+        .then((r) => r.unwrap())
+      expect(
+        triggersInMerged.find((t) => t.uuid === createdDraft.uuid),
+      ).toBeTruthy()
+    })
   })
 })

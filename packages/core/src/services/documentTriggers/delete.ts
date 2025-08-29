@@ -185,3 +185,30 @@ export async function deleteDocumentTrigger<T extends DocumentTriggerType>(
     return Result.ok(currentDocumentTrigger)
   })
 }
+
+export async function deleteAllDocumentTriggersFromCommit({
+  workspace,
+  commit,
+}: {
+  workspace: Workspace
+  commit: Commit
+}): PromisedResult<undefined> {
+  const documentTriggerScope = new DocumentTriggersRepository(workspace.id)
+  const activeDocumentTriggersResult =
+    await documentTriggerScope.getTriggersInProject({
+      projectId: commit.projectId,
+      commit,
+    })
+  const activeDocumentTriggers = activeDocumentTriggersResult.unwrap()
+  await Promise.all(
+    activeDocumentTriggers.map((trigger) =>
+      deleteDocumentTrigger({
+        workspace,
+        commit,
+        triggerUuid: trigger.uuid,
+      }).then((r) => r.unwrap()),
+    ),
+  )
+
+  return Result.nil()
+}
