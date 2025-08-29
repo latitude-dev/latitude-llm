@@ -64,4 +64,10 @@ export class Result {
   ): ErrorResult<E> | undefined {
     return results.find((r) => !r.ok) as ErrorResult<E> | undefined
   }
+
+  public static includesAnError<E extends Error>(
+    results: TypedResult<any, E>[],
+  ): boolean {
+    return results.some((r) => !r.ok)
+  }
 }

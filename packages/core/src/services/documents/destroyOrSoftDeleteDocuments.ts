@@ -10,6 +10,7 @@ import { EvaluationsV2Repository } from '../../repositories'
 import { documentVersions } from '../../schema'
 import { deleteEvaluationV2 } from '../evaluationsV2/delete'
 import { pingProjectUpdate } from '../projects'
+import { deleteDocumentTriggersFromDocuments } from '../documentTriggers/deleteDocumentTriggersFromDocuments'
 
 async function findUuidsInOtherCommits({
   tx,
@@ -121,12 +122,9 @@ async function invalidateDocumentsCacheInCommit(
 }
 
 /**
- * Destroy or soft delete documents in a commit
- * A document can:
- *
- * 1. Not exists in previous commits. In this case, it will be hard deleted
- * 2. Exists in previous commits and in the commit. It will be updated the `deletedAt` field
- * 3. Exists in previous commits but not in the commit. It will be created as soft deleted
+ * Destroy or soft delete documents in a commit:
+ * - If the document was created in this same draft version, it will be hard deleted
+ * - If the document was created in a previous commit, it will be soft deleted (upserting deletedAt)
  */
 export async function destroyOrSoftDeleteDocuments(
   {
@@ -162,6 +160,19 @@ export async function destroyOrSoftDeleteDocuments(
         )
       }),
     )
+    const deleteAllTriggerDocumentsResult =
+      await deleteDocumentTriggersFromDocuments(
+        {
+          commit,
+          workspace,
+          documents,
+        },
+        transaction,
+      )
+
+    if (!Result.isOk(deleteAllTriggerDocumentsResult)) {
+      return deleteAllTriggerDocumentsResult
+    }
 
     const existingUuids = await findUuidsInOtherCommits({
       tx: tx,
