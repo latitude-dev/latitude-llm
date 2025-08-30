@@ -73,7 +73,9 @@ export async function handleTriggerMerge(
 
   if (
     updatedTriggers.some(
-      (trigger) => trigger.triggerStatus === DocumentTriggerStatus.Pending,
+      (trigger) =>
+        !trigger.deletedAt &&
+        trigger.triggerStatus === DocumentTriggerStatus.Pending,
     )
   ) {
     return Result.error(
