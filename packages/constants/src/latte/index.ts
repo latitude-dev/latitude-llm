@@ -28,8 +28,8 @@ export enum LatteTool {
   triggerActions = 'trigger_actions',
 }
 
-export const LATTE_COST_PROVIDER = 'openai'
-export const LATTE_COST_MODEL = 'gpt-5'
+export const LATTE_COST_PROVIDER = 'anthropic'
+export const LATTE_COST_MODEL = 'claude-sonnet-4-0'
 export const LATTE_COST_PER_CREDIT = 200_000 // $0.20
 export const LATTE_COST_FEE_FACTOR = 1.1 // 10%
 export const LATTE_MINIMUM_CREDITS_PER_REQUEST = 1

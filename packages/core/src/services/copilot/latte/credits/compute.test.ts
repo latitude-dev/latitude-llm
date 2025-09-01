@@ -36,7 +36,7 @@ describe('computeLatteCredits', () => {
         },
         workspace: workspace,
       }).then((r) => r.unwrap()),
-    ).toEqual(7)
+    ).toEqual(10)
 
     expect(
       await computeLatteCredits({
