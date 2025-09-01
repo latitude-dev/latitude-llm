@@ -14,6 +14,7 @@ import type {
   ExperimentDto,
   LatteChange,
   LatteUsage,
+  Project,
   ProviderLogDto,
 } from '../browser'
 
@@ -97,6 +98,11 @@ type McpServerConnectedArgs = {
   mcpServerId: number
 }
 
+type ProjectUpdatedArgs = {
+  workspaceId: number
+  project: Project
+}
+
 type LatteThreadResponse = {
   type: 'fullResponse'
   response: string
@@ -152,6 +158,7 @@ export type WebServerToClientEvents = {
   evaluationResultV2Created: (args: EvaluationResultV2CreatedArgs) => void
   mcpServerScaleEvent: (args: McpServerScaleEventArgs) => void
   mcpServerConnected: (args: McpServerConnectedArgs) => void
+  projectUpdated: (args: ProjectUpdatedArgs) => void
   latteThreadUpdate: (args: LatteThreadUpdateArgs) => void
   latteProjectChanges: (args: {
     threadUuid: string
@@ -195,6 +202,10 @@ export type WorkersClientToServerEvents = {
   mcpServerConnected: (args: {
     workspaceId: number
     data: McpServerConnectedArgs
+  }) => void
+  projectUpdated: (args: {
+    workspaceId: number
+    data: ProjectUpdatedArgs
   }) => void
   latteThreadUpdate: (args: {
     workspaceId: number

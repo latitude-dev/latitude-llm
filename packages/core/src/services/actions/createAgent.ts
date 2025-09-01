@@ -8,6 +8,7 @@ import {
 } from '../../browser'
 import { cache as getCache } from '../../cache'
 import { database } from '../../client'
+import { defaultQueue } from '../../jobs/queues'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { hashContent } from '../../lib/hashContent'
 import { Result } from '../../lib/Result'
@@ -51,16 +52,7 @@ Latte can you create me an agent for the following use case please?
 ${parameters.prompt}
 `.trim()
 
-  let name = 'New Agent'
-  try {
-    const details = await generateAgentDetails({ prompt }, db)
-    if (!details.error) {
-      name = details.unwrap().name
-    }
-  } catch (error) {
-    // Note: doing nothing
-  }
-
+  let name = 'New Agent' // Note: generating project name asynchronously
   const ensuring = await ensureAgentName({ name, workspace }, db)
   if (ensuring.error) {
     return Result.error(ensuring.error)
@@ -72,6 +64,16 @@ ${parameters.prompt}
     return Result.error(creating.error)
   }
   const { project, commit } = creating.unwrap()
+
+  try {
+    defaultQueue.add('generateProjectNameJob', {
+      workspaceId: workspace.id,
+      projectId: project.id,
+      prompt: prompt,
+    })
+  } catch (error) {
+    // Note: doing nothing
+  }
 
   return Result.ok({
     projectId: project.id,
@@ -89,7 +91,7 @@ type AgentDetails = z.infer<typeof generatorSchema>
 const generatorKey = (prompt: string) =>
   `agents:details:generator:${hashContent(prompt)}`
 
-async function generateAgentDetails(
+export async function generateAgentDetails(
   { prompt }: { prompt: string },
   db = database,
 ) {
@@ -149,7 +151,7 @@ async function generateAgentDetails(
   return Result.ok(details)
 }
 
-async function ensureAgentName(
+export async function ensureAgentName(
   {
     name,
     workspace,
