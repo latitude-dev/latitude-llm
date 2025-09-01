@@ -1,12 +1,11 @@
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { EvaluationV2 } from '@latitude-data/constants'
+import { EvaluationV2, DocumentVersion } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useMemo } from 'react'
 import { ROUTES } from '$/services/routes'
 import {
   getEvaluationMetricSpecification,
@@ -121,20 +120,16 @@ function EvaluationItem({
 export function EvaluationList({
   changeType,
   indentation,
-  documentUuid,
+  document,
   currentEvaluationUuid,
 }: {
   changeType?: ModifiedDocumentType | undefined
   indentation?: IndentType[]
-  documentUuid: string
+  document: DocumentVersion
   currentEvaluationUuid: ParamValue
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const document = useMemo(
-    () => ({ documentUuid, commitId: commit.id }),
-    [documentUuid, commit.id],
-  )
   const { color, selectedBackgroundColor, selectedBackgroundColorHover } =
     useModifiedColors({
       changeType,
@@ -157,7 +152,7 @@ export function EvaluationList({
             selectedBackgroundColorHover={selectedBackgroundColorHover}
             projectId={project.id}
             commitUuid={commit.uuid}
-            documentUuid={documentUuid}
+            documentUuid={document.documentUuid}
             evaluation={evaluation}
             currentEvaluationUuid={currentEvaluationUuid}
           />
