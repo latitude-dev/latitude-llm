@@ -46,7 +46,7 @@ export const PaneWrapper = ({
 }
 
 const SplitHandle =
-  (visibleHandle: boolean) =>
+  ({ visibleHandle }: { visibleHandle: boolean }) =>
   (resizeHandle: ResizeHandle, ref: RefObject<HTMLDivElement>) => {
     const direction =
       resizeHandle === 'e' || resizeHandle === 'w' ? 'horizontal' : 'vertical'
@@ -75,6 +75,8 @@ const SplitHandle =
       </div>
     )
   }
+
+export { SplitHandle }
 
 export function ResizablePane({
   direction,
@@ -134,7 +136,7 @@ export function ResizablePane({
           [`${widthClassWhileNoPaneWidth}`]:
             !paneSize && widthClassWhileNoPaneWidth,
         })}
-        handle={SplitHandle(visibleHandle)}
+        handle={SplitHandle({ visibleHandle })}
         onResize={onResize}
         onResizeStop={onStop}
       >
@@ -150,7 +152,7 @@ export function ResizablePane({
       minConstraints={[Infinity, minSize]}
       resizeHandles={dragDisabled ? [] : reversed ? ['n'] : ['s']}
       className='flex flex-col relative flex-shrink-0 flex-grow-0 w-full'
-      handle={SplitHandle(visibleHandle)}
+      handle={SplitHandle({ visibleHandle })}
       onResize={onResize}
       onResizeStop={onStop}
     >
