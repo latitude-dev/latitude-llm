@@ -69,54 +69,11 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
     const projectId = _projectId ?? commit?.projectId
     const maxMergedAt = commit?.mergedAt ?? undefined
 
-    // UUID & mergedAt of the last version of each document trigger
-    const lastVersionOfEachTrigger = this.db.$with('lastVersionOfDocuments').as(
-      this.db
-        .select({
-          uuid: documentTriggers.uuid,
-          mergedAt: max(commits.mergedAt).as('maxMergedAt'),
-        })
-        .from(documentTriggers)
-        .innerJoin(
-          commits,
-          and(
-            eq(commits.id, documentTriggers.commitId),
-            eq(commits.projectId, documentTriggers.projectId),
-          ),
-        )
-        .where(
-          and(
-            eq(documentTriggers.workspaceId, this.workspaceId),
-            isNull(commits.deletedAt),
-            isNotNull(commits.mergedAt),
-            maxMergedAt ? lte(commits.mergedAt, maxMergedAt) : undefined,
-            projectId ? eq(documentTriggers.projectId, projectId) : undefined,
-          ),
-        )
-        .groupBy(documentTriggers.uuid),
-    )
-
-    // All document triggers from the last committed version
-    const mergedTriggers = await this.db
-      .with(lastVersionOfEachTrigger)
-      .select(tt)
-      .from(documentTriggers)
-      .innerJoin(
-        commits,
-        and(
-          eq(commits.id, documentTriggers.commitId),
-          isNotNull(commits.mergedAt),
-          isNull(commits.deletedAt),
-        ),
-      )
-      .innerJoin(
-        lastVersionOfEachTrigger,
-        and(
-          eq(documentTriggers.workspaceId, this.workspaceId),
-          eq(lastVersionOfEachTrigger.uuid, documentTriggers.uuid),
-          eq(lastVersionOfEachTrigger.mergedAt, commits.mergedAt),
-        ),
-      )
+    // Get merged triggers using the helper method
+    const mergedTriggers = await this.getTriggersFromMergedCommits({
+      maxMergedAt,
+      projectId,
+    })
 
     // Triggers created/updated specifically in this commit
     const draftTriggers =
@@ -144,6 +101,34 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
     LatitudeError
   > {
     return this.getTriggers()
+  }
+
+  /**
+   * Returns the last version of each merged trigger plus all draft triggers.
+   * This provides a clean view of the current state without duplicates.
+   */
+  async getAllTriggers(): PromisedResult<DocumentTrigger[], LatitudeError> {
+    const mergedTriggers = await this.getTriggersFromMergedCommits()
+    const draftTriggers = await this.db
+      .select(tt)
+      .from(documentTriggers)
+      .innerJoin(
+        commits,
+        and(
+          eq(commits.id, documentTriggers.commitId),
+          isNull(commits.mergedAt),
+          isNull(commits.deletedAt),
+        ),
+      )
+      .where(eq(documentTriggers.workspaceId, this.workspaceId))
+
+    const totalTriggers = mergeTriggers(
+      mergedTriggers,
+      draftTriggers as DocumentTrigger[],
+    )
+
+    const activeTriggers = totalTriggers.filter((trigger) => !trigger.deletedAt)
+    return Result.ok(activeTriggers)
   }
 
   getTriggersInProject({
@@ -209,5 +194,71 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
       )
 
     return Result.ok(results as DocumentTrigger[])
+  }
+
+  /**
+   * Gets triggers based on commit context and project filtering.
+   * NOTE: This method does NOT return all triggers that are not active unless passing a commit parameter.
+   * For a simple method that returns all document triggers, use getAllTriggers() instead.
+   */
+  /**
+   * Helper method to get the last version of each merged trigger
+   */
+  private async getTriggersFromMergedCommits({
+    maxMergedAt,
+    projectId,
+  }: {
+    maxMergedAt?: Date
+    projectId?: number
+  } = {}): Promise<DocumentTrigger[]> {
+    const lastVersionOfEachTrigger = this.db.$with('lastVersionOfDocuments').as(
+      this.db
+        .select({
+          uuid: documentTriggers.uuid,
+          mergedAt: max(commits.mergedAt).as('maxMergedAt'),
+        })
+        .from(documentTriggers)
+        .innerJoin(
+          commits,
+          and(
+            eq(commits.id, documentTriggers.commitId),
+            eq(commits.projectId, documentTriggers.projectId),
+          ),
+        )
+        .where(
+          and(
+            eq(documentTriggers.workspaceId, this.workspaceId),
+            isNull(commits.deletedAt),
+            isNotNull(commits.mergedAt),
+            maxMergedAt ? lte(commits.mergedAt, maxMergedAt) : undefined,
+            projectId ? eq(documentTriggers.projectId, projectId) : undefined,
+          ),
+        )
+        .groupBy(documentTriggers.uuid),
+    )
+
+    // Get merged triggers (last version of each)
+    const mergedTriggers = await this.db
+      .with(lastVersionOfEachTrigger)
+      .select(tt)
+      .from(documentTriggers)
+      .innerJoin(
+        commits,
+        and(
+          eq(commits.id, documentTriggers.commitId),
+          isNotNull(commits.mergedAt),
+          isNull(commits.deletedAt),
+        ),
+      )
+      .innerJoin(
+        lastVersionOfEachTrigger,
+        and(
+          eq(documentTriggers.workspaceId, this.workspaceId),
+          eq(lastVersionOfEachTrigger.uuid, documentTriggers.uuid),
+          eq(lastVersionOfEachTrigger.mergedAt, commits.mergedAt),
+        ),
+      )
+
+    return mergedTriggers as DocumentTrigger[]
   }
 }

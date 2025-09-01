@@ -17,9 +17,11 @@ export async function destroyIntegration(
 ) {
   return transaction.call(async (trx) => {
     const referencesResult = await listReferences(integration, trx)
+
     if (!Result.isOk(referencesResult)) {
       return referencesResult
     }
+
     const references = referencesResult.unwrap()
     if (references.length > 0) {
       return Result.error(
