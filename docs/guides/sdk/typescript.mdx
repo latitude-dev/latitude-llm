@@ -166,6 +166,17 @@ await latitude.prompts.run('prompt-path', {
 })
 ```
 
+### Prompts that return structured outputs
+
+By default the sdk assumes your prompt return text. If you expect your prompt
+to return structured output you can type it in the `prompts.run` method:
+
+```typescript
+const result = await latitude.prompts.run<{ expected: 'property' }>('structured-output-prompt')
+
+console.log(result.object) // outputs { expected: 'property' }
+```
+
 ### Chat with a Prompt
 
 Follow the conversation of a runned prompt:
