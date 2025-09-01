@@ -20,6 +20,8 @@ export * from '../../events/handlers/touchApiKeyJob'
 export * from '../../events/handlers/webhooks'
 export * from '../../events/handlers/notifyClientOfExportReady'
 export * from '../../events/handlers/undeployDocumentTriggerJob'
+export * from '../../events/handlers/notifyClientOfDocumentTriggerCreated'
+export * from '../../events/handlers/notifyClientOfDocumentTriggerDeleted'
 
 // Jobs
 export * from './documentLogs/createDocumentLogJob'

@@ -7,6 +7,7 @@ import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { documentTriggers } from '../../schema'
 import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { deployDocumentTrigger } from './deploy'
+import { publisher } from '../../events/publisher'
 
 export async function createDocumentTrigger<
   T extends DocumentTriggerType = DocumentTriggerType,
@@ -49,28 +50,41 @@ export async function createDocumentTrigger<
   const { deploymentSettings, triggerStatus } =
     deploymentSettingsResult.unwrap()
 
-  return await transaction.call(async (tx) => {
-    const [documentTrigger] = (await tx
-      .insert(documentTriggers)
-      .values({
-        uuid: triggerUuid,
-        workspaceId: workspace.id,
-        projectId: project.id,
-        commitId: commit.id,
-        documentUuid: document.documentUuid,
-        triggerType,
-        configuration,
-        deploymentSettings,
-        triggerStatus,
+  return await transaction.call(
+    async (tx) => {
+      const [documentTrigger] = (await tx
+        .insert(documentTriggers)
+        .values({
+          uuid: triggerUuid,
+          workspaceId: workspace.id,
+          projectId: project.id,
+          commitId: commit.id,
+          documentUuid: document.documentUuid,
+          triggerType,
+          configuration,
+          deploymentSettings,
+          triggerStatus,
+        })
+        .returning()) as DocumentTrigger<T>[]
+
+      if (!documentTrigger) {
+        return Result.error(
+          new LatitudeError('Failed to create document trigger'),
+        )
+      }
+
+      return Result.ok(documentTrigger)
+    },
+    (documentTrigger) => {
+      publisher.publishLater({
+        type: 'documentTriggerCreated',
+        data: {
+          workspaceId: workspace.id,
+          documentTrigger,
+          project,
+          commit,
+        },
       })
-      .returning()) as DocumentTrigger<T>[]
-
-    if (!documentTrigger) {
-      return Result.error(
-        new LatitudeError('Failed to create document trigger'),
-      )
-    }
-
-    return Result.ok(documentTrigger)
-  })
+    },
+  )
 }

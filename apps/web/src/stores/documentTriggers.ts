@@ -181,6 +181,7 @@ export default function useDocumentTriggers(
   return useMemo(
     () => ({
       data,
+      mutate,
       isLoading,
       create,
       isCreating,
@@ -193,6 +194,7 @@ export default function useDocumentTriggers(
     }),
     [
       data,
+      mutate,
       isLoading,
       create,
       isCreating,

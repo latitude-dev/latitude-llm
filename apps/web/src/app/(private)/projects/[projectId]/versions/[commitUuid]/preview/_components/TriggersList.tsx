@@ -28,6 +28,7 @@ import { TriggersBlankSlate } from './TriggersBlankSlate'
 import { TriggersCard } from './TriggersCard'
 import { UnconfiguredIntegrations } from './UnconfiguredIntegrations'
 import { useActiveChatTrigger } from './useActiveTrigger'
+import { useTriggerSockets } from './useTriggerSockets'
 
 const ADD_BUTTON_LABEL = 'Add trigger'
 
@@ -123,7 +124,7 @@ export function TriggersList({
   const [openTriggerUuid, setOpenTriggerUuid] = useState<string | null>(null)
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { data: triggers } = useDocumentTriggers(
+  const { data: triggers, mutate } = useDocumentTriggers(
     {
       projectId: project.id,
       commitUuid: commit.uuid,
@@ -133,10 +134,12 @@ export function TriggersList({
       keepPreviousData: true,
     },
   )
+  useTriggerSockets({ commit, project, mutate })
   const { data: integrations } = useIntegrations({
     fallbackData: fallbackIntegrations,
     withTriggers: true,
   })
+
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const [expandParameters, setExpandParameters] = useState(true)
   const [activeTrigger, setActiveTrigger] = useState<ActiveTrigger>({
@@ -190,7 +193,7 @@ export function TriggersList({
       <TriggersHeader project={project} mode={mode} />
       {mode === 'preview' ? (
         <>
-          <div className='flex-1 min-h-0'>
+          <div className='flex-1'>
             <div className='flex flex-col gap-6'>
               <UnconfiguredIntegrations
                 integrations={integrations}

@@ -34,6 +34,10 @@ const eventHandlersJobMappings = {
   notifyClientOfScaleUpMcpServer: jobs.notifyClientOfScaleUpMcpServer,
   notifyClientOfMcpServerConnected: jobs.notifyClientOfMcpServerConnected,
   undeployDocumentTriggerJob: jobs.undeployDocumentTriggerJob,
+  notifyClientOfDocumentTriggerCreated:
+    jobs.notifyClientOfDocumentTriggerCreated,
+  notifyClientOfDocumentTriggerDeleted:
+    jobs.notifyClientOfDocumentTriggerDeleted,
 }
 
 export function startEventsWorker() {
