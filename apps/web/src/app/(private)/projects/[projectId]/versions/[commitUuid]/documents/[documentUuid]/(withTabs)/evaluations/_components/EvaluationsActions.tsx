@@ -190,7 +190,6 @@ function AddEvaluation({
         Add evaluation
       </TableWithHeader.Button>
       <ConfirmModal
-        dismissible
         size='medium'
         open={openCreateModal}
         title='Create a new evaluation'
@@ -202,6 +201,7 @@ function AddEvaluation({
           disabled: isCreatingEvaluation,
           isConfirming: isCreatingEvaluation,
         }}
+        onCancel={() => setOpenCreateModal(false)}
       >
         <EvaluationV2Form
           mode='create'

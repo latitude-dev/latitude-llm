@@ -241,7 +241,6 @@ function EditEvaluation<
         Settings
       </TableWithHeader.Button>
       <ConfirmModal
-        dismissible
         size='medium'
         open={openUpdateModal}
         title={`Update ${evaluation.name}`}
@@ -252,6 +251,7 @@ function EditEvaluation<
         }
         onOpenChange={setOpenUpdateModal}
         onConfirm={onUpdate}
+        onCancel={() => setOpenUpdateModal(false)}
         confirm={{
           label: isUpdatingEvaluation ? 'Updating...' : 'Update',
           disabled: isUpdatingEvaluation,
