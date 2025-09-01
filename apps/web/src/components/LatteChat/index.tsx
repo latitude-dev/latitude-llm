@@ -102,7 +102,7 @@ export function LatteChat() {
       <div className='flex-1 flex flex-col h-full w-full items-center gap-4 min-w-[300px] max-w-[1200px] m-auto flex-shrink-0'>
         <div className='flex-grow min-h-0 h-full w-full flex flex-col items-center justify-center relative'>
           <div
-            className='w-full h-full overflow-hidden custom-scrollbar flex flex-col gap-4 items-center shadow-sm pb-8'
+            className='w-full h-full overflow-hidden custom-scrollbar flex flex-col gap-4 items-center pb-8'
             ref={containerRef}
           >
             {isLoadingThread && !isBrewing && <ChatSkeleton />}

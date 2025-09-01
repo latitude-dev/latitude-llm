@@ -2,7 +2,7 @@ import { LatteInteraction } from '$/hooks/latte/types'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CollapsedInteractionSteps } from './CollapsedInteractionSteps'
 import { InteractionStep } from './InteractionStep'
 import { MarkdownResponse } from './MarkdownText'
@@ -17,6 +17,10 @@ export function ChatInteraction({
   isStreaming?: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  useEffect(() => {
+    if (isStreaming) setIsOpen(true)
+    else setIsOpen(false)
+  }, [isStreaming])
 
   return (
     <div className='flex flex-col justify-center gap-4 w-full relative'>
