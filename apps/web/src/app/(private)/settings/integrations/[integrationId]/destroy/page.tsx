@@ -10,25 +10,29 @@ import useIntegrationReferences from '$/stores/integrationReferences'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import Link from 'next/link'
-import { HEAD_COMMIT, IntegrationReference } from '@latitude-data/constants'
+import { IntegrationReference } from '@latitude-data/constants'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import useProjects from '$/stores/projects'
 
-function ReferenceItem({ reference }: { reference: IntegrationReference }) {
-  const { data: document } = useDocumentVersion(reference.documentUuid)
+function TriggerReference({
+  reference: { data },
+}: {
+  reference: Extract<IntegrationReference, { type: 'trigger' }>
+}) {
+  const { data: document } = useDocumentVersion(data.documentUuid)
   const { data: projects } = useProjects()
   const project = useMemo(() => {
-    return projects.find((p) => p.id === reference.projectId)
-  }, [projects, reference.projectId])
+    return projects.find((p) => p.id === data.projectId)
+  }, [projects, data.projectId])
 
   return (
     <Link
       href={
         ROUTES.projects
-          .detail({ id: reference.projectId })
-          .commits.detail({ uuid: HEAD_COMMIT })
-          .documents.detail({ uuid: reference.documentUuid }).root
+          .detail({ id: data.projectId })
+          .commits.detail({ uuid: data.commitUuid })
+          .preview.triggers.edit(data.triggerUuid).root
       }
       className='flex flex-row items-center justify-between gap-2 p-4 bg-secondary rounded-md hover:bg-accent'
       target='_blank'
@@ -90,9 +94,13 @@ export default function DestroyIntegration({
             prompts:
           </Text.H5>
           <div className='flex flex-col gap-2'>
-            {references.map((reference, idx) => (
-              <ReferenceItem key={idx} reference={reference} />
-            ))}
+            {references.map((reference, idx) => {
+              if (reference.type === 'trigger') {
+                return <TriggerReference key={idx} reference={reference} />
+              }
+
+              return null
+            })}
           </div>
           <Text.H5>
             You must remove them all before deleting the integration.

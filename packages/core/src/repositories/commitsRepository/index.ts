@@ -6,6 +6,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  inArray,
   not,
   or,
 } from 'drizzle-orm'
@@ -112,6 +113,10 @@ export class CommitsRepository extends RepositoryLegacy<
 
   async getCommits() {
     return this.db.select().from(this.scope)
+  }
+
+  async getCommitsByIds(ids: number[]) {
+    return this.db.select().from(this.scope).where(inArray(this.scope.id, ids))
   }
 
   async getFirstCommitForProject(project: Project) {

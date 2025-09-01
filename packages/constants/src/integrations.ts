@@ -109,9 +109,15 @@ export enum HostedIntegrationType {
   // Loops = 'loops', // Does not exist
 }
 
-export type IntegrationReference = {
-  projectId: number
-  documentUuid: string
-  asTrigger: boolean
-  // asTool: boolean // TODO: This would be really useful
-}
+// TODO: Add support for tools: { type: 'tool', data: { ... } }
+export type IntegrationReference =
+  | {
+      type: 'trigger'
+      data: {
+        projectId: number
+        documentUuid: string
+        commitUuid: string
+        triggerUuid: string
+      }
+    }
+  | never

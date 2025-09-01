@@ -82,9 +82,13 @@ describe('listReferences', () => {
     expect(Result.isOk(result)).toBe(true)
     expect(result.unwrap()).toEqual([
       {
-        projectId: trigger.projectId,
-        documentUuid: trigger.documentUuid,
-        asTrigger: true,
+        type: 'trigger',
+        data: {
+          projectId: trigger.projectId,
+          documentUuid: trigger.documentUuid,
+          commitUuid: commit.uuid,
+          triggerUuid: trigger.uuid,
+        },
       },
     ])
   })

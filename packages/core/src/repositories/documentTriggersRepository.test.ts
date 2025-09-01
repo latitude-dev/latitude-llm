@@ -756,6 +756,191 @@ describe('DocumentTriggersRepository', () => {
     })
   })
 
+  describe('getAllTriggers', () => {
+    it('returns all triggers in workspace excluding deleted ones', async () => {
+      // Create triggers in draft commit
+      const [emailTrigger] = await database
+        .insert(documentTriggers)
+        .values({
+          workspaceId: workspace.id,
+          projectId: project.id,
+          commitId: draft.id,
+          documentUuid: document.documentUuid,
+          triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
+          configuration: {
+            name: 'Test Email Trigger',
+            replyWithResponse: true,
+          },
+        })
+        .returning()
+
+      const [scheduledTrigger] = await database
+        .insert(documentTriggers)
+        .values({
+          workspaceId: workspace.id,
+          projectId: project.id,
+          commitId: draft.id,
+          documentUuid: document.documentUuid,
+          triggerType: DocumentTriggerType.Scheduled,
+          triggerStatus: 'deployed',
+          configuration: {
+            cronExpression: '0 * * * *',
+          },
+        })
+        .returning()
+
+      // Mark one trigger as deleted
+      await database
+        .update(documentTriggers)
+        .set({ deletedAt: new Date() })
+        .where(eq(documentTriggers.id, emailTrigger!.id))
+
+      const result = await repo.getAllTriggers()
+      const triggers = result.unwrap()
+
+      expect(triggers).toHaveLength(1)
+      expect(triggers[0]!.uuid).toBe(scheduledTrigger!.uuid)
+      expect(triggers[0]!.deletedAt).toBeNull()
+    })
+
+    it('returns all triggers from merged commits', async () => {
+      // Create triggers in draft commit
+      const [emailTrigger] = await database
+        .insert(documentTriggers)
+        .values({
+          workspaceId: workspace.id,
+          projectId: project.id,
+          commitId: draft.id,
+          documentUuid: document.documentUuid,
+          triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
+          configuration: {
+            name: 'Test Email Trigger',
+            replyWithResponse: true,
+          },
+        })
+        .returning()
+
+      const [scheduledTrigger] = await database
+        .insert(documentTriggers)
+        .values({
+          workspaceId: workspace.id,
+          projectId: project.id,
+          commitId: draft.id,
+          documentUuid: document.documentUuid,
+          triggerType: DocumentTriggerType.Scheduled,
+          triggerStatus: 'deployed',
+          configuration: {
+            cronExpression: '0 * * * *',
+          },
+        })
+        .returning()
+
+      // Merge the commit
+      await mergeCommit(draft).then((r) => r.unwrap())
+
+      const result = await repo.getAllTriggers()
+      const triggers = result.unwrap()
+
+      expect(triggers).toHaveLength(2)
+      expect(triggers.map((t) => t.uuid).sort()).toEqual(
+        [emailTrigger!.uuid, scheduledTrigger!.uuid].sort(),
+      )
+    })
+
+    it('includes triggers from draft commits', async () => {
+      // Create triggers in draft commit
+      const [emailTrigger] = await database
+        .insert(documentTriggers)
+        .values({
+          workspaceId: workspace.id,
+          projectId: project.id,
+          commitId: draft.id,
+          documentUuid: document.documentUuid,
+          triggerType: DocumentTriggerType.Email,
+          triggerStatus: 'deployed',
+          configuration: {
+            name: 'Test Email Trigger',
+            replyWithResponse: true,
+          },
+        })
+        .returning()
+
+      const [scheduledTrigger] = await database
+        .insert(documentTriggers)
+        .values({
+          workspaceId: workspace.id,
+          projectId: project.id,
+          commitId: draft.id,
+          documentUuid: document.documentUuid,
+          triggerType: DocumentTriggerType.Scheduled,
+          triggerStatus: 'deployed',
+          configuration: {
+            cronExpression: '0 * * * *',
+          },
+        })
+        .returning()
+
+      // Don't merge the commit - keep it as draft
+      const result = await repo.getAllTriggers()
+      const triggers = result.unwrap()
+
+      expect(triggers).toHaveLength(2)
+      expect(triggers.map((t) => t.uuid).sort()).toEqual(
+        [emailTrigger!.uuid, scheduledTrigger!.uuid].sort(),
+      )
+    })
+
+    it('excludes triggers from different workspaces', async () => {
+      // Create trigger in current workspace
+      await database.insert(documentTriggers).values({
+        workspaceId: workspace.id,
+        projectId: project.id,
+        commitId: draft.id,
+        documentUuid: document.documentUuid,
+        triggerType: DocumentTriggerType.Email,
+        triggerStatus: 'deployed',
+        configuration: {
+          name: 'Test Email Trigger',
+          replyWithResponse: true,
+        },
+      })
+
+      // Create trigger in different workspace
+      const {
+        workspace: otherWorkspace,
+        project: otherProject,
+        commit: otherCommit,
+        documents: otherDocuments,
+      } = await factories.createProject({
+        providers: [{ name: 'openai4', type: Providers.OpenAI }], // Use different provider name
+        documents: {
+          doc1: factories.helpers.createPrompt({ provider: 'openai4' }),
+        },
+      })
+
+      await database.insert(documentTriggers).values({
+        workspaceId: otherWorkspace.id,
+        projectId: otherProject.id,
+        commitId: otherCommit.id,
+        documentUuid: otherDocuments[0]!.documentUuid,
+        triggerType: DocumentTriggerType.Email,
+        triggerStatus: 'deployed',
+        configuration: {
+          name: 'Other Trigger',
+          replyWithResponse: true,
+        },
+      })
+
+      const result = await repo.getAllTriggers()
+      const triggers = result.unwrap()
+
+      expect(triggers).toHaveLength(1)
+      expect(triggers[0]!.workspaceId).toBe(workspace.id)
+    })
+  })
+
   describe('edge cases and integration scenarios', () => {
     it('handles multiple commits with same trigger UUID correctly', async () => {
       // Create trigger in draft
