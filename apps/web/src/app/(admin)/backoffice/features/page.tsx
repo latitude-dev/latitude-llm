@@ -1,6 +1,6 @@
 'use client'
 
-import { FeaturesManager } from './_components'
+import { FeaturesManager, UserSearch } from './_components'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 export default function AdminFeatures() {
@@ -13,6 +13,10 @@ export default function AdminFeatures() {
           them on/off for specific workspaces.
         </Text.H4>
         <FeaturesManager />
+      </section>
+
+      <section className='flex flex-col gap-y-4'>
+        <UserSearch />
       </section>
     </div>
   )
