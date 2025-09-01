@@ -1,6 +1,6 @@
 import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
 import { ROUTES } from '$/services/routes'
-import { DocumentType } from '@latitude-data/core/browser'
+import { DocumentType, DocumentVersion } from '@latitude-data/core/browser'
 import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { type ParamValue } from 'next/dist/server/request/params'
@@ -146,7 +146,7 @@ export default function DocumentHeader({
         <EvaluationList
           changeType={node.changeType}
           indentation={indentation}
-          documentUuid={documentUuid}
+          document={node.doc! as DocumentVersion}
           currentEvaluationUuid={currentEvaluationUuid}
         />
       )}
