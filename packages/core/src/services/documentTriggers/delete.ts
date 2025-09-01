@@ -52,52 +52,6 @@ async function getLiveDocumentTrigger<T extends DocumentTriggerType>(
   })
 }
 
-type ContextResult<T extends DocumentTriggerType> = {
-  currentDocumentTrigger: DocumentTrigger<T>
-  liveDocumentTrigger: DocumentTrigger<T> | undefined
-}
-async function findTriggerContext<T extends DocumentTriggerType>(
-  {
-    workspace,
-    commit,
-    triggerUuid,
-  }: {
-    workspace: Workspace
-    commit: Commit
-    triggerUuid: string
-  },
-  transaction: Transaction,
-): PromisedResult<ContextResult<T>> {
-  return transaction.call<ContextResult<T>>(async (tx) => {
-    const triggersScope = new DocumentTriggersRepository(workspace.id, tx)
-
-    const currentDocumentTriggerResult =
-      await triggersScope.getTriggerByUuid<T>({
-        uuid: triggerUuid,
-        commit,
-      })
-
-    if (currentDocumentTriggerResult.error) return currentDocumentTriggerResult
-
-    const currentDocumentTrigger = currentDocumentTriggerResult.value
-    const liveDocumentTriggerResult = await getLiveDocumentTrigger<T>(
-      {
-        workspace,
-        projectId: currentDocumentTrigger.projectId,
-        triggerUuid,
-      },
-      transaction,
-    )
-
-    if (liveDocumentTriggerResult.error) return liveDocumentTriggerResult
-
-    return Result.ok({
-      currentDocumentTrigger,
-      liveDocumentTrigger: liveDocumentTriggerResult.value,
-    })
-  })
-}
-
 /**
  * Deletes a document trigger at a given commit, and automatically undeploys it.
  * - If the trigger was created in this same draft version, it will be hard deleted.
@@ -119,20 +73,30 @@ export async function deleteDocumentTrigger<T extends DocumentTriggerType>(
     return Result.error(new BadRequestError('Cannot update a merged commit'))
   }
 
-  const contextResult = await findTriggerContext<T>(
-    {
-      workspace,
-      commit,
-      triggerUuid,
-    },
-    transaction,
-  )
+  return transaction.call(async (tx) => {
+    const triggersScope = new DocumentTriggersRepository(workspace.id, tx)
 
-  if (contextResult.error) return contextResult
+    const currentDocumentTriggerResult =
+      await triggersScope.getTriggerByUuid<T>({
+        uuid: triggerUuid,
+        commit,
+      })
 
-  const { currentDocumentTrigger, liveDocumentTrigger } = contextResult.value
+    if (currentDocumentTriggerResult.error) return currentDocumentTriggerResult
 
-  if (currentDocumentTrigger.commitId === commit.id) {
+    const currentDocumentTrigger = currentDocumentTriggerResult.value
+    const liveDocumentTriggerResult = await getLiveDocumentTrigger<T>(
+      {
+        workspace,
+        projectId: currentDocumentTrigger.projectId,
+        triggerUuid,
+      },
+      transaction,
+    )
+
+    if (liveDocumentTriggerResult.error) return liveDocumentTriggerResult
+    const liveDocumentTrigger = liveDocumentTriggerResult.unwrap()
+
     const undeployResult = await undeployDocumentTrigger(
       {
         workspace,
@@ -141,9 +105,7 @@ export async function deleteDocumentTrigger<T extends DocumentTriggerType>(
       transaction,
     )
     if (!Result.isOk(undeployResult)) return undeployResult
-  }
 
-  return transaction.call(async (tx) => {
     if (currentDocumentTrigger.commitId === commit.id) {
       const deleteResult = await tx
         .delete(documentTriggers)

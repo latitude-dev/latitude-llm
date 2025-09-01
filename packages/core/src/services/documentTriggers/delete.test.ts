@@ -184,7 +184,7 @@ describe.sequential('deleteDocumentTrigger', () => {
     expect(result.value?.uuid).toBe(created.uuid)
     expect(result.value?.commitId).toBe(newDraft.id)
     expect(result.value?.deletedAt).toBeTruthy()
-    expect(mocks.undeployDocumentTrigger).not.toHaveBeenCalled()
+    expect(mocks.undeployDocumentTrigger).toHaveBeenCalled()
 
     // Active triggers should exclude deleted ones
     const triggersScope = new DocumentTriggersRepository(workspace.id)

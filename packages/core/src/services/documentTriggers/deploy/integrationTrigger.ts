@@ -7,11 +7,9 @@ import { Commit, Workspace, DocumentTrigger } from '../../../browser'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../lib/Result'
-import {
-  deployPipedreamTrigger,
-  destroyPipedreamTrigger,
-} from '../../integrations/pipedream/triggers'
+import { deployPipedreamTrigger } from '../../integrations/pipedream/triggers'
 import { IntegrationsRepository } from '../../../repositories'
+import { publisher } from '../../../events/publisher'
 
 import {
   IntegrationTriggerConfiguration,
@@ -84,9 +82,7 @@ export async function deployIntegrationTrigger(
 }
 
 /**
- * Important Note:
- * This service fetches data from an external service.
- * Do not include this service inside a transaction.
+ * Schedules the undeployment of an integration trigger.
  */
 export async function undeployIntegrationTrigger(
   {
@@ -110,14 +106,25 @@ export async function undeployIntegrationTrigger(
     return Result.nil()
   }
 
-  const destroyResult = await destroyPipedreamTrigger(
-    {
-      workspace,
-      documentTrigger,
-    },
-    transaction,
-  )
+  if (!isIntegrationConfigured(integration)) {
+    // Integration is not configured, no need to undeploy
+    return Result.ok(undefined)
+  }
 
-  if (!Result.isOk(destroyResult)) return destroyResult
+  // Check if the trigger has deployment settings (if not, nothing to undeploy)
+  if (!documentTrigger.deploymentSettings) {
+    return Result.ok(undefined)
+  }
+
+  // Schedule the undeployment to happen asynchronously via the event system
+  publisher.publishLater({
+    type: 'documentTriggerUndeployRequested',
+    data: {
+      workspaceId: workspace.id,
+      triggerId: documentTrigger.deploymentSettings.triggerId,
+      externalUserId: integration.configuration.externalUserId,
+    },
+  })
+
   return Result.ok(undefined)
 }

@@ -33,6 +33,7 @@ const eventHandlersJobMappings = {
     jobs.notifyClientOfEvaluationResultV2Created,
   notifyClientOfScaleUpMcpServer: jobs.notifyClientOfScaleUpMcpServer,
   notifyClientOfMcpServerConnected: jobs.notifyClientOfMcpServerConnected,
+  undeployDocumentTriggerJob: jobs.undeployDocumentTriggerJob,
 }
 
 export function startEventsWorker() {
