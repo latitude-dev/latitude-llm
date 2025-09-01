@@ -17,6 +17,7 @@ import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
 import { touchApiKeyJob } from './touchApiKeyJob'
 import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
+import { undeployDocumentTriggerJob } from './undeployDocumentTriggerJob'
 import { updateWebhookLastTriggeredAt } from './webhooks'
 
 export const EventHandlers: IEventsHandlers = {
@@ -71,4 +72,5 @@ export const EventHandlers: IEventsHandlers = {
   segmentUpdated: [],
   actionExecuted: [],
   toolExecuted: [],
+  documentTriggerUndeployRequested: [undeployDocumentTriggerJob],
 }

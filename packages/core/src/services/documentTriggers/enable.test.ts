@@ -98,6 +98,8 @@ describe('setDocumentTriggerEnabled', () => {
   })
 
   it('returns error when trying to enable a deleted trigger in live', async () => {
+    mocks.undeployDocumentTrigger.mockResolvedValue(Result.nil())
+
     // Create trigger in draft and merge so it becomes live
     const created = await createDocumentTrigger({
       workspace,

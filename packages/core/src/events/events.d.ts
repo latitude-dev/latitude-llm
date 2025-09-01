@@ -72,6 +72,7 @@ export type Events =
   | 'segmentUpdated'
   | 'actionExecuted'
   | 'toolExecuted'
+  | 'documentTriggerUndeployRequested'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -535,6 +536,16 @@ export type ToolExecutedEvent = LatitudeEventGeneric<
     toolName: string
   }
 >
+
+export type DocumentTriggerUndeployRequestedEvent = LatitudeEventGeneric<
+  'documentTriggerUndeployRequested',
+  {
+    workspaceId: number
+    triggerId: string
+    externalUserId: string
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -581,6 +592,7 @@ export type LatitudeEvent =
   | SegmentUpdatedEvent
   | ActionExecutedEvent
   | ToolExecutedEvent
+  | DocumentTriggerUndeployRequestedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -628,4 +640,5 @@ export interface IEventsHandlers {
   segmentUpdated: EventHandler<SegmentUpdatedEvent>[]
   actionExecuted: EventHandler<ActionExecutedEvent>[]
   toolExecuted: EventHandler<ToolExecutedEvent>[]
+  documentTriggerUndeployRequested: EventHandler<DocumentTriggerUndeployRequestedEvent>[]
 }
