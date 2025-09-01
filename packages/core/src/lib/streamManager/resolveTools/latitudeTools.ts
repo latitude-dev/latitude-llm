@@ -9,6 +9,24 @@ import { TelemetryContext } from '../../../telemetry'
 import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
 import { Result, TypedResult } from '../../Result'
 import { ResolvedTools, ToolSource } from './types'
+import { publisher } from '../../../events/publisher'
+import { Tool } from 'ai'
+
+export function resolveLatitudeTools({
+  config,
+  streamManager,
+}: {
+  config: LatitudePromptConfig
+  streamManager: StreamManager
+}): TypedResult<ResolvedTools, LatitudeError> {
+  const newSchemaResult = resolveLatitudeToolsFromNewSchema({
+    config,
+    streamManager,
+  })
+  if (newSchemaResult.error) return newSchemaResult
+
+  return Result.ok(newSchemaResult.unwrap())
+}
 
 const ALL_LATITUDE_RESOLVED_TOOLS = (context: TelemetryContext) =>
   Object.fromEntries(
@@ -79,10 +97,16 @@ function resolveLatitudeToolsFromNewSchema({
     resolvedTools[
       getLatitudeToolInternalName(latitudeToolName as LatitudeTool)
     ] = {
-      definition: getLatitudeToolDefinition(
-        latitudeToolName as LatitudeTool,
-        streamManager.$completion!.context,
-      )!,
+      definition: instrumentLatitudeTool(
+        getLatitudeToolDefinition(
+          latitudeToolName as LatitudeTool,
+          streamManager.$completion!.context,
+        )!,
+        {
+          streamManager,
+          name: latitudeToolName,
+        },
+      ),
       sourceData: {
         source: ToolSource.Latitude,
         latitudeTool: latitudeToolName as LatitudeTool,
@@ -93,18 +117,23 @@ function resolveLatitudeToolsFromNewSchema({
   return Result.ok(resolvedTools)
 }
 
-export function resolveLatitudeTools({
-  config,
-  streamManager,
-}: {
-  config: LatitudePromptConfig
-  streamManager: StreamManager
-}): TypedResult<ResolvedTools, LatitudeError> {
-  const newSchemaResult = resolveLatitudeToolsFromNewSchema({
-    config,
-    streamManager,
-  })
-  if (newSchemaResult.error) return newSchemaResult
+function instrumentLatitudeTool(
+  definition: Tool,
+  { streamManager, name }: { streamManager: StreamManager; name: string },
+) {
+  const originalExecute = definition.execute!
+  definition.execute = async (...args) => {
+    publisher.publishLater({
+      type: 'toolExecuted',
+      data: {
+        workspaceId: streamManager.workspace.id,
+        type: 'latitude',
+        toolName: name,
+      },
+    })
 
-  return Result.ok(newSchemaResult.unwrap())
+    return originalExecute(...args)
+  }
+
+  return definition
 }
