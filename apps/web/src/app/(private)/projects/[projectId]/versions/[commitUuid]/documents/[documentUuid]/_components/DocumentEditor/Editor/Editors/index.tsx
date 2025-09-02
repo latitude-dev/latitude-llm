@@ -1,5 +1,6 @@
 import { useDevMode } from '$/hooks/useDevMode'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
+import { useExperimentDiff } from '$/hooks/useExperimentDiffContext'
 import { useMetadata } from '$/hooks/useMetadata'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import {
@@ -8,32 +9,23 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useMemo } from 'react'
 import { PlaygroundBlocksEditor } from '../BlocksEditor'
-import { useDiffState } from '../hooks/useDiffState'
 import { PlaygroundTextEditor } from '../TextEditor'
+import { useSyncLatteChanges } from '$/hooks/useSyncLatteChanges'
 
 export function Editors({
   document,
-  initialDiff,
   refinementEnabled,
 }: {
   document: DocumentVersion
-  initialDiff: string | undefined
   refinementEnabled: boolean
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { devMode } = useDevMode()
   const { metadata } = useMetadata()
-  const {
-    value,
-    updateDocumentContent,
-    isSaved,
-    diff: latteDiff,
-  } = useDocumentValue()
-  const { diff: editorDiff, setDiff: setEditorDiff } = useDiffState(
-    initialDiff,
-    updateDocumentContent,
-  )
+  const { value, updateDocumentContent, isSaved } = useDocumentValue()
+  const { diff: latteDiff } = useSyncLatteChanges()
+  const { diff: experimentDiff, setDiff: setEditorDiff } = useExperimentDiff()
 
   const readOnlyMessage = useMemo(() => {
     if (commit.mergedAt !== null) {
@@ -47,8 +39,6 @@ export function Editors({
     return undefined
   }, [commit.mergedAt, latteDiff])
 
-  const diff = editorDiff ?? latteDiff
-
   return devMode ? (
     <PlaygroundTextEditor
       copilotEnabled={false}
@@ -58,7 +48,7 @@ export function Editors({
       document={document}
       commit={commit}
       setDiff={setEditorDiff}
-      diff={diff}
+      diff={experimentDiff ?? latteDiff}
       value={value}
       defaultValue={document.content}
       readOnlyMessage={readOnlyMessage}

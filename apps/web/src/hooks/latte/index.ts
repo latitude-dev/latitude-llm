@@ -186,7 +186,9 @@ export function useLatteChangeActions() {
         trigger('LatteChangesAccepted', { changes })
         setChanges([])
         setIsBrewing(false)
-        setLatteActionsFeedbackUuid(evaluationUuid)
+        if (evaluationUuid) {
+          setLatteActionsFeedbackUuid(evaluationUuid)
+        }
       },
       onError: ({ err }) => {
         setError(err.message)
@@ -214,7 +216,9 @@ export function useLatteChangeActions() {
         // Clear changes state
         setChanges([])
         setIsBrewing(false)
-        setLatteActionsFeedbackUuid(evaluationUuid)
+        if (evaluationUuid) {
+          setLatteActionsFeedbackUuid(evaluationUuid)
+        }
       },
       onError: ({ err }) => {
         setError(err.message)

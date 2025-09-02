@@ -70,7 +70,7 @@ export default async function DocumentPage({
   const freeRunsCount = await getFreeRuns(workspace.id)
 
   const awaitedSearchParams = await searchParams
-  const initialDiff = await getDiffFromExperimentId({
+  const experimentDiff = await getDiffFromExperimentId({
     workspaceId: workspace.id,
     experimentId: Number(awaitedSearchParams?.['applyExperimentId']),
   })
@@ -83,7 +83,7 @@ export default async function DocumentPage({
       freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
       copilotEnabled={env.LATITUDE_CLOUD}
       refinementEnabled={env.LATITUDE_CLOUD}
-      initialDiff={initialDiff}
+      experimentDiff={experimentDiff}
     />
   )
 }

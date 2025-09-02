@@ -9,6 +9,7 @@ import {
   DocumentValueProvider,
   useDocumentValue,
 } from '$/hooks/useDocumentValueContext'
+import { ExperimentDiffProvider } from '$/hooks/useExperimentDiffContext'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useToggleModal } from '$/hooks/useToogleModal'
@@ -45,7 +46,9 @@ export function DocumentEditor(props: DocumentEditorProps) {
           document={props.document}
           documents={props.documents}
         >
-          <DocumentEditorContent {...props} />
+          <ExperimentDiffProvider diff={props.experimentDiff || undefined}>
+            <DocumentEditorContent {...props} />
+          </ExperimentDiffProvider>
         </DocumentValueProvider>
       </DevModeProvider>
     </MetadataProvider>
@@ -68,10 +71,10 @@ const HISTORY_ELM_HEIGHT = 44
  * @param props.initialDiff - Initial diff data for the document
  */
 function DocumentEditorContent({
+  document: doc,
   freeRunsCount,
-  initialDiff,
   refinementEnabled,
-}: DocumentEditorProps) {
+}: Omit<DocumentEditorProps, 'experimentDiff'>) {
   const { updateDocumentContent, document } = useDocumentValue()
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const { metadata } = useMetadata()
@@ -84,10 +87,7 @@ function DocumentEditorContent({
     togglePlaygroundOpen,
     toggleExperimentModal,
   } = useToggleStates()
-  const name = useMemo(
-    () => document.path.split('/').pop() ?? document.path,
-    [document.path],
-  )
+  const name = useMemo(() => doc.path.split('/').pop() ?? doc.path, [doc.path])
   const isMerged = useMemo(() => commit.mergedAt !== null, [commit.mergedAt])
   const isLatitudeProvider = useIsLatitudeProvider({ metadata })
   const {
@@ -183,7 +183,6 @@ function DocumentEditorContent({
             <div className='flex-1 overflow-y-auto'>
               <Editors
                 document={document}
-                initialDiff={initialDiff}
                 refinementEnabled={refinementEnabled}
               />
             </div>
