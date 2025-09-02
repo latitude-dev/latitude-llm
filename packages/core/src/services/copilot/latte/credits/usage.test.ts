@@ -1,9 +1,23 @@
 import { addMonths, startOfDay, subMonths } from 'date-fns'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
-import { LatteThread, SubscriptionPlan, Workspace } from '../../../../browser'
+import {
+  LatteThread,
+  SubscriptionPlan,
+  SubscriptionPlans,
+  Workspace,
+} from '../../../../browser'
 import * as cache from '../../../../cache'
+import * as plans from '../../../../plans'
 import * as factories from '../../../../tests/factories'
 import { usageLatteCredits } from './usage'
+
+const SubscriptionPlansMock = {
+  ...SubscriptionPlans,
+  [SubscriptionPlan.HobbyV2]: {
+    ...SubscriptionPlans[SubscriptionPlan.HobbyV2],
+    latte_credits: 30,
+  },
+}
 
 describe('usageLatteCredits', () => {
   let mocks: {
@@ -97,6 +111,10 @@ describe('usageLatteCredits', () => {
         set: setCacheMock,
       },
     }
+
+    vi.spyOn(plans, 'SubscriptionPlans', 'get').mockReturnValue(
+      SubscriptionPlansMock as any,
+    )
   })
 
   it('succeeds when no requests', async () => {

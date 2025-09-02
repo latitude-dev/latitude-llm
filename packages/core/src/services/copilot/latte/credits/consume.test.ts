@@ -2,13 +2,23 @@ import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
   LatteThread,
   SubscriptionPlan,
+  SubscriptionPlans,
   User,
   Workspace,
 } from '../../../../browser'
 import * as cache from '../../../../cache'
+import * as plans from '../../../../plans'
 import * as factories from '../../../../tests/factories'
 import { WebsocketClient } from '../../../../websockets/workers'
 import { consumeLatteCredits } from './consume'
+
+const SubscriptionPlansMock = {
+  ...SubscriptionPlans,
+  [SubscriptionPlan.HobbyV2]: {
+    ...SubscriptionPlans[SubscriptionPlan.HobbyV2],
+    latte_credits: 30,
+  },
+}
 
 describe('consumeLatteCredits', () => {
   let mocks: {
@@ -51,6 +61,10 @@ describe('consumeLatteCredits', () => {
         .spyOn(WebsocketClient, 'sendEvent')
         .mockImplementation(async () => {}),
     }
+
+    vi.spyOn(plans, 'SubscriptionPlans', 'get').mockReturnValue(
+      SubscriptionPlansMock as any,
+    )
   })
 
   it('succeeds when consuming billable credits', async () => {

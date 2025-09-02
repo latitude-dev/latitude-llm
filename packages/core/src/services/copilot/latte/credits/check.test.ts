@@ -5,8 +5,17 @@ import {
   Workspace,
 } from '../../../../browser'
 import { UnprocessableEntityError } from '../../../../lib/errors'
+import * as plans from '../../../../plans'
 import * as factories from '../../../../tests/factories'
 import { checkLatteCredits } from './check'
+
+const SubscriptionPlansMock = {
+  ...SubscriptionPlans,
+  [SubscriptionPlan.HobbyV2]: {
+    ...SubscriptionPlans[SubscriptionPlan.HobbyV2],
+    latte_credits: 30,
+  },
+}
 
 describe('checkLatteCredits', () => {
   let workspace: Workspace
@@ -25,13 +34,17 @@ describe('checkLatteCredits', () => {
 
     await factories.createLatteRequest({
       credits: Math.floor(
-        SubscriptionPlans[SubscriptionPlan.HobbyV2].latte_credits / 2,
+        SubscriptionPlansMock[SubscriptionPlan.HobbyV2].latte_credits / 2,
       ),
       threadUuid: thread.uuid,
       user: user,
       workspace: workspace,
       billable: true,
     })
+
+    vi.spyOn(plans, 'SubscriptionPlans', 'get').mockReturnValue(
+      SubscriptionPlansMock as any,
+    )
   })
 
   it('fails when not enough limited credits', async () => {
@@ -39,7 +52,7 @@ describe('checkLatteCredits', () => {
       checkLatteCredits({
         credits:
           Math.floor(
-            SubscriptionPlans[SubscriptionPlan.HobbyV2].latte_credits / 2,
+            SubscriptionPlansMock[SubscriptionPlan.HobbyV2].latte_credits / 2,
           ) + 1,
         workspace,
       }).then((r) => r.unwrap()),
