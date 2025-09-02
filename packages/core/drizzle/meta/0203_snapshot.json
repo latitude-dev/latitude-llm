@@ -1,6 +1,6 @@
 {
-  "id": "5882cac4-54fe-43cb-be4b-dc202af4bd46",
-  "prevId": "60d5f192-1e7c-41d8-9b99-1d5e0e5e129c",
+  "id": "b50a7aaf-e318-431b-bf63-96c8e0a74f7a",
+  "prevId": "8e7f5deb-fb2c-44f1-b372-f9b80e9f9048",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3916,7 +3916,8 @@
           "name": "messages",
           "type": "json",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false,
+          "default": "'[]'::json"
         },
         "output": {
           "name": "output",
@@ -3946,7 +3947,7 @@
           "name": "tool_calls",
           "type": "json",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "default": "'[]'::json"
         },
         "tokens": {
@@ -3984,6 +3985,12 @@
         "generated_at": {
           "name": "generated_at",
           "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "file_key": {
+          "name": "file_key",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
@@ -5443,6 +5450,14 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "trigger_status": {
+          "name": "trigger_status",
+          "type": "document_trigger_status",
+          "typeSchema": "latitude",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
         },
         "trigger_type": {
           "name": "trigger_type",
@@ -7454,6 +7469,15 @@
         "scheduled_trigger",
         "shared_prompt",
         "user"
+      ]
+    },
+    "latitude.document_trigger_status": {
+      "name": "document_trigger_status",
+      "schema": "latitude",
+      "values": [
+        "pending",
+        "deployed",
+        "deprecated"
       ]
     },
     "latitude.document_trigger_types": {

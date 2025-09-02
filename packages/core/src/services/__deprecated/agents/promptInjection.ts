@@ -103,7 +103,7 @@ export function injectAgentFinishToolResponsesAfterEachRequest(
   return messages
     .map((message, idx) => {
       if (message.role !== MessageRole.assistant) return [message]
-      const agentToolCallIds = message.toolCalls
+      const agentToolCallIds = (message.toolCalls ?? [])
         .filter((toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME)
         .map((toolCall) => toolCall.id)
 

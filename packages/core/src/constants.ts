@@ -186,7 +186,7 @@ export type SerializedConversation = {
 export type SerializedProviderLog = {
   messages: SerializedConversation
   context: string
-  toolCalls: ToolCall[]
+  toolCalls: ToolCall[] | null
   response: string | null
   config: object | null
   cost: number

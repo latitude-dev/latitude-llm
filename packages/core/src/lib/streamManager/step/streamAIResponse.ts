@@ -69,6 +69,7 @@ export async function streamAIResponse({
   const checkResult = checkValidStream({ type: aiResult.type })
   if (checkResult.error) throw checkResult.error
   const accumulatedText = { text: '' }
+
   let chunkError
   try {
     const resultStream = await consumeStream({
@@ -90,8 +91,10 @@ export async function streamAIResponse({
         startTime,
       })
     }
+
     throw error
   }
+
   if (chunkError) throw chunkError
 
   const processedResponse = await processResponse({
@@ -115,6 +118,7 @@ export async function streamAIResponse({
       response: processedResponse,
     }),
   }).then((r) => r.unwrap())
+
   const response = { ...processedResponse, providerLog }
 
   return {

@@ -26,6 +26,7 @@ import {
 } from '../../../../../_components/MetadataInfoTabs'
 import { DocumentLogEvaluations } from './Evaluations'
 import { DocumentLogMetadata } from './Metadata'
+import { useProviderLog } from '$/stores/providerLogs'
 
 function DocumentLogMetadataLoading() {
   return (
@@ -71,6 +72,7 @@ export function DocumentLogInfo({
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [target, setTarget] = useState<HTMLDivElement | null>(null)
+  const { data: providerLog } = useProviderLog(providerLogs?.at(-1)?.id)
 
   useEffect(() => {
     if (!ref.current) return
@@ -88,10 +90,10 @@ export function DocumentLogInfo({
   })
 
   const conversation = useMemo(() => {
-    const providerLog = providerLogs?.at(-1)
     if (!providerLog) return []
+
     return buildConversation(providerLog)
-  }, [providerLogs])
+  }, [providerLog])
 
   return (
     <MetadataInfoTabs

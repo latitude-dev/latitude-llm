@@ -99,7 +99,7 @@ function isChainCompleted(newMessages?: Message[]) {
   if (!newMessages?.length) return false
 
   const assistantMessage = newMessages[0] as AssistantMessage
-  const returnToolCallIds = assistantMessage.toolCalls
+  const returnToolCallIds = (assistantMessage.toolCalls ?? [])
     .filter((toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME)
     .map((toolCall) => toolCall.id)
 

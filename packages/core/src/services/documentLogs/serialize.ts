@@ -10,8 +10,9 @@ import { Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
 import { ProviderLogsRepository } from '../../repositories'
 import { serializeForEvaluation as serializeProviderLog } from '../providerLogs'
+import { hydrateProviderLog } from '../providerLogs/hydrate'
 
-export function serializeAggregatedProviderLog({
+export async function serializeAggregatedProviderLog({
   documentLog,
   providerLogs,
 }: {
@@ -21,13 +22,16 @@ export function serializeAggregatedProviderLog({
   let cost = 0
   let tokens = 0
   let duration = 0
+  const lastProviderLog = await hydrateProviderLog(providerLogs.at(-1)!).then(
+    (r) => r.unwrap(),
+  )
+
   for (const providerLog of providerLogs) {
     cost += providerLog.costInMillicents ?? 0
     tokens += providerLog.tokens ?? 0
     duration += providerLog.duration ?? 0
   }
 
-  const lastProviderLog = providerLogs.at(-1)!
   return Result.ok({
     ...serializeProviderLog(lastProviderLog),
     parameters: documentLog.parameters,
@@ -52,7 +56,6 @@ export async function serialize(
   const providerLogs = await providerLogsScope
     .findByDocumentLogUuid(documentLog.uuid)
     .then((r) => r.unwrap())
-
   if (!providerLogs.length) {
     return Result.error(
       new NotFoundError('ProviderLogs not found for DocumentLog'),

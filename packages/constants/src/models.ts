@@ -67,10 +67,10 @@ export type ProviderLog = {
   model: string | null
   finishReason: string | null
   config: PartialPromptConfig | null
-  messages: Message[]
+  messages: Message[] | null
   responseObject: unknown | null
   responseText: string | null
-  toolCalls: ToolCall[]
+  toolCalls: ToolCall[] | null
   tokens: number | null
   costInMillicents: number | null
   duration: number | null

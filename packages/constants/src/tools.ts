@@ -23,7 +23,7 @@ type BuildMessageParams<T extends StreamType> = T extends 'object'
       data?: {
         text: string | undefined
         reasoning?: string | undefined
-        toolCalls?: ToolCall[]
+        toolCalls?: ToolCall[] | null
         toolCallResponses?: ToolCallResponse[]
       }
     }

@@ -16,7 +16,7 @@ import { buildProvidersMap } from '../../../../providerApiKeys/buildMap'
 import { runAgentStep } from '../../../agents/runStep'
 
 function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
-  const toolContents: ToolRequestContent[] = providerLog.toolCalls.map(
+  const toolContents: ToolRequestContent[] = (providerLog.toolCalls ?? []).map(
     (toolCall) => ({
       type: ContentType.toolCall,
       toolCallId: toolCall.id,
@@ -32,7 +32,7 @@ function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
   return {
     role: MessageRole.assistant,
     content: [...textContents, ...toolContents] as MessageContent[],
-    toolCalls: providerLog.toolCalls,
+    toolCalls: providerLog.toolCalls ?? [],
   }
 }
 

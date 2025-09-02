@@ -4,6 +4,7 @@ import { ProviderLog } from '../browser'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { documentLogs, providerLogs } from '../schema'
+import { hydrateProviderLog } from '../services/providerLogs/hydrate'
 import { QueryOptions } from './repository'
 import Repository from './repositoryV2'
 
@@ -22,6 +23,16 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
       .$dynamic()
   }
 
+  async find(id: string | number | undefined | null) {
+    const result = await super.find(id)
+    if (result.error) return result
+
+    const hydrated = await hydrateProviderLog(result.unwrap())
+    if (hydrated.error) return hydrated
+
+    return Result.ok(hydrated.unwrap())
+  }
+
   async findByUuid(uuid: string) {
     const result = await this.scope
       .where(and(this.scopeFilter, eq(providerLogs.uuid, uuid)))
@@ -33,7 +44,10 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
       )
     }
 
-    return Result.ok(result[0]!)
+    const hydrated = await hydrateProviderLog(result[0]!)
+    if (hydrated.error) return hydrated
+
+    return Result.ok(hydrated.unwrap())
   }
 
   async findByDocumentUuid(documentUuid: string, opts: QueryOptions = {}) {
@@ -75,8 +89,10 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
     if (!result.length) {
       return Result.error(new NotFoundError('ProviderLog not found'))
     }
+    const hydrated = await hydrateProviderLog(result[0]!)
+    if (hydrated.error) return hydrated
 
-    return Result.ok(result[0]!)
+    return Result.ok(hydrated.unwrap())
   }
 
   async findManyByDocumentLogUuid(documentLogUuids: string[]) {
