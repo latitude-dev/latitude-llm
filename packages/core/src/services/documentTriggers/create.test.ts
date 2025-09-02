@@ -22,10 +22,17 @@ import { DocumentTriggersRepository } from '../../repositories'
 
 const mocks = vi.hoisted(() => ({
   deployDocumentTrigger: vi.fn(),
+  publisher: {
+    publishLater: vi.fn(),
+  },
 }))
 
 vi.mock('./deploy', () => ({
   deployDocumentTrigger: mocks.deployDocumentTrigger,
+}))
+
+vi.mock('../../events/publisher', () => ({
+  publisher: mocks.publisher,
 }))
 
 describe('createDocumentTrigger', () => {
@@ -288,6 +295,53 @@ describe('createDocumentTrigger', () => {
       expect(trigger.triggerType).toBe(DocumentTriggerType.Integration)
       expect(trigger.configuration).toEqual(integrationConfig)
       expect(trigger.deploymentSettings).toEqual(deploymentSettings)
+    })
+  })
+
+  describe('event emission', () => {
+    it('should emit documentTriggerCreated event when trigger is created successfully', async () => {
+      // Arrange
+      const emailConfig: EmailTriggerConfiguration = {
+        name: 'Test Email Trigger',
+        emailWhitelist: ['test@example.com'],
+        domainWhitelist: ['example.com'],
+        replyWithResponse: true,
+        parameters: {},
+      }
+      const deploymentSettings: EmailTriggerDeploymentSettings = {}
+
+      mocks.deployDocumentTrigger.mockResolvedValue(
+        Result.ok({
+          deploymentSettings,
+          triggerStatus: 'deployed',
+        }),
+      )
+
+      // Act
+      await createDocumentTrigger({
+        workspace,
+        project,
+        commit: draft,
+        document,
+        triggerType: DocumentTriggerType.Email,
+        configuration: emailConfig,
+      })
+
+      // Assert
+      expect(mocks.publisher.publishLater).toHaveBeenCalledWith({
+        type: 'documentTriggerCreated',
+        data: {
+          workspaceId: workspace.id,
+          documentTrigger: expect.objectContaining({
+            triggerType: DocumentTriggerType.Email,
+            projectId: project.id,
+            commitId: draft.id,
+            documentUuid: document.documentUuid,
+          }),
+          project,
+          commit: draft,
+        },
+      })
     })
   })
 })

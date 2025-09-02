@@ -9,6 +9,7 @@ import type {
   DatasetRow,
   DocumentLogWithMetadataAndError,
   DocumentSuggestion,
+  DocumentTrigger,
   EvaluationResultV2,
   EvaluationV2,
   ExperimentDto,
@@ -103,6 +104,16 @@ type ProjectUpdatedArgs = {
   project: Project
 }
 
+type DocumentTriggerCreatedArgs = {
+  workspaceId: number
+  trigger: DocumentTrigger
+}
+
+type DocumentTriggerDeletedArgs = {
+  workspaceId: number
+  trigger: DocumentTrigger
+}
+
 type LatteThreadResponse = {
   type: 'fullResponse'
   response: string
@@ -159,6 +170,8 @@ export type WebServerToClientEvents = {
   mcpServerScaleEvent: (args: McpServerScaleEventArgs) => void
   mcpServerConnected: (args: McpServerConnectedArgs) => void
   projectUpdated: (args: ProjectUpdatedArgs) => void
+  triggerCreated: (args: DocumentTriggerCreatedArgs) => void
+  triggerDeleted: (args: DocumentTriggerDeletedArgs) => void
   latteThreadUpdate: (args: LatteThreadUpdateArgs) => void
   latteProjectChanges: (args: {
     threadUuid: string
@@ -206,6 +219,14 @@ export type WorkersClientToServerEvents = {
   projectUpdated: (args: {
     workspaceId: number
     data: ProjectUpdatedArgs
+  }) => void
+  triggerCreated: (args: {
+    workspaceId: number
+    data: DocumentTriggerCreatedArgs
+  }) => void
+  triggerDeleted: (args: {
+    workspaceId: number
+    data: DocumentTriggerDeletedArgs
   }) => void
   latteThreadUpdate: (args: {
     workspaceId: number

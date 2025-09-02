@@ -17,6 +17,7 @@ import {
   DocumentTriggersRepository,
 } from '../../repositories'
 import { eq } from 'drizzle-orm'
+import { publisher } from '../../events/publisher'
 
 async function getLiveDocumentTrigger<T extends DocumentTriggerType>(
   {
@@ -70,80 +71,97 @@ export async function deleteDocumentTrigger<T extends DocumentTriggerType>(
   transaction = new Transaction(),
 ): PromisedResult<DocumentTrigger<T> | null> {
   if (commit.mergedAt) {
-    return Result.error(new BadRequestError('Cannot update a merged commit'))
+    return Result.error(
+      new BadRequestError('Cannot delete a trigger in a live version'),
+    )
   }
 
-  return transaction.call(async (tx) => {
-    const triggersScope = new DocumentTriggersRepository(workspace.id, tx)
+  return transaction.call(
+    async (tx) => {
+      const triggersScope = new DocumentTriggersRepository(workspace.id, tx)
 
-    const currentDocumentTriggerResult =
-      await triggersScope.getTriggerByUuid<T>({
-        uuid: triggerUuid,
-        commit,
-      })
-
-    if (currentDocumentTriggerResult.error) return currentDocumentTriggerResult
-
-    const currentDocumentTrigger = currentDocumentTriggerResult.value
-    const liveDocumentTriggerResult = await getLiveDocumentTrigger<T>(
-      {
-        workspace,
-        projectId: currentDocumentTrigger.projectId,
-        triggerUuid,
-      },
-      transaction,
-    )
-
-    if (liveDocumentTriggerResult.error) return liveDocumentTriggerResult
-    const liveDocumentTrigger = liveDocumentTriggerResult.unwrap()
-
-    const undeployResult = await undeployDocumentTrigger(
-      {
-        workspace,
-        documentTrigger: currentDocumentTrigger,
-      },
-      transaction,
-    )
-    if (!Result.isOk(undeployResult)) return undeployResult
-
-    if (currentDocumentTrigger.commitId === commit.id) {
-      const deleteResult = await tx
-        .delete(documentTriggers)
-        .where(eq(documentTriggers.id, currentDocumentTrigger.id))
-        .returning()
-
-      if (!deleteResult.length) {
-        return Result.error(new NotFoundError('Trigger not found'))
-      }
-    }
-
-    if (liveDocumentTrigger) {
-      const [createdTrigger] = (await tx
-        .insert(documentTriggers)
-        .values({
-          workspaceId: workspace.id,
-          projectId: liveDocumentTrigger.projectId,
-          uuid: currentDocumentTrigger.uuid,
-          documentUuid: liveDocumentTrigger.documentUuid,
-          triggerType: liveDocumentTrigger.triggerType,
-          configuration: liveDocumentTrigger.configuration,
-
-          commitId: commit.id,
-          deletedAt: new Date(),
-          triggerStatus: DocumentTriggerStatus.Deprecated,
-          deploymentSettings: null,
+      const currentDocumentTriggerResult =
+        await triggersScope.getTriggerByUuid<T>({
+          uuid: triggerUuid,
+          commit,
         })
-        .returning()) as DocumentTrigger<T>[]
 
-      if (!createdTrigger) {
-        return Result.error(
-          new LatitudeError('Failed to create delete trigger'),
-        )
+      if (currentDocumentTriggerResult.error) {
+        return currentDocumentTriggerResult
       }
 
-      return Result.ok(createdTrigger)
-    }
+      const currentDocumentTrigger = currentDocumentTriggerResult.value
+      const liveDocumentTriggerResult = await getLiveDocumentTrigger<T>(
+        {
+          workspace,
+          projectId: currentDocumentTrigger.projectId,
+          triggerUuid,
+        },
+        transaction,
+      )
 
-    return Result.ok(currentDocumentTrigger)
-  })
+      if (liveDocumentTriggerResult.error) return liveDocumentTriggerResult
+      const liveDocumentTrigger = liveDocumentTriggerResult.unwrap()
+
+      const undeployResult = await undeployDocumentTrigger(
+        {
+          workspace,
+          documentTrigger: currentDocumentTrigger,
+        },
+        transaction,
+      )
+      if (!Result.isOk(undeployResult)) return undeployResult
+
+      if (currentDocumentTrigger.commitId === commit.id) {
+        const deleteResult = await tx
+          .delete(documentTriggers)
+          .where(eq(documentTriggers.id, currentDocumentTrigger.id))
+          .returning()
+
+        if (!deleteResult.length) {
+          return Result.error(new NotFoundError('Trigger not found'))
+        }
+      }
+
+      if (liveDocumentTrigger) {
+        const [createdTrigger] = (await tx
+          .insert(documentTriggers)
+          .values({
+            workspaceId: workspace.id,
+            projectId: liveDocumentTrigger.projectId,
+            uuid: currentDocumentTrigger.uuid,
+            documentUuid: liveDocumentTrigger.documentUuid,
+            triggerType: liveDocumentTrigger.triggerType,
+            configuration: liveDocumentTrigger.configuration,
+
+            commitId: commit.id,
+            deletedAt: new Date(),
+            triggerStatus: DocumentTriggerStatus.Deprecated,
+            deploymentSettings: null,
+          })
+          .returning()) as DocumentTrigger<T>[]
+
+        if (!createdTrigger) {
+          return Result.error(
+            new LatitudeError('Failed to create delete trigger'),
+          )
+        }
+
+        return Result.ok(createdTrigger)
+      }
+
+      return Result.ok(currentDocumentTrigger)
+    },
+    (deletedTrigger) => {
+      publisher.publishLater({
+        type: 'documentTriggerDeleted',
+        data: {
+          workspaceId: workspace.id,
+          documentTrigger: deletedTrigger as DocumentTrigger,
+          projectId: deletedTrigger.projectId,
+          commit,
+        },
+      })
+    },
+  )
 }

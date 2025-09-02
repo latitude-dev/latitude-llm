@@ -19,6 +19,8 @@ import { touchApiKeyJob } from './touchApiKeyJob'
 import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
 import { undeployDocumentTriggerJob } from './undeployDocumentTriggerJob'
 import { updateWebhookLastTriggeredAt } from './webhooks'
+import { notifyClientOfDocumentTriggerCreated } from './notifyClientOfDocumentTriggerCreated'
+import { notifyClientOfDocumentTriggerDeleted } from './notifyClientOfDocumentTriggerDeleted'
 
 export const EventHandlers: IEventsHandlers = {
   claimReferralInvitations: [createClaimInvitationReferralJob],
@@ -73,4 +75,6 @@ export const EventHandlers: IEventsHandlers = {
   actionExecuted: [],
   toolExecuted: [],
   documentTriggerUndeployRequested: [undeployDocumentTriggerJob],
+  documentTriggerCreated: [notifyClientOfDocumentTriggerCreated],
+  documentTriggerDeleted: [notifyClientOfDocumentTriggerDeleted],
 }
