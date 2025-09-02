@@ -120,42 +120,42 @@ const SelectTrigger = forwardRef<
     ref,
   ) => {
     return (
-      <SelectPrimitive.Trigger ref={ref} asChild {...props}>
-        <div
-          className={cn(
-            'flex items-center justify-between gap-x-1 whitespace-nowrap rounded-md',
-            'border border-input bg-transparent text-sm shadow-sm ring-offset-background',
-            'placeholder:text-muted-foreground focus:outline-none focus:ring-offset-2 focus:ring-2 focus:ring-ring',
-            'disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 bg-background',
-            {
-              'w-full': fullWidth,
-              'py-buttonDefaultVertical px-3 min-h-8': size === 'default',
-              'py-0 px-1.5 min-h-6': size === 'small',
-            },
-            className,
-          )}
-        >
-          <div className='flex flex-row justify-between items-center gap-x-1 min-w-0 w-full'>
-            {children}
-          </div>
-          {!removable ? (
-            <SelectPrimitive.Icon asChild>
-              <Icon
-                name='chevronsUpDown'
-                className='min-w-0 flex-none opacity-50'
-              />
-            </SelectPrimitive.Icon>
-          ) : (
-            <Icon
-              name='close'
-              className='min-w-0 flex-none opacity-50 cursor-pointer'
-              onClick={(event) => {
-                event.preventDefault()
-                onRemove?.()
-              }}
-            />
-          )}
+      <SelectPrimitive.Trigger
+        ref={ref}
+        {...props}
+        className={cn(
+          'flex items-center justify-between gap-x-1 whitespace-nowrap rounded-md',
+          'border border-input bg-transparent text-sm shadow-sm ring-offset-background',
+          'placeholder:text-muted-foreground focus:outline-none focus:ring-offset-2 focus:ring-2 focus:ring-ring',
+          'disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 bg-background',
+          {
+            'w-full': fullWidth,
+            'py-buttonDefaultVertical px-3 min-h-8': size === 'default',
+            'py-0 px-1.5 min-h-6': size === 'small',
+          },
+          className,
+        )}
+      >
+        <div className='flex flex-row justify-between items-center gap-x-1 min-w-0 w-full'>
+          {children}
         </div>
+        {!removable ? (
+          <SelectPrimitive.Icon asChild>
+            <Icon
+              name='chevronsUpDown'
+              className='min-w-0 flex-none opacity-50'
+            />
+          </SelectPrimitive.Icon>
+        ) : (
+          <Icon
+            name='close'
+            className='min-w-0 flex-none opacity-50 cursor-pointer'
+            onClick={(event) => {
+              event.preventDefault()
+              onRemove?.()
+            }}
+          />
+        )}
       </SelectPrimitive.Trigger>
     )
   },
