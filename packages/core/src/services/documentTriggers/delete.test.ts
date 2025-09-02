@@ -12,10 +12,7 @@ import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'
 import { createDocumentTrigger } from './create'
-
-import { deleteDocumentTrigger } from './delete'
 import { DocumentTriggersRepository } from '../../repositories'
-import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 
 const mocks = vi.hoisted(() => ({
   deployDocumentTrigger: vi.fn(),
@@ -34,15 +31,24 @@ vi.mock('../../events/publisher', () => ({
   publisher: mocks.publisher,
 }))
 
-describe.sequential('deleteDocumentTrigger', () => {
+vi.mock('../../events/publisher', () => ({
+  publisher: mocks.publisher,
+}))
+
+describe.sequential('deleting documents...', () => {
   let workspace: Workspace
   let project: Project
   let draft: Commit
   let document: DocumentVersion
   let user: User
+  let deleteDocumentTrigger: typeof import('./delete').deleteDocumentTrigger
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    vi.resetAllMocks()
+    await vi.resetModules()
+    const deleteModule = await import('./delete')
+    deleteDocumentTrigger = deleteModule.deleteDocumentTrigger
 
     const {
       workspace: w,
@@ -75,7 +81,7 @@ describe.sequential('deleteDocumentTrigger', () => {
     })
 
     expect(result.ok).toBeFalsy()
-    expect(result.error).toBeInstanceOf(BadRequestError)
+    expect(result.error?.constructor.name).toBe('BadRequestError')
     expect(result.error?.message).toBe(
       'Cannot delete a trigger in a live version',
     )
@@ -90,7 +96,7 @@ describe.sequential('deleteDocumentTrigger', () => {
     })
 
     expect(result.ok).toBeFalsy()
-    expect(result.error).toBeInstanceOf(NotFoundError)
+    expect(result.error?.constructor.name).toBe('NotFoundError')
     expect(result.error?.message).toContain(
       "Trigger with uuid 'non-existent-uuid' not found in commit",
     )
@@ -181,6 +187,8 @@ describe.sequential('deleteDocumentTrigger', () => {
 
     // New draft
     const { commit: newDraft } = await factories.createDraft({ project, user })
+
+    mocks.undeployDocumentTrigger.mockResolvedValue(Result.ok(undefined))
 
     const result = await deleteDocumentTrigger<DocumentTriggerType.Email>({
       workspace,
