@@ -38,6 +38,11 @@ export default function SendEmailTrigger() {
       const content = formData.get('content')?.toString()
       if (!content) return
 
+      const commitUuid = formData.get('commitUuid')?.toString()
+      const projectId = formData.get('projectId')
+        ? parseInt(formData.get('projectId')!.toString(), 10)
+        : undefined
+
       const messageId = formData.get('messageId')?.toString()
       const references = formData.get('references')?.toString()
 
@@ -50,6 +55,8 @@ export default function SendEmailTrigger() {
         messageId,
         references,
         files,
+        projectId,
+        commitUuid,
       })
     },
     [execute, files],
@@ -64,6 +71,18 @@ export default function SendEmailTrigger() {
             label='Sender email'
             name='senderEmail'
             placeholder='user@latitude.so'
+          />
+        </div>
+        <div className='flex flex-row w-full gap-4'>
+          <Input
+            label='Project Id (Optional)'
+            name='projectId'
+            description='Useful for tests in draft commits'
+          />
+          <Input
+            label='Commit UUID (Optional)'
+            name='commitUuid'
+            description='Useful for tests in draft commits'
           />
         </div>
         <Input

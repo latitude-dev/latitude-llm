@@ -24,6 +24,7 @@ import type {
   User,
   Workspace,
   DocumentTrigger,
+  DocumentTriggerEvent,
 } from '../browser'
 import { PartialConfig } from '../services/ai'
 
@@ -76,6 +77,7 @@ export type Events =
   | 'documentTriggerUndeployRequested'
   | 'documentTriggerCreated'
   | 'documentTriggerDeleted'
+  | 'documentTriggerEventCreated'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -558,6 +560,15 @@ export type DocumentTriggerCreatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type DocumentTriggerEventCreatedEvent = LatitudeEventGeneric<
+  'documentTriggerEventCreated',
+  {
+    workspaceId: number
+    documentTriggerEvent: DocumentTriggerEvent
+    commit: Commit
+  }
+>
+
 export type DocumentTriggerDeletedEvent = LatitudeEventGeneric<
   'documentTriggerDeleted',
   {
@@ -617,6 +628,7 @@ export type LatitudeEvent =
   | DocumentTriggerUndeployRequestedEvent
   | DocumentTriggerCreatedEvent
   | DocumentTriggerDeletedEvent
+  | DocumentTriggerEventCreatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -667,4 +679,5 @@ export interface IEventsHandlers {
   documentTriggerUndeployRequested: EventHandler<DocumentTriggerUndeployRequestedEvent>[]
   documentTriggerCreated: EventHandler<DocumentTriggerCreatedEvent>[]
   documentTriggerDeleted: EventHandler<DocumentTriggerDeletedEvent>[]
+  documentTriggerEventCreated: EventHandler<DocumentTriggerEventCreatedEvent>[]
 }

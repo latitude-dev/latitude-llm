@@ -38,6 +38,8 @@ const eventHandlersJobMappings = {
     jobs.notifyClientOfDocumentTriggerCreated,
   notifyClientOfDocumentTriggerDeleted:
     jobs.notifyClientOfDocumentTriggerDeleted,
+  notifyClientOfDocumentTriggerEventCreated:
+    jobs.notifyClientOfDocumentTriggerEventCreated,
 }
 
 export function startEventsWorker() {

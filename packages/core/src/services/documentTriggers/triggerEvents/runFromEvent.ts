@@ -4,7 +4,6 @@ import {
   DocumentTriggerEvent,
   Workspace,
 } from '../../../browser'
-import { PromisedResult } from '../../../lib/Transaction'
 import { Result, TypedResult } from '../../../lib/Result'
 import { NotImplementedError } from '@latitude-data/constants/errors'
 import {
@@ -12,8 +11,6 @@ import {
   DocumentTriggersRepository,
   DocumentVersionsRepository,
 } from '../../../repositories'
-import { ExecuteDocumentTriggerJobData } from '../../../jobs/job-definitions/documentTriggers/runDocumentTriggerEventJob'
-import { documentsQueue } from '../../../jobs/queues'
 import { runDocumentAtCommit } from '../../commits'
 import { BACKGROUND } from '../../../telemetry'
 import { sendEmailResponse } from '../handlers/email/sendResponse'
@@ -124,22 +121,5 @@ export async function runDocumentFromTriggerEvent<
   }
 
   if (!Result.isOk(runResult)) return runResult
-  return Result.nil()
-}
-
-export async function enqueueRunDocumentFromTriggerEventJob({
-  workspace,
-  documentTriggerEvent,
-}: {
-  workspace: Workspace
-  documentTriggerEvent: DocumentTriggerEvent
-}): PromisedResult<undefined> {
-  const jobData: ExecuteDocumentTriggerJobData = {
-    workspaceId: workspace.id,
-    documentTriggerEventId: documentTriggerEvent.id,
-  }
-
-  await documentsQueue.add('runDocumentTriggerEventJob', jobData)
-
   return Result.nil()
 }

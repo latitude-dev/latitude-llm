@@ -1,7 +1,35 @@
+import { create } from 'zustand'
 import { useCallback } from 'react'
 import { KeyedMutator } from 'swr'
-import { Commit, Project, DocumentTrigger } from '@latitude-data/core/browser'
+import {
+  Commit,
+  Project,
+  DocumentTrigger,
+  DocumentTriggerEvent,
+} from '@latitude-data/core/browser'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
+import useDocumentTriggerEvents from '$/stores/documentTriggerEvents'
+
+type RealtimeTriggerEventCounters = {
+  eventsByTrigger: Record<string, number | undefined>
+  resetCounter: (triggerUuid: string) => void
+  incrementCounter: (triggerUuid: string) => void
+}
+export const realtimeTriggerEventsCounters =
+  create<RealtimeTriggerEventCounters>((set) => ({
+    eventsByTrigger: {},
+    resetCounter: (triggerUuid: string) =>
+      set((state) => ({
+        eventsByTrigger: { ...state.eventsByTrigger, [triggerUuid]: undefined },
+      })),
+    incrementCounter: (triggerUuid: string) =>
+      set((state) => ({
+        eventsByTrigger: {
+          ...state.eventsByTrigger,
+          [triggerUuid]: (state.eventsByTrigger[triggerUuid] || 0) + 1,
+        },
+      })),
+  }))
 
 /**
  * Real-time updates for document triggers using websockets.
@@ -15,6 +43,21 @@ export function useTriggerSockets({
   project: Project
   mutate: KeyedMutator<DocumentTrigger[]>
 }) {
+  const { incrementCounter } = realtimeTriggerEventsCounters((state) => ({
+    incrementCounter: state.incrementCounter,
+  }))
+  const onRealtimeTriggerEventCreated = useCallback(
+    (event: DocumentTriggerEvent) => {
+      incrementCounter(event.triggerUuid)
+    },
+    [incrementCounter],
+  )
+  const { onDocumentTriggerEventCreated } = useDocumentTriggerEvents({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    onRealtimeTriggerEventCreated,
+  })
+
   const onTriggerCreated = useCallback(
     (event: { workspaceId: number; trigger: DocumentTrigger }) => {
       const projectId = event.trigger.projectId
@@ -58,4 +101,8 @@ export function useTriggerSockets({
 
   useSockets({ event: 'triggerCreated', onMessage: onTriggerCreated })
   useSockets({ event: 'triggerDeleted', onMessage: onTriggerDeleted })
+  useSockets({
+    event: 'triggerEventCreated',
+    onMessage: onDocumentTriggerEventCreated,
+  })
 }

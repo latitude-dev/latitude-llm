@@ -23,6 +23,7 @@ import { MouseEvent, ReactNode, useCallback, useMemo } from 'react'
 import { TriggerEventsList } from '../TriggerEventsList'
 import { OnRunTriggerFn } from '../TriggersList'
 import { OnRunChatTrigger } from '../useActiveTrigger'
+import { realtimeTriggerEventsCounters } from '../useTriggerSockets'
 
 function ToggleEnabled({
   projectId,
@@ -149,6 +150,14 @@ export function TriggerWrapper({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
+  const { eventsByTrigger, resetCounter } = realtimeTriggerEventsCounters(
+    (state) => ({
+      eventsByTrigger: state.eventsByTrigger,
+      resetCounter: state.resetCounter,
+    }),
+  )
+  const realtimeCount = eventsByTrigger[trigger.uuid] || 0
+
   const isLive = !!commit.mergedAt
   const canSeeEvents =
     !RUNNABLE_TRIGGERS.includes(trigger.triggerType) &&
@@ -157,10 +166,12 @@ export function TriggerWrapper({
   const canEnable = trigger.triggerStatus === DocumentTriggerStatus.Deployed
 
   const onToggleEventList = useCallback(() => {
+    resetCounter(trigger.uuid)
+
     if (!canSeeEvents) return
 
     setOpenTriggerUuid(trigger.uuid === openTriggerUuid ? null : trigger.uuid)
-  }, [setOpenTriggerUuid, trigger, openTriggerUuid, canSeeEvents])
+  }, [setOpenTriggerUuid, trigger, openTriggerUuid, canSeeEvents, resetCounter])
   const open = trigger.uuid === openTriggerUuid
   const avoidOpenEvents = useCallback((e: MouseEvent<HTMLDivElement>) => {
     e.stopPropagation()
@@ -178,7 +189,12 @@ export function TriggerWrapper({
     onRunTrigger({ document, parameters: {} })
   }, [onRunTrigger, onRunChatTrigger, trigger, document, canRunTrigger])
   return (
-    <div className='flex flex-col'>
+    <div className='flex flex-col relative'>
+      {realtimeCount > 0 ? (
+        <div className='absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 z-10'>
+          <Badge>{realtimeCount}</Badge>
+        </div>
+      ) : null}
       <div
         className={cn(
           'w-full p-4 flex flex-row items-start justify-between gap-4',

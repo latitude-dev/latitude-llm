@@ -132,7 +132,7 @@ export async function createEmailDocumentTrigger({
     })
     .returning()
 
-  return trigger
+  return trigger as DocumentTrigger<DocumentTriggerType.Email>
 }
 
 export async function createIntegrationDocumentTrigger({

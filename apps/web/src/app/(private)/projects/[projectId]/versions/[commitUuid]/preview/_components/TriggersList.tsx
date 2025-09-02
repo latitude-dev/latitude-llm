@@ -200,7 +200,7 @@ export function TriggersList({
                 triggers={triggers}
               />
 
-              <div className='flex flex-col border rounded-lg divide-y divide-border overflow-hidden'>
+              <div className='flex flex-col border rounded-lg divide-y divide-border'>
                 {triggers.map((trigger) => (
                   <TriggersCard
                     key={trigger.uuid}

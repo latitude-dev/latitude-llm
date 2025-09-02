@@ -1,17 +1,11 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  Commit,
-  DocumentTrigger,
-  DocumentTriggerEvent,
-  Workspace,
-} from '../../../browser'
+import { Commit, DocumentTriggerEvent, Workspace } from '../../../browser'
 import { DocumentTriggerEventPayload } from '@latitude-data/constants/documentTriggers'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
-import { documentTriggerEvents } from '../../../schema'
-import { LatitudeError } from '@latitude-data/constants/errors'
 import { Result } from '../../../lib/Result'
 import { DocumentTriggersRepository } from '../../../repositories'
-import { enqueueRunDocumentFromTriggerEventJob } from './runFromEvent'
+import { enqueueRunDocumentFromTriggerEventJob } from './enqueueRunDocumentFromTriggerEventJob'
+import { createDocumentTriggerEvent } from './create'
 
 /**
  * Registers and incoming document trigger event, and enqueues a job to execute the trigger if the trigger is enabled.
@@ -32,58 +26,39 @@ export async function registerDocumentTriggerEvent<
   },
   transaction = new Transaction(),
 ): PromisedResult<DocumentTriggerEvent<T>> {
-  let documentTrigger: DocumentTrigger<T> | undefined
-
-  const documentTriggerEventResult = await transaction.call(async (tx) => {
-    const documentTriggerScope = new DocumentTriggersRepository(
-      workspace.id,
-      tx,
-    )
-    const documentTriggerResult = await documentTriggerScope.getTriggerByUuid({
+  return transaction.call(async (db) => {
+    const triggerScope = new DocumentTriggersRepository(workspace.id, db)
+    const triggerResult = await triggerScope.getTriggerByUuid({
       uuid: triggerUuid,
       commit,
     })
 
-    if (documentTriggerResult.error) {
-      return Result.error(documentTriggerResult.error)
-    }
+    if (triggerResult.error) return triggerResult
 
-    documentTrigger = documentTriggerResult.unwrap() as DocumentTrigger<T>
+    const trigger = triggerResult.value
+    const eventResult = await createDocumentTriggerEvent(
+      {
+        commit,
+        trigger,
+        eventPayload,
+      },
+      transaction,
+    )
 
-    // TODO: Implement services/documentTriggerEvents/create.ts service
-    const [triggerEvent] = (await tx
-      .insert(documentTriggerEvents)
-      .values({
-        workspaceId: workspace.id,
-        triggerUuid: documentTrigger.uuid,
-        triggerType: documentTrigger.triggerType,
-        commitId: commit.id,
-        payload: eventPayload,
-      })
-      .returning()) as [DocumentTriggerEvent<T>]
+    if (eventResult.error) return eventResult
 
-    if (!triggerEvent) {
-      return Result.error(new LatitudeError('Failed to create trigger event'))
-    }
+    const event = eventResult.value
 
-    return Result.ok(triggerEvent)
-  })
-
-  if (documentTriggerEventResult.error) return documentTriggerEventResult
-  const documentTriggerEvent = documentTriggerEventResult.unwrap()
-
-  // If enabled, run the trigger event automatically
-  if (documentTrigger?.enabled) {
-    const executeDocumentTriggerEventResult =
-      await enqueueRunDocumentFromTriggerEventJob({
+    // If enabled, run the trigger event automatically
+    if (trigger.enabled) {
+      const enqueuedResult = await enqueueRunDocumentFromTriggerEventJob({
         workspace,
-        documentTriggerEvent,
+        documentTriggerEvent: event,
       })
 
-    if (executeDocumentTriggerEventResult.error) {
-      return executeDocumentTriggerEventResult
+      if (enqueuedResult.error) return enqueuedResult
     }
-  }
 
-  return Result.ok(documentTriggerEvent)
+    return Result.ok(event)
+  })
 }
