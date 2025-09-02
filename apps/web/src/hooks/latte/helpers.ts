@@ -173,7 +173,7 @@ function getLatteSubagentDescription(
       }
     case 'lat_agent_latte_managers_investigator':
       return {
-        activeDescription: `Looking into ${params.question}...`,
+        activeDescription: `Hunting for answers to your question...`,
         finishedDescription: `Mystery question answered`,
       }
     case 'lat_agent_latte_agents_integrations_integration_manager':
