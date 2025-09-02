@@ -5,6 +5,7 @@ import {
   getEvaluationMetricSpecification,
 } from '$/components/evaluations'
 import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
+import { MetadataProvider } from '$/components/MetadataProvider'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -297,7 +298,7 @@ function RunExperiment<
   const [open, setOpen] = useState(false)
 
   return (
-    <>
+    <MetadataProvider>
       <TableWithHeader.Button variant='default' onClick={() => setOpen(true)}>
         Run experiment
       </TableWithHeader.Button>
@@ -310,6 +311,6 @@ function RunExperiment<
         initialEvaluation={evaluation}
         navigateOnCreate
       />
-    </>
+    </MetadataProvider>
   )
 }

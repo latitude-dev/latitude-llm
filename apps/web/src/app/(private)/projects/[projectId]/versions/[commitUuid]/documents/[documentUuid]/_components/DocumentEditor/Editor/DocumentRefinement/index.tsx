@@ -23,6 +23,7 @@ export function DocumentRefinement({
   project,
   commit,
   document,
+  diff,
   setDiff,
   setPrompt,
   refinementEnabled,
@@ -30,6 +31,7 @@ export function DocumentRefinement({
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
+  diff?: DiffOptions
   setDiff: (value?: DiffOptions) => void
   setPrompt: (prompt: string) => void
   refinementEnabled: boolean
@@ -217,6 +219,8 @@ export function DocumentRefinement({
     }
   }
 
+  const isDisabled = !refinementEnabled || !!diff
+
   if (!refinementEnabled) return null
   if (document.promptlVersion === 0) return null
 
@@ -231,10 +235,11 @@ export function DocumentRefinement({
         }}
         containerClassName='flex-shrink-0'
         onClick={() => setOpenModal(true)}
+        disabled={isDisabled}
       >
-        <Text.H6>Refine</Text.H6>
+        <Text.H6 userSelect={false}>Refine</Text.H6>
       </Button>
-      {openModal && (
+      {openModal && !isDisabled && (
         <Modal
           title={step.title}
           description={step.description}

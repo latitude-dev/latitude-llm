@@ -117,6 +117,7 @@ export const PlaygroundTextEditor = memo(
                 commit={commit}
                 document={document}
                 prompt={value}
+                diff={diff}
                 setDiff={setDiff}
                 setPrompt={onChange}
               />
@@ -124,6 +125,7 @@ export const PlaygroundTextEditor = memo(
                 project={project}
                 commit={commit}
                 document={document}
+                diff={diff}
                 setDiff={setDiff}
                 setPrompt={onChange}
                 refinementEnabled={refinementEnabled}

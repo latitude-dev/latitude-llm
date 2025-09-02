@@ -6,6 +6,7 @@ import {
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import {
   ICommitContextType,
   IProjectContextType,
@@ -13,7 +14,6 @@ import {
 import DiffMatchPatch from 'diff-match-patch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import { useCallback, useMemo } from 'react'
 
 const dmp = new DiffMatchPatch()
@@ -63,8 +63,8 @@ export function SuggestionItem({
       newValue: patchedPrompt,
       description: suggestion.summary,
       onAccept: async (prompt) => {
-        const result = await apply({ suggestionId: suggestion.id, prompt })
-        if (!result) return
+        const [result, error] = await apply({ suggestionId: suggestion.id, prompt }) // prettier-ignore
+        if (error) return
 
         setDiff(undefined)
 
@@ -79,15 +79,23 @@ export function SuggestionItem({
           setPrompt(prompt)
         }
       },
-      onReject: () => setDiff(undefined),
+      onReject: async () => {
+        const [_, error] = await discard({ suggestionId: suggestion.id })
+        if (error) return
+
+        setDiff(undefined)
+      },
     })
 
     close()
-  }, [suggestion, prompt, setDiff, setPrompt, apply, close, router])
+  }, [suggestion, prompt, setDiff, setPrompt, apply, discard, close, router])
 
   const onDiscard = useCallback(async () => {
-    await discard({ suggestionId: suggestion.id })
-  }, [suggestion, discard])
+    const [_, error] = await discard({ suggestionId: suggestion.id })
+    if (error) return
+
+    close()
+  }, [suggestion, discard, close])
 
   return (
     <li className='w-full flex flex-col p-4 gap-y-2 hover:bg-accent/50'>
