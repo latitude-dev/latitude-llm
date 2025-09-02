@@ -9,6 +9,10 @@ import {
 import { annotateEvaluationV2 } from '../../../evaluationsV2/annotate'
 import { getCopilotDocument } from '../helpers'
 import { NotImplementedError } from '@latitude-data/constants/errors'
+import {
+  AssistantMessage,
+  MessageRole,
+} from '@latitude-data/constants/legacyCompiler'
 
 export async function evaluateLatteThreadChanges(
   {
@@ -58,6 +62,22 @@ export async function evaluateLatteThreadChanges(
     return Result.error(evaluationResult.error!)
   }
   const evaluation = evaluationResult.unwrap()
+
+  // If output message is empty, fill it with "[ABORTED]"
+  if (providerLog.responseText === '') {
+    providerLog.responseText = '[ABORTED]'
+    providerLog.output = [
+      {
+        role: MessageRole.assistant,
+        content: [
+          {
+            type: 'text',
+            text: '[ABORTED]',
+          },
+        ],
+      } as AssistantMessage,
+    ]
+  }
 
   return annotateEvaluationV2(
     {
