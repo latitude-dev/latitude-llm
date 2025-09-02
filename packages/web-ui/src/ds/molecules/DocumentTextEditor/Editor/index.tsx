@@ -83,7 +83,7 @@ export function DocumentTextEditor({
     const newValue = diffEditorRef.current.getModifiedEditor().getValue()
 
     setIsApplyingDiff(true)
-    diff.onAccept(newValue)
+    await diff.onAccept(newValue)
     setIsApplyingDiff(false)
   }, [diff])
 
@@ -92,7 +92,7 @@ export function DocumentTextEditor({
     if (!diffEditorRef.current) return
 
     setIsDiscardingDiff(true)
-    diff.onReject()
+    await diff.onReject()
     setIsDiscardingDiff(false)
   }, [diff])
 
@@ -217,11 +217,7 @@ export function DocumentTextEditor({
             </Button>
           )}
         </div>
-        {!diff && (
-          <div className='flex flex-row items-center gap-2'>
-            {actionButtons}
-          </div>
-        )}
+        <div className='flex flex-row items-center gap-2'>{actionButtons}</div>
       </div>
     </div>
   )

@@ -76,15 +76,13 @@ export default function useDocumentSuggestions(
       suggestionId: number
       prompt?: string
     }) => {
-      const [result, error] = await executeApplyDocumentSuggestion({
+      return await executeApplyDocumentSuggestion({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
         suggestionId: suggestionId,
         prompt: prompt,
       })
-      if (error) return
-      return result
     },
     [project, commit, document, executeApplyDocumentSuggestion],
   )
@@ -106,14 +104,12 @@ export default function useDocumentSuggestions(
   })
   const discardDocumentSuggestion = useCallback(
     async ({ suggestionId }: { suggestionId: number }) => {
-      const [result, error] = await executeDiscardDocumentSuggestion({
+      return await executeDiscardDocumentSuggestion({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
         suggestionId: suggestionId,
       })
-      if (error) return
-      return result
     },
     [project, commit, document, executeDiscardDocumentSuggestion],
   )

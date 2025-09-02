@@ -1,6 +1,7 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { ResultPanel } from '$/components/evaluations/ResultPanel'
+import { DevModeProvider } from '$/hooks/useDevMode'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { useEvaluationResultsV2Count } from '$/stores/evaluationResultsV2'
 import {
@@ -88,11 +89,13 @@ export function EvaluationResultsTable<
               setSearch={setSearch}
               isLoading={isLoading}
             />
-            <EvaluationResultsTableActions
-              selectableState={selectableState}
-              refinementEnabled={refinementEnabled}
-              isLoading={isLoading}
-            />
+            <DevModeProvider>
+              <EvaluationResultsTableActions
+                selectableState={selectableState}
+                refinementEnabled={refinementEnabled}
+                isLoading={isLoading}
+              />
+            </DevModeProvider>
           </div>
         ) : (
           <TableBlankSlate description='There are no results that match the selected filters. Change the filters to see more results.' />

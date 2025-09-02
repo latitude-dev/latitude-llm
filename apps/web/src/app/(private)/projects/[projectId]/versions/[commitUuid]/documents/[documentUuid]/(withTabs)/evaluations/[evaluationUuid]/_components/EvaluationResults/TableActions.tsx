@@ -1,5 +1,6 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
+import { useDevMode } from '$/hooks/useDevMode'
 import {
   PlaygroundAction,
   usePlaygroundAction,
@@ -12,6 +13,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import { useCallback } from 'react'
 
 export function EvaluationResultsTableActions<
   T extends EvaluationType = EvaluationType,
@@ -29,6 +31,7 @@ export function EvaluationResultsTableActions<
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const { evaluation } = useCurrentEvaluationV2<T, M>()
+  const { setDevMode } = useDevMode()
 
   const { setPlaygroundAction } = usePlaygroundAction({
     action: PlaygroundAction.RefinePrompt,
@@ -40,20 +43,20 @@ export function EvaluationResultsTableActions<
   const isDisabled =
     isLoading || !refinementEnabled || !selectableState.selectedCount
 
+  const onRefine = useCallback(() => {
+    if (isDisabled) return
+    setDevMode(true)
+    setPlaygroundAction({
+      evaluationUuid: evaluation.uuid,
+      resultUuids: selectableState.selectedRowIds as string[],
+    })
+  }, [isDisabled, setDevMode, setPlaygroundAction, evaluation, selectableState])
+
   return (
     <div className='flex justify-center sticky bottom-4 pointer-events-none'>
       <FloatingPanel visible={selectableState.selectedCount > 0}>
         <div className='flex flex-row justify-between gap-x-4'>
-          <Button
-            fancy
-            onClick={() =>
-              setPlaygroundAction({
-                evaluationUuid: evaluation.uuid,
-                resultUuids: selectableState.selectedRowIds as string[],
-              })
-            }
-            disabled={isDisabled}
-          >
+          <Button fancy onClick={onRefine} disabled={isDisabled}>
             Refine prompt
           </Button>
           <Button

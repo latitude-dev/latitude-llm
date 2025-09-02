@@ -64,6 +64,7 @@ export function DocumentSuggestions({
   commit,
   document,
   prompt,
+  diff,
   setDiff,
   setPrompt,
 }: {
@@ -71,6 +72,7 @@ export function DocumentSuggestions({
   commit: ICommitContextType['commit']
   document: DocumentVersion
   prompt: string
+  diff?: DiffOptions
   setDiff: (value?: DiffOptions) => void
   setPrompt: (prompt: string) => void
 }) {
@@ -104,11 +106,13 @@ export function DocumentSuggestions({
   )
   useDocumentSuggestionsSocket({ document, mutate, notify })
 
+  const isDisabled = isLoading || !!diff
+
   if (!suggestions.length) return null
 
   return (
-    <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
-      <Popover.Trigger disabled={isLoading} asChild>
+    <Popover.Root open={isOpen && !isDisabled} onOpenChange={setIsOpen}>
+      <Popover.Trigger disabled={isDisabled} asChild>
         <Button
           variant='shiny'
           size='small'
@@ -120,8 +124,9 @@ export function DocumentSuggestions({
           }}
           className='relative'
           containerClassName='flex-shrink-0'
+          disabled={isDisabled}
         >
-          <Text.H6M color='accentForeground'>
+          <Text.H6M color='accentForeground' userSelect={false}>
             {suggestions.length}{' '}
             {suggestions.length > 1 ? 'suggestions' : 'suggestion'}
           </Text.H6M>
