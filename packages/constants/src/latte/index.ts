@@ -25,7 +25,9 @@ export enum LatteTool {
 
   getFullTriggerSchema = 'get_full_trigger_schema',
   validateTriggerSchema = 'validate_trigger_schema',
-  triggerActions = 'trigger_actions',
+  createTrigger = 'create_trigger',
+  updateTrigger = 'update_trigger',
+  deleteTrigger = 'delete_trigger',
 }
 
 export const LATTE_COST_PROVIDER = 'anthropic'
