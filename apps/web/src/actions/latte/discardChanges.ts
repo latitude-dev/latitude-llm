@@ -21,14 +21,12 @@ export const discardLatteChangesActions = authProcedure
       threadUuid,
     }).then((r) => r.unwrap())
 
-    const evaluationResult = await evaluateLatteThreadChanges({
+    const rezult = await evaluateLatteThreadChanges({
       threadUuid,
       accepted: false,
     })
 
-    const { result } = evaluationResult.unwrap()
+    const uuid = rezult.value?.result.uuid
 
-    return {
-      evaluationUuid: result.uuid,
-    }
+    return { evaluationUuid: uuid }
   })

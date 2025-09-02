@@ -5,8 +5,13 @@ import {
   DocumentValueProvider,
   useDocumentValue,
 } from '$/hooks/useDocumentValueContext'
+import {
+  ExperimentDiffProvider,
+  useExperimentDiff,
+} from '$/hooks/useExperimentDiffContext'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
+import { useSyncLatteChanges } from '$/hooks/useSyncLatteChanges'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import useFeature from '$/stores/useFeature'
 import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
@@ -20,7 +25,7 @@ import { EvaluationEditorHeader } from '../../../(withTabs)/evaluations/[evaluat
 import DocumentTabs from '../../DocumentTabs'
 import { PlaygroundBlocksEditor } from './BlocksEditor'
 import { EditorHeader } from './EditorHeader'
-import { useDiffState } from './hooks/useDiffState'
+
 import { useOldEditorHeaderActions } from './hooks/useOldEditorHeaderActions'
 import { Playground } from './Playground'
 import { PlaygroundTextEditor } from './TextEditor'
@@ -32,7 +37,7 @@ export type DocumentEditorProps = {
   freeRunsCount?: number
   copilotEnabled: boolean
   refinementEnabled: boolean
-  initialDiff?: string
+  experimentDiff?: string
 }
 
 export function OldDocumentEditor(props: DocumentEditorProps) {
@@ -43,7 +48,9 @@ export function OldDocumentEditor(props: DocumentEditorProps) {
           document={props.document}
           documents={props.documents}
         >
-          <OldDocumentEditorContent {...props} />
+          <ExperimentDiffProvider diff={props.experimentDiff}>
+            <OldDocumentEditorContent {...props} />
+          </ExperimentDiffProvider>
         </DocumentValueProvider>
       </DevModeProvider>
     </MetadataProvider>
@@ -55,21 +62,16 @@ function OldDocumentEditorContent({
   freeRunsCount,
   copilotEnabled,
   refinementEnabled,
-  initialDiff,
-}: DocumentEditorProps) {
+}: Omit<DocumentEditorProps, 'experimentDiff'>) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { isEnabled: blocksEditorEnabled } = useFeature('blocksEditor')
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
-  const {
-    document,
-    value,
-    updateDocumentContent,
-    isSaved,
-    diff: latteDiff,
-  } = useDocumentValue()
+  const { document, value, updateDocumentContent, isSaved } = useDocumentValue()
+  const { diff: latteDiff } = useSyncLatteChanges()
+  const { diff: experimentDiff, setDiff: setEditorDiff } = useExperimentDiff()
   const oldHeaderEditorActions = useOldEditorHeaderActions({
     project: useCurrentProject().project,
     commit: useCurrentCommit().commit,
@@ -83,10 +85,6 @@ function OldDocumentEditorContent({
   })
   const isMerged = commit.mergedAt !== null
   const { devMode } = useDevMode()
-  const { diff: editorDiff, setDiff: setEditorDiff } = useDiffState(
-    initialDiff,
-    updateDocumentContent,
-  )
   const name = document.path.split('/').pop() ?? document.path
   const readOnlyMessage = useMemo(() => {
     if (isMerged) {
@@ -99,7 +97,6 @@ function OldDocumentEditorContent({
 
     return undefined
   }, [isMerged, latteDiff])
-  const diff = editorDiff ?? latteDiff
 
   return (
     <DocumentTabs
@@ -153,7 +150,7 @@ function OldDocumentEditorContent({
                   document={document}
                   commit={commit}
                   setDiff={setEditorDiff}
-                  diff={diff}
+                  diff={experimentDiff ?? latteDiff}
                   value={value}
                   defaultValue={document.content}
                   copilotEnabled={copilotEnabled}
