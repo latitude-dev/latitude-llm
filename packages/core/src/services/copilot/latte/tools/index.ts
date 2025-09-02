@@ -19,11 +19,13 @@ import searchIntegrationResources from './settings/searchIntegrationResources'
 import searchIntegrationApps from './settings/searchIntegrationApps'
 import createIntegration from './settings/createIntegration'
 import { ToolHandler } from '../../../../lib/streamManager/clientTools/handlers'
-import triggerActions from './triggers/actions/triggerActions'
 import listExistingTriggers from './triggers/listExistingTriggers'
 import { getFullTriggerConfigSchema } from './triggers/getFullTriggerConfigSchema'
 import { validateTriggerSchema } from './triggers/validateTriggerSchema'
 import { LatteInvalidChoiceError } from './triggers/configValidator'
+import createTrigger from './triggers/actions/createTrigger'
+import updateTrigger from './triggers/actions/updateTrigger'
+import deleteTrigger from './triggers/actions/deleteTrigger'
 
 export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.think]: think,
@@ -40,7 +42,9 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.searchIntegrationApps]: searchIntegrationApps,
   [LatteTool.createIntegration]: createIntegration,
   [LatteTool.listIntegrationTriggers]: listIntegrationTriggers,
-  [LatteTool.triggerActions]: triggerActions,
+  [LatteTool.createTrigger]: createTrigger,
+  [LatteTool.updateTrigger]: updateTrigger,
+  [LatteTool.deleteTrigger]: deleteTrigger,
   [LatteTool.listExistingTriggers]: listExistingTriggers,
   [LatteTool.getFullTriggerSchema]: getFullTriggerConfigSchema,
   [LatteTool.validateTriggerSchema]: validateTriggerSchema,

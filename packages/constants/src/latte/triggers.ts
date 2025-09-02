@@ -5,25 +5,6 @@ import {
   ScheduledTriggerConfiguration,
 } from '../documentTriggers/schema'
 
-type LatteCreateEmailTriggerAction = {
-  operation: 'create'
-  triggerType: DocumentTriggerType.Email
-  configuration: EmailTriggerConfiguration
-}
-
-type LatteCreateScheduledTriggerAction = {
-  operation: 'create'
-  triggerType: DocumentTriggerType.Scheduled
-  promptUuid: string
-  configuration: ScheduledTriggerConfiguration
-}
-
-type LatteCreateIntegrationTriggerAction = {
-  operation: 'create'
-  triggerType: DocumentTriggerType.Integration
-  configuration: IntegrationTriggerConfiguration
-}
-
 type LatteDeleteScheduledTriggerAction = {
   operation: 'delete'
   triggerType: DocumentTriggerType.Scheduled
@@ -43,7 +24,6 @@ type LatteDeleteIntegrationTriggerAction = {
 type LatteUpdateScheduledTriggerAction = {
   operation: 'update'
   triggerType: DocumentTriggerType.Scheduled
-  promptUuid: string
   configuration: ScheduledTriggerConfiguration
 }
 
@@ -60,9 +40,6 @@ type LatteUpdateIntegrationTriggerAction = {
 }
 
 export type LatteTriggerAction =
-  | LatteCreateEmailTriggerAction
-  | LatteCreateScheduledTriggerAction
-  | LatteCreateIntegrationTriggerAction
   | LatteDeleteScheduledTriggerAction
   | LatteDeleteEmailTriggerAction
   | LatteDeleteIntegrationTriggerAction

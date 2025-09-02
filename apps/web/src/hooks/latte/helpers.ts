@@ -122,28 +122,19 @@ function getDescriptionFromLatteTool(
         finishedDescription: `Trigger configuration validated`,
       }
 
-    case LatteTool.triggerActions:
-      if (
-        Array.isArray(params.actions) &&
-        params.actions.length > 0 &&
-        params.actions[0].operation === 'create'
-      ) {
-        return {
-          activeDescription: `Creating trigger ${params.componentId}...`,
-          finishedDescription: `${params.componentId} trigger created`,
-        }
+    case LatteTool.createTrigger:
+      return {
+        activeDescription: `Creating trigger ${params.componentId}...`,
+        finishedDescription: `${params.componentId} trigger created`,
       }
-      if (
-        Array.isArray(params.actions) &&
-        params.actions.length > 0 &&
-        params.actions[0].operation === 'delete'
-      ) {
-        return {
-          activeDescription: `Deleting trigger ${params.componentId}...`,
-          finishedDescription: `${params.componentId} trigger deleted`,
-        }
+
+    case LatteTool.deleteTrigger:
+      return {
+        activeDescription: `Deleting trigger ${params.componentId}...`,
+        finishedDescription: `${params.componentId} trigger deleted`,
       }
-      // Will be update if its neither create nor delete
+
+    case LatteTool.updateTrigger:
       return {
         activeDescription: `Updating trigger ${params.componentId}...`,
         finishedDescription: `${params.componentId} trigger updated`,
@@ -162,8 +153,8 @@ function getLatteSubagentDescription(
   switch (toolName) {
     case 'lat_agent_latte_agents_documentation_ask_documentation':
       return {
-        activeDescription: `Searching '${params.question}'...`,
-        finishedDescription: `Searched '${params.question}'`,
+        activeDescription: `Searching through the docs...`,
+        finishedDescription: `Searched through documentation`,
         customIcon: 'bookMarked',
       }
     case 'lat_agent_latte_managers_build_manager':
@@ -173,8 +164,8 @@ function getLatteSubagentDescription(
       }
     case 'lat_agent_latte_managers_investigator':
       return {
-        activeDescription: `Hunting for answers to your question...`,
-        finishedDescription: `Mystery question answered`,
+        activeDescription: `Taking a closer look...`,
+        finishedDescription: `Investigation completed`,
       }
     case 'lat_agent_latte_agents_integrations_integration_manager':
       return {
@@ -203,8 +194,13 @@ function getLatteSubagentDescription(
       }
     case 'lat_agent_latte_agents_reading_reader':
       return {
-        activeDescription: `Reading through prompt ${params.path}...`,
+        activeDescription: `Reading through the prompts...`,
         finishedDescription: `Prompt read successfully`,
+      }
+    case 'lat_tool_web_extract':
+      return {
+        activeDescription: `Searching through the web...`,
+        finishedDescription: `Searched through the web`,
       }
     default:
       return {
