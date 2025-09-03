@@ -207,7 +207,7 @@ function LatteChangesFeedback({
   onSubmit,
   action,
 }: {
-  onSubmit: (feedback: string, evaluationResultUuid?: string) => void
+  onSubmit: (feedback: string) => void
   action: 'accept' | 'undo'
 }) {
   const [value, setValue] = useState('')

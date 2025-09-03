@@ -1,6 +1,6 @@
 import { LatteTool } from '@latitude-data/constants/latte'
-import { LatteToolStep } from './types'
 import { ToolCall } from 'ai'
+import { LatteToolStep } from './types'
 
 export function getDescriptionFromToolCall(
   toolCall: ToolCall<string, Record<string, unknown>>,
@@ -52,7 +52,7 @@ function getDescriptionFromLatteTool(
 
     case LatteTool.listIntegrations:
       return {
-        activeDescription: `Showing available integrations...`,
+        activeDescription: `Gathering available integrations...`,
         finishedDescription: `Gathered available integrations`,
       }
 
@@ -70,8 +70,8 @@ function getDescriptionFromLatteTool(
 
     case LatteTool.writePrompt:
       return {
-        activeDescription: `Writing prompt to ${params.path}...`,
-        finishedDescription: `Wrote prompt to ${params.path}`,
+        activeDescription: `Writing prompt ${params.path}...`,
+        finishedDescription: `Wrote prompt ${params.path}`,
       }
 
     case LatteTool.deletePrompt:
@@ -82,14 +82,14 @@ function getDescriptionFromLatteTool(
 
     case LatteTool.editProject:
       return {
-        activeDescription: `Editing your project configuration...`,
+        activeDescription: `Updating your project configuration...`,
         finishedDescription: `Updated project configuration`,
       }
 
     case LatteTool.searchIntegrationApps:
       return {
         activeDescription: `Searching for useful integrations...`,
-        finishedDescription: `Gathered useful integrations`,
+        finishedDescription: `Searched useful integrations`,
       }
 
     case LatteTool.searchIntegrationResources:
@@ -159,8 +159,8 @@ function getLatteSubagentDescription(
       }
     case 'lat_agent_latte_managers_build_manager':
       return {
-        activeDescription: 'Figuring out what to build...',
-        finishedDescription: 'Building phase completed',
+        activeDescription: 'Figuring out what to brew...',
+        finishedDescription: 'Brewed to perfection',
       }
     case 'lat_agent_latte_managers_investigator':
       return {
@@ -172,7 +172,7 @@ function getLatteSubagentDescription(
         activeDescription: 'Setting up your integration...',
         finishedDescription: `Integration ${params.name} configured`,
       }
-    case 'lat_agent_latte_agents_triggers_trigger_manager':
+    case 'lat_agent_latte_agents_integrations_trigger_manager':
       return {
         activeDescription: `Setting up your trigger...`,
         finishedDescription: `${params.componentId} trigger configured`,
@@ -184,23 +184,33 @@ function getLatteSubagentDescription(
       }
     case 'lat_agent_latte_agents_building_prompt_writer':
       return {
-        activeDescription: `Creating new prompts...`,
-        finishedDescription: `New prompts added successfully`,
+        activeDescription: `Crafting new prompts...`,
+        finishedDescription: `New prompts crafted`,
       }
     case 'lat_agent_latte_agents_planning_project_architect':
       return {
         activeDescription: `Designing the project structure...`,
-        finishedDescription: `Design phase completed`,
+        finishedDescription: `Project structure designed`,
       }
     case 'lat_agent_latte_agents_reading_reader':
       return {
-        activeDescription: `Reading through the prompts...`,
-        finishedDescription: `Prompt read successfully`,
+        activeDescription: `Understanding your prompts...`,
+        finishedDescription: `Prompts understood`,
+      }
+    case 'lat_tool_run_code':
+      return {
+        activeDescription: `Doing magic...`,
+        finishedDescription: `Spell casted`,
+      }
+    case 'lat_tool_web_search':
+      return {
+        activeDescription: `Browsing the web...`,
+        finishedDescription: `Browsed the web`,
       }
     case 'lat_tool_web_extract':
       return {
-        activeDescription: `Searching through the web...`,
-        finishedDescription: `Searched through the web`,
+        activeDescription: `Curating resources...`,
+        finishedDescription: `Resources curated`,
       }
     default:
       return {

@@ -255,13 +255,15 @@ export function useLatteChangeActions() {
   const addFeedbackToLatteChange = useCallback(
     (feedback: string) => {
       if (!latteActionsFeedbackUuid) return
-      if (feedback.trim() === '') return
 
-      setIsBrewing(true)
-      executeAddFeedbackToLatteChange({
-        content: feedback,
-        evaluationResultUuid: latteActionsFeedbackUuid,
-      })
+      feedback = feedback.trim()
+      if (feedback) {
+        setIsBrewing(true)
+        executeAddFeedbackToLatteChange({
+          content: feedback,
+          evaluationResultUuid: latteActionsFeedbackUuid,
+        })
+      }
 
       setLatteActionsFeedbackUuid(undefined)
     },
