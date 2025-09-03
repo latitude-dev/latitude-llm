@@ -130,6 +130,7 @@ describe('createDocumentTrigger', () => {
           triggerUuid: expect.any(String),
           triggerType: DocumentTriggerType.Scheduled,
           configuration: { cronExpression: '0 0 * * *' },
+          skipDeployment: false,
         },
         expect.any(Object), // transaction
       )

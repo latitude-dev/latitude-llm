@@ -248,6 +248,7 @@ export async function cloneDocumentTriggers({
       document: targetDocument,
       triggerType: trigger.triggerType,
       configuration: copyTriggerConfiguration(trigger, matchingIntegrationsMap),
+      skipDeployment: true,
     })
 
     if (!Result.isOk(createTriggerResult)) {
