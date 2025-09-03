@@ -8,7 +8,6 @@ import {
   ObjectStreamPart,
   streamText as originalStreamText,
   Output,
-  smoothStream,
   StreamTextResult,
   TextStreamPart,
   Tool,
@@ -155,7 +154,6 @@ export async function ai({
       abortSignal,
       providerOptions: config.providerOptions,
       experimental_telemetry: { isEnabled: false }, // Note: avoid conflicts with our own telemetry
-      experimental_transform: smoothStream(),
       experimental_output: useSchema
         ? Output.object({ schema: jsonSchema(schema) })
         : undefined,
