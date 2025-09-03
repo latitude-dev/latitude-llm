@@ -1,5 +1,5 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useLatteChangeActions } from '$/hooks/latte'
+import { useLatteChangeActions } from '$/hooks/latte/useLatteChangeActions'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useEvents } from '$/lib/events'
 import { ROUTES } from '$/services/routes'
