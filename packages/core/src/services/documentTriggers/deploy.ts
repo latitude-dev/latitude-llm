@@ -34,18 +34,27 @@ export async function deployDocumentTrigger<T extends DocumentTriggerType>(
     triggerUuid,
     triggerType,
     configuration,
+    skipDeployment = false,
   }: {
     workspace: Workspace
     commit: Commit
     triggerUuid: string
     triggerType: T
     configuration: DocumentTriggerConfiguration<T>
+    skipDeployment?: boolean
   },
   transaction = new Transaction(),
 ): PromisedResult<{
   deploymentSettings: DocumentTriggerDeploymentSettings<T>
   triggerStatus: DocumentTriggerStatus
 }> {
+  if (skipDeployment) {
+    return Result.ok({
+      deploymentSettings: {} as DocumentTriggerDeploymentSettings<T>,
+      triggerStatus: DocumentTriggerStatus.Pending,
+    })
+  }
+
   if (commit.mergedAt) {
     return Result.error(
       new BadRequestError(

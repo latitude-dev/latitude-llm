@@ -19,6 +19,7 @@ export async function createDocumentTrigger<
     document,
     triggerType,
     configuration,
+    skipDeployment = false,
   }: {
     workspace: Workspace
     project: Project
@@ -26,6 +27,7 @@ export async function createDocumentTrigger<
     document: DocumentVersion
     triggerType: T
     configuration: DocumentTriggerConfiguration<T>
+    skipDeployment?: boolean
   },
   transaction = new Transaction(),
 ): PromisedResult<DocumentTrigger<T>> {
@@ -43,6 +45,7 @@ export async function createDocumentTrigger<
       triggerUuid,
       triggerType,
       configuration,
+      skipDeployment,
     },
     transaction,
   )

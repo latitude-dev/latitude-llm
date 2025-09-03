@@ -1,12 +1,19 @@
 import {
   DocumentTriggerParameters,
   DocumentTriggerType,
+  DocumentTriggerStatus,
 } from '@latitude-data/constants'
 import { v4 as uuidv4 } from 'uuid'
 import { database } from '../../client'
 import { documentTriggers } from '../../schema'
 import { createProject } from './createProject'
-import { DocumentTrigger } from '../../browser'
+import {
+  DocumentTrigger,
+  Workspace,
+  Project,
+  Commit,
+  DocumentVersion,
+} from '../../browser'
 import {
   EmailTriggerConfiguration,
   EmailTriggerDeploymentSettings,
@@ -14,6 +21,10 @@ import {
   IntegrationTriggerDeploymentSettings,
   ScheduledTriggerConfiguration,
   ScheduledTriggerDeploymentSettings,
+  ChatTriggerConfiguration,
+  ChatTriggerDeploymentSettings,
+  DocumentTriggerConfiguration,
+  DocumentTriggerDeploymentSettings,
 } from '@latitude-data/constants/documentTriggers'
 
 /**
@@ -188,4 +199,82 @@ export async function createIntegrationDocumentTrigger({
     .returning()
 
   return trigger as DocumentTrigger
+}
+
+export async function createChatDocumentTrigger({
+  workspaceId,
+  projectId,
+  commitId,
+  documentUuid = uuidv4(),
+  enabled = true,
+}: {
+  workspaceId?: number
+  projectId?: number
+  commitId?: number
+  documentUuid?: string
+  enabled?: boolean
+} = {}): Promise<DocumentTrigger<DocumentTriggerType.Chat>> {
+  if (!commitId || !projectId || !workspaceId) {
+    const { project, commit } = await createProject({ skipMerge: true })
+    workspaceId = project.workspaceId
+    projectId = project.id
+    commitId = commit.id
+  }
+
+  const configuration: ChatTriggerConfiguration = {}
+  const deploymentSettings: ChatTriggerDeploymentSettings = {}
+
+  const [trigger] = await database
+    .insert(documentTriggers)
+    .values({
+      workspaceId,
+      projectId,
+      commitId,
+      documentUuid,
+      triggerType: DocumentTriggerType.Chat,
+      triggerStatus: 'deployed',
+      configuration,
+      deploymentSettings,
+      enabled,
+    })
+    .returning()
+
+  return trigger as DocumentTrigger<DocumentTriggerType.Chat>
+}
+
+export async function createDocumentTrigger<T extends DocumentTriggerType>({
+  workspace,
+  project,
+  commit,
+  document,
+  triggerType,
+  configuration,
+  triggerStatus = DocumentTriggerStatus.Deployed,
+  deploymentSettings,
+}: {
+  workspace: Workspace
+  project: Project
+  commit: Commit
+  document: DocumentVersion
+  triggerType: T
+  configuration: DocumentTriggerConfiguration<T>
+  triggerStatus?: DocumentTriggerStatus
+  deploymentSettings?: DocumentTriggerDeploymentSettings<T>
+}): Promise<DocumentTrigger<T>> {
+  const [trigger] = await database
+    .insert(documentTriggers)
+    .values({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      commitId: commit.id,
+      documentUuid: document.documentUuid,
+      triggerType,
+      triggerStatus,
+      configuration,
+      deploymentSettings:
+        deploymentSettings || ({} as DocumentTriggerDeploymentSettings<T>),
+    })
+    .returning()
+
+  return trigger as DocumentTrigger<T>
 }
