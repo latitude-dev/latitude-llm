@@ -1,12 +1,10 @@
 'use client'
 
 import { UpgradeLink } from '$/components/UpgradeLink'
-import {
-  useLatteChangeActions,
-  useLatteChatActions,
-  useLoadThreadFromProviderLogs,
-  useSyncLatteUrlState,
-} from '$/hooks/latte'
+import { useLoadThreadFromProviderLogs } from '$/hooks/latte/useLoadThreadFromProviderLogs'
+import { useLatteChangeActions } from '$/hooks/latte/useLatteChangeActions'
+import { useLatteChatActions } from '$/hooks/latte/useLatteChatActions'
+import { useSyncLatteUrlState } from '$/hooks/latte/useSyncLatteUrlState'
 import { useOnce } from '$/hooks/useMount'
 import {
   PlaygroundAction,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useLatteDebugMode } from '$/hooks/latte'
+import { useLatteDebugMode } from '$/hooks/latte/useLatteDebugMode'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { useMemo } from 'react'

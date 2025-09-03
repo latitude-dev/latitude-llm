@@ -1,7 +1,8 @@
 'use client'
 
-import { useLatteProjectChanges, useLatteThreadUpdates } from '$/hooks/latte'
 import { memo, ReactNode } from 'react'
+import { useLatteProjectChanges } from '$/hooks/latte/useLatteProjectChanges'
+import { useLatteThreadUpdates } from '$/hooks/latte/useLatteThreadUpdates'
 
 export const LatteRealtimeUpdatesProvider = memo(
   ({ children }: { children: ReactNode }) => {
