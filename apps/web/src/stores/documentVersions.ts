@@ -346,24 +346,26 @@ export default function useDocumentVersions(
       if (commitChanges.length === 0) return
 
       mutate((prev) => {
-        if (!prev) return prev
+        const newDocuments = [...(prev || [])]
 
         changes.forEach((change) => {
           if (change.previous) {
-            const index = prev.findIndex(
+            const index = newDocuments.findIndex(
               (d) => d.documentUuid === change.previous!.documentUuid,
             )
             if (index === -1) return
 
             if (change.current.deletedAt) {
-              prev.splice(index, 1)
+              newDocuments.splice(index, 1)
+            } else {
+              newDocuments[index] = change.current as unknown as DocumentVersion
             }
-
-            prev[index] = change.current as DocumentVersion
           } else {
-            prev.push(change.current as DocumentVersion)
+            newDocuments.push(change.current as unknown as DocumentVersion)
           }
         })
+
+        return newDocuments
       })
     },
   })
