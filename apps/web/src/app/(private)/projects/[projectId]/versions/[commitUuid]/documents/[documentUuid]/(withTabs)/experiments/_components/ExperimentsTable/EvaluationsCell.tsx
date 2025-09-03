@@ -15,21 +15,19 @@ function EvaluationsList({
 }: {
   evaluations: (EvaluationV2 | undefined)[]
 }) {
-  return (
-    <div className='flex flex-nowrap overflow-x-auto max-w-full gap-2'>
-      <Badge variant='secondary' className='max-w-32'>
-        <Text.H6 noWrap ellipsis>
-          {evaluations[0]?.name ?? 'Removed evaluation'}
-        </Text.H6>
-      </Badge>
+  const visible = useMemo(
+    () => [evaluations[0], evaluations[1]].filter(Boolean),
+    [evaluations],
+  )
+  if (visible.length === 0) return null // this should never happen but just in case
 
-      {evaluations.length === 2 && (
-        <Badge variant='secondary' className='max-w-32'>
-          <Text.H6 noWrap ellipsis>
-            {evaluations[1]?.name ?? 'Removed evaluation'}
-          </Text.H6>
+  return (
+    <div className='flex gap-2 min-w-0'>
+      {visible.map((evaluation) => (
+        <Badge key={evaluation?.uuid} variant='secondary' ellipsis noWrap>
+          {evaluation?.name ?? 'Removed evaluation'}
         </Badge>
-      )}
+      ))}
 
       {evaluations.length > 2 && (
         <Badge variant='secondary'>

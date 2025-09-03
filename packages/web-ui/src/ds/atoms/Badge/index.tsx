@@ -89,24 +89,20 @@ function Badge({
 }: BadgeProps) {
   return (
     <div
-      className={cn(
-        'min-w-0',
-        badgeVariants({ variant, shape, size }),
-        className,
-        {
-          'opacity-50': disabled,
-          'flex-row max-h-none gap-x-1 py-px': !!iconProps,
-          'justify-center': centered,
-          'select-none': !userSelect,
-        },
-      )}
+      className={cn(badgeVariants({ variant, shape, size }), className, {
+        'opacity-50': disabled,
+        'flex-row max-h-none gap-x-1 py-px': !!iconProps,
+        'justify-center': centered,
+        'select-none': !userSelect,
+        'min-w-0': ellipsis || noWrap,
+      })}
       {...props}
     >
       {iconProps && iconProps.placement === 'start' ? (
         <Icon {...iconProps} size='xsmall' />
       ) : null}
       <span
-        className={cn('max-w-full', {
+        className={cn({
           truncate: ellipsis,
           'whitespace-nowrap': noWrap,
         })}

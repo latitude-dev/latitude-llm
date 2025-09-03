@@ -1,7 +1,6 @@
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { EvaluationV2 } from '@latitude-data/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -52,13 +51,15 @@ function DatasetLabelSelector({
       label={
         <div className='flex flex-row items-center gap-2'>
           <Text.H5>Expected output for</Text.H5>
-          <Badge variant='muted'>
-            <Icon
-              name={specification.icon}
-              className='mr-1'
-              color='foregroundMuted'
-            ></Icon>
-            <Text.H6 color='foregroundMuted'>{evaluation.name}</Text.H6>
+          <Badge
+            variant='muted'
+            iconProps={{
+              name: specification.icon,
+              color: 'foregroundMuted',
+              placement: 'start',
+            }}
+          >
+            {evaluation.name}
           </Badge>
         </div>
       }

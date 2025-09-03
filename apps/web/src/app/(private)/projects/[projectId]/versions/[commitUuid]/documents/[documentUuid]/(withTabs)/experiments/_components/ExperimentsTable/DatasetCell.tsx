@@ -20,29 +20,13 @@ export function DatasetCell({
     return datasets.find((dataset) => dataset.id === datasetId)
   }, [isLoading, datasets, datasetId])
 
-  if (!datasetId) {
-    return (
-      <Badge variant='secondary' className='mr-1'>
-        No dataset
-      </Badge>
-    )
-  }
-
   if (isLoading) {
     return <Skeleton height='h5' className='w-12' />
   }
 
-  if (!dataset) {
-    return (
-      <Badge variant='secondary' className='mr-1'>
-        Unknown dataset
-      </Badge>
-    )
-  }
-
   return (
-    <Badge variant='secondary' className='mr-1'>
-      {dataset.name}
+    <Badge variant='secondary' ellipsis noWrap>
+      {!datasetId ? 'No dataset' : !dataset ? 'Unknown dataset' : dataset.name}
     </Badge>
   )
 }
