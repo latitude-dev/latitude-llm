@@ -10,6 +10,7 @@ import type {
   DocumentLogWithMetadataAndError,
   DocumentSuggestion,
   DocumentTrigger,
+  DocumentTriggerEvent,
   EvaluationResultV2,
   EvaluationV2,
   ExperimentDto,
@@ -109,6 +110,12 @@ type DocumentTriggerCreatedArgs = {
   trigger: DocumentTrigger
 }
 
+type DocumentTriggerEventCreatedArgs = {
+  workspaceId: number
+  commit: Commit
+  triggerEvent: DocumentTriggerEvent
+}
+
 type DocumentTriggerDeletedArgs = {
   workspaceId: number
   trigger: DocumentTrigger
@@ -172,6 +179,7 @@ export type WebServerToClientEvents = {
   projectUpdated: (args: ProjectUpdatedArgs) => void
   triggerCreated: (args: DocumentTriggerCreatedArgs) => void
   triggerDeleted: (args: DocumentTriggerDeletedArgs) => void
+  triggerEventCreated: (args: DocumentTriggerEventCreatedArgs) => void
   latteThreadUpdate: (args: LatteThreadUpdateArgs) => void
   latteProjectChanges: (args: {
     threadUuid: string
@@ -227,6 +235,10 @@ export type WorkersClientToServerEvents = {
   triggerDeleted: (args: {
     workspaceId: number
     data: DocumentTriggerDeletedArgs
+  }) => void
+  triggerEventCreated: (args: {
+    workspaceId: number
+    data: DocumentTriggerEventCreatedArgs
   }) => void
   latteThreadUpdate: (args: {
     workspaceId: number

@@ -40,8 +40,11 @@ export const GET = errorHandler(
       const triggerEventsScope = new DocumentTriggerEventsRepository(
         workspace.id,
       )
+      // Hard limit to avoid sending too many events. Maybe implement
+      // pagination but the UI for now is to consume latest events
+      const limit = 200
       const triggerEvents = await triggerEventsScope
-        .getTriggerEventsInTrigger({ triggerUuid, commit })
+        .getTriggerEventsInTrigger({ triggerUuid, commit, limit })
         .then((r) => r.unwrap())
 
       return NextResponse.json(triggerEvents, { status: 200 })

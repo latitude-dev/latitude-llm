@@ -31,11 +31,13 @@ export class DocumentTriggerEventsRepository extends Repository<DocumentTriggerE
   private async getTriggerEvents({
     commit,
     triggerUuid,
+    limit,
   }: {
     commit?: Commit
     triggerUuid?: string
+    limit?: number
   } = {}): PromisedResult<DocumentTriggerEvent[], LatitudeError> {
-    const query = this.db
+    const baseQuery = this.db
       .select(tt)
       .from(documentTriggerEvents)
       .innerJoin(
@@ -58,6 +60,8 @@ export class DocumentTriggerEventsRepository extends Repository<DocumentTriggerE
         desc(documentTriggerEvents.createdAt),
         desc(documentTriggerEvents.id),
       )
+
+    const query = limit !== undefined ? baseQuery.limit(limit) : baseQuery
 
     const results = await query
 
@@ -82,11 +86,13 @@ export class DocumentTriggerEventsRepository extends Repository<DocumentTriggerE
   async getTriggerEventsInTrigger({
     triggerUuid,
     commit,
+    limit,
   }: {
     triggerUuid: string
     commit?: Commit
+    limit?: number
   }): PromisedResult<DocumentTriggerEvent[], LatitudeError> {
-    return this.getTriggerEvents({ triggerUuid, commit })
+    return this.getTriggerEvents({ triggerUuid, commit, limit })
   }
 
   async getTriggerEventById({

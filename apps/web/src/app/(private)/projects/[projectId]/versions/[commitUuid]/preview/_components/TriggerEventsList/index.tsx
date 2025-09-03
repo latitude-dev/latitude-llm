@@ -78,7 +78,6 @@ export function TriggerEventsList({
         documentTrigger: trigger,
         documentTriggerEvent: event,
       })
-      // `parameters` only can be `null` when the trigger type is not known. Not an issue here
       onRunTrigger({ document, parameters: parameters ?? {} })
     },
     [onRunTrigger, document, trigger],

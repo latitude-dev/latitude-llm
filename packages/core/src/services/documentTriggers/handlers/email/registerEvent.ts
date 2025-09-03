@@ -4,6 +4,7 @@ import {
 } from '@latitude-data/constants'
 import { PromptLFile } from 'promptl-ai'
 import {
+  Commit,
   DocumentTrigger,
   DocumentTriggerEvent,
   Workspace,
@@ -81,6 +82,7 @@ export async function registerEmailTriggerEvent(
     messageId,
     parentMessageIds,
     attachments,
+    commit,
   }: {
     recipient: string
     senderEmail: string
@@ -90,6 +92,7 @@ export async function registerEmailTriggerEvent(
     messageId?: string
     parentMessageIds?: string[]
     attachments?: File[]
+    commit?: Commit // Only used in development to test draft
   },
   db = database,
 ): PromisedResult<DocumentTriggerEvent | undefined> {
@@ -111,7 +114,9 @@ export async function registerEmailTriggerEvent(
   const documentTriggersResult =
     await documentTriggerScope.getTriggersInDocument({
       documentUuid,
+      commit,
     })
+
   if (documentTriggersResult.error) return Result.nil()
   const documentTriggers = documentTriggersResult.unwrap()
   const emailTriggers = documentTriggers.filter(
@@ -132,7 +137,8 @@ export async function registerEmailTriggerEvent(
   if (headCommitResult.error) return Result.nil()
   const headCommit = headCommitResult.unwrap()
 
-  if (!headCommit) return Result.nil() // TODO: Search the Live and all draft versions for each trigger, not just the Live one
+  // TODO: Search the Live and all draft versions for each trigger, not just the Live one
+  if (!headCommit) return Result.nil()
 
   const eventPayload: EmailTriggerEventPayload = {
     recipient,
@@ -155,7 +161,7 @@ export async function registerEmailTriggerEvent(
     const result = await registerDocumentTriggerEvent({
       workspace,
       triggerUuid: trigger.uuid,
-      commit: headCommit,
+      commit: commit ?? headCommit,
       eventPayload,
     })
 

@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
   enqueueRunDocumentFromTriggerEventJob: vi.fn(),
 }))
 
-vi.mock('../../triggerEvents/runFromEvent', () => ({
+vi.mock('../../triggerEvents/enqueueRunDocumentFromTriggerEventJob', () => ({
   enqueueRunDocumentFromTriggerEventJob:
     mocks.enqueueRunDocumentFromTriggerEventJob,
 }))

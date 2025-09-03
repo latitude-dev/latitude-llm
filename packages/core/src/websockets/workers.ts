@@ -14,6 +14,7 @@ export class WebsocketClient {
     return instance
   }
 
+  // FIXME: Improve types. This is not safe and `any` avoid us moving to `strict` mode
   static async sendEvent(event: string, data: any) {
     const instance = await WebsocketClient.getInstance()
     return instance.sendEvent(event, data)

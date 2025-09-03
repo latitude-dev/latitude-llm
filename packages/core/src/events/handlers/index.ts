@@ -21,6 +21,7 @@ import { undeployDocumentTriggerJob } from './undeployDocumentTriggerJob'
 import { updateWebhookLastTriggeredAt } from './webhooks'
 import { notifyClientOfDocumentTriggerCreated } from './notifyClientOfDocumentTriggerCreated'
 import { notifyClientOfDocumentTriggerDeleted } from './notifyClientOfDocumentTriggerDeleted'
+import { notifyClientOfDocumentTriggerEventCreated } from './notifyClientOfDocumentTriggerEventCreated'
 
 export const EventHandlers: IEventsHandlers = {
   claimReferralInvitations: [createClaimInvitationReferralJob],
@@ -77,4 +78,5 @@ export const EventHandlers: IEventsHandlers = {
   documentTriggerUndeployRequested: [undeployDocumentTriggerJob],
   documentTriggerCreated: [notifyClientOfDocumentTriggerCreated],
   documentTriggerDeleted: [notifyClientOfDocumentTriggerDeleted],
+  documentTriggerEventCreated: [notifyClientOfDocumentTriggerEventCreated],
 }
