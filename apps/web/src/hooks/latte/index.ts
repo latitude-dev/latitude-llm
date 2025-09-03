@@ -11,7 +11,7 @@ import { trigger } from '$/lib/events'
 import { ROUTES } from '$/services/routes'
 import { useCurrentUser } from '$/stores/currentUser'
 import { useLatteStore } from '$/stores/latte'
-import useProviderLogs from '$/stores/providerLogs'
+import useProviderLogs, { useProviderLog } from '$/stores/providerLogs'
 import useFeature from '$/stores/useFeature'
 import {
   LatteChange,
@@ -549,9 +549,9 @@ const useLatteThreadProviderLog = () => {
   const { data: providerLogs, ...rest } = useProviderLogs({
     documentLogUuid: threadUuid,
   })
-  const providerLog = useMemo(
-    () => sortBy(providerLogs, 'generatedAt').at(-1),
-    [providerLogs],
+
+  const { data: providerLog } = useProviderLog(
+    sortBy(providerLogs, 'generatedAt').at(-1)?.id,
   )
 
   return useMemo(() => ({ providerLog, ...rest }), [providerLog, rest])
