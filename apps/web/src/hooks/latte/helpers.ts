@@ -15,6 +15,11 @@ export function getDescriptionFromToolCall(
   return getLatteSubagentDescription(name, params)
 }
 
+function getTriggerName(params: Record<string, unknown>): string {
+  return (params.componentId ||
+    (params.action as Record<string, unknown>).triggerType) as string
+}
+
 function getDescriptionFromLatteTool(
   toolName: LatteTool,
   params: Record<string, unknown>,
@@ -46,8 +51,8 @@ function getDescriptionFromLatteTool(
 
     case LatteTool.listProviders:
       return {
-        activeDescription: `Collecting your existing LLM providers...`,
-        finishedDescription: `Collected your LLM providers`,
+        activeDescription: `Collecting existing providers...`,
+        finishedDescription: `Collected existing providers`,
       }
 
     case LatteTool.listIntegrations:
@@ -58,14 +63,14 @@ function getDescriptionFromLatteTool(
 
     case LatteTool.listIntegrationTools:
       return {
-        activeDescription: `Collecting tools from '${params.name}' integration...`,
-        finishedDescription: `Collected tools from '${params.name}' integration`,
+        activeDescription: `Collecting tools for ${params.name}...`,
+        finishedDescription: `Collected tools for ${params.name}`,
       }
 
     case LatteTool.listIntegrationTriggers:
       return {
-        activeDescription: `Finding triggers from '${params.name}' integration...`,
-        finishedDescription: `Found triggers from '${params.name}' integration`,
+        activeDescription: `Finding triggers for ${params.name}...`,
+        finishedDescription: `Found triggers for ${params.name}`,
       }
 
     case LatteTool.writePrompt:
@@ -88,20 +93,20 @@ function getDescriptionFromLatteTool(
 
     case LatteTool.searchIntegrationApps:
       return {
-        activeDescription: `Searching for useful integrations...`,
+        activeDescription: `Searching useful integrations...`,
         finishedDescription: `Searched useful integrations`,
       }
 
     case LatteTool.searchIntegrationResources:
       return {
-        activeDescription: `Searching for ${params.type} from '${params.app}'...`,
-        finishedDescription: `Found ${params.type} from '${params.app} integration'`,
+        activeDescription: `Searching ${params.type} on ${params.app}...`,
+        finishedDescription: `Found ${params.type} on ${params.app}`,
       }
 
     case LatteTool.createIntegration:
       return {
-        activeDescription: `Creating new '${params.app} integration'...`,
-        finishedDescription: `Created new '${params.app} integration'`,
+        activeDescription: `Creating new ${params.app} integration...`,
+        finishedDescription: `Created new ${params.app} integration`,
       }
 
     case LatteTool.listExistingTriggers:
@@ -112,32 +117,32 @@ function getDescriptionFromLatteTool(
 
     case LatteTool.getFullTriggerSchema:
       return {
-        activeDescription: `Looking up trigger configuration for '${params.componentId}'...`,
-        finishedDescription: `Retrieved trigger configuration`,
+        activeDescription: `Looking up configuration for ${getTriggerName(params)}...`,
+        finishedDescription: `Retrieved ${getTriggerName(params)} configuration`,
       }
 
     case LatteTool.validateTriggerSchema:
       return {
-        activeDescription: `Checking trigger configuration for '${params.componentId}'...`,
-        finishedDescription: `Trigger configuration validated`,
+        activeDescription: `Validating configuration for ${getTriggerName(params)}...`,
+        finishedDescription: `${getTriggerName(params)} configuration validated`,
       }
 
     case LatteTool.createTrigger:
       return {
-        activeDescription: `Creating trigger ${params.componentId}...`,
-        finishedDescription: `${params.componentId} trigger created`,
+        activeDescription: `Creating trigger ${getTriggerName(params)}...`,
+        finishedDescription: `${getTriggerName(params)} trigger created`,
       }
 
     case LatteTool.deleteTrigger:
       return {
-        activeDescription: `Deleting trigger ${params.componentId}...`,
-        finishedDescription: `${params.componentId} trigger deleted`,
+        activeDescription: `Deleting trigger ${getTriggerName(params)}...`,
+        finishedDescription: `${getTriggerName(params)} trigger deleted`,
       }
 
     case LatteTool.updateTrigger:
       return {
-        activeDescription: `Updating trigger ${params.componentId}...`,
-        finishedDescription: `${params.componentId} trigger updated`,
+        activeDescription: `Updating trigger ${getTriggerName(params)}...`,
+        finishedDescription: `${getTriggerName(params)} trigger updated`,
       }
     default:
       return {
@@ -159,7 +164,7 @@ function getLatteSubagentDescription(
       }
     case 'lat_agent_latte_managers_build_manager':
       return {
-        activeDescription: 'Figuring out what to brew...',
+        activeDescription: 'Planning out next moves...',
         finishedDescription: 'Brewed to perfection',
       }
     case 'lat_agent_latte_managers_investigator':
@@ -169,18 +174,18 @@ function getLatteSubagentDescription(
       }
     case 'lat_agent_latte_agents_integrations_integration_manager':
       return {
-        activeDescription: 'Setting up your integration...',
-        finishedDescription: `Integration ${params.name} configured`,
+        activeDescription: `Setting up ${params.integration_name} integration...`,
+        finishedDescription: `Integration ${params.integration_name} configured`,
       }
     case 'lat_agent_latte_agents_integrations_trigger_manager':
       return {
-        activeDescription: `Setting up your trigger...`,
-        finishedDescription: `${params.componentId} trigger configured`,
+        activeDescription: `Setting up ${params.integration_name} trigger...`,
+        finishedDescription: `${params.integration_name} trigger configured`,
       }
     case 'lat_agent_latte_agents_building_prompt_editor':
       return {
-        activeDescription: `Editing prompt ${params.path}...`,
-        finishedDescription: `Edited prompt ${params.path}`,
+        activeDescription: `Editing prompt ${params.full_path}...`,
+        finishedDescription: `Edited prompt ${params.full_path}`,
       }
     case 'lat_agent_latte_agents_building_prompt_writer':
       return {
