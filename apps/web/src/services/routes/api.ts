@@ -398,5 +398,12 @@ export const API_ROUTES = {
         root: `/api/latte/debug/versions`,
       },
     },
+    threads: {
+      detail: (threadUuid: string) => ({
+        checkpoints: {
+          root: `/api/latte/threads/${threadUuid}/checkpoints`,
+        },
+      }),
+    },
   },
 }

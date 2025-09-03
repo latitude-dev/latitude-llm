@@ -39,6 +39,7 @@ import { useRunPlaygroundPrompt } from './Playground/hooks/useRunPlaygroundPromp
 import { RunButton } from './RunButton'
 import { V2Playground } from './V2Playground'
 import DocumentParams from './V2Playground/DocumentParams'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 
 export function DocumentEditor(props: DocumentEditorProps) {
   return (
@@ -77,13 +78,13 @@ function DocumentEditorContent({
   freeRunsCount,
   refinementEnabled,
 }: Omit<DocumentEditorProps, 'experimentDiff'>) {
-  const { updateDocumentContent, isUpdatingContent, document } =
-    useDocumentValue()
+  const { updateDocumentContent } = useDocumentValue()
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const { metadata } = useMetadata()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { toggleDocumentation } = useDeployPrompt()
+  const { document } = useCurrentDocument()
   const {
     isPlaygroundOpen,
     isPlaygroundTransitioning,
@@ -134,6 +135,7 @@ function DocumentEditorContent({
   )
 
   const containerRef = useRef<HTMLDivElement>(null)
+
   useAutoScroll(containerRef, { startAtBottom: mode === 'chat' })
 
   return (
@@ -187,7 +189,6 @@ function DocumentEditorContent({
             <AgentToolbar
               isMerged={isMerged}
               isAgent={metadata?.config?.type === 'agent'}
-              isUpdatingContent={isUpdatingContent}
               config={metadata?.config}
               prompt={document.content}
               onChangePrompt={updateDocumentContent}

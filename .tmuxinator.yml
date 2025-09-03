@@ -5,7 +5,7 @@ windows:
   - packages:
       layout: main-horizontal
       panes:
-        - pnpm dev --filter='./packages/*'
-        - cd apps/web && pnpm workers:watch
+        - pnpm build --filter='./packages/**'
+        - cd apps/web && pnpm workers:build
   - docker: docker compose up db redis mailpit --menu=false
   - studio: cd packages/core && pnpm db:studio

@@ -1,4 +1,5 @@
 import useIntegrations from '$/stores/integrations'
+import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -172,7 +173,6 @@ function SubAgentItem({
 }
 
 function Content({
-  isUpdatingContent,
   isMerged,
   prompt,
   selectedTab,
@@ -182,7 +182,6 @@ function Content({
   selectedTab: TabSection
   prompt: EditorHeaderProps['prompt']
   subAgents: UseLatitudeAgentsConfig
-  isUpdatingContent: boolean
 }) {
   const { data: integrations, isLoading } = useIntegrations({
     includeLatitudeTools: true,
@@ -192,6 +191,7 @@ function Content({
     useActiveIntegrations({
       prompt,
     })
+  const { isUpdatingContent } = useDocumentValue()
 
   return (
     <>
@@ -233,12 +233,10 @@ export function AgentToolbar({
   isAgent,
   config,
   onChangePrompt,
-  isUpdatingContent,
   prompt,
   isMerged,
 }: {
   isAgent: boolean
-  isUpdatingContent: boolean
   config: Config | undefined
   onChangePrompt: EditorHeaderProps['onChangePrompt']
   prompt: EditorHeaderProps['prompt']
@@ -322,7 +320,6 @@ export function AgentToolbar({
                 prompt={prompt}
                 selectedTab={tabs.selected}
                 subAgents={counters.subAgents}
-                isUpdatingContent={isUpdatingContent}
               />
             </div>
           }

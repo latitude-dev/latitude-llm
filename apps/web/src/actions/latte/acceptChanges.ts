@@ -16,7 +16,7 @@ export const acceptLatteChangesAction = authProcedure
     const { workspace } = ctx
     const { threadUuid } = input
 
-    await clearLatteThreadCheckpoints({
+    const checkpoints = await clearLatteThreadCheckpoints({
       threadUuid,
       workspaceId: workspace.id,
     }).then((r) => r.unwrap())
@@ -28,5 +28,5 @@ export const acceptLatteChangesAction = authProcedure
 
     const uuid = rezult.value?.result.uuid
 
-    return { evaluationUuid: uuid }
+    return { evaluationUuid: uuid, checkpoints }
   })

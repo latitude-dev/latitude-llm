@@ -18,6 +18,7 @@ import { useCallback, useRef, useState } from 'react'
 import { Step1 } from './Step1'
 import { Step2 } from './Step2'
 import { Step3 } from './Step3'
+import { useLatteDiff } from '$/hooks/useLatteDiff'
 
 export function DocumentRefinement({
   project,
@@ -37,6 +38,7 @@ export function DocumentRefinement({
   refinementEnabled: boolean
 }) {
   const router = useRouter()
+  const { diff: latteDiff } = useLatteDiff()
 
   const { playgroundAction, resetPlaygroundAction } = usePlaygroundAction({
     action: PlaygroundAction.RefinePrompt,
@@ -221,6 +223,7 @@ export function DocumentRefinement({
 
   const isDisabled = !refinementEnabled || !!diff
 
+  if (latteDiff) return null
   if (!refinementEnabled) return null
   if (document.promptlVersion === 0) return null
 

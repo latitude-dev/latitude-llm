@@ -1,6 +1,6 @@
 import { Result } from '../../../../../lib/Result'
 import Transaction from '../../../../../lib/Transaction'
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, getTableColumns, inArray } from 'drizzle-orm'
 import { latteThreadCheckpoints, latteThreads } from '../../../../../schema'
 
 export function clearLatteThreadCheckpoints(
@@ -15,9 +15,7 @@ export function clearLatteThreadCheckpoints(
 ) {
   return transaction.call(async (tx) => {
     const existingCheckpoints = await tx
-      .select({
-        id: latteThreadCheckpoints.id,
-      })
+      .select(getTableColumns(latteThreadCheckpoints))
       .from(latteThreadCheckpoints)
       .leftJoin(
         latteThreads,
@@ -37,6 +35,6 @@ export function clearLatteThreadCheckpoints(
       ),
     )
 
-    return Result.nil()
+    return Result.ok(existingCheckpoints)
   })
 }

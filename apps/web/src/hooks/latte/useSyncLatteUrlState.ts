@@ -1,8 +1,10 @@
+'use client'
+
+import { useLatteStore } from '$/stores/latte'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { useLatteStore } from '$/stores/latte'
 import { useOnce } from '../useMount'
 
 /**

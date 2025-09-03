@@ -7,10 +7,10 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { PlaygroundBlocksEditor } from '../BlocksEditor'
 import { PlaygroundTextEditor } from '../TextEditor'
-import { useSyncLatteChanges } from '$/hooks/useSyncLatteChanges'
+import { useLatteDiff } from '$/hooks/useLatteDiff'
 
 export function Editors({
   document,
@@ -21,12 +21,11 @@ export function Editors({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { devMode } = useDevMode()
+  const { devMode, setDevMode } = useDevMode()
   const { metadata } = useMetadata()
   const { value, updateDocumentContent, isSaved } = useDocumentValue()
-  const { diff: latteDiff } = useSyncLatteChanges()
+  const { diff: latteDiff } = useLatteDiff()
   const { diff: experimentDiff, setDiff: setEditorDiff } = useExperimentDiff()
-
   const readOnlyMessage = useMemo(() => {
     if (commit.mergedAt !== null) {
       return 'Version published. Create a draft to edit documents.'
@@ -38,6 +37,17 @@ export function Editors({
 
     return undefined
   }, [commit.mergedAt, latteDiff])
+  const diff = useMemo(
+    () => experimentDiff ?? latteDiff,
+    [experimentDiff, latteDiff],
+  )
+
+  useEffect(() => {
+    if (!diff) return
+    if (devMode) return
+
+    setDevMode(true)
+  }, [setDevMode, devMode, diff])
 
   return devMode ? (
     <PlaygroundTextEditor
@@ -48,7 +58,7 @@ export function Editors({
       document={document}
       commit={commit}
       setDiff={setEditorDiff}
-      diff={experimentDiff ?? latteDiff}
+      diff={diff}
       value={value}
       defaultValue={document.content}
       readOnlyMessage={readOnlyMessage}

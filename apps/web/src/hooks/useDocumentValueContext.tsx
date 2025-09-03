@@ -18,7 +18,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useState,
 } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
@@ -31,11 +30,9 @@ export type updateContentFn = (
 
 type DocumentValueContextType = {
   value: string
-  setValue: updateContentFn
-  updateDocumentContent: updateContentFn
-  document: DocumentVersion
   isSaved: boolean
   isUpdatingContent: boolean
+  updateDocumentContent: updateContentFn
 }
 
 const DocumentValueContext = createContext<
@@ -50,37 +47,18 @@ type DocumentValueProviderProps = {
 
 export function DocumentValueProvider({
   children,
-  document: _document,
-  documents: _documents,
+  document,
 }: DocumentValueProviderProps) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { devMode } = useDevMode()
-  const { data: documents } = useDocumentVersions(
-    {
-      commitUuid: commit.uuid,
-      projectId: project.id,
-    },
-    {
-      fallbackData: _documents,
-      keepPreviousData: true,
-      revalidateOnMount: true,
-    },
-  )
-  const document = useMemo(
-    () =>
-      documents?.find((d) => d.documentUuid === _document.documentUuid) ??
-      _document,
-    [documents, _document],
-  )
-
   const [value, setValue] = useState(document.content)
+  const { toast } = useToast()
+  const [origin, setOrigin] = useState<string>()
   const { updateContent, isUpdatingContent } = useDocumentVersions({
     commitUuid: commit.uuid,
     projectId: project.id,
   })
-  const { toast } = useToast()
-  const [origin, setOrigin] = useState<string>()
   const setContentValue = useCallback(
     (content: string, opts?: Parameters<updateContentFn>[1]) => {
       setValue(content)
@@ -124,11 +102,9 @@ export function DocumentValueProvider({
     <DocumentValueContext.Provider
       value={{
         value,
-        setValue: setContentValue,
         updateDocumentContent,
-        isSaved: !isUpdatingContent,
         isUpdatingContent,
-        document,
+        isSaved: !isUpdatingContent,
       }}
     >
       {children}
@@ -145,6 +121,17 @@ export function useDocumentValue() {
   }
 
   return context
+}
+
+export function useDocumentValueMaybe() {
+  const context = useContext(DocumentValueContext)
+  return (
+    context ?? {
+      value: undefined,
+      isSaved: false,
+      updateDocumentContent: undefined,
+    }
+  )
 }
 
 export function useRefreshPromptMetadata({

@@ -29,23 +29,20 @@ export function TitleRow({
   isMerged: EditorHeaderProps['isMerged']
 }) {
   const { isEnabled: blocksEditorEnabled } = useFeature('blocksEditor')
-
   const { data: providers } = useProviderApiKeys()
   const { devMode, setDevMode, isLoading: isLoadingDevMode } = useDevMode()
 
   return (
     <div className='w-full flex flex-row items-center justify-between gap-x-4 pt-px'>
       <div className='flex flex-row items-center gap-2 min-w-0'>
-        <div className='flex flex-row items-center gap-x-2 min-w-0'>
-          {isAgent ? (
-            <Tooltip trigger={<Icon name='bot' color='foregroundMuted' />}>
-              This prompt is an agent
-            </Tooltip>
-          ) : null}
-          <Text.H4M ellipsis noWrap>
-            {title}
-          </Text.H4M>
-        </div>
+        {isAgent ? (
+          <Tooltip trigger={<Icon name='bot' color='foregroundMuted' />}>
+            This prompt is an agent
+          </Tooltip>
+        ) : null}
+        <Text.H4M ellipsis noWrap>
+          {title}
+        </Text.H4M>
       </div>
 
       <div className='flex flex-row gap-x-2'>

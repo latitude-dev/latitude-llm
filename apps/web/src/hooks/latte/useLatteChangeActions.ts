@@ -1,44 +1,42 @@
-import { useCallback } from 'react'
+'use client'
+
 import { acceptLatteChangesAction } from '$/actions/latte/acceptChanges'
 import { addFeedbackToLatteChangeAction } from '$/actions/latte/addFeedbackToLatteChange'
 import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
-import { useLatteStore } from '$/stores/latte'
+import { partialAcceptLatteChangesAction } from '$/actions/latte/partialAcceptChanges'
+import { partialRejectLatteChangesAction } from '$/actions/latte/partialRejectChanges'
 import { trigger } from '$/lib/events'
+import { useLatteStore } from '$/stores/latte'
+import { useCallback, useMemo } from 'react'
 import { useServerAction } from 'zsa-react'
 
 /**
- * Provides actions for managing Latte project changes including accepting, undoing, and providing feedback.
- *
- * @returns An object containing:
- *   - `acceptChanges`: Function to accept all pending changes
- *   - `undoChanges`: Function to undo all pending changes
- *   - `addFeedbackToLatteChange`: Function to add feedback to a specific change
+ * Provides actions for managing Latte project changes including accepting,
+ * undoing, and providing feedback.
  */
 export function useLatteChangeActions() {
   const {
     threadUuid,
-    changes,
-    setChanges,
     latteActionsFeedbackUuid,
     setLatteActionsFeedbackUuid,
-    setIsBrewing,
     setError,
   } = useLatteStore()
 
   const { execute: executeAcceptChanges } = useServerAction(
     acceptLatteChangesAction,
     {
-      onSuccess: ({ data: { evaluationUuid } }) => {
-        trigger('LatteChangesAccepted', { changes })
-        setChanges([])
-        setIsBrewing(false)
+      onSuccess: ({ data: { checkpoints, evaluationUuid } }) => {
+        trigger('LatteChangesAccepted', {
+          threadUuid: threadUuid!,
+          checkpoints,
+        })
+
         if (evaluationUuid) {
           setLatteActionsFeedbackUuid(evaluationUuid)
         }
       },
       onError: ({ err }) => {
         setError(err.message)
-        setIsBrewing(false)
       },
     },
   )
@@ -46,29 +44,56 @@ export function useLatteChangeActions() {
   const { execute: executeUndoChanges } = useServerAction(
     discardLatteChangesActions,
     {
-      onSuccess: ({ data: { evaluationUuid } }) => {
-        trigger('LatteChangesRejected', { changes })
-        // Undo changes in the UI
-        trigger('LatteProjectChanges', {
-          changes: changes.map((c) => ({
-            ...c,
-            previous: c.current,
-            current: c.previous ?? {
-              ...c.current,
-              deletedAt: new Date(),
-            },
-          })),
+      onSuccess: ({ data: { checkpoints, evaluationUuid } }) => {
+        trigger('LatteChangesRejected', {
+          threadUuid: threadUuid!,
+          checkpoints,
         })
-        // Clear changes state
-        setChanges([])
-        setIsBrewing(false)
+
         if (evaluationUuid) {
           setLatteActionsFeedbackUuid(evaluationUuid)
         }
       },
       onError: ({ err }) => {
         setError(err.message)
-        setIsBrewing(false)
+      },
+    },
+  )
+
+  const { execute: executeAcceptPartialChanges } = useServerAction(
+    partialAcceptLatteChangesAction,
+    {
+      onSuccess: ({ data: { evaluationUuid, checkpoints } }) => {
+        trigger('LatteChangesAccepted', {
+          threadUuid: threadUuid!,
+          checkpoints,
+        })
+
+        if (evaluationUuid) {
+          setLatteActionsFeedbackUuid(evaluationUuid)
+        }
+      },
+      onError: ({ err }) => {
+        setError(err.message)
+      },
+    },
+  )
+
+  const { execute: executeRejectPartialChanges } = useServerAction(
+    partialRejectLatteChangesAction,
+    {
+      onSuccess: ({ data: { evaluationUuid, checkpoints } }) => {
+        trigger('LatteChangesRejected', {
+          threadUuid: threadUuid!,
+          checkpoints,
+        })
+
+        if (evaluationUuid) {
+          setLatteActionsFeedbackUuid(evaluationUuid)
+        }
+      },
+      onError: ({ err }) => {
+        setError(err.message)
       },
     },
   )
@@ -76,55 +101,79 @@ export function useLatteChangeActions() {
   const { execute: executeAddFeedbackToLatteChange } = useServerAction(
     addFeedbackToLatteChangeAction,
     {
-      onSuccess: () => {
-        setIsBrewing(false)
-      },
       onError: ({ err }) => {
         setError(err.message)
-        setIsBrewing(false)
       },
     },
   )
 
   const acceptChanges = useCallback(() => {
     if (!threadUuid) return
-    setIsBrewing(true)
     executeAcceptChanges({ threadUuid })
-  }, [threadUuid, executeAcceptChanges, setIsBrewing])
+  }, [threadUuid, executeAcceptChanges])
 
   const undoChanges = useCallback(() => {
     if (!threadUuid) return
-    setIsBrewing(true)
     executeUndoChanges({ threadUuid })
-  }, [threadUuid, executeUndoChanges, setIsBrewing])
+  }, [threadUuid, executeUndoChanges])
+
+  const acceptPartialChanges = useCallback(
+    async ({ documentUuids }: { documentUuids: string[] }) => {
+      if (!threadUuid) return
+
+      await executeAcceptPartialChanges({
+        threadUuid,
+        documentUuidsToAccept: documentUuids,
+      })
+    },
+    [threadUuid, executeAcceptPartialChanges],
+  )
+
+  const undoPartialChanges = useCallback(
+    async ({ documentUuids }: { documentUuids: string[] }) => {
+      if (!threadUuid) return
+
+      await executeRejectPartialChanges({
+        threadUuid,
+        documentUuidsToReject: documentUuids,
+      })
+    },
+    [threadUuid, executeRejectPartialChanges],
+  )
 
   const addFeedbackToLatteChange = useCallback(
     (feedback: string) => {
       if (!latteActionsFeedbackUuid) return
+      if (feedback.trim() === '') return
 
-      feedback = feedback.trim()
-      if (feedback) {
-        setIsBrewing(true)
-        executeAddFeedbackToLatteChange({
-          content: feedback,
-          evaluationResultUuid: latteActionsFeedbackUuid,
-        })
-      }
+      executeAddFeedbackToLatteChange({
+        content: feedback,
+        evaluationResultUuid: latteActionsFeedbackUuid,
+      })
 
       setLatteActionsFeedbackUuid(undefined)
     },
     [
       executeAddFeedbackToLatteChange,
       setLatteActionsFeedbackUuid,
-      setIsBrewing,
       latteActionsFeedbackUuid,
     ],
   )
 
-  return {
-    changes,
-    acceptChanges,
-    undoChanges,
-    addFeedbackToLatteChange,
-  }
+  return useMemo(
+    () => ({
+      acceptChanges,
+      undoChanges,
+      acceptPartialChanges,
+      undoPartialChanges,
+      addFeedbackToLatteChange,
+    }),
+    [
+      acceptChanges,
+      undoChanges,
+      acceptPartialChanges,
+      undoPartialChanges,
+      addFeedbackToLatteChange,
+    ],
+  )
 }

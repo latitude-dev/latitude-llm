@@ -10,7 +10,8 @@
 - `pnpm test:watch` - Run tests in watch mode (specific packages)
 - `pnpm --filter @latitude-data/core db:migrate` - Run database migrations
 - `pnpm --filter @latitude-data/core db:generate` - Generate database migrations
-- `pnpm prettier` - **ALWAYS run this when completing tasks** - Formats all code to standardize patterns
+- `pnpm prettier` - Format code
+- NEVER build packages with `pnpm build` unless specifically asked to
 
 ## Code Style
 
@@ -49,6 +50,7 @@
 - Always use named exports
 - Avoid exporting all services from an `index.ts` barrel file
 - Example structure:
+
   ```
   services/apiKeys/
     ├── create.ts
@@ -63,6 +65,7 @@
 - Actions fetch model instances using repositories before calling services
 - **Admin-only actions**: Place under `actions/admin/` directory for backoffice functionality
 - Example pattern:
+
   ```typescript
   export const updateApiKeyAction = authProcedure
     .createServerAction()
@@ -81,6 +84,7 @@
 - Export CRUD operations: `create`, `destroy`, `update` with loading states
 - Toast notifications on success/error
 - Example pattern:
+
   ```typescript
   const { execute: update, isPending: isUpdating } = useLatitudeAction(
     updateAction,
@@ -112,6 +116,7 @@
 - Use `bigserial` for primary keys with `{ mode: 'number' }`
 - Foreign keys use `references()` with cascade delete where appropriate
 - Example pattern:
+
   ```typescript
   export const tableName = latitudeSchema.table('table_name', {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
@@ -131,6 +136,7 @@
 - Implement `scope` getter for base query with workspace filtering
 - Export from `packages/core/src/repositories/index.ts`
 - Example pattern:
+
   ```typescript
   export class EntityRepository extends RepositoryLegacy<typeof tt, Entity> {
     get scope() {
@@ -158,6 +164,7 @@
 - Use `errorHandler(...)` only for public routes
 - Access workspace via `ctx.workspace` in authenticated handlers
 - Example pattern:
+
   ```typescript
   export const GET = errorHandler(
     authHandler(

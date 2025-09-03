@@ -30,17 +30,6 @@ export function SyncChangesPlugin({
         })
         editor.setEditable(!readOnly)
       },
-      onLatteProjectChanges: ({ changes }) => {
-        const updatedDocument = changes.find(
-          (change) =>
-            change.draftUuid === commit.uuid &&
-            change.current.documentUuid === document.documentUuid,
-        )?.current
-        if (!updatedDocument) return
-        if (updatedDocument.deletedAt) return
-
-        editor.setEditable(false)
-      },
     },
     [editor, commit, document, readOnly],
   )

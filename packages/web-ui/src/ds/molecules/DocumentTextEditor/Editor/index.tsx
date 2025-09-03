@@ -83,7 +83,9 @@ export function DocumentTextEditor({
     const newValue = diffEditorRef.current.getModifiedEditor().getValue()
 
     setIsApplyingDiff(true)
+
     await diff.onAccept(newValue)
+
     setIsApplyingDiff(false)
   }, [diff])
 
@@ -92,7 +94,9 @@ export function DocumentTextEditor({
     if (!diffEditorRef.current) return
 
     setIsDiscardingDiff(true)
+
     await diff.onReject()
+
     setIsDiscardingDiff(false)
   }, [diff])
 

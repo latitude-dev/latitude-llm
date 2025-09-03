@@ -19,7 +19,7 @@ export async function undoLatteThreadChanges(
     threadUuid: string
   },
   transaction = new Transaction(),
-): PromisedResult<undefined> {
+) {
   return transaction.call(async (tx) => {
     const threadsScope = new LatteThreadsRepository(workspace.id, tx)
     const checkpoints = await threadsScope
@@ -45,11 +45,13 @@ export async function undoLatteThreadChanges(
       transaction,
     )
 
-    return result
+    if (result.error) return Result.error(result.error)
+
+    return Result.ok(checkpoints)
   })
 }
 
-function restoreThreadCheckpoint(
+export function restoreThreadCheckpoint(
   checkpoint: LatteThreadCheckpoint,
   transaction = new Transaction(),
 ): PromisedResult<DocumentVersion | undefined> {
@@ -66,6 +68,7 @@ function restoreThreadCheckpoint(
           ),
         )
         .returning()
+
       return Result.ok(uncreatedResults[0])
     }
 
