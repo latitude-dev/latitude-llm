@@ -67,11 +67,9 @@ describe('Latte create document triggers', () => {
     })
 
     const action: {
-      operation: 'create'
       triggerType: DocumentTriggerType.Email
       configuration: EmailTriggerConfiguration
     } = {
-      operation: 'create',
       triggerType: DocumentTriggerType.Email,
       configuration: {
         name: 'Test Email Trigger',
@@ -111,11 +109,9 @@ describe('Latte create document triggers', () => {
     })
 
     const action: {
-      operation: 'create'
       triggerType: DocumentTriggerType.Email
       configuration: EmailTriggerConfiguration
     } = {
-      operation: 'create',
       triggerType: DocumentTriggerType.Email,
       configuration: {
         name: 'Test Email Trigger',
@@ -141,7 +137,6 @@ describe('Latte create document triggers', () => {
 
   it('should create a document trigger', async () => {
     action = {
-      operation: 'create' as const,
       triggerType: DocumentTriggerType.Email as const,
       configuration: {
         name: 'Test Email Trigger',
@@ -182,7 +177,6 @@ describe('Latte create document triggers', () => {
 
   it('should handle document not found when creating a trigger', async () => {
     action = {
-      operation: 'create' as const,
       triggerType: DocumentTriggerType.Email as const,
       configuration: {
         name: 'Test Email Trigger',
@@ -212,7 +206,6 @@ describe('Latte create document triggers', () => {
 
   it('should throw an error if creating a trigger fails', async () => {
     action = {
-      operation: 'create' as const,
       triggerType: DocumentTriggerType.Scheduled as const,
       configuration: {
         cronExpression: '* * * 9 0',

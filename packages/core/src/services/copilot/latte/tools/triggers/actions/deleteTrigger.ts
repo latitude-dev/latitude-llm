@@ -84,15 +84,12 @@ const deleteTrigger = defineLatteTool(
     promptUuid: z.string(),
     action: z.union([
       z.object({
-        operation: z.literal('delete'),
         triggerType: z.literal(DocumentTriggerType.Email),
       }),
       z.object({
-        operation: z.literal('delete'),
         triggerType: z.literal(DocumentTriggerType.Scheduled),
       }),
       z.object({
-        operation: z.literal('delete'),
         triggerType: z.literal(DocumentTriggerType.Integration),
         configuration: integrationTriggerConfigurationSchema,
       }),

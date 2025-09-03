@@ -53,7 +53,6 @@ describe('Latte update document triggers', () => {
     promptUuid = documents[0]!.documentUuid
 
     action = {
-      operation: 'create' as const,
       triggerType: DocumentTriggerType.Scheduled as const,
       configuration: {
         cronExpression: '0 * * * *',
@@ -87,11 +86,9 @@ describe('Latte update document triggers', () => {
     })
 
     const action: {
-      operation: 'update'
       triggerType: DocumentTriggerType.Email
       configuration: EmailTriggerConfiguration
     } = {
-      operation: 'update',
       triggerType: DocumentTriggerType.Email,
       configuration: {
         name: 'Test Email Trigger',
@@ -131,11 +128,9 @@ describe('Latte update document triggers', () => {
     })
 
     const action: {
-      operation: 'update'
       triggerType: DocumentTriggerType.Email
       configuration: EmailTriggerConfiguration
     } = {
-      operation: 'update',
       triggerType: DocumentTriggerType.Email,
       configuration: {
         name: 'Test Email Trigger',
@@ -162,7 +157,6 @@ describe('Latte update document triggers', () => {
   it('should update a document trigger', async () => {
     // Arrange
     action = {
-      operation: 'update' as const,
       triggerType: DocumentTriggerType.Scheduled as const,
       configuration: {
         cronExpression: '0 0 0 0 0',
@@ -197,7 +191,6 @@ describe('Latte update document triggers', () => {
   it('should handle document not found when updating a trigger', async () => {
     // Arrange
     action = {
-      operation: 'update' as const,
       triggerType: DocumentTriggerType.Scheduled as const,
       configuration: {
         cronExpression: '0 0 0 0 0',
@@ -229,7 +222,6 @@ describe('Latte update document triggers', () => {
   it('should throw an error if updating a trigger fails', async () => {
     // Arrange
     action = {
-      operation: 'update' as const,
       triggerType: DocumentTriggerType.Scheduled as const,
       configuration: {
         cronExpression: '0 0 0 0 0',

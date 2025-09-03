@@ -43,7 +43,6 @@ describe('Latte delete document triggers', () => {
     promptUuid = documents[0]!.documentUuid
 
     action = {
-      operation: 'create' as const,
       triggerType: DocumentTriggerType.Email as const,
       configuration: {
         name: 'Test Email Trigger',
@@ -68,7 +67,6 @@ describe('Latte delete document triggers', () => {
   it('should delete a document trigger', async () => {
     // Arrange
     action = {
-      operation: 'delete' as const,
       triggerType: DocumentTriggerType.Email as const,
     }
 
@@ -100,7 +98,6 @@ describe('Latte delete document triggers', () => {
   it('should handle document not found when deleting a trigger', async () => {
     // Arrange
     action = {
-      operation: 'delete' as const,
       triggerType: DocumentTriggerType.Email as const,
     }
 
@@ -129,7 +126,6 @@ describe('Latte delete document triggers', () => {
   it('should throw an error if deleting a trigger fails', async () => {
     // Arrange
     action = {
-      operation: 'delete' as const,
       triggerType: DocumentTriggerType.Email as const,
     }
     const expectedError = new Error('Failed to delete document trigger')
@@ -158,7 +154,6 @@ describe('Latte delete document triggers', () => {
   it('should throw error if deleting email trigger that does not exist but integration triggers do', async () => {
     // Arrange
     action = {
-      operation: 'delete' as const,
       triggerType: DocumentTriggerType.Scheduled as const,
     }
 
@@ -195,7 +190,6 @@ describe('Latte delete document triggers', () => {
     })
 
     action = {
-      operation: 'delete' as const,
       triggerType: DocumentTriggerType.Integration as const,
       configuration: {
         componentId: 'non-existent-component-id',

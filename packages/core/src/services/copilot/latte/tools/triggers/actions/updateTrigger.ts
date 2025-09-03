@@ -69,17 +69,14 @@ const updateTrigger = defineLatteTool(
     promptUuid: z.string(),
     action: z.union([
       z.object({
-        operation: z.literal('update'),
         triggerType: z.literal(DocumentTriggerType.Email),
         configuration: emailTriggerConfigurationSchema,
       }),
       z.object({
-        operation: z.literal('update'),
         triggerType: z.literal(DocumentTriggerType.Scheduled),
         configuration: scheduledTriggerConfigurationSchema,
       }),
       z.object({
-        operation: z.literal('update'),
         triggerType: z.literal(DocumentTriggerType.Integration),
         configuration: integrationTriggerConfigurationSchema,
       }),

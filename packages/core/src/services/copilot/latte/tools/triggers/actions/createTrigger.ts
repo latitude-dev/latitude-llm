@@ -81,17 +81,14 @@ const createTrigger = defineLatteTool(
     promptUuid: z.string(),
     action: z.union([
       z.object({
-        operation: z.literal('create'),
         triggerType: z.literal(DocumentTriggerType.Email),
         configuration: emailTriggerConfigurationSchema,
       }),
       z.object({
-        operation: z.literal('create'),
         triggerType: z.literal(DocumentTriggerType.Scheduled),
         configuration: scheduledTriggerConfigurationSchema,
       }),
       z.object({
-        operation: z.literal('create'),
         triggerType: z.literal(DocumentTriggerType.Integration),
         configuration: integrationTriggerConfigurationSchema,
       }),
