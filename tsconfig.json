@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "files": [],
+  "references": [
+    { "path": "./packages/constants" },
+    { "path": "./packages/env" },
+    { "path": "./packages/telemetry/typescript" },
+    { "path": "./packages/core" },
+    { "path": "./packages/web-ui" },
+
+    { "path": "./apps/console" },
+    { "path": "./apps/gateway" },
+    { "path": "./apps/websockets" },
+    { "path": "./apps/workers" },
+    { "path": "./apps/web" }
+  ]
+}

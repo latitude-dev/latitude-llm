@@ -2,7 +2,9 @@
   "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
     "moduleResolution": "Bundler",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "incremental": true,
+    "tsBuildInfoFile": "node_modules/.cache/tsconfig.tsbuildinfo"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
