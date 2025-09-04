@@ -153,11 +153,7 @@ export default function PublishDraftCommitModal({
             changes={changes}
             onClose={onClose}
           />
-          <TriggerChangesList
-            isLoading={isLoading}
-            changes={changes}
-            onClose={onClose}
-          />
+          <TriggerChangesList isLoading={isLoading} changes={changes} />
         </div>
 
         <div className='pl-4 flex flex-col w-full'>
