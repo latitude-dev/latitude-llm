@@ -11,7 +11,7 @@
     "moduleResolution": "Bundler",
     "jsx": "preserve",
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": [],
     "baseUrl": ".",
     "paths": {
       "$/*": [
