@@ -398,5 +398,10 @@ export const API_ROUTES = {
         root: `/api/latte/debug/versions`,
       },
     },
+    thread: {
+      detail: (uuid: string) => ({
+        root: `/api/latte/thread/${uuid}`,
+      }),
+    },
   },
 }

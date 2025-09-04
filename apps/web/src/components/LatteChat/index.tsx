@@ -1,7 +1,6 @@
 'use client'
 
 import { UpgradeLink } from '$/components/UpgradeLink'
-import { useLoadThreadFromProviderLogs } from '$/hooks/latte/useLoadThreadFromProviderLogs'
 import { useLatteChangeActions } from '$/hooks/latte/useLatteChangeActions'
 import { useLatteChatActions } from '$/hooks/latte/useLatteChatActions'
 import { useSyncLatteUrlState } from '$/hooks/latte/useSyncLatteUrlState'
@@ -31,6 +30,7 @@ import { ChatSkeleton } from './_components/ChatSkeleton'
 import { LatteUsageInfo } from './_components/LatteUsageInfo'
 import { LatteMessageList } from './_components/MessageList'
 import { LatteChatInput } from './LatteChatInput'
+import { useLoadLatteThread } from '$/hooks/latte/useLoadThread'
 
 export function LatteChat() {
   const { data: workspace } = useCurrentWorkspace()
@@ -38,8 +38,7 @@ export function LatteChat() {
   const { project } = useCurrentProject()
 
   useSyncLatteUrlState()
-
-  const isLoadingThread = useLoadThreadFromProviderLogs()
+  const isLoading = useLoadLatteThread()
 
   const {
     isBrewing,
@@ -103,8 +102,8 @@ export function LatteChat() {
             className='w-full h-full overflow-hidden custom-scrollbar flex flex-col gap-4 items-center pb-8'
             ref={containerRef}
           >
-            {isLoadingThread && !isBrewing && <ChatSkeleton />}
-            {!isLoadingThread &&
+            {isLoading && !isBrewing && <ChatSkeleton />}
+            {!isLoading &&
               (!inConversation ? (
                 <div className='flex flex-col items-center justify-center h-full gap-8 min-w-[50%] p-8'>
                   <div className='flex flex-col items-center justify-center gap-6'>

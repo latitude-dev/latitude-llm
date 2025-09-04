@@ -61,6 +61,7 @@ apps/web/scripts-dist
 apps/web/uploads
 apps/web/public/uploads
 uploads
+storage
 
 # Temporal
 tmp
