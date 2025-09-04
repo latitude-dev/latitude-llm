@@ -1,9 +1,9 @@
+import { memo, LegacyRef, ReactNode, useMemo } from 'react'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Markdown } from '@latitude-data/web-ui/atoms/Markdown'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
-import React, { ReactNode, useMemo } from 'react'
 import type { Components } from 'react-markdown'
 
 function isCodeBlockInline(children: string, className?: string) {
@@ -48,7 +48,7 @@ function LatteLink({ children, href }: { children: ReactNode; href: string }) {
   )
 }
 
-export const MarkdownResponse = React.memo(
+export const MarkdownResponse = memo(
   function MarkdownResponse({ text }: { text: string }) {
     const components = useMemo<Components>(
       () => ({
@@ -87,7 +87,7 @@ export const MarkdownResponse = React.memo(
             return (
               <div
                 {...restProps}
-                ref={ref as React.LegacyRef<HTMLDivElement>}
+                ref={ref as LegacyRef<HTMLDivElement>}
                 className='bg-latte-background rounded-sm px-1 py-0.5 inline-flex flex-wrap'
               >
                 <Text.H6M color='latteInputForeground'>{content}</Text.H6M>

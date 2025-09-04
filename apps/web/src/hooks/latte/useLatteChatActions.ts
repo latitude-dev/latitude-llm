@@ -68,7 +68,6 @@ export function useLatteChatActions() {
       const newInteraction: LatteInteraction = {
         input: message,
         steps: [],
-        output: undefined,
       }
 
       addInteractions([newInteraction])

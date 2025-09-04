@@ -5,7 +5,78 @@ import { getDescriptionFromToolCall } from './helpers'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useLatteStore } from '$/stores/latte'
 import { useLatteUsage } from './usage'
-import { LatteActionStep, LatteInteractionStep, LatteToolStep } from './types'
+import {
+  LatteActionStep,
+  LatteToolStep,
+  LatteThoughtStep,
+  LatteStepGroupItem,
+} from './types'
+
+/**
+ * Creates a tool step from the tool started update
+ */
+function createToolStep(
+  update: Extract<LatteThreadUpdateArgs, { type: 'toolStarted' }>,
+): LatteToolStep {
+  const description = getDescriptionFromToolCall({
+    toolCallId: update.toolCallId,
+    toolName: update.toolName,
+    args: update.args,
+  })
+
+  return {
+    type: 'tool',
+    id: update.toolCallId,
+    toolName: update.toolName,
+    parameters: update.args,
+    finished: false,
+    activeDescription: description.activeDescription ?? 'Processing...',
+    finishedDescription: description.finishedDescription,
+    customIcon: description.customIcon,
+  }
+}
+
+/**
+ * Creates action steps from edit project tool calls
+ */
+function createActionSteps(
+  update: Extract<LatteThreadUpdateArgs, { type: 'toolStarted' }>,
+): LatteActionStep[] {
+  const actions = (update.args as { actions: LatteEditAction[] }).actions
+  return actions.map((action) => ({
+    type: 'action',
+    action,
+  }))
+}
+
+/**
+ * Creates a thought step from think tool calls
+ */
+function createThoughtStep(
+  update: Extract<LatteThreadUpdateArgs, { type: 'toolStarted' }>,
+): LatteThoughtStep {
+  return {
+    type: 'thought',
+    content: update.args['thought'] as string,
+  }
+}
+
+/**
+ * Processes tool started update and returns the appropriate steps
+ */
+function processToolStartedUpdate(
+  update: Extract<LatteThreadUpdateArgs, { type: 'toolStarted' }>,
+): LatteStepGroupItem[] {
+  if (update.toolName === LatteTool.editProject) {
+    return createActionSteps(update)
+  }
+
+  if (update.toolName === LatteTool.think) {
+    return [createThoughtStep(update)]
+  }
+
+  return [createToolStep(update)]
+}
 
 /**
  * Handles real-time updates from the Latte thread via WebSocket connections.
@@ -71,70 +142,50 @@ export function useLatteThreadUpdates() {
         const lastInteraction = [...prev.slice(-1)][0]!
 
         if (update.type === 'fullResponse') {
-          lastInteraction.output = update.response
+          lastInteraction.steps.push({
+            type: 'text',
+            text: update.response,
+          })
           setIsBrewing(false)
         }
 
+        const lastStep = lastInteraction.steps[lastInteraction.steps.length - 1]
+
         if (update.type === 'responseDelta') {
-          lastInteraction.output = (lastInteraction.output ?? '') + update.delta
-        }
-
-        if (update.type === 'toolCompleted') {
+          if (lastStep && lastStep.type === 'text') {
+            lastStep.text += update.delta
+          } else {
+            lastInteraction.steps.push({
+              type: 'text',
+              text: update.delta,
+            })
+          }
+        } else if (update.type === 'toolCompleted') {
           const finishedToolId = update.toolCallId
-          lastInteraction.steps = lastInteraction.steps.map((step) => {
-            if (
-              step.type === 'tool' &&
-              !step.finished &&
-              step.id === finishedToolId
-            ) {
-              step.finished = true
-            }
-            return step
-          })
-        }
 
-        if (update.type === 'toolStarted') {
-          let steps: LatteInteractionStep[] = [
-            {
-              type: 'tool',
-              id: update.toolCallId,
-              toolName: update.toolName,
-              parameters: update.args,
-              finished: false,
-              ...getDescriptionFromToolCall({
-                toolCallId: update.toolCallId,
-                toolName: update.toolName,
-                args: update.args,
-              }),
-            } as LatteToolStep,
-          ]
-
-          if (update.toolName === LatteTool.editProject) {
-            const actions = (
-              update.args as {
-                actions: LatteEditAction[]
+          if (lastStep && lastStep.type === 'group') {
+            lastStep.steps = lastStep.steps.map((groupStep) => {
+              if (
+                groupStep.type === 'tool' &&
+                !groupStep.finished &&
+                groupStep.id === finishedToolId
+              ) {
+                groupStep.finished = true
               }
-            ).actions
-
-            steps = actions.map(
-              (action) =>
-                ({
-                  type: 'action',
-                  action,
-                }) as LatteActionStep,
-            )
+              return groupStep
+            })
           }
+        } else if (update.type === 'toolStarted') {
+          const newSteps = processToolStartedUpdate(update)
 
-          if (update.toolName === LatteTool.think) {
-            steps = [
-              {
-                type: 'thought',
-                content: update.args['thought'] as string,
-              },
-            ]
+          if (lastStep && lastStep.type === 'group') {
+            lastStep.steps.push(...newSteps)
+          } else {
+            lastInteraction.steps.push({
+              type: 'group',
+              steps: newSteps,
+            })
           }
-
-          lastInteraction.steps.push(...steps)
         }
 
         return [...otherInteractions, lastInteraction]
