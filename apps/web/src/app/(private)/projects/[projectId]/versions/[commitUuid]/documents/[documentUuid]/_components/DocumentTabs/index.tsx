@@ -1,14 +1,14 @@
 'use client'
 
-import { ReactNode, useContext } from 'react'
+import { ReactNode } from 'react'
 
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 
-import { DocumentationContext } from '../DocumentationModal'
-import { DocumentTriggersButton } from './DocumentTriggers'
-import { DocumentTabSelector } from './tabs'
 import { DocumentVersion } from '@latitude-data/core/browser'
+import { useDeployPrompt } from '../DocumentationModal'
+import { DocumentTriggersButton } from './DocumentTriggers'
 import { PublishDocumentButton } from './PublishDocument'
+import { DocumentTabSelector } from './tabs'
 
 export default function DocumentTabs({
   params,
@@ -19,7 +19,7 @@ export default function DocumentTabs({
   document: DocumentVersion
   children: ReactNode
 }) {
-  const { toggleDocumentation } = useContext(DocumentationContext)
+  const { toggleDocumentation } = useDeployPrompt()
 
   return (
     <>

@@ -17,13 +17,26 @@ import { scan, type ConversationMetadata } from 'promptl-ai'
 
 import { SettingsTabs } from './_components/SettingsTabs'
 
-export const DocumentationContext = createContext<{
+type DocumentationContextProps = {
   open: boolean
   toggleDocumentation: () => void
-}>({
+}
+
+export const DocumentationContext = createContext<DocumentationContextProps>({
   open: false,
   toggleDocumentation: () => {},
 })
+
+export const useDeployPrompt = () => {
+  const context = useContext(DocumentationContext)
+  if (!context) {
+    throw new Error(
+      'useDeployPrompt must be used within a DocumentationModalProvider',
+    )
+  }
+
+  return context
+}
 
 export type UsedToolsDoc = { name: string; parameters: string[] }
 export default function DocumentationModal({
@@ -76,12 +89,12 @@ export default function DocumentationModal({
     <Modal
       dismissible
       title='Deploy this prompt'
-      description="Deploying this prompt in your application is straightforward. Here's what you need to do."
+      description='Deploying this prompt in your application is straightforward.'
       size='large'
       open={open}
       onOpenChange={toggleDocumentation}
     >
-      {document && (
+      {!!document && !!metadata && (
         <SettingsTabs
           projectId={Number(projectId)}
           commitUuid={commitUuid}

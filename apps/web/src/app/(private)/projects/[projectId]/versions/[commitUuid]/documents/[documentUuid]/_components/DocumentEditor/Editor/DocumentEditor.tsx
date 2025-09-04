@@ -20,6 +20,7 @@ import {
   LogSources,
   Project,
 } from '@latitude-data/core/browser'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import {
   useCurrentCommit,
@@ -27,6 +28,7 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { useDeployPrompt } from '../../DocumentationModal'
 import { DocumentTabSelector } from '../../DocumentTabs/tabs'
 import { ChatInputBox } from './ChatInputBox'
 import { AgentToolbar } from './EditorHeader/AgentToolbar'
@@ -80,6 +82,7 @@ function DocumentEditorContent({
   const { metadata } = useMetadata()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
+  const { toggleDocumentation } = useDeployPrompt()
   const {
     isPlaygroundOpen,
     isPlaygroundTransitioning,
@@ -136,11 +139,22 @@ function DocumentEditorContent({
     <LatteLayout>
       <div className='relative flex flex-col pt-6 h-full min-h-0'>
         <div className='w-full flex flex-col justify-center items-start gap-4 px-4 pb-4'>
-          <DocumentTabSelector
-            projectId={String(project.id)}
-            commitUuid={commit.uuid}
-            documentUuid={document.documentUuid}
-          />
+          <div className='w-full flex flex-row items-center justify-between gap-4'>
+            <DocumentTabSelector
+              projectId={String(project.id)}
+              commitUuid={commit.uuid}
+              documentUuid={document.documentUuid}
+            />
+            <Button
+              variant='ghost'
+              onClick={toggleDocumentation}
+              iconProps={{ name: 'code2', placement: 'right' }}
+              className='truncate hover:text-primary transition-colors'
+              userSelect={false}
+            >
+              Deploy
+            </Button>
+          </div>
           <TitleRow
             title={name}
             isAgent={metadata?.config?.type === 'agent'}
