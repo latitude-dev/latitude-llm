@@ -22,6 +22,7 @@ export enum BackofficeRoutes {
   usageOverview = 'usageOverview',
   triggers = 'triggers',
   features = 'features',
+  search = 'search',
 }
 
 const BACKOFFICE_ROOT = '/backoffice'
@@ -48,6 +49,13 @@ export const ROUTES = {
     },
     [BackofficeRoutes.features]: {
       root: `${BACKOFFICE_ROOT}/features`,
+    },
+    [BackofficeRoutes.search]: {
+      root: `${BACKOFFICE_ROOT}/search`,
+      workspace: (id: number) => `${BACKOFFICE_ROOT}/search/workspace/${id}`,
+      user: (email: string) =>
+        `${BACKOFFICE_ROOT}/search/user/${encodeURIComponent(email)}`,
+      project: (id: number) => `${BACKOFFICE_ROOT}/search/project/${id}`,
     },
   },
   noWorkspace: {

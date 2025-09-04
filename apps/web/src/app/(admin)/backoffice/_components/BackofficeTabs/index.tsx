@@ -19,6 +19,10 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
           showSelectedOnSubroutes
           options={[
             {
+              label: 'Search',
+              value: BackofficeRoutes.search,
+            },
+            {
               label: 'Rewards',
               value: BackofficeRoutes.rewards,
             },
