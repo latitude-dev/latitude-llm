@@ -165,6 +165,39 @@ function adaptContentFields({
   })
 }
 
+function filterEmptyContent(content: Exclude<Message['content'], string>) {
+  return content.filter((part) => {
+    if (part.type === 'text') {
+      return part.text && part.text.length > 0
+    }
+
+    return true
+  })
+}
+
+// Note: currently only filtering empty assistant messages
+// produced by aborting the request before it hits the provider
+function filterEmptyMessages(messages: Message[]) {
+  return messages.filter((message) => {
+    if (message.role !== 'assistant') return true
+
+    if (typeof message.content === 'string') {
+      if (message.content.length > 0) return true
+    }
+
+    if (Array.isArray(message.content)) {
+      message.content = filterEmptyContent(message.content)
+      if (message.content.length > 0) return true
+    }
+
+    if (message.toolCalls) {
+      if (message.toolCalls.length > 0) return true
+    }
+
+    return false
+  })
+}
+
 /**
  * Extracts the toolCallId and toolName from
  * promptl-ai messages. Old compiler messages don't have this.
@@ -185,7 +218,7 @@ export function vercelSdkRules(
   rules: AppliedRules,
   provider: Providers,
 ): AppliedRules {
-  const messages = rules.messages.flatMap((message) => {
+  let messages = rules.messages.flatMap((message) => {
     if (message.role === 'system') {
       return flattenSystemMessage({ message, provider })
     }
@@ -209,6 +242,8 @@ export function vercelSdkRules(
 
     return [{ ...extracted, content } as Message]
   }) as Message[]
+
+  messages = filterEmptyMessages(messages)
 
   return { ...rules, messages }
 }

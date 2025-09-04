@@ -561,4 +561,522 @@ describe('applyVercelSdkRules', () => {
       },
     ])
   })
+
+  describe('filterEmptyMessages', () => {
+    it('keeps non-assistant messages regardless of content', () => {
+      messages = [
+        {
+          role: 'system',
+          content: [{ type: 'text', text: '' }],
+        },
+        {
+          role: 'user',
+          content: '',
+        },
+        {
+          role: 'tool',
+          content: '',
+          toolId: '1',
+          toolName: 'test',
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      expect(rules.messages).toHaveLength(3)
+      expect(rules.messages.map((m) => m.role)).toEqual([
+        'system',
+        'user',
+        'tool',
+      ])
+    })
+
+    it('keeps assistant messages with non-empty string content', () => {
+      messages = [
+        {
+          role: 'system',
+          content: [{ type: 'text', text: '' }],
+        },
+        {
+          role: 'user',
+          content: '',
+        },
+        {
+          role: 'assistant',
+          content: 'Hello there!',
+        },
+        {
+          role: 'assistant',
+          content: '   ',
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      expect(rules.messages).toHaveLength(4)
+      expect(rules.messages[2].content).toEqual([
+        { type: 'text', text: 'Hello there!' },
+      ])
+      expect(rules.messages[3].content).toEqual([{ type: 'text', text: '   ' }])
+    })
+
+    it('filters assistant messages with empty string content', () => {
+      messages = [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Hello' }],
+        },
+        {
+          role: 'assistant',
+          content: '',
+        },
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Are you there?' }],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      expect(rules.messages).toHaveLength(2)
+      expect(rules.messages.map((m) => m.role)).toEqual(['user', 'user'])
+    })
+
+    it('keeps assistant messages with non-empty array content', () => {
+      messages = [
+        {
+          role: 'system',
+          content: [{ type: 'text', text: '' }],
+        },
+        {
+          role: 'user',
+          content: '',
+        },
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: 'Hello' },
+            { type: 'text', text: 'How are you?' },
+          ],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      expect(rules.messages).toHaveLength(3)
+      expect(rules.messages[2].content).toEqual([
+        { type: 'text', text: 'Hello' },
+        { type: 'text', text: 'How are you?' },
+      ])
+    })
+
+    it('filters assistant messages with completely empty array content', () => {
+      messages = [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Hello' }],
+        },
+        {
+          role: 'assistant',
+          content: [],
+        },
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Still there?' }],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      expect(rules.messages).toHaveLength(2)
+      expect(rules.messages.map((m) => m.role)).toEqual(['user', 'user'])
+    })
+
+    it('filters assistant messages with only empty text content parts', () => {
+      messages = [
+        {
+          role: 'system',
+          content: [{ type: 'text', text: '' }],
+        },
+        {
+          role: 'user',
+          content: '',
+        },
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: '' },
+            { type: 'text', text: '' },
+          ],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      expect(rules.messages).toHaveLength(2)
+      expect(rules.messages.map((m) => m.role)).toEqual(['system', 'user'])
+    })
+
+    it('keeps assistant messages with mixed empty and non-empty content parts', () => {
+      messages = [
+        {
+          role: 'system',
+          content: [{ type: 'text', text: '' }],
+        },
+        {
+          role: 'user',
+          content: '',
+        },
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: '' },
+            { type: 'text', text: 'Hello' },
+            { type: 'text', text: '' },
+          ],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      expect(rules.messages).toHaveLength(3)
+      expect(rules.messages[2].content).toEqual([
+        { type: 'text', text: 'Hello' },
+      ])
+    })
+
+    it('keeps assistant messages with toolCalls even if content is empty', () => {
+      messages = [
+        {
+          role: 'system',
+          content: [{ type: 'text', text: '' }],
+        },
+        {
+          role: 'user',
+          content: '',
+        },
+        {
+          role: 'assistant',
+          content: '',
+          toolCalls: [
+            {
+              id: 'call_123',
+              name: 'search',
+              arguments: { query: 'test' },
+            },
+          ],
+        },
+        {
+          role: 'assistant',
+          content: [],
+          toolCalls: [
+            {
+              id: 'call_456',
+              name: 'calculate',
+              arguments: { expression: '2+2' },
+            },
+          ],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      expect(rules.messages).toHaveLength(4)
+      expect(rules.messages[2].toolCalls).toEqual([
+        {
+          id: 'call_123',
+          name: 'search',
+          arguments: { query: 'test' },
+        },
+      ])
+      expect(rules.messages[3].toolCalls).toEqual([
+        {
+          id: 'call_456',
+          name: 'calculate',
+          arguments: { expression: '2+2' },
+        },
+      ])
+    })
+
+    it('filters assistant messages with empty toolCalls array and empty content', () => {
+      messages = [
+        {
+          role: 'system',
+          content: [{ type: 'text', text: '' }],
+        },
+        {
+          role: 'user',
+          content: '',
+        },
+        {
+          role: 'assistant',
+          content: '',
+          toolCalls: [],
+        },
+        {
+          role: 'assistant',
+          content: [],
+          toolCalls: [],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      expect(rules.messages).toHaveLength(2)
+      expect(rules.messages.map((m) => m.role)).toEqual(['system', 'user'])
+    })
+
+    it('keeps non-text content types in assistant messages', () => {
+      messages = [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool-call',
+              toolCallId: '123',
+              toolName: 'search',
+              args: { query: 'test' },
+            },
+          ],
+        },
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'file',
+              file: 'file content',
+              mimeType: 'text/plain',
+            },
+          ],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      expect(rules.messages).toHaveLength(2)
+      expect(
+        Array.isArray(rules.messages[0].content) &&
+          rules.messages[0].content[0].type,
+      ).toBe('tool-call')
+      expect(
+        Array.isArray(rules.messages[1].content) &&
+          rules.messages[1].content[0].type,
+      ).toBe('file')
+    })
+
+    it('handles complex conversation with multiple empty assistant messages', () => {
+      messages = [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Hello' }],
+        },
+        {
+          role: 'assistant',
+          content: '',
+        },
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Are you there?' }],
+        },
+        {
+          role: 'assistant',
+          content: [{ type: 'text', text: '' }],
+        },
+        {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Yes, I am here!' }],
+        },
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Great!' }],
+        },
+        {
+          role: 'assistant',
+          content: [],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      expect(rules.messages).toHaveLength(4)
+      expect(rules.messages.map((m) => m.role)).toEqual([
+        'user',
+        'user',
+        'assistant',
+        'user',
+      ])
+      expect(rules.messages[2].content).toEqual([
+        { type: 'text', text: 'Yes, I am here!' },
+      ])
+    })
+
+    it('preserves message order after filtering empty assistant messages', () => {
+      messages = [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'First message' }],
+        },
+        {
+          role: 'assistant',
+          content: '',
+        },
+        {
+          role: 'system',
+          content: [{ type: 'text', text: 'System message' }],
+        },
+        {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Valid assistant message' }],
+        },
+        {
+          role: 'assistant',
+          content: [],
+        },
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Last message' }],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      expect(rules.messages).toHaveLength(4)
+      expect(rules.messages.map((m) => m.role)).toEqual([
+        'user',
+        'system',
+        'assistant',
+        'user',
+      ])
+
+      // Verify content to ensure order is preserved
+      expect(
+        Array.isArray(rules.messages[0].content)
+          ? (rules.messages[0].content[0] as { text: string }).text
+          : rules.messages[0].content,
+      ).toBe('First message')
+      expect(
+        Array.isArray(rules.messages[2].content)
+          ? (rules.messages[2].content[0] as { text: string }).text
+          : rules.messages[2].content,
+      ).toBe('Valid assistant message')
+      expect(
+        Array.isArray(rules.messages[3].content)
+          ? (rules.messages[3].content[0] as { text: string }).text
+          : rules.messages[3].content,
+      ).toBe('Last message')
+    })
+
+    it('handles assistant messages that become empty after content filtering', () => {
+      messages = [
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: '' },
+            { type: 'text', text: '   ' },
+            { type: 'text', text: '' },
+          ],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      // The message should be kept because it has whitespace content
+      expect(rules.messages).toHaveLength(1)
+      expect(rules.messages[0].content).toEqual([{ type: 'text', text: '   ' }])
+    })
+
+    it('filters assistant messages with mixed content where all text parts are empty', () => {
+      messages = [
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: '' },
+            {
+              type: 'tool-call',
+              toolCallId: '123',
+              toolName: 'search',
+              args: {},
+            },
+            { type: 'text', text: '' },
+          ],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      // Should be kept because it has non-text content
+      expect(rules.messages).toHaveLength(1)
+      expect(rules.messages[0].content).toHaveLength(1)
+      expect(
+        Array.isArray(rules.messages[0].content) &&
+          rules.messages[0].content[0].type,
+      ).toBe('tool-call')
+    })
+
+    it('handles edge case with null or undefined content parts', () => {
+      messages = [
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: null },
+            { type: 'text', text: undefined },
+            { type: 'text', text: 'Valid content' },
+          ],
+        },
+      ] as Message[]
+
+      const rules = vercelSdkRules(
+        { rules: [], messages, config },
+        Providers.Anthropic,
+      )
+
+      // Should keep the message but filter out null/undefined text parts
+      expect(rules.messages).toHaveLength(1)
+      expect(rules.messages[0].content).toEqual([
+        { type: 'text', text: 'Valid content' },
+      ])
+    })
+  })
 })

@@ -34,7 +34,7 @@ async function execute(
   const name = sample.document.path
     .split('/')
     .pop()
-    ?.split('_')
+    ?.split(/[_-]/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
     .trim()
