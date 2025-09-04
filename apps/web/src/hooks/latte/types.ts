@@ -24,13 +24,24 @@ export type LatteActionStep = ILatteInteractionStep & {
   action: LatteEditAction
 }
 
-export type LatteInteractionStep =
+export type LatteTextStep = {
+  type: 'text'
+  text: string
+}
+
+export type LatteStepGroupItem =
   | LatteThoughtStep
   | LatteToolStep
   | LatteActionStep
 
+export type LatteStepGroup = {
+  type: 'group'
+  steps: LatteStepGroupItem[]
+}
+
+export type LatteInteractionStep = LatteStepGroup | LatteTextStep
+
 export type LatteInteraction = {
   input: string
   steps: LatteInteractionStep[]
-  output: string | undefined
 }

@@ -1,4 +1,4 @@
-import { LatteInteractionStep } from '$/hooks/latte/types'
+import { LatteStepGroup, LatteStepGroupItem } from '$/hooks/latte/types'
 import { LatteEditAction } from '@latitude-data/constants/latte'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -10,7 +10,7 @@ export function InteractionStep({
   isLoading = false,
   isStreaming = false,
 }: {
-  step?: LatteInteractionStep
+  step?: LatteStepGroup['steps'][number]
   singleLine?: boolean
   isLoading?: boolean
   isStreaming?: boolean
@@ -19,8 +19,8 @@ export function InteractionStep({
     return (
       <Text.H5
         color='latteOutputForegroundMuted'
-        noWrap={singleLine}
-        ellipsis={singleLine}
+        noWrap
+        ellipsis
         userSelect={false}
         animate
       >
@@ -75,7 +75,7 @@ function ToolStep({
   isLoading,
   isStreaming,
 }: {
-  step: Extract<LatteInteractionStep, { type: 'tool' }>
+  step: Extract<LatteStepGroupItem, { type: 'tool' }>
   singleLine?: boolean
   isLoading?: boolean
   isStreaming?: boolean
@@ -155,7 +155,7 @@ function EditActionStep({
   isLoading,
   isStreaming,
 }: {
-  step: Extract<LatteInteractionStep, { type: 'action' }>
+  step: Extract<LatteStepGroupItem, { type: 'action' }>
   singleLine?: boolean
   isLoading?: boolean
   isStreaming?: boolean

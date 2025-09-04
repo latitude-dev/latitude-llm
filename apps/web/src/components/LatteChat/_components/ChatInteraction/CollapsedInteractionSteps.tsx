@@ -1,4 +1,4 @@
-import { LatteInteractionStep } from '$/hooks/latte/types'
+import { LatteStepGroup } from '$/hooks/latte/types'
 import { useEffect, useState } from 'react'
 import { InteractionStep } from './InteractionStep'
 
@@ -9,7 +9,7 @@ export const CollapsedInteractionSteps = ({
   isLoading = false,
   isStreaming = false,
 }: {
-  steps: LatteInteractionStep[]
+  steps: LatteStepGroup['steps'][number][]
   isLoading?: boolean
   isStreaming?: boolean
 }) => {
