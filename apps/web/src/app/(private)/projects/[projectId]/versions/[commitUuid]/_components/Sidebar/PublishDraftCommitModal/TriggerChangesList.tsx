@@ -24,7 +24,6 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { ROUTES } from '$/services/routes'
 import { CurrentTheme } from '@latitude-data/web-ui/browser'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 const TRIGGER_TYPE: Record<DocumentTriggerType, string> = {
   [DocumentTriggerType.Integration]: 'Integration',
@@ -208,11 +207,9 @@ export function CleanTriggers({
 
 export function TriggerChangesList({
   isLoading,
-  onClose,
   changes,
 }: {
   isLoading: boolean
-  onClose: ReactStateDispatch<number | null>
   changes: CommitChanges
 }) {
   const triggerChanges = changes.triggers
