@@ -1,18 +1,9 @@
 'use client'
 
-import {
-  ReactNode,
-  RefObject,
-  SyntheticEvent,
-  useCallback,
-  useState,
-} from 'react'
-
+import { ReactNode, RefObject, SyntheticEvent, useCallback } from 'react'
 import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable'
-
 import { SplitDirection } from '..'
 import { cn } from '../../../../lib/utils'
-
 export const JS_PANEL_CLASS = 'js-pane'
 
 export const PaneWrapper = ({
@@ -103,26 +94,21 @@ export function ResizablePane({
   widthClassWhileNoPaneWidth?: string
   dragDisabled?: boolean
 }) {
-  const [size, setSize] = useState<number>(paneSize)
-
-  const onResize = (_: SyntheticEvent, data: ResizeCallbackData) => {
-    const size = direction === 'horizontal' ? data.size.width : data.size.height
-    const lessThanMinSize = minSize ? size < minSize : false
-
-    setSize(size)
-    if (lessThanMinSize) return
-
-    onResizePane(size)
-  }
-
+  // During drag, we don't update React state at all to avoid rerenders
+  // The visual resize is handled by react-resizable directly through DOM manipulation
+  // We'll update React state only when the drag ends in onStop
   const onStop = useCallback(
-    (_e: SyntheticEvent) => {
-      onDragStop?.(size)
+    (_e: SyntheticEvent, data: ResizeCallbackData) => {
+      const finalSize =
+        direction === 'horizontal' ? data.size.width : data.size.height
+      const adjustedSize = Math.max(finalSize, minSize)
 
-      onResizeStop?.(Math.max(size, minSize))
-      if (size < minSize) setSize(minSize)
+      // Update React state only when drag ends
+      onResizePane(adjustedSize)
+      onDragStop?.(adjustedSize)
+      onResizeStop?.(adjustedSize)
     },
-    [onResizeStop, onDragStop, minSize, size],
+    [onResizeStop, onDragStop, onResizePane, minSize, direction],
   )
 
   if (direction === 'horizontal') {
@@ -137,7 +123,6 @@ export function ResizablePane({
             !paneSize && widthClassWhileNoPaneWidth,
         })}
         handle={SplitHandle({ visibleHandle })}
-        onResize={onResize}
         onResizeStop={onStop}
       >
         {children}
@@ -153,7 +138,6 @@ export function ResizablePane({
       resizeHandles={dragDisabled ? [] : reversed ? ['n'] : ['s']}
       className='flex flex-col relative flex-shrink-0 flex-grow-0 w-full'
       handle={SplitHandle({ visibleHandle })}
-      onResize={onResize}
       onResizeStop={onStop}
     >
       {children}
