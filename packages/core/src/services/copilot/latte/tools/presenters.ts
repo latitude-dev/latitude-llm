@@ -13,6 +13,7 @@ import { PromisedResult } from '../../../../lib/Transaction'
 import { IntegrationsRepository } from '../../../../repositories'
 import { Result } from '../../../../lib/Result'
 import { env } from '@latitude-data/env'
+import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 
 export function projectPresenter(project: Project) {
   return {
@@ -128,6 +129,10 @@ export function integrationPresenter(integration: IntegrationDto) {
   }
 }
 
+/*
+ * This function is used to present the document triggers in a way that is easy to understand for Latte.
+ *  We return the integration name for the integration trigger and the trigger type for the other triggers.
+ */
 async function triggerDocumentPresenter({
   triggers,
   workspaceId,
@@ -136,33 +141,34 @@ async function triggerDocumentPresenter({
   workspaceId: number
 }): PromisedResult<string[]> {
   const documentTriggerNames: string[] = []
-
-  if (
-    triggers.some((trigger) => trigger.triggerType == DocumentTriggerType.Email)
-  ) {
-    documentTriggerNames.push(DocumentTriggerType.Email)
-  }
-
-  if (
-    triggers.some(
-      (trigger) => trigger.triggerType == DocumentTriggerType.Scheduled,
-    )
-  ) {
-    documentTriggerNames.push(DocumentTriggerType.Scheduled)
-  }
-  const integrationTriggers = triggers.filter(
-    (trigger) => trigger.triggerType === DocumentTriggerType.Integration,
-  ) as DocumentTrigger<DocumentTriggerType.Integration>[]
-
   const integrationScope = new IntegrationsRepository(workspaceId)
-  for (const trigger of integrationTriggers) {
-    const integration = await integrationScope.find(
-      trigger.configuration.integrationId,
-    )
-    if (!integration.ok) {
-      return Result.error(integration.error!)
+
+  for (const trigger of triggers) {
+    switch (trigger.triggerType) {
+      case DocumentTriggerType.Email:
+        documentTriggerNames.push(DocumentTriggerType.Email)
+        break
+
+      case DocumentTriggerType.Scheduled:
+        documentTriggerNames.push(DocumentTriggerType.Scheduled)
+        break
+
+      case DocumentTriggerType.Chat:
+        documentTriggerNames.push(DocumentTriggerType.Chat)
+        break
+
+      case DocumentTriggerType.Integration: {
+        const integration = await integrationScope.find(
+          (trigger.configuration as IntegrationTriggerConfiguration)
+            .integrationId,
+        )
+        if (!integration.ok) {
+          return Result.error(integration.error!)
+        }
+        documentTriggerNames.push(integration.unwrap().name)
+        break
+      }
     }
-    documentTriggerNames.push(integration.unwrap().name)
   }
 
   return Result.ok(documentTriggerNames)

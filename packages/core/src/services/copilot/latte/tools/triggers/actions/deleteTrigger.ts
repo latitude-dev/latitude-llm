@@ -15,7 +15,7 @@ import { LatteTriggerChanges } from '@latitude-data/constants/latte'
 
 const deleteTrigger = defineLatteTool(
   async (
-    { projectId, versionUuid, promptUuid, action },
+    { projectId, versionUuid, promptUuid, triggerSpecification },
     { workspace },
   ): PromisedResult<LatteTriggerChanges> => {
     const commitsScope = new CommitsRepository(workspace.id)
@@ -34,7 +34,7 @@ const deleteTrigger = defineLatteTool(
     }
 
     const triggerResult = await getTriggerDocument(
-      action,
+      triggerSpecification,
       workspace.id,
       currentVersionCommit,
       promptUuid,
@@ -46,7 +46,7 @@ const deleteTrigger = defineLatteTool(
 
     const documentTrigger = triggerResult.unwrap()
 
-    if (action.triggerType === DocumentTriggerType.Integration) {
+    if (triggerSpecification.triggerType === DocumentTriggerType.Integration) {
       const projectsRepository = new ProjectsRepository(workspace.id)
       const project = await projectsRepository
         .getProjectById(currentVersionCommit.projectId)
@@ -75,14 +75,14 @@ const deleteTrigger = defineLatteTool(
       projectId: currentVersionCommit.projectId,
       versionUuid: currentVersionCommit.uuid,
       promptUuid: promptUuid,
-      triggerType: action.triggerType,
+      triggerType: triggerSpecification.triggerType,
     })
   },
   z.object({
     projectId: z.number(),
     versionUuid: z.string(),
     promptUuid: z.string(),
-    action: z.union([
+    triggerSpecification: z.union([
       z.object({
         triggerType: z.literal(DocumentTriggerType.Email),
       }),
@@ -92,6 +92,9 @@ const deleteTrigger = defineLatteTool(
       z.object({
         triggerType: z.literal(DocumentTriggerType.Integration),
         configuration: integrationTriggerConfigurationSchema,
+      }),
+      z.object({
+        triggerType: z.literal(DocumentTriggerType.Chat),
       }),
     ]),
   }),

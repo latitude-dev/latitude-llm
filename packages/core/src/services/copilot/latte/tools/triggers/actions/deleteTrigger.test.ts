@@ -19,7 +19,7 @@ describe('Latte delete document triggers', () => {
   let commit: Commit
   let documents: DocumentVersion[]
   let promptUuid: string
-  let action
+  let triggerSpecification
 
   beforeEach(async () => {
     const project = await factories.createProject({
@@ -42,7 +42,7 @@ describe('Latte delete document triggers', () => {
     documents = project.documents
     promptUuid = documents[0]!.documentUuid
 
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Email as const,
       configuration: {
         name: 'Test Email Trigger',
@@ -55,7 +55,7 @@ describe('Latte delete document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -66,7 +66,7 @@ describe('Latte delete document triggers', () => {
 
   it('should delete a document trigger', async () => {
     // Arrange
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Email as const,
     }
 
@@ -83,7 +83,7 @@ describe('Latte delete document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -97,7 +97,7 @@ describe('Latte delete document triggers', () => {
 
   it('should handle document not found when deleting a trigger', async () => {
     // Arrange
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Email as const,
     }
 
@@ -111,7 +111,7 @@ describe('Latte delete document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid: '00000000-0000-0000-0000-000000000000', // Non-existent UUID
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -125,7 +125,7 @@ describe('Latte delete document triggers', () => {
 
   it('should throw an error if deleting a trigger fails', async () => {
     // Arrange
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Email as const,
     }
     const expectedError = new Error('Failed to delete document trigger')
@@ -140,7 +140,7 @@ describe('Latte delete document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -153,7 +153,7 @@ describe('Latte delete document triggers', () => {
 
   it('should throw error if deleting email trigger that does not exist but integration triggers do', async () => {
     // Arrange
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Scheduled as const,
     }
 
@@ -167,7 +167,7 @@ describe('Latte delete document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -189,7 +189,7 @@ describe('Latte delete document triggers', () => {
       },
     })
 
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Integration as const,
       configuration: {
         componentId: 'non-existent-component-id',
@@ -207,7 +207,7 @@ describe('Latte delete document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
-        action,
+        triggerSpecification,
       },
       {
         workspace,

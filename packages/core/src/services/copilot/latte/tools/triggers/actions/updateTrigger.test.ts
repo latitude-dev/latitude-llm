@@ -29,7 +29,7 @@ describe('Latte update document triggers', () => {
   let commit: Commit
   let documents: DocumentVersion[]
   let promptUuid: string
-  let action
+  let triggerSpecification
 
   beforeEach(async () => {
     const project = await factories.createProject({
@@ -52,7 +52,7 @@ describe('Latte update document triggers', () => {
     documents = project.documents
     promptUuid = documents[0]!.documentUuid
 
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Scheduled as const,
       configuration: {
         cronExpression: '0 * * * *',
@@ -64,7 +64,7 @@ describe('Latte update document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -85,7 +85,7 @@ describe('Latte update document triggers', () => {
       })
     })
 
-    const action: {
+    const triggerSpecification: {
       triggerType: DocumentTriggerType.Email
       configuration: EmailTriggerConfiguration
     } = {
@@ -101,7 +101,7 @@ describe('Latte update document triggers', () => {
         projectId: 1,
         versionUuid: 'commit-uuid',
         promptUuid: '1111-1111-1111-1111',
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -127,7 +127,7 @@ describe('Latte update document triggers', () => {
       })
     })
 
-    const action: {
+    const triggerSpecification: {
       triggerType: DocumentTriggerType.Email
       configuration: EmailTriggerConfiguration
     } = {
@@ -143,7 +143,7 @@ describe('Latte update document triggers', () => {
         projectId: 1,
         versionUuid: 'commit-uuid',
         promptUuid: '1111-1111-1111-1111',
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -156,7 +156,7 @@ describe('Latte update document triggers', () => {
 
   it('should update a document trigger', async () => {
     // Arrange
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Scheduled as const,
       configuration: {
         cronExpression: '0 0 0 0 0',
@@ -176,7 +176,7 @@ describe('Latte update document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -190,7 +190,7 @@ describe('Latte update document triggers', () => {
 
   it('should handle document not found when updating a trigger', async () => {
     // Arrange
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Scheduled as const,
       configuration: {
         cronExpression: '0 0 0 0 0',
@@ -207,7 +207,7 @@ describe('Latte update document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid: '00000000-0000-0000-0000-000000000000', // Non-existent UUID
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -221,7 +221,7 @@ describe('Latte update document triggers', () => {
 
   it('should throw an error if updating a trigger fails', async () => {
     // Arrange
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Scheduled as const,
       configuration: {
         cronExpression: '0 0 0 0 0',
@@ -245,7 +245,7 @@ describe('Latte update document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
-        action,
+        triggerSpecification,
       },
       {
         workspace,
