@@ -137,7 +137,6 @@ export function TriggersList({
   useTriggerSockets({ commit, project, mutate })
   const { data: integrations } = useIntegrations({
     fallbackData: fallbackIntegrations,
-    withTriggers: true,
   })
 
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
@@ -201,11 +200,13 @@ export function TriggersList({
               />
 
               <div className='flex flex-col border rounded-lg divide-y divide-border'>
-                {triggers.map((trigger) => (
+                {triggers.map((trigger, i) => (
                   <TriggersCard
                     key={trigger.uuid}
                     trigger={trigger}
                     integrations={integrations}
+                    isFirst={i === 0}
+                    isLast={i === triggers.length - 1}
                     openTriggerUuid={openTriggerUuid}
                     setOpenTriggerUuid={setOpenTriggerUuid}
                     onRunTrigger={onRunTrigger}

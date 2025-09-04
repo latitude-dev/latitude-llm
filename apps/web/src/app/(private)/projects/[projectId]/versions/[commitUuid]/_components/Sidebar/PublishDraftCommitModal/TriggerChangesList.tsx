@@ -72,7 +72,8 @@ function useTriggersFromChanges({ changes }: { changes: ChangedTrigger[] }) {
           url: !isDeleted
             ? ROUTES.projects
                 .detail({ id: projectId })
-                .commits.detail({ uuid: commitUuid }).preview.root
+                .commits.detail({ uuid: commitUuid })
+                .preview.triggers.edit(change.triggerUuid).root
             : undefined,
         }
       })
@@ -84,13 +85,11 @@ function TriggerItem({
   name,
   url,
   type,
-  onClose,
   changeType,
 }: {
   name: string
   type: 'changed' | 'pending'
   theme: CurrentTheme
-  onClose?: ReactStateDispatch<number | null>
   changeType: ModifiedDocumentType
   url?: string
 }) {
@@ -134,7 +133,7 @@ function TriggerItem({
       ) : null}
       <div className='flex-grow truncate'>
         {url ? (
-          <Link onClick={() => onClose?.(null)} href={url}>
+          <Link href={url}>
             {tooltip ? (
               <Tooltip side='right' trigger={nameComp}>
                 {tooltip}
@@ -158,9 +157,7 @@ function TriggerItem({
 function PendingTriggers({
   changes,
   theme,
-  onClose,
 }: {
-  onClose: ReactStateDispatch<number | null>
   changes: ChangedTrigger[]
   theme: CurrentTheme
 }) {
@@ -176,7 +173,6 @@ function PendingTriggers({
           url={t.url}
           theme={theme}
           type='pending'
-          onClose={onClose}
           changeType={t.changeType}
         />
       ))}
@@ -187,9 +183,7 @@ function PendingTriggers({
 export function CleanTriggers({
   changes,
   theme,
-  onClose,
 }: {
-  onClose?: ReactStateDispatch<number | null>
   changes: ChangedTrigger[]
   theme: CurrentTheme
 }) {
@@ -205,7 +199,6 @@ export function CleanTriggers({
           url={t.url}
           theme={theme}
           type='changed'
-          onClose={onClose}
           changeType={t.changeType}
         />
       ))}
@@ -268,16 +261,8 @@ export function TriggerChangesList({
                 <Text.H5M color='foregroundMuted'>No changes</Text.H5M>
               </div>
             ) : null}
-            <PendingTriggers
-              changes={pendingTriggers}
-              theme={theme}
-              onClose={onClose}
-            />
-            <CleanTriggers
-              changes={cleanTriggers}
-              theme={theme}
-              onClose={onClose}
-            />
+            <PendingTriggers changes={pendingTriggers} theme={theme} />
+            <CleanTriggers changes={cleanTriggers} theme={theme} />
           </>
         )}
       </ul>

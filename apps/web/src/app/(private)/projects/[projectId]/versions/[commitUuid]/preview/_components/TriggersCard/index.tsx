@@ -23,6 +23,8 @@ import { OnRunChatTrigger } from '../useActiveTrigger'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 
 function IntegrationTriggerCard({
+  isFirst,
+  isLast,
   trigger,
   integrations,
   documentName,
@@ -40,6 +42,8 @@ function IntegrationTriggerCard({
   setOpenTriggerUuid: ReactStateDispatch<string | null>
   onRunTrigger: OnRunTriggerFn
   onRunChatTrigger: OnRunChatTrigger
+  isFirst?: boolean
+  isLast?: boolean
 }) {
   const integration = useMemo(() => {
     if (!integrations) return undefined
@@ -59,6 +63,8 @@ function IntegrationTriggerCard({
 
   return (
     <TriggerWrapper
+      isFirst={isFirst}
+      isLast={isLast}
       document={document}
       trigger={trigger}
       title={component?.name || 'Unknown Trigger'}
@@ -84,6 +90,8 @@ function IntegrationTriggerCard({
 }
 
 function GenericTriggerCard({
+  isFirst,
+  isLast,
   trigger,
   documentName,
   document,
@@ -99,6 +107,8 @@ function GenericTriggerCard({
   setOpenTriggerUuid: ReactStateDispatch<string | null>
   onRunTrigger: OnRunTriggerFn
   onRunChatTrigger: OnRunChatTrigger
+  isFirst?: boolean
+  isLast?: boolean
 }) {
   const info = useMemo(() => {
     const type = trigger.triggerType
@@ -150,6 +160,8 @@ function GenericTriggerCard({
   }, [trigger, documentName])
   return (
     <TriggerWrapper
+      isFirst={isFirst}
+      isLast={isLast}
       document={document}
       trigger={trigger}
       openTriggerUuid={openTriggerUuid}
@@ -174,6 +186,8 @@ export function TriggersCard({
   setOpenTriggerUuid,
   onRunTrigger,
   onRunChatTrigger,
+  isFirst = false,
+  isLast = false,
 }: {
   trigger: DocumentTrigger
   integrations: IntegrationDto[]
@@ -181,6 +195,8 @@ export function TriggersCard({
   setOpenTriggerUuid: ReactStateDispatch<string | null>
   onRunTrigger: OnRunTriggerFn
   onRunChatTrigger: OnRunChatTrigger
+  isFirst?: boolean
+  isLast?: boolean
 }) {
   const type = trigger.triggerType
   const { commit } = useCurrentCommit()
@@ -207,6 +223,8 @@ export function TriggersCard({
   if (type === DocumentTriggerType.Integration) {
     return (
       <IntegrationTriggerCard
+        isFirst={isFirst}
+        isLast={isLast}
         trigger={trigger as DocumentTrigger<DocumentTriggerType.Integration>}
         integrations={integrations}
         documentName={documentWithName.documentName}
@@ -221,6 +239,8 @@ export function TriggersCard({
 
   return (
     <GenericTriggerCard
+      isFirst={isFirst}
+      isLast={isLast}
       trigger={trigger}
       documentName={documentWithName.documentName}
       document={documentWithName.document}

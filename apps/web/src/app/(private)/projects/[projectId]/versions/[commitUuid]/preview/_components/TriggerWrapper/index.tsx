@@ -135,6 +135,8 @@ export function TriggerWrapper({
   setOpenTriggerUuid,
   onRunTrigger,
   onRunChatTrigger,
+  isFirst = false,
+  isLast = false,
 }: {
   document: DocumentVersion
   trigger: DocumentTrigger
@@ -146,6 +148,8 @@ export function TriggerWrapper({
   openTriggerUuid: string | null
   setOpenTriggerUuid: ReactStateDispatch<string | null>
   onRunTrigger: OnRunTriggerFn
+  isFirst?: boolean
+  isLast?: boolean
   onRunChatTrigger: OnRunChatTrigger
 }) {
   const { project } = useCurrentProject()
@@ -199,6 +203,8 @@ export function TriggerWrapper({
         className={cn(
           'w-full p-4 flex flex-row items-start justify-between gap-4',
           {
+            'rounded-t-lg': isFirst,
+            'rounded-b-lg': isLast,
             'border-b border-border': open,
             'bg-latte-background':
               trigger.triggerStatus === DocumentTriggerStatus.Pending,
