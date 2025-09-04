@@ -4,7 +4,10 @@ import { defineLatteTool } from '../../types'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../../lib/Result'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { integrationTriggerConfigurationSchema } from '@latitude-data/constants/documentTriggers'
+import {
+  chatTriggerConfigurationSchema,
+  integrationTriggerConfigurationSchema,
+} from '@latitude-data/constants/documentTriggers'
 import { getTriggerDocument } from './getTriggerDocument'
 import {
   emailTriggerConfigurationSchema,
@@ -16,7 +19,7 @@ import { LatteTriggerChanges } from '@latitude-data/constants/latte'
 
 const updateTrigger = defineLatteTool(
   async (
-    { projectId, versionUuid, promptUuid, action },
+    { projectId, versionUuid, promptUuid, triggerSpecification },
     { workspace },
   ): PromisedResult<LatteTriggerChanges> => {
     const commitsScope = new CommitsRepository(workspace.id)
@@ -33,7 +36,7 @@ const updateTrigger = defineLatteTool(
     }
 
     const triggerResult = await getTriggerDocument(
-      action,
+      triggerSpecification,
       workspace.id,
       currentVersionCommit,
       promptUuid,
@@ -49,7 +52,7 @@ const updateTrigger = defineLatteTool(
       workspace,
       commit: currentVersionCommit,
       triggerUuid: documentTrigger.uuid,
-      configuration: action.configuration,
+      configuration: triggerSpecification.configuration,
     })
 
     if (!result.ok) {
@@ -60,14 +63,14 @@ const updateTrigger = defineLatteTool(
       projectId: currentVersionCommit.projectId,
       versionUuid: currentVersionCommit.uuid,
       promptUuid: promptUuid,
-      triggerType: action.triggerType,
+      triggerType: triggerSpecification.triggerType,
     })
   },
   z.object({
     projectId: z.number(),
     versionUuid: z.string(),
     promptUuid: z.string(),
-    action: z.union([
+    triggerSpecification: z.union([
       z.object({
         triggerType: z.literal(DocumentTriggerType.Email),
         configuration: emailTriggerConfigurationSchema,
@@ -79,6 +82,11 @@ const updateTrigger = defineLatteTool(
       z.object({
         triggerType: z.literal(DocumentTriggerType.Integration),
         configuration: integrationTriggerConfigurationSchema,
+      }),
+      z.object({
+        triggerType: z.literal(DocumentTriggerType.Chat),
+        // For consistency, however, it will always default to an empty object
+        configuration: chatTriggerConfigurationSchema.optional().default({}),
       }),
     ]),
   }),

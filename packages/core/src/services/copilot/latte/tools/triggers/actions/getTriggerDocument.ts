@@ -8,7 +8,7 @@ import { NotFoundError } from '@latitude-data/constants/errors'
 import { DocumentTriggersRepository } from '../../../../../../repositories'
 
 export async function getTriggerDocument(
-  action: LatteTriggerAction,
+  triggerSpecification: LatteTriggerAction,
   workspaceId: number,
   commit: Commit,
   promptUuid: string,
@@ -30,20 +30,23 @@ export async function getTriggerDocument(
     )
   }
 
-  if (action.triggerType === DocumentTriggerType.Integration) {
+  if (triggerSpecification.triggerType === DocumentTriggerType.Integration) {
     const integrationTriggers = documentTriggers.filter(
       (trigger) => trigger.triggerType === DocumentTriggerType.Integration,
     )
 
     const integrationTrigger = integrationTriggers.find((trigger) => {
       const config = trigger.configuration as IntegrationTriggerConfiguration
-      return config.integrationId === action.configuration.integrationId
+      return (
+        config.integrationId ===
+        triggerSpecification.configuration.integrationId
+      )
     })
 
     if (!integrationTrigger) {
       return Result.error(
         new NotFoundError(
-          `Integration trigger with ID ${action.configuration.integrationId} not found for document with UUID ${promptUuid}.`,
+          `Integration trigger with ID ${triggerSpecification.configuration.integrationId} not found for document with UUID ${promptUuid}.`,
         ),
       )
     }
@@ -53,13 +56,13 @@ export async function getTriggerDocument(
 
   // For email and scheduled triggers, there can only be one per document
   const triggerOfType = documentTriggers.find(
-    (trigger) => trigger.triggerType === action.triggerType,
+    (trigger) => trigger.triggerType === triggerSpecification.triggerType,
   )
 
   if (!triggerOfType) {
     return Result.error(
       new NotFoundError(
-        `${action.triggerType} trigger not found for document with UUID ${promptUuid}.`,
+        `${triggerSpecification.triggerType} trigger not found for document with UUID ${promptUuid}.`,
       ),
     )
   }

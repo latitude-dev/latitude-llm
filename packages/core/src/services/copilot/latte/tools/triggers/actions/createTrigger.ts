@@ -9,6 +9,7 @@ import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../../lib/Result'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import {
+  chatTriggerConfigurationSchema,
   emailTriggerConfigurationSchema,
   integrationTriggerConfigurationSchema,
   scheduledTriggerConfigurationSchema,
@@ -19,7 +20,7 @@ import { LatteTriggerChanges } from '@latitude-data/constants/latte'
 
 const createTrigger = defineLatteTool(
   async (
-    { projectId, versionUuid, promptUuid, action },
+    { projectId, versionUuid, promptUuid, triggerSpecification },
     { workspace },
   ): PromisedResult<LatteTriggerChanges> => {
     const commitsScope = new CommitsRepository(workspace.id)
@@ -60,8 +61,8 @@ const createTrigger = defineLatteTool(
       project,
       commit: currentVersionCommit,
       document: document,
-      triggerType: action.triggerType,
-      configuration: action.configuration,
+      triggerType: triggerSpecification.triggerType,
+      configuration: triggerSpecification.configuration,
     })
 
     if (!result.ok) {
@@ -72,14 +73,14 @@ const createTrigger = defineLatteTool(
       projectId: currentVersionCommit.projectId,
       versionUuid: currentVersionCommit.uuid,
       promptUuid: promptUuid,
-      triggerType: action.triggerType,
+      triggerType: triggerSpecification.triggerType,
     })
   },
   z.object({
     projectId: z.number(),
     versionUuid: z.string(),
     promptUuid: z.string(),
-    action: z.union([
+    triggerSpecification: z.union([
       z.object({
         triggerType: z.literal(DocumentTriggerType.Email),
         configuration: emailTriggerConfigurationSchema,
@@ -91,6 +92,11 @@ const createTrigger = defineLatteTool(
       z.object({
         triggerType: z.literal(DocumentTriggerType.Integration),
         configuration: integrationTriggerConfigurationSchema,
+      }),
+      z.object({
+        triggerType: z.literal(DocumentTriggerType.Chat),
+        // For consistency, however, it will always default to an empty object
+        configuration: chatTriggerConfigurationSchema.optional().default({}),
       }),
     ]),
   }),

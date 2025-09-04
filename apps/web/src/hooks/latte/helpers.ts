@@ -17,7 +17,8 @@ export function getDescriptionFromToolCall(
 
 function getTriggerName(params: Record<string, unknown>): string {
   return (params.componentId ||
-    (params.action as Record<string, unknown>).triggerType) as string
+    (params.triggerSpecification as Record<string, unknown>)
+      .triggerType) as string
 }
 
 function getDescriptionFromLatteTool(
@@ -164,7 +165,7 @@ function getLatteSubagentDescription(
       }
     case 'lat_agent_latte_managers_build_manager':
       return {
-        activeDescription: 'Planning out next moves...',
+        activeDescription: 'Planning out the brewing process...',
         finishedDescription: 'Brewed to perfection',
       }
     case 'lat_agent_latte_managers_investigator':

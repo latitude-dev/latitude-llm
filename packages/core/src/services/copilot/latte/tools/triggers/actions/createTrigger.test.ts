@@ -29,7 +29,7 @@ describe('Latte create document triggers', () => {
   let commit: Commit
   let documents: DocumentVersion[]
   let promptUuid: string
-  let action
+  let triggerSpecification
 
   beforeEach(async () => {
     const project = await factories.createProject({
@@ -66,7 +66,7 @@ describe('Latte create document triggers', () => {
       })
     })
 
-    const action: {
+    const triggerSpecification: {
       triggerType: DocumentTriggerType.Email
       configuration: EmailTriggerConfiguration
     } = {
@@ -82,7 +82,7 @@ describe('Latte create document triggers', () => {
         projectId: 1,
         versionUuid: 'commit-uuid',
         promptUuid: '1111-1111-1111-1111',
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -108,7 +108,7 @@ describe('Latte create document triggers', () => {
       })
     })
 
-    const action: {
+    const triggerSpecification: {
       triggerType: DocumentTriggerType.Email
       configuration: EmailTriggerConfiguration
     } = {
@@ -124,7 +124,7 @@ describe('Latte create document triggers', () => {
         projectId: 1,
         versionUuid: 'commit-uuid',
         promptUuid: '1111-1111-1111-1111',
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -136,7 +136,7 @@ describe('Latte create document triggers', () => {
   })
 
   it('should create a document trigger', async () => {
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Email as const,
       configuration: {
         name: 'Test Email Trigger',
@@ -164,7 +164,7 @@ describe('Latte create document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -176,7 +176,7 @@ describe('Latte create document triggers', () => {
   })
 
   it('should handle document not found when creating a trigger', async () => {
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Email as const,
       configuration: {
         name: 'Test Email Trigger',
@@ -193,7 +193,7 @@ describe('Latte create document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid: '00000000-0000-0000-0000-000000000000',
-        action,
+        triggerSpecification,
       },
       {
         workspace,
@@ -205,7 +205,7 @@ describe('Latte create document triggers', () => {
   })
 
   it('should throw an error if creating a trigger fails', async () => {
-    action = {
+    triggerSpecification = {
       triggerType: DocumentTriggerType.Scheduled as const,
       configuration: {
         cronExpression: '* * * 9 0',
@@ -225,7 +225,7 @@ describe('Latte create document triggers', () => {
         projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
-        action,
+        triggerSpecification,
       },
       {
         workspace,

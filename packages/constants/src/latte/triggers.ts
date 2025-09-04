@@ -1,5 +1,6 @@
 import { DocumentTriggerType } from '..'
 import {
+  ChatTriggerConfiguration,
   EmailTriggerConfiguration,
   IntegrationTriggerConfiguration,
   ScheduledTriggerConfiguration,
@@ -11,6 +12,10 @@ type LatteDeleteScheduledTriggerAction = {
 
 type LatteDeleteEmailTriggerAction = {
   triggerType: DocumentTriggerType.Email
+}
+
+type LatteDeleteChatTriggerAction = {
+  triggerType: DocumentTriggerType.Chat
 }
 
 type LatteDeleteIntegrationTriggerAction = {
@@ -33,13 +38,20 @@ type LatteUpdateIntegrationTriggerAction = {
   configuration: IntegrationTriggerConfiguration
 }
 
+type LatteUpdateChatTriggerAction = {
+  triggerType: DocumentTriggerType.Chat
+  configuration: ChatTriggerConfiguration
+}
+
 export type LatteTriggerAction =
   | LatteDeleteScheduledTriggerAction
   | LatteDeleteEmailTriggerAction
   | LatteDeleteIntegrationTriggerAction
+  | LatteDeleteChatTriggerAction
   | LatteUpdateScheduledTriggerAction
   | LatteUpdateEmailTriggerAction
   | LatteUpdateIntegrationTriggerAction
+  | LatteUpdateChatTriggerAction
 
 export type LatteTriggerChanges = {
   projectId: number

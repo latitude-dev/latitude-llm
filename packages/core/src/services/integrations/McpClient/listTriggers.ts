@@ -37,7 +37,12 @@ export async function listTriggers(integration: IntegrationDto): PromisedResult<
       description: 'Trigger that runs when an email is received',
     }
 
-    return Result.ok([scheduledTrigger, emailTrigger])
+    const chatTrigger = {
+      name: 'Chat Trigger',
+      description: 'Trigger that runs when a chat message is received',
+    }
+
+    return Result.ok([scheduledTrigger, emailTrigger, chatTrigger])
   }
 
   return Result.error(new NotImplementedError('Unsupported integration type'))

@@ -7,7 +7,7 @@ import { buildLatitudeIntegration } from '../../../../integrations/list'
 
 const listIntegrationTriggers = defineLatteTool(
   async ({ name }, { workspace }) => {
-    // TODO - change when we merge Latitude integrations with its triggers
+    // For Latte, we are listing the triggers from the Latitude integration for it to better understand
     if (name === 'latitude') {
       const latitudeIntegration = buildLatitudeIntegration(workspace)
       const triggersResult = await listTriggers(latitudeIntegration)
