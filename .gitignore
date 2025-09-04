@@ -21,6 +21,7 @@ coverage
 # Turbo
 .turbo
 .tsbuildinfo
+tsconfig.tsbuildinfo
 
 # Vim shit
 *.py-E
@@ -60,7 +61,9 @@ apps/web/scripts-dist
 # File uploads in development
 apps/web/uploads
 apps/web/public/uploads
+apps/web/public/storage
 uploads
+storage
 
 # Temporal
 tmp
@@ -89,4 +92,6 @@ __testing__
 # New spans
 apps/web/ingest
 apps/workers/workspaces/*/traces
+apps/web/tsc-tracing
+*.tsbuildinfo
 

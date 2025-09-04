@@ -7,12 +7,11 @@
       }
     ],
     "incremental": true,
-    "tsBuildInfoFile": ".tsbuildinfo",
+    "noEmit": true,
     "moduleResolution": "Bundler",
     "jsx": "preserve",
-    "typeRoots": [
-      "./node_modules/@types"
-    ],
+    "skipLibCheck": true,
+    "types": ["node"],
     "baseUrl": ".",
     "paths": {
       "$/*": [
@@ -24,9 +23,7 @@
     "./src/**/*.test.ts",
     "./src/**/*.ts",
     "./src/**/*.tsx",
-    "next-env.d.ts",
-    "next.config.js",
-    ".next/types/**/*.ts"
+    "next-env.d.ts"
   ],
   "exclude": [
     "node_modules",

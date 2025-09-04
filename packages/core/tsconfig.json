@@ -1,6 +1,7 @@
 {
   "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
+    "noEmit": true,
     "moduleResolution": "Bundler",
     "jsx": "preserve"
   },
