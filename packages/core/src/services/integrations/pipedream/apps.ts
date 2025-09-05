@@ -94,11 +94,8 @@ export async function listApps({
       hasComponents,
     }
 
-    console.log({ '🧹 appsParams': JSON.stringify(appsParams, null, 4) })
     const apps = await pipedream.getApps(appsParams)
     let appsList: App[] = apps.data
-
-    console.log({ '🤔 appsList': JSON.stringify(appsList, null, 4) })
 
     if (hasTriggers) {
       const appsListResult = await fetchTriggerCounts({
