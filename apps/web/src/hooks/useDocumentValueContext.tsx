@@ -35,6 +35,7 @@ type DocumentValueContextType = {
   updateDocumentContent: updateContentFn
   document: DocumentVersion
   isSaved: boolean
+  isUpdatingContent: boolean
 }
 
 const DocumentValueContext = createContext<
@@ -126,6 +127,7 @@ export function DocumentValueProvider({
         setValue: setContentValue,
         updateDocumentContent,
         isSaved: !isUpdatingContent,
+        isUpdatingContent,
         document,
       }}
     >

@@ -69,7 +69,8 @@ function OldDocumentEditorContent({
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
-  const { document, value, updateDocumentContent, isSaved } = useDocumentValue()
+  const { document, value, updateDocumentContent, isSaved, isUpdatingContent } =
+    useDocumentValue()
   const { diff: latteDiff } = useSyncLatteChanges()
   const { diff: experimentDiff, setDiff: setEditorDiff } = useExperimentDiff()
   const oldHeaderEditorActions = useOldEditorHeaderActions({
@@ -127,6 +128,7 @@ function OldDocumentEditorContent({
                   isLatitudeProvider={isLatitudeProvider}
                   isMerged={isMerged}
                   freeRunsCount={freeRunsCount}
+                  isUpdatingContent={isUpdatingContent}
                 />
               ) : (
                 <EvaluationEditorHeader

@@ -149,11 +149,10 @@ function SubAgentItem({
   isFirst?: boolean
   disabled?: boolean
 }) {
-  const [checked, setChecked] = useState(availableAgents.includes(agentPath))
+  const checked = availableAgents.includes(agentPath)
   const onClick = useCallback(() => {
-    setChecked(!checked)
     toggleAgent(agentPath)
-  }, [toggleAgent, agentPath, checked])
+  }, [toggleAgent, agentPath])
   const name = agentPath.split('/').pop() || ''
   return (
     <ItemWrapper isFirst={isFirst}>
@@ -171,7 +170,9 @@ function SubAgentItem({
     </ItemWrapper>
   )
 }
+
 function Content({
+  isUpdatingContent,
   isMerged,
   prompt,
   selectedTab,
@@ -181,6 +182,7 @@ function Content({
   selectedTab: TabSection
   prompt: EditorHeaderProps['prompt']
   subAgents: UseLatitudeAgentsConfig
+  isUpdatingContent: boolean
 }) {
   const { data: integrations, isLoading } = useIntegrations({
     includeLatitudeTools: true,
@@ -195,7 +197,7 @@ function Content({
     <>
       {selectedTab === TAB_SECTIONS.tools ? (
         <IntegrationsList
-          disabled={isMerged}
+          disabled={isMerged || isUpdatingContent}
           isLoading={isLoading}
           integrations={integrations ?? []}
           activeIntegrations={activeIntegrations as ActiveIntegrations}
@@ -213,7 +215,7 @@ function Content({
                 agentPath={agent}
                 toggleAgent={subAgents.toggleAgent}
                 availableAgents={subAgents.selectedAgents}
-                disabled={isMerged}
+                disabled={isMerged || isUpdatingContent}
               />
             </li>
           ))}
@@ -231,10 +233,12 @@ export function AgentToolbar({
   isAgent,
   config,
   onChangePrompt,
+  isUpdatingContent,
   prompt,
   isMerged,
 }: {
   isAgent: boolean
+  isUpdatingContent: boolean
   config: Config | undefined
   onChangePrompt: EditorHeaderProps['onChangePrompt']
   prompt: EditorHeaderProps['prompt']
@@ -318,6 +322,7 @@ export function AgentToolbar({
                 prompt={prompt}
                 selectedTab={tabs.selected}
                 subAgents={counters.subAgents}
+                isUpdatingContent={isUpdatingContent}
               />
             </div>
           }
