@@ -57,8 +57,8 @@ export function buildPipedreamClient() {
 export async function listApps({
   query,
   cursor,
-  withTriggers: hasTriggers = false,
-  withTools: hasComponents = false,
+  withTriggers: hasTriggers,
+  withTools: hasComponents,
   pipedreamClientBuilder = buildPipedreamClient,
 }: {
   query?: string
@@ -91,15 +91,14 @@ export async function listApps({
       limit: LIST_APPS_LIMIT,
       after: cursor,
       hasTriggers,
+      hasComponents,
     }
 
-    // Only include hasComponents if it's true
-    if (hasComponents) {
-      appsParams.hasComponents = true
-    }
-
+    console.log({ '🧹 appsParams': JSON.stringify(appsParams, null, 4) })
     const apps = await pipedream.getApps(appsParams)
     let appsList: App[] = apps.data
+
+    console.log({ '🤔 appsList': JSON.stringify(appsList, null, 4) })
 
     if (hasTriggers) {
       const appsListResult = await fetchTriggerCounts({
