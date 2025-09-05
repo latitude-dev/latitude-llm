@@ -11,7 +11,6 @@ import {
 } from '$/hooks/useExperimentDiffContext'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
-import { useSyncLatteChanges } from '$/hooks/useSyncLatteChanges'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import useFeature from '$/stores/useFeature'
 import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
@@ -29,6 +28,8 @@ import { EditorHeader } from './EditorHeader'
 import { useOldEditorHeaderActions } from './hooks/useOldEditorHeaderActions'
 import { Playground } from './Playground'
 import { PlaygroundTextEditor } from './TextEditor'
+import { useLatteDiff } from '$/hooks/useLatteDiff'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 
 export type DocumentEditorProps = {
   document: DocumentVersion
@@ -65,13 +66,13 @@ function OldDocumentEditorContent({
 }: Omit<DocumentEditorProps, 'experimentDiff'>) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
+  const { document } = useCurrentDocument()
   const { isEnabled: blocksEditorEnabled } = useFeature('blocksEditor')
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
-  const { document, value, updateDocumentContent, isSaved, isUpdatingContent } =
-    useDocumentValue()
-  const { diff: latteDiff } = useSyncLatteChanges()
+  const { diff: latteDiff } = useLatteDiff()
+  const { value, updateDocumentContent, isSaved } = useDocumentValue()
   const { diff: experimentDiff, setDiff: setEditorDiff } = useExperimentDiff()
   const oldHeaderEditorActions = useOldEditorHeaderActions({
     project: useCurrentProject().project,
@@ -128,7 +129,6 @@ function OldDocumentEditorContent({
                   isLatitudeProvider={isLatitudeProvider}
                   isMerged={isMerged}
                   freeRunsCount={freeRunsCount}
-                  isUpdatingContent={isUpdatingContent}
                 />
               ) : (
                 <EvaluationEditorHeader

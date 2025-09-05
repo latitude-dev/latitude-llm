@@ -4,7 +4,12 @@ import { NextRequest, NextResponse } from 'next/server'
 export function authHandler(handler: any) {
   return async (
     req: NextRequest,
-    { params, ...rest }: { params: Promise<Record<string, string>> },
+    {
+      params,
+      ...rest
+    }: {
+      params: Promise<Record<string, string>>
+    },
   ) => {
     const { user, workspace } = await getDataFromSession()
     if (!user || !workspace) {

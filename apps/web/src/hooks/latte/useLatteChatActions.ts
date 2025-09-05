@@ -1,9 +1,11 @@
-import { useCallback } from 'react'
+'use client'
+
 import { addMessageToLatteAction } from '$/actions/latte/addMessage'
 import { createNewLatteAction } from '$/actions/latte/new'
 import { stopChatLatteAction } from '$/actions/latte/stopChat'
-import { useServerAction } from 'zsa-react'
 import { useLatteStore } from '$/stores/latte'
+import { useCallback } from 'react'
+import { useServerAction } from 'zsa-react'
 import { useLatteContext } from './context'
 import { LatteInteraction } from './types'
 

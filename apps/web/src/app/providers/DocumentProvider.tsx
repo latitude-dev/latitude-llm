@@ -8,9 +8,9 @@ import useDocumentVersions from '$/stores/documentVersions'
 type DocumentVersionContext = {
   document: DocumentVersion
 }
-const DocumentContext = createContext<DocumentVersionContext>(
-  {} as DocumentVersionContext,
-)
+const DocumentContext = createContext<DocumentVersionContext>({
+  document: {},
+} as DocumentVersionContext)
 
 const DocumentVersionProvider = ({
   children,
@@ -24,20 +24,19 @@ const DocumentVersionProvider = ({
   commitUuid: string
 }) => {
   const { data: documents } = useDocumentVersions({
-    projectId,
-    commitUuid,
+    projectId: projectId,
+    commitUuid: commitUuid,
   })
-
-  const document = useMemo(() => {
-    return (
-      documents?.find((d) => d.id === fallbackDocument.id) ?? fallbackDocument
-    )
-  }, [documents, fallbackDocument])
+  const document = useMemo(
+    () =>
+      documents.find((d) => d.documentUuid === fallbackDocument.documentUuid),
+    [documents, fallbackDocument],
+  )
 
   return (
     <DocumentContext.Provider
       value={{
-        document: document || fallbackDocument,
+        document: document ?? fallbackDocument,
       }}
     >
       {children}
@@ -47,13 +46,17 @@ const DocumentVersionProvider = ({
 
 const useCurrentDocument = () => {
   const context = useContext(DocumentContext)
-
   if (!context) {
     throw new Error(
       'useCurrentDocument must be used within a DocumentVersionProvider',
     )
   }
+
+  return context
+}
+const useCurrentDocumentMaybe = () => {
+  const context = useContext(DocumentContext)
   return context
 }
 
-export { DocumentVersionProvider, useCurrentDocument }
+export { DocumentVersionProvider, useCurrentDocument, useCurrentDocumentMaybe }

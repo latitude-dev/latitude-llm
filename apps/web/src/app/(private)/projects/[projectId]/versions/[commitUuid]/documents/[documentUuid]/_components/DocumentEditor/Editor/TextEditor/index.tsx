@@ -15,6 +15,7 @@ import { memo, Suspense, useCallback } from 'react'
 import { DocumentRefinement } from '../DocumentRefinement'
 import { DocumentSuggestions } from '../DocumentSuggestions'
 import { EditorSettings } from '../EditorSettings'
+import { LatteDiffManager } from './LatteDiffManager'
 
 export const PlaygroundTextEditor = memo(
   ({
@@ -130,6 +131,7 @@ export const PlaygroundTextEditor = memo(
                 setPrompt={onChange}
                 refinementEnabled={refinementEnabled}
               />
+              <LatteDiffManager />
               <EditorSettings copilotEnabled={copilotEnabled} />
             </>
           }

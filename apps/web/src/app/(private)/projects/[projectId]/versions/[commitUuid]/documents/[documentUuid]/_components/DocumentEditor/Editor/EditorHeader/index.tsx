@@ -8,7 +8,6 @@ export type EditorHeaderProps = {
   freeRunsCount: number | undefined
   isLatitudeProvider: boolean
   isMerged: boolean
-  isUpdatingContent: boolean
   metadata: ResolvedMetadata | undefined
   onChangePrompt: (prompt: string) => void
   prompt: string
@@ -23,11 +22,11 @@ export const EditorHeader = memo(
     isMerged,
     isLatitudeProvider,
     freeRunsCount,
-    isUpdatingContent,
     onChangePrompt,
   }: EditorHeaderProps) => {
     const metadataConfig = metadata?.config
     const isAgent = metadataConfig?.type === 'agent' || false
+
     return (
       <div className='flex flex-col gap-y-4'>
         <TitleRow
@@ -45,7 +44,6 @@ export const EditorHeader = memo(
         <AgentToolbar
           isMerged={isMerged}
           isAgent={isAgent}
-          isUpdatingContent={isUpdatingContent}
           config={metadataConfig}
           prompt={prompt}
           onChangePrompt={onChangePrompt}

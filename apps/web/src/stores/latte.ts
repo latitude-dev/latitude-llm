@@ -1,7 +1,7 @@
 'use client'
 
 import { LatteInteraction } from '$/hooks/latte/types'
-import { LatteChange, LatteUsage } from '@latitude-data/constants/latte'
+import { LatteUsage } from '@latitude-data/constants/latte'
 import {
   AppLocalStorage,
   useLocalStorage,
@@ -16,8 +16,6 @@ interface LatteState {
   error: string | undefined
   threadUuid: string | undefined
 
-  // Changes state
-  changes: LatteChange[]
   latteActionsFeedbackUuid: string | undefined
 
   // Debug state
@@ -44,16 +42,6 @@ interface LatteState {
     updater: (interaction: LatteInteraction) => LatteInteraction,
   ) => void
   setError: (error: string | undefined) => void
-  setChanges: (
-    changes: LatteChange[] | ((prev: LatteChange[]) => LatteChange[]),
-  ) => void
-  addChange: (change: LatteChange) => void
-  updateChange: (
-    draftUuid: string,
-    documentUuid: string,
-    updater: (change: LatteChange) => LatteChange,
-  ) => void
-  removeChange: (draftUuid: string, documentUuid: string) => void
   setLatteActionsFeedbackUuid: (uuid: string | undefined) => void
   setDebugVersionUuid: (uuid: string | undefined) => void
   setUsage: (usage: LatteUsage | undefined) => void
@@ -61,7 +49,6 @@ interface LatteState {
   setJobId: (jobId: string | undefined) => void
 
   // Reset functions
-  resetChanges: () => void
   resetAll: () => void
 }
 
@@ -70,7 +57,6 @@ const useStore = create<LatteState>((set) => ({
   isBrewing: false,
   interactions: [],
   error: undefined,
-  changes: [],
   latteActionsFeedbackUuid: undefined,
   threadUuid: undefined,
   debugVersionUuid: undefined,
@@ -118,50 +104,6 @@ const useStore = create<LatteState>((set) => ({
 
   setError: (error: string | undefined) => set({ error }),
 
-  // Changes actions
-  setChanges: (
-    changes: LatteChange[] | ((prev: LatteChange[]) => LatteChange[]),
-  ) =>
-    set((state) => ({
-      changes: typeof changes === 'function' ? changes(state.changes) : changes,
-    })),
-
-  addChange: (change: LatteChange) =>
-    set((state) => ({
-      changes: [...state.changes, change],
-    })),
-
-  updateChange: (
-    draftUuid: string,
-    documentUuid: string,
-    updater: (change: LatteChange) => LatteChange,
-  ) =>
-    set((state) => {
-      const index = state.changes.findIndex(
-        (change) =>
-          change.draftUuid === draftUuid &&
-          change.current.documentUuid === documentUuid,
-      )
-
-      if (index === -1) return state
-
-      const updatedChanges = [...state.changes]
-      updatedChanges[index] = updater(updatedChanges[index]!)
-
-      return { changes: updatedChanges }
-    }),
-
-  removeChange: (draftUuid: string, documentUuid: string) =>
-    set((state) => ({
-      changes: state.changes.filter(
-        (change) =>
-          !(
-            change.draftUuid === draftUuid &&
-            change.current.documentUuid === documentUuid
-          ),
-      ),
-    })),
-
   setLatteActionsFeedbackUuid: (uuid: string | undefined) =>
     set({ latteActionsFeedbackUuid: uuid }),
 
@@ -174,15 +116,8 @@ const useStore = create<LatteState>((set) => ({
   setJobId: (jobId: string | undefined) => set({ jobId: jobId }),
 
   // Reset functions
-  resetChanges: () =>
-    set({
-      changes: [],
-      latteActionsFeedbackUuid: undefined,
-    }),
-
   resetAll: () =>
     set({
-      changes: [],
       latteActionsFeedbackUuid: undefined,
       threadUuid: undefined,
       jobId: undefined,

@@ -16,6 +16,7 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useState } from 'react'
 import { SuggestionItem } from './SuggestionItem'
+import { useLatteDiff } from '$/hooks/useLatteDiff'
 
 const useDocumentSuggestionsSocket = ({
   document,
@@ -76,6 +77,7 @@ export function DocumentSuggestions({
   setDiff: (value?: DiffOptions) => void
   setPrompt: (prompt: string) => void
 }) {
+  const { diff: latteDiff } = useLatteDiff()
   const [isOpen, setIsOpen] = useState(false)
   const close = useCallback(() => setIsOpen(false), [setIsOpen])
   const [notifier, setNotifier] = useState<Notifier>({ isOpen: false })
@@ -108,6 +110,7 @@ export function DocumentSuggestions({
 
   const isDisabled = isLoading || !!diff
 
+  if (latteDiff) return null
   if (!suggestions.length) return null
 
   return (

@@ -22,11 +22,10 @@ import {
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useRouter } from 'next/navigation'
 import useSWR, { SWRConfiguration } from 'swr'
-import { useServerAction } from 'zsa-react'
 import { inferServerActionReturnData } from 'zsa'
-import { useEvents } from '$/lib/events'
 
 const EMPTY_DATA = [] as DocumentVersion[]
+
 export default function useDocumentVersions(
   {
     commitUuid = HEAD_COMMIT,
@@ -60,7 +59,7 @@ export default function useDocumentVersions(
   )
 
   const router = useRouter()
-  const { execute: executeCreateDocument } = useServerAction(
+  const { execute: executeCreateDocument } = useLatitudeAction(
     createDocumentVersionAction,
     {
       onSuccess: ({ data: document }) => {
@@ -68,7 +67,7 @@ export default function useDocumentVersions(
       },
     },
   )
-  const { execute: executeUploadDocument } = useServerAction(
+  const { execute: executeUploadDocument } = useLatitudeAction(
     uploadDocumentAction,
     {
       onSuccess: ({ data: document }) => {
@@ -76,13 +75,13 @@ export default function useDocumentVersions(
       },
     },
   )
-  const { execute: executeRenamePaths } = useServerAction(
+  const { execute: executeRenamePaths } = useLatitudeAction(
     renameDocumentPathsAction,
   )
   const { execute: executeDestroyDocument, isPending: isDestroyingFile } =
-    useServerAction(destroyDocumentAction)
+    useLatitudeAction(destroyDocumentAction)
   const { execute: executeDestroyFolder, isPending: isDestroyingFolder } =
-    useServerAction(destroyFolderAction)
+    useLatitudeAction(destroyFolderAction)
 
   const createFile = useCallback(
     async ({
@@ -339,36 +338,6 @@ export default function useDocumentVersions(
         [data, mutate],
       ),
     })
-
-  useEvents({
-    onLatteProjectChanges: ({ changes }) => {
-      const commitChanges = changes.filter((c) => c.draftUuid === commitUuid)
-      if (commitChanges.length === 0) return
-
-      mutate((prev) => {
-        const newDocuments = [...(prev || [])]
-
-        changes.forEach((change) => {
-          if (change.previous) {
-            const index = newDocuments.findIndex(
-              (d) => d.documentUuid === change.previous!.documentUuid,
-            )
-            if (index === -1) return
-
-            if (change.current.deletedAt) {
-              newDocuments.splice(index, 1)
-            } else {
-              newDocuments[index] = change.current as unknown as DocumentVersion
-            }
-          } else {
-            newDocuments.push(change.current as unknown as DocumentVersion)
-          }
-        })
-
-        return newDocuments
-      })
-    },
-  })
 
   return useMemo(
     () => ({

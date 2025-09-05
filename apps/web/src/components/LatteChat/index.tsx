@@ -31,6 +31,7 @@ import { ChatSkeleton } from './_components/ChatSkeleton'
 import { LatteUsageInfo } from './_components/LatteUsageInfo'
 import { LatteMessageList } from './_components/MessageList'
 import { LatteChatInput } from './LatteChatInput'
+import { useLatteEventHandlers } from '$/hooks/latte/useLatteEventHandlers'
 
 export function LatteChat() {
   const { data: workspace } = useCurrentWorkspace()
@@ -38,29 +39,17 @@ export function LatteChat() {
   const { project } = useCurrentProject()
 
   useSyncLatteUrlState()
+  useLatteEventHandlers()
 
   const isLoadingThread = useLoadThreadFromProviderLogs()
-
-  const {
-    isBrewing,
-    resetAll,
-    interactions,
-    error,
-    changes,
-    latteActionsFeedbackUuid,
-    usage,
-    jobId,
-  } = useLatteStore()
-
+  const { isBrewing, resetAll, interactions, error, usage, jobId } =
+    useLatteStore()
   const { sendMessage, stopChat } = useLatteChatActions()
-  const { acceptChanges, undoChanges, addFeedbackToLatteChange } =
-    useLatteChangeActions()
-
+  const { addFeedbackToLatteChange } = useLatteChangeActions()
   const resetChat = useCallback(() => {
     addFeedbackToLatteChange('')
     resetAll()
   }, [resetAll, addFeedbackToLatteChange])
-
   const stopLatteChat = useCallback(() => {
     stopChat({ jobId: jobId })
   }, [stopChat, jobId])
@@ -130,17 +119,11 @@ export function LatteChat() {
                     </div>
                   </div>
                   <LatteChatInput
-                    sendMessage={sendMessage}
-                    resetChat={resetChat}
-                    changes={changes}
-                    undoChanges={undoChanges}
-                    acceptChanges={acceptChanges}
                     error={error}
                     inConversation={false}
+                    resetChat={resetChat}
                     scrollToBottom={scrollToBottom}
-                    isBrewing={isBrewing}
-                    feedbackRequested={!!latteActionsFeedbackUuid}
-                    addFeedbackToLatteChange={addFeedbackToLatteChange}
+                    sendMessage={sendMessage}
                   />
                 </div>
               ) : (
@@ -209,14 +192,8 @@ export function LatteChat() {
                 inConversation
                 sendMessage={sendMessage}
                 resetChat={resetChat}
-                changes={changes}
-                undoChanges={undoChanges}
-                acceptChanges={acceptChanges}
                 error={error}
                 scrollToBottom={scrollToBottom}
-                isBrewing={isBrewing}
-                feedbackRequested={!!latteActionsFeedbackUuid}
-                addFeedbackToLatteChange={addFeedbackToLatteChange}
                 stopLatteChat={stopLatteChat}
               />
               {!!usage && !!workspace && (

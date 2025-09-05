@@ -1,13 +1,29 @@
-import { LatteChange } from '@latitude-data/constants/latte'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import { useTypeWriterValue } from '@latitude-data/web-ui/browser'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+  useTypeWriterValue,
+} from '@latitude-data/web-ui/browser'
 import { cn } from '@latitude-data/web-ui/utils'
-import React, { KeyboardEvent, useCallback, useEffect, useState } from 'react'
+import React, {
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import { ChangeList } from './_components/ChangesList'
 import { LatteDebugVersionSelector } from './_components/DebugVersionSelector'
+import useLatteThreadCheckpoints from '$/stores/latteThreadCheckpoints'
+import { useLatteStore } from '$/stores/latte'
+import { useLatteChangeActions } from '$/hooks/latte'
+import { useCurrentDocumentMaybe } from '$/app/providers/DocumentProvider'
+import { useDocumentValueMaybe } from '$/hooks/useDocumentValueContext'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
 
 const INPUT_PLACEHOLDERS = [
   'How can I see the logs of my agent?',
@@ -28,37 +44,39 @@ const INPUT_PLACEHOLDERS = [
 export function LatteChatInput({
   sendMessage,
   resetChat,
-  changes,
-  undoChanges,
-  acceptChanges,
   error,
   scrollToBottom,
-  isBrewing,
   inConversation,
-  feedbackRequested,
-  addFeedbackToLatteChange,
   stopLatteChat,
 }: {
-  isBrewing: boolean
   inConversation: boolean
   scrollToBottom: () => void
   sendMessage: (message: string) => void
-  changes: LatteChange[]
   error?: string
   resetChat: () => void
-  acceptChanges: () => void
-  undoChanges: () => void
-  feedbackRequested?: boolean
-  addFeedbackToLatteChange?: (feedback: string) => void
   stopLatteChat?: () => void
 }) {
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const { document } = useCurrentDocumentMaybe()
+  const { updateDocumentContent } = useDocumentValueMaybe()
+  const navigate = useNavigate()
+  const { acceptChanges, undoChanges, addFeedbackToLatteChange } =
+    useLatteChangeActions()
+  const { threadUuid, isBrewing, latteActionsFeedbackUuid } = useLatteStore()
+  const { data: checkpoints } = useLatteThreadCheckpoints({
+    threadUuid,
+    commitId: commit.id,
+  })
+  const checkpoint = useMemo(() => {
+    return checkpoints?.find((cp) => cp.documentUuid === document.documentUuid)
+  }, [checkpoints, document])
   const placeholder = useTypeWriterValue(
     inConversation ? [] : INPUT_PLACEHOLDERS,
   )
-
   const [value, setValue] = useState('')
   const [action, setAction] = useState<'accept' | 'undo'>('accept')
-
+  const feedbackRequested = !!latteActionsFeedbackUuid
   const handleValueChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value
@@ -66,14 +84,12 @@ export function LatteChatInput({
     },
     [],
   )
-
   const onSubmit = useCallback(() => {
     if (isBrewing) return
     if (value.trim() === '') return
     setValue('')
     sendMessage(value)
   }, [value, sendMessage, isBrewing])
-
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -85,6 +101,31 @@ export function LatteChatInput({
     },
     [scrollToBottom, onSubmit],
   )
+  const handleUndoChanges = useCallback(async () => {
+    setAction('undo')
+    undoChanges()
+
+    if (!checkpoint?.data) {
+      // Optimistically redirect if document is deleted
+      navigate.push(
+        ROUTES.projects
+          .detail({ id: project.id })
+          .commits.detail({ uuid: commit.uuid }).documents.root,
+      )
+    } else if (updateDocumentContent) {
+      // Optimistically update the document value to the previous value
+      updateDocumentContent(checkpoint?.data?.content!, {
+        origin: 'latteCopilot',
+      })
+    }
+  }, [
+    undoChanges,
+    checkpoint?.data,
+    navigate,
+    project.id,
+    commit.uuid,
+    updateDocumentContent,
+  ])
 
   return (
     <div
@@ -92,25 +133,22 @@ export function LatteChatInput({
         'max-w-[600px]': !inConversation,
       })}
     >
-      {!changes.length && feedbackRequested ? (
+      {!checkpoints.length && feedbackRequested ? (
         <LatteChangesFeedback
           onSubmit={addFeedbackToLatteChange!}
           action={action}
         />
-      ) : (
+      ) : checkpoints.length > 0 ? (
         <ChangeList
-          changes={changes}
-          undoChanges={() => {
-            setAction('undo')
-            undoChanges()
-          }}
+          checkpoints={checkpoints}
+          undoChanges={handleUndoChanges}
           acceptChanges={() => {
             setAction('accept')
             acceptChanges()
           }}
           disabled={isBrewing}
         />
-      )}
+      ) : null}
       <TextArea
         className={cn(
           'bg-background w-full px-3 pt-3 pb-14 resize-none text-sm',
@@ -119,7 +157,7 @@ export function LatteChatInput({
           'focus-visible:animate-glow focus-visible:glow-latte custom-scrollbar scrollable-indicator',
           {
             'rounded-t-none border-t-0':
-              changes.length > 0 || feedbackRequested,
+              checkpoints.length > 0 || feedbackRequested,
           },
         )}
         placeholder={

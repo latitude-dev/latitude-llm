@@ -33,6 +33,10 @@ export default {
         primary: {
           DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
           foreground: 'hsl(var(--primary-foreground) / <alpha-value>)',
+          muted: {
+            DEFAULT: 'hsl(var(--primary-muted) / <alpha-value>)',
+            hover: 'hsl(var(--primary-muted-hover) / <alpha-value>)',
+          },
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary) / <alpha-value>)',

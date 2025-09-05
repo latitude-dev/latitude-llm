@@ -1,25 +1,38 @@
 'use client'
+
 import { DocumentRoutes, ROUTES } from '$/services/routes'
+import useDocumentVersion from '$/stores/useDocumentVersion'
 import { ModifiedDocumentType } from '@latitude-data/constants'
-import { LatteChange } from '@latitude-data/constants/latte'
+import { LatteThreadCheckpoint } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
 
-function ChangeListItem({ change }: { change: LatteChange }) {
-  const path = change.current.path
-  const oldPath =
-    change.previous?.path !== change.current.path
-      ? change.previous?.path
-      : undefined
+function ChangeListItem({ checkpoint }: { checkpoint: LatteThreadCheckpoint }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { data: document } = useDocumentVersion(checkpoint.documentUuid, {
+    commitUuid: commit.uuid,
+  })
+  const current = document
+  const previous = checkpoint.data
+
+  if (!current) return null
+
+  const path = current.path
+  const oldPath = previous?.path !== current.path ? previous?.path : undefined
 
   const changeType: ModifiedDocumentType =
-    change.previous === null
+    previous === null
       ? ModifiedDocumentType.Created
-      : change.current.deletedAt
+      : current.deletedAt
         ? ModifiedDocumentType.Deleted
-        : change.current.path !== change.previous?.path
+        : current.path !== previous?.path
           ? ModifiedDocumentType.UpdatedPath
           : ModifiedDocumentType.Updated
 
@@ -39,9 +52,9 @@ function ChangeListItem({ change }: { change: LatteChange }) {
     <Link
       href={
         ROUTES.projects
-          .detail({ id: change.projectId })
-          .commits.detail({ uuid: change.draftUuid })
-          .documents.detail({ uuid: change.current.documentUuid })[
+          .detail({ id: project.id })
+          .commits.detail({ uuid: commit.uuid })
+          .documents.detail({ uuid: current.documentUuid })[
           DocumentRoutes.editor
         ].root
       }
@@ -59,19 +72,17 @@ function ChangeListItem({ change }: { change: LatteChange }) {
 }
 
 export function ChangeList({
-  changes,
+  checkpoints,
   undoChanges,
   acceptChanges,
   disabled,
 }: {
-  changes: LatteChange[]
+  checkpoints: LatteThreadCheckpoint[]
   undoChanges: () => void
   acceptChanges: () => void
   disabled?: boolean
 }) {
-  if (!changes.length) {
-    return null
-  }
+  if (!checkpoints.length) return null
 
   return (
     <div className='w-full flex flex-col gap-2 border-latte-widget border py-2 px-3 rounded-t-2xl'>
@@ -94,7 +105,7 @@ export function ChangeList({
             className='text-latte-input-foreground group-hover:text-latte-input-foreground/75 font-light'
             userSelect={false}
           >
-            Undo
+            Undo all
           </Button>
           <Button
             variant='ghost'
@@ -110,13 +121,13 @@ export function ChangeList({
             className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
             userSelect={false}
           >
-            Keep
+            Keep all
           </Button>
         </div>
       </div>
       <div className='w-full max-h-96 overflow-y-auto custom-scrollbar flex flex-col gap-1'>
-        {changes.map((change, index) => (
-          <ChangeListItem key={index} change={change} />
+        {checkpoints.map((checkpoint, index) => (
+          <ChangeListItem key={index} checkpoint={checkpoint} />
         ))}
       </div>
     </div>

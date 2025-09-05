@@ -1,7 +1,12 @@
-import { LatteChange } from '@latitude-data/constants/latte'
+import { LatteThreadCheckpoint } from '@latitude-data/core/browser'
 
 export interface LatteEvents {
-  LatteProjectChanges: { changes: LatteChange[] }
-  LatteChangesAccepted: { changes: LatteChange[] }
-  LatteChangesRejected: { changes: LatteChange[] }
+  LatteChangesAccepted: {
+    threadUuid: string
+    checkpoints: LatteThreadCheckpoint[]
+  }
+  LatteChangesRejected: {
+    threadUuid: string
+    checkpoints: LatteThreadCheckpoint[]
+  }
 }
