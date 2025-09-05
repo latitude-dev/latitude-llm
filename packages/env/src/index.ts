@@ -161,8 +161,18 @@ export const env = createEnv({
     AWS_ACCESS_SECRET: z.string().optional(),
     AWS_REGION: z.string().optional(),
 
+    // Google Cloud Storage
+    GCS_BUCKET: z.string().optional(),
+    GCS_PUBLIC_BUCKET: z.string().optional(),
+    GCS_PROJECT_ID: z.string().optional(),
+    GCS_KEY_FILENAME: z.string().optional(),
+    GCS_CLIENT_EMAIL: z.string().optional(),
+    GCS_PRIVATE_KEY: z.string().optional(),
+
     // File storage
-    DRIVE_DISK: z.union([z.literal('local'), z.literal('s3')]).optional(),
+    DRIVE_DISK: z
+      .union([z.literal('local'), z.literal('s3'), z.literal('gcs')])
+      .optional(),
     FILES_STORAGE_PATH: z.string().optional(),
     FILE_PUBLIC_PATH: z.string().optional(),
     PUBLIC_FILES_STORAGE_PATH: z.string().optional(),
