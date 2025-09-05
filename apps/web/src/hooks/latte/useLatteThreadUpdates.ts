@@ -142,17 +142,13 @@ export function useLatteThreadUpdates() {
         const lastInteraction = [...prev.slice(-1)][0]!
 
         if (update.type === 'fullResponse') {
-          lastInteraction.steps.push({
-            type: 'text',
-            text: update.response,
-          })
           setIsBrewing(false)
         }
 
         const lastStep = lastInteraction.steps[lastInteraction.steps.length - 1]
 
         if (update.type === 'responseDelta') {
-          if (lastStep && lastStep.type === 'text') {
+          if (lastStep?.type === 'text') {
             lastStep.text += update.delta
           } else {
             lastInteraction.steps.push({
