@@ -59,6 +59,12 @@ export class Result {
     return result.ok
   }
 
+  public static isError<V, E extends Error>(
+    result: TypedResult<V, E>,
+  ): result is ErrorResult<E> {
+    return !result.ok
+  }
+
   public static findError<E extends Error>(
     results: TypedResult<any, E>[],
   ): ErrorResult<E> | undefined {
