@@ -144,13 +144,17 @@ export function useLatteChangeActions() {
   const addFeedbackToLatteChange = useCallback(
     (feedback: string) => {
       if (!latteActionsFeedbackUuid) return
-      if (feedback.trim() === '') return
 
-      executeAddFeedbackToLatteChange({
-        content: feedback,
-        evaluationResultUuid: latteActionsFeedbackUuid,
-      })
+      feedback = feedback.trim()
+      if (feedback) {
+        executeAddFeedbackToLatteChange({
+          content: feedback,
+          evaluationResultUuid: latteActionsFeedbackUuid,
+        })
+      }
 
+      // Note: empty latte actions feedback uuid even if we dont
+      // have feedback to be able to close the feedback input form
       setLatteActionsFeedbackUuid(undefined)
     },
     [
