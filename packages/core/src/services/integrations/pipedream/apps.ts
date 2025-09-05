@@ -57,8 +57,8 @@ export function buildPipedreamClient() {
 export async function listApps({
   query,
   cursor,
-  withTriggers: hasTriggers,
-  withTools: hasComponents,
+  withTriggers: hasTriggers, // Sources are triggers in Pipedream, however the API is called with hasTriggers
+  withTools: hasActions, // Actions are tools in Pipedream
   pipedreamClientBuilder = buildPipedreamClient,
 }: {
   query?: string
@@ -84,14 +84,14 @@ export async function listApps({
       q?: string
       limit: number
       after?: string
-      hasComponents?: boolean
+      hasActions?: boolean
       hasTriggers?: boolean
     } = {
       q: query,
       limit: LIST_APPS_LIMIT,
       after: cursor,
       hasTriggers,
-      hasComponents,
+      hasActions,
     }
 
     const apps = await pipedream.getApps(appsParams)

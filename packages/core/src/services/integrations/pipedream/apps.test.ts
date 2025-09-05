@@ -72,7 +72,7 @@ describe('listApps', () => {
         // This simulates the behavior that the listApps function expects
         const appsWithIntegrations = mockApps.map((app) => ({
           ...app,
-          ...(opts.hasComponents && {
+          ...(opts.hasActions && {
             integrations: mockComponents.filter((c) =>
               c.key.includes(app.name_slug),
             ),
@@ -302,8 +302,8 @@ describe('listApps', () => {
   it('should handle components API error when withTools is true', async () => {
     const errorClientBuilder = () =>
       Result.ok({
-        getApps: ({ hasComponents }: { hasComponents?: boolean } = {}) => {
-          if (hasComponents) {
+        getApps: ({ hasActions }: { hasActions?: boolean } = {}) => {
+          if (hasActions) {
             return Promise.reject(new Error('Components API failed'))
           }
           return Promise.resolve({
@@ -389,8 +389,8 @@ describe('listApps', () => {
 
     // Verify getApps was called with the correct parameters
     expect(mockClient.__getAppsSpy).toHaveBeenCalledWith({
-      hasComponents: true,
-      hasTriggers: false,
+      hasActions: true,
+      hasTriggers: undefined,
       q: 'test-query',
       after: 'test-cursor',
       limit: 64,
@@ -408,14 +408,15 @@ describe('listApps', () => {
     })
 
     expect(mockClient.__getAppsSpy).toHaveBeenCalledWith({
-      hasTriggers: false,
+      hasActions: false,
+      hasTriggers: undefined,
       q: 'test-query',
       after: undefined,
       limit: 64,
     })
   })
 
-  it('should call getApps without hasComponents when only withTriggers is true', async () => {
+  it('should call getApps without hasActions when only withTriggers is true', async () => {
     const mockClient = createMockPipedreamClient()
     const clientBuilder = () => Result.ok(mockClient)
 
@@ -426,9 +427,10 @@ describe('listApps', () => {
       pipedreamClientBuilder: clientBuilder,
     })
 
-    // Verify getApps was called without hasComponents parameter
+    // Verify getApps was called without hasActions parameter
     expect(mockClient.__getAppsSpy).toHaveBeenCalledWith({
       hasTriggers: true,
+      hasActions: false,
       q: 'test-query',
       after: undefined,
       limit: 64,

@@ -46,8 +46,8 @@ function useInfiniteFetcher<T>(
 export default function usePipedreamApps(
   {
     query,
-    withTriggers = false,
-    withTools = false,
+    withTriggers,
+    withTools,
   }: {
     query?: string
     withTriggers?: boolean
@@ -55,16 +55,13 @@ export default function usePipedreamApps(
   } = {},
   opts?: SWRInfiniteConfiguration<PipedreamAppsResponse, any>,
 ) {
-  const hasTriggers = withTriggers ? 'true' : 'false'
-  const hasTools = withTools ? 'true' : 'false'
-
   const getKey = useCallback(
     (pageIndex: number, previousPageData: PipedreamAppsResponse | null) => {
       if (pageIndex === 0) {
         return [
           'pipedream-apps',
-          hasTriggers,
-          hasTools,
+          withTriggers,
+          withTools,
           query || '',
           '',
         ] as const
@@ -77,13 +74,13 @@ export default function usePipedreamApps(
 
       return [
         'pipedream-apps',
-        hasTriggers,
-        hasTools,
+        withTriggers,
+        withTools,
         query || '',
         previousPageData.cursor,
       ] as const
     },
-    [hasTriggers, hasTools, query],
+    [withTriggers, withTools, query],
   )
 
   // Use the reusable infinite fetcher hook

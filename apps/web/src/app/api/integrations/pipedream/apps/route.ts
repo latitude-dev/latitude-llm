@@ -8,8 +8,12 @@ export const GET = errorHandler(
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('query') || undefined
     const cursor = searchParams.get('cursor') || undefined
-    const withTriggers = searchParams.get('withTriggers') === 'true'
-    const withTools = searchParams.get('withTools') === 'true'
+    const withTriggers = searchParams.get('withTriggers')
+      ? searchParams.get('withTriggers') === 'true'
+      : undefined
+    const withTools = searchParams.get('withTools')
+      ? searchParams.get('withTools') === 'true'
+      : undefined
     const result = await listApps({
       query,
       cursor,
