@@ -9,12 +9,12 @@ import {
 import {
   buildWorkspaceRoom,
   verifyWebsocketToken,
-  verifyWorkerWebsocketToken,
 } from '@latitude-data/core/websockets/utils'
 import { env } from '@latitude-data/env'
 import cookieParser from 'cookie-parser'
 import express from 'express'
 import { Namespace, Server, Socket } from 'socket.io'
+import Redis from 'ioredis'
 
 function parseCookie(cookieString: string): Record<string, string> {
   return cookieString.split(';').reduce(
@@ -31,39 +31,9 @@ function parseCookie(cookieString: string): Record<string, string> {
 
 const app = express()
 app.use(cookieParser())
-app.use(express.json({ limit: '10mb' }))
-app.use(express.urlencoded({ limit: '10mb', extended: true }))
 
 app.get('/health', (_, res) => {
   res.json({ status: 'Websockets server running' })
-})
-
-// Worker events endpoint
-app.post('/worker-events', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1]
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' })
-    }
-
-    const result = await verifyWorkerWebsocketToken(token)
-    if (result.error) {
-      return res.status(401).json({ error: result.error.message })
-    }
-
-    const { event, workspaceId, data } = req.body
-    if (!event || !workspaceId || !data) {
-      return res.status(400).json({ error: 'Missing required fields' })
-    }
-
-    const workspace = buildWorkspaceRoom({ workspaceId })
-    web.to(workspace).emit(event, data)
-
-    res.json({ success: true })
-  } catch (err) {
-    console.error('Error processing worker event:', err)
-    res.status(500).json({ error: 'Internal server error' })
-  }
 })
 
 const server = http.createServer(app)
@@ -134,6 +104,54 @@ web.on('connection', (socket) => {
   })
 })
 
+// Initialize Redis subscriber for WebSocket events
+async function initializeRedisSubscriber() {
+  const subscriber = new Redis({
+    host: env.QUEUE_HOST,
+    port: env.QUEUE_PORT,
+    password: env.QUEUE_PASSWORD,
+  })
+
+  // Subscribe to all workspace WebSocket channels
+  await subscriber.psubscribe('websocket:workspace:*')
+
+  subscriber.on(
+    'pmessage',
+    (_pattern: string, channel: string, message: string) => {
+      try {
+        // Extract workspace ID from channel name
+        const workspaceId = parseInt(channel.split(':')[2])
+
+        // Parse message
+        const { event, data } = JSON.parse(message)
+
+        // Emit to workspace room
+        const room = buildWorkspaceRoom({ workspaceId })
+        web.to(room).emit(event as any, data)
+      } catch (error) {
+        console.error('Error processing WebSocket event:', error)
+      }
+    },
+  )
+
+  subscriber.on('error', (error: Error) => {
+    console.error('Redis subscriber error:', error)
+  })
+
+  console.log('Redis WebSocket subscriber initialized')
+  return subscriber
+}
+
+// Initialize subscriber
+let redisSubscriber: Redis
+initializeRedisSubscriber()
+  .then((subscriber) => {
+    redisSubscriber = subscriber
+  })
+  .catch((error) => {
+    console.error('Failed to initialize Redis subscriber:', error)
+  })
+
 const PORT = process.env.WEBSOCKETS_SERVER_PORT || 4002
 
 server.listen(PORT, () => {
@@ -142,4 +160,21 @@ server.listen(PORT, () => {
 
 server.on('error', (err) => {
   console.error('Socket.IO server error:', err)
+})
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('Shutting down WebSocket server...')
+  if (redisSubscriber) {
+    redisSubscriber.disconnect()
+  }
+  server.close()
+})
+
+process.on('SIGINT', async () => {
+  console.log('Shutting down WebSocket server...')
+  if (redisSubscriber) {
+    redisSubscriber.disconnect()
+  }
+  server.close()
 })

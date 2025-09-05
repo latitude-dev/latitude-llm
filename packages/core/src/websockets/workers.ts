@@ -1,12 +1,11 @@
+import Redis from 'ioredis'
 import { env } from '@latitude-data/env'
-import { generateWorkerWebsocketToken } from './utils'
 
 export class WebsocketClient {
   private static instance: WebsocketClient
-  private token: string | null = null
-  private tokenExpiryTimestamp: number | null = null
+  private redis: Redis | null = null
 
-  static async getInstance(): Promise<WebsocketClient> {
+  static getInstance(): WebsocketClient {
     if (WebsocketClient.instance) return WebsocketClient.instance
 
     const instance = new WebsocketClient()
@@ -14,88 +13,55 @@ export class WebsocketClient {
     return instance
   }
 
+  private async getRedisClient() {
+    if (!this.redis) {
+      this.redis = new Redis({
+        host: env.QUEUE_HOST,
+        port: env.QUEUE_PORT,
+        password: env.QUEUE_PASSWORD,
+      })
+    }
+    return this.redis
+  }
+
   // FIXME: Improve types. This is not safe and `any` avoid us moving to `strict` mode
-  static async sendEvent(event: string, data: any) {
-    const instance = await WebsocketClient.getInstance()
+  static async sendEvent(event: string, data: any): Promise<any> {
+    const instance = WebsocketClient.getInstance()
     return instance.sendEvent(event, data)
   }
 
-  private isTokenExpired(): boolean {
-    if (!this.token || !this.tokenExpiryTimestamp) return true
-
-    // Add a 5-minute buffer before actual expiration to avoid edge cases
-    const bufferMs = 5 * 60 * 1000
-    return Date.now() >= this.tokenExpiryTimestamp - bufferMs
-  }
-
-  private async getToken(): Promise<string> {
-    if (this.token && !this.isTokenExpired()) return this.token
-
-    // Generate a new token if we don't have one or if it's expired/about to expire
-    this.token = await generateWorkerWebsocketToken('1h')
-
-    this.tokenExpiryTimestamp = Date.now() + 60 * 60 * 1000 // in 1 hour
-
-    return this.token
-  }
-
   async sendEvent(event: string, data: any): Promise<any> {
-    // Try to send the event, with token refresh on failure
-    return this.sendEventWithRetry(event, data, false)
-  }
-
-  private async sendEventWithRetry(
-    event: string,
-    data: any,
-    isRetry: boolean,
-  ): Promise<any> {
-    const token = await this.getToken()
-
     try {
-      const response = await fetch(`${env.WEBSOCKETS_SERVER}/worker-events`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          event,
-          workspaceId: data.workspaceId,
-          data: data.data,
-        }),
+      const redis = await this.getRedisClient()
+
+      // Create workspace-specific channel
+      const channel = `websocket:workspace:${data.workspaceId}`
+
+      // Create message payload
+      const message = JSON.stringify({
+        event,
+        workspaceId: data.workspaceId,
+        data: data.data,
+        timestamp: Date.now(),
       })
 
-      if (!response.ok) {
-        const error = await response.json()
+      // Publish to Redis channel - guarantees FIFO ordering per workspace channel
+      await redis.publish(channel, message)
 
-        // If we get an auth error and haven't retried yet, try refreshing the token
-        if (
-          !isRetry &&
-          (response.status === 401 ||
-            response.status === 403 ||
-            (error.error &&
-              error.error.includes('exp claim timestamp check failed')))
-        ) {
-          // Force token refresh
-          this.token = null
-          this.tokenExpiryTimestamp = null
-
-          // Retry once with a fresh token
-          return this.sendEventWithRetry(event, data, true)
-        }
-
-        throw new Error(`Failed to send event: ${error.error}`)
-      }
-
-      return response.json()
+      return { success: true, channel }
     } catch (error) {
-      // If this is already a retry attempt, propagate the error
-      if (isRetry) throw error
+      console.error('Error publishing WebSocket event:', error)
+      throw new Error(`Failed to publish WebSocket event: ${error}`)
+    }
+  }
 
-      // For network errors on first attempt, try to refresh token and retry
-      this.token = null
-      this.tokenExpiryTimestamp = null
-      return this.sendEventWithRetry(event, data, true)
+  /**
+   * Close Redis connection (for graceful shutdown)
+   */
+  async close(): Promise<void> {
+    if (this.redis) {
+      this.redis.disconnect()
+      this.redis = null
     }
   }
 }
