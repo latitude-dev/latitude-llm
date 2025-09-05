@@ -15,7 +15,9 @@ export async function listTools(
   streamManager?: StreamManager,
 ): PromisedResult<McpTool[], LatitudeError> {
   if (integration.type === IntegrationType.Pipedream) {
-    const toolsResult = await listPipedreamIntegrationTools(integration)
+    const toolsResult = await listPipedreamIntegrationTools(
+      integration.configuration.appName,
+    )
     if (!Result.isOk(toolsResult)) {
       return Result.error(new LatitudeError(toolsResult.error.message))
     }
