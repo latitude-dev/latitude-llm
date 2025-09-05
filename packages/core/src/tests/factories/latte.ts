@@ -2,6 +2,7 @@ import {
   LATTE_MINIMUM_CREDITS_PER_REQUEST,
   User,
   Workspace,
+  Project,
 } from '../../browser'
 import { database } from '../../client'
 import { latteRequests, latteThreads } from '../../schema'
@@ -9,10 +10,12 @@ import { latteRequests, latteThreads } from '../../schema'
 export async function createLatteThread({
   user,
   workspace,
+  project,
   requests: requestsCount,
 }: {
   user: User
   workspace: Workspace
+  project: Project
   requests?: number
 }) {
   const thread = await database
@@ -20,6 +23,7 @@ export async function createLatteThread({
     .values({
       userId: user.id,
       workspaceId: workspace.id,
+      projectId: project.id,
     })
     .returning()
     .then((r) => r[0]!)

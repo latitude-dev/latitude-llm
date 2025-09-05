@@ -1,7 +1,7 @@
 'use client'
 
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
-import { useLatteStore } from '$/stores/latte'
+import { useLatteStore } from '$/stores/latte/index'
 import { LatteChange } from '@latitude-data/constants/latte'
 import { useCallback } from 'react'
 import { useUpdateLocalState } from './useUpdateLocalState'

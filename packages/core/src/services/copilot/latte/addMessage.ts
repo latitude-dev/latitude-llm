@@ -5,7 +5,13 @@ import {
   MessageRole,
   UserMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { Commit, DocumentVersion, User, Workspace } from '../../../browser'
+import {
+  Commit,
+  DocumentVersion,
+  User,
+  Workspace,
+  Project,
+} from '../../../browser'
 import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { BACKGROUND, TelemetryContext } from '../../../telemetry'
@@ -27,6 +33,7 @@ export async function runNewLatte({
   copilotCommit,
   copilotDocument,
   clientWorkspace,
+  clientProject,
   user,
   threadUuid,
   message,
@@ -37,6 +44,7 @@ export async function runNewLatte({
   copilotCommit: Commit
   copilotDocument: DocumentVersion
   clientWorkspace: Workspace
+  clientProject: Project
   user: User
   threadUuid: string
   message: string
@@ -49,6 +57,7 @@ export async function runNewLatte({
     copilotCommit,
     copilotDocument,
     clientWorkspace,
+    clientProject,
     user,
     threadUuid,
     initialParameters: { message, context },
@@ -61,6 +70,7 @@ export async function addMessageToExistingLatte({
   copilotCommit,
   copilotDocument,
   clientWorkspace,
+  clientProject,
   user,
   threadUuid,
   message,
@@ -71,6 +81,7 @@ export async function addMessageToExistingLatte({
   copilotCommit: Commit
   copilotDocument: DocumentVersion
   clientWorkspace: Workspace
+  clientProject: Project
   user: User
   threadUuid: string
   message: string
@@ -97,6 +108,7 @@ export async function addMessageToExistingLatte({
     copilotCommit,
     copilotDocument,
     clientWorkspace,
+    clientProject,
     user,
     threadUuid,
     messages: [userMessage],
@@ -104,12 +116,13 @@ export async function addMessageToExistingLatte({
   })
 }
 
-type generateLatteResponseArgs = {
+type GenerateLatteResponseArgs = {
   context: TelemetryContext
   copilotWorkspace: Workspace
   copilotCommit: Commit
   copilotDocument: DocumentVersion
   clientWorkspace: Workspace
+  clientProject: Project
   threadUuid: string
   initialParameters?: { message: string; context: string } // for the first "new" request
   messages?: Message[] // for subsequent "add" requests
@@ -117,7 +130,7 @@ type generateLatteResponseArgs = {
   abortSignal?: AbortSignal
 }
 
-async function generateLatteResponse(args: generateLatteResponseArgs) {
+async function generateLatteResponse(args: GenerateLatteResponseArgs) {
   const checking = await checkLatteCredits({ workspace: args.clientWorkspace })
   if (checking.error) {
     return Result.error(checking.error)
@@ -170,26 +183,17 @@ async function innerGenerateLatteResponse({
   copilotCommit,
   copilotDocument,
   clientWorkspace,
+  clientProject,
   threadUuid,
   initialParameters,
   messages,
   user,
   abortSignal,
-}: {
-  context: TelemetryContext
-  copilotWorkspace: Workspace
-  copilotCommit: Commit
-  copilotDocument: DocumentVersion
-  clientWorkspace: Workspace
-  threadUuid: string
-  initialParameters?: { message: string; context: string } // for the first "new" request
-  messages?: Message[] // for subsequent "add" requests
-  user: User
-  abortSignal?: AbortSignal
-}) {
+}: GenerateLatteResponseArgs) {
   const tools = buildToolHandlers({
     user,
     workspace: clientWorkspace,
+    project: clientProject,
     threadUuid,
   })
 

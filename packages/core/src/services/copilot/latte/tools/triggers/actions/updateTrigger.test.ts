@@ -5,7 +5,7 @@ import {
   Providers,
 } from '@latitude-data/constants'
 import { describe, expect, beforeEach, it, vi } from 'vitest'
-import { Commit, Workspace } from '../../../../../../browser'
+import { Commit, Workspace, Project } from '../../../../../../browser'
 import {
   EmailTriggerConfiguration,
   ScheduledTriggerConfiguration,
@@ -27,12 +27,13 @@ const mockCommit = (mergedAt: boolean) => ({
 describe('Latte update document triggers', () => {
   let workspace: Workspace
   let commit: Commit
+  let project: Project
   let documents: DocumentVersion[]
   let promptUuid: string
   let triggerSpecification
 
   beforeEach(async () => {
-    const project = await factories.createProject({
+    const data = await factories.createProject({
       providers: [
         {
           type: Providers.OpenAI,
@@ -47,9 +48,10 @@ describe('Latte update document triggers', () => {
       },
       skipMerge: true,
     })
-    workspace = project.workspace
-    commit = project.commit
-    documents = project.documents
+    workspace = data.workspace
+    project = data.project
+    commit = data.commit
+    documents = data.documents
     promptUuid = documents[0]!.documentUuid
 
     triggerSpecification = {
@@ -61,13 +63,13 @@ describe('Latte update document triggers', () => {
 
     await createTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
         triggerSpecification,
       },
       {
         workspace,
+        project,
       } as LatteToolContext,
     )
     vi.restoreAllMocks()
@@ -98,13 +100,13 @@ describe('Latte update document triggers', () => {
 
     const result = await updateTrigger(
       {
-        projectId: 1,
         versionUuid: 'commit-uuid',
         promptUuid: '1111-1111-1111-1111',
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
 
@@ -140,13 +142,13 @@ describe('Latte update document triggers', () => {
 
     const result = await updateTrigger(
       {
-        projectId: 1,
         versionUuid: 'commit-uuid',
         promptUuid: '1111-1111-1111-1111',
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
 
@@ -173,18 +175,17 @@ describe('Latte update document triggers', () => {
     // Act
     const result = await updateTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
 
     // Assert
-    expect(result.ok).toBe(true)
     expect(result.value).toStrictEqual(expectedLatteTriggerChanges)
   })
 
@@ -204,13 +205,13 @@ describe('Latte update document triggers', () => {
     // Act
     const result = await updateTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid: '00000000-0000-0000-0000-000000000000', // Non-existent UUID
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
 
@@ -242,13 +243,13 @@ describe('Latte update document triggers', () => {
     // Act
     const result = await updateTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
     // Assert

@@ -5,6 +5,7 @@ import {
   SubscriptionPlans,
   User,
   Workspace,
+  Project,
 } from '../../../../browser'
 import * as cache from '../../../../cache'
 import * as plans from '../../../../plans'
@@ -29,6 +30,7 @@ describe('consumeLatteCredits', () => {
   }
 
   let workspace: Workspace
+  let project: Project
   let user: User
   let thread: LatteThread
 
@@ -40,10 +42,16 @@ describe('consumeLatteCredits', () => {
     const { workspace: w, userData: u } = await factories.createWorkspace({
       subscriptionPlan: SubscriptionPlan.HobbyV2,
     })
+    const { project: p } = await factories.createProject({ workspace: w })
     workspace = w
+    project = p
     user = u
 
-    const { thread: t } = await factories.createLatteThread({ workspace, user })
+    const { thread: t } = await factories.createLatteThread({
+      workspace,
+      project,
+      user,
+    })
     thread = t
 
     const delCacheMock = vi.fn().mockResolvedValue(null)

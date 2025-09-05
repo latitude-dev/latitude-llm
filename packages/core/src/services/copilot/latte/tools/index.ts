@@ -1,5 +1,5 @@
 import { LatteTool } from '@latitude-data/constants/latte'
-import { User, Workspace } from '../../../../browser'
+import { User, Workspace, Project } from '../../../../browser'
 import { Result, TypedResult } from '../../../../lib/Result'
 import type { LatteToolFn } from './types'
 
@@ -49,10 +49,12 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
 
 export function buildToolHandlers({
   workspace,
+  project,
   threadUuid,
   user,
 }: {
   workspace: Workspace
+  project: Project
   threadUuid: string
   user: User
 }): Record<LatteTool, ToolHandler> {
@@ -69,6 +71,7 @@ export function buildToolHandlers({
             context,
             threadUuid,
             workspace,
+            project,
             toolName,
             toolCall,
             user,

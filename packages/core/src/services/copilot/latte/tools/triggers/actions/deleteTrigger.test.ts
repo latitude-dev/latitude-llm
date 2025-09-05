@@ -5,7 +5,7 @@ import {
   Providers,
 } from '@latitude-data/constants'
 import { describe, expect, beforeEach, it, vi } from 'vitest'
-import { Commit, Workspace } from '../../../../../../browser'
+import { Commit, Workspace, Project } from '../../../../../../browser'
 import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import * as deleteDocumentTriggersModule from '../../../../../documentTriggers/delete'
@@ -52,13 +52,13 @@ describe('Latte delete document triggers', () => {
 
     await createTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
     vi.restoreAllMocks()
@@ -80,13 +80,13 @@ describe('Latte delete document triggers', () => {
     // Act
     const result = await deleteTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
 
@@ -108,13 +108,13 @@ describe('Latte delete document triggers', () => {
     // Act
     const result = await deleteTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid: '00000000-0000-0000-0000-000000000000', // Non-existent UUID
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
 
@@ -137,13 +137,13 @@ describe('Latte delete document triggers', () => {
     // Act
     const result = await deleteTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
 
@@ -164,13 +164,13 @@ describe('Latte delete document triggers', () => {
     // Act
     const result = await deleteTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
 
@@ -204,13 +204,13 @@ describe('Latte delete document triggers', () => {
     // Act
     const result = await deleteTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
 

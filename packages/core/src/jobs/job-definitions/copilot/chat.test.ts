@@ -5,18 +5,20 @@ import * as dataAccess from '../../../data-access'
 import {
   CommitsRepository,
   DocumentLogsRepository,
+  ProjectsRepository,
   UsersRepository,
 } from '../../../repositories'
 import * as addMessageLatte from '../../../services/copilot/latte/addMessage'
 import * as chatHelpers from '../../../services/copilot/latte/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
 import { runLatteJob } from './chat'
+import { Project } from '../../../browser'
 
 describe('runLatteJob', () => {
   let mockJob: Job<any>
   const workspace = { id: 1 }
   const user = { id: 'user-123' }
-  const project = { id: 2 }
+  const project = { id: 2 } as Project
   const commit = { id: 3 }
   const threadUuid = 'chat-uuid'
   const messageText = 'Hello, Copilot!'
@@ -53,6 +55,10 @@ describe('runLatteJob', () => {
     vi.spyOn(CommitsRepository.prototype, 'find').mockResolvedValue({
       ok: true,
       unwrap: () => commit,
+    } as any)
+    vi.spyOn(ProjectsRepository.prototype, 'find').mockResolvedValue({
+      ok: true,
+      unwrap: () => project,
     } as any)
     vi.spyOn(chatHelpers, 'getCopilotDocument').mockResolvedValue({
       ok: true,
@@ -105,6 +111,8 @@ describe('runLatteJob', () => {
     ;(DocumentLogsRepository.prototype.findByUuid as any).mockResolvedValueOnce(
       { ok: false },
     )
+    const projectOk = { ok: true, value: project }
+    ;(ProjectsRepository.prototype.find as any).mockResolvedValueOnce(projectOk)
 
     await runLatteJob(mockJob)
 
@@ -113,6 +121,7 @@ describe('runLatteJob', () => {
       copilotCommit: { id: 98 },
       copilotDocument: { uuid: 'doc-123' },
       clientWorkspace: workspace,
+      clientProject: project,
       user,
       context: {
         path: '/some/path',
@@ -128,6 +137,8 @@ describe('runLatteJob', () => {
     ;(DocumentLogsRepository.prototype.findByUuid as any).mockResolvedValueOnce(
       { ok: true },
     )
+    const projectOk = { ok: true, value: project }
+    ;(ProjectsRepository.prototype.find as any).mockResolvedValueOnce(projectOk)
     await runLatteJob(mockJob)
 
     expect(addMessageLatte.addMessageToExistingLatte).toHaveBeenCalledWith({
@@ -135,6 +146,7 @@ describe('runLatteJob', () => {
       copilotCommit: { id: 98 },
       copilotDocument: { uuid: 'doc-123' },
       clientWorkspace: workspace,
+      clientProject: project,
       user,
       threadUuid,
       message: messageText,

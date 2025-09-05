@@ -1,12 +1,5 @@
 import { sql } from 'drizzle-orm'
-import {
-  bigint,
-  bigserial,
-  index,
-  text,
-  uniqueIndex,
-  uuid,
-} from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, text, uuid } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
@@ -27,14 +20,14 @@ export const latteThreads = latitudeSchema.table(
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
+    projectId: bigint('project_id', { mode: 'number' }).notNull(),
     ...timestamps(),
   },
   (thread) => ({
-    // FIXME: this index is duplicated because the column has already a unique constraint
-    uuidIndex: uniqueIndex('latte_threads_uuid_index').on(thread.uuid),
     userWorkspaceIndex: index('latte_threads_user_workspace_index').on(
       thread.userId,
       thread.workspaceId,
     ),
+    projectIndex: index('latte_threads_project_index').on(thread.projectId),
   }),
 )

@@ -3,7 +3,7 @@ import { LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
 import { LatteThreadUpdateArgs } from '@latitude-data/core/browser'
 import { getDescriptionFromToolCall } from './helpers'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
-import { useLatteStore } from '$/stores/latte'
+import { useLatteStore } from '$/stores/latte/index'
 import { useLatteUsage } from './usage'
 import {
   LatteActionStep,
@@ -116,6 +116,7 @@ export function useLatteThreadUpdates() {
         return
       }
       const { threadUuid: incomingthreadUuid } = update
+
       if (!threadUuid) return
       if (threadUuid !== incomingthreadUuid) return
 
@@ -132,18 +133,20 @@ export function useLatteThreadUpdates() {
       // React strict mode will call this function twice. this fixes that.
       let fuckReactStrictMode = false
 
+      if (update.type === 'fullResponse') {
+        // Handle fullResponse outside of setInteractions to ensure setIsBrewing is called
+        setIsBrewing(false)
+      }
+
       setInteractions((prev) => {
         if (fuckReactStrictMode) return prev
+
         fuckReactStrictMode = true
 
         if (!prev.length) return prev
 
         const otherInteractions = prev.slice(0, -1)
         const lastInteraction = [...prev.slice(-1)][0]!
-
-        if (update.type === 'fullResponse') {
-          setIsBrewing(false)
-        }
 
         const lastStep = lastInteraction.steps[lastInteraction.steps.length - 1]
 

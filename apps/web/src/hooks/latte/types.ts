@@ -44,5 +44,4 @@ export type LatteInteractionStep = LatteStepGroup | LatteTextStep
 export type LatteInteraction = {
   input: string
   steps: LatteInteractionStep[]
-  output?: string
 }

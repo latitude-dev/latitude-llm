@@ -81,6 +81,9 @@ export const API_ROUTES = {
   },
   providerLogs: {
     root: '/api/providerLogs',
+    detail: (providerLogId: string | number) => ({
+      root: `/api/providerLogs/${providerLogId}`,
+    }),
   },
   users: {
     root: '/api/users',

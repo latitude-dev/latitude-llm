@@ -1,4 +1,4 @@
-import { useLatteStore } from '$/stores/latte'
+import { useLatteStore } from '$/stores/latte/index'
 import {
   useCurrentCommit,
   useCurrentProject,
@@ -10,9 +10,9 @@ import { useCurrentDocumentMaybe } from '$/app/providers/DocumentProvider'
 import useDocumentVersions from '$/stores/documentVersions'
 
 export function useUpdateLocalState() {
+  const { project } = useCurrentProject()
   const { threadUuid } = useLatteStore()
   const { commit } = useCurrentCommit()
-  const { project } = useCurrentProject()
   const { document } = useCurrentDocumentMaybe()
   const { updateDocumentContent } = useDocumentValueMaybe()
   const { mutate: mutateCheckpoints } = useLatteThreadCheckpoints({

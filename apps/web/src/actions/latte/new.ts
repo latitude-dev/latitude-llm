@@ -3,10 +3,10 @@
 import { createLatteJob } from '@latitude-data/core/services/copilot/latte/createLatteJob'
 import { createLatteThread } from '@latitude-data/core/services/copilot/latte/threads/createThread'
 import { z } from 'zod'
-import { authProcedure, withRateLimit } from '../procedures'
+import { withProject, withRateLimit } from '../procedures'
 
 export const createNewLatteAction = (
-  await withRateLimit(authProcedure, {
+  await withRateLimit(withProject, {
     limit: 10,
     period: 60,
   })
@@ -20,17 +20,18 @@ export const createNewLatteAction = (
     }),
   )
   .handler(async ({ ctx, input }) => {
-    const { workspace, user } = ctx
+    const { workspace, user, project } = ctx
     const { message, context, debugVersionUuid } = input
-
     const thread = await createLatteThread({
       user,
       workspace,
+      project,
     }).then((r) => r.unwrap())
 
     const runResult = await createLatteJob({
       threadUuid: thread.uuid,
       workspace,
+      project,
       user,
       message,
       context,

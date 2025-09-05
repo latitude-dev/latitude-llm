@@ -18,8 +18,7 @@ export enum AppLocalStorage {
   evaluationPlaygroundParameters = 'evaluationPlaygroundParameters',
   playgroundActions = 'playgroundActions',
   expandParameters = 'expandParameters',
-  latteThreadUuid = 'latteThreadUuid',
-  latteJobId = 'latteJobId',
+  latteThread = 'latteThread',
 }
 
 export const isLocalStorageAvailable = (() => {
@@ -51,7 +50,7 @@ export function getStorageValue(key: string, defaultValue: unknown) {
 
 type LocalStorageStore = {
   values: Partial<Record<string, unknown>>
-  setValue: (key: string, value: unknown) => void
+  setValue: (key: string, value: unknown, defaultValue?: unknown) => void
 }
 
 type LocalStorageStorePersist = (
@@ -63,9 +62,9 @@ const useLocalStorageStore = create<LocalStorageStore>(
   (persist as LocalStorageStorePersist)(
     (set) => ({
       values: {},
-      setValue: (key, value) => {
+      setValue: (key: string, value: unknown, defaultValue?: unknown) => {
         if (typeof value === 'function') {
-          value = value(getStorageValue(key, null))
+          value = value(getStorageValue(key, defaultValue))
         }
 
         if (isLocalStorageAvailable) {
@@ -134,9 +133,9 @@ export const useLocalStorage = <T>({
     value,
     setValue: useCallback(
       (newValue: SetStateAction<T>) => {
-        setValue(fullKey, newValue)
+        setValue(fullKey, newValue, defaultValue)
       },
-      [setValue, fullKey],
+      [setValue, fullKey, defaultValue],
     ),
   }
 }
