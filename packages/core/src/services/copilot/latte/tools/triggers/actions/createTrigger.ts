@@ -2,7 +2,6 @@ import { z } from 'zod'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  ProjectsRepository,
 } from '../../../../../../repositories'
 import { defineLatteTool } from '../../types'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'

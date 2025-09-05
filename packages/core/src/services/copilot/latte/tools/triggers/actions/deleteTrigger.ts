@@ -1,10 +1,7 @@
 import { z } from 'zod'
-import {
-  CommitsRepository,
-  ProjectsRepository,
-} from '../../../../../../repositories'
+import { CommitsRepository } from '../../../../../../repositories'
 import { defineLatteTool } from '../../types'
-import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
+import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../../lib/Result'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { integrationTriggerConfigurationSchema } from '@latitude-data/constants/documentTriggers'
@@ -45,15 +42,6 @@ const deleteTrigger = defineLatteTool(
     }
 
     const documentTrigger = triggerResult.unwrap()
-
-    if (triggerSpecification.triggerType === DocumentTriggerType.Integration) {
-      if (!project) {
-        return Result.error(
-          new NotFoundError(`Project with ID ${project.id} not found.`),
-        )
-      }
-    }
-
     const result = await deleteDocumentTrigger({
       workspace,
       commit: currentVersionCommit,

@@ -27,12 +27,13 @@ const mockCommit = (mergedAt: boolean) => ({
 describe('Latte update document triggers', () => {
   let workspace: Workspace
   let commit: Commit
+  let project: Project
   let documents: DocumentVersion[]
   let promptUuid: string
   let triggerSpecification
 
   beforeEach(async () => {
-    const project = await factories.createProject({
+    const data = await factories.createProject({
       providers: [
         {
           type: Providers.OpenAI,
@@ -47,9 +48,10 @@ describe('Latte update document triggers', () => {
       },
       skipMerge: true,
     })
-    workspace = project.workspace
-    commit = project.commit
-    documents = project.documents
+    workspace = data.workspace
+    project = data.project
+    commit = data.commit
+    documents = data.documents
     promptUuid = documents[0]!.documentUuid
 
     triggerSpecification = {
@@ -67,8 +69,8 @@ describe('Latte update document triggers', () => {
       },
       {
         workspace,
-        project: { id: commit.projectId } as Project,
-      } as LatteToolContext,
+        project,
+      } as LatteToolContext
     )
     vi.restoreAllMocks()
   })
@@ -98,7 +100,6 @@ describe('Latte update document triggers', () => {
 
     const result = await updateTrigger(
       {
-        projectId: 1,
         versionUuid: 'commit-uuid',
         promptUuid: '1111-1111-1111-1111',
         triggerSpecification,
@@ -141,7 +142,6 @@ describe('Latte update document triggers', () => {
 
     const result = await updateTrigger(
       {
-        projectId: 1,
         versionUuid: 'commit-uuid',
         promptUuid: '1111-1111-1111-1111',
         triggerSpecification,

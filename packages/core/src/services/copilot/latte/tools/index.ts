@@ -1,5 +1,5 @@
 import { LatteTool } from '@latitude-data/constants/latte'
-import { User, Workspace } from '../../../../browser'
+import { User, Workspace, Project } from '../../../../browser'
 import { Result, TypedResult } from '../../../../lib/Result'
 import type { LatteToolFn } from './types'
 

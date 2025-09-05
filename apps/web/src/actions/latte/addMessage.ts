@@ -34,6 +34,7 @@ export const addMessageToLatteAction = (
 
     const runResult = await createLatteJob({
       workspace,
+      project: ctx.project,
       user,
       threadUuid: thread.uuid,
       message,
