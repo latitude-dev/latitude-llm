@@ -125,6 +125,25 @@ add_calendar_event:
     required: [title, date, time]
 ```
 
+### Tools without Parameters
+
+If you want to define a tool without parameters, for example a tool that generates a random number, you can omit the parameters key. However, providers such as Anthropic or Google, always requires parameters. In this case, the best option is to define an empty object as parameters:
+
+```markdown {8-11}
+---
+provider: anthropic
+model: claude-sonnet-4-0
+type: agent
+tools:
+  - randomizer:
+      description: Generates a random number.
+      parameters:
+        type: object
+        properties: {}
+        required: []
+---
+```
+
 ## Next Steps
 
 - Explore [Latitude's Built-in Tools](/guides/prompt-manager/latitude-tools) in more detail.
