@@ -1,19 +1,25 @@
 import { z } from 'zod'
-import { IntegrationsRepository } from '../../../../../repositories'
 import { defineLatteTool } from '../types'
-import { listTools } from '../../../../integrations'
+import { fixToolSchema } from '../../../../integrations/McpClient/listTools/fixToolSchema'
+import { JSONSchema7 } from 'json-schema'
+import { McpTool } from '@latitude-data/constants'
+import { listPipedreamIntegrationTools } from '../../../../integrations/pipedream/listTools'
+import { Result } from '../../../../../lib/Result'
 
 const listIntegrationTools = defineLatteTool(
-  async ({ name }, { workspace }) => {
-    const integrationsScope = new IntegrationsRepository(workspace.id)
-    const integrationResult = await integrationsScope.findByName(name)
-    if (!integrationResult.ok) return integrationResult
-    const integration = integrationResult.unwrap()
+  async ({ integrationAppName }) => {
+    const toolsResult = await listPipedreamIntegrationTools(integrationAppName)
+    if (!Result.isOk(toolsResult)) return toolsResult
 
-    return listTools(integration)
+    const tools = toolsResult.value
+    const fixedTools = tools.map((tool) => ({
+      ...tool,
+      inputSchema: fixToolSchema(tool.inputSchema as JSONSchema7),
+    }))
+    return Result.ok(fixedTools as McpTool[])
   },
   z.object({
-    name: z.string(),
+    integrationAppName: z.string(),
   }),
 )
 
