@@ -1,10 +1,10 @@
 'use server'
 
 import { z } from 'zod'
-import { authProcedure } from '$/actions/procedures'
+import { withProject } from '$/actions/procedures'
 import { addFeedbackToEvaluationResult } from '@latitude-data/core/services/copilot/latte/threads/addFeedbackToEvaluation'
 
-export const addFeedbackToLatteChangeAction = authProcedure
+export const addFeedbackToLatteChangeAction = withProject
   .createServerAction()
   .input(
     z.object({

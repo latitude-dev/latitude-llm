@@ -16,7 +16,7 @@ import { LatteInteraction } from './types'
  *   - `sendMessage`: Function to send a message to the current or new Latte thread
  *   - `stopChat`: Function to stop the current active Latte response
  */
-export function useLatteChatActions() {
+export function useLatteChatActions({ projectId }: { projectId: number }) {
   const latteContext = useLatteContext()
   const {
     threadUuid,
@@ -76,8 +76,11 @@ export function useLatteChatActions() {
 
       const context = await latteContext()
 
-      if (threadUuid) addMessageToExistingChat({ threadUuid, message, context })
-      else createNewChat({ message, context, debugVersionUuid })
+      if (threadUuid)
+        addMessageToExistingChat({ threadUuid, projectId, message, context })
+      else {
+        createNewChat({ projectId, message, context, debugVersionUuid })
+      }
     },
     [
       addInteractions,
@@ -87,6 +90,7 @@ export function useLatteChatActions() {
       setIsBrewing,
       threadUuid,
       debugVersionUuid,
+      projectId,
     ],
   )
 

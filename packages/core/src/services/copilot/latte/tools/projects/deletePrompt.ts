@@ -11,12 +11,12 @@ import { executeLatteActions } from './latteActions/executeActions'
 
 const deletePrompt = defineLatteTool(
   async (
-    { projectId, versionUuid, path: rawPath },
-    { workspace, threadUuid },
+    { versionUuid, path: rawPath },
+    { workspace, project, threadUuid },
   ) => {
     const commitsScope = new CommitsRepository(workspace.id)
     const commitResult = await commitsScope.getCommitByUuid({
-      projectId: projectId,
+      projectId: project.id,
       uuid: versionUuid,
     })
     if (!commitResult.ok) return commitResult
@@ -78,7 +78,6 @@ const deletePrompt = defineLatteTool(
     })
   },
   z.object({
-    projectId: z.number(),
     versionUuid: z.string(),
     path: z.string(),
   }),

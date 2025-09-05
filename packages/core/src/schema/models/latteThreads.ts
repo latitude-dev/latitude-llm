@@ -27,6 +27,7 @@ export const latteThreads = latitudeSchema.table(
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
+    projectId: bigint('project_id', { mode: 'number' }).notNull(),
     ...timestamps(),
   },
   (thread) => ({
@@ -34,6 +35,9 @@ export const latteThreads = latitudeSchema.table(
     uuidIndex: uniqueIndex('latte_threads_uuid_index').on(thread.uuid),
     userWorkspaceIndex: index('latte_threads_user_workspace_index').on(
       thread.userId,
+      thread.workspaceId,
+    ),
+    workspaceIndex: index('latte_threads_workspace_index').on(
       thread.workspaceId,
     ),
   }),

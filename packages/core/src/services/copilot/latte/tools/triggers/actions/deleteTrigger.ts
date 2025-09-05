@@ -15,14 +15,14 @@ import { LatteTriggerChanges } from '@latitude-data/constants/latte'
 
 const deleteTrigger = defineLatteTool(
   async (
-    { projectId, versionUuid, promptUuid, triggerSpecification },
-    { workspace },
+    { versionUuid, promptUuid, triggerSpecification },
+    { workspace, project },
   ): PromisedResult<LatteTriggerChanges> => {
     const commitsScope = new CommitsRepository(workspace.id)
 
     const currentVersionCommit = await commitsScope
       .getCommitByUuid({
-        projectId: projectId,
+        projectId: project.id,
         uuid: versionUuid,
       })
       .then((r) => r.unwrap())
@@ -47,16 +47,9 @@ const deleteTrigger = defineLatteTool(
     const documentTrigger = triggerResult.unwrap()
 
     if (triggerSpecification.triggerType === DocumentTriggerType.Integration) {
-      const projectsRepository = new ProjectsRepository(workspace.id)
-      const project = await projectsRepository
-        .getProjectById(currentVersionCommit.projectId)
-        .then((r) => r.unwrap())
-
       if (!project) {
         return Result.error(
-          new NotFoundError(
-            `Project with ID ${currentVersionCommit.projectId} not found.`,
-          ),
+          new NotFoundError(`Project with ID ${project.id} not found.`),
         )
       }
     }
@@ -72,14 +65,13 @@ const deleteTrigger = defineLatteTool(
     }
 
     return Result.ok({
-      projectId: currentVersionCommit.projectId,
+      projectId: project.id,
       versionUuid: currentVersionCommit.uuid,
       promptUuid: promptUuid,
       triggerType: triggerSpecification.triggerType,
     })
   },
   z.object({
-    projectId: z.number(),
     versionUuid: z.string(),
     promptUuid: z.string(),
     triggerSpecification: z.union([

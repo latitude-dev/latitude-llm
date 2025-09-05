@@ -1,11 +1,11 @@
 'use server'
 
 import { z } from 'zod'
-import { authProcedure } from '$/actions/procedures'
+import { withProject } from '$/actions/procedures'
 import { cancelJob } from '@latitude-data/core/services/bullmq/cancelJob'
 import { documentsQueue } from '@latitude-data/core/queues'
 
-export const stopChatLatteAction = authProcedure
+export const stopChatLatteAction = withProject
   .createServerAction()
   .input(
     z.object({

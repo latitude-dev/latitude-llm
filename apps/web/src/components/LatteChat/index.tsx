@@ -44,15 +44,17 @@ export function LatteChat() {
   const isLoadingThread = useLoadThreadFromProviderLogs()
   const { isBrewing, resetAll, interactions, error, usage, jobId } =
     useLatteStore()
-  const { sendMessage, stopChat } = useLatteChatActions()
+  const { sendMessage, stopChat } = useLatteChatActions({
+    projectId: project.id,
+  })
   const { addFeedbackToLatteChange } = useLatteChangeActions()
   const resetChat = useCallback(() => {
     addFeedbackToLatteChange('')
     resetAll()
   }, [resetAll, addFeedbackToLatteChange])
   const stopLatteChat = useCallback(() => {
-    stopChat({ jobId: jobId })
-  }, [stopChat, jobId])
+    stopChat({ projectId: project.id, jobId: jobId })
+  }, [project.id, stopChat, jobId])
 
   const inConversation = interactions.length > 0
   const containerRef = useRef<HTMLDivElement>(null)

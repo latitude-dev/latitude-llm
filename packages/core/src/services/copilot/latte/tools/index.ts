@@ -53,10 +53,12 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
 
 export function buildToolHandlers({
   workspace,
+  project,
   threadUuid,
   user,
 }: {
   workspace: Workspace
+  project: Project
   threadUuid: string
   user: User
 }): Record<LatteTool, ToolHandler> {
@@ -73,6 +75,7 @@ export function buildToolHandlers({
             context,
             threadUuid,
             workspace,
+            project,
             toolName,
             toolCall,
             user,
