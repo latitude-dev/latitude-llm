@@ -68,7 +68,7 @@ export function LatteUsageInfo({
             <div className='relative overflow-hidden'>
               {usage.included === 'unlimited' ? (
                 <Text.H6 color='foregroundMuted' noWrap ellipsis>
-                  You've unlimited credits
+                  You have unlimited credits
                 </Text.H6>
               ) : (
                 <Text.H6 color='foregroundMuted' noWrap ellipsis>
