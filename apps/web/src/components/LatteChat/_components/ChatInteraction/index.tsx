@@ -37,7 +37,7 @@ function StepGroup({
           'rotate-90': isOpen,
         })}
       />
-      <div className='flex flex-col gap-4 flex-grow max-w-[75%]'>
+      <div className='flex flex-col gap-4 flex-grow'>
         {isOpen && group.steps.length > 0 ? (
           group.steps.map((step, i) => (
             <InteractionStep
@@ -60,9 +60,7 @@ function StepGroup({
 }
 
 function StepWrap({ children }: { children: ReactNode }) {
-  return (
-    <li className='flex flex-col gap-4 flex-grow max-w-[75%]'>{children}</li>
-  )
+  return <li className='flex flex-col gap-4 flex-grow'>{children}</li>
 }
 
 /**
