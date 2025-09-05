@@ -8,6 +8,7 @@ import { buildRedisConnection } from '../../../redis'
 import { Result } from '../../../lib/Result'
 import { findOrCreateExport } from '../../../services/exports/findOrCreate'
 import { updateExport } from '../../../services/exports/update'
+import { hydrateProviderLog } from '../../../services/providerLogs/hydrate'
 
 // Mock dependencies
 vi.mock('../../../lib/disk', () => ({
@@ -23,6 +24,10 @@ vi.mock('../../../services/exports/findOrCreate', () => ({
 }))
 vi.mock('../../../services/exports/update', () => ({
   updateExport: vi.fn(),
+}))
+
+vi.mock('../../../services/providerLogs/hydrate', () => ({
+  hydrateProviderLog: vi.fn(),
 }))
 
 describe('downloadLogsJob', () => {
@@ -277,5 +282,64 @@ describe('downloadLogsJob', () => {
     expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
+  })
+
+  it('should return complete row when provider log is hydrated', async () => {
+    // Create test document log
+    await factories.createDocumentLog({
+      document,
+      commit,
+      source: LogSources.API,
+    })
+
+    // Mock hydrated provider log with complete data
+    const mockHydratedLog = {
+      id: 1,
+      workspaceId: workspace.id,
+      uuid: 'test-uuid',
+      documentLogUuid: 'doc-log-uuid',
+      providerId: 1,
+      model: 'gpt-3.5-turbo',
+      finishReason: 'stop',
+      config: { model: 'gpt-3.5-turbo' },
+      messages: [{ role: 'user', content: 'Hello' }],
+      output: { text: 'Hello, how can I help you?' },
+      responseObject: { content: 'Hello, how can I help you?' },
+      responseText: 'Hello, how can I help you?',
+      responseReasoning: 'Generated response based on input',
+      toolCalls: [],
+      tokens: 150,
+      costInMillicents: 500,
+      duration: 1000,
+      source: LogSources.API,
+      apiKeyId: 1,
+      generatedAt: new Date(),
+      fileKey: 'test-file-key',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    vi.mocked(hydrateProviderLog).mockResolvedValue(
+      Result.ok(mockHydratedLog as any),
+    )
+
+    // Run the job
+    const result = await downloadLogsJob(mockJob)
+
+    // Verify results
+    expect(result).toEqual({ totalProcessed: 1 })
+    expect(hydrateProviderLog).toHaveBeenCalled()
+    expect(mockDisk.putStream).toHaveBeenCalled()
+
+    // Verify that hydrateProviderLog was called with the row data
+    expect(hydrateProviderLog).toHaveBeenCalled()
+    expect(mockDisk.putStream).toHaveBeenCalled()
+
+    // Verify the mock was called with the expected row structure
+    const hydrateCall = vi.mocked(hydrateProviderLog).mock.calls[0]
+    const rowPassedToHydrate = hydrateCall[0]
+    expect(rowPassedToHydrate).toHaveProperty('uuid')
+    expect(rowPassedToHydrate).toHaveProperty('duration')
+    expect(rowPassedToHydrate).toHaveProperty('tokens')
   })
 })

@@ -23,8 +23,8 @@ export const downloadLogsAsyncAction = withDocument
       user,
       token: generateUUIDIdentifier(),
       document,
-      filters: filterOptions,
       selectionMode,
+      filters: filterOptions,
       excludedDocumentLogIds,
     })
   })

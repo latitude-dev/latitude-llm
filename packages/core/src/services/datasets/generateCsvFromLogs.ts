@@ -1,8 +1,3 @@
-/**
- * NOTE: If memory is a problem exporting the CSV this library have
- * a streaming API that can be used to write the CSV to a file
- * but we need to change the we we do the download in the web api.
- */
 import { stringify } from 'csv-stringify/sync'
 import { Result } from '../../lib/Result'
 import { Workspace } from '../../browser'

@@ -6,19 +6,10 @@ import {
 import { diskFactory } from '../../lib/disk'
 import { Result } from '../../lib/Result'
 
-export async function hydrateProviderLog(providerLog: ProviderLog) {
+export async function hydrateProviderLog(providerLog: Partial<ProviderLog>) {
   if (!providerLog.fileKey) {
     // Fallback to existing columns for backwards compatibility
-    return Result.ok({
-      ...providerLog,
-      config: providerLog.config,
-      messages: providerLog.messages,
-      output: providerLog.output,
-      responseObject: providerLog.responseObject,
-      responseText: providerLog.responseText,
-      responseReasoning: providerLog.responseReasoning,
-      toolCalls: providerLog.toolCalls,
-    } as HydratedProviderLog)
+    return Result.ok(providerLog as HydratedProviderLog)
   }
 
   try {

@@ -19,6 +19,7 @@ import { markExportReady } from '../../../services/exports/markExportReady'
 import { findOrCreateExport } from '../../../services/exports/findOrCreate'
 import { buildLogsFilterSQLConditions } from '../../../services/documentLogs/logsFilterUtils'
 import { Readable } from 'stream'
+import { hydrateProviderLog } from '../../../services/providerLogs/hydrate'
 
 const BATCH_SIZE = 1000
 
@@ -130,6 +131,7 @@ export const downloadLogsJob = async (
           responseText: providerLogs.responseText,
           responseObject: providerLogs.responseObject,
           createdAt: documentLogs.createdAt,
+          fileKey: providerLogs.fileKey,
         })
         .from(documentLogs)
         .innerJoin(
@@ -174,21 +176,26 @@ export const downloadLogsJob = async (
       }
 
       // Process the batch and write to CSV
-      const csvRows = results.map((row) => ({
-        documentLogUuid: row.uuid,
-        versionUuid: row.versionUuid,
-        timestamp: row.timestamp?.toISOString() ?? '',
-        duration: row.duration,
-        tokens: row.tokens ?? '',
-        costInMillicents: row.costInMillicents ?? '',
-        parameters: JSON.stringify(row.parameters),
-        finishReason: row.finishReason ?? '',
-        messages: JSON.stringify(row.messages),
-        response: buildProviderLogResponse({
-          responseText: row.responseText ?? '',
-          responseObject: row.responseObject,
-        }),
-      }))
+      const csvRows = []
+      for await (const row of results) {
+        const providerLog = (await hydrateProviderLog(row)).unwrap()
+
+        csvRows.push({
+          documentLogUuid: row.uuid,
+          versionUuid: row.versionUuid,
+          timestamp: row.timestamp?.toISOString() ?? '',
+          duration: row.duration,
+          tokens: row.tokens ?? '',
+          costInMillicents: row.costInMillicents ?? '',
+          parameters: JSON.stringify(row.parameters),
+          finishReason: row.finishReason ?? '',
+          messages: JSON.stringify(providerLog.messages ?? row.messages),
+          response: buildProviderLogResponse({
+            responseText: providerLog.responseText ?? '',
+            responseObject: providerLog.responseObject,
+          }),
+        })
+      }
 
       // Convert the batch to CSV
       const csvString = stringify(csvRows, {
