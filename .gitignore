@@ -60,7 +60,9 @@ apps/web/scripts-dist
 # File uploads in development
 apps/web/uploads
 apps/web/public/uploads
+apps/web/public/storage
 uploads
+storage
 
 # Temporal
 tmp

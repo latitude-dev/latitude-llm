@@ -77,7 +77,8 @@ function DocumentEditorContent({
   freeRunsCount,
   refinementEnabled,
 }: Omit<DocumentEditorProps, 'experimentDiff'>) {
-  const { updateDocumentContent, document } = useDocumentValue()
+  const { updateDocumentContent, isUpdatingContent, document } =
+    useDocumentValue()
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const { metadata } = useMetadata()
   const { commit } = useCurrentCommit()
@@ -186,6 +187,7 @@ function DocumentEditorContent({
             <AgentToolbar
               isMerged={isMerged}
               isAgent={metadata?.config?.type === 'agent'}
+              isUpdatingContent={isUpdatingContent}
               config={metadata?.config}
               prompt={document.content}
               onChangePrompt={updateDocumentContent}
