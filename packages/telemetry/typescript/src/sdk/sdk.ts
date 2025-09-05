@@ -52,21 +52,9 @@ import {
   VertexAIInstrumentation,
 } from '@traceloop/instrumentation-vertexai'
 
-import type * as anthropic from '@anthropic-ai/sdk'
-import type * as bedrock from '@aws-sdk/client-bedrock-runtime'
-import type * as azure from '@azure/openai'
-import type * as aiplatform from '@google-cloud/aiplatform'
-import type * as vertexai from '@google-cloud/vertexai'
 import type * as langchain_runnables from '@langchain/core/runnables'
 import type * as langchain_vectorstores from '@langchain/core/vectorstores'
 import type * as latitude from '@latitude-data/sdk'
-import type * as cohere from 'cohere-ai'
-import type * as langchain_agents from 'langchain/agents'
-import type * as langchain_chains from 'langchain/chains'
-import type * as langchain_tools from 'langchain/tools'
-import type * as llamaindex from 'llamaindex'
-import type * as openai from 'openai'
-import type * as togetherai from 'together-ai'
 
 const TRACES_URL = `${env.GATEWAY_BASE_URL}/api/v3/traces`
 const SERVICE_NAME = process.env.npm_package_name || 'unknown'
@@ -122,23 +110,23 @@ export type TelemetryOptions = {
     [Instrumentation.Latitude]?:
       | typeof latitude.Latitude
       | LatitudeInstrumentationOptions
-    [Instrumentation.OpenAI]?: typeof openai.OpenAI
-    [Instrumentation.Anthropic]?: typeof anthropic
-    [Instrumentation.AzureOpenAI]?: typeof azure
+    [Instrumentation.OpenAI]?: typeof import('openai').OpenAI
+    [Instrumentation.Anthropic]?: import('@anthropic-ai/sdk').Anthropic
+    [Instrumentation.AzureOpenAI]?: typeof import('@azure/openai')
     [Instrumentation.VercelAI]?: 'manual'
-    [Instrumentation.VertexAI]?: typeof vertexai
-    [Instrumentation.AIPlatform]?: typeof aiplatform
-    [Instrumentation.Bedrock]?: typeof bedrock
-    [Instrumentation.TogetherAI]?: typeof togetherai.Together
-    [Instrumentation.Cohere]?: typeof cohere
+    [Instrumentation.VertexAI]?: import('@google-cloud/vertexai').VertexAI
+    [Instrumentation.AIPlatform]?: import('@google-cloud/aiplatform').v1.EndpointServiceClient
+    [Instrumentation.Bedrock]?: import('@aws-sdk/client-bedrock-runtime').BedrockRuntimeClient
+    [Instrumentation.TogetherAI]?: import('together-ai').default
+    [Instrumentation.Cohere]?: typeof import('cohere-ai').CohereClientV2
     [Instrumentation.Langchain]?: {
-      chainsModule: typeof langchain_chains
-      agentsModule: typeof langchain_agents
-      toolsModule: typeof langchain_tools
+      chainsModule: import('langchain/chains').APIChain
+      agentsModule: import('langchain/agents').AgentExecutor
+      toolsModule: import('langchain/tools').Tool
       vectorStoreModule: typeof langchain_vectorstores
       runnablesModule: typeof langchain_runnables
     }
-    [Instrumentation.LlamaIndex]?: typeof llamaindex
+    [Instrumentation.LlamaIndex]?: import('llamaindex').OpenAI
   }
   disableBatch?: boolean
   exporter?: SpanExporter
