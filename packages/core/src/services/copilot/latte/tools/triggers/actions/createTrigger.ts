@@ -2,7 +2,6 @@ import { z } from 'zod'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  ProjectsRepository,
 } from '../../../../../../repositories'
 import { defineLatteTool } from '../../types'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
@@ -20,12 +19,12 @@ import { LatteTriggerChanges } from '@latitude-data/constants/latte'
 
 const createTrigger = defineLatteTool(
   async (
-    { projectId, versionUuid, promptUuid, triggerSpecification },
-    { workspace },
+    { versionUuid, promptUuid, triggerSpecification },
+    { workspace, project },
   ): PromisedResult<LatteTriggerChanges> => {
     const commitsScope = new CommitsRepository(workspace.id)
     const currentVersionCommit = await commitsScope
-      .getCommitByUuid({ projectId, uuid: versionUuid })
+      .getCommitByUuid({ projectId: project.id, uuid: versionUuid })
       .then((r) => r.unwrap())
 
     if (currentVersionCommit.mergedAt) {
@@ -42,11 +41,6 @@ const createTrigger = defineLatteTool(
       .then((r) => r.unwrap())
 
     const document = documents.find((doc) => doc.documentUuid === promptUuid)
-
-    const projectRepository = new ProjectsRepository(workspace.id)
-    const project = await projectRepository
-      .getProjectById(currentVersionCommit.projectId)
-      .then((r) => r.unwrap())
 
     if (!document) {
       return Result.error(
@@ -70,14 +64,13 @@ const createTrigger = defineLatteTool(
     }
 
     return Result.ok({
-      projectId: currentVersionCommit.projectId,
+      projectId: project.id,
       versionUuid: currentVersionCommit.uuid,
       promptUuid: promptUuid,
       triggerType: triggerSpecification.triggerType,
     })
   },
   z.object({
-    projectId: z.number(),
     versionUuid: z.string(),
     promptUuid: z.string(),
     triggerSpecification: z.union([

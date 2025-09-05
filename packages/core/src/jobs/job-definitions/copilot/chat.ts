@@ -3,7 +3,7 @@ import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { clearCancelJobFlag, isJobCancelled } from '../../../lib/cancelJobs'
 import { LatitudeError } from '../../../lib/errors'
-import { DocumentLogsRepository, UsersRepository } from '../../../repositories'
+import { DocumentLogsRepository, ProjectsRepository, UsersRepository } from '../../../repositories'
 import {
   addMessageToExistingLatte,
   runNewLatte,
@@ -13,6 +13,7 @@ import { WebsocketClient } from '../../../websockets/workers'
 
 export type RunLatteJobData = {
   workspaceId: number
+  projectId: number
   userId: string
   threadUuid: string
   message: string
@@ -41,6 +42,7 @@ async function emitError({
 export const runLatteJob = async (job: Job<RunLatteJobData>) => {
   const {
     workspaceId,
+    projectId,
     userId,
     threadUuid,
     message,
@@ -57,8 +59,18 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
 
   try {
     const workspace = await unsafelyFindWorkspace(workspaceId).then((w) => w!)
+
+    const projectRepo = new ProjectsRepository(workspace.id)
+    const projectResult = await projectRepo.find(projectId)
+    if (projectResult.error) {
+      await emitError({ workspaceId, threadUuid, error: projectResult.error })
+      return projectResult
+    }
+    const project = projectResult.value
+
     const usersScope = new UsersRepository(workspace.id)
     const userResult = await usersScope.find(userId)
+
     if (!userResult.ok) {
       await emitError({
         workspaceId,
@@ -94,6 +106,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
         copilotCommit,
         copilotDocument,
         clientWorkspace: workspace,
+        clientProject: project,
         user,
         threadUuid,
         message,
@@ -116,6 +129,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
       copilotCommit,
       copilotDocument,
       clientWorkspace: workspace,
+      clientProject: project,
       user,
       threadUuid,
       message,

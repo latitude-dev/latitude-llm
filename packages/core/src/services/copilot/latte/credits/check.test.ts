@@ -3,6 +3,7 @@ import {
   SubscriptionPlan,
   SubscriptionPlans,
   Workspace,
+  Project,
 } from '../../../../browser'
 import { UnprocessableEntityError } from '../../../../lib/errors'
 import * as plans from '../../../../plans'
@@ -19,6 +20,7 @@ const SubscriptionPlansMock = {
 
 describe('checkLatteCredits', () => {
   let workspace: Workspace
+  let project: Project
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -28,9 +30,15 @@ describe('checkLatteCredits', () => {
     const { workspace: w, userData: user } = await factories.createWorkspace({
       subscriptionPlan: SubscriptionPlan.HobbyV2,
     })
+    const { project: p } = await factories.createProject({ workspace: w })
     workspace = w
+    project = p
 
-    const { thread } = await factories.createLatteThread({ workspace, user })
+    const { thread } = await factories.createLatteThread({
+      workspace,
+      project,
+      user,
+    })
 
     await factories.createLatteRequest({
       credits: Math.floor(

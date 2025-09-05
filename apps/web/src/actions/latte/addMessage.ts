@@ -4,10 +4,10 @@ import { NotFoundError } from '@latitude-data/constants/errors'
 import { LatteThreadsRepository } from '@latitude-data/core/repositories'
 import { createLatteJob } from '@latitude-data/core/services/copilot/latte/createLatteJob'
 import { z } from 'zod'
-import { authProcedure, withRateLimit } from '../procedures'
+import { withProject, withRateLimit } from '../procedures'
 
 export const addMessageToLatteAction = (
-  await withRateLimit(authProcedure, {
+  await withRateLimit(withProject, {
     limit: 10,
     period: 60,
   })
@@ -23,7 +23,6 @@ export const addMessageToLatteAction = (
   .handler(async ({ ctx, input }) => {
     const { workspace, user } = ctx
     const { message, threadUuid, context } = input
-
     const threadScope = new LatteThreadsRepository(workspace.id)
     const thread = await threadScope.findByUuidAndUser({
       threadUuid,
@@ -35,6 +34,7 @@ export const addMessageToLatteAction = (
 
     const runResult = await createLatteJob({
       workspace,
+      project: ctx.project,
       user,
       threadUuid: thread.uuid,
       message,

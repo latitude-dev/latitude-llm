@@ -9,10 +9,10 @@ import { z } from 'zod'
 import { scanDocuments } from '../../helpers'
 
 const readPrompt = defineLatteTool(
-  async ({ projectId, versionUuid, path: rawPath }, { workspace }) => {
+  async ({ versionUuid, path: rawPath }, { workspace, project }) => {
     const commitsScope = new CommitsRepository(workspace.id)
     const commitResult = await commitsScope.getCommitByUuid({
-      projectId: projectId,
+      projectId: project.id,
       uuid: versionUuid,
     })
     if (!commitResult.ok) return commitResult
@@ -27,6 +27,7 @@ const readPrompt = defineLatteTool(
 
     const path = rawPath.startsWith('/') ? rawPath.slice(1) : rawPath
     const document = documents.find((doc) => doc.path === path)
+
     if (!document) {
       return Result.error(
         new LatitudeError(
@@ -50,7 +51,6 @@ const readPrompt = defineLatteTool(
     })
   },
   z.object({
-    projectId: z.number(),
     versionUuid: z.string(),
     path: z.string(),
   }),

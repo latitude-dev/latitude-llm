@@ -1,10 +1,7 @@
 import { z } from 'zod'
-import {
-  CommitsRepository,
-  ProjectsRepository,
-} from '../../../../../../repositories'
+import { CommitsRepository } from '../../../../../../repositories'
 import { defineLatteTool } from '../../types'
-import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
+import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../../lib/Result'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { integrationTriggerConfigurationSchema } from '@latitude-data/constants/documentTriggers'
@@ -15,14 +12,14 @@ import { LatteTriggerChanges } from '@latitude-data/constants/latte'
 
 const deleteTrigger = defineLatteTool(
   async (
-    { projectId, versionUuid, promptUuid, triggerSpecification },
-    { workspace },
+    { versionUuid, promptUuid, triggerSpecification },
+    { workspace, project },
   ): PromisedResult<LatteTriggerChanges> => {
     const commitsScope = new CommitsRepository(workspace.id)
 
     const currentVersionCommit = await commitsScope
       .getCommitByUuid({
-        projectId: projectId,
+        projectId: project.id,
         uuid: versionUuid,
       })
       .then((r) => r.unwrap())
@@ -45,22 +42,6 @@ const deleteTrigger = defineLatteTool(
     }
 
     const documentTrigger = triggerResult.unwrap()
-
-    if (triggerSpecification.triggerType === DocumentTriggerType.Integration) {
-      const projectsRepository = new ProjectsRepository(workspace.id)
-      const project = await projectsRepository
-        .getProjectById(currentVersionCommit.projectId)
-        .then((r) => r.unwrap())
-
-      if (!project) {
-        return Result.error(
-          new NotFoundError(
-            `Project with ID ${currentVersionCommit.projectId} not found.`,
-          ),
-        )
-      }
-    }
-
     const result = await deleteDocumentTrigger({
       workspace,
       commit: currentVersionCommit,
@@ -72,14 +53,13 @@ const deleteTrigger = defineLatteTool(
     }
 
     return Result.ok({
-      projectId: currentVersionCommit.projectId,
+      projectId: project.id,
       versionUuid: currentVersionCommit.uuid,
       promptUuid: promptUuid,
       triggerType: triggerSpecification.triggerType,
     })
   },
   z.object({
-    projectId: z.number(),
     versionUuid: z.string(),
     promptUuid: z.string(),
     triggerSpecification: z.union([

@@ -19,12 +19,12 @@ import { LatteTriggerChanges } from '@latitude-data/constants/latte'
 
 const updateTrigger = defineLatteTool(
   async (
-    { projectId, versionUuid, promptUuid, triggerSpecification },
-    { workspace },
+    { versionUuid, promptUuid, triggerSpecification },
+    { workspace, project },
   ): PromisedResult<LatteTriggerChanges> => {
     const commitsScope = new CommitsRepository(workspace.id)
     const currentVersionCommit = await commitsScope
-      .getCommitByUuid({ projectId, uuid: versionUuid })
+      .getCommitByUuid({ projectId: project.id, uuid: versionUuid })
       .then((r) => r.unwrap())
 
     if (currentVersionCommit.mergedAt) {
@@ -60,14 +60,13 @@ const updateTrigger = defineLatteTool(
     }
 
     return Result.ok({
-      projectId: currentVersionCommit.projectId,
+      projectId: project.id,
       versionUuid: currentVersionCommit.uuid,
       promptUuid: promptUuid,
       triggerType: triggerSpecification.triggerType,
     })
   },
   z.object({
-    projectId: z.number(),
     versionUuid: z.string(),
     promptUuid: z.string(),
     triggerSpecification: z.union([

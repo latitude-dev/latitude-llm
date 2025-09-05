@@ -9,10 +9,10 @@ import { promptPresenter } from '../presenters'
 import { defineLatteTool } from '../types'
 
 const listPrompts = defineLatteTool(
-  async ({ projectId, versionUuid }, { workspace }) => {
+  async ({ versionUuid }, { workspace, project }) => {
     const commitsScope = new CommitsRepository(workspace.id)
     const commitResult = await commitsScope.getCommitByUuid({
-      projectId,
+      projectId: project.id,
       uuid: versionUuid,
     })
     if (!commitResult.ok) return commitResult
@@ -26,7 +26,7 @@ const listPrompts = defineLatteTool(
     const documentTriggerScope = new DocumentTriggersRepository(workspace.id)
 
     const existingTriggersAtCommit = await documentTriggerScope
-      .getTriggersInProject({ projectId, commit })
+      .getTriggersInProject({ projectId: project.id, commit })
       .then((r) => r.unwrap())
 
     const promptObjects = await Promise.all(
@@ -37,7 +37,7 @@ const listPrompts = defineLatteTool(
         return promptPresenter({
           document: doc,
           versionUuid,
-          projectId,
+          projectId: project.id,
           triggers: existingTriggers,
           workspaceId: workspace.id,
         })
@@ -47,7 +47,6 @@ const listPrompts = defineLatteTool(
     return Result.ok(promptObjects)
   },
   z.object({
-    projectId: z.number(),
     versionUuid: z.string(),
   }),
 )
