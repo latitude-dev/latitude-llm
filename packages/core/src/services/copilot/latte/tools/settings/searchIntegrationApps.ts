@@ -3,7 +3,7 @@ import { defineLatteTool } from '../types'
 import { listApps } from '../../../../integrations/pipedream/apps'
 import { Result } from '../../../../../lib/Result'
 
-const searchIntegrationResources = defineLatteTool(
+const searchAvailableIntegrations = defineLatteTool(
   async ({ query }) => {
     const result = await listApps({
       query,
@@ -23,4 +23,4 @@ const searchIntegrationResources = defineLatteTool(
   }),
 )
 
-export default searchIntegrationResources
+export default searchAvailableIntegrations

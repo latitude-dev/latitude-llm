@@ -1,5 +1,3 @@
-import { IntegrationType } from '@latitude-data/constants'
-import { IntegrationDto } from '../../../browser'
 import { PromisedResult } from '../../../lib/Transaction'
 import {
   LatitudeError,
@@ -7,26 +5,22 @@ import {
 } from '@latitude-data/constants/errors'
 import { Result } from '../../../lib/Result'
 import { listPipedreamIntegrationTriggers } from '../pipedream/listTriggers'
+import { IntegrationType } from '@latitude-data/constants'
 
-export async function listTriggers(integration: IntegrationDto): PromisedResult<
+export async function listTriggers({
+  integrationType,
+  integrationAppName,
+}: {
+  integrationType: IntegrationType
+  integrationAppName: string
+}): PromisedResult<
   {
     name: string
     description?: string
-  }[],
-  LatitudeError
+  }[]
 > {
-  if (integration.type === IntegrationType.Pipedream) {
-    const triggerResult = await listPipedreamIntegrationTriggers(integration)
-    if (!Result.isOk(triggerResult)) {
-      return Result.error(new LatitudeError(triggerResult.error.message))
-    }
-
-    const triggers = triggerResult.unwrap()
-    return Result.ok(triggers)
-  }
-
   // As Latitude is an integration, we must return its triggers
-  if (integration.type === IntegrationType.Latitude) {
+  if (integrationType === IntegrationType.Latitude) {
     const scheduledTrigger = {
       name: 'Scheduled Trigger',
       description: 'Trigger that runs on a schedule',
@@ -43,6 +37,16 @@ export async function listTriggers(integration: IntegrationDto): PromisedResult<
     }
 
     return Result.ok([scheduledTrigger, emailTrigger, chatTrigger])
+  }
+
+  if (integrationType === IntegrationType.Pipedream) {
+    const triggerResult =
+      await listPipedreamIntegrationTriggers(integrationAppName)
+    if (!Result.isOk(triggerResult)) {
+      return Result.error(new LatitudeError(triggerResult.error.message))
+    }
+    const triggers = triggerResult.unwrap()
+    return Result.ok(triggers)
   }
 
   return Result.error(new NotImplementedError('Unsupported integration type'))

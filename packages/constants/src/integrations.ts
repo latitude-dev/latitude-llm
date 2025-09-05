@@ -1,5 +1,5 @@
 export enum IntegrationType {
-  Latitude = 'latitude', // For internal use only
+  Latitude = 'latitude', // For internal use only and Latte
   ExternalMCP = 'custom_mcp',
   HostedMCP = 'mcp_server',
   Pipedream = 'pipedream',
