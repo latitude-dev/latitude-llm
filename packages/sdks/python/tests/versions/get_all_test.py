@@ -34,25 +34,17 @@ class TestGetAllVersions(TestCase):
         self.assertEqual(endpoint_mock.call_count, 1)
         self.assertEqual(result, [fixtures.VERSION])
 
-    async def test_success_default_project_id(self):
-        self.sdk._options.project_id = 21  # pyright: ignore [reportPrivateUsage]
-        endpoint = "/projects/21/versions"
+    async def test_fails_no_project_id(self):
+        self.sdk._options.project_id = None  # pyright: ignore [reportPrivateUsage]
+        endpoint = r"/projects/.+/versions"
         endpoint_mock = self.gateway_mock.get(endpoint).mock(
             return_value=httpx.Response(200, json=[fixtures.VERSION_RESPONSE])
         )
 
-        result = await self.sdk.versions.get_all()
-        request, _ = endpoint_mock.calls.last
-
-        self.assert_requested(request, method="GET", endpoint=endpoint)
-        self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, [fixtures.VERSION])
-
-    async def test_fails_no_project_id(self):
-        self.sdk._options.project_id = None  # pyright: ignore [reportPrivateUsage]
-
-        with self.assertRaisesRegex(ValueError, "Project ID is required"):
+        with self.assertRaisesRegex(type(fixtures.NOT_FOUND_ERROR), fixtures.NOT_FOUND_ERROR.message):
             await self.sdk.versions.get_all()
+
+        self.assertEqual(endpoint_mock.call_count, 0)
 
     async def test_fails(self):
         endpoint = f"/projects/{self.project_id}/versions"

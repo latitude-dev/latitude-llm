@@ -2,7 +2,7 @@ from typing import List, cast
 
 import httpx
 
-from latitude_sdk.sdk.prompts import GetAllPromptOptions, GetPromptResult
+from latitude_sdk.sdk.prompts import GetAllPromptsOptions, GetPromptResult
 from tests.utils import TestCase, fixtures
 
 
@@ -21,7 +21,7 @@ class TestGetAllPrompts(TestCase):
         self.assertEqual(result, [GetPromptResult(**dict(fixtures.PROMPT))])
 
     async def test_success_overrides_options(self):
-        options = GetAllPromptOptions(project_id=21, version_uuid="version-uuid")
+        options = GetAllPromptsOptions(project_id=21, version_uuid="version-uuid")
         endpoint = f"/projects/{options.project_id}/versions/{options.version_uuid}/documents"
         endpoint_mock = self.gateway_mock.get(endpoint).mock(
             return_value=httpx.Response(200, json=[fixtures.PROMPT_RESPONSE])
