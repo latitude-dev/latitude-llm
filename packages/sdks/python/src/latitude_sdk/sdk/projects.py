@@ -1,11 +1,12 @@
 from typing import List
 
-from latitude_sdk.client import Client, CreateProjectRequestBody, RequestHandler
+from latitude_sdk.client import Client, CreateProjectRequestBody, GetAllVersionsRequestParams, RequestHandler
 from latitude_sdk.sdk.types import Project, SdkOptions, Version
 from latitude_sdk.util import Adapter as AdapterUtil
 from latitude_sdk.util import Model
 
 _GetAllProjectResults = AdapterUtil[List[Project]](List[Project])
+_GetAllVersionsResults = AdapterUtil[List[Version]](List[Version])
 
 
 class CreateProjectResult(Model):
@@ -33,3 +34,10 @@ class Projects:
             body=CreateProjectRequestBody(name=name),
         ) as response:
             return CreateProjectResult.model_validate_json(response.content)
+
+    async def get_all_versions(self, project_id: int) -> List[Version]:
+        async with self._client.request(
+            handler=RequestHandler.GetAllVersions,
+            params=GetAllVersionsRequestParams(project_id=project_id),
+        ) as response:
+            return _GetAllVersionsResults.validate_json(response.content)

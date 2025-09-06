@@ -118,6 +118,10 @@ export type GetversionUrlParams = {
   versionUuid: string
 }
 
+export type GetAllVersionsUrlParams = {
+  projectId: number
+}
+
 export type PushVersionUrlParams = {
   projectId: number
   commitUuid: string
@@ -155,6 +159,7 @@ export enum HandlerType {
   GetDocument = 'get-document',
   GetOrCreateDocument = 'get-or-create-document',
   GetVersion = 'get-version',
+  GetAllVersions = 'get-all-versions',
   PushVersion = 'push-version',
   RunDocument = 'run-document',
   Log = 'log',
@@ -181,6 +186,7 @@ export type HandlerConfigs = {
     GetOrCreateDocumentBodyParams
   >
   [HandlerType.GetVersion]: HandlerConfig<GetversionUrlParams, never>
+  [HandlerType.GetAllVersions]: HandlerConfig<GetAllVersionsUrlParams, never>
   [HandlerType.PushVersion]: HandlerConfig<
     PushVersionUrlParams,
     PushVersionBodyParams

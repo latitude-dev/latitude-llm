@@ -128,6 +128,77 @@ export function mockCreateVersionBody({
   return { mockResponse, mockBodyFn }
 }
 
+export function mockGetAllVersionsAuthHeader({
+  server,
+  apiVersion,
+  projectId,
+}: {
+  server: Server
+  apiVersion: SdkApiVersion
+  projectId: number
+}) {
+  const mockFn = vi.fn()
+  server.use(
+    http.get(
+      `http://localhost:8787/api/${apiVersion}/projects/${projectId}/versions`,
+      (info) => {
+        mockFn(info.request.headers.get('Authorization'))
+        return HttpResponse.json([])
+      },
+    ),
+  )
+  return { mockFn }
+}
+
+export function mockGetAllVersionsBody({
+  server,
+  apiVersion,
+  projectId,
+}: {
+  server: Server
+  apiVersion: SdkApiVersion
+  projectId: number
+}) {
+  const mockResponse = [
+    {
+      id: 1,
+      uuid: 'version-uuid-1',
+      title: 'Version 1',
+      description: 'First version',
+      projectId,
+      version: 1,
+      userId: 'user-1',
+      mergedAt: '2024-01-01T00:00:00Z',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+      deletedAt: null,
+    },
+    {
+      id: 2,
+      uuid: 'version-uuid-2',
+      title: 'Version 2',
+      description: 'Second version',
+      projectId,
+      version: 2,
+      userId: 'user-2',
+      mergedAt: '2024-01-02T00:00:00Z',
+      createdAt: '2024-01-02T00:00:00Z',
+      updatedAt: '2024-01-02T00:00:00Z',
+      deletedAt: null,
+    },
+  ]
+  server.use(
+    http.get(
+      `http://localhost:8787/api/${apiVersion}/projects/${projectId}/versions`,
+      () => {
+        return HttpResponse.json(mockResponse)
+      },
+    ),
+  )
+
+  return { mockResponse }
+}
+
 export function mockVersionsError({
   server,
   apiVersion,

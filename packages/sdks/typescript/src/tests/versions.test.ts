@@ -5,6 +5,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import {
   mockGetVersionAuthHeader,
   mockGetVersionBody,
+  mockGetAllVersionsAuthHeader,
+  mockGetAllVersionsBody,
   mockCreateVersionAuthHeader,
   mockCreateVersionBody,
   mockVersionsError,
@@ -164,6 +166,80 @@ describe('versions', () => {
         })
         try {
           await sdk.versions.create('Test Version', { projectId })
+        } catch (error) {
+          // @ts-expect-error - mock error
+          expect(error.message).toEqual(
+            'Unexpected API Error: 500 Something went wrong',
+          )
+        }
+      }),
+    )
+  })
+
+  describe('getAll', () => {
+    it(
+      'sends auth header',
+      server.boundary(async () => {
+        const { mockFn } = mockGetAllVersionsAuthHeader({
+          server,
+          apiVersion: 'v3',
+          projectId,
+        })
+        await sdk.versions.getAll(projectId)
+        expect(mockFn).toHaveBeenCalledWith('Bearer fake-api-key')
+      }),
+    )
+
+    it(
+      'handles response correctly',
+      server.boundary(async () => {
+        const { mockResponse } = mockGetAllVersionsBody({
+          server,
+          apiVersion: 'v3',
+          projectId,
+        })
+        const response = await sdk.versions.getAll(projectId)
+        expect(response).toEqual(mockResponse)
+      }),
+    )
+
+    it(
+      'uses default projectId from SDK options',
+      server.boundary(async () => {
+        const sdkWithProject = new Latitude(FAKE_API_KEY, { projectId })
+        const { mockResponse } = mockGetAllVersionsBody({
+          server,
+          apiVersion: 'v3',
+          projectId,
+        })
+        const response = await sdkWithProject.versions.getAll()
+        expect(response).toEqual(mockResponse)
+      }),
+    )
+
+    it(
+      'throws error when no projectId provided',
+      server.boundary(async () => {
+        try {
+          await sdk.versions.getAll()
+        } catch (error) {
+          // @ts-expect-error - mock error
+          expect(error.message).toEqual('Project ID is required')
+        }
+      }),
+    )
+
+    it(
+      'handles errors correctly',
+      server.boundary(async () => {
+        mockVersionsError({
+          server,
+          apiVersion: 'v3',
+          projectId,
+          method: 'GET',
+        })
+        try {
+          await sdk.versions.getAll(projectId)
         } catch (error) {
           // @ts-expect-error - mock error
           expect(error.message).toEqual(

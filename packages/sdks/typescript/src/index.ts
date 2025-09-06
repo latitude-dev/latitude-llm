@@ -143,6 +143,7 @@ class Latitude {
 
   public versions: {
     get: (projectId: number, commitUuid: string) => Promise<Version>
+    getAll: (projectId?: number) => Promise<Version[]>
     create: (name: string, opts?: { projectId?: number }) => Promise<Version>
     push: (
       projectId: number,
@@ -214,6 +215,7 @@ class Latitude {
     // Initialize versions namespace
     this.versions = {
       get: this.getVersion.bind(this),
+      getAll: this.getAllVersions.bind(this),
       create: this.createVersion.bind(this),
       push: this.pushVersion.bind(this),
     }
@@ -802,6 +804,32 @@ class Latitude {
     }
 
     return (await response.json()) as Version
+  }
+
+  private async getAllVersions(projectId?: number): Promise<Version[]> {
+    projectId = projectId ?? this.options.projectId
+    if (!projectId) throw new Error('Project ID is required')
+
+    const response = await makeRequest<HandlerType.GetAllVersions>({
+      handler: HandlerType.GetAllVersions,
+      params: { projectId },
+      method: 'GET',
+      options: this.options,
+    })
+
+    if (!response.ok) {
+      const error = (await response.json()) as ApiErrorJsonResponse
+
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
+      })
+    }
+
+    return (await response.json()) as Version[]
   }
 
   private async pushVersion(

@@ -99,6 +99,10 @@ class CreateProjectRequestBody(Model):
     name: str
 
 
+class GetAllVersionsRequestParams(Model):
+    project_id: int
+
+
 RequestParams = Union[
     GetPromptRequestParams,
     GetAllPromptRequestParams,
@@ -107,6 +111,7 @@ RequestParams = Union[
     ChatPromptRequestParams,
     CreateLogRequestParams,
     AnnotateEvaluationRequestParams,
+    GetAllVersionsRequestParams,
 ]
 
 
@@ -132,3 +137,4 @@ class RequestHandler(StrEnum):
     ToolResults = "TOOL_RESULTS"
     GetAllProjects = "GET_ALL_PROJECTS"
     CreateProject = "CREATE_PROJECT"
+    GetAllVersions = "GET_ALL_VERSIONS"
