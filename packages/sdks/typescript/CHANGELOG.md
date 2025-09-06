@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0-beta.3] - 2025-09-06
+
+### Added
+
+- Added `versions.getAll()` method to TypeScript SDK for retrieving all versions of a project
+
 ## [5.0.0-beta.2] - 2025-08-25
 
 - Add userMessage to `run` method of the Typescript SDK in beta version. In the beta version of the SDK v5 we want to allow to run a prompt with a user message on it. We want this to allow prompts to be run like if in GPT where you can start asking something to a preconfigured AI. In this case could be a Latitude AI agent.

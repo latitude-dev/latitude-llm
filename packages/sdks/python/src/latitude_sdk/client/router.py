@@ -5,6 +5,7 @@ from latitude_sdk.client.payloads import (
     ChatPromptRequestParams,
     CreateLogRequestParams,
     GetAllPromptRequestParams,
+    GetAllVersionsRequestParams,
     GetOrCreatePromptRequestParams,
     GetPromptRequestParams,
     RequestHandler,
@@ -98,6 +99,10 @@ class Router:
 
         elif handler == RequestHandler.CreateProject:
             return "POST", f"{self.options.gateway.base_url}/projects"
+
+        elif handler == RequestHandler.GetAllVersions:
+            assert isinstance(params, GetAllVersionsRequestParams)
+            return "GET", f"{self.options.gateway.base_url}/projects/{params.project_id}/versions"
 
         raise TypeError(f"Unknown handler: {handler}")
 

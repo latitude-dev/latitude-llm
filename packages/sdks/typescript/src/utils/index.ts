@@ -3,6 +3,7 @@ import {
   ChatUrlParams,
   CreateVersionUrlParams,
   GetAllDocumentsParams,
+  GetAllVersionsUrlParams,
   GetDocumentUrlParams,
   GetOrCreateDocumentUrlParams,
   GetversionUrlParams,
@@ -98,6 +99,10 @@ export class RouteResolver {
         return this.projects
           .project((params as GetversionUrlParams).projectId)
           .versions.version((params as GetversionUrlParams).versionUuid).root
+      case HandlerType.GetAllVersions:
+        return this.projects.project(
+          (params as GetAllVersionsUrlParams).projectId,
+        ).versions.root
       case HandlerType.PushVersion:
         return this.projects
           .project((params as PushVersionUrlParams).projectId)

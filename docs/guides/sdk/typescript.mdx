@@ -49,6 +49,7 @@ The Latitude SDK is organized into several namespaces:
 - `prompts`: Methods for managing and running prompts
 - `logs`: Methods for pushing logs to Latitude
 - `evaluations`: Methods for pushing evaluation results to Latitude
+- `versions`: Methods for managing project versions
 
 ## Prompt Management
 
@@ -82,6 +83,22 @@ You can also provide the content when creating a new prompt:
 const prompt = await latitude.prompts.getOrCreate('prompt-path', {
   prompt: 'This is the content of my new prompt',
 })
+```
+
+## Version Management
+
+### Get All Versions
+
+To retrieve all versions from a project:
+
+```typescript
+const versions = await latitude.versions.getAll()
+```
+
+You can also specify a different project ID:
+
+```typescript
+const versions = await latitude.versions.getAll(123)
 ```
 
 ## Running Prompts
@@ -172,7 +189,9 @@ By default the sdk assumes your prompt return text. If you expect your prompt
 to return structured output you can type it in the `prompts.run` method:
 
 ```typescript
-const result = await latitude.prompts.run<{ expected: 'property' }>('structured-output-prompt')
+const result = await latitude.prompts.run<{ expected: 'property' }>(
+  'structured-output-prompt',
+)
 
 console.log(result.object) // outputs { expected: 'property' }
 ```
@@ -487,6 +506,13 @@ latitude.evaluations.annotate(
     versionUuid?: string
   }
 )
+```
+
+### Versions Namespace
+
+```typescript
+// Get all versions
+latitude.versions.getAll(projectId?: number): Promise<Version[]>
 ```
 
 ## Error Handling
