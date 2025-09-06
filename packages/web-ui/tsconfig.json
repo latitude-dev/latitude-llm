@@ -4,7 +4,9 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "types": ["node"],
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "incremental": true,
+    "tsBuildInfoFile": "node_modules/.cache/tsconfig.tsbuildinfo"
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

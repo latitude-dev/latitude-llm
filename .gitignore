@@ -21,6 +21,7 @@ coverage
 # Turbo
 .turbo
 .tsbuildinfo
+tsconfig.tsbuildinfo
 
 # Vim shit
 *.py-E
@@ -91,4 +92,6 @@ __testing__
 # New spans
 apps/web/ingest
 apps/workers/workspaces/*/traces
+apps/web/tsc-tracing
+*.tsbuildinfo
 

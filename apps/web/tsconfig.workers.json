@@ -5,13 +5,12 @@
     "module": "es2022",
     "noEmit": false,
     "moduleResolution": "Bundler",
-    "jsx": "preserve",
-    "typeRoots": ["./node_modules/@types"],
+    "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
       "$/*": ["./src/workers/*"],
-      "@latitude-data/constants": ["../../packages/constants/src/index.ts"],
-      "@latitude-data/constants/*": ["../../packages/constants/src/*"]
+      "@latitude-data/constants": ["../../packages/constants"],
+      "@latitude-data/constants/*": ["../../packages/constants/*"]
     }
   },
   "include": ["./src/workers/**/*.ts"],
