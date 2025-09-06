@@ -97,6 +97,36 @@ describe('downloadLogsJob', () => {
       Result.ok({ ...mockExport, readyAt: now }),
     )
 
+    // Mock hydrateProviderLog to return a basic hydrated log
+    const mockHydratedLog = {
+      id: 1,
+      workspaceId: workspace.id,
+      uuid: 'test-uuid',
+      documentLogUuid: 'doc-log-uuid',
+      providerId: 1,
+      model: 'gpt-3.5-turbo',
+      finishReason: 'stop',
+      config: { model: 'gpt-3.5-turbo' },
+      messages: [{ role: 'user', content: 'Hello' }],
+      output: { text: 'Hello, how can I help you?' },
+      responseObject: { content: 'Hello, how can I help you?' },
+      responseText: 'Hello, how can I help you?',
+      responseReasoning: 'Generated response based on input',
+      toolCalls: [],
+      tokens: 150,
+      costInMillicents: 500,
+      duration: 1000,
+      source: LogSources.API,
+      apiKeyId: 1,
+      generatedAt: new Date(),
+      fileKey: 'test-file-key',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    vi.mocked(hydrateProviderLog).mockResolvedValue(
+      Result.ok(mockHydratedLog as any),
+    )
+
     // Create mock job
     mockJob = {
       data: {
