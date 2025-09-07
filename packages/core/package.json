@@ -4,34 +4,114 @@
   "description": "Core services used across the latitude LLM stack",
   "type": "module",
   "exports": {
-    "./__deprecated/*": "./src/__deprecated/*.ts",
-    "./browser": "./src/browser.ts",
-    "./cache": "./src/cache/index.ts",
-    "./client": "./src/client/index.ts",
-    "./data-access": "./src/data-access/index.ts",
-    "./data-access/*": "./src/data-access/*.ts",
-    "./events/*": "./src/events/*.ts",
-    "./factories": "./src/tests/factories/index.ts",
-    "./jobs": "./src/jobs/index.ts",
-    "./jobs/constants": "./src/jobs/constants.ts",
-    "./jobs/definitions": "./src/jobs/job-definitions/index.ts",
-    "./lib/*": "./src/lib/*.ts",
-    "./mailers": "./src/mailers/index.ts",
-    "./queues": "./src/jobs/queues/index.ts",
-    "./queues/types": "./src/jobs/queues/types.ts",
-    "./redis": "./src/redis/index.ts",
-    "./repositories": "./src/repositories/index.ts",
-    "./repositories/*": "./src/repositories/*.ts",
-    "./schema": "./src/schema/index.ts",
-    "./schema/*": "./src/schema/*.ts",
-    "./services/*": "./src/services/*.ts",
-    "./test": "./src/tests/useTestDatabase.ts",
-    "./websockets/*": "./src/websockets/*.ts",
-    "./workers/*": "./src/workers/*.js",
-    "./utils/*": "./src/utils/*.ts",
-    "./telemetry": "./src/telemetry/index.ts"
+    "./__deprecated/*": {
+      "types": "./dist/types/__deprecated/*.d.ts",
+      "import": "./src/__deprecated/*.ts"
+    },
+    "./browser": {
+      "types": "./dist/types/browser.d.ts",
+      "import": "./src/browser.ts"
+    },
+    "./cache": {
+      "types": "./dist/types/cache/index.d.ts",
+      "import": "./src/cache/index.ts"
+    },
+    "./client": {
+      "types": "./dist/types/client/index.d.ts",
+      "import": "./src/client/index.ts"
+    },
+    "./data-access": {
+      "types": "./dist/types/data-access/index.d.ts",
+      "import": "./src/data-access/index.ts"
+    },
+    "./data-access/*": {
+      "types": "./dist/types/data-access/*.d.ts",
+      "import": "./src/data-access/*.ts"
+    },
+    "./events/*": {
+      "types": "./dist/types/events/*.d.ts",
+      "import": "./src/events/*.ts"
+    },
+    "./factories": {
+      "types": "./dist/types/tests/factories/index.d.ts",
+      "import": "./src/tests/factories/index.ts"
+    },
+    "./jobs": {
+      "types": "./dist/types/jobs/index.d.ts",
+      "import": "./src/jobs/index.ts"
+    },
+    "./jobs/constants": {
+      "types": "./dist/types/jobs/constants.d.ts",
+      "import": "./src/jobs/constants.ts"
+    },
+    "./jobs/definitions": {
+      "types": "./dist/types/jobs/job-definitions/index.d.ts",
+      "import": "./src/jobs/job-definitions/index.ts"
+    },
+    "./lib/*": {
+      "types": "./dist/types/lib/*.d.ts",
+      "import": "./src/lib/*.ts"
+    },
+    "./mailers": {
+      "types": "./dist/types/mailers/index.d.ts",
+      "import": "./src/mailers/index.ts"
+    },
+    "./queues": {
+      "types": "./dist/types/jobs/queues/index.d.ts",
+      "import": "./src/jobs/queues/index.ts"
+    },
+    "./queues/types": {
+      "types": "./dist/types/jobs/queues/types.d.ts",
+      "import": "./src/jobs/queues/types.ts"
+    },
+    "./redis": {
+      "types": "./dist/types/redis/index.d.ts",
+      "import": "./src/redis/index.ts"
+    },
+    "./repositories": {
+      "types": "./dist/types/repositories/index.d.ts",
+      "import": "./src/repositories/index.ts"
+    },
+    "./repositories/*": {
+      "types": "./dist/types/repositories/*.d.ts",
+      "import": "./src/repositories/*.ts"
+    },
+    "./schema": {
+      "types": "./dist/types/schema/index.d.ts",
+      "import": "./src/schema/index.ts"
+    },
+    "./schema/*": {
+      "types": "./dist/types/schema/*.d.ts",
+      "import": "./src/schema/*.ts"
+    },
+    "./services/*": {
+      "types": "./dist/types/services/*.d.ts",
+      "import": "./src/services/*.ts"
+    },
+    "./test": {
+      "types": "./dist/types/tests/useTestDatabase.d.ts",
+      "import": "./src/tests/useTestDatabase.ts"
+    },
+    "./websockets/*": {
+      "types": "./dist/types/websockets/*.d.ts",
+      "import": "./src/websockets/*.ts"
+    },
+    "./workers/*": {
+      "types": "./dist/types/workers/*.d.ts",
+      "import": "./src/workers/*.js"
+    },
+    "./utils/*": {
+      "types": "./dist/types/utils/*.d.ts",
+      "import": "./src/utils/*.ts"
+    },
+    "./telemetry": {
+      "types": "./dist/types/telemetry/index.d.ts",
+      "import": "./src/telemetry/index.ts"
+    }
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "build:watch": "tsc --watch -p tsconfig.build.json",
     "db:generate": "drizzle-kit generate",
     "db:generate:custom": "pnpm run db:generate --custom",
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",

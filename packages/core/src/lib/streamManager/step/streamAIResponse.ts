@@ -1,11 +1,15 @@
-import { VercelConfig } from '@latitude-data/constants'
+import {
+  ChainStepResponse,
+  StreamType,
+  VercelConfig,
+} from '@latitude-data/constants'
 import {
   Conversation,
   Message as LegacyMessage,
 } from '@latitude-data/constants/legacyCompiler'
 import { JSONSchema7 } from 'json-schema'
 import { LogSources, ProviderApiKey, Workspace } from '../../../browser'
-import { ai } from '../../../services/ai'
+import { ai, AIReturn } from '../../../services/ai'
 import { processResponse } from '../../../services/chains/ProviderProcessor'
 import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
 import { createProviderLog } from '../../../services/providerLogs'
@@ -54,7 +58,12 @@ export async function streamAIResponse({
   schema?: JSONSchema7
   output?: Output
   abortSignal?: AbortSignal
-}) {
+}): Promise<{
+  response: ChainStepResponse<StreamType>
+  messages: LegacyMessage[]
+  tokenUsage: Awaited<AIReturn<StreamType>['usage']>
+  finishReason: Awaited<AIReturn<StreamType>['finishReason']>
+}> {
   const startTime = Date.now()
 
   const aiResult = await ai({
@@ -119,12 +128,13 @@ export async function streamAIResponse({
     }),
   }).then((r) => r.unwrap())
 
-  const response = { ...processedResponse, providerLog }
+  const response = processedResponse
+  response.providerLog = providerLog
 
   return {
     response,
     messages: responseMessages,
     tokenUsage: await aiResult.usage,
-    finishReason: aiResult.finishReason,
+    finishReason: await aiResult.finishReason,
   }
 }

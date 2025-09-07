@@ -4,6 +4,7 @@
   "description": "Latitude web ui elements",
   "private": true,
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "lint": "eslint ./src",
     "tc": "tsc --noEmit",
     "test": "vitest run",
@@ -12,27 +13,72 @@
   },
   "type": "module",
   "exports": {
-    "./atoms/Alert": "./src/ds/atoms/Alert/index.tsx",
-    "./atoms/Alert/Primitives": "./src/ds/atoms/Alert/Primitives/index.tsx",
-    "./atoms/Avatar": "./src/ds/atoms/Avatar/index.tsx",
-    "./atoms/Badge": "./src/ds/atoms/Badge/index.tsx",
-    "./atoms/Button": "./src/ds/atoms/Button/index.tsx",
-    "./atoms/Card": "./src/ds/atoms/Card/index.tsx",
-    "./atoms/Charts": "./src/ds/atoms/Charts/index.tsx",
-    "./atoms/ChartBlankSlate": "./src/ds/atoms/ChartBlankSlate/index.tsx",
-    "./atoms/Checkbox": "./src/ds/atoms/Checkbox/index.tsx",
-    "./atoms/CircularProgress": "./src/ds/atoms/CircularProgress/index.tsx",
-    "./atoms/ClientOnly": "./src/ds/atoms/ClientOnly/index.tsx",
+    "./atoms/Alert": {
+      "types": "./dist/types/ds/atoms/Alert/index.d.ts",
+      "import": "./src/ds/atoms/Alert/index.tsx"
+    },
+    "./atoms/Alert/Primitives": {
+      "types": "./dist/types/ds/atoms/Alert/Primitives/index.d.ts",
+      "import": "./src/ds/atoms/Alert/Primitives/index.tsx"
+    },
+    "./atoms/Avatar": {
+      "types": "./dist/types/ds/atoms/Avatar/index.d.ts",
+      "import": "./src/ds/atoms/Avatar/index.tsx"
+    },
+    "./atoms/Badge": {
+      "types": "./dist/types/ds/atoms/Badge/index.d.ts",
+      "import": "./src/ds/atoms/Badge/index.tsx"
+    },
+    "./atoms/Button": {
+      "types": "./dist/types/ds/atoms/Button/index.d.ts",
+      "import": "./src/ds/atoms/Button/index.tsx"
+    },
+    "./atoms/Card": {
+      "types": "./dist/types/ds/atoms/Card/index.d.ts",
+      "import": "./src/ds/atoms/Card/index.tsx"
+    },
+    "./atoms/Charts": {
+      "types": "./dist/types/ds/atoms/Charts/index.d.ts",
+      "import": "./src/ds/atoms/Charts/index.tsx"
+    },
+    "./atoms/ChartBlankSlate": {
+      "types": "./dist/types/ds/atoms/ChartBlankSlate/index.d.ts",
+      "import": "./src/ds/atoms/ChartBlankSlate/index.tsx"
+    },
+    "./atoms/Checkbox": {
+      "types": "./dist/types/ds/atoms/Checkbox/index.d.ts",
+      "import": "./src/ds/atoms/Checkbox/index.tsx"
+    },
+    "./atoms/CircularProgress": {
+      "types": "./dist/types/ds/atoms/CircularProgress/index.d.ts",
+      "import": "./src/ds/atoms/CircularProgress/index.tsx"
+    },
+    "./atoms/ClientOnly": {
+      "types": "./dist/types/ds/atoms/ClientOnly/index.d.ts",
+      "import": "./src/ds/atoms/ClientOnly/index.tsx"
+    },
     "./atoms/CodeBlock": "./src/ds/atoms/CodeBlock/index.tsx",
     "./atoms/Command": "./src/ds/atoms/Command/index.tsx",
     "./atoms/DataGrid": "./src/ds/atoms/DataGrid/index.tsx",
     "./atoms/Container": "./src/ds/atoms/Container/index.tsx",
-    "./atoms/CopyButton": "./src/ds/atoms/CopyButton/index.tsx",
+    "./atoms/CopyButton": {
+      "types": "./dist/types/ds/atoms/CopyButton/index.d.ts",
+      "import": "./src/ds/atoms/CopyButton/index.tsx"
+    },
     "./atoms/DatePicker": "./src/ds/atoms/DatePicker/index.tsx",
     "./atoms/DotIndicator": "./src/ds/atoms/DotIndicator/index.tsx",
-    "./atoms/DropdownMenu": "./src/ds/atoms/DropdownMenu/index.tsx",
-    "./atoms/Dropzone": "./src/ds/atoms/Dropzone/index.tsx",
-    "./atoms/DropzoneInput": "./src/ds/atoms/DropzoneInput/index.tsx",
+    "./atoms/DropdownMenu": {
+      "types": "./dist/types/ds/atoms/DropdownMenu/index.d.ts",
+      "import": "./src/ds/atoms/DropdownMenu/index.tsx"
+    },
+    "./atoms/Dropzone": {
+      "types": "./dist/types/ds/atoms/Dropzone/index.d.ts",
+      "import": "./src/ds/atoms/Dropzone/index.tsx"
+    },
+    "./atoms/DropzoneInput": {
+      "types": "./dist/types/ds/atoms/DropzoneInput/index.d.ts",
+      "import": "./src/ds/atoms/DropzoneInput/index.tsx"
+    },
     "./atoms/FloatingPanel": "./src/ds/atoms/FloatingPanel/index.tsx",
     "./atoms/FormField": "./src/ds/atoms/FormField/index.tsx",
     "./atoms/FormFieldGroup": "./src/ds/atoms/FormFieldGroup/index.tsx",
@@ -42,28 +88,94 @@
     "./atoms/Illustrations": "./src/ds/atoms/Illustrations/index.tsx",
     "./atoms/Image": "./src/ds/atoms/Image/index.tsx",
     "./atoms/Input": "./src/ds/atoms/Input/index.tsx",
-    "./atoms/Label": "./src/ds/atoms/Label/index.tsx",
-    "./atoms/LineSeparator": "./src/ds/atoms/LineSeparator/index.tsx",
-    "./atoms/Markdown": "./src/ds/atoms/Markdown/index.tsx",
-    "./atoms/Modal": "./src/ds/atoms/Modal/index.tsx",
-    "./atoms/NavTab": "./src/ds/atoms/NavTab/index.tsx",
-    "./atoms/NumberInput": "./src/ds/atoms/NumberInput/index.tsx",
-    "./atoms/Popover": "./src/ds/atoms/Popover/index.tsx",
-    "./atoms/Progress": "./src/ds/atoms/Progress/index.tsx",
-    "./atoms/RadioButtonsInput": "./src/ds/atoms/RadioButtonsInput/index.tsx",
-    "./atoms/Resizable": "./src/ds/atoms/Resizable/index.tsx",
-    "./atoms/Select": "./src/ds/atoms/Select/index.tsx",
-    "./atoms/Separator": "./src/ds/atoms/Separator/index.tsx",
-    "./atoms/Skeleton": "./src/ds/atoms/Skeleton/index.tsx",
-    "./atoms/Slider": "./src/ds/atoms/Slider/index.tsx",
-    "./atoms/SplitPane": "./src/ds/atoms/SplitPane/index.tsx",
-    "./atoms/Switch": "./src/ds/atoms/Switch/index.tsx",
-    "./atoms/Table": "./src/ds/atoms/Table/index.tsx",
-    "./atoms/Text": "./src/ds/atoms/Text/index.tsx",
-    "./atoms/TextArea": "./src/ds/atoms/TextArea/index.tsx",
-    "./atoms/Toast": "./src/ds/atoms/Toast/index.tsx",
-    "./atoms/Tooltip": "./src/ds/atoms/Tooltip/index.tsx",
-    "./atoms/TypewriterText": "./src/ds/atoms/TypewriterText/index.tsx",
+    "./atoms/Label": {
+      "types": "./dist/types/ds/atoms/Label/index.d.ts",
+      "import": "./src/ds/atoms/Label/index.tsx"
+    },
+    "./atoms/LineSeparator": {
+      "types": "./dist/types/ds/atoms/LineSeparator/index.d.ts",
+      "import": "./src/ds/atoms/LineSeparator/index.tsx"
+    },
+    "./atoms/Markdown": {
+      "types": "./dist/types/ds/atoms/Markdown/index.d.ts",
+      "import": "./src/ds/atoms/Markdown/index.tsx"
+    },
+    "./atoms/Modal": {
+      "types": "./dist/types/ds/atoms/Modal/index.d.ts",
+      "import": "./src/ds/atoms/Modal/index.tsx"
+    },
+    "./atoms/NavTab": {
+      "types": "./dist/types/ds/atoms/NavTab/index.d.ts",
+      "import": "./src/ds/atoms/NavTab/index.tsx"
+    },
+    "./atoms/NumberInput": {
+      "types": "./dist/types/ds/atoms/NumberInput/index.d.ts",
+      "import": "./src/ds/atoms/NumberInput/index.tsx"
+    },
+    "./atoms/Popover": {
+      "types": "./dist/types/ds/atoms/Popover/index.d.ts",
+      "import": "./src/ds/atoms/Popover/index.tsx"
+    },
+    "./atoms/Progress": {
+      "types": "./dist/types/ds/atoms/Progress/index.d.ts",
+      "import": "./src/ds/atoms/Progress/index.tsx"
+    },
+    "./atoms/RadioButtonsInput": {
+      "types": "./dist/types/ds/atoms/RadioButtonsInput/index.d.ts",
+      "import": "./src/ds/atoms/RadioButtonsInput/index.tsx"
+    },
+    "./atoms/Resizable": {
+      "types": "./dist/types/ds/atoms/Resizable/index.d.ts",
+      "import": "./src/ds/atoms/Resizable/index.tsx"
+    },
+    "./atoms/Select": {
+      "types": "./dist/types/ds/atoms/Select/index.d.ts",
+      "import": "./src/ds/atoms/Select/index.tsx"
+    },
+    "./atoms/Separator": {
+      "types": "./dist/types/ds/atoms/Separator/index.d.ts",
+      "import": "./src/ds/atoms/Separator/index.tsx"
+    },
+    "./atoms/Skeleton": {
+      "types": "./dist/types/ds/atoms/Skeleton/index.d.ts",
+      "import": "./src/ds/atoms/Skeleton/index.tsx"
+    },
+    "./atoms/Slider": {
+      "types": "./dist/types/ds/atoms/Slider/index.d.ts",
+      "import": "./src/ds/atoms/Slider/index.tsx"
+    },
+    "./atoms/SplitPane": {
+      "types": "./dist/types/ds/atoms/SplitPane/index.d.ts",
+      "import": "./src/ds/atoms/SplitPane/index.tsx"
+    },
+    "./atoms/Switch": {
+      "types": "./dist/types/ds/atoms/Switch/index.d.ts",
+      "import": "./src/ds/atoms/Switch/index.tsx"
+    },
+    "./atoms/Table": {
+      "types": "./dist/types/ds/atoms/Table/index.d.ts",
+      "import": "./src/ds/atoms/Table/index.tsx"
+    },
+    "./atoms/Text": {
+      "types": "./dist/types/ds/atoms/Text/index.d.ts",
+      "import": "./src/ds/atoms/Text/index.tsx"
+    },
+    "./atoms/TextArea": {
+      "types": "./dist/types/ds/atoms/TextArea/index.d.ts",
+      "import": "./src/ds/atoms/TextArea/index.tsx"
+    },
+    "./atoms/Toast": {
+      "types": "./dist/types/ds/atoms/Toast/index.d.ts",
+      "import": "./src/ds/atoms/Toast/index.tsx"
+    },
+    "./atoms/Tooltip": {
+      "types": "./dist/types/ds/atoms/Tooltip/index.d.ts",
+      "import": "./src/ds/atoms/Tooltip/index.tsx"
+    },
+    "./atoms/TypewriterText": {
+      "types": "./dist/types/ds/atoms/TypewriterText/index.d.ts",
+      "import": "./src/ds/atoms/TypewriterText/index.tsx"
+    },
     "./molecules/DiffViewer": "./src/ds/molecules/DiffViewer/index.tsx",
     "./molecules/AnimatedDots": "./src/ds/molecules/AnimatedDots/index.tsx",
     "./molecules/BlankSlate": "./src/ds/molecules/BlankSlate/index.tsx",
@@ -85,7 +197,10 @@
     "./molecules/LoadingText": "./src/ds/molecules/LoadingText/index.tsx",
     "./molecules/ListingHeader": "./src/ds/molecules/ListingHeader/index.tsx",
     "./molecules/MultiSelect": "./src/ds/molecules/MultiSelect/index.tsx",
-    "./molecules/TwoColumnSelect": "./src/ds/molecules/TwoColumnSelect/index.tsx",
+    "./molecules/TwoColumnSelect": {
+      "types": "./dist/types/ds/molecules/TwoColumnSelect/index.d.ts",
+      "import": "./src/ds/molecules/TwoColumnSelect/index.tsx"
+    },
     "./molecules/NumeredList": "./src/ds/molecules/NumeredList/index.tsx",
     "./molecules/RangeBadge": "./src/ds/molecules/RangeBadge/index.tsx",
     "./molecules/SelectableCard": "./src/ds/molecules/SelectableCard/index.tsx",
@@ -93,36 +208,112 @@
     "./molecules/Steps": "./src/ds/molecules/Steps/index.tsx",
     "./molecules/TabSelect": "./src/ds/molecules/TabSelect/index.tsx",
     "./molecules/TabSelector": "./src/ds/molecules/TabSelector/index.tsx",
-    "./molecules/TableBlankSlate": "./src/ds/molecules/TableBlankSlate/index.tsx",
-    "./molecules/TableSkeleton": "./src/ds/molecules/TableSkeleton/index.tsx",
-    "./molecules/Tabs": "./src/ds/molecules/Tabs/index.tsx",
-    "./molecules/TextEditorPlaceholder": "./src/ds/molecules/TextEditorPlaceholder/index.tsx",
-    "./molecules/TitleWithActions": "./src/ds/molecules/TitleWithActions/index.tsx",
-    "./molecules/TruncatedTooltip": "./src/ds/molecules/TruncatedTooltip/index.tsx",
-    "./molecules/TrippleThemeToggle": "./src/ds/molecules/TrippleThemeToggle/index.tsx",
+    "./molecules/TableBlankSlate": {
+      "types": "./dist/types/ds/molecules/TableBlankSlate/index.d.ts",
+      "import": "./src/ds/molecules/TableBlankSlate/index.tsx"
+    },
+    "./molecules/TableSkeleton": {
+      "types": "./dist/types/ds/molecules/TableSkeleton/index.d.ts",
+      "import": "./src/ds/molecules/TableSkeleton/index.tsx"
+    },
+    "./molecules/Tabs": {
+      "types": "./dist/types/ds/molecules/Tabs/index.d.ts",
+      "import": "./src/ds/molecules/Tabs/index.tsx"
+    },
+    "./molecules/TextEditorPlaceholder": {
+      "types": "./dist/types/ds/molecules/TextEditorPlaceholder/index.d.ts",
+      "import": "./src/ds/molecules/TextEditorPlaceholder/index.tsx"
+    },
+    "./molecules/TitleWithActions": {
+      "types": "./dist/types/ds/molecules/TitleWithActions/index.d.ts",
+      "import": "./src/ds/molecules/TitleWithActions/index.tsx"
+    },
+    "./molecules/TruncatedTooltip": {
+      "types": "./dist/types/ds/molecules/TruncatedTooltip/index.d.ts",
+      "import": "./src/ds/molecules/TruncatedTooltip/index.tsx"
+    },
+    "./molecules/TrippleThemeToggle": {
+      "types": "./dist/types/ds/molecules/TrippleThemeToggle/index.d.ts",
+      "import": "./src/ds/molecules/TrippleThemeToggle/index.tsx"
+    },
     "./molecules/ClickToCopy": "./src/ds/molecules/ClickToCopy/index.tsx",
     "./molecules/DynamicBot": "./src/ds/molecules/DynamicBot/index.tsx",
     "./molecules/PaginatedSelect": "./src/ds/molecules/PaginatedSelect/index.tsx",
     "./molecules/MultipleInput": "./src/ds/molecules/MultipleInput/index.tsx",
     "./molecules/SearchableList": "./src/ds/molecules/SearchableList/index.tsx",
-    "./organisms/ClickToCopyUuid": "./src/ds/organisms/ClickToCopyUuid/index.tsx",
-    "./organisms/CronInput": "./src/ds/organisms/CronInput/index.tsx",
-    "./tokens": "./src/ds/tokens/index.ts",
-    "./providers": "./src/providers/index.ts",
-    "./sections/ProjectSidebarLayout": "./src/sections/ProjectSidebarLayout/index.tsx",
-    "./utils": "./src/lib/utils.ts",
-    "./dateUtils": "./src/lib/dateUtils.ts",
-    "./getUserInfo": "./src/lib/getUserInfo.ts",
-    "./hooks/useAutoScroll": "./src/lib/hooks/useAutoScroll.ts",
-    "./hooks/useLocalStorage": "./src/lib/hooks/useLocalStorage.ts",
-    "./hooks/useDnD": "./src/lib/hooks/useDnD.ts",
-    "./hooks/useOnClickOutside": "./src/lib/hooks/useOnClickOutside.ts",
+    "./organisms/ClickToCopyUuid": {
+      "types": "./dist/types/ds/organisms/ClickToCopyUuid/index.d.ts",
+      "import": "./src/ds/organisms/ClickToCopyUuid/index.tsx"
+    },
+    "./organisms/CronInput": {
+      "types": "./dist/types/ds/organisms/CronInput/index.d.ts",
+      "import": "./src/ds/organisms/CronInput/index.tsx"
+    },
+    "./tokens": {
+      "types": "./dist/types/ds/tokens/index.d.ts",
+      "import": "./src/ds/tokens/index.ts"
+    },
+    "./providers": {
+      "types": "./dist/types/providers/index.d.ts",
+      "import": "./src/providers/index.ts"
+    },
+    "./sections/ProjectSidebarLayout": {
+      "types": "./dist/types/sections/ProjectSidebarLayout/index.d.ts",
+      "import": "./src/sections/ProjectSidebarLayout/index.tsx"
+    },
+    "./utils": {
+      "types": "./dist/types/lib/utils.d.ts",
+      "import": "./src/lib/utils.ts"
+    },
+    "./dateUtils": {
+      "types": "./dist/types/lib/dateUtils.d.ts",
+      "import": "./src/lib/dateUtils.ts"
+    },
+    "./getUserInfo": {
+      "types": "./dist/types/lib/getUserInfo.d.ts",
+      "import": "./src/lib/getUserInfo.ts"
+    },
+    "./hooks/useAutoScroll": {
+      "types": "./dist/types/lib/hooks/useAutoScroll.d.ts",
+      "import": "./src/lib/hooks/useAutoScroll.ts"
+    },
+    "./hooks/useLocalStorage": {
+      "types": "./dist/types/lib/hooks/useLocalStorage.d.ts",
+      "import": "./src/lib/hooks/useLocalStorage.ts"
+    },
+    "./hooks/useDnD": {
+      "types": "./dist/types/lib/hooks/useDnD.d.ts",
+      "import": "./src/lib/hooks/useDnD.ts"
+    },
+    "./hooks/useOnClickOutside": {
+      "types": "./dist/types/lib/hooks/useOnClickOutside.d.ts",
+      "import": "./src/lib/hooks/useOnClickOutside.ts"
+    },
     "./hooks/useMonacoSetup": "./src/ds/molecules/DiffViewer/Editor/useMonacoSetup.ts",
-    "./hooks/useToolContentMap": "./src/lib/hooks/useToolContentMap.ts",
-    "./commonTypes": "./src/lib/commonTypes.ts",
-    "./versionedMessagesHelpers": "./src/lib/versionedMessagesHelpers.ts",
-    "./getUserInfoFromSession": "./src/lib/getUserInfo.ts",
-    "./browser": "./src/browser.ts",
+    "./hooks/useToolContentMap": {
+      "types": "./dist/types/lib/hooks/useToolContentMap.d.ts",
+      "import": "./src/lib/hooks/useToolContentMap.ts"
+    },
+    "./commonTypes": {
+      "types": "./dist/types/lib/commonTypes.d.ts",
+      "import": "./src/lib/commonTypes.ts"
+    },
+    "./versionedMessagesHelpers": {
+      "types": "./dist/types/lib/versionedMessagesHelpers.d.ts",
+      "import": "./src/lib/versionedMessagesHelpers.ts"
+    },
+    "./getUserInfoFromSession": {
+      "types": "./dist/types/lib/getUserInfo.d.ts",
+      "import": "./src/lib/getUserInfo.ts"
+    },
+    "./browser": {
+      "types": "./dist/types/browser.d.ts",
+      "import": "./src/browser.ts"
+    },
+    "./constants": {
+      "types": "./dist/types/constants.d.ts",
+      "import": "./src/constants.ts"
+    },
     "./styles.css": "./styles.css",
     "./tailwind.config.js": "./tailwind.config.js"
   },
