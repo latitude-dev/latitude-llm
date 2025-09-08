@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0] - 2025-09-08
+
+Official release of v5. Targets the new agent runtime, which introduces several improvements to agent performance and reliability.
+
+Breaking changes:
+
+- Agents now respond as regular prompts rather than in the custom `agentResponse` key.
+
 ## [5.0.0-beta.3] - 2025-09-06
 
 ### Added
