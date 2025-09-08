@@ -27,6 +27,7 @@ export * from './models/apiKeys'
 export * from './models/claimedRewards'
 export * from './models/oauthAccounts'
 export * from './models/magicLinkTokens'
+export * from './models/grants'
 
 // Document tables
 export * from './models/projects'

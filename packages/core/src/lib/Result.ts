@@ -40,6 +40,9 @@ export type TypedResult<V = undefined, E extends Error = Error> =
   | Ok<V>
   | ErrorResult<E>
 
+export type OkType<F extends (...args: any) => any> =
+  Awaited<ReturnType<F>> extends TypedResult<infer V, any> ? V : never
+
 export class Result {
   private constructor() {}
 

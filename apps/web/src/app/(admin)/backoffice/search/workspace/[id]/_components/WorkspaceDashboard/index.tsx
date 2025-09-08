@@ -2,14 +2,14 @@
 import Link from 'next/link'
 
 import { WorkspaceWithDetails } from '$/data-access'
-import { ROUTES, BackofficeRoutes } from '$/services/routes'
+import { BackofficeRoutes, ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
-import { DashboardHeader } from '$/app/(admin)/backoffice/search/_components/DashboardHeader'
 import { BasicInfoList } from '$/app/(admin)/backoffice/search/_components/BasicInfoList'
+import { DashboardHeader } from '$/app/(admin)/backoffice/search/_components/DashboardHeader'
 import { DataTable } from '$/app/(admin)/backoffice/search/_components/DataTable'
 
 type Props = {
@@ -34,6 +34,31 @@ export function WorkspaceDashboard({ workspace }: Props) {
       value: new Date(workspace.createdAt).toLocaleDateString(),
       icon: 'calendar' as const,
     },
+    {
+      label: 'Seats Limit',
+      value: workspace.quotas.seats.toLocaleString(),
+      icon: 'users' as const,
+    },
+    {
+      label: 'Runs Limit',
+      value: workspace.quotas.runs.toLocaleString(),
+      icon: 'logs' as const,
+    },
+    {
+      label: 'Credits Limit',
+      value: workspace.quotas.credits.toLocaleString(),
+      icon: 'coins' as const,
+    },
+    {
+      label: 'Subscription Plan',
+      value: workspace.subscription.plan.plan,
+      icon: 'blocks' as const,
+    },
+    {
+      label: 'Billable Period',
+      value: `${new Date(workspace.subscription.billableFrom).toLocaleDateString()} - ${new Date(workspace.subscription.billableAt).toLocaleDateString()}`,
+      icon: 'rectangleHorizontal' as const,
+    },
   ]
 
   const breadcrumbs = [{ label: 'Workspace', href: undefined }]
@@ -52,7 +77,7 @@ export function WorkspaceDashboard({ workspace }: Props) {
 
         <div className='space-y-8'>
           <DataTable
-            title='Active Feature Flags'
+            title='Feature Flags'
             count={workspace.features.length}
             columns={[{ header: 'Feature Name' }, { header: 'Description' }]}
             emptyMessage='No active feature flags'
@@ -66,6 +91,81 @@ export function WorkspaceDashboard({ workspace }: Props) {
                 <TableCell>
                   <Text.H5 color='foregroundMuted'>
                     {feature.description || 'No description available'}
+                  </Text.H5>
+                </TableCell>
+              </TableRow>
+            ))}
+          </DataTable>
+
+          <DataTable
+            title='Grants'
+            count={workspace.grants.length}
+            columns={[
+              { header: 'Type' },
+              { header: 'Amount' },
+              { header: 'Source' },
+              { header: 'Expires At' },
+              { header: 'Granted At' },
+            ]}
+            emptyMessage='No grants found'
+            icon='circleGauge'
+          >
+            {workspace.grants.map((grant) => (
+              <TableRow key={grant.id}>
+                <TableCell className='p-2'>
+                  <div className='flex items-center space-x-3'>
+                    <div className='p-2 bg-accent rounded-lg'>
+                      <Icon
+                        name={
+                          grant.type === 'seats'
+                            ? 'users'
+                            : grant.type === 'runs'
+                              ? 'logs'
+                              : grant.type === 'credits'
+                                ? 'coins'
+                                : 'circleGauge'
+                        }
+                        size='small'
+                        color='primary'
+                      />
+                    </div>
+                    <Text.H5 weight='medium'>
+                      {grant.type.charAt(0).toUpperCase() + grant.type.slice(1)}
+                    </Text.H5>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className='flex flex-col gap-1'>
+                    <Text.H5 weight='medium'>
+                      {grant.amount.toLocaleString()}
+                    </Text.H5>
+                    {grant.amount !== 'unlimited' &&
+                      grant.balance !== grant.amount && (
+                        <Text.H6 color='foregroundMuted'>
+                          {grant.balance.toLocaleString()} left
+                        </Text.H6>
+                      )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className='flex flex-col gap-1'>
+                    <Text.H5 monospace>{grant.referenceId}</Text.H5>
+                    <Text.H6 color='foregroundMuted' monospace>
+                      {grant.source.charAt(0).toUpperCase() +
+                        grant.source.slice(1)}
+                    </Text.H6>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Text.H5 color='foregroundMuted'>
+                    {grant.expiresAt
+                      ? new Date(grant.expiresAt).toLocaleDateString()
+                      : '-'}
+                  </Text.H5>
+                </TableCell>
+                <TableCell>
+                  <Text.H5 color='foregroundMuted'>
+                    {new Date(grant.createdAt).toLocaleDateString()}
                   </Text.H5>
                 </TableCell>
               </TableRow>

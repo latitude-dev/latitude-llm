@@ -39,6 +39,10 @@ describe('consumeLatteCredits', () => {
     vi.clearAllMocks()
     vi.restoreAllMocks()
 
+    vi.spyOn(plans, 'SubscriptionPlans', 'get').mockReturnValue(
+      SubscriptionPlansMock as any,
+    )
+
     const { workspace: w, userData: u } = await factories.createWorkspace({
       subscriptionPlan: SubscriptionPlan.HobbyV2,
     })
@@ -69,10 +73,6 @@ describe('consumeLatteCredits', () => {
         .spyOn(WebsocketClient, 'sendEvent')
         .mockImplementation(async () => {}),
     }
-
-    vi.spyOn(plans, 'SubscriptionPlans', 'get').mockReturnValue(
-      SubscriptionPlansMock as any,
-    )
   })
 
   it('succeeds when consuming billable credits', async () => {

@@ -72,6 +72,23 @@ CLIENT_ERROR = ApiError(
     db_ref=None,
 )
 
+NOT_FOUND_ERROR_RESPONSE: dict[str, Any] = {
+    "name": "NotFoundError",
+    "message": "Project ID is required",
+    "errorCode": "not_found_error",
+    "details": {},
+}
+
+
+NOT_FOUND_ERROR = ApiError(
+    status=404,
+    code=ApiErrorCodes.NotFoundError,
+    message="Project ID is required",
+    response=mock.ANY,
+    db_ref=None,
+)
+
+
 PROMPT_RESPONSE: dict[str, Any] = {
     "uuid": "e01a1035-6ed3-4edc-88e6-c0748ea300c7",
     "path": "prompt",

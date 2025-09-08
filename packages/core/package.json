@@ -28,6 +28,10 @@
       "types": "./dist/types/data-access/*.d.ts",
       "import": "./src/data-access/*.ts"
     },
+    "./data-migrations": {
+      "types": "./dist/types/data-migrations/index.d.ts",
+      "import": "./src/data-migrations/index.ts"
+    },
     "./events/*": {
       "types": "./dist/types/events/*.d.ts",
       "import": "./src/events/*.ts"

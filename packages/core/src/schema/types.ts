@@ -423,3 +423,10 @@ export interface ProjectStats {
 }
 
 export type ProjectLimitedView = ProjectStats
+
+export type WorkspaceLimits = {
+  seats: number
+  runs: number
+  credits: number
+  resetsAt: Date
+}

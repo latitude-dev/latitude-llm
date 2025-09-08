@@ -1,18 +1,18 @@
-import Stripe from 'stripe'
 import { eq } from 'drizzle-orm'
-
+import Stripe from 'stripe'
+import { Subscription, Workspace } from '../../browser'
 import { Database } from '../../client'
-import { workspaces } from '../../schema/models/workspaces'
-import { subscriptions } from '../../schema/models/subscriptions'
-import { SubscriptionPlan } from '../../plans'
-import { Result, TypedResult } from '../../lib/Result'
-import { LatitudeError } from '../../lib/errors'
 import {
   unsafelyFindUserByEmail,
   unsafelyFindWorkspacesFromUser,
 } from '../../data-access'
-import { Subscription, Workspace } from '../../browser'
+import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
+import { LatitudeError } from '../../lib/errors'
+import { SubscriptionPlan } from '../../plans'
+import { subscriptions } from '../../schema/models/subscriptions'
+import { workspaces } from '../../schema/models/workspaces'
+import { issueSubscriptionGrants } from '../subscriptions/grants'
 
 // Infer the transaction type from the Drizzle instance
 export type TransactionType = Parameters<
@@ -131,6 +131,11 @@ export async function handleSubscriptionUpdate(
           },
         )
       }
+
+      await issueSubscriptionGrants(
+        { subscription: newSubscription, workspace },
+        transaction,
+      ).then((r) => r.unwrap())
 
       return Result.ok({
         workspace: updatedWorkspace,

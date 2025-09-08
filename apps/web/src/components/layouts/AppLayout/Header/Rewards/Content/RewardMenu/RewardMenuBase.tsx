@@ -129,6 +129,7 @@ export function RewardMenuBase({
         </Step>
       ))}
       <div className='flex w-full justify-end'>
+        {/* TODO(rewards): create CTA*/}
         <Button fancy disabled={buttonDisabled} onClick={claimFn}>
           {buttonDisabled
             ? (config.buttonConfig?.alreadyClamedLabel ??

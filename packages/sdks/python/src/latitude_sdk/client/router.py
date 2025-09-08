@@ -4,7 +4,7 @@ from latitude_sdk.client.payloads import (
     AnnotateEvaluationRequestParams,
     ChatPromptRequestParams,
     CreateLogRequestParams,
-    GetAllPromptRequestParams,
+    GetAllPromptsRequestParams,
     GetAllVersionsRequestParams,
     GetOrCreatePromptRequestParams,
     GetPromptRequestParams,
@@ -38,7 +38,7 @@ class Router:
             ).prompt(params.path)
 
         if handler == RequestHandler.GetAllPrompts:
-            assert isinstance(params, GetAllPromptRequestParams)
+            assert isinstance(params, GetAllPromptsRequestParams)
 
             return (
                 "GET",

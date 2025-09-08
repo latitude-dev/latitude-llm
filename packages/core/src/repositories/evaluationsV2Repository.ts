@@ -16,7 +16,6 @@ import { Result } from '../lib/Result'
 import { commits, evaluationVersions, projects } from '../schema'
 import { CommitsRepository } from './commitsRepository'
 import Repository from './repositoryV2'
-import { PromisedResult } from '../lib/Transaction'
 
 const tt = {
   ...getTableColumns(evaluationVersions),
@@ -153,17 +152,19 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
       .from(evaluationVersions)
       .where(
         and(
+          // Not using this.scopeFilter because we want to receive deleted evaluations too
           eq(evaluationVersions.workspaceId, this.workspaceId),
           eq(evaluationVersions.evaluationUuid, evaluationUuid),
           ne(evaluationVersions.commitId, commitId),
         ),
       )
+      .limit(1)
       .then((r) => r[0])
 
     return Result.ok<boolean>(!!result?.exists)
   }
 
-  async getChangesInCommit(commit: Commit): PromisedResult<EvaluationV2[]> {
+  async getChangesInCommit(commit: Commit) {
     const result = await this.db
       .select(tt)
       .from(evaluationVersions)
@@ -176,6 +177,6 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
       )
       .orderBy(desc(evaluationVersions.createdAt), desc(evaluationVersions.id))
 
-    return Result.ok(result)
+    return Result.ok<EvaluationV2[]>(result)
   }
 }

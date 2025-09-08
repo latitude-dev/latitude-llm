@@ -103,6 +103,7 @@ export async function computeWorkspaceUsage(
   const members = await membersRepo.findAll().then((r) => r.unwrap())
   const usageResult: WorkspaceUsage = {
     usage,
+    // TODO(grants): use grants table instead of this
     max: currentSubscriptionPlan.credits + extraRuns,
     members: members.length,
     maxMembers: currentSubscriptionPlan.users,

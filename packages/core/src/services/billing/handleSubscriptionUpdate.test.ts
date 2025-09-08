@@ -1,18 +1,47 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import Stripe from 'stripe'
 import { eq } from 'drizzle-orm'
-
-import { database } from '../../client'
-import { handleSubscriptionUpdate } from './handleSubscriptionUpdate'
+import Stripe from 'stripe'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  createUser,
-  createSubscription,
-  createProject,
-} from '../../tests/factories'
-import { workspaces } from '../../schema/models/workspaces'
-import { SubscriptionPlan } from '../../plans'
+  QuotaType,
+  SubscriptionPlan,
+  SubscriptionPlans,
+  User,
+  Workspace,
+} from '../../browser'
+import { database } from '../../client'
 import { LatitudeError } from '../../lib/errors'
-import { User, Workspace } from '../../browser'
+import * as plans from '../../plans'
+import { workspaces } from '../../schema/models/workspaces'
+import {
+  createProject,
+  createSubscription,
+  createUser,
+} from '../../tests/factories'
+import { computeQuota } from '../grants/quota'
+import { issueSubscriptionGrants } from '../subscriptions/grants'
+import { handleSubscriptionUpdate } from './handleSubscriptionUpdate'
+
+const SubscriptionPlansMock = {
+  ...SubscriptionPlans,
+  [SubscriptionPlan.HobbyV1]: {
+    ...SubscriptionPlans[SubscriptionPlan.HobbyV1],
+    users: 1,
+    credits: 50_000,
+    latte_credits: 30,
+  },
+  [SubscriptionPlan.HobbyV2]: {
+    ...SubscriptionPlans[SubscriptionPlan.HobbyV2],
+    users: 1,
+    credits: 10_000,
+    latte_credits: 30,
+  },
+  [SubscriptionPlan.TeamV1]: {
+    ...SubscriptionPlans[SubscriptionPlan.TeamV1],
+    users: 5,
+    credits: 100_000,
+    latte_credits: 300,
+  },
+}
 
 const mockStripe = {
   customers: {
@@ -32,6 +61,14 @@ describe('handleSubscriptionUpdate', () => {
   let initialStripeSubscription: Partial<Stripe.Subscription>
 
   beforeEach(async () => {
+    vi.resetAllMocks()
+    vi.clearAllMocks()
+    vi.restoreAllMocks()
+
+    vi.spyOn(plans, 'SubscriptionPlans', 'get').mockReturnValue(
+      SubscriptionPlansMock as any,
+    )
+
     const { workspace, user } = await createProject({
       name: 'Test Workspace',
     })
@@ -78,6 +115,24 @@ describe('handleSubscriptionUpdate', () => {
     expect(workspace.currentSubscriptionId).toBe(subscription.id)
     expect(subscription.plan).toBe(SubscriptionPlan.TeamV1)
     expect(subscription.workspaceId).toBe(testWorkspace.id)
+    expect(
+      await computeQuota({
+        type: QuotaType.Seats,
+        workspace: workspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(5)
+    expect(
+      await computeQuota({
+        type: QuotaType.Runs,
+        workspace: workspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(100_000)
+    expect(
+      await computeQuota({
+        type: QuotaType.Credits,
+        workspace: workspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(300)
   })
 
   it('should upgrade an existing non-TeamV1 subscription to TeamV1', async () => {
@@ -102,6 +157,24 @@ describe('handleSubscriptionUpdate', () => {
     expect(workspace.currentSubscriptionId).toBe(newSubscription.id)
     expect(newSubscription.plan).toBe(SubscriptionPlan.TeamV1)
     expect(newSubscription.id).not.toBe(oldSub.id)
+    expect(
+      await computeQuota({
+        type: QuotaType.Seats,
+        workspace: workspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(5)
+    expect(
+      await computeQuota({
+        type: QuotaType.Runs,
+        workspace: workspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(100_000)
+    expect(
+      await computeQuota({
+        type: QuotaType.Credits,
+        workspace: workspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(300)
   })
 
   it('should do nothing if a TeamV1 subscription already exists and Stripe sub is active', async () => {
@@ -113,6 +186,11 @@ describe('handleSubscriptionUpdate', () => {
       .update(workspaces)
       .set({ currentSubscriptionId: existingTeamSub.id })
       .where(eq(workspaces.id, testWorkspace.id))
+
+    await issueSubscriptionGrants({
+      subscription: existingTeamSub,
+      workspace: testWorkspace,
+    }).then((r) => r.unwrap())
 
     const result = await handleSubscriptionUpdate({
       stripeSubscription: initialStripeSubscription as Stripe.Subscription,
@@ -126,6 +204,24 @@ describe('handleSubscriptionUpdate', () => {
     expect(workspace.currentSubscriptionId).toBe(existingTeamSub.id)
     expect(subscription.id).toBe(existingTeamSub.id)
     expect(subscription.plan).toBe(SubscriptionPlan.TeamV1)
+    expect(
+      await computeQuota({
+        type: QuotaType.Seats,
+        workspace: workspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(5)
+    expect(
+      await computeQuota({
+        type: QuotaType.Runs,
+        workspace: workspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(100_000)
+    expect(
+      await computeQuota({
+        type: QuotaType.Credits,
+        workspace: workspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(300)
   })
 
   it('should do nothing if Stripe subscription is not active', async () => {
@@ -142,8 +238,29 @@ describe('handleSubscriptionUpdate', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) throw result.error
 
-    const { subscription } = result.value!
+    const { workspace, subscription } = result.value!
+    expect(workspace.currentSubscriptionId).toBe(
+      testWorkspace.currentSubscriptionId,
+    )
     expect(subscription.plan).not.toBe(SubscriptionPlan.TeamV1)
+    expect(
+      await computeQuota({
+        type: QuotaType.Seats,
+        workspace: workspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(1)
+    expect(
+      await computeQuota({
+        type: QuotaType.Runs,
+        workspace: workspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(10_000)
+    expect(
+      await computeQuota({
+        type: QuotaType.Credits,
+        workspace: workspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(30)
   })
 
   it('should throw LatitudeError if Stripe customer ID is not a string', async () => {
@@ -159,6 +276,24 @@ describe('handleSubscriptionUpdate', () => {
     expect(result.ok).toBe(false)
     expect(result.error).toBeInstanceOf(LatitudeError)
     expect(result.error?.message).toBe('Stripe customer ID is not a string.')
+    expect(
+      await computeQuota({
+        type: QuotaType.Seats,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(1)
+    expect(
+      await computeQuota({
+        type: QuotaType.Runs,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(10_000)
+    expect(
+      await computeQuota({
+        type: QuotaType.Credits,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(30)
   })
 
   it('should throw LatitudeError if Stripe customer is deleted', async () => {
@@ -174,6 +309,24 @@ describe('handleSubscriptionUpdate', () => {
     expect(result.ok).toBe(false)
     expect(result.error).toBeInstanceOf(LatitudeError)
     expect(result.error?.message).toBe('Stripe customer has been deleted.')
+    expect(
+      await computeQuota({
+        type: QuotaType.Seats,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(1)
+    expect(
+      await computeQuota({
+        type: QuotaType.Runs,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(10_000)
+    expect(
+      await computeQuota({
+        type: QuotaType.Credits,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(30)
   })
 
   it('should throw LatitudeError if Stripe customer has no email', async () => {
@@ -189,6 +342,24 @@ describe('handleSubscriptionUpdate', () => {
     expect(result.error?.message).toBe(
       'Stripe customer does not have an email.',
     )
+    expect(
+      await computeQuota({
+        type: QuotaType.Seats,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(1)
+    expect(
+      await computeQuota({
+        type: QuotaType.Runs,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(10_000)
+    expect(
+      await computeQuota({
+        type: QuotaType.Credits,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(30)
   })
 
   it('should throw LatitudeError if user not found in DB', async () => {
@@ -206,6 +377,24 @@ describe('handleSubscriptionUpdate', () => {
     expect(result.error?.message).toBe(
       `User with email wat@example.com not found.`,
     )
+    expect(
+      await computeQuota({
+        type: QuotaType.Seats,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(1)
+    expect(
+      await computeQuota({
+        type: QuotaType.Runs,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(10_000)
+    expect(
+      await computeQuota({
+        type: QuotaType.Credits,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(30)
   })
 
   it('should throw LatitudeError if no workspace found for user (via membership)', async () => {
@@ -223,10 +412,27 @@ describe('handleSubscriptionUpdate', () => {
     })
 
     expect(result.ok).toBe(false)
-
     expect(result.error).toBeInstanceOf(LatitudeError)
     expect(result.error?.message).toBe(
       `No workspace found for user ${userWithNoWorkspace.id}.`,
     )
+    expect(
+      await computeQuota({
+        type: QuotaType.Seats,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(1)
+    expect(
+      await computeQuota({
+        type: QuotaType.Runs,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(10_000)
+    expect(
+      await computeQuota({
+        type: QuotaType.Credits,
+        workspace: testWorkspace,
+      }).then((r) => r.unwrap().limit),
+    ).toEqual(30)
   })
 })

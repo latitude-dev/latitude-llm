@@ -1,12 +1,27 @@
-#!/usr/bin/env -S NODE_DEBUG=latitude:debug pnpx dotenv-cli -e .env.development -- tsx
+#!/usr/bin/env node
 
+import { spawn } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
-import { chdir } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-chdir(resolve(__dirname, '../apps/console'))
+const rootDir = resolve(__dirname, '..')
+const consoleDir = resolve(__dirname, '../apps/console')
+const envFile = resolve(rootDir, '.env.development')
 
-import('../apps/console/src/index.ts')
+// Run tsx with the correct working directory and environment
+const child = spawn(
+  'pnpm',
+  ['exec', 'dotenv', '-e', envFile, '--', 'tsx', 'src/index.ts'],
+  {
+    cwd: consoleDir,
+    stdio: 'inherit',
+    env: { ...process.env, NODE_DEBUG: 'latitude:debug' },
+  },
+)
+
+child.on('exit', (code) => {
+  process.exit(code || 0)
+})
