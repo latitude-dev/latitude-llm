@@ -6,13 +6,13 @@ import { IntegrationType } from '@latitude-data/constants'
 import { buildLatitudeIntegration } from '../../../../integrations/buildLatitudeIntegration'
 
 const listIntegrationTriggers = defineLatteTool(
-  async ({ appNickname }, { workspace }) => {
+  async ({ appName }, { workspace }) => {
     // For Latte, Latitude is an integration with its own triggers and tools for better overall understanding
-    if (appNickname === IntegrationType.Latitude) {
+    if (appName === IntegrationType.Latitude) {
       const latitudeIntegration = buildLatitudeIntegration(workspace)
       const triggersResult = await listTriggers({
         integrationType: latitudeIntegration.type,
-        appNickname: latitudeIntegration.name,
+        appName: latitudeIntegration.name,
       })
       if (!Result.isOk(triggersResult)) return triggersResult
       const triggers = triggersResult.value
@@ -21,7 +21,7 @@ const listIntegrationTriggers = defineLatteTool(
 
     const triggersResult = await listTriggers({
       integrationType: IntegrationType.Pipedream,
-      appNickname,
+      appName,
     })
     if (!Result.isOk(triggersResult)) return triggersResult
     const triggers = triggersResult.value
@@ -29,7 +29,7 @@ const listIntegrationTriggers = defineLatteTool(
     return Result.ok(triggers)
   },
   z.object({
-    appNickname: z.string(),
+    appName: z.string(),
   }),
 )
 

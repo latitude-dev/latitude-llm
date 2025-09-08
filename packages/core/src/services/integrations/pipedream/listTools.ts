@@ -5,10 +5,10 @@ import { PromisedResult } from '../../../lib/Transaction'
 import { pipedreamComponentToToolDefinition } from './helpers/ComponentConverter'
 
 export async function listPipedreamIntegrationTools(
-  integrationAppName: string,
+  appName: string,
 ): PromisedResult<McpTool[]> {
   const appResult = await getApp({
-    name: integrationAppName,
+    name: appName,
   })
 
   if (!Result.isOk(appResult)) return appResult
