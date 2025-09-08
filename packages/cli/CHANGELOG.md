@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 
+## [2.0.4] - 2025-09-08
+
+### Added
+
+- Adds `login` command to change the stored API key.
+
 ## [2.0.3] - 2025-09-08
 
 ### Changed

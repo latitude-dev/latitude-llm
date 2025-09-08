@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import { init, pull, push, checkout, status } from './commands'
+import { init, pull, push, checkout, status, login } from './commands'
 import { help } from './commands/help'
 
 // Version constant that gets replaced at build time
@@ -20,6 +20,7 @@ pull(program)
 push(program)
 checkout(program)
 status(program)
+login(program)
 help(program)
 
 // Parse command line arguments
