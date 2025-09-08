@@ -7,8 +7,8 @@ import { listPipedreamIntegrationTools } from '../../../../integrations/pipedrea
 import { Result } from '../../../../../lib/Result'
 
 const listIntegrationTools = defineLatteTool(
-  async ({ integrationAppName }) => {
-    const toolsResult = await listPipedreamIntegrationTools(integrationAppName)
+  async ({ appNickname }) => {
+    const toolsResult = await listPipedreamIntegrationTools(appNickname)
     if (!Result.isOk(toolsResult)) return toolsResult
 
     const tools = toolsResult.value
@@ -19,7 +19,7 @@ const listIntegrationTools = defineLatteTool(
     return Result.ok(fixedTools as McpTool[])
   },
   z.object({
-    integrationAppName: z.string(),
+    appNickname: z.string(),
   }),
 )
 

@@ -6,10 +6,10 @@ import { IntegrationType } from '@latitude-data/constants'
 
 export async function listTriggers({
   integrationType,
-  integrationAppName,
+  appNickname,
 }: {
   integrationType: IntegrationType
-  integrationAppName: string
+  appNickname: string
 }): PromisedResult<
   {
     name: string
@@ -37,8 +37,7 @@ export async function listTriggers({
   }
 
   if (integrationType === IntegrationType.Pipedream) {
-    const triggerResult =
-      await listPipedreamIntegrationTriggers(integrationAppName)
+    const triggerResult = await listPipedreamIntegrationTriggers(appNickname)
     if (!Result.isOk(triggerResult)) return triggerResult
     const triggers = triggerResult.value
     return Result.ok(triggers)

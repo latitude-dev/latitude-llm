@@ -104,8 +104,8 @@ export function integrationPresenter(integration: IntegrationDto) {
   if (integration.type === IntegrationType.Pipedream) {
     return {
       id: integration.id,
-      name: integration.name,
-      type: integration.configuration.appName,
+      appNickname: integration.name,
+      appName: integration.configuration.appName,
       hasTools: integration.hasTools,
       hasTriggers: integration.hasTriggers,
     }
@@ -113,8 +113,8 @@ export function integrationPresenter(integration: IntegrationDto) {
 
   if (integration.type === IntegrationType.Latitude) {
     return {
-      name: integration.name,
-      type: integration.type,
+      appNickname: integration.name,
+      appName: integration.type,
       hasTools: integration.hasTools,
       hasTriggers: integration.hasTriggers,
     }

@@ -3,10 +3,10 @@ import { getApp } from './apps'
 import { Result } from '../../../lib/Result'
 
 export async function listPipedreamIntegrationTriggers(
-  integrationAppName: string,
+  appNickname: string,
 ): PromisedResult<{ name: string; description?: string }[]> {
   const appResult = await getApp({
-    name: integrationAppName,
+    name: appNickname,
   })
 
   if (!Result.isOk(appResult)) return appResult
