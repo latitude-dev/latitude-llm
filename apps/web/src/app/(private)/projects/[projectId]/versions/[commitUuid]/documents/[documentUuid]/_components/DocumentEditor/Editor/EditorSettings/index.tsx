@@ -34,46 +34,48 @@ export const EditorSettings = memo(
       })
 
     return (
-      <DropdownMenu
-        triggerButtonProps={{
-          variant: 'outline',
-          size: 'small',
-          className: '!bg-background',
-        }}
-        options={[
-          {
-            label: 'Show line numbers',
-            onClick: () => setShowLineNumbers(!showLineNumbers),
-            checked: showLineNumbers,
-          },
-          {
-            label: 'Wrap text',
-            onClick: () => setWrapText(!wrapText),
-            checked: wrapText,
-          },
-          {
-            label: 'Show minimap',
-            onClick: () => setShowMinimap(!showMinimap),
-            checked: showMinimap,
-          },
-          {
-            label: 'Auto closing tags',
-            onClick: () => setAutoClosingTags(!autoClosingTags),
-            checked: autoClosingTags,
-          },
-          ...(copilotEnabled
-            ? [
-                {
-                  label: 'Show Copilot',
-                  onClick: () => setShowCopilot(!showCopilot),
-                  checked: showCopilot,
-                },
-              ]
-            : []),
-        ]}
-        side='bottom'
-        align='end'
-      />
+      <div className='flex flex-row items-center'>
+        <DropdownMenu
+          triggerButtonProps={{
+            variant: 'outline',
+            size: 'small',
+            className: '!bg-background',
+          }}
+          options={[
+            {
+              label: 'Show line numbers',
+              onClick: () => setShowLineNumbers(!showLineNumbers),
+              checked: showLineNumbers,
+            },
+            {
+              label: 'Wrap text',
+              onClick: () => setWrapText(!wrapText),
+              checked: wrapText,
+            },
+            {
+              label: 'Show minimap',
+              onClick: () => setShowMinimap(!showMinimap),
+              checked: showMinimap,
+            },
+            {
+              label: 'Auto closing tags',
+              onClick: () => setAutoClosingTags(!autoClosingTags),
+              checked: autoClosingTags,
+            },
+            ...(copilotEnabled
+              ? [
+                  {
+                    label: 'Show Copilot',
+                    onClick: () => setShowCopilot(!showCopilot),
+                    checked: showCopilot,
+                  },
+                ]
+              : []),
+          ]}
+          side='bottom'
+          align='end'
+        />
+      </div>
     )
   },
 )

@@ -40,13 +40,15 @@ export function LatteDiffManager() {
 
   const handleNavigateToCheckpoint = useCallback(
     (direction: 'prev' | 'next') => {
-      if (!checkpoints.length || currentCheckpointIndex === -1) return
-
+      if (!checkpoints.length) return
       const newIndex =
-        direction === 'prev'
-          ? Math.max(0, currentCheckpointIndex - 1)
-          : Math.min(checkpoints.length - 1, currentCheckpointIndex + 1)
-
+        currentCheckpointIndex === -1
+          ? direction === 'prev'
+            ? checkpoints.length - 1
+            : 0
+          : direction === 'prev'
+            ? Math.max(0, currentCheckpointIndex - 1)
+            : Math.min(checkpoints.length - 1, currentCheckpointIndex + 1)
       if (newIndex !== currentCheckpointIndex) {
         const targetCheckpoint = checkpoints[newIndex]
         navigate.push(
@@ -92,60 +94,84 @@ export function LatteDiffManager() {
     })
   }, [acceptPartialChanges, document.documentUuid])
 
+  const handleReviewNextFile = useCallback(() => {
+    handleNavigateToCheckpoint('next')
+  }, [handleNavigateToCheckpoint])
+
   if (!devMode) return null
   if (!checkpoints.length) return null
 
   return (
     <div className='border flex flex-row gap-4 items-center bg-background rounded-xl p-1'>
-      {checkpoints.length > 1 && (
+      {diff && checkpoints.length > 1 && (
         <div className='flex flex-1 flex-noShrink flex-row gap-1 items-center'>
           <Button
             size='small'
             variant='ghost'
             onClick={() => handleNavigateToCheckpoint('prev')}
-            disabled={isBrewing || currentCheckpointIndex <= 0}
-            iconProps={{
-              name: 'chevronLeft',
-            }}
+            disabled={
+              isBrewing ||
+              (currentCheckpointIndex !== -1
+                ? currentCheckpointIndex <= 0
+                : false)
+            }
+            iconProps={{ name: 'chevronLeft' }}
           />
           <Text.H6M color='foregroundMuted' noWrap>
-            {currentCheckpointIndex + 1} / {checkpoints.length}
+            {currentCheckpointIndex === -1 ? '—' : currentCheckpointIndex + 1} /{' '}
+            {checkpoints.length}
           </Text.H6M>
           <Button
             size='small'
             variant='ghost'
             onClick={() => handleNavigateToCheckpoint('next')}
             disabled={
-              isBrewing || currentCheckpointIndex >= checkpoints.length - 1
+              isBrewing ||
+              (currentCheckpointIndex !== -1
+                ? currentCheckpointIndex >= checkpoints.length - 1
+                : false)
             }
-            iconProps={{
-              name: 'chevronRight',
-            }}
+            iconProps={{ name: 'chevronRight' }}
           />
         </div>
       )}
-      <div className='flex flex-row gap-2 items-center'>
-        <Button
-          size='small'
-          variant='ghost'
-          onClick={handlePartialRejectChange}
-          disabled={isBrewing || !diff}
-          iconProps={{
-            name: 'undo',
-          }}
-        >
-          Undo
-        </Button>
-        <Button
-          size='small'
-          variant='primaryMuted'
-          onClick={handlePartialAcceptChange}
-          iconProps={{ name: 'check' }}
-          disabled={isBrewing || !diff}
-        >
-          Keep
-        </Button>
-      </div>
+      {!diff && checkpoints.length > 0 ? (
+        <div className='flex-shrink-0'>
+          <Button
+            size='small'
+            variant='primaryMuted'
+            onClick={handleReviewNextFile}
+            iconProps={{ name: 'arrowRight' }}
+            disabled={isBrewing}
+            className='flex-shrink-0'
+          >
+            Review next file
+          </Button>
+        </div>
+      ) : diff ? (
+        <div className='flex flex-row gap-2 items-center'>
+          <Button
+            size='small'
+            variant='ghost'
+            onClick={handlePartialRejectChange}
+            disabled={isBrewing || !diff}
+            iconProps={{
+              name: 'undo',
+            }}
+          >
+            Undo
+          </Button>
+          <Button
+            size='small'
+            variant='primaryMuted'
+            onClick={handlePartialAcceptChange}
+            iconProps={{ name: 'check' }}
+            disabled={isBrewing || !diff}
+          >
+            Keep
+          </Button>
+        </div>
+      ) : null}
     </div>
   )
 }
