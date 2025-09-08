@@ -92,8 +92,8 @@ export function LatteDiffManager() {
     })
   }, [acceptPartialChanges, document.documentUuid])
 
-  if (!diff) return null
   if (!devMode) return null
+  if (!checkpoints.length) return null
 
   return (
     <div className='border flex flex-row gap-4 items-center bg-background rounded-xl p-1'>
@@ -129,7 +129,7 @@ export function LatteDiffManager() {
           size='small'
           variant='ghost'
           onClick={handlePartialRejectChange}
-          disabled={isBrewing}
+          disabled={isBrewing || !diff}
           iconProps={{
             name: 'undo',
           }}
@@ -141,7 +141,7 @@ export function LatteDiffManager() {
           variant='primaryMuted'
           onClick={handlePartialAcceptChange}
           iconProps={{ name: 'check' }}
-          disabled={isBrewing}
+          disabled={isBrewing || !diff}
         >
           Keep
         </Button>
