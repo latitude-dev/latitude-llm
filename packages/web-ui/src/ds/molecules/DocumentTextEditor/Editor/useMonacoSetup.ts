@@ -1,20 +1,14 @@
 import { useCallback, useEffect, useRef } from 'react'
 
 import { type Monaco } from '@monaco-editor/react'
-import { type languages } from 'monaco-editor'
 
 import {
   themeRules,
   tokenizer,
   useThemeColors,
 } from '../../../../lib/monacoEditor/language'
-import { DocumentError } from '../types'
 
-export function useMonacoSetup({
-  errorFixFn,
-}: {
-  errorFixFn?: (errors: DocumentError[]) => void
-} = {}) {
+export function useMonacoSetup() {
   const monacoRef = useRef<Monaco | null>(null)
   const themeColors = useThemeColors()
 
@@ -54,54 +48,8 @@ export function useMonacoSetup({
         brackets: [['{{', '}}']],
       })
       applyTheme(monaco)
-
-      monaco.editor.addCommand({
-        id: 'fixErrors',
-        run: (_, ...errors: DocumentError[]) => errorFixFn?.(errors),
-      })
-
-      if (errorFixFn) {
-        const codeActionProvider: languages.CodeActionProvider = {
-          provideCodeActions: (_, __, context, ___) => {
-            const actions = [
-              {
-                title: 'Fix with copilot',
-                diagnostics: context.markers,
-                kind: 'quickfix',
-                isPreferred: true,
-                edit: {
-                  edits: [],
-                },
-                command: {
-                  id: 'fixErrors',
-                  title: 'Fix with copilot',
-                  arguments: context.markers.map((marker) => ({
-                    message: marker.message,
-                    startLineNumber: marker.startLineNumber,
-                    startColumn: marker.startColumn,
-                  })),
-                },
-              },
-            ]
-
-            return {
-              actions,
-              dispose: () => {},
-            }
-          },
-        }
-
-        const disposable = monaco.languages.registerCodeActionProvider(
-          'document',
-          codeActionProvider,
-        )
-
-        return () => {
-          disposable.dispose()
-        }
-      }
     },
-    [applyTheme, errorFixFn],
+    [applyTheme],
   )
 
   return { monacoRef, handleEditorWillMount }
