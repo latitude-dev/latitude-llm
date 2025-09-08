@@ -58,8 +58,8 @@ function getDescriptionFromLatteTool(
 
     case LatteTool.listExistingIntegrations:
       return {
-        activeDescription: `Gathering available integrations...`,
-        finishedDescription: `Gathered available integrations`,
+        activeDescription: `Gathering existing integrations...`,
+        finishedDescription: `Gathered existing integrations`,
       }
 
     case LatteTool.listIntegrationTools:
@@ -94,8 +94,8 @@ function getDescriptionFromLatteTool(
 
     case LatteTool.searchAvailableIntegrations:
       return {
-        activeDescription: `Searching useful integrations...`,
-        finishedDescription: `Searched useful integrations`,
+        activeDescription: `Searching integrations with keyword ${params.query}...`,
+        finishedDescription: `Searched integrations with keyword ${params.query}`,
       }
 
     case LatteTool.createIntegration:
