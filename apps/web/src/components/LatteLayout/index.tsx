@@ -10,7 +10,7 @@ export function LatteLayout({ children }: { children: ReactNode }) {
     <SplitPane
       direction='horizontal'
       initialPercentage={50}
-      minSize={400 + 32} // 400px (tabs) + 32px (x-padding)
+      minSize={500 + 32} // 500 (tabs + deploy button) + 32px (x-padding)
       firstPane={children}
       secondPane={
         <ClientOnly>
