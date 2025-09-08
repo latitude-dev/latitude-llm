@@ -1,11 +1,20 @@
-import { Latitude } from '$sdk/index'
+import { Latitude } from '../../dist/index.js'
 import { describe, expect, it, vi, beforeAll } from 'vitest'
+
+// HOW TO RUN THESE TESTS:
+//
+// 1. Start the latitude services locally
+// 2. Remove the `.skip` from the describe block
+// 3. Set the TEST_LATITUDE_API_KEY environment variable with a valid API key
+// 4. Ensure a provider with valid api key that matches the promptContent :point_down: is available
+// 5. Build the sdk package with `pnpm build`
+// 6. Run the test
 
 describe.skip('SDK Integration Tests (E2E)', () => {
   const apiKey = process.env.TEST_LATITUDE_API_KEY!
   const promptPath = 'weather-assistant'
   const promptContent = `---
-provider: Latitude
+provider: OpenAI
 model: gpt-4o-mini
 tools:
   get_weather:
@@ -47,8 +56,7 @@ Location: {{ location }}
 
     try {
       // Create or get project
-      let project
-      let versionUuid = '3ca7d0de-f1ac-4b85-b922-02123c0b9eb8'
+      let project, versionUuid
 
       try {
         const existingProjects = await setupSdk.projects.getAll()
@@ -58,6 +66,9 @@ Location: {{ location }}
           const result = await setupSdk.projects.create('E2E Test Project')
           project = result.project
           versionUuid = result.version.uuid
+        } else {
+          const versions = await setupSdk.versions.getAll(project.id)
+          versionUuid = versions[0].uuid
         }
       } catch (error) {
         // If we can't get projects, create a new one
