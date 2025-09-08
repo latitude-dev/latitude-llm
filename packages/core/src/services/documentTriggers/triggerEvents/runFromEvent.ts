@@ -1,5 +1,6 @@
 import { DocumentTriggerType, LogSources } from '@latitude-data/constants'
 import {
+  Commit,
   DocumentTrigger,
   DocumentTriggerEvent,
   Workspace,
@@ -7,7 +8,6 @@ import {
 import { Result, TypedResult } from '../../../lib/Result'
 import { NotImplementedError } from '@latitude-data/constants/errors'
 import {
-  CommitsRepository,
   DocumentTriggersRepository,
   DocumentVersionsRepository,
 } from '../../../repositories'
@@ -41,15 +41,12 @@ export async function runDocumentFromTriggerEvent<
 >({
   workspace,
   documentTriggerEvent,
+  commit,
 }: {
   workspace: Workspace
   documentTriggerEvent: DocumentTriggerEvent<T>
+  commit: Commit
 }) {
-  const commitsScope = new CommitsRepository(workspace.id)
-  const commitResult = await commitsScope.find(documentTriggerEvent.commitId)
-  if (!Result.isOk(commitResult)) return commitResult
-  const commit = commitResult.unwrap()
-
   const documentTriggersRepository = new DocumentTriggersRepository(
     workspace.id,
   )

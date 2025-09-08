@@ -113,7 +113,7 @@ describe('findAndRegisterScheduledTriggerEvents', () => {
       const events = result.unwrap()
       expect(events).toHaveLength(1)
       expect(events[0]!.triggerUuid).toBe(trigger.uuid)
-      expect(events[0]!.commitId).toBe(live.id)
+      expect(events[0]!.triggerHash).toBe(trigger.triggerHash)
       expect(events[0]!.workspaceId).toBe(workspace.id)
     })
 
@@ -188,7 +188,7 @@ describe('findAndRegisterScheduledTriggerEvents', () => {
 
       expect(event).toBeTruthy()
       expect(event!.triggerUuid).toBe(trigger.uuid)
-      expect(event!.commitId).toBe(live.id)
+      expect(event!.triggerHash).toBe(trigger.triggerHash)
       expect(event!.workspaceId).toBe(workspace.id)
       expect(event!.payload).toEqual({})
     })
@@ -309,10 +309,6 @@ describe('findAndRegisterScheduledTriggerEvents', () => {
         workspace,
       })
 
-      const anotherLive = await mergeCommit(anotherDraft).then((r) =>
-        r.unwrap(),
-      )
-
       // Create trigger on the old live commit (which is now merged but not the current live)
       const pastDate = new Date(Date.now() - 60 * 60 * 1000)
       const trigger = await factories.createScheduledDocumentTrigger({
@@ -331,7 +327,7 @@ describe('findAndRegisterScheduledTriggerEvents', () => {
       expect(events).toHaveLength(1)
 
       // Event should use the current live commit, not the trigger's commit
-      expect(events[0]!.commitId).toBe(anotherLive.id)
+      expect(events[0]!.triggerHash).toBe(trigger.triggerHash)
       expect(events[0]!.triggerUuid).toBe(trigger.uuid)
     })
   })
@@ -345,6 +341,7 @@ describe('findAndRegisterScheduledTriggerEvents', () => {
         commitId: live.id,
         documentUuid: document.documentUuid,
         triggerType: DocumentTriggerType.Scheduled,
+        triggerHash: '',
         configuration: { cronExpression: '0 * * * *' },
         deploymentSettings: null, // Not deployed
       })

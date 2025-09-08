@@ -30,9 +30,9 @@ export const GET = errorHandler(
         })
         .then((r) => r.unwrap())
 
-      // Validate that the trigger exists
+      // Get trigger
       const documentTriggersScope = new DocumentTriggersRepository(workspace.id)
-      await documentTriggersScope
+      const trigger = await documentTriggersScope
         .getTriggerByUuid({ commit, uuid: triggerUuid })
         .then((r) => r.unwrap())
 
@@ -44,7 +44,7 @@ export const GET = errorHandler(
       // pagination but the UI for now is to consume latest events
       const limit = 200
       const triggerEvents = await triggerEventsScope
-        .getTriggerEventsInTrigger({ triggerUuid, commit, limit })
+        .findByTrigger(trigger, limit)
         .then((r) => r.unwrap())
 
       return NextResponse.json(triggerEvents, { status: 200 })

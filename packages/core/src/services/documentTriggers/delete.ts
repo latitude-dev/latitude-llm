@@ -133,7 +133,7 @@ export async function deleteDocumentTrigger<T extends DocumentTriggerType>(
             documentUuid: liveDocumentTrigger.documentUuid,
             triggerType: liveDocumentTrigger.triggerType,
             configuration: liveDocumentTrigger.configuration,
-
+            triggerHash: liveDocumentTrigger.triggerHash,
             commitId: commit.id,
             deletedAt: new Date(),
             triggerStatus: DocumentTriggerStatus.Deprecated,

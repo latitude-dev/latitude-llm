@@ -8,6 +8,7 @@ import { documentTriggers } from '../../schema'
 import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { deployDocumentTrigger } from './deploy'
 import { publisher } from '../../events/publisher'
+import { createTriggerHash } from './helpers/triggerHash'
 
 export async function createDocumentTrigger<
   T extends DocumentTriggerType = DocumentTriggerType,
@@ -53,6 +54,8 @@ export async function createDocumentTrigger<
   const { deploymentSettings, triggerStatus } =
     deploymentSettingsResult.unwrap()
 
+  const triggerHash = createTriggerHash({ configuration })
+
   return await transaction.call(
     async (tx) => {
       const [documentTrigger] = (await tx
@@ -67,6 +70,7 @@ export async function createDocumentTrigger<
           configuration,
           deploymentSettings,
           triggerStatus,
+          triggerHash,
         })
         .returning()) as DocumentTrigger<T>[]
 

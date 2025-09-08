@@ -7,6 +7,7 @@ import {
   timestamp,
   uuid,
   uniqueIndex,
+  text,
 } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
@@ -58,6 +59,7 @@ export const documentTriggers = latitudeSchema.table(
     configuration: jsonb('configuration')
       .$type<DocumentTriggerConfiguration<DocumentTriggerType>>()
       .notNull(),
+    triggerHash: text('trigger_hash').notNull(),
     deploymentSettings: jsonb(
       'deployment_settings',
     ).$type<DocumentTriggerDeploymentSettings<DocumentTriggerType> | null>(), // When NULL, the trigger is not deployed
@@ -79,5 +81,6 @@ export const documentTriggers = latitudeSchema.table(
     ).on(sql`(deployment_settings->>'nextRunTime')`),
     // Index on triggerType to quickly find scheduled triggers
     triggerTypeIdx: index('document_trigger_type_idx').on(table.triggerType),
+    triggerHashIdx: index('document_trigger_hash_idx').on(table.triggerHash),
   }),
 )

@@ -66,10 +66,7 @@ describe('createDocumentTriggerEvent', () => {
 
     const eventsRepo = new DocumentTriggerEventsRepository(workspace.id)
     const events = await eventsRepo
-      .getTriggerEventsInTrigger({
-        triggerUuid: trigger.uuid,
-        commit,
-      })
+      .findByTrigger(trigger)
       .then((r) => r.unwrap())
 
     const event = events[0]!
@@ -79,7 +76,7 @@ describe('createDocumentTriggerEvent', () => {
     expect(event.workspaceId).toBe(workspace.id)
     expect(event.triggerUuid).toBe(trigger.uuid)
     expect(event.triggerType).toBe(DocumentTriggerType.Email)
-    expect(event.commitId).toBe(commit.id)
+    expect(event.triggerHash).toBe(trigger.triggerHash)
     expect(event.payload).toEqual(emailEventPayload)
   })
 
@@ -111,7 +108,7 @@ describe('createDocumentTriggerEvent', () => {
           workspaceId: workspace.id,
           triggerUuid: trigger.uuid,
           triggerType: DocumentTriggerType.Email,
-          commitId: commit.id,
+          triggerHash: trigger.triggerHash,
           payload: emailEventPayload,
         }),
       },

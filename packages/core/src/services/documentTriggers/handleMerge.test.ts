@@ -14,6 +14,7 @@ import {
 } from '../../browser'
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
+import { createTriggerHash } from './helpers/triggerHash'
 // Note: avoid static imports of modules that import `./deploy` to ensure mocks apply
 
 const mocks: {
@@ -184,6 +185,14 @@ describe('handleTriggerMerge', () => {
     const { v4: uuidv4 } = await import('uuid')
 
     const triggerUuid = uuidv4()
+    const triggerHash = createTriggerHash({
+      configuration: {
+        integrationId: integration.id,
+        componentId: 'slack.functions.send_message_to_channel',
+        properties: {},
+        payloadParameters: [],
+      },
+    })
     const [trigger] = await database
       .insert(documentTriggers)
       .values({
@@ -201,6 +210,7 @@ describe('handleTriggerMerge', () => {
           payloadParameters: [],
         },
         deploymentSettings: null,
+        triggerHash,
         enabled: false,
       })
       .returning()
@@ -303,6 +313,14 @@ describe('handleTriggerMerge', () => {
     const { v4: uuidv4 } = await import('uuid')
 
     const pendingTriggerUuid = uuidv4()
+    const pendingTriggerHash = createTriggerHash({
+      configuration: {
+        integrationId: integration.id,
+        componentId: 'slack.functions.send_message_to_channel',
+        properties: {},
+        payloadParameters: [],
+      },
+    })
     await database.insert(documentTriggers).values({
       uuid: pendingTriggerUuid,
       workspaceId: workspace.id,
@@ -318,6 +336,7 @@ describe('handleTriggerMerge', () => {
         payloadParameters: [],
       },
       deploymentSettings: null,
+      triggerHash: pendingTriggerHash,
       enabled: false,
     })
 

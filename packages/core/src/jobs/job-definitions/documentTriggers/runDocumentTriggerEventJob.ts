@@ -1,11 +1,16 @@
 import { Job } from 'bullmq'
-import { DocumentTriggerEventsRepository } from '../../../repositories'
+import {
+  CommitsRepository,
+  DocumentTriggerEventsRepository,
+} from '../../../repositories'
 import { runDocumentFromTriggerEvent } from '../../../services/documentTriggers/triggerEvents/runFromEvent'
 import { unsafelyFindWorkspace } from '../../../data-access'
+import { Result } from '../../../lib/Result'
 
 export type ExecuteDocumentTriggerJobData = {
   workspaceId: number
   documentTriggerEventId: number
+  commitId: number
 }
 
 /**
@@ -14,7 +19,7 @@ export type ExecuteDocumentTriggerJobData = {
 export const runDocumentTriggerEventJob = async (
   job: Job<ExecuteDocumentTriggerJobData>,
 ) => {
-  const { workspaceId, documentTriggerEventId } = job.data
+  const { workspaceId, documentTriggerEventId, commitId } = job.data
   const workspace = (await unsafelyFindWorkspace(workspaceId))!
 
   const documentTriggerEventsScope = new DocumentTriggerEventsRepository(
@@ -25,9 +30,15 @@ export const runDocumentTriggerEventJob = async (
   )
   const documentTriggerEvent = documentTriggerEventResult.unwrap()
 
+  const commitsScope = new CommitsRepository(workspaceId)
+  const commitResult = await commitsScope.find(commitId)
+  if (!Result.isOk(commitResult)) return commitResult
+  const commit = commitResult.unwrap()
+
   await runDocumentFromTriggerEvent({
     workspace,
     documentTriggerEvent,
+    commit,
   }).then((r) => r.unwrap())
 
   return { success: true }

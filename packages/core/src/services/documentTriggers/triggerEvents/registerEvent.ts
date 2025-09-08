@@ -54,6 +54,7 @@ export async function registerDocumentTriggerEvent<
       const enqueuedResult = await enqueueRunDocumentFromTriggerEventJob({
         workspace,
         documentTriggerEvent: event,
+        commit,
       })
 
       if (enqueuedResult.error) return enqueuedResult

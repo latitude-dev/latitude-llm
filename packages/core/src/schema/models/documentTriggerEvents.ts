@@ -1,10 +1,16 @@
-import { bigint, bigserial, index, jsonb, uuid } from 'drizzle-orm/pg-core'
+import {
+  bigint,
+  bigserial,
+  index,
+  jsonb,
+  text,
+  uuid,
+} from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { documentLogs } from './documentLogs'
 import { workspaces } from './workspaces'
-import { commits } from './commits'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTriggerEventPayload } from '@latitude-data/constants/documentTriggers'
 import { documentTriggerTypeEnum } from './documentTriggers'
@@ -16,11 +22,9 @@ export const documentTriggerEvents = latitudeSchema.table(
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
-    commitId: bigint('commit_id', { mode: 'number' })
-      .notNull()
-      .references(() => commits.id, { onDelete: 'cascade' }),
     triggerUuid: uuid('trigger_uuid').notNull(),
     triggerType: documentTriggerTypeEnum('trigger_type').notNull(),
+    triggerHash: text('trigger_hash').notNull(),
     payload:
       jsonb('payload').$type<
         DocumentTriggerEventPayload<DocumentTriggerType>
@@ -41,5 +45,8 @@ export const documentTriggerEvents = latitudeSchema.table(
     documentTriggerEventsDocumentLogUuidIdx: index(
       'document_trigger_events_document_log_uuid_idx',
     ).on(table.documentLogUuid),
+    documentTriggerEventsTriggerHashIdx: index(
+      'document_trigger_events_trigger_hash_idx',
+    ).on(table.triggerHash),
   }),
 )

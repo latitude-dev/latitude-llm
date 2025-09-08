@@ -27,7 +27,7 @@ export async function createDocumentTriggerEvent<T extends DocumentTriggerType>(
           workspaceId: trigger.workspaceId,
           triggerUuid: trigger.uuid,
           triggerType: trigger.triggerType,
-          commitId: commit.id,
+          triggerHash: trigger.triggerHash,
           payload: eventPayload,
         })
         .returning()) as [DocumentTriggerEvent<T>]

@@ -70,6 +70,7 @@ tmp
 # Misc
 TODO.md
 .vscode/settings.json
+.vscode/tasks.json
 /acme
 
 # Sentry
