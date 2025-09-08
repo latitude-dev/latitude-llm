@@ -57,7 +57,6 @@ export function RegularMonacoEditor({
   readOnlyMessage,
   errorMarkers,
   onChange,
-  errorFixFn,
   autoFocus = false,
   autoCompleteParameters = [],
   highlightedCursorIndex,
@@ -71,12 +70,11 @@ export function RegularMonacoEditor({
   language?: string
   errorMarkers?: DocumentError[]
   onChange?: (value?: string) => void
-  errorFixFn?: (errors: DocumentError[]) => void
   autoFocus?: boolean
   autoCompleteParameters?: string[]
   highlightedCursorIndex?: number
 }) {
-  const { monacoRef, handleEditorWillMount } = useMonacoSetup({ errorFixFn })
+  const { monacoRef, handleEditorWillMount } = useMonacoSetup()
   const { registerAutoClosingTags } = useAutoClosingTags()
 
   // to avoid race conditions

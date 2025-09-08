@@ -100,18 +100,6 @@ export function DocumentTextEditor({
     setIsDiscardingDiff(false)
   }, [diff])
 
-  const errorFixFn = useMemo(() => {
-    if (!copilot) return undefined
-
-    return (errors: DocumentError[]) => {
-      const request =
-        'Please, fix the following errors from the prompt:\n' +
-        errors.map((error) => ` - ${JSON.stringify(error)}`).join('\n')
-
-      return copilot.requestSuggestion(request)
-    }
-  }, [copilot])
-
   return (
     <div className='relative h-full rounded-lg border border-border overflow-hidden flex flex-col bg-secondary'>
       <EditorReadOnlyBanner readOnlyMessage={readOnlyMessage} />
@@ -140,7 +128,6 @@ export function DocumentTextEditor({
           })}
           onChange={handleValueChange}
           errorMarkers={errorMarkers}
-          errorFixFn={errorFixFn}
           autoCompleteParameters={autoCompleteParameters}
           highlightedCursorIndex={highlightedCursorIndex}
         />
