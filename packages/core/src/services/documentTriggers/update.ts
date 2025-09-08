@@ -14,6 +14,7 @@ import {
   DocumentTriggersRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
+import { createTriggerHash } from './helpers/triggerHash'
 
 /**
  * Updates the configuration of a document trigger at a given commit.
@@ -120,6 +121,8 @@ export async function updateDocumentTriggerConfiguration<
   if (!Result.isOk(deployResult)) return deployResult
   const { deploymentSettings, triggerStatus } = deployResult.unwrap()
 
+  const triggerHash = createTriggerHash({ configuration })
+
   return transaction.call(async (tx) => {
     const [upsertResult] = (await tx
       .insert(documentTriggers)
@@ -133,6 +136,7 @@ export async function updateDocumentTriggerConfiguration<
         configuration,
         deploymentSettings,
         triggerStatus,
+        triggerHash,
         enabled: false,
       })
       .onConflictDoUpdate({

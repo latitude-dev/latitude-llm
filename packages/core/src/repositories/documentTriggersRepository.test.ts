@@ -70,6 +70,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Test Email Trigger',
             replyWithResponse: true,
@@ -86,6 +87,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -115,6 +117,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Test Email Trigger',
             replyWithResponse: true,
@@ -147,6 +150,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Original Trigger',
             replyWithResponse: true,
@@ -171,6 +175,7 @@ describe('DocumentTriggersRepository', () => {
         documentUuid: document.documentUuid,
         triggerType: DocumentTriggerType.Email,
         triggerStatus: 'deployed',
+        triggerHash: '123',
         configuration: {
           name: 'Updated Trigger',
           replyWithResponse: true,
@@ -196,6 +201,7 @@ describe('DocumentTriggersRepository', () => {
         documentUuid: document.documentUuid,
         triggerType: DocumentTriggerType.Email,
         triggerStatus: 'deployed',
+        triggerHash: '123',
         configuration: {
           name: 'Test Email Trigger',
           replyWithResponse: true,
@@ -222,6 +228,7 @@ describe('DocumentTriggersRepository', () => {
         documentUuid: otherDocuments[0]!.documentUuid,
         triggerType: DocumentTriggerType.Email,
         triggerStatus: 'deployed',
+        triggerHash: '123',
         configuration: {
           name: 'Other Trigger',
           replyWithResponse: true,
@@ -258,6 +265,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Project 1 Trigger',
             replyWithResponse: true,
@@ -285,6 +293,7 @@ describe('DocumentTriggersRepository', () => {
         documentUuid: documents2[0]!.documentUuid,
         triggerType: DocumentTriggerType.Email,
         triggerStatus: 'deployed',
+        triggerHash: '123',
         configuration: {
           name: 'Project 2 Trigger',
           replyWithResponse: true,
@@ -313,6 +322,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Original Trigger',
             replyWithResponse: true,
@@ -338,6 +348,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -391,6 +402,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Doc 1 Trigger',
             replyWithResponse: true,
@@ -405,6 +417,7 @@ describe('DocumentTriggersRepository', () => {
         documentUuid: document2Uuid,
         triggerType: DocumentTriggerType.Scheduled,
         triggerStatus: 'deployed',
+        triggerHash: '123',
         configuration: {
           cronExpression: '0 * * * *',
         },
@@ -434,6 +447,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Original Trigger',
             replyWithResponse: true,
@@ -459,6 +473,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -499,6 +514,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Original Name',
             replyWithResponse: true,
@@ -523,6 +539,7 @@ describe('DocumentTriggersRepository', () => {
         documentUuid: document.documentUuid,
         triggerType: DocumentTriggerType.Email,
         triggerStatus: 'deployed',
+        triggerHash: '123',
         configuration: {
           name: 'Updated Name',
           replyWithResponse: false,
@@ -586,6 +603,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Test Trigger',
             replyWithResponse: true,
@@ -614,6 +632,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -642,6 +661,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Original',
             replyWithResponse: true,
@@ -666,6 +686,7 @@ describe('DocumentTriggersRepository', () => {
         documentUuid: document.documentUuid,
         triggerType: DocumentTriggerType.Email,
         triggerStatus: 'deployed',
+        triggerHash: '123',
         configuration: {
           name: 'Updated',
           replyWithResponse: true,
@@ -696,6 +717,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Test Trigger',
             replyWithResponse: true,
@@ -741,6 +763,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: otherDocuments[0]!.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Other Workspace Trigger',
             replyWithResponse: true,
@@ -768,6 +791,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Test Email Trigger',
             replyWithResponse: true,
@@ -784,6 +808,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -815,6 +840,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Test Email Trigger',
             replyWithResponse: true,
@@ -831,6 +857,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -860,6 +887,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Test Email Trigger',
             replyWithResponse: true,
@@ -876,6 +904,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -901,6 +930,7 @@ describe('DocumentTriggersRepository', () => {
         documentUuid: document.documentUuid,
         triggerType: DocumentTriggerType.Email,
         triggerStatus: 'deployed',
+        triggerHash: '123',
         configuration: {
           name: 'Test Email Trigger',
           replyWithResponse: true,
@@ -927,6 +957,7 @@ describe('DocumentTriggersRepository', () => {
         documentUuid: otherDocuments[0]!.documentUuid,
         triggerType: DocumentTriggerType.Email,
         triggerStatus: 'deployed',
+        triggerHash: '123',
         configuration: {
           name: 'Other Trigger',
           replyWithResponse: true,
@@ -953,6 +984,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Version 1',
             replyWithResponse: true,
@@ -984,6 +1016,7 @@ describe('DocumentTriggersRepository', () => {
         documentUuid: document.documentUuid,
         triggerType: DocumentTriggerType.Scheduled,
         triggerStatus: 'deployed',
+        triggerHash: '123',
         configuration: {
           cronExpression: '0 9 * * *',
         },
@@ -1027,6 +1060,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Email,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             name: 'Email Trigger',
             replyWithResponse: true,
@@ -1043,6 +1077,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Scheduled,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             cronExpression: '0 * * * *',
           },
@@ -1058,6 +1093,7 @@ describe('DocumentTriggersRepository', () => {
           documentUuid: document.documentUuid,
           triggerType: DocumentTriggerType.Integration,
           triggerStatus: 'deployed',
+          triggerHash: '123',
           configuration: {
             integrationId: 123,
             componentId: 'webhook-component',

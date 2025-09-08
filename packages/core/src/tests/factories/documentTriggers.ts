@@ -26,6 +26,7 @@ import {
   DocumentTriggerConfiguration,
   DocumentTriggerDeploymentSettings,
 } from '@latitude-data/constants/documentTriggers'
+import { createTriggerHash } from '../../services/documentTriggers/helpers/triggerHash'
 
 /**
  * Creates a scheduled document trigger in the database
@@ -77,6 +78,7 @@ export async function createScheduledDocumentTrigger({
       triggerStatus: 'deployed',
       configuration,
       deploymentSettings,
+      triggerHash: createTriggerHash({ configuration }),
       enabled,
     })
     .returning()
@@ -139,6 +141,7 @@ export async function createEmailDocumentTrigger({
       triggerStatus: 'deployed',
       configuration,
       deploymentSettings,
+      triggerHash: createTriggerHash({ configuration }),
       enabled,
     })
     .returning()
@@ -195,6 +198,7 @@ export async function createIntegrationDocumentTrigger({
       triggerStatus: 'deployed',
       configuration,
       deploymentSettings,
+      triggerHash: createTriggerHash({ configuration }),
     })
     .returning()
 
@@ -234,6 +238,7 @@ export async function createChatDocumentTrigger({
       triggerType: DocumentTriggerType.Chat,
       triggerStatus: 'deployed',
       configuration,
+      triggerHash: createTriggerHash({ configuration }),
       deploymentSettings,
       enabled,
     })
@@ -271,6 +276,7 @@ export async function createDocumentTrigger<T extends DocumentTriggerType>({
       triggerType,
       triggerStatus,
       configuration,
+      triggerHash: createTriggerHash({ configuration }),
       deploymentSettings:
         deploymentSettings || ({} as DocumentTriggerDeploymentSettings<T>),
     })
