@@ -306,3 +306,5 @@ export {
   ServerSideTableCell,
   TableCaption,
 }
+
+export { SortableTableHead, type SortDirection } from './sortedTable'

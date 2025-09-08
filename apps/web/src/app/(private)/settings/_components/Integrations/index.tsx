@@ -9,6 +9,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  SortableTableHead,
+  type SortDirection,
 } from '@latitude-data/web-ui/atoms/Table'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
@@ -24,6 +26,7 @@ import { McpServerStatus } from '../../integrations/[integrationId]/details/_com
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
+import { useState, useMemo } from 'react'
 
 export default function Integrations() {
   const { data: integrations, isLoading: isLoading } = useIntegrations()
@@ -65,6 +68,52 @@ const IntegrationsTable = () => {
   const router = useRouter()
   const { data: integrations, scaleDown, scaleUp } = useIntegrations()
   const { data: workspace } = useCurrentWorkspace()
+  const [sortLastUsedDirection, setSortLastUsedDirection] =
+    useState<SortDirection>(null)
+  const [sortCreatedAtDirection, setSortCreatedAtDirection] =
+    useState<SortDirection>(null)
+
+  const handleLastUsedSort = () => {
+    if (sortLastUsedDirection === null) {
+      setSortLastUsedDirection('desc')
+      setSortCreatedAtDirection(null)
+    } else if (sortLastUsedDirection === 'desc') {
+      setSortLastUsedDirection('asc')
+    } else {
+      setSortLastUsedDirection(null)
+    }
+  }
+
+  const handleCreatedAtSort = () => {
+    if (sortCreatedAtDirection === null) {
+      setSortCreatedAtDirection('desc')
+      setSortLastUsedDirection(null)
+    } else if (sortCreatedAtDirection === 'desc') {
+      setSortCreatedAtDirection('asc')
+    } else {
+      setSortCreatedAtDirection(null)
+    }
+  }
+
+  const sortedIntegrations = useMemo(() => {
+    if (!sortLastUsedDirection && !sortCreatedAtDirection) return integrations
+
+    return [...integrations].sort((a, b) => {
+      if (sortLastUsedDirection) {
+        const aTime = a.lastUsedAt ? a.lastUsedAt.getTime() : 0
+        const bTime = b.lastUsedAt ? b.lastUsedAt.getTime() : 0
+        return sortLastUsedDirection === 'asc' ? aTime - bTime : bTime - aTime
+      }
+
+      if (sortCreatedAtDirection) {
+        const aTime = a.createdAt.getTime()
+        const bTime = b.createdAt.getTime()
+        return sortCreatedAtDirection === 'asc' ? aTime - bTime : bTime - aTime
+      }
+
+      return 0
+    })
+  }, [integrations, sortLastUsedDirection, sortCreatedAtDirection])
 
   return (
     <Table>
@@ -72,13 +121,24 @@ const IntegrationsTable = () => {
         <TableRow verticalPadding>
           <TableHead>Name</TableHead>
           <TableHead>Type</TableHead>
-          <TableHead>Last Used</TableHead>
+          <SortableTableHead
+            sortDirection={sortLastUsedDirection}
+            onSort={handleLastUsedSort}
+          >
+            Last Used
+          </SortableTableHead>
+          <SortableTableHead
+            sortDirection={sortCreatedAtDirection}
+            onSort={handleCreatedAtSort}
+          >
+            Created At
+          </SortableTableHead>
           <TableHead>Status</TableHead>
           <TableHead />
         </TableRow>
       </TableHeader>
       <TableBody>
-        {integrations.map((integration) => {
+        {sortedIntegrations.map((integration) => {
           const values = integrationOptions(integration)
           return (
             <TableRow key={integration.id} hoverable={false} verticalPadding>
@@ -99,6 +159,13 @@ const IntegrationsTable = () => {
                 <Text.H5 color='foregroundMuted'>
                   {relativeTime(
                     integration.lastUsedAt ? integration.lastUsedAt : null,
+                  )}
+                </Text.H5>
+              </TableCell>
+              <TableCell>
+                <Text.H5 color='foregroundMuted'>
+                  {relativeTime(
+                    integration.createdAt ? integration.createdAt : null,
                   )}
                 </Text.H5>
               </TableCell>
