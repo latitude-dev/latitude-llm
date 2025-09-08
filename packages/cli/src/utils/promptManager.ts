@@ -85,12 +85,12 @@ export class PromptManager {
     const camelCaseName = promptName
       .replace(/[-_\s.]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ''))
       .replace(/^(.)/, (c) => c.toLowerCase())
-    // Use the raw prompt content without modifying indentation
-    const prettyPrompt = prompt.content
+    // Serialize content as a JSON string literal to avoid template issues
+    const jsonString = JSON.stringify(prompt.content)
     // Create the content with the camelCased variable name
     const content = isEsm
-      ? `export const ${camelCaseName} = \`${prettyPrompt}\``
-      : `const ${camelCaseName} = \`${prettyPrompt}\`\n\nmodule.exports = { ${camelCaseName} }`
+      ? `export const ${camelCaseName} = ${jsonString}\n`
+      : `const ${camelCaseName} = ${jsonString}\n\nmodule.exports = { ${camelCaseName} }\n`
     await fs.writeFile(filePath, content)
     // Return the relative path for logging
     return path.join(rootFolder, path.dirname(promptPath), fileName)
