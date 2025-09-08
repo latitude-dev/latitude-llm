@@ -6,6 +6,7 @@ windows:
       panes:
         - pnpm dev --filter='./apps/*'
         - cd packages/core && pnpm build:watch
+        - cd packages/constants && pnpm build:watch
   - packages:
       layout: main-horizontal
       panes:

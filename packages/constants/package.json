@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "build:watch": "tsc --watch -p tsconfig.build.json",
     "lint": "eslint src",
     "tc": "tsc --noEmit"
   },
