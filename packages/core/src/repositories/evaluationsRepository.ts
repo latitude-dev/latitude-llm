@@ -19,7 +19,7 @@ import { evaluationMetadataManual } from '../schema/legacyModels/evaluationMetad
 import { getSharedTableColumns } from '../schema/schemaHelpers'
 import RepositoryLegacy from './repository'
 
-const tt = {
+const tt: any = {
   ...getTableColumns(evaluations),
   metadata: omit(
     getSharedTableColumns(evaluations.metadataType, {

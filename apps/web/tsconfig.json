@@ -10,8 +10,11 @@
     "tsBuildInfoFile": ".tsbuildinfo",
     "moduleResolution": "Bundler",
     "jsx": "preserve",
-    "typeRoots": [
-      "./node_modules/@types"
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": [
+      "node"
     ],
     "baseUrl": ".",
     "paths": {
@@ -21,16 +24,20 @@
     }
   },
   "include": [
-    "./src/**/*.test.ts",
     "./src/**/*.ts",
     "./src/**/*.tsx",
     "next-env.d.ts",
-    "next.config.js",
+    "next.config.mjs",
     ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "./src/workers",
-    ".next"
+    ".next",
+    "dist",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/__tests__/**",
+    "src/tests/**"
   ]
 }

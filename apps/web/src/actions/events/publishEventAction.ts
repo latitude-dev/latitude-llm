@@ -20,10 +20,9 @@ export const publishEventAction = authProcedure
       workspaceId: ctx.workspace.id,
       ...(payload || {}),
     }
+
     publisher.publishLater({
-      // @ts-expect-error - Type not typed in this action
       type: eventType,
-      // @ts-expect-error - Type not typed in this action
       data: data,
     })
   })

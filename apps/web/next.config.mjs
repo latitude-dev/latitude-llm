@@ -14,7 +14,6 @@ const nextConfig = {
   serverExternalPackages: [
     '@latitude-data/sdk',
     '@napi-rs/canvas',
-    '@sentry/nextjs',
     'bullmq',
     'nodemailer-mailgun-transport',
     'openid-client',

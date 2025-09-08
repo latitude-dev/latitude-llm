@@ -110,7 +110,6 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
     const result = await this.db
       .select({
         ...this.scope._.selectedFields,
-        // @ts-expect-error the query works but the types don't
         evaluation: {
           ...evaluationsScope.scope._.selectedFields,
         },
