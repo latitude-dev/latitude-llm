@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useMemo } from 'react'
 import { DefaultTriggerEvent } from './Default'
 import { DocumentTriggerEvent } from '@latitude-data/core/browser'
 import { DocumentTriggerType } from '@latitude-data/constants'
@@ -10,11 +10,12 @@ export function DocumentTriggerEventItem<T extends DocumentTriggerType>({
   handleRunTrigger,
 }: {
   event: DocumentTriggerEvent<T>
-  handleRunTrigger: (event: DocumentTriggerEvent<T>) => void
+  handleRunTrigger: (event: DocumentTriggerEvent<T>) => () => void
 }) {
-  const handleRun = useCallback(() => {
-    handleRunTrigger(event)
-  }, [handleRunTrigger, event])
+  const handleRun = useMemo(
+    () => handleRunTrigger(event),
+    [handleRunTrigger, event],
+  )
 
   if (event.triggerType === DocumentTriggerType.Email) {
     return (
