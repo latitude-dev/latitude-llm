@@ -64,14 +64,14 @@ function getDescriptionFromLatteTool(
 
     case LatteTool.listIntegrationTools:
       return {
-        activeDescription: `Collecting tools for ${params.integrationAppName}...`,
-        finishedDescription: `Collected tools for ${params.integrationAppName}`,
+        activeDescription: `Collecting tools for ${params.appName}...`,
+        finishedDescription: `Collected tools for ${params.appName}`,
       }
 
     case LatteTool.listIntegrationTriggers:
       return {
-        activeDescription: `Finding triggers for ${params.integrationAppName}...`,
-        finishedDescription: `Found triggers for ${params.integrationAppName}`,
+        activeDescription: `Finding triggers for ${params.appName}...`,
+        finishedDescription: `Found triggers for ${params.appName}`,
       }
 
     case LatteTool.writePrompt:
