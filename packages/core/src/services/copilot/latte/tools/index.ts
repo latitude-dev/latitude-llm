@@ -10,16 +10,14 @@ import editProject from './projects/editProject'
 import writePrompt from './projects/writePrompt'
 import deletePrompt from './projects/deletePrompt'
 import listProjects from './projects/list'
-import listIntegrations from './settings/listIntegrations'
+import listExistingIntegrations from './settings/listExistingIntegrations'
 import listIntegrationTools from './settings/listIntegrationTools'
 import listProviders from './settings/listProviders'
 import listIntegrationTriggers from './triggers/listIntegrationTriggers'
 import think from './general/think'
-import searchIntegrationResources from './settings/searchIntegrationResources'
-import searchIntegrationApps from './settings/searchIntegrationApps'
+import searchAvailableIntegrations from './settings/searchAvailableIntegrations'
 import createIntegration from './settings/createIntegration'
 import { ToolHandler } from '../../../../lib/streamManager/clientTools/handlers'
-import listExistingTriggers from './triggers/listExistingTriggers'
 import { getFullTriggerConfigSchema } from './triggers/getFullTriggerConfigSchema'
 import { validateTriggerSchema } from './triggers/validateTriggerSchema'
 import { LatteInvalidChoiceError } from './triggers/configValidator'
@@ -36,16 +34,14 @@ export const LATTE_TOOLS: Record<LatteTool, LatteToolFn<any>> = {
   [LatteTool.editProject]: editProject,
   [LatteTool.deletePrompt]: deletePrompt,
   [LatteTool.listProviders]: listProviders,
-  [LatteTool.listIntegrations]: listIntegrations,
+  [LatteTool.listExistingIntegrations]: listExistingIntegrations,
   [LatteTool.listIntegrationTools]: listIntegrationTools,
-  [LatteTool.searchIntegrationResources]: searchIntegrationResources,
-  [LatteTool.searchIntegrationApps]: searchIntegrationApps,
-  [LatteTool.createIntegration]: createIntegration,
   [LatteTool.listIntegrationTriggers]: listIntegrationTriggers,
+  [LatteTool.searchAvailableIntegrations]: searchAvailableIntegrations,
+  [LatteTool.createIntegration]: createIntegration,
   [LatteTool.createTrigger]: createTrigger,
   [LatteTool.updateTrigger]: updateTrigger,
   [LatteTool.deleteTrigger]: deleteTrigger,
-  [LatteTool.listExistingTriggers]: listExistingTriggers,
   [LatteTool.getFullTriggerSchema]: getFullTriggerConfigSchema,
   [LatteTool.validateTriggerSchema]: validateTriggerSchema,
   [LatteTool.writePrompt]: writePrompt,

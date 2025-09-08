@@ -14,14 +14,13 @@ export enum LatteTool {
   editProject = 'edit_project',
 
   listProviders = 'list_providers',
-  listIntegrations = 'list_integrations',
-  listIntegrationTools = 'list_integration_tools',
 
-  searchIntegrationApps = 'search_integration_apps',
-  searchIntegrationResources = 'search_integration_resources',
-  createIntegration = 'create_integration',
+  listExistingIntegrations = 'list_existing_integrations',
+  searchAvailableIntegrations = 'search_available_integrations',
+  listIntegrationTools = 'list_integration_tools',
   listIntegrationTriggers = 'list_integration_triggers',
-  listExistingTriggers = 'list_existing_triggers',
+
+  createIntegration = 'create_integration',
 
   getFullTriggerSchema = 'get_full_trigger_schema',
   validateTriggerSchema = 'validate_trigger_schema',

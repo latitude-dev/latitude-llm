@@ -56,7 +56,7 @@ function getDescriptionFromLatteTool(
         finishedDescription: `Collected existing providers`,
       }
 
-    case LatteTool.listIntegrations:
+    case LatteTool.listExistingIntegrations:
       return {
         activeDescription: `Gathering available integrations...`,
         finishedDescription: `Gathered available integrations`,
@@ -64,14 +64,14 @@ function getDescriptionFromLatteTool(
 
     case LatteTool.listIntegrationTools:
       return {
-        activeDescription: `Collecting tools for ${params.name}...`,
-        finishedDescription: `Collected tools for ${params.name}`,
+        activeDescription: `Collecting tools for ${params.integrationAppName}...`,
+        finishedDescription: `Collected tools for ${params.integrationAppName}`,
       }
 
     case LatteTool.listIntegrationTriggers:
       return {
-        activeDescription: `Finding triggers for ${params.name}...`,
-        finishedDescription: `Found triggers for ${params.name}`,
+        activeDescription: `Finding triggers for ${params.integrationAppName}...`,
+        finishedDescription: `Found triggers for ${params.integrationAppName}`,
       }
 
     case LatteTool.writePrompt:
@@ -92,28 +92,16 @@ function getDescriptionFromLatteTool(
         finishedDescription: `Updated project configuration`,
       }
 
-    case LatteTool.searchIntegrationApps:
+    case LatteTool.searchAvailableIntegrations:
       return {
         activeDescription: `Searching useful integrations...`,
         finishedDescription: `Searched useful integrations`,
-      }
-
-    case LatteTool.searchIntegrationResources:
-      return {
-        activeDescription: `Searching ${params.type} on ${params.app}...`,
-        finishedDescription: `Found ${params.type} on ${params.app}`,
       }
 
     case LatteTool.createIntegration:
       return {
         activeDescription: `Creating new ${params.app} integration...`,
         finishedDescription: `Created new ${params.app} integration`,
-      }
-
-    case LatteTool.listExistingTriggers:
-      return {
-        activeDescription: `Discovering existing triggers...`,
-        finishedDescription: `Found existing triggers`,
       }
 
     case LatteTool.getFullTriggerSchema:

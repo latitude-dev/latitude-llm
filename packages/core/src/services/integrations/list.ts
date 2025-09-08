@@ -1,31 +1,12 @@
-import { IntegrationDto, Workspace } from '@latitude-data/core/browser'
-import { IntegrationType } from '@latitude-data/constants'
+import { Workspace } from '@latitude-data/core/browser'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { Result } from '@latitude-data/core/lib/Result'
+import { buildLatitudeIntegration } from './buildLatitudeIntegration'
 
 export async function listIntegrations(workspace: Workspace) {
   const integrationsScope = new IntegrationsRepository(workspace.id)
   const integrations = await integrationsScope.findAll().then((r) => r.unwrap())
-  // Adding a fake integration for Latitude, to later be used to its their tools/triggers
-  const latitudeIntegration: IntegrationDto =
-    buildLatitudeIntegration(workspace)
+  // Adding a fake integration for Latitude, to later be used to find its tools and triggers
+  const latitudeIntegration = buildLatitudeIntegration(workspace)
   return Result.ok([latitudeIntegration, ...integrations])
-}
-
-export function buildLatitudeIntegration(workspace: Workspace): IntegrationDto {
-  return {
-    id: -1,
-    name: 'latitude',
-    type: IntegrationType.Latitude,
-    hasTools: true,
-    hasTriggers: true,
-    workspaceId: workspace.id,
-    createdAt: workspace.createdAt,
-    updatedAt: workspace.updatedAt,
-    authorId: workspace.creatorId!,
-    lastUsedAt: workspace.updatedAt,
-    configuration: null,
-    deletedAt: null,
-    mcpServerId: null,
-  }
 }
