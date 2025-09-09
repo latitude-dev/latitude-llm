@@ -24,10 +24,12 @@ export function useLoadThread() {
   const syncAndGetThreadUuid = useSyncAndGetThreadUuid({ project })
   const [isLoading, startTransition] = useTransition()
 
-  if (currentProjectId !== projectId) {
-    setCurrentProject(projectId)
-    lastLoadedProjectId.current = null // force a reload next time
-  }
+  useEffect(() => {
+    if (currentProjectId !== projectId) {
+      setCurrentProject(projectId)
+      lastLoadedProjectId.current = null // force a reload next time
+    }
+  }, [currentProjectId, projectId, setCurrentProject])
 
   useEffect(() => {
     // Don’t refetch if there are already interactions
