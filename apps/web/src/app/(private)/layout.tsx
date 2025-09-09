@@ -17,6 +17,7 @@ import { redirect } from 'next/navigation'
 
 import { CSPostHogProvider, IdentifyUser } from '../providers'
 import { NAV_LINKS } from './_lib/constants'
+import { PaywallModalProvider } from './providers/PaywallModalProvider'
 
 export const metadata = buildMetatags({
   title: 'Home',
@@ -53,14 +54,16 @@ export default async function PrivateLayout({
                 workspace={workspace}
                 socketServer={env.WEBSOCKETS_SERVER}
               >
-                <AppLayout
-                  currentUser={user}
-                  navigationLinks={NAV_LINKS}
-                  cloudInfo={cloudInfo}
-                  isCloud={isCloud}
-                >
-                  {children}
-                </AppLayout>
+                <PaywallModalProvider>
+                  <AppLayout
+                    currentUser={user}
+                    navigationLinks={NAV_LINKS}
+                    cloudInfo={cloudInfo}
+                    isCloud={isCloud}
+                  >
+                    {children}
+                  </AppLayout>
+                </PaywallModalProvider>
               </LatitudeWebsocketsProvider>
             </SessionProvider>
           </SocketIOProvider>

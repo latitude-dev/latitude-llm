@@ -33,6 +33,19 @@ import { LatteChatInput } from './LatteChatInput'
 import { useLatteEventHandlers } from '$/hooks/latte/useLatteEventHandlers'
 import { LatteUnconfiguredIntegrations } from './_components/UnconfiguredIntegrations'
 
+export function LatteChat() {
+  const isLoading = useLoadThread()
+
+  if (isLoading)
+    return (
+      <ChatWrapper>
+        <ChatSkeleton />
+      </ChatWrapper>
+    )
+
+  return <LatteChatUI />
+}
+
 function ChatWrapper({ children }: { children: ReactNode }) {
   return (
     <div className='w-full h-full max-h-full flex flex-col items-center bg-latte-background'>
@@ -41,12 +54,49 @@ function ChatWrapper({ children }: { children: ReactNode }) {
   )
 }
 
-export function LatteChatUI() {
+function LatteChatInputSection({
+  error,
+  inConversation,
+  resetChat,
+  scrollToBottom,
+  sendMessage,
+  stopLatteChat,
+}: {
+  error?: string
+  inConversation: boolean
+  resetChat: () => void
+  scrollToBottom: () => void
+  sendMessage: (message: string) => void
+  stopLatteChat?: () => void
+}) {
+  const { data: workspace } = useCurrentWorkspace()
+  const { usage } = useLatteStore()
+
+  return (
+    <div className='w-full flex flex-col gap-4 items-center justify-center'>
+      <LatteChatInput
+        error={error}
+        inConversation={inConversation}
+        resetChat={resetChat}
+        scrollToBottom={scrollToBottom}
+        sendMessage={sendMessage}
+        stopLatteChat={stopLatteChat}
+      />
+      {!!usage && !!workspace && (
+        <LatteUsageInfo
+          usage={usage}
+          plan={workspace.currentSubscription.plan}
+        />
+      )}
+    </div>
+  )
+}
+
+function LatteChatUI() {
   const { data: workspace } = useCurrentWorkspace()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const { isBrewing, resetAll, interactions, error, usage, jobId } =
-    useLatteStore()
+  const { isBrewing, resetAll, interactions, error, jobId } = useLatteStore()
   const { sendMessage, stopChat } = useLatteChatActions()
   const { addFeedbackToLatteChange } = useLatteChangeActions()
   const resetChat = useCallback(() => {
@@ -122,7 +172,7 @@ export function LatteChatUI() {
                     </Text.H5>
                   </div>
                 </div>
-                <LatteChatInput
+                <LatteChatInputSection
                   error={error}
                   inConversation={false}
                   resetChat={resetChat}
@@ -192,38 +242,19 @@ export function LatteChatUI() {
             )}
           </div>
           {inConversation && (
-            <div className='w-full p-8 flex flex-col gap-4 items-center justify-center'>
-              <LatteChatInput
-                inConversation
-                sendMessage={sendMessage}
-                resetChat={resetChat}
+            <div className='w-full p-8'>
+              <LatteChatInputSection
                 error={error}
+                inConversation={true}
+                resetChat={resetChat}
                 scrollToBottom={scrollToBottom}
+                sendMessage={sendMessage}
                 stopLatteChat={stopLatteChat}
               />
-              {!!usage && !!workspace && (
-                <LatteUsageInfo
-                  usage={usage}
-                  plan={workspace.currentSubscription.plan}
-                />
-              )}
             </div>
           )}
         </div>
       </div>
     </ChatWrapper>
   )
-}
-
-export function LatteChat() {
-  const isLoading = useLoadThread()
-
-  if (isLoading)
-    return (
-      <ChatWrapper>
-        <ChatSkeleton />
-      </ChatWrapper>
-    )
-
-  return <LatteChatUI />
 }

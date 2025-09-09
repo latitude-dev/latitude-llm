@@ -1,9 +1,8 @@
 'use client'
 
-import { UpgradeLink } from '$/components/UpgradeLink'
+import { usePaywallModal } from '$/app/(private)/providers/PaywallModalProvider'
 import { formatCount } from '$/lib/formatCount'
 import {
-  FREE_PLANS,
   LatteUsage,
   SubscriptionPlan,
 } from '@latitude-data/core/browser'
@@ -12,6 +11,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { format } from 'date-fns'
+import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 const ANIMATION_DURATION = 4
@@ -25,20 +25,18 @@ function hasUsageChanged(previous: LatteUsage, current: LatteUsage) {
 
 export function LatteUsageInfo({
   usage,
-  plan,
 }: {
   usage: LatteUsage
   plan: SubscriptionPlan
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isAnimating, setIsAnimating] = useState(false)
-
   const previousRef = useRef<LatteUsage>(usage)
-
   const incurring = useMemo(() => {
     if (usage.limit === 'unlimited') return Infinity
     return Number(Math.ceil((usage.billable / usage.limit) * 100))
   }, [usage])
+  const { open } = usePaywallModal()
 
   useEffect(() => {
     if (hasUsageChanged(previousRef.current, usage)) {
@@ -51,6 +49,7 @@ export function LatteUsageInfo({
       return () => clearTimeout(timer)
     }
   }, [usage])
+  const overLimit = usage.limit !== 'unlimited' && incurring >= 100
 
   return (
     <div className='w-full flex items-center justify-center gap-2'>
@@ -58,7 +57,7 @@ export function LatteUsageInfo({
         <Popover.Trigger asChild>
           <span
             className='flex items-center justify-center gap-2 select-none cursor-pointer truncate hover:opacity-60 transition-opacity'
-            onClick={() => setIsOpen(!isOpen)}
+            onClick={() => !overLimit && setIsOpen(!isOpen)}
           >
             <Icon
               name='circleGauge'
@@ -70,11 +69,14 @@ export function LatteUsageInfo({
                 <Text.H6 color='foregroundMuted' noWrap ellipsis>
                   You have unlimited credits
                 </Text.H6>
-              ) : (
-                <Text.H6 color='foregroundMuted' noWrap ellipsis>
-                  You've used {incurring}% of your overall credit limit
-                </Text.H6>
-              )}
+              ) : overLimit ? (
+                <Text.H5 color='destructive'>Limit Reached. <span role='button' className='text-destructive underline' onClick={open}>Upgrade now.</span></Text.H5>
+              ) :
+                (
+                  <Text.H6 color='foregroundMuted' noWrap ellipsis>
+                    You've used {incurring}% of your overall credit limit
+                  </Text.H6>
+                )}
               {isAnimating && (
                 <div
                   className='absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/80 to-transparent animate-shine'
@@ -123,15 +125,6 @@ export function LatteUsageInfo({
                   </Text.H6>
                 )} */}
             </Text.H6>
-            {incurring >= 100 && usage.limit !== 'unlimited' && (
-              <UpgradeLink className='w-full'>
-                <Button fullWidth fancy roundy>
-                  {FREE_PLANS.includes(plan)
-                    ? 'Upgrade to Team plan'
-                    : 'Contact us to upgrade'}
-                </Button>
-              </UpgradeLink>
-            )}
           </div>
         </Popover.Content>
       </Popover.Root>
