@@ -26,44 +26,46 @@ export function RewardItem({
   }, [isLoading, claimedRewards, type])
 
   return (
-    <Button
-      variant='nope'
-      className='justify-start !py-3 !rounded-none transition-opacity'
-      containerClassName={cn({
-        'hover:opacity-75': !isClaimed,
-        '!cursor-default pointer-events-none': isClaimed,
-      })}
-      fullWidth
-      onClick={onClick}
-    >
-      <div className='flex flex-row w-full items-center gap-4 justify-between'>
-        <div className='flex flex-row items-center gap-2'>
-          {isLoading ? (
-            <Icon
-              name='loader'
-              color='foregroundMuted'
-              className='animate-spin flex-shrink-0 stroke-[2.25]'
-            />
-          ) : (
-            <Icon
-              name={isClaimed ? 'check' : 'circle'}
-              color={isClaimed ? 'accentForeground' : 'foregroundMuted'}
-              className='flex-shrink-0 stroke-[2.25]'
-            />
-          )}
-          <Text.H5M color={isClaimed ? 'primary' : 'foreground'}>
-            {description}
-          </Text.H5M>
+    <span className='w-full'>
+      <Button
+        variant='nope'
+        className='justify-start !py-3 !rounded-none transition-opacity'
+        containerClassName={cn({
+          'hover:opacity-75': !isClaimed,
+          '!cursor-default pointer-events-none': isClaimed,
+        })}
+        fullWidth
+        onClick={onClick}
+      >
+        <div className='flex flex-row w-full items-center gap-4 justify-between'>
+          <div className='flex flex-row items-center gap-2'>
+            {isLoading ? (
+              <Icon
+                name='loader'
+                color='foregroundMuted'
+                className='animate-spin flex-shrink-0 stroke-[2.25]'
+              />
+            ) : (
+              <Icon
+                name={isClaimed ? 'check' : 'circle'}
+                color={isClaimed ? 'accentForeground' : 'foregroundMuted'}
+                className='flex-shrink-0 stroke-[2.25]'
+              />
+            )}
+            <Text.H5M color={isClaimed ? 'primary' : 'foreground'}>
+              {description}
+            </Text.H5M>
+          </div>
+          <Badge
+            variant={isClaimed ? 'noBorderMuted' : 'noBorderLatte'}
+            color='accentForeground'
+            size='large'
+            className='flex-shrink-0'
+          >
+            +{REWARD_VALUES[type]} credits
+          </Badge>
         </div>
-        <Badge
-          variant={isClaimed ? 'noBorderMuted' : 'noBorderLatte'}
-          color='accentForeground'
-          size='large'
-          className='flex-shrink-0'
-        >
-          +{REWARD_VALUES[type]} credits
-        </Badge>
-      </div>
-    </Button>
+      </Button>
+    </span>
   )
 }

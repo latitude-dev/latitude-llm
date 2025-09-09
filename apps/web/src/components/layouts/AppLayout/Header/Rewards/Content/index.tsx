@@ -2,6 +2,7 @@
 
 import { RewardType } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { useState } from 'react'
 import { RewardItem } from './RewardItem'
 import { RewardMenu } from './RewardMenu'
@@ -10,6 +11,7 @@ import { RewardsProgress } from './RewardsProgress'
 
 export function RewardsContent() {
   const [selectedType, setSelectedType] = useState<RewardType>()
+  const [isExpanded, setIsExpanded] = useState(false)
 
   if (selectedType) {
     return (
@@ -21,7 +23,7 @@ export function RewardsContent() {
   }
 
   return (
-    <div className='flex flex-col gap-2 p-2'>
+    <div className='flex flex-col gap-2 p-2 pb-0'>
       <RewardsProgress />
       <div className='flex flex-col gap-0.5'>
         <Text.H3M>Earn Latte credits!</Text.H3M>
@@ -30,14 +32,66 @@ export function RewardsContent() {
         </Text.H5>
       </div>
       <div className='flex flex-col gap-0.5 pt-2 divide-y divide-dashed divide-border'>
-        {Object.values(REWARD_CONFIGS).map((config, index) => (
-          <RewardItem
-            key={index}
-            description={config.title}
-            type={config.type}
-            onClick={() => setSelectedType(config.type)}
+        <RewardItem
+          description={REWARD_CONFIGS[RewardType.ProductHuntUpvote].title}
+          type={RewardType.ProductHuntUpvote}
+          onClick={() => setSelectedType(RewardType.ProductHuntUpvote)}
+        />
+        <RewardItem
+          description={REWARD_CONFIGS[RewardType.AgentShare].title}
+          type={RewardType.AgentShare}
+          onClick={() => setSelectedType(RewardType.AgentShare)}
+        />
+        <span className='w-full'>
+          <CollapsibleBox
+            title='Engage with us on Social Media'
+            icon='globe'
+            iconColor='foregroundMuted'
+            isExpanded={isExpanded}
+            onToggle={setIsExpanded}
+            scrollable={false}
+            paddingBottom={false}
+            paddingRight={false}
+            paddingLeft={false}
+            titlePadding={false}
+            headerDivider={true}
+            className='w-full !border-none !border-t'
+            expandedContent={
+              <div className='w-full flex flex-col gap-0.5 pt-2 divide-y divide-dashed divide-border'>
+                <RewardItem
+                  description={REWARD_CONFIGS[RewardType.XFollow].title}
+                  type={RewardType.XFollow}
+                  onClick={() => setSelectedType(RewardType.XFollow)}
+                />
+                <RewardItem
+                  description={REWARD_CONFIGS[RewardType.LinkedInFollow].title}
+                  type={RewardType.LinkedInFollow}
+                  onClick={() => setSelectedType(RewardType.LinkedInFollow)}
+                />
+                <RewardItem
+                  description={REWARD_CONFIGS[RewardType.XPost].title}
+                  type={RewardType.XPost}
+                  onClick={() => setSelectedType(RewardType.XPost)}
+                />
+                <RewardItem
+                  description={REWARD_CONFIGS[RewardType.LinkedInPost].title}
+                  type={RewardType.LinkedInPost}
+                  onClick={() => setSelectedType(RewardType.LinkedInPost)}
+                />
+              </div>
+            }
           />
-        ))}
+        </span>
+        <RewardItem
+          description={REWARD_CONFIGS[RewardType.GithubStar].title}
+          type={RewardType.GithubStar}
+          onClick={() => setSelectedType(RewardType.GithubStar)}
+        />
+        <RewardItem
+          description={REWARD_CONFIGS[RewardType.Referral].title}
+          type={RewardType.Referral}
+          onClick={() => setSelectedType(RewardType.Referral)}
+        />
       </div>
     </div>
   )

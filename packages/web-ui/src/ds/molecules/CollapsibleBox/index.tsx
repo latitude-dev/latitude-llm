@@ -1,8 +1,10 @@
 'use client'
+
 import { MouseEvent, ReactNode, useCallback, useState } from 'react'
 import { cn } from '../../../lib/utils'
 import { Icon, IconName } from '../../atoms/Icons'
 import { Text } from '../../atoms/Text'
+import { TextColor } from '../../tokens'
 
 export const COLLAPSED_BOX_HEIGHT = 48
 
@@ -10,6 +12,7 @@ export type OnToggleFn = (expanded: boolean) => void
 export function CollapsibleBox({
   title,
   icon,
+  iconColor,
   collapsedContent,
   collapsedContentHeader,
   expandedContent,
@@ -23,6 +26,7 @@ export function CollapsibleBox({
   paddingBottom = true,
   paddingRight = true,
   paddingLeft = true,
+  titlePadding = true,
   isExpanded: isExpandedProp,
   avoidToggleOnTitleClick = false,
   handleIcon = true,
@@ -32,6 +36,7 @@ export function CollapsibleBox({
 }: {
   title: string | ReactNode
   icon?: IconName
+  iconColor?: TextColor
   collapsedContent?: ReactNode
   collapsedContentHeader?: ReactNode
   expandedContent?: ReactNode
@@ -46,6 +51,7 @@ export function CollapsibleBox({
   paddingBottom?: boolean
   paddingRight?: boolean
   paddingLeft?: boolean
+  titlePadding?: boolean
   avoidToggleOnTitleClick?: boolean
   handleIcon?: boolean
   handlePosition?: 'left' | 'right'
@@ -95,9 +101,10 @@ export function CollapsibleBox({
       >
         <div
           className={cn(
-            'flex flex-shrink-0 justify-between items-center py-3.5 px-4 gap-x-4',
+            'flex flex-shrink-0 justify-between items-center py-3.5 gap-x-4',
             {
               'border-b': isExpanded && headerDivider,
+              'px-4': titlePadding,
             },
           )}
         >
@@ -111,7 +118,9 @@ export function CollapsibleBox({
                 name={isExpanded ? 'chevronUp' : 'chevronDown'}
               />
             )}
-            {icon && <Icon className='flex-shrink-0' name={icon} />}
+            {icon && (
+              <Icon className='flex-shrink-0' name={icon} color={iconColor} />
+            )}
             {typeof title === 'string' ? (
               <Text.H5M userSelect={false}>{title}</Text.H5M>
             ) : (

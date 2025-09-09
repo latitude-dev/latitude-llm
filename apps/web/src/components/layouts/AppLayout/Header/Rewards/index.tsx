@@ -29,7 +29,8 @@ export function RewardsButton() {
         side='bottom'
         align='end'
         size='xmedium'
-        className='!rounded-xl'
+        className='!rounded-xl !pb-2'
+        maxHeight='none'
       >
         <RewardsContent />
       </Popover.Content>

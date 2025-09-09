@@ -95,7 +95,7 @@ export const REWARD_CONFIGS: Record<RewardType, RewardConfig> = {
   },
   [RewardType.AgentShare]: {
     type: RewardType.AgentShare,
-    title: 'Share your Agent on Social Media',
+    title: 'Share your Agent to the World',
     referenceSchema: z.string({ required_error: 'Link is required' }).url(),
     placeholder: 'https://x.com/post/...',
     steps: [
