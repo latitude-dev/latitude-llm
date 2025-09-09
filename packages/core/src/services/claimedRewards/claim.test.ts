@@ -22,7 +22,7 @@ describe('claimReward', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('should return an error if the reward has already been solicited', async () => {
+  it('should return an error if the user has been already invited', async () => {
     const { workspace, user } = await createProject()
 
     await claimReward({ workspace, user, type: RewardType.Referral, reference })
@@ -36,7 +36,7 @@ describe('claimReward', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toBeInstanceOf(BadRequestError)
-    expect(result.error?.message).toBe('Referral already solicited')
+    expect(result.error?.message).toBe('User already invited')
   })
 
   it('should return an error if the user already exists', async () => {

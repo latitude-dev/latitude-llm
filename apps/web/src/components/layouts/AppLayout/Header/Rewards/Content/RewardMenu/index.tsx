@@ -1,10 +1,9 @@
 'use client'
 import { useMemo } from 'react'
 
+import useRewards from '$/stores/rewards'
 import { RewardType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import useRewards from '$/stores/rewards'
 
 import { REWARD_CONFIGS } from './RewardConfigs'
 import { RewardMenuBase } from './RewardMenuBase'
@@ -30,9 +29,18 @@ export function RewardMenu({
   if (!config) return null
 
   return (
-    <div className='flex flex-col p-4 gap-6 items-start'>
-      <Button variant='link' className='p-0' onClick={onClose}>
-        <Icon name='arrowLeft' /> Go back to list
+    <div className='flex flex-col px-2 py-1 gap-2 items-start'>
+      <Button
+        variant='ghost'
+        className='p-0'
+        onClick={onClose}
+        iconProps={{
+          name: 'chevronLeft',
+          placement: 'left',
+          className: 'flex-shrink-0 stroke-[2.25]',
+        }}
+      >
+        Back to Rewards
       </Button>
       <RewardMenuBase
         claimedRewardData={claimedRewardData}

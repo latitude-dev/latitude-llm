@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { REWARD_VALUES, RewardType, User, Workspace } from '../browser'
+import { RewardType, User, Workspace } from '../browser'
 import { claimReward, updateRewardClaim } from '../services/claimedRewards'
 import { ClaimedRewardsRepository } from './claimedRewardsRepository'
 
@@ -24,14 +24,14 @@ describe('ClaimedRewardsRepository', () => {
       const claim1 = await claimReward({
         workspace,
         user,
-        type: RewardType.Post,
+        type: RewardType.XPost,
         reference: faker.internet.url(),
       }).then((r) => r.unwrap())
 
       const claim2 = await claimReward({
         workspace,
         user,
-        type: RewardType.GithubIssue,
+        type: RewardType.LinkedInFollow,
         reference: faker.internet.url(),
       }).then((r) => r.unwrap())
 
@@ -64,57 +64,13 @@ describe('ClaimedRewardsRepository', () => {
     })
   })
 
-  describe('getExtraRunsOptimistic', () => {
-    it('should return the total value of valid optimistic claimed rewards', async () => {
-      const claim1 = await claimReward({
-        workspace,
-        user,
-        type: RewardType.Follow,
-        reference: faker.internet.userName(),
-      }).then((r) => r.unwrap())
-
-      await updateRewardClaim({ claimId: claim1.id, isValid: true })
-
-      await claimReward({
-        workspace,
-        user,
-        type: RewardType.GithubStar,
-        reference: faker.internet.userName(),
-      }).then((r) => r.unwrap())
-
-      await claimReward({
-        workspace,
-        user,
-        type: RewardType.Referral,
-        reference: faker.internet.email(),
-      }).then((r) => r.unwrap())
-
-      const claim4 = await claimReward({
-        workspace,
-        user,
-        type: RewardType.Post,
-        reference: faker.internet.url(),
-      }).then((r) => r.unwrap())
-      await updateRewardClaim({ claimId: claim4.id, isValid: false })
-
-      const result = await repository.getExtraRunsOptimistic()
-
-      expect(result.ok).toBe(true)
-      const totalValue = result.value
-
-      const expectedValue =
-        REWARD_VALUES[RewardType.Follow] + REWARD_VALUES[RewardType.GithubStar]
-      expect(totalValue).toBe(expectedValue)
-    })
-  })
-
   describe('hasClaimed', () => {
     it('should return true if there is a claimed reward of the given type', async () => {
       // Create claimed rewards
       const claim1 = await claimReward({
         workspace,
         user,
-        type: RewardType.Follow,
+        type: RewardType.XFollow,
         reference: faker.internet.userName(),
       }).then((r) => r.unwrap())
       await updateRewardClaim({ claimId: claim1.id, isValid: true })
@@ -126,7 +82,7 @@ describe('ClaimedRewardsRepository', () => {
         reference: faker.internet.email(),
       }).then((r) => r.unwrap())
 
-      let result = await repository.hasClaimed(RewardType.Follow)
+      let result = await repository.hasClaimed(RewardType.XFollow)
       expect(result).toBe(true)
 
       result = await repository.hasClaimed(RewardType.Referral)
@@ -146,12 +102,12 @@ describe('ClaimedRewardsRepository', () => {
       const claim1 = await claimReward({
         workspace,
         user,
-        type: RewardType.Follow,
+        type: RewardType.XFollow,
         reference: followRef1,
       }).then((r) => r.unwrap())
 
       let result = await repository.exists({
-        rewardType: RewardType.Follow,
+        rewardType: RewardType.XFollow,
         reference: followRef1,
       })
       expect(result).toBe(true)
@@ -164,7 +120,7 @@ describe('ClaimedRewardsRepository', () => {
 
       await updateRewardClaim({ claimId: claim1.id, isValid: false })
       result = await repository.exists({
-        rewardType: RewardType.Follow,
+        rewardType: RewardType.XFollow,
         reference: followRef1,
       })
       expect(result).toBe(false)
@@ -172,12 +128,12 @@ describe('ClaimedRewardsRepository', () => {
       await claimReward({
         workspace,
         user,
-        type: RewardType.Follow,
+        type: RewardType.XFollow,
         reference: followRef2,
       }).then((r) => r.unwrap())
 
       result = await repository.exists({
-        rewardType: RewardType.Follow,
+        rewardType: RewardType.XFollow,
         reference: followRef1,
       })
       expect(result).toBe(false)

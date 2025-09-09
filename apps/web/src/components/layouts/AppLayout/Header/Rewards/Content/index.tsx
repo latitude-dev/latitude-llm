@@ -1,24 +1,14 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-
 import { RewardType } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import useRewards from '$/stores/rewards'
-
+import { useState } from 'react'
 import { RewardItem } from './RewardItem'
 import { RewardMenu } from './RewardMenu'
+import { REWARD_CONFIGS } from './RewardMenu/RewardConfigs'
+import { RewardsProgress } from './RewardsProgress'
 
 export function RewardsContent() {
-  const { data: claimedRewards, isLoading } = useRewards()
-
-  const isLaunchDaySignupClaimed = useMemo(() => {
-    if (isLoading || !claimedRewards) return false
-    return claimedRewards.some(
-      (r) => r.rewardType === RewardType.SignupLaunchDay,
-    )
-  }, [isLoading, claimedRewards])
-
   const [selectedType, setSelectedType] = useState<RewardType>()
 
   if (selectedType) {
@@ -31,42 +21,24 @@ export function RewardsContent() {
   }
 
   return (
-    <>
-      <Text.H5>
-        Get rewards and extend your runs limit forever by completing these
-        actions
-      </Text.H5>
-      <RewardItem
-        description='Give us a Github star'
-        type={RewardType.GithubStar}
-        onClick={() => setSelectedType(RewardType.GithubStar)}
-      />
-      <RewardItem
-        description='Follow us on X or LinkedIn'
-        type={RewardType.Follow}
-        onClick={() => setSelectedType(RewardType.Follow)}
-      />
-      <RewardItem
-        description='Post on X or LinkedIn'
-        type={RewardType.Post}
-        onClick={() => setSelectedType(RewardType.Post)}
-      />
-      <RewardItem
-        description='Refer Latitude to a friend'
-        type={RewardType.Referral}
-        onClick={() => setSelectedType(RewardType.Referral)}
-      />
-      <RewardItem
-        description='Resolve an Issue on Github'
-        type={RewardType.GithubIssue}
-        onClick={() => setSelectedType(RewardType.GithubIssue)}
-      />
-      {isLaunchDaySignupClaimed && (
-        <RewardItem
-          description='Signed up on the launch day'
-          type={RewardType.SignupLaunchDay}
-        />
-      )}
-    </>
+    <div className='flex flex-col gap-2 p-2'>
+      <RewardsProgress />
+      <div className='flex flex-col gap-0.5'>
+        <Text.H3M>Earn Latte credits!</Text.H3M>
+        <Text.H5 color='foregroundMuted'>
+          Complete these simple tasks and get additional Latte credits
+        </Text.H5>
+      </div>
+      <div className='flex flex-col gap-0.5 pt-2 divide-y divide-dashed divide-border'>
+        {Object.values(REWARD_CONFIGS).map((config, index) => (
+          <RewardItem
+            key={index}
+            description={config.title}
+            type={config.type}
+            onClick={() => setSelectedType(config.type)}
+          />
+        ))}
+      </div>
+    </div>
   )
 }

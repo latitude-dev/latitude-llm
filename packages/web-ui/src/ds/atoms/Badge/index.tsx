@@ -42,12 +42,17 @@ const badgeVariants = cva(
           'border-destructive-muted-foreground/30 text-destructive-muted-foreground',
         outlineWarningMuted:
           'border-warning-muted-foreground/30 text-warning-muted-foreground',
+        noBorderMuted:
+          'bg-muted border-none text-muted-foreground hover:bg-muted/80',
+        noBorderLatte:
+          'bg-latte-input border-none text-latte-input-foreground hover:bg-latte/15',
       },
       shape: {
-        default: 'max-h-5 ',
+        default: 'max-h-5',
         rounded: 'rounded-full',
       },
       size: {
+        large: 'text-[0.8rem] font-medium py-3.5 px-2.5 rounded-lg',
         normal: 'text-xs py-2 px-1.5 max-h-5',
         small: `${font.size.h7} max-h-4 min-w-4 px-1`,
       },

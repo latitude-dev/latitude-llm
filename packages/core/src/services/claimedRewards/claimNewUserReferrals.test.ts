@@ -8,7 +8,7 @@ import { claimReward } from './claim'
 import { claimNewUserReferrals } from './claimNewUserReferrals'
 
 describe('claimNewUserReferrals', () => {
-  it('accepts all pending referral reward claims for the specified email', async (ctx) => {
+  it('accepts winner pending referral reward claims for the specified email', async (ctx) => {
     const email = 'test@example.com'
     const { workspace: workspace1, user: user1 } =
       await ctx.factories.createProject()
@@ -56,7 +56,9 @@ describe('claimNewUserReferrals', () => {
     })
 
     expect(updatedClaims.length).toBe(3)
-    expect(updatedClaims.every((c) => c.isValid === true)).toBe(true)
+    expect(updatedClaims.filter((c) => c.isValid === true).length).toBe(1)
+    expect(updatedClaims.filter((c) => c.isValid === false).length).toBe(2)
+    expect(updatedClaims.filter((c) => c.isValid === null).length).toBe(0)
   })
 
   it('can only claim 1 referral reward per workspace', async (ctx) => {

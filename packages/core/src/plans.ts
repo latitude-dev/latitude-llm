@@ -12,7 +12,7 @@ export const SubscriptionPlans = {
     users: 1,
     retention_period: 30, // days
     rate_limit: 10, // per second
-    latte_credits: 'unlimited' as const, // TODO(credits): change back to 30 when beta ends
+    latte_credits: 30,
   },
   [SubscriptionPlan.HobbyV1]: {
     name: 'Hobby',
@@ -20,7 +20,7 @@ export const SubscriptionPlans = {
     users: 1,
     retention_period: 30, // days
     rate_limit: 10, // per second
-    latte_credits: 'unlimited' as const, // TODO(credits): change back to 30 when beta ends
+    latte_credits: 30,
   },
   [SubscriptionPlan.TeamV1]: {
     name: 'Team',
@@ -28,7 +28,7 @@ export const SubscriptionPlans = {
     users: 5,
     retention_period: 1825, // days
     rate_limit: 166, // per second
-    latte_credits: 'unlimited' as const, // TODO(credits): change back to 300 when beta ends
+    latte_credits: 300,
   },
   [SubscriptionPlan.EnterpriseV1]: {
     name: 'Enterprise',

@@ -2,10 +2,9 @@ import { ReactNode, useCallback, useMemo, useState } from 'react'
 
 import { ClaimedReward, RewardType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { cn } from '@latitude-data/web-ui/utils'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { ZodType } from 'zod'
 
@@ -13,6 +12,7 @@ import { Step } from './Step'
 
 export type RewardConfig = {
   type: RewardType
+  title: string
   referenceSchema: ZodType
   placeholder: string
   steps: Array<{
@@ -99,42 +99,60 @@ export function RewardMenuBase({
 
   return (
     <>
-      {steps.map((step, index) => (
-        <Step number={index + 1} key={index}>
-          {step.title}
-          {step.content}
-          {step.links &&
-            step.links.map((link, idx) => (
-              <Link href={link.href} key={idx}>
-                <Button variant='link' className='p-0'>
-                  <Text.H5 color='accentForeground'>{link.text}</Text.H5>
-                  <Icon color='accentForeground' name='externalLink' />
-                </Button>
-              </Link>
-            ))}
-          {step.input && (
-            <>
-              <Input
-                value={reference}
-                disabled={isClaimed}
-                onChange={(e) => setReference(e.target.value)}
-                placeholder={placeholder}
-                className={cn({ 'border-destructive': inputError })}
-              />
-              {!!inputError && (
-                <Text.H6 color='destructive'>{inputError}</Text.H6>
-              )}
-            </>
-          )}
-        </Step>
-      ))}
+      <div className='flex flex-col  divide-y divide-dashed divide-border'>
+        {steps.map((step, index) => (
+          <Step number={index + 1} key={index}>
+            <div className='flex flex-col'>
+              <Text.H5B>{step.title}</Text.H5B>
+              <Text.H5 color='foregroundMuted'>{step.content}</Text.H5>
+              {step.links &&
+                step.links.map((link, idx) => (
+                  <Link href={link.href} key={idx}>
+                    <Button
+                      variant='link'
+                      className='!p-0'
+                      iconProps={{
+                        name: 'externalLink',
+                        placement: 'right',
+                        color: 'accentForeground',
+                        className: 'flex-shrink-0 stroke-[2.25]',
+                      }}
+                    >
+                      <Text.H5B color='accentForeground'>{link.text}</Text.H5B>
+                    </Button>
+                  </Link>
+                ))}
+            </div>
+            {step.input && (
+              <>
+                <Input
+                  value={reference}
+                  disabled={isClaimed}
+                  onChange={(e) => setReference(e.target.value)}
+                  placeholder={placeholder}
+                  className={cn({ 'border-destructive': inputError })}
+                />
+                {!!inputError && (
+                  <Text.H6 color='destructive'>{inputError}</Text.H6>
+                )}
+              </>
+            )}
+          </Step>
+        ))}
+      </div>
       <div className='flex w-full justify-end'>
-        {/* TODO(rewards): create CTA*/}
-        <Button fancy disabled={buttonDisabled} onClick={claimFn}>
+        <Button
+          fancy
+          roundy
+          disabled={buttonDisabled}
+          onClick={claimFn}
+          fullWidth
+          variant='outline'
+        >
           {buttonDisabled
             ? (config.buttonConfig?.alreadyClamedLabel ??
               'Reward already claimed')
-            : (config.buttonConfig?.claimLabel ?? 'Claim reward')}
+            : (config.buttonConfig?.claimLabel ?? 'Mark as done')}
         </Button>
       </div>
     </>

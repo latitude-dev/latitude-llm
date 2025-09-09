@@ -1,4 +1,11 @@
-import { REWARD_VALUES, RewardType, User, Workspace } from '../../browser'
+import {
+  GrantSource,
+  QuotaType,
+  REWARD_VALUES,
+  RewardType,
+  User,
+  Workspace,
+} from '../../browser'
 import { unsafelyFindUserByEmail } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
@@ -6,6 +13,7 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { ClaimedRewardsRepository } from '../../repositories'
 import { claimedRewards } from '../../schema'
+import { issueGrant } from '../grants/issue'
 
 export async function claimReward(
   {
@@ -38,7 +46,7 @@ export async function claimReward(
         })
 
         if (alreadyReferred) {
-          return Result.error(new BadRequestError('Referral already solicited'))
+          return Result.error(new BadRequestError('User already invited'))
         }
 
         const invited = await unsafelyFindUserByEmail(reference, tx)
@@ -47,6 +55,8 @@ export async function claimReward(
         }
       }
 
+      const value = REWARD_VALUES[type]
+
       const newClaimedReward = await tx
         .insert(claimedRewards)
         .values({
@@ -54,7 +64,7 @@ export async function claimReward(
           userId: user.id,
           rewardType: type,
           reference,
-          value: REWARD_VALUES[type],
+          value,
           isValid: autoValidated ? true : null,
         })
         .returning()
@@ -62,6 +72,23 @@ export async function claimReward(
 
       if (!newClaimedReward) {
         return Result.error(new Error('Error claiming reward'))
+      }
+
+      // Referral rewards are not optimistic
+      if (type !== RewardType.Referral) {
+        const granting = await issueGrant(
+          {
+            type: QuotaType.Credits,
+            amount: value,
+            source: GrantSource.Reward,
+            referenceId: newClaimedReward.id.toString(),
+            workspace: workspace,
+          },
+          transaction,
+        )
+        if (granting.error) {
+          return Result.error(granting.error)
+        }
       }
 
       return Result.ok(newClaimedReward)

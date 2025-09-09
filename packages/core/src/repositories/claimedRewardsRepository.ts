@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns, isNull, not, or, sum } from 'drizzle-orm'
+import { and, eq, getTableColumns, isNull, not, or } from 'drizzle-orm'
 
 import { ClaimedReward, RewardType } from '../browser'
 import { Result } from '../lib/Result'
@@ -38,18 +38,9 @@ export class ClaimedRewardsRepository extends RepositoryLegacy<
     return Result.ok(result)
   }
 
-  async getExtraRunsOptimistic() {
-    const result = await this.db
-      .select({
-        total: sum(this.scope.value).mapWith(Number).as('total'),
-      })
-      .from(this.scope)
-      .where(this.optimisticFilter)
-
-    return Result.ok(result[0]?.total ?? 0)
-  }
-
   async hasClaimed(rewardType: RewardType) {
+    // TODO(rewards): allow 2 per month for posts and referrals
+
     const result = await this.db
       .select()
       .from(this.scope)

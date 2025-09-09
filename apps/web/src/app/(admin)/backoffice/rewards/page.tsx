@@ -1,4 +1,6 @@
 'use client'
+import { REWARD_CONFIGS } from '$/components/layouts/AppLayout/Header/Rewards/Content/RewardMenu/RewardConfigs'
+import usePendingRewardClaims from '$/stores/pendingRewardClaims'
 import { RewardType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
@@ -10,12 +12,17 @@ import {
   TableHeader,
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
-import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
-import usePendingRewardClaims from '$/stores/pendingRewardClaims'
+import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import Link from 'next/link'
+
+const LINKABLE_REWARDS = [
+  RewardType.XPost,
+  RewardType.LinkedInPost,
+  RewardType.AgentShare,
+]
 
 function ReferenceCell({
   reference,
@@ -24,7 +31,7 @@ function ReferenceCell({
   reference: string
   type: RewardType
 }) {
-  if ([RewardType.Post, RewardType.GithubIssue].includes(type)) {
+  if (LINKABLE_REWARDS.includes(type)) {
     return (
       <Link href={reference}>
         <Button variant='link' className='p-0'>
@@ -46,15 +53,6 @@ function ReferenceCell({
   )
 }
 
-const REWARD_TITLES: Record<RewardType, string> = {
-  [RewardType.GithubStar]: 'Github Star',
-  [RewardType.Follow]: 'Follow on X or LinkedIn',
-  [RewardType.Post]: 'Post on X or LinkedIn',
-  [RewardType.GithubIssue]: 'Solve a Github Issue',
-  [RewardType.Referral]: 'Referral',
-  [RewardType.SignupLaunchDay]: 'Signed up on Launch Day',
-}
-
 function RewardTypeCell({
   type,
   rewardAmount,
@@ -64,8 +62,8 @@ function RewardTypeCell({
 }) {
   return (
     <div className='flex flex-row items-center gap-2'>
-      <Text.H6 color='foregroundMuted'> (+{rewardAmount / 1000}k)</Text.H6>
-      <Text.H6>{REWARD_TITLES[type]}</Text.H6>
+      <Text.H6 color='foregroundMuted'> (+{rewardAmount})</Text.H6>
+      <Text.H6>{REWARD_CONFIGS[type].title}</Text.H6>
     </div>
   )
 }
@@ -126,21 +124,9 @@ export default function AdminPage() {
     isValid: boolean
   }) => {
     updateRewardClaim({ claimId, isValid })
-    const { dismiss } = toast({
+    toast({
       title: `Claim ${isValid ? 'accepted' : 'rejected'}`,
       description: `The claim has been ${isValid ? 'accepted' : 'rejected'}`,
-      action: (
-        <Button
-          variant='outline'
-          onClick={() => {
-            updateRewardClaim({ claimId, isValid: null })
-            dismiss()
-          }}
-        >
-          <Icon name='undo' />
-          Undo
-        </Button>
-      ),
     })
   }
 
@@ -148,19 +134,24 @@ export default function AdminPage() {
     <div className='w-full max-w-[1250px] m-auto px-4 py-8 pt-0 flex flex-col gap-8'>
       <div className='w-full flex flex-row align-center justify-end gap-2'>
         <LinkButton
-          label='Star gazers'
-          href='https://github.com/latitude-dev/latitude-llm/stargazers'
-          icon='star'
-        />
-        <LinkButton
           label='X Followers'
           href='https://x.com/trylatitude/followers'
           icon='twitter'
         />
         <LinkButton
-          label='Pull Requests'
-          href='https://github.com/latitude-dev/latitude-llm/pulls'
-          icon='github'
+          label='LinkedIn Followers'
+          href='https://www.linkedin.com/company/trylatitude/'
+          icon='linear'
+        />
+        <LinkButton
+          label='Star gazers'
+          href='https://github.com/latitude-dev/latitude-llm/stargazers'
+          icon='star'
+        />
+        <LinkButton
+          label='Product Hunt Launch'
+          href='https://www.producthunt.com/products/latitude-4'
+          icon='rocket'
         />
       </div>
       <TableWithHeader

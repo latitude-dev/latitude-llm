@@ -9,13 +9,9 @@ import { ClaimedReward } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useSWR, { SWRConfiguration } from 'swr'
 
-import useWorkspaceUsage from './workspaceUsage'
-
 const EMPTY_ARRAY: ClaimedReward[] = []
 
 export default function useRewards(opts?: SWRConfiguration) {
-  const { mutate: mutateUsage } = useWorkspaceUsage()
-
   const { toast } = useToast()
   const fetcher = useFetcher<ClaimedReward[]>(ROUTES.api.claimedRewards.root)
   const {
@@ -38,25 +34,6 @@ export default function useRewards(opts?: SWRConfiguration) {
     [mutate],
   )
 
-  const increaseMaxUsage = useCallback(
-    (increaseCount: number) => {
-      mutateUsage(
-        (prevUsage) => {
-          if (!prevUsage) return prevUsage
-          return {
-            ...prevUsage,
-            max:
-              prevUsage.max === 'unlimited'
-                ? 'unlimited'
-                : prevUsage.max + increaseCount,
-          }
-        },
-        { revalidate: false },
-      )
-    },
-    [mutateUsage],
-  )
-
   const { execute: executeClaimRewardAction } = useLatitudeAction(
     claimRewardAction,
     { onSuccess: noop }, // noop to prevent useLatitudeAction's default toast
@@ -66,7 +43,6 @@ export default function useRewards(opts?: SWRConfiguration) {
     async ({
       type,
       reference,
-      optimistic,
     }: {
       type: string
       reference: string
@@ -81,14 +57,11 @@ export default function useRewards(opts?: SWRConfiguration) {
             description: 'Your reward has been claimed successfully',
           })
 
-          if (optimistic) {
-            updateRewards(claimedReward)
-            increaseMaxUsage(claimedReward.value)
-          }
+          updateRewards(claimedReward)
         },
       )
     },
-    [executeClaimRewardAction, toast, updateRewards, increaseMaxUsage],
+    [executeClaimRewardAction, toast, updateRewards],
   )
 
   return { data, isLoading, error: swrError, claimReward }

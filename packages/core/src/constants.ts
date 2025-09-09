@@ -119,24 +119,26 @@ export enum EvaluationMetadataType {
   Manual = 'manual',
 }
 
-// TODO(rewards): update enum with new rewards
 export enum RewardType {
+  XFollow = 'x_follow',
+  LinkedInFollow = 'linkedin_follow',
   GithubStar = 'github_star',
-  GithubIssue = 'github_issue',
-  Follow = 'follow',
-  Post = 'post',
+  XPost = 'x_post',
+  LinkedInPost = 'linkedin_post',
+  AgentShare = 'agent_share',
+  ProductHuntUpvote = 'producthunt_upvote',
   Referral = 'referral',
-  SignupLaunchDay = 'signup_launch_day',
 }
 
-// TODO(rewards): update values with new rewards
 export const REWARD_VALUES: Record<RewardType, number> = {
-  [RewardType.GithubStar]: 1_000,
-  [RewardType.Follow]: 2_000,
-  [RewardType.Post]: 5_000,
-  [RewardType.GithubIssue]: 10_000,
-  [RewardType.Referral]: 5_000,
-  [RewardType.SignupLaunchDay]: 10_000,
+  [RewardType.XFollow]: 3,
+  [RewardType.LinkedInFollow]: 3,
+  [RewardType.GithubStar]: 3,
+  [RewardType.XPost]: 5,
+  [RewardType.LinkedInPost]: 5,
+  [RewardType.AgentShare]: 10,
+  [RewardType.ProductHuntUpvote]: 10,
+  [RewardType.Referral]: 10,
 }
 
 export type EvaluationAggregationTotals = {

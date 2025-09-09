@@ -1,12 +1,13 @@
 'use client'
-import { useMemo } from 'react'
 
+import useRewards from '$/stores/rewards'
 import { REWARD_VALUES, RewardType } from '@latitude-data/core/browser'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import useRewards from '$/stores/rewards'
+import { cn } from '@latitude-data/web-ui/utils'
+import { useMemo } from 'react'
 
 export function RewardItem({
   description,
@@ -24,41 +25,44 @@ export function RewardItem({
     return claimedRewards.some((r) => r.rewardType === type)
   }, [isLoading, claimedRewards, type])
 
-  const runs = useMemo(() => `${REWARD_VALUES[type] / 1000}k`, [type])
-
   return (
     <Button
-      variant='ghost'
-      className={cn('justify-start', {
-        ' hover:bg-muted': !isClaimed,
-        'cursor-default': isClaimed,
+      variant='nope'
+      className='justify-start !py-3 !rounded-none transition-opacity'
+      containerClassName={cn({
+        'hover:opacity-75': !isClaimed,
+        '!cursor-default pointer-events-none': isClaimed,
       })}
       fullWidth
-      aria-disabled={isClaimed}
       onClick={onClick}
     >
       <div className='flex flex-row w-full items-center gap-4 justify-between'>
-        <div className='flex flex-row items-center gap-1'>
+        <div className='flex flex-row items-center gap-2'>
           {isLoading ? (
             <Icon
               name='loader'
               color='foregroundMuted'
-              className='animate-spin'
+              className='animate-spin flex-shrink-0 stroke-[2.25]'
             />
           ) : (
             <Icon
-              name='check'
+              name={isClaimed ? 'check' : 'circle'}
               color={isClaimed ? 'accentForeground' : 'foregroundMuted'}
-              className={cn({ 'opacity-50': !isClaimed })}
+              className='flex-shrink-0 stroke-[2.25]'
             />
           )}
           <Text.H5M color={isClaimed ? 'primary' : 'foreground'}>
             {description}
           </Text.H5M>
         </div>
-        <Text.H5M color={isClaimed ? 'accentForeground' : 'foregroundMuted'}>
-          +{runs} runs
-        </Text.H5M>
+        <Badge
+          variant={isClaimed ? 'noBorderMuted' : 'noBorderLatte'}
+          color='accentForeground'
+          size='large'
+          className='flex-shrink-0'
+        >
+          +{REWARD_VALUES[type]} credits
+        </Badge>
       </div>
     </Button>
   )
