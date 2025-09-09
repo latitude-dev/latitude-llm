@@ -12,13 +12,8 @@ on:
         default: false
 
 jobs:
-  lint:
+  node-lint:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [22.x]
-        python-version: [3.13.x]
 
     steps:
       - name: Checkout repository
@@ -29,12 +24,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+          node-version: 22.x
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -55,21 +45,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: '0.5.10'
-          enable-cache: true
-
       - name: Install Node.js dependencies
         run: pnpm install
-
-      # TODO: We should probably separate node from python jobs
-      - name: Install Python dependencies
-        run: |
-          cd packages/sdks/python
-          uv venv
-          uv sync --all-extras --all-groups
 
       - name: Use Turbo to build affected packages
         run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
@@ -80,10 +57,36 @@ jobs:
       - name: Node.js Lint
         run: pnpm lint
 
+      - name: TypeScript
+        run: pnpm tc --cache-dir=.turbo
+
+  python-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13.x
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: '0.5.10'
+          enable-cache: true
+
+      - name: Install Python dependencies
+        run: |
+          cd packages/sdks/python
+          uv venv
+          uv sync --all-extras --all-groups
+
       - name: Python Lint
         run: |
           cd packages/sdks/python
           uv run scripts/lint.py
-
-      - name: TypeScript
-        run: pnpm tc --cache-dir=.turbo
