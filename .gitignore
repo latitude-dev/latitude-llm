@@ -93,3 +93,8 @@ __testing__
 apps/web/ingest
 apps/workers/workspaces/*/traces
 
+# Helm chart secrets (do not commit)
+charts/latitude/values.secrets.yaml
+**/*.secrets.yaml
+**/*.secrets.yml
+
