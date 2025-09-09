@@ -60,6 +60,8 @@ import { latteRequests } from './models/latteRequests'
 import { features } from './models/features'
 import { workspaceFeatures } from './models/workspaceFeatures'
 import { documentTriggerEvents } from './models/documentTriggerEvents'
+import { promocodes } from './models/promocodes'
+import { claimedPromocodes } from './models/claimedPromocodes'
 
 export type {
   DocumentLog,
@@ -431,3 +433,6 @@ export type WorkspaceLimits = {
   credits: number
   resetsAt: Date
 }
+
+export type Promocode = InferSelectModel<typeof promocodes>
+export type ClaimedPromocode = InferSelectModel<typeof claimedPromocodes>

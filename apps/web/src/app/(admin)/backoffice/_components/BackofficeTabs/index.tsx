@@ -46,6 +46,10 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               label: 'Grants',
               value: BackofficeRoutes.grants,
             },
+            {
+              label: 'Promocodes',
+              value: BackofficeRoutes.promocodes,
+            },
           ]}
           selected={selected}
           onSelect={(value) => {

@@ -24,6 +24,7 @@ export enum BackofficeRoutes {
   features = 'features',
   search = 'search',
   grants = 'grants',
+  promocodes = 'promocodes',
 }
 
 const BACKOFFICE_ROOT = '/backoffice'
@@ -61,6 +62,9 @@ export const ROUTES = {
     [BackofficeRoutes.grants]: {
       root: `${BACKOFFICE_ROOT}/grants`,
     },
+    [BackofficeRoutes.promocodes]: {
+      root: `${BACKOFFICE_ROOT}/promocodes`,
+    },
   },
   noWorkspace: {
     root: '/no-workspace',
@@ -83,6 +87,12 @@ export const ROUTES = {
       },
       destroy: (id: number) => {
         return { root: `/settings/provider-api-keys/${id}/destroy` }
+      },
+    },
+    promocodes: {
+      root: `/promocodes`,
+      claim: {
+        root: '/settings/promocodes/claim',
       },
     },
     integrations: {

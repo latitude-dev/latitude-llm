@@ -65,7 +65,6 @@ import {
   FolderOpen,
   FolderPlus,
   Forward,
-  GiftIcon,
   GitCompareArrows,
   Github,
   Gitlab,
@@ -136,6 +135,7 @@ import {
   XIcon,
   Youtube,
   Zap,
+  GiftIcon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
