@@ -1,5 +1,6 @@
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
+import { Message as MessageComponent } from '$/components/ChatWrapper'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
   DocumentLog,
@@ -11,7 +12,6 @@ import {
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import { Message as MessageComponent } from '$/components/ChatWrapper'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { format } from 'date-fns'
 import { useCallback, useMemo } from 'react'
@@ -314,6 +314,28 @@ export function DocumentLogMetadata({
   const providerLog = providerLogs[providerLogs.length - 1]
   return (
     <div className='flex flex-col gap-4'>
+      {isSpanLoading ? (
+        <>
+          <div className='w-full h-full flex items-center justify-center gap-2'>
+            <Icon
+              name='loader'
+              color='foregroundMuted'
+              className='animate-spin'
+            />
+            <Text.H5 color='foregroundMuted'>Loading details</Text.H5>
+          </div>
+          <LineSeparator text='Log details' />
+        </>
+      ) : (
+        !!span && (
+          <>
+            <DetailsPanel
+              span={{ ...span, conversationId: documentLog.uuid }}
+            />
+            <LineSeparator text='Log details' />
+          </>
+        )
+      )}
       <RunErrorMessage error={documentLog.error} />
       <MetadataItem label='Log uuid'>
         <ClickToCopy copyValue={documentLog.uuid}>
@@ -361,28 +383,6 @@ export function DocumentLogMetadata({
           />
         </div>
       ) : null}
-      {isSpanLoading ? (
-        <>
-          <LineSeparator text='Event details' />
-          <div className='w-full h-full flex items-center justify-center gap-2'>
-            <Icon
-              name='loader'
-              color='foregroundMuted'
-              className='animate-spin'
-            />
-            <Text.H5 color='foregroundMuted'>Loading details</Text.H5>
-          </div>
-        </>
-      ) : (
-        !!span && (
-          <>
-            <LineSeparator text='Event details' />
-            <DetailsPanel
-              span={{ ...span, conversationId: documentLog.uuid }}
-            />
-          </>
-        )
-      )}
     </div>
   )
 }

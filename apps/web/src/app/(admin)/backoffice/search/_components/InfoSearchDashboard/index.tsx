@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
-import { ROUTES, BackofficeRoutes } from '$/services/routes'
+import { BackofficeRoutes, ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Card } from '@latitude-data/web-ui/atoms/Card'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -77,6 +77,7 @@ function SearchCard({
             disabled={!value.trim()}
             className='w-full'
             fancy
+            roundy
           >
             <Icon name='search' size='small' className='mr-2' />
             {buttonText}

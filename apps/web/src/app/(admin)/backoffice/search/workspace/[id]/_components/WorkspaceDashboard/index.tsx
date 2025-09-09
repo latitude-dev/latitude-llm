@@ -3,10 +3,12 @@ import Link from 'next/link'
 
 import { WorkspaceWithDetails } from '$/data-access'
 import { BackofficeRoutes, ROUTES } from '$/services/routes'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 
 import { BasicInfoList } from '$/app/(admin)/backoffice/search/_components/BasicInfoList'
 import { DashboardHeader } from '$/app/(admin)/backoffice/search/_components/DashboardHeader'
@@ -149,7 +151,11 @@ export function WorkspaceDashboard({ workspace }: Props) {
                 </TableCell>
                 <TableCell>
                   <div className='flex flex-col gap-1'>
-                    <Text.H5 monospace>{grant.referenceId}</Text.H5>
+                    <ClickToCopy copyValue={grant.referenceId}>
+                      <Badge variant='muted' size='small'>
+                        {grant.referenceId}
+                      </Badge>
+                    </ClickToCopy>
                     <Text.H6 color='foregroundMuted' monospace>
                       {grant.source.charAt(0).toUpperCase() +
                         grant.source.slice(1)}

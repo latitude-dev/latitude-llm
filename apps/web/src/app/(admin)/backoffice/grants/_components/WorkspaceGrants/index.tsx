@@ -4,12 +4,14 @@ import { DataTable } from '$/app/(admin)/backoffice/search/_components/DataTable
 import { useGrantsAdmin } from '$/stores/admin/grants'
 import { useWorkspaceLimitsAdmin } from '$/stores/admin/workspaceLimits'
 import { Grant, GrantSource } from '@latitude-data/core/browser'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Card, CardContent, CardHeader } from '@latitude-data/web-ui/atoms/Card'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { useState } from 'react'
 import { IssueGrantModal } from '../IssueGrantModal'
 
@@ -177,7 +179,11 @@ export function WorkspaceGrants({ workspaceId }: { workspaceId: number }) {
                 </TableCell>
                 <TableCell>
                   <div className='flex flex-col gap-1'>
-                    <Text.H5 monospace>{grant.referenceId}</Text.H5>
+                    <ClickToCopy copyValue={grant.referenceId}>
+                      <Badge variant='muted' size='small'>
+                        {grant.referenceId}
+                      </Badge>
+                    </ClickToCopy>
                     <Text.H6 color='foregroundMuted' monospace>
                       {grant.source.charAt(0).toUpperCase() +
                         grant.source.slice(1)}

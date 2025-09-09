@@ -48,6 +48,7 @@ export default function GrantsAdmin() {
                 }}
                 disabled={!workspaceId}
                 fancy
+                roundy
               >
                 See Grants
               </Button>
