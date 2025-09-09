@@ -8,7 +8,6 @@ import { KeysetTablePaginationFooter } from '$/components/TablePaginationFooter/
 import { OnSelectedSpanFn } from '$/components/tracing/traces/Timeline'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
-import useFeature from '$/stores/useFeature'
 import {
   DocumentLogsLimitedView,
   DocumentLogWithMetadataAndError,
@@ -147,8 +146,6 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
     },
     ref,
   ) {
-    const { isEnabled: tracingEnabled } = useFeature('tracing')
-
     const queryParams =
       typeof window !== 'undefined' ? window.location.search : undefined
 
@@ -307,7 +304,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                     </Text.H5>
                   </TableCell>
                 </TableRow>
-                {tracingEnabled && selectedLog?.uuid === documentLog.uuid && (
+                {selectedLog?.uuid === documentLog.uuid && (
                   <TableRow hoverable={false}>
                     <TableCell
                       colSpan={999}

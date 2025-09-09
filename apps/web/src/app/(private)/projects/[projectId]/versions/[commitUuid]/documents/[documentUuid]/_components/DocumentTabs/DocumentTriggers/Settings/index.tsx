@@ -1,11 +1,10 @@
 import useDocumentTriggers from '$/stores/documentTriggers'
-import useFeature from '$/stores/useFeature'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { EmailTriggerSettings } from './EmailTrigger'
 import { IntegrationTriggerSettings } from './IntegrationTriggers'
 import { ScheduleTriggerSettings } from './ScheduleTrigger'
@@ -44,41 +43,24 @@ export function TriggerSettings({
     commitUuid,
   })
 
-  const { isEnabled: integrationTriggersEnabled } = useFeature(
-    'integrationTriggers',
-  )
-
-  const [selectedTab, setSelectedTab] = useState<ShareSettingsTabs>()
-  useEffect(
-    () =>
-      setSelectedTab(
-        integrationTriggersEnabled
-          ? ShareSettingsTabs.Integrations
-          : ShareSettingsTabs.Email,
-      ),
-    [integrationTriggersEnabled],
-  )
+  const [selectedTab, setSelectedTab] = useState<ShareSettingsTabs>(ShareSettingsTabs.Integrations)
 
   return (
     <div className='flex flex-col w-full gap-2 p-2'>
       <TabSelector
         options={[
-          ...(integrationTriggersEnabled
-            ? [
-                {
-                  value: ShareSettingsTabs.Integrations,
-                  label: (
-                    <TabLabel
-                      text='Integrations'
-                      isActive={triggers?.some(
-                        (t) =>
-                          t.triggerType === DocumentTriggerType.Integration,
-                      )}
-                    />
-                  ),
-                },
-              ]
-            : []),
+          {
+            value: ShareSettingsTabs.Integrations,
+            label: (
+              <TabLabel
+                text='Integrations'
+                isActive={triggers?.some(
+                  (t) =>
+                    t.triggerType === DocumentTriggerType.Integration,
+                )}
+              />
+            ),
+          },
           {
             value: ShareSettingsTabs.Email,
             label: (
