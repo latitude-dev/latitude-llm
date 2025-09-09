@@ -6,6 +6,8 @@ import {
   Commit,
   DocumentVersion,
   PipedreamIntegration,
+  User,
+  Project,
 } from '../../../../../browser'
 import { Result } from '../../../../../lib/Result'
 import { validateTriggerSchema } from './validateTriggerSchema'
@@ -34,11 +36,14 @@ vi.mock('@pipedream/sdk', () => ({
 }))
 
 describe('validateTriggerSchema', () => {
+  let project: Project
   let workspace: Workspace
-  let commit: Commit
+  let liveCommit: Commit
   let documents: DocumentVersion[]
   let integration: PipedreamIntegration
   let context: LatteToolContext
+  let draftCommit: Commit
+  let user: User
 
   const mockPipedreamClient: Partial<BackendClient> = {
     getComponent: vi.fn(),
@@ -55,7 +60,13 @@ describe('validateTriggerSchema', () => {
   const mockCreateBackendClient = vi.mocked(createBackendClient)
 
   beforeEach(async () => {
-    const project = await factories.createProject({
+    const {
+      project: prj,
+      user: usr,
+      workspace: wsp,
+      commit: livec,
+      documents: docs,
+    } = await factories.createProject({
       providers: [
         {
           type: Providers.OpenAI,
@@ -69,9 +80,17 @@ describe('validateTriggerSchema', () => {
         }),
       },
     })
-    workspace = project.workspace
-    commit = project.commit
-    documents = project.documents
+    user = usr
+    workspace = wsp
+    documents = docs
+    liveCommit = livec
+    project = prj
+
+    const { commit: draft } = await factories.createDraft({
+      project,
+      user,
+    })
+    draftCommit = draft
 
     integration = {
       id: 3,
@@ -124,8 +143,8 @@ describe('validateTriggerSchema', () => {
     it('should validate trigger successfully', async () => {
       // Arrange
       const params = {
-        projectId: commit.projectId,
-        versionUuid: commit.uuid,
+        projectId: project.id,
+        versionUuid: draftCommit.uuid,
         componentId: 'slack-new-message',
         promptUuid: documents[0]!.documentUuid,
         integrationId: integration.id,
@@ -157,8 +176,8 @@ describe('validateTriggerSchema', () => {
     it('should handle missing payloadParameters gracefully', async () => {
       // Arrange
       const params = {
-        projectId: commit.projectId,
-        versionUuid: commit.uuid,
+        projectId: project.id,
+        versionUuid: draftCommit.uuid,
         componentId: 'slack-new-message',
         promptUuid: documents[0]!.documentUuid,
         integrationId: integration.id,
@@ -185,8 +204,8 @@ describe('validateTriggerSchema', () => {
     it('should return error when document is not found', async () => {
       // Arrange
       const params = {
-        projectId: commit.projectId,
-        versionUuid: commit.uuid,
+        projectId: draftCommit.projectId,
+        versionUuid: draftCommit.uuid,
         componentId: 'slack-new-message',
         promptUuid: 'non-existent-uuid',
         integrationId: integration.id,
@@ -206,11 +225,11 @@ describe('validateTriggerSchema', () => {
       )
     })
 
-    it('should return error when trying to create trigger on draft commit', async () => {
+    it('should return error when trying to create trigger on live commit', async () => {
       // Arrange
       const params = {
-        projectId: commit.projectId,
-        versionUuid: 'draft-commit-uuid',
+        projectId: project.id,
+        versionUuid: liveCommit.uuid,
         componentId: 'slack-new-message',
         promptUuid: documents[0]!.documentUuid,
         integrationId: integration.id,
@@ -226,7 +245,7 @@ describe('validateTriggerSchema', () => {
       expect(Result.isOk(result)).toBe(false)
       expect(result.error).toBeInstanceOf(BadRequestError)
       expect(result.error?.message).toContain(
-        'Cannot create triggers on a draft commit',
+        'Cannot create triggers on a live commit',
       )
     })
   })
@@ -235,8 +254,8 @@ describe('validateTriggerSchema', () => {
     it('should return error when pipedream environment is not configured', async () => {
       // Arrange
       const params = {
-        projectId: commit.projectId,
-        versionUuid: commit.uuid,
+        projectId: project.id,
+        versionUuid: draftCommit.uuid,
         componentId: 'slack-new-message',
         promptUuid: documents[0]!.documentUuid,
         integrationId: integration.id,
@@ -265,8 +284,8 @@ describe('validateTriggerSchema', () => {
     it('should return error when integration is not found', async () => {
       // Arrange
       const params = {
-        projectId: commit.projectId,
-        versionUuid: commit.uuid,
+        projectId: project.id,
+        versionUuid: draftCommit.uuid,
         componentId: 'slack-new-message',
         promptUuid: documents[0]!.documentUuid,
         integrationId: 999,
@@ -293,8 +312,8 @@ describe('validateTriggerSchema', () => {
     it('should return error when latte choices validation fails', async () => {
       // Arrange
       const params = {
-        projectId: commit.projectId,
-        versionUuid: commit.uuid,
+        projectId: project.id,
+        versionUuid: draftCommit.uuid,
         componentId: 'slack-new-message',
         promptUuid: documents[0]!.documentUuid,
         integrationId: integration.id,
@@ -321,10 +340,10 @@ describe('validateTriggerSchema', () => {
   })
 
   describe('edge cases', () => {
-    it('should handle versionUuid as "live"', async () => {
+    it('should handle versionUuid as "live" returning an error', async () => {
       // Arrange
       const params = {
-        projectId: commit.projectId,
+        projectId: project.id,
         versionUuid: 'live',
         componentId: 'slack-new-message',
         promptUuid: documents[0]!.documentUuid,
@@ -342,14 +361,14 @@ describe('validateTriggerSchema', () => {
       const result = await validateTriggerSchema(params, context)
 
       // Assert
-      expect(Result.isOk(result)).toBe(true)
+      expect(Result.isOk(result)).toBe(false)
     })
 
     it('should pass correct parameters to validateLattesChoices', async () => {
       // Arrange
       const params = {
-        projectId: commit.projectId,
-        versionUuid: commit.uuid,
+        projectId: project.id,
+        versionUuid: draftCommit.uuid,
         componentId: 'custom-component',
         promptUuid: documents[0]!.documentUuid,
         integrationId: integration.id,

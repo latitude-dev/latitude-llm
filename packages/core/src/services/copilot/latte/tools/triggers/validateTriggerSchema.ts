@@ -98,19 +98,23 @@ const validateDocumentReadyForCreatingTrigger = async ({
     .then((r) => r.unwrap())
 
   if (
-    headCommit == undefined ||
-    (versionUuid !== headCommit.uuid && versionUuid !== HEAD_COMMIT)
+    headCommit !== undefined &&
+    (versionUuid === headCommit.uuid || versionUuid === HEAD_COMMIT)
   ) {
     return Result.error(
       new BadRequestError(
-        `Cannot create triggers on a draft commit. Select a previous live commit or publish the draft.`,
+        `Cannot create triggers on a live commit. Select a previous draft commit.`,
       ),
     )
   }
 
   const documentsScope = new DocumentVersionsRepository(workspaceId)
+  const commit = await commitsScope
+    .getCommitByUuid({ uuid: versionUuid })
+    .then((r) => r.unwrap())
+
   const documents = await documentsScope
-    .getDocumentsAtCommit(headCommit)
+    .getDocumentsAtCommit(commit)
     .then((r) => r.unwrap())
 
   const document = documents.find((doc) => doc.documentUuid === promptUuid)
