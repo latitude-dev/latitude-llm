@@ -20,9 +20,14 @@ export default function useProviderLogs(
   opts?: SWRConfiguration,
 ) {
   const fetcher = useFetcher<ProviderLogDto[], ProviderLogDto[]>(
-    buildRoute({ documentUuid, documentLogUuid, documentLogId }),
+    ROUTES.api.providerLogs.root,
     {
-      serializer: (rows) => rows.map(deserialize),
+      searchParams: {
+        documentUuid: documentUuid ?? '',
+        documentLogUuid: documentLogUuid ?? '',
+        documentLogId: documentLogId ? String(documentLogId) : '',
+      },
+      serializer: (rows) => rows.map(deserializeProviderLog),
     },
   )
   const {
@@ -47,7 +52,9 @@ export function useProviderLog(
   opts?: SWRConfiguration,
 ) {
   const fetcher = useFetcher<ProviderLogDto | undefined>(
-    providerLogId ? `/api/providerLogs/${providerLogId}` : undefined,
+    providerLogId
+      ? ROUTES.api.providerLogs.detail(providerLogId).root
+      : undefined,
     {
       fallback: null,
     },
@@ -69,44 +76,7 @@ export function useProviderLog(
   }
 }
 
-function buildRoute({
-  documentUuid,
-  documentLogUuid,
-  documentLogId,
-}: {
-  documentUuid?: string
-  documentLogUuid?: string
-  documentLogId?: number
-}) {
-  if (!documentUuid && !documentLogUuid && !documentLogId) return undefined
-
-  let route = ROUTES.api.providerLogs.root
-  if (documentUuid) {
-    route += `?documentUuid=${documentUuid}`
-  }
-  if (documentLogUuid) {
-    if (documentUuid) {
-      route += '&'
-    } else {
-      route += '?'
-    }
-
-    route += `documentLogUuid=${documentLogUuid}`
-  }
-  if (documentLogId) {
-    if (documentUuid || documentLogUuid) {
-      route += '&'
-    } else {
-      route += '?'
-    }
-
-    route += `documentLogId=${documentLogId}`
-  }
-
-  return route
-}
-
-function deserialize(item: ProviderLogDto) {
+export function deserializeProviderLog(item: ProviderLogDto) {
   return {
     ...item,
     generatedAt: item.generatedAt ? new Date(item.generatedAt) : null,

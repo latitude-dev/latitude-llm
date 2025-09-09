@@ -1,5 +1,5 @@
 import { LatitudeError } from '@latitude-data/constants/errors'
-import { User, Workspace } from '../../../browser'
+import { User, Workspace, Project } from '../../../browser'
 import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
 import { documentsQueue } from '../../../jobs/queues'
 import { ErrorResult, Result } from '../../../lib/Result'
@@ -9,6 +9,7 @@ import { assertCopilotIsSupported } from './helpers'
 
 export async function createLatteJob({
   workspace,
+  project,
   threadUuid,
   message,
   context,
@@ -16,6 +17,7 @@ export async function createLatteJob({
   debugVersionUuid,
 }: {
   workspace: Workspace
+  project: Project
   threadUuid: string
   message: string
   context: string
@@ -32,6 +34,7 @@ export async function createLatteJob({
 
   const job = await documentsQueue.add('runLatteJob', {
     workspaceId: workspace.id,
+    projectId: project.id,
     threadUuid,
     message,
     context,

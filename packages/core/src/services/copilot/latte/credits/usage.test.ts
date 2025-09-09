@@ -5,6 +5,7 @@ import {
   SubscriptionPlan,
   SubscriptionPlans,
   Workspace,
+  Project,
 } from '../../../../browser'
 import * as cache from '../../../../cache'
 import * as plans from '../../../../plans'
@@ -29,6 +30,7 @@ describe('usageLatteCredits', () => {
 
   let now: Date
   let workspace: Workspace
+  let project: Project
   let thread: LatteThread
 
   beforeEach(async () => {
@@ -42,9 +44,15 @@ describe('usageLatteCredits', () => {
       subscriptionPlan: SubscriptionPlan.HobbyV2,
       createdAt: subMonths(now, 1),
     })
+    const { project: p } = await factories.createProject({ workspace: w })
     workspace = w
+    project = p
 
-    const { thread: t } = await factories.createLatteThread({ workspace, user })
+    const { thread: t } = await factories.createLatteThread({
+      workspace,
+      project,
+      user,
+    })
     thread = t
 
     await factories.createLatteRequest({

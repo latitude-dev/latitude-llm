@@ -6,7 +6,7 @@ import {
   Providers,
 } from '@latitude-data/constants'
 import { describe, expect, beforeEach, it, vi } from 'vitest'
-import { Commit, Workspace } from '../../../../../../browser'
+import { Commit, Workspace, Project } from '../../../../../../browser'
 import {
   EmailTriggerConfiguration,
   ScheduledTriggerConfiguration,
@@ -79,13 +79,13 @@ describe('Latte create document triggers', () => {
 
     const result = await createTrigger(
       {
-        projectId: 1,
         versionUuid: 'commit-uuid',
         promptUuid: '1111-1111-1111-1111',
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: 1 } as Project,
       } as LatteToolContext,
     )
 
@@ -121,13 +121,13 @@ describe('Latte create document triggers', () => {
 
     const result = await createTrigger(
       {
-        projectId: 1,
         versionUuid: 'commit-uuid',
         promptUuid: '1111-1111-1111-1111',
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: 1 } as Project,
       } as LatteToolContext,
     )
 
@@ -161,13 +161,13 @@ describe('Latte create document triggers', () => {
 
     const result = await createTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
 
@@ -190,13 +190,13 @@ describe('Latte create document triggers', () => {
 
     const result = await createTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid: '00000000-0000-0000-0000-000000000000',
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
 
@@ -222,13 +222,13 @@ describe('Latte create document triggers', () => {
 
     const result = await createTrigger(
       {
-        projectId: commit.projectId,
         versionUuid: commit.uuid,
         promptUuid,
         triggerSpecification,
       },
       {
         workspace,
+        project: { id: commit.projectId } as Project,
       } as LatteToolContext,
     )
 

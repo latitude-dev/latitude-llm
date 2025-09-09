@@ -1,12 +1,12 @@
 'use client'
 
-import { ROUTES } from '$/services/routes'
-import { useCurrentUser } from '$/stores/currentUser'
-import { useLatteStore } from '$/stores/latte'
-import useFeature from '$/stores/useFeature'
-import { LatteVersion } from '@latitude-data/core/services/copilot/latte/debugVersions'
 import { useEffect, useMemo } from 'react'
 import useSWR from 'swr'
+import { ROUTES } from '$/services/routes'
+import { useCurrentUser } from '$/stores/currentUser'
+import { useLatteStore } from '$/stores/latte/index'
+import useFeature from '$/stores/useFeature'
+import { LatteVersion } from '@latitude-data/core/services/copilot/latte/debugVersions'
 import useFetcher from '../useFetcher'
 
 const EMPTY_ARRAY = [] as const

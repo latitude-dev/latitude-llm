@@ -35,16 +35,21 @@ describe('writePrompt', () => {
     project = p
     draft = c
 
-    const latteThread = await createLatteThread({ workspace, user }).then((r) =>
-      r.unwrap(),
-    )
+    const latteThread = await createLatteThread({
+      workspace,
+      user,
+      project,
+    }).then((r) => r.unwrap())
 
-    // @ts-expect-error Only defining stuff being used in writePrompt
     latteContext = {
       workspace,
       user,
+      project,
       threadUuid: latteThread.uuid,
-    }
+      context: {} as any,
+      toolName: 'writePrompt' as any,
+      toolCall: null as any,
+    } as unknown as LatteToolContext
   })
 
   it('creates a prompt in a draft', async () => {
@@ -53,7 +58,6 @@ describe('writePrompt', () => {
 
     const result = await writePrompt(
       {
-        projectId: project.id,
         versionUuid: draft.uuid,
         path,
         content,
@@ -90,7 +94,6 @@ describe('writePrompt', () => {
 
     const result = await writePrompt(
       {
-        projectId: project.id,
         versionUuid: draft.uuid,
         path,
         content: newContent,
@@ -127,7 +130,6 @@ temperature: wrong
 
     const result = await writePrompt(
       {
-        projectId: project.id,
         versionUuid: draft.uuid,
         path,
         content,
@@ -160,7 +162,6 @@ Parameter 2: {{ bar }}
 
     const result = await writePrompt(
       {
-        projectId: project.id,
         versionUuid: draft.uuid,
         path,
         content,

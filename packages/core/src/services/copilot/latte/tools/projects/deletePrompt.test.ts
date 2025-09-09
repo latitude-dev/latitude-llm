@@ -35,13 +35,16 @@ describe('deletePrompt', () => {
     project = p
     draft = c
 
-    const latteThread = await createLatteThread({ workspace, user }).then((r) =>
-      r.unwrap(),
-    )
+    const latteThread = await createLatteThread({
+      workspace,
+      user,
+      project,
+    }).then((r) => r.unwrap())
 
     // @ts-expect-error Only defining stuff being used in deletePrompt
     latteContext = {
       workspace,
+      project,
       user,
       threadUuid: latteThread.uuid,
     }
@@ -61,7 +64,6 @@ describe('deletePrompt', () => {
 
     const result = await deletePrompt(
       {
-        projectId: project.id,
         versionUuid: draft.uuid,
         path: path,
       },
@@ -111,7 +113,6 @@ describe('deletePrompt', () => {
 
     const result = await deletePrompt(
       {
-        projectId: project.id,
         versionUuid: draft.uuid,
         path: nonExistentPath,
       },
@@ -141,7 +142,6 @@ describe('deletePrompt', () => {
 
     const result = await deletePrompt(
       {
-        projectId: project.id,
         versionUuid: draft.uuid,
         path: path,
       },
@@ -168,7 +168,6 @@ describe('deletePrompt', () => {
     // First deletion
     const firstResult = await deletePrompt(
       {
-        projectId: project.id,
         versionUuid: draft.uuid,
         path: path,
       },
@@ -182,7 +181,6 @@ describe('deletePrompt', () => {
     // without includeDeleted, so it won't find the document
     const secondResult = await deletePrompt(
       {
-        projectId: project.id,
         versionUuid: draft.uuid,
         path: path,
       },

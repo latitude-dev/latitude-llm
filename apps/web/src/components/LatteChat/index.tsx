@@ -1,10 +1,10 @@
 'use client'
 
+import { ReactNode, useCallback, useRef, useState } from 'react'
 import { UpgradeLink } from '$/components/UpgradeLink'
-import { useLoadThreadFromProviderLogs } from '$/hooks/latte/useLoadThreadFromProviderLogs'
+import { useLoadThread } from '$/hooks/latte/useLoadThread/index'
 import { useLatteChangeActions } from '$/hooks/latte/useLatteChangeActions'
 import { useLatteChatActions } from '$/hooks/latte/useLatteChatActions'
-import { useSyncLatteUrlState } from '$/hooks/latte/useSyncLatteUrlState'
 import { useOnce } from '$/hooks/useMount'
 import {
   PlaygroundAction,
@@ -26,22 +26,24 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
-import { useCallback, useRef, useState } from 'react'
 import { ChatSkeleton } from './_components/ChatSkeleton'
 import { LatteUsageInfo } from './_components/LatteUsageInfo'
 import { LatteMessageList } from './_components/MessageList'
 import { LatteChatInput } from './LatteChatInput'
 import { useLatteEventHandlers } from '$/hooks/latte/useLatteEventHandlers'
 
-export function LatteChat() {
+function ChatWrapper({ children }: { children: ReactNode }) {
+  return (
+    <div className='w-full h-full max-h-full flex flex-col items-center bg-latte-background'>
+      {children}
+    </div>
+  )
+}
+
+export function LatteChatUI() {
   const { data: workspace } = useCurrentWorkspace()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-
-  useSyncLatteUrlState()
-  useLatteEventHandlers()
-
-  const isLoadingThread = useLoadThreadFromProviderLogs()
   const { isBrewing, resetAll, interactions, error, usage, jobId } =
     useLatteStore()
   const { sendMessage, stopChat } = useLatteChatActions()
@@ -76,115 +78,116 @@ export function LatteChat() {
     commit: commit,
   })
 
+  useLatteEventHandlers()
   useOnce(() => {
     if (!playgroundAction) return
+
     const { prompt } = playgroundAction
     resetPlaygroundAction()
     resetChat()
-    setTimeout(() => sendMessage(prompt)) // Note: using empty setTimeout to execute sendMessage in the next tick
+    // Note: using empty setTimeout to execute sendMessage in the next tick
+    setTimeout(() => sendMessage(prompt))
   })
 
   return (
-    <div className='w-full h-full max-h-full flex flex-col items-center bg-latte-background'>
+    <ChatWrapper>
       <div className='flex-1 flex flex-col h-full w-full items-center gap-4 min-w-[300px] max-w-[1200px] m-auto flex-shrink-0'>
         <div className='flex-grow min-h-0 h-full w-full flex flex-col items-center justify-center relative'>
           <div
             className='w-full h-full overflow-hidden custom-scrollbar flex flex-col gap-4 items-center pb-8'
             ref={containerRef}
           >
-            {isLoadingThread && !isBrewing && <ChatSkeleton />}
-            {!isLoadingThread &&
-              (!inConversation ? (
-                <div className='flex flex-col items-center justify-center h-full gap-8 min-w-[50%] p-8'>
-                  <div className='flex flex-col items-center justify-center gap-6'>
-                    <Image
-                      src='/latte.svg'
-                      alt='Latte'
-                      width={80}
-                      height={80}
-                      className={cn('select-none duration-500 h-auto', {
-                        'animate-spin': animateLatte,
-                      })}
-                      onDoubleClick={() => setAnimateLatte((prev) => !prev)}
-                      unselectable='on'
-                      unoptimized
-                    />
-                    <div className='flex flex-col items-center justify-center gap-2'>
-                      <Text.H3M centered>
-                        What do you want to automate today?
-                      </Text.H3M>
-                      <Text.H5 color='foregroundMuted' centered>
-                        Chat with Latte to build and improve your agent
-                      </Text.H5>
-                    </div>
+            {!inConversation ? (
+              <div className='flex flex-col items-center justify-center h-full gap-8 min-w-[50%] p-8'>
+                <div className='flex flex-col items-center justify-center gap-6'>
+                  <Image
+                    src='/latte.svg'
+                    alt='Latte'
+                    width={80}
+                    height={80}
+                    className={cn('select-none duration-500 h-auto', {
+                      'animate-spin': animateLatte,
+                    })}
+                    onDoubleClick={() => setAnimateLatte((prev) => !prev)}
+                    unselectable='on'
+                    unoptimized
+                  />
+                  <div className='flex flex-col items-center justify-center gap-2'>
+                    <Text.H3M centered>
+                      What do you want to automate today?
+                    </Text.H3M>
+                    <Text.H5 color='foregroundMuted' centered>
+                      Chat with Latte to build and improve your agent
+                    </Text.H5>
                   </div>
-                  <LatteChatInput
-                    error={error}
-                    inConversation={false}
-                    resetChat={resetChat}
-                    scrollToBottom={scrollToBottom}
-                    sendMessage={sendMessage}
-                  />
                 </div>
-              ) : (
-                <>
-                  <LatteMessageList
-                    interactions={interactions}
-                    isStreaming={isBrewing}
-                  />
-                  {error && (
-                    <div className='w-full px-8'>
-                      <Alert
-                        variant='destructive'
-                        direction='column'
-                        spacing='small'
-                        title='Oh no, something went wrong'
-                        description={error}
-                        cta={
-                          error.includes(LATTE_NOT_ENOUGH_CREDITS_ERROR) ? (
-                            <UpgradeLink className='w-full'>
-                              <Button
-                                variant='ghost'
-                                size='none'
-                                iconProps={{
-                                  name: 'arrowUpRight',
-                                  color: 'destructiveMutedForeground',
-                                  className: 'flex-shrink-0',
-                                }}
-                                className='text-destructive-muted-foreground'
-                                userSelect={false}
-                              >
-                                {FREE_PLANS.includes(
-                                  workspace?.currentSubscription.plan ??
-                                    FREE_PLANS[0],
-                                )
-                                  ? 'Upgrade to Team plan'
-                                  : 'Contact us to upgrade'}
-                              </Button>
-                            </UpgradeLink>
-                          ) : (
+                <LatteChatInput
+                  error={error}
+                  inConversation={false}
+                  resetChat={resetChat}
+                  scrollToBottom={scrollToBottom}
+                  sendMessage={sendMessage}
+                />
+              </div>
+            ) : (
+              <>
+                <LatteMessageList
+                  interactions={interactions}
+                  isStreaming={isBrewing}
+                />
+                {error && (
+                  <div className='w-full px-8'>
+                    <Alert
+                      variant='destructive'
+                      direction='column'
+                      spacing='small'
+                      title='Oh no, something went wrong'
+                      description={error}
+                      cta={
+                        error.includes(LATTE_NOT_ENOUGH_CREDITS_ERROR) ? (
+                          <UpgradeLink className='w-full'>
                             <Button
                               variant='ghost'
                               size='none'
-                              onClick={resetChat}
                               iconProps={{
-                                name: 'rotate',
+                                name: 'arrowUpRight',
                                 color: 'destructiveMutedForeground',
                                 className: 'flex-shrink-0',
                               }}
                               className='text-destructive-muted-foreground'
                               userSelect={false}
                             >
-                              Start a new chat
+                              {FREE_PLANS.includes(
+                                workspace?.currentSubscription.plan ??
+                                  FREE_PLANS[0],
+                              )
+                                ? 'Upgrade to Team plan'
+                                : 'Contact us to upgrade'}
                             </Button>
-                          )
-                        }
-                        className='rounded-2xl'
-                      />
-                    </div>
-                  )}
-                </>
-              ))}
+                          </UpgradeLink>
+                        ) : (
+                          <Button
+                            variant='ghost'
+                            size='none'
+                            onClick={resetChat}
+                            iconProps={{
+                              name: 'rotate',
+                              color: 'destructiveMutedForeground',
+                              className: 'flex-shrink-0',
+                            }}
+                            className='text-destructive-muted-foreground'
+                            userSelect={false}
+                          >
+                            Start a new chat
+                          </Button>
+                        )
+                      }
+                      className='rounded-2xl'
+                    />
+                  </div>
+                )}
+              </>
+            )}
           </div>
           {inConversation && (
             <div className='w-full p-8 flex flex-col gap-4 items-center justify-center'>
@@ -206,6 +209,19 @@ export function LatteChat() {
           )}
         </div>
       </div>
-    </div>
+    </ChatWrapper>
   )
+}
+
+export function LatteChat() {
+  const isLoading = useLoadThread()
+
+  if (isLoading)
+    return (
+      <ChatWrapper>
+        <ChatSkeleton />
+      </ChatWrapper>
+    )
+
+  return <LatteChatUI />
 }

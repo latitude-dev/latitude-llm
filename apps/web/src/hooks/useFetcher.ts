@@ -32,9 +32,9 @@ export async function handleResponse<
 }: {
   response: Response
   returnRaw?: Raw
-  toast: ReturnType<typeof useToast>['toast']
-  navigate: ReturnType<typeof useNavigate>
-  currentUrl: string
+  toast?: ReturnType<typeof useToast>['toast']
+  navigate?: ReturnType<typeof useNavigate>
+  currentUrl?: string
   serializer?: (item: I) => R
   onSuccess?: (data: ConditionalResponse<R, Raw>) => void
   onFail?: (error: string) => void
@@ -52,14 +52,14 @@ export async function handleResponse<
   }
 
   if (response.status === 401 || response.status === 403) {
-    toast({
+    toast?.({
       title: 'You are being redirected...',
       description:
         'You are not authorized to access this resource, redirecting your to the login page',
     })
 
-    if (!currentUrl.includes(ROUTES.auth.login)) {
-      navigate.push(
+    if (currentUrl && !currentUrl.includes(ROUTES.auth.login)) {
+      navigate?.push(
         `${ROUTES.auth.login}?returnTo=${encodeURIComponent(currentUrl)}`,
       )
     }
@@ -67,7 +67,7 @@ export async function handleResponse<
     if (onFail) {
       onFail('Something went wrong on the server')
     } else {
-      toast({
+      toast?.({
         title: 'Server error',
         description: 'Something went wrong on the server',
         variant: 'destructive',
@@ -78,7 +78,7 @@ export async function handleResponse<
     if (onFail) {
       onFail(error.message)
     } else {
-      toast({
+      toast?.({
         title: 'Error',
         description: error.message,
         variant: 'destructive',
@@ -103,9 +103,9 @@ export async function executeFetch<
 }: {
   route: string
   searchParams?: ISearchParams
-  toast: ReturnType<typeof useToast>['toast']
-  navigate: ReturnType<typeof useNavigate>
-  currentUrl: string
+  toast?: ReturnType<typeof useToast>['toast']
+  navigate?: ReturnType<typeof useNavigate>
+  currentUrl?: string
   serializer?: (item: any) => any
   onSuccess?: (data: ConditionalResponse<R, Raw>) => void
   onFail?: (error: string) => void

@@ -6,7 +6,7 @@ import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
 import { partialAcceptLatteChangesAction } from '$/actions/latte/partialAcceptChanges'
 import { partialRejectLatteChangesAction } from '$/actions/latte/partialRejectChanges'
 import { trigger } from '$/lib/events'
-import { useLatteStore } from '$/stores/latte'
+import { useLatteStore } from '$/stores/latte/index'
 import { useCallback, useMemo } from 'react'
 import { useServerAction } from 'zsa-react'
 

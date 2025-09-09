@@ -1,4 +1,4 @@
-import { LatteThread, User, Workspace } from '../../../../browser'
+import { LatteThread, User, Workspace, Project } from '../../../../browser'
 import { Result } from '../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../lib/Transaction'
 import { latteThreads } from '../../../../schema'
@@ -7,9 +7,11 @@ export function createLatteThread(
   {
     user,
     workspace,
+    project,
   }: {
     user: User
     workspace: Workspace
+    project: Project
   },
   transaction = new Transaction(),
 ): PromisedResult<LatteThread> {
@@ -19,6 +21,7 @@ export function createLatteThread(
       .values({
         userId: user.id,
         workspaceId: workspace.id,
+        projectId: project.id,
       })
       .returning()
       .then((r) => r[0])

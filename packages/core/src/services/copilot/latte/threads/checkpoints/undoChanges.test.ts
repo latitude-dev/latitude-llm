@@ -82,7 +82,7 @@ describe('undo latte changes', () => {
     }).then((r) => r.unwrap())
 
     /*
-    LATTE ACTIONS: 
+    LATTE ACTIONS:
       [ + ] create/new: Latte was here
       [ · ] update/new: (...) + Latte was here
       [ · ] update/edited: (...) + Latte was here
@@ -119,8 +119,8 @@ describe('undo latte changes', () => {
       }),
     ]
 
-    const thread = await createLatteThread({ user, workspace }).then((r) =>
-      r.unwrap(),
+    const thread = await createLatteThread({ user, workspace, project }).then(
+      (r) => r.unwrap(),
     )
 
     await LATTE_TOOLS[LatteTool.editProject](
@@ -131,8 +131,9 @@ describe('undo latte changes', () => {
       },
       {
         workspace,
+        project,
         threadUuid: thread.uuid,
-        // @ts-ignore
+        // @ts-expect-error - Lazy typing
         tool: {
           name: LatteTool.editProject,
         },
@@ -140,7 +141,7 @@ describe('undo latte changes', () => {
     ).then((r) => r.unwrap())
 
     /*
-    DRAFT STATE AFTER LATTE ACTIONS: 
+    DRAFT STATE AFTER LATTE ACTIONS:
       [ + ] create/new: Latte was here
       [ + ] update/new: (...) + Latte was here <-- appears as "new" because it was created in the draft
       [ · ] update/edited: (...) + Latte was here
@@ -232,12 +233,11 @@ describe('undo latte changes', () => {
       })
 
       const { commit: draft } = await factories.createDraft({ project, user })
-      const thread = await createLatteThread({ user, workspace }).then((r) =>
-        r.unwrap(),
+      const thread = await createLatteThread({ user, workspace, project }).then(
+        (r) => r.unwrap(),
       )
       await LATTE_TOOLS[LatteTool.editProject](
         {
-          projectId: project.id,
           versionUuid: draft.uuid,
           actions: [
             {
@@ -251,8 +251,9 @@ describe('undo latte changes', () => {
         },
         {
           workspace,
+          project,
           threadUuid: thread.uuid,
-          // @ts-ignore
+          // @ts-expect-error - Lazy typing
           tool: {
             name: LatteTool.editProject,
           },
