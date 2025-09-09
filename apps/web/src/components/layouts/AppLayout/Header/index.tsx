@@ -24,6 +24,7 @@ export function AppHeaderWrapper({
         'border-b border-border bg-background',
         'sticky top-0 isolate py-3 z-10',
         { 'pl-6 pr-3': xPadding === 'normal', 'px-0': xPadding === 'none' },
+        'max-h-12',
       )}
     >
       {children}

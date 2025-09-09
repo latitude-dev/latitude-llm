@@ -196,7 +196,7 @@ export function StepHeader({
         className='relative flex flex-row items-center justify-between gap-x-2'
       >
         <div className='flex items-center gap-x-2'>
-          <div className='flex items-center justify-center border border-border rounded-lg p-0.5 min-w-6 min-h-6'>
+          <div className='flex items-center justify-center border border-border rounded-xl p-0.5 min-w-6 min-h-6'>
             <Text.H6M userSelect={false}>{stepIndex}</Text.H6M>
           </div>
           <div

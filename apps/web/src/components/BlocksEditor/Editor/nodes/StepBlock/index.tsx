@@ -74,7 +74,7 @@ export class StepBlockNode extends ElementNode {
     div.className = cn(
       'step-block',
       'p-3 border border-border bg-background',
-      'rounded-lg flex flex-col gap-y-3',
+      'rounded-xl flex flex-col gap-y-3',
     )
 
     createReactDivWrapper({

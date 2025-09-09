@@ -36,7 +36,7 @@ const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
       className: cn(
         className,
         'animate-in fade-in-0 slide-in-from-top-2',
-        'bg-background shadow-lg rounded-md',
+        'bg-background shadow-lg rounded-xl',
         'mt-1 border border-border',
         'gap-y-4 flex flex-col',
         zIndex.popover,
@@ -90,9 +90,9 @@ export const ButtonTrigger = ({
       <Button variant={buttonVariant} ellipsis className={cn(className)}>
         <div className='flex flex-row justify-between items-center w-full gap-x-2'>
           {isString(children) ? (
-            <Text.H5 color={color} noWrap ellipsis>
+            <Text.H5M color={color} noWrap ellipsis>
               <div className={overrideDarkColor}>{children}</div>
-            </Text.H5>
+            </Text.H5M>
           ) : (
             <div className={overrideDarkColor}>{children}</div>
           )}

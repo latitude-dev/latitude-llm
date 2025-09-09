@@ -62,7 +62,7 @@ export class MessageBlockNode extends ElementNode {
     div.className = cn(
       'message-block',
       'p-3 border border-border bg-secondary',
-      'rounded-lg flex flex-col gap-y-3',
+      'rounded-xl flex flex-col gap-y-3',
     )
 
     createReactDivWrapper({

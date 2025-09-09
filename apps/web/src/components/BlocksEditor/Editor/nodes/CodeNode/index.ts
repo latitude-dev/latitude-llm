@@ -137,7 +137,7 @@ export class CodeNode extends LexicalCodeNode {
       'code-error-overlay',
       'pointer-events-none select-none',
       'flex items-center px-4 py-2 mb-2',
-      'border border-destructive-muted-foreground/10 bg-destructive-muted text-destructive-muted-foreground rounded-lg ',
+      'border border-destructive-muted-foreground/10 bg-destructive-muted text-destructive-muted-foreground rounded-xl ',
     ].join(' ')
     dom.appendChild(newOverlay)
     return newOverlay

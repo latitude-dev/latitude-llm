@@ -48,7 +48,7 @@ const theme = {
     'block whitespace-pre-wrap ',
     'text-sm text-muted-foreground',
     'px-4 py-2',
-    'rounded-lg',
+    'rounded-xl',
     'bg-backgroundCode',
     'border border-border',
     'standalone-tooltip',

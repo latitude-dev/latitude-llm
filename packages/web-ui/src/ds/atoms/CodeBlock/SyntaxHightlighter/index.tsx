@@ -55,11 +55,9 @@ export function SyntaxHighlighter({
   }, [currentTheme])
 
   return (
-    <Suspense
-      fallback={<div className='p-4 text-sm text-muted'>Loading code...</div>}
-    >
+    <Suspense fallback={<div className='p-4 text-sm'>Loading code...</div>}>
       <LazyPrism
-        className={cn('text-sm', className)}
+        className={cn('text-xs', className)}
         language={language}
         style={style}
         customStyle={{

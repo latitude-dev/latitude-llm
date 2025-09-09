@@ -20,7 +20,7 @@ const BlocksEditor = lazy(() =>
 
 function BlocksEditorPlaceholder() {
   return (
-    <Skeleton className='w-full h-full rounded-lg flex items-center justify-center gap-2 p-4'>
+    <Skeleton className='w-full h-full rounded-xl flex items-center justify-center gap-2 p-4'>
       <Icon name='loader' color='foregroundMuted' className='animate-spin' />
       <Text.H5 color='foregroundMuted'>Assembling prompt</Text.H5>
     </Skeleton>

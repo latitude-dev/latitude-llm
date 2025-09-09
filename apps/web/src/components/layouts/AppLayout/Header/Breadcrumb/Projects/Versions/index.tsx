@@ -45,9 +45,9 @@ export function CommitBreadcrumbItems({
       <BreadcrumbSeparator />
       <BreadcrumbItem>
         {isLoading ? (
-          <BreadcrumbItemSkeleton />
+          <BreadcrumbItemSkeleton className='pl-3' />
         ) : (
-          <div className='flex flex-row w-full justify-between overflow-hidden'>
+          <div className='flex flex-row w-full justify-between overflow-hidden pl-3'>
             <Text.H5 color='foregroundMuted' noWrap ellipsis>
               {currentCommit?.title ?? commitUuid}
             </Text.H5>

@@ -118,13 +118,13 @@ export function TabSelect<V extends unknown = unknown>({
           <div
             className={cn(
               'relative flex flex-row justify-between gap-2 p-1 w-[calc(100%+2px)]',
-              'bg-background rounded-lg border border-input',
+              'bg-secondary rounded-lg border border-input',
               { '-mt-[4px] -mx-px rounded-xl': fancy },
             )}
           >
             <div
               className={cn(
-                'absolute hidden bg-secondary rounded-md p-1 gap-2 border border-border transition-all duration-200 ease-in-out',
+                'absolute hidden bg-background rounded-md p-1 gap-2 border border-border transition-all duration-200 ease-in-out',
                 { 'rounded-lg': fancy },
               )}
               ref={backgroundRef}
