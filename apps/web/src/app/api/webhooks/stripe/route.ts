@@ -7,47 +7,55 @@ import {
 import { env } from '@latitude-data/env'
 import { handleSubscriptionUpdate } from '@latitude-data/core/services/billing/handleSubscriptionUpdate'
 import { errorHandler } from '$/middlewares/errorHandler'
+import { getStripe } from '@latitude-data/core/lib/stripe'
 
-export const POST = errorHandler(async (req: NextRequest) => {
-  const stripeSecretKey = env.STRIPE_SECRET_KEY
-  const webhookSecret = env.STRIPE_WEBHOOK_SECRET
-  if (!stripeSecretKey) {
-    throw new UnprocessableEntityError(
-      'Stripe SDK not initialized. Server configuration error.',
-    )
-  }
-
-  const stripe = stripeSecretKey
-    ? new Stripe(stripeSecretKey, {
-        typescript: true,
-      })
-    : undefined
-
-  if (!stripe) {
-    throw new UnprocessableEntityError(
-      'Stripe SDK not initialized. Server configuration error.',
-    )
-  }
-
-  if (!webhookSecret) {
+function getWebhookSecret() {
+  if (!env.STRIPE_WEBHOOK_SECRET) {
     throw new UnprocessableEntityError(
       'Stripe webhook secret is not configured. Please set STRIPE_WEBHOOK_SECRET.',
     )
   }
 
-  const sig = req.headers.get('stripe-signature')
+  return env.STRIPE_WEBHOOK_SECRET
+}
+
+async function getEvent({
+  stripe,
+  request,
+}: {
+  stripe: Stripe
+  request: NextRequest
+}) {
+  const webhookSecret = getWebhookSecret()
+  const sig = request.headers.get('stripe-signature')
+
   if (!sig) {
     throw new BadRequestError('Missing Stripe signature header')
   }
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(await req.text(), sig, webhookSecret)
-  } catch (error: any) {
+    event = stripe.webhooks.constructEvent(
+      await request.text(),
+      sig,
+      webhookSecret,
+    )
+  } catch (err) {
+    const error = err as Error
     throw new UnprocessableEntityError(`Webhook Error: ${error.message}`)
   }
 
-  if (event.type === 'customer.subscription.updated') {
+  return event
+}
+
+export const POST = errorHandler(async (req: NextRequest) => {
+  const stripe = getStripe().unwrap()
+  const event = await getEvent({ stripe, request: req })
+
+  if (
+    event.type === 'customer.subscription.updated' ||
+    event.type === 'customer.subscription.created'
+  ) {
     const subscription = event.data.object as Stripe.Subscription
 
     if (subscription.status === 'active') {

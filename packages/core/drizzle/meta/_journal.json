@@ -1450,6 +1450,13 @@
       "when": 1757432511901,
       "tag": "0207_massive_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 208,
+      "version": "7",
+      "when": 1757449808384,
+      "tag": "0208_add_new_pricing_plans",
+      "breakpoints": true
     }
   ]
 }
