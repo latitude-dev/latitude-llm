@@ -94,7 +94,7 @@ export function NewTrigger() {
     >
       <div className='grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-6 w-full h-full min-h-0 pb-6'>
         <IntegrationsList onSelectIntegration={setSelected} />
-        <div className='border border-border rounded-lg min-h-0 bg-secondary overflow-hidden'>
+        <div className='border border-border rounded-lg min-h-0 bg-secondary overflow-auto custom-scrollbar'>
           <IntegrationDetail
             selectedIntegration={selected}
             onTriggerCreated={onTriggerCreated}

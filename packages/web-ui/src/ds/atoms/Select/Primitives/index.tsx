@@ -15,6 +15,7 @@ import { SelectOption, SelectOptionGroup } from '..'
 import { cn } from '../../../../lib/utils'
 import { Icon, IconName } from '../../Icons'
 import { type SelectProps } from '../index'
+import { Text } from '../../Text'
 
 const SelectRoot = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
@@ -31,7 +32,7 @@ function SelectValueWithIcon({
   return (
     <div className='w-full flex flex-row items-center gap-x-2 min-w-0 truncate'>
       {typeof icon === 'string' ? <Icon name={icon as IconName} /> : icon}
-      {children}
+      {typeof children === 'string' ? <Text.H6>{children}</Text.H6> : children}
     </div>
   )
 }
@@ -124,8 +125,8 @@ const SelectTrigger = forwardRef<
         ref={ref}
         {...props}
         className={cn(
-          'flex items-center justify-between gap-x-1 whitespace-nowrap rounded-md',
-          'border border-input bg-transparent text-sm shadow-sm ring-offset-background',
+          'flex items-center justify-between gap-x-1 whitespace-nowrap rounded-lg',
+          'border border-border bg-transparent text-sm ring-offset-background',
           'placeholder:text-muted-foreground focus:outline-none focus:ring-offset-2 focus:ring-2 focus:ring-ring',
           'disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 bg-background',
           {
@@ -220,7 +221,7 @@ const SelectContent = forwardRef<
         ref={ref}
         position={position}
         className={cn(
-          'min-w-[8rem] relative z-50 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md',
+          'min-w-[8rem] relative z-50 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-md',
           'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
           'data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
           className,

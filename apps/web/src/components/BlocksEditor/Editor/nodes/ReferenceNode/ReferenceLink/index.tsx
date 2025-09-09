@@ -159,7 +159,7 @@ function ReferenceLinkReal({
     <div
       className={cn(
         'bg-background flex-grow inline-flex flex-row items-center max-w-60 overflow-hidden',
-        'border border-border rounded-lg px-1 py-px',
+        'border border-border rounded-xl px-1 py-px',
         'gap-x-1',
       )}
     >

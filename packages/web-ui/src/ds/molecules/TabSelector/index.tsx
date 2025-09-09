@@ -80,7 +80,7 @@ export function TabSelector<T extends string>({
       <div
         className={cn(
           'flex flex-row justify-between gap-2 ',
-          'bg-background rounded-xl border border-border',
+          'bg-secondary rounded-xl border border-border',
           'relative -m-px p-1',
           {
             'w-[calc(100%+2px)]': fullWidth,
@@ -90,7 +90,7 @@ export function TabSelector<T extends string>({
         <div
           className={cn(
             'h-8', // Button normal size height
-            'absolute hidden bg-secondary rounded-lg border border-border',
+            'absolute hidden bg-background rounded-lg border border-border',
             '-m-px p-1 gap-2 transition-all duration-200 ease-in-out',
           )}
           ref={selectedOptionBackgroundRef}
@@ -108,7 +108,7 @@ export function TabSelector<T extends string>({
                 size='none'
                 color={isSelected ? 'foreground' : 'foregroundMuted'}
                 className={cn(
-                  'flex w-full px-3 h-8 rounded-lg cursor-pointer items-center justify-center gap-1',
+                  'flex w-full px-3 h-8 bg-transparent rounded-lg cursor-pointer items-center justify-center gap-1',
                 )}
                 onClick={handleSelect(option)}
                 fullWidth={fullWidth}

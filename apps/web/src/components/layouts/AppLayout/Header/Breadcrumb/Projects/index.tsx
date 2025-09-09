@@ -36,7 +36,7 @@ export function ProjectBreadcrumbItems({ segments }: { segments: string[] }) {
         {isLoading ? (
           <BreadcrumbItemSkeleton />
         ) : (
-          <div className='flex flex-row items-center gap-x-1'>
+          <div className='flex flex-row items-center gap-x-1 pr-3'>
             <BreadcrumbSelector
               label={currentProject?.name || 'Unknown'}
               options={options}

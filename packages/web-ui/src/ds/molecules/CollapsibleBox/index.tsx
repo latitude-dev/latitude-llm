@@ -77,7 +77,7 @@ export function CollapsibleBox({
     <div
       className={cn(
         className,
-        'w-full border rounded-lg relative overflow-hidden',
+        'w-full border rounded-xl relative overflow-hidden',
         {
           'h-auto': !isExpanded,
           'custom-scrollbar': scrollable,

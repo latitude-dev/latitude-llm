@@ -21,7 +21,7 @@ export function UnconfiguredIntegration({
     })
 
   return (
-    <div className='flex flex-row px-4 py-2 gap-3 border border-latte-border bg-latte-background rounded-lg items-center'>
+    <div className='flex flex-row px-4 py-3 gap-3 border border-latte-border bg-latte-background rounded-xl items-center'>
       <Image
         src={integration.configuration.metadata?.imageUrl ?? ''}
         alt={integration.name}
@@ -44,7 +44,7 @@ export function UnconfiguredIntegration({
         onClick={connectAccount}
         isLoading={isUpdating}
       >
-        <Text.H5 noWrap>Set up</Text.H5>
+        Set up
       </Button>
     </div>
   )

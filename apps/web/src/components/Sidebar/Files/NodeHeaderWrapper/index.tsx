@@ -188,9 +188,9 @@ function NodeHeaderWrapper({
                   colors.textColors[color],
                 )}
               >
-                <Text.H5M ellipsis noWrap userSelect={false} color={color}>
+                <Text.H5 ellipsis noWrap userSelect={false} color={color}>
                   {name && name !== ' ' ? name : tmpName}
-                </Text.H5M>
+                </Text.H5>
               </div>
             )}
           </div>

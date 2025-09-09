@@ -25,7 +25,7 @@ export function Tabs({
   children,
 }: TabsProps) {
   return (
-    <div className={cn('flex flex-col border rounded-lg min-w-0', className)}>
+    <div className={cn('flex flex-col border rounded-xl min-w-0', className)}>
       <div className='flex border-b border-border'>
         {tabs.map((tab) => (
           <button

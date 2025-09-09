@@ -239,7 +239,7 @@ function Content({
 }
 
 function AgentToolbarSkeleton() {
-  return <Skeleton className='h-[3.125rem] w-full rounded-lg' />
+  return <Skeleton className='h-[3.125rem] w-full rounded-xl' />
 }
 
 export function AgentToolbar({

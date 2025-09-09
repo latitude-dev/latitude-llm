@@ -101,7 +101,7 @@ export function DocumentTextEditor({
   }, [diff])
 
   return (
-    <div className='relative h-full rounded-lg border border-border overflow-hidden flex flex-col bg-secondary'>
+    <div className='relative h-full rounded-xl border border-border overflow-hidden flex flex-col bg-secondary'>
       <EditorReadOnlyBanner readOnlyMessage={readOnlyMessage} />
       {diff ? (
         <MonacoDiffEditor

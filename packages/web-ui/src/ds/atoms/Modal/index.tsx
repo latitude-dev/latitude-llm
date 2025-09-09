@@ -124,8 +124,8 @@ export function Modal({
 
           {footer ? (
             <div
-              className={cn('px-6 border-border border-t rounded-b-lg', {
-                'bg-background-gray py-6': !!footer,
+              className={cn('px-6 border-border border-t rounded-b-2xl', {
+                'bg-background-gray py-4': !!footer,
               })}
             >
               {footer ? (

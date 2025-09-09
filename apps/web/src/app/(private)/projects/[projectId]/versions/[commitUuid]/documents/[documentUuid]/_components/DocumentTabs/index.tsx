@@ -6,14 +6,11 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 
 import { DocumentVersion } from '@latitude-data/core/browser'
 import { useDeployPrompt } from '../DocumentationModal'
-import { DocumentTriggersButton } from './DocumentTriggers'
-import { PublishDocumentButton } from './PublishDocument'
 import { DocumentTabSelector } from './tabs'
 
 export default function DocumentTabs({
   params,
   children,
-  document,
 }: {
   params: { documentUuid: string; projectId: string; commitUuid: string }
   document: DocumentVersion
@@ -37,15 +34,6 @@ export default function DocumentTabs({
           >
             Deploy this prompt
           </Button>
-          <PublishDocumentButton
-            document={document}
-            projectId={Number(params.projectId)}
-          />
-          <DocumentTriggersButton
-            document={document}
-            projectId={Number(params.projectId)}
-            commitUuid={params.commitUuid}
-          />
         </div>
       </div>
       <div className='flex-grow min-h-0 flex flex-col w-full relative'>

@@ -37,7 +37,7 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
             : 'unset',
       }}
       className={cn(
-        'flex flex-col relative w-full rounded-lg border overflow-hidden',
+        'flex flex-col relative w-full rounded-xl border overflow-hidden',
         wrapperClassName,
       )}
     >

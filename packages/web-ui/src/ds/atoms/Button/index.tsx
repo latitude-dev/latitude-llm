@@ -3,14 +3,15 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { ButtonHTMLAttributes, forwardRef, ReactNode, useMemo } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { font } from '../../tokens'
+import { font, TextColor } from '../../tokens'
 import { DotIndicator, DotIndicatorProps } from '../DotIndicator'
 import { Icon, IconProps } from '../Icons'
+import { Text } from '../Text'
 
 const buttonContainerVariants = cva(
   cn(
     'group relative',
-    'rounded-md inline-flex',
+    'rounded-lg inline-flex',
     'disabled:opacity-50 disabled:pointer-events-none',
   ),
   {
@@ -64,7 +65,7 @@ const buttonContainerVariants = cva(
 
 const buttonVariants = cva(
   cn(
-    'w-full inline-flex items-center justify-center rounded-md font-sans font-medium transition-colors',
+    'w-full inline-flex items-center justify-center rounded-lg font-sans font-medium transition-colors',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
     'ring-offset-background',
     'group-disabled:opacity-50 group-disabled:pointer-events-none',
@@ -145,12 +146,6 @@ const buttonVariants = cva(
           'bg-white/90 dark:bg-transparent shadow-[inset_0px_0px_0px_1px_hsl(var(--destructive)_/_0.5)] dark:shadow-[inset_0px_0px_0px_1px_hsl(var(--foreground))]',
       },
       {
-        size: 'default',
-        fanciness: 'fancy',
-        className: '!py-1',
-      },
-      {
-        size: 'small',
         fanciness: 'fancy',
         className: 'py-0.5',
       },
@@ -166,6 +161,23 @@ const buttonVariants = cva(
     },
   },
 )
+
+const textColorVariants = ({
+  variant,
+}: {
+  variant: ButtonProps['variant']
+}): TextColor => {
+  if (variant === 'destructive') return 'destructiveForeground'
+  if (variant === 'default') return 'background'
+  if (variant === 'secondary') return 'secondaryForeground'
+  if (variant === 'link') return 'accentForeground'
+  if (variant === 'linkOutline') return 'accentForeground'
+  if (variant === 'linkDestructive') return 'destructiveForeground'
+  if (variant === 'shiny') return 'accentForeground'
+  if (variant === 'latte') return 'latteInputForeground'
+  if (variant === 'primaryMuted') return 'primary'
+  return 'foreground'
+}
 
 type ButtonIconProps = IconProps & {
   placement?: 'left' | 'right'
@@ -261,7 +273,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     className,
     containerClassName,
     innerClassName,
-    variant,
+    variant = 'default',
     size,
     fancy,
     roundy,
@@ -328,7 +340,12 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
                 className={cn('flex-shrink-0', iconProps.className)}
               />
             ) : null}
-            {children ? (
+
+            {typeof children === 'string' ? (
+              <Text.H5B noWrap color={textColorVariants({ variant })}>
+                {children}
+              </Text.H5B>
+            ) : children ? (
               <div
                 className={cn({
                   'flex flex-row items-center w-full': !childrenOnlyText,
@@ -342,6 +359,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
                 {children}
               </div>
             ) : null}
+
             {iconProps && iconPlacement === 'right' ? (
               <Icon
                 {...iconProps}

@@ -14,7 +14,7 @@ export function HeaderBreadcrumb() {
     <Breadcrumb>
       <Link
         href={ROUTES.dashboard.root}
-        className='flex flex-row items-center gap-x-4'
+        className='flex flex-row items-center gap-4 pr-4'
       >
         {logoElement}
       </Link>

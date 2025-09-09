@@ -9,7 +9,7 @@ import { type FormFieldProps } from '../FormField'
 export const INPUT_BASE_CLASSES = [
   'flex w-full border border-input bg-background ring-offset-background',
   'file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground',
-  'focus-visible:outline-none focus-visible:ring-ring rounded-md focus-visible:ring-2',
+  'focus-visible:outline-none focus-visible:ring-ring rounded-lg focus-visible:ring-2',
   'disabled:cursor-not-allowed disabled:opacity-50',
   font.size.h5,
 ]
