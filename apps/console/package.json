@@ -4,11 +4,12 @@
   "description": "Interact with Latitude through the console",
   "type": "module",
   "devDependencies": {
-    "@types/node": "^22.5.1",
     "@latitude-data/core": "workspace:^",
+    "@latitude-data/env": "workspace:^",
     "@latitude-data/eslint-config": "workspace:^",
     "@latitude-data/typescript-config": "workspace:^",
-    "@latitude-data/env": "workspace:^",
-    "tsx": "^4.16.2"
+    "@types/node": "^22.5.1",
+    "tsx": "^4.16.2",
+    "dotenv-cli": "^10.0.0"
   }
 }

@@ -1,5 +1,5 @@
-import useIntegrations from '$/stores/integrations'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
+import useIntegrations from '$/stores/integrations'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -23,7 +23,6 @@ import {
   useActiveIntegrations,
 } from '../../PromptIntegrations/useActiveIntegrations'
 import { EditorHeaderProps } from '../index'
-import useIntegrationTools from '$/stores/integrationTools'
 
 const singularPluralLabel = (c: number, s: string, p: string) =>
   c === 1 ? `1 ${s}` : `${c} ${p}`

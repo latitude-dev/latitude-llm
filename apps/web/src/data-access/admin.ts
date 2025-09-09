@@ -1,23 +1,33 @@
-import { eq, and } from 'drizzle-orm'
+import { Grant, Quota, QuotaType } from '@latitude-data/core/browser'
 import { database } from '@latitude-data/core/client'
 import {
   NotFoundError,
   UnauthorizedError,
 } from '@latitude-data/core/lib/errors'
-import { Result } from '@latitude-data/core/lib/Result'
+import { OkType, Result } from '@latitude-data/core/lib/Result'
+import { GrantsRepository } from '@latitude-data/core/repositories'
 import {
-  workspaces,
-  users,
+  features,
   memberships,
   projects,
-  features,
+  users,
   workspaceFeatures,
+  workspaces,
 } from '@latitude-data/core/schema'
+import { computeQuota } from '@latitude-data/core/services/grants/quota'
+import { getWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/get'
+import { and, eq } from 'drizzle-orm'
 
 export type WorkspaceWithDetails = {
   id: number
   name: string
   createdAt: Date
+  subscription: OkType<typeof getWorkspaceSubscription>
+  quotas: {
+    seats: Quota
+    runs: Quota
+    credits: Quota
+  }
   users: Array<{
     id: string
     email: string
@@ -33,6 +43,7 @@ export type WorkspaceWithDetails = {
     description: string | null
     enabled: boolean
   }>
+  grants: Grant[]
 }
 
 export type UserWithDetails = {
@@ -90,11 +101,7 @@ export async function findWorkspaceByIdForAdmin(
   try {
     // First get the workspace
     const workspaceResult = await db
-      .select({
-        id: workspaces.id,
-        name: workspaces.name,
-        createdAt: workspaces.createdAt,
-      })
+      .select()
       .from(workspaces)
       .where(eq(workspaces.id, workspaceId))
       .limit(1)
@@ -103,6 +110,33 @@ export async function findWorkspaceByIdForAdmin(
     if (!workspace) {
       return Result.error(new NotFoundError('Workspace not found'))
     }
+
+    const subscriptionResult = await getWorkspaceSubscription({ workspace })
+    if (subscriptionResult.error) {
+      return Result.error(subscriptionResult.error)
+    }
+    const subscription = subscriptionResult.value
+
+    const seatsResult = await computeQuota({ type: QuotaType.Seats, workspace })
+    if (seatsResult.error) {
+      return Result.error(seatsResult.error)
+    }
+    const seats = seatsResult.value
+
+    const runsResult = await computeQuota({ type: QuotaType.Runs, workspace })
+    if (runsResult.error) {
+      return Result.error(runsResult.error)
+    }
+    const runs = runsResult.value
+
+    const creditsResult = await computeQuota({
+      type: QuotaType.Credits,
+      workspace,
+    })
+    if (creditsResult.error) {
+      return Result.error(creditsResult.error)
+    }
+    const credits = creditsResult.value
 
     // Get workspace users
     const workspaceUsers = await db
@@ -142,14 +176,30 @@ export async function findWorkspaceByIdForAdmin(
       )
       .where(eq(workspaceFeatures.enabled, true)) // Only show enabled features
 
+    const repository = new GrantsRepository(workspaceId)
+    const grantsResult = await repository.listApplicable(
+      subscription.billableFrom,
+    )
+    if (grantsResult.error) {
+      return Result.error(grantsResult.error)
+    }
+    const grants = grantsResult.value
+
     const result: WorkspaceWithDetails = {
       ...workspace,
+      subscription: subscription,
+      quotas: {
+        seats: seats.limit,
+        runs: runs.limit,
+        credits: credits.limit,
+      },
       users: workspaceUsers,
       projects: workspaceProjects,
       features: workspaceFeaturesList.map((feature) => ({
         ...feature,
         enabled: feature.enabled ?? false,
       })),
+      grants: grants,
     }
 
     return Result.ok(result)

@@ -51,6 +51,7 @@ export async function usageLatteCredits(
     return Result.error(counting.error)
   }
   usage = {
+    // TODO(grants): use grants table instead of this
     included: subscription.plan.latte_credits,
     billable: counting.value.billable,
     unbillable: counting.value.unbillable,

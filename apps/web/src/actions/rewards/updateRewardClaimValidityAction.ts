@@ -1,13 +1,11 @@
 'use server'
 
 import { ClaimedReward } from '@latitude-data/core/browser'
-import { UnauthorizedError } from '@latitude-data/constants/errors'
 import { updateRewardClaim } from '@latitude-data/core/services/claimedRewards/update'
 import { z } from 'zod'
+import { withAdmin } from '../procedures'
 
-import { authProcedure } from '../procedures'
-
-export const updateRewardClaimValidityAction = authProcedure
+export const updateRewardClaimValidityAction = withAdmin
   .createServerAction()
   .input(
     z.object({
@@ -15,14 +13,11 @@ export const updateRewardClaimValidityAction = authProcedure
       isValid: z.boolean().nullable(),
     }),
   )
-  .handler(async ({ input, ctx }) => {
-    if (!ctx.user.admin) {
-      throw new UnauthorizedError('You must be an admin to see pending claims')
-    }
-
+  .handler(async ({ input }) => {
     const result = await updateRewardClaim({
       claimId: input.claimId,
       isValid: input.isValid,
     })
+
     return result.unwrap() as ClaimedReward | undefined
   })

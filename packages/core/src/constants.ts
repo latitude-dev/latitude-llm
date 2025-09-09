@@ -1,3 +1,9 @@
+import {
+  EvaluationResultableType,
+  LatitudeTool,
+  LatitudeToolInternalName,
+  LogSources,
+} from '@latitude-data/constants'
 import type {
   AssistantMessage,
   Message as CompilerMessage,
@@ -5,15 +11,11 @@ import type {
   ToolCall,
   UserMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import {
-  EvaluationResultableType,
-  LatitudeTool,
-  LatitudeToolInternalName,
-  LogSources,
-} from '@latitude-data/constants'
 import { FinishReason, LanguageModelUsage, Tool, ToolResultPart } from 'ai'
 import { z } from 'zod'
 
+import { TelemetryContext } from '@latitude-data/telemetry'
+import { ConfigurableProp, PropOption } from '@pipedream/sdk'
 import { App, ConfigurableProps, V1Component } from '@pipedream/sdk/browser'
 import type {
   ApiKey,
@@ -26,27 +28,26 @@ import type {
 } from './browser'
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
-import { TelemetryContext } from '@latitude-data/telemetry'
-import { ConfigurableProp, PropOption } from '@pipedream/sdk'
 
 export {
   DocumentType,
+  EMAIL_REGEX,
   EvaluationResultableType,
   FINISH_REASON_DETAILS,
   HEAD_COMMIT,
+  isLatitudeUrl,
+  isSafeUrl,
   LegacyChainEventTypes,
   LogSources,
   ModifiedDocumentType,
   StreamEventTypes,
   type LegacyChainEvent,
-  EMAIL_REGEX,
-  isSafeUrl,
-  isLatitudeUrl,
 } from '@latitude-data/constants'
-export * from '@latitude-data/constants/evaluations'
-export * from '@latitude-data/constants/tracing'
 export * from '@latitude-data/constants/actions'
+export * from '@latitude-data/constants/evaluations'
+export * from '@latitude-data/constants/grants'
 export * from '@latitude-data/constants/latte'
+export * from '@latitude-data/constants/tracing'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
@@ -117,6 +118,7 @@ export enum EvaluationMetadataType {
   Manual = 'manual',
 }
 
+// TODO(rewards): update enum with new rewards
 export enum RewardType {
   GithubStar = 'github_star',
   GithubIssue = 'github_issue',
@@ -126,6 +128,7 @@ export enum RewardType {
   SignupLaunchDay = 'signup_launch_day',
 }
 
+// TODO(rewards): update values with new rewards
 export const REWARD_VALUES: Record<RewardType, number> = {
   [RewardType.GithubStar]: 1_000,
   [RewardType.Follow]: 2_000,

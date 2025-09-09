@@ -27,6 +27,10 @@ describe('checkLatteCredits', () => {
     vi.clearAllMocks()
     vi.restoreAllMocks()
 
+    vi.spyOn(plans, 'SubscriptionPlans', 'get').mockReturnValue(
+      SubscriptionPlansMock as any,
+    )
+
     const { workspace: w, userData: user } = await factories.createWorkspace({
       subscriptionPlan: SubscriptionPlan.HobbyV2,
     })
@@ -49,10 +53,6 @@ describe('checkLatteCredits', () => {
       workspace: workspace,
       billable: true,
     })
-
-    vi.spyOn(plans, 'SubscriptionPlans', 'get').mockReturnValue(
-      SubscriptionPlansMock as any,
-    )
   })
 
   it('fails when not enough limited credits', async () => {

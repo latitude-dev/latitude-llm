@@ -1,0 +1,71 @@
+import { addMonths } from 'date-fns'
+import { Grant, GrantSource, Quota, QuotaType, Workspace } from '../../browser'
+import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
+import { grants } from '../../schema'
+import { getWorkspaceSubscription } from '../subscriptions/get'
+import { validateGrant } from './validate'
+
+export async function issueGrant(
+  {
+    type,
+    amount,
+    source,
+    referenceId,
+    workspace,
+    periods,
+    expiresAt,
+    idempotencyKey,
+  }: {
+    type: QuotaType
+    amount: Quota
+    source: GrantSource
+    referenceId: string
+    workspace: Workspace
+    periods?: number
+    expiresAt?: Date
+    idempotencyKey?: string
+  },
+  tx = new Transaction(),
+) {
+  return await tx.call(async (db) => {
+    const validation = await validateGrant(
+      { type, amount, source, workspace, periods, expiresAt, idempotencyKey },
+      db,
+    )
+    if (validation.error) {
+      return Result.error(validation.error)
+    }
+
+    if (periods) {
+      const getting = await getWorkspaceSubscription({ workspace }, tx)
+      if (getting.error) {
+        return Result.error(getting.error)
+      }
+      const subscription = getting.value
+      expiresAt = addMonths(subscription.billableFrom, periods)
+    }
+
+    const result = await db
+      .insert(grants)
+      .values({
+        uuid: idempotencyKey,
+        workspaceId: workspace.id,
+        referenceId: referenceId,
+        source: source,
+        type: type,
+        amount: typeof amount === 'number' ? amount : null,
+        balance: typeof amount === 'number' ? amount : 0,
+        expiresAt: expiresAt,
+      })
+      .returning()
+      .then((r) => r[0]!)
+
+    const grant = {
+      ...result,
+      amount: (result.amount ?? 'unlimited') as Quota,
+    } as Grant
+
+    return Result.ok(grant)
+  })
+}

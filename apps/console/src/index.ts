@@ -1,4 +1,5 @@
 import { database, utils } from '@latitude-data/core/client'
+import * as migrations from '@latitude-data/core/data-migrations'
 import * as models from '@latitude-data/core/schema'
 import { randomUUID as uuid } from 'node:crypto'
 import repl from 'node:repl'
@@ -29,6 +30,7 @@ Object.assign(r.context, {
   ...utils,
   ...models,
   database,
+  ...migrations,
   uuid,
   inspect,
   ...loadModules,

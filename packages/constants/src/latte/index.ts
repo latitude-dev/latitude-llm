@@ -38,7 +38,7 @@ export const LATTE_MINIMUM_CREDITS_PER_REQUEST = 1
 export const LATTE_NOT_ENOUGH_CREDITS_ERROR = 'Not enough Latte credits'
 
 export type LatteUsage = {
-  included: number | 'unlimited'
+  included: number | 'unlimited' // TODO(grants): Compute with total limit quota
   billable: number
   unbillable: number
   resetsAt: Date

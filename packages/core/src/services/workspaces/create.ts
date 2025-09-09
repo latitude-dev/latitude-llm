@@ -1,5 +1,4 @@
 import { eq } from 'drizzle-orm'
-
 import { User, WorkspaceDto } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
@@ -7,6 +6,7 @@ import Transaction from '../../lib/Transaction'
 import { SubscriptionPlan } from '../../plans'
 import { workspaces } from '../../schema'
 import { createSubscription } from '../subscriptions/create'
+import { issueSubscriptionGrants } from '../subscriptions/grants'
 
 export async function createWorkspace(
   {
@@ -45,6 +45,11 @@ export async function createWorkspace(
         .where(eq(workspaces.id, workspace.id))
         .returning()
       workspace = updated[0]!
+
+      await issueSubscriptionGrants(
+        { subscription, workspace },
+        transaction,
+      ).then((r) => r.unwrap())
 
       return Result.ok({ ...workspace, currentSubscription: subscription })
     },

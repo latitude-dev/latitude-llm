@@ -23,7 +23,7 @@ class GetPromptRequestParams(PromptRequestParams, Model):
     path: str
 
 
-class GetAllPromptRequestParams(PromptRequestParams, Model):
+class GetAllPromptsRequestParams(PromptRequestParams, Model):
     pass
 
 
@@ -105,7 +105,7 @@ class GetAllVersionsRequestParams(Model):
 
 RequestParams = Union[
     GetPromptRequestParams,
-    GetAllPromptRequestParams,
+    GetAllPromptsRequestParams,
     GetOrCreatePromptRequestParams,
     RunPromptRequestParams,
     ChatPromptRequestParams,

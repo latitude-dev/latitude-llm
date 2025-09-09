@@ -22,6 +22,7 @@
     "./experiments": "./src/experiments.ts",
     "./tracing": "./src/tracing/index.ts",
     "./actions": "./src/actions.ts",
+    "./grants": "./src/grants.ts",
     "./latitudePromptSchema": "./src/latitudePromptSchema/index.ts",
     "./latte": "./src/latte/index.ts",
     "./promptl": "./src/promptl.ts",

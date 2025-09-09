@@ -6,6 +6,7 @@ import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 import { workspaces } from './workspaces'
 
+// TODO(rewards): update enum with new rewards
 export const rewardTypesEnum = latitudeSchema.enum('reward_types', [
   RewardType.GithubStar,
   RewardType.Follow,

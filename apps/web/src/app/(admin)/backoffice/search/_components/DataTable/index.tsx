@@ -45,10 +45,10 @@ export function DataTable({
               <Icon name={icon} size='medium' color='primary' />
             </div>
           )}
-          <div>
-            <Text.H2>{title}</Text.H2>
-            <div className='flex items-center space-x-2 mt-1'>
-              <Badge variant={count > 0 ? 'default' : 'secondary'}>
+          <div className='flex flex-col'>
+            <span>{title}</span>
+            <div className='flex items-center justify-start'>
+              <Badge variant={count > 0 ? 'default' : 'secondary'} size='small'>
                 {count} {count === 1 ? 'item' : 'items'}
               </Badge>
             </div>

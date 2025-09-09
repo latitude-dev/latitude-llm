@@ -42,6 +42,10 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               label: 'Features',
               value: BackofficeRoutes.features,
             },
+            {
+              label: 'Grants',
+              value: BackofficeRoutes.grants,
+            },
           ]}
           selected={selected}
           onSelect={(value) => {

@@ -5,8 +5,8 @@ from latitude_sdk.sdk.types import Project, SdkOptions, Version
 from latitude_sdk.util import Adapter as AdapterUtil
 from latitude_sdk.util import Model
 
-_GetAllProjectResults = AdapterUtil[List[Project]](List[Project])
-_GetAllVersionsResults = AdapterUtil[List[Version]](List[Version])
+_GetAllProjectsResult = AdapterUtil[List[Project]](List[Project])
+_GetAllVersionsResult = AdapterUtil[List[Version]](List[Version])
 
 
 class CreateProjectResult(Model):
@@ -26,7 +26,7 @@ class Projects:
         async with self._client.request(
             handler=RequestHandler.GetAllProjects,
         ) as response:
-            return _GetAllProjectResults.validate_json(response.content)
+            return _GetAllProjectsResult.validate_json(response.content)
 
     async def create(self, name: str) -> CreateProjectResult:
         async with self._client.request(
@@ -40,4 +40,4 @@ class Projects:
             handler=RequestHandler.GetAllVersions,
             params=GetAllVersionsRequestParams(project_id=project_id),
         ) as response:
-            return _GetAllVersionsResults.validate_json(response.content)
+            return _GetAllVersionsResult.validate_json(response.content)

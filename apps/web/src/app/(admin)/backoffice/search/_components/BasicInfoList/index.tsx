@@ -2,6 +2,7 @@ import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Card } from '@latitude-data/web-ui/atoms/Card'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { cn } from '@latitude-data/web-ui/utils'
 
 type InfoItem = {
   label: string
@@ -25,14 +26,19 @@ export function BasicInfoList({ items, title }: Props) {
           <Text.H3>{title}</Text.H3>
         </div>
       )}
-      <div className='grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3'>
+      <div className='flex flex-wrap gap-4'>
         {items.map((item, index) => (
           <div
             key={index}
-            className='flex items-center space-x-3 p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors'
+            className={cn(
+              'flex items-center space-x-3 p-4 bg-muted/30 rounded-lg',
+              'hover:bg-muted/50 transition-colors border border-border',
+              'flex-1 min-w-0 last:flex-grow',
+              'sm:min-w-full md:min-w-[calc(50%-0.5rem)] lg:min-w-[calc(33.333%-0.667rem)]',
+            )}
           >
             {item.icon && (
-              <div className='p-2 bg-background rounded-md shadow-sm'>
+              <div className='p-2 bg-background rounded-md shadow-sm border border-border'>
                 <Icon name={item.icon} size='normal' color='primary' />
               </div>
             )}

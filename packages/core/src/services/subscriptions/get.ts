@@ -17,34 +17,39 @@ export async function getWorkspaceSubscription(
   }: {
     workspace: Workspace
   },
-  _ = new Transaction(),
+  tx = new Transaction(),
 ) {
-  if (!workspace.currentSubscriptionId) {
-    return Result.error(
-      new UnprocessableEntityError('Workspace has no subscription'),
-    )
-  }
-
-  const repository = new SubscriptionRepository(workspace.id)
-  const finding = await repository.find(workspace.currentSubscriptionId)
-  if (finding.error) {
-    return Result.error(finding.error)
-  }
-  const subscription = finding.value
-
-  let plan: SubscriptionPlanContent = {
-    plan: SubscriptionPlan.HobbyV2,
-    ...SubscriptionPlans[SubscriptionPlan.HobbyV2],
-  }
-  if (subscription.plan in SubscriptionPlans) {
-    plan = {
-      plan: subscription.plan,
-      ...SubscriptionPlans[subscription.plan],
+  return await tx.call(async (db) => {
+    if (!workspace.currentSubscriptionId) {
+      return Result.error(
+        new UnprocessableEntityError('Workspace has no subscription'),
+      )
     }
-  }
 
-  const billableFrom = getLatestRenewalDate(subscription.createdAt, new Date())
-  const billableAt = addMonths(billableFrom, 1)
+    const repository = new SubscriptionRepository(workspace.id, db)
+    const finding = await repository.find(workspace.currentSubscriptionId)
+    if (finding.error) {
+      return Result.error(finding.error)
+    }
+    const subscription = finding.value
 
-  return Result.ok({ ...subscription, plan, billableFrom, billableAt })
+    let plan: SubscriptionPlanContent = {
+      plan: SubscriptionPlan.HobbyV2,
+      ...SubscriptionPlans[SubscriptionPlan.HobbyV2],
+    }
+    if (subscription.plan in SubscriptionPlans) {
+      plan = {
+        plan: subscription.plan,
+        ...SubscriptionPlans[subscription.plan],
+      }
+    }
+
+    const billableFrom = getLatestRenewalDate(
+      subscription.createdAt,
+      new Date(),
+    )
+    const billableAt = addMonths(billableFrom, 1)
+
+    return Result.ok({ ...subscription, plan, billableFrom, billableAt })
+  })
 }

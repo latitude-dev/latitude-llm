@@ -12,6 +12,7 @@ export const API_ROUTES = {
       root: '/api/workspaces/onboarding',
       update: '/api/workspaces/onboarding/update',
     },
+    limits: '/api/workspaces/limits',
   },
   apiKeys: {
     root: '/api/apiKeys',
@@ -358,6 +359,17 @@ export const API_ROUTES = {
   admin: {
     workspaces: {
       root: '/api/admin/workspaces',
+      detail: (workspaceId: number) => {
+        const root = `/api/admin/workspaces/${workspaceId}`
+        return {
+          limits: {
+            root: `${root}/limits`,
+          },
+          grants: {
+            root: `${root}/grants`,
+          },
+        }
+      },
     },
     features: {
       root: '/api/admin/features',

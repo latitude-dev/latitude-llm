@@ -38,6 +38,10 @@ describe('usageLatteCredits', () => {
     vi.clearAllMocks()
     vi.restoreAllMocks()
 
+    vi.spyOn(plans, 'SubscriptionPlans', 'get').mockReturnValue(
+      SubscriptionPlansMock as any,
+    )
+
     now = new Date()
 
     const { workspace: w, userData: user } = await factories.createWorkspace({
@@ -119,10 +123,6 @@ describe('usageLatteCredits', () => {
         set: setCacheMock,
       },
     }
-
-    vi.spyOn(plans, 'SubscriptionPlans', 'get').mockReturnValue(
-      SubscriptionPlansMock as any,
-    )
   })
 
   it('succeeds when no requests', async () => {
