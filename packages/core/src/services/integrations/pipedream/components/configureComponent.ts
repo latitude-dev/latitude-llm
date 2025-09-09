@@ -17,19 +17,11 @@ export async function configureComponent({
   componentId,
   propName,
   configuredProps: configuredClientProps,
-  previousContext,
-
-  query,
-  page,
 }: {
   integration: Extract<IntegrationDto, { type: IntegrationType.Pipedream }>
   componentId: string | ComponentId
   propName: string
   configuredProps?: ConfiguredProps<ConfigurableProps>
-  previousContext?: Record<string, unknown>
-
-  query?: string
-  page?: number
 }) {
   if (!isIntegrationConfigured(integration)) {
     return Result.error(
@@ -58,15 +50,13 @@ export async function configureComponent({
   }
 
   try {
+    // TODO - Add pagination possibilities, then start using prevContext, query, and page
     const response = await pipedream.configureComponent({
       externalUserId,
       userId: externalUserId,
       componentId,
       propName,
       configuredProps: configuredPropsResult.unwrap(),
-      prevContext: previousContext,
-      query,
-      page,
     })
 
     return Result.ok(response)

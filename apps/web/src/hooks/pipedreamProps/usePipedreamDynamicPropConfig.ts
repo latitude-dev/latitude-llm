@@ -6,11 +6,9 @@ import {
   ConfigureComponentResponse,
   ConfiguredProps,
 } from '@pipedream/sdk/browser'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { useServerAction } from 'zsa-react'
-
-type ConfigureComponentContext = Record<string, unknown>
 
 export function usePipedreamDynamicPropConfig({
   integration,
@@ -23,35 +21,6 @@ export function usePipedreamDynamicPropConfig({
   prop: ConfigurableProp
   configuredProps: ConfiguredProps<ConfigurableProps>
 }) {
-  const [query, _setQuery] = useState<string | undefined>(undefined)
-  const [page, setPage] = useState<number | undefined>(undefined)
-
-  const setQuery = useCallback(
-    (newQuery: string | undefined) => {
-      setPage(undefined) // Reset page when query changes
-      _setQuery(newQuery)
-    },
-    [_setQuery],
-  )
-
-  const nextPage = useCallback(() => {
-    setPage((prevPage) => {
-      if (prevPage === undefined) return 1
-      return prevPage + 1
-    })
-  }, [])
-
-  const prevPage = useCallback(() => {
-    setPage((prevPage) => {
-      if (prevPage === undefined || prevPage <= 1) return undefined
-      return prevPage - 1
-    })
-  }, [])
-
-  const [context, setContext] = useState<ConfigureComponentContext | undefined>(
-    undefined,
-  )
-
   const [config, setConfig] = useState<ConfigureComponentResponse | undefined>(
     undefined,
   )
@@ -62,7 +31,6 @@ export function usePipedreamDynamicPropConfig({
   } = useServerAction(configurePipedreamComponentAction, {
     onSuccess: ({ data }) => {
       setConfig(data)
-      setContext(data.context)
     },
   })
 
@@ -77,11 +45,7 @@ export function usePipedreamDynamicPropConfig({
       componentId: component.key,
       propName: prop.name,
       configuredProps,
-      previousContext: context,
-      query,
-      page,
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- context causes infinite loop
   }, [
     integration.name,
     component.key,
@@ -89,9 +53,6 @@ export function usePipedreamDynamicPropConfig({
     prop.remoteOptions,
     configuredProps,
     debouncedExecute,
-    // context, // TODO(triggers): Fix this, it causes infinite loop
-    query,
-    page,
   ])
 
   const errors = useMemo<[string, ...string[]] | undefined>(() => {
@@ -111,10 +72,5 @@ export function usePipedreamDynamicPropConfig({
     config,
     isLoading,
     errors,
-    query,
-    page,
-    setQuery,
-    nextPage,
-    prevPage,
   }
 }
