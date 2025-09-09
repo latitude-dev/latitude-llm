@@ -1,6 +1,6 @@
 import type { WorkspaceUsage } from '@latitude-data/core/browser'
 
-export function calcualteUsage(workspaceUsage: WorkspaceUsage | undefined) {
+export function calculateUsage(workspaceUsage: WorkspaceUsage | undefined) {
   if (!workspaceUsage) {
     return {
       ratio: 1,
@@ -12,9 +12,11 @@ export function calcualteUsage(workspaceUsage: WorkspaceUsage | undefined) {
   }
 
   const { usage, max, members, maxMembers } = workspaceUsage
-  const ratio = (max - usage) / max
-  const isOverlimitsMembers = members > maxMembers
-  const isOverlimitsRuns = usage > max
+
+  const ratio = max === 'unlimited' ? 0.1 : (max - usage) / max
+  const isOverlimitsMembers =
+    maxMembers === 'unlimited' ? false : members > maxMembers
+  const isOverlimitsRuns = max === 'unlimited' ? false : usage > max
   const isOverlimits = isOverlimitsRuns || isOverlimitsMembers
 
   return { ratio, max, isOverlimits, isOverlimitsRuns, isOverlimitsMembers }

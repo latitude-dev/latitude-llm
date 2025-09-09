@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
   LatteThread,
+  Project,
   SubscriptionPlan,
   SubscriptionPlans,
   User,
   Workspace,
-  Project,
 } from '../../../../browser'
 import * as cache from '../../../../cache'
 import * as plans from '../../../../plans'
@@ -109,7 +109,7 @@ describe('consumeLatteCredits', () => {
         type: 'usage',
         threadUuid: thread.uuid,
         usage: {
-          included: 30,
+          limit: 30,
           billable: 1,
           unbillable: 0,
           resetsAt: expect.any(Date),
@@ -153,7 +153,7 @@ describe('consumeLatteCredits', () => {
         type: 'usage',
         threadUuid: thread.uuid,
         usage: {
-          included: 30,
+          limit: 30,
           billable: 0,
           unbillable: 1,
           resetsAt: expect.any(Date),

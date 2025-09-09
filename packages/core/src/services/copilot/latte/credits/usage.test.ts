@@ -2,10 +2,10 @@ import { addMonths, startOfDay, subMonths } from 'date-fns'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
   LatteThread,
+  Project,
   SubscriptionPlan,
   SubscriptionPlans,
   Workspace,
-  Project,
 } from '../../../../browser'
 import * as cache from '../../../../cache'
 import * as plans from '../../../../plans'
@@ -136,7 +136,7 @@ describe('usageLatteCredits', () => {
     )
 
     expect(result).toEqual({
-      included: 30,
+      limit: 30,
       billable: 0,
       unbillable: 0,
       resetsAt: startOfDay(addMonths(now, 1)),
@@ -151,7 +151,7 @@ describe('usageLatteCredits', () => {
     )
 
     expect(result).toEqual({
-      included: 30,
+      limit: 30,
       billable: 4,
       unbillable: 3,
       resetsAt: startOfDay(addMonths(now, 1)),
@@ -163,7 +163,7 @@ describe('usageLatteCredits', () => {
   it('succeeds when cached', async () => {
     mocks.cache.get.mockResolvedValue(
       JSON.stringify({
-        included: 0,
+        limit: 0,
         billable: 0,
         unbillable: 0,
         resetsAt: startOfDay(addMonths(now, 1)),
@@ -175,7 +175,7 @@ describe('usageLatteCredits', () => {
     )
 
     expect(result).toEqual({
-      included: 0,
+      limit: 0,
       billable: 0,
       unbillable: 0,
       resetsAt: startOfDay(addMonths(now, 1)),
@@ -187,7 +187,7 @@ describe('usageLatteCredits', () => {
   it('succeeds when cached but fresh', async () => {
     mocks.cache.get.mockResolvedValue(
       JSON.stringify({
-        included: 0,
+        limit: 0,
         billable: 0,
         unbillable: 0,
         resetsAt: startOfDay(addMonths(now, 1)),
@@ -199,7 +199,7 @@ describe('usageLatteCredits', () => {
     )
 
     expect(result).toEqual({
-      included: 30,
+      limit: 30,
       billable: 4,
       unbillable: 3,
       resetsAt: startOfDay(addMonths(now, 1)),
@@ -219,7 +219,7 @@ describe('usageLatteCredits', () => {
     )
 
     expect(result).toEqual({
-      included: 'unlimited',
+      limit: 'unlimited',
       billable: 0,
       unbillable: 0,
       resetsAt: startOfDay(addMonths(now, 1)),

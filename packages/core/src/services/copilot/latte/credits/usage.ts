@@ -2,6 +2,7 @@ import {
   LATTE_USAGE_CACHE_KEY,
   LATTE_USAGE_CACHE_TTL,
   LatteUsage,
+  QuotaType,
   Workspace,
 } from '../../../../browser'
 import { cache as getCache } from '../../../../cache'
@@ -9,6 +10,7 @@ import { Result } from '../../../../lib/Result'
 import Transaction from '../../../../lib/Transaction'
 import { LatteRequestsRepository } from '../../../../repositories'
 import { captureException } from '../../../../utils/workers/sentry'
+import { computeQuota } from '../../../grants/quota'
 import { getWorkspaceSubscription } from '../../../subscriptions/get'
 
 export async function usageLatteCredits(
@@ -50,9 +52,14 @@ export async function usageLatteCredits(
   if (counting.error) {
     return Result.error(counting.error)
   }
+
+  const quoting = await computeQuota({ type: QuotaType.Credits, workspace })
+  if (quoting.error) {
+    return Result.error(quoting.error)
+  }
+
   usage = {
-    // TODO(grants): use grants table instead of this
-    included: subscription.plan.latte_credits,
+    limit: quoting.value.limit,
     billable: counting.value.billable,
     unbillable: counting.value.unbillable,
     resetsAt: subscription.billableAt,

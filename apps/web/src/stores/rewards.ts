@@ -1,12 +1,12 @@
-import { useCallback } from 'react'
 import { noop } from 'lodash-es'
+import { useCallback } from 'react'
 
-import { ClaimedReward } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { claimRewardAction } from '$/actions/rewards/claimRewardAction'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
+import { ClaimedReward } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useSWR, { SWRConfiguration } from 'swr'
 
 import useWorkspaceUsage from './workspaceUsage'
@@ -45,7 +45,10 @@ export default function useRewards(opts?: SWRConfiguration) {
           if (!prevUsage) return prevUsage
           return {
             ...prevUsage,
-            max: prevUsage.max + increaseCount,
+            max:
+              prevUsage.max === 'unlimited'
+                ? 'unlimited'
+                : prevUsage.max + increaseCount,
           }
         },
         { revalidate: false },

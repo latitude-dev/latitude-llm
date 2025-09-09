@@ -36,8 +36,8 @@ export function LatteUsageInfo({
   const previousRef = useRef<LatteUsage>(usage)
 
   const incurring = useMemo(() => {
-    if (usage.included === 'unlimited') return Infinity
-    return Number(Math.ceil((usage.billable / usage.included) * 100))
+    if (usage.limit === 'unlimited') return Infinity
+    return Number(Math.ceil((usage.billable / usage.limit) * 100))
   }, [usage])
 
   useEffect(() => {
@@ -66,7 +66,7 @@ export function LatteUsageInfo({
               className='shrink-0 mt-0.5'
             />
             <div className='relative overflow-hidden'>
-              {usage.included === 'unlimited' ? (
+              {usage.limit === 'unlimited' ? (
                 <Text.H6 color='foregroundMuted' noWrap ellipsis>
                   You have unlimited credits
                 </Text.H6>
@@ -93,7 +93,7 @@ export function LatteUsageInfo({
         >
           <div className='w-full h-full flex flex-col items-start justify-center gap-3 p-1'>
             <div className='w-full flex flex-col items-start justify-center gap-1.5'>
-              {usage.included === 'unlimited' ? (
+              {usage.limit === 'unlimited' ? (
                 <Text.H6 color='foregroundMuted' noWrap ellipsis>
                   <b>{formatCount(usage.billable + usage.unbillable)}</b> used
                   credits (unlimited)
@@ -102,7 +102,7 @@ export function LatteUsageInfo({
                 <Text.H6 color='foregroundMuted' noWrap ellipsis>
                   <b>{formatCount(usage.billable)}</b>
                   <span className='mx-0.5'>/</span>
-                  {formatCount(usage.included)} included credits
+                  {formatCount(usage.limit)} available credits
                   {/* TODO(credits): Uncomment this when clients are informed about */}
                   {/* {!!usage.unbillable &&
                     ` (+${formatCount(usage.unbillable)} bonus)`} */}
@@ -114,16 +114,16 @@ export function LatteUsageInfo({
               Resets {format(usage.resetsAt, 'MMMM d, yyyy')}
               {/* TODO(credits): Uncomment this when clients are informed about */}
               {/* {incurring > 100 &&
-                usage.included !== 'unlimited' &&
+                usage.limit !== 'unlimited' &&
                 !FREE_PLANS.includes(plan) && (
                   <Text.H6 color='foregroundMuted' noWrap ellipsis>
                     <br />
                     You will be billed{' '}
-                    {formatCount(usage.billable - usage.included)} extra credits
+                    {formatCount(usage.billable - usage.limit)} extra credits
                   </Text.H6>
                 )} */}
             </Text.H6>
-            {incurring >= 100 && usage.included !== 'unlimited' && (
+            {incurring >= 100 && usage.limit !== 'unlimited' && (
               <UpgradeLink className='w-full'>
                 <Button fullWidth fancy roundy>
                   {FREE_PLANS.includes(plan)

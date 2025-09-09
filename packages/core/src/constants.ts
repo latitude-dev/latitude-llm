@@ -3,6 +3,7 @@ import {
   LatitudeTool,
   LatitudeToolInternalName,
   LogSources,
+  Quota,
 } from '@latitude-data/constants'
 import type {
   AssistantMessage,
@@ -156,9 +157,9 @@ export type EvaluationMeanValue = {
 
 export type WorkspaceUsage = {
   usage: number
-  max: number
+  max: Quota
   members: number
-  maxMembers: number
+  maxMembers: Quota
 }
 
 export type ChainCallResponseDto =
