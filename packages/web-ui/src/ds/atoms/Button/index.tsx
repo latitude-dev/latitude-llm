@@ -28,6 +28,7 @@ const buttonContainerVariants = cva(
         linkOutline: 'shadow-none underline-offset-4 hover:underline',
         linkDestructive: 'shadow-none underline-offset-4 hover:underline',
         shiny: '',
+        shinyLatte: '',
         latte: 'bg-latte-border hover:bg-latte-border/90 border-latte-border',
         primaryMuted: 'bg-primary-muted hover:bg-primary-muted-hover',
       },
@@ -89,7 +90,10 @@ const buttonVariants = cva(
         linkDestructive:
           'shadow-none underline-offset-4 group-hover:underline text-destructive',
         shiny: cn(
-          'bg-accent border-accent group-hover:bg-primary/15 overflow-hidden',
+          'bg-accent border border-accent group-hover:bg-primary/15 overflow-hidden',
+        ),
+        shinyLatte: cn(
+          'bg-latte-input border border-latte-widget group-hover:bg-latte/15 text-latte-input-foreground overflow-hidden',
         ),
         latte:
           'bg-latte text-latte-input-foreground group-hover:bg-latte/90 border-latte-border',
@@ -99,6 +103,7 @@ const buttonVariants = cva(
       size: {
         default: 'py-buttonDefaultVertical px-3 min-h-8',
         small: 'py-0 px-1.5 min-h-7',
+        tiny: 'py-0 px-1.5 min-h-6',
         none: 'py-0 px-0',
         iconDefault: 'h-8 w-8',
         icon: 'h-6 w-6',
@@ -117,6 +122,16 @@ const buttonVariants = cva(
         variant: 'shiny',
         size: 'small',
         className: 'rounded-lg px-2',
+      },
+      {
+        variant: 'shinyLatte',
+        size: 'small',
+        className: 'rounded-lg px-2',
+      },
+      {
+        variant: 'shinyLatte',
+        size: 'tiny',
+        className: 'rounded-lg px-1.5',
       },
       {
         variant: 'outline',
@@ -296,7 +311,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     >
       <Slottable>
         <div className={buttonStyles.buttonClass}>
-          {variant === 'shiny' && (
+          {variant?.startsWith('shiny') && (
             <span
               className={cn(
                 'absolute inset-0',

@@ -43,6 +43,7 @@ import {
   ClockFadingIcon,
   Code,
   Code2,
+  CoinsIcon,
   Copy,
   CpuIcon,
   Database,
@@ -64,6 +65,7 @@ import {
   FolderOpen,
   FolderPlus,
   Forward,
+  GiftIcon,
   GitCompareArrows,
   Github,
   Gitlab,
@@ -105,6 +107,7 @@ import {
   RefreshCcw,
   RegexIcon,
   Repeat2,
+  RocketIcon,
   RotateCcw,
   ScrollTextIcon,
   SearchIcon,
@@ -128,12 +131,11 @@ import {
   Undo,
   Unplug,
   UserRound,
+  UsersIcon,
   WholeWord,
   XIcon,
   Youtube,
   Zap,
-  UsersIcon,
-  CoinsIcon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -377,6 +379,8 @@ const Icons = {
   circleX: CircleX,
   users: UsersIcon,
   coins: CoinsIcon,
+  rocket: RocketIcon,
+  gift: GiftIcon,
 }
 
 export type IconName = keyof typeof Icons

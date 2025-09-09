@@ -1,19 +1,18 @@
 'use client'
-import { forwardRef, ReactNode, Ref } from 'react'
-import * as RadixPopover from '@radix-ui/react-popover'
 
-import { cn } from '../../../lib/utils'
-import { Button, ButtonProps } from '../Button'
-import { Icon } from '../Icons'
-import { IconProps } from '../Icons'
-import { Text } from '../Text'
-import { TextColor } from '../../tokens'
+import * as RadixPopover from '@radix-ui/react-popover'
 import { isString } from 'lodash-es'
+import { forwardRef, ReactNode, Ref } from 'react'
+import { cn } from '../../../lib/utils'
+import { TextColor } from '../../tokens'
 import { zIndex } from '../../tokens/zIndex'
+import { Button, ButtonProps } from '../Button'
+import { Icon, IconProps } from '../Icons'
+import { Text } from '../Text'
 
 export type PopoverContentProps = RadixPopover.PopoverContentProps & {
   inPortal?: boolean
-  size?: 'small' | 'medium' | 'large' | 'auto'
+  size?: 'small' | 'medium' | 'xmedium' | 'large' | 'auto'
   scrollable?: boolean
   maxHeight?: 'normal' | 'none'
   width?: number
@@ -44,6 +43,7 @@ const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
           'custom-scrollbar': scrollable,
           'max-w-80 p-2': size === 'small',
           'max-w-96 p-4': size === 'medium',
+          'max-w-[30rem] p-4': size === 'xmedium',
           'max-w-xl p-4': size === 'large',
           'max-h-96': maxHeight === 'normal',
           'w-[var(--radix-popover-trigger-width)]': size === 'auto',
