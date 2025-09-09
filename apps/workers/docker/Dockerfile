@@ -43,6 +43,7 @@ COPY --from=pruner /app/out/json/ .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --shamefully-hoist \
   --frozen-lockfile \
+  --ignore-scripts \
   --filter "${PROJECT}..."
 
 COPY --from=pruner /app/out/full/ .

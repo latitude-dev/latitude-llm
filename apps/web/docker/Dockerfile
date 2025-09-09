@@ -89,6 +89,7 @@ COPY --from=pruner /app/out/full/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --frozen-lockfile \
+  --ignore-scripts \
   --filter "${PROJECT}..."
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
