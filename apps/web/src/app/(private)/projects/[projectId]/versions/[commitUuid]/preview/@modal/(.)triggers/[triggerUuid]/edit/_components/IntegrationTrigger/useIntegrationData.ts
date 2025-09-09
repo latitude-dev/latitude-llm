@@ -7,6 +7,7 @@ import type {
 } from '@latitude-data/core/browser'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import useIntegrations from '$/stores/integrations'
+import { PipedreamIntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
 
 type Trigger = PipedreamComponent<PipedreamComponentType.Trigger>
 const EMPTY_LIST: Trigger[] = []
@@ -27,11 +28,13 @@ export function useIntegrationData({
     [integrations, trigger.configuration.integrationId],
   )
 
-  let pipedreamSlug: string | undefined
-  const integrationConfig = integration?.configuration
-  if (integrationConfig && 'appName' in integrationConfig) {
-    pipedreamSlug = integrationConfig.appName
-  }
+  const pipedreamSlug = useMemo(() => {
+    if (!integration) return undefined
+    const { appName } =
+      integration.configuration as PipedreamIntegrationConfiguration
+    return appName
+  }, [integration])
+
   const { data: pipedreamApp, isLoading: isLoadingPipedramApp } =
     usePipedreamApp(pipedreamSlug)
 
@@ -51,11 +54,19 @@ export function useIntegrationData({
       }
     }
 
+    if (!pipedreamSlug) {
+      return {
+        isLoading: false as const,
+        valid: false as const,
+        error: 'App is not correctly configured in integration',
+      }
+    }
+
     if (!pipedreamApp) {
       return {
         isLoading: false as const,
         valid: false as const,
-        error: 'Integration not found',
+        error: `App '${pipedreamSlug}' does not exist`,
       }
     }
 
@@ -64,11 +75,11 @@ export function useIntegrationData({
       (pt) => pt.key === pipedreamTriggerKey,
     )
 
-    if (!pipedreamSlug || !pipedreamTrigger) {
+    if (!pipedreamTrigger) {
       return {
         isLoading: false as const,
         valid: false as const,
-        error: 'Integration not found',
+        error: `Trigger with id '${pipedreamTriggerKey}' does not exist on integration '${integration.name}'`,
       }
     }
 

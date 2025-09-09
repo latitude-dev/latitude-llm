@@ -13,6 +13,7 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 import { humanizeCronValue } from '@latitude-data/web-ui/organisms/CronInput'
 import {
   EmailTriggerConfiguration,
+  IntegrationTriggerConfiguration,
   ScheduledTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
 import { ICONS_BY_TRIGGER } from '../../@modal/(.)triggers/new/_components/IntegrationsList'
@@ -59,6 +60,11 @@ function IntegrationTriggerCard({
     return app.triggers.find((c) => c.key === trigger.configuration.componentId)
   }, [app, trigger.configuration.componentId])
 
+  const title = useMemo(() => {
+    if (component) return component.name
+    return trigger.configuration.componentId
+  }, [component, trigger.configuration.componentId])
+
   if (!integration) return null
 
   return (
@@ -67,7 +73,7 @@ function IntegrationTriggerCard({
       isLast={isLast}
       document={document}
       trigger={trigger}
-      title={component?.name || 'Unknown Trigger'}
+      title={title}
       subtitle={integration.name}
       description={app ? `Runs ${documentName}` : 'Loading...'}
       descriptionLoading={!app}
