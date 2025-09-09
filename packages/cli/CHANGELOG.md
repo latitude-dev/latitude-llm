@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 
+## [2.0.5] - 2025-09-09
+
+### Changed
+
+- Prompts are default exports instead of named in js/ts projects to avoid name conflicts.
+
 ## [2.0.4] - 2025-09-08
 
 ### Added
