@@ -14,10 +14,6 @@ export const configurePipedreamComponentAction = authProcedure
       componentId: z.string(),
       propName: z.string(),
       configuredProps: z.record(z.any()).optional(),
-      previousContext: z.record(z.any()).optional(),
-
-      query: z.string().optional(),
-      page: z.number().optional(),
     }),
   )
   .handler(async ({ input, ctx }) => {
@@ -36,8 +32,5 @@ export const configurePipedreamComponentAction = authProcedure
       componentId: input.componentId,
       propName: input.propName,
       configuredProps: input.configuredProps,
-      previousContext: input.previousContext,
-      query: input.query,
-      page: input.page,
     }).then((r) => r.unwrap())
   })
