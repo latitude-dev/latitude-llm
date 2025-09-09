@@ -147,6 +147,7 @@ export type IEvaluationConfiguration =
   | EvaluationConfigurationNumerical
   | EvaluationConfigurationText
 
+// TODO(evalsv2): deprecated, remove
 // TODO: EvaluationDto now has two polimorphic attributes. There's two ways to define it:
 // 1. Use generic types, which is way prettier, but Typescript won't infer the type automatically.
 // 2. Use union types, which requires to explicitly define every combination, but works flawlesly with Typescript.

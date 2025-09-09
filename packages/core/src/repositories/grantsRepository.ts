@@ -10,7 +10,7 @@ import {
   or,
   type InferSelectModel,
 } from 'drizzle-orm'
-import { Grant, Quota, QuotaType } from '../browser'
+import { Grant, GrantSource, Quota, QuotaType } from '../browser'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { grants } from '../schema'
@@ -110,6 +110,18 @@ export class GrantsRepository extends Repository<Grant> {
     }
 
     return Result.ok<Grant>(this.serialize(result))
+  }
+
+  async listReferenced(source: GrantSource, referenceId: string) {
+    const results = await this.scope.where(
+      and(
+        this.scopeFilter,
+        eq(grants.source, source),
+        eq(grants.referenceId, referenceId),
+      ),
+    )
+
+    return Result.ok<Grant[]>(results.map(this.serialize))
   }
 
   async listApplicable(since: Date, type?: QuotaType) {
