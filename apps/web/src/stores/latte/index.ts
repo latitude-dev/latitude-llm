@@ -128,6 +128,7 @@ export const useLatteStore = () => {
       addInteractions: store.addInteractions,
       setInteractions: store.setInteractions,
       addInteraction: store.addInteraction,
+      addIntegrationId: store.addIntegrationId,
       updateLastInteraction: store.updateLastInteraction,
       setError: store.setError,
       setLatteActionsFeedbackUuid: store.setLatteActionsFeedbackUuid,

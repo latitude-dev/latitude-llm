@@ -91,6 +91,7 @@ export function useLatteThreadUpdates() {
     setError,
     setUsage,
     setIsLoadingUsage,
+    addIntegrationId,
   } = useLatteStore()
 
   const {
@@ -136,6 +137,17 @@ export function useLatteThreadUpdates() {
       if (update.type === 'fullResponse') {
         // Handle fullResponse outside of setInteractions to ensure setIsBrewing is called
         setIsBrewing(false)
+      }
+
+      if (
+        update.type === 'toolCompleted' &&
+        update.toolName === LatteTool.createIntegration
+      ) {
+        // TODO: Nasty hack
+        if ('id' in update.result) {
+          const integrationId = update.result.id as number
+          addIntegrationId(integrationId)
+        }
       }
 
       setInteractions((prev) => {
@@ -190,7 +202,14 @@ export function useLatteThreadUpdates() {
         return [...otherInteractions, lastInteraction]
       })
     },
-    [threadUuid, setInteractions, setIsBrewing, setError, mutateUsage],
+    [
+      threadUuid,
+      setInteractions,
+      setIsBrewing,
+      setError,
+      mutateUsage,
+      addIntegrationId,
+    ],
   )
 
   useSockets({

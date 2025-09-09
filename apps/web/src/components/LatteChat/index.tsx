@@ -31,6 +31,7 @@ import { LatteUsageInfo } from './_components/LatteUsageInfo'
 import { LatteMessageList } from './_components/MessageList'
 import { LatteChatInput } from './LatteChatInput'
 import { useLatteEventHandlers } from '$/hooks/latte/useLatteEventHandlers'
+import { LatteUnconfiguredIntegrations } from './_components/UnconfiguredIntegrations'
 
 function ChatWrapper({ children }: { children: ReactNode }) {
   return (
@@ -135,6 +136,7 @@ export function LatteChatUI() {
                   interactions={interactions}
                   isStreaming={isBrewing}
                 />
+                <LatteUnconfiguredIntegrations />
                 {error && (
                   <div className='w-full px-8'>
                     <Alert

@@ -8,6 +8,7 @@ type ProjectLatteState = {
   usage: LatteUsage | undefined
   latteActionsFeedbackUuid: string | undefined
   interactions: LatteInteraction[]
+  newIntegrationIds: number[]
   isBrewing: boolean
   error: string | undefined
 }
@@ -18,6 +19,7 @@ const EMPTY_PROJECT_STATE = {
   usage: undefined,
   latteActionsFeedbackUuid: undefined,
   interactions: [],
+  newIntegrationIds: [], // TODO: refactor latte interactions to be stored in backend and have better step management
   isBrewing: false,
   error: undefined,
 } satisfies ProjectLatteState
@@ -39,6 +41,7 @@ type LatteState = {
   setThreadUuid: (uuid: string | undefined) => void
   setIsBrewing: (loading: boolean) => void
   addInteractions: (interactions: LatteInteraction[]) => void
+  addIntegrationId: (integrationId: number) => void
   setInteractions: (
     interactions:
       | LatteInteraction[]
@@ -192,6 +195,25 @@ export const useLatteZustandStore = create<LatteState>((set, get) => ({
           [state.currentProjectId]: {
             ...currentState,
             interactions: updatedInteractions,
+          },
+        },
+      }
+    }),
+
+  addIntegrationId: (integrationId: number) =>
+    set((state) => {
+      if (!state.currentProjectId) return state
+      const currentState =
+        state.projectStates[state.currentProjectId] ?? EMPTY_PROJECT_STATE
+      return {
+        projectStates: {
+          ...state.projectStates,
+          [state.currentProjectId]: {
+            ...currentState,
+            newIntegrationIds: [
+              ...currentState.newIntegrationIds,
+              integrationId,
+            ],
           },
         },
       }
