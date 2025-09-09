@@ -2,10 +2,7 @@
 
 import { usePaywallModal } from '$/app/(private)/providers/PaywallModalProvider'
 import { formatCount } from '$/lib/formatCount'
-import {
-  LatteUsage,
-  SubscriptionPlan,
-} from '@latitude-data/core/browser'
+import { LatteUsage, SubscriptionPlan } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
@@ -70,13 +67,21 @@ export function LatteUsageInfo({
                   You have unlimited credits
                 </Text.H6>
               ) : overLimit ? (
-                <Text.H5 color='destructive'>Limit Reached. <span role='button' className='text-destructive underline' onClick={open}>Upgrade now.</span></Text.H5>
-              ) :
-                (
-                  <Text.H6 color='foregroundMuted' noWrap ellipsis>
-                    You've used {incurring}% of your overall credit limit
-                  </Text.H6>
-                )}
+                <Text.H5 color='destructive'>
+                  Limit Reached.{' '}
+                  <span
+                    role='button'
+                    className='text-destructive underline'
+                    onClick={open}
+                  >
+                    Upgrade now.
+                  </span>
+                </Text.H5>
+              ) : (
+                <Text.H6 color='foregroundMuted' noWrap ellipsis>
+                  You've used {incurring}% of your overall credit limit
+                </Text.H6>
+              )}
               {isAnimating && (
                 <div
                   className='absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/80 to-transparent animate-shine'
