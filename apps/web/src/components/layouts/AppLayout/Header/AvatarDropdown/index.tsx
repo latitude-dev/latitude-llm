@@ -22,6 +22,9 @@ export default function AvatarDropdown({
   const onClickBackoffice = useCallback(() => {
     router.push(ROUTES.backoffice.root)
   }, [router])
+  const onClickPromocodes = useCallback(() => {
+    router.push(ROUTES.promocodes.root)
+  }, [router])
 
   const onClickLogout = useCallback(async () => {
     await logoutAction()
@@ -49,12 +52,19 @@ export default function AvatarDropdown({
             ]
           : []),
         {
+          label: 'Promocodes',
+          iconProps: {
+            name: 'gift',
+          },
+          onClick: onClickPromocodes,
+        },
+        {
           label: 'Logout',
           type: 'destructive',
           onClick: onClickLogout,
         },
       ] as MenuOption[],
-    [currentUser, isCloud, onClickBackoffice, onClickLogout],
+    [currentUser, isCloud, onClickBackoffice, onClickLogout, onClickPromocodes],
   )
 
   const info = currentUser ? getUserInfoFromSession(currentUser) : null

@@ -62,6 +62,9 @@ export const ROUTES = {
       root: `${BACKOFFICE_ROOT}/grants`,
     },
   },
+  promocodes: {
+    root: `/promocodes`,
+  },
   noWorkspace: {
     root: '/no-workspace',
   },

@@ -78,3 +78,7 @@ export * from './models/latteRequests'
 // Feature toggles
 export * from './models/features'
 export * from './models/workspaceFeatures'
+
+// Promocodes
+export * from './models/promocodes'
+export * from './models/claimedPromocodes'

@@ -134,6 +134,7 @@ import {
   Zap,
   UsersIcon,
   CoinsIcon,
+  Gift,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -377,6 +378,7 @@ const Icons = {
   circleX: CircleX,
   users: UsersIcon,
   coins: CoinsIcon,
+  gift: Gift,
 }
 
 export type IconName = keyof typeof Icons
