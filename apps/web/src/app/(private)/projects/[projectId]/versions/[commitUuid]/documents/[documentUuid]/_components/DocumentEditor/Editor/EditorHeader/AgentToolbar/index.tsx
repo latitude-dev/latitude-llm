@@ -23,6 +23,7 @@ import {
   useActiveIntegrations,
 } from '../../PromptIntegrations/useActiveIntegrations'
 import { EditorHeaderProps } from '../index'
+import useIntegrationTools from '$/stores/integrationTools'
 
 const singularPluralLabel = (c: number, s: string, p: string) =>
   c === 1 ? `1 ${s}` : `${c} ${p}`
@@ -81,7 +82,7 @@ function useCounters({
   const { isInitialized, activeIntegrations } = useActiveIntegrations({
     prompt,
   })
-  const toolsCount = Object.keys(activeIntegrations).length
+  const toolsCount = countTools(activeIntegrations)
   const toolsLabel =
     toolsCount > 0
       ? singularPluralLabel(toolsCount, 'Tool', 'Tools')
@@ -116,6 +117,19 @@ function useCounters({
       isInitialized,
       isLoading,
     ],
+  )
+}
+
+function countTools(activeIntegrations: ActiveIntegrations) {
+  return Object.values(activeIntegrations).reduce(
+    (sumActiveTools, listTools) => {
+      if (listTools === true) {
+        return sumActiveTools + 1 // TODO: count true as all tools of integration instead of just 1
+      } else {
+        return sumActiveTools + listTools.length
+      }
+    },
+    0,
   )
 }
 
