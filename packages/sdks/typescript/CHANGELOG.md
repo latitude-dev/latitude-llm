@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.1] - 2025-09-09
+
+### Changed
+
+Throw error if sdk fails to create version
+
 ## [5.0.0] - 2025-09-08
 
 Official release of v5. Targets the new agent runtime, which introduces several improvements to agent performance and reliability.

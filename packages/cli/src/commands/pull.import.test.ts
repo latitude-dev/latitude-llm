@@ -18,7 +18,9 @@ describe('PullCommand.importPromptFromFile (default exports)', () => {
     // Cleanup tmp dir
     try {
       fsSync.rmSync(tmpDir, { recursive: true, force: true })
-    } catch {}
+    } catch {
+      // do nothing
+    }
   })
 
   it('reads default export from .mjs (ESM)', async () => {
