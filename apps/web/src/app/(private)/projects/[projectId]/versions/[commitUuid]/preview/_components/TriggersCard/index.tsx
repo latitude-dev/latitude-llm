@@ -13,7 +13,6 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 import { humanizeCronValue } from '@latitude-data/web-ui/organisms/CronInput'
 import {
   EmailTriggerConfiguration,
-  IntegrationTriggerConfiguration,
   ScheduledTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
 import { ICONS_BY_TRIGGER } from '../../@modal/(.)triggers/new/_components/IntegrationsList'
