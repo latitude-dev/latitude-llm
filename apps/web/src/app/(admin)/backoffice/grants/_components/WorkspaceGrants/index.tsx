@@ -3,7 +3,7 @@
 import { DataTable } from '$/app/(admin)/backoffice/search/_components/DataTable'
 import { useGrantsAdmin } from '$/stores/admin/grants'
 import { useWorkspaceLimitsAdmin } from '$/stores/admin/workspaceLimits'
-import { Grant } from '@latitude-data/core/browser'
+import { Grant, GrantSource } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Card, CardContent, CardHeader } from '@latitude-data/web-ui/atoms/Card'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -197,18 +197,20 @@ export function WorkspaceGrants({ workspaceId }: { workspaceId: number }) {
                   </Text.H5>
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant='destructive'
-                    size='small'
-                    onClick={() => {
-                      setSelectedGrant(grant)
-                      setOpenRevokeModal(true)
-                    }}
-                    disabled={isRevokingGrant}
-                    fancy
-                  >
-                    Revoke
-                  </Button>
+                  {grant.source !== GrantSource.Subscription && (
+                    <Button
+                      variant='destructive'
+                      size='small'
+                      onClick={() => {
+                        setSelectedGrant(grant)
+                        setOpenRevokeModal(true)
+                      }}
+                      disabled={isRevokingGrant}
+                      fancy
+                    >
+                      Revoke
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -221,7 +223,7 @@ export function WorkspaceGrants({ workspaceId }: { workspaceId: number }) {
         onIssueGrant={handleIssueGrant}
         isLoading={isIssuingGrant}
       />
-      {openRevokeModal && selectedGrant && (
+      {openRevokeModal && !!selectedGrant && (
         <ConfirmModal
           dismissible
           open={openRevokeModal}

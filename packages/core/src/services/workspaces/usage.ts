@@ -1,17 +1,24 @@
 import { count, eq, inArray } from 'drizzle-orm'
 import Redis from 'ioredis'
-import { Subscription, Workspace, WorkspaceUsage } from '../../browser'
+import {
+  QuotaType,
+  Subscription,
+  SubscriptionPlan,
+  Workspace,
+  WorkspaceUsage,
+} from '../../browser'
 import { cache } from '../../cache'
 import { database } from '../../client'
+import { unsafelyFindWorkspace } from '../../data-access'
+import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
-import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
 import {
-  ClaimedRewardsRepository,
   EvaluationResultsV2Repository,
   MembershipsRepository,
 } from '../../repositories'
 import { commits, documentLogs, projects } from '../../schema'
+import { computeQuota } from '../grants/quota'
 import { getLatestRenewalDate } from './utils/calculateRenewalDate'
 
 /**
@@ -77,11 +84,13 @@ async function computeUsageFromDatabase(
 }
 
 export async function computeWorkspaceUsage(
-  workspace: {
-    id: Workspace['id']
-    currentSubscriptionCreatedAt: Subscription['createdAt']
-    plan: SubscriptionPlan
-  },
+  workspace:
+    | {
+        id: Workspace['id']
+        currentSubscriptionCreatedAt: Subscription['createdAt']
+        plan: SubscriptionPlan
+      }
+    | Workspace,
   db = database,
 ): PromisedResult<WorkspaceUsage, Error> {
   const cacheClient = await cache()
@@ -89,24 +98,29 @@ export async function computeWorkspaceUsage(
   let usage = await getUsageFromCache(cacheClient, cacheKey)
 
   if (usage === null) {
-    usage = await computeUsageFromDatabase(workspace, db)
+    usage = await computeUsageFromDatabase(workspace as any, db)
     await cacheClient.set(cacheKey, usage.toString(), 'EX', 86400) // cache for 24 hours
   }
 
-  const claimedRewardsScope = new ClaimedRewardsRepository(workspace.id, db)
-  const extraRuns = await claimedRewardsScope
-    .getExtraRunsOptimistic()
-    .then((r) => r.unwrap())
-  const currentSubscriptionPlan = SubscriptionPlans[workspace.plan]
+  workspace = await unsafelyFindWorkspace(workspace.id, db)
+  if (!workspace) {
+    return Result.error(new BadRequestError('Workspace not found'))
+  }
+
+  const runs = await computeQuota({ type: QuotaType.Runs, workspace }).then(
+    (r) => r.unwrap(),
+  )
+  const seats = await computeQuota({ type: QuotaType.Seats, workspace }).then(
+    (r) => r.unwrap(),
+  )
 
   const membersRepo = new MembershipsRepository(workspace.id, db)
   const members = await membersRepo.findAll().then((r) => r.unwrap())
   const usageResult: WorkspaceUsage = {
     usage,
-    // TODO(grants): use grants table instead of this
-    max: currentSubscriptionPlan.credits + extraRuns,
+    max: runs.limit,
     members: members.length,
-    maxMembers: currentSubscriptionPlan.users,
+    maxMembers: seats.limit,
   }
 
   return Result.ok(usageResult)

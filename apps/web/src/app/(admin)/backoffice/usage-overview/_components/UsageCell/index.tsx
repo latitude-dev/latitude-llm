@@ -2,9 +2,10 @@ import {
   UsageIndicatorPopover,
   type UsageSubscription,
 } from '$/components/UsageIndicatorPopover'
-import { calcualteUsage } from '$/lib/usageUtils'
+import { calculateUsage } from '$/lib/usageUtils'
 import { computeWorkspaceUsage } from '@latitude-data/core/services/workspaces/usage'
 import type { GetUsageOverviewRow } from '@latitude-data/core/services/workspaces/usageOverview/getUsageOverview'
+
 export async function UsageCell({
   usageOverview,
   subscription,
@@ -23,7 +24,7 @@ export async function UsageCell({
     currentSubscriptionCreatedAt: new Date(usageOverview.subscriptionCreatedAt),
     plan: usageOverview.subscriptionPlan,
   }).then((r) => r.unwrap())
-  const calculatedUsage = calcualteUsage(usage)
+  const calculatedUsage = calculateUsage(usage)
 
   return (
     <UsageIndicatorPopover

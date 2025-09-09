@@ -1,6 +1,8 @@
 'use client'
+
 import {
   FREE_PLANS,
+  Quota,
   SubscriptionPlan,
   WorkspaceUsage,
 } from '@latitude-data/core/browser'
@@ -34,7 +36,11 @@ export function SubscriptionBadge({
   )
 }
 
-function runsDescription({ ratio, max }: { ratio: number; max: number }) {
+function runsDescription({ ratio, max }: { ratio: number; max: Quota }) {
+  if (max === 'unlimited') {
+    return 'Your plan includes unlimited runs. Enjoy!'
+  }
+
   if (ratio <= 0) {
     return "You've reached the maximum number of runs. Your app will continue working, the Latitude limit reached means you'll no longer be able to run tests, view new logs or evaluation results."
   }
@@ -50,8 +56,12 @@ function membersDescription({
   maxMembers,
 }: {
   members: number
-  maxMembers: number
+  maxMembers: Quota
 }) {
+  if (maxMembers === 'unlimited') {
+    return 'Your plan includes unlimited members. Invite as many as you need!'
+  }
+
   if (members >= maxMembers) {
     return `You have reached the maximum number of members for your current plan. (${maxMembers} members allowed)`
   }
@@ -71,6 +81,7 @@ function UsageIndicatorCircle({
 }) {
   const ratio = useMemo(() => {
     if (!workspaceUsage) return 1
+    if (workspaceUsage.max === 'unlimited') return 0.1 // Show small progress for unlimited
     if (workspaceUsage.max === 0) return 1
     const actualRatio = workspaceUsage.usage / workspaceUsage.max
 
@@ -139,7 +150,7 @@ export function UsageIndicatorPopover({
   workspaceUsage?: WorkspaceUsage
   calculatedUsage: {
     ratio: number
-    max: number
+    max: Quota
     isOverlimits: boolean
     isOverlimitsRuns: boolean
     isOverlimitsMembers: boolean
@@ -187,7 +198,9 @@ export function UsageIndicatorPopover({
               >
                 {isOverlimits && isFree
                   ? 'Over limits'
-                  : `${workspaceUsage?.usage} / ${workspaceUsage?.max}`}
+                  : workspaceUsage?.max === 'unlimited'
+                    ? `${workspaceUsage?.usage} / unlimited`
+                    : `${workspaceUsage?.usage} / ${workspaceUsage?.max}`}
               </Text.H6>
             </LoadingText>
           </div>
@@ -221,7 +234,11 @@ export function UsageIndicatorPopover({
                     </Text.H4>
                     <Text.H4 color='foregroundMuted' noWrap>
                       {' '}
-                      / {workspaceUsage?.max} runs
+                      /{' '}
+                      {workspaceUsage?.max === 'unlimited'
+                        ? 'unlimited'
+                        : workspaceUsage?.max}{' '}
+                      runs
                     </Text.H4>
                     <div className='w-full flex items-center justify-end'>
                       <SubscriptionBadge subscription={subscription} />
@@ -257,7 +274,11 @@ export function UsageIndicatorPopover({
                     </Text.H4>
                     <Text.H4 color='foregroundMuted' noWrap>
                       {' '}
-                      / {workspaceUsage?.maxMembers} members
+                      /{' '}
+                      {workspaceUsage?.maxMembers === 'unlimited'
+                        ? 'unlimited'
+                        : workspaceUsage?.maxMembers}{' '}
+                      members
                     </Text.H4>
                   </div>
                 </LoadingText>

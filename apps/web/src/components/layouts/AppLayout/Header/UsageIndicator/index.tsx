@@ -6,7 +6,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useSession } from '@latitude-data/web-ui/providers'
 import useWorkspaceUsage from '$/stores/workspaceUsage'
 import { UsageIndicatorPopover } from '$/components/UsageIndicatorPopover'
-import { calcualteUsage } from '$/lib/usageUtils'
+import { calculateUsage } from '$/lib/usageUtils'
 import { UpgradeLink } from '$/components/UpgradeLink'
 
 function SubscriptionButton({
@@ -27,7 +27,7 @@ export function UsageIndicator() {
   const { data: workspaceUsage, isLoading } = useWorkspaceUsage()
   const { subscriptionPlan, workspace } = useSession()
   const calculatedUsage = useMemo(
-    () => calcualteUsage(workspaceUsage),
+    () => calculateUsage(workspaceUsage),
     [workspaceUsage],
   )
 

@@ -28,11 +28,11 @@ export async function checkLatteCredits(
   }
   const usage = counting.value
 
-  if (usage.included === 'unlimited') {
+  if (usage.limit === 'unlimited') {
     return Result.ok(true)
   }
 
-  if (usage.billable + credits > usage.included) {
+  if (usage.billable + credits > usage.limit) {
     return Result.error(
       new UnprocessableEntityError(LATTE_NOT_ENOUGH_CREDITS_ERROR),
     )
