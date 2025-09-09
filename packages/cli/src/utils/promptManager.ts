@@ -80,17 +80,13 @@ export class PromptManager {
     // Create the file
     const fileName = path.basename(promptPath) + (isEsm ? '.js' : '.cjs')
     const filePath = path.join(dirPath, fileName)
-    // Get the prompt name from the path and convert to camelCase
-    const promptName = path.basename(promptPath)
-    const camelCaseName = promptName
-      .replace(/[-_\s.]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ''))
-      .replace(/^(.)/, (c) => c.toLowerCase())
+
     // Serialize content as a JSON string literal to avoid template issues
     const jsonString = JSON.stringify(prompt.content)
-    // Create the content with the camelCased variable name
+    // Create the content exporting default to avoid invalid identifiers
     const content = isEsm
-      ? `export const ${camelCaseName} = ${jsonString}\n`
-      : `const ${camelCaseName} = ${jsonString}\n\nmodule.exports = { ${camelCaseName} }\n`
+      ? `export default ${jsonString}\n`
+      : `module.exports = ${jsonString}\n`
     await fs.writeFile(filePath, content)
     // Return the relative path for logging
     return path.join(rootFolder, path.dirname(promptPath), fileName)

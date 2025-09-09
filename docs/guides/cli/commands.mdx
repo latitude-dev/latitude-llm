@@ -55,7 +55,7 @@ latitude pull [-p <path>] [-y] [--dev]
 - Choose: Accept / Cancel / View details (opens pager for full diffs)
 - `-y` skips confirmation and applies changes
 - Saves prompts as:
-  - npm projects: `.js` (ESM) or `.cjs` (CJS) exporting a string
+  - npm projects: `.js` (ESM) or `.cjs` (CJS) default-exporting a string
   - non-npm projects: `.promptl` plain text
 - Removes local files that no longer exist remotely
 
@@ -110,15 +110,14 @@ latitude help
 
 ```js
 // src/prompts/welcome.js
-export const welcome = 'Welcome to Latitude!'
+export default 'Welcome to Latitude!'
 ```
 
 - CJS (default):
 
 ```js
 // src/prompts/welcome.cjs
-const welcome = 'Welcome to Latitude!'
-module.exports = { welcome }
+module.exports = 'Welcome to Latitude!'
 ```
 
 - non-npm projects:
