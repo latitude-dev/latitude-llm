@@ -1464,6 +1464,13 @@
       "when": 1757518213076,
       "tag": "0209_claimed_promocodes",
       "breakpoints": true
+    },
+    {
+      "idx": 210,
+      "version": "7",
+      "when": 1757519852358,
+      "tag": "0210_fine_pandemic",
+      "breakpoints": true
     }
   ]
 }

@@ -24,7 +24,7 @@ import { getLatestRenewalDate } from './utils/calculateRenewalDate'
 /**
  * Handle both old cache format (object) and new cache format (number)
  **/
-async function getUsageFromCache(
+export async function getUsageFromCache(
   cacheClient: Redis,
   cacheKey: string,
 ): Promise<number | null> {

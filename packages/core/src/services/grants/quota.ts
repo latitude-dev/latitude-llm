@@ -1,8 +1,8 @@
 import { QuotaType, Workspace } from '../../browser'
+import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import Transaction from '../../lib/Transaction'
 import { GrantsRepository } from '../../repositories'
-import { getWorkspaceSubscription } from '../subscriptions/get'
+import { findWorkspaceSubscription } from '../subscriptions/data-access/find'
 
 export async function computeQuota(
   {
@@ -12,9 +12,9 @@ export async function computeQuota(
     type: QuotaType
     workspace: Workspace
   },
-  tx = new Transaction(),
+  db = database,
 ) {
-  const getting = await getWorkspaceSubscription({ workspace }, tx)
+  const getting = await findWorkspaceSubscription({ workspace }, db)
   if (getting.error) {
     return Result.error(getting.error)
   }

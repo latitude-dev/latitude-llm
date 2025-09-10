@@ -4,7 +4,7 @@ import { Grant, GrantSource, Quota, QuotaType, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { grants } from '../../schema'
-import { getWorkspaceSubscription } from '../subscriptions/get'
+import { findWorkspaceSubscription } from '../subscriptions/data-access/find'
 
 export async function revokeGrant(
   {
@@ -76,7 +76,7 @@ async function expireGrants(
   tx = new Transaction(),
 ) {
   return await tx.call(async (db) => {
-    const getting = await getWorkspaceSubscription({ workspace }, tx)
+    const getting = await findWorkspaceSubscription({ workspace }, db)
     if (getting.error) {
       return Result.error(getting.error)
     }

@@ -1,9 +1,12 @@
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
+import {
+  ChainError,
+  PaymentRequiredError,
+  RunErrorCodes,
+} from '@latitude-data/constants/errors'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { JSONSchema7 } from 'json-schema'
 import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
 import { z } from 'zod'
-
 import {
   azureConfig,
   LatitudePromptConfig,
@@ -14,6 +17,7 @@ import { Result, TypedResult } from '../../../lib/Result'
 import { Output } from '../../../lib/streamManager/step/streamAIResponse'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
+import { applyCreditPlanLimit } from '../../subscriptions/limits/applyCreditPlanLimit'
 
 const DEFAULT_AGENT_MAX_STEPS = 20
 
@@ -66,7 +70,7 @@ export const getOutputType = ({
   return configSchema.type === 'array' ? 'array' : 'object'
 }
 
-export const renderChain = async ({
+export const validateChain = async ({
   workspace,
   providersMap,
   chain,
@@ -75,51 +79,67 @@ export const renderChain = async ({
 }: ValidatorContext): Promise<
   TypedResult<ValidatedChainStep, ChainError<RunErrorCodes>>
 > => {
-  const chainResult = await safeChain({ chain, newMessages })
-  if (chainResult.error) return chainResult
+  try {
+    await applyCreditPlanLimit({ workspace }).then((r) => r.unwrap())
 
-  const { chainCompleted, conversation } = chainResult.value
-  const configResult = validateConfig(
-    conversation.config as LatitudePromptConfig,
-  )
-  if (configResult.error) return configResult
+    const chainResult = await getChainNextStep({ chain, newMessages })
+    if (chainResult.error) return chainResult
 
-  const config = applyAgentRule(configResult.unwrap())
-  const providerResult = findProvider(config.provider, providersMap)
-  if (providerResult.error) return providerResult
+    const { chainCompleted, conversation } = chainResult.value
+    const config = applyAgentRule(
+      validateConfig(conversation.config as LatitudePromptConfig).unwrap(),
+    )
 
-  const provider = providerResult.value
-  const freeQuota = await checkFreeProviderQuota({
-    workspace,
-    provider,
-    model: config.model,
-  })
-  if (freeQuota.error) return freeQuota
+    const provider = findProvider(config.provider, providersMap).unwrap()
+    await checkFreeProviderQuota({
+      workspace,
+      provider,
+      model: config.model,
+    }).then((r) => r.unwrap())
 
-  const rule = applyProviderRules({
-    providerType: provider.provider,
-    // TODO(compiler): review this casting
-    messages: conversation.messages as unknown as LegacyMessage[],
-    config,
-  })
+    const rule = applyProviderRules({
+      providerType: provider.provider,
+      // TODO(compiler): review this casting
+      messages: conversation.messages as unknown as LegacyMessage[],
+      config,
+    })
 
-  const output = getOutputType({
-    config,
-    configOverrides,
-  })
-  const schema = getInputSchema({
-    config,
-    configOverrides,
-  })
+    const output = getOutputType({
+      config,
+      configOverrides,
+    })
+    const schema = getInputSchema({
+      config,
+      configOverrides,
+    })
 
-  return Result.ok({
-    provider,
-    config: rule.config as LatitudePromptConfig,
-    messages: rule?.messages ?? conversation.messages,
-    chainCompleted,
-    output,
-    schema,
-  })
+    return Result.ok({
+      chainCompleted,
+      config: rule.config as LatitudePromptConfig,
+      messages: rule?.messages ?? conversation.messages,
+      output,
+      provider,
+      schema,
+    })
+  } catch (e) {
+    if (e instanceof ChainError) {
+      return Result.error(e)
+    } else if (e instanceof PaymentRequiredError) {
+      return Result.error(
+        new ChainError({
+          code: RunErrorCodes.PaymentRequiredError,
+          message: e.message,
+        }),
+      )
+    } else {
+      return Result.error(
+        new ChainError({
+          code: RunErrorCodes.Unknown,
+          message: (e as Error).message,
+        }),
+      )
+    }
+  }
 }
 
 function applyAgentRule(config: LatitudePromptConfig) {
@@ -131,7 +151,7 @@ function applyAgentRule(config: LatitudePromptConfig) {
   }
 }
 
-async function safeChain({
+async function getChainNextStep({
   chain,
   newMessages,
 }: {
