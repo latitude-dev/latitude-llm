@@ -131,14 +131,24 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
     return Result.ok(activeTriggers)
   }
 
-  getTriggersInProject({
+  async getTriggersInProject({
     projectId,
     commit,
   }: {
     projectId: number
     commit?: Commit
   }): PromisedResult<DocumentTrigger[], LatitudeError> {
-    return this.getTriggers({ projectId, commit })
+    const triggersResult = await this.getTriggers({ projectId, commit })
+    if (triggersResult.error) return triggersResult
+
+    return Result.ok(
+      triggersResult.value.sort(
+        (a, b) =>
+          (a.triggerType === DocumentTriggerType.Integration ? 1 : 0) -
+            (b.triggerType === DocumentTriggerType.Integration ? 1 : 0) ||
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      ),
+    )
   }
 
   async getTriggersInDocument({
