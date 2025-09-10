@@ -4,6 +4,7 @@ CREATE TABLE "latitude"."promocodes" (
 	"quota_type" varchar(32) NOT NULL,
 	"description" text,
 	"amount" bigint NOT NULL,
+	"cancelled_at" timestamp with time zone,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "promocodes_code_unique" UNIQUE("code")

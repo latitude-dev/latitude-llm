@@ -4,8 +4,9 @@ import { claimedPromocodes } from '../../schema'
 import { Promocode } from '../../browser'
 import { GrantSource, Workspace } from '../../browser'
 import { publisher } from '../../events/publisher'
-import { PromocodesRepository } from '../../repositories/promocodesRepository'
 import { issueGrant } from '../grants/issue'
+import { BadRequestError } from '@latitude-data/constants/errors'
+import { findByCode } from '../../data-access/promocodes'
 
 export async function claimPromocode(
   {
@@ -19,10 +20,17 @@ export async function claimPromocode(
 ): PromisedResult<Promocode> {
   return transaction.call<Promocode>(
     async (tx) => {
-      const promocodeScope = new PromocodesRepository(workspace.id, tx)
-      const promocodeResult = await promocodeScope.findByCode(code)
+      const promocodeResult = await findByCode(code, tx)
       if (!Result.isOk(promocodeResult)) return promocodeResult
       const promocode = promocodeResult.unwrap()
+
+      if (promocode.cancelledAt) {
+        return Result.error(
+          new BadRequestError(
+            'Promocode has been expired and cannot be claimed',
+          ),
+        )
+      }
 
       const [claimedPromocode] = await tx
         .insert(claimedPromocodes)

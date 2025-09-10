@@ -1,4 +1,10 @@
-import { bigserial, bigint, text, varchar } from 'drizzle-orm/pg-core'
+import {
+  bigserial,
+  bigint,
+  text,
+  varchar,
+  timestamp,
+} from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
@@ -10,5 +16,6 @@ export const promocodes = latitudeSchema.table('promocodes', {
   quotaType: varchar('quota_type', { length: 32 }).notNull().$type<QuotaType>(),
   description: text('description'),
   amount: bigint('amount', { mode: 'number' }).notNull(),
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
   ...timestamps(),
 })

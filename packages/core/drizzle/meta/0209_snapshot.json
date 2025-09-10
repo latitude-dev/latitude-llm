@@ -1,5 +1,5 @@
 {
-  "id": "156547ac-0c51-430e-acb2-54e8f7a03817",
+  "id": "46439cd6-6bae-44b2-9ae6-b19469930570",
   "prevId": "2b271d1e-b886-478a-a3a5-c37c34eb8ef1",
   "version": "7",
   "dialect": "postgresql",
@@ -7572,6 +7572,12 @@
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
