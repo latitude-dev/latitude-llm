@@ -8,6 +8,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { deletePromocodeAction } from '$/actions/admin/promocodes/deletePromocode'
 import { createPromocodeAction } from '$/actions/admin/promocodes/createPromocode'
+import { expirePromocodeAction } from '$/actions/admin/promocodes/expirePromocode'
 
 export function usePromocodes(
   setIsCreatePromocodeModalOpen: (open: boolean) => void,
@@ -44,6 +45,39 @@ export function usePromocodes(
     useLatitudeAction(deletePromocodeAction, {
       onSuccess: ({ data: promocode }) => {
         mutate(data.filter((p) => p.id !== promocode.id))
+        toast({
+          title: 'Success',
+          description: 'Promocode deleted successfully',
+        })
+      },
+      onError: (error) => {
+        toast({
+          title: 'Error',
+          description: error.err.message,
+          variant: 'destructive',
+        })
+      },
+    })
+
+  const { execute: executeExpirePromocode, isPending: isExpiringPromocode } =
+    useLatitudeAction(expirePromocodeAction, {
+      onSuccess: ({ data: expiredPromocode }) => {
+        mutate(
+          data.map((p) =>
+            p.id === expiredPromocode.id ? expiredPromocode : p,
+          ),
+        )
+        toast({
+          title: 'Success',
+          description: 'Promocode expired successfully',
+        })
+      },
+      onError: (error) => {
+        toast({
+          title: 'Error',
+          description: error.err.message,
+          variant: 'destructive',
+        })
       },
     })
 
@@ -57,6 +91,8 @@ export function usePromocodes(
       isCreatingPromocode,
       executeDeletePromocode,
       isDeletingPromocode,
+      executeExpirePromocode,
+      isExpiringPromocode,
     }),
     [
       data,
@@ -67,6 +103,8 @@ export function usePromocodes(
       isCreatingPromocode,
       executeDeletePromocode,
       isDeletingPromocode,
+      executeExpirePromocode,
+      isExpiringPromocode,
     ],
   )
 }

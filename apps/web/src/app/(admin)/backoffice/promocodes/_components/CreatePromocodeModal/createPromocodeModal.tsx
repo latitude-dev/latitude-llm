@@ -22,7 +22,7 @@ export default function CreatePromocodeModal({
 }) {
   const [code, setCode] = useState('')
   const [quotaType, setQuotaType] = useState<QuotaType>(QuotaType.Credits)
-  const [amount, setAmount] = useState<number>(0)
+  const [amount, setAmount] = useState<number>(1)
   const [description, setDescription] = useState('')
   const quotaTypeOptions = [
     { label: 'Credits', value: QuotaType.Credits },
@@ -33,7 +33,7 @@ export default function CreatePromocodeModal({
   const resetForm = useCallback(() => {
     setCode('')
     setQuotaType(QuotaType.Credits)
-    setAmount(0)
+    setAmount(1)
     setDescription('')
   }, [])
 

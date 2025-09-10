@@ -4,6 +4,7 @@ import { usePromocodes } from '$/stores/admin/promocodes'
 import { QuotaType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import {
   Table,
   TableBody,
@@ -22,19 +23,72 @@ function QuotaTypeCell({ quotaType }: { quotaType: QuotaType }) {
   const getQuotaTypeLabel = (type: QuotaType) => {
     switch (type) {
       case QuotaType.Credits:
-        return 'Credits'
+        return 'coins'
       case QuotaType.Runs:
-        return 'Runs'
+        return 'rotate'
       default:
-        return type
+        return 'accessibility'
     }
   }
 
   return (
     <div className='flex flex-row items-center gap-2'>
-      <Icon name='gift' />
-      <Text.H6>{getQuotaTypeLabel(quotaType)}</Text.H6>
+      <Icon name={getQuotaTypeLabel(quotaType)} />
+      <Text.H5>{quotaType}</Text.H5>
     </div>
+  )
+}
+
+function ActionsCell({
+  promocode,
+  onDelete,
+  onExpire,
+  isDeleting,
+  isExpiring,
+}: {
+  promocode: any
+  onDelete: (code: string) => void
+  onExpire: (code: string) => void
+  isDeleting: boolean
+  isExpiring: boolean
+}) {
+  const isExpired = !!promocode.cancelledAt
+
+  return (
+    <Popover.Root>
+      <Popover.ButtonTrigger
+        buttonVariant='ghost'
+        iconProps={{ name: 'ellipsis' }}
+      >
+        {''}
+      </Popover.ButtonTrigger>
+      <Popover.Content size='small'>
+        <div className='flex flex-col gap-1'>
+          {!isExpired && (
+            <Button
+              variant='ghost'
+              size='small'
+              onClick={() => onExpire(promocode.code)}
+              disabled={isExpiring}
+              className='justify-start'
+            >
+              <Icon name='clock' className='mr-2' />
+              Expire
+            </Button>
+          )}
+          <Button
+            variant='ghost'
+            size='small'
+            onClick={() => onDelete(promocode.code)}
+            disabled={isDeleting}
+            className='justify-start'
+          >
+            <Icon name='trash' className='mr-2' />
+            Delete
+          </Button>
+        </div>
+      </Popover.Content>
+    </Popover.Root>
   )
 }
 
@@ -50,6 +104,8 @@ export default function PromocodesPage() {
     isCreatingPromocode,
     executeDeletePromocode,
     isDeletingPromocode,
+    executeExpirePromocode,
+    isExpiringPromocode,
   } = usePromocodes(setIsCreatePromocodeModalOpen)
 
   if (isLoading) {
@@ -106,6 +162,7 @@ export default function PromocodesPage() {
                 <TableHead>Description</TableHead>
                 <TableHead>Quota Type</TableHead>
                 <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Updated</TableHead>
                 <TableHead>Actions</TableHead>
@@ -148,17 +205,28 @@ export default function PromocodesPage() {
                     </Text.H5>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      onClick={() =>
-                        executeDeletePromocode({ code: promocode.code })
-                      }
-                      variant='destructive'
-                      disabled={isDeletingPromocode}
-                      iconProps={{
-                        name: 'trash',
-                        color: 'destructiveForeground',
-                      }}
-                    ></Button>
+                    <div className='flex items-center gap-2'>
+                      {promocode.cancelledAt ? (
+                        <>
+                          <Icon name='clock' className='text-destructive' />
+                          <Text.H5 color='destructive'>Expired</Text.H5>
+                        </>
+                      ) : (
+                        <>
+                          <Icon name='check' className='text-green-500' />
+                          <Text.H5 color='success'>Active</Text.H5>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <ActionsCell
+                      promocode={promocode}
+                      onDelete={(code) => executeDeletePromocode({ code })}
+                      onExpire={(code) => executeExpirePromocode({ code })}
+                      isDeleting={isDeletingPromocode}
+                      isExpiring={isExpiringPromocode}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

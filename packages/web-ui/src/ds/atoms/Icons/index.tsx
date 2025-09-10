@@ -136,6 +136,8 @@ import {
   Youtube,
   Zap,
   GiftIcon,
+  Accessibility,
+  Bitcoin,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -381,6 +383,7 @@ const Icons = {
   coins: CoinsIcon,
   rocket: RocketIcon,
   gift: GiftIcon,
+  accessibility: Accessibility,
 }
 
 export type IconName = keyof typeof Icons
