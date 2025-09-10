@@ -37,12 +37,14 @@ export function IntegrationsList({
 
   const options = useMemo<TwoColumnSelectOption<number>[]>(
     () =>
-      integrations.map((integration) => ({
-        value: integration.id,
-        name: integration.name,
-        isActive: activeIntegrations[integration.name] !== undefined,
-        ...integrationOptions(integration),
-      })),
+      integrations
+        .map((integration) => ({
+          value: integration.id,
+          name: integration.name,
+          isActive: activeIntegrations[integration.name] !== undefined,
+          ...integrationOptions(integration),
+        }))
+        .sort((a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0)),
     [integrations, activeIntegrations],
   )
   const onChange = useCallback(
