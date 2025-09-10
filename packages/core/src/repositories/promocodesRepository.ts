@@ -1,4 +1,4 @@
-import { eq, and } from '../client/utils'
+import { eq, and, desc } from '../client/utils'
 import { promocodes, claimedPromocodes } from '../schema'
 import Repository from './repositoryV2'
 import { Promocode } from '../browser'
@@ -14,7 +14,11 @@ export class PromocodesRepository extends Repository<Promocode> {
   }
 
   get scope() {
-    return this.db.select(tt).from(promocodes).$dynamic()
+    return this.db
+      .select(tt)
+      .from(promocodes)
+      .orderBy(desc(promocodes.createdAt), desc(promocodes.id))
+      .$dynamic()
   }
 
   async findByCode(code: string) {

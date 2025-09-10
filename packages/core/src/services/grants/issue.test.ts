@@ -84,6 +84,7 @@ describe('issueGrant', () => {
         workspace: workspace,
       }).then((r) => r.unwrap().limit),
     ).toEqual(0)
+    expect(cacheMock.del).not.toHaveBeenCalled()
   })
 
   it('succeeds when limited grant', async () => {
@@ -185,7 +186,7 @@ describe('issueGrant', () => {
 
   it('succeeds when expirable grant on time', async () => {
     const result = await issueGrant({
-      type: QuotaType.Credits,
+      type: QuotaType.Runs,
       amount: 10,
       source: GrantSource.Subscription,
       referenceId: 'fake-reference-id',
@@ -200,7 +201,7 @@ describe('issueGrant', () => {
         workspaceId: workspace.id,
         referenceId: 'fake-reference-id',
         source: GrantSource.Subscription,
-        type: QuotaType.Credits,
+        type: QuotaType.Runs,
         amount: 10,
         balance: 10,
         expiresAt: addMonths(now, 1),
@@ -208,10 +209,10 @@ describe('issueGrant', () => {
     )
     expect(
       await computeQuota({
-        type: QuotaType.Credits,
+        type: QuotaType.Runs,
         workspace: workspace,
       }).then((r) => r.unwrap().limit),
     ).toEqual(10)
-    expect(cacheMock.del).toHaveBeenCalledOnce()
+    expect(cacheMock.del).not.toHaveBeenCalled()
   })
 })

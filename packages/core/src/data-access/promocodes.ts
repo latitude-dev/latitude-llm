@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 
 import { database } from '../client'
 import { Result } from '../lib/Result'
@@ -8,7 +8,7 @@ export async function findAllPromocodes(tx = database) {
   const result = await tx
     .select()
     .from(promocodes)
-    .orderBy(asc(promocodes.createdAt))
+    .orderBy(desc(promocodes.createdAt), desc(promocodes.id))
 
   return Result.ok(result)
 }

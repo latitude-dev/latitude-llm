@@ -75,12 +75,14 @@ export async function issueGrant(
       amount: (result.amount ?? 'unlimited') as Quota,
     } as Grant
 
-    try {
-      const cache = await getCache()
-      const key = LATTE_USAGE_CACHE_KEY(workspace.id)
-      await cache.del(key)
-    } catch (error) {
-      captureException(error as Error) // Note: failing silently
+    if (type === QuotaType.Credits) {
+      try {
+        const cache = await getCache()
+        const key = LATTE_USAGE_CACHE_KEY(workspace.id)
+        await cache.del(key)
+      } catch (error) {
+        captureException(error as Error) // Note: failing silently
+      }
     }
 
     // TODO - runs dont update automatically when granted an issue

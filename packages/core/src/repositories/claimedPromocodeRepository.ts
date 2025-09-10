@@ -15,7 +15,7 @@ export class ClaimedPromocodeRepository extends Repository<ClaimedPromocode> {
       .select(tt)
       .from(claimedPromocodes)
       .where(this.scopeFilter)
-      .$dynamic()
       .orderBy(desc(claimedPromocodes.createdAt), desc(claimedPromocodes.id))
+      .$dynamic()
   }
 }
