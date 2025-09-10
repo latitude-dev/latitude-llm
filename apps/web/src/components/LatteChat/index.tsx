@@ -12,10 +12,7 @@ import {
 } from '$/hooks/usePlaygroundAction'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { useLatteStore } from '$/stores/latte'
-import {
-  FREE_PLANS,
-  LATTE_NOT_ENOUGH_CREDITS_ERROR,
-} from '@latitude-data/core/browser'
+import { LATTE_NOT_ENOUGH_CREDITS_ERROR } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -93,7 +90,6 @@ function LatteChatInputSection({
 }
 
 function LatteChatUI() {
-  const { data: workspace } = useCurrentWorkspace()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { isBrewing, resetAll, interactions, error, jobId } = useLatteStore()
@@ -197,26 +193,20 @@ function LatteChatUI() {
                       description={error}
                       cta={
                         error.includes(LATTE_NOT_ENOUGH_CREDITS_ERROR) ? (
-                          <UpgradeLink className='w-full'>
-                            <Button
-                              variant='ghost'
-                              size='none'
-                              iconProps={{
+                          <UpgradeLink
+                            buttonProps={{
+                              fullWidth: true,
+                              variant: 'ghost',
+                              size: 'none',
+                              iconProps: {
                                 name: 'arrowUpRight',
                                 color: 'destructiveMutedForeground',
                                 className: 'flex-shrink-0',
-                              }}
-                              className='text-destructive-muted-foreground'
-                              userSelect={false}
-                            >
-                              {FREE_PLANS.includes(
-                                workspace?.currentSubscription.plan ??
-                                  FREE_PLANS[0],
-                              )
-                                ? 'Upgrade to Team plan'
-                                : 'Contact us to upgrade'}
-                            </Button>
-                          </UpgradeLink>
+                              },
+                              className: 'text-destructive-muted-foreground',
+                              userSelect: false,
+                            }}
+                          />
                         ) : (
                           <Button
                             variant='ghost'

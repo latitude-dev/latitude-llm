@@ -83,7 +83,10 @@ describe('handleSubscriptionUpdate', () => {
         data: [
           {
             id: 'si_test123',
-            price: { id: 'price_team_v1', product: 'prod_team_v1' },
+            price: {
+              id: 'price_1QjVaoAMdFMjIC4f7oRcoEzE',
+              product: 'prod_team_v1',
+            },
           } as Stripe.SubscriptionItem,
         ],
         has_more: false,
@@ -112,9 +115,9 @@ describe('handleSubscriptionUpdate', () => {
 
     const { workspace, subscription } = result.value!
     expect(workspace.id).toBe(testWorkspace.id)
-    expect(workspace.currentSubscriptionId).toBe(subscription.id)
-    expect(subscription.plan).toBe(SubscriptionPlan.TeamV1)
-    expect(subscription.workspaceId).toBe(testWorkspace.id)
+    expect(workspace.currentSubscriptionId).toBe(subscription!.id)
+    expect(subscription!.plan).toBe(SubscriptionPlan.TeamV1)
+    expect(subscription!.workspaceId).toBe(testWorkspace.id)
     expect(
       await computeQuota({
         type: QuotaType.Seats,
@@ -154,9 +157,9 @@ describe('handleSubscriptionUpdate', () => {
     if (!result.ok) throw result.error
 
     const { workspace, subscription: newSubscription } = result.value!
-    expect(workspace.currentSubscriptionId).toBe(newSubscription.id)
-    expect(newSubscription.plan).toBe(SubscriptionPlan.TeamV1)
-    expect(newSubscription.id).not.toBe(oldSub.id)
+    expect(workspace.currentSubscriptionId).toBe(newSubscription!.id)
+    expect(newSubscription!.plan).toBe(SubscriptionPlan.TeamV1)
+    expect(newSubscription!.id).not.toBe(oldSub.id)
     expect(
       await computeQuota({
         type: QuotaType.Seats,
@@ -202,8 +205,8 @@ describe('handleSubscriptionUpdate', () => {
 
     const { workspace, subscription } = result.value!
     expect(workspace.currentSubscriptionId).toBe(existingTeamSub.id)
-    expect(subscription.id).toBe(existingTeamSub.id)
-    expect(subscription.plan).toBe(SubscriptionPlan.TeamV1)
+    expect(subscription!.id).toBe(existingTeamSub.id)
+    expect(subscription!.plan).toBe(SubscriptionPlan.TeamV1)
     expect(
       await computeQuota({
         type: QuotaType.Seats,
@@ -242,7 +245,7 @@ describe('handleSubscriptionUpdate', () => {
     expect(workspace.currentSubscriptionId).toBe(
       testWorkspace.currentSubscriptionId,
     )
-    expect(subscription.plan).not.toBe(SubscriptionPlan.TeamV1)
+    expect(subscription!.plan).not.toBe(SubscriptionPlan.TeamV1)
     expect(
       await computeQuota({
         type: QuotaType.Seats,

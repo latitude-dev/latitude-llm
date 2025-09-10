@@ -9,6 +9,8 @@ export const plansEnum = latitudeSchema.enum('subscription_plans', [
   SubscriptionPlan.HobbyV2,
   SubscriptionPlan.TeamV1,
   SubscriptionPlan.EnterpriseV1,
+  SubscriptionPlan.ProV2,
+  SubscriptionPlan.TeamV2,
 ])
 
 export const subscriptions = latitudeSchema.table(

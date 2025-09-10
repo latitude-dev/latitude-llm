@@ -9,27 +9,54 @@ import {
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { LatitudeError } from '../../lib/errors'
-import { SubscriptionPlan } from '../../plans'
+import { STRIPE_PLANS, SubscriptionPlans } from '../../plans'
 import { subscriptions } from '../../schema/models/subscriptions'
 import { workspaces } from '../../schema/models/workspaces'
 import { issueSubscriptionGrants } from '../subscriptions/grants'
 
-// Infer the transaction type from the Drizzle instance
-export type TransactionType = Parameters<
-  Parameters<Database['transaction']>[0]
->[0]
-
-interface HandleSubscriptionUpdateParams {
+function findTargetPlan({
+  stripeSubscription,
+}: {
   stripeSubscription: Stripe.Subscription
-  stripe: Stripe
-  db?: Database // Allow overriding db instance, e.g., for transactions or testing
+}) {
+  const priceId = stripeSubscription.items.data
+    .map((item) => item.price.id)
+    .at(0)
+
+  const plan = STRIPE_PLANS.find(
+    (plan) => SubscriptionPlans[plan].stripePriceId === priceId,
+  )
+  if (!priceId || !plan) {
+    throw new LatitudeError(
+      'Could not determine subscription plan from Stripe subscription items.',
+      {
+        stripeSubscriptionId: stripeSubscription.id,
+        stripeCustomerId:
+          typeof stripeSubscription.customer === 'object'
+            ? stripeSubscription.customer.id
+            : stripeSubscription.customer?.toString(),
+      },
+    )
+  }
+
+  return plan
 }
 
 export async function handleSubscriptionUpdate(
-  { stripeSubscription, stripe }: HandleSubscriptionUpdateParams,
+  {
+    stripeSubscription,
+    stripe,
+  }: {
+    stripeSubscription: Stripe.Subscription
+    stripe: Stripe
+    db?: Database // Allow overriding db instance, e.g., for transactions or testing
+  },
   transaction = new Transaction(),
 ): Promise<
-  TypedResult<{ workspace: Workspace; subscription: Subscription }, Error>
+  TypedResult<{
+    workspace: Workspace
+    subscription: Subscription | null
+  }>
 > {
   // Ensure stripeSubscription.customer is a string (ID) before using it
   if (typeof stripeSubscription.customer !== 'string') {
@@ -51,7 +78,8 @@ export async function handleSubscriptionUpdate(
       }),
     )
   }
-  const customerEmail = (stripeCustomer as Stripe.Customer).email
+
+  const customerEmail = stripeCustomer.email
   if (!customerEmail) {
     return Result.error(
       new LatitudeError('Stripe customer does not have an email.', {
@@ -63,6 +91,7 @@ export async function handleSubscriptionUpdate(
   return await transaction.call(async (tx) => {
     // 2. Find user by email in our database
     const user = await unsafelyFindUserByEmail(customerEmail, tx)
+
     if (!user) {
       throw new LatitudeError(`User with email ${customerEmail} not found.`, {
         stripeCustomerId:
@@ -73,15 +102,19 @@ export async function handleSubscriptionUpdate(
     }
 
     // 3. Find the first workspace for this user
-    const workspace = await unsafelyFindWorkspacesFromUser(user.id, tx).then(
-      (workspaces) => workspaces[0],
-    )
-    if (!workspace) {
+    // FIXME: This is not ok. If a user sign with a second email the payment
+    // will go to the first workspace found.
+    const unsafeWorkspace = await unsafelyFindWorkspacesFromUser(
+      user.id,
+      tx,
+    ).then((workspaces) => workspaces[0])
+    if (!unsafeWorkspace) {
       throw new LatitudeError(`No workspace found for user ${user.id}.`, {
         userId: user.id,
       })
     }
 
+    const workspace = unsafeWorkspace as Workspace
     // 4. Check workspace's active subscription
     let currentSubscription: Subscription | null = null
     if (workspace.currentSubscriptionId) {
@@ -96,10 +129,12 @@ export async function handleSubscriptionUpdate(
       }
     }
 
-    // 5. If the subscription is active and plan is not team_v1, create/update
+    // 5. If the subscription is active, determine the target plan from Stripe
     if (stripeSubscription.status === 'active') {
-      const targetPlan = SubscriptionPlan.TeamV1
-      if (currentSubscription?.plan === targetPlan) {
+      const targetPlan = findTargetPlan({ stripeSubscription })
+      const currentPlan = currentSubscription?.plan
+      // Already upgraded to the same or higher tier plan
+      if (currentPlan && currentPlan === targetPlan) {
         return Result.ok({ workspace, subscription: currentSubscription })
       }
 
@@ -110,6 +145,7 @@ export async function handleSubscriptionUpdate(
           plan: targetPlan,
         })
         .returning()
+
       if (!newSubscription) {
         throw new LatitudeError('Failed to create new subscription record.', {
           workspaceId: workspace.id.toString(),
@@ -123,6 +159,7 @@ export async function handleSubscriptionUpdate(
         .set({ currentSubscriptionId: newSubscription.id })
         .where(eq(workspaces.id, workspace.id))
         .returning()
+
       if (!updatedWorkspace) {
         throw new LatitudeError(
           'Failed to update workspace with new subscription.',
@@ -143,6 +180,6 @@ export async function handleSubscriptionUpdate(
       })
     }
 
-    return Result.ok({ workspace, subscription: currentSubscription! })
+    return Result.ok({ workspace, subscription: currentSubscription })
   })
 }

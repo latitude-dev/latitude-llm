@@ -94,9 +94,9 @@ const StatusText = ({
         will automatically resume when required.
         <br />
         <br />
-        <UpgradeLink>
-          <Text.H6 color='primary'>Upgrade</Text.H6>
-        </UpgradeLink>{' '}
+        <UpgradeLink buttonProps={{ variant: 'nope' }}>
+          {({ label }) => <Text.H6 color='primary'>{label}</Text.H6>}
+        </UpgradeLink>
         your plan to avoid this.
       </Tooltip>
     )
