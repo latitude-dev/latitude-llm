@@ -123,8 +123,8 @@
   }
 
   .glow-latte {
-    --from-glow-color: hsl(var(--latte-border) / 0.15);
-    --to-glow-color: hsl(var(--latte-border) / 0.3);
+    --from-glow-color: hsl(var(--latte-border) / 0.375);
+    --to-glow-color: hsl(var(--latte-border) / 0.75);
   }
 }
 
