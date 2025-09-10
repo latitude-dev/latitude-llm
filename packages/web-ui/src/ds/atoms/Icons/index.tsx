@@ -137,7 +137,6 @@ import {
   Zap,
   GiftIcon,
   Accessibility,
-  Bitcoin,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
