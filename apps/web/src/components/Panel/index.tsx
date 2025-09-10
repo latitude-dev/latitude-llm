@@ -38,7 +38,7 @@ export default function Panel({
       trigger={
         <div
           className={cn(
-            'h-full flex-1 flex flex-col gap-1 p-4 rounded-lg border border-border',
+            'h-full flex-1 flex flex-col gap-1 p-4 rounded-xl border border-border',
             { 'cursor-default': !additionalInfo },
           )}
           onMouseEnter={onMouseEnter}

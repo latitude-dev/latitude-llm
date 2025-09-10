@@ -126,7 +126,7 @@ export function SuggestionItem({
         <Button
           variant='link'
           size='none'
-          className='text-destructive'
+          textColor='destructive'
           onClick={onDiscard}
           disabled={isLoading}
         >

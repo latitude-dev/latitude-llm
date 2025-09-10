@@ -30,7 +30,8 @@ const buttonContainerVariants = cva(
         linkDestructive: 'shadow-none underline-offset-4 hover:underline',
         shiny: '',
         shinyLatte: '',
-        latte: 'bg-latte-border hover:bg-latte-border/90 border-latte-border',
+        // TODO: apply a color token for this
+        latte: 'bg-[#E5B217] hover:bg-[#E5B217]/90 border-latte-border',
         primaryMuted: 'bg-primary-muted hover:bg-primary-muted-hover',
       },
       fanciness: {
@@ -168,14 +169,15 @@ const textColorVariants = ({
   variant: ButtonProps['variant']
 }): TextColor => {
   if (variant === 'destructive') return 'destructiveForeground'
-  if (variant === 'default') return 'background'
+  if (variant === 'default') return 'white'
   if (variant === 'secondary') return 'secondaryForeground'
   if (variant === 'link') return 'accentForeground'
   if (variant === 'linkOutline') return 'accentForeground'
-  if (variant === 'linkDestructive') return 'destructiveForeground'
+  if (variant === 'linkDestructive') return 'destructive'
   if (variant === 'shiny') return 'accentForeground'
   if (variant === 'latte') return 'latteInputForeground'
   if (variant === 'primaryMuted') return 'primary'
+  if (variant === 'outlineDestructive') return 'destructive'
   return 'foreground'
 }
 
@@ -202,6 +204,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     indicator?: DotIndicatorProps
     childrenOnlyText?: boolean
     userSelect?: boolean
+    textColor?: TextColor
   }
 
 export function useButtonStyles({
@@ -277,6 +280,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     size,
     fancy,
     roundy,
+    textColor,
     iconProps,
     fullWidth = false,
     asChild = false,
@@ -337,12 +341,20 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             {iconProps && iconPlacement === 'left' ? (
               <Icon
                 {...iconProps}
+                color={
+                  textColor ??
+                  iconProps?.color ??
+                  textColorVariants({ variant })
+                }
                 className={cn('flex-shrink-0', iconProps.className)}
               />
             ) : null}
 
             {typeof children === 'string' ? (
-              <Text.H5B noWrap color={textColorVariants({ variant })}>
+              <Text.H5B
+                noWrap
+                color={textColor ?? textColorVariants({ variant })}
+              >
                 {children}
               </Text.H5B>
             ) : children ? (

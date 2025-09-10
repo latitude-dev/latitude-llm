@@ -99,11 +99,10 @@ export function ChangeList({
             iconProps={{
               name: 'undo',
               color: 'latteInputForeground',
-              className:
-                'flex-shrink-0 group-hover:text-latte-input-foreground/75 stroke-[1.5]',
+              className: 'flex-shrink-0 stroke-[1.5]',
             }}
-            className='text-latte-input-foreground group-hover:text-latte-input-foreground/75 font-light'
             userSelect={false}
+            textColor='latteInputForeground'
           >
             Undo all
           </Button>
@@ -115,11 +114,10 @@ export function ChangeList({
             iconProps={{
               name: 'checkClean',
               color: 'latteInputForeground',
-              className:
-                'flex-shrink-0 group-hover:text-latte-input-foreground/75',
+              className: 'flex-shrink-0',
             }}
-            className='text-latte-input-foreground group-hover:text-latte-input-foreground/75'
             userSelect={false}
+            textColor='latteInputForeground'
           >
             Keep all
           </Button>

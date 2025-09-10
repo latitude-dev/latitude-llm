@@ -1,8 +1,8 @@
 import type { Metadata, ResolvedMetadata } from 'next'
 
-const DEFAULT_TITLE = 'The Open-Source LLM Development Platform'
+const DEFAULT_TITLE = 'The Agent Engineering Platform'
 const DEFAULT_DESCRIPTION =
-  'Latitude is an end-to-end platform for prompt engineering where domain experts can collaborate with engineers to ship and maintain production-grade LLM features.'
+  'Latitude is the platform for building and running AI agents without code. With Latte, you can create complex automations using a single prompt. Latitude handles everything: creating the agents, connecting them to 2,500+ tools, and deploying them into production.'
 
 // This function is necessary to define default metadata correctly, because
 // Nextjs metadata merging would overwrite the nested objects totally.

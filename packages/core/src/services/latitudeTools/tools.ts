@@ -4,7 +4,7 @@ import WebExtractTool from './webExtract'
 import { LatitudeToolDefinition } from '../../constants'
 
 export const LATITUDE_TOOLS: LatitudeToolDefinition[] = [
-  RunCodeTool,
   WebSearchTool,
   WebExtractTool,
+  RunCodeTool,
 ] as const

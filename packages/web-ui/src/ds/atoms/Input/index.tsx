@@ -21,7 +21,7 @@ export const INPUT_VARIANT_SIZE = {
 const inputVariants = cva(cn(INPUT_BASE_CLASSES), {
   variants: {
     size: {
-      normal: `${INPUT_VARIANT_SIZE.normal} h-8`,
+      normal: `${INPUT_VARIANT_SIZE.normal} h-9`,
       small: INPUT_VARIANT_SIZE.small,
     },
   },
