@@ -1,7 +1,6 @@
 import { ProviderModelSelector } from '$/components/ProviderModelSelector'
 import { useDevMode } from '$/hooks/useDevMode'
 import useProviderApiKeys from '$/stores/providerApiKeys'
-import useFeature from '$/stores/useFeature'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -28,7 +27,6 @@ export function TitleRow({
   onChangePrompt: EditorHeaderProps['onChangePrompt']
   isMerged: EditorHeaderProps['isMerged']
 }) {
-  const { isEnabled: blocksEditorEnabled } = useFeature('blocksEditor')
   const { data: providers } = useProviderApiKeys()
   const { devMode, setDevMode, isLoading: isLoadingDevMode } = useDevMode()
 
@@ -62,34 +60,32 @@ export function TitleRow({
             onChangePrompt(updatePromptMetadata(prompt, config))
           }}
         />
-        {blocksEditorEnabled && (
-          <ClientOnly loader={<Skeleton className='w-20 h-8 rounded-md' />}>
-            <Tooltip
-              asChild
-              trigger={
-                <span>
-                  <FancySwitchToggle
-                    iconProps={{
-                      name: 'terminal',
-                      color: devMode ? 'white' : 'foregroundMuted',
-                    }}
-                    checked={devMode}
-                    onCheckedChange={setDevMode}
-                    buttonProps={{
-                      variant: devMode ? 'default' : 'outline',
-                    }}
-                    loading={isLoadingDevMode}
-                  />
-                </span>
-              }
-              align='center'
-              side='top'
-              className='cursor-pointer'
-            >
-              {devMode ? 'Switch to Simple Mode' : 'Switch to Dev Mode'}
-            </Tooltip>
-          </ClientOnly>
-        )}
+        <ClientOnly loader={<Skeleton className='w-20 h-8 rounded-md' />}>
+          <Tooltip
+            asChild
+            trigger={
+              <span>
+                <FancySwitchToggle
+                  iconProps={{
+                    name: 'terminal',
+                    color: devMode ? 'white' : 'foregroundMuted',
+                  }}
+                  checked={devMode}
+                  onCheckedChange={setDevMode}
+                  buttonProps={{
+                    variant: devMode ? 'default' : 'outline',
+                  }}
+                  loading={isLoadingDevMode}
+                />
+              </span>
+            }
+            align='center'
+            side='top'
+            className='cursor-pointer'
+          >
+            {devMode ? 'Switch to Simple Mode' : 'Switch to Dev Mode'}
+          </Tooltip>
+        </ClientOnly>
       </div>
     </div>
   )

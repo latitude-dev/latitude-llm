@@ -1,6 +1,5 @@
 'use client'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
-import useFeature from '$/stores/useFeature'
 import {
   PipedreamComponent,
   PipedreamComponentType,
@@ -101,11 +100,7 @@ function AppComponents({ app }: { app: App }) {
   const { data, isLoading: isLoadingPipedreamApp } = usePipedreamApp(
     app.name_slug,
   )
-  const {
-    isEnabled: isIntegrationTriggersEnabled,
-    isLoading: isLoadingFeatureFlag,
-  } = useFeature('integrationTriggers')
-  const isLoading = isLoadingPipedreamApp || isLoadingFeatureFlag
+  const isLoading = isLoadingPipedreamApp
 
   return (
     <div className='flex flex-col gap-4'>
@@ -126,25 +121,23 @@ function AppComponents({ app }: { app: App }) {
           )
         }
       />
-      {isIntegrationTriggersEnabled && (
-        <AppComponentsCard
-          title='Triggers'
-          icon='zap'
-          isLoading={isLoading}
-          components={data?.triggers}
-          header={
-            isLoading || data?.triggers?.length ? (
-              <AppComponentsHeader
-                label='triggers'
-                isLoading={isLoading}
-                count={data?.triggers?.length}
-              />
-            ) : (
-              <Text.H5 color='foregroundMuted'>No triggers available</Text.H5>
-            )
-          }
-        />
-      )}
+      <AppComponentsCard
+        title='Triggers'
+        icon='zap'
+        isLoading={isLoading}
+        components={data?.triggers}
+        header={
+          isLoading || data?.triggers?.length ? (
+            <AppComponentsHeader
+              label='triggers'
+              isLoading={isLoading}
+              count={data?.triggers?.length}
+            />
+          ) : (
+            <Text.H5 color='foregroundMuted'>No triggers available</Text.H5>
+          )
+        }
+      />
     </div>
   )
 }

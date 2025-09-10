@@ -1,7 +1,6 @@
 'use client'
 
 import { ROUTES } from '$/services/routes'
-import useFeature from '$/stores/useFeature'
 import { Commit, Project } from '@latitude-data/core/browser'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -42,50 +41,29 @@ export default function ProjectSection({
   project: Project
   commit: Commit
 }) {
-  const feature = useFeature('latte')
-  let PROJECT_ROUTES: ProjectRoute[] = []
-  if (feature.isEnabled) {
-    PROJECT_ROUTES = [
-      {
-        label: 'Preview',
-        route: ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid }).preview.root,
-        iconName: 'eye',
-      },
-      {
-        label: 'Analytics',
-        route: ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid }).analytics.root,
-        iconName: 'barChart4',
-      },
-      {
-        label: 'History',
-        route: ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid }).history.root,
-        iconName: 'history',
-      },
-    ]
-  } else {
-    PROJECT_ROUTES = [
-      {
-        label: 'Overview',
-        route: ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid }).overview.root,
-        iconName: 'barChart4',
-      },
-      {
-        label: 'History',
-        route: ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid }).history.root,
-        iconName: 'history',
-      },
-    ]
-  }
+  const PROJECT_ROUTES: ProjectRoute[] = [
+    {
+      label: 'Preview',
+      route: ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({ uuid: commit.uuid }).preview.root,
+      iconName: 'eye',
+    },
+    {
+      label: 'Analytics',
+      route: ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({ uuid: commit.uuid }).analytics.root,
+      iconName: 'barChart4',
+    },
+    {
+      label: 'History',
+      route: ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({ uuid: commit.uuid }).history.root,
+      iconName: 'history',
+    },
+  ]
 
   return (
     <div className='flex flex-col gap-2'>

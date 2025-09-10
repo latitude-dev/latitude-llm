@@ -34,12 +34,22 @@ import { ChatInputBox } from './ChatInputBox'
 import { AgentToolbar } from './EditorHeader/AgentToolbar'
 import { TitleRow } from './EditorHeader/TitleRow'
 import { Editors } from './Editors'
-import { DocumentEditorProps } from './OldDocumentEditor'
 import { useRunPlaygroundPrompt } from './Playground/hooks/useRunPlaygroundPrompt'
 import { RunButton } from './RunButton'
 import { V2Playground } from './V2Playground'
 import DocumentParams from './V2Playground/DocumentParams'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import type { ProviderApiKey } from '@latitude-data/core/browser'
+
+export type DocumentEditorProps = {
+  document: DocumentVersion
+  documents: DocumentVersion[]
+  providerApiKeys?: ProviderApiKey[]
+  freeRunsCount?: number
+  copilotEnabled: boolean
+  refinementEnabled: boolean
+  experimentDiff?: string
+}
 
 export function DocumentEditor(props: DocumentEditorProps) {
   return (
@@ -231,13 +241,13 @@ function DocumentEditorContent({
           >
             {((isPlaygroundTransitioning && !isPlaygroundOpen) ||
               isPlaygroundOpen) && (
-              <V2Playground
-                metadata={metadata}
-                mode={mode}
-                parameters={parameters}
-                playground={playground}
-              />
-            )}
+                <V2Playground
+                  metadata={metadata}
+                  mode={mode}
+                  parameters={parameters}
+                  playground={playground}
+                />
+              )}
           </div>
           <div
             className={cn(
