@@ -8,7 +8,7 @@ function isSubscriptionPlan(value: string): value is SubscriptionPlan {
 }
 
 const PLAN_PRO_PAYMENT_URL = 'https://buy.stripe.com/28EcN4bfq0YodDM17r38407'
-const PLAN_TEAM_PAYMENT_URL = 'https://buy.stripe.com/28EcN4bfq0YodDM17r38407'
+const PLAN_TEAM_PAYMENT_URL = 'https://buy.stripe.com/4gMbJ083e4aAfLU4jD38406'
 
 export async function GET(
   request: NextRequest,

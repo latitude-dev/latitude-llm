@@ -13,7 +13,7 @@ export function getStripe(): TypedResult<Stripe> {
   if (!secret) {
     return Result.error(
       new UnprocessableEntityError(
-        'Stripe SDK not initialized. Missing STRIPE_SECRET_KEY.',
+        'Stripe SDK not initialized. Server configuration error.',
       ),
     )
   }
