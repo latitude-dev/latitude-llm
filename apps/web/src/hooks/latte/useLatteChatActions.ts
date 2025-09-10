@@ -1,14 +1,14 @@
 'use client'
 
-import { useCallback } from 'react'
-import { useServerAction } from 'zsa-react'
 import { addMessageToLatteAction } from '$/actions/latte/addMessage'
 import { createNewLatteAction } from '$/actions/latte/new'
 import { stopChatLatteAction } from '$/actions/latte/stopChat'
 import { useLatteStore } from '$/stores/latte/index'
+import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { useCallback } from 'react'
+import { useServerAction } from 'zsa-react'
 import { useLatteContext } from './context'
 import { LatteInteraction } from './types'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
 
 /**
  * Provides chat actions for Latte conversations including creating new chats and sending messages.
@@ -18,7 +18,7 @@ import { useCurrentProject } from '@latitude-data/web-ui/providers'
  *   - `stopChat`: Function to stop the current active Latte response
  */
 export function useLatteChatActions() {
-  const latteContext = useLatteContext()
+  const { context: latteContext } = useLatteContext()
   const { project } = useCurrentProject()
   const projectId = project.id
   const {
@@ -77,12 +77,20 @@ export function useLatteChatActions() {
 
       addInteractions([newInteraction])
 
-      const context = await latteContext()
-
       if (threadUuid) {
-        addMessageToExistingChat({ threadUuid, projectId, message, context })
+        addMessageToExistingChat({
+          threadUuid,
+          projectId,
+          message,
+          context: latteContext,
+        })
       } else {
-        createNewChat({ projectId, message, context, debugVersionUuid })
+        createNewChat({
+          projectId,
+          message,
+          context: latteContext,
+          debugVersionUuid,
+        })
       }
     },
     [

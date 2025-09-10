@@ -26,12 +26,17 @@ export function LatteUsageInfo({
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isAnimating, setIsAnimating] = useState(false)
+  const { open: openPaywall } = usePaywallModal()
+
   const previousRef = useRef<LatteUsage>(usage)
+
   const incurring = useMemo(() => {
     if (usage.limit === 'unlimited') return Infinity
     return Number(Math.ceil((usage.billable / usage.limit) * 100))
   }, [usage])
-  const { open } = usePaywallModal()
+  const isOverLimits = useMemo(() => {
+    return usage.limit !== 'unlimited' && incurring >= 100
+  }, [usage, incurring])
 
   useEffect(() => {
     if (hasUsageChanged(previousRef.current, usage)) {
@@ -44,7 +49,6 @@ export function LatteUsageInfo({
       return () => clearTimeout(timer)
     }
   }, [usage])
-  const overLimit = usage.limit !== 'unlimited' && incurring >= 100
 
   return (
     <div className='w-full flex items-center justify-center gap-2'>
@@ -52,11 +56,14 @@ export function LatteUsageInfo({
         <Popover.Trigger asChild>
           <span
             className='flex items-center justify-center gap-2 select-none cursor-pointer truncate hover:opacity-60 transition-opacity'
-            onClick={() => !overLimit && setIsOpen(!isOpen)}
+            onClick={() => {
+              if (isOverLimits) openPaywall()
+              else setIsOpen(!isOpen)
+            }}
           >
             <Icon
               name='circleGauge'
-              color='foregroundMuted'
+              color={isOverLimits ? 'destructive' : 'foregroundMuted'}
               className='shrink-0 mt-0.5'
             />
             <div className='relative overflow-hidden'>
@@ -64,17 +71,11 @@ export function LatteUsageInfo({
                 <Text.H6 color='foregroundMuted' noWrap ellipsis>
                   You have unlimited credits
                 </Text.H6>
-              ) : overLimit ? (
-                <Text.H5 color='destructive'>
-                  Limit Reached.{' '}
-                  <span
-                    role='button'
-                    className='text-destructive underline'
-                    onClick={open}
-                  >
-                    Upgrade now.
-                  </span>
-                </Text.H5>
+              ) : isOverLimits ? (
+                <Text.H6 color='destructive' noWrap ellipsis>
+                  You ran out of credits.{' '}
+                  <span className='font-medium underline'>Upgrade now.</span>
+                </Text.H6>
               ) : (
                 <Text.H6 color='foregroundMuted' noWrap ellipsis>
                   You've used {incurring}% of your overall credit limit

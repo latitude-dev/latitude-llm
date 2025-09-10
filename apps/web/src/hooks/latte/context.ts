@@ -5,7 +5,7 @@ import useDocumentVersions from '$/stores/documentVersions'
 import useProjects from '$/stores/projects'
 import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import { useParams, usePathname } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 
 export function useLatteContext() {
   const pathname = usePathname()
@@ -40,54 +40,44 @@ export function useLatteContext() {
     return documentVersions?.find((d) => d.documentUuid === documentUuid)
   }, [documentVersions, documentUuid])
 
-  // Note: using refs to track current state so it is not stale in the async callback
-  const isLoadingRef = useRef(
-    isLoadingProjects || isLoadingCommits || isLoadingDocuments,
-  )
-  useEffect(() => {
-    isLoadingRef.current =
-      isLoadingProjects || isLoadingCommits || isLoadingDocuments
-  }, [isLoadingProjects, isLoadingCommits, isLoadingDocuments])
+  const isLoading = useMemo(() => {
+    return (
+      isLoadingProjects ||
+      !currentProject ||
+      isLoadingCommits ||
+      !currentCommit ||
+      isLoadingDocuments
+    )
+  }, [
+    isLoadingProjects,
+    isLoadingCommits,
+    isLoadingDocuments,
+    currentProject,
+    currentCommit,
+  ])
 
-  const currentProjectRef = useRef(currentProject)
-  useEffect(() => {
-    currentProjectRef.current = currentProject
-  }, [currentProject])
-
-  const currentCommitRef = useRef(currentCommit)
-  useEffect(() => {
-    currentCommitRef.current = currentCommit
-  }, [currentCommit])
-
-  const currentDocumentRef = useRef(currentDocument)
-  useEffect(() => {
-    currentDocumentRef.current = currentDocument
-  }, [currentDocument])
-
-  return useCallback(async () => {
-    while (isLoadingRef.current) {
-      await new Promise((resolve) => setTimeout(resolve, 100))
-    }
-
+  const context = useMemo(() => {
     const meta = document.querySelector<HTMLMetaElement>(
       `meta[name="location-description"]`,
     )
     const locationDescription = meta?.content || 'The Latitude Platform'
 
     const items = contextItems({
-      pathname,
-      project: currentProjectRef.current,
-      commit: currentCommitRef.current,
-      document: currentDocumentRef.current,
+      pathname: pathname,
+      project: currentProject,
+      commit: currentCommit,
+      document: currentDocument,
     })
 
     return `
 <context>
-  The user is currently in this page: ${locationDescription}.
-  ${items.map((item) => `<${item.name}>${item.value}</${item.name}>`).join('\n  ')}
+The user is currently in this page: ${locationDescription}.
+${items.map((item) => `<${item.name}>${item.value}</${item.name}>`).join('\n  ')}
 </context>
-    `
-  }, [pathname])
+  `
+  }, [pathname, currentProject, currentCommit, currentDocument])
+
+  return { isLoading, context }
 }
 
 function contextItems({

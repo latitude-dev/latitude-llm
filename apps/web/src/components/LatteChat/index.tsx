@@ -1,10 +1,11 @@
 'use client'
 
-import { ReactNode, useCallback, useRef, useState } from 'react'
 import { UpgradeLink } from '$/components/UpgradeLink'
-import { useLoadThread } from '$/hooks/latte/useLoadThread/index'
+import { useLatteContext } from '$/hooks/latte/context'
 import { useLatteChangeActions } from '$/hooks/latte/useLatteChangeActions'
 import { useLatteChatActions } from '$/hooks/latte/useLatteChatActions'
+import { useLatteEventHandlers } from '$/hooks/latte/useLatteEventHandlers'
+import { useLoadThread } from '$/hooks/latte/useLoadThread/index'
 import { useOnce } from '$/hooks/useMount'
 import {
   PlaygroundAction,
@@ -23,12 +24,12 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
+import { ReactNode, useCallback, useRef, useState } from 'react'
 import { ChatSkeleton } from './_components/ChatSkeleton'
 import { LatteUsageInfo } from './_components/LatteUsageInfo'
 import { LatteMessageList } from './_components/MessageList'
-import { LatteChatInput } from './LatteChatInput'
-import { useLatteEventHandlers } from '$/hooks/latte/useLatteEventHandlers'
 import { LatteUnconfiguredIntegrations } from './_components/UnconfiguredIntegrations'
+import { LatteChatInput } from './LatteChatInput'
 
 export function LatteChat() {
   const isLoading = useLoadThread()
@@ -95,6 +96,7 @@ function LatteChatUI() {
   const { isBrewing, resetAll, interactions, error, jobId } = useLatteStore()
   const { sendMessage, stopChat } = useLatteChatActions()
   const { addFeedbackToLatteChange } = useLatteChangeActions()
+  const { isLoading: isLoadingContext } = useLatteContext()
   const resetChat = useCallback(() => {
     addFeedbackToLatteChange('')
     resetAll()
@@ -128,13 +130,11 @@ function LatteChatUI() {
   useLatteEventHandlers()
   useOnce(() => {
     if (!playgroundAction) return
-
     const { prompt } = playgroundAction
     resetPlaygroundAction()
     resetChat()
-    // Note: using empty setTimeout to execute sendMessage in the next tick
-    setTimeout(() => sendMessage(prompt))
-  })
+    setTimeout(() => sendMessage(prompt)) // Note: using empty setTimeout to execute sendMessage in the next tick
+  }, !isLoadingContext)
 
   return (
     <ChatWrapper>
@@ -195,7 +195,6 @@ function LatteChatUI() {
                         error.includes(LATTE_NOT_ENOUGH_CREDITS_ERROR) ? (
                           <UpgradeLink
                             buttonProps={{
-                              fullWidth: true,
                               variant: 'ghost',
                               size: 'none',
                               iconProps: {
