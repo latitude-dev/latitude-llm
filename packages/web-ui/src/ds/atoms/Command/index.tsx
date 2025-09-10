@@ -1,26 +1,32 @@
 'use client'
 
+import {
+  useCallback,
+  ElementRef,
+  WheelEvent,
+  HTMLAttributes,
+  ComponentPropsWithoutRef,
+  forwardRef,
+} from 'react'
 import { Dialog, DialogContent, type DialogProps } from '@radix-ui/react-dialog'
 import { Command as CommandPrimitive } from 'cmdk'
-import * as React from 'react'
 import { cn } from '../../../lib/utils'
 import { Icon, IconName } from '../Icons'
 
-type CommandProps = React.ComponentPropsWithoutRef<typeof CommandPrimitive> & {
+type CommandProps = ComponentPropsWithoutRef<typeof CommandPrimitive> & {
   unstyled?: boolean
 }
-const Command = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive>,
-  CommandProps
->(({ className, unstyled = false, ...props }, ref) => (
-  <CommandPrimitive
-    ref={ref}
-    className={cn('flex h-full w-full flex-col overflow-hidden ', className, {
-      'rounded-md bg-popover text-popover-foreground': !unstyled,
-    })}
-    {...props}
-  />
-))
+const Command = forwardRef<ElementRef<typeof CommandPrimitive>, CommandProps>(
+  ({ className, unstyled = false, ...props }, ref) => (
+    <CommandPrimitive
+      ref={ref}
+      className={cn('flex h-full w-full flex-col overflow-hidden ', className, {
+        'rounded-md bg-popover text-popover-foreground': !unstyled,
+      })}
+      {...props}
+    />
+  ),
+)
 Command.displayName = CommandPrimitive.displayName
 
 const CommandDialog = ({ children, ...props }: DialogProps) => {
@@ -35,13 +41,13 @@ const CommandDialog = ({ children, ...props }: DialogProps) => {
   )
 }
 
-type CommandInputProps = React.ComponentPropsWithoutRef<
+type CommandInputProps = ComponentPropsWithoutRef<
   typeof CommandPrimitive.Input
 > & {
   searchIcon?: IconName | null
 }
-const CommandInput = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Input>,
+const CommandInput = forwardRef<
+  ElementRef<typeof CommandPrimitive.Input>,
   CommandInputProps
 >(({ className, searchIcon = 'search', ...props }, ref) => (
   <div
@@ -64,33 +70,40 @@ const CommandInput = React.forwardRef<
 
 CommandInput.displayName = CommandPrimitive.Input.displayName
 
-type CommandListProps = React.ComponentPropsWithoutRef<
+type CommandListProps = ComponentPropsWithoutRef<
   typeof CommandPrimitive.List
 > & {
   maxHeight?: 'auto' | '300'
 }
-const CommandList = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.List>,
+const CommandList = forwardRef<
+  ElementRef<typeof CommandPrimitive.List>,
   CommandListProps
->(({ className, maxHeight = '300', ...props }, ref) => (
-  <CommandPrimitive.List
-    ref={ref}
-    className={cn(
-      'overflow-y-auto custom-scrollbar overflow-x-hidden outline-none',
-      className,
-      {
-        'max-h-[300px]': maxHeight === '300',
-      },
-    )}
-    {...props}
-  />
-))
+>(({ className, maxHeight = '300', ...props }, ref) => {
+  const allowScrollWithMouse = useCallback(
+    (e: WheelEvent<HTMLDivElement>) => e.stopPropagation(),
+    [],
+  )
+  return (
+    <CommandPrimitive.List
+      ref={ref}
+      onWheel={allowScrollWithMouse}
+      className={cn(
+        'overflow-y-auto custom-scrollbar overflow-x-hidden outline-none',
+        className,
+        {
+          'max-h-[300px]': maxHeight === '300',
+        },
+      )}
+      {...props}
+    />
+  )
+})
 
 CommandList.displayName = CommandPrimitive.List.displayName
 
-const CommandEmpty = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Empty>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
+const CommandEmpty = forwardRef<
+  ElementRef<typeof CommandPrimitive.Empty>,
+  ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
 >((props, ref) => (
   <CommandPrimitive.Empty
     ref={ref}
@@ -101,13 +114,11 @@ const CommandEmpty = React.forwardRef<
 
 CommandEmpty.displayName = CommandPrimitive.Empty.displayName
 
-type CommandGroupProps = React.ComponentPropsWithoutRef<
-  typeof CommandPrimitive.Group
-> & {
+type CommandGroupProps = ComponentPropsWithoutRef<typeof CommandPrimitive> & {
   unstyled?: boolean
 }
-const CommandGroup = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Group>,
+const CommandGroup = forwardRef<
+  ElementRef<typeof CommandPrimitive.Group>,
   CommandGroupProps
 >(({ className, unstyled = false, ...props }, ref) => (
   <CommandPrimitive.Group
@@ -122,9 +133,9 @@ const CommandGroup = React.forwardRef<
 
 CommandGroup.displayName = CommandPrimitive.Group.displayName
 
-const CommandSeparator = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Separator>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Separator>
+const CommandSeparator = forwardRef<
+  ElementRef<typeof CommandPrimitive.Separator>,
+  ComponentPropsWithoutRef<typeof CommandPrimitive.Separator>
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Separator
     ref={ref}
@@ -152,14 +163,14 @@ export function useCommandItemStyles({
   )
 }
 
-type CommandItemProps = React.ComponentPropsWithoutRef<
+type CommandItemProps = ComponentPropsWithoutRef<
   typeof CommandPrimitive.Item
 > & {
   unstyled?: boolean
 }
 
-const CommandItem = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Item>,
+const CommandItem = forwardRef<
+  ElementRef<typeof CommandPrimitive.Item>,
   CommandItemProps
 >(({ className, unstyled = false, ...props }, ref) => {
   const classes = useCommandItemStyles({ className, unstyled })
@@ -171,7 +182,7 @@ CommandItem.displayName = CommandPrimitive.Item.displayName
 const CommandShortcut = ({
   className,
   ...props
-}: React.HTMLAttributes<HTMLSpanElement>) => {
+}: HTMLAttributes<HTMLSpanElement>) => {
   return (
     <span
       className={cn(
