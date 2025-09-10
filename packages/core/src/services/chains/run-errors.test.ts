@@ -94,7 +94,7 @@ describe('run chain error handling', () => {
   // TODO: troll test in CI
   it.skip('stores error when default provider quota is exceeded', async () => {
     const chainValidatorCall = vi
-      .spyOn(ChainValidator, 'renderChain')
+      .spyOn(ChainValidator, 'validateChain')
       .mockResolvedValueOnce(
         Result.error(
           new ChainError({
@@ -138,7 +138,7 @@ describe('run chain error handling', () => {
 
   it('store error as unknown when something undefined happens', async () => {
     const chainValidatorCall = vi
-      .spyOn(ChainValidator, 'renderChain')
+      .spyOn(ChainValidator, 'validateChain')
       .mockResolvedValue(
         Result.error(
           new ChainError({

@@ -3,9 +3,9 @@ import {
   LATTE_NOT_ENOUGH_CREDITS_ERROR,
   Workspace,
 } from '../../../../browser'
+import { database } from '../../../../client'
 import { UnprocessableEntityError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'
-import Transaction from '../../../../lib/Transaction'
 import { usageLatteCredits } from './usage'
 
 export async function checkLatteCredits(
@@ -16,13 +16,13 @@ export async function checkLatteCredits(
     credits?: number
     workspace: Workspace
   },
-  tx = new Transaction(),
+  db = database,
 ) {
   if (!credits) {
     credits = LATTE_MINIMUM_CREDITS_PER_REQUEST
   }
 
-  const counting = await usageLatteCredits({ workspace, fresh: true }, tx)
+  const counting = await usageLatteCredits({ workspace, fresh: true }, db)
   if (counting.error) {
     return Result.error(counting.error)
   }

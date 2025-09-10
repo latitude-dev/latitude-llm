@@ -69,7 +69,7 @@ export async function consumeLatteCredits(
     captureException(error as Error) // Note: failing silently
   }
 
-  const counting = await usageLatteCredits({ workspace, fresh: true }, tx)
+  const counting = await usageLatteCredits({ workspace, fresh: true })
   if (counting.ok) {
     const usage = counting.value
     WebsocketClient.sendEvent('latteThreadUpdate', {

@@ -9,6 +9,7 @@ export enum LatitudeErrorCodes {
   ConflictError = 'ConflictError',
   UnprocessableEntityError = 'UnprocessableEntityError',
   NotImplementedError = 'NotImplementedError',
+  PaymentRequiredError = 'PaymentRequiredError',
 }
 
 export type LatitudeErrorDetails = {
@@ -35,6 +36,7 @@ export enum RunErrorCodes {
   RateLimit = 'rate_limit_error',
   Unknown = 'unknown_error',
   UnsupportedProviderResponseTypeError = 'unsupported_provider_response_type_error',
+  PaymentRequiredError = 'payment_required_error',
 }
 // NOTE: If you add a new error code, please add it to the pg enum in models/runErrors.ts
 

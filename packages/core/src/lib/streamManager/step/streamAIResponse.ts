@@ -65,7 +65,6 @@ export async function streamAIResponse({
   finishReason: Awaited<AIReturn<StreamType>['finishReason']>
 }> {
   const startTime = Date.now()
-
   const aiResult = await ai({
     context,
     messages,

@@ -6,12 +6,12 @@ import {
   Workspace,
 } from '../../../../browser'
 import { cache as getCache } from '../../../../cache'
+import { database } from '../../../../client'
 import { Result } from '../../../../lib/Result'
-import Transaction from '../../../../lib/Transaction'
 import { LatteRequestsRepository } from '../../../../repositories'
 import { captureException } from '../../../../utils/workers/sentry'
 import { computeQuota } from '../../../grants/quota'
-import { getWorkspaceSubscription } from '../../../subscriptions/get'
+import { findWorkspaceSubscription } from '../../../subscriptions/data-access/find'
 
 export async function usageLatteCredits(
   {
@@ -21,9 +21,9 @@ export async function usageLatteCredits(
     workspace: Workspace
     fresh?: boolean
   },
-  tx = new Transaction(),
+  db = database,
 ) {
-  const getting = await getWorkspaceSubscription({ workspace }, tx)
+  const getting = await findWorkspaceSubscription({ workspace }, db)
   if (getting.error) {
     return Result.error(getting.error)
   }

@@ -10,7 +10,7 @@ import {
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { grants } from '../../schema'
-import { getWorkspaceSubscription } from '../subscriptions/get'
+import { findWorkspaceSubscription } from '../subscriptions/data-access/find'
 import { validateGrant } from './validate'
 import { captureException } from '../../utils/workers/sentry'
 import { cache as getCache } from '../../cache'
@@ -47,7 +47,7 @@ export async function issueGrant(
     }
 
     if (periods) {
-      const getting = await getWorkspaceSubscription({ workspace }, tx)
+      const getting = await findWorkspaceSubscription({ workspace }, db)
       if (getting.error) {
         return Result.error(getting.error)
       }

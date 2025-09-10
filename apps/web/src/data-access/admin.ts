@@ -15,14 +15,14 @@ import {
   workspaces,
 } from '@latitude-data/core/schema'
 import { computeQuota } from '@latitude-data/core/services/grants/quota'
-import { getWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/get'
+import { findWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/data-access/find'
 import { and, eq } from 'drizzle-orm'
 
 export type WorkspaceWithDetails = {
   id: number
   name: string
   createdAt: Date
-  subscription: OkType<typeof getWorkspaceSubscription>
+  subscription: OkType<typeof findWorkspaceSubscription>
   quotas: {
     seats: Quota
     runs: Quota
@@ -111,7 +111,7 @@ export async function findWorkspaceByIdForAdmin(
       return Result.error(new NotFoundError('Workspace not found'))
     }
 
-    const subscriptionResult = await getWorkspaceSubscription({ workspace })
+    const subscriptionResult = await findWorkspaceSubscription({ workspace })
     if (subscriptionResult.error) {
       return Result.error(subscriptionResult.error)
     }

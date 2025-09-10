@@ -103,13 +103,15 @@ export async function runDocumentAtCommit({
     return checkerResult
   }
 
+  const { chain } = checkerResult.value
+
   const runResult = runChain({
     context: $prompt.context,
     abortSignal,
     providersMap,
     source,
     workspace,
-    chain: checkerResult.value.chain,
+    chain,
     uuid: errorableUuid,
     tools,
     promptSource: {

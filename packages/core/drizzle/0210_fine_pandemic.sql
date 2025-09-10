@@ -1,0 +1,1 @@
+ALTER TYPE "latitude"."run_error_code_enum" ADD VALUE 'payment_required_error';

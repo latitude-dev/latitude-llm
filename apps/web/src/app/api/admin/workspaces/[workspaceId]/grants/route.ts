@@ -3,7 +3,7 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { unsafelyFindWorkspace } from '@latitude-data/core/data-access'
 import { GrantsRepository } from '@latitude-data/core/repositories'
-import { getWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/get'
+import { findWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/data-access/find'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
@@ -25,7 +25,7 @@ export const GET = errorHandler(
         throw new BadRequestError('Workspace not found')
       }
 
-      const subscription = await getWorkspaceSubscription({ workspace }).then(
+      const subscription = await findWorkspaceSubscription({ workspace }).then(
         (r) => r.unwrap(),
       )
 
