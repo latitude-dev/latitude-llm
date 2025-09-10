@@ -41,15 +41,12 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
     const commits = await findCommitsByProjectCached({
       projectId: project.id,
     })
-    const latteEnabled = await isFeatureEnabledCached('latte')
-
     url = getRedirectUrl({
       commits,
       projectId: project.id,
       lastSeenCommitUuid,
       lastSeenDocumentUuid,
       PROJECT_ROUTE,
-      latteEnabled,
     })
   } catch (error) {
     if (error instanceof NotFoundError) {

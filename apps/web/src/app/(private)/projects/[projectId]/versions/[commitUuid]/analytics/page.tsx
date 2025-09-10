@@ -5,16 +5,13 @@ import {
   getDocumentLogsApproximatedCountByProjectCached,
   getProjectStatsCached,
   hasDocumentLogsByProjectCached,
-  isFeatureEnabledCached,
 } from '$/app/(private)/_data-access'
 import { AddPromptTextarea } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/overview/_components/Overview/AddPromptTextarea'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { ROUTES } from '$/services/routes'
 import { LIMITED_VIEW_THRESHOLD } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import { redirect } from 'next/navigation'
 import ProjectLayout from '../_components/ProjectLayout'
 import { DocumentBlankSlateLayout } from '../documents/_components/DocumentBlankSlateLayout'
 import Overview from '../overview/_components/Overview'
@@ -34,15 +31,6 @@ export default async function AnalyticsPage({
 }) {
   const { projectId: projectIdString, commitUuid } = await params
   const projectId = Number(projectIdString)
-
-  const latteEnabled = await isFeatureEnabledCached('latte')
-  if (!latteEnabled) {
-    return redirect(
-      ROUTES.projects
-        .detail({ id: Number(projectId) })
-        .commits.detail({ uuid: commitUuid }).overview.root,
-    )
-  }
 
   const session = await getCurrentUserOrRedirect()
   const project = await findProjectCached({

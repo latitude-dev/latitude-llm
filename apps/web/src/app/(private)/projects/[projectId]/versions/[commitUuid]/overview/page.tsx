@@ -35,65 +35,9 @@ export default async function OverviewPage({
   const { projectId: projectIdString, commitUuid } = await params
   const projectId = Number(projectIdString)
 
-  const latteEnabled = await isFeatureEnabledCached('latte')
-  if (latteEnabled) {
-    return redirect(
-      ROUTES.projects
-        .detail({ id: Number(projectId) })
-        .commits.detail({ uuid: commitUuid }).analytics.root,
-    )
-  }
-
-  const session = await getCurrentUserOrRedirect()
-  const project = await findProjectCached({
-    projectId: projectId,
-    workspaceId: session.workspace.id,
-  })
-
-  const hasLogs = await hasDocumentLogsByProjectCached(projectId)
-  if (!hasLogs) {
-    return (
-      <ProjectLayout projectId={projectId} commitUuid={commitUuid}>
-        <DocumentBlankSlateLayout
-          title={project.name}
-          description='To get started, please choose one of the following options.'
-        >
-          <AddFileButton />
-          <Text.H5 color='foregroundMuted'>Or</Text.H5>
-          <AddPromptTextarea />
-        </DocumentBlankSlateLayout>
-      </ProjectLayout>
-    )
-  }
-
-  let limitedView = undefined
-  const approximatedCount =
-    await getDocumentLogsApproximatedCountByProjectCached(projectId)
-  if (approximatedCount > LIMITED_VIEW_THRESHOLD) {
-    limitedView = await getProjectStatsCached(projectId)
-    if (!limitedView) {
-      limitedView = {
-        totalDocuments: 0,
-        totalRuns: approximatedCount,
-        totalTokens: 0,
-        runsPerModel: {},
-        costPerModel: {},
-        rollingDocumentLogs: [],
-        totalEvaluations: 0,
-        totalEvaluationResults: 0,
-        costPerEvaluation: {},
-      }
-    }
-  }
-
-  return (
-    <ProjectLayout projectId={projectId} commitUuid={commitUuid}>
-      <div className='min-h-full w-full p-6'>
-        <TableWithHeader
-          title='Overview'
-          table={<Overview project={project} limitedView={limitedView} />}
-        />
-      </div>
-    </ProjectLayout>
+  return redirect(
+    ROUTES.projects
+      .detail({ id: Number(projectId) })
+      .commits.detail({ uuid: commitUuid }).analytics.root,
   )
 }
