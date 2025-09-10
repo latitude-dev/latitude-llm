@@ -1,12 +1,13 @@
 import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { ROUTES } from '$/services/routes'
 
 type GetCommitUrlParams = {
   commits: Commit[]
   projectId: number
   lastSeenCommitUuid: string | undefined
   lastSeenDocumentUuid?: string | undefined
-  PROJECT_ROUTE: any // Replace 'any' with the actual type of PROJECT_ROUTE
+  PROJECT_ROUTE: (typeof ROUTES.projects.detail)
   latteEnabled?: boolean
 }
 

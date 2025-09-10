@@ -86,6 +86,10 @@
     "tc": {
       "dependsOn": ["^tc"]
     },
+    "types:build": {
+      "dependsOn": ["^types:build"],
+      "outputs": ["dist/**", "types/**"]
+    },
     "test": {},
     "dev": {
       "cache": false,
