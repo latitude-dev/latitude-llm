@@ -64,7 +64,7 @@ jobs:
               - 'packages/**'
 
   build-and-push:
-    needs: [lint, check-changes]
+    needs: [check-changes]
     runs-on: ubuntu-latest
     permissions:
       contents: read
