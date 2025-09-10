@@ -66,6 +66,9 @@ jobs:
   build-and-push:
     needs: [lint, check-changes]
     runs-on: ubuntu-latest
+    concurrency:
+      group: build-and-push-${{ github.ref }}-${{ matrix.app }}
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
@@ -252,10 +255,3 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-
-# Concurrency settings to manage multiple workflow runs
-# - Groups runs by workflow name and git ref
-# - For main branch: Never cancel running builds (queue them instead)
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
