@@ -22,5 +22,6 @@ export const createPromocodeAction = withAdmin
       description: input.description,
       amount: input.amount,
     })
+
     return createdPromocodeResult.unwrap()
   })
