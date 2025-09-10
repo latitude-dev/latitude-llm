@@ -4,7 +4,7 @@
   "description": "Latitude web ui elements",
   "private": true,
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "types:build": "tsc -p tsconfig.build.json",
     "lint": "eslint ./src",
     "tc": "tsc --noEmit",
     "test": "vitest run",

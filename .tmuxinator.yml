@@ -5,12 +5,12 @@ windows:
       layout: main-horizontal
       panes:
         - pnpm dev --filter='./apps/*'
-        - cd packages/core && pnpm build:watch
-        - cd packages/constants && pnpm build:watch
+        - cd packages/core && pnpm types:build:watch
+        - cd packages/constants && pnpm types:build:watch
   - packages:
       layout: main-horizontal
       panes:
-        - pnpm build --filter='./packages/sdks/typescript' --filter='./packages/telemetry/typescript' --filter='./packages/constants' --filter='./packages/web-ui'
+        - pnpm build --filter='./packages/**'
         - cd apps/web && pnpm workers:build
   - docker: docker compose up db redis mailpit --menu=false
   - studio: cd packages/core && pnpm db:studio

@@ -1,4 +1,4 @@
-name: Linter
+name: Typecheck
 
 on:
   pull_request:
@@ -51,36 +51,8 @@ jobs:
       - name: Use Turbo to build affected packages
         run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
 
-      - name: Node.js Lint
-        run: pnpm lint
+      - name: Build package types
+        run: pnpm turbo types:build --cache-dir=.turbo --filter="./packages/**"
 
-  python-lint:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.13.x
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: '0.5.10'
-          enable-cache: true
-
-      - name: Install Python dependencies
-        run: |
-          cd packages/sdks/python
-          uv venv
-          uv sync --all-extras --all-groups
-
-      - name: Python Lint
-        run: |
-          cd packages/sdks/python
-          uv run scripts/lint.py
+      - name: Typecheck
+        run: pnpm tc

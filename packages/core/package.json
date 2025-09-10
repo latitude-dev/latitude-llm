@@ -114,8 +114,8 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "build:watch": "tsc --watch -p tsconfig.build.json",
+    "types:build": "tsc -p tsconfig.build.json",
+    "types:build:watch": "tsc --watch -p tsconfig.build.json",
     "db:generate": "drizzle-kit generate",
     "db:generate:custom": "pnpm run db:generate --custom",
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
