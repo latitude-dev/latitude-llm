@@ -6,7 +6,6 @@ import { useMemo } from 'react'
 import useFetcher from '$/hooks/useFetcher'
 import { compact } from 'lodash-es'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { deletePromocodeAction } from '$/actions/admin/promocodes/deletePromocode'
 import { createPromocodeAction } from '$/actions/admin/promocodes/createPromocode'

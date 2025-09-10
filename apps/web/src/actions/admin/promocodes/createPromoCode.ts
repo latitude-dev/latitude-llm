@@ -10,7 +10,7 @@ export const createPromocodeAction = withAdmin
   .input(
     z.object({
       code: z.string(),
-      quotaType: z.string(),
+      quotaType: z.nativeEnum(QuotaType),
       description: z.string(),
       amount: z.number(),
     }),
@@ -18,7 +18,7 @@ export const createPromocodeAction = withAdmin
   .handler(async ({ input }) => {
     const createdPromocodeResult = await createPromocode({
       code: input.code,
-      quotaType: input.quotaType as QuotaType,
+      quotaType: input.quotaType,
       description: input.description,
       amount: input.amount,
     })
