@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
-import Stripe from 'stripe'
+import type Stripe from 'stripe'
+import { Result } from '@latitude-data/core/lib/Result'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
 // Hoist mocks for env and services
 const mocks = vi.hoisted(() => {
   return {
@@ -19,9 +21,23 @@ const mocks = vi.hoisted(() => {
 })
 
 // Mock dependencies before they are imported by the route file
-vi.mock('stripe', () => ({
-  default: mocks.Stripe, // This will be the vi.fn() defined above
-}))
+vi.mock('@latitude-data/core/lib/stripe', () => {
+  return {
+    getStripe: vi.fn(() => {
+      if (!mocks.env.STRIPE_SECRET_KEY) {
+        return Result.error(
+          new UnprocessableEntityError(
+            'Stripe SDK not initialized. Server configuration error.',
+          ),
+        )
+      }
+
+      return Result.ok({
+        webhooks: { constructEvent: mocks.mockConstructEvent },
+      } as unknown as Stripe)
+    }),
+  }
+})
 
 vi.mock('@latitude-data/env', () => ({
   env: mocks.env,
@@ -36,10 +52,9 @@ vi.mock(
 
 // Now import the route handler
 import { POST } from './route'
+import { UnprocessableEntityError } from '@latitude-data/constants/errors'
 
-// FIXME: Uncommend and fix tests
-// Stripe client was moved and probably the mock is wrong
-describe.skip('POST /api/webhooks/stripe', () => {
+describe('POST /api/webhooks/stripe', () => {
   let mockRequest: NextRequest
 
   beforeEach(() => {
