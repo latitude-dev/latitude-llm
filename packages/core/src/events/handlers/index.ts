@@ -79,4 +79,5 @@ export const EventHandlers: IEventsHandlers = {
   documentTriggerCreated: [notifyClientOfDocumentTriggerCreated],
   documentTriggerDeleted: [notifyClientOfDocumentTriggerDeleted],
   documentTriggerEventCreated: [notifyClientOfDocumentTriggerEventCreated],
+  promocodeClaimed: [],
 }

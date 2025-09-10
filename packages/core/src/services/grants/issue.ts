@@ -1,10 +1,19 @@
 import { addMonths } from 'date-fns'
-import { Grant, GrantSource, Quota, QuotaType, Workspace } from '../../browser'
+import {
+  Grant,
+  GrantSource,
+  LATTE_USAGE_CACHE_KEY,
+  Quota,
+  QuotaType,
+  Workspace,
+} from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { grants } from '../../schema'
 import { getWorkspaceSubscription } from '../subscriptions/get'
 import { validateGrant } from './validate'
+import { captureException } from '../../utils/workers/sentry'
+import { cache as getCache } from '../../cache'
 
 export async function issueGrant(
   {
@@ -65,6 +74,18 @@ export async function issueGrant(
       ...result,
       amount: (result.amount ?? 'unlimited') as Quota,
     } as Grant
+
+    if (type === QuotaType.Credits) {
+      try {
+        const cache = await getCache()
+        const key = LATTE_USAGE_CACHE_KEY(workspace.id)
+        await cache.del(key)
+      } catch (error) {
+        captureException(error as Error) // Note: failing silently
+      }
+    }
+
+    // TODO - runs dont update automatically when granted an issue
 
     return Result.ok(grant)
   })

@@ -78,6 +78,7 @@ export type Events =
   | 'documentTriggerCreated'
   | 'documentTriggerDeleted'
   | 'documentTriggerEventCreated'
+  | 'promocodeClaimed'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -216,6 +217,14 @@ export type SendReferralInvitationEvent = LatitudeEventGeneric<
     email: string
     workspaceId: number
     userId: string
+  }
+>
+
+export type PromocodeClaimedEvent = LatitudeEventGeneric<
+  'promocodeClaimed',
+  {
+    workspaceId: number
+    promocode: Promocode
   }
 >
 
@@ -629,6 +638,7 @@ export type LatitudeEvent =
   | DocumentTriggerCreatedEvent
   | DocumentTriggerDeletedEvent
   | DocumentTriggerEventCreatedEvent
+  | PromocodeClaimedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -680,4 +690,5 @@ export interface IEventsHandlers {
   documentTriggerCreated: EventHandler<DocumentTriggerCreatedEvent>[]
   documentTriggerDeleted: EventHandler<DocumentTriggerDeletedEvent>[]
   documentTriggerEventCreated: EventHandler<DocumentTriggerEventCreatedEvent>[]
+  promocodeClaimed: EventHandler<PromocodeClaimedEvent>[]
 }

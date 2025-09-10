@@ -11,6 +11,7 @@ import WorkspaceApiKeys from './_components/WorkspaceApiKeys'
 import WorkspaceName from './_components/WorkspaceName'
 import Integrations from './_components/Integrations'
 import Webhooks from './_components/Webhooks'
+import Promocodes from './_components/Promocodes'
 
 export const metadata = buildMetatags({
   title: 'Settings',
@@ -31,6 +32,7 @@ export default async function SettingsLayout({
       <Memberships />
       <WorkspaceApiKeys />
       <ProviderApiKeys />
+      <Promocodes />
       <Integrations />
       <Webhooks />
     </Container>

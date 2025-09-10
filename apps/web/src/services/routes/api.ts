@@ -376,6 +376,9 @@ export const API_ROUTES = {
       workspaces: (featureId: number) =>
         `/api/admin/features/${featureId}/workspaces`,
     },
+    promocodes: {
+      root: '/api/admin/promocodes',
+    },
   },
   conversations: {
     root: '/api/conversations',
@@ -420,5 +423,8 @@ export const API_ROUTES = {
         },
       }),
     },
+  },
+  claimedPromocodes: {
+    root: '/api/claimedPromocodes',
   },
 }
