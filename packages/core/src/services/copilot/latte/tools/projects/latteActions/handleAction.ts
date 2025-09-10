@@ -70,6 +70,7 @@ export async function executeEditAction(
         commit,
         path: action.path,
         content: action.content,
+        createDemoEvaluation: true,
         includeDefaultContent: false,
       },
       transaction,
