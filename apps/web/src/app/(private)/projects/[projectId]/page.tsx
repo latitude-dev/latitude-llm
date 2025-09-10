@@ -3,7 +3,6 @@
 import {
   findCommitsByProjectCached,
   findProjectCached,
-  isFeatureEnabledCached,
 } from '$/app/(private)/_data-access'
 import { lastSeenCommitCookieName } from '$/helpers/cookies/lastSeenCommit'
 import {
