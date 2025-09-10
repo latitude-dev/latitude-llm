@@ -7,7 +7,7 @@ type GetCommitUrlParams = {
   projectId: number
   lastSeenCommitUuid: string | undefined
   lastSeenDocumentUuid?: string | undefined
-  PROJECT_ROUTE: (typeof ROUTES.projects.detail)
+  PROJECT_ROUTE: typeof ROUTES.projects.detail
   latteEnabled?: boolean
 }
 

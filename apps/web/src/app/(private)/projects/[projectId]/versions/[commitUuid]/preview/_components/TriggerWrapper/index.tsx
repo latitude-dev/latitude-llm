@@ -3,6 +3,7 @@ import useDocumentTriggers from '$/stores/documentTriggers'
 import {
   DocumentTriggerStatus,
   DocumentTriggerType,
+  HEAD_COMMIT,
 } from '@latitude-data/constants'
 import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
@@ -28,12 +29,12 @@ import { realtimeTriggerEventsCounters } from '../useTriggerSockets'
 function ToggleEnabled({
   projectId,
   commitUuid,
-  isLive,
+  isMerged,
   trigger,
 }: {
   projectId: number
   commitUuid: string
-  isLive: boolean
+  isMerged: boolean
   trigger: DocumentTrigger
 }) {
   const { toggleEnabled, isEnabling } = useDocumentTriggers({
@@ -50,13 +51,13 @@ function ToggleEnabled({
   }, [toggleEnabled, projectId, commitUuid, trigger.uuid, trigger.enabled])
   const toogleComp = (
     <SwitchToggle
-      disabled={!isLive || isEnabling}
+      disabled={!isMerged || isEnabling}
       checked={trigger.enabled}
       onCheckedChange={onToggleEnabled}
     />
   )
 
-  if (!isLive) {
+  if (!isMerged) {
     return (
       <Tooltip asChild trigger={<div>{toogleComp}</div>}>
         A trigger can only be enabled or disabled in the Live commit
@@ -71,43 +72,28 @@ function EditTriggerButton({
   projectId,
   commitUuid,
   trigger,
-  isLive,
+  isHead,
+  isMerged,
 }: {
   projectId: number
   commitUuid: string
   trigger: DocumentTrigger
-  isLive: boolean
+  isHead: boolean
+  isMerged: boolean
 }) {
   const editLink = useMemo(
     () =>
       ROUTES.projects
         .detail({ id: projectId })
-        .commits.detail({ uuid: commitUuid })
+        .commits.detail({ uuid: isHead ? HEAD_COMMIT : commitUuid })
         .preview.triggers.edit(trigger.uuid).root,
-    [projectId, commitUuid, trigger.uuid],
+    [projectId, commitUuid, trigger.uuid, isHead],
   )
 
-  if (isLive) {
-    return (
-      <>
-        <Tooltip
-          asChild
-          trigger={
-            <Button lookDisabled variant='outline' fancy>
-              Edit
-            </Button>
-          }
-        >
-          Version published. Create a draft to edit triggers.
-        </Tooltip>
-      </>
-    )
-  }
-
   return (
-    <Link href={editLink}>
+    <Link href={editLink} scroll={false}>
       <Button fancy variant='outline'>
-        Edit
+        {isMerged ? 'View' : 'Edit'}
       </Button>
     </Link>
   )
@@ -153,7 +139,7 @@ export function TriggerWrapper({
   onRunChatTrigger: OnRunChatTrigger
 }) {
   const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
+  const { commit, isHead } = useCurrentCommit()
   const { eventsByTrigger, resetCounter } = realtimeTriggerEventsCounters(
     (state) => ({
       eventsByTrigger: state.eventsByTrigger,
@@ -162,7 +148,7 @@ export function TriggerWrapper({
   )
   const realtimeCount = eventsByTrigger[trigger.uuid] || 0
 
-  const isLive = !!commit.mergedAt
+  const isMerged = !!commit.mergedAt
   const canSeeEvents =
     !RUNNABLE_TRIGGERS.includes(trigger.triggerType) &&
     trigger.triggerStatus !== DocumentTriggerStatus.Pending
@@ -256,7 +242,7 @@ export function TriggerWrapper({
               <ToggleEnabled
                 projectId={project.id}
                 commitUuid={commit.uuid}
-                isLive={isLive}
+                isMerged={isMerged}
                 trigger={trigger}
               />
             ) : null}
@@ -274,7 +260,8 @@ export function TriggerWrapper({
               projectId={project.id}
               commitUuid={commit.uuid}
               trigger={trigger}
-              isLive={isLive}
+              isHead={isHead}
+              isMerged={isMerged}
             />
           </div>
           {canSeeEvents ? (
