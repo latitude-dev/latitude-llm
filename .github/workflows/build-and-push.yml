@@ -67,7 +67,7 @@ jobs:
     needs: [lint, check-changes]
     runs-on: ubuntu-latest
     concurrency:
-      group: build-and-push-${{ github.ref }}-${{ matrix.app }}
+      group: build-and-push-${{ github.ref }}
       cancel-in-progress: false
     permissions:
       contents: read
@@ -219,6 +219,9 @@ jobs:
 
   run-migrations:
     needs: [build-and-push]
+    concurrency:
+      group: build-and-push-${{ github.ref }}
+      cancel-in-progress: false
     uses: ./.github/workflows/run-migrations.yml
     with:
       workflow_call: true
@@ -234,6 +237,9 @@ jobs:
 
   deploy-bluegreen:
     needs: [run-migrations, build-and-push]
+    concurrency:
+      group: build-and-push-${{ github.ref }}
+      cancel-in-progress: false
     uses: ./.github/workflows/deploy-bluegreen.yml
     permissions:
       id-token: write
@@ -246,6 +252,9 @@ jobs:
 
   deploy-rolling:
     needs: [run-migrations, build-and-push]
+    concurrency:
+      group: build-and-push-${{ github.ref }}
+      cancel-in-progress: false
     uses: ./.github/workflows/deploy-rolling.yml
     permissions:
       id-token: write
