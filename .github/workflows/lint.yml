@@ -1,6 +1,9 @@
 name: Linter
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -84,3 +87,9 @@ jobs:
         run: |
           cd packages/sdks/python
           uv run scripts/lint.py
+
+  call-build-and-push:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [node-lint, python-lint]
+    uses: ./.github/workflows/build-and-push.yml
+    secrets: inherit

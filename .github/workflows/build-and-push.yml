@@ -1,27 +1,17 @@
 name: Build and Push Docker Images
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - '.github/workflows/**'
-      - 'package.json'
-      - 'yarn.lock'
-      - 'pnpm-lock.yaml'
+  workflow_call
+
+concurrency:
+  group: build-and-push-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   PUBLIC_REGISTRY: ghcr.io
   PUBLIC_OWNER: latitude-dev
 
 jobs:
-  lint:
-    uses: ./.github/workflows/lint.yml
-    with:
-      workflow_call: true
-
   test:
     uses: ./.github/workflows/test.yml
     with:
@@ -64,11 +54,8 @@ jobs:
               - 'packages/**'
 
   build-and-push:
-    needs: [lint, check-changes]
+    needs: [test, check-changes]
     runs-on: ubuntu-latest
-    concurrency:
-      group: build-and-push-${{ github.ref }}
-      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
@@ -219,9 +206,6 @@ jobs:
 
   run-migrations:
     needs: [build-and-push]
-    concurrency:
-      group: build-and-push-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/run-migrations.yml
     with:
       workflow_call: true
@@ -237,9 +221,6 @@ jobs:
 
   deploy-bluegreen:
     needs: [run-migrations, build-and-push]
-    concurrency:
-      group: build-and-push-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/deploy-bluegreen.yml
     permissions:
       id-token: write
@@ -252,9 +233,6 @@ jobs:
 
   deploy-rolling:
     needs: [run-migrations, build-and-push]
-    concurrency:
-      group: build-and-push-${{ github.ref }}
-      cancel-in-progress: false
     uses: ./.github/workflows/deploy-rolling.yml
     permissions:
       id-token: write
