@@ -91,5 +91,9 @@ jobs:
   call-build-and-push:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [node-lint, python-lint]
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/build-and-push.yml
     secrets: inherit
