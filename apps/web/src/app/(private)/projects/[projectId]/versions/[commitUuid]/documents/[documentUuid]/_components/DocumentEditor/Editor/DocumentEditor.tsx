@@ -241,13 +241,13 @@ function DocumentEditorContent({
           >
             {((isPlaygroundTransitioning && !isPlaygroundOpen) ||
               isPlaygroundOpen) && (
-                <V2Playground
-                  metadata={metadata}
-                  mode={mode}
-                  parameters={parameters}
-                  playground={playground}
-                />
-              )}
+              <V2Playground
+                metadata={metadata}
+                mode={mode}
+                parameters={parameters}
+                playground={playground}
+              />
+            )}
           </div>
           <div
             className={cn(

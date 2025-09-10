@@ -30,8 +30,7 @@ export function DevModeProvider({ children }: DevModeProviderProps) {
     },
     [updateEditorMode],
   )
-  const isLoading =
-    isLoadingUser || isUpdatingEditorMode
+  const isLoading = isLoadingUser || isUpdatingEditorMode
 
   return (
     <DevModeContext.Provider value={{ devMode, setDevMode, isLoading }}>

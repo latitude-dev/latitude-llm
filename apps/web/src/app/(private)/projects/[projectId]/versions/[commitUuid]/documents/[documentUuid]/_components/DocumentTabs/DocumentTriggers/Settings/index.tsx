@@ -43,7 +43,9 @@ export function TriggerSettings({
     commitUuid,
   })
 
-  const [selectedTab, setSelectedTab] = useState<ShareSettingsTabs>(ShareSettingsTabs.Integrations)
+  const [selectedTab, setSelectedTab] = useState<ShareSettingsTabs>(
+    ShareSettingsTabs.Integrations,
+  )
 
   return (
     <div className='flex flex-col w-full gap-2 p-2'>
@@ -55,8 +57,7 @@ export function TriggerSettings({
               <TabLabel
                 text='Integrations'
                 isActive={triggers?.some(
-                  (t) =>
-                    t.triggerType === DocumentTriggerType.Integration,
+                  (t) => t.triggerType === DocumentTriggerType.Integration,
                 )}
               />
             ),

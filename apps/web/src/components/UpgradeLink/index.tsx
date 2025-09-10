@@ -1,12 +1,10 @@
-import { MouseEvent, ReactNode, useCallback, useMemo } from 'react'
-import { FREE_PLANS, SubscriptionPlan } from '@latitude-data/core/browser'
-import { useSession } from '@latitude-data/web-ui/providers'
 import { createCustomerPortalAction } from '$/actions/billing/createCustomerPortalAction'
-import { Button, ButtonProps } from '@latitude-data/web-ui/atoms/Button'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import useFeature from '$/stores/useFeature'
+import { FREE_PLANS, SubscriptionPlan } from '@latitude-data/core/browser'
+import { Button, ButtonProps } from '@latitude-data/web-ui/atoms/Button'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { envClient } from '$/envClient'
+import { useSession } from '@latitude-data/web-ui/providers'
+import { MouseEvent, ReactNode, useCallback, useMemo } from 'react'
 
 const PRICING_PAGE = 'https://latitude.so/pricing' // Hardcoded for now.
 const TEAM_PLANS = [SubscriptionPlan.TeamV1, SubscriptionPlan.TeamV2]
@@ -21,11 +19,8 @@ export function UpgradeLink({
   buttonProps: Exclude<ButtonProps, 'children'>
   children?: (_args: { label: string }) => ReactNode
 }) {
-  const oldTeamV1Link = envClient.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL
   const { toast } = useToast()
-  const { currentUser, workspace } = useSession()
-  const latte = useFeature('latte') // feature flag
-  const isLoadingFeature = latte.isLoading || latte.isValidating
+  const { workspace } = useSession()
   const plan = workspace.currentSubscription.plan
   const isFreePlan = FREE_PLANS.includes(plan)
 
@@ -60,17 +55,6 @@ export function UpgradeLink({
     (e: MouseEvent) => {
       e.preventDefault()
 
-      if (!latte.isEnabled) {
-        // Old behaviour: free -> pricing, others -> mailto
-        if (isFreePlan) {
-          const upgradeLink = `${oldTeamV1Link}?prefilled_email=${currentUser.email}`
-          window.open(upgradeLink, '_blank')
-        } else {
-          window.location.href = 'mailto:hello@latitude.so'
-        }
-        return
-      }
-
       if (plan === SubscriptionPlan.ProV2) {
         createPortal()
       } else if (TEAM_PLANS.includes(plan)) {
@@ -79,32 +63,17 @@ export function UpgradeLink({
         window.open(PRICING_PAGE, '_blank')
       }
     },
-    [
-      createPortal,
-      isFreePlan,
-      latte.isEnabled,
-      plan,
-      currentUser.email,
-      oldTeamV1Link,
-    ],
+    [createPortal, plan],
   )
 
   const label = useMemo(() => {
-    if (isLoadingFeature) return 'Loading...'
-
-    if (!latte.isEnabled) {
-      if (isFreePlan) return 'Upgrade to Team plan'
-      return 'Contact us to upgrade'
-    }
-
     if (isFreePlan) return 'Choose a plan'
     if (plan === SubscriptionPlan.ProV2) return 'Upgrade to Team plan'
     return 'Contact us to upgrade'
-  }, [latte.isEnabled, isLoadingFeature, isFreePlan, plan])
+  }, [isFreePlan, plan])
 
-  const disabled = isLoadingFeature || isPending
   return (
-    <Button {...buttonProps} onClick={handleClick} disabled={disabled}>
+    <Button {...buttonProps} onClick={handleClick} disabled={isPending}>
       {children ? children({ label }) : label}
     </Button>
   )
