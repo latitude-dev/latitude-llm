@@ -1,20 +1,17 @@
 'use client'
 
-import {
-  SelectDocument,
-  useDocumentSelection,
-} from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/SelectDocument'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useDocumentVersions from '$/stores/documentVersions'
-import { DocumentTriggerType } from '@latitude-data/constants'
+import { DocumentTriggerType, HEAD_COMMIT } from '@latitude-data/constants'
 import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
-import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
-import { ConfirmModal, Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import {
@@ -25,11 +22,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { EditEmailTrigger } from './_components/EmailTrigger'
 import { EditIntegrationTrigger } from './_components/IntegrationTrigger'
 import { EditScheduleTrigger } from './_components/ScheduleTrigger'
+import {
+  SelectDocument,
+  useDocumentSelection,
+} from '../../../(.)triggers/_components/SelectDocument'
 
 function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
   const navigate = useNavigate()
   const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
+  const { commit, isHead } = useCurrentCommit()
   const { data: documents, isLoading: isLoadingDocuments } =
     useDocumentVersions({
       commitUuid: commit.uuid,
@@ -39,11 +40,12 @@ function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
     () =>
       ROUTES.projects
         .detail({ id: project.id })
-        .commits.detail({ uuid: commit.uuid }).preview.root,
-    [project.id, commit.uuid],
+        .commits.detail({ uuid: isHead ? HEAD_COMMIT : commit.uuid }).preview
+        .root,
+    [project.id, commit.uuid, isHead],
   )
   const onCloseModal = useCallback(() => {
-    navigate.push(previewPath)
+    navigate.push(previewPath, { scroll: false })
   }, [navigate, previewPath])
   const {
     update,
@@ -73,7 +75,7 @@ function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
     return {
       trigger,
       document,
-      isLive: !!commit.mergedAt,
+      isMerged: !!commit.mergedAt,
       isLoading,
       onCloseModal,
       update,
@@ -153,7 +155,7 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
     update,
     trigger,
     document,
-    isLive,
+    isMerged,
     onCloseModal,
     isLoading,
     isUpdating,
@@ -194,70 +196,63 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
     // Close modal if trigger is not found
     onCloseModal()
   }, [trigger, isLoading, onCloseModal])
+  const footer = useMemo(() => {
+    if (isMerged) return null
 
-  if (!isLive) {
     return (
-      <Modal
-        open
-        dismissible
-        title={`Edit ${trigger?.triggerType} trigger`}
-        description='Edit the trigger configuration'
-        onOpenChange={onCloseModal}
-        footerAlign='justify'
-        footer={
-          <>
-            <Button
-              fancy
-              disabled={isDeleting}
-              variant='outlineDestructive'
-              onClick={onDeleteTrigger}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Button>
-            <Button disabled={isUpdating} fancy onClick={onUpdate}>
-              Update
-            </Button>
-          </>
-        }
-      >
-        {isLoading ? <LoadingTrigger /> : null}
-        {trigger && document ? (
-          <FormWrapper>
-            <SelectDocument
-              onSelectDocument={docSelection.onSelectDocument}
-              options={docSelection.options}
-              document={docSelection.document}
-            />
-            <EditTrigger
-              trigger={trigger}
-              document={docSelection.document ?? document}
-              setConfiguration={setTriggerConfiguration}
-              isUpdating={isUpdating}
-            />
-          </FormWrapper>
-        ) : null}
-      </Modal>
+      <>
+        <Button
+          fancy
+          disabled={isDeleting}
+          variant='outlineDestructive'
+          onClick={onDeleteTrigger}
+        >
+          {isDeleting ? 'Deleting...' : 'Delete'}
+        </Button>
+        <Button disabled={isUpdating} fancy onClick={onUpdate}>
+          Update
+        </Button>
+      </>
     )
-  }
+  }, [isMerged, isDeleting, onDeleteTrigger, isUpdating, onUpdate])
 
-  // This is what user's see if they try to edit a trigger in a live commit.
   return (
-    <ConfirmModal
+    <Modal
       open
       dismissible
-      type='default'
-      title={`Edit ${trigger?.triggerType} trigger`}
+      title={isLoading ? 'Edit' : `Edit ${trigger?.triggerType} trigger`}
       description='Edit the trigger configuration'
-      onConfirm={onCloseModal}
-      confirm={{
-        label: 'Back to preview',
-      }}
+      onOpenChange={onCloseModal}
+      footerAlign='justify'
+      footer={footer}
     >
-      <Alert
-        variant='warning'
-        title='Version published'
-        description='Triggers cannot be modified in a published commit. Create a draft to edit the trigger.'
-      />
-    </ConfirmModal>
+      {isLoading ? <LoadingTrigger /> : null}
+      {trigger && document ? (
+        <div className='space-y-4'>
+          {isMerged ? (
+            <Alert
+              title='Live versions'
+              description='You need to do a new version to edit this trigger'
+              variant='warning'
+            />
+          ) : null}
+          <div className={cn({ 'pointer-events-none opacity-60': isMerged })}>
+            <FormWrapper>
+              <SelectDocument
+                onSelectDocument={docSelection.onSelectDocument}
+                options={docSelection.options}
+                document={docSelection.document}
+              />
+              <EditTrigger
+                trigger={trigger}
+                document={docSelection.document ?? document}
+                setConfiguration={setTriggerConfiguration}
+                isUpdating={isUpdating}
+              />
+            </FormWrapper>
+          </div>
+        </div>
+      ) : null}
+    </Modal>
   )
 }
