@@ -1,5 +1,5 @@
 {
-  "id": "46439cd6-6bae-44b2-9ae6-b19469930570",
+  "id": "53b29f1f-f499-4985-a52c-192ac8521ece",
   "prevId": "2b271d1e-b886-478a-a3a5-c37c34eb8ef1",
   "version": "7",
   "dialect": "postgresql",
@@ -7630,7 +7630,7 @@
           "name": "code",
           "type": "varchar(32)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",

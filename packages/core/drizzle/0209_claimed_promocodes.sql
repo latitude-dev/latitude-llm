@@ -13,7 +13,7 @@ CREATE TABLE "latitude"."promocodes" (
 CREATE TABLE "latitude"."claimed_promocodes" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"workspace_id" bigint NOT NULL,
-	"code" varchar(32),
+	"code" varchar(32) NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );

@@ -15,10 +15,12 @@ export const claimedPromocodes = latitudeSchema.table(
         onDelete: 'cascade',
         onUpdate: 'cascade',
       }),
-    code: varchar('code', { length: 32 }).references(() => promocodes.code, {
-      onDelete: 'restrict',
-      onUpdate: 'cascade',
-    }),
+    code: varchar('code', { length: 32 })
+      .notNull()
+      .references(() => promocodes.code, {
+        onDelete: 'restrict',
+        onUpdate: 'cascade',
+      }),
     ...timestamps(),
   },
   (table) => ({
