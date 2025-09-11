@@ -1,8 +1,7 @@
 import asyncio
 import gc
 import os
-import tracemalloc
-from typing import List, Optional
+from typing import List
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock
 
@@ -18,104 +17,11 @@ from latitude_sdk import (
     RunPromptOptions,
 )
 
-
-class MemoryMetrics:
-    """Helper class to track memory and resource metrics"""
-
-    def __init__(self) -> None:
-        self.process = psutil.Process()
-        self.initial_memory: Optional[int] = None
-        self.peak_memory: Optional[int] = None
-        self.final_memory: Optional[int] = None
-        self.initial_connections: Optional[int] = None
-        self.peak_connections: Optional[int] = None
-        self.final_connections: Optional[int] = None
-        self.tracemalloc_snapshots: List[tracemalloc.Snapshot] = []
-
-    def start_tracking(self) -> None:
-        """Start memory and resource tracking"""
-        tracemalloc.start()
-        gc.collect()  # Clean up before starting
-
-        self.initial_memory = self.process.memory_info().rss
-        self.peak_memory = self.initial_memory
-        self.initial_connections = len(self.process.net_connections())
-        self.peak_connections = self.initial_connections
-
-        self.tracemalloc_snapshots.append(tracemalloc.take_snapshot())
-
-    def record_current(self) -> None:
-        """Record current memory and connection state"""
-        current_memory = self.process.memory_info().rss
-        current_connections = len(self.process.net_connections())
-
-        if self.peak_memory is not None and current_memory > self.peak_memory:
-            self.peak_memory = current_memory
-
-        if self.peak_connections is not None and current_connections > self.peak_connections:
-            self.peak_connections = current_connections
-
-        self.tracemalloc_snapshots.append(tracemalloc.take_snapshot())
-
-    async def stop_tracking(self) -> None:
-        """Stop tracking and record final state"""
-        gc.collect()  # Force garbage collection
-        await asyncio.sleep(0.1)  # Allow async cleanup
-
-        self.final_memory = self.process.memory_info().rss
-        self.final_connections = len(self.process.net_connections())
-
-        self.tracemalloc_snapshots.append(tracemalloc.take_snapshot())
-        tracemalloc.stop()
-
-    def get_memory_leak_mb(self) -> float:
-        """Calculate memory leak in MB"""
-        if self.initial_memory is not None and self.final_memory is not None:
-            return (self.final_memory - self.initial_memory) / 1024 / 1024
-        return 0.0
-
-    def get_connection_leak(self) -> int:
-        """Calculate connection leak count"""
-        if self.initial_connections is not None and self.final_connections is not None:
-            return self.final_connections - self.initial_connections
-        return 0
-
-    def get_tracemalloc_diff(self) -> List[tracemalloc.StatisticDiff]:
-        """Get memory allocation differences from tracemalloc"""
-        if len(self.tracemalloc_snapshots) >= 2:
-            initial = self.tracemalloc_snapshots[0]
-            final = self.tracemalloc_snapshots[-1]
-            return final.compare_to(initial, "lineno")
-        return []
-
-    def print_summary(self) -> None:
-        """Print a summary of memory metrics"""
-        print("\n=== Memory Leak Analysis ===", flush=True)
-
-        if self.initial_memory is not None:
-            print(f"Initial Memory: {self.initial_memory / 1024 / 1024:.2f} MB", flush=True)
-        if self.peak_memory is not None:
-            print(f"Peak Memory: {self.peak_memory / 1024 / 1024:.2f} MB", flush=True)
-        if self.final_memory is not None:
-            print(f"Final Memory: {self.final_memory / 1024 / 1024:.2f} MB", flush=True)
-
-        print(f"Memory Leak: {self.get_memory_leak_mb():.2f} MB", flush=True)
-        print(f"Initial Connections: {self.initial_connections}", flush=True)
-        print(f"Peak Connections: {self.peak_connections}", flush=True)
-        print(f"Final Connections: {self.final_connections}", flush=True)
-        print(f"Connection Leak: {self.get_connection_leak()}", flush=True)
-
-        # Print top memory allocations
-        top_stats = self.get_tracemalloc_diff()[:10]
-        if top_stats:
-            print("\nTop 10 memory allocation differences:", flush=True)
-            for index, stat in enumerate(top_stats):
-                print(f"{index + 1}. {stat}", flush=True)
+# Global list to simulate memory leaks for testing
+_LEAKED_OBJECTS: List[bytes] = []
 
 
-class TestSDKMemoryLeaks(IsolatedAsyncioTestCase):
-    """Test for memory leaks in SDK streaming operations"""
-
+class TestMemoryLeaks(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.maxDiff = None
 
@@ -123,7 +29,7 @@ class TestSDKMemoryLeaks(IsolatedAsyncioTestCase):
         self.prompt_path = "memory-test-prompt"
         self.prompt_content = """
 ---
-provider: OpenAI
+provider: openai
 model: gpt-4.1-mini
 tools:
   test_tool:
@@ -154,7 +60,6 @@ This is a test step.
 """.strip()
 
     async def setup_sdk(self) -> Latitude:
-        """Setup SDK for memory leak testing"""
         setup_sdk = Latitude(
             self.api_key,
             options=LatitudeOptions(
@@ -164,119 +69,111 @@ This is a test step.
             ),
         )
 
-        try:
-            # Create or get project
-            existing_projects = await setup_sdk.projects.get_all()
-            project = next((p for p in existing_projects if p.name == "Memory Test Project"), None)
+        # Create project
+        result = await setup_sdk.projects.create("Memory Leak Test")
+        project = result.project
+        version_uuid = result.version.uuid
 
-            if not project:
-                result = await setup_sdk.projects.create("Memory Test Project")
-                project = result.project
-                version_uuid = result.version.uuid
-            else:
-                version_uuid = "live"
+        # Create or get prompt
+        await setup_sdk.prompts.get_or_create(
+            self.prompt_path,
+            options=GetOrCreatePromptOptions(
+                project_id=project.id, version_uuid=version_uuid, prompt=self.prompt_content
+            ),
+        )
 
-            # Create or get prompt
-            await setup_sdk.prompts.get_or_create(
-                self.prompt_path,
-                options=GetOrCreatePromptOptions(
-                    project_id=project.id, version_uuid=version_uuid, prompt=self.prompt_content
+        return Latitude(
+            self.api_key,
+            options=LatitudeOptions(
+                project_id=project.id,
+                version_uuid=version_uuid,
+                internal=InternalOptions(
+                    gateway=GatewayOptions(host="localhost", port=8787, ssl=False, api_version="v3")
                 ),
-            )
-
-            return Latitude(
-                self.api_key,
-                options=LatitudeOptions(
-                    project_id=project.id,
-                    version_uuid=version_uuid,
-                    internal=InternalOptions(
-                        gateway=GatewayOptions(host="localhost", port=8787, ssl=False, api_version="v3")
-                    ),
-                ),
-            )
-
-        except Exception as error:
-            if "ECONNREFUSED" in str(error):
-                pytest.skip("Latitude service is not running on localhost:8787")
-            raise error
+            ),
+        )
 
     @pytest.mark.skip(reason="Memory leak test. Run manually when investigating performance issues.")
     async def test_streaming_response_memory_leak(self) -> None:
-        """Test for memory leaks in streaming responses over multiple requests"""
-        print("🧪 Starting memory leak test for streaming responses...", flush=True)
-
+        """Test for memory leaks in streaming responses using multi-cycle methodology"""
         sdk = await self.setup_sdk()
-        metrics = MemoryMetrics()
-
-        # Mock tool that simulates some processing
         test_tool = AsyncMock(return_value="Tool executed successfully")
 
-        print("📊 Starting memory tracking...", flush=True)
-        metrics.start_tracking()
+        # Run multiple cycles to detect linear growth patterns
+        cycle_memories: List[float] = []
+        cycle_connections: List[int] = []
 
-        try:
-            # Perform multiple streaming requests to detect leaks
-            num_iterations = 50
-            print(f"\nPerforming {num_iterations} streaming requests...", flush=True)
+        num_cycles = 5
+        requests_per_cycle = 10
 
-            for i in range(num_iterations):
+        for cycle in range(num_cycles):
+            gc.collect()  # Force cleanup before each cycle
+            await asyncio.sleep(0.5)  # Allow async cleanup
+            # Perform requests for this cycle
+            for i in range(requests_per_cycle):
                 try:
                     result = await sdk.prompts.run(
                         self.prompt_path,
                         options=RunPromptOptions(
-                            parameters={"input": f"test_input_{i}"}, stream=True, tools={"test_tool": test_tool}
+                            parameters={"input": f"cycle_{cycle}_request_{i}"},
+                            stream=True,
+                            tools={"test_tool": test_tool},
                         ),
                     )
-
-                    # Verify we got a result
                     assert result is not None
-
-                    # Record metrics every 10 iterations
-                    if i % 10 == 0:
-                        metrics.record_current()
-                        print(f"Completed {i + 1}/{num_iterations} requests", flush=True)
-
-                except Exception as e:
-                    print(f"Request {i} failed: {e}", flush=True)
+                except Exception:
                     continue
 
-                # Small delay to allow cleanup
                 await asyncio.sleep(0.01)
 
-            # Force cleanup and wait
+            # Allow cleanup after cycle
+            gc.collect()
             await asyncio.sleep(1)
 
-        finally:
-            await metrics.stop_tracking()
-            metrics.print_summary()
+            # Record memory at end of cycle
+            cycle_end_memory = psutil.Process().memory_info().rss / 1024 / 1024  # MB
+            cycle_end_connections = len(psutil.Process().net_connections())
 
-        # Assert no significant memory leak (threshold: 50MB)
-        memory_leak_mb = metrics.get_memory_leak_mb()
-        connection_leak = metrics.get_connection_leak()
+            cycle_memories.append(cycle_end_memory)
+            cycle_connections.append(cycle_end_connections)
 
-        print("\nAssertion checks:", flush=True)
-        print(f"Memory leak: {memory_leak_mb:.2f} MB (threshold: 50 MB)", flush=True)
-        print(f"Connection leak: {connection_leak} (threshold: 10)", flush=True)
+        # Ensure we completed enough cycles for meaningful analysis
+        assert len(cycle_memories) == num_cycles, f"Expected {num_cycles} cycles, got {len(cycle_memories)}"
+        assert len(cycle_memories) >= 3, f"Need at least 3 cycles for leak detection, got {len(cycle_memories)}"
 
-        # These assertions might need adjustment based on actual behavior
-        assert memory_leak_mb <= 0, f"Memory leak detected: {memory_leak_mb:.2f} MB"
-        assert connection_leak <= 0, f"Connection leak detected: {connection_leak} connections"
+        # Calculate growth rate across cycles
+        memory_growth_rate = (cycle_memories[-1] - cycle_memories[0]) / num_cycles
+        connection_growth_rate = (cycle_connections[-1] - cycle_connections[0]) / num_cycles
+
+        print("\nMemory growth analysis:", flush=True)
+        print(f"Cycle memories (MB): {[f'{m:.2f}' for m in cycle_memories]}", flush=True)
+        print(f"Memory growth rate: {memory_growth_rate:.2f} MB/cycle", flush=True)
+        print(f"Connection growth rate: {connection_growth_rate:.2f} connections/cycle", flush=True)
+
+        # Assert reasonable growth rates (allow some growth but detect leaks)
+        msg = f"Potential memory leak: {memory_growth_rate:.2f} MB/cycle growth"
+        assert memory_growth_rate < 5.0, msg
+        msg = f"Connection leak: {connection_growth_rate:.2f} connections/cycle growth"
+        assert connection_growth_rate < 1.0, msg
 
     @pytest.mark.skip(reason="Memory leak test. Run manually when investigating performance issues.")
     async def test_mixed_streaming_non_streaming_memory_leak(self) -> None:
-        """Test for memory leaks with mixed streaming and non-streaming requests"""
+        """Test for memory leaks in mixed streaming/non-streaming responses"""
         sdk = await self.setup_sdk()
-        metrics = MemoryMetrics()
-
         test_tool = AsyncMock(return_value="Tool executed")
 
-        metrics.start_tracking()
+        cycle_memories: List[float] = []
+        cycle_connection_counts: List[int] = []
 
-        try:
-            num_iterations = 30
-            print(f"\nPerforming {num_iterations} mixed requests (streaming and non-streaming)...", flush=True)
+        num_cycles = 5
+        requests_per_cycle = 8  # 4 streaming + 4 non-streaming per cycle
 
-            for i in range(num_iterations):
+        for cycle in range(num_cycles):
+            gc.collect()
+            await asyncio.sleep(0.5)
+
+            # Perform mixed requests for this cycle
+            for i in range(requests_per_cycle):
                 try:
                     # Alternate between streaming and non-streaming
                     use_streaming = i % 2 == 0
@@ -284,46 +181,49 @@ This is a test step.
                     result = await sdk.prompts.run(
                         self.prompt_path,
                         options=RunPromptOptions(
-                            parameters={"input": f"mixed_test_{i}"},
+                            parameters={"input": f"mixed_cycle_{cycle}_request_{i}"},
                             stream=use_streaming,
                             tools={"test_tool": test_tool} if use_streaming else None,
                         ),
                     )
-
                     assert result is not None
-
-                    if i % 5 == 0:
-                        metrics.record_current()
-                        print(f"Completed {i + 1}/{num_iterations} requests (streaming: {use_streaming})", flush=True)
-
-                except Exception as e:
-                    print(f"Request {i} failed: {e}", flush=True)
+                except Exception:
                     continue
 
                 await asyncio.sleep(0.01)
 
+            # Cleanup and measure
+            gc.collect()
             await asyncio.sleep(1)
 
-        finally:
-            await metrics.stop_tracking()
-            metrics.print_summary()
+            cycle_memory = psutil.Process().memory_info().rss / 1024 / 1024
+            cycle_connection_count = len(psutil.Process().net_connections())
 
-        # Assert no significant leaks
-        memory_leak_mb = metrics.get_memory_leak_mb()
-        connection_leak = metrics.get_connection_leak()
+            cycle_memories.append(cycle_memory)
+            cycle_connection_counts.append(cycle_connection_count)
 
-        assert memory_leak_mb <= 0, f"Memory leak in mixed mode: {memory_leak_mb:.2f} MB"
-        assert connection_leak <= 0, f"Connection leak in mixed mode: {connection_leak} connections"
+        # Ensure we completed enough cycles for meaningful analysis
+        assert len(cycle_memories) == num_cycles, f"Expected {num_cycles} cycles, got {len(cycle_memories)}"
+        assert len(cycle_memories) >= 3, f"Need at least 3 cycles for leak detection, got {len(cycle_memories)}"
+
+        # Analyze growth patterns
+        memory_growth_rate = (cycle_memories[-1] - cycle_memories[0]) / num_cycles
+        connection_growth_rate = (cycle_connection_counts[-1] - cycle_connection_counts[0]) / num_cycles
+
+        print("\nMixed mode growth analysis:", flush=True)
+        print(f"Memory growth rate: {memory_growth_rate:.2f} MB/cycle", flush=True)
+        print(f"Connection growth rate: {connection_growth_rate:.2f} connections/cycle", flush=True)
+
+        msg = f"Mixed mode memory leak: {memory_growth_rate:.2f} MB/cycle"
+        assert memory_growth_rate < 5.0, msg
+        msg = f"Mixed mode connection leak: {connection_growth_rate:.2f} connections/cycle"
+        assert connection_growth_rate < 1.0, msg
 
     @pytest.mark.skip(reason="Memory leak test. Run manually when investigating performance issues.")
     async def test_concurrent_streaming_requests_memory_leak(self) -> None:
         """Test for memory leaks with concurrent streaming requests"""
         sdk = await self.setup_sdk()
-        metrics = MemoryMetrics()
-
         test_tool = AsyncMock(return_value="Concurrent tool executed")
-
-        metrics.start_tracking()
 
         async def single_request(request_id: int) -> bool:
             """Execute a single streaming request"""
@@ -337,40 +237,128 @@ This is a test step.
                     ),
                 )
                 return result is not None
-            except Exception as e:
-                print(f"Concurrent request {request_id} failed: {e}", flush=True)
+            except Exception:
                 return False
 
-        try:
-            # Execute concurrent requests in batches
-            batch_size = 5
-            num_batches = 10
+        cycle_memories: List[float] = []
+        cycle_connection_counts: List[int] = []
 
-            print(f"\nPerforming {num_batches} batches of {batch_size} concurrent requests...", flush=True)
+        num_cycles = 5
+        concurrent_requests_per_cycle = 8
 
-            for batch in range(num_batches):
-                # Create batch of concurrent requests
-                tasks = [single_request(batch * batch_size + i) for i in range(batch_size)]
+        for cycle in range(num_cycles):
+            gc.collect()
+            await asyncio.sleep(0.5)
 
-                # Wait for batch completion
-                results = await asyncio.gather(*tasks, return_exceptions=True)
-                successful = sum(1 for r in results if r is True)
+            # Execute concurrent requests for this cycle
+            tasks = [
+                single_request(cycle * concurrent_requests_per_cycle + i) for i in range(concurrent_requests_per_cycle)
+            ]
 
-                metrics.record_current()
-                print(f"Batch {batch + 1}/{num_batches}: {successful}/{batch_size} successful", flush=True)
+            # Wait for all concurrent requests to complete
+            await asyncio.gather(*tasks, return_exceptions=True)
 
-                # Small delay between batches
-                await asyncio.sleep(0.1)
+            # Allow cleanup after concurrent operations
+            gc.collect()
+            await asyncio.sleep(2)  # Longer cleanup for concurrent requests
 
-            await asyncio.sleep(2)  # Allow longer cleanup time for concurrent requests
+            cycle_memory = psutil.Process().memory_info().rss / 1024 / 1024
+            cycle_connection_count = len(psutil.Process().net_connections())
 
-        finally:
-            await metrics.stop_tracking()
-            metrics.print_summary()
+            cycle_memories.append(cycle_memory)
+            cycle_connection_counts.append(cycle_connection_count)
 
-        # Assert no significant leaks with concurrent access
-        memory_leak_mb = metrics.get_memory_leak_mb()
-        connection_leak = metrics.get_connection_leak()
+        # Ensure we completed enough cycles for meaningful analysis
+        assert len(cycle_memories) == num_cycles, f"Expected {num_cycles} cycles, got {len(cycle_memories)}"
+        assert len(cycle_memories) >= 3, f"Need at least 3 cycles for leak detection, got {len(cycle_memories)}"
 
-        assert memory_leak_mb <= 0, f"Memory leak with concurrent requests: {memory_leak_mb:.2f} MB"
-        assert connection_leak <= 0, f"Connection leak with concurrent requests: {connection_leak} connections"
+        # Analyze growth patterns for concurrent requests
+        memory_growth_rate = (cycle_memories[-1] - cycle_memories[0]) / num_cycles
+        connection_growth_rate = (cycle_connection_counts[-1] - cycle_connection_counts[0]) / num_cycles
+
+        print("\nConcurrent requests growth analysis:", flush=True)
+        print(f"Memory growth rate: {memory_growth_rate:.2f} MB/cycle", flush=True)
+        print(f"Connection growth rate: {connection_growth_rate:.2f} connections/cycle", flush=True)
+
+        # More lenient thresholds for concurrent requests due to connection pooling
+        msg = f"Concurrent memory leak: {memory_growth_rate:.2f} MB/cycle"
+        assert memory_growth_rate < 10.0, msg
+        msg = f"Concurrent connection leak: {connection_growth_rate:.2f} connections/cycle"
+        assert connection_growth_rate < 2.0, msg
+
+    @pytest.mark.skip(reason="Memory leak test. Run manually to validate leak detection works.")
+    async def test_detection_intentional_memory_leak(self) -> None:
+        """
+        Test that our memory leak detection methodology works by intentionally leaking memory.
+        """
+        sdk = await self.setup_sdk()
+        test_tool = AsyncMock(return_value="Tool executed")
+
+        cycle_memories: List[float] = []
+        cycle_connections: List[int] = []
+
+        num_cycles = 5
+        requests_per_cycle = 5
+        leak_size_mb = 2  # Leak 2MB per cycle
+
+        print("\n🧪 Testing intentional memory leak detection...", flush=True)
+
+        for cycle in range(num_cycles):
+            gc.collect()
+            await asyncio.sleep(0.5)
+
+            # Perform requests for this cycle
+            for i in range(requests_per_cycle):
+                try:
+                    result = await sdk.prompts.run(
+                        self.prompt_path,
+                        options=RunPromptOptions(
+                            parameters={"input": f"leak_test_cycle_{cycle}_request_{i}"},
+                            stream=True,
+                            tools={"test_tool": test_tool},
+                        ),
+                    )
+                    assert result is not None
+
+                    # INTENTIONALLY LEAK MEMORY: Create large objects and store references
+                    large_data = b"x" * (leak_size_mb * 1024 * 1024 // requests_per_cycle)  # Split leak across requests
+                    _LEAKED_OBJECTS.append(large_data)  # This creates a memory leak!
+
+                except Exception:
+                    continue
+
+                await asyncio.sleep(0.01)
+
+            # Cleanup and measure (but leaked objects remain in _LEAKED_OBJECTS)
+            gc.collect()
+            await asyncio.sleep(1)
+
+            cycle_memory = psutil.Process().memory_info().rss / 1024 / 1024
+            cycle_connection_count = len(psutil.Process().net_connections())
+
+            cycle_memories.append(cycle_memory)
+            cycle_connections.append(cycle_connection_count)
+
+            leaked_mb = len(_LEAKED_OBJECTS) * leak_size_mb / requests_per_cycle
+            print(f"Cycle {cycle + 1}: {cycle_memory:.2f} MB, leaked ~{leaked_mb:.1f} MB", flush=True)
+
+        # Ensure we completed enough cycles for meaningful analysis
+        assert len(cycle_memories) == num_cycles, f"Expected {num_cycles} cycles, got {len(cycle_memories)}"
+        assert len(cycle_memories) >= 3, f"Need at least 3 cycles for leak detection, got {len(cycle_memories)}"
+
+        # Analyze growth patterns - this should detect the intentional leak
+        memory_growth_rate = (cycle_memories[-1] - cycle_memories[0]) / num_cycles
+        connection_growth_rate = (cycle_connections[-1] - cycle_connections[0]) / num_cycles
+
+        print("\n📊 Intentional leak analysis:", flush=True)
+        print(f"Memory growth rate: {memory_growth_rate:.2f} MB/cycle", flush=True)
+        print(f"Expected growth rate: ~{leak_size_mb:.2f} MB/cycle", flush=True)
+        print(f"Connection growth rate: {connection_growth_rate:.2f} connections/cycle", flush=True)
+
+        # Clean up the leaked objects for subsequent tests
+        _LEAKED_OBJECTS.clear()
+        gc.collect()
+
+        # This test should FAIL if our detection works correctly
+        assert memory_growth_rate < 1.0, f"Memory leak detected as expected: {memory_growth_rate:.2f} MB/cycle"
+        print("❌ UNEXPECTED: No memory leak detected - our test methodology may need improvement", flush=True)

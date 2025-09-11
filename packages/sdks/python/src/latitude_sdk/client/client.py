@@ -116,7 +116,7 @@ class Client:
             await client.aclose()
 
     async def _exception(self, exception: Exception, response: Optional[httpx.Response] = None) -> ApiError:
-        if not response:
+        if not response or not response.is_error:
             return ApiError(
                 status=500,
                 code=ApiErrorCodes.InternalServerError,
@@ -125,7 +125,7 @@ class Client:
             )
 
         try:
-            if not response.is_stream_consumed:
+            if not response.is_stream_consumed and not response.is_closed:
                 await response.aread()
 
             error = ErrorResponse.model_validate_json(response.content)
@@ -136,6 +136,14 @@ class Client:
                 message=error.message,
                 response=response.text,
                 db_ref=ApiErrorDbRef(**dict(error.db_ref)) if error.db_ref else None,
+            )
+
+        except httpx.ResponseNotRead:
+            return ApiError(
+                status=500,
+                code=ApiErrorCodes.InternalServerError,
+                message=str(exception),
+                response=str(exception),
             )
 
         except Exception:

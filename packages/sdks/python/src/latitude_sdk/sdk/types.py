@@ -281,19 +281,19 @@ class Version(Model):
 class StreamCallbacks(Model):
     @runtime_checkable
     class OnEvent(Protocol):
-        def __call__(self, event: StreamEvent): ...
+        async def __call__(self, event: StreamEvent): ...
 
     on_event: Optional[OnEvent] = None
 
     @runtime_checkable
     class OnFinished(Protocol):
-        def __call__(self, result: FinishedResult): ...
+        async def __call__(self, result: FinishedResult): ...
 
     on_finished: Optional[OnFinished] = None
 
     @runtime_checkable
     class OnError(Protocol):
-        def __call__(self, error: ApiError): ...
+        async def __call__(self, error: ApiError): ...
 
     on_error: Optional[OnError] = None
 

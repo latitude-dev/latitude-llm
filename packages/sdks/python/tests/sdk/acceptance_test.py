@@ -1,4 +1,5 @@
 import os
+from typing import Any
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock
 
@@ -11,14 +12,13 @@ from latitude_sdk import (
     InternalOptions,
     Latitude,
     LatitudeOptions,
+    OnToolCallDetails,
     RunPromptOptions,
     StreamEvent,
 )
 
 
-class TestSDKIntegrationE2E(IsolatedAsyncioTestCase):
-    """SDK Integration Tests (E2E)"""
-
+class TestEndToEnd(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.maxDiff = None
 
@@ -26,7 +26,7 @@ class TestSDKIntegrationE2E(IsolatedAsyncioTestCase):
         self.prompt_path = "weather-assistant"
         self.prompt_content = """
 ---
-provider: OpenAI
+provider: openai
 model: gpt-4.1-mini
 tools:
   get_weather:
@@ -54,7 +54,6 @@ Location: {{ location }}
 """.strip()
 
     async def setup_sdk(self) -> Latitude:
-        """Setup SDK for creating project and prompt"""
         setup_sdk = Latitude(
             self.api_key,
             options=LatitudeOptions(
@@ -64,56 +63,29 @@ Location: {{ location }}
             ),
         )
 
-        project_id = None
-        version_uuid = "live"
+        # Create project
+        result = await setup_sdk.projects.create("End to End Test")
+        project = result.project
+        version_uuid = result.version.uuid
 
-        try:
-            # Create or get project
-            try:
-                existing_projects = await setup_sdk.projects.get_all()
-                project = next((p for p in existing_projects if p.name == "E2E Test Project"), None)
+        # Create or get prompt with weather content
+        await setup_sdk.prompts.get_or_create(
+            self.prompt_path,
+            options=GetOrCreatePromptOptions(
+                project_id=project.id, version_uuid=version_uuid, prompt=self.prompt_content
+            ),
+        )
 
-                if not project:
-                    result = await setup_sdk.projects.create("E2E Test Project")
-                    project = result.project
-                    version_uuid = result.version.uuid
-            except Exception:
-                # If we can't get projects, create a new one
-                result = await setup_sdk.projects.create("E2E Test Project")
-                project = result.project
-                version_uuid = result.version.uuid
-
-            project_id = project.id
-
-            # Create or get prompt with weather content
-            await setup_sdk.prompts.get_or_create(
-                self.prompt_path,
-                options=GetOrCreatePromptOptions(
-                    project_id=project_id, version_uuid=version_uuid, prompt=self.prompt_content
+        return Latitude(
+            self.api_key,
+            options=LatitudeOptions(
+                project_id=project.id,
+                version_uuid=version_uuid,
+                internal=InternalOptions(
+                    gateway=GatewayOptions(host="localhost", port=8787, ssl=False, api_version="v3")
                 ),
-            )
-
-            print(f"✅ Setup completed - Project ID: {project_id}")
-
-            sdk = Latitude(
-                self.api_key,
-                options=LatitudeOptions(
-                    project_id=project_id,
-                    version_uuid=version_uuid,
-                    internal=InternalOptions(
-                        gateway=GatewayOptions(host="localhost", port=8787, ssl=False, api_version="v3")
-                    ),
-                ),
-            )
-
-            return sdk
-
-        except Exception as error:
-            if "ECONNREFUSED" in str(error):
-                raise Exception(
-                    "Latitude service is not running on localhost:8787. Start the service before running E2E tests"
-                ) from error
-            raise error
+            ),
+        )
 
     @pytest.mark.skip(reason="Acceptance test. Does not run on CI for now.")
     async def test_sdk_instantiation_with_tool_handler(self):
@@ -121,205 +93,161 @@ Location: {{ location }}
         sdk = await self.setup_sdk()
 
         # Create the get_weather tool handler
-        get_weather_tool = AsyncMock(return_value="Temperature is 25°C and sunny")
+        get_weather_mock = AsyncMock()
 
-        try:
-            # Run prompt with get_weather tool - this makes a real API call
-            result = await sdk.prompts.run(
-                self.prompt_path,
-                options=RunPromptOptions(
-                    parameters={"location": "Barcelona"}, stream=True, tools={"get_weather": get_weather_tool}
-                ),
-            )
+        async def get_weather(arguments: dict[str, Any], details: OnToolCallDetails):
+            get_weather_mock(arguments, details)
+            return "Temperature is 22°C and sunny"
 
-            # Assertions for real response
-            assert result is not None
-            assert result.uuid is not None
-            assert isinstance(result.uuid, str)
-            assert result.response is not None  # type: ignore
-            assert result.response.text is not None  # type: ignore
-            assert isinstance(result.response.text, str)  # type: ignore
-            assert len(result.response.text) > 0  # type: ignore
+        # Run prompt with get_weather tool - this makes a real API call
+        result = await sdk.prompts.run(
+            self.prompt_path,
+            options=RunPromptOptions(
+                stream=True,
+                parameters={"location": "Barcelona"},
+                tools={"get_weather": get_weather},
+            ),
+        )
 
-            # Verify the response is not an error and contains valid text
-            assert not hasattr(result.response, "error")  # type: ignore
-            assert "error" not in result.response.text.lower()  # type: ignore
+        # Assertions for real response
+        assert result is not None
+        assert result.uuid is not None
+        assert isinstance(result.uuid, str)
+        assert result.response is not None  # type: ignore
+        assert result.response.text is not None  # type: ignore
+        assert isinstance(result.response.text, str)  # type: ignore
+        assert len(result.response.text) > 0  # type: ignore
 
-            # Verify tool handler is available (may or may not be called depending on prompt)
-            assert get_weather_tool is not None
+        # Verify the response is not an error and contains valid text
+        assert not hasattr(result.response, "error")  # type: ignore
+        assert "error" not in result.response.text.lower()  # type: ignore
 
-        except Exception as error:
-            if "ECONNREFUSED" in str(error):
-                raise Exception(
-                    "Latitude service is not running on localhost:8787. Start the service before running E2E tests"
-                ) from error
-
-            # If authentication fails with test API key, skip test with warning
-            if "Failed query" in str(error) and os.getenv("TEST_LATITUDE_API_KEY") == "test-api-key":
-                pytest.skip(  # type: ignore
-                    "⚠️  Using test API key. Set TEST_LATITUDE_API_KEY environment variable with a valid \
-                            API key for full E2E testing."
-                )
-
-            raise error
+        # Verify tool handler is available (may or may not be called depending on prompt)
+        assert get_weather is not None
 
     @pytest.mark.skip(reason="Acceptance test. Does not run on CI for now.")
     async def test_tool_calls_during_streaming(self):
         """Should handle tool calls during prompt execution with streaming"""
         sdk = await self.setup_sdk()
 
-        get_weather_mock = AsyncMock(return_value="Temperature is 22°C and cloudy")
+        on_event_mock = AsyncMock()
+
+        async def on_event(event: StreamEvent):
+            print(f"[TEST] Event: {event}")
+            on_event_mock(event)
+
         on_finished_mock = AsyncMock()
+
+        async def on_finished(result: FinishedResult):
+            print(f"[TEST] Finished: {result}")
+            on_finished_mock(result)
+
         on_error_mock = AsyncMock()
 
-        def debug_finished_mock(result: FinishedResult):
-            print(f"[TEST] Finished: {result}", flush=True)
-            return on_finished_mock(result)
+        async def on_error(error: Exception):
+            print(f"[ERROR] Error occurred: {error}")
+            on_error_mock(error)
 
-        def debug_event_mock(event: StreamEvent):
-            print(f"[TEST] Event: {event}", flush=True)
+        get_weather_mock = AsyncMock()
 
-        # Add debug callback to see what error occurs
-        def debug_error(error: Exception):
-            print(f"[ERROR] Error occurred: {error}", flush=True)
-            return on_error_mock(error)
+        async def get_weather(arguments: dict[str, Any], details: OnToolCallDetails):
+            get_weather_mock(arguments, details)
+            return "Temperature is 22°C and cloudy"
 
-        debug_error_mock = AsyncMock(side_effect=debug_error)
+        # Try non-streaming first to see if that works
+        print("[TEST] Trying non-streaming request first")
+        non_stream_result = await sdk.prompts.run(
+            self.prompt_path,
+            options=RunPromptOptions(
+                stream=False,
+                parameters={"location": "Madrid"},
+                tools={"get_weather": get_weather},
+            ),
+        )
+        assert non_stream_result is not None
 
-        try:
-            # Try non-streaming first to see if that works
-            print("[TEST] Trying non-streaming request first", flush=True)
-            try:
-                non_stream_result = await sdk.prompts.run(
-                    self.prompt_path,
-                    options=RunPromptOptions(
-                        parameters={"location": "Madrid"}, stream=False, tools={"get_weather": get_weather_mock}
-                    ),
-                )
-                print(f"[TEST] Non-streaming worked: {non_stream_result is not None}", flush=True)
-            except Exception as e:
-                print(f"[TEST] Non-streaming failed: {e}", flush=True)
+        # Non-streaming request do not call the tool automatically
+        get_weather_mock.assert_not_called()
 
-            # Make real streaming API call
-            print("[TEST] Now trying streaming request", flush=True)
-            result = await sdk.prompts.run(
-                self.prompt_path,
-                options=RunPromptOptions(
-                    parameters={"location": "Madrid"},
-                    stream=True,
-                    tools={"get_weather": get_weather_mock},
-                    on_finished=debug_finished_mock,
-                    on_event=debug_event_mock,
-                    on_error=debug_error_mock,
-                ),
-            )
+        # Make real streaming API call
+        print("[TEST] Now trying streaming request")
+        result = await sdk.prompts.run(
+            self.prompt_path,
+            options=RunPromptOptions(
+                stream=True,
+                parameters={"location": "Madrid"},
+                tools={"get_weather": get_weather},
+                on_finished=on_finished,
+                on_event=on_event,
+                on_error=on_error,
+            ),
+        )
 
-            # Verify no errors occurred (unless using test API key)
-            if os.getenv("TEST_LATITUDE_API_KEY") != "test-api-key":
-                if debug_error_mock.called:
-                    print(f"[DEBUG] Error mock was called: {debug_error_mock.call_args}")
-                assert not debug_error_mock.called
+        # Verify no errors occurred
+        assert not on_error_mock.called, f"[DEBUG] Error mock was called: {on_error_mock.call_args}"
 
-                # Verify final response only if no errors
-                assert result is not None
-                assert result.response.text is not None  # type: ignore
-                assert isinstance(result.response.text, str)  # type: ignore
-                assert len(result.response.text) > 0  # type: ignore
+        # Verify final response only if no errors
+        assert result is not None
+        assert result.response.text is not None  # type: ignore
+        assert isinstance(result.response.text, str)  # type: ignore
+        assert len(result.response.text) > 0  # type: ignore
 
-                # Verify callbacks were called appropriately
-                if on_finished_mock.call_count > 0:
-                    assert on_finished_mock.called
-
-        except Exception as error:
-            if "ECONNREFUSED" in str(error):
-                raise Exception(
-                    "Latitude service is not running on localhost:8787. Please start the service before running E2E \
-                            tests."
-                ) from error
-
-            # If authentication fails with test API key, skip test with warning
-            if "Failed query" in str(error) and os.getenv("TEST_LATITUDE_API_KEY") == "test-api-key":
-                pytest.skip(  # type: ignore
-                    "⚠️  Using test API key. Set TEST_LATITUDE_API_KEY environment variable with a valid API key for\
-                            full E2E testing."
-                )
-
-            raise error
+        # Verify callbacks were called appropriately
+        assert on_finished_mock.called
 
     @pytest.mark.skip(reason="Acceptance test. Does not run on CI for now.")
     async def test_tool_handler_gets_called_when_requested(self):
         """Should ensure tool handler gets called when tools are requested"""
         sdk = await self.setup_sdk()
 
-        get_weather_mock = AsyncMock(return_value="Temperature is 20°C and rainy")
+        get_weather_mock = AsyncMock()
 
-        try:
-            # Make real API call
-            result = await sdk.prompts.run(
-                self.prompt_path,
-                options=RunPromptOptions(
-                    parameters={"location": "Paris"}, stream=True, tools={"get_weather": get_weather_mock}
-                ),
-            )
+        async def get_weather(arguments: dict[str, Any], details: OnToolCallDetails):
+            get_weather_mock(arguments, details)
+            return "Temperature is 20°C and rainy"
 
-            # Verify the tool handler was available
-            assert get_weather_mock is not None
+        # Make real API call
+        result = await sdk.prompts.run(
+            self.prompt_path,
+            options=RunPromptOptions(
+                parameters={"location": "Paris"},
+                stream=True,
+                tools={"get_weather": get_weather},
+            ),
+        )
 
-            # Verify response structure and content from real service
-            assert result is not None
-            assert result.uuid is not None  # type: ignore
-            assert isinstance(result.uuid, str)  # type: ignore
-            assert result.response is not None  # type: ignore
-            assert result.response.text is not None  # type: ignore
-            assert isinstance(result.response.text, str)  # type: ignore
-            assert len(result.response.text) > 0  # type: ignore
+        # Verify the tool handler was available
+        assert get_weather is not None
 
-            # Verify the response is not an error and contains valid text
-            assert not hasattr(result.response, "error")  # type: ignore
-            assert "error" not in result.response.text.lower()  # type: ignore
+        # Verify response structure and content from real service
+        assert result is not None
+        assert result.uuid is not None  # type: ignore
+        assert isinstance(result.uuid, str)  # type: ignore
+        assert result.response is not None  # type: ignore
+        assert result.response.text is not None  # type: ignore
+        assert isinstance(result.response.text, str)  # type: ignore
+        assert len(result.response.text) > 0  # type: ignore
 
-            # Note: Whether the tool gets called depends on the actual prompt content
-            # and the AI model's decision to use tools
-
-        except Exception as error:
-            if "ECONNREFUSED" in str(error):
-                raise Exception(
-                    "Latitude service is not running on localhost:8787. Please start the service before running \
-                            E2E tests."
-                ) from error
-
-            # If authentication fails with test API key, skip test with warning
-            if "Failed query" in str(error) and os.getenv("TEST_LATITUDE_API_KEY") == "test-api-key":
-                pytest.skip(  # type: ignore
-                    "⚠️  Using test API key. Set TEST_LATITUDE_API_KEY environment variable with a valid API key for \
-                            full E2E testing."
-                )
-
-            raise error
+        # Verify the response is not an error and contains valid text
+        assert not hasattr(result.response, "error")  # type: ignore
+        assert "error" not in result.response.text.lower()  # type: ignore
 
     @pytest.mark.skip(reason="Acceptance test. Does not run on CI for now.")
     async def test_authentication_and_project_validation(self):
         """Should handle authentication and project validation"""
         sdk = await self.setup_sdk()
 
-        try:
-            await sdk.prompts.run(
-                self.prompt_path,
-                options=RunPromptOptions(
-                    parameters={"location": "London"}, tools={"get_weather": AsyncMock(return_value="test")}
-                ),
-            )
+        get_weather_mock = AsyncMock()
 
-            # If we get here without error, the service might not be validating auth
-            # This is still a valid test result
+        async def get_weather(arguments: dict[str, Any], details: OnToolCallDetails):
+            get_weather_mock(arguments, details)
+            return "Temperature is 20°C and sunny"
 
-        except Exception as error:
-            if "ECONNREFUSED" in str(error):
-                raise Exception(
-                    "Latitude service is not running on localhost:8787. Please start the service before running \
-                            E2E tests."
-                ) from error
-
-            # Authentication errors are expected with invalid API key
-            # This confirms the service is properly validating authentication
-            assert error is not None
+        await sdk.prompts.run(
+            self.prompt_path,
+            options=RunPromptOptions(
+                stream=False,
+                parameters={"location": "London"},
+                tools={"get_weather": get_weather},
+            ),
+        )

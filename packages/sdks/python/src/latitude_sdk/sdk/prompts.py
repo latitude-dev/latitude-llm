@@ -184,7 +184,7 @@ class Prompts:
                 )
 
             if on_event:
-                on_event(event)
+                await on_event(event)
 
             if tool_call:
                 await self._handle_tool_call(tool_call, tools)
@@ -324,7 +324,7 @@ class Prompts:
                     result = RunPromptResult.model_validate_json(response.content)
 
             if options.on_finished:
-                options.on_finished(FinishedResult(**dict(result)))
+                await options.on_finished(FinishedResult(**dict(result)))
 
             return RunPromptResult(**dict(result))
 
@@ -340,7 +340,7 @@ class Prompts:
             if not options.on_error:
                 raise exception
 
-            options.on_error(exception)
+            await options.on_error(exception)
 
             return None
 
@@ -370,7 +370,7 @@ class Prompts:
                     result = ChatPromptResult.model_validate_json(response.content)
 
             if options.on_finished:
-                options.on_finished(FinishedResult(**dict(result)))
+                await options.on_finished(FinishedResult(**dict(result)))
 
             return ChatPromptResult(**dict(result))
 
@@ -386,7 +386,7 @@ class Prompts:
             if not options.on_error:
                 raise exception
 
-            options.on_error(exception)
+            await options.on_error(exception)
 
             return None
 

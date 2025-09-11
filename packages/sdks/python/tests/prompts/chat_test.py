@@ -1,6 +1,6 @@
 import json
 from typing import List, cast
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 import httpx
 
@@ -10,9 +10,9 @@ from tests.utils import TestCase, fixtures
 
 class TestChatPromptSync(TestCase):
     async def test_success_without_tools(self):
-        on_event_mock = Mock()
-        on_finished_mock = Mock()
-        on_error_mock = Mock()
+        on_event_mock = AsyncMock()
+        on_finished_mock = AsyncMock()
+        on_error_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
         options = ChatPromptOptions(
@@ -40,14 +40,14 @@ class TestChatPromptSync(TestCase):
         )
         self.assertEqual(endpoint_mock.call_count, 1)
         self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
-        on_event_mock.assert_not_called()
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
-        on_error_mock.assert_not_called()
+        on_event_mock.assert_not_awaited()
+        on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
+        on_error_mock.assert_not_awaited()
 
     async def test_success_with_tools(self):
-        on_event_mock = Mock()
-        on_finished_mock = Mock()
-        on_error_mock = Mock()
+        on_event_mock = AsyncMock()
+        on_finished_mock = AsyncMock()
+        on_error_mock = AsyncMock()
         actual_tool_mock = AsyncMock(
             side_effect=[
                 r.result if not r.is_error else Exception(r.result) for r in fixtures.CONVERSATION_TOOL_RESULTS
@@ -85,16 +85,16 @@ class TestChatPromptSync(TestCase):
         self.assertEqual(chat_endpoint_mock.call_count, 1)
         self.assertEqual(tools_endpoint_mock.call_count, 0)
         self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
-        on_event_mock.assert_not_called()
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
-        on_error_mock.assert_not_called()
+        on_event_mock.assert_not_awaited()
+        on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
+        on_error_mock.assert_not_awaited()
         actual_tool_mock.assert_not_awaited()
         other_tool_mock.assert_not_awaited()
 
     async def test_fails_and_retries(self):
-        on_event_mock = Mock()
-        on_finished_mock = Mock()
-        on_error_mock = Mock()
+        on_event_mock = AsyncMock()
+        on_finished_mock = AsyncMock()
+        on_error_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
         options = ChatPromptOptions(
@@ -125,13 +125,13 @@ class TestChatPromptSync(TestCase):
         ]
         self.assertEqual(endpoint_mock.call_count, self.internal_options.retries)
         self.assertEqual(result, None)
-        on_event_mock.assert_not_called()
-        on_finished_mock.assert_not_called()
-        on_error_mock.assert_called_once_with(fixtures.ERROR)
+        on_event_mock.assert_not_awaited()
+        on_finished_mock.assert_not_awaited()
+        on_error_mock.assert_awaited_once_with(fixtures.ERROR)
 
     async def test_fails_and_raises(self):
-        on_event_mock = Mock()
-        on_finished_mock = Mock()
+        on_event_mock = AsyncMock()
+        on_finished_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
         options = ChatPromptOptions(
@@ -158,13 +158,13 @@ class TestChatPromptSync(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        on_event_mock.assert_not_called()
-        on_finished_mock.assert_not_called()
+        on_event_mock.assert_not_awaited()
+        on_finished_mock.assert_not_awaited()
 
     async def test_fails_and_callbacks(self):
-        on_event_mock = Mock()
-        on_finished_mock = Mock()
-        on_error_mock = Mock()
+        on_event_mock = AsyncMock()
+        on_finished_mock = AsyncMock()
+        on_error_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
         options = ChatPromptOptions(
@@ -192,16 +192,16 @@ class TestChatPromptSync(TestCase):
         )
         self.assertEqual(endpoint_mock.call_count, 1)
         self.assertEqual(result, None)
-        on_event_mock.assert_not_called()
-        on_finished_mock.assert_not_called()
-        on_error_mock.assert_called_once_with(fixtures.CONVERSATION_ERROR)
+        on_event_mock.assert_not_awaited()
+        on_finished_mock.assert_not_awaited()
+        on_error_mock.assert_awaited_once_with(fixtures.CONVERSATION_ERROR)
 
 
 class TestChatPromptStream(TestCase):
     async def test_success_without_tools(self):
-        on_event_mock = Mock()
-        on_finished_mock = Mock()
-        on_error_mock = Mock()
+        on_event_mock = AsyncMock()
+        on_finished_mock = AsyncMock()
+        on_error_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
         options = ChatPromptOptions(
@@ -217,7 +217,7 @@ class TestChatPromptStream(TestCase):
 
         result = await self.sdk.prompts.chat(conversation_uuid, messages, options)
         request, _ = endpoint_mock.calls.last
-        events = cast(List[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])
+        events = cast(List[StreamEvent], [event[0] for event, _ in on_event_mock.await_args_list])
 
         self.assert_requested(
             request,
@@ -231,14 +231,14 @@ class TestChatPromptStream(TestCase):
         self.assertEqual(endpoint_mock.call_count, 1)
         self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
-        self.assertEqual(on_event_mock.call_count, len(fixtures.CONVERSATION_EVENTS))
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
-        on_error_mock.assert_not_called()
+        self.assertEqual(on_event_mock.await_count, len(fixtures.CONVERSATION_EVENTS))
+        on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
+        on_error_mock.assert_not_awaited()
 
     async def test_success_with_tools(self):
-        on_event_mock = Mock()
-        on_finished_mock = Mock()
-        on_error_mock = Mock()
+        on_event_mock = AsyncMock()
+        on_finished_mock = AsyncMock()
+        on_error_mock = AsyncMock()
         actual_tool_mock = AsyncMock(
             side_effect=[
                 r.result if not r.is_error else Exception(r.result) for r in fixtures.CONVERSATION_TOOL_RESULTS
@@ -264,7 +264,7 @@ class TestChatPromptStream(TestCase):
         result = await self.sdk.prompts.chat(conversation_uuid, messages, options)
         chat_request, _ = chat_endpoint_mock.calls.last
         tools_requests = cast(list[httpx.Request], [request for request, _ in tools_endpoint_mock.calls])  # type: ignore
-        events = cast(List[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])
+        events = cast(List[StreamEvent], [event[0] for event, _ in on_event_mock.await_args_list])
 
         self.assert_requested(
             chat_request,
@@ -293,12 +293,12 @@ class TestChatPromptStream(TestCase):
         self.assertEqual(tools_endpoint_mock.call_count, len(fixtures.CONVERSATION_TOOL_CALLS))
         self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
-        self.assertEqual(on_event_mock.call_count, len(fixtures.CONVERSATION_EVENTS))
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
-        on_error_mock.assert_not_called()
+        self.assertEqual(on_event_mock.await_count, len(fixtures.CONVERSATION_EVENTS))
+        on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
+        on_error_mock.assert_not_awaited()
         [
             self.assertEqual(
-                actual_tool_mock.call_args_list[index][0],
+                actual_tool_mock.await_args_list[index][0],
                 (
                     fixtures.CONVERSATION_TOOL_CALLS[index].arguments,
                     OnToolCallDetails.model_construct(
@@ -308,15 +308,15 @@ class TestChatPromptStream(TestCase):
                     ),
                 ),
             )
-            for index, _ in enumerate(actual_tool_mock.call_args_list)
+            for index, _ in enumerate(actual_tool_mock.await_args_list)
         ]
         self.assertEqual(actual_tool_mock.await_count, len(fixtures.CONVERSATION_TOOL_CALLS))
         other_tool_mock.assert_not_awaited()
 
     async def test_fails_and_retries(self):
-        on_event_mock = Mock()
-        on_finished_mock = Mock()
-        on_error_mock = Mock()
+        on_event_mock = AsyncMock()
+        on_finished_mock = AsyncMock()
+        on_error_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
         options = ChatPromptOptions(
@@ -347,13 +347,13 @@ class TestChatPromptStream(TestCase):
         ]
         self.assertEqual(endpoint_mock.call_count, self.internal_options.retries)
         self.assertEqual(result, None)
-        on_event_mock.assert_not_called()
-        on_finished_mock.assert_not_called()
-        on_error_mock.assert_called_once_with(fixtures.ERROR)
+        on_event_mock.assert_not_awaited()
+        on_finished_mock.assert_not_awaited()
+        on_error_mock.assert_awaited_once_with(fixtures.ERROR)
 
     async def test_fails_and_raises(self):
-        on_event_mock = Mock()
-        on_finished_mock = Mock()
+        on_event_mock = AsyncMock()
+        on_finished_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
         options = ChatPromptOptions(
@@ -380,13 +380,13 @@ class TestChatPromptStream(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        on_event_mock.assert_not_called()
-        on_finished_mock.assert_not_called()
+        on_event_mock.assert_not_awaited()
+        on_finished_mock.assert_not_awaited()
 
     async def test_fails_and_callbacks(self):
-        on_event_mock = Mock()
-        on_finished_mock = Mock()
-        on_error_mock = Mock()
+        on_event_mock = AsyncMock()
+        on_finished_mock = AsyncMock()
+        on_error_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
         options = ChatPromptOptions(
@@ -414,6 +414,6 @@ class TestChatPromptStream(TestCase):
         )
         self.assertEqual(endpoint_mock.call_count, 1)
         self.assertEqual(result, None)
-        on_event_mock.assert_not_called()
-        on_finished_mock.assert_not_called()
-        on_error_mock.assert_called_once_with(fixtures.CONVERSATION_ERROR)
+        on_event_mock.assert_not_awaited()
+        on_finished_mock.assert_not_awaited()
+        on_error_mock.assert_awaited_once_with(fixtures.CONVERSATION_ERROR)
