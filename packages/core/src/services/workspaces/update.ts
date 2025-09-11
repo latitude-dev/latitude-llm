@@ -12,6 +12,7 @@ export async function updateWorkspace(
   values: {
     name?: string
     defaultProviderId?: number | null
+    currentSubscriptionId?: number | null
   },
   transaction = new Transaction(),
 ) {

@@ -82,4 +82,11 @@ export async function setupSchedules() {
     { pattern: '0 0 4 * * *' },
     { opts: { attempts: 1 } },
   )
+
+  // Every day at 1 AM - Schedule cleanup jobs for free plan workspaces
+  await maintenanceQueue.upsertJobScheduler(
+    'scheduleWorkspaceCleanupJobs',
+    { pattern: '0 0 1 * * *' },
+    { opts: { attempts: 1 } },
+  )
 }
