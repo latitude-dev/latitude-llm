@@ -18,6 +18,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
@@ -47,18 +48,26 @@ type DocumentValueProviderProps = {
 
 export function DocumentValueProvider({
   children,
-  document,
+  document: _document,
 }: DocumentValueProviderProps) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { devMode } = useDevMode()
-  const [value, setValue] = useState(document.content)
+  const [value, setValue] = useState(_document.content)
   const { toast } = useToast()
   const [origin, setOrigin] = useState<string>()
-  const { updateContent, isUpdatingContent } = useDocumentVersions({
+  const {
+    data: documents,
+    updateContent,
+    isUpdatingContent,
+  } = useDocumentVersions({
     commitUuid: commit.uuid,
     projectId: project.id,
   })
+  const document = useMemo(
+    () => documents.find((d) => d.documentUuid === _document.documentUuid),
+    [documents, _document.documentUuid],
+  )
   const setContentValue = useCallback(
     (content: string, opts?: Parameters<updateContentFn>[1]) => {
       setValue(content)
@@ -73,7 +82,7 @@ export function DocumentValueProvider({
       const [_, error] = await updateContent({
         commitUuid: commit.uuid,
         projectId: project.id,
-        documentUuid: document.documentUuid,
+        documentUuid: _document.documentUuid,
         content,
       })
       if (error) {
@@ -82,7 +91,7 @@ export function DocumentValueProvider({
           description: 'There was an error saving the document.',
           variant: 'destructive',
         })
-        setContentValue(document.content)
+        setContentValue(content)
       }
     },
     500,
@@ -143,7 +152,7 @@ export function useRefreshPromptMetadata({
   origin,
 }: {
   value: string
-  document: DocumentVersion
+  document?: DocumentVersion
   commit: Commit
   project: Project
   devMode: boolean
@@ -162,7 +171,10 @@ export function useRefreshPromptMetadata({
   })
 
   useEffect(() => {
+    if (!document) return
+
     devMode // Note: This is a hack to force the metadata to be updated when the dev mode is switched
+
     updateMetadata({
       prompt: value,
       documents,
@@ -175,15 +187,14 @@ export function useRefreshPromptMetadata({
       origin,
     })
   }, [
-    document.promptlVersion,
     agentToolsMap,
-    providers,
-    integrations,
+    devMode,
     document,
     documents,
+    integrations,
+    origin,
+    providers,
     updateMetadata,
     value,
-    origin,
-    devMode,
   ])
 }
