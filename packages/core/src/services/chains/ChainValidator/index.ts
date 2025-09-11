@@ -17,7 +17,6 @@ import { Result, TypedResult } from '../../../lib/Result'
 import { Output } from '../../../lib/streamManager/step/streamAIResponse'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
-import { applyCreditPlanLimit } from '../../subscriptions/limits/applyCreditPlanLimit'
 
 const DEFAULT_AGENT_MAX_STEPS = 20
 
@@ -80,8 +79,6 @@ export const validateChain = async ({
   TypedResult<ValidatedChainStep, ChainError<RunErrorCodes>>
 > => {
   try {
-    await applyCreditPlanLimit({ workspace }).then((r) => r.unwrap())
-
     const chainResult = await getChainNextStep({ chain, newMessages })
     if (chainResult.error) return chainResult
 
