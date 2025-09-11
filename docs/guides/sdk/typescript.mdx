@@ -49,6 +49,7 @@ The Latitude SDK is organized into several namespaces:
 - `prompts`: Methods for managing and running prompts
 - `logs`: Methods for pushing logs to Latitude
 - `evaluations`: Methods for pushing evaluation results to Latitude
+- `projects`: Methods for managing projects
 - `versions`: Methods for managing project versions
 
 ## Prompt Management
@@ -409,6 +410,16 @@ latitude.prompts.getAll(
   }
 ): Promise<Prompt[]>
 
+// Create a prompt
+latitude.prompts.create(
+  path: string,
+  options?: {
+    projectId?: number,
+    versionUuid?: string,
+    prompt?: string
+  }
+): Promise<Prompt>
+
 // Get or create a prompt
 latitude.prompts.getOrCreate(
   path: string,
@@ -420,7 +431,7 @@ latitude.prompts.getOrCreate(
 ): Promise<Prompt>
 
 // Run a prompt
-latitude.prompts.run<Tools extends ToolSpec = {}>(
+latitude.prompts.run<S extends AssertedStreamType = 'text', Tools extends ToolSpec = {}>(
   path: string,
   options: {
     projectId?: number,
@@ -431,13 +442,13 @@ latitude.prompts.run<Tools extends ToolSpec = {}>(
     tools?: ToolCalledFn<Tools>,
     signal?: AbortSignal,
     onEvent?: ({ event, data }: { event: StreamEventTypes, data: ChainEventDto }) => void,
-    onFinished?: (data: StreamChainResponse) => void,
+    onFinished?: (data: GenerationResponse<S>) => void,
     onError?: (error: LatitudeApiError) => void
   }
-): Promise<(StreamChainResponse & { uuid: string }) | undefined>
+): Promise<GenerationResponse<S> | undefined>
 
 // Chat with a prompt
-latitude.prompts.chat<Tools extends ToolSpec = {}>(
+latitude.prompts.chat<S extends AssertedStreamType = 'text', Tools extends ToolSpec = {}>(
   uuid: string,
   messages: Message[],
   options?: {
@@ -445,10 +456,10 @@ latitude.prompts.chat<Tools extends ToolSpec = {}>(
     tools?: ToolCalledFn<Tools>,
     signal?: AbortSignal,
     onEvent?: ({ event, data }: { event: StreamEventTypes, data: ChainEventDto }) => void,
-    onFinished?: (data: StreamChainResponse) => void,
+    onFinished?: (data: GenerationResponse<S>) => void,
     onError?: (error: LatitudeApiError) => void
   }
-): Promise<StreamChainResponse | undefined>
+): Promise<GenerationResponse<S> | undefined>
 
 // Render a prompt
 latitude.prompts.render<M extends AdapterMessageType = PromptlMessage>(
@@ -470,11 +481,21 @@ latitude.prompts.renderChain<M extends AdapterMessageType = PromptlMessage>(
     logResponses?: boolean
   }
 ): Promise<{ config: Config, messages: M[] }>
+```
 
-// Render an agent
-latitude.prompts.renderAgent<M extends AdapterMessageType = PromptlMessage>(
-  options: RenderChainOptions<M>
-): Promise<{ config: Config, messages: M[], result: unknown }>
+### Projects Namespace
+
+```typescript
+// Get all projects
+latitude.projects.getAll(): Promise<Project[]>
+
+// Create a project
+latitude.projects.create(
+  name: string
+): Promise<{
+  project: Project
+  version: Version
+}>
 ```
 
 ### Logs Namespace
@@ -489,7 +510,7 @@ latitude.logs.create(
     projectId?: number,
     versionUuid?: string
   }
-)
+): Promise<DocumentLog>
 ```
 
 ### Evaluations Namespace
@@ -497,22 +518,47 @@ latitude.logs.create(
 ```typescript
 // Annotate a log
 latitude.evaluations.annotate(
-  conversationUuid: string,
+  uuid: string,
   score: number,
   evaluationUuid: string,
   options?: {
     reason?: string,
-    projectId?: number,
     versionUuid?: string
   }
-)
+): Promise<PublicManualEvaluationResultV2>
 ```
 
 ### Versions Namespace
 
 ```typescript
+// Get a version
+latitude.versions.get(
+  projectId: number,
+  commitUuid: string
+): Promise<Version>
+
 // Get all versions
 latitude.versions.getAll(projectId?: number): Promise<Version[]>
+
+// Create a version
+latitude.versions.create(
+  name: string,
+  options?: {
+    projectId?: number
+  }
+): Promise<Version>
+
+// Push version changes
+latitude.versions.push(
+  projectId: number,
+  baseCommitUuid: string,
+  changes: Array<{
+    path: string
+    content: string
+    status: 'added' | 'modified' | 'deleted' | 'unchanged'
+    contentHash?: string
+  }>
+): Promise<{ commitUuid: string }>
 ```
 
 ## Error Handling

@@ -1,15 +1,16 @@
 import asyncio
 import os
-from devtools import pprint
-
 from typing import Any
 
+from devtools import pprint
 from latitude_sdk import (
+    ApiError,
+    FinishedResult,
     Latitude,
     LatitudeOptions,
-    RunPromptOptions,
-    ChatPromptOptions,
     OnToolCallDetails,
+    RunPromptOptions,
+    StreamEvent,
 )
 
 
@@ -18,6 +19,18 @@ async def get_weather(arguments: dict[str, Any], details: OnToolCallDetails) -> 
 
     # Simulate a call to a weather API
     return "2°C"
+
+
+async def on_event(event: StreamEvent):
+    print(event, "\n" * 2)
+
+
+async def on_finished(result: FinishedResult):
+    print(result, "\n" * 2)
+
+
+async def on_error(error: ApiError):
+    print(error, "\n" * 2)
 
 
 async def run():
@@ -35,32 +48,15 @@ async def run():
                 "location": "Boston",
             },
             tools={"get_weather": get_weather},
-            # on_event=lambda event: print(event, "\n" * 2),
-            # on_finished=lambda result: print(result, "\n" * 2),
-            on_error=lambda error: print(error, "\n" * 2),
+            on_event=on_event,
+            on_finished=on_finished,
+            on_error=on_error,
             stream=True,
         ),
     )
 
-    print(f"Response UUID: {result.uuid} \n")
-
-    # When the AI ask for the tool we response to it using `chat` method from the sdk
-    # You need the `uuid` of the result to use it
-    result = await sdk.prompts.chat(
-        result.uuid,
-        [],  # List of extra messages
-        ChatPromptOptions(
-            tools={"get_weather": get_weather},
-            # on_event=lambda event: print(event, "\n" * 2),
-            # on_finished=lambda result: print(result, "\n" * 2),
-            on_error=lambda error: print(error, "\n" * 2),
-            stream=True,
-        ),
-    )
-
-    last_message = result.conversation[-1]
-    text_message = last_message.content[0].text
-    print(text_message, "\n" * 2)
+    if result:
+        print(result.response.text, "\n" * 2)
 
 
 asyncio.run(run())

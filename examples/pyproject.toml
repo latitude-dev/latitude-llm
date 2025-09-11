@@ -6,7 +6,7 @@ dependencies = [
     "openai>=1.58.1",
     "devtools>=0.12.2",
     "python-dotenv>=1.0.1",
-    "latitude-sdk>=3.0.1"
+    "latitude-sdk>=5.1.0",
 ]
 
 [build-system]
@@ -33,12 +33,8 @@ indent-style = "space"
 allow-direct-references = true
 
 [dependency-groups]
-dev = [
-    "pyright>=1.1.392",
-    "ruff>=0.8.3",
-]
+dev = ["pyright>=1.1.392", "ruff>=0.8.3"]
 
 # Use monorepo version of the SDK
 # [tool.uv.sources]
 # latitude-sdk = { path = "../../../packages/sdks/python" }
-

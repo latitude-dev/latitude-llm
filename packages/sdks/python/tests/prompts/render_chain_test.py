@@ -58,14 +58,14 @@ class TestRenderChain(TestCase):
             ),
         )
         self.assertEqual(
-            on_step_mock.call_args_list[0][0],
+            on_step_mock.await_args_list[0][0],
             (
                 expected_messages[:2],
                 expected_config,
             ),
         )
         self.assertEqual(
-            on_step_mock.call_args_list[1][0],
+            on_step_mock.await_args_list[1][0],
             (
                 expected_messages[:-1],
                 expected_config,
@@ -111,14 +111,14 @@ class TestRenderChain(TestCase):
             ),
         )
         self.assertEqual(
-            on_step_mock.call_args_list[0][0],
+            on_step_mock.await_args_list[0][0],
             (
                 expected_messages[:2],
                 expected_config,
             ),
         )
         self.assertEqual(
-            on_step_mock.call_args_list[1][0],
+            on_step_mock.await_args_list[1][0],
             (
                 expected_messages[:-1],
                 expected_config,

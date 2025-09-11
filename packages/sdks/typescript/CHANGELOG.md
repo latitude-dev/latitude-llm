@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-Throw error if sdk fails to create version
+- Throw error if sdk fails to create version
 
 ## [5.0.0] - 2025-09-08
 
@@ -45,7 +45,7 @@ Breaking changes:
 
 - Default to `HEAD_COMMIT` when in the logs.create method
 
-## [5.0.0-beta.1] - 2025-01-16
+## [5.0.0-beta.1] - 2025-07-16
 
 ### Added
 
