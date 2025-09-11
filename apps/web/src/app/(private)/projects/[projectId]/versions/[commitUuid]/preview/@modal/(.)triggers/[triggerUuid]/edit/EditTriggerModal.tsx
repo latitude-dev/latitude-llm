@@ -1,5 +1,6 @@
 'use client'
 
+import { useParams } from 'next/navigation'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
@@ -30,7 +31,9 @@ import {
 function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
   const navigate = useNavigate()
   const { project } = useCurrentProject()
-  const { commit, isHead } = useCurrentCommit()
+  const { commit } = useCurrentCommit()
+  const { commitUuid: paramCommitUuid } = useParams()
+  const isHead = paramCommitUuid === HEAD_COMMIT ? HEAD_COMMIT : null
   const { data: documents, isLoading: isLoadingDocuments } =
     useDocumentVersions({
       commitUuid: commit.uuid,

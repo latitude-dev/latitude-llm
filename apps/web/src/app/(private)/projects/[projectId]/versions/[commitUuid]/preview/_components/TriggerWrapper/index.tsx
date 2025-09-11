@@ -25,6 +25,7 @@ import { TriggerEventsList } from '../TriggerEventsList'
 import { OnRunTriggerFn } from '../TriggersList'
 import { OnRunChatTrigger } from '../useActiveTrigger'
 import { realtimeTriggerEventsCounters } from '../useTriggerSockets'
+import { useParams } from 'next/navigation'
 
 function ToggleEnabled({
   projectId,
@@ -72,15 +73,15 @@ function EditTriggerButton({
   projectId,
   commitUuid,
   trigger,
-  isHead,
   isMerged,
 }: {
   projectId: number
   commitUuid: string
   trigger: DocumentTrigger
-  isHead: boolean
   isMerged: boolean
 }) {
+  const { commitUuid: paramCommitUuid } = useParams()
+  const isHead = paramCommitUuid === HEAD_COMMIT ? HEAD_COMMIT : null
   const editLink = useMemo(
     () =>
       ROUTES.projects
@@ -91,7 +92,7 @@ function EditTriggerButton({
   )
 
   return (
-    <Link href={editLink} scroll={false}>
+    <Link href={editLink}>
       <Button fancy variant='outline'>
         {isMerged ? 'View' : 'Edit'}
       </Button>
@@ -139,7 +140,7 @@ export function TriggerWrapper({
   onRunChatTrigger: OnRunChatTrigger
 }) {
   const { project } = useCurrentProject()
-  const { commit, isHead } = useCurrentCommit()
+  const { commit } = useCurrentCommit()
   const { eventsByTrigger, resetCounter } = realtimeTriggerEventsCounters(
     (state) => ({
       eventsByTrigger: state.eventsByTrigger,
@@ -260,7 +261,6 @@ export function TriggerWrapper({
               projectId={project.id}
               commitUuid={commit.uuid}
               trigger={trigger}
-              isHead={isHead}
               isMerged={isMerged}
             />
           </div>
