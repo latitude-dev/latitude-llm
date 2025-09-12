@@ -53,4 +53,4 @@ echo "Static assets uploaded successfully to s3://$S3_BUCKET/$S3_PREFIX/"
 # Output the S3 URL for use in Next.js configuration
 S3_URL="https://$S3_BUCKET.s3.$AWS_REGION.amazonaws.com/$S3_PREFIX"
 echo "Static assets URL: $S3_URL"
-echo "NEXT_PUBLIC_STATIC_ASSETS_URL=$S3_URL" >> "$GITHUB_ENV"
+echo "Note: NEXT_PUBLIC_STATIC_ASSETS_URL is set in the Docker container at runtime"
