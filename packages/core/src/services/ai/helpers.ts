@@ -9,8 +9,8 @@ import {
 import {
   createVertexAnthropic,
   GoogleVertexAnthropicProvider,
-} from '@ai-sdk/google-vertex/anthropic/edge'
-import { createVertex, GoogleVertexProvider } from '@ai-sdk/google-vertex/edge'
+} from '@ai-sdk/google-vertex/anthropic'
+import { createVertex, GoogleVertexProvider } from '@ai-sdk/google-vertex'
 import { createMistral, MistralProvider } from '@ai-sdk/mistral'
 import { createOpenAI, type OpenAIProvider } from '@ai-sdk/openai'
 import { createPerplexity, PerplexityProvider } from '@ai-sdk/perplexity'
@@ -73,15 +73,17 @@ function validateVertexConfig({
   if (result.success) {
     const config = result.data
     const privateKey = config.googleCredentials.privateKey.replace(/\\n/g, '\n')
-
     return Result.ok({
       ...config,
-      googleCredentials: {
-        ...config.googleCredentials,
-        privateKey,
+      googleAuthOptions: {
+        credentials: {
+          client_email: config.googleCredentials.clientEmail,
+          private_key: privateKey,
+        },
       },
     })
   }
+
   return Result.error(
     new ChainError({
       code: RunErrorCodes.AIProviderConfigError,

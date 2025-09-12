@@ -7,7 +7,7 @@ export const vertexConfigurationSchema = z.object({
   googleCredentials: z.object({
     clientEmail: z.string(),
     privateKey: z.string(),
-    privateKeyId: z.string(),
+    privateKeyId: z.string().optional(),
   }),
 })
 
