@@ -13,7 +13,6 @@ import { createMembership } from '../memberships/create'
 import { createOnboardingProject } from '../projects/createOnboardingProject'
 import { importOnboardingProject } from '../projects/import'
 import { createProviderApiKey } from '../providerApiKeys'
-import { createWorkspaceOnboarding } from '../workspaceOnboarding'
 import { createWorkspace } from '../workspaces'
 import { createUser } from './createUser'
 
@@ -75,9 +74,6 @@ export default async function setupService(
     transaction,
   ).then((r) => r.unwrap())
   await createApiKey({ workspace }, transaction).then((r) => r.unwrap())
-  await createWorkspaceOnboarding({ workspace }, transaction).then((r) =>
-    r.unwrap(),
-  )
   await createOnboardingDataset({ workspace, author: user }, transaction).then(
     (r) => r.unwrap(),
   )
