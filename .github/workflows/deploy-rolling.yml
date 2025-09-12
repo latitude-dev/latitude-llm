@@ -19,13 +19,13 @@ jobs:
       matrix:
         include:
           - app: workers
-            task_family: LatitudeLLMWorkersTaskFamily
-            codedeploy_app: LatitudeLLMWorkersCodeDeployApp
-            codedeploy_group: LatitudeLLMWorkersDeploymentGroup
+            task-family: LatitudeLLMWorkersTaskFamily
+            service: LatitudeLLMWorkers
+            cluster: LatitudeLLMCluster-883fb8c
             repo_name: latitude-llm-workers-repo-184cb29
           - app: websockets
             task-family: LatitudeLLMWebsocketsTaskFamily
-            service: LatitudeLLMWebsockets-3ba81ef
+            service: LatitudeLLMWebsockets
             cluster: LatitudeLLMCluster-883fb8c
             repo_name: latitude-llm-websockets-repo-eea3d9a
     concurrency:
