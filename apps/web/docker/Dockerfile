@@ -108,6 +108,27 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   NODE_OPTIONS="--max-old-space-size=8192" \
   pnpm turbo build --filter="${PROJECT}..."
 
+# Upload static assets to S3 for persistent availability
+ARG AWS_ACCESS_KEY_ID
+ARG AWS_SECRET_ACCESS_KEY
+ARG AWS_REGION
+ARG S3_BUCKET
+ARG BUILD_ID
+ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+ENV AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+ENV AWS_REGION=$AWS_REGION
+ENV S3_BUCKET=$S3_BUCKET
+ENV BUILD_ID=$BUILD_ID
+
+RUN if [ -n "$S3_BUCKET" ] && [ -n "$BUILD_ID" ]; then \
+  echo "Uploading static assets to S3..."; \
+  chmod +x ./apps/web/scripts/upload-static-assets.sh && \
+  cd apps/web && \
+  ./scripts/upload-static-assets.sh; \
+else \
+  echo "Skipping S3 upload - S3_BUCKET or BUILD_ID not provided"; \
+fi
+
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
 
 # PRODUCTION
