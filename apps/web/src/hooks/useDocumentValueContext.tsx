@@ -98,7 +98,15 @@ export function DocumentValueProvider({
         setContentValue(prevContent)
       }
     },
-    [setContentValue, updateContent, document],
+    [
+      setContentValue,
+      updateContent,
+      document,
+      _document.documentUuid,
+      commit.uuid,
+      project.id,
+      toast,
+    ],
   )
   const updateDocumentContent = useDebouncedCallback(
     _updateDocumentContent,
