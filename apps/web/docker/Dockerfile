@@ -86,11 +86,13 @@ ENV NEXT_PUBLIC_DOCS_URL=$NEXT_PUBLIC_DOCS_URL
 ARG AWS_REGION
 ARG S3_BUCKET
 ARG BUILD_ID
+ARG STATIC_ASSETS_HOST
 
 # Set environment variables with defaults
 ENV AWS_REGION=${AWS_REGION:-}
 ENV S3_BUCKET=${S3_BUCKET:-}
 ENV BUILD_ID=${BUILD_ID:-}
+ENV STATIC_ASSETS_HOST=${STATIC_ASSETS_HOST:-}
 
 WORKDIR /app
 
@@ -122,7 +124,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   AWS_REGION=$AWS_REGION && \
   S3_BUCKET=$S3_BUCKET && \
   BUILD_ID=$BUILD_ID && \
-  if [ -n "$AWS_REGION" ] && [ -n "$S3_BUCKET" ] && [ -n "$BUILD_ID" ]; then NEXT_PUBLIC_STATIC_ASSETS_URL="https://$S3_BUCKET.s3.$AWS_REGION.amazonaws.com/static-assets/$BUILD_ID"; fi && \
+  STATIC_ASSETS_HOST=$STATIC_ASSETS_HOST && \
+  if [ -n "$STATIC_ASSETS_HOST" ] && [ -n "$BUILD_ID" ]; then NEXT_PUBLIC_STATIC_ASSETS_URL="https://$STATIC_ASSETS_HOST/static-assets/$BUILD_ID"; fi && \
   NODE_OPTIONS="--max-old-space-size=8192" && \
   pnpm turbo build --filter="${PROJECT}..."
 
