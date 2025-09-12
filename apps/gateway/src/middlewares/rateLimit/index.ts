@@ -22,7 +22,7 @@ async function getTokenRateLimit(token: string): Promise<{
     return {
       workspaceId: cached.workspaceId,
       rateLimit: cached.rateLimit,
-      rateLimiter: getRateLimiterForRateLimit(cached.rateLimit),
+      rateLimiter: await getRateLimiterForRateLimit(cached.rateLimit),
     }
   }
 
@@ -48,7 +48,7 @@ async function getTokenRateLimit(token: string): Promise<{
   return {
     workspaceId,
     rateLimit,
-    rateLimiter: getRateLimiterForRateLimit(rateLimit),
+    rateLimiter: await getRateLimiterForRateLimit(rateLimit),
   }
 }
 

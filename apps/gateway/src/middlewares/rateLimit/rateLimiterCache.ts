@@ -3,13 +3,13 @@ import { cache } from '@latitude-data/core/cache'
 
 const RATE_LIMIT_DURATION = 1
 
-const client = await cache()
-
 const rateLimiters = new Map<number, RateLimiterRedis>()
 
-export function getRateLimiterForRateLimit(
+export async function getRateLimiterForRateLimit(
   rateLimit: number,
-): RateLimiterRedis {
+): Promise<RateLimiterRedis> {
+  const client = await cache()
+
   if (rateLimiters.has(rateLimit)) {
     return rateLimiters.get(rateLimit)!
   }

@@ -9,7 +9,7 @@ import { getRateLimiterForRateLimit } from './rateLimit/rateLimiterCache'
  */
 export const webhookRateLimitMiddleware = (rateLimit: number = 10) =>
   createMiddleware(async (c, next) => {
-    const rateLimiter = getRateLimiterForRateLimit(rateLimit)
+    const rateLimiter = await getRateLimiterForRateLimit(rateLimit)
 
     // Use IP address as the rate limit key for public endpoints
     const ip =
