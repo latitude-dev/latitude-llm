@@ -38,6 +38,8 @@ const nextConfig = {
   images: {
     remotePatterns: [new URL('https://assets.pipedream.net/**')],
   },
+  // Serve static assets from S3 for persistent chunk availability
+  assetPrefix: process.env.NEXT_PUBLIC_STATIC_ASSETS_URL,
 }
 
 let config
