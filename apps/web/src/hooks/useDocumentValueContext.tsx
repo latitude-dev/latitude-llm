@@ -53,7 +53,6 @@ export function DocumentValueProvider({
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { devMode } = useDevMode()
-  const [value, setValue] = useState(_document.content)
   const { toast } = useToast()
   const [origin, setOrigin] = useState<string>()
   const {
@@ -68,6 +67,7 @@ export function DocumentValueProvider({
     () => documents.find((d) => d.documentUuid === _document.documentUuid),
     [documents, _document.documentUuid],
   )
+  const [value, setValue] = useState(document?.content ?? _document.content)
   const setContentValue = useCallback(
     (content: string, opts?: Parameters<updateContentFn>[1]) => {
       setValue(content)
@@ -75,8 +75,10 @@ export function DocumentValueProvider({
     },
     [setValue, setOrigin],
   )
-  const updateDocumentContent = useDebouncedCallback(
+  const _updateDocumentContent = useCallback(
     async (content: string, opts?: Parameters<updateContentFn>[1]) => {
+      const prevContent = document?.content ?? ''
+
       setContentValue(content, opts)
 
       const [_, error] = await updateContent({
@@ -85,15 +87,21 @@ export function DocumentValueProvider({
         documentUuid: _document.documentUuid,
         content,
       })
+
       if (error) {
         toast({
           title: 'Error saving document',
           description: 'There was an error saving the document.',
           variant: 'destructive',
         })
-        setContentValue(content)
+
+        setContentValue(prevContent)
       }
     },
+    [setContentValue, updateContent, document],
+  )
+  const updateDocumentContent = useDebouncedCallback(
+    _updateDocumentContent,
     500,
     { leading: false, trailing: true },
   )

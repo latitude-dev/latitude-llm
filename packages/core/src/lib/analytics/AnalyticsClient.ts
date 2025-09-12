@@ -59,6 +59,7 @@ export class AnalyticsClient {
     if (!this.userEmail) return
 
     const data = await this.getData()
+
     return this.collector.collect({
       email: this.userEmail,
       user: data?.user,
