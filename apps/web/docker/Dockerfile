@@ -150,18 +150,12 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optiona
 FROM alpine AS runner
 
 ARG PROJECT_PATH
-ARG AWS_REGION
-ARG S3_BUCKET
-ARG BUILD_ID
 
 ENV HOSTNAME=0.0.0.0
 ENV KEEP_ALIVE_TIMEOUT=601000
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV PORT=8080
-
-# Set static assets URL for runtime
-ENV NEXT_PUBLIC_STATIC_ASSETS_URL=https://$S3_BUCKET.s3.$AWS_REGION.amazonaws.com/static-assets/$BUILD_ID
 
 WORKDIR /app
 
