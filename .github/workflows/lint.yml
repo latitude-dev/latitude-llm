@@ -90,7 +90,6 @@ jobs:
 
   call-build-and-push:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [node-lint, python-lint]
     permissions:
       contents: read
       packages: write
