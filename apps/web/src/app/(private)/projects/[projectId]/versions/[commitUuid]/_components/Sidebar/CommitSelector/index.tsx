@@ -156,7 +156,6 @@ export default function CommitSelector({
   const [deleteCommit, setDeleteCommit] = useState<number | null>(null)
 
   const canPublish = !currentCommit.mergedAt
-  const isHead = currentCommit.id === headCommit?.id
   const [selectedTab, setSelectedTab] = useState<'current' | 'archived'>(
     !currentCommit.mergedAt || currentCommit.id == headCommit?.id
       ? 'current'
@@ -228,7 +227,7 @@ export default function CommitSelector({
           Publish
         </Button>
       ) : null}
-      {isHead ? (
+      {currentCommit.mergedAt ? (
         <Button variant='outline' fullWidth onClick={() => setOpen(true)}>
           New version
         </Button>
