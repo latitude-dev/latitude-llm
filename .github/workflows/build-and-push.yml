@@ -207,7 +207,7 @@ jobs:
             SENTRY_PROJECT=${{ matrix.private && secrets.SENTRY_PROJECT || '' }}
             AWS_REGION=${{ matrix.private && vars.AWS_REGION || '' }}
             S3_BUCKET=${{ matrix.private && vars.STATIC_ASSETS_S3_BUCKET || '' }}
-            STATIC_ASSETS_HOST={{ matrix.private && vars.STATIC_ASSETS_HOST || '' }}
+            STATIC_ASSETS_HOST=${{ matrix.private && vars.STATIC_ASSETS_HOST || '' }}
             BUILD_ID=${{ github.sha }}
 
   run-migrations:
