@@ -50,13 +50,14 @@ export async function getToolDefinitionFromDocument({
   ) => Promise<{ path: string; content: string } | undefined>
   streamManager: StreamManager
   context: TelemetryContext
-}): Promise<Tool> {
+}): Promise<{ name: string; toolDefinition: Tool }> {
   const metadata = await scan({
     prompt: document.content,
     fullPath: document.path,
     referenceFn,
   })
 
+  const name = metadata.config['name'] as string | undefined
   const description = metadata.config['description'] as string | undefined
   const params = Object.fromEntries(
     Object.entries(
@@ -77,7 +78,7 @@ export async function getToolDefinitionFromDocument({
     params[param] = DEFAULT_PARAM_DEFINITION
   })
 
-  return {
+  const toolDefinition: Tool = {
     description: description ?? 'An AI agent',
     parameters: {
       type: 'object',
@@ -155,6 +156,11 @@ export async function getToolDefinitionFromDocument({
         return result
       }
     },
+  }
+
+  return {
+    name: name ?? getAgentToolName(document.path),
+    toolDefinition,
   }
 }
 
