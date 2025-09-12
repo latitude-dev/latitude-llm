@@ -79,6 +79,7 @@ export type Events =
   | 'documentTriggerDeleted'
   | 'documentTriggerEventCreated'
   | 'promocodeClaimed'
+  | 'subscriptionUpdated'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -588,6 +589,15 @@ export type DocumentTriggerDeletedEvent = LatitudeEventGeneric<
   }
 >
 
+export type SubscriptionUpdatedEvent = LatitudeEventGeneric<
+  'subscriptionUpdated',
+  {
+    workspace: Workspace
+    subscription: Subscription
+    userEmail: string
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -639,6 +649,7 @@ export type LatitudeEvent =
   | DocumentTriggerDeletedEvent
   | DocumentTriggerEventCreatedEvent
   | PromocodeClaimedEvent
+  | SubscriptionUpdatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -691,4 +702,5 @@ export interface IEventsHandlers {
   documentTriggerDeleted: EventHandler<DocumentTriggerDeletedEvent>[]
   documentTriggerEventCreated: EventHandler<DocumentTriggerEventCreatedEvent>[]
   promocodeClaimed: EventHandler<PromocodeClaimedEvent>[]
+  subscriptionUpdated: EventHandler<SubscriptionUpdatedEvent>[]
 }

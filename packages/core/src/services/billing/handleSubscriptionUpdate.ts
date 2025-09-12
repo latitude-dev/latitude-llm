@@ -13,6 +13,7 @@ import { STRIPE_PLANS, SubscriptionPlans } from '../../plans'
 import { subscriptions } from '../../schema/models/subscriptions'
 import { workspaces } from '../../schema/models/workspaces'
 import { issueSubscriptionGrants } from '../subscriptions/grants'
+import { publisher } from '../../events/publisher'
 
 function findTargetPlan({
   stripeSubscription,
@@ -88,98 +89,115 @@ export async function handleSubscriptionUpdate(
     )
   }
 
-  return await transaction.call(async (tx) => {
-    // 2. Find user by email in our database
-    const user = await unsafelyFindUserByEmail(customerEmail, tx)
+  return await transaction.call(
+    async (tx) => {
+      // 2. Find user by email in our database
+      const user = await unsafelyFindUserByEmail(customerEmail, tx)
 
-    if (!user) {
-      throw new LatitudeError(`User with email ${customerEmail} not found.`, {
-        stripeCustomerId:
-          typeof stripeSubscription.customer === 'object'
-            ? stripeSubscription.customer.id
-            : stripeSubscription.customer?.toString(),
-      })
-    }
-
-    // 3. Find the first workspace for this user
-    // FIXME: This is not ok. If a user sign with a second email the payment
-    // will go to the first workspace found.
-    const unsafeWorkspace = await unsafelyFindWorkspacesFromUser(
-      user.id,
-      tx,
-    ).then((workspaces) => workspaces[0])
-    if (!unsafeWorkspace) {
-      throw new LatitudeError(`No workspace found for user ${user.id}.`, {
-        userId: user.id,
-      })
-    }
-
-    const workspace = unsafeWorkspace as Workspace
-    // 4. Check workspace's active subscription
-    let currentSubscription: Subscription | null = null
-    if (workspace.currentSubscriptionId) {
-      const [subscription] = await tx
-        .select()
-        .from(subscriptions)
-        .where(eq(subscriptions.id, workspace.currentSubscriptionId))
-        .limit(1)
-
-      if (subscription) {
-        currentSubscription = subscription
-      }
-    }
-
-    // 5. If the subscription is active, determine the target plan from Stripe
-    if (stripeSubscription.status === 'active') {
-      const targetPlan = findTargetPlan({ stripeSubscription })
-      const currentPlan = currentSubscription?.plan
-      // Already upgraded to the same or higher tier plan
-      if (currentPlan && currentPlan === targetPlan) {
-        return Result.ok({ workspace, subscription: currentSubscription })
-      }
-
-      const [newSubscription] = await tx
-        .insert(subscriptions)
-        .values({
-          workspaceId: workspace.id,
-          plan: targetPlan,
-        })
-        .returning()
-
-      if (!newSubscription) {
-        throw new LatitudeError('Failed to create new subscription record.', {
-          workspaceId: workspace.id.toString(),
-          plan: targetPlan,
+      if (!user) {
+        throw new LatitudeError(`User with email ${customerEmail} not found.`, {
+          stripeCustomerId:
+            typeof stripeSubscription.customer === 'object'
+              ? stripeSubscription.customer.id
+              : stripeSubscription.customer?.toString(),
         })
       }
 
-      // Assign it as the workspace's current subscription
-      const [updatedWorkspace] = await tx
-        .update(workspaces)
-        .set({ currentSubscriptionId: newSubscription.id })
-        .where(eq(workspaces.id, workspace.id))
-        .returning()
+      // 3. Find the first workspace for this user
+      // FIXME: This is not ok. If a user sign with a second email the payment
+      // will go to the first workspace found.
+      const unsafeWorkspace = await unsafelyFindWorkspacesFromUser(
+        user.id,
+        tx,
+      ).then((workspaces) => workspaces[0])
+      if (!unsafeWorkspace) {
+        throw new LatitudeError(`No workspace found for user ${user.id}.`, {
+          userId: user.id,
+        })
+      }
 
-      if (!updatedWorkspace) {
-        throw new LatitudeError(
-          'Failed to update workspace with new subscription.',
-          {
+      const workspace = unsafeWorkspace as Workspace
+      // 4. Check workspace's active subscription
+      let currentSubscription: Subscription | null = null
+      if (workspace.currentSubscriptionId) {
+        const [subscription] = await tx
+          .select()
+          .from(subscriptions)
+          .where(eq(subscriptions.id, workspace.currentSubscriptionId))
+          .limit(1)
+
+        if (subscription) {
+          currentSubscription = subscription
+        }
+      }
+
+      // 5. If the subscription is active, determine the target plan from Stripe
+      if (stripeSubscription.status === 'active') {
+        const targetPlan = findTargetPlan({ stripeSubscription })
+        const currentPlan = currentSubscription?.plan
+        // Already upgraded to the same or higher tier plan
+        if (currentPlan && currentPlan === targetPlan) {
+          return Result.ok({
+            workspace,
+            user,
+            subscription: currentSubscription,
+          })
+        }
+
+        const [newSubscription] = await tx
+          .insert(subscriptions)
+          .values({
+            workspaceId: workspace.id,
+            plan: targetPlan,
+          })
+          .returning()
+
+        if (!newSubscription) {
+          throw new LatitudeError('Failed to create new subscription record.', {
             workspaceId: workspace.id.toString(),
-          },
-        )
+            plan: targetPlan,
+          })
+        }
+
+        // Assign it as the workspace's current subscription
+        const [updatedWorkspace] = await tx
+          .update(workspaces)
+          .set({ currentSubscriptionId: newSubscription.id })
+          .where(eq(workspaces.id, workspace.id))
+          .returning()
+
+        if (!updatedWorkspace) {
+          throw new LatitudeError(
+            'Failed to update workspace with new subscription.',
+            {
+              workspaceId: workspace.id.toString(),
+            },
+          )
+        }
+
+        await issueSubscriptionGrants(
+          { subscription: newSubscription, workspace },
+          transaction,
+        ).then((r) => r.unwrap())
+
+        return Result.ok({
+          user,
+          workspace: updatedWorkspace,
+          subscription: newSubscription,
+        })
       }
 
-      await issueSubscriptionGrants(
-        { subscription: newSubscription, workspace },
-        transaction,
-      ).then((r) => r.unwrap())
-
-      return Result.ok({
-        workspace: updatedWorkspace,
-        subscription: newSubscription,
+      return Result.ok({ workspace, user, subscription: currentSubscription })
+    },
+    ({ workspace, subscription, user }) => {
+      publisher.publishLater({
+        type: 'subscriptionUpdated',
+        data: {
+          userEmail: user.email,
+          workspace,
+          subscription,
+        },
       })
-    }
-
-    return Result.ok({ workspace, subscription: currentSubscription })
-  })
+    },
+  )
 }
