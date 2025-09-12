@@ -28,7 +28,7 @@ export function ChartWrapper({
   return (
     <div
       className={cn(
-        'h-full w-full flex-1 flex flex-col gap-2 p-4 border rounded-lg',
+        'h-full w-full flex-1 flex flex-col gap-2 p-4 border rounded-xl',
         className,
         {
           'border-border': !error,

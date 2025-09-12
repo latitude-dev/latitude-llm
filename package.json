@@ -6,6 +6,7 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "buildExamples": "tsx ./examples/scripts/docs/buildDocs.ts",
+    "buildTypes": "turbo types:build --cache-dir=.turbo --filter=\"./packages/**\"",
     "watch:buildExamples": "chokidar 'examples/src/**/*' -c 'pnpm buildExamples'",
     "mintlify_docs": "cd docs && mintlify dev",
     "latitudeDocs": "pnpm buildExamples && concurrently \"pnpm watch:buildExamples\" \"pnpm mintlify_docs\"",

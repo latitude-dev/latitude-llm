@@ -227,11 +227,11 @@ export function LatteChatInput({
             iconProps={{
               name: 'rotate',
               color: 'latteInputForeground',
-              className:
-                'flex-shrink-0 group-hover:text-latte-input-foreground/75 -mt-px',
+              className: 'flex-shrink-0 -mt-px',
             }}
-            className='text-latte-input-foreground group-hover:text-latte-input-foreground/75 ml-1'
+            className='ml-1'
             userSelect={false}
+            textColor='latteInputForeground'
           >
             New chat
           </Button>

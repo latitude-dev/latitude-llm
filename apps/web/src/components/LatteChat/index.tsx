@@ -202,7 +202,7 @@ function LatteChatUI() {
                                 color: 'destructiveMutedForeground',
                                 className: 'flex-shrink-0',
                               },
-                              className: 'text-destructive-muted-foreground',
+                              textColor: 'destructiveMutedForeground',
                               userSelect: false,
                             }}
                           />
@@ -216,7 +216,7 @@ function LatteChatUI() {
                               color: 'destructiveMutedForeground',
                               className: 'flex-shrink-0',
                             }}
-                            className='text-destructive-muted-foreground'
+                            textColor='destructiveMutedForeground'
                             userSelect={false}
                           >
                             Start a new chat

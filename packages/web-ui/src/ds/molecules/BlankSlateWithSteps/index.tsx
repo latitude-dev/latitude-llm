@@ -21,7 +21,7 @@ export function BlankSlateStep({
   return (
     <div
       className={cn(
-        'max-w-md bg-background border border-border rounded-lg p-4 flex flex-col gap-4',
+        'max-w-md bg-background border border-border rounded-xl p-4 flex flex-col gap-4',
         className,
       )}
     >
@@ -39,7 +39,7 @@ export function BlankSlateStepSkeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'max-w-md bg-background border border-border rounded-lg p-4 flex flex-col gap-4',
+        'max-w-md bg-background border border-border rounded-xl p-4 flex flex-col gap-4',
         className,
       )}
     >
@@ -53,7 +53,7 @@ export function BlankSlateStepSkeleton({ className }: { className?: string }) {
         {[1, 2, 3].map((index) => (
           <div
             key={index}
-            className='flex flex-row items-center justify-between gap-4 p-4 rounded-lg'
+            className='flex flex-row items-center justify-between gap-4 p-4 rounded-xl'
           >
             <div className='flex flex-col gap-1 flex-grow'>
               <Skeleton className='w-3/4 h-5' />
@@ -77,7 +77,7 @@ export function BlankSlateWithSteps({
   children?: ReactNode
 }) {
   return (
-    <div className='rounded-lg w-full py-16 flex flex-col gap-4 items-center justify-center bg-gradient-to-b from-secondary to-transparent'>
+    <div className='rounded-2xl w-full py-16 flex flex-col gap-4 items-center justify-center bg-gradient-to-b from-secondary to-transparent'>
       <div className='max-w-md flex flex-col items-center gap-2'>
         <Text.H4B>{title}</Text.H4B>
         <Text.H5 align='center' display='block' color='foregroundMuted'>

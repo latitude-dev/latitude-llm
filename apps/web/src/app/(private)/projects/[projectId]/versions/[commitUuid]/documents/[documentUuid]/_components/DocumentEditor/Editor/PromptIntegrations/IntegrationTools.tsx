@@ -58,7 +58,7 @@ function IntegrationToolItem({
           disabled={disabled}
         />
       </div>
-      <Text.H6 color='foregroundMuted'>{tool.description}</Text.H6>
+      <Text.H5 color='foregroundMuted'>{tool.description}</Text.H5>
       <div className='flex flex-wrap items-center'>
         {Object.keys(tool.inputSchema.properties).map((property) => {
           const type = tool.inputSchema.properties[property]!.type
