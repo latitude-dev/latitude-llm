@@ -120,6 +120,11 @@ ENV AWS_REGION=$AWS_REGION
 ENV S3_BUCKET=$S3_BUCKET
 ENV BUILD_ID=$BUILD_ID
 
+# Install AWS CLI v2 for S3 uploads
+RUN if [ -n "$S3_BUCKET" ] && [ -n "$BUILD_ID" ]; then \
+  apk add --no-cache aws-cli; \
+fi
+
 RUN if [ -n "$S3_BUCKET" ] && [ -n "$BUILD_ID" ]; then \
   echo "Uploading static assets to S3..."; \
   chmod +x ./apps/web/scripts/upload-static-assets.sh && \
