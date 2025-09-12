@@ -5,7 +5,6 @@ import { Result, TypedResult } from '../../Result'
 import { ResolvedTools, ToolSource, ToolSourceData } from './types'
 import { DocumentVersion } from '../../../browser'
 import { DocumentVersionsRepository } from '../../../repositories'
-import { getAgentToolName } from '../../../services/agents/helpers'
 import { getToolDefinitionFromDocument } from '../../../services/agents/agentsAsTools'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Tool } from 'ai'
@@ -104,17 +103,19 @@ export async function resolveAgentsAsTools({
     { definition: Tool; sourceData: ToolSourceData },
   ][] = await Promise.all(
     agentDocs.map(async (doc) => {
+      const { name, toolDefinition } = await getToolDefinitionFromDocument({
+        workspace,
+        commit: promptSource.commit,
+        document: doc,
+        referenceFn,
+        streamManager,
+        context: streamManager.$completion!.context,
+      })
+
       return [
-        getAgentToolName(doc.path),
+        name,
         {
-          definition: await getToolDefinitionFromDocument({
-            workspace,
-            commit: promptSource.commit,
-            document: doc,
-            referenceFn,
-            streamManager,
-            context: streamManager.$completion!.context,
-          }),
+          definition: toolDefinition,
           sourceData: {
             source: ToolSource.AgentAsTool,
             agentPath: doc.path,
