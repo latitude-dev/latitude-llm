@@ -19,7 +19,7 @@ if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_
 fi
 
 STATIC_DIR="./.next/static"
-S3_PREFIX="static-assets/$BUILD_ID"
+S3_PREFIX="static-assets/$BUILD_ID/_next/static"
 
 echo "Uploading static assets to S3..."
 echo "Bucket: $S3_BUCKET"
@@ -54,3 +54,4 @@ echo "Static assets uploaded successfully to s3://$S3_BUCKET/$S3_PREFIX/"
 S3_URL="https://$S3_BUCKET.s3.$AWS_REGION.amazonaws.com/$S3_PREFIX"
 echo "Static assets URL: $S3_URL"
 echo "Note: NEXT_PUBLIC_STATIC_ASSETS_URL is set in the Docker container at runtime"
+
