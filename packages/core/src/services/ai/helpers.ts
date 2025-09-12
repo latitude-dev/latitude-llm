@@ -73,6 +73,7 @@ function validateVertexConfig({
   if (result.success) {
     const config = result.data
     const privateKey = config.googleCredentials.privateKey.replace(/\\n/g, '\n')
+
     return Result.ok({
       ...config,
       googleCredentials: {

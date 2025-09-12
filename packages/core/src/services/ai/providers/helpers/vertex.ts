@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 export const vertexConfigurationSchema = z.object({
+  baseUrl: z.string().optional(),
   project: z.string(),
   location: z.string(),
   googleCredentials: z.object({

@@ -51,6 +51,15 @@ export function VertexConfiguration() {
           fieldNamespace: '[googleCredentials][privateKey]',
         })}
       />
+      <Input
+        type='text'
+        label='Base URL (Optional)'
+        info='Base URL for the Google Vertex API calls e.g. to use proxy servers. By default, it is constructed using the location and project.'
+        name={buildConfigFieldName({
+          fieldNamespace: 'baseUrl',
+        })}
+        placeholder='https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/publishers/google'
+      />
     </>
   )
 }
