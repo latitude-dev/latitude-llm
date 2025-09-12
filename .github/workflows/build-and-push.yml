@@ -1,7 +1,6 @@
 name: Build and Push Docker Images
 
-on:
-  workflow_call
+on: workflow_call
 
 concurrency:
   group: build-and-push-${{ github.ref }}
@@ -194,20 +193,20 @@ jobs:
           cache-from: type=registry,ref=${{ matrix.private && format('{0}/{1}', env.ECR_REGISTRY, matrix.repo_name) || format('{0}/{1}/{2}', matrix.registry, matrix.owner, matrix.repo_name) }}:latest
           cache-to: type=inline
           secrets: ${{ matrix.private && format('SENTRY_AUTH_TOKEN={0}', secrets.SENTRY_AUTH_TOKEN) || '' }}
-           build-args: |
-             NEXT_PUBLIC_DOCS_URL=${{ matrix.private && vars.NEXT_PUBLIC_DOCS_URL || '' }}
-             NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ matrix.private && vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL || '' }}
-             NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
-             NEXT_PUBLIC_POSTHOG_KEY=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_KEY || '' }}
-             NEXT_PUBLIC_SENTRY_WEB_DSN=${{ matrix.private && vars.SENTRY_WEB_DSN || '' }}
-             SENTRY_ORG=${{ matrix.private && secrets.SENTRY_ORG || '' }}
-             SENTRY_PROJECT=${{ matrix.private && secrets.SENTRY_PROJECT || '' }}
-             NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
-             AWS_ACCESS_KEY_ID=${{ matrix.private && secrets.AWS_ACCESS_KEY_ID || '' }}
-             AWS_SECRET_ACCESS_KEY=${{ matrix.private && secrets.AWS_SECRET_ACCESS_KEY || '' }}
-             AWS_REGION=${{ matrix.private && vars.AWS_REGION || '' }}
-             S3_BUCKET=${{ matrix.private && vars.STATIC_ASSETS_S3_BUCKET || '' }}
-             BUILD_ID=${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_DOCS_URL=${{ matrix.private && vars.NEXT_PUBLIC_DOCS_URL || '' }}
+            NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ matrix.private && vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL || '' }}
+            NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
+            NEXT_PUBLIC_POSTHOG_KEY=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_KEY || '' }}
+            NEXT_PUBLIC_SENTRY_WEB_DSN=${{ matrix.private && vars.SENTRY_WEB_DSN || '' }}
+            SENTRY_ORG=${{ matrix.private && secrets.SENTRY_ORG || '' }}
+            SENTRY_PROJECT=${{ matrix.private && secrets.SENTRY_PROJECT || '' }}
+            NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
+            AWS_ACCESS_KEY_ID=${{ matrix.private && secrets.AWS_ACCESS_KEY_ID || '' }}
+            AWS_SECRET_ACCESS_KEY=${{ matrix.private && secrets.AWS_SECRET_ACCESS_KEY || '' }}
+            AWS_REGION=${{ matrix.private && vars.AWS_REGION || '' }}
+            S3_BUCKET=${{ matrix.private && vars.STATIC_ASSETS_S3_BUCKET || '' }}
+            BUILD_ID=${{ github.sha }}
 
   run-migrations:
     needs: [build-and-push]
