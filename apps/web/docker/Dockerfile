@@ -80,6 +80,17 @@ ENV NEXT_PUBLIC_SENTRY_WEB_DSN=$NEXT_PUBLIC_SENTRY_WEB_DSN
 
 ENV NEXT_PUBLIC_DOCS_URL=$NEXT_PUBLIC_DOCS_URL
 
+ARG AWS_REGION
+ARG S3_BUCKET
+ARG BUILD_ID
+
+ENV AWS_REGION=$AWS_REGION
+ENV S3_BUCKET=$S3_BUCKET
+ENV BUILD_ID=$BUILD_ID
+
+# Set static assets URL for build time
+ENV NEXT_PUBLIC_STATIC_ASSETS_URL=https://$S3_BUCKET.s3.$AWS_REGION.amazonaws.com/static-assets/$BUILD_ID
+
 WORKDIR /app
 
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
@@ -106,18 +117,14 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   NEXT_PUBLIC_SENTRY_WEB_DSN=$NEXT_PUBLIC_SENTRY_WEB_DSN \
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(cat /run/secrets/NEXT_SERVER_ACTIONS_ENCRYPTION_KEY 2>/dev/null || echo '')" \
   NEXT_PUBLIC_DOCS_URL=$NEXT_PUBLIC_DOCS_URL \
+  AWS_REGION=$AWS_REGION \
+  S3_BUCKET=$S3_BUCKET \
+  BUILD_ID=$BUILD_ID \
+  NEXT_PUBLIC_STATIC_ASSETS_URL=$NEXT_PUBLIC_STATIC_ASSETS_URL \
   NODE_OPTIONS="--max-old-space-size=8192" \
   pnpm turbo build --filter="${PROJECT}..."
 
 # Upload static assets to S3 for persistent availability
-
-ARG AWS_REGION
-ARG S3_BUCKET
-ARG BUILD_ID
-
-ENV AWS_REGION=$AWS_REGION
-ENV S3_BUCKET=$S3_BUCKET
-ENV BUILD_ID=$BUILD_ID
 
 # Install AWS CLI v2 for S3 uploads
 RUN if [ -n "$S3_BUCKET" ] && [ -n "$BUILD_ID" ]; then \
