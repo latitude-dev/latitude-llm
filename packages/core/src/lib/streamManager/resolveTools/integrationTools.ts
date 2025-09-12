@@ -8,7 +8,6 @@ import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSch
 import { Tool } from 'ai'
 import { callIntegrationTool } from '../../../services/integrations/McpClient/callTool'
 import { StreamManager } from '..'
-import { LATITUDE_TOOL_PREFIX } from '@latitude-data/constants'
 import { telemetry } from '../../../telemetry'
 import { publisher } from '../../../events/publisher'
 
@@ -60,9 +59,7 @@ export async function resolveIntegrationTools({
     if (toolName === '*') {
       Object.entries(integrationAvailableTools).forEach(
         ([toolName, definition]) => {
-          resolvedTools[
-            `${LATITUDE_TOOL_PREFIX}_${integrationName}_${toolName}`
-          ] = {
+          resolvedTools[toolName] = {
             definition,
             sourceData: {
               source: ToolSource.Integration,
@@ -84,7 +81,7 @@ export async function resolveIntegrationTools({
       )
     }
 
-    resolvedTools[`${LATITUDE_TOOL_PREFIX}_${integrationName}_${toolName}`] = {
+    resolvedTools[toolName] = {
       definition: integrationAvailableTools[toolName],
       sourceData: { source: ToolSource.Integration, integrationName, toolName },
     }
@@ -123,7 +120,7 @@ async function addIntegrationTools({
         parameters: mcpTool.inputSchema,
         execute: async (args, toolCall) => {
           const $tool = telemetry.tool(streamManager.$completion!.context, {
-            name: `${LATITUDE_TOOL_PREFIX}_${integrationName}_${mcpTool.name}`,
+            name: mcpTool.name,
             call: {
               id: toolCall.toolCallId,
               arguments: args,
