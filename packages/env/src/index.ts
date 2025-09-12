@@ -248,6 +248,9 @@ export const env = createEnv({
     BULL_ADMIN_USER: z.string().optional().default('admin'),
     BULL_ADMIN_PASS: z.string().optional().default('admin'),
 
+    // ECS Task Protection
+    ECS_AGENT_URI: z.string().optional(),
+
     // MCP Server feature configurations
     EKS_CA_DATA: z.string().optional(),
     EKS_CLUSTER_NAME: z.string().optional(),
@@ -321,5 +324,6 @@ export const env = createEnv({
       'tool-responses-generator',
     DEFAULT_PROVIDER_API_KEY:
       process.env.DEFAULT_PROVIDER_API_KEY ?? 'default_api_key',
+    ECS_AGENT_URI: process.env.ECS_AGENT_URI,
   },
 })

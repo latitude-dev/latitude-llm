@@ -12,6 +12,7 @@ import {
 import { startWorkers, setupSchedules } from './workers'
 import { env } from '@latitude-data/env'
 import * as queues from '@latitude-data/core/queues'
+import { jobTracker } from './workers/utils/jobTracker'
 
 setupSchedules()
 
@@ -70,10 +71,22 @@ const server = app.listen(port, host, () => {
 })
 
 const gracefulShutdown = async (signal: string) => {
-  console.log(`Received ${signal}, closing workers and server...`)
+  console.log(`Received ${signal}, initiating graceful shutdown...`)
 
-  await Promise.all(Object.values(workers).map((w) => w.close()))
+  // 1) Stop accepting new jobs
+  await Promise.all(workers.map((w) => w.pause()))
 
+  // 2) Compute remaining active jobs while paused
+  const remaining = jobTracker.getActiveJobsCount()
+  console.log(`Paused workers. Remaining active jobs: ${remaining}`)
+
+  // 3) Wait for active jobs to complete
+  await Promise.all(workers.map((w) => w.close()))
+
+  // 4) Disable scale-in protection after all jobs finished
+  await jobTracker.forceDisableProtection()
+
+  // 5) Close HTTP server and exit
   server.close(() => process.exit(0))
 }
 
