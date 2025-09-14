@@ -92,13 +92,13 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
         response,
         messages: responseMessages,
         tokenUsage,
-        finishReason: await finishReason,
+        finishReason,
       })
       this.endProviderStep({
         responseMessages,
         tokenUsage,
         response,
-        finishReason: await finishReason,
+        finishReason,
       })
       this.endStep()
 

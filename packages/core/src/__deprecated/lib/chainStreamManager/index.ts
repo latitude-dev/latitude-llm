@@ -132,14 +132,23 @@ export class ChainStreamManager {
 
         if (abortSignal) {
           if (abortSignal.aborted) {
-            this.endStream()
-            return
+            return this.error(
+              new ChainError({
+                message: 'Stream aborted by user',
+                code: RunErrorCodes.AbortError,
+              }),
+            )
           }
 
           abortSignal.addEventListener(
             'abort',
             () => {
-              this.endStream()
+              this.error(
+                new ChainError({
+                  message: 'Stream aborted by user',
+                  code: RunErrorCodes.AbortError,
+                }),
+              )
             },
             { once: true },
           )

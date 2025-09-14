@@ -1,7 +1,9 @@
 import { env } from '@latitude-data/env'
 import { Queue, QueueOptions } from 'bullmq'
+import { buildRedisConnection, REDIS_KEY_PREFIX } from '../../redis'
 import { Queues } from './types'
-import { buildRedisConnection } from '../../redis'
+
+export { Queues } from './types'
 
 let _queues:
   | {
@@ -15,6 +17,7 @@ let _queues:
       tracingQueue: Queue
       webhooksQueue: Queue
       latteQueue: Queue
+      runsQueue: Queue
     }
   | undefined
 
@@ -22,7 +25,7 @@ export async function queues() {
   if (_queues) return _queues
 
   const options: QueueOptions = {
-    prefix: 'latitude',
+    prefix: REDIS_KEY_PREFIX,
     connection: await buildRedisConnection({
       host: env.QUEUE_HOST,
       port: env.QUEUE_PORT,
@@ -50,6 +53,7 @@ export async function queues() {
     tracingQueue: new Queue(Queues.tracingQueue, options),
     webhooksQueue: new Queue(Queues.webhooksQueue, options),
     latteQueue: new Queue(Queues.latteQueue, options),
+    runsQueue: new Queue(Queues.runsQueue, options),
   }
 
   return _queues

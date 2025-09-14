@@ -50,12 +50,10 @@ class InternalExporter implements SpanExporter {
       .then((r) => r.unwrap())
       .then(() => callback({ code: ExportResultCode.SUCCESS }))
       .catch((error: Error) => {
-        // TODO(tracing): temporal error logging
-        console.error(error)
         try {
           captureException(error)
         } catch {
-          // noop
+          console.error(error)
         }
         callback({ code: ExportResultCode.FAILED, error })
       })

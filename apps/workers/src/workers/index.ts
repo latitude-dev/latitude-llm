@@ -8,6 +8,7 @@ import {
 } from './worker-definitions/eventsWorker'
 import { startLatteWorker } from './worker-definitions/latteWorker'
 import { startMaintenanceWorker } from './worker-definitions/maintenanceWorker'
+import { startRunsWorker } from './worker-definitions/runsWorker'
 import { startTracingWorker } from './worker-definitions/tracingWorker'
 import { startWebhooksWorker } from './worker-definitions/webhooksWorker'
 
@@ -22,6 +23,7 @@ export async function startWorkers() {
   const documentsWorker = startDocumentsWorker()
   const documentSuggestionsWorker = startDocumentSuggestionsWorker()
   const tracingWorker = startTracingWorker()
+  const runsWorker = startRunsWorker()
 
   const workers = [
     defaultWorker,
@@ -34,6 +36,7 @@ export async function startWorkers() {
     documentsWorker,
     documentSuggestionsWorker,
     tracingWorker,
+    runsWorker,
   ]
 
   return Promise.all(workers)

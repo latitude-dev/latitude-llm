@@ -1,7 +1,6 @@
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Job } from 'bullmq'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LogSources, Providers } from '../../../browser'
 import { Result } from '../../../lib/Result'
 import * as factories from '../../../tests/factories'
@@ -20,9 +19,13 @@ describe('runDocumentJob', () => {
   let commit: any
 
   vi.spyOn(WebsocketClient, 'sendEvent').mockImplementation(vi.fn())
-  vi.mock('../../../redis', () => ({
-    buildRedisConnection: vi.fn().mockResolvedValue({} as any),
-  }))
+  vi.mock(import('../../../redis'), async (importOriginal) => {
+    const actual = await importOriginal()
+    return {
+      ...actual,
+      buildRedisConnection: vi.fn(),
+    }
+  })
   vi.spyOn(
     runDocumentAtCommitWithAutoToolResponses,
     'runDocumentAtCommitWithAutoToolResponses',

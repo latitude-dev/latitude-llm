@@ -2,16 +2,19 @@ import { captureException } from '$/common/sentry'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter, runPresenterLegacy } from '$/presenters/runPresenter'
 import { ChatRoute } from '$/routes/api/v3/conversations/chat/chat.route'
+import { compareVersion } from '$/utils/versionComparison'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
+import {
+  awaitClientToolResult,
+  ToolHandler,
+} from '@latitude-data/core/lib/streamManager/clientTools/handlers'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
+import { addMessagesLegacy } from '@latitude-data/core/services/__deprecated/documentLogs/addMessages/index'
 import { addMessages } from '@latitude-data/core/services/documentLogs/addMessages/index'
 import { BACKGROUND, telemetry } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
-import { buildClientToolHandlersMap } from '../../projects/versions/documents/run'
-import { addMessagesLegacy } from '@latitude-data/core/services/__deprecated/documentLogs/addMessages/index'
-import { compareVersion } from '$/utils/versionComparison'
 
 // @ts-expect-error: streamSSE has type issues
 export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
@@ -96,6 +99,13 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   }
 
   return c.json(body, 200)
+}
+
+function buildClientToolHandlersMap(tools: string[]) {
+  return tools.reduce((acc: Record<string, ToolHandler>, toolName: string) => {
+    acc[toolName] = awaitClientToolResult
+    return acc
+  }, {})
 }
 
 async function _addMessages(args: any) {

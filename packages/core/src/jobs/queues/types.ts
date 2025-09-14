@@ -9,4 +9,5 @@ export enum Queues {
   documentSuggestionsQueue = 'documentSuggestionsQueue',
   tracingQueue = 'tracing',
   latteQueue = 'latteQueue',
+  runsQueue = 'runsQueue',
 }

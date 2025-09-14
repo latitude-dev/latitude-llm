@@ -37,6 +37,7 @@ export enum RunErrorCodes {
   Unknown = 'unknown_error',
   UnsupportedProviderResponseTypeError = 'unsupported_provider_response_type_error',
   PaymentRequiredError = 'payment_required_error',
+  AbortError = 'abort_error',
 }
 // NOTE: If you add a new error code, please add it to the pg enum in models/runErrors.ts
 

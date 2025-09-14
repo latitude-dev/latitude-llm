@@ -169,7 +169,6 @@ describe('POST /run', () => {
       const response = new Promise((resolve) => {
         resolve({ text: 'Hello', usage: {} })
       })
-
       const trace = createTelemetryTrace({})
 
       mocks.runDocumentAtCommit.mockReturnValue(

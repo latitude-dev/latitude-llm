@@ -1,6 +1,7 @@
-import { Worker, WorkerOptions } from 'bullmq'
 import { Queues } from '@latitude-data/core/queues/types'
+import { REDIS_KEY_PREFIX } from '@latitude-data/core/redis'
 import { captureException } from '@latitude-data/core/utils/workers/sentry'
+import { Worker, WorkerOptions } from 'bullmq'
 import { WORKER_OPTIONS } from './connectionConfig'
 import { createJobHandler } from './createJobHandler'
 import { jobTracker } from './jobTracker'
@@ -18,7 +19,7 @@ export function createWorker<T extends Record<string, Function>>(
 ): Worker {
   const worker = new Worker(queue, createJobHandler(jobMappings), {
     ...workerOptions,
-    prefix: 'latitude',
+    prefix: REDIS_KEY_PREFIX,
   })
 
   worker.on('error', (error: Error) => {

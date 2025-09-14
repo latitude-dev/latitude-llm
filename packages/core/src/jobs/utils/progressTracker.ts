@@ -1,6 +1,6 @@
-import { Redis, RedisOptions } from 'ioredis'
 import { env } from '@latitude-data/env'
-import { buildRedisConnection } from '../../redis'
+import { Redis, RedisOptions } from 'ioredis'
+import { buildRedisConnection, REDIS_KEY_PREFIX } from '../../redis'
 
 export type TrackedProgress = {
   total: number
@@ -22,7 +22,7 @@ export class ProgressTracker {
         // Use 'any' or a more specific type for options
         host: env.CACHE_HOST,
         port: env.CACHE_PORT,
-        keyPrefix: 'latitude',
+        keyPrefix: REDIS_KEY_PREFIX,
       }
       if (env.CACHE_PASSWORD) {
         redisOptions.password = env.CACHE_PASSWORD

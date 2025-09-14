@@ -167,6 +167,17 @@ export type LatteThreadUpdateArgs = {
   | LatteThreadError
 )
 
+type LatteProjectChangesArgs = {
+  threadUuid: string
+  changes: LatteChange[]
+}
+
+export type DocumentRunEventArgs = {
+  event: string
+  data: unknown
+  jobId: string
+}
+
 export type WebServerToClientEvents = {
   documentBatchRunStatus: (args: DocumentBatchRunStatusArgs) => void
   experimentStatus: (args: ExperimentStatusArgs) => void
@@ -182,10 +193,8 @@ export type WebServerToClientEvents = {
   triggerDeleted: (args: DocumentTriggerDeletedArgs) => void
   triggerEventCreated: (args: DocumentTriggerEventCreatedArgs) => void
   latteThreadUpdate: (args: LatteThreadUpdateArgs) => void
-  latteProjectChanges: (args: {
-    threadUuid: string
-    changes: LatteChange[]
-  }) => void
+  latteProjectChanges: (args: LatteProjectChangesArgs) => void
+  documentRunEvent: (args: DocumentRunEventArgs) => void
 }
 
 export type WebClientToServerEvents = {
@@ -247,6 +256,10 @@ export type WorkersClientToServerEvents = {
   }) => void
   latteProjectChanges: (args: {
     workspaceId: number
-    data: { threadUuid: string; changes: LatteChange[] }
+    data: LatteProjectChangesArgs
+  }) => void
+  documentRunEvent: (args: {
+    workspaceId: number
+    data: DocumentRunEventArgs
   }) => void
 }

@@ -5,41 +5,53 @@ import {
 import { captureException } from '$/common/sentry'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter, runPresenterLegacy } from '$/presenters/runPresenter'
-import { LogSources } from '@latitude-data/core/browser'
+import { compareVersion } from '$/utils/versionComparison'
+import {
+  Commit,
+  DocumentVersion,
+  LogSources,
+  Project,
+  Workspace,
+} from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
-import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
-import {
-  runDocumentAtCommit,
-  type RunDocumentAtCommitArgs,
-} from '@latitude-data/core/services/commits/runDocumentAtCommit'
-import { BACKGROUND } from '@latitude-data/core/telemetry'
+import { enqueueDocumentRunJob } from '@latitude-data/core/services/documents/enqueueDocumentRunJob'
 import { streamSSE } from 'hono/streaming'
+import { runHandler as runHandlerLegacy } from './__deprecated/run.handler'
 import { RunRoute } from './run.route'
-import {
-  awaitClientToolResult,
-  ToolHandler,
-} from '@latitude-data/core/lib/streamManager/clientTools/handlers'
-import {
-  runDocumentAtCommitLegacy,
-  type RunDocumentAtCommitLegacyArgs,
-} from '@latitude-data/core/services/__deprecated/commits/runDocumentAtCommit'
-import { compareVersion } from '$/utils/versionComparison'
+
+type RunHandlerContext = {
+  c: Parameters<AppRouteHandler<RunRoute>>[0]
+  workspace: Workspace
+  project: Project
+  commit: Commit
+  document: DocumentVersion
+  parameters?: Record<string, unknown>
+  customIdentifier?: string
+  tools?: string[]
+  userMessage?: string
+  source?: LogSources
+  isLegacy: boolean
+}
 
 // https://github.com/honojs/middleware/issues/735
 // https://github.com/orgs/honojs/discussions/1803
 // @ts-expect-error: streamSSE has type issues with zod-openapi
-export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
+export const runHandler: AppRouteHandler<RunRoute> = async (c, next) => {
+  const { stream, background } = c.req.valid('json')
+  if (!background) return runHandlerLegacy(c, next)
+
+  const context = await buildRunHandlerContext(c)
+  if (stream) return handleStreamingMode(context)
+  return await handleNonStreamingMode(context)
+}
+
+async function buildRunHandlerContext(
+  c: Parameters<AppRouteHandler<RunRoute>>[0],
+): Promise<RunHandlerContext> {
   const { projectId, versionUuid } = c.req.valid('param')
-  const {
-    path,
-    parameters,
-    customIdentifier,
-    tools,
-    stream: useSSE,
-    userMessage,
-    __internal,
-  } = c.req.valid('json')
+  const { path, parameters, customIdentifier, tools, userMessage, __internal } =
+    c.req.valid('json')
   const workspace = c.get('workspace')
   const { document, commit, project } = await getData({
     workspace,
@@ -58,86 +70,125 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     })
   }
 
+  const source = __internal?.source ?? LogSources.API
   const sdkVersion = c.req.header('X-Latitude-SDK-Version')
   const isLegacy = !compareVersion(sdkVersion, '5.0.0')
 
-  const legacyArgs = {
+  return {
+    c,
     workspace,
-    document,
+    project,
     commit,
+    document,
     parameters,
     customIdentifier,
-    source: __internal?.source ?? LogSources.API,
-    abortSignal: c.req.raw.signal,
+    tools,
+    userMessage,
+    source,
+    isLegacy,
   }
-  const result = await _runDocumentAtCommit(
-    isLegacy
-      ? {
-          isLegacy: true,
-          data: legacyArgs,
-        }
-      : {
-          isLegacy: false,
-          data: {
-            ...legacyArgs,
-            context: BACKGROUND({ workspaceId: workspace.id }),
-            tools: useSSE ? buildClientToolHandlersMap(tools ?? []) : {},
-            userMessage,
-          },
-        },
-  ).then((r) => r.unwrap())
+}
 
-  if (useSSE) {
-    return streamSSE(
-      c,
-      async (stream) => {
+async function handleStreamingMode({
+  c,
+  workspace,
+  project,
+  commit,
+  document,
+  parameters,
+  customIdentifier,
+  tools,
+  userMessage,
+  source,
+  isLegacy,
+}: RunHandlerContext) {
+  return streamSSE(
+    c,
+    async (stream) => {
+      const abortController = new AbortController()
+      stream.onAbort(() => {
+        abortController.abort()
+        stream.close()
+      })
+
+      try {
         let id = 0
-
-        c.req.raw.signal.addEventListener('abort', () => {
-          stream.close()
-        })
-
-        try {
-          for await (const event of streamToGenerator(
-            result.stream,
-            c.req.raw.signal,
-          )) {
-            const data = event.data
-
+        const { result } = await enqueueDocumentRunJob({
+          workspaceId: workspace.id,
+          projectId: project.id,
+          commitUuid: commit.uuid,
+          documentUuid: document.documentUuid,
+          parameters,
+          customIdentifier,
+          tools,
+          userMessage,
+          source,
+          isLegacy,
+          abortSignal: abortController.signal,
+          onEvent: ({ event, data }) => {
             stream.writeSSE({
               id: String(id++),
-              event: event.event,
+              event: event,
               data: typeof data === 'string' ? data : JSON.stringify(data),
             })
-          }
-        } catch (error) {
-          // Handle abort errors gracefully - don't log them as actual errors
-          if (isAbortError(error)) {
-            // Client disconnected, close stream quietly
-            return
-          }
+          },
+        }).then((r) => r.unwrap())
 
-          // Re-throw other errors to be handled by the error callback
-          throw error
-        }
-      },
-      (error: Error) => {
-        // Don't log abort errors as they are expected when clients disconnect
+        // Wait for stream to finish
+        const error = await result.error
+        if (error) throw error
+      } catch (error) {
+        // Handle abort errors gracefully - don't log them as actual errors
         if (isAbortError(error)) {
-          return Promise.resolve()
+          // Client disconnected, close stream quietly
+          return
         }
 
-        const unknownError = getUnknownError(error)
-
-        if (unknownError) {
-          captureException(error)
-        }
-
+        // Re-throw other errors to be handled by the error callback
+        throw error
+      }
+    },
+    (error: Error) => {
+      // Don't log abort errors as they are expected when clients disconnect
+      if (isAbortError(error)) {
         return Promise.resolve()
-      },
-    )
-  }
+      }
 
+      const unknownError = getUnknownError(error)
+      if (unknownError) captureException(error)
+
+      return Promise.resolve()
+    },
+  )
+}
+
+async function handleNonStreamingMode({
+  c,
+  workspace,
+  project,
+  commit,
+  document,
+  parameters,
+  customIdentifier,
+  userMessage,
+  source,
+  isLegacy,
+}: RunHandlerContext) {
+  const { result } = await enqueueDocumentRunJob({
+    workspaceId: workspace.id,
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+    parameters,
+    customIdentifier,
+    tools: undefined, // Note: tools are not supported for non streaming requests
+    userMessage,
+    source,
+    isLegacy,
+    abortSignal: c.req.raw.signal, // FIXME: this is not working
+  }).then((r) => r.unwrap())
+
+  // Wait for stream to finish
   const error = await result.error
   if (error) throw error
 
@@ -146,9 +197,6 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     body = runPresenterLegacy({
       response: (await result.lastResponse)!,
       toolCalls: await result.toolCalls,
-      // @ts-expect-error: trace is not in the type of new runDocumentAtCommit
-      // (but it is in the legacy version)
-      trace: await result.trace,
     }).unwrap()
   } else {
     body = runPresenter({
@@ -157,28 +205,4 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   }
 
   return c.json(body)
-}
-
-export function buildClientToolHandlersMap(tools: string[]) {
-  return tools.reduce((acc: Record<string, ToolHandler>, toolName: string) => {
-    acc[toolName] = awaitClientToolResult
-    return acc
-  }, {})
-}
-
-type RunDocumentArgs<T extends boolean> = T extends true
-  ? { isLegacy: true; data: RunDocumentAtCommitLegacyArgs }
-  : T extends false
-    ? { isLegacy: false; data: RunDocumentAtCommitArgs }
-    : never
-async function _runDocumentAtCommit<T extends boolean>(
-  args: RunDocumentArgs<T>,
-) {
-  const { isLegacy } = args
-
-  if (isLegacy) {
-    return runDocumentAtCommitLegacy(args.data)
-  } else {
-    return runDocumentAtCommit(args.data)
-  }
 }
