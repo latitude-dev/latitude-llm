@@ -4,8 +4,17 @@ import { ReactNode } from 'react'
 import { LatteChat } from '$/components/LatteChat'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
+import type { ProviderLogDto } from '@latitude-data/core/browser'
 
-export function LatteLayout({ children }: { children: ReactNode }) {
+export function LatteLayout({
+  children,
+  initialThreadUuid,
+  initialProviderLog,
+}: {
+  children: ReactNode
+  initialThreadUuid?: string
+  initialProviderLog?: ProviderLogDto
+}) {
   return (
     <SplitPane
       direction='horizontal'
@@ -14,7 +23,10 @@ export function LatteLayout({ children }: { children: ReactNode }) {
       firstPane={children}
       secondPane={
         <ClientOnly>
-          <LatteChat />
+          <LatteChat
+            initialThreadUuid={initialThreadUuid}
+            initialProviderLog={initialProviderLog}
+          />
         </ClientOnly>
       }
     />

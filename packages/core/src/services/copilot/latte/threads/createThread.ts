@@ -2,6 +2,8 @@ import { LatteThread, User, Workspace, Project } from '../../../../browser'
 import { Result } from '../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../lib/Transaction'
 import { latteThreads } from '../../../../schema'
+import { cache as redis } from '../../../../cache'
+import { LAST_LATTE_THREAD_CACHE_KEY } from '../../../../constants'
 
 export function createLatteThread(
   {
@@ -29,6 +31,12 @@ export function createLatteThread(
     if (!thread) {
       return Result.error(new Error('Failed to create latte thread'))
     }
+
+    const client = await redis()
+    await client.set(
+      LAST_LATTE_THREAD_CACHE_KEY(workspace.id, user.id, project.id),
+      thread.uuid,
+    )
 
     return Result.ok(thread!)
   })

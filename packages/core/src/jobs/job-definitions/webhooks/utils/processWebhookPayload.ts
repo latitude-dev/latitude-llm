@@ -3,7 +3,7 @@ import { WebhookPayload } from '../../../../services/webhooks/types'
 import { findDocumentFromLog } from '../../../../data-access/documentLogs'
 import { Result, TypedResult } from '../../../../lib/Result'
 import { findLastProviderLogFromDocumentLogUuid } from '../../../../data-access'
-import { buildProviderLogResponse } from '../../../../services/providerLogs'
+import { buildProviderLogResponse } from '../../../../services/providerLogs/buildResponse'
 import { DocumentLogsRepository } from '../../../../repositories'
 
 export async function processWebhookPayload(

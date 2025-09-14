@@ -1,7 +1,7 @@
 import {
   createProviderLog,
   CreateProviderLogProps,
-} from '../../services/providerLogs'
+} from '../../services/providerLogs/create'
 
 export type CreateProviderLogJobProps = Omit<
   CreateProviderLogProps,

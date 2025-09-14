@@ -508,6 +508,12 @@ export const PROJECT_STATS_CACHE_KEY = (
 ) => `project_stats:${workspaceId}:${projectId}`
 export const STATS_CACHE_TTL = 2 * 24 * 60 * 60 // 2 days
 
+export const LAST_LATTE_THREAD_CACHE_KEY = (
+  workspaceId: number,
+  userId: string,
+  projectId: number,
+) => `latte:last_thread:${workspaceId}:${userId}:${projectId}`
+
 export enum PipedreamComponentType {
   Tool = 'action',
   Trigger = 'source',

@@ -31,8 +31,16 @@ import { LatteMessageList } from './_components/MessageList'
 import { LatteUnconfiguredIntegrations } from './_components/UnconfiguredIntegrations'
 import { LatteChatInput } from './LatteChatInput'
 
-export function LatteChat() {
-  const isLoading = useLoadThread()
+import type { ProviderLogDto } from '@latitude-data/core/browser'
+
+export function LatteChat({
+  initialThreadUuid,
+  initialProviderLog,
+}: {
+  initialThreadUuid?: string
+  initialProviderLog?: ProviderLogDto
+}) {
+  const isLoading = useLoadThread({ initialThreadUuid, initialProviderLog })
 
   if (isLoading)
     return (

@@ -9,7 +9,7 @@ import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
 import { ProviderLogsRepository } from '../../repositories'
-import { serializeForEvaluation as serializeProviderLog } from '../providerLogs'
+import { serializeForEvaluation as serializeProviderLog } from '../providerLogs/serializeForEvaluation'
 import { hydrateProviderLog } from '../providerLogs/hydrate'
 
 export async function serializeAggregatedProviderLog({

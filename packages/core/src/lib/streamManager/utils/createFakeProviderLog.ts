@@ -3,7 +3,7 @@ import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompile
 import { LogSources, ProviderApiKey, Workspace } from '../../../browser'
 import { fakeResponse } from '../../../services/chains/ProviderProcessor'
 import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
-import { createProviderLog } from '../../../services/providerLogs'
+import { createProviderLog } from '../../../services/providerLogs/create'
 
 /**
  * When a assistant message is stopped by the user, we must create a uncomplete provider log with the information we

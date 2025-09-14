@@ -1,58 +1,63 @@
-import { useEffect, useTransition, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useLatteStore } from '$/stores/latte/index'
 
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
-import { fetchProviderLogHydrated } from './fetchProviderLogHydrated'
 import { buildInteractionsFromProviderLog } from './buildInteractionsFromProviderLog'
-import { useSyncAndGetThreadUuid } from './useSyncAndGetThreadUuid'
+import type { ProviderLogDto } from '@latitude-data/core/browser'
 
 /**
- * - Loads and transforms provider logs into Latte interactions.
- * - Fetches provider logs for the current thread UUID and converts them
- *   into a structured format of user-assistant interactions with input/output pairs.
- * - Runs only if there are no interactions in the current chat state,
- *   so it avoids overriding existing state.
- * - Runs once when Chat loads for a given project.
+ * Hook to load and initialize a thread in the Latte store based on the current project.
+ * It sets the thread UUID and builds interactions from the initial provider log if provided.
+ * @param initialThreadUuid - Optional UUID of the thread to load
+ * @param initialProviderLog - Optional provider log to build interactions from
+ * @returns Always returns false (placeholder for future loading state)
  */
-export function useLoadThread() {
+export function useLoadThread({
+  initialThreadUuid,
+  initialProviderLog,
+}: {
+  initialThreadUuid?: string
+  initialProviderLog?: ProviderLogDto
+}) {
   const { project } = useCurrentProject()
   const projectId = project.id
 
   const lastLoadedProjectId = useRef<number | null>(null)
-  const { interactions, setInteractions, currentProjectId, setCurrentProject } =
-    useLatteStore()
-  const syncAndGetThreadUuid = useSyncAndGetThreadUuid({ project })
-  const [isLoading, startTransition] = useTransition()
+  const {
+    interactions,
+    setInteractions,
+    setThreadUuid,
+    currentProjectId,
+    setCurrentProject,
+  } = useLatteStore()
 
   useEffect(() => {
     if (currentProjectId !== projectId) {
       setCurrentProject(projectId)
-      lastLoadedProjectId.current = null // force a reload next time
+      lastLoadedProjectId.current = null
     }
   }, [currentProjectId, projectId, setCurrentProject])
 
   useEffect(() => {
-    // Don’t refetch if there are already interactions
-    if (interactions.length > 0) return
-
-    // Don’t refetch if we already fetched this project
     if (lastLoadedProjectId.current === projectId) return
-
     lastLoadedProjectId.current = projectId
 
-    startTransition(async () => {
-      const threadUuid = syncAndGetThreadUuid()
-      if (!threadUuid) return
+    if (initialThreadUuid) setThreadUuid(initialThreadUuid)
 
-      const providerLog = await fetchProviderLogHydrated({ threadUuid })
-      if (!providerLog) return
+    if (initialProviderLog && interactions.length === 0) {
+      const built = buildInteractionsFromProviderLog({
+        providerLog: initialProviderLog,
+      })
+      if (built.length > 0) setInteractions(built)
+    }
+  }, [
+    projectId,
+    initialThreadUuid,
+    initialProviderLog,
+    setThreadUuid,
+    interactions.length,
+    setInteractions,
+  ])
 
-      const _interactions = buildInteractionsFromProviderLog({ providerLog })
-      if (_interactions.length > 0) {
-        setInteractions(_interactions)
-      }
-    })
-  }, [projectId, interactions.length, syncAndGetThreadUuid, setInteractions])
-
-  return isLoading
+  return false
 }
