@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker'
 import { v4 as uuid } from 'uuid'
 
 import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
-import { createProviderLog as createProviderLogService } from '../../services/providerLogs'
+import { createProviderLog as createProviderLogService } from '../../services/providerLogs/create'
 import type { ToolCall, Message } from '@latitude-data/constants/legacyCompiler'
 
 export type IProviderLogData = {

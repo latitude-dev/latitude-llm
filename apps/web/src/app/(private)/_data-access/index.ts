@@ -11,6 +11,7 @@ import {
   ProjectLimitedView,
   Workspace,
   type Commit,
+  LAST_LATTE_THREAD_CACHE_KEY,
 } from '@latitude-data/core/browser'
 import { cache as redis } from '@latitude-data/core/cache'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
@@ -401,3 +402,15 @@ export const isFeatureEnabledCached = cache(async (feature: string) => {
 
   return enabled
 })
+
+export const getLastLatteThreadUuidCached = async ({
+  projectId,
+}: {
+  projectId: number
+}) => {
+  const { workspace, user } = await getCurrentUserOrRedirect()
+  const client = await redis()
+  const key = LAST_LATTE_THREAD_CACHE_KEY(workspace.id, user.id, projectId)
+  const uuid = await client.get(key)
+  return uuid || undefined
+}

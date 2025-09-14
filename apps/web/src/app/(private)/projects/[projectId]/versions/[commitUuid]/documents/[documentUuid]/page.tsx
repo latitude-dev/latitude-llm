@@ -3,6 +3,7 @@ import {
   getDocumentByUuidCached,
   getDocumentsAtCommitCached,
   getProviderApiKeysCached,
+  getLastLatteThreadUuidCached,
 } from '$/app/(private)/_data-access'
 import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
@@ -12,6 +13,7 @@ import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
 import { env } from '@latitude-data/env'
 import { redirect } from 'next/navigation'
 import DocumentEditor from './_components/DocumentEditor/Editor'
+import { findLatteThreadProviderLog } from '@latitude-data/core/services/providerLogs/findLatteThreadProviderLog'
 
 export default async function DocumentPage({
   params,
@@ -45,6 +47,10 @@ export default async function DocumentPage({
   const documents = await getDocumentsAtCommitCached({ commit })
   const providerApiKeys = await getProviderApiKeysCached()
   const freeRunsCount = await getFreeRuns(workspace.id)
+  const lastThreadUuid = await getLastLatteThreadUuidCached({ projectId })
+  const initialProviderLog = await findLatteThreadProviderLog({
+    lastThreadUuid,
+  })
 
   return (
     <DocumentEditor
@@ -54,6 +60,8 @@ export default async function DocumentPage({
       freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
       copilotEnabled={env.LATITUDE_CLOUD}
       refinementEnabled={env.LATITUDE_CLOUD}
+      initialThreadUuid={lastThreadUuid}
+      initialProviderLog={initialProviderLog}
     />
   )
 }

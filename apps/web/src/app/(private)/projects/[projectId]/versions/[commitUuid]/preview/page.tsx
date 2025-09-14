@@ -8,6 +8,8 @@ import {
   IntegrationsRepository,
 } from '@latitude-data/core/repositories'
 import { TriggersList } from './_components/TriggersList'
+import { getLastLatteThreadUuidCached } from '$/app/(private)/_data-access'
+import { findLatteThreadProviderLog } from '@latitude-data/core/services/providerLogs/findLatteThreadProviderLog'
 
 export default async function PreviewPage({
   params,
@@ -38,9 +40,16 @@ export default async function PreviewPage({
     .findAll()
     .then((r) => r.unwrap())
     .then((integrations) => integrations.filter((i) => i.type === 'pipedream'))
+  const lastThreadUuid = await getLastLatteThreadUuidCached({ projectId })
+  const initialProviderLog = await findLatteThreadProviderLog({
+    lastThreadUuid,
+  })
 
   return (
-    <LatteLayout>
+    <LatteLayout
+      initialThreadUuid={lastThreadUuid}
+      initialProviderLog={initialProviderLog}
+    >
       <TriggersList
         triggers={integrationTriggers}
         integrations={integrations}

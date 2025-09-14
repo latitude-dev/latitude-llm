@@ -39,7 +39,10 @@ import { RunButton } from './RunButton'
 import { V2Playground } from './V2Playground'
 import DocumentParams from './V2Playground/DocumentParams'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import type { ProviderApiKey } from '@latitude-data/core/browser'
+import type {
+  ProviderApiKey,
+  ProviderLogDto,
+} from '@latitude-data/core/browser'
 
 export type DocumentEditorProps = {
   document: DocumentVersion
@@ -49,6 +52,8 @@ export type DocumentEditorProps = {
   copilotEnabled: boolean
   refinementEnabled: boolean
   experimentDiff?: string
+  initialThreadUuid?: string
+  initialProviderLog?: ProviderLogDto
 }
 
 export function DocumentEditor(props: DocumentEditorProps) {
@@ -87,6 +92,8 @@ function DocumentEditorContent({
   document: doc,
   freeRunsCount,
   refinementEnabled,
+  initialThreadUuid,
+  initialProviderLog,
 }: Omit<DocumentEditorProps, 'experimentDiff'>) {
   const { updateDocumentContent } = useDocumentValue()
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
@@ -149,7 +156,10 @@ function DocumentEditorContent({
   useAutoScroll(containerRef, { startAtBottom: mode === 'chat' })
 
   return (
-    <LatteLayout>
+    <LatteLayout
+      initialThreadUuid={initialThreadUuid}
+      initialProviderLog={initialProviderLog}
+    >
       <div className='relative flex flex-col pt-6 h-full min-h-0'>
         <div className='w-full flex flex-col justify-center items-start gap-4 px-4 pb-4'>
           <div className='w-full flex flex-row items-center justify-between gap-4'>

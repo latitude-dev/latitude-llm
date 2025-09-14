@@ -11,7 +11,7 @@ import { ProviderApiKey, Workspace } from '../../../browser'
 import { defaultQueue } from '../../../jobs/queues'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { PartialConfig } from '../../ai'
-import { createProviderLog } from '../../providerLogs'
+import { createProviderLog } from '../../providerLogs/create'
 
 export async function saveProviderLog({
   workspace,

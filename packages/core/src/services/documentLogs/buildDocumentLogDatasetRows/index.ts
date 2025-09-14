@@ -10,7 +10,7 @@ import { ProviderLogsRepository } from '../../../repositories'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../../repositories/documentLogsWithMetadataAndErrorsRepository'
 import { Column, DatasetRowData, documentLogs } from '../../../schema'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from '../../datasets/utils'
-import { buildProviderLogResponse } from '../../providerLogs'
+import { buildProviderLogResponse } from '../../providerLogs/buildResponse'
 import { hydrateProviderLog } from '../../providerLogs/hydrate'
 import { buildColumns, FixedColumnsByName } from './buildColumns'
 

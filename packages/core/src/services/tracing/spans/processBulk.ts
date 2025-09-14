@@ -425,7 +425,8 @@ export function convertSpanAttributes(
 
   for (const attribute of attributes) {
     const converting = convertSpanAttribute(attribute.value)
-    if (converting.error) return Result.error(converting.error)
+    if (converting.error) continue // ignore attributes we can't convert
+
     result[attribute.key] = converting.value
   }
 
