@@ -3,7 +3,6 @@ export enum Queues {
   evaluationsQueue = 'evaluations',
   eventHandlersQueue = 'eventHandlers',
   eventsQueue = 'events',
-  liveEvaluationsQueue = 'liveEvaluations',
   maintenanceQueue = 'maintenance',
   webhooksQueue = 'webhooks',
   documentsQueue = 'documentsQueue',

@@ -7,7 +7,6 @@ import {
   startEventHandlersWorker,
   startEventsWorker,
 } from './worker-definitions/eventsWorker'
-import { startLiveEvaluationsWorker } from './worker-definitions/liveEvaluationsWorker'
 import { startMaintenanceWorker } from './worker-definitions/maintenanceWorker'
 import { startTracingWorker } from './worker-definitions/tracingWorker'
 import { startWebhooksWorker } from './worker-definitions/webhooksWorker'
@@ -17,7 +16,6 @@ export async function startWorkers() {
   const evaluationsWorker = startEvaluationsWorker()
   const eventsWorker = startEventsWorker()
   const eventHandlersWorker = startEventHandlersWorker()
-  const liveEvaluationsWorker = startLiveEvaluationsWorker()
   const maintenanceWorker = startMaintenanceWorker()
   const webhooksWorker = startWebhooksWorker()
   const documentsWorker = startDocumentsWorker()
@@ -29,7 +27,6 @@ export async function startWorkers() {
     evaluationsWorker,
     eventsWorker,
     eventHandlersWorker,
-    liveEvaluationsWorker,
     maintenanceWorker,
     webhooksWorker,
     documentsWorker,
