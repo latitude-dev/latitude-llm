@@ -52,7 +52,90 @@ jobs:
               - '.github/workflows/**'
               - 'packages/**'
 
-  build-and-push:
+  build-and-push-public:
+    needs: [check-changes]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          # Public images on GitHub Container Registry (without Sentry)
+          - app: web
+            dockerfile: apps/web/docker/Dockerfile
+            registry: ghcr.io
+            owner: latitude-dev
+            repo_name: web
+            build_if: ${{ needs.check-changes.outputs.web == 'true' || needs.check-changes.outputs.shared == 'true' }}
+          - app: gateway
+            dockerfile: apps/gateway/docker/Dockerfile
+            registry: ghcr.io
+            owner: latitude-dev
+            repo_name: gateway
+            build_if: ${{ needs.check-changes.outputs.gateway == 'true' || needs.check-changes.outputs.shared == 'true' }}
+          - app: workers
+            dockerfile: apps/workers/docker/Dockerfile
+            registry: ghcr.io
+            owner: latitude-dev
+            repo_name: workers
+            build_if: ${{ needs.check-changes.outputs.workers == 'true' || needs.check-changes.outputs.shared == 'true' }}
+          - app: websockets
+            dockerfile: apps/websockets/docker/Dockerfile
+            registry: ghcr.io
+            owner: latitude-dev
+            repo_name: websockets
+            build_if: ${{ needs.check-changes.outputs.websockets == 'true' || needs.check-changes.outputs.shared == 'true' }}
+          - app: migrations
+            dockerfile: packages/core/docker/Dockerfile
+            registry: ghcr.io
+            owner: latitude-dev
+            repo_name: migrations
+            build_if: ${{ needs.check-changes.outputs.migrations == 'true' || needs.check-changes.outputs.shared == 'true' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login to GitHub Container Registry for public images
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ matrix.registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Generate Docker metadata/tags based on Git context
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ format('{0}/{1}/{2}', matrix.registry, matrix.owner, matrix.repo_name) }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # Build and push the Docker image
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ format('{0}/{1}/{2}', matrix.registry, matrix.owner, matrix.repo_name) }}:latest
+          cache-to: type=inline
+
+  build-and-push-private:
     needs: [check-changes]
     runs-on: ubuntu-latest
     permissions:
@@ -62,61 +145,21 @@ jobs:
     strategy:
       matrix:
         include:
-          # Public images on GitHub Container Registry (without Sentry)
-          - app: web
-            dockerfile: apps/web/docker/Dockerfile
-            private: false
-            registry: ghcr.io
-            owner: latitude-dev
-            repo_name: web
-            build_if: ${{ needs.check-changes.outputs.web == 'true' || needs.check-changes.outputs.shared == 'true' }}
-          - app: gateway
-            dockerfile: apps/gateway/docker/Dockerfile
-            private: false
-            registry: ghcr.io
-            owner: latitude-dev
-            repo_name: gateway
-            build_if: ${{ needs.check-changes.outputs.gateway == 'true' || needs.check-changes.outputs.shared == 'true' }}
-          - app: workers
-            dockerfile: apps/workers/docker/Dockerfile
-            private: false
-            registry: ghcr.io
-            owner: latitude-dev
-            repo_name: workers
-            build_if: ${{ needs.check-changes.outputs.workers == 'true' || needs.check-changes.outputs.shared == 'true' }}
-          - app: websockets
-            dockerfile: apps/websockets/docker/Dockerfile
-            private: false
-            registry: ghcr.io
-            owner: latitude-dev
-            repo_name: websockets
-            build_if: ${{ needs.check-changes.outputs.websockets == 'true' || needs.check-changes.outputs.shared == 'true' }}
-          - app: migrations
-            dockerfile: packages/core/docker/Dockerfile
-            private: false
-            registry: ghcr.io
-            owner: latitude-dev
-            repo_name: migrations
-            build_if: ${{ needs.check-changes.outputs.migrations == 'true' || needs.check-changes.outputs.shared == 'true' }}
           # Private images on AWS ECR (with Sentry)
           - app: web
             dockerfile: apps/web/docker/Dockerfile
-            private: true
             repo_name: latitude-llm-app-repo-43d71dc
             build_if: ${{ needs.check-changes.outputs.web == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: gateway
             dockerfile: apps/gateway/docker/Dockerfile
-            private: true
             repo_name: latitude-llm-gateway-repo-b859826
             build_if: ${{ needs.check-changes.outputs.gateway == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: workers
             dockerfile: apps/workers/docker/Dockerfile
-            private: true
             repo_name: latitude-llm-workers-repo-184cb29
             build_if: ${{ needs.check-changes.outputs.workers == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: websockets
             dockerfile: apps/websockets/docker/Dockerfile
-            private: true
             repo_name: latitude-llm-websockets-repo-eea3d9a
             build_if: ${{ needs.check-changes.outputs.websockets == 'true' || needs.check-changes.outputs.shared == 'true' }}
 
@@ -129,7 +172,6 @@ jobs:
 
       # Configure AWS credentials for ECR access
       - name: Configure AWS credentials
-        if: ${{ matrix.private }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -141,37 +183,21 @@ jobs:
 
       # Set ECR registry for private images
       - name: Set ECR registry
-        if: ${{ matrix.private }}
         run: |
           echo "ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com" >> $GITHUB_ENV
 
       # Login to ECR for private images
       - name: Login to Amazon ECR
-        if: ${{ matrix.private }}
         uses: aws-actions/amazon-ecr-login@v2
         with:
           registries: ${{ secrets.AWS_ACCOUNT_ID }}
 
-      # Login to GitHub Container Registry for public images
-      - name: Log in to GitHub Container Registry
-        if: ${{ !matrix.private }}
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ matrix.registry }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       # Generate Docker metadata/tags based on Git context
-      # Image path interpolation examples:
-      # Private (ECR): {ECR_REGISTRY}/{repo_name}
-      #   e.g.: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/latitude-llm-websockets-repo-eea3d9a
-      # Public (GHCR): {registry}/{owner}/{repo_name}
-      #   e.g.: ghcr.io/latitude-dev/websockets
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ matrix.private && format('{0}/{1}', env.ECR_REGISTRY, matrix.repo_name) || format('{0}/{1}/{2}', matrix.registry, matrix.owner, matrix.repo_name) }}
+          images: ${{ format('{0}/{1}', env.ECR_REGISTRY, matrix.repo_name) }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -180,38 +206,38 @@ jobs:
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
 
-        # Build and push the Docker image
+      # Build and push the Docker image
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ${{ matrix.dockerfile }}
-          platforms: ${{ matrix.private && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ matrix.private && format('{0}/{1}', env.ECR_REGISTRY, matrix.repo_name) || format('{0}/{1}/{2}', matrix.registry, matrix.owner, matrix.repo_name) }}:latest
+          cache-from: type=registry,ref=${{ format('{0}/{1}', env.ECR_REGISTRY, matrix.repo_name) }}:latest
           cache-to: type=inline
           secrets: |
-            ${{ matrix.private && format('SENTRY_AUTH_TOKEN={0}', secrets.SENTRY_AUTH_TOKEN) || '' }}
-            ${{ matrix.private && format('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY={0}', secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY) || '' }}
-            ${{ matrix.private && format('AWS_ACCESS_KEY_ID={0}', secrets.AWS_ACCESS_KEY_ID) || '' }}
-            ${{ matrix.private && format('AWS_SECRET_ACCESS_KEY={0}', secrets.AWS_SECRET_ACCESS_KEY) || '' }}
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
           build-args: |
-            AWS_REGION=${{ matrix.private && vars.AWS_REGION || '' }}
+            AWS_REGION=${{ vars.AWS_REGION }}
             BUILD_ID=${{ github.sha }}
-            NEXT_PUBLIC_DOCS_URL=${{ matrix.private && vars.NEXT_PUBLIC_DOCS_URL || '' }}
-            NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ matrix.private && vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL || '' }}
-            NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
-            NEXT_PUBLIC_POSTHOG_KEY=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_KEY || '' }}
-            NEXT_PUBLIC_SENTRY_WEB_DSN=${{ matrix.private && vars.SENTRY_WEB_DSN || '' }}
-            S3_BUCKET=${{ matrix.private && vars.STATIC_ASSETS_S3_BUCKET || '' }}
-            SENTRY_ORG=${{ matrix.private && secrets.SENTRY_ORG || '' }}
-            SENTRY_PROJECT=${{ matrix.private && secrets.SENTRY_PROJECT || '' }}
-            STATIC_ASSETS_HOST=${{ matrix.private && vars.STATIC_ASSETS_HOST || '' }}
+            NEXT_PUBLIC_DOCS_URL=${{ vars.NEXT_PUBLIC_DOCS_URL }}
+            NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL }}
+            NEXT_PUBLIC_POSTHOG_HOST=${{ secrets.NEXT_PUBLIC_POSTHOG_HOST }}
+            NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
+            NEXT_PUBLIC_SENTRY_WEB_DSN=${{ vars.SENTRY_WEB_DSN }}
+            S3_BUCKET=${{ vars.STATIC_ASSETS_S3_BUCKET }}
+            SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
+            STATIC_ASSETS_HOST=${{ vars.STATIC_ASSETS_HOST }}
 
   run-migrations:
-    needs: [build-and-push]
+    needs: [build-and-push-private]
     uses: ./.github/workflows/run-migrations.yml
     with:
       workflow_call: true
@@ -226,7 +252,7 @@ jobs:
       SSH_USER: ${{ secrets.SSH_USER }}
 
   deploy-bluegreen:
-    needs: [run-migrations, build-and-push]
+    needs: [run-migrations, build-and-push-private]
     uses: ./.github/workflows/deploy-bluegreen.yml
     permissions:
       id-token: write
@@ -238,7 +264,7 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
   deploy-rolling:
-    needs: [run-migrations, build-and-push]
+    needs: [run-migrations, build-and-push-private]
     uses: ./.github/workflows/deploy-rolling.yml
     permissions:
       id-token: write
