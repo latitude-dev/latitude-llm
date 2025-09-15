@@ -116,6 +116,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
         message,
         context,
         abortSignal: controller.signal,
+        debugVersionUuid,
       })
       if (!runResult.ok) {
         await emitError({
@@ -139,6 +140,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
       message,
       context,
       abortSignal: controller.signal,
+      debugVersionUuid,
     })
     if (!runResult.ok) {
       await emitError({

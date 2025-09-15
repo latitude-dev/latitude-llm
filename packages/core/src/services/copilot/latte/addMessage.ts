@@ -12,6 +12,7 @@ import {
   Workspace,
   Project,
 } from '../../../browser'
+
 import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { BACKGROUND, TelemetryContext } from '../../../telemetry'
@@ -21,6 +22,7 @@ import { runDocumentAtCommit } from '../../commits'
 import { addMessages } from '../../documentLogs/addMessages/index'
 import { checkLatteCredits } from './credits/check'
 import { consumeLatteCredits } from './credits/consume'
+import { isLatteDebugSession } from './debugVersions'
 import { sendWebsockets } from './helpers'
 import { buildToolHandlers } from './tools'
 export * from './threads/checkpoints/clearCheckpoints'
@@ -39,6 +41,7 @@ export async function runNewLatte({
   message,
   context,
   abortSignal,
+  debugVersionUuid,
 }: {
   copilotWorkspace: Workspace
   copilotCommit: Commit
@@ -50,6 +53,7 @@ export async function runNewLatte({
   message: string
   context: string
   abortSignal?: AbortSignal
+  debugVersionUuid?: string
 }): PromisedResult<undefined> {
   return generateLatteResponse({
     context: BACKGROUND({ workspaceId: copilotWorkspace.id }),
@@ -62,6 +66,7 @@ export async function runNewLatte({
     threadUuid,
     initialParameters: { message, context },
     abortSignal,
+    debugVersionUuid,
   })
 }
 
@@ -76,6 +81,7 @@ export async function addMessageToExistingLatte({
   message,
   context,
   abortSignal,
+  debugVersionUuid,
 }: {
   copilotWorkspace: Workspace
   copilotCommit: Commit
@@ -87,6 +93,7 @@ export async function addMessageToExistingLatte({
   message: string
   context: string
   abortSignal?: AbortSignal
+  debugVersionUuid?: string
 }): PromisedResult<undefined> {
   const userMessage: UserMessage = {
     role: MessageRole.user,
@@ -113,6 +120,7 @@ export async function addMessageToExistingLatte({
     threadUuid,
     messages: [userMessage],
     abortSignal,
+    debugVersionUuid,
   })
 }
 
@@ -128,6 +136,7 @@ type GenerateLatteResponseArgs = {
   messages?: Message[] // for subsequent "add" requests
   user: User
   abortSignal?: AbortSignal
+  debugVersionUuid?: string
 }
 
 async function generateLatteResponse(args: GenerateLatteResponseArgs) {
@@ -189,6 +198,7 @@ async function innerGenerateLatteResponse({
   messages,
   user,
   abortSignal,
+  debugVersionUuid,
 }: GenerateLatteResponseArgs) {
   const tools = buildToolHandlers({
     user,
@@ -222,10 +232,20 @@ async function innerGenerateLatteResponse({
   if (!runResult.ok) return runResult as ErrorResult<LatitudeError>
   const run = runResult.unwrap()
 
+  const isLatteDebugSessionResult = await isLatteDebugSession(
+    clientWorkspace.id,
+    debugVersionUuid,
+  )
+
+  if (!Result.isOk(isLatteDebugSessionResult)) {
+    return isLatteDebugSessionResult
+  }
+
   await sendWebsockets({
     workspace: clientWorkspace,
     threadUuid,
     stream: run.stream,
+    isLatteDebugSession: isLatteDebugSessionResult.unwrap(),
   })
 
   return Result.ok(run)

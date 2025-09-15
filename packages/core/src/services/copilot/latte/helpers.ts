@@ -152,10 +152,12 @@ export async function sendWebsockets({
   workspace,
   threadUuid,
   stream,
+  isLatteDebugSession,
 }: {
   workspace: Workspace
   threadUuid: string
   stream: ReadableStream<ChainEvent>
+  isLatteDebugSession: boolean
 }) {
   for await (const payload of streamToGenerator(stream)) {
     const { event, data } = payload
@@ -183,6 +185,7 @@ export async function sendWebsockets({
             toolCallId: data.toolCallId,
             toolName: data.toolName,
             args: data.args,
+            debugMode: isLatteDebugSession,
           } as LatteThreadUpdateArgs,
         })
       }

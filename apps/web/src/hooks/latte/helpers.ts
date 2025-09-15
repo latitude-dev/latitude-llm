@@ -2,12 +2,22 @@ import { LatteTool } from '@latitude-data/constants/latte'
 import { ToolCall } from 'ai'
 import { LatteToolStep } from './types'
 
-export function getDescriptionFromToolCall(
-  toolCall: ToolCall<string, Record<string, unknown>>,
-): Partial<LatteToolStep> {
+export function getDescriptionFromToolCall({
+  toolCall,
+  debugMode,
+}: {
+  toolCall: ToolCall<string, Record<string, unknown>>
+  debugMode: boolean
+}): Partial<LatteToolStep> {
   const name = toolCall.toolName
   const params = toolCall.args
   const latteTools = Object.values(LatteTool)
+
+  if (debugMode) {
+    return {
+      activeDescription: name,
+    }
+  }
 
   if (latteTools.includes(name as LatteTool)) {
     return getDescriptionFromLatteTool(name as LatteTool, params)

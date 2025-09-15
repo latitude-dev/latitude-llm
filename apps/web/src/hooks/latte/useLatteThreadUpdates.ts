@@ -19,9 +19,12 @@ function createToolStep(
   update: Extract<LatteThreadUpdateArgs, { type: 'toolStarted' }>,
 ): LatteToolStep {
   const description = getDescriptionFromToolCall({
-    toolCallId: update.toolCallId,
-    toolName: update.toolName,
-    args: update.args,
+    toolCall: {
+      toolName: update.toolName,
+      args: update.args,
+      toolCallId: update.toolCallId,
+    },
+    debugMode: update.debugMode,
   })
 
   return {
