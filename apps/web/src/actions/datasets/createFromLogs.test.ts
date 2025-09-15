@@ -14,7 +14,6 @@ const mocks = vi.hoisted(() => {
     getSession: vi.fn(),
     findOrCreateDataset: vi.fn(),
     updateDatasetFromLogs: vi.fn(),
-    queueAdd: vi.fn(),
     defaultQueueAddMock: vi.fn(),
   }
 })
@@ -54,9 +53,7 @@ describe('createDatasetFromLogsAction', () => {
   let filterOptions: DocumentLogFilterOptions
 
   beforeEach(async () => {
-    // Reset mocks
-    vi.resetAllMocks()
-
+    vi.clearAllMocks()
     // Create test data
     const {
       workspace: ws,
