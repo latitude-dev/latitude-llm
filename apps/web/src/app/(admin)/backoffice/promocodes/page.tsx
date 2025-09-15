@@ -162,9 +162,9 @@ export default function PromocodesPage() {
                 <TableHead>Description</TableHead>
                 <TableHead>Quota Type</TableHead>
                 <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
                 <TableHead>Updated</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
