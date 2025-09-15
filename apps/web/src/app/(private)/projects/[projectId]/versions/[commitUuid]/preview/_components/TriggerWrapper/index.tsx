@@ -5,15 +5,17 @@ import {
   DocumentTriggerType,
   HEAD_COMMIT,
 } from '@latitude-data/constants'
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
+import {
+  DocumentTrigger,
+  DocumentVersion,
+  PipedreamIntegration,
+} from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import {
   useCurrentCommit,
   useCurrentProject,
@@ -111,32 +113,26 @@ const RUNNABLE_TRIGGERS = [
   DocumentTriggerType.Chat,
 ]
 export function TriggerWrapper({
+  trigger,
   image,
   title,
-  subtitle,
   description,
-  descriptionLoading = false,
-  trigger,
   document,
-  openTriggerUuid,
-  setOpenTriggerUuid,
+  integration,
+  isOpen,
+  onOpen,
   onRunTrigger,
   onRunChatTrigger,
-  isFirst = false,
-  isLast = false,
 }: {
-  document: DocumentVersion
   trigger: DocumentTrigger
-  title: string
-  subtitle?: string
-  description: string
-  descriptionLoading?: boolean
   image: ReactNode
-  openTriggerUuid: string | null
-  setOpenTriggerUuid: ReactStateDispatch<string | null>
+  title: string
+  description?: string
+  document: DocumentVersion
+  integration?: PipedreamIntegration
+  isOpen: boolean
+  onOpen: () => void
   onRunTrigger: OnRunTriggerFn
-  isFirst?: boolean
-  isLast?: boolean
   onRunChatTrigger: OnRunChatTrigger
 }) {
   const { project } = useCurrentProject()
@@ -156,14 +152,18 @@ export function TriggerWrapper({
   const canRunTrigger = RUNNABLE_TRIGGERS.includes(trigger.triggerType)
   const canEnable = trigger.triggerStatus === DocumentTriggerStatus.Deployed
 
+  const documentName = useMemo(() => {
+    return document.path.split('/').pop()
+  }, [document])
+
   const onToggleEventList = useCallback(() => {
     resetCounter(trigger.uuid)
 
     if (!canSeeEvents) return
 
-    setOpenTriggerUuid(trigger.uuid === openTriggerUuid ? null : trigger.uuid)
-  }, [setOpenTriggerUuid, trigger, openTriggerUuid, canSeeEvents, resetCounter])
-  const open = trigger.uuid === openTriggerUuid
+    onOpen()
+  }, [onOpen, trigger, canSeeEvents, resetCounter])
+
   const avoidOpenEvents = useCallback((e: MouseEvent<HTMLDivElement>) => {
     e.stopPropagation()
   }, [])
@@ -190,9 +190,7 @@ export function TriggerWrapper({
         className={cn(
           'w-full p-4 flex flex-row items-start justify-between gap-4',
           {
-            'rounded-t-lg': isFirst,
-            'rounded-b-lg': isLast,
-            'border-b border-border': open,
+            'border-b border-border': isOpen,
             'bg-latte-background':
               trigger.triggerStatus === DocumentTriggerStatus.Pending,
             'cursor-pointer': canSeeEvents,
@@ -204,7 +202,7 @@ export function TriggerWrapper({
           <div className='flex-none'>
             <div
               className={cn(
-                'size-10 rounded-md bg-backgroundCode flex items-center justify-center',
+                'size-10 rounded-md bg-backgroundCode flex items-center justify-center overflow-hidden',
               )}
             >
               {image}
@@ -219,19 +217,50 @@ export function TriggerWrapper({
                 <Text.H5 color='latteOutputForeground' ellipsis noWrap>
                   Requires additional configuration
                 </Text.H5>
-              ) : descriptionLoading ? (
-                <Skeleton className='w-24 h-5' />
-              ) : (
+              ) : description ? (
                 <Text.H5 color='foregroundMuted' ellipsis noWrap>
                   {description}
                 </Text.H5>
-              )}
+              ) : null}
             </div>
-            {subtitle ? (
-              <div className='flex'>
-                <Badge variant='muted'>{subtitle}</Badge>
-              </div>
-            ) : null}
+            {integration && (
+              <Badge
+                variant='muted'
+                className='w-fit'
+                noWrap
+                ellipsis
+                iconProps={{ name: 'userRound', placement: 'start' }}
+              >
+                {integration.name}
+              </Badge>
+            )}
+            <div className='flex flex-row items-center justify-start'>
+              <Link
+                href={
+                  ROUTES.projects
+                    .detail({ id: project.id })
+                    .commits.detail({ uuid: commit.uuid })
+                    .documents.detail({ uuid: document.documentUuid }).root
+                }
+              >
+                <Tooltip
+                  className='w-fit'
+                  trigger={
+                    <Badge
+                      variant='accent'
+                      iconProps={{ name: 'file', placement: 'start' }}
+                      noWrap
+                      ellipsis
+                      className='w-fit'
+                    >
+                      {documentName}
+                    </Badge>
+                  }
+                >
+                  {document.path}
+                </Tooltip>
+              </Link>
+            </div>
           </div>
         </div>
         <div className='flex-1 flex flex-row justify-end gap-x-4'>
@@ -267,14 +296,14 @@ export function TriggerWrapper({
           {canSeeEvents ? (
             <div className='min-h-button flex items-center justify-center'>
               <Icon
-                name={open ? 'chevronUp' : 'chevronDown'}
+                name={isOpen ? 'chevronUp' : 'chevronDown'}
                 color='foregroundMuted'
               />
             </div>
           ) : null}
         </div>
       </div>
-      {open ? (
+      {isOpen ? (
         <TriggerEventsList
           document={document}
           trigger={trigger}

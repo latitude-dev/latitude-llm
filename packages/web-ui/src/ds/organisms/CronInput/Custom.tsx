@@ -63,11 +63,13 @@ const FIELDS = [
 export function CustomCronInput({
   value,
   onChange,
+  disabled,
 }: {
   value: CronValue
   onChange: (value: CronValue) => void
+  disabled?: boolean
 }) {
-  const [activeIndex, setActiveIndex] = useState(0)
+  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined)
 
   const handleChange = useCallback(
     (key: keyof CronValue, val: string) => {
@@ -81,7 +83,9 @@ export function CustomCronInput({
       <div className='flex items-center gap-1'>
         {FIELDS.map((f, idx) => (
           <div className='flex flex-col w-full items-center' key={f.key}>
-            <Text.H6 color='foregroundMuted'>{f.label}</Text.H6>
+            <Text.H6 noWrap color='foregroundMuted'>
+              {f.label}
+            </Text.H6>
             <Input
               type='text'
               name={f.key}
@@ -91,27 +95,37 @@ export function CustomCronInput({
               onFocus={() => setActiveIndex(idx)}
               onChange={(e) => handleChange(f.key, e.target.value)}
               className={cn('w-24', { 'border-primary': activeIndex === idx })}
+              disabled={disabled}
             />
           </div>
         ))}
       </div>
       <div className='flex flex-col gap-2 w-full bg-muted p-4 rounded-md'>
-        <Text.H5B>{FIELDS[activeIndex]!.label}</Text.H5B>
-        <Text.H5>{FIELDS[activeIndex]!.description}</Text.H5>
-        <div className='flex flex-wrap gap-2'>
-          {FIELDS[activeIndex]!.actions.map((action) => (
-            <Button
-              key={action.value}
-              variant='outline'
-              className='bg-muted'
-              onClick={() =>
-                handleChange(FIELDS[activeIndex]!.key, action.value)
-              }
-            >
-              <Text.H6 color='foregroundMuted'>{action.label}</Text.H6>
-            </Button>
-          ))}
-        </div>
+        {activeIndex === undefined ? (
+          <Text.H5 color='foregroundMuted'>
+            Select a field to see available options
+          </Text.H5>
+        ) : (
+          <>
+            <Text.H5B>{FIELDS[activeIndex]!.label}</Text.H5B>
+            <Text.H5>{FIELDS[activeIndex]!.description}</Text.H5>
+            <div className='flex flex-wrap gap-2'>
+              {FIELDS[activeIndex]!.actions.map((action) => (
+                <Button
+                  key={action.value}
+                  variant='outline'
+                  className='bg-muted'
+                  onClick={() =>
+                    handleChange(FIELDS[activeIndex]!.key, action.value)
+                  }
+                  disabled={disabled}
+                >
+                  <Text.H6 color='foregroundMuted'>{action.label}</Text.H6>
+                </Button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

@@ -48,6 +48,7 @@ export type EmailTriggerEventPayload = z.infer<typeof emailTriggerEventPayloadSc
 
 export const scheduledTriggerConfigurationSchema = z.object({
   cronExpression: z.string(),
+  timezone: z.string().optional(),
 })
 
 export const scheduledTriggerDeploymentSettingsSchema = z.object({

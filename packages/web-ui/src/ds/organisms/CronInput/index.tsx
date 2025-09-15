@@ -1,30 +1,16 @@
-// index.tsx
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button } from '../../atoms/Button'
 import { FormField } from '../../atoms/FormField'
 import { Popover } from '../../atoms/Popover'
 import { TabSelector, TabSelectorOption } from '../../molecules/TabSelector'
 import { Text } from '../../atoms/Text'
-import cronstrue from 'cronstrue'
 import { Icon } from '../../atoms/Icons'
 
 import { IntervalCronInput } from './Interval'
 import { ScheduleCronInput } from './Schedule'
 import { CustomCronInput } from './Custom'
-import {
-  CronValue,
-  parseCronValue,
-  formatCronValue,
-  isIntervalCron,
-  isScheduleCron,
-} from './utils'
-
-/** Editing modes */
-export enum CronTab {
-  Interval = 'interval',
-  Schedule = 'schedule',
-  Custom = 'custom',
-}
+import { CronValue, CronTab, getInitialTab } from './utils'
+import { useCronModel } from './useCronModel'
 
 /** TabSelector options */
 const TAB_OPTIONS = [
@@ -33,14 +19,66 @@ const TAB_OPTIONS = [
   { label: 'Custom', value: CronTab.Custom },
 ] as TabSelectorOption<CronTab>[]
 
-export function humanizeCronValue(value: string): string {
-  try {
-    return cronstrue.toString(value, {
-      throwExceptionOnParseError: true,
-    })
-  } catch (err) {
-    return 'Invalid cron expression'
-  }
+function CronInputContent({
+  value,
+  disabled,
+  onChange,
+  valueError,
+  initialTab,
+}: {
+  value: CronValue
+  disabled?: boolean
+  onChange: (value: CronValue) => void
+  valueError?: string
+  initialTab?: CronTab
+}) {
+  const [selectedTab, setSelectedTab] = useState<CronTab>(
+    initialTab ?? CronTab.Custom,
+  )
+
+  useEffect(() => {
+    if (!initialTab) return
+    setSelectedTab(initialTab ?? CronTab.Custom)
+  }, [initialTab])
+
+  return (
+    <div className='flex flex-col gap-4'>
+      <TabSelector
+        options={TAB_OPTIONS}
+        selected={selectedTab}
+        onSelect={setSelectedTab}
+        disabled={disabled}
+      />
+      <div className='flex flex-col gap-2 px-2'>
+        {selectedTab === CronTab.Interval && (
+          <IntervalCronInput
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        )}
+        {selectedTab === CronTab.Schedule && (
+          <ScheduleCronInput
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        )}
+        {selectedTab === CronTab.Custom && (
+          <CustomCronInput
+            value={value}
+            onChange={onChange}
+            disabled={disabled}
+          />
+        )}
+      </div>
+      {valueError && (
+        <div className='rounded-md bg-destructive p-4'>
+          <Text.H6 color='destructiveForeground'>{valueError}</Text.H6>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function CronInput({
@@ -64,46 +102,24 @@ export function CronInput({
   errors?: string[]
   fullWidth?: boolean
 }) {
-  const [localValue, setLocalValue] = useState<CronValue>(() =>
-    parseCronValue(value ?? '* * * * *'),
-  )
-  const [stringValue, setStringValue] = useState<string>(
-    () => value ?? '* * * * *',
-  )
-  const [humanReadableValue, setHumanReadableValue] = useState<string>(() =>
-    cronstrue.toString(value ?? '* * * * *'),
-  )
-  const [valueError, setValueError] = useState<string>()
+  const {
+    localValue,
+    stringValue,
+    humanReadableValue,
+    valueError,
+    onCronChange,
+  } = useCronModel({ value, onChange })
 
-  const handleChange = useCallback(
-    (newValue: CronValue) => {
-      setLocalValue(newValue)
-      const next = formatCronValue(newValue)
+  const [initialTab, setInitialTab] = useState<CronTab>(CronTab.Custom)
 
-      try {
-        const human = cronstrue.toString(next, {
-          throwExceptionOnParseError: true,
-        })
-        setStringValue(next)
-        setHumanReadableValue(human)
-        setValueError(undefined)
-        onChange?.(next)
-      } catch (err) {
-        setValueError(err as string) // For some reason, cronstrue throws a string
-      }
+  const handleOpen = useCallback(
+    // Recalculate the best tab to show when the popover is opened
+    (open: boolean) => {
+      if (!open) return
+      setInitialTab(getInitialTab(localValue, valueError))
     },
-    [onChange],
+    [localValue, valueError],
   )
-
-  const [selectedTab, setSelectedTab] = useState<CronTab>(CronTab.Custom)
-
-  const getAutomaticTab = useCallback((): CronTab => {
-    if (valueError) return CronTab.Custom
-    if (localValue.month !== '*') return CronTab.Custom
-    if (isIntervalCron(localValue)) return CronTab.Interval
-    if (isScheduleCron(localValue)) return CronTab.Schedule
-    return CronTab.Custom
-  }, [localValue, valueError])
 
   return (
     <>
@@ -116,13 +132,7 @@ export function CronInput({
         required={required}
       />
       <FormField label={label} description={description} errors={errors}>
-        <Popover.Root
-          onOpenChange={(open) => {
-            if (open) {
-              setSelectedTab(getAutomaticTab())
-            }
-          }}
-        >
+        <Popover.Root onOpenChange={handleOpen}>
           <Popover.Trigger asChild>
             <Button
               variant='outline'
@@ -148,28 +158,69 @@ export function CronInput({
             size='large'
             className='w-[600px]'
           >
-            <TabSelector
-              options={TAB_OPTIONS}
-              selected={selectedTab}
-              onSelect={setSelectedTab}
+            <CronInputContent
+              value={localValue}
+              onChange={onCronChange}
+              valueError={valueError}
+              initialTab={initialTab}
             />
-            {selectedTab === CronTab.Interval && (
-              <IntervalCronInput value={localValue} onChange={handleChange} />
-            )}
-            {selectedTab === CronTab.Schedule && (
-              <ScheduleCronInput value={localValue} onChange={handleChange} />
-            )}
-            {selectedTab === CronTab.Custom && (
-              <CustomCronInput value={localValue} onChange={handleChange} />
-            )}
-            {valueError && (
-              <div className='rounded-md bg-destructive p-4'>
-                <Text.H6 color='destructiveForeground'>{valueError}</Text.H6>
-              </div>
-            )}
           </Popover.Content>
         </Popover.Root>
       </FormField>
     </>
   )
 }
+
+export function CronFormField({
+  name,
+  value,
+  onChange,
+  required = false,
+  disabled,
+}: {
+  name?: string
+  value?: string
+  onChange?: (value: string) => void
+  required?: boolean
+  disabled?: boolean
+  errors?: string[]
+}) {
+  const {
+    localValue,
+    stringValue,
+    humanReadableValue,
+    valueError,
+    onCronChange,
+  } = useCronModel({ value, onChange })
+
+  const [initialTab] = useState(getInitialTab(localValue, valueError))
+
+  return (
+    <div className='flex flex-col gap-2 border border-border rounded-xl overflow-hidden'>
+      <div className='flex flex-col gap-2 p-2'>
+        {name && (
+          <input
+            type='text'
+            name={name}
+            value={stringValue}
+            readOnly
+            hidden
+            required={required}
+          />
+        )}
+        <CronInputContent
+          value={localValue}
+          disabled={disabled}
+          onChange={onCronChange}
+          valueError={valueError}
+          initialTab={initialTab}
+        />
+      </div>
+      <div className='bg-secondary p-4 border-t border-border'>
+        <Text.H6 color='foregroundMuted'>{humanReadableValue}</Text.H6>
+      </div>
+    </div>
+  )
+}
+
+export { humanizeCronValue } from './utils'

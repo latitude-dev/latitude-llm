@@ -196,14 +196,12 @@ export function TriggersList({
             <div className='flex flex-col gap-6'>
               <UnconfiguredIntegrations integrations={integrations} />
 
-              <div className='flex flex-col border rounded-lg divide-y divide-border'>
-                {triggers.map((trigger, i) => (
+              <div className='flex flex-col border rounded-xl divide-y divide-border flex-1 overflow-hidden'>
+                {triggers.map((trigger) => (
                   <TriggersCard
                     key={trigger.uuid}
                     trigger={trigger}
                     integrations={integrations}
-                    isFirst={i === 0}
-                    isLast={i === triggers.length - 1}
                     openTriggerUuid={openTriggerUuid}
                     setOpenTriggerUuid={setOpenTriggerUuid}
                     onRunTrigger={onRunTrigger}

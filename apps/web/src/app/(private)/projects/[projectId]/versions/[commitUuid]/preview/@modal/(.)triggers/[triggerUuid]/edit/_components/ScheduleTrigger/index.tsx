@@ -1,42 +1,42 @@
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { ScheduleTriggerForm } from '../../../../_components/TriggerForms/ScheduleTriggerForm'
-import {
-  DEFAULT_CONFIG,
-  type ScheduleConfig,
-  convertToCronExpression,
-} from '../../../../_components/TriggerForms/ScheduleTriggerForm/scheduleUtils'
 import type { EditTriggerProps } from '../../EditTriggerModal'
+import { CronFormField } from '@latitude-data/web-ui/organisms/CronInput'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { CLIENT_TIMEZONE, DEFAULT_TIMEZONE } from '$/lib/constants'
 
 export function EditScheduleTrigger({
   trigger,
   setConfiguration,
   isUpdating,
 }: EditTriggerProps<DocumentTriggerType.Scheduled>) {
-  const [config, setConfig] = useState<ScheduleConfig>({
-    ...DEFAULT_CONFIG,
-    type: 'custom',
-    custom: {
-      expression: trigger.configuration.cronExpression,
-    },
-  })
+  const triggerTimezone = trigger.configuration.timezone ?? DEFAULT_TIMEZONE
 
-  const onUpdateConfiguration = useCallback(
-    (updater: (prev: ScheduleConfig) => ScheduleConfig) => {
-      const nextConfig = updater(config)
-      setConfig(nextConfig)
+  const handleChange = useCallback(
+    (newCronExpression: string) => {
       setConfiguration({
-        cronExpression: convertToCronExpression(nextConfig),
+        ...trigger.configuration,
+        cronExpression: newCronExpression,
       })
     },
-    [setConfiguration, config],
+    [setConfiguration, trigger.configuration],
   )
 
   return (
-    <ScheduleTriggerForm
-      config={config}
-      setConfig={onUpdateConfiguration}
-      isExecuting={isUpdating}
-    />
+    <>
+      <CronFormField
+        name='cronExpression'
+        value={trigger.configuration.cronExpression}
+        onChange={handleChange}
+        disabled={isUpdating}
+      />
+      {triggerTimezone !== CLIENT_TIMEZONE && (
+        <Alert
+          variant='warning'
+          title='Timezone mismatch'
+          description={`This trigger is configured in ${triggerTimezone} timezone. Create a new trigger to configure it in ${CLIENT_TIMEZONE} timezone.`}
+        />
+      )}
+    </>
   )
 }
