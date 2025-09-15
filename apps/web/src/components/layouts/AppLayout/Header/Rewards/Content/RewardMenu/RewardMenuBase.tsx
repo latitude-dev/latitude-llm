@@ -107,7 +107,7 @@ export function RewardMenuBase({
               <Text.H5 color='foregroundMuted'>{step.content}</Text.H5>
               {step.links &&
                 step.links.map((link, idx) => (
-                  <Link href={link.href} key={idx}>
+                  <Link key={idx} href={link.href} target='_blank'>
                     <Button
                       variant='link'
                       className='!p-0'

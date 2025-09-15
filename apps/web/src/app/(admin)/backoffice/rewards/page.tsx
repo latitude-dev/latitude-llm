@@ -33,7 +33,7 @@ function ReferenceCell({
 }) {
   if (LINKABLE_REWARDS.includes(type)) {
     return (
-      <Link href={reference}>
+      <Link href={reference} target='_blank'>
         <Button variant='link' className='p-0'>
           <Text.H5 noWrap ellipsis color='accentForeground'>
             {reference}

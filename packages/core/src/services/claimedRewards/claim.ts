@@ -56,6 +56,9 @@ export async function claimReward(
       }
 
       const value = REWARD_VALUES[type]
+      if (!value) {
+        return Result.error(new BadRequestError('Invalid reward type'))
+      }
 
       const newClaimedReward = await tx
         .insert(claimedRewards)

@@ -137,8 +137,9 @@ export const REWARD_VALUES: Record<RewardType, number> = {
   [RewardType.XPost]: 5,
   [RewardType.LinkedInPost]: 5,
   [RewardType.AgentShare]: 10,
-  [RewardType.ProductHuntUpvote]: 10,
   [RewardType.Referral]: 10,
+  // Deprecated
+  [RewardType.ProductHuntUpvote]: 0,
 }
 
 export type EvaluationAggregationTotals = {

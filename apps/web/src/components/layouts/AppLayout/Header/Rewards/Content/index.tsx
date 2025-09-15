@@ -33,11 +33,6 @@ export function RewardsContent() {
       </div>
       <div className='flex flex-col gap-0.5 pt-2 divide-y divide-dashed divide-border'>
         <RewardItem
-          description={REWARD_CONFIGS[RewardType.ProductHuntUpvote].title}
-          type={RewardType.ProductHuntUpvote}
-          onClick={() => setSelectedType(RewardType.ProductHuntUpvote)}
-        />
-        <RewardItem
           description={REWARD_CONFIGS[RewardType.AgentShare].title}
           type={RewardType.AgentShare}
           onClick={() => setSelectedType(RewardType.AgentShare)}
