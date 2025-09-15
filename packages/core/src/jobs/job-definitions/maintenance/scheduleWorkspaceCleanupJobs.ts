@@ -3,7 +3,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { FREE_PLANS } from '../../../plans'
 import { database } from '../../../client'
 import { subscriptions, workspaces } from '../../../schema'
-import { maintenanceQueue } from '../../queues'
+import { queues } from '../../queues'
 
 export type ScheduleWorkspaceCleanupJobsData = Record<string, never>
 
@@ -35,6 +35,7 @@ export const scheduleWorkspaceCleanupJobs = async (
 
   // Enqueue individual cleanup job for each free workspace
   for (const workspace of freeWorkspaces) {
+    const { maintenanceQueue } = await queues()
     await maintenanceQueue.add(
       'cleanupWorkspaceOldLogsJob',
       { workspaceId: workspace.id },

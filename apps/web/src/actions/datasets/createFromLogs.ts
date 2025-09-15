@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { withDocument } from '../procedures'
 import { documentLogFilterOptionsSchema } from '@latitude-data/core/browser'
-import { defaultQueue } from '@latitude-data/core/queues'
+import { queues } from '@latitude-data/core/queues'
 import { findOrCreateDataset } from '@latitude-data/core/services/datasets/findOrCreate'
 import { updateDatasetFromLogs } from '@latitude-data/core/services/datasets/createFromLogs'
 
@@ -43,6 +43,8 @@ export const createDatasetFromLogsAction = withDocument
         result,
       }
     }
+
+    const { defaultQueue } = await queues()
 
     defaultQueue.add('createDatasetFromLogsJob', {
       name: input.name,

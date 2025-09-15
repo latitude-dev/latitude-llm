@@ -7,7 +7,7 @@ import { ExperimentsRepository } from '../../../repositories'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 import { BACKGROUND } from '../../../telemetry'
 import { captureException } from '../../../utils/workers/sentry'
-import { evaluationsQueue } from '../../queues'
+import { queues } from '../../queues'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
 import {
   RunEvaluationV2JobData,
@@ -69,6 +69,7 @@ export const runDocumentForExperimentJob = async (
         progressTracker.incrementEnqueued(experiment.evaluationUuids.length),
     ).then((r) => r.unwrap())
 
+    const { evaluationsQueue } = await queues()
     experiment.evaluationUuids.forEach((evaluationUuid) => {
       const payload: RunEvaluationV2JobData = {
         workspaceId,

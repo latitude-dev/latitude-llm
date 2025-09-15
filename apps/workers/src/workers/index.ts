@@ -1,4 +1,4 @@
-import { maintenanceQueue } from '@latitude-data/core/queues'
+import { queues } from '@latitude-data/core/queues'
 import { startDefaultWorker } from './worker-definitions/defaultWorker'
 import { startDocumentSuggestionsWorker } from './worker-definitions/documentSuggestionsWorker'
 import { startDocumentsWorker } from './worker-definitions/documentsWorker'
@@ -38,6 +38,8 @@ export async function startWorkers() {
 }
 
 export async function setupSchedules() {
+  const { maintenanceQueue } = await queues()
+
   // Every day at 8 AM
   await maintenanceQueue.upsertJobScheduler(
     'requestDocumentSuggestionsJob',

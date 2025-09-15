@@ -16,7 +16,10 @@ export function createWorker<T extends Record<string, Function>>(
   jobMappings: T,
   workerOptions: WorkerOptions = WORKER_OPTIONS,
 ): Worker {
-  const worker = new Worker(queue, createJobHandler(jobMappings), workerOptions)
+  const worker = new Worker(queue, createJobHandler(jobMappings), {
+    ...workerOptions,
+    prefix: 'latitude',
+  })
 
   worker.on('error', (error: Error) => {
     captureException(error)

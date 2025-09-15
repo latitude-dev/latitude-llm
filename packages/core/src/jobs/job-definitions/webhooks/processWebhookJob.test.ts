@@ -1,5 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { webhooksQueue } from '../../queues'
+import { describe, expect, it, vi } from 'vitest'
 import { processWebhookJob } from './processWebhookJob'
 import * as factories from '../../../tests/factories'
 import { Commit, Providers } from '../../../browser'
@@ -13,10 +12,13 @@ describe('processWebhookJob', () => {
     webhooksQueue: vi.fn(),
   }))
 
-  beforeEach(async () => {
-    // Mock the webhooksQueue.add method
-    vi.spyOn(webhooksQueue, 'add').mockImplementation(mocks.webhooksQueue)
-  })
+  vi.mock('../../queues', () => ({
+    queues: vi.fn().mockResolvedValue({
+      webhooksQueue: {
+        add: mocks.webhooksQueue,
+      },
+    }),
+  }))
 
   it('enqueues jobs for all active webhooks in the workspace', async () => {
     // Create a workspace and multiple webhooks

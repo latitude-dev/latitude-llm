@@ -4,7 +4,7 @@ import {
   findWorkspaceFromDocumentLog,
 } from '../../data-access'
 import { runEvaluationV2JobKey } from '../../jobs/job-definitions'
-import { evaluationsQueue } from '../../jobs/queues'
+import { queues } from '../../jobs/queues'
 import { NotFoundError } from '../../lib/errors'
 import {
   CommitsRepository,
@@ -75,6 +75,7 @@ export const evaluateLiveLogJob = async ({
       providerLogUuid: providerLog.uuid,
     }
 
+    const { evaluationsQueue } = await queues()
     evaluationsQueue.add('runEvaluationV2Job', payload, {
       deduplication: { id: runEvaluationV2JobKey(payload) },
     })

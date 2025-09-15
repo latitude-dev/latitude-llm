@@ -1,17 +1,37 @@
 import { env } from '@latitude-data/env'
 import { QueueEvents, QueueEventsListener, QueueEventsProducer } from 'bullmq'
-
-const options = {
-  connection: {
-    host: env.QUEUE_HOST,
-    port: env.QUEUE_PORT,
-    password: env.QUEUE_PASSWORD,
-  },
-}
+import { buildRedisConnection } from '../redis'
 
 const queueName = 'pubsub'
-export const pubSubProducer = new QueueEventsProducer(queueName, options)
-export const pubSubEvents = new QueueEvents(queueName, options)
+
+let _pubSub:
+  | {
+      producer: QueueEventsProducer
+      events: QueueEvents
+    }
+  | undefined
+
+export async function pubSub() {
+  if (_pubSub) return _pubSub
+
+  const options = {
+    connection: await buildRedisConnection({
+      host: env.QUEUE_HOST,
+      port: env.QUEUE_PORT,
+      password: env.QUEUE_PASSWORD,
+    }),
+  }
+
+  const pubSubProducer = new QueueEventsProducer(queueName, options)
+  const pubSubEvents = new QueueEvents(queueName, options)
+
+  _pubSub = {
+    producer: pubSubProducer,
+    events: pubSubEvents,
+  }
+
+  return _pubSub
+}
 
 // PubSub events
 export type PubSubEvent = 'clientToolResultReceived'

@@ -11,7 +11,7 @@ import {
 } from '@latitude-data/core/utils/workers/sentry'
 import { startWorkers, setupSchedules } from './workers'
 import { env } from '@latitude-data/env'
-import * as queues from '@latitude-data/core/queues'
+import { queues } from '@latitude-data/core/queues'
 import { jobTracker } from './workers/utils/jobTracker'
 
 setupSchedules()
@@ -24,7 +24,7 @@ const serverAdapter = new ExpressAdapter()
 serverAdapter.setBasePath('/admin/queues')
 
 createBullBoard({
-  queues: Object.values(queues).map((q) => new BullMQAdapter(q)),
+  queues: Object.values(await queues()).map((q) => new BullMQAdapter(q)),
   serverAdapter,
 })
 

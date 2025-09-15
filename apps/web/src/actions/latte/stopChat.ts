@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { authProcedure } from '$/actions/procedures'
 import { cancelJob } from '@latitude-data/core/services/bullmq/cancelJob'
-import { documentsQueue } from '@latitude-data/core/queues'
+import { queues } from '@latitude-data/core/queues'
 
 export const stopChatLatteAction = authProcedure
   .createServerAction()
@@ -13,6 +13,7 @@ export const stopChatLatteAction = authProcedure
     }),
   )
   .handler(async ({ input }) => {
+    const { documentsQueue } = await queues()
     const { jobId } = input
     if (!jobId) return
     const job = await documentsQueue.getJob(jobId)

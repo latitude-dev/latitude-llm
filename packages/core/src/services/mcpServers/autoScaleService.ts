@@ -5,7 +5,7 @@ import { database } from '../../client'
 import { and, eq, lt, inArray, gt } from 'drizzle-orm'
 import { SubscriptionPlan } from '../../plans'
 import { workspaces } from '../../schema'
-import { maintenanceQueue } from '../../jobs/queues'
+import { queues } from '../../jobs/queues'
 
 const INACTIVITY_THRESHOLD_MINUTES = 10
 const SCALE_DOWN_REPLICAS = 0
@@ -44,11 +44,12 @@ export async function autoScaleInactiveServers(db = database) {
       )
 
     // Enqueue a job for each inactive server
-    const jobPromises = inactiveServers.map((server) =>
-      maintenanceQueue.add('scaleDownMcpServerJob', {
+    const jobPromises = inactiveServers.map(async (server) => {
+      const { maintenanceQueue } = await queues()
+      return maintenanceQueue.add('scaleDownMcpServerJob', {
         mcpServerId: server.id,
-      }),
-    )
+      })
+    })
 
     await Promise.all(jobPromises)
 

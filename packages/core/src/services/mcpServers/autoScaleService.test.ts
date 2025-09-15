@@ -6,15 +6,20 @@ import { SubscriptionPlan } from '../../plans'
 import { autoScaleInactiveServers } from './autoScaleService'
 import { createWorkspace, createMcpServer } from '../../tests/factories'
 import { workspaces } from '../../schema'
-import { maintenanceQueue } from '../../jobs/queues'
 
 const mocks = vi.hoisted(() => ({
   maintenanceQueue: vi.fn(),
 }))
 
-describe('autoScaleInactiveServers', () => {
-  vi.spyOn(maintenanceQueue, 'add').mockImplementation(mocks.maintenanceQueue)
+vi.mock('../../jobs/queues', () => ({
+  queues: vi.fn().mockResolvedValue({
+    maintenanceQueue: {
+      add: mocks.maintenanceQueue,
+    },
+  }),
+}))
 
+describe('autoScaleInactiveServers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })

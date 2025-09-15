@@ -1,7 +1,7 @@
 import { Experiment } from '../../../browser'
 import { LatitudeError } from '../../../lib/errors'
 import { Workspace } from '../../../browser'
-import { documentsQueue } from '../../../jobs/queues'
+import { queues } from '../../../jobs/queues'
 import { experiments } from '../../../schema'
 import { eq } from 'drizzle-orm'
 import { getExperimentJobPayload } from './getExperimentJobPayload'
@@ -55,6 +55,7 @@ export async function startExperiment(
   }
 
   const { experiment, commit, rows } = updateResult.unwrap()
+  const { documentsQueue } = await queues()
 
   for await (const row of rows) {
     await documentsQueue.add('runDocumentForExperimentJob', {
