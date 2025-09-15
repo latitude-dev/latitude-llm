@@ -1,6 +1,5 @@
 'use client'
 
-import { UpgradeLink } from '$/components/UpgradeLink'
 import { useLatteContext } from '$/hooks/latte/context'
 import { useLatteChangeActions } from '$/hooks/latte/useLatteChangeActions'
 import { useLatteChatActions } from '$/hooks/latte/useLatteChatActions'
@@ -13,7 +12,8 @@ import {
 } from '$/hooks/usePlaygroundAction'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { useLatteStore } from '$/stores/latte'
-import { LATTE_NOT_ENOUGH_CREDITS_ERROR } from '@latitude-data/core/browser'
+import { LatitudeErrorCodes } from '@latitude-data/constants/errors'
+import type { ProviderLogDto } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -28,10 +28,9 @@ import { ReactNode, useCallback, useRef, useState } from 'react'
 import { ChatSkeleton } from './_components/ChatSkeleton'
 import { LatteUsageInfo } from './_components/LatteUsageInfo'
 import { LatteMessageList } from './_components/MessageList'
+import { PaymentRequiredAlert } from './_components/PaymentRequiredAlert'
 import { LatteUnconfiguredIntegrations } from './_components/UnconfiguredIntegrations'
 import { LatteChatInput } from './LatteChatInput'
-
-import type { ProviderLogDto } from '@latitude-data/core/browser'
 
 export function LatteChat({
   initialThreadUuid,
@@ -68,7 +67,7 @@ function LatteChatInputSection({
   sendMessage,
   stopLatteChat,
 }: {
-  error?: string
+  error?: Error
   inConversation: boolean
   resetChat: () => void
   scrollToBottom: () => void
@@ -193,28 +192,16 @@ function LatteChatUI() {
                 <LatteUnconfiguredIntegrations />
                 {error && (
                   <div className='w-full px-8'>
-                    <Alert
-                      variant='destructive'
-                      direction='column'
-                      spacing='small'
-                      title='Oh no, something went wrong'
-                      description={error}
-                      cta={
-                        error.includes(LATTE_NOT_ENOUGH_CREDITS_ERROR) ? (
-                          <UpgradeLink
-                            buttonProps={{
-                              variant: 'ghost',
-                              size: 'none',
-                              iconProps: {
-                                name: 'arrowUpRight',
-                                color: 'destructiveMutedForeground',
-                                className: 'flex-shrink-0',
-                              },
-                              textColor: 'destructiveMutedForeground',
-                              userSelect: false,
-                            }}
-                          />
-                        ) : (
+                    {error.name === LatitudeErrorCodes.PaymentRequiredError ? (
+                      <PaymentRequiredAlert />
+                    ) : (
+                      <Alert
+                        variant='destructive'
+                        direction='column'
+                        spacing='small'
+                        title='Oh no, something went wrong'
+                        description={error.message}
+                        cta={
                           <Button
                             variant='ghost'
                             size='none'
@@ -229,10 +216,10 @@ function LatteChatUI() {
                           >
                             Start a new chat
                           </Button>
-                        )
-                      }
-                      className='rounded-2xl'
-                    />
+                        }
+                        className='rounded-2xl'
+                      />
+                    )}
                   </div>
                 )}
               </>

@@ -10,7 +10,7 @@ type ProjectLatteState = {
   interactions: LatteInteraction[]
   newIntegrationIds: number[]
   isBrewing: boolean
-  error: string | undefined
+  error: Error | undefined
 }
 
 const EMPTY_PROJECT_STATE = {
@@ -51,7 +51,7 @@ type LatteState = {
   updateLastInteraction: (
     updater: (interaction: LatteInteraction) => LatteInteraction,
   ) => void
-  setError: (error: string | undefined) => void
+  setError: (error: Error | undefined) => void
   setLatteActionsFeedbackUuid: (uuid: string | undefined) => void
   setDebugVersionUuid: (uuid: string | undefined) => void
   setUsage: (usage: LatteUsage | undefined) => void
@@ -219,7 +219,7 @@ export const useLatteZustandStore = create<LatteState>((set, get) => ({
       }
     }),
 
-  setError: (error: string | undefined) =>
+  setError: (error: Error | undefined) =>
     set((state) => {
       if (!state.currentProjectId) return state
 

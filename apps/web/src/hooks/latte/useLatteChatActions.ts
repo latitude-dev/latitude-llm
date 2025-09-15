@@ -36,7 +36,7 @@ export function useLatteChatActions() {
       setJobId(data.jobId)
     },
     onError: ({ err }) => {
-      setError(err.message)
+      setError(err)
       setIsBrewing(false)
     },
   })
@@ -48,7 +48,7 @@ export function useLatteChatActions() {
         setJobId(data.jobId)
       },
       onError: ({ err }) => {
-        setError(err.message)
+        setError(err)
         setIsBrewing(false)
       },
     },
@@ -60,7 +60,7 @@ export function useLatteChatActions() {
       setJobId(undefined)
     },
     onError: ({ err }) => {
-      setError(err.message)
+      setError(err)
       setIsBrewing(false)
       setJobId(undefined)
     },

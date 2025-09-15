@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  Project,
   SubscriptionPlan,
   SubscriptionPlans,
   Workspace,
-  Project,
 } from '../../../../browser'
-import { UnprocessableEntityError } from '../../../../lib/errors'
+import { PaymentRequiredError } from '../../../../lib/errors'
 import * as plans from '../../../../plans'
 import * as factories from '../../../../tests/factories'
 import { checkLatteCredits } from './check'
@@ -65,7 +65,9 @@ describe('checkLatteCredits', () => {
         workspace,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new UnprocessableEntityError('Not enough Latte credits'),
+      new PaymentRequiredError(
+        'You have reached the maximum number of Latte credits allowed for your Latitude plan. Upgrade now.',
+      ),
     )
   })
 

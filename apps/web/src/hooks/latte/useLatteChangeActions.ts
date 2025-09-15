@@ -36,7 +36,7 @@ export function useLatteChangeActions() {
         }
       },
       onError: ({ err }) => {
-        setError(err.message)
+        setError(err)
       },
     },
   )
@@ -55,7 +55,7 @@ export function useLatteChangeActions() {
         }
       },
       onError: ({ err }) => {
-        setError(err.message)
+        setError(err)
       },
     },
   )
@@ -74,7 +74,7 @@ export function useLatteChangeActions() {
         }
       },
       onError: ({ err }) => {
-        setError(err.message)
+        setError(err)
       },
     },
   )
@@ -93,7 +93,7 @@ export function useLatteChangeActions() {
         }
       },
       onError: ({ err }) => {
-        setError(err.message)
+        setError(err)
       },
     },
   )
@@ -102,7 +102,7 @@ export function useLatteChangeActions() {
     addFeedbackToLatteChangeAction,
     {
       onError: ({ err }) => {
-        setError(err.message)
+        setError(err)
       },
     },
   )
