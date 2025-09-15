@@ -180,13 +180,13 @@ jobs:
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
 
-      # Build and push the Docker image
+       # Build and push the Docker image
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ${{ matrix.dockerfile }}
-          platforms: linux/amd64
+          platforms: ${{ matrix.private && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -198,17 +198,17 @@ jobs:
             ${{ matrix.private && format('AWS_ACCESS_KEY_ID={0}', secrets.AWS_ACCESS_KEY_ID) || '' }}
             ${{ matrix.private && format('AWS_SECRET_ACCESS_KEY={0}', secrets.AWS_SECRET_ACCESS_KEY) || '' }}
           build-args: |
-            NEXT_PUBLIC_DOCS_URL=${{ matrix.private && vars.NEXT_PUBLIC_DOCS_URL || '' }}
-            NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ matrix.private && vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL || '' }}
-            NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
-            NEXT_PUBLIC_POSTHOG_KEY=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_KEY || '' }}
-            NEXT_PUBLIC_SENTRY_WEB_DSN=${{ matrix.private && vars.SENTRY_WEB_DSN || '' }}
-            SENTRY_ORG=${{ matrix.private && secrets.SENTRY_ORG || '' }}
-            SENTRY_PROJECT=${{ matrix.private && secrets.SENTRY_PROJECT || '' }}
-            AWS_REGION=${{ matrix.private && vars.AWS_REGION || '' }}
-            S3_BUCKET=${{ matrix.private && vars.STATIC_ASSETS_S3_BUCKET || '' }}
-            STATIC_ASSETS_HOST=${{ matrix.private && vars.STATIC_ASSETS_HOST || '' }}
-            BUILD_ID=${{ github.sha }}
+          AWS_REGION=${{ matrix.private && vars.AWS_REGION || '' }}
+          BUILD_ID=${{ github.sha }}
+          NEXT_PUBLIC_DOCS_URL=${{ matrix.private && vars.NEXT_PUBLIC_DOCS_URL || '' }}
+          NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ matrix.private && vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL || '' }}
+          NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
+          NEXT_PUBLIC_POSTHOG_KEY=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_KEY || '' }}
+          NEXT_PUBLIC_SENTRY_WEB_DSN=${{ matrix.private && vars.SENTRY_WEB_DSN || '' }}
+          S3_BUCKET=${{ matrix.private && vars.STATIC_ASSETS_S3_BUCKET || '' }}
+          SENTRY_ORG=${{ matrix.private && secrets.SENTRY_ORG || '' }}
+          SENTRY_PROJECT=${{ matrix.private && secrets.SENTRY_PROJECT || '' }}
+          STATIC_ASSETS_HOST=${{ matrix.private && vars.STATIC_ASSETS_HOST || '' }}
 
   run-migrations:
     needs: [build-and-push]
