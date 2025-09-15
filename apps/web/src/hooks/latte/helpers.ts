@@ -7,7 +7,7 @@ export function getDescriptionFromToolCall({
   debugMode,
 }: {
   toolCall: ToolCall<string, Record<string, unknown>>
-  debugMode: boolean
+  debugMode?: boolean
 }): Partial<LatteToolStep> {
   const name = toolCall.toolName
   const params = toolCall.args
