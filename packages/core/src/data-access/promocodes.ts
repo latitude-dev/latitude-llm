@@ -6,7 +6,7 @@ import { claimedPromocodes, promocodes } from '../schema'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Promocode } from '../browser'
 
-export async function findAllPromocodes(tx = database) {
+export async function findAll(tx = database) {
   const result = await tx
     .select()
     .from(promocodes)
@@ -15,7 +15,7 @@ export async function findAllPromocodes(tx = database) {
   return Result.ok(result)
 }
 
-export async function findUsedPromocodesByCode(code: string, tx = database) {
+export async function findClaimedByCode(code: string, tx = database) {
   const result = await tx
     .select()
     .from(claimedPromocodes)

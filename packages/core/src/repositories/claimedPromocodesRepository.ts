@@ -21,7 +21,7 @@ export class ClaimedPromocodesRepository extends Repository<ClaimedPromocode> {
       .$dynamic()
   }
 
-  async findClaimedPromocodes() {
+  async findUsedPromocodes() {
     const result = await this.db
       .select(tt)
       .from(promocodes)
@@ -29,6 +29,7 @@ export class ClaimedPromocodesRepository extends Repository<ClaimedPromocode> {
         claimedPromocodes,
         and(this.scopeFilter, eq(claimedPromocodes.code, promocodes.code)),
       )
+      .where(this.scopeFilter)
 
     return Result.ok(result as Promocode[])
   }

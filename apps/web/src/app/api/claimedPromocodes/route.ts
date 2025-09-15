@@ -15,7 +15,7 @@ export const GET = errorHandler(
       },
     ) => {
       const scope = new ClaimedPromocodesRepository(workspace.id)
-      const promocodes = await scope.findClaimedPromocodes()
+      const promocodes = await scope.findUsedPromocodes()
 
       return NextResponse.json(promocodes.unwrap(), { status: 200 })
     },

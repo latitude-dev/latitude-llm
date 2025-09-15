@@ -2,7 +2,7 @@ import { promocodes } from '../../schema'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { eq } from 'drizzle-orm'
-import { findUsedPromocodesByCode } from '../../data-access/promocodes'
+import { findClaimedByCode } from '../../data-access/promocodes'
 
 export async function deletePromocode(
   { code }: { code: string },
@@ -31,7 +31,7 @@ export async function deletePromocode(
 }
 
 async function isPromocodeUsed(code: string): PromisedResult<boolean> {
-  const claimedPromocodesResult = await findUsedPromocodesByCode(code)
+  const claimedPromocodesResult = await findClaimedByCode(code)
   if (!Result.isOk(claimedPromocodesResult)) {
     return claimedPromocodesResult
   }
