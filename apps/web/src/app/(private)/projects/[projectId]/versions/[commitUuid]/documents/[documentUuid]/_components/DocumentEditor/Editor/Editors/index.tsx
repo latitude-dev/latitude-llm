@@ -28,11 +28,11 @@ export function Editors({
   const { diff: experimentDiff, setDiff: setEditorDiff } = useExperimentDiff()
   const readOnlyMessage = useMemo(() => {
     if (commit.mergedAt !== null) {
-      return 'Version published. Create a draft to edit documents.'
+      return 'Version published. Create a draft to edit prompts.'
     }
 
     if (latteDiff) {
-      return 'Keep or undo changes to edit documents.'
+      return 'Keep or undo changes to edit prompts.'
     }
 
     return undefined

@@ -1,3 +1,10 @@
+import { useCurrentDocumentMaybe } from '$/app/providers/DocumentProvider'
+import { useLatteChangeActions } from '$/hooks/latte/useLatteChangeActions'
+import { useDocumentValueMaybe } from '$/hooks/useDocumentValueContext'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
+import { useLatteStore } from '$/stores/latte/index'
+import useLatteThreadCheckpoints from '$/stores/latteThreadCheckpoints'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -17,13 +24,6 @@ import React, {
 } from 'react'
 import { ChangeList } from './_components/ChangesList'
 import { LatteDebugVersionSelector } from './_components/DebugVersionSelector'
-import useLatteThreadCheckpoints from '$/stores/latteThreadCheckpoints'
-import { useLatteStore } from '$/stores/latte/index'
-import { useLatteChangeActions } from '$/hooks/latte/useLatteChangeActions'
-import { useCurrentDocumentMaybe } from '$/app/providers/DocumentProvider'
-import { useDocumentValueMaybe } from '$/hooks/useDocumentValueContext'
-import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
 
 const INPUT_PLACEHOLDERS = [
   'How can I see the logs of my agent?',
@@ -52,7 +52,7 @@ export function LatteChatInput({
   inConversation: boolean
   scrollToBottom: () => void
   sendMessage: (message: string) => void
-  error?: string
+  error?: Error
   resetChat: () => void
   stopLatteChat?: () => void
 }) {

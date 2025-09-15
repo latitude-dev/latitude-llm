@@ -9,10 +9,9 @@ import {
   useState,
 } from 'react'
 
+import { UpgradeLink } from '$/components/UpgradeLink'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
-import Link from 'next/link'
 
 export type PaywallModalContextValue = {
   isOpen: boolean
@@ -45,19 +44,31 @@ export function PaywallModalProvider({ children }: { children: ReactNode }) {
         onOpenChange={setIsOpen}
         dismissible
         title='Upgrade is required'
-        description="You've reached the limit included in your plan. Upgrade, wait for renewal or earn rewards to continue using Latte."
+        description="You've reached the credit limit included in your plan. Upgrade, wait for renewal or earn rewards to continue using Latte."
         footer={
           <>
             <CloseTrigger />
-            <Link href='mailto:hello@latitude.so'>
-              <Button fancy iconProps={{ name: 'mail' }}>
-                Get in touch to upgrade
-              </Button>
-            </Link>
+            <UpgradeLink
+              buttonProps={{
+                variant: 'latte',
+                fancy: true,
+                iconProps: {
+                  name: 'arrowUpRight',
+                  placement: 'right',
+                  size: 'normal',
+                  color: 'latteInputForeground',
+                  className: 'flex-shrink-0 -mt-px',
+                },
+                userSelect: false,
+              }}
+            />
           </>
         }
       >
-        <Alert description="Latitude will continue working, but you'll no longer be able to use Latte." />
+        <Alert
+          variant='warning'
+          description='Latitude will continue working, but you will not be able to use Latte.'
+        />
       </Modal>
     </PaywallModalContext.Provider>
   )

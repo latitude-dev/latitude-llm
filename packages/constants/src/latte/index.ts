@@ -36,8 +36,6 @@ export const LATTE_COST_MODEL = 'claude-sonnet-4-0'
 export const LATTE_COST_PER_CREDIT = 200_000 // $0.20
 export const LATTE_COST_FEE_FACTOR = 1.1 // 10%
 export const LATTE_MINIMUM_CREDITS_PER_REQUEST = 1
-// TODO: Find a better way to handle this with latitude error codes
-export const LATTE_NOT_ENOUGH_CREDITS_ERROR = 'Not enough Latte credits'
 
 export type LatteUsage = {
   limit: Quota

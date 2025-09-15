@@ -1,16 +1,16 @@
-import { useCallback, useEffect } from 'react'
-import { LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
-import { LatteThreadUpdateArgs } from '@latitude-data/core/browser'
-import { getDescriptionFromToolCall } from './helpers'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useLatteStore } from '$/stores/latte/index'
-import { useLatteUsage } from './usage'
+import { LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
+import { LatteThreadUpdateArgs } from '@latitude-data/core/browser'
+import { useCallback, useEffect } from 'react'
+import { getDescriptionFromToolCall } from './helpers'
 import {
   LatteActionStep,
-  LatteToolStep,
-  LatteThoughtStep,
   LatteStepGroupItem,
+  LatteThoughtStep,
+  LatteToolStep,
 } from './types'
+import { useLatteUsage } from './usage'
 
 /**
  * Creates a tool step from the tool started update
@@ -122,7 +122,7 @@ export function useLatteThreadUpdates() {
       if (threadUuid !== incomingthreadUuid) return
 
       if (update.type === 'error') {
-        setError(update.error.message)
+        setError(update.error)
         setIsBrewing(false)
         return
       }

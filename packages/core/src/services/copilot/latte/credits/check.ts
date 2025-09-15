@@ -1,10 +1,9 @@
 import {
   LATTE_MINIMUM_CREDITS_PER_REQUEST,
-  LATTE_NOT_ENOUGH_CREDITS_ERROR,
   Workspace,
 } from '../../../../browser'
 import { database } from '../../../../client'
-import { UnprocessableEntityError } from '../../../../lib/errors'
+import { PaymentRequiredError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'
 import { usageLatteCredits } from './usage'
 
@@ -34,7 +33,9 @@ export async function checkLatteCredits(
 
   if (usage.billable + credits > usage.limit) {
     return Result.error(
-      new UnprocessableEntityError(LATTE_NOT_ENOUGH_CREDITS_ERROR),
+      new PaymentRequiredError(
+        'You have reached the maximum number of Latte credits allowed for your Latitude plan. Upgrade now.',
+      ),
     )
   }
 
