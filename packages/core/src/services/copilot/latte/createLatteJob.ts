@@ -1,7 +1,7 @@
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { User, Workspace, Project } from '../../../browser'
 import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
-import { documentsQueue } from '../../../jobs/queues'
+import { queues } from '../../../jobs/queues'
 import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { checkLatteCredits } from './credits/check'
@@ -32,6 +32,7 @@ export async function createLatteJob({
     return Result.error(checking.error)
   }
 
+  const { documentsQueue } = await queues()
   const job = await documentsQueue.add('runLatteJob', {
     workspaceId: workspace.id,
     projectId: project.id,

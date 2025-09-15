@@ -4,7 +4,7 @@ import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { IntegrationDto, McpServer } from '../../../browser'
 import { publisher } from '../../../events/publisher'
-import { maintenanceQueue } from '../../../jobs/queues'
+import { queues } from '../../../jobs/queues'
 import { Result, TypedResult } from '../../../lib/Result'
 import { StreamManager } from '../../../lib/streamManager'
 import { McpServerRepository } from '../../../repositories'
@@ -80,6 +80,7 @@ async function updateMcpServerLastUsed(
   }
 
   try {
+    const { maintenanceQueue } = await queues()
     await maintenanceQueue.add('updateMcpServerLastUsedJob', {
       workspaceId: integration.workspaceId,
       mcpServerId: mcpServerResult.value.id,

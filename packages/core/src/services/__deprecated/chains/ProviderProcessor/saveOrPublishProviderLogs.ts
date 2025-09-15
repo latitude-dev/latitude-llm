@@ -7,7 +7,7 @@ import {
   LogSources,
   StreamType,
 } from '../../../../constants'
-import { defaultQueue } from '../../../../jobs/queues'
+import { queues } from '../../../../jobs/queues'
 import { generateUUIDIdentifier } from '../../../../lib/generateUUID'
 import { PartialConfig } from '../../../ai'
 import { createProviderLog } from '../../../providerLogs/create'
@@ -39,6 +39,7 @@ export async function saveOrPublishProviderLogs<
     return providerLog as P
   }
 
+  const { defaultQueue } = await queues()
   defaultQueue.add('createProviderLogJob', {
     ...providerLogsData,
     generatedAt: data.generatedAt.toISOString(),

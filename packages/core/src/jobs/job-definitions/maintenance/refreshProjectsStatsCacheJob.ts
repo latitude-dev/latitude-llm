@@ -2,7 +2,7 @@ import { Job } from 'bullmq'
 import { isNull } from 'drizzle-orm'
 import { database } from '../../../client'
 import { projects } from '../../../schema'
-import { maintenanceQueue } from '../../queues'
+import { queues } from '../../queues'
 
 export type RefreshProjectsStatsCacheJobData = Record<string, never>
 
@@ -16,6 +16,7 @@ export const refreshProjectsStatsCacheJob = async (
     .then((r) => r)
 
   for (const project of candidates) {
+    const { maintenanceQueue } = await queues()
     await maintenanceQueue.add(
       'refreshProjectStatsCacheJob',
       { projectId: project.id },

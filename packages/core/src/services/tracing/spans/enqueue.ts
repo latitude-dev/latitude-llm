@@ -7,7 +7,7 @@ import {
   Workspace,
 } from '../../../browser'
 import { ingestSpansJobKey } from '../../../jobs/job-definitions/tracing/ingestSpansJob'
-import { tracingQueue } from '../../../jobs/queues'
+import { queues } from '../../../jobs/queues'
 import { diskFactory, DiskWrapper } from '../../../lib/disk'
 import { hashContent as hash } from '../../../lib/hashContent'
 import { Result, TypedResult } from '../../../lib/Result'
@@ -34,6 +34,7 @@ export async function enqueueSpans(
     workspaceId: workspace?.id,
   }
 
+  const { tracingQueue } = await queues()
   await tracingQueue.add('ingestSpansJob', payload, {
     attempts: TRACING_JOBS_MAX_ATTEMPTS,
     deduplication: { id: ingestSpansJobKey(payload) },

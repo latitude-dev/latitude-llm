@@ -1,6 +1,6 @@
 import { ExecuteDocumentTriggerJobData } from '../../../jobs/job-definitions/documentTriggers/runDocumentTriggerEventJob'
 import { Commit, DocumentTriggerEvent, Workspace } from '../../../browser'
-import { documentsQueue } from '../../../jobs/queues'
+import { queues } from '../../../jobs/queues'
 import { PromisedResult } from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'
 
@@ -19,6 +19,7 @@ export async function enqueueRunDocumentFromTriggerEventJob({
     commitId: commit.id,
   }
 
+  const { documentsQueue } = await queues()
   await documentsQueue.add('runDocumentTriggerEventJob', jobData)
 
   return Result.nil()

@@ -2,10 +2,11 @@ import { Job } from 'bullmq'
 
 import { LatitudeEvent } from '../../../events/events'
 import { EventHandlers } from '../../../events/handlers/index'
-import { eventHandlersQueue } from '../../queues'
+import { queues } from '../../queues'
 
 export const publishEventJob = async (job: Job<LatitudeEvent>) => {
   const event = job.data
+  const { eventHandlersQueue } = await queues()
 
   // Async handlers
   const handlers = EventHandlers[event.type]

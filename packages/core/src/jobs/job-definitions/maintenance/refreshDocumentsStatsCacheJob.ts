@@ -3,7 +3,7 @@ import { Job } from 'bullmq'
 import { and, inArray, isNull } from 'drizzle-orm'
 import { database } from '../../../client'
 import { commits, documentVersions } from '../../../schema'
-import { maintenanceQueue } from '../../queues'
+import { queues } from '../../queues'
 
 export type RefreshDocumentsStatsCacheJobData = Record<string, never>
 
@@ -38,6 +38,7 @@ export const refreshDocumentsStatsCacheJob = async (
     .then((r) => r)
 
   for (const document of candidates) {
+    const { maintenanceQueue } = await queues()
     await maintenanceQueue.add(
       'refreshDocumentStatsCacheJob',
       { documentUuid: document.uuid },

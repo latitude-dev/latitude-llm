@@ -223,8 +223,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/env
       '@latitude-data/sdk':
-        specifier: 5.0.0-beta.2
-        version: 5.0.0-beta.2(typescript@5.8.3)(ws@8.18.3)
+        specifier: 5.0.0
+        version: 5.0.0(typescript@5.8.3)(ws@8.18.3)
       '@latitude-data/socket.io-react-hook':
         specifier: 2.4.5
         version: 2.4.5(react@19.0.0-rc-5d19e1c8-20240923)
@@ -3536,8 +3536,8 @@ packages:
     peerDependencies:
       typescript: ^5.5.4
 
-  '@latitude-data/sdk@5.0.0-beta.2':
-    resolution: {integrity: sha512-3niZ8aZTW4IkvlOL6sLQ9SIu9UdasEeoUEOxGJxMwhO/pAI0DiG8WfkoEz5PZjqI/j6qRn7HGN6LtZbVvz2KeQ==}
+  '@latitude-data/sdk@5.0.0':
+    resolution: {integrity: sha512-62tpSInd8/weR9zqDDx/wT8nEwFtUXkqao508cYuA+cLh2c/Pm+0pRmbohlZwNPh4B1b4//SjlBzyTbFjNtp8g==}
     peerDependencies:
       typescript: ^5.5.4
 
@@ -17056,7 +17056,7 @@ snapshots:
       - encoding
       - ws
 
-  '@latitude-data/sdk@5.0.0-beta.2(typescript@5.8.3)(ws@8.18.3)':
+  '@latitude-data/sdk@5.0.0(typescript@5.8.3)(ws@8.18.3)':
     dependencies:
       eventsource-parser: 2.0.1
       node-fetch: 2.7.0

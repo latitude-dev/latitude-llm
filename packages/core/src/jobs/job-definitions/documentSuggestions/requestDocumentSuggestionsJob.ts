@@ -24,7 +24,7 @@ import {
   evaluationVersions,
   projects,
 } from '../../../schema'
-import { documentSuggestionsQueue } from '../../queues'
+import { queues } from '../../queues'
 import { generateDocumentSuggestionJobKey } from './generateDocumentSuggestionJob'
 
 export type RequestDocumentSuggestionsJobData = {}
@@ -181,6 +181,7 @@ export const requestDocumentSuggestionsJob = async (
     )
 
   for (const candidate of candidatesV2) {
+    const { documentSuggestionsQueue } = await queues()
     await documentSuggestionsQueue.add(
       'generateDocumentSuggestionJob',
       candidate,

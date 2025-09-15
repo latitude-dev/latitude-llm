@@ -13,7 +13,7 @@ import { and, desc, eq, isNull, lt, notInArray } from 'drizzle-orm'
 import { buildLogsFilterSQLConditions } from '../../../services/documentLogs/logsFilterUtils'
 import { updateDatasetFromLogs } from '../../../services/datasets/createFromLogs'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
-import { defaultQueue } from '../../queues'
+import { queues } from '../../queues'
 
 type CreateDatasetFromLogsJobProps = {
   name: string
@@ -120,6 +120,7 @@ export const createDatasetFromLogsJob = async (
     }
   }
 
+  const { defaultQueue } = await queues()
   defaultQueue.add('notifyClientOfDatasetUpdate', {
     userId: author.id,
     datasetId: dt.id,

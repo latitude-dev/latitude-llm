@@ -8,7 +8,7 @@ import {
 } from '../../browser'
 import { cache as getCache } from '../../cache'
 import { database } from '../../client'
-import { defaultQueue } from '../../jobs/queues'
+import { queues } from '../../jobs/queues'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { hashContent } from '../../lib/hashContent'
 import { Result } from '../../lib/Result'
@@ -53,6 +53,7 @@ ${parameters.prompt}
   const { project, commit } = creating.unwrap()
 
   try {
+    const { defaultQueue } = await queues()
     defaultQueue.add('generateProjectNameJob', {
       workspaceId: workspace.id,
       projectId: project.id,

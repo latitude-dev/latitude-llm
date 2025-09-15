@@ -4,7 +4,6 @@ import {
   Providers,
 } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
-import { defaultQueue } from '@latitude-data/core/queues'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createDatasetFromLogsAction } from './createFromLogs'
@@ -16,6 +15,7 @@ const mocks = vi.hoisted(() => {
     findOrCreateDataset: vi.fn(),
     updateDatasetFromLogs: vi.fn(),
     queueAdd: vi.fn(),
+    defaultQueueAddMock: vi.fn(),
   }
 })
 
@@ -32,9 +32,11 @@ vi.mock('@latitude-data/core/services/datasets/createFromLogs', () => ({
 }))
 
 vi.mock('@latitude-data/core/queues', () => ({
-  defaultQueue: {
-    add: vi.fn(),
-  },
+  queues: vi.fn().mockResolvedValue({
+    defaultQueue: {
+      add: mocks.defaultQueueAddMock,
+    },
+  }),
 }))
 
 vi.mock('@latitude-data/core/events/publisher', () => ({
@@ -163,7 +165,7 @@ describe('createDatasetFromLogsAction', () => {
       })
 
       // Verify queue was not used
-      expect(defaultQueue.add).not.toHaveBeenCalled()
+      expect(mocks.defaultQueueAddMock).not.toHaveBeenCalled()
     })
   })
 
@@ -193,7 +195,7 @@ describe('createDatasetFromLogsAction', () => {
       expect(mocks.updateDatasetFromLogs).not.toHaveBeenCalled()
 
       // Verify queue was used with correct params
-      expect(defaultQueue.add).toHaveBeenCalledWith(
+      expect(mocks.defaultQueueAddMock).toHaveBeenCalledWith(
         'createDatasetFromLogsJob',
         {
           name: 'Test Dataset',
@@ -224,7 +226,7 @@ describe('createDatasetFromLogsAction', () => {
       expect(result).toEqual({ mode: 'async' })
 
       // Verify queue was used with correct params
-      expect(defaultQueue.add).toHaveBeenCalledWith(
+      expect(mocks.defaultQueueAddMock).toHaveBeenCalledWith(
         'createDatasetFromLogsJob',
         {
           name: 'Test Dataset',
@@ -255,7 +257,7 @@ describe('createDatasetFromLogsAction', () => {
       expect(result).toEqual({ mode: 'async' })
 
       // Verify queue was used with correct params
-      expect(defaultQueue.add).toHaveBeenCalledWith(
+      expect(mocks.defaultQueueAddMock).toHaveBeenCalledWith(
         'createDatasetFromLogsJob',
         {
           name: 'Test Dataset',
