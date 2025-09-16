@@ -1,0 +1,20 @@
+# Common Helm ignores
+.git/
+.github/
+.vscode/
+.idea/
+*.swp
+*.bak
+*.tmp
+*.orig
+*.log
+.DS_Store
+node_modules/
+charts/
+Chart.lock
+
+# Do not package local secrets files
+values.secrets.yaml
+values.secrets.yml
+*.secrets.yaml
+*.secrets.yml
