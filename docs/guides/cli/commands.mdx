@@ -14,7 +14,7 @@ latitude init [-p <path>] [--dev]
 ```
 
 - Prompts for your API key (or uses `latitude login`/`LATITUDE_API_KEY`)
-- Detects npm project and module type (ESM/CJS)
+- Detects npm project setup
 - Lets you choose:
   - Create a new project (provide a name)
   - Use an existing project (enter `projectId`)
@@ -54,9 +54,8 @@ latitude pull [-p <path>] [-y] [--dev]
 - Computes local vs remote changes
 - Choose: Accept / Cancel / View details (opens pager for full diffs)
 - `-y` skips confirmation and applies changes
-- Saves prompts as:
-  - npm projects: `.js` (ESM) or `.cjs` (CJS) default-exporting a string
-  - non-npm projects: `.promptl` plain text
+- Saves prompts as `.js` files with a default export in npm projects
+- Preserves `.promptl` files for non-npm projects
 - Removes local files that no longer exist remotely
 
 ## push
@@ -70,7 +69,7 @@ latitude push [-p <path>] [-y] [--dev]
 - Reads prompt files under `rootFolder`
 - Shows a diff and asks for confirmation; `-y` skips confirmation
 - Sends only changed files to the server
-- Note: TypeScript prompt files (`.ts`) are not supported for reading content; use `.js`, `.cjs`, `.mjs`, or `.promptl`
+- Note: TypeScript prompt files (`.ts`) are not supported for reading content; use `.js` or `.promptl`
 
 ## checkout
 
@@ -106,19 +105,13 @@ latitude help
 ## Prompt file formats
 
 - npm projects:
-  - ESM (`package.json` has `"type": "module"`):
-
+  
 ```js
 // src/prompts/welcome.js
 export default 'Welcome to Latitude!'
 ```
 
-- CJS (default):
-
-```js
-// src/prompts/welcome.cjs
-module.exports = 'Welcome to Latitude!'
-```
+Latitude always writes prompts for npm projects as `.js` modules with a default export to match modern ESM tooling.
 
 - non-npm projects:
 

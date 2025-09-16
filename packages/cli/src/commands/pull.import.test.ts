@@ -31,11 +31,11 @@ describe('PullCommand.importPromptFromFile (default exports)', () => {
     expect(content).toBe('esm hello')
   })
 
-  it('reads default export from .cjs (CJS)', async () => {
-    const file = path.join(tmpDir, 'default-cjs.cjs')
-    fsSync.writeFileSync(file, "module.exports = 'cjs hello'\n")
+  it('reads default export from .js (ESM)', async () => {
+    const file = path.join(tmpDir, 'default-esm.js')
+    fsSync.writeFileSync(file, "export default 'esm js hello'\n")
 
     const content = await pull.importPromptFromFile(file)
-    expect(content).toBe('cjs hello')
+    expect(content).toBe('esm js hello')
   })
 })

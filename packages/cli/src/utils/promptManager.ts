@@ -47,27 +47,12 @@ export class PromptManager {
     }
   }
   /**
-   * Detect if the project uses ESM or CJS
-   */
-  async isEsmProject(projectPath: string): Promise<boolean> {
-    try {
-      const packageJsonPath = path.join(projectPath, 'package.json')
-      const packageJsonContent = await fs.readFile(packageJsonPath, 'utf-8')
-      const packageJson = JSON.parse(packageJsonContent)
-      return packageJson.type === 'module'
-    } catch (error) {
-      // Default to CJS if we can't determine
-      return false
-    }
-  }
-  /**
    * Save a prompt to the filesystem
    */
   async savePromptToFile(
     prompt: Prompt,
     rootFolder: string,
     projectPath: string,
-    isEsm: boolean,
   ): Promise<string> {
     // Use the prompt's path property to determine where to save it
     // Remove any leading slashes
@@ -78,15 +63,13 @@ export class PromptManager {
     const dirPath = path.join(projectPath, rootFolder, path.dirname(promptPath))
     await fs.mkdir(dirPath, { recursive: true })
     // Create the file
-    const fileName = path.basename(promptPath) + (isEsm ? '.js' : '.cjs')
+    const fileName = path.basename(promptPath) + '.js'
     const filePath = path.join(dirPath, fileName)
 
     // Serialize content as a JSON string literal to avoid template issues
     const jsonString = JSON.stringify(prompt.content)
     // Create the content exporting default to avoid invalid identifiers
-    const content = isEsm
-      ? `export default ${jsonString}\n`
-      : `module.exports = ${jsonString}\n`
+    const content = `export default ${jsonString}\n`
     await fs.writeFile(filePath, content)
     // Return the relative path for logging
     return path.join(rootFolder, path.dirname(promptPath), fileName)
@@ -98,7 +81,6 @@ export class PromptManager {
     promptPath: string,
     rootFolder: string,
     isNpmProject: boolean = true,
-    isEsm: boolean = false,
   ): string {
     // Remove any leading slashes
     const normalizedPath = promptPath.startsWith('/')
@@ -107,8 +89,7 @@ export class PromptManager {
 
     // Add appropriate extension based on project type
     if (isNpmProject) {
-      const extension = isEsm ? '.js' : '.cjs'
-      return path.join(rootFolder, normalizedPath + extension)
+      return path.join(rootFolder, normalizedPath + '.js')
     } else {
       return path.join(rootFolder, normalizedPath + '.promptl')
     }
@@ -123,7 +104,7 @@ export class PromptManager {
   ): Promise<string[]> {
     return new Promise((resolve, reject) => {
       // Set the file pattern based on whether it's an npm project
-      const filePattern = isNpmProject ? '*.{js,mjs,cjs,ts}' : '*.promptl'
+      const filePattern = isNpmProject ? '*.{js,mjs,ts,cjs}' : '*.promptl'
       const pattern = path.join(projectPath, rootFolder, '**', filePattern)
 
       glob(pattern, (err, matches) => {
@@ -148,7 +129,6 @@ export class PromptManager {
     rootFolder: string,
     projectPath: string,
     isNpmProject: boolean = true,
-    isEsm: boolean = false,
   ): Promise<string[]> {
     try {
       // Get all prompt files in the filesystem
@@ -168,7 +148,7 @@ export class PromptManager {
         // Add filename with appropriate extension
         let fileName: string
         if (isNpmProject) {
-          fileName = path.basename(promptPath) + (isEsm ? '.js' : '.cjs')
+          fileName = path.basename(promptPath) + '.js'
         } else {
           fileName = path.basename(promptPath) + '.promptl'
         }

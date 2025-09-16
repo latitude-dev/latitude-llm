@@ -354,8 +354,6 @@ describe('CheckoutCommand', () => {
 
   describe('savePrompts', () => {
     beforeEach(() => {
-      checkoutCommand['isEsm'] = true
-
       // Mock savePrompts function
       vi.doMock('../utils/promptOperations', () => ({
         savePrompts: vi.fn().mockResolvedValue(undefined),

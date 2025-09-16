@@ -352,6 +352,14 @@ describe('PushCommand', () => {
 
       expect(result).toBe('js content')
     })
+
+    it('should reject .cjs files with a helpful message', async () => {
+      await expect(
+        (pushCommand as any).readPromptContent('/path/test.cjs'),
+      ).rejects.toThrow(
+        'CommonJS prompt files are no longer supported. Rename to .js to continue.',
+      )
+    })
   })
 
   describe('convertToPromptVariableName', () => {
@@ -377,9 +385,6 @@ describe('PushCommand', () => {
         (pushCommand as any).convertFilePathToPromptPath('test.promptl'),
       ).toBe('test')
       expect((pushCommand as any).convertFilePathToPromptPath('test.ts')).toBe(
-        'test',
-      )
-      expect((pushCommand as any).convertFilePathToPromptPath('test.cjs')).toBe(
         'test',
       )
     })

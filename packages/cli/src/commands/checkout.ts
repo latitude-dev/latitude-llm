@@ -206,7 +206,6 @@ export class CheckoutCommand extends BaseCommand {
         prompts,
         promptsRootFolder,
         this.projectPath,
-        this.isEsm,
         this.promptManager,
         isNpmProject,
       )

@@ -17,7 +17,6 @@ import { DiffResult } from './computePromptDiff'
 export abstract class BaseCommand {
   protected client: Latitude | undefined
   protected configManager: ConfigManager
-  protected isEsm: boolean = false
   protected lockFileManager: LockFileManager
   protected projectManager: ProjectManager
   protected projectPath: string = ''
@@ -88,7 +87,6 @@ export abstract class BaseCommand {
     this.setProjectPath(options)
 
     await this.setClient(options)
-    await this.detectModuleFormat()
     await validateEnvironment(
       this.projectPath,
       this.lockFileManager,
@@ -107,13 +105,6 @@ export abstract class BaseCommand {
       )
     }
     return lockFile
-  }
-
-  /**
-   * Detect if the project uses ESM or CommonJS
-   */
-  protected async detectModuleFormat(): Promise<void> {
-    this.isEsm = await this.promptManager.isEsmProject(this.projectPath)
   }
 
   /**
