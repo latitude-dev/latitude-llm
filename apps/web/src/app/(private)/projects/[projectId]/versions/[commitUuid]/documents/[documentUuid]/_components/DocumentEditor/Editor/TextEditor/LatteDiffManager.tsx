@@ -29,6 +29,7 @@ export function LatteDiffManager() {
   const { data: checkpoints } = useLatteThreadCheckpoints({
     threadUuid,
     commitId: commit.id,
+    refreshInterval: isBrewing ? 2000 : 0, // Poll every 2 seconds when brewing
   })
 
   const currentCheckpointIndex = useMemo(() => {

@@ -44,85 +44,90 @@ export async function executeLatteActions({
 
   const transaction = new Transaction()
 
-  return await transaction.call(async (tx) => {
-    // Update all documents requested
-    const latteChanges: LatteChange[] = []
-    for await (const action of actions) {
-      const result = await executeEditAction(
-        { workspace, commit, documents, action },
-        transaction,
-      )
-      if (!result.ok) {
-        return Result.error(result.error!)
+  const result = await transaction.call(
+    async (tx) => {
+      // Update all documents requested
+      const latteChanges: LatteChange[] = []
+      for await (const action of actions) {
+        const actionResult = await executeEditAction(
+          { workspace, commit, documents, action },
+          transaction,
+        )
+        if (!actionResult.ok) {
+          return Result.error(actionResult.error!)
+        }
+        latteChanges.push(actionResult.unwrap())
       }
-      latteChanges.push(result.unwrap())
-    }
 
-    WebsocketClient.sendEvent('latteProjectChanges', {
-      workspaceId: workspace.id,
-      data: {
-        threadUuid,
-        changes: latteChanges,
-      },
-    })
+      // Create the missing checkpoints (status of the previous documents for documents that were updated and not previously checkpointed)
+      const missingCheckpoints = latteChanges
+        .filter(
+          (change) =>
+            !threadCheckpoints.some(
+              (checkpoint) =>
+                checkpoint.documentUuid === change.current.documentUuid &&
+                checkpoint.commitId === commit.id,
+            ),
+        )
+        .reduce(
+          (acc, change) => ({
+            ...acc,
+            [change.current.documentUuid]: change.previous,
+          }),
+          {},
+        )
 
-    // Create the missing checkpoints (status of the previous documents for documents that were updated and not previously checkpointed)
-    const missingCheckpoints = latteChanges
-      .filter(
-        (change) =>
-          !threadCheckpoints.some(
-            (checkpoint) =>
-              checkpoint.documentUuid === change.current.documentUuid &&
-              checkpoint.commitId === commit.id,
-          ),
-      )
-      .reduce(
-        (acc, change) => ({
-          ...acc,
-          [change.current.documentUuid]: change.previous,
-        }),
-        {},
-      )
+      if (Object.keys(missingCheckpoints).length) {
+        const newCheckpointsResult = await createLatteThreadCheckpoints(
+          {
+            threadUuid,
+            commitId: commit.id,
+            checkpoints: missingCheckpoints,
+          },
+          transaction,
+        )
+        if (!newCheckpointsResult.ok) {
+          return Result.error(newCheckpointsResult.error!)
+        }
+      }
 
-    if (Object.keys(missingCheckpoints).length) {
-      const newCheckpointsResult = await createLatteThreadCheckpoints(
+      // Scan the updated project for errors
+      const documentsScope = new DocumentVersionsRepository(workspace.id, tx)
+      const newDocuments = await documentsScope
+        .getDocumentsAtCommit(commit)
+        .then((r) => r.unwrap())
+
+      const metadatasResult = await scanDocuments(
         {
-          threadUuid,
-          commitId: commit.id,
-          checkpoints: missingCheckpoints,
+          documents: newDocuments,
+          commit,
+          workspace,
         },
-        transaction,
+        tx,
       )
-      if (!newCheckpointsResult.ok) {
-        return Result.error(newCheckpointsResult.error!)
+
+      if (!metadatasResult.ok) {
+        return Result.error(metadatasResult.error!)
       }
-    }
 
-    // Scan the updated project for errors
-    const documentsScope = new DocumentVersionsRepository(workspace.id, tx)
-    const newDocuments = await documentsScope
-      .getDocumentsAtCommit(commit)
-      .then((r) => r.unwrap())
+      const metadatas = metadatasResult.unwrap() as {
+        [path: string]: ConversationMetadata
+      }
+      return Result.ok({
+        changes: latteChanges,
+        metadatas,
+      })
+    },
+    ({ changes }) => {
+      WebsocketClient.sendEvent('latteProjectChanges', {
+        workspaceId: workspace.id,
+        data: {
+          threadUuid,
+          changes,
+        },
+      })
+    },
+  )
 
-    const metadatasResult = await scanDocuments(
-      {
-        documents: newDocuments,
-        commit,
-        workspace,
-      },
-      tx,
-    )
-
-    if (!metadatasResult.ok) {
-      return Result.error(metadatasResult.error!)
-    }
-
-    const metadatas = metadatasResult.unwrap() as {
-      [path: string]: ConversationMetadata
-    }
-    return Result.ok({
-      changes: latteChanges,
-      metadatas,
-    })
-  })
+  return result
 }
