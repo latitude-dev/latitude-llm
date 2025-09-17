@@ -15,7 +15,7 @@ from promptl_ai import (
     openai,
 )
 
-from latitude_sdk import RenderChainOptions, RenderChainResult
+from latitude_sdk import Prompt, RenderChainOptions, RenderChainResult
 from tests.utils import TestCase, fixtures
 
 
@@ -133,7 +133,19 @@ class TestRenderChain(TestCase):
                 "Goodbye!",
             ]
         )
-        prompt = fixtures.PROMPT
+        parts = fixtures.PROMPT.content.split("---")
+        prompt = Prompt(
+            **dict(
+                fixtures.PROMPT,
+                content=f"""
+---
+{parts[1].strip()}
+---
+{{{{ increment += 1 }}}}
+{parts[2].strip()}
+""".strip(),  # noqa: E501
+            ),
+        )
         options = RenderChainOptions(
             adapter=Adapter.Default,
         )
@@ -147,9 +159,9 @@ class TestRenderChain(TestCase):
                 Error.model_construct(
                     name="CompileError",
                     code="variable-not-declared",
-                    message="Variable 'question' is not declared",
-                    start=ErrorPosition(line=11, column=14, character=141),
-                    end=ErrorPosition(line=11, column=22, character=149),
+                    message="Variable 'increment' is not declared",
+                    start=ErrorPosition(line=8, column=4, character=90),
+                    end=ErrorPosition(line=8, column=13, character=99),
                     frame=mock.ANY,
                 )
             ),

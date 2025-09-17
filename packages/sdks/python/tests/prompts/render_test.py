@@ -124,7 +124,14 @@ class TestRenderPrompt(TestCase):
         )
 
     async def test_fails(self):
-        prompt = fixtures.PROMPT.content
+        parts = fixtures.PROMPT.content.split("---")
+        prompt = f"""
+---
+{parts[1].strip()}
+---
+{{{{ increment += 1 }}}}
+{parts[2].strip()}
+""".strip()  # noqa: E501
         options = RenderPromptOptions(
             adapter=Adapter.Default,
         )
@@ -138,9 +145,9 @@ class TestRenderPrompt(TestCase):
                 Error.model_construct(
                     name="CompileError",
                     code="variable-not-declared",
-                    message="Variable 'question' is not declared",
-                    start=ErrorPosition(line=11, column=14, character=141),
-                    end=ErrorPosition(line=11, column=22, character=149),
+                    message="Variable 'increment' is not declared",
+                    start=ErrorPosition(line=8, column=4, character=90),
+                    end=ErrorPosition(line=8, column=13, character=99),
                     frame=mock.ANY,
                 )
             ),

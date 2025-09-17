@@ -12,17 +12,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: 3.13.x
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6
         with:
-          version: '0.5.10'
+          version: '0.8.17'
           enable-cache: true
 
       - name: Install Python dependencies
@@ -46,7 +46,7 @@ jobs:
         run: |
           cd packages/sdks/python
           CURRENT_VERSION="${{ steps.get_version.outputs.version }}"
-          
+
           # Check if version exists on PyPI using the PyPI API
           if curl -s "https://pypi.org/pypi/latitude-sdk/$CURRENT_VERSION/json" | grep -q '"version"'; then
             echo "should_publish=false" >> $GITHUB_OUTPUT
