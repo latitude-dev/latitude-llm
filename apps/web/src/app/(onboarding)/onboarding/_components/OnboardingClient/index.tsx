@@ -8,6 +8,7 @@ import {
   Dataset,
 } from '@latitude-data/core/browser'
 import { useCallback, useState } from 'react'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ROUTES } from '$/services/routes'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -80,6 +81,11 @@ export function OnboardingClient({
     ],
   )
 
+  const onSkipOnboarding = useCallback(async () => {
+    await completeOnboarding()
+    navigate.push(ROUTES.dashboard.root)
+  }, [completeOnboarding, navigate])
+
   return (
     <div className='space-y-16'>
       <div className='space-y-2'>
@@ -110,6 +116,11 @@ export function OnboardingClient({
             messages={messages}
             onCompleteOnboarding={onCompleteOnboarding}
           />
+        </div>
+        <div className='flex justify-center pt-4'>
+          <Button variant='link' className='p-0' onClick={onSkipOnboarding}>
+            Skip onboarding
+          </Button>
         </div>
       </div>
     </div>
