@@ -34,7 +34,7 @@ While Latitude can be run using `docker compose` on a single machine, production
   cp .env.example .env
   # Edit .env with production values (DB creds, S3, Traefik email, domain, etc.)
   docker network create web # If using Traefik default config
-  docker compose -f docker-compose.yml up -d
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
   ```
 
 ### 2. Container Orchestration (Kubernetes, ECS, etc.)

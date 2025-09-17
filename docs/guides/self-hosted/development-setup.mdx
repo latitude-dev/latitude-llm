@@ -49,9 +49,14 @@ This guide explains how to set up a local instance of Latitude on your machine f
 5.  **Start Services with Docker Compose**:
     This command starts the database, message queue, and other background services defined in `docker-compose.yml`.
 
-    ```bash
-    docker compose up -d # Run in detached mode
-    ```
+```bash
+docker compose up -d
+```
+
+<Info>
+  The Docker Compose setup pulls pre-built images from GitHub Container Registry (ghcr.io/latitude-dev).
+  To build local images after making code changes, add the `--build` flag (e.g., `docker compose up -d --build`).
+</Info>
 
     _Alternatively, if using Tmuxinator (recommended)_:
 
