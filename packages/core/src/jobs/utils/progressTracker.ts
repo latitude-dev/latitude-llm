@@ -1,4 +1,4 @@
-import { Redis } from 'ioredis'
+import { Redis, RedisOptions } from 'ioredis'
 import { env } from '@latitude-data/env'
 import { buildRedisConnection } from '../../redis'
 
@@ -18,11 +18,11 @@ export class ProgressTracker {
 
   private async ensureConnection() {
     if (!this.redis) {
-      const redisOptions: any = {
+      const redisOptions: RedisOptions = {
         // Use 'any' or a more specific type for options
         host: env.CACHE_HOST,
         port: env.CACHE_PORT,
-        prefixKey: 'latitude',
+        keyPrefix: 'latitude',
       }
       if (env.CACHE_PASSWORD) {
         redisOptions.password = env.CACHE_PASSWORD

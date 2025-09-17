@@ -6,7 +6,7 @@ import { database } from '../../../client'
 import { documentLogs } from '../../../schema/models/documentLogs'
 import { providerLogs } from '../../../schema/models/providerLogs'
 import { and, eq, lt, desc, notInArray, isNull } from 'drizzle-orm'
-import { Redis } from 'ioredis'
+import { Redis, RedisOptions } from 'ioredis'
 import { env } from '@latitude-data/env'
 import { buildRedisConnection } from '../../../redis'
 import { commits } from '../../../schema/models/commits'
@@ -33,15 +33,15 @@ export class CursorState {
 
   private async ensureConnection() {
     if (!this.redis) {
-      const redisOptions: any = {
-        prefixKey: 'latitude',
+      const redisOptions: RedisOptions = {
+        keyPrefix: 'latitude',
         host: env.CACHE_HOST,
         port: env.CACHE_PORT,
       }
-
       if (env.CACHE_PASSWORD) {
         redisOptions.password = env.CACHE_PASSWORD
       }
+
       this.redis = await buildRedisConnection(redisOptions)
     }
     return this.redis as Redis

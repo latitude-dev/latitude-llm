@@ -1,5 +1,10 @@
 import { env } from '@latitude-data/env'
-import { QueueEvents, QueueEventsListener, QueueEventsProducer } from 'bullmq'
+import {
+  QueueBaseOptions,
+  QueueEvents,
+  QueueEventsListener,
+  QueueEventsProducer,
+} from 'bullmq'
 import { buildRedisConnection } from '../redis'
 
 const queueName = 'pubsub'
@@ -14,8 +19,8 @@ let _pubSub:
 export async function pubSub() {
   if (_pubSub) return _pubSub
 
-  const options = {
-    prefixKey: 'latitude',
+  const options: QueueBaseOptions = {
+    prefix: 'latitude',
     connection: await buildRedisConnection({
       host: env.QUEUE_HOST,
       port: env.QUEUE_PORT,
