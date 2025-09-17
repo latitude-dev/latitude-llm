@@ -1,12 +1,12 @@
 [project]
 name = "latitude-python-examples"
 version = "1.0.0"
-requires-python = ">=3.9, <3.13"
+requires-python = ">=3.9, <3.14"
 dependencies = [
-    "openai>=1.58.1",
+    "openai>=1.107.3",
     "devtools>=0.12.2",
-    "python-dotenv>=1.0.1",
-    "latitude-sdk>=5.1.0",
+    "python-dotenv>=1.1.1",
+    "latitude-sdk>=5.2.0",
 ]
 
 [build-system]
@@ -33,7 +33,7 @@ indent-style = "space"
 allow-direct-references = true
 
 [dependency-groups]
-dev = ["pyright>=1.1.392", "ruff>=0.8.3"]
+dev = ["pyright>=1.1.405", "ruff>=0.13.0"]
 
 # Use monorepo version of the SDK
 # [tool.uv.sources]
