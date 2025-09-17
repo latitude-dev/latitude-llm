@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.2.0] - 2025-17-09
+
+### Added
+
+- Python 3.13 support
+- Bump PromptL to 0.7.5
+
 ## [5.1.0] - 2025-11-09
 
 ### Added
@@ -15,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Stream callbacks are now asyncrhonous, following the consistency of the on_step and on_tool_call callbacks
+- Stream callbacks are now asynchronous, following the consistency of the on_step and on_tool_call callbacks
 
 ### Fixed
 
