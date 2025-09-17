@@ -135,6 +135,7 @@ type LatteThreadToolStarted = {
   type: 'toolStarted'
   toolName: string
   toolCallId: string
+  debugMode: boolean
   args: Record<string, unknown>
 }
 

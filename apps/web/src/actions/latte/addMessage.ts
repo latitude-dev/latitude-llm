@@ -18,11 +18,12 @@ export const addMessageToLatteAction = (
       threadUuid: z.string(),
       message: z.string(),
       context: z.string(),
+      debugVersionUuid: z.string().optional(),
     }),
   )
   .handler(async ({ ctx, input }) => {
     const { workspace, user } = ctx
-    const { message, threadUuid, context } = input
+    const { message, threadUuid, context, debugVersionUuid } = input
     const threadScope = new LatteThreadsRepository(workspace.id)
     const thread = await threadScope.findByUuidAndUser({
       threadUuid,
@@ -39,6 +40,7 @@ export const addMessageToLatteAction = (
       threadUuid: thread.uuid,
       message,
       context,
+      debugVersionUuid,
     })
 
     runResult.unwrap()

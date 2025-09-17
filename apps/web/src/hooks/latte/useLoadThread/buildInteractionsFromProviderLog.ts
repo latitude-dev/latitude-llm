@@ -55,9 +55,11 @@ function buildStepGroup(content: AssitantToolContent) {
   const toolName = content.toolName
   const args = content.args
   const description = getDescriptionFromToolCall({
-    toolCallId,
-    toolName,
-    args,
+    toolCall: {
+      toolCallId,
+      toolName,
+      args,
+    },
   })
 
   return {

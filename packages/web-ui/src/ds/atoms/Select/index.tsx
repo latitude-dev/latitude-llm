@@ -28,12 +28,8 @@ export type SelectOptionGroup<V extends unknown = unknown> = {
   options: SelectOption<V>[]
 }
 export function Options({ options }: { options: SelectOption[] }) {
-  return options.map((option) => (
-    <SelectItem
-      key={option.label}
-      value={String(option.value)}
-      icon={option.icon}
-    >
+  return options.map((option, key) => (
+    <SelectItem key={key} value={String(option.value)} icon={option.icon}>
       {option.label}
     </SelectItem>
   ))

@@ -83,6 +83,7 @@ export function useLatteChatActions() {
           projectId,
           message,
           context: latteContext,
+          debugVersionUuid,
         })
       } else {
         createNewChat({

@@ -59,3 +59,29 @@ export async function getLatteDebugVersions(
     })),
   ])
 }
+
+/**
+ * Returns true if the debugVersion is not the live Latte version, false otherwise
+ */
+export async function isLatteDebugSession(
+  workspaceId: number,
+  debugVersionUuid?: string,
+): PromisedResult<boolean> {
+  if (!debugVersionUuid) {
+    return Result.ok(false)
+  }
+
+  const latteVersionsResult = await getLatteDebugVersions(workspaceId)
+  if (!Result.isOk(latteVersionsResult)) {
+    return latteVersionsResult
+  }
+  const latteVersions = latteVersionsResult.unwrap()
+
+  const latteVersionUsed = latteVersions.find(
+    (v) => v.uuid === debugVersionUuid,
+  )
+
+  const isDebugSession = latteVersionUsed?.isLive === false
+
+  return Result.ok(isDebugSession)
+}
