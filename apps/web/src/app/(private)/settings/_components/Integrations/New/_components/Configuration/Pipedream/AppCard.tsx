@@ -98,7 +98,7 @@ function AppComponentsCard<C extends PipedreamComponentType>({
 
 function AppComponents({ app }: { app: App }) {
   const { data, isLoading: isLoadingPipedreamApp } = usePipedreamApp(
-    app.name_slug,
+    app.nameSlug,
   )
   const isLoading = isLoadingPipedreamApp
 
@@ -149,7 +149,7 @@ export function PipedreamAppCard({ app }: { app: App | undefined }) {
     <div className='w-full flex flex-col gap-4 border border-border p-4 rounded-lg'>
       <div className='flex gap-2 items-center'>
         <Image
-          src={app.img_src}
+          src={app.imgSrc}
           alt={app.name}
           width={24}
           height={24}

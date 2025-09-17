@@ -34,7 +34,7 @@
     "@monaco-editor/react": "4.6.0",
     "@napi-rs/canvas": "0.1.68",
     "@pilcrowjs/object-parser": "0.0.4",
-    "@pipedream/sdk": "^1.6.9",
+    "@pipedream/sdk": "^2.0.0",
     "@sentry/nextjs": "9.10.1",
     "@sindresorhus/slugify": "2.2.1",
     "@t3-oss/env-nextjs": "0.10.1",

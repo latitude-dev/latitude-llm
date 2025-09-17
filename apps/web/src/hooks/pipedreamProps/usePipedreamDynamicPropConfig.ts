@@ -1,10 +1,10 @@
 import { configurePipedreamComponentAction } from '$/actions/integrations/pipedream/configureComponent'
 import { IntegrationDto, PipedreamComponent } from '@latitude-data/core/browser'
-import {
+import type {
   ConfigurableProp,
   ConfigurableProps,
-  ConfigureComponentResponse,
   ConfiguredProps,
+  ConfigurePropResponse,
 } from '@pipedream/sdk/browser'
 import { useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
@@ -21,7 +21,7 @@ export function usePipedreamDynamicPropConfig({
   prop: ConfigurableProp
   configuredProps: ConfiguredProps<ConfigurableProps>
 }) {
-  const [config, setConfig] = useState<ConfigureComponentResponse | undefined>(
+  const [config, setConfig] = useState<ConfigurePropResponse | undefined>(
     undefined,
   )
   const {

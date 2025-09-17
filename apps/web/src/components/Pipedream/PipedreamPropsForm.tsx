@@ -7,10 +7,14 @@ import {
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import {
+import type {
   ConfigurableProp,
+  ConfigurablePropAlert,
   ConfigurablePropBoolean,
+  ConfigurablePropInteger,
+  ConfigurablePropIntegerArray,
   ConfigurableProps,
+  ConfigurablePropStringArray,
   ConfiguredProps,
 } from '@pipedream/sdk/browser'
 import DynamicPipedreamProp, { isDynamicProp } from './Props/DynamicProp'
@@ -19,13 +23,14 @@ import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { AlertProps } from '@latitude-data/web-ui/atoms/Alert/Primitives'
 import PipedreamTimerProp from './Props/TimerProp'
 import ArrayPipedreamProp from './Props/ArrayProp'
+import type {
+  ConfigurablePropAlertType,
+  ConfigurablePropTimer,
+} from '@pipedream/sdk'
 
 type Defined<T> = Exclude<T, undefined | null>
-type AlertType = Defined<
-  Extract<ConfigurableProp, { type: 'alert' }>['alertType']
->
 type AlertVariant = Defined<AlertProps['variant']>
-const ALERT_VARIANTS: Record<AlertType, AlertVariant> = {
+const ALERT_VARIANTS: Record<ConfigurablePropAlertType, AlertVariant> = {
   info: 'default',
   neutral: 'default',
   warning: 'warning',
@@ -159,7 +164,7 @@ function PipedreamPropsForm({
   if (prop.type === 'boolean') {
     return (
       <BooleanPipedreamProp
-        prop={prop}
+        prop={prop as ConfigurablePropBoolean}
         value={value}
         setValue={setValue}
         disabled={disabled}
@@ -178,8 +183,16 @@ function PipedreamPropsForm({
         description={prop.description}
         type={prop.type === 'string' ? 'text' : 'number'}
         disabled={disabled || prop.disabled}
-        min={prop.type === 'integer' ? prop.min : undefined}
-        max={prop.type === 'integer' ? prop.max : undefined}
+        min={
+          prop.type === 'integer'
+            ? (prop as ConfigurablePropInteger).min
+            : undefined
+        }
+        max={
+          prop.type === 'integer'
+            ? (prop as ConfigurablePropInteger).max
+            : undefined
+        }
       />
     )
   }
@@ -187,7 +200,9 @@ function PipedreamPropsForm({
   if (prop.type === 'string[]' || prop.type === 'integer[]') {
     return (
       <ArrayPipedreamProp
-        prop={prop}
+        prop={
+          prop as ConfigurablePropStringArray | ConfigurablePropIntegerArray
+        }
         type={prop.type === 'string[]' ? 'text' : 'number'}
         value={value}
         setValue={setValue}
@@ -199,8 +214,10 @@ function PipedreamPropsForm({
   if (prop.type === 'alert') {
     return (
       <Alert
-        variant={ALERT_VARIANTS[prop.alertType ?? 'info']}
-        description={prop.content}
+        variant={
+          ALERT_VARIANTS[(prop as ConfigurablePropAlert).alertType ?? 'info']
+        }
+        description={(prop as ConfigurablePropAlert).content}
       />
     )
   }
@@ -209,7 +226,7 @@ function PipedreamPropsForm({
     return (
       <PipedreamTimerProp
         integration={integration}
-        prop={prop}
+        prop={prop as ConfigurablePropTimer}
         component={component}
         configuredProps={configuredProps}
         value={value}

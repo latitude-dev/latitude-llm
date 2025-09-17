@@ -159,7 +159,7 @@
     "@opentelemetry/resources": "catalog:",
     "@opentelemetry/sdk-trace-node": "catalog:",
     "@opentelemetry/semantic-conventions": "catalog:",
-    "@pipedream/sdk": "^1.6.9",
+    "@pipedream/sdk": "^2.0.0",
     "@plunk/node": "3.0.2",
     "@react-email/components": "0.0.35",
     "@sentry/node": "9.9.0",

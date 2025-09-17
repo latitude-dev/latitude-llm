@@ -1,5 +1,4 @@
-import { getPipedreamEnvironment } from '../../services/integrations/pipedream/apps'
-import { createBackendClient } from '@pipedream/sdk'
+import { getPipedreamClient } from '../../services/integrations/pipedream/apps'
 import { EventHandler } from '../events'
 import { DocumentTriggerUndeployRequestedEvent } from '../events'
 import { captureException } from '../../utils/workers/sentry'
@@ -8,20 +7,10 @@ export const undeployDocumentTriggerJob: EventHandler<
   DocumentTriggerUndeployRequestedEvent
 > = async ({ data: event }) => {
   const { triggerId, externalUserId } = event.data
-
-  const pipedreamEnv = getPipedreamEnvironment()
-  if (!pipedreamEnv.ok) {
-    console.error(
-      `Pipedream environment not configured: ${pipedreamEnv.error?.message}`,
-    )
-    return
-  }
-
-  const pipedream = createBackendClient(pipedreamEnv.unwrap())
+  const pipedream = getPipedreamClient().unwrap()
 
   try {
-    await pipedream.deleteTrigger({
-      id: triggerId,
+    await pipedream.deployedTriggers.delete(triggerId, {
       externalUserId,
     })
   } catch (error) {

@@ -17,10 +17,10 @@ const createIntegrationLatte = defineLatteTool(
       name,
       type: IntegrationType.Pipedream,
       configuration: {
-        appName: app.name_slug,
+        appName: app.nameSlug,
         metadata: {
           displayName: app.name,
-          imageUrl: app.img_src,
+          imageUrl: app.imgSrc,
         },
       } as UnconfiguredPipedreamIntegrationConfiguration,
       workspace,

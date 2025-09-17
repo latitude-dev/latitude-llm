@@ -13,6 +13,7 @@ import {
 } from './constants'
 import type { QueryParams } from './lib/pagination'
 import { env } from '@latitude-data/env'
+import type { ConfigurableProp, ConfigurePropOptions } from '@pipedream/sdk'
 
 export function buildCsvFile(csvData: CsvData, name: string): File {
   const headers = csvData.headers.map((h) => JSON.stringify(h)).join(',')
@@ -292,4 +293,23 @@ export function evaluationResultsV2SearchToQueryParams(
   }
 
   return params.toString()
+}
+
+export function getPropOptions<T = string>(
+  prop: ConfigurableProp,
+): Record<string, T> | undefined {
+  if (!('options' in prop)) return undefined
+  const options = prop.options as ConfigurePropOptions | string[]
+  if (!options) return undefined
+
+  return Object.fromEntries(
+    options.map((option) => {
+      if (typeof option === 'string') {
+        return [option, option] as [string, T]
+      }
+
+      const { label, value } = 'lv' in option ? option.lv : option
+      return [label, value ?? label] as [string, T]
+    }),
+  )
 }

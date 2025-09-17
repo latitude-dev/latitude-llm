@@ -1,6 +1,6 @@
 import { UnprocessableEntityError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
-import { App, BackendClient, createBackendClient } from '@pipedream/sdk/server'
+import { PipedreamClient } from '@pipedream/sdk/server'
 import {
   AppDto,
   PipedreamComponent,
@@ -8,11 +8,14 @@ import {
 } from '../../../constants'
 import { Result, TypedResult } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
-import { fetchTriggerCounts } from './fetchTriggerCounts'
+import { getPageInfo } from './helpers/page'
+import { AppsListRequest } from '@pipedream/sdk'
+import { AppsListRequestSortKey } from '@pipedream/sdk'
+import { AppsListRequestSortDirection } from '@pipedream/sdk'
 
 const LIST_APPS_LIMIT = 64
 
-export function getPipedreamEnvironment() {
+export function getPipedreamClient(): TypedResult<PipedreamClient> {
   const {
     PIPEDREAM_ENVIRONMENT,
     PIPEDREAM_CLIENT_ID,
@@ -33,123 +36,128 @@ export function getPipedreamEnvironment() {
     )
   }
 
-  return Result.ok({
-    environment: PIPEDREAM_ENVIRONMENT,
-    credentials: {
-      clientId: PIPEDREAM_CLIENT_ID,
-      clientSecret: PIPEDREAM_CLIENT_SECRET,
-    },
+  const client = new PipedreamClient({
+    clientId: PIPEDREAM_CLIENT_ID,
+    clientSecret: PIPEDREAM_CLIENT_SECRET,
     projectId: PIPEDREAM_PROJECT_ID,
+    projectEnvironment: PIPEDREAM_ENVIRONMENT,
   })
-}
 
-export function buildPipedreamClient() {
-  const pipedreamEnv = getPipedreamEnvironment()
-
-  if (pipedreamEnv.error) return pipedreamEnv
-
-  return Result.ok(createBackendClient(pipedreamEnv.value))
+  return Result.ok(client)
 }
 
 export async function listApps({
   query,
   cursor,
-  withTriggers: hasTriggers, // Sources are triggers in Pipedream, however the API is called with hasTriggers
-  withTools: hasActions, // Actions are tools in Pipedream
-  pipedreamClientBuilder = buildPipedreamClient,
+  withTriggers, // Sources are triggers in Pipedream, however the API is called with hasTriggers
+  withTools, // Actions are tools in Pipedream
+  pipedreamClientBuilder = getPipedreamClient,
 }: {
   query?: string
   cursor?: string
   withTriggers?: boolean
   withTools?: boolean
-  pipedreamClientBuilder?: () => TypedResult<BackendClient, Error>
+  pipedreamClientBuilder?: () => TypedResult<PipedreamClient, Error>
 } = {}): PromisedResult<{
-  apps: App[]
+  apps: AppDto[]
   totalCount: number
   cursor: string
 }> {
   const pipedreamResult = pipedreamClientBuilder()
-
-  if (pipedreamResult.error) {
-    return Result.error(pipedreamResult.error)
-  }
-
-  const pipedream = pipedreamResult.value
+  if (!Result.isOk(pipedreamResult)) return pipedreamResult
+  const pipedream = pipedreamResult.unwrap()
 
   try {
-    const appsParams: {
-      q?: string
-      limit: number
-      after?: string
-      hasActions?: boolean
-      hasTriggers?: boolean
-    } = {
+    const appsParams: AppsListRequest = {
       q: query,
       limit: LIST_APPS_LIMIT,
       after: cursor,
-      hasTriggers,
-      hasActions,
+      sortKey: AppsListRequestSortKey.FeaturedWeight,
+      sortDirection: AppsListRequestSortDirection.Desc,
     }
 
-    const apps = await pipedream.getApps(appsParams)
-    let appsList: App[] = apps.data
+    const page = await pipedream.apps.list(appsParams)
 
-    if (hasTriggers) {
-      const appsListResult = await fetchTriggerCounts({
-        type: 'pipedreamApps',
-        apps: appsList,
-        pipedream,
-      })
-      appsList = appsListResult.unwrap()
-    }
+    const apps: AppDto[] = await Promise.all(
+      page.data.map(async (app) => {
+        const componentsResult = await getAllAppComponents(
+          app.nameSlug,
+          pipedream,
+        )
+        return {
+          ...app,
+          ...componentsResult.unwrap(),
+        }
+      }),
+    )
+
+    const filteredApps = apps.filter((app) => {
+      if (withTriggers && app.triggers.length === 0) return false
+      if (withTools && app.tools.length === 0) return false
+
+      // We are filtering out apps that do not require authentication, as they are not supported yet
+      return app.authType !== undefined
+    })
+
+    const pageInfo = getPageInfo(page)
+
     return Result.ok({
-      apps: appsList,
-      totalCount: apps.page_info.total_count,
-      cursor: apps.page_info.end_cursor,
+      apps: filteredApps,
+      totalCount: pageInfo.totalCount ?? apps.length,
+      cursor: pageInfo.endCursor ?? '',
     })
   } catch (error) {
     return Result.error(error as Error)
   }
 }
 
-async function getAllAppComponents(
-  pipedream: BackendClient,
+export async function getAllAppComponents(
   appName: string,
-): Promise<{
+  pipedream?: PipedreamClient,
+): PromisedResult<{
   tools: PipedreamComponent<PipedreamComponentType.Tool>[]
   triggers: PipedreamComponent<PipedreamComponentType.Trigger>[]
 }> {
+  if (!pipedream) {
+    const pipedreamResult = getPipedreamClient()
+    if (!Result.isOk(pipedreamResult)) return pipedreamResult
+    pipedream = pipedreamResult.unwrap()
+  }
+
+  let list = await pipedream.components.list({
+    app: appName,
+    limit: LIST_APPS_LIMIT,
+  })
+
   const tools: PipedreamComponent<PipedreamComponentType.Tool>[] = []
   const triggers: PipedreamComponent<PipedreamComponentType.Trigger>[] = []
-  let cursor: string | undefined = undefined
 
-  do {
-    const response = await pipedream.getComponents({
-      app: appName,
-      limit: LIST_APPS_LIMIT,
-      after: cursor,
-    })
-
+  const processPage = (pageData: typeof list.data) => {
     tools.push(
-      ...(response.data.filter(
-        (component) => component.component_type === PipedreamComponentType.Tool,
+      ...(pageData.filter(
+        (component) => component.componentType === PipedreamComponentType.Tool,
       ) as PipedreamComponent<PipedreamComponentType.Tool>[]),
     )
 
     triggers.push(
-      ...(response.data.filter(
+      ...(pageData.filter(
         (component) =>
-          component.component_type === PipedreamComponentType.Trigger,
+          component.componentType === PipedreamComponentType.Trigger,
       ) as PipedreamComponent<PipedreamComponentType.Trigger>[]),
     )
+  }
 
-    cursor = response.page_info.end_cursor
-  } while (cursor)
+  processPage(list.data)
 
-  return {
+  while (list.hasNextPage()) {
+    list = await list.getNextPage()
+    processPage(list.data)
+  }
+
+  return Result.ok({
     tools,
     triggers,
-  }
+  })
 }
 
 export async function getApp({
@@ -157,16 +165,16 @@ export async function getApp({
 }: {
   name: string
 }): PromisedResult<AppDto> {
-  const pipedreamEnv = getPipedreamEnvironment()
-  if (!pipedreamEnv.ok) {
-    return Result.error(pipedreamEnv.error!)
-  }
-
-  const pipedream = createBackendClient(pipedreamEnv.unwrap())
+  const pipedreamResult = getPipedreamClient()
+  if (!Result.isOk(pipedreamResult)) return pipedreamResult
+  const pipedream = pipedreamResult.unwrap()
 
   try {
-    const app = await pipedream.getApp(name)
-    const components = await getAllAppComponents(pipedream, name)
+    const app = await pipedream.apps.retrieve(name)
+
+    const componentsResult = await getAllAppComponents(name, pipedream)
+    if (!Result.isOk(componentsResult)) return componentsResult
+    const components = componentsResult.unwrap()
 
     return Result.ok({
       ...app.data,

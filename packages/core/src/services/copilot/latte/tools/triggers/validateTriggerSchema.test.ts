@@ -20,19 +20,19 @@ import {
 } from '@latitude-data/constants/errors'
 import * as pipedreamAppsModule from '../../../../integrations/pipedream/apps'
 import * as configValidatorModule from './configValidator'
-import { BackendClient, createBackendClient } from '@pipedream/sdk'
+import { PipedreamClient } from '@pipedream/sdk/server'
 
 // Mock the modules
 vi.mock('../../../../integrations/pipedream/apps', () => ({
-  getPipedreamEnvironment: vi.fn(),
+  getPipedreamClient: vi.fn(),
 }))
 
 vi.mock('./configValidator', () => ({
   validateLattesChoices: vi.fn(),
 }))
 
-vi.mock('@pipedream/sdk', () => ({
-  createBackendClient: vi.fn(),
+vi.mock('@pipedream/sdk/server', () => ({
+  PipedreamClient: vi.fn(),
 }))
 
 describe('validateTriggerSchema', () => {
@@ -45,19 +45,25 @@ describe('validateTriggerSchema', () => {
   let draftCommit: Commit
   let user: User
 
-  const mockPipedreamClient: Partial<BackendClient> = {
-    getComponent: vi.fn(),
-    configureComponent: vi.fn(),
-  }
+  const mockPipedreamClient = {
+    components: {
+      retrieve: vi.fn(),
+      configure: vi.fn(),
+    },
+    apps: {
+      retrieve: vi.fn(),
+      list: vi.fn(),
+    },
+  } as unknown as PipedreamClient
 
-  const mockGetPipedreamEnvironment = vi.mocked(
-    pipedreamAppsModule.getPipedreamEnvironment,
+  const mockGetPipedreamClient = vi.mocked(
+    pipedreamAppsModule.getPipedreamClient,
   )
 
   const mockValidateLattesChoices = vi.mocked(
     configValidatorModule.validateLattesChoices,
   )
-  const mockCreateBackendClient = vi.mocked(createBackendClient)
+  const mockPipedreamClientConstructor = vi.mocked(PipedreamClient)
 
   beforeEach(async () => {
     const {
@@ -121,19 +127,12 @@ describe('validateTriggerSchema', () => {
     vi.clearAllMocks()
 
     // Setup default mocks
-    mockGetPipedreamEnvironment.mockReturnValue(
-      Result.ok({
-        environment: 'development' as const,
-        credentials: {
-          clientId: 'test-client-id',
-          clientSecret: 'test-client-secret',
-        },
-        projectId: 'test-project-id',
-      }),
+    mockGetPipedreamClient.mockReturnValue(
+      Result.ok(mockPipedreamClient as PipedreamClient),
     )
 
-    mockCreateBackendClient.mockReturnValue(
-      mockPipedreamClient as BackendClient,
+    mockPipedreamClientConstructor.mockReturnValue(
+      mockPipedreamClient as PipedreamClient,
     )
 
     mockValidateLattesChoices.mockResolvedValue(Result.ok(true))
@@ -250,8 +249,8 @@ describe('validateTriggerSchema', () => {
     })
   })
 
-  describe('pipedream environment errors', () => {
-    it('should return error when pipedream environment is not configured', async () => {
+  describe('pipedream client errors', () => {
+    it('should return error when pipedream client is not configured', async () => {
       // Arrange
       const params = {
         projectId: project.id,
@@ -264,19 +263,17 @@ describe('validateTriggerSchema', () => {
         },
       }
 
-      const environmentError = new UnauthorizedError(
-        'Pipedream environment not configured',
+      const clientError = new UnauthorizedError(
+        'Pipedream client not configured',
       )
-      mockGetPipedreamEnvironment.mockReturnValue(
-        Result.error(environmentError),
-      )
+      mockGetPipedreamClient.mockReturnValue(Result.error(clientError))
 
       // Act
       const result = await validateTriggerSchema(params, context)
 
       // Assert
       expect(Result.isOk(result)).toBe(false)
-      expect(result.error).toBe(environmentError)
+      expect(result.error).toBe(clientError)
     })
   })
 

@@ -1,61 +1,37 @@
-import { UnprocessableEntityError } from '@latitude-data/constants/errors'
-import { env } from '@latitude-data/env'
-import { createBackendClient } from '@pipedream/sdk/server'
 import { Workspace } from '../../../browser'
-import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
+import { getPipedreamClient } from './apps'
 
 export async function createConnectToken({
   workspace,
+  externalUserId,
 }: {
   workspace: Workspace
+  externalUserId: string
 }): PromisedResult<{
   token: string
   expiresAt: string
   externalUserId: string
 }> {
-  const {
-    PIPEDREAM_ENVIRONMENT,
-    PIPEDREAM_CLIENT_ID,
-    PIPEDREAM_CLIENT_SECRET,
-    PIPEDREAM_PROJECT_ID,
-  } = env
-
-  if (
-    !PIPEDREAM_CLIENT_ID ||
-    !PIPEDREAM_CLIENT_SECRET ||
-    !PIPEDREAM_PROJECT_ID
-  ) {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Pipedream credentials are not set. Please set PIPEDREAM_CLIENT_ID, PIPEDREAM_CLIENT_SECRET and PIPEDREAM_PROJECT_ID in your environment variables.',
-      ),
-    )
+  if (!externalUserId.startsWith(`${workspace.id}:`)) {
+    return Result.error(new BadRequestError('Invalid external user ID'))
   }
 
-  const pipedream = createBackendClient({
-    environment: PIPEDREAM_ENVIRONMENT,
-    credentials: {
-      clientId: PIPEDREAM_CLIENT_ID,
-      clientSecret: PIPEDREAM_CLIENT_SECRET,
-    },
-    projectId: PIPEDREAM_PROJECT_ID,
-  })
-
-  const externalUserId = `${workspace.id}:${generateUUIDIdentifier()}`
+  const pipedreamResult = getPipedreamClient()
+  if (!Result.isOk(pipedreamResult)) return pipedreamResult
+  const pipedream = pipedreamResult.unwrap()
 
   try {
-    const { token, expires_at: expiresAt } = await pipedream.createConnectToken(
-      {
-        external_user_id: externalUserId,
-      },
-    )
+    const { token, expiresAt } = await pipedream.tokens.create({
+      externalUserId,
+    })
 
     return Result.ok({
       externalUserId,
       token,
-      expiresAt,
+      expiresAt: expiresAt.toISOString(),
     })
   } catch (error) {
     return Result.error(error as Error)

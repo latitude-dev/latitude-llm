@@ -63,19 +63,19 @@ export function IntegrationsList({
 
     const availableApps: SearchableOptionItem<TriggerIntegrationType>[] =
       pipedreamApps
-        .filter((app) => !connectedSlugs[app.name_slug])
+        .filter((app) => !connectedSlugs[app.nameSlug])
         .map(
           (app) =>
             ({
               type: 'item',
-              value: app.name_slug,
-              keywords: [app.name, app.name_slug],
+              value: app.nameSlug,
+              keywords: [app.name, app.nameSlug],
               metadata: { type: DocumentTriggerType.Integration },
               title: app.name,
-              description: `${app.triggerCount} triggers`,
+              description: `${app.triggers.length} triggers`,
               imageIcon: {
                 type: 'image',
-                src: app.img_src,
+                src: app.imgSrc,
                 alt: app.name,
               },
             }) satisfies SearchableOptionItem<TriggerIntegrationType>,

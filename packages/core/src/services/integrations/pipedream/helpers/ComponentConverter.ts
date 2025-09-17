@@ -11,6 +11,6 @@ export function pipedreamComponentToToolDefinition(
   return {
     name: component.key,
     description: component.description,
-    inputSchema: propsToJSONSchema(component.configurable_props),
+    inputSchema: propsToJSONSchema(component.configurableProps),
   }
 }

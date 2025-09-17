@@ -3,7 +3,8 @@ import { IntegrationDto, PipedreamComponent } from '@latitude-data/core/browser'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
 import { cn } from '@latitude-data/web-ui/utils'
-import { ConfigurableProp } from '@pipedream/sdk/browser'
+import type { ConfigurableProp } from '@pipedream/sdk/browser'
+import { useMemo } from 'react'
 
 export function isDynamicProp(prop: ConfigurableProp): boolean {
   if (prop.remoteOptions) return true
@@ -39,6 +40,24 @@ export default function DynamicPipedreamProp({
     configuredProps,
   })
 
+  const options = useMemo<{ label: string; value: string }[]>(() => {
+    if (config?.options) {
+      return config.options.map((option) => {
+        const { label, value } = 'lv' in option ? option.lv : option
+        return { label, value: (value as string) ?? label }
+      })
+    }
+
+    if (config?.stringOptions) {
+      return config.stringOptions.map((option) => ({
+        label: option,
+        value: option,
+      }))
+    }
+
+    return []
+  }, [config])
+
   if (prop.type.endsWith('[]')) {
     return (
       <div className={cn({ 'animate-pulse': isLoading })}>
@@ -50,14 +69,7 @@ export default function DynamicPipedreamProp({
           description={prop.description}
           defaultValue={value ?? []}
           onChange={(newVal) => setValue(newVal)}
-          options={
-            (config?.options ?? config?.stringOptions ?? []).map((option) => {
-              if (typeof option === 'string') {
-                return { label: option, value: option }
-              }
-              return option
-            }) ?? []
-          }
+          options={options}
           disabled={disabled || prop.disabled}
           placeholder='Select an option'
           errors={errors}
@@ -77,14 +89,7 @@ export default function DynamicPipedreamProp({
         description={prop.description}
         value={value}
         onChange={(newVal) => setValue(newVal)}
-        options={
-          (config?.options ?? config?.stringOptions ?? []).map((option) => {
-            if (typeof option === 'string') {
-              return { label: option, value: option }
-            }
-            return option
-          }) ?? []
-        }
+        options={options}
         disabled={disabled || prop.disabled}
         placeholder='Select an option'
         errors={errors}

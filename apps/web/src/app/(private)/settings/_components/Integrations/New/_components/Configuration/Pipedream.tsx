@@ -30,14 +30,14 @@ export const PipedreamIntegrationConfiguration = forwardRef<{
         return {
           type: IntegrationType.Pipedream,
           configuration: {
-            appName: app.name_slug,
+            appName: app.nameSlug,
             connectionId,
             externalUserId,
-            authType: app.auth_type,
+            authType: app.authType ?? 'none',
             oauthAppId: app.id,
             metadata: {
               displayName: app.name,
-              imageUrl: app.img_src,
+              imageUrl: app.imgSrc,
             },
           },
         }

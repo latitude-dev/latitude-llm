@@ -16,8 +16,12 @@ import { FinishReason, LanguageModelUsage, Tool, ToolResultPart } from 'ai'
 import { z } from 'zod'
 
 import { TelemetryContext } from '@latitude-data/telemetry'
-import { ConfigurableProp, PropOption } from '@pipedream/sdk'
-import { App, ConfigurableProps, V1Component } from '@pipedream/sdk/browser'
+import {
+  ConfigurableProp,
+  ConfigurePropResponse,
+  PropOption,
+} from '@pipedream/sdk'
+import { App, Component } from '@pipedream/sdk/browser'
 import type {
   ApiKey,
   Commit,
@@ -521,10 +525,10 @@ export enum PipedreamComponentType {
 }
 
 export type PipedreamComponent<T extends PipedreamComponentType = any> = Omit<
-  V1Component<ConfigurableProps>,
-  'component_type'
+  Component,
+  'componentType'
 > & {
-  component_type: T
+  componentType: T
 }
 
 export type AppDto = App & {
@@ -548,23 +552,43 @@ export type ConfigurablePropWithRemoteOptions = ConfigurableProp & {
 
 export class RemoteOptions {
   public remoteOptions: PropOption[] | string[]
-  constructor(remoteOptions: PropOption[] | string[]) {
-    this.remoteOptions = remoteOptions
+  constructor(remoteOptions: ConfigurePropResponse) {
+    if (remoteOptions.options) {
+      // If they're nested objects
+      const propOptions = remoteOptions.options.map((option) => {
+        // For some reason, Pipedream MAY have a "nested" option object, where the values are nested inside an "lv" property
+        if ('lv' in option) return option.lv
+        return option
+      })
+      this.remoteOptions = propOptions
+      return
+    }
+
+    if (remoteOptions.stringOptions) {
+      this.remoteOptions = remoteOptions.stringOptions
+      return
+    }
+
+    this.remoteOptions = []
   }
+
   getFlattenedValues(): string[] {
-    return this.remoteOptions.map((value) => {
-      if (typeof value === 'string') {
-        return value
+    return this.remoteOptions.map((option) => {
+      if (typeof option === 'string') {
+        return option
       }
-      return value.value
+
+      return option.value as string
     })
   }
+
   containsAll(lattesChoices: string[] | string): boolean {
     const lattesChoicesArray = Array.isArray(lattesChoices)
       ? lattesChoices
       : [lattesChoices]
     return lattesChoicesArray.every((value) => this.includes(value))
   }
+
   private includes(searchValue: string): boolean {
     return this.getFlattenedValues().includes(searchValue)
   }

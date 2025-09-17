@@ -1,9 +1,4 @@
-import {
-  ComponentId,
-  ConfigurableProps,
-  ConfiguredProps,
-  createBackendClient,
-} from '@pipedream/sdk'
+import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk'
 import {
   Commit,
   DocumentTrigger,
@@ -11,7 +6,7 @@ import {
   PipedreamIntegration,
   Workspace,
 } from '../../../browser'
-import { getPipedreamEnvironment } from './apps'
+import { getPipedreamClient } from './apps'
 import { Result } from '../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import {
@@ -32,7 +27,7 @@ export async function deployPipedreamTrigger({
   triggerUuid: string
   commit: Commit
   integration: PipedreamIntegration
-  componentId: ComponentId
+  componentId: string
   configuredProps: ConfiguredProps<ConfigurableProps>
 }): PromisedResult<{ id: string }> {
   if (!isIntegrationConfigured(integration)) {
@@ -43,12 +38,10 @@ export async function deployPipedreamTrigger({
     )
   }
 
-  const pipedreamEnv = getPipedreamEnvironment()
-  if (!pipedreamEnv.ok) {
-    return Result.error(pipedreamEnv.error!)
-  }
+  const pipedreamResult = getPipedreamClient()
+  if (!Result.isOk(pipedreamResult)) return pipedreamResult
+  const pipedream = pipedreamResult.unwrap()
 
-  const pipedream = createBackendClient(pipedreamEnv.unwrap())
   const externalUserId = integration.configuration.externalUserId
 
   const configuredPropsResult = await fillConfiguredProps({
@@ -64,15 +57,15 @@ export async function deployPipedreamTrigger({
 
   try {
     // Need the dynamic props id for some components to work correctly (i.e. Github new branch trigger)
-    const reload = await pipedream.reloadComponentProps({
+    const reload = await pipedream.components.reloadProps({
+      id: componentId,
       externalUserId: integration.configuration.externalUserId,
-      componentId: componentId,
-      configuredProps: configuredPropsResult.unwrap(),
+      configuredProps,
     })
 
-    const deployResult = await pipedream.deployTrigger({
+    const deployResult = await pipedream.triggers.deploy({
+      id: componentId,
       externalUserId,
-      triggerId: componentId,
       configuredProps,
       dynamicPropsId: reload.dynamicProps?.id,
       webhookUrl: gatewayPath(
@@ -122,18 +115,17 @@ export async function destroyPipedreamTrigger(
     )
   }
 
-  const pipedreamEnv = getPipedreamEnvironment()
-  if (!pipedreamEnv.ok) {
-    return Result.error(pipedreamEnv.error!)
-  }
-
-  const pipedream = createBackendClient(pipedreamEnv.unwrap())
+  const pipedreamResult = getPipedreamClient()
+  if (!Result.isOk(pipedreamResult)) return pipedreamResult
+  const pipedream = pipedreamResult.unwrap()
 
   try {
-    await pipedream.deleteTrigger({
-      id: documentTrigger.deploymentSettings.triggerId,
-      externalUserId: integration.configuration.externalUserId,
-    })
+    await pipedream.deployedTriggers.delete(
+      documentTrigger.deploymentSettings.triggerId,
+      {
+        externalUserId: integration.configuration.externalUserId,
+      },
+    )
     return Result.nil()
   } catch (error) {
     return Result.error(error as Error)
