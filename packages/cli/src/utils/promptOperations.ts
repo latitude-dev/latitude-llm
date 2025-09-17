@@ -8,7 +8,6 @@ import { PromptManager } from './promptManager'
  * @param prompts The prompts to save
  * @param promptsRootFolder The root folder to save prompts in
  * @param projectPath The project path
- * @param isEsm Whether the project uses ESM modules
  * @param promptManager The prompt manager instance
  * @param isNpmProject Whether the project is an npm project
  */
@@ -16,7 +15,6 @@ export async function savePrompts(
   prompts: Prompt[],
   promptsRootFolder: string,
   projectPath: string,
-  isEsm: boolean,
   promptManager: PromptManager,
   isNpmProject: boolean = false,
 ): Promise<void> {
@@ -52,12 +50,11 @@ export async function savePrompts(
     let savedPath: string
 
     if (isNpmProject) {
-      // Save as JS/CJS file for npm projects
+      // Save as JS file for npm projects
       savedPath = await promptManager.savePromptToFile(
         prompt,
         promptsRootFolder,
         projectPath,
-        isEsm,
       )
     } else {
       // Save as .promptl file for non-npm projects

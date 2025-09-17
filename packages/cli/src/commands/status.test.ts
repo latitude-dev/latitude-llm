@@ -311,6 +311,14 @@ describe('StatusCommand', () => {
         expect.stringContaining('Failed to import prompt from /path/test.js'),
       )
     })
+
+    it('should reject .cjs files with a helpful message', async () => {
+      await expect(
+        (statusCommand as any).readPromptContent('/path/test.cjs'),
+      ).rejects.toThrow(
+        'CommonJS prompt files are no longer supported. Rename to .js to continue.',
+      )
+    })
   })
 
   describe('convertToPromptVariableName', () => {
@@ -337,9 +345,6 @@ describe('StatusCommand', () => {
       ).toBe('test')
       expect(
         (statusCommand as any).convertFilePathToPromptPath('test.ts'),
-      ).toBe('test')
-      expect(
-        (statusCommand as any).convertFilePathToPromptPath('test.cjs'),
       ).toBe('test')
     })
   })

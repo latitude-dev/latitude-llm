@@ -6,6 +6,12 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 
+## [3.0.0] - 2025-09-16
+
+### Removed
+
+- Dropped CommonJS prompt support; CLI now writes `.js` default exports for npm projects.
+
 ## [2.0.5] - 2025-09-09
 
 ### Changed
@@ -24,5 +30,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 - Fixes escaping of special characters in prompts when pulled into JS/TS projects.
 
-[Unreleased]: https://github.com/latitude-dev/latitude-llm/compare/cli-2.0.3...HEAD
+[Unreleased]: https://github.com/latitude-dev/latitude-llm/compare/cli-3.0.0...HEAD
+[3.0.0]: https://github.com/latitude-dev/latitude-llm/releases/tag/cli-3.0.0
+[2.0.5]: https://github.com/latitude-dev/latitude-llm/releases/tag/cli-2.0.5
+[2.0.4]: https://github.com/latitude-dev/latitude-llm/releases/tag/cli-2.0.4
 [2.0.3]: https://github.com/latitude-dev/latitude-llm/releases/tag/cli-2.0.3

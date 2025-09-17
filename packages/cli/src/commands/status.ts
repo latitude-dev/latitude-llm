@@ -123,13 +123,23 @@ export class StatusCommand extends BaseCommand {
    * Read content from a prompt file
    */
   private async readPromptContent(filePath: string): Promise<string> {
-    // If it's a JS/CJS file, try to import and extract the prompt
-    if (
-      filePath.endsWith('.js') ||
-      filePath.endsWith('.cjs') ||
-      filePath.endsWith('.mjs') ||
-      filePath.endsWith('.ts')
-    ) {
+    if (filePath.endsWith('.cjs')) {
+      throw new Error(
+        'CommonJS prompt files are no longer supported. Rename to .js to continue.',
+      )
+    }
+
+    if (filePath.endsWith('.ts')) {
+      console.warn(
+        chalk.yellow(
+          `TypeScript files not supported yet, skipping ${filePath}`,
+        ),
+      )
+      throw new Error(`TypeScript files not supported yet`)
+    }
+
+    // If it's a JS/MJS file, try to import and extract the prompt
+    if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
       try {
         return await this.importPromptFromFile(filePath)
       } catch (error) {
@@ -146,22 +156,12 @@ export class StatusCommand extends BaseCommand {
       return await fs.readFile(filePath, 'utf-8')
     }
 
-    // Skip TypeScript files for now as they need compilation
-    if (filePath.endsWith('.ts')) {
-      console.warn(
-        chalk.yellow(
-          `TypeScript files not supported yet, skipping ${filePath}`,
-        ),
-      )
-      throw new Error(`TypeScript files not supported yet`)
-    }
-
     // Default: read as plain text
     return await fs.readFile(filePath, 'utf-8')
   }
 
   /**
-   * Import and extract prompt content from a JS/CJS file
+   * Import and extract prompt content from a JS module file
    */
   private async importPromptFromFile(filePath: string): Promise<string> {
     // Get the prompt name from the file path
@@ -205,7 +205,7 @@ export class StatusCommand extends BaseCommand {
    * Convert file path back to prompt path (reverse of PromptManager.convertPromptPathToFilePath)
    */
   private convertFilePathToPromptPath(filePath: string): string {
-    return filePath.replace(/\.(js|cjs|ts|promptl)$/, '')
+    return filePath.replace(/\.(js|ts|promptl)$/, '')
   }
 
   /**

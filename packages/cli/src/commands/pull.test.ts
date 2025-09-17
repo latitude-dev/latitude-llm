@@ -303,6 +303,14 @@ describe('PullCommand', () => {
         expect.stringContaining('Failed to import prompt from /path/test.js'),
       )
     })
+
+    it('should reject .cjs files with a helpful message', async () => {
+      await expect(
+        (pullCommand as any).readPromptContent('/path/test.cjs'),
+      ).rejects.toThrow(
+        'CommonJS prompt files are no longer supported. Rename to .js to continue.',
+      )
+    })
   })
 
   describe('convertToPromptVariableName', () => {
@@ -328,9 +336,6 @@ describe('PullCommand', () => {
         (pullCommand as any).convertFilePathToPromptPath('test.promptl'),
       ).toBe('test')
       expect((pullCommand as any).convertFilePathToPromptPath('test.ts')).toBe(
-        'test',
-      )
-      expect((pullCommand as any).convertFilePathToPromptPath('test.cjs')).toBe(
         'test',
       )
     })
@@ -359,8 +364,6 @@ describe('PullCommand', () => {
     })
 
     it('should pull prompts successfully', async () => {
-      pullCommand['isEsm'] = true
-
       await (pullCommand as any).pullPrompts(
         123,
         'prompts',

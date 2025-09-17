@@ -25,12 +25,7 @@ describe('PromptManager.savePromptToFile', () => {
     const projectPath = '/project'
     const rootFolder = 'src/prompts'
 
-    const saved = await pm.savePromptToFile(
-      prompt,
-      rootFolder,
-      projectPath,
-      true,
-    )
+    const saved = await pm.savePromptToFile(prompt, rootFolder, projectPath)
 
     const dirPath = path.join(projectPath, rootFolder, 'emails')
     const filePath = path.join(dirPath, 'welcome.js')
@@ -43,26 +38,21 @@ describe('PromptManager.savePromptToFile', () => {
     expect(saved).toBe(path.join(rootFolder, 'emails', 'welcome.js'))
   })
 
-  it('writes CJS default export .cjs', async () => {
-    const prompt = { path: 'greetings/hey', content: 'Hi' } as any
+  it('cleans prompt path and writes default export .js', async () => {
+    const prompt = { path: '/greetings/hey', content: 'Hi' } as any
     const projectPath = '/project'
     const rootFolder = 'src/prompts'
 
-    const saved = await pm.savePromptToFile(
-      prompt,
-      rootFolder,
-      projectPath,
-      false,
-    )
+    const saved = await pm.savePromptToFile(prompt, rootFolder, projectPath)
 
     const dirPath = path.join(projectPath, rootFolder, 'greetings')
-    const filePath = path.join(dirPath, 'hey.cjs')
+    const filePath = path.join(dirPath, 'hey.js')
 
     expect(mockFs.mkdir).toHaveBeenCalledWith(dirPath, { recursive: true })
     expect(mockFs.writeFile).toHaveBeenCalledWith(
       filePath,
-      `module.exports = ${JSON.stringify('Hi')}\n`,
+      `export default ${JSON.stringify('Hi')}\n`,
     )
-    expect(saved).toBe(path.join(rootFolder, 'greetings', 'hey.cjs'))
+    expect(saved).toBe(path.join(rootFolder, 'greetings', 'hey.js'))
   })
 })

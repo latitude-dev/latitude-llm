@@ -264,13 +264,10 @@ export class InitCommand extends BaseCommand {
         projectId,
       )
 
-      this.detectModuleFormat()
-
       await savePrompts(
         prompts,
         promptsRootFolder,
         this.projectPath,
-        this.isEsm,
         this.promptManager,
         this.isNpmProject,
       )
