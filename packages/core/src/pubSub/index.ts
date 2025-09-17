@@ -15,10 +15,12 @@ export async function pubSub() {
   if (_pubSub) return _pubSub
 
   const options = {
+    prefixKey: 'latitude',
     connection: await buildRedisConnection({
       host: env.QUEUE_HOST,
       port: env.QUEUE_PORT,
       password: env.QUEUE_PASSWORD,
+      maxRetriesPerRequest: 0,
     }),
   }
 
