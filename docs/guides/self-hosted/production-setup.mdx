@@ -51,6 +51,19 @@ While Latitude can be run using `docker compose` on a single machine, production
 - Services like Heroku, Render, or Fly.io might be suitable, often requiring Docker container deployments.
 - You'll need to configure buildpacks or Dockerfiles and manage addons for databases and Redis.
 
+### 4. Helm Chart (OCI)
+
+The chart is automatically published to GitHub Container Registry by the workflow
+`.github/workflows/publish-helm-chart.yml` on tags matching `helm-chart-v*`. Install it with:
+
+```bash
+helm install latitude oci://ghcr.io/<owner>/latitude \
+  --version <version> \
+  -n latitude --create-namespace \
+  -f charts/latitude/values.yaml \
+  -f charts/latitude/values.secrets.yaml
+```
+
 ## Configuration for Production
 
 Regardless of the method, ensure these are configured correctly:

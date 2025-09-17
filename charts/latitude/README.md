@@ -2,7 +2,7 @@
 
 Deploy Latitude (web, gateway, workers, websockets) to Kubernetes using public container images from GHCR.
 
-- Chart path: `charts/latitude`
+- Chart path: `charts/latitude` (alias `@charts/latitude`)
 - Images: `ghcr.io/latitude-dev/{web,gateway,workers,websockets,migrations}:latest`
 
 ## Prerequisites
