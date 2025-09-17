@@ -9,9 +9,11 @@ import { useMemo } from 'react'
 export default function useLatteThreadCheckpoints({
   threadUuid,
   commitId,
+  refreshInterval,
 }: {
   threadUuid?: string
   commitId?: number
+  refreshInterval?: number
 } = {}) {
   const enabled = !!threadUuid && !!commitId
   const fetcher = useFetcher<LatteThreadCheckpoint[]>(
@@ -30,6 +32,11 @@ export default function useLatteThreadCheckpoints({
   } = useSWR<LatteThreadCheckpoint[]>(
     enabled ? ['latteThreadCheckpoint', threadUuid, commitId] : undefined,
     fetcher,
+    {
+      refreshInterval: refreshInterval || 0,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    },
   )
 
   return useMemo(
