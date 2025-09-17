@@ -165,29 +165,28 @@ Make sure this network is created before running the containers with `docker com
 1. Start all services using Docker Compose:
 
 ```bash
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 This will start the following services from public Docker images stored in our
 [GitHub Container Registry](https://github.com/orgs/latitude-dev/packages):
 
-- API Gateway (accessible via `gateway.latitude.localhost`)
+- API Gateway
 - Background workers
 - Migrations daemon that will run on startup and automatically apply database migrations
 - PostgreSQL database on port 5432
 - Redis on port 6379
-- Traefik (reverse proxy) on port 80
-- Web application (accessible via `app.latitude.localhost`)
-- WebSocket server (accessible via `ws.latitude.localhost`)
+- Traefik (reverse proxy) on ports 80 and 443
+- Web application
+- WebSocket server
 
 ## Service URLs
 
 Once running, you can access:
 
-- Main application: `http://app.latitude.localhost`
-- API Gateway: `http://gateway.latitude.localhost`
-- WebSocket server: `http://ws.latitude.localhost`
-- Traefik dashboard: `http://localhost:8090`
+- Main application: `https://${APP_DOMAIN}` (or `http://${APP_DOMAIN}` if SSL is disabled)
+- API Gateway: `https://api.${APP_DOMAIN}`
+- WebSocket server: `wss://ws.${APP_DOMAIN}`
 
 ## Monitoring
 
@@ -216,24 +215,3 @@ docker compose top
    - Set up proper monitoring and logging
    - Use a container orchestrator like Kubernetes, GCP or AWS ECS
 
-## Running in localhost
-
-You might want to run the services in localhost for development purposes. To do so, you can use the following command:
-
-```bash
-docker compose -f docker-compose.local.yml up
-```
-
-This will start the same services as in production mode but SSL/HTTPS disabled,
-which allows you to use local tlds such as `localhost`. Remember to configure
-your `.env` file accordingly.
-
-## Building Your Own Images
-
-We provide a custom docker profile for building your own images locally.
-
-To build and run your local images, run the following command:
-
-```bash
-docker compose --profile local up --build
-```
