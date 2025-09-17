@@ -22,6 +22,7 @@ export class ProgressTracker {
         // Use 'any' or a more specific type for options
         host: env.CACHE_HOST,
         port: env.CACHE_PORT,
+        prefixKey: 'latitude',
       }
       if (env.CACHE_PASSWORD) {
         redisOptions.password = env.CACHE_PASSWORD

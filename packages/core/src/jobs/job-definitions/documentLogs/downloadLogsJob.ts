@@ -34,9 +34,11 @@ export class CursorState {
   private async ensureConnection() {
     if (!this.redis) {
       const redisOptions: any = {
+        prefixKey: 'latitude',
         host: env.CACHE_HOST,
         port: env.CACHE_PORT,
       }
+
       if (env.CACHE_PASSWORD) {
         redisOptions.password = env.CACHE_PASSWORD
       }
