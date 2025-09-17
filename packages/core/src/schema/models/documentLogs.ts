@@ -13,6 +13,7 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { experiments } from './experiments'
+import { workspaces } from './workspaces'
 import { logSourcesEnum } from './providerLogs'
 
 export const documentLogs = latitudeSchema.table(
@@ -20,6 +21,7 @@ export const documentLogs = latitudeSchema.table(
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     uuid: uuid('uuid').notNull().unique(),
+    workspaceId: bigint('workspace_id', { mode: 'number' }).references(() => workspaces.id, { onDelete: 'cascade' }),
     documentUuid: uuid('document_uuid').notNull(),
     commitId: bigint('commit_id', { mode: 'number' })
       .notNull()
@@ -47,6 +49,7 @@ export const documentLogs = latitudeSchema.table(
     documentLogDocumentUuidIdx: index('document_log_document_uuid_idx').on(
       table.documentUuid,
     ),
+    workspaceIdx: index('document_logs_workspace_idx').on(table.workspaceId),
     commitIdIdx: index('document_logs_commit_id_idx').on(table.commitId),
     contentHashIdx: index('document_logs_content_hash_idx').on(
       table.contentHash,

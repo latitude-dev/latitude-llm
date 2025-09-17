@@ -64,6 +64,7 @@ export async function createDocumentLog(
       const inserts = await trx
         .insert(documentLogs)
         .values({
+          workspaceId: workspace.id,
           uuid,
           documentUuid,
           commitId: commit.id,
