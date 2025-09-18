@@ -6,17 +6,20 @@ export default function setupService({
   email,
   name,
   companyName,
+  source,
   importDefaultProject = env.IMPORT_DEFAULT_PROJECT,
 }: {
   email: string
   name: string
   companyName: string
+  source?: string
   importDefaultProject?: boolean
 }) {
   return setupServiceFn({
     email,
     name,
     companyName,
+    source,
     defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
     defaultProviderApiKey: env.DEFAULT_PROVIDER_API_KEY,
     captureException,

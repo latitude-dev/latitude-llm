@@ -23,9 +23,10 @@ export default async function SetupPage({
     name?: string
     companyName?: string
     returnTo?: string
+    source?: string
   }>
 }) {
-  const { email, name, companyName, returnTo } = await searchParams
+  const { email, name, companyName, source, returnTo } = await searchParams
 
   return (
     <FocusLayout
@@ -44,6 +45,7 @@ export default async function SetupPage({
             name={name}
             companyName={companyName}
             footer={<AuthFooter />}
+            source={source}
             returnTo={returnTo}
           />
         </CardContent>

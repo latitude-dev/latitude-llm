@@ -158,6 +158,7 @@ export type WorkspaceCreatedEvent = LatitudeEventGeneric<
     user: User
     userEmail: string
     workspaceId: number
+    source: string
   }
 >
 

@@ -16,6 +16,7 @@ export const setupAction = errorHandlingProcedure
     async () => {
       return z.object({
         returnTo: z.string().optional(),
+        source: z.string().optional(),
         name: z.string().min(1, { message: 'Name is a required field' }),
         email: z
           .string()
