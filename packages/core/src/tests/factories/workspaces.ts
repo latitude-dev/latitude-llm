@@ -13,6 +13,7 @@ export type ICreateWorkspace = {
   creator?: User | ICreateUser
   createdAt?: Date
   subscriptionPlan?: SubscriptionPlan
+  source?: string
   onboarding?: boolean
   features?: string[]
 }

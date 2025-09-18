@@ -122,6 +122,7 @@ describe('AnalyticsClient', () => {
         event: {
           type: 'workspaceCreated',
           data: {
+            source: 'default',
             workspace: {} as Workspace, // Not really
             user,
             workspaceId: 123,
@@ -163,6 +164,7 @@ describe('AnalyticsClient', () => {
         event: {
           type: 'workspaceCreated',
           data: {
+            source: 'default',
             workspace,
             user,
             workspaceId: workspace.id,
@@ -204,6 +206,7 @@ describe('AnalyticsClient', () => {
         event: {
           type: 'workspaceCreated',
           data: {
+            source: 'default',
             workspace,
             user,
             workspaceId: workspace.id,
@@ -229,6 +232,7 @@ describe('AnalyticsClient', () => {
         event: {
           type: 'workspaceCreated',
           data: {
+            source: 'default',
             workspace,
             user,
             workspaceId: workspace.id,
@@ -256,6 +260,7 @@ describe('AnalyticsClient', () => {
           event: {
             type: 'workspaceCreated',
             data: {
+              source: 'default',
               workspace,
               user,
               workspaceId: workspace.id,

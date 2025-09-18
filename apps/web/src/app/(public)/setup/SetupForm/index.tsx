@@ -18,12 +18,14 @@ export default function SetupForm({
   name,
   companyName,
   footer,
+  source,
   returnTo,
 }: {
   footer: ReactNode
   email?: string
   name?: string
   companyName?: string
+  source?: string
   returnTo?: string
 }) {
   const { toast } = useToast()
@@ -43,6 +45,7 @@ export default function SetupForm({
   return (
     <form action={action}>
       <input type='hidden' name='returnTo' value={returnTo} />
+      <input type='hidden' name='source' value={source} />
       <FormWrapper>
         <Input
           autoFocus

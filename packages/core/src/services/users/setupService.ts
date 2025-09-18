@@ -26,6 +26,7 @@ export default async function setupService(
     defaultProviderName,
     defaultProviderApiKey,
     captureException,
+    source,
     importDefaultProject = env.IMPORT_DEFAULT_PROJECT,
   }: {
     email: string
@@ -33,6 +34,7 @@ export default async function setupService(
     companyName: string
     defaultProviderName: string
     defaultProviderApiKey: string
+    source?: string
     captureException?: (error: Error) => void
     importDefaultProject?: boolean
   },
@@ -46,6 +48,7 @@ export default async function setupService(
     {
       name: companyName,
       user,
+      source,
     },
     transaction,
   ).then((r) => r.unwrap())

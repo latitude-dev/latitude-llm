@@ -13,10 +13,12 @@ export async function createWorkspace(
     name,
     user,
     createdAt,
+    source = 'default',
     subscriptionPlan = SubscriptionPlan.HobbyV2,
   }: {
     name: string
     user: User
+    source?: string
     createdAt?: Date
     subscriptionPlan?: SubscriptionPlan
   },
@@ -59,6 +61,7 @@ export async function createWorkspace(
         data: {
           workspace: w,
           user,
+          source,
           workspaceId: w.id,
           userEmail: user.email,
         },
