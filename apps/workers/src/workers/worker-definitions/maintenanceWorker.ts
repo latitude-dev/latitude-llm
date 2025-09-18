@@ -16,6 +16,7 @@ const jobMappings = {
   refreshDocumentStatsCacheJob: jobs.refreshDocumentStatsCacheJob,
   scheduleWorkspaceCleanupJobs: jobs.scheduleWorkspaceCleanupJobs,
   cleanupWorkspaceOldLogsJob: jobs.cleanupWorkspaceOldLogsJob,
+  scheduleProviderLogsMigrationJobs: jobs.scheduleProviderLogsMigrationJobs,
 }
 
 export function startMaintenanceWorker() {

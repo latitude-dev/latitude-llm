@@ -88,4 +88,11 @@ export async function setupSchedules() {
     { pattern: '0 0 1 * * *' },
     { opts: { attempts: 1 } },
   )
+
+  // Every day at 2 AM - Schedule provider logs migration jobs
+  await maintenanceQueue.upsertJobScheduler(
+    'scheduleProviderLogsMigrationJobs',
+    { pattern: '0 0 2 * * *' },
+    { opts: { attempts: 1 } },
+  )
 }
