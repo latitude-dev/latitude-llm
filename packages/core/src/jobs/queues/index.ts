@@ -14,6 +14,7 @@ let _queues:
       maintenanceQueue: Queue
       tracingQueue: Queue
       webhooksQueue: Queue
+      latteQueue: Queue
     }
   | undefined
 
@@ -33,8 +34,8 @@ export async function queues() {
         type: 'exponential',
         delay: 1000,
       },
-      removeOnFail: true,
-      removeOnComplete: true,
+      removeOnFail: 100,
+      removeOnComplete: 100,
     },
   }
 
@@ -48,6 +49,7 @@ export async function queues() {
     maintenanceQueue: new Queue(Queues.maintenanceQueue, options),
     tracingQueue: new Queue(Queues.tracingQueue, options),
     webhooksQueue: new Queue(Queues.webhooksQueue, options),
+    latteQueue: new Queue(Queues.latteQueue, options),
   }
 
   return _queues

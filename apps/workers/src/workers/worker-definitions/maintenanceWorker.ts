@@ -19,7 +19,8 @@ const jobMappings = {
 
   // Migrate provider logs to object storage
   scheduleProviderLogsMigrationJobs: jobs.scheduleProviderLogsMigrationJobs,
-  migrateProviderLogsToObjectStorageJob: jobs.migrateProviderLogsToObjectStorageJob,
+  migrateProviderLogsToObjectStorageJob:
+    jobs.migrateProviderLogsToObjectStorageJob,
 
   // Migrate document logs workspace ids
   scheduleWorkspaceLogsMigrationJobs: jobs.scheduleWorkspaceLogsMigrationJobs,

@@ -21,7 +21,10 @@ export const documentLogs = latitudeSchema.table(
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     uuid: uuid('uuid').notNull().unique(),
-    workspaceId: bigint('workspace_id', { mode: 'number' }).references(() => workspaces.id, { onDelete: 'cascade' }),
+    workspaceId: bigint('workspace_id', { mode: 'number' }).references(
+      () => workspaces.id,
+      { onDelete: 'cascade' },
+    ),
     documentUuid: uuid('document_uuid').notNull(),
     commitId: bigint('commit_id', { mode: 'number' })
       .notNull()
