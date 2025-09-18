@@ -53,6 +53,7 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
       }).then((r) => r.unwrap())
       if (chain.chainCompleted) return this.endStream()
 
+      this.setMemory(chain.memory)
       this.setMessages(chain.messages)
       this.startStep()
       this.startProviderStep({

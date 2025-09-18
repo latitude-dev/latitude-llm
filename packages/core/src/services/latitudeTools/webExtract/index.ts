@@ -7,7 +7,6 @@ import { LatitudeToolDefinition } from '../../../constants'
 import { BadRequestError, LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
-import { TelemetryContext } from '../../../telemetry'
 import { withTelemetryWrapper } from '../telemetryWrapper'
 import { ExtractToolArgs, ExtractToolResult } from './types'
 
@@ -75,7 +74,7 @@ export default {
   name: LatitudeTool.WebExtract,
   internalName: LatitudeToolInternalName.WebExtract,
   method: webExtract,
-  definition: (context: TelemetryContext) => ({
+  definition: ({ context }) => ({
     description: 'Given a URL, returns the contents of the page.',
     parameters: {
       type: 'object',

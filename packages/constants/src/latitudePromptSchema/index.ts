@@ -105,8 +105,10 @@ export function latitudePromptConfigSchema({
         .optional(),
       schema: outputSchema,
       azure: azureConfigSchema.optional(),
+      memory: z
+        .union([z.object({ userId: z.string() }), z.boolean()])
+        .optional(),
     })
-
     .refine((d) => d.type === 'agent' || !d.name, {
       // name is provided but type is not agent
       path: ['name'],

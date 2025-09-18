@@ -8,6 +8,8 @@ import { LatitudeToolCall } from '../../constants'
 import { TypedResult } from '../../lib/Result'
 import { TelemetryContext } from '../../telemetry'
 import { LATITUDE_TOOLS } from './tools'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { DocumentVersion } from '../../browser'
 
 export const getLatitudeToolName = (
   internalName: LatitudeToolInternalName,
@@ -39,11 +41,26 @@ export function getLatitudeToolCallsFromAssistantMessage(
   ) as LatitudeToolCall[]
 }
 
-export function getLatitudeToolDefinition(
-  tool: LatitudeTool,
-  context?: TelemetryContext,
-): Tool | undefined {
-  return LATITUDE_TOOLS.find((t) => t.name === tool)?.definition(context)
+export function getLatitudeToolDefinition({
+  tool,
+  context,
+  config,
+  document,
+  hidden = true,
+}: {
+  tool: LatitudeTool
+  context?: TelemetryContext
+  config?: LatitudePromptConfig
+  document?: DocumentVersion
+  hidden?: boolean
+}): Tool | undefined {
+  return LATITUDE_TOOLS.find(
+    (t) => t.name === tool && (!hidden ? !t.hidden : true),
+  )?.definition({
+    context,
+    config,
+    document,
+  })
 }
 
 export function buildToolMessage({

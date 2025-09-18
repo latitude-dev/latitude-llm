@@ -37,6 +37,7 @@ type CommonArgs<C extends PromptlChain = PromptlChain> = {
   messages?: LegacyMessage[]
   pausedTokenUsage?: LanguageModelUsage
 
+  memory?: { userId: string }
   tools?: Record<string, ToolHandler>
   abortSignal?: AbortSignal
 }
@@ -53,6 +54,7 @@ export function runChain<C extends PromptlChain>({
   pausedTokenUsage,
   promptSource,
   abortSignal,
+  memory,
   tools = {},
   uuid = generateUUIDIdentifier(),
 }: RunChainArgs<C>) {
@@ -68,6 +70,7 @@ export function runChain<C extends PromptlChain>({
     source,
     chain,
     tools,
+    memory,
   })
 
   const { start, ...rest } = chainStreamManager.prepare()

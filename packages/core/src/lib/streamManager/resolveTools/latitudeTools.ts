@@ -5,12 +5,12 @@ import {
   getLatitudeToolDefinition,
   getLatitudeToolInternalName,
 } from '../../../services/latitudeTools/helpers'
-import { TelemetryContext } from '../../../telemetry'
 import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
 import { Result, TypedResult } from '../../Result'
 import { ResolvedTools, ToolSource } from './types'
 import { publisher } from '../../../events/publisher'
 import { Tool } from 'ai'
+import { DocumentRunPromptSource } from '../../../constants'
 
 export function resolveLatitudeTools({
   config,
@@ -28,12 +28,24 @@ export function resolveLatitudeTools({
   return Result.ok(newSchemaResult.unwrap())
 }
 
-const ALL_LATITUDE_RESOLVED_TOOLS = (context: TelemetryContext) =>
+const resolveAllLatitudeeTools = ({
+  streamManager,
+  config,
+}: {
+  streamManager: StreamManager
+  config: LatitudePromptConfig
+}) =>
   Object.fromEntries(
     Object.values(LatitudeTool).map((latitudeToolName) => [
       getLatitudeToolInternalName(latitudeToolName),
       {
-        definition: getLatitudeToolDefinition(latitudeToolName, context)!,
+        definition: getLatitudeToolDefinition({
+          config,
+          tool: latitudeToolName,
+          context: streamManager.$completion!.context,
+          document: (streamManager.promptSource as DocumentRunPromptSource)
+            .document,
+        })!,
         sourceData: {
           source: ToolSource.Latitude,
           latitudeTool: latitudeToolName,
@@ -49,8 +61,19 @@ function resolveLatitudeToolsFromNewSchema({
   config: LatitudePromptConfig
   streamManager: StreamManager
 }) {
+  let latitudeToolNames: string[] = []
+  // If config contains a memory key with a userId key, include storeMemory and getMemory tools
+  if (config.memory) {
+    if (!latitudeToolNames.includes('storeMemory')) {
+      latitudeToolNames.push('storeMemory')
+    }
+    if (!latitudeToolNames.includes('getMemory')) {
+      latitudeToolNames.push('getMemory')
+    }
+  }
+
   const tools = config.tools
-  if (!tools) {
+  if (!tools && !latitudeToolNames.length) {
     return Result.ok({})
   }
 
@@ -61,11 +84,13 @@ function resolveLatitudeToolsFromNewSchema({
   }
 
   // New schema
-  const toolIds = tools.filter((t) => typeof t === 'string')
-  const latitudeToolNames = toolIds // Any other tool ids that are not from "latitude" are computed as Integration Tools
-    .map((t) => t.split('/'))
-    .filter(([toolSource]) => toolSource === 'latitude')
-    .map(([, ...rest]) => rest.join('/'))
+  const toolIds = tools?.filter((t) => typeof t === 'string')
+  latitudeToolNames = latitudeToolNames.concat(
+    toolIds
+      ?.map((t) => t.split('/'))
+      ?.filter(([toolSource]) => toolSource === 'latitude')
+      ?.map(([, ...rest]) => rest.join('/')) ?? [],
+  ) // Any other tool ids that are not from "latitude" are computed as Integration Tools
 
   const resolvedTools: ResolvedTools = {}
   for (const latitudeToolName of latitudeToolNames) {
@@ -79,7 +104,7 @@ function resolveLatitudeToolsFromNewSchema({
     if (latitudeToolName === '*') {
       Object.assign(
         resolvedTools,
-        ALL_LATITUDE_RESOLVED_TOOLS(streamManager.$completion!.context),
+        resolveAllLatitudeeTools({ streamManager, config }),
       )
       continue
     }
@@ -98,10 +123,13 @@ function resolveLatitudeToolsFromNewSchema({
       getLatitudeToolInternalName(latitudeToolName as LatitudeTool)
     ] = {
       definition: instrumentLatitudeTool(
-        getLatitudeToolDefinition(
-          latitudeToolName as LatitudeTool,
-          streamManager.$completion!.context,
-        )!,
+        getLatitudeToolDefinition({
+          tool: latitudeToolName as LatitudeTool,
+          context: streamManager.$completion!.context,
+          config,
+          document: (streamManager.promptSource as DocumentRunPromptSource)
+            .document,
+        })!,
         {
           streamManager,
           name: latitudeToolName,

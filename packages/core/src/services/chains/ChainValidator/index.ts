@@ -139,7 +139,7 @@ export const validateChain = async ({
   }
 }
 
-function applyAgentRule(config: LatitudePromptConfig) {
+export function applyAgentRule(config: LatitudePromptConfig) {
   if (config.type !== 'agent' || 'maxSteps' in config) return config
 
   return {

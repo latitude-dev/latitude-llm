@@ -6,7 +6,6 @@ import { LatitudeToolDefinition } from '../../../constants'
 import { BadRequestError, LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
-import { TelemetryContext } from '../../../telemetry'
 import { withTelemetryWrapper } from '../telemetryWrapper'
 import { CodeToolArgs } from './types'
 import { runCodeWithDependencies } from './withDependencies'
@@ -64,7 +63,7 @@ export default {
   name: LatitudeTool.RunCode,
   internalName: LatitudeToolInternalName.RunCode,
   method: runCode,
-  definition: (context: TelemetryContext) => ({
+  definition: ({ context }) => ({
     description:
       'Runs a custom script, and returns the output text.\n' +
       'This code will be executed in a sandboxed environment, so it cannot have access to other or previous runs.\n' +

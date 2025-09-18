@@ -29,6 +29,7 @@ import type {
 } from './browser'
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 
 export {
   DocumentType,
@@ -470,8 +471,13 @@ export type PromptSource = EvaluationV2 | DocumentRunPromptSource
 export type LatitudeToolDefinition = {
   name: LatitudeTool
   internalName: LatitudeToolInternalName
-  definition: (context?: TelemetryContext) => Tool
-  method: (args: unknown) => PromisedResult<unknown, LatitudeError>
+  hidden?: boolean
+  definition: (args: {
+    context?: TelemetryContext
+    document?: DocumentVersion
+    config?: LatitudePromptConfig
+  }) => Tool
+  method?: (args: unknown) => PromisedResult<unknown, LatitudeError>
 }
 
 export type LatitudeToolCall = ToolCall & {

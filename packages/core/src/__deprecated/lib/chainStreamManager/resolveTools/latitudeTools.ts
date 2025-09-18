@@ -16,7 +16,7 @@ const ALL_LATITUDE_RESOLVED_TOOLS = Object.fromEntries(
   Object.values(LatitudeTool).map((latitudeToolName) => [
     getLatitudeToolInternalName(latitudeToolName),
     {
-      definition: getLatitudeToolDefinition(latitudeToolName)!,
+      definition: getLatitudeToolDefinition({ tool: latitudeToolName })!,
       sourceData: {
         source: ToolSource.Latitude,
         latitudeTool: latitudeToolName,
@@ -73,7 +73,9 @@ function resolveLatitudeToolsFromNewSchema(config: LatitudePromptConfig) {
     ] = {
       // TODO(compiler): fix types
       // @ts-expect-error - TODO: fix types
-      definition: getLatitudeToolDefinition(latitudeToolName as LatitudeTool)!,
+      definition: getLatitudeToolDefinition({
+        tool: latitudeToolName as LatitudeTool,
+      })!,
       sourceData: {
         source: ToolSource.Latitude,
         latitudeTool: latitudeToolName as LatitudeTool,

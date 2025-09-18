@@ -22,16 +22,21 @@ export const GET = errorHandler(
       },
     ) => {
       if (params.integrationName === 'latitude') {
-        const latitudeTools: McpTool[] = Object.values(LatitudeTool).map(
-          (latitudeTool) => {
-            const toolDefinition = getLatitudeToolDefinition(latitudeTool)!
+        const latitudeTools: McpTool[] = Object.values(LatitudeTool)
+          .map((latitudeTool) => {
+            const toolDefinition = getLatitudeToolDefinition({
+              tool: latitudeTool,
+              hidden: false,
+            })
+            if (!toolDefinition) return null
+
             return {
               name: latitudeTool,
               description: toolDefinition.description,
               inputSchema: toolDefinition.parameters,
             }
-          },
-        )
+          })
+          .filter(Boolean) as McpTool[]
         return NextResponse.json(
           {
             ok: true,

@@ -27,6 +27,7 @@ export type RunDocumentAtCommitArgs = {
   customIdentifier?: string
   source: LogSources
   tools?: Record<string, ToolHandler>
+  memory?: { userId: string }
   customPrompt?: string
   experiment?: Experiment
   errorableUuid?: string
@@ -47,6 +48,7 @@ export async function runDocumentAtCommit({
   errorableUuid,
   userMessage,
   abortSignal,
+  memory,
   tools = {},
 }: RunDocumentAtCommitArgs) {
   errorableUuid = errorableUuid ?? generateUUIDIdentifier()
@@ -114,6 +116,7 @@ export async function runDocumentAtCommit({
     chain,
     uuid: errorableUuid,
     tools,
+    memory,
     promptSource: {
       document,
       commit,

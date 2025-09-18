@@ -8,7 +8,6 @@ import { LatitudeToolDefinition } from '../../../constants'
 import { BadRequestError, LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
-import { TelemetryContext } from '../../../telemetry'
 import { withTelemetryWrapper } from '../telemetryWrapper'
 import { SearchToolArgs, SearchToolResult } from './types'
 
@@ -41,7 +40,7 @@ export default {
   name: LatitudeTool.WebSearch,
   internalName: LatitudeToolInternalName.WebSearch,
   method: webSearch,
-  definition: (context?: TelemetryContext) => ({
+  definition: ({ context }) => ({
     description:
       'Search the web for information.\n' +
       'Given a query, this tool will search the web for information and return the results.\n' +

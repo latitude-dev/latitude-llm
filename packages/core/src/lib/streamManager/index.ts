@@ -44,6 +44,7 @@ export type StreamManagerProps = {
   source: LogSources
   context: TelemetryContext
   abortSignal?: AbortSignal
+  memory?: { userId: string }
   uuid?: string
   messages?: LegacyMessage[]
   tokenUsage?: LanguageModelUsage
@@ -66,6 +67,7 @@ export abstract class StreamManager {
   public uuid: string
   public workspace: Workspace
   public abortSignal?: AbortSignal
+  public memory?: { userId: string }
 
   public $context: TelemetryContext
   public $completion: ReturnType<typeof telemetry.completion> | undefined
@@ -95,6 +97,7 @@ export abstract class StreamManager {
     source,
     abortSignal,
     context,
+    memory,
     tools = {},
     messages = [],
     uuid = generateUUIDIdentifier(),
@@ -107,6 +110,7 @@ export abstract class StreamManager {
     this.source = source
     this.abortSignal = abortSignal
     this.$context = context
+    this.memory = memory
     this.tools = tools
     this.stream = new ReadableStream<ChainEvent>({
       start: (controller) => {
@@ -410,6 +414,12 @@ export abstract class StreamManager {
 
   protected setMessages(messages: LegacyMessage[]) {
     this.messages = messages
+  }
+
+  protected setMemory(memory: { userId: string }) {
+    if (this.memory) return this.memory
+
+    this.memory = memory
   }
 }
 
