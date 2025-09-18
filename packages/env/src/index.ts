@@ -301,29 +301,29 @@ export const env = createEnv({
       .string()
       .optional()
       .default('709a3398-ed26-4e77-beef-90ed288cdd0a'),
+
+    // AI Memory
+    MEM0_API_KEY: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,
-    CACHE_PORT: process.env.CACHE_PORT ?? '6379',
     CACHE_PASSWORD: process.env.CACHE_PASSWORD,
-    NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: 'Latitude', // TODO: Move to env in infra
+    CACHE_PORT: process.env.CACHE_PORT ?? '6379',
+    COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH: process.env.COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH ?? 'tool-responses-generator', // prettier-ignore
+    DEFAULT_PROVIDER_API_KEY: process.env.DEFAULT_PROVIDER_API_KEY ?? 'default_api_key', // prettier-ignore
+    DISABLE_EMAIL_AUTHENTICATION: process.env.DISABLE_EMAIL_AUTHENTICATION === 'true', // prettier-ignore
     DRIVE_DISK: process.env.DRIVE_DISK ?? 'local',
+    ECS_AGENT_URI: process.env.ECS_AGENT_URI,
+    ENABLE_ALL_FLAGS: process.env.ENABLE_ALL_FLAGS === 'true',
     FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? UPLOADS_PATH,
+    LATITUDE_CLOUD: process.env.LATITUDE_CLOUD === 'true',
+    LATITUDE_CLOUD_PAYMENT_URL: process.env.LATITUDE_CLOUD_PAYMENT_URL,
+    LOOPS_API_KEY: process.env.LOOPS_API_KEY ?? '',
+    MEM0_API_KEY: process.env.MEM0_API_KEY ?? 'fake-api-key',
+    NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: 'Latitude', // TODO: Move to env in infra
+    OPT_OUT_ANALYTICS: process.env.OPT_OUT_ANALYTICS === 'true',
     QUEUE_PORT: process.env.QUEUE_PORT ?? '6379',
     SUPPORT_APP_ID: process.env.SUPPORT_APP_ID ?? '',
     SUPPORT_APP_SECRET_KEY: process.env.SUPPORT_APP_SECRET_KEY ?? '',
-    LOOPS_API_KEY: process.env.LOOPS_API_KEY ?? '',
-    LATITUDE_CLOUD: process.env.LATITUDE_CLOUD === 'true',
-    LATITUDE_CLOUD_PAYMENT_URL: process.env.LATITUDE_CLOUD_PAYMENT_URL,
-    OPT_OUT_ANALYTICS: process.env.OPT_OUT_ANALYTICS === 'true',
-    DISABLE_EMAIL_AUTHENTICATION:
-      process.env.DISABLE_EMAIL_AUTHENTICATION === 'true',
-    ENABLE_ALL_FLAGS: process.env.ENABLE_ALL_FLAGS === 'true',
-    COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH:
-      process.env.COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH ??
-      'tool-responses-generator',
-    DEFAULT_PROVIDER_API_KEY:
-      process.env.DEFAULT_PROVIDER_API_KEY ?? 'default_api_key',
-    ECS_AGENT_URI: process.env.ECS_AGENT_URI,
   },
 })
