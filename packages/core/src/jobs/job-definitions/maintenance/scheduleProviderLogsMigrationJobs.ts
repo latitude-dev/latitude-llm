@@ -18,9 +18,7 @@ export const scheduleProviderLogsMigrationJobs = async (
 ) => {
   // Find workspaces that have provider logs without fileKey
   const workspacesWithOldLogs = await database
-    .select({
-      id: workspaces.id,
-    })
+    .select({ id: workspaces.id })
     .from(workspaces)
 
   let enqueuedJobs = 0
@@ -33,6 +31,7 @@ export const scheduleProviderLogsMigrationJobs = async (
       { workspaceId: workspace.id },
       { attempts: 3 },
     )
+
     enqueuedJobs++
   }
 

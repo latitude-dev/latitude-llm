@@ -31,7 +31,10 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
         commits,
         and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
       )
-      .innerJoin(projects, eq(projects.id, commits.projectId))
+      .innerJoin(
+        projects,
+        eq(projects.id, commits.projectId),
+      )
       .leftJoin(
         runErrors,
         and(

@@ -9,7 +9,8 @@ import {
   captureException,
   captureMessage,
 } from '@latitude-data/core/utils/workers/sentry'
-import { startWorkers, setupSchedules } from './workers'
+import { startWorkers } from './workers'
+import { setupSchedules } from './workers/schedule'
 import { env } from '@latitude-data/env'
 import { queues } from '@latitude-data/core/queues'
 import { jobTracker } from './workers/utils/jobTracker'
@@ -93,7 +94,7 @@ const gracefulShutdown = async (signal: string) => {
 process.on('SIGINT', () => gracefulShutdown('SIGINT'))
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
 
-process.on('uncaughtException', function (err) {
+process.on('uncaughtException', function(err) {
   captureException(err)
 })
 
