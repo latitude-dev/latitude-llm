@@ -31,10 +31,7 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
         commits,
         and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
       )
-      .innerJoin(
-        projects,
-        eq(projects.id, commits.projectId),
-      )
+      .innerJoin(projects, eq(projects.id, commits.projectId))
       .leftJoin(
         runErrors,
         and(
@@ -51,17 +48,23 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
       return Result.error(new NotFoundError('DocumentLog not found'))
     }
 
-    const result = await this.scope.where(
-      and(this.scopeFilter, eq(documentLogs.uuid, uuid)),
-    )
-
-    if (!result.length) {
-      return Result.error(
-        new NotFoundError(`DocumentLog not found with uuid ${uuid}`),
+    try {
+      const result = await this.scope.where(
+        and(this.scopeFilter, eq(documentLogs.uuid, uuid)),
       )
-    }
 
-    return Result.ok(result[0]!)
+      if (!result.length) {
+        return Result.error(
+          new NotFoundError(`DocumentLog not found with uuid ${uuid}`),
+        )
+      }
+
+      return Result.ok(result[0]!)
+    } catch (err) {
+      console.log(err)
+
+      return Result.error(err as Error)
+    }
   }
 
   async totalCountSinceDate(minDate: Date) {

@@ -31,7 +31,10 @@ export const providerLogs = latitudeSchema.table(
   'provider_logs',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
-    workspaceId: bigint('workspace_id', { mode: 'number' }).references(() => workspaces.id, { onDelete: 'cascade' }),
+    workspaceId: bigint('workspace_id', { mode: 'number' }).references(
+      () => workspaces.id,
+      { onDelete: 'cascade' },
+    ),
     uuid: uuid('uuid').notNull().unique(),
     documentLogUuid: uuid('document_log_uuid'), // Note: this seems to be used for document logs and evaluation results, we should probably rename it or use two columns
     providerId: bigint('provider_id', { mode: 'number' }).references(

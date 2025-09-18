@@ -32,8 +32,8 @@ export async function createLatteJob({
     return Result.error(checking.error)
   }
 
-  const { documentsQueue } = await queues()
-  const job = await documentsQueue.add('runLatteJob', {
+  const { latteQueue } = await queues()
+  const job = await latteQueue.add('runLatteJob', {
     workspaceId: workspace.id,
     projectId: project.id,
     threadUuid,

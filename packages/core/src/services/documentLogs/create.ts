@@ -82,20 +82,23 @@ export async function createDocumentLog(
       const documentLog = inserts[0]!
 
       if (providerLog) {
-        await createProviderLog({
-          uuid: generateUUIDIdentifier(),
-          documentLogUuid: documentLog.uuid,
-          messages: providerLog.messages,
-          responseText: providerLog.responseText,
-          toolCalls: providerLog.toolCalls,
-          generatedAt: new Date(),
-          model: providerLog.model,
-          duration: providerLog.duration,
-          costInMillicents: providerLog.costInMillicents,
-          usage: providerLog.usage,
-          source,
-          workspace,
-        }).then((r) => r.unwrap())
+        await createProviderLog(
+          {
+            uuid: generateUUIDIdentifier(),
+            documentLogUuid: documentLog.uuid,
+            messages: providerLog.messages,
+            responseText: providerLog.responseText,
+            toolCalls: providerLog.toolCalls,
+            generatedAt: new Date(),
+            model: providerLog.model,
+            duration: providerLog.duration,
+            costInMillicents: providerLog.costInMillicents,
+            usage: providerLog.usage,
+            source,
+            workspace,
+          },
+          transaction,
+        ).then((r) => r.unwrap())
       }
 
       return Result.ok(documentLog)

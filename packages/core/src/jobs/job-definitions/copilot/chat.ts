@@ -118,6 +118,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
         abortSignal: controller.signal,
         debugVersionUuid,
       })
+
       if (!runResult.ok) {
         await emitError({
           workspaceId,
