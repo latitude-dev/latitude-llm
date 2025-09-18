@@ -16,17 +16,3 @@ export const findLastProviderLogFromDocumentLogUuid = async (
 
   return hydrateProviderLog(result).then((r) => r.unwrap())
 }
-
-export const unsafelyFindProviderLogByUuid = async (
-  providerLogUuid: string,
-  db = database,
-) => {
-  const result = await db
-    .select()
-    .from(providerLogs)
-    .where(eq(providerLogs.uuid, providerLogUuid))
-    .limit(1)
-  if (!result[0]) return
-
-  return hydrateProviderLog(result[0]).then((r) => r.unwrap())
-}

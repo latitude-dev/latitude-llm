@@ -88,6 +88,9 @@ export const ROUTES = {
       destroy: (id: number) => {
         return { root: `/settings/provider-api-keys/${id}/destroy` }
       },
+      update: (id: number) => {
+        return { root: `/settings/provider-api-keys/${id}/update` }
+      },
     },
     promocodes: {
       root: `/promocodes`,

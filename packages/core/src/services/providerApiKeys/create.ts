@@ -8,6 +8,7 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { providerApiKeys, ProviderConfiguration } from '../../schema'
 import { amazonBedrockConfigurationSchema } from '../ai'
+import { validateProviderApiKeyName } from './helpers/validateName'
 
 export type Props = {
   workspace: Workspace
@@ -54,6 +55,19 @@ export function createProviderApiKey(
         }
       }
     }
+    const validatedNameResult = await validateProviderApiKeyName(
+      {
+        name,
+        workspaceId: workspace.id,
+      },
+      tx,
+    )
+
+    if (!Result.isOk(validatedNameResult)) {
+      return validatedNameResult
+    }
+
+    const validatedName = validatedNameResult.unwrap()
 
     try {
       const result = await tx
@@ -63,7 +77,7 @@ export function createProviderApiKey(
           provider,
           token,
           url,
-          name,
+          name: validatedName,
           defaultModel,
           authorId: author.id,
           configuration,
@@ -87,18 +101,12 @@ export function createProviderApiKey(
       return Result.ok(providerApiKey)
     } catch (e) {
       const error = 'cause' in (e as Error) ? (e as Error).cause : undefined
-      if (error instanceof DatabaseError) {
-        if (error.code === databaseErrorCodes.uniqueViolation) {
-          if (error.constraint?.includes('name')) {
-            throw new BadRequestError(
-              'A provider API key with this name already exists',
-            )
-          }
-
-          if (error.constraint?.includes('token')) {
-            throw new BadRequestError('This token is already in use')
-          }
-        }
+      if (
+        error instanceof DatabaseError &&
+        error.code === databaseErrorCodes.uniqueViolation &&
+        error.constraint?.includes('token')
+      ) {
+        throw new BadRequestError('This token is already in use')
       }
 
       throw e

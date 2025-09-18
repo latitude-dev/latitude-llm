@@ -1,5 +1,6 @@
 import { createProviderApiKeyAction } from '$/actions/providerApiKeys/create'
 import { destroyProviderApiKeyAction } from '$/actions/providerApiKeys/destroy'
+import { updateProviderApiKeyAction } from '$/actions/providerApiKeys/update'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
@@ -63,6 +64,19 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
     },
   )
 
+  const { execute: update, isPending: isUpdating } = useLatitudeAction(
+    updateProviderApiKeyAction,
+    {
+      onSuccess: async ({ data: apikey }) => {
+        toast({
+          title: 'Success',
+          description: `${apikey.name} updated successfully`,
+        })
+        mutate(data.map((item) => (item.id === apikey.id ? apikey : item)))
+      },
+    },
+  )
+
   return useMemo(
     () => ({
       data,
@@ -71,9 +85,21 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
       mutate,
       isCreating,
       isDestroying,
+      update,
+      isUpdating,
       ...rest,
     }),
-    [data, create, destroy, mutate, isCreating, isDestroying, rest],
+    [
+      data,
+      create,
+      destroy,
+      update,
+      mutate,
+      isCreating,
+      isDestroying,
+      isUpdating,
+      rest,
+    ],
   )
 }
 
