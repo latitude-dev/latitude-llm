@@ -1,9 +1,27 @@
+import cronstrue from 'cronstrue'
+
 export type CronValue = {
   minutes: string
   hours: string
   dayOfMonth: string
   month: string
   dayOfWeek: string
+}
+
+export enum CronTab {
+  Interval = 'interval',
+  Schedule = 'schedule',
+  Custom = 'custom',
+}
+
+export function humanizeCronValue(value: string): string {
+  try {
+    return cronstrue.toString(value, {
+      throwExceptionOnParseError: true,
+    })
+  } catch {
+    return 'Invalid cron expression'
+  }
 }
 
 export function parseCronValue(cron: string): CronValue {
@@ -55,4 +73,13 @@ export function isScheduleCron({
     month === '*' &&
     (dayOfWeek === '*' || isNumList(dayOfWeek))
   )
+}
+
+// Calculates the best tab to show based on the cron value
+export function getInitialTab(value: CronValue, valueError?: string): CronTab {
+  if (valueError) return CronTab.Custom
+  if (value.month !== '*') return CronTab.Custom
+  if (isIntervalCron(value)) return CronTab.Interval
+  if (isScheduleCron(value)) return CronTab.Schedule
+  return CronTab.Custom
 }

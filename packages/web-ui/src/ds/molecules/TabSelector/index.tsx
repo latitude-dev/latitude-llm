@@ -17,6 +17,7 @@ export function TabSelector<T extends string>({
   selected: originalSelected,
   showSelectedOnSubroutes = false,
   fullWidth = false,
+  disabled,
   onSelect,
 }: {
   options: TabSelectorOption<T>[]
@@ -24,6 +25,7 @@ export function TabSelector<T extends string>({
   onSelect?: (value: T) => void
   showSelectedOnSubroutes?: boolean
   fullWidth?: boolean
+  disabled?: boolean
 }) {
   const selectedOptionButtonRef = useRef<HTMLButtonElement>(null)
   const selectedOptionBackgroundRef = useRef<HTMLDivElement>(null)
@@ -112,6 +114,7 @@ export function TabSelector<T extends string>({
                 )}
                 onClick={handleSelect(option)}
                 fullWidth={fullWidth}
+                disabled={disabled}
               >
                 {typeof option.label === 'string' ? (
                   <Text.H5M

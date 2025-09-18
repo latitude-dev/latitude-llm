@@ -23,9 +23,11 @@ type IntervalType = 'minutes' | 'hours' | 'days'
 export function IntervalCronInput({
   value,
   onChange,
+  disabled,
 }: {
   value: CronValue
   onChange: (value: CronValue) => void
+  disabled?: boolean
 }) {
   const [intervalValue, setIntervalValue] = useState(() =>
     getInitialValue(value),
@@ -102,6 +104,7 @@ export function IntervalCronInput({
           onChange={onChangeValue}
           min={1}
           className='w-16'
+          disabled={disabled}
         />
       </div>
       <Select<IntervalType>
@@ -109,6 +112,7 @@ export function IntervalCronInput({
         name='intervalType'
         options={intervalOptions}
         onChange={onChangeInterval}
+        disabled={disabled}
       />
     </div>
   )

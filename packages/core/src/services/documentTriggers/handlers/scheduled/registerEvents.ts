@@ -56,7 +56,7 @@ async function findScheduledTriggersDueToRun(
     const dueTriggers = triggersWithoutNextRunTime.filter((trigger) => {
       return checkCronExpression(
         trigger.configuration.cronExpression,
-        'UTC',
+        trigger.configuration.timezone,
         trigger.deploymentSettings!.lastRun || trigger.createdAt,
       )
     })
@@ -108,7 +108,7 @@ async function registerSingleScheduledTriggerEvent(
 
     const nextRunTime = getNextRunTime(
       documentTrigger.configuration.cronExpression,
-      'UTC',
+      documentTrigger.configuration.timezone,
       documentTrigger.deploymentSettings!.nextRunTime,
     )
 

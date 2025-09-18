@@ -8,16 +8,18 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { OnTriggerCreated } from '../../../client'
 import {
-  DEFAULT_CONFIG,
-  type ScheduleConfig,
-  convertToCronExpression,
-} from '../../../../_components/TriggerForms/ScheduleTriggerForm/scheduleUtils'
-import { ScheduleTriggerForm } from '../../../../_components/TriggerForms/ScheduleTriggerForm'
-import {
   SelectDocument,
   useDocumentSelection,
 } from '../../../../_components/SelectDocument'
 import { TriggerWrapper } from '../TriggerWrapper'
+import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { CronFormField } from '@latitude-data/web-ui/organisms/CronInput'
+import { CLIENT_TIMEZONE } from '$/lib/constants'
+
+const DEFAULT_CONFIG: ScheduledTriggerConfiguration = {
+  cronExpression: '* * * * *',
+  timezone: CLIENT_TIMEZONE,
+}
 
 export function ScheduleTrigger({
   onTriggerCreated,
@@ -41,14 +43,16 @@ export function ScheduleTrigger({
     },
   )
   const documentUuid = document?.documentUuid
-  const [config, setConfig] = useState<ScheduleConfig>(DEFAULT_CONFIG)
+  const [config, setConfig] =
+    useState<ScheduledTriggerConfiguration>(DEFAULT_CONFIG)
+
   const onCreate = useCallback(async () => {
     if (!documentUuid) return
 
     create({
       documentUuid,
       triggerType: DocumentTriggerType.Scheduled,
-      configuration: { cronExpression: convertToCronExpression(config) },
+      configuration: config,
     })
   }, [create, documentUuid, config])
 
@@ -64,11 +68,14 @@ export function ScheduleTrigger({
       />
       {document ? (
         <>
-          <ScheduleTriggerForm
-            config={config}
-            setConfig={setConfig}
-            isExecuting={isCreating}
+          <CronFormField
+            value={config.cronExpression}
+            onChange={(newValue: string) =>
+              setConfig({ ...config, cronExpression: newValue })
+            }
+            disabled={isCreating}
           />
+
           <Button fancy onClick={onCreate} disabled={isCreating}>
             {isCreating ? 'Creating trigger...' : 'Create trigger'}
           </Button>

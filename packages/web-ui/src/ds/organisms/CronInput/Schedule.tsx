@@ -53,9 +53,11 @@ function getInitialMinute({ minutes }: CronValue): string {
 export function ScheduleCronInput({
   value,
   onChange,
+  disabled,
 }: {
   value: CronValue
   onChange: (value: CronValue) => void
+  disabled?: boolean
 }) {
   const [selectedDays, setSelectedDays] = useState<SelectedDays>(() =>
     parseSelectedDays(value.dayOfWeek),
@@ -100,6 +102,7 @@ export function ScheduleCronInput({
             key={label}
             variant={selectedDays[idx] ? 'default' : 'outline'}
             onClick={() => toggleDay(idx)}
+            disabled={disabled}
           >
             <Text.H5
               color={selectedDays[idx] ? 'background' : 'foregroundMuted'}
@@ -119,6 +122,7 @@ export function ScheduleCronInput({
             min={0}
             max={23}
             className='w-16'
+            disabled={disabled}
           />
         </div>
         <Text.H5 noWrap>:</Text.H5>
@@ -130,6 +134,7 @@ export function ScheduleCronInput({
             min={0}
             max={59}
             className='w-16'
+            disabled={disabled}
           />
         </div>
       </div>

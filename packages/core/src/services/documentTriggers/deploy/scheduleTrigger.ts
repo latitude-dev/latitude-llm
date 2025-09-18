@@ -17,7 +17,9 @@ export function deployScheduledTrigger({
   return Result.ok({
     deploymentSettings: {
       lastRun: new Date(),
-      nextRunTime: getNextRunTime(configuration.cronExpression) ?? undefined,
+      nextRunTime:
+        getNextRunTime(configuration.cronExpression, configuration.timezone) ??
+        undefined,
     },
     triggerStatus: DocumentTriggerStatus.Deployed,
   })
