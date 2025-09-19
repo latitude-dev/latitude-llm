@@ -10,8 +10,10 @@ export function useConnectToPipedreamApp(app: App | undefined) {
   const { data: workspace } = useCurrentWorkspace()
 
   const [isConnecting, setIsConnecting] = useState(false)
-  const [externalUserId] = useState(
-    workspace!.id + ':' + generateUUIDIdentifier(),
+  const externalUserId = useMemo(
+    () =>
+      workspace ? workspace.id + ':' + generateUUIDIdentifier() : undefined,
+    [workspace],
   )
 
   const [connectionId, setConnectionId] = useState<string | undefined>(
@@ -37,6 +39,13 @@ export function useConnectToPipedreamApp(app: App | undefined) {
   const connect = useCallback((): Promise<
     [string, undefined] | [undefined, Error]
   > => {
+    if (!externalUserId) {
+      return Promise.resolve([
+        undefined,
+        new Error('Something went wrong, please try again.'),
+      ])
+    }
+
     if (!app) {
       return Promise.resolve([undefined, new Error('App is not selected')])
     }
