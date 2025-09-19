@@ -143,6 +143,7 @@ describe('AnalyticsClient', () => {
           workspaceId: undefined,
           workspaceUuid: undefined,
           data: {
+            source: 'default',
             workspace: {},
             user,
             workspaceId: 123,
@@ -185,6 +186,7 @@ describe('AnalyticsClient', () => {
           workspaceId: workspace.id,
           workspaceUuid: workspace.uuid,
           data: {
+            source: 'default',
             workspace,
             user,
             workspaceId: workspace.id,
@@ -284,6 +286,7 @@ describe('AnalyticsClient', () => {
             workspaceId: workspace.id,
             workspaceUuid: workspace.uuid,
             data: {
+              source: '[REDACTED]',
               workspace: '[REDACTED]',
               user: '[REDACTED]',
               workspaceId: '[REDACTED]',
@@ -310,6 +313,7 @@ describe('AnalyticsClient', () => {
             workspaceId: workspace.id,
             workspaceUuid: workspace.uuid,
             data: {
+              source: '[REDACTED]',
               workspace: '[REDACTED]',
               user: '[REDACTED]',
               workspaceId: '[REDACTED]',
