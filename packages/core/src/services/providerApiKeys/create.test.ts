@@ -271,6 +271,86 @@ describe('createProviderApiKey', () => {
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
+  it('does not allow to create a provider with empty name', async () => {
+    const result = await createProviderApiKey({
+      workspace,
+      provider: Providers.OpenAI,
+      token: 'fake-token',
+      name: '',
+      author: user,
+    })
+
+    expect(result.ok).toEqual(false)
+    expect(result.error).toBeInstanceOf(BadRequestError)
+    expect(result.error!.message).toEqual(
+      'Name must be at least 1 characters long',
+    )
+
+    const providersScope = new ProviderApiKeysRepository(workspace.id)
+    const providers = await providersScope.findAll().then((r) => r.unwrap())
+
+    expect(providers.map((p) => p.id)).toEqual([])
+
+    expect(mocks.publisher).not.toHaveBeenCalled()
+  })
+
+  it('does not allow to create a provider with whitespace-only name', async () => {
+    const result = await createProviderApiKey({
+      workspace,
+      provider: Providers.OpenAI,
+      token: 'fake-token',
+      name: '   ',
+      author: user,
+    })
+
+    expect(result.ok).toEqual(false)
+    expect(result.error).toBeInstanceOf(BadRequestError)
+    expect(result.error!.message).toEqual(
+      'Name must be at least 1 characters long',
+    )
+
+    const providersScope = new ProviderApiKeysRepository(workspace.id)
+    const providers = await providersScope.findAll().then((r) => r.unwrap())
+
+    expect(providers.map((p) => p.id)).toEqual([])
+
+    expect(mocks.publisher).not.toHaveBeenCalled()
+  })
+
+  it('preserves internal spaces in multi-word names when creating provider', async () => {
+    const result = await createProviderApiKey({
+      workspace,
+      provider: Providers.OpenAI,
+      token: 'fake-token',
+      name: '  My Provider Name  ',
+      author: user,
+    })
+
+    expect(result.ok).toEqual(true)
+
+    const provider = result.unwrap()
+
+    expect(provider.provider).toEqual(Providers.OpenAI)
+    expect(provider.name).toEqual('My Provider Name')
+    expect(provider.token).toEqual('fake-token')
+    expect(provider.defaultModel).toEqual(null)
+
+    const providersScope = new ProviderApiKeysRepository(workspace.id)
+    const providers = await providersScope.findAll().then((r) => r.unwrap())
+
+    expect(providers.map((p) => p.id)).toEqual([provider.id])
+
+    expect(mocks.publisher).toHaveBeenCalledOnce()
+    expect(mocks.publisher).toHaveBeenCalledWith({
+      type: 'providerApiKeyCreated',
+      data: {
+        providerApiKey: provider,
+        workspaceId: workspace.id,
+        userEmail: user.email,
+      },
+    })
+  })
+
   it('creates a provider with same name if one is deleted', async () => {
     const oldProvider = await createProviderApiKey({
       workspace,

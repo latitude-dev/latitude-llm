@@ -14,6 +14,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  SortableTableHead,
+  type SortDirection,
 } from '@latitude-data/web-ui/atoms/Table'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
@@ -27,6 +29,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
+import { useState, useMemo } from 'react'
 
 export default function ProviderApiKeys() {
   const { data: providerApiKeys, isLoading: isProviderApiKeysLoading } =
@@ -111,8 +114,56 @@ const ProviderApiKeysTable = ({
 }) => {
   const router = useRouter()
   const { updateDefaultProvider } = useCurrentWorkspace()
+  const [sortLastUsedDirection, setSortLastUsedDirection] =
+    useState<SortDirection>(null)
+  const [sortCreatedAtDirection, setSortCreatedAtDirection] =
+    useState<SortDirection>(null)
+
   const findProvider = (provider: string) =>
     Object.entries(Providers).find(([_, value]) => value === provider)?.[0]
+
+  const handleLastUsedSort = () => {
+    if (sortLastUsedDirection === null) {
+      setSortLastUsedDirection('desc')
+      setSortCreatedAtDirection(null)
+    } else if (sortLastUsedDirection === 'desc') {
+      setSortLastUsedDirection('asc')
+    } else {
+      setSortLastUsedDirection(null)
+    }
+  }
+
+  const handleCreatedAtSort = () => {
+    if (sortCreatedAtDirection === null) {
+      setSortCreatedAtDirection('desc')
+      setSortLastUsedDirection(null)
+    } else if (sortCreatedAtDirection === 'desc') {
+      setSortCreatedAtDirection('asc')
+    } else {
+      setSortCreatedAtDirection(null)
+    }
+  }
+
+  const sortedProviderApiKeys = useMemo(() => {
+    if (!sortLastUsedDirection && !sortCreatedAtDirection)
+      return providerApiKeys
+
+    return [...providerApiKeys].sort((a, b) => {
+      if (sortLastUsedDirection) {
+        const aTime = a.lastUsedAt ? a.lastUsedAt.getTime() : 0
+        const bTime = b.lastUsedAt ? b.lastUsedAt.getTime() : 0
+        return sortLastUsedDirection === 'asc' ? aTime - bTime : bTime - aTime
+      }
+
+      if (sortCreatedAtDirection) {
+        const aTime = a.createdAt.getTime()
+        const bTime = b.createdAt.getTime()
+        return sortCreatedAtDirection === 'asc' ? aTime - bTime : bTime - aTime
+      }
+
+      return 0
+    })
+  }, [providerApiKeys, sortLastUsedDirection, sortCreatedAtDirection])
 
   return (
     <Table>
@@ -121,12 +172,23 @@ const ProviderApiKeysTable = ({
           <TableHead>Name</TableHead>
           <TableHead>Source</TableHead>
           <TableHead>Token</TableHead>
-          <TableHead>Last Used</TableHead>
+          <SortableTableHead
+            sortDirection={sortLastUsedDirection}
+            onSort={handleLastUsedSort}
+          >
+            Last Used
+          </SortableTableHead>
+          <SortableTableHead
+            sortDirection={sortCreatedAtDirection}
+            onSort={handleCreatedAtSort}
+          >
+            Created At
+          </SortableTableHead>
           <TableHead />
         </TableRow>
       </TableHeader>
       <TableBody>
-        {providerApiKeys.map((apiKey) => (
+        {sortedProviderApiKeys.map((apiKey) => (
           <TableRow key={apiKey.id} hoverable={false} verticalPadding>
             <TableCell>
               <div className='flex flex-row items-center gap-2'>
@@ -150,6 +212,11 @@ const ProviderApiKeysTable = ({
               </Text.H5>
             </TableCell>
             <TableCell>
+              <Text.H5 color='foregroundMuted'>
+                {relativeTime(apiKey.createdAt ? apiKey.createdAt : null)}
+              </Text.H5>
+            </TableCell>
+            <TableCell>
               <DropdownMenu
                 options={[
                   apiKey.id === workspace.defaultProviderId
@@ -167,6 +234,13 @@ const ProviderApiKeysTable = ({
                             defaultProviderId: apiKey.id,
                           }),
                       },
+                  {
+                    label: 'Update name',
+                    onClick: () =>
+                      router.push(
+                        ROUTES.settings.providerApiKeys.update(apiKey.id).root,
+                      ),
+                  },
                   {
                     label: 'Remove',
                     onClick: () =>
