@@ -120,7 +120,11 @@ async function addIntegrationTools({
       `${mcpTool.name}`,
       {
         description: mcpTool?.description?.slice(0, 1023) ?? '',
-        parameters: mcpTool.inputSchema,
+        parameters: {
+          ...mcpTool.inputSchema,
+          additionalProperties:
+            mcpTool.inputSchema.additionalProperties ?? false,
+        },
         execute: async (args, toolCall) => {
           const $tool = telemetry.tool(streamManager.$completion!.context, {
             name: `${LATITUDE_TOOL_PREFIX}_${integrationName}_${mcpTool.name}`,
