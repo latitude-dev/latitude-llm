@@ -1,4 +1,16 @@
-import { LatitudeErrorCodes, LatitudeErrorDetails } from './constants'
+import {
+  LatitudeErrorCodes,
+  LatitudeErrorDetails,
+  RunErrorCodes,
+} from './constants'
+
+export type LatitudeErrorDto = {
+  name: LatitudeErrorCodes
+  code: RunErrorCodes
+  status: number
+  message: string
+  details: Record<string, unknown>
+}
 
 export class LatitudeError extends Error {
   statusCode: number = 500
@@ -7,10 +19,35 @@ export class LatitudeError extends Error {
 
   public details: LatitudeErrorDetails
 
-  constructor(message: string, details: LatitudeErrorDetails = {}) {
+  constructor(
+    message: string,
+    details?: LatitudeErrorDetails,
+    status?: number,
+    name?: string,
+  ) {
     super(message)
-    this.details = details
-    this.name = this.constructor.name
+    this.details = details ?? {}
+    this.statusCode = status ?? this.statusCode
+    this.name = name ?? this.constructor.name
+  }
+
+  serialize(): LatitudeErrorDto {
+    return {
+      name: this.name as LatitudeErrorCodes,
+      code: this.name as RunErrorCodes,
+      status: this.statusCode,
+      message: this.message,
+      details: this.details,
+    }
+  }
+
+  static deserialize(json: LatitudeErrorDto): LatitudeError {
+    return new LatitudeError(
+      json.message,
+      json.details as LatitudeErrorDetails,
+      json.status,
+      json.name,
+    )
   }
 }
 

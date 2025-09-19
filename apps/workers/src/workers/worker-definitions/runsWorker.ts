@@ -4,13 +4,11 @@ import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
-  runDocumentJob: jobs.runDocumentJob,
-  runDocumentForExperimentJob: jobs.runDocumentForExperimentJob,
-  runDocumentTriggerEventJob: jobs.runDocumentTriggerEventJob,
+  runDocumentApiJob: jobs.runDocumentApiJob,
 }
 
-export function startDocumentsWorker() {
-  return createWorker(Queues.documentsQueue, jobMappings, {
+export function startRunsWorker() {
+  return createWorker(Queues.runsQueue, jobMappings, {
     concurrency: 25,
     connection: WORKER_CONNECTION_CONFIG,
   })

@@ -1,24 +1,23 @@
+import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
-import { DocumentLogFilterOptions } from '../../../constants'
-import { DocumentVersion, User } from '../../../browser'
-import { Workspace } from '../../../browser'
+import { stringify } from 'csv-stringify/sync'
+import { and, desc, eq, isNull, lt, notInArray } from 'drizzle-orm'
+import { Redis, RedisOptions } from 'ioredis'
+import { Readable } from 'stream'
+import { DocumentVersion, User, Workspace } from '../../../browser'
 import { database } from '../../../client'
+import { DocumentLogFilterOptions } from '../../../constants'
+import { findWorkspaceFromDocument } from '../../../data-access'
+import { diskFactory } from '../../../lib/disk'
+import { NotFoundError } from '../../../lib/errors'
+import { buildRedisConnection, REDIS_KEY_PREFIX } from '../../../redis'
+import { commits } from '../../../schema/models/commits'
 import { documentLogs } from '../../../schema/models/documentLogs'
 import { providerLogs } from '../../../schema/models/providerLogs'
-import { and, eq, lt, desc, notInArray, isNull } from 'drizzle-orm'
-import { Redis, RedisOptions } from 'ioredis'
-import { env } from '@latitude-data/env'
-import { buildRedisConnection } from '../../../redis'
-import { commits } from '../../../schema/models/commits'
-import { diskFactory } from '../../../lib/disk'
-import { stringify } from 'csv-stringify/sync'
-import { findWorkspaceFromDocument } from '../../../data-access'
-import { NotFoundError } from '../../../lib/errors'
-import { buildProviderLogResponse } from '../../../services/providerLogs/buildResponse'
-import { markExportReady } from '../../../services/exports/markExportReady'
-import { findOrCreateExport } from '../../../services/exports/findOrCreate'
 import { buildLogsFilterSQLConditions } from '../../../services/documentLogs/logsFilterUtils'
-import { Readable } from 'stream'
+import { findOrCreateExport } from '../../../services/exports/findOrCreate'
+import { markExportReady } from '../../../services/exports/markExportReady'
+import { buildProviderLogResponse } from '../../../services/providerLogs/buildResponse'
 import { hydrateProviderLog } from '../../../services/providerLogs/hydrate'
 
 const BATCH_SIZE = 1000
@@ -34,7 +33,7 @@ export class CursorState {
   private async ensureConnection() {
     if (!this.redis) {
       const redisOptions: RedisOptions = {
-        keyPrefix: 'latitude',
+        keyPrefix: REDIS_KEY_PREFIX,
         host: env.CACHE_HOST,
         port: env.CACHE_PORT,
       }

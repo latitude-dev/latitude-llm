@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeAll, vi, beforeEach } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   Commit,
-  EvaluationV2,
-  User,
-  ProviderLogDto,
   EvaluationResultV2,
+  EvaluationV2,
+  ProviderLogDto,
+  User,
   Workspace,
 } from '../../browser'
 import * as factories from '../../tests/factories'

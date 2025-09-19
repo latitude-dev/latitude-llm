@@ -5,7 +5,7 @@ import {
   QueueEventsListener,
   QueueEventsProducer,
 } from 'bullmq'
-import { buildRedisConnection } from '../redis'
+import { buildRedisConnection, REDIS_KEY_PREFIX } from '../redis'
 
 const queueName = 'pubsub'
 
@@ -20,7 +20,7 @@ export async function pubSub() {
   if (_pubSub) return _pubSub
 
   const options: QueueBaseOptions = {
-    prefix: 'latitude',
+    prefix: REDIS_KEY_PREFIX,
     connection: await buildRedisConnection({
       host: env.QUEUE_HOST,
       port: env.QUEUE_PORT,
@@ -41,7 +41,7 @@ export async function pubSub() {
 }
 
 // PubSub events
-export type PubSubEvent = 'clientToolResultReceived'
+export type PubSubEvent = 'clientToolResultReceived' | 'cancelJob'
 
 // PubSub handlers
 export interface PubSubHandler {
@@ -50,9 +50,11 @@ export interface PubSubHandler {
     result: unknown
     isError?: string
   }) => void
+  cancelJob: (args: { jobId: string }) => void
 }
 
 // PubSub listeners
 export interface PubSubListener extends QueueEventsListener {
   clientToolResultReceived: PubSubHandler['clientToolResultReceived']
+  cancelJob: PubSubHandler['cancelJob']
 }

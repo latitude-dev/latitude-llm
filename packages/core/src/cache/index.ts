@@ -1,7 +1,6 @@
 import { env } from '@latitude-data/env'
 import Redis, { RedisOptions } from 'ioredis'
-
-import { buildRedisConnection } from '../redis'
+import { buildRedisConnection, REDIS_KEY_PREFIX } from '../redis'
 
 export type Cache = Redis
 
@@ -14,7 +13,7 @@ export const cache = async () => {
     // Use 'any' or a more specific type for options
     host: env.CACHE_HOST,
     port: env.CACHE_PORT,
-    keyPrefix: 'latitude',
+    keyPrefix: REDIS_KEY_PREFIX,
   }
   if (env.CACHE_PASSWORD) {
     redisOptions.password = env.CACHE_PASSWORD

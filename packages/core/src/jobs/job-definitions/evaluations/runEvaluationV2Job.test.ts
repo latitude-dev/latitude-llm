@@ -1,7 +1,6 @@
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   Commit,
   Dataset,
@@ -17,16 +16,20 @@ import * as evaluationsV2 from '../../../services/evaluationsV2/run'
 import { completeExperiment } from '../../../services/experiments/complete'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
 import * as factories from '../../../tests/factories'
+import { WebsocketClient } from '../../../websockets/workers'
 import * as progressTracker from '../../utils/progressTracker'
 import {
   runEvaluationV2Job,
   type RunEvaluationV2JobData,
 } from './runEvaluationV2Job'
-import { WebsocketClient } from '../../../websockets/workers'
 
-vi.mock('../../../redis', () => ({
-  buildRedisConnection: vi.fn().mockResolvedValue({}),
-}))
+vi.mock(import('../../../redis'), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    buildRedisConnection: vi.fn(),
+  }
+})
 
 const runEvaluationV2Spy = vi.spyOn(evaluationsV2, 'runEvaluationV2')
 

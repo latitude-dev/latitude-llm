@@ -3,13 +3,13 @@ import {
   Message,
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
+import { FinishReason, LanguageModelUsage } from 'ai'
 import {
   ChainStepResponse,
   ProviderData,
   StreamEventTypes,
   StreamType,
 } from '..'
-import { FinishReason, LanguageModelUsage } from 'ai'
 import { ChainError, RunErrorCodes } from '../errors'
 
 export enum ChainEventTypes {
@@ -25,6 +25,7 @@ export enum ChainEventTypes {
   ToolsRequested = 'tools-requested', // TODO(compiler): remove
   ToolResult = 'tool-result',
   ToolsStarted = 'tools-started',
+  RunQueued = 'run-queued',
 }
 
 interface GenericLatitudeEventData {
@@ -98,6 +99,11 @@ export interface LatitudeToolsRequestedEventData
   tools: ToolCall[]
 }
 
+export interface LatitudeRunQueuedEventData extends GenericLatitudeEventData {
+  type: ChainEventTypes.RunQueued
+  jobId: string
+}
+
 export type LatitudeEventData =
   | LatitudeChainStartedEventData
   | LatitudeStepStartedEventData
@@ -109,6 +115,7 @@ export type LatitudeEventData =
   | LatitudeChainCompletedEventData
   | LatitudeChainErrorEventData
   | LatitudeIntegrationWakingUpEventData
+  | LatitudeRunQueuedEventData
 
 // Just a type helper for ChainStreamManager. Omit<LatitudeEventData, 'messages' | 'uuid'> does not work.
 export type OmittedLatitudeEventData =
@@ -123,6 +130,7 @@ export type OmittedLatitudeEventData =
   | Omit<LatitudeChainErrorEventData, 'messages' | 'uuid'>
   | Omit<LatitudeToolsRequestedEventData, 'messages' | 'uuid'>
   | Omit<LatitudeIntegrationWakingUpEventData, 'messages' | 'uuid'>
+  | Omit<LatitudeRunQueuedEventData, 'messages' | 'uuid'>
 
 export type ChainEvent =
   | {

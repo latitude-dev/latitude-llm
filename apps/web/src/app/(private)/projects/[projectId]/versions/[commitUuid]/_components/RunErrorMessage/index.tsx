@@ -9,7 +9,9 @@ export function RunErrorMessage({ error }: { error: RunErrorField }) {
 
   let message = resultError.message
   if (resultError.details) {
-    const keys = Object.keys(resultError.details)
+    const keys = Object.keys(resultError.details).filter(
+      (key) => key !== 'stack',
+    )
     for (const key of keys) {
       // @ts-ignore
       message += `\n${key}: ${resultError.details[key]}`

@@ -329,7 +329,12 @@ export abstract class StreamManager {
     abortSignal?.addEventListener(
       'abort',
       () => {
-        this.endStream()
+        this.endWithError(
+          new ChainError({
+            message: 'Stream aborted by user',
+            code: RunErrorCodes.AbortError,
+          }),
+        )
       },
       { once: true },
     )
