@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import {
   buildConversation,
   Commit,
@@ -118,7 +119,11 @@ export async function annotateEvaluationV2<
     }).then((r) => r.unwrap())
 
     if (resultMetadata) {
-      typeSpecification.resultMetadata.partial().parse(resultMetadata)
+      if (typeSpecification.resultMetadata instanceof z.ZodObject) {
+        typeSpecification.resultMetadata.partial().parse(resultMetadata)
+      } else {
+        typeSpecification.resultMetadata.parse(resultMetadata)
+      }
     }
 
     value = (await typeSpecification.annotate(

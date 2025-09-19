@@ -25,6 +25,7 @@ import { consumeLatteCredits } from './credits/consume'
 import { isLatteDebugSession } from './debugVersions'
 import { sendWebsockets } from './helpers'
 import { buildToolHandlers } from './tools'
+import { EMPTY_USAGE } from '../../../lib/streamManager'
 export * from './threads/checkpoints/clearCheckpoints'
 export * from './threads/checkpoints/createCheckpoint'
 export * from './threads/checkpoints/undoChanges'
@@ -155,16 +156,13 @@ async function generateLatteResponse(args: GenerateLatteResponseArgs) {
   }
 
   const consuming = await consumeLatteCredits({
-    usage: usage ?? {
-      promptTokens: 0,
-      completionTokens: 0,
-      totalTokens: 0,
-    },
+    usage: usage ?? EMPTY_USAGE(),
     threadUuid: args.threadUuid,
     error: error,
     user: args.user,
     workspace: args.clientWorkspace,
   }) // Note: failing silently
+
   if (consuming.error) {
     captureException(consuming.error)
   }

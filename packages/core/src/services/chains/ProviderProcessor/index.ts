@@ -5,6 +5,7 @@ import {
   MessageRole,
 } from '@latitude-data/constants/legacyCompiler'
 import * as vercelSdkFromV5ToV4 from '../../../lib/vercelSdkFromV5ToV4'
+import { EMPTY_USAGE } from '../../../lib/streamManager'
 
 function parseObject(text: string) {
   const parsed = text
@@ -86,16 +87,10 @@ export async function fakeResponse({
     documentLogUuid,
     text: accumulatedText.text,
     output: [fakeAssistantMessage(accumulatedText.text)],
-    usage: nullLanguageModelUse,
+    usage: EMPTY_USAGE(),
     reasoning: undefined,
     toolCalls: [],
   }
-}
-
-const nullLanguageModelUse = {
-  promptTokens: 0,
-  completionTokens: 0,
-  totalTokens: 0,
 }
 
 const fakeAssistantMessage = (accumulatedText: string): AssistantMessage => {

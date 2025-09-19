@@ -46,7 +46,7 @@ export type ToolExecutionOptions = {
   abortSignal?: AbortSignal
 }
 
-type LegacyVercelSDKToolResultPart = Omit<ToolResultPart, 'output'> & {
+export type LegacyVercelSDKToolResultPart = Omit<ToolResultPart, 'output'> & {
   result: ToolResultPart['output']
 }
 

@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import {
   EvaluationType,
   HumanEvaluationMetric,
@@ -90,7 +91,7 @@ async function annotate<M extends HumanEvaluationMetric>(
     throw new BadRequestError('Annotating is not supported for this evaluation')
   }
 
-  if (resultMetadata) {
+  if (resultMetadata && metricSpecification.resultMetadata instanceof z.ZodObject) {
     metricSpecification.resultMetadata.partial().parse(resultMetadata)
   }
 

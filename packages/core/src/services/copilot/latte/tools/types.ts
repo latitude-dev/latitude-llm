@@ -4,8 +4,8 @@ import { PromisedResult } from '../../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../lib/Result'
 import { TelemetryContext } from '../../../../telemetry'
-import { Tool } from 'ai'
 import { LatteTool } from '@latitude-data/constants/latte'
+import { ToolExecutionOptions } from '@latitude-data/constants'
 
 export type LatteToolContext = {
   context: TelemetryContext
@@ -14,7 +14,7 @@ export type LatteToolContext = {
   user: User
   threadUuid: string
   toolName: LatteTool
-  toolCall: Tool
+  toolCall: ToolExecutionOptions
 }
 export type LatteToolFn<
   P extends Record<string, unknown> = Record<string, never>,

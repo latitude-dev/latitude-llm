@@ -3,7 +3,6 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Adapters, Chain, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   Commit,
   EvaluationType,
@@ -76,7 +75,7 @@ export async function buildLlmEvaluationRunFunction<
   try {
     if (schema) {
       prompt = updatePromptMetadata(prompt, {
-        schema: zodToJsonSchema(schema, { target: 'openAi' }),
+        schema: z.toJSONSchema(schema, { target: 'openapi-3.0' }),
       })
     }
 

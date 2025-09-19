@@ -86,7 +86,8 @@ export type EvaluationResultError<
 export const EvaluationResultErrorSchema = z.custom<EvaluationResultError>()
 
 // prettier-ignore
-type ZodSchema<T = any> = z.ZodType<T>
+/* type ZodSchema<T = any> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodType, T, T> */
+type ZodSchema<T = any> = z.ZodType<T>;
 
 export type EvaluationMetricSpecification<
   T extends EvaluationType = EvaluationType,
@@ -127,10 +128,10 @@ type EvaluationMetricSpecificationFilter<
   F extends keyof EvaluationMetricSpecification,
   T extends EvaluationType = EvaluationType
 > = { [K in EvaluationType]: {
-    [M in keyof EvaluationSpecifications[K]['metrics']]:
-      // @ts-expect-error F can indeed index M type
-      EvaluationSpecifications[K]['metrics'][M][F] extends true ? M : never
-  }[keyof EvaluationSpecifications[K]['metrics']]
+  [M in keyof EvaluationSpecifications[K]['metrics']]:
+  // @ts-expect-error F can indeed index M type
+  EvaluationSpecifications[K]['metrics'][M][F] extends true ? M : never
+}[keyof EvaluationSpecifications[K]['metrics']]
 }[T] & EvaluationMetric<T>
 
 export type LiveEvaluationMetric<T extends EvaluationType = EvaluationType> =
