@@ -32,7 +32,7 @@ export const cleanupWorkspaceOldLogsJob = async (
     (r) => r.value,
   )
   if (!subscription) return Result.nil()
-  if (!FREE_PLANS.includes(subscription?.plan.plan)) return Result.nil()
+  if (!FREE_PLANS.includes(subscription?.plan)) return Result.nil()
 
   // Calculate cutoff date (30 days ago)
   const cutoffDate = new Date()

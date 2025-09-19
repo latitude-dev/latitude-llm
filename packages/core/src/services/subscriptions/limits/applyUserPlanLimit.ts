@@ -1,5 +1,11 @@
 import { PaymentRequiredError } from '@latitude-data/constants/errors'
-import { QuotaType, Workspace } from '../../../browser'
+import {
+  FREE_PLANS,
+  PRO_PLANS,
+  QuotaType,
+  Subscription,
+  Workspace,
+} from '../../../browser'
 import { findWorkspaceUsers } from '../../workspaces/findUsers'
 import { Result } from '../../../lib/Result'
 import { findWorkspaceSubscription } from '../data-access/find'
@@ -8,14 +14,16 @@ import { computeQuota } from '../../grants/quota'
 export async function applyUserPlanLimit({
   workspace,
 }: {
-  workspace: Workspace
+  workspace: Workspace & { currentSubscription: Subscription }
 }) {
-  const subscription = await findWorkspaceSubscription({ workspace }).then(
-    (r) => r.value,
-  )
-  // should not be possible but we are nice and opt for letting the request
-  // continue...
+  const subscription =
+    workspace.currentSubscription ??
+    (await findWorkspaceSubscription({ workspace }).then((r) => r.value))
+
+  // should not be possible but we are nice and opt for letting the request continue...
   if (!subscription) return Result.nil()
+  // Team and enterprise plans don't have this limit as they are charged per seat
+  if (![...FREE_PLANS, ...PRO_PLANS].includes(subscription.plan)) return Result.nil() // prettier-ignore
 
   const result = await findWorkspaceUsers(workspace)
   if (result.error) return result
@@ -24,6 +32,7 @@ export async function applyUserPlanLimit({
   const quota = await computeQuota({ type: QuotaType.Seats, workspace }).then(
     (r) => r.value,
   )
+
   // should not be possible but we are nice and opt for letting the request continue...
   if (!quota) return Result.nil()
   if (quota.limit === 'unlimited') return Result.nil()
