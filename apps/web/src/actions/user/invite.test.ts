@@ -1,6 +1,5 @@
 import * as factories from '@latitude-data/core/factories'
 import { PaymentRequiredError } from '@latitude-data/constants/errors'
-import { SubscriptionPlan } from '@latitude-data/core/browser'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { inviteUserAction } from './invite'
