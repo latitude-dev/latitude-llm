@@ -48,6 +48,7 @@ export type Events =
   | 'userInvited'
   | 'commitCreated'
   | 'commitPublished'
+  | 'commitMerged'
   | 'documentCreated'
   | 'documentRunRequested'
   | 'publicDocumentRunRequested'
@@ -278,6 +279,15 @@ export type UserInvitedEvent = LatitudeEventGeneric<
 
 export type CommitPublishedEvent = LatitudeEventGeneric<
   'commitPublished',
+  {
+    commit: Commit
+    userEmail: string
+    workspaceId: number
+  }
+>
+
+export type CommitMergedEvent = LatitudeEventGeneric<
+  'commitMerged',
   {
     commit: Commit
     userEmail: string
@@ -619,6 +629,7 @@ export type LatitudeEvent =
   | UserInvitedEvent
   | CommitCreatedEvent
   | CommitPublishedEvent
+  | CommitMergedEvent
   | DocumentCreatedEvent
   | DocumentRunRequestedEvent
   | PublicDocumentRunRequestedEvent
@@ -672,6 +683,7 @@ export interface IEventsHandlers {
   userInvited: EventHandler<UserInvitedEvent>[]
   commitCreated: EventHandler<CommitCreatedEvent>[]
   commitPublished: EventHandler<CommitPublishedEvent>[]
+  commitMerged: EventHandler<CommitMergedEvent>[]
   documentCreated: EventHandler<DocumentCreatedEvent>[]
   documentRunRequested: EventHandler<DocumentRunRequestedEvent>[]
   publicDocumentRunRequested: EventHandler<PublicDocumentRunRequestedEvent>[]

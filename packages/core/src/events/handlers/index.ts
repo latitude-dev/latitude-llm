@@ -81,4 +81,5 @@ export const EventHandlers: IEventsHandlers = {
   documentTriggerEventCreated: [notifyClientOfDocumentTriggerEventCreated],
   promocodeClaimed: [],
   subscriptionUpdated: [],
+  commitMerged: [],
 }

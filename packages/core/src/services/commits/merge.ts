@@ -17,6 +17,8 @@ import {
   DocumentTriggersRepository,
   EvaluationsV2Repository,
 } from '../../repositories'
+import { publisher } from '../../events/publisher'
+import { findUser } from '../users/data-access/find'
 
 export async function mergeCommit(
   commit: Commit,
@@ -112,30 +114,45 @@ export async function mergeCommit(
   if (!Result.isOk(handleTriggerMergeResult)) return handleTriggerMergeResult
 
   // Phase 3: finalize merge in a new short transaction
-  return transaction.call<Commit>(async (tx) => {
-    const lastMergedCommit = await tx.query.commits.findFirst({
-      where: and(
-        isNotNull(commits.version),
-        eq(commits.projectId, commit.projectId),
-      ),
-      orderBy: desc(commits.version),
-    })
-    const version = (lastMergedCommit?.version ?? 0) + 1
+  return transaction.call<Commit>(
+    async (tx) => {
+      const lastMergedCommit = await tx.query.commits.findFirst({
+        where: and(
+          isNotNull(commits.version),
+          eq(commits.projectId, commit.projectId),
+        ),
+        orderBy: desc(commits.version),
+      })
+      const version = (lastMergedCommit?.version ?? 0) + 1
+      const result = await tx
+        .update(commits)
+        .set({ mergedAt, version })
+        .where(eq(commits.id, commit.id))
+        .returning()
+      const updatedCommit = result[0]!
 
-    const result = await tx
-      .update(commits)
-      .set({ mergedAt, version })
-      .where(eq(commits.id, commit.id))
-      .returning()
-    const updatedCommit = result[0]!
+      return Result.ok(updatedCommit)
+    },
+    async (commit) => {
+      const user = await findUser(commit.userId)
+      if (!user) return
 
-    await pingProjectUpdate(
-      {
-        projectId: commit.projectId,
-      },
-      transaction,
-    ).then((r) => r.unwrap())
-
-    return Result.ok(updatedCommit)
-  })
+      await Promise.all([
+        publisher.publishLater({
+          type: 'commitMerged',
+          data: {
+            commit,
+            userEmail: user.email,
+            workspaceId: workspace.id,
+          },
+        }),
+        pingProjectUpdate(
+          {
+            projectId: commit.projectId,
+          },
+          transaction,
+        ).then((r) => r.unwrap()),
+      ])
+    },
+  )
 }
