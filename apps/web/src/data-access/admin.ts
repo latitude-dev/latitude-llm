@@ -1,4 +1,9 @@
-import { Grant, Quota, QuotaType } from '@latitude-data/core/browser'
+import {
+  Grant,
+  Quota,
+  QuotaType,
+  Subscription,
+} from '@latitude-data/core/browser'
 import { database } from '@latitude-data/core/client'
 import {
   NotFoundError,
@@ -10,19 +15,21 @@ import {
   features,
   memberships,
   projects,
+  subscriptions,
   users,
   workspaceFeatures,
   workspaces,
 } from '@latitude-data/core/schema'
 import { computeQuota } from '@latitude-data/core/services/grants/quota'
 import { findWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/data-access/find'
-import { and, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 
 export type WorkspaceWithDetails = {
   id: number
   name: string
   createdAt: Date
   subscription: OkType<typeof findWorkspaceSubscription>
+  subscriptions: Subscription[]
   quotas: {
     seats: Quota
     runs: Quota
@@ -80,6 +87,20 @@ async function assertUserIsAdmin(userId: string, db = database) {
   }
 
   return Result.ok(undefined)
+}
+
+/**
+ * Find all subscriptions for a workspace, sorted by creation date descending
+ */
+async function findWorkspaceSubscriptionsForAdmin(
+  workspaceId: number,
+  db = database,
+): Promise<Subscription[]> {
+  return await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.workspaceId, workspaceId))
+    .orderBy(desc(subscriptions.createdAt))
 }
 
 /**
@@ -185,9 +206,16 @@ export async function findWorkspaceByIdForAdmin(
     }
     const grants = grantsResult.value
 
+    // Get all subscriptions for this workspace
+    const workspaceSubscriptions = await findWorkspaceSubscriptionsForAdmin(
+      workspaceId,
+      db,
+    )
+
     const result: WorkspaceWithDetails = {
       ...workspace,
       subscription: subscription,
+      subscriptions: workspaceSubscriptions,
       quotas: {
         seats: seats.limit,
         runs: runs.limit,
