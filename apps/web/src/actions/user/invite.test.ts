@@ -1,5 +1,6 @@
 import * as factories from '@latitude-data/core/factories'
 import { PaymentRequiredError } from '@latitude-data/constants/errors'
+import { SubscriptionPlan } from '@latitude-data/core/browser'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { inviteUserAction } from './invite'
@@ -85,6 +86,70 @@ describe('inviteUserAction', () => {
           workspace,
           author: user,
         })
+      })
+
+      it('only applies user plan limit for free plans', async () => {
+        const mockInvitedUser = {
+          id: 1,
+          email: 'test@example.com',
+          name: 'Test User',
+        }
+
+        mocks.inviteUser.mockResolvedValue({ unwrap: () => mockInvitedUser })
+
+        // Test with free plan (HobbyV1)
+        const freeWorkspaceSetup = await factories.createWorkspace({
+          subscriptionPlan: SubscriptionPlan.HobbyV1,
+        })
+        const freeWorkspace = freeWorkspaceSetup.workspace
+        const freeUser = freeWorkspaceSetup.userData
+
+        mocks.getSession.mockResolvedValue({
+          user: freeUser,
+          session: {
+            userId: freeUser.id,
+            currentWorkspaceId: freeWorkspace.id,
+          },
+        })
+
+        mocks.applyUserPlanLimit.mockResolvedValue({ unwrap: () => {} })
+
+        await inviteUserAction({
+          email: 'test@example.com',
+          name: 'Test User',
+        })
+
+        expect(mocks.applyUserPlanLimit).toHaveBeenCalledWith({
+          workspace: freeWorkspace,
+        })
+
+        // Reset mocks
+        mocks.applyUserPlanLimit.mockReset()
+        mocks.inviteUser.mockReset()
+
+        // Test with paid plan (ProV2)
+        const paidWorkspaceSetup = await factories.createWorkspace({
+          subscriptionPlan: SubscriptionPlan.ProV2,
+        })
+        const paidWorkspace = paidWorkspaceSetup.workspace
+        const paidUser = paidWorkspaceSetup.userData
+
+        mocks.getSession.mockResolvedValue({
+          user: paidUser,
+          session: {
+            userId: paidUser.id,
+            currentWorkspaceId: paidWorkspace.id,
+          },
+        })
+
+        mocks.inviteUser.mockResolvedValue({ unwrap: () => mockInvitedUser })
+
+        await inviteUserAction({
+          email: 'test@example.com',
+          name: 'Test User',
+        })
+
+        expect(mocks.applyUserPlanLimit).not.toHaveBeenCalled()
       })
 
       it('rejects invitation when plan user limit is exceeded', async () => {

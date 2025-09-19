@@ -4,6 +4,7 @@ import { inviteUser } from '@latitude-data/core/services/users/invite'
 import { z } from 'zod'
 import { applyUserPlanLimit } from '@latitude-data/core/services/subscriptions/limits/applyUserPlanLimit'
 import { authProcedure } from '../procedures'
+import { FREE_PLANS } from '@latitude-data/core/browser'
 
 export const inviteUserAction = authProcedure
   .createServerAction()
@@ -14,9 +15,12 @@ export const inviteUserAction = authProcedure
     }),
   )
   .handler(async ({ input, ctx }) => {
-    await applyUserPlanLimit({ workspace: ctx.workspace }).then((r) =>
-      r.unwrap(),
-    )
+    const subscription = ctx.workspace.currentSubscription
+    if (FREE_PLANS.includes(subscription.plan)) {
+      await applyUserPlanLimit({ workspace: ctx.workspace }).then((r) =>
+        r.unwrap(),
+      )
+    }
 
     return await inviteUser({
       email: input.email,
