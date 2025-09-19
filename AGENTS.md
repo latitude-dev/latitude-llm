@@ -60,7 +60,7 @@
 
 ### Action Layer (`apps/web/src/actions/`)
 
-- Server actions use `authProcedure.createServerAction()` pattern
+- Server actions use `authProcedure` pattern
 - Input validation with Zod schemas
 - Actions fetch model instances using repositories before calling services
 - **Admin-only actions**: Place under `actions/admin/` directory for backoffice functionality
@@ -68,12 +68,11 @@
 
   ```typescript
   export const updateApiKeyAction = authProcedure
-    .createServerAction()
-    .input(z.object({ id: z.number(), name: z.string() }))
-    .handler(async ({ input, ctx }) => {
+    .inputSchema(z.object({ id: z.number(), name: z.string() }))
+    .action(async ({ parsedInput, ctx }) => {
       const repo = new Repository(ctx.workspace.id)
-      const model = await repo.find(input.id).then((r) => r.unwrap())
-      return updateService(model, { name: input.name }).then((r) => r.unwrap())
+      const model = await repo.find(parsedInput.id).then((r) => r.unwrap())
+      return updateService(model, { name: parsedInput.name }).then((r) => r.unwrap())
     })
   ```
 

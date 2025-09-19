@@ -115,29 +115,27 @@ export default function useDatasets(
     [data, mutate, onCreateSuccess, toast],
   )
 
-  const { execute: destroy, isPending: isDestroying } = useLatitudeAction<
-    typeof destroyDatasetAction
-  >(destroyDatasetAction, {
-    onSuccess: ({ data: dataset }) => {
-      toast({
-        title: 'Success',
-        description: 'Dataset removed successfully',
-      })
+  const { execute: destroy, isPending: isDestroying } = useLatitudeAction(
+    destroyDatasetAction,
+    {
+      onSuccess: ({ data: dataset }) => {
+        toast({
+          title: 'Success',
+          description: 'Dataset removed successfully',
+        })
 
-      // FIXME: This does not work. WHY?
-      mutate(data.filter((ds) => ds.id !== dataset.id))
+        // FIXME: This does not work. WHY?
+        mutate(data.filter((ds) => ds.id !== dataset.id))
+      },
     },
-  })
+  )
 
   const { execute: updateColumn, isPending: isUpdatingColumn } =
-    useLatitudeAction<typeof updateDatasetColumnAction>(
-      updateDatasetColumnAction,
-      {
-        onSuccess: ({ data: dataset }) => {
-          mutate(data.map((ds) => (ds.id === dataset.id ? dataset : ds)))
-        },
+    useLatitudeAction(updateDatasetColumnAction, {
+      onSuccess: ({ data: dataset }) => {
+        mutate(data.map((ds) => (ds.id === dataset.id ? dataset : ds)))
       },
-    )
+    })
 
   return {
     data,

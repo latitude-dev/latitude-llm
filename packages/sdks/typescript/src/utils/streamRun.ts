@@ -127,6 +127,9 @@ export function handleToolCallFactory<T extends ToolSpec>({
     const tool = tools?.[data.toolName]
     if (!tool) return
 
+    // FIXME: Remove this and fix it before merging it
+    // FiiiiiiiiiiiiiiiiixxxxxxxxxxxxxxxxxxxxxxxxxxxxMMMEEEEEEEEEEEEE
+    // @ts-ignore
     const result = await tool(data.args, {
       id: data.toolCallId,
       name: data.toolName,

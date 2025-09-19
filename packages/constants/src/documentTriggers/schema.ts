@@ -10,7 +10,9 @@ export const emailTriggerConfigurationSchema = z.object({
   replyWithResponse: z.boolean(),
   emailWhitelist: z.array(z.string()).optional(),
   domainWhitelist: z.array(z.string()).optional(),
-  parameters: z.record(z.nativeEnum(DocumentTriggerParameters)).optional(),
+  parameters: z
+    .record(z.string(), z.enum(DocumentTriggerParameters))
+    .optional(),
 })
 
 export const emailTriggerDeploymentSettingsSchema = z.object({

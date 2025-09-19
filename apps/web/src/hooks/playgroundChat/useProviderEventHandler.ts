@@ -218,153 +218,13 @@ export function useProviderEventHandler({
     [setMessages, setRunningLatitudeTools],
   )
 
-  // Helper function to handle reasoning events
-  const handleReasoning = useCallback(
-    (data: { type: 'reasoning'; textDelta: string }) => {
-      setMessages((messages) => {
-        const lastMessage = messages.at(-1)!
-
-        if (lastMessage.role === MessageRole.assistant) {
-          const lastContent = (lastMessage.content as MessageContent[])?.at(-1)
-
-          if (!lastContent) {
-            return [
-              ...messages.slice(0, -1),
-              {
-                ...lastMessage,
-                content: [
-                  ...((lastMessage.content as MessageContent[]) || []),
-                  {
-                    type: 'reasoning',
-                    text: data.textDelta,
-                  },
-                ],
-              },
-            ]
-          } else if (lastContent.type !== 'reasoning') {
-            return [
-              ...messages.slice(0, -1),
-              {
-                ...lastMessage,
-                content: [
-                  ...((lastMessage.content as MessageContent[]) || []),
-                  {
-                    type: 'reasoning',
-                    text: data.textDelta,
-                  },
-                ],
-              },
-            ]
-          } else {
-            return [
-              ...messages.slice(0, -1),
-              {
-                ...lastMessage,
-                content: [
-                  ...(lastMessage.content.slice(0, -1) as MessageContent[]),
-                  {
-                    ...lastContent,
-                    text: (lastContent.text ?? '') + data.textDelta,
-                  },
-                ],
-              },
-            ]
-          }
-        } else {
-          return [
-            ...messages,
-            {
-              role: MessageRole.assistant,
-              toolCalls: [],
-              content: [
-                ...((lastMessage.content as MessageContent[]) || []),
-                {
-                  type: 'reasoning',
-                  text: data.textDelta,
-                },
-              ],
-            },
-          ]
-        }
-      })
-
-      incrementUsageDelta({ completionTokens: tokenizeText(data.textDelta) })
-    },
-    [setMessages, incrementUsageDelta],
-  )
-
-  // Helper function to handle redacted-reasoning events
-  const handleRedactedReasoning = useCallback(
-    (data: { type: 'redacted-reasoning'; data: string }) => {
-      setMessages((messages) => {
-        const lastMessage = messages.at(-1)!
-        if (lastMessage.role === MessageRole.assistant) {
-          const lastContent = (lastMessage.content as MessageContent[])?.at(-1)
-
-          if (!lastContent) {
-            return [
-              ...messages.slice(0, -1),
-              {
-                ...lastMessage,
-                content: [
-                  ...((lastMessage.content as MessageContent[]) || []),
-                  data,
-                ],
-              },
-            ]
-          } else if (lastContent.type !== 'redacted-reasoning') {
-            return [
-              ...messages.slice(0, -1),
-              {
-                ...lastMessage,
-                content: [
-                  ...((lastMessage.content as MessageContent[]) || []),
-                  data,
-                ],
-              },
-            ]
-          } else {
-            return [
-              ...messages.slice(0, -1),
-              {
-                ...lastMessage,
-                content: [
-                  ...(lastMessage.content.slice(0, -1) as MessageContent[]),
-                  {
-                    ...lastContent,
-                    text: (lastContent.text ?? '') + data.data,
-                  },
-                ],
-              },
-            ]
-          }
-        } else {
-          return [
-            ...messages,
-            {
-              role: MessageRole.assistant,
-              toolCalls: [],
-              content: [
-                ...((lastMessage.content as MessageContent[]) || []),
-                data,
-              ],
-            },
-          ]
-        }
-      })
-
-      incrementUsageDelta({ completionTokens: tokenizeText(data.data) })
-    },
-    [setMessages, incrementUsageDelta],
-  )
-
   // Main handler that delegates to the appropriate helper based on event type
   const handleProviderEvent = useCallback(
     (parsedEvent: ParsedEvent, data: ChainEvent['data']) => {
       if (parsedEvent.event !== StreamEventTypes.Provider) return
 
       switch (data.type) {
-        case 'step-start':
+        case 'start-step':
           handleStepStart()
           break
         case 'text-delta':
@@ -376,22 +236,9 @@ export function useProviderEventHandler({
         case 'tool-result':
           handleToolResult(data)
           break
-        case 'reasoning':
-          handleReasoning(data)
-          break
-        case 'redacted-reasoning':
-          handleRedactedReasoning(data)
-          break
       }
     },
-    [
-      handleStepStart,
-      handleTextDelta,
-      handleToolCall,
-      handleToolResult,
-      handleReasoning,
-      handleRedactedReasoning,
-    ],
+    [handleStepStart, handleTextDelta, handleToolCall, handleToolResult],
   )
 
   return { handleProviderEvent }

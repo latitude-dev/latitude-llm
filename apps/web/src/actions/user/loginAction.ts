@@ -13,16 +13,16 @@ import { env } from '@latitude-data/env'
 import { errorHandlingProcedure } from '../procedures'
 
 export const loginAction = errorHandlingProcedure
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
-      email: z.string().email(),
+      email: z.string().pipe(z.email()),
       returnTo: z.string().optional(),
     }),
-    { type: 'formData' },
   )
-  .handler(async ({ input }) => {
-    const { user } = await getUserFromCredentials(input).then((r) => r.unwrap())
+  .action(async ({ parsedInput }) => {
+    const { user } = await getUserFromCredentials(parsedInput).then((r) =>
+      r.unwrap(),
+    )
 
     if (env.DISABLE_EMAIL_AUTHENTICATION) {
       if (!user) throw new NotFoundError('User not found')
@@ -40,14 +40,14 @@ export const loginAction = errorHandlingProcedure
         },
       })
 
-      if (!input.returnTo || !isLatitudeUrl(input.returnTo)) {
+      if (!parsedInput.returnTo || !isLatitudeUrl(parsedInput.returnTo)) {
         return redirect(ROUTES.dashboard.root)
       }
 
-      return redirect(input.returnTo)
+      return redirect(parsedInput.returnTo)
     } else {
-      await createMagicLinkToken({ user, returnTo: input.returnTo }).then((r) =>
-        r.unwrap(),
+      await createMagicLinkToken({ user, returnTo: parsedInput.returnTo }).then(
+        (r) => r.unwrap(),
       )
 
       redirect(ROUTES.auth.magicLinkSent(user.email))

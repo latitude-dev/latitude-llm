@@ -4,7 +4,7 @@ import { PromisedResult } from '../../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../lib/Result'
 import { TelemetryContext } from '../../../../telemetry'
-import { ToolExecutionOptions } from 'ai'
+import { Tool } from 'ai'
 import { LatteTool } from '@latitude-data/constants/latte'
 
 export type LatteToolContext = {
@@ -14,18 +14,19 @@ export type LatteToolContext = {
   user: User
   threadUuid: string
   toolName: LatteTool
-  toolCall: ToolExecutionOptions
+  toolCall: Tool
 }
-export type LatteToolFn<P extends { [key: string]: unknown } = {}> = (
-  parameters: P,
-  context: LatteToolContext,
-) => PromisedResult<unknown>
+export type LatteToolFn<
+  P extends Record<string, unknown> = Record<string, never>,
+> = (parameters: P, context: LatteToolContext) => PromisedResult<unknown>
 
 export const defineLatteTool = <
-  S extends z.ZodSchema | undefined = undefined,
-  P extends { [key: string]: unknown } = S extends z.ZodSchema
-    ? z.infer<S>
-    : {},
+  S extends z.ZodType | undefined = undefined,
+  P extends Record<string, unknown> = S extends z.ZodType
+    ? z.infer<S> extends Record<string, unknown>
+      ? z.infer<S>
+      : Record<string, never>
+    : Record<string, never>,
 >(
   cb: LatteToolFn<P>,
   schema?: S,
@@ -42,6 +43,6 @@ export const defineLatteTool = <
       )
     }
 
-    return await cb(result.data, context)
+    return await cb(result.data as P, context)
   }
 }

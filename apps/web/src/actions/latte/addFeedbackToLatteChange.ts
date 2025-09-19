@@ -5,15 +5,14 @@ import { authProcedure } from '$/actions/procedures'
 import { addFeedbackToEvaluationResult } from '@latitude-data/core/services/copilot/latte/threads/addFeedbackToEvaluation'
 
 export const addFeedbackToLatteChangeAction = authProcedure
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       evaluationResultUuid: z.string(),
       content: z.string(),
     }),
   )
-  .handler(async ({ input }) => {
-    const { evaluationResultUuid, content } = input
+  .action(async ({ parsedInput }) => {
+    const { evaluationResultUuid, content } = parsedInput
 
     await addFeedbackToEvaluationResult({
       evaluationResultUuid,

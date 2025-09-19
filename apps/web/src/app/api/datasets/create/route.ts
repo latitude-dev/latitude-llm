@@ -20,7 +20,7 @@ const createDatasetSchema = (workspaceId: number) =>
     .object({
       name: z
         .string()
-        .min(1, { message: 'Name is required' })
+        .min(1, { error: 'Name is required' })
         .refine(
           async (name) => {
             const scope = new DatasetsRepository(workspaceId)

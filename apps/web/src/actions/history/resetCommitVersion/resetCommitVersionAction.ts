@@ -6,16 +6,15 @@ import { withProject } from '../../procedures'
 import { resetProjectToCommit } from '@latitude-data/core/services/history/resetProjectToCommit'
 
 export const resetCommitVersionAction = withProject
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       targetDraftUuid: z.string().optional(),
       commitUuid: z.string(),
     }),
   )
-  .handler(async ({ input, ctx }) => {
+  .action(async ({ parsedInput, ctx }) => {
     const { user, workspace, project } = ctx
-    const { targetDraftUuid, commitUuid } = input
+    const { targetDraftUuid, commitUuid } = parsedInput
 
     const draft = await resetProjectToCommit({
       workspace,

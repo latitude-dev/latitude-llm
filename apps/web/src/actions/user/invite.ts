@@ -7,14 +7,13 @@ import { authProcedure } from '../procedures'
 import { FREE_PLANS } from '@latitude-data/core/browser'
 
 export const inviteUserAction = authProcedure
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       email: z.string(),
       name: z.string(),
     }),
   )
-  .handler(async ({ input, ctx }) => {
+  .action(async ({ parsedInput, ctx }) => {
     const subscription = ctx.workspace.currentSubscription
     if (FREE_PLANS.includes(subscription.plan)) {
       await applyUserPlanLimit({ workspace: ctx.workspace }).then((r) =>
@@ -23,8 +22,8 @@ export const inviteUserAction = authProcedure
     }
 
     return await inviteUser({
-      email: input.email,
-      name: input.name,
+      email: parsedInput.email,
+      name: parsedInput.name,
       workspace: ctx.workspace,
       author: ctx.user,
     }).then((r) => r.unwrap())

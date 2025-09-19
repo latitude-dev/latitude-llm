@@ -1,4 +1,4 @@
-import { ActionErrors, parseActionErrors } from '$/hooks/useLatitudeAction'
+import { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationMetric,
@@ -34,6 +34,17 @@ const EVALUATION_TYPE_OPTIONS = Object.values(EvaluationType).map((type) => {
     icon: specification.icon,
   }
 })
+
+/**
+ * Helper: normalize validation errors into a flat map
+ */
+export function parseActionErrors(errors?: {
+  formErrors: string[]
+  fieldErrors: Record<string, string[]>
+}) {
+  if (!errors) return {}
+  return errors.fieldErrors
+}
 
 const EVALUATION_METRIC_OPTIONS = <
   T extends EvaluationType = EvaluationType,
