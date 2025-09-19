@@ -24,6 +24,7 @@ export async function syncRun<
     projectId,
     versionUuid,
     parameters,
+    background,
     customIdentifier,
     userMessage,
     onFinished,
@@ -56,6 +57,7 @@ export async function syncRun<
     options,
     body: {
       stream: false,
+      background,
       path,
       parameters,
       customIdentifier,

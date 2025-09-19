@@ -278,6 +278,7 @@ export type RunPromptOptions<
   customIdentifier?: string
   parameters?: Record<string, unknown>
   stream?: boolean
+  background?: boolean
   tools?: ToolCalledFn<Tools>
   signal?: AbortSignal
   userMessage?: string
@@ -364,6 +365,7 @@ type RunDocumentBodyParams = {
   parameters?: Record<string, unknown>
   customIdentifier?: string
   stream?: boolean
+  background?: boolean
   tools?: string[]
   userMessage?: string
 }

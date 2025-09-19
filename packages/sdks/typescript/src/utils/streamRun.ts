@@ -26,6 +26,7 @@ export async function streamRun<
     versionUuid,
     parameters,
     stream = false,
+    background,
     tools,
     customIdentifier,
     userMessage,
@@ -60,6 +61,7 @@ export async function streamRun<
       options,
       body: {
         stream,
+        background,
         path,
         parameters,
         customIdentifier,
