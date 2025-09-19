@@ -77,6 +77,60 @@ export function WorkspaceDashboard({ workspace }: Props) {
 
         <BasicInfoList items={basicInfo} title='Workspace Information' />
 
+        <DataTable
+          title='Subscription History'
+          count={workspace.subscriptions.length}
+          columns={[
+            { header: 'Plan' },
+            { header: 'Started At' },
+            { header: 'Ended At' },
+          ]}
+          emptyMessage='No subscriptions found'
+          icon='blocks'
+        >
+          {workspace.subscriptions.map((subscription, index) => {
+            // Since subscriptions are sorted by createdAt DESC (most recent first),
+            // the previous subscription chronologically is at index - 1
+            const previousSubscription = workspace.subscriptions[index - 1]
+            const endDate = previousSubscription
+              ? previousSubscription.createdAt
+              : null
+
+            return (
+              <TableRow key={subscription.id}>
+                <TableCell className='p-2'>
+                  <div className='flex items-center space-x-3'>
+                    <div className='p-2 bg-accent rounded-lg'>
+                      <Icon name='blocks' size='small' color='primary' />
+                    </div>
+                    <Text.H5 weight='medium'>
+                      {subscription.plan
+                        .split('_')
+                        .map(
+                          (word) =>
+                            word.charAt(0).toUpperCase() + word.slice(1),
+                        )
+                        .join(' ')}
+                    </Text.H5>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Text.H5 color='foregroundMuted'>
+                    {new Date(subscription.createdAt).toLocaleDateString()}
+                  </Text.H5>
+                </TableCell>
+                <TableCell>
+                  <Text.H5 color='foregroundMuted'>
+                    {endDate
+                      ? new Date(endDate).toLocaleDateString()
+                      : 'Current'}
+                  </Text.H5>
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </DataTable>
+
         <div className='space-y-8'>
           <DataTable
             title='Feature Flags'
