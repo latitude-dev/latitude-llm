@@ -1,14 +1,9 @@
-import {
-  ComponentId,
-  ConfigurableProps,
-  ConfiguredProps,
-  createBackendClient,
-} from '@pipedream/sdk/server'
+import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/server'
 import { IntegrationDto } from '../../../../browser'
 import { IntegrationType } from '@latitude-data/constants'
 import { Result } from '../../../../lib/Result'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { getPipedreamEnvironment } from '../apps'
+import { getPipedreamClient } from '../apps'
 import { isIntegrationConfigured } from './reloadComponentProps'
 import { fillConfiguredProps } from './fillConfiguredProps'
 
@@ -19,7 +14,7 @@ export async function configureComponent({
   configuredProps: configuredClientProps,
 }: {
   integration: Extract<IntegrationDto, { type: IntegrationType.Pipedream }>
-  componentId: string | ComponentId
+  componentId: string
   propName: string
   configuredProps?: ConfiguredProps<ConfigurableProps>
 }) {
@@ -31,12 +26,10 @@ export async function configureComponent({
     )
   }
 
-  const pipedreamEnv = getPipedreamEnvironment()
-  if (!pipedreamEnv.ok) {
-    return Result.error(pipedreamEnv.error!)
-  }
+  const pipedreamResult = getPipedreamClient()
+  if (!Result.isOk(pipedreamResult)) return pipedreamResult
+  const pipedream = pipedreamResult.unwrap()
 
-  const pipedream = createBackendClient(pipedreamEnv.unwrap())
   const externalUserId = integration.configuration.externalUserId
 
   const configuredPropsResult = await fillConfiguredProps({
@@ -45,18 +38,16 @@ export async function configureComponent({
     componentId,
     configuredProps: configuredClientProps ?? {},
   })
-  if (!Result.isOk(configuredPropsResult)) {
-    return Result.error(configuredPropsResult.error)
-  }
+  if (!Result.isOk(configuredPropsResult)) return configuredPropsResult
+  const configuredProps = configuredPropsResult.unwrap()
 
   try {
     // TODO - Add pagination possibilities, then start using prevContext, query, and page
-    const response = await pipedream.configureComponent({
+    const response = await pipedream.components.configureProp({
+      id: componentId,
       externalUserId,
-      userId: externalUserId,
-      componentId,
       propName,
-      configuredProps: configuredPropsResult.unwrap(),
+      configuredProps,
     })
 
     return Result.ok(response)

@@ -1,13 +1,9 @@
 import { z } from 'zod'
 import { defineLatteTool } from '../types'
 import { PipedreamIntegration } from '../../../../../browser'
-import {
-  ConfigurableProps,
-  ConfiguredProps,
-  createBackendClient,
-} from '@pipedream/sdk'
+import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk'
 import { Result } from '../../../../../lib/Result'
-import { getPipedreamEnvironment } from '../../../../integrations/pipedream/apps'
+import { getPipedreamClient } from '../../../../integrations/pipedream/apps'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -41,12 +37,9 @@ export const validateTriggerSchema = defineLatteTool(
       return documentResult
     }
 
-    const pipedreamEnv = getPipedreamEnvironment()
-    if (!pipedreamEnv.ok) {
-      return Result.error(pipedreamEnv.error!)
-    }
-
-    const pipedream = createBackendClient(pipedreamEnv.unwrap())
+    const pipedreamResult = getPipedreamClient()
+    if (!pipedreamResult.ok) return pipedreamResult
+    const pipedream = pipedreamResult.unwrap()
 
     const integrationScope = new IntegrationsRepository(workspace.id)
     const integrationResult = await integrationScope.find(integrationId)

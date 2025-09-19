@@ -1,7 +1,5 @@
 import {
-  BackendClient,
-  ComponentId,
-  ConfigurableProp,
+  PipedreamClient,
   ConfigurablePropApp,
   ConfigurableProps,
   ConfiguredProps,
@@ -51,9 +49,9 @@ export async function fillConfiguredProps({
   componentId,
   configuredProps,
 }: {
-  pipedream: BackendClient
+  pipedream: PipedreamClient
   integration: PipedreamIntegration
-  componentId: ComponentId | string
+  componentId: string
   configuredProps: ConfiguredProps<ConfigurableProps>
 }): PromisedResult<ConfiguredProps<ConfigurableProps>> {
   if (!isIntegrationConfigured(integration)) {
@@ -65,14 +63,12 @@ export async function fillConfiguredProps({
   }
 
   try {
-    const { data: component } = await pipedream.getComponent(
-      typeof componentId === 'string' ? { key: componentId } : componentId,
-    )
+    const { data: component } = await pipedream.components.retrieve(componentId)
 
     // "app" props are only configured in the backend
-    const appProps: ConfigurablePropApp[] = component.configurable_props.filter(
-      (prop: ConfigurableProp) => prop.type === 'app',
-    )
+    const appProps = component.configurableProps.filter(
+      (prop) => prop.type === 'app',
+    ) as ConfigurablePropApp[]
 
     if (
       appProps.some((prop) => prop.app !== integration.configuration.appName)
@@ -95,7 +91,7 @@ export async function fillConfiguredProps({
 
     // We include some hardcodded props by default when not provided by the user
     addDefaultPropValue({
-      configurableProps: component.configurable_props,
+      configurableProps: component.configurableProps,
       configuredProps,
       propName: 'customizeBotSettings',
       defaultValues: {
@@ -105,13 +101,13 @@ export async function fillConfiguredProps({
       },
     })
     addDefaultPropValue({
-      configurableProps: component.configurable_props,
+      configurableProps: component.configurableProps,
       configuredProps,
       propName: 'includeSentViaPipedream',
       defaultValues: { includeSentViaPipedream: false },
     })
     addDefaultPropValue({
-      configurableProps: component.configurable_props,
+      configurableProps: component.configurableProps,
       configuredProps,
       propName: 'include_sent_via_pipedream_flag',
       defaultValues: { include_sent_via_pipedream_flag: false },

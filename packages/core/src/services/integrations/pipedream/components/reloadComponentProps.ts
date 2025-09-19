@@ -1,16 +1,11 @@
-import {
-  BackendClient,
-  ComponentId,
-  ConfigurableProps,
-  ConfiguredProps,
-  createBackendClient,
-} from '@pipedream/sdk/server'
+import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/server'
 import { PipedreamIntegration } from '../../../../browser'
 import { PipedreamIntegrationConfiguration } from '../../helpers/schema'
 import { Result } from '../../../../lib/Result'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { getPipedreamEnvironment } from '../apps'
+import { getPipedreamClient } from '../apps'
 import { fillConfiguredProps } from './fillConfiguredProps'
+import { PipedreamClient } from '@pipedream/sdk'
 
 export function isIntegrationConfigured<T extends PipedreamIntegration>(
   integration: T,
@@ -25,9 +20,9 @@ export async function reloadComponentProps({
   pipedream,
 }: {
   integration: PipedreamIntegration
-  componentId: string | ComponentId
+  componentId: string
   configuredProps: ConfiguredProps<ConfigurableProps>
-  pipedream?: BackendClient
+  pipedream?: PipedreamClient
 }) {
   if (!isIntegrationConfigured(integration)) {
     return Result.error(
@@ -38,12 +33,9 @@ export async function reloadComponentProps({
   }
 
   if (!pipedream) {
-    const pipedreamEnv = getPipedreamEnvironment()
-    if (!pipedreamEnv.ok) {
-      return Result.error(pipedreamEnv.error!)
-    }
-
-    pipedream = createBackendClient(pipedreamEnv.unwrap())
+    const pipedreamResult = getPipedreamClient()
+    if (!Result.isOk(pipedreamResult)) return pipedreamResult
+    pipedream = pipedreamResult.unwrap()
   }
 
   const externalUserId = integration.configuration.externalUserId
@@ -54,16 +46,14 @@ export async function reloadComponentProps({
     componentId,
     configuredProps: configuredClientProps ?? {},
   })
-  if (!Result.isOk(configuredPropsResult)) {
-    return Result.error(configuredPropsResult.error)
-  }
+  if (!Result.isOk(configuredPropsResult)) return configuredPropsResult
+  const configuredProps = configuredPropsResult.unwrap()
 
   try {
-    const response = await pipedream.reloadComponentProps({
+    const response = await pipedream.components.reloadProps({
+      id: componentId,
       externalUserId,
-      userId: externalUserId,
-      componentId,
-      configuredProps: configuredPropsResult.unwrap(),
+      configuredProps,
     })
 
     return Result.ok(response)

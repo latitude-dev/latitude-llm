@@ -1,5 +1,5 @@
 import {
-  BackendClient,
+  PipedreamClient,
   ConfigurableProp,
   ConfiguredProps,
 } from '@pipedream/sdk'
@@ -45,18 +45,16 @@ export async function fetchFullConfigSchema({
   componentId,
   integration,
 }: {
-  pipedream: BackendClient
+  pipedream: PipedreamClient
   componentId: string
   integration: PipedreamIntegration
 }): PromisedResult<ConfigurablePropWithRemoteOptions[]> {
   try {
-    const { data: component } = await pipedream.getComponent(
-      typeof componentId === 'string' ? { key: componentId } : componentId,
-    )
+    const { data: component } = await pipedream.components.retrieve(componentId)
 
-    const relevantLatteProps = (
-      component.configurable_props as ConfigurableProp[]
-    ).filter((prop) => !IRRELEVANT_PROP_TYPES.includes(prop.type))
+    const relevantLatteProps = component.configurableProps.filter(
+      (prop) => !IRRELEVANT_PROP_TYPES.includes(prop.type),
+    )
 
     if (!isIntegrationConfigured(integration)) {
       // We still want to return the initial schema to Latte if integration is not configured, so it can fill what it can
@@ -85,7 +83,7 @@ export async function fetchFullConfigSchema({
 
 export async function addRemoteOptions(
   componentId: string,
-  pipedream: BackendClient,
+  pipedream: PipedreamClient,
   filteredProps: ConfigurableProp[],
   integration: PipedreamIntegration,
   externalUserId: string,
@@ -132,18 +130,17 @@ async function fetchRemoteOptions({
   configuredProps,
 }: {
   prop: ConfigurableProp
-  pipedream: BackendClient
+  pipedream: PipedreamClient
   externalUserId: string
   componentId: string
   propName: string
   configuredProps: ConfiguredProps<readonly ConfigurableProp[]>
 }): Promise<ConfigurablePropWithRemoteOptions> {
-  const remoteOptions = await pipedream.configureComponent({
+  const remoteOptions = await pipedream.components.configureProp({
+    id: componentId,
     externalUserId,
-    userId: externalUserId,
-    componentId: componentId,
-    propName: propName,
-    configuredProps: configuredProps,
+    propName,
+    configuredProps,
   })
 
   if (remoteOptions.errors) {
@@ -152,9 +149,7 @@ async function fetchRemoteOptions({
 
   return {
     ...prop,
-    remoteOptionValues: new RemoteOptions(
-      remoteOptions.options ?? remoteOptions.stringOptions ?? [],
-    ),
+    remoteOptionValues: new RemoteOptions(remoteOptions),
   }
 }
 

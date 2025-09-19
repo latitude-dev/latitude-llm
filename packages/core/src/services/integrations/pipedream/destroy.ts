@@ -1,8 +1,7 @@
-import { createBackendClient } from '@pipedream/sdk'
 import { IntegrationDto } from '../../../browser'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
-import { getPipedreamEnvironment } from './apps'
+import { getPipedreamClient } from './apps'
 import { IntegrationType } from '@latitude-data/constants'
 import { isIntegrationConfigured } from './components/reloadComponentProps'
 
@@ -17,15 +16,16 @@ export async function destroyPipedreamAccountFromIntegration(
     return Result.nil() // Not configured, nothing to destroy
   }
 
-  const pipedreamEnv = getPipedreamEnvironment()
-  if (!Result.isOk(pipedreamEnv)) {
-    return pipedreamEnv
+  const pipedreamResult = getPipedreamClient()
+  if (!Result.isOk(pipedreamResult)) {
+    return pipedreamResult
   }
-
-  const pipedream = createBackendClient(pipedreamEnv.unwrap())
+  const pipedream = pipedreamResult.unwrap()
 
   try {
-    await pipedream.deleteExternalUser(integration.configuration.externalUserId)
+    await pipedream.users.deleteExternalUser(
+      integration.configuration.externalUserId,
+    )
     return Result.nil()
   } catch (error) {
     return Result.error(error as Error)

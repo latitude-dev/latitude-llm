@@ -13,7 +13,7 @@ const searchAvailableIntegrations = defineLatteTool(
     const apps = result.unwrap().apps
     return Result.ok(
       apps.map((app) => ({
-        name: app.name_slug,
+        name: app.nameSlug,
         description: app.description,
       })),
     )

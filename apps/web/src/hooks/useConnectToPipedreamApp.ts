@@ -1,54 +1,44 @@
 import { createPipedreamTokenAction } from '$/actions/integrations/pipedream/createToken'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useServerAction } from 'zsa-react'
 import { createFrontendClient, type App } from '@pipedream/sdk/browser'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
+import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
+import type { TokenCallback } from 'node_modules/@pipedream/sdk/dist/esm/core/index.mjs'
 
 export function useConnectToPipedreamApp(app: App | undefined) {
-  const [token, setToken] = useState<string | undefined>(undefined)
-  const [tokenExpiresAt, setTokenExpiresAt] = useState<Date | undefined>(
-    undefined,
-  )
+  const { data: workspace } = useCurrentWorkspace()
 
   const [isConnecting, setIsConnecting] = useState(false)
-  const [externalUserId, setExternalUserId] = useState<string | undefined>(
-    undefined,
+  const [externalUserId] = useState(
+    workspace!.id + ':' + generateUUIDIdentifier(),
   )
+
   const [connectionId, setConnectionId] = useState<string | undefined>(
     undefined,
   )
 
-  const { execute: generateToken } = useServerAction(
-    createPipedreamTokenAction,
-    {
-      onSuccess: ({ data }) => {
-        setToken(data.token)
-        setExternalUserId(data.externalUserId)
-        setTokenExpiresAt(new Date(data.expiresAt))
-      },
+  const { execute: generateToken } = useServerAction(createPipedreamTokenAction)
+
+  const tokenCallback = useCallback<TokenCallback>(
+    async ({ externalUserId }: { externalUserId: string }) => {
+      const [data, error] = await generateToken({ externalUserId })
+      if (error) throw error
+
+      return {
+        token: data.token,
+        expiresAt: new Date(data.expiresAt),
+        connectLinkUrl: '', // TODO: wtf is this
+      }
     },
+    [generateToken],
   )
-
-  useEffect(() => {
-    // Keeps regenerating the token when it expires
-    const timeToExpire = tokenExpiresAt
-      ? tokenExpiresAt.getTime() - Date.now()
-      : 0
-
-    const timeoutId = setTimeout(generateToken, timeToExpire)
-    return () => {
-      clearTimeout(timeoutId)
-    }
-  }, [tokenExpiresAt, generateToken])
 
   const connect = useCallback((): Promise<
     [string, undefined] | [undefined, Error]
   > => {
     if (!app) {
       return Promise.resolve([undefined, new Error('App is not selected')])
-    }
-
-    if (!token || !tokenExpiresAt || tokenExpiresAt < new Date()) {
-      return Promise.resolve([undefined, new Error('Invalid token')])
     }
 
     setIsConnecting(true)
@@ -60,10 +50,13 @@ export function useConnectToPipedreamApp(app: App | undefined) {
       },
     )
 
-    const pipedream = createFrontendClient()
+    const pipedream = createFrontendClient({
+      externalUserId,
+      tokenCallback,
+    })
+
     pipedream.connectAccount({
-      app: app.name_slug,
-      token: token,
+      app: app.nameSlug,
       onSuccess: (account) => {
         setIsConnecting(false)
         setConnectionId(account.id)
@@ -80,15 +73,15 @@ export function useConnectToPipedreamApp(app: App | undefined) {
     })
 
     return promise
-  }, [app, token, tokenExpiresAt])
+  }, [app, externalUserId, tokenCallback])
 
   return useMemo(
     () => ({
       connect,
-      isLoading: !token || isConnecting,
+      isLoading: isConnecting,
       connectionId,
       externalUserId,
     }),
-    [connect, isConnecting, token, connectionId, externalUserId],
+    [connect, isConnecting, connectionId, externalUserId],
   )
 }

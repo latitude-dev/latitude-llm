@@ -45,7 +45,7 @@ export function ConnectAccount({
 }) {
   const [showConnect, setShowConnect] = useState(false)
   const { options, accounts, isLoading } = useConnectedPipedreamAccounts({
-    pipedreamSlug: pipedreamApp.name_slug,
+    pipedreamSlug: pipedreamApp.nameSlug,
   })
   const onSelectAccount = useCallback(
     (accountId: number) => {

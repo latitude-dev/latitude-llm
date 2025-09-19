@@ -16,6 +16,7 @@ import {
   IntegrationTriggerDeploymentSettings,
 } from '@latitude-data/constants/documentTriggers'
 import { isIntegrationConfigured } from '../../integrations/pipedream/components/fillConfiguredProps'
+import { getAllAppComponents } from '../../integrations/pipedream/apps'
 
 /**
  * Important Note:
@@ -55,6 +56,25 @@ export async function deployIntegrationTrigger(
   }
 
   if (!isIntegrationConfigured(integration)) {
+    // At least, check that the trigger is available for the integration's app
+    const componentsResult = await getAllAppComponents(
+      integration.configuration.appName,
+    )
+    if (!Result.isOk(componentsResult)) return componentsResult
+    const components = componentsResult.unwrap()
+
+    const component = components.triggers.find(
+      (component) => component.key === configuration.componentId,
+    )
+
+    if (!component) {
+      return Result.error(
+        new BadRequestError(
+          `There is no trigger with id '${configuration.componentId}' for integration '${integration.name}'`,
+        ),
+      )
+    }
+
     // Integration is not configured, we cannot deploy the trigger
     return Result.ok({
       deploymentSettings: {} as IntegrationTriggerDeploymentSettings,
@@ -66,7 +86,7 @@ export async function deployIntegrationTrigger(
     triggerUuid,
     commit,
     integration,
-    componentId: { key: configuration.componentId },
+    componentId: configuration.componentId,
     configuredProps: configuration.properties ?? {},
   })
 

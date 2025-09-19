@@ -1,6 +1,6 @@
 import { reloadPipedreamComponentPropsAction } from '$/actions/integrations/pipedream/reloadComponentProps'
 import { IntegrationDto, PipedreamComponent } from '@latitude-data/core/browser'
-import {
+import type {
   ConfigurableProp,
   ConfigurableProps,
   ConfiguredProps,
@@ -29,7 +29,7 @@ export function usePipedreamComponentProps({
 }) {
   const [props, setProps] = useState<ConfigurableProps>(
     // some props are configured in the backend, or not configured at all
-    component.configurable_props.filter(
+    component.configurableProps.filter(
       (p) => !IGNORED_PROP_TYPES.includes(p.type),
     ),
   )
@@ -40,9 +40,9 @@ export function usePipedreamComponentProps({
       onSuccess: ({ data }) => {
         setProps(
           // some props are configured in the backend, or not configured at all
-          data.dynamicProps.configurableProps.filter(
+          data.dynamicProps?.configurableProps?.filter(
             (p) => !IGNORED_PROP_TYPES.includes(p.type),
-          ),
+          ) ?? [],
         )
       },
     },

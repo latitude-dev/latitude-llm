@@ -1,11 +1,12 @@
 import {
   type PipedreamIntegration,
   type PipedreamIntegrationWithAcountCount,
+  PipedreamIntegrationWithCounts,
   Workspace,
 } from '@latitude-data/core/browser'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
-import { buildPipedreamClient } from './pipedream/apps'
-import { fetchTriggerCounts } from './pipedream/fetchTriggerCounts'
+import { getAllAppComponents, getPipedreamClient } from './pipedream/apps'
+import { Result } from '../../lib/Result'
 
 function mergeConnectedAppsBySlug(
   connectedApps: PipedreamIntegration[],
@@ -49,13 +50,23 @@ export async function listConnectedIntegrationsByApp({
       withTriggers,
     }),
   )
-  const pipedreamResult = buildPipedreamClient()
-  if (pipedreamResult.error) return pipedreamResult
-  const pipedream = pipedreamResult.value
+  const pipedreamResult = getPipedreamClient()
+  if (!Result.isOk(pipedreamResult)) return pipedreamResult
+  const pipedream = pipedreamResult.unwrap()
 
-  return fetchTriggerCounts({
-    type: 'connectedApps',
-    apps: connectedPipedreamApps,
-    pipedream,
-  })
+  const integrationsWithCounts: PipedreamIntegrationWithCounts[] =
+    await Promise.all(
+      connectedPipedreamApps.map(async (app) => {
+        const components = await getAllAppComponents(
+          app.configuration.appName,
+          pipedream,
+        )
+        return {
+          ...app,
+          triggerCount: components.unwrap().triggers.length,
+        }
+      }),
+    )
+
+  return Result.ok(integrationsWithCounts)
 }

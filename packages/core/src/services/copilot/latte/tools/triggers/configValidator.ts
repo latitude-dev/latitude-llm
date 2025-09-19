@@ -4,7 +4,7 @@ import {
 } from '../../../../../browser'
 import { PromisedResult } from '../../../../../lib/Transaction'
 import {
-  BackendClient,
+  PipedreamClient,
   ConfigurableProps,
   ConfiguredProps,
 } from '@pipedream/sdk'
@@ -25,7 +25,7 @@ export async function validateLattesChoices({
   integration,
   lattesChoices,
 }: {
-  pipedream: BackendClient
+  pipedream: PipedreamClient
   componentId: string
   integration: PipedreamIntegration
   lattesChoices: ConfiguredProps<ConfigurableProps>
@@ -72,7 +72,7 @@ export async function validateLattesChoices({
 
     const reloadedProps = reloadResult.unwrap()
 
-    if (reloadedProps.errors.length > 0) {
+    if (reloadedProps.errors?.length) {
       return Result.error(
         new LatitudeError(
           `Failed to reload props for ${prop.name}: ${reloadedProps.errors.join(', ')}. Call again the tool with the same props.`,
@@ -81,9 +81,9 @@ export async function validateLattesChoices({
     }
 
     const relevantLattePropsFromReload =
-      reloadedProps.dynamicProps.configurableProps.filter(
+      reloadedProps.dynamicProps?.configurableProps?.filter(
         (prop) => !IRRELEVANT_PROP_TYPES.includes(prop.type),
-      )
+      ) ?? []
 
     // More performant way to check if the prop names are already in the full schema
     const propNamesWithRemoteOptions = new Set(
@@ -154,7 +154,7 @@ export async function isValidConfiguration({
 
     if (
       prop.remoteOptionValues &&
-      !prop.remoteOptionValues.containsAll(chosenPropValue)
+      !prop.remoteOptionValues.containsAll(chosenPropValue as string)
     ) {
       latteErrors.push(
         `Invalid value for configured prop ${prop.name} with value ${chosenPropValue}. Expected one of: ${prop.remoteOptionValues.getFlattenedValues().join(', ')}`,

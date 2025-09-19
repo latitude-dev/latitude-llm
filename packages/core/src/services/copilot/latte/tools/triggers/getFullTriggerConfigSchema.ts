@@ -1,8 +1,7 @@
 import { z } from 'zod'
 import { defineLatteTool } from '../types'
 import { Result } from '../../../../../lib/Result'
-import { getPipedreamEnvironment } from '../../../../integrations/pipedream/apps'
-import { createBackendClient } from '@pipedream/sdk'
+import { getPipedreamClient } from '../../../../integrations/pipedream/apps'
 import { IntegrationsRepository } from '../../../../../repositories'
 import {
   ConfigurablePropWithRemoteOptions,
@@ -16,12 +15,9 @@ export const getFullTriggerConfigSchema = defineLatteTool(
     { componentId, integrationId },
     { workspace },
   ): PromisedResult<ConfigurablePropWithRemoteOptions[]> => {
-    const pipedreamEnv = getPipedreamEnvironment()
-    if (!pipedreamEnv.ok) {
-      return Result.error(pipedreamEnv.error!)
-    }
-
-    const pipedream = createBackendClient(pipedreamEnv.unwrap())
+    const pipedreamResult = getPipedreamClient()
+    if (!Result.isOk(pipedreamResult)) return pipedreamResult
+    const pipedream = pipedreamResult.unwrap()
 
     const integrationScope = new IntegrationsRepository(workspace.id)
     const integrationResult = await integrationScope.find(integrationId)

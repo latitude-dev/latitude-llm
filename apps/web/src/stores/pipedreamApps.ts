@@ -2,16 +2,13 @@ import { useCurrentUrl } from '$/hooks/useCurrentUrl'
 import { executeFetch } from '$/hooks/useFetcher'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
+import { AppDto } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { App } from '@pipedream/sdk/browser'
 import { useCallback, useMemo } from 'react'
 import useSWRInfinite, { SWRInfiniteConfiguration } from 'swr/infinite'
 
-type PipedreamApp = App & {
-  triggerCount?: number
-}
 type PipedreamAppsResponse = {
-  apps: PipedreamApp[]
+  apps: AppDto[]
   totalCount: number
   cursor: string
 }

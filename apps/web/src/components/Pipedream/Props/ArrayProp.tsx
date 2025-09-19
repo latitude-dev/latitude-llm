@@ -1,10 +1,11 @@
-import {
+import type {
   ConfigurablePropIntegerArray,
   ConfigurablePropStringArray,
 } from '@pipedream/sdk/browser'
 import { MultipleInput } from '@latitude-data/web-ui/molecules/MultipleInput'
 import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { getPropOptions } from '@latitude-data/core/browser'
 
 export default function ArrayPipedreamProp<
   T extends 'text' | 'number' = 'text',
@@ -27,7 +28,9 @@ export default function ArrayPipedreamProp<
     return value.map((v) => String(v))
   })
 
-  if (prop.options) {
+  const options = useMemo(() => getPropOptions(prop), [prop])
+
+  if (options) {
     return (
       <MultiSelect
         label={prop.label ?? prop.name}
@@ -36,15 +39,10 @@ export default function ArrayPipedreamProp<
           if (type === 'text') return newValues
           return newValues.map((v) => Number(v)) as V[]
         }}
-        options={prop.options.map((option) => {
-          if (typeof option === 'object') {
-            return {
-              label: option.label,
-              value: String(option.value),
-            }
-          }
-          return { label: String(option), value: String(option) }
-        })}
+        options={Object.entries(options).map(([label, value]) => ({
+          label,
+          value,
+        }))}
         defaultValue={initialValue}
         required={!prop.optional}
         disabled={disabled || prop.disabled}

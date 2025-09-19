@@ -2,7 +2,11 @@ import { PipedreamIntegration } from '../../../../../browser'
 import { IntegrationType } from '@latitude-data/constants'
 import * as fetchFullConfigSchemaModule from './fetchFullConfigSchema'
 import * as reloadComponentPropsModule from '../../../../integrations/pipedream/components/reloadComponentProps'
-import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk'
+import {
+  ConfigurableProps,
+  ConfiguredProps,
+  PipedreamClient,
+} from '@pipedream/sdk'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   ConfigurablePropWithRemoteOptions,
@@ -55,20 +59,22 @@ describe('Validating schema', () => {
         description: 'Select one or more channels to monitor for new messages.',
         remoteOptions: true,
         optional: true,
-        remoteOptionValues: new RemoteOptions([
-          {
-            label: 'Public channel: general',
-            value: 'AABBBCCCDDD',
-          },
-          {
-            label: 'Public channel: random',
-            value: 'DDDEEEFFFGG',
-          },
-          {
-            label: 'Public channel: development',
-            value: 'HHHIIJJJKKK',
-          },
-        ]),
+        remoteOptionValues: new RemoteOptions({
+          options: [
+            {
+              label: 'Public channel: general',
+              value: 'AABBBCCCDDD',
+            },
+            {
+              label: 'Public channel: random',
+              value: 'DDDEEEFFFGG',
+            },
+            {
+              label: 'Public channel: development',
+              value: 'HHHIIJJJKKK',
+            },
+          ],
+        }),
       },
       {
         name: 'user',
@@ -76,20 +82,22 @@ describe('Validating schema', () => {
         label: 'User',
         description: 'Select a user',
         remoteOptions: true,
-        remoteOptionValues: new RemoteOptions([
-          {
-            label: 'User: Pepe Sanchez',
-            value: '123ABC456',
-          },
-          {
-            label: 'User: Maria Lopez',
-            value: 'ASD123DFG',
-          },
-          {
-            label: 'User: John Doe',
-            value: '1231234567',
-          },
-        ]),
+        remoteOptionValues: new RemoteOptions({
+          options: [
+            {
+              label: 'User: Pepe Sanchez',
+              value: '123ABC456',
+            },
+            {
+              label: 'User: Maria Lopez',
+              value: 'ASD123DFG',
+            },
+            {
+              label: 'User: John Doe',
+              value: '1231234567',
+            },
+          ],
+        }),
       },
       {
         name: 'keyword',
@@ -102,7 +110,6 @@ describe('Validating schema', () => {
         type: 'boolean',
         label: 'Ignore Bots',
         description: 'Ignore messages from bots',
-        default: false,
         optional: true,
       },
     ]
@@ -151,7 +158,7 @@ describe('Validating schema', () => {
       const result = await validateLattesChoices({
         componentId: 'notion',
         integration: integration,
-        pipedream: {} as any,
+        pipedream: {} as PipedreamClient,
         lattesChoices: latteChosenConfiguredProps,
       })
 
@@ -171,7 +178,7 @@ describe('Validating schema', () => {
       const result = await validateLattesChoices({
         componentId: 'notion',
         integration: integration,
-        pipedream: {} as any,
+        pipedream: {} as PipedreamClient,
         lattesChoices: invalidChoices,
       })
 
@@ -211,16 +218,18 @@ describe('Validating schema', () => {
         Result.ok([
           {
             ...relevantLattePropsFromReload,
-            remoteOptionValues: new RemoteOptions([
-              {
-                label: 'Option 1',
-                value: 'option1',
-              },
-              {
-                label: 'Option 2',
-                value: 'option2',
-              },
-            ]),
+            remoteOptionValues: new RemoteOptions({
+              options: [
+                {
+                  label: 'Option 1',
+                  value: 'option1',
+                },
+                {
+                  label: 'Option 2',
+                  value: 'option2',
+                },
+              ],
+            }),
           },
         ]),
       )
@@ -228,7 +237,7 @@ describe('Validating schema', () => {
       const result = await validateLattesChoices({
         componentId: 'notion',
         integration: integration,
-        pipedream: {} as any,
+        pipedream: {} as PipedreamClient,
         lattesChoices: {
           ...latteChosenConfiguredProps,
           newProp: ['option1'],
@@ -273,7 +282,7 @@ describe('Validating schema', () => {
       const result = await validateLattesChoices({
         componentId: 'notion',
         integration: integration,
-        pipedream: {} as any,
+        pipedream: {} as PipedreamClient,
         lattesChoices: latteChosenConfiguredProps,
       })
 

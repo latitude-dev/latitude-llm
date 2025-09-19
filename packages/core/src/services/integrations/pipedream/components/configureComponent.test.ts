@@ -1,60 +1,56 @@
 import { beforeEach, describe, expect, vi, it } from 'vitest'
 import { IntegrationDto } from '../../../../browser'
 import { IntegrationType } from '@latitude-data/constants'
-import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
-import * as appsModule from '../apps' // adjust the path if needed
+import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/server'
+import * as appsModule from '../apps'
 import { configureComponent } from './configureComponent'
 import { Result } from '../../../../lib/Result'
 import { PipedreamIntegrationConfiguration } from '../../helpers/schema'
 
-const configureComponentSpy = vi.fn().mockResolvedValue({})
+const configurePropSpy = vi.fn().mockResolvedValue({})
+const retrieveComponentSpy = vi.fn().mockResolvedValue({
+  data: {
+    name: 'New Branch Created',
+    description: 'Emit new event when a branch is created.',
+    componentType: 'source',
+    version: '1.0.11',
+    key: 'github-new-branch',
+    configurableProps: [
+      {
+        name: 'github',
+        type: 'app',
+        app: 'github',
+      },
+      {
+        name: 'repoFullname',
+        label: 'Repository',
+        description:
+          'The name of the repository (not case sensitive). The format should be `owner/repo` (for example, `PipedreamHQ/pipedream`).',
+        type: 'string',
+        remoteOptions: true,
+        reloadProps: true,
+      },
+      {
+        name: 'db',
+        type: '$.service.db',
+      },
+    ],
+  },
+})
+
+const mockPipedreamClient = {
+  components: {
+    configureProp: configurePropSpy,
+    retrieve: retrieveComponentSpy,
+  },
+}
 
 vi.mock('@pipedream/sdk/server', () => ({
-  createBackendClient: () => ({
-    configureComponent: configureComponentSpy,
-    getComponent: vi.fn().mockReturnValue(
-      Promise.resolve({
-        data: {
-          name: 'New Branch Created',
-          description: 'Emit new event when a branch is created.',
-          component_type: 'source',
-          version: '1.0.11',
-          key: 'github-new-branch',
-          configurable_props: [
-            {
-              name: 'github',
-              type: 'app',
-              app: 'github',
-            },
-            {
-              name: 'repoFullname',
-              label: 'Repository',
-              description:
-                'The name of the repository (not case sensitive). The format should be `owner/repo` (for example, `PipedreamHQ/pipedream`).',
-              type: 'string',
-              remoteOptions: true,
-              reloadProps: true,
-            },
-            {
-              name: 'db',
-              type: '$.service.db',
-            },
-          ],
-        },
-      }),
-    ),
-  }),
+  PipedreamClient: vi.fn(() => mockPipedreamClient),
 }))
 
-vi.spyOn(appsModule, 'getPipedreamEnvironment').mockReturnValue(
-  Result.ok({
-    environment: 'development',
-    credentials: {
-      clientId: 'test',
-      clientSecret: 'test',
-    },
-    projectId: 'test',
-  }),
+vi.spyOn(appsModule, 'getPipedreamClient').mockReturnValue(
+  Result.ok(mockPipedreamClient as never),
 )
 
 describe('Pipedream Configuring Components', () => {
@@ -95,18 +91,11 @@ describe('Pipedream Configuring Components', () => {
     }
 
     githubComponentId = 'github-new-branch'
-    githubConfiguredProps = [
-      {
-        name: 'repoFullname',
-        label: 'Repository',
-        description:
-          'The name of the repository (not case sensitive). The format should be `owner/repo` (for example, `PipedreamHQ/pipedream`).',
-        type: 'string',
-        remoteOptions: true,
-        reloadProps: true,
-      },
-    ]
-    configureComponentSpy.mockClear()
+    githubConfiguredProps = {
+      repoFullname: 'PipedreamHQ/pipedream',
+    }
+    configurePropSpy.mockClear()
+    retrieveComponentSpy.mockClear()
   })
 
   it('Should configure the component with the correct props', async () => {
@@ -120,9 +109,10 @@ describe('Pipedream Configuring Components', () => {
 
     // Assert
     expect(result.ok).toBe(true)
-    expect(configureComponentSpy).toHaveBeenCalled()
+    expect(configurePropSpy).toHaveBeenCalled()
+    expect(retrieveComponentSpy).toHaveBeenCalledWith(githubComponentId)
 
-    const call = configureComponentSpy.mock.calls[0]
+    const call = configurePropSpy.mock.calls[0]
     expect(call).toBeDefined()
     const args = call?.[0]
     expect(args).toBeDefined()
@@ -136,5 +126,12 @@ describe('Pipedream Configuring Components', () => {
     expect(args?.configuredProps.github).toEqual({
       authProvisionId: githubIntegration.configuration.connectionId,
     })
+
+    // Verify correct parameters are passed to configureProp
+    expect(args?.id).toBe(githubComponentId)
+    expect(args?.externalUserId).toBe(
+      githubIntegration.configuration.externalUserId,
+    )
+    expect(args?.propName).toBe('repoFullname')
   })
 })

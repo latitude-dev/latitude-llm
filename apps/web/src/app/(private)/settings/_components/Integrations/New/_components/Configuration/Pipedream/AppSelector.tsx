@@ -56,12 +56,12 @@ export function AppSelector({
       onChange={onChange}
       fetch={fetchOptions}
       serialize={(app: App) => ({
-        value: app.name_slug,
+        value: app.nameSlug,
         label: app.name,
         description: app.description,
         icon: (
           <Image
-            src={app.img_src}
+            src={app.imgSrc}
             alt={app.name}
             width={16}
             height={16}
