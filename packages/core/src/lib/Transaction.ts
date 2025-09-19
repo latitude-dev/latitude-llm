@@ -39,7 +39,7 @@ export default class Transaction {
       // but the mostly ducktype each other so we use them interchangeably
       result = await handler(this.db)
 
-      if (result.error) throw result.error
+      if (!Result.isOk(result)) throw result.error
       if (callback) this.callbacks.push(callback.bind(null, result.value))
 
       return result
@@ -51,7 +51,7 @@ export default class Transaction {
           // but the mostly ducktype each other so we use them interchangeably
           result = await handler(this.db)
 
-          if (result.error) throw result.error
+          if (!Result.isOk(result)) throw result.error
           if (callback) this.callbacks.push(callback.bind(null, result.value))
         })
 

@@ -22,7 +22,7 @@ function assertContainsPrintStatement({ code, language }: CodeToolArgs) {
     )
   })()
 
-  if (printStatementResult.error) return printStatementResult
+  if (!Result.isOk(printStatementResult)) return printStatementResult
   const printStatement = printStatementResult.value
 
   if (!code.includes(printStatement)) {
@@ -42,14 +42,14 @@ async function runCode({
   dependencies,
 }: CodeToolArgs): PromisedResult<string, LatitudeError> {
   const assertResult = assertContainsPrintStatement({ code, language })
-  if (assertResult.error) return assertResult
+  if (!Result.isOk(assertResult)) return assertResult
 
   const runFn = dependencies?.length
     ? runCodeWithDependencies
     : runCodeWithoutDependencies
 
   const runResult = await runFn({ code, language, dependencies })
-  if (runResult.error) return runResult
+  if (!Result.isOk(runResult)) return runResult
 
   const { output, exitCode } = runResult.unwrap()
 

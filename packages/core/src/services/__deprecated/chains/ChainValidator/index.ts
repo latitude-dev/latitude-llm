@@ -219,15 +219,15 @@ export const validateChain = async ({
   TypedResult<ValidatedChainStep, ChainError<RunErrorCodes>>
 > => {
   const chainResult = await safeChain({ promptlVersion, chain, newMessages })
-  if (chainResult.error) return chainResult
+  if (!Result.isOk(chainResult)) return chainResult
 
   const { chainCompleted, conversation } = chainResult.value
   const configResult = validateConfig(conversation.config)
-  if (configResult.error) return configResult
+  if (!Result.isOk(configResult)) return configResult
 
   const config = configResult.unwrap()
   const providerResult = findProvider(config.provider, providersMap)
-  if (providerResult.error) return providerResult
+  if (!Result.isOk(providerResult)) return providerResult
 
   const provider = providerResult.value
   const freeQuota = await checkFreeProviderQuota({
@@ -235,7 +235,7 @@ export const validateChain = async ({
     provider,
     model: config.model,
   })
-  if (freeQuota.error) return freeQuota
+  if (!Result.isOk(freeQuota)) return freeQuota
 
   const rule = applyProviderRules({
     providerType: provider.provider,

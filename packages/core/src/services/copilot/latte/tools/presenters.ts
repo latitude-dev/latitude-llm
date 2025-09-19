@@ -158,14 +158,15 @@ async function triggerDocumentPresenter({
         break
 
       case DocumentTriggerType.Integration: {
-        const integration = await integrationScope.find(
+        const integrationResult = await integrationScope.find(
           (trigger.configuration as IntegrationTriggerConfiguration)
             .integrationId,
         )
-        if (!integration.ok) {
-          return Result.error(integration.error!)
+        if (!integrationResult.ok) {
+          return Result.error(integrationResult.error!)
         }
-        documentTriggerNames.push(integration.unwrap().name)
+        const integration = integrationResult.unwrap()
+        documentTriggerNames.push(integration.name)
         break
       }
     }

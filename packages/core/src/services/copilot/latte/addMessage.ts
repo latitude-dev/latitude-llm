@@ -141,7 +141,7 @@ type GenerateLatteResponseArgs = {
 
 async function generateLatteResponse(args: GenerateLatteResponseArgs) {
   const checking = await checkLatteCredits({ workspace: args.clientWorkspace })
-  if (checking.error) {
+  if (!Result.isOk(checking)) {
     return Result.error(checking.error)
   }
 
@@ -165,7 +165,7 @@ async function generateLatteResponse(args: GenerateLatteResponseArgs) {
     user: args.user,
     workspace: args.clientWorkspace,
   }) // Note: failing silently
-  if (consuming.error) {
+  if (!Result.isOk(consuming)) {
     captureException(consuming.error)
   }
 
@@ -229,7 +229,7 @@ async function innerGenerateLatteResponse({
         tools,
         abortSignal,
       })
-  if (!runResult.ok) return runResult as ErrorResult<LatitudeError>
+  if (!Result.isOk(runResult)) return runResult as ErrorResult<LatitudeError>
   const run = runResult.unwrap()
 
   const isLatteDebugSessionResult = await isLatteDebugSession(

@@ -15,6 +15,7 @@ import cookieParser from 'cookie-parser'
 import express from 'express'
 import { Namespace, Server, Socket } from 'socket.io'
 import Redis from 'ioredis'
+import { Result } from '@latitude-data/core/lib/Result'
 
 function parseCookie(cookieString: string): Record<string, string> {
   return cookieString.split(';').reduce(
@@ -73,13 +74,14 @@ web.use(async (socket, next) => {
       return next(new Error('AUTH_ERROR: No token provided'))
     }
 
-    const result = await verifyWebsocketToken({ token, type: 'websocket' })
+    const tokenResult = await verifyWebsocketToken({ token, type: 'websocket' })
 
-    if (result.error) {
-      return next(new Error(`AUTH_ERROR: ${result.error.message}`))
+    if (!Result.isOk(tokenResult)) {
+      return next(new Error(`AUTH_ERROR: ${tokenResult.error.message}`))
     }
 
-    const payload = result.value.payload
+    const tokenData = tokenResult.unwrap()
+    const payload = tokenData.payload
 
     socket.data = {
       userId: payload.userId,

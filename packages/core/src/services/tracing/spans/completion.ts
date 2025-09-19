@@ -93,19 +93,19 @@ async function process(
   db = database,
 ) {
   const extractingcp = extractProvider(attributes)
-  if (extractingcp.error) return Result.error(extractingcp.error)
+  if (!Result.isOk(extractingcp)) return Result.error(extractingcp.error)
   const provider = extractingcp.value
 
   const extractingcm = extractModel(attributes)
-  if (extractingcm.error) return Result.error(extractingcm.error)
+  if (!Result.isOk(extractingcm)) return Result.error(extractingcm.error)
   const model = extractingcm.value
 
   const extractingcc = extractConfiguration(attributes)
-  if (extractingcc.error) return Result.error(extractingcc.error)
+  if (!Result.isOk(extractingcc)) return Result.error(extractingcc.error)
   const configuration = extractingcc.value
 
   const extractingci = extractInput(attributes)
-  if (extractingci.error) return Result.error(extractingci.error)
+  if (!Result.isOk(extractingci)) return Result.error(extractingci.error)
   const input = extractingci.value
 
   if (status === SpanStatus.Error) {
@@ -118,23 +118,23 @@ async function process(
   }
 
   const extractingco = extractOutput(attributes)
-  if (extractingco.error) return Result.error(extractingco.error)
+  if (!Result.isOk(extractingco)) return Result.error(extractingco.error)
   const output = extractingco.value
 
   const extractingpt = extractPromptTokens(attributes)
-  if (extractingpt.error) return Result.error(extractingpt.error)
+  if (!Result.isOk(extractingpt)) return Result.error(extractingpt.error)
   const promptTokens = extractingpt.value
 
   const extractinght = extractCachedTokens(attributes)
-  if (extractinght.error) return Result.error(extractinght.error)
+  if (!Result.isOk(extractinght)) return Result.error(extractinght.error)
   const cachedTokens = extractinght.value
 
   const extractingrt = extractReasoningTokens(attributes)
-  if (extractingrt.error) return Result.error(extractingrt.error)
+  if (!Result.isOk(extractingrt)) return Result.error(extractingrt.error)
   const reasoningTokens = extractingrt.value
 
   const extractingct = extractCompletionTokens(attributes)
-  if (extractingct.error) return Result.error(extractingct.error)
+  if (!Result.isOk(extractingct)) return Result.error(extractingct.error)
   const completionTokens = extractingct.value
 
   const tokens = {
@@ -145,11 +145,11 @@ async function process(
   }
 
   const enrichingcs = await enrichCost(provider, model, tokens, workspace, db)
-  if (enrichingcs.error) return Result.error(enrichingcs.error)
+  if (!Result.isOk(enrichingcs)) return Result.error(enrichingcs.error)
   const cost = enrichingcs.value
 
   const extractingfr = extractFinishReason(attributes)
-  if (extractingfr.error) return Result.error(extractingfr.error)
+  if (!Result.isOk(extractingfr)) return Result.error(extractingfr.error)
   const finishReason = extractingfr.value
 
   return Result.ok({
@@ -317,7 +317,7 @@ function convertMessageContent(
         )
       }
       const convertingt = convertContentType(String(item.type))
-      if (convertingt.error) return Result.error(convertingt.error)
+      if (!Result.isOk(convertingt)) return Result.error(convertingt.error)
       const type = convertingt.value
 
       switch (type) {
@@ -343,7 +343,7 @@ function convertMessageContent(
         case ContentType.toolCall:
           {
             const converting = convertToolCalls([item])
-            if (converting.error) return Result.error(converting.error)
+            if (!Result.isOk(converting)) return Result.error(converting.error)
             result.push(...converting.value)
           }
           break
@@ -409,7 +409,7 @@ function convertMessages(
         )
       }
       const convertingr = convertMessageRole(String(message.role))
-      if (convertingr.error) return Result.error(convertingr.error)
+      if (!Result.isOk(convertingr)) return Result.error(convertingr.error)
       const role = convertingr.value
 
       if (!message.content && message.content !== '') {
@@ -418,12 +418,12 @@ function convertMessages(
         )
       }
       const convertingc = convertMessageContent(message.content)
-      if (convertingc.error) return Result.error(convertingc.error)
+      if (!Result.isOk(convertingc)) return Result.error(convertingc.error)
       const content = convertingc.value
 
       if (message.toolCalls && Array.isArray(message.toolCalls)) {
         const converting = convertToolCalls(message.toolCalls)
-        if (converting.error) return Result.error(converting.error)
+        if (!Result.isOk(converting)) return Result.error(converting.error)
         content.push(...converting.value)
       }
 
@@ -506,7 +506,7 @@ function extractInput(
       }
 
       const converting = convertMessages(payload)
-      if (converting.error) return Result.error(converting.error)
+      if (!Result.isOk(converting)) return Result.error(converting.error)
       return Result.ok([...messages, ...converting.value])
     } catch {
       return Result.error(
@@ -517,7 +517,7 @@ function extractInput(
 
   for (const source of [ATTR_GEN_AI_PROMPTS, ATTR_LLM_PROMPTS]) {
     const extracting = extractMessages(attributes, source)
-    if (extracting.error) return Result.error(extracting.error)
+    if (!Result.isOk(extracting)) return Result.error(extracting.error)
     if (extracting.value.length < 1) continue
     return Result.ok([...messages, ...extracting.value])
   }
@@ -548,7 +548,7 @@ function extractOutput(
       }
 
       const converting = convertMessages(payload)
-      if (converting.error) return Result.error(converting.error)
+      if (!Result.isOk(converting)) return Result.error(converting.error)
       return Result.ok(converting.value)
     } catch {
       return Result.error(
@@ -559,7 +559,7 @@ function extractOutput(
 
   for (const source of [ATTR_GEN_AI_COMPLETIONS, ATTR_LLM_COMPLETIONS]) {
     const extracting = extractMessages(attributes, source)
-    if (extracting.error) return Result.error(extracting.error)
+    if (!Result.isOk(extracting)) return Result.error(extracting.error)
     if (extracting.value.length < 1) continue
     return Result.ok(extracting.value)
   }
@@ -588,7 +588,7 @@ function extractOutput(
         }
 
         const converting = convertToolCalls(payload)
-        if (converting.error) return Result.error(converting.error)
+        if (!Result.isOk(converting)) return Result.error(converting.error)
         message.content.push(...converting.value)
       } catch {
         return Result.error(

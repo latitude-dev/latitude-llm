@@ -59,13 +59,14 @@ export async function createDocumentVersion(
 
   // Fetch created or updated document from db because createNewDocument and
   // updateDocument perform 2 updates but return the state of the first one
+  const documentData = result.unwrap()
   const document = (
     await tx
       .select()
       .from(documentVersions)
       .where(
         and(
-          eq(documentVersions.documentUuid, result.unwrap().documentUuid),
+          eq(documentVersions.documentUuid, documentData.documentUuid),
           eq(documentVersions.commitId, data.commit.id),
         ),
       )

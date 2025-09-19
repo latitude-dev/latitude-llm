@@ -21,21 +21,21 @@ async function getDraftTriggerChanges(
     const currentCommitTriggers =
       await triggersRepository.getTriggerUpdatesInDraft(draft)
 
-    if (currentCommitTriggers.error) {
+    if (!Result.isOk(currentCommitTriggers)) {
       return Result.error(currentCommitTriggers.error)
     }
 
     // For draft changes, we compare against the head triggers
     const headTriggers =
       await triggersRepository.getAllActiveTriggersInWorkspace()
-    if (headTriggers.error) {
+    if (!Result.isOk(headTriggers)) {
       return Result.error(headTriggers.error)
     }
 
     return Result.ok(
       triggerChangesPresenter({
-        currentCommitTriggers: currentCommitTriggers.value,
-        previousCommitTriggers: headTriggers.value,
+        currentCommitTriggers: currentCommitTriggers.unwrap(),
+        previousCommitTriggers: headTriggers.unwrap(),
       }),
     )
   })
@@ -100,7 +100,7 @@ export async function getCommitTriggerChanges(
 
     const currentCommitTriggers =
       await triggersRepository.getTriggerUpdatesInDraft(commit)
-    if (currentCommitTriggers.error) {
+    if (!Result.isOk(currentCommitTriggers)) {
       return Result.error(currentCommitTriggers.error)
     }
 
@@ -111,14 +111,14 @@ export async function getCommitTriggerChanges(
         })
       : Result.ok([])
 
-    if (previousCommitTriggers.error) {
+    if (!Result.isOk(previousCommitTriggers)) {
       return Result.error(previousCommitTriggers.error)
     }
 
     return Result.ok(
       triggerChangesPresenter({
-        currentCommitTriggers: currentCommitTriggers.value,
-        previousCommitTriggers: previousCommitTriggers.value,
+        currentCommitTriggers: currentCommitTriggers.unwrap(),
+        previousCommitTriggers: previousCommitTriggers.unwrap(),
       }),
     )
   })

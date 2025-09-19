@@ -63,7 +63,7 @@ export default async function setupService(
     },
     transaction,
   )
-  if (firstProvider.error) {
+  if (!Result.isOk(firstProvider)) {
     captureException?.(firstProvider.error)
   }
 

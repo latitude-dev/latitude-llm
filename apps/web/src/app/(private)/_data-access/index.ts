@@ -29,6 +29,7 @@ import {
 } from '@latitude-data/core/repositories/index'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { notFound } from 'next/navigation'
+import { Result } from '@latitude-data/core/lib/Result'
 
 export const getFirstProjectCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
@@ -130,7 +131,7 @@ export const getDocumentByUuidCached = cache(
       commitUuid,
       projectId,
     })
-    if (result.error) {
+    if (!Result.isOk(result)) {
       const error = result.error
       if (error instanceof NotFoundError) {
         return notFound()
@@ -319,7 +320,7 @@ export const getEvaluationV2AtCommitByDocumentCached = cache(
       documentUuid: documentUuid,
       evaluationUuid: evaluationUuid,
     })
-    if (result.error) {
+    if (!Result.isOk(result)) {
       if (result.error instanceof NotFoundError) return notFound()
       throw result.error
     }

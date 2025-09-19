@@ -92,7 +92,7 @@ export async function buildStreamEvaluationRun({
       reason: z.string(),
     }),
   })
-  if (result.error) return result
+  if (!Result.isOk(result)) return result
 
   const { runArgs } = result.unwrap()
 

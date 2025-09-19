@@ -133,31 +133,31 @@ export async function findWorkspaceByIdForAdmin(
     }
 
     const subscriptionResult = await findWorkspaceSubscription({ workspace })
-    if (subscriptionResult.error) {
+    if (!Result.isOk(subscriptionResult)) {
       return Result.error(subscriptionResult.error)
     }
-    const subscription = subscriptionResult.value
+    const subscription = subscriptionResult.unwrap()
 
     const seatsResult = await computeQuota({ type: QuotaType.Seats, workspace })
-    if (seatsResult.error) {
+    if (!Result.isOk(seatsResult)) {
       return Result.error(seatsResult.error)
     }
-    const seats = seatsResult.value
+    const seats = seatsResult.unwrap()
 
     const runsResult = await computeQuota({ type: QuotaType.Runs, workspace })
-    if (runsResult.error) {
+    if (!Result.isOk(runsResult)) {
       return Result.error(runsResult.error)
     }
-    const runs = runsResult.value
+    const runs = runsResult.unwrap()
 
     const creditsResult = await computeQuota({
       type: QuotaType.Credits,
       workspace,
     })
-    if (creditsResult.error) {
+    if (!Result.isOk(creditsResult)) {
       return Result.error(creditsResult.error)
     }
-    const credits = creditsResult.value
+    const credits = creditsResult.unwrap()
 
     // Get workspace users
     const workspaceUsers = await db
@@ -201,10 +201,10 @@ export async function findWorkspaceByIdForAdmin(
     const grantsResult = await repository.listApplicable(
       subscription.billableFrom,
     )
-    if (grantsResult.error) {
+    if (!Result.isOk(grantsResult)) {
       return Result.error(grantsResult.error)
     }
-    const grants = grantsResult.value
+    const grants = grantsResult.unwrap()
 
     // Get all subscriptions for this workspace
     const workspaceSubscriptions = await findWorkspaceSubscriptionsForAdmin(

@@ -56,7 +56,7 @@ async function getPromptMetadata(
     db,
   )
 
-  if (metadata.error) {
+  if (!Result.isOk(metadata)) {
     return Result.error(metadata.error)
   }
   const { resolvedPrompt, hash, parameters } = metadata.value
@@ -100,7 +100,7 @@ export async function createExperiment(
       evaluations,
       datasetLabels,
     })
-    if (requirementsResult.error) return requirementsResult
+    if (!Result.isOk(requirementsResult)) return requirementsResult
 
     const promptMetadataResult = await getPromptMetadata(
       {
@@ -112,7 +112,7 @@ export async function createExperiment(
       tx,
     )
 
-    if (promptMetadataResult.error) {
+    if (!Result.isOk(promptMetadataResult)) {
       return Result.error(new LatitudeError(promptMetadataResult.error.message))
     }
     const promptMetadata = promptMetadataResult.unwrap()

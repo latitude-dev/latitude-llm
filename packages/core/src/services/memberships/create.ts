@@ -29,7 +29,7 @@ export const createMembership = async (
     (m) => publishEvent({ membership: m, author }),
   )
 
-  if (result.error) return result
+  if (!Result.isOk(result)) return result
 
   return result
 }

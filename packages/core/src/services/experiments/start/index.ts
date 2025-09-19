@@ -40,7 +40,7 @@ export async function startExperiment(
       },
       tx,
     )
-    if (payloadResult.error) {
+    if (!Result.isOk(payloadResult)) {
       return Result.error(payloadResult.error as LatitudeError)
     }
 
@@ -50,7 +50,7 @@ export async function startExperiment(
     })
   })
 
-  if (updateResult.error) {
+  if (!Result.isOk(updateResult)) {
     return Result.error(updateResult.error as LatitudeError)
   }
 

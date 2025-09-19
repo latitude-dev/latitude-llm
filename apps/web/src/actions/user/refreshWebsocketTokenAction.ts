@@ -1,5 +1,6 @@
 'use server'
 
+import { Result } from '@latitude-data/core/lib/Result'
 import { verifyWebsocketToken } from '@latitude-data/core/websockets/utils'
 import { setWebsocketSessionCookie } from '$/services/auth/setSession'
 import { cookies } from 'next/headers'
@@ -17,7 +18,7 @@ export const refreshWebesocketTokenAction = authProcedure
       type: 'websocket',
     })
 
-    if (!result.error) return { success: true }
+    if (Result.isOk(result)) return { success: true }
 
     await setWebsocketSessionCookie({
       name: 'websocket',

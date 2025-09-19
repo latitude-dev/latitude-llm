@@ -6,6 +6,7 @@ import { type ChainEventDto, type Message } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { createStreamableValue } from 'ai/rsc'
 import { findSharedDocumentCached } from '$/app/(public)/_data_access'
+import { Result } from '@latitude-data/core/lib/Result'
 
 type AddMessagesActionProps = {
   publishedDocumentUuid: string
@@ -19,7 +20,7 @@ export async function addSharedMessagesAction({
 }: AddMessagesActionProps) {
   const result = await findSharedDocumentCached(publishedDocumentUuid)
 
-  if (result.error) {
+  if (!Result.isOk(result)) {
     throw result.error
   }
 

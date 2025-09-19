@@ -1,4 +1,5 @@
 import { Workspace } from '@latitude-data/core/browser'
+import { Result } from '@latitude-data/core/lib/Result'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
@@ -22,7 +23,7 @@ export const GET = errorHandler(
       const datasetRepo = new DatasetsRepository(workspace.id)
       const result = await datasetRepo.find(Number(datasetId))
 
-      if (result.error) {
+      if (!Result.isOk(result)) {
         return NextResponse.json(
           { message: `Dataset not found with id: ${datasetId}` },
           { status: 404 },

@@ -184,9 +184,10 @@ export async function computeChangesToRevertCommit(
   const changedDocs = await documentsScope.getDocumentsAtCommit(changedCommit)
   const documentsInDraft =
     await documentsScope.getDocumentsAtCommit(targetDraft)
-  if (originalDocs.error) return Result.error(originalDocs.error)
-  if (changedDocs.error) return Result.error(changedDocs.error)
-  if (documentsInDraft.error) return Result.error(documentsInDraft.error)
+  if (!Result.isOk(originalDocs)) return Result.error(originalDocs.error)
+  if (!Result.isOk(changedDocs)) return Result.error(changedDocs.error)
+  if (!Result.isOk(documentsInDraft))
+    return Result.error(documentsInDraft.error)
 
   const changesToRevert = getChangesToRevertDocuments({
     originalDocuments: originalDocs.value,

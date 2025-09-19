@@ -227,7 +227,7 @@ export class ExperimentsRepository extends Repository<Experiment> {
     const result = await this.aggregatedResultsSubquery({
       experimentUuid: uuid,
     })
-    if (result.error) return result
+    if (!Result.isOk(result)) return result
     const aggregatedResults = result.unwrap()
 
     const results = await this.db

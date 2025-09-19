@@ -36,15 +36,15 @@ async function process(
   _ = database,
 ) {
   const extractingtn = extractToolName(attributes)
-  if (extractingtn.error) return Result.error(extractingtn.error)
+  if (!Result.isOk(extractingtn)) return Result.error(extractingtn.error)
   const name = extractingtn.value
 
   const extractingci = extractToolCallId(attributes)
-  if (extractingci.error) return Result.error(extractingci.error)
+  if (!Result.isOk(extractingci)) return Result.error(extractingci.error)
   const callId = extractingci.value
 
   const extractingca = extractToolCallArguments(attributes)
-  if (extractingca.error) return Result.error(extractingca.error)
+  if (!Result.isOk(extractingca)) return Result.error(extractingca.error)
   const callArguments = extractingca.value
 
   if (status === SpanStatus.Error) {
@@ -58,11 +58,11 @@ async function process(
   }
 
   const extractingrv = extractToolResultValue(attributes)
-  if (extractingrv.error) return Result.error(extractingrv.error)
+  if (!Result.isOk(extractingrv)) return Result.error(extractingrv.error)
   const resultValue = extractingrv.value
 
   const extractingre = extractToolResultIsError(attributes)
-  if (extractingre.error) return Result.error(extractingre.error)
+  if (!Result.isOk(extractingre)) return Result.error(extractingre.error)
   const resultIsError = extractingre.value
 
   return Result.ok({

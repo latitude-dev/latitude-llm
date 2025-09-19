@@ -176,7 +176,7 @@ export function createProvider({
       )
     case Providers.Google: {
       const firstMessageResult = isFirstMessageOfUserType(messages)
-      if (firstMessageResult.error) return firstMessageResult
+      if (!Result.isOk(firstMessageResult)) return firstMessageResult
 
       return Result.ok(
         createGoogleGenerativeAI({
@@ -190,7 +190,7 @@ export function createProvider({
         name: provider.name,
         maybeConfig: provider.configuration,
       })
-      if (result.error) return result
+      if (!Result.isOk(result)) return result
       const config = result.value
 
       return Result.ok(
@@ -206,7 +206,7 @@ export function createProvider({
         name: provider.name,
         maybeConfig: provider.configuration,
       })
-      if (result.error) return result
+      if (!Result.isOk(result)) return result
       const config = result.value
 
       return Result.ok(

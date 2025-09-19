@@ -9,6 +9,7 @@ import {
 } from '../../../repositories'
 import { generateDocumentSuggestion } from '../../../services/documentSuggestions'
 import { captureException } from '../../../utils/workers/sentry'
+import { Result } from '../../../lib/Result'
 
 export type GenerateDocumentSuggestionJobData = {
   workspaceId: number
@@ -65,7 +66,7 @@ export const generateDocumentSuggestionJob = async (
     commit: commit,
     workspace: workspace,
   })
-  if (result.error) {
+  if (!Result.isOk(result)) {
     if (result.error instanceof UnprocessableEntityError) {
       captureException(result.error)
     } else throw result.error

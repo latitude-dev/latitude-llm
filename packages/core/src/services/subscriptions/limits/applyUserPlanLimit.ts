@@ -26,11 +26,11 @@ export async function applyUserPlanLimit({
   if (![...FREE_PLANS, ...PRO_PLANS].includes(subscription.plan)) return Result.nil() // prettier-ignore
 
   const result = await findWorkspaceUsers(workspace)
-  if (result.error) return result
+  if (!Result.isOk(result)) return result
 
   const users = result.unwrap()
   const quota = await computeQuota({ type: QuotaType.Seats, workspace }).then(
-    (r) => r.value,
+    (r) => r.unwrap(),
   )
 
   // should not be possible but we are nice and opt for letting the request continue...

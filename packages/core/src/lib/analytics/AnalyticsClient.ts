@@ -4,6 +4,7 @@ import { users } from '../../schema'
 import { WorkspacesRepository } from '../../repositories'
 import { database } from '../../client'
 import { LatitudeEvent } from '../../events/events'
+import { Result } from '../Result'
 import debug from '../debug'
 import {
   CollectorInput,
@@ -79,9 +80,9 @@ export class AnalyticsClient {
     const repo = new WorkspacesRepository(user.id)
     const result = await repo.find(this.workspaceId)
 
-    if (result.error) return undefined
+    if (!Result.isOk(result)) return undefined
 
-    const workspace = result.value
+    const workspace = result.unwrap()
     return {
       user: {
         id: user.id,

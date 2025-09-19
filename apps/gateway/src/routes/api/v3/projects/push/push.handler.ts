@@ -1,5 +1,6 @@
 import { Context } from 'hono'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
+import { Result } from '@latitude-data/core/lib/Result'
 import { AppRouteHandler } from '$/openApi/types'
 import {
   CommitsRepository,
@@ -29,7 +30,7 @@ export const pushHandler: AppRouteHandler<typeof pushRoute> = async (
   // Verify project exists and belongs to workspace
   const projectsRepository = new ProjectsRepository(workspace.id)
   const projectResult = await projectsRepository.find(Number(projectId))
-  if (projectResult.error) {
+  if (!Result.isOk(projectResult)) {
     throw new NotFoundError('Project not found')
   }
   const project = projectResult.value
@@ -40,7 +41,7 @@ export const pushHandler: AppRouteHandler<typeof pushRoute> = async (
     uuid: versionUuid,
     projectId: project.id,
   })
-  if (commitResult.error) {
+  if (!Result.isOk(commitResult)) {
     throw new NotFoundError('Commit not found')
   }
   const commit = commitResult.value
@@ -52,7 +53,7 @@ export const pushHandler: AppRouteHandler<typeof pushRoute> = async (
     changes,
   })
 
-  if (result.error) {
+  if (!Result.isOk(result)) {
     throw result.error
   }
 

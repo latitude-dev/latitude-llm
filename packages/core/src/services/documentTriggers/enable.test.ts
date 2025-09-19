@@ -217,12 +217,15 @@ describe('setDocumentTriggerEnabled', () => {
         enabled: true,
       })
     expect(enableResult.ok).toBeTruthy()
-    expect(enableResult.unwrap().enabled).toBe(true)
+    const enabledTrigger = enableResult.unwrap()
+    expect(enabledTrigger.enabled).toBe(true)
 
     const triggersScope = new DocumentTriggersRepository(workspace.id)
-    const enabledRecord = await triggersScope
-      .getTriggerByUuid({ uuid: created.uuid, commit: live })
-      .then((r) => r.unwrap())
+    const enabledRecordResult = await triggersScope.getTriggerByUuid({
+      uuid: created.uuid,
+      commit: live,
+    })
+    const enabledRecord = enabledRecordResult.unwrap()
     expect(enabledRecord.enabled).toBe(true)
 
     // Disable
@@ -234,7 +237,8 @@ describe('setDocumentTriggerEnabled', () => {
         enabled: false,
       })
     expect(disableResult.ok).toBeTruthy()
-    expect(disableResult.unwrap().enabled).toBe(false)
+    const disabledTrigger = disableResult.unwrap()
+    expect(disabledTrigger.enabled).toBe(false)
 
     const disabledRecord = await triggersScope
       .getTriggerByUuid({ uuid: created.uuid, commit: live })

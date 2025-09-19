@@ -56,9 +56,10 @@ export function convertSpanAttribute(
 
   if (attribute.arrayValue != undefined) {
     const values = attribute.arrayValue.values.map(convertSpanAttribute)
-    if (values.some((v) => v.error)) return Result.error(values[0]!.error!)
+    if (values.some((v) => !Result.isOk(v)))
+      return Result.error(values[0]!.error!)
 
-    return Result.ok(values.map((v) => v.value!))
+    return Result.ok(values.map((v) => v.unwrap()))
   }
 
   return Result.error(new UnprocessableEntityError('Invalid attribute value'))
@@ -71,9 +72,9 @@ export function convertSpanAttributes(
 
   for (const attribute of attributes) {
     const converting = convertSpanAttribute(attribute.value)
-    if (converting.error) continue // we skip invalid attributes for now
+    if (!Result.isOk(converting)) continue // we skip invalid attributes for now
 
-    result[attribute.key] = converting.value
+    result[attribute.key] = converting.unwrap()
   }
 
   return Result.ok(result)
@@ -176,23 +177,24 @@ export async function extractApiKeyAndWorkspace(
   let internal
   if (!workspaceId) {
     const extracting = extractInternal(attributes)
-    if (extracting.error) return Result.error(extracting.error)
-    internal = extracting.value
+    if (!Result.isOk(extracting)) return Result.error(extracting.error)
+    internal = extracting.unwrap()
   }
 
   const gettingWorkspace = await getWorkspace(
     { workspaceId: workspaceId ?? internal?.workspaceId },
     db,
   )
-  if (gettingWorkspace.error) return Result.error(gettingWorkspace.error)
-  const workspace = gettingWorkspace.value
+  if (!Result.isOk(gettingWorkspace))
+    return Result.error(gettingWorkspace.error)
+  const workspace = gettingWorkspace.unwrap()
 
   const gettingApiKey = await getApiKey(
     { apiKeyId: apiKeyId ?? internal?.apiKeyId, workspace },
     db,
   )
-  if (gettingApiKey.error) return Result.error(gettingApiKey.error)
-  const apiKey = gettingApiKey.value
+  if (!Result.isOk(gettingApiKey)) return Result.error(gettingApiKey.error)
+  const apiKey = gettingApiKey.unwrap()
 
   return Result.ok({ apiKey, workspace })
 }
@@ -252,16 +254,16 @@ async function getApiKey(
   let apiKey
   if (apiKeyId) {
     const finding = await repository.find(apiKeyId)
-    if (finding.error) {
+    if (!Result.isOk(finding)) {
       return Result.error(new UnprocessableEntityError('API key not found'))
     }
-    apiKey = finding.value
+    apiKey = finding.unwrap()
   } else {
     const finding = await repository.selectFirst()
-    if (finding.error) {
+    if (!Result.isOk(finding)) {
       return Result.error(new UnprocessableEntityError('API key not found'))
     }
-    apiKey = finding.value
+    apiKey = finding.unwrap()
   }
 
   if (!apiKey) {

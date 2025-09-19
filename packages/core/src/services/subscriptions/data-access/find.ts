@@ -22,9 +22,9 @@ export async function findWorkspaceSubscription(
 
   const repository = new SubscriptionRepository(workspace.id, db)
   const finding = await repository.find(workspace.currentSubscriptionId)
-  if (finding.error) return Result.error(finding.error)
+  if (!Result.isOk(finding)) return Result.error(finding.error)
 
-  const subscription = finding.value
+  const subscription = finding.unwrap()
   const billableFrom = getLatestRenewalDate(subscription.createdAt, new Date())
   const billableAt = addMonths(billableFrom, 1)
 

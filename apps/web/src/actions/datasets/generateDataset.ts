@@ -12,6 +12,7 @@ import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { authProcedure } from '$/actions/procedures'
 import { createDatasetFromJson } from '@latitude-data/core/services/datasets/createFromJson'
+import { Result } from '@latitude-data/core/lib/Result'
 
 export const generateDatasetAction = authProcedure
   .createServerAction()
@@ -77,7 +78,7 @@ export const generateDatasetAction = authProcedure
       },
     })
 
-    if (result.error) {
+    if (!Result.isOk(result)) {
       throw result.error
     }
 

@@ -49,7 +49,7 @@ Length: {{word_count}} words`,
     },
     transaction,
   )
-  if (documentResult.error) {
+  if (!Result.isOk(documentResult)) {
     return documentResult
   }
 

@@ -130,17 +130,17 @@ export async function ai({
       config,
     })
 
-    if (providerAdapterResult.error) return providerAdapterResult
+    if (!Result.isOk(providerAdapterResult)) return providerAdapterResult
 
     const languageModel = getLanguageModel({
-      llmProvider: providerAdapterResult.value,
+      llmProvider: providerAdapterResult.unwrap(),
       provider,
       config,
       model,
     })
 
     const toolsResult = buildTools(tools)
-    if (toolsResult.error) return toolsResult
+    if (!Result.isOk(toolsResult)) return toolsResult
 
     const useSchema = schema && !!output && output !== 'no-schema'
     const resultType: StreamType = useSchema ? 'object' : 'text'
@@ -150,7 +150,7 @@ export async function ai({
       model: languageModel,
       prompt,
       messages: messages as CoreMessage[],
-      tools: toolsResult.value,
+      tools: toolsResult.unwrap(),
       abortSignal,
       providerOptions: config.providerOptions,
       experimental_telemetry: { isEnabled: false }, // Note: avoid conflicts with our own telemetry

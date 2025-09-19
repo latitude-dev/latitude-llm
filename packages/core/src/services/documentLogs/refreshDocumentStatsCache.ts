@@ -51,14 +51,15 @@ export async function refreshDocumentStatsCache(
       projectId: project.id,
       documentUuid: documentUuid,
     })
-    if (document.error) return Result.error(document.error)
+    if (!Result.isOk(document)) return Result.error(document.error)
 
     const logsRepository = new DocumentLogsRepository(project.workspaceId, db)
     // Approximate the number of document logs for this document
     const approximatedCount = await logsRepository.approximatedCount({
       documentUuid: documentUuid,
     })
-    if (approximatedCount.error) return Result.error(approximatedCount.error)
+    if (!Result.isOk(approximatedCount))
+      return Result.error(approximatedCount.error)
 
     if (approximatedCount.value < LIMITED_VIEW_THRESHOLD) {
       // Count the number of document logs for this document
@@ -88,8 +89,8 @@ export async function refreshDocumentStatsCache(
           db,
         ))(),
     ])
-    if (aggregations.error) return Result.error(aggregations.error)
-    if (dailyCount.error) return Result.error(dailyCount.error)
+    if (!Result.isOk(aggregations)) return Result.error(aggregations.error)
+    if (!Result.isOk(dailyCount)) return Result.error(dailyCount.error)
 
     const stats = { ...aggregations.value, dailyCount: dailyCount.value }
 

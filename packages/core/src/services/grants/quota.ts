@@ -15,20 +15,20 @@ export async function computeQuota(
   db = database,
 ) {
   const getting = await findWorkspaceSubscription({ workspace }, db)
-  if (getting.error) {
+  if (!Result.isOk(getting)) {
     return Result.error(getting.error)
   }
-  const subscription = getting.value
+  const subscription = getting.unwrap()
 
   const repository = new GrantsRepository(workspace.id)
   const counting = await repository.quotaSinceDate(
     type,
     subscription.billableFrom,
   )
-  if (counting.error) {
+  if (!Result.isOk(counting)) {
     return Result.error(counting.error)
   }
-  const quota = counting.value
+  const quota = counting.unwrap()
 
   return Result.ok({
     limit: quota,

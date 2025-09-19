@@ -62,7 +62,7 @@ export async function runDocumentAtCommit({
 
   // NOTE: We don't log these errors. If something happen
   // in getResolvedContent it will not appear in Latitude
-  if (result.error) return result
+  if (!Result.isOk(result)) return result
 
   // Note: run document retries always produce new traces)
   const $prompt = telemetry.prompt(context, {
@@ -71,7 +71,7 @@ export async function runDocumentAtCommit({
     promptUuid: document.documentUuid,
     experimentUuid: experiment?.uuid,
     externalId: customIdentifier,
-    template: result.value,
+    template: result.unwrap(),
     parameters: parameters,
     name: document.path.split('/').at(-1),
   })
@@ -79,12 +79,12 @@ export async function runDocumentAtCommit({
   const checker = new RunDocumentChecker({
     document,
     errorableUuid,
-    prompt: result.value,
+    prompt: result.unwrap(),
     parameters,
     userMessage,
   })
   const checkerResult = await checker.call()
-  if (checkerResult.error) {
+  if (!Result.isOk(checkerResult)) {
     await createDocumentLog({
       commit,
       data: {
@@ -92,7 +92,7 @@ export async function runDocumentAtCommit({
         customIdentifier,
         duration: 0,
         parameters,
-        resolvedContent: result.value,
+        resolvedContent: result.unwrap(),
         uuid: errorableUuid,
         source,
         experimentId: experiment?.id,
@@ -123,7 +123,7 @@ export async function runDocumentAtCommit({
   return Result.ok({
     ...runResult,
     errorableUuid,
-    resolvedContent: result.value,
+    resolvedContent: result.unwrap(),
     error: runResult.error.then(async (error) => {
       if (error) {
         await createChainRunError({
@@ -154,7 +154,7 @@ export async function runDocumentAtCommit({
           duration: duration ?? 0,
           experimentId: experiment?.id,
           parameters,
-          resolvedContent: result.value,
+          resolvedContent: result.unwrap(),
           source,
           uuid: errorableUuid,
         },

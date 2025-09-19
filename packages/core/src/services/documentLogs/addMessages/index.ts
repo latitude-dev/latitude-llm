@@ -46,7 +46,7 @@ export async function addMessages({
     workspace,
     documentLogUuid,
   })
-  if (dataResult.error) return dataResult
+  if (!Result.isOk(dataResult)) return dataResult
   const { document, commit, providerLog, globalConfig } = dataResult.unwrap()
 
   if (!providerLog.providerId) {
@@ -108,12 +108,12 @@ async function retrieveData({
 }) {
   const logsRepo = new DocumentLogsRepository(workspace.id)
   const logResult = await logsRepo.findByUuid(documentLogUuid)
-  if (logResult.error) return logResult
+  if (!Result.isOk(logResult)) return logResult
   const documentLog = logResult.value
 
   const commitsRepo = new CommitsRepository(workspace.id)
   const commitResult = await commitsRepo.find(documentLog.commitId)
-  if (commitResult.error) return commitResult
+  if (!Result.isOk(commitResult)) return commitResult
   const commit = commitResult.value
 
   const documentsRepo = new DocumentVersionsRepository(workspace.id)
@@ -121,13 +121,13 @@ async function retrieveData({
     commitUuid: commit?.uuid,
     documentUuid: documentLog.documentUuid,
   })
-  if (documentResult.error) return documentResult
+  if (!Result.isOk(documentResult)) return documentResult
   const document = documentResult.value
 
   const providerLogRepo = new ProviderLogsRepository(workspace.id)
   const providerLogResult =
     await providerLogRepo.findLastByDocumentLogUuid(documentLogUuid)
-  if (providerLogResult.error) return providerLogResult
+  if (!Result.isOk(providerLogResult)) return providerLogResult
   const providerLog = providerLogResult.value
 
   const metadataResult = await scanDocumentContent({
@@ -135,7 +135,7 @@ async function retrieveData({
     document,
     commit,
   })
-  if (metadataResult.error) return metadataResult
+  if (!Result.isOk(metadataResult)) return metadataResult
   const globalConfig = metadataResult.value.config as LatitudePromptConfig
 
   return Result.ok({ commit, document, providerLog, globalConfig })

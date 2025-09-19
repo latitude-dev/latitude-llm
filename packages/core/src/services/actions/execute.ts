@@ -33,7 +33,7 @@ export async function executeAction<T extends ActionType = ActionType>(
   }
 
   const parsing = specification.parameters.safeParse(parameters)
-  if (parsing.error) {
+  if (!Result.isOk(parsing)) {
     return Result.error(new BadRequestError('Invalid action parameters'))
   }
 
@@ -47,7 +47,7 @@ export async function executeAction<T extends ActionType = ActionType>(
     async (db) => {
       if (onboarding && !onboarding.completedAt) {
         const marking = await markWorkspaceOnboardingComplete({ onboarding }, tx) // prettier-ignore
-        if (marking.error) {
+        if (!Result.isOk(marking)) {
           return Result.error(marking.error)
         }
       }
@@ -57,7 +57,7 @@ export async function executeAction<T extends ActionType = ActionType>(
         db,
         tx,
       )
-      if (executing.error) {
+      if (!Result.isOk(executing)) {
         return Result.error(executing.error)
       }
       const result = executing.value

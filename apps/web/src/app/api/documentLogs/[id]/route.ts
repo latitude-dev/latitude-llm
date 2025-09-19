@@ -1,4 +1,5 @@
 import { Workspace } from '@latitude-data/core/browser'
+import { Result } from '@latitude-data/core/lib/Result'
 import { fetchDocumentLogWithMetadata } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithMetadata'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
@@ -22,7 +23,7 @@ export const GET = errorHandler(
         documentLogId: +id,
       })
 
-      if (result.error) {
+      if (!Result.isOk(result)) {
         return NextResponse.json(
           { message: `Document Log not found with uuid: ${id}` },
           { status: 404 },

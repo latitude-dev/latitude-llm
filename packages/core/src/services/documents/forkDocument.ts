@@ -70,15 +70,15 @@ async function createDocuments({
     ),
   )
 
-  if (newDocs.some((r) => r.error)) {
-    const result = newDocs.find((r) => r.error)
+  if (newDocs.some((r) => !Result.isOk(r))) {
+    const result = newDocs.find((r) => !Result.isOk(r))
     const error = result!.error!
     return Result.error(
       new Error(`Failed to create documents: ${error.message}`),
     )
   }
 
-  const docs = newDocs.map((r) => r.value).filter((d) => d !== undefined)
+  const docs = newDocs.map((r) => r.unwrap()).filter((d) => d !== undefined)
   const copiedDocument = docs.find((d) => d.path === origin.document.path)!
 
   return Result.ok({ documents: docs, copiedDocument })

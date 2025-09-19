@@ -109,7 +109,7 @@ export async function createRowsFromUploadedDataset(
   const repo = new DatasetsRepository(workspaceId)
   const datasetResult = await repo.find(datasetId)
 
-  if (datasetResult.error) {
+  if (!Result.isOk(datasetResult)) {
     onError?.(new Error('Dataset not found'))
     return Result.error(datasetResult.error)
   }
@@ -134,7 +134,7 @@ export async function createRowsFromUploadedDataset(
 
       const deleteResult = await disk.delete(fileKey)
 
-      if (deleteResult.error) {
+      if (!Result.isOk(deleteResult)) {
         throw new Error(
           `Error deleting file: ${deleteResult.error.message} datasetId: ${datasetId} workspaceId: ${workspaceId}`,
         )
@@ -167,7 +167,7 @@ export async function createRowsFromUploadedDataset(
       transaction,
     )
 
-    if (insertResult.error) {
+    if (!Result.isOk(insertResult)) {
       onError?.(insertResult.error)
       return Result.error(insertResult.error)
     } else {

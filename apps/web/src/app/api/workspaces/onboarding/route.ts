@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authHandler } from '$/middlewares/authHandler'
 import { WorkspaceDto } from '@latitude-data/core/browser'
 import { errorHandler } from '$/middlewares/errorHandler'
+import { Result } from '@latitude-data/core/lib/Result'
 
 export const GET = errorHandler(
   authHandler(
@@ -12,7 +13,7 @@ export const GET = errorHandler(
           workspace,
         })
 
-        if (result.error) {
+        if (!Result.isOk(result)) {
           return NextResponse.json({
             currentStep: 1,
             completed: false,

@@ -27,7 +27,7 @@ export async function completeExperiment(
     return Result.ok(result[0]! as Experiment)
   })
 
-  if (updateResult.error) {
+  if (!Result.isOk(updateResult)) {
     return Result.error(updateResult.error as LatitudeError)
   }
 

@@ -3,6 +3,7 @@ import { findSharedDocumentCached } from '$/app/(public)/_data_access'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { findForkedDocument } from '@latitude-data/core/services/publishedDocuments/findForkedDocument'
 import { ForkedDocument } from './_components/ForkedDocument'
+import { Result } from '@latitude-data/core/lib/Result'
 
 export default async function ForkedDocumentPage({
   params,
@@ -15,9 +16,11 @@ export default async function ForkedDocumentPage({
   const { commitUuid, documentUuid } = await searchParams
   const { workspace, user } = await getCurrentUserOrRedirect()
 
-  const result = await findSharedDocumentCached(publishedDocumentUuid)
+  const sharedDocumentResult = await findSharedDocumentCached(
+    publishedDocumentUuid,
+  )
 
-  if (result.error || !user || !workspace) return notFound()
+  if (sharedDocumentResult.error || !user || !workspace) return notFound()
 
   const forkedResult = await findForkedDocument({
     workspace,
@@ -26,10 +29,11 @@ export default async function ForkedDocumentPage({
     documentUuid,
   })
 
-  if (forkedResult.error) return notFound()
+  if (!Result.isOk(forkedResult)) return notFound()
 
-  const { project, commit, document } = forkedResult.value
-  const shared = result.value.shared
+  const { project, commit, document } = forkedResult.unwrap()
+  const sharedDocument = sharedDocumentResult.unwrap()
+  const shared = sharedDocument.shared
 
   return (
     <ForkedDocument

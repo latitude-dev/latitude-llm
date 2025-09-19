@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation'
 
 import { WorkspaceDashboard } from './_components/WorkspaceDashboard'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Result } from '@latitude-data/core/lib/Result'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -30,7 +31,7 @@ export default async function WorkspaceInfoPage({ params }: Props) {
     userId: user.id,
   })
 
-  if (result.error) {
+  if (!Result.isOk(result)) {
     return (
       <div className='container mx-auto p-6 max-w-4xl'>
         <div className='space-y-6'>
@@ -52,5 +53,5 @@ export default async function WorkspaceInfoPage({ params }: Props) {
     )
   }
 
-  return <WorkspaceDashboard workspace={result.value} />
+  return <WorkspaceDashboard workspace={result.unwrap()} />
 }

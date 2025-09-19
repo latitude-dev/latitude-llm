@@ -51,7 +51,7 @@ export async function getCopilotDataForGenerateToolResponses() {
   if (CACHED_COPILOT_DATA !== undefined) return Result.ok(CACHED_COPILOT_DATA)
 
   const credentialsResult = getCopilotCredentials()
-  if (credentialsResult.error) return credentialsResult
+  if (!Result.isOk(credentialsResult)) return credentialsResult
 
   const {
     apiKey: token,
@@ -61,7 +61,7 @@ export async function getCopilotDataForGenerateToolResponses() {
   const apiKeyResult = await unsafelyGetApiKeyByToken({
     token,
   })
-  if (apiKeyResult.error) return buildError({ data: 'API key' })
+  if (!Result.isOk(apiKeyResult)) return buildError({ data: 'API key' })
 
   const workspace = await unsafelyFindWorkspace(apiKeyResult.value.workspaceId)
   if (!workspace) return buildError({ data: 'workspace' })
@@ -71,7 +71,7 @@ export async function getCopilotDataForGenerateToolResponses() {
     projectId,
     uuid: env.COPILOT_GENERATE_TOOL_RESPONSES_COMMIT_UUID || HEAD_COMMIT,
   })
-  if (commitResult.error) return buildError({ data: 'head commit' })
+  if (!Result.isOk(commitResult)) return buildError({ data: 'head commit' })
 
   const commit = commitResult.value!
   const documentScope = new DocumentVersionsRepository(workspace.id)
@@ -79,7 +79,7 @@ export async function getCopilotDataForGenerateToolResponses() {
     commit,
     path: generateToolResponsesPath,
   })
-  if (documentResult.error) return buildError({ data: 'document' })
+  if (!Result.isOk(documentResult)) return buildError({ data: 'document' })
 
   const document = documentResult.value
   CACHED_COPILOT_DATA = { workspace, commit, document }

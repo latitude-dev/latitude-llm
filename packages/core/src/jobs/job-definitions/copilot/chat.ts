@@ -3,6 +3,7 @@ import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { clearCancelJobFlag, isJobCancelled } from '../../../lib/cancelJobs'
 import { LatitudeError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
 import {
   DocumentLogsRepository,
   ProjectsRepository,
@@ -66,16 +67,16 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
 
     const projectRepo = new ProjectsRepository(workspace.id)
     const projectResult = await projectRepo.find(projectId)
-    if (projectResult.error) {
+    if (!Result.isOk(projectResult)) {
       await emitError({ workspaceId, threadUuid, error: projectResult.error })
       return projectResult
     }
-    const project = projectResult.value
+    const project = projectResult.unwrap()
 
     const usersScope = new UsersRepository(workspace.id)
     const userResult = await usersScope.find(userId)
 
-    if (!userResult.ok) {
+    if (!Result.isOk(userResult)) {
       await emitError({
         workspaceId,
         threadUuid,
@@ -86,7 +87,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
     const user = userResult.unwrap()
 
     const copilotResult = await getCopilotDocument(debugVersionUuid)
-    if (!copilotResult.ok) {
+    if (!Result.isOk(copilotResult)) {
       await emitError({
         workspaceId,
         threadUuid,
@@ -103,7 +104,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
 
     const documentLogsScope = new DocumentLogsRepository(copilotWorkspace.id)
     const documentLogResult = await documentLogsScope.findByUuid(threadUuid)
-    if (!documentLogResult.ok) {
+    if (!Result.isOk(documentLogResult)) {
       // Chat still does not exist, we create a new one
       const runResult = await runNewLatte({
         copilotWorkspace,
@@ -119,7 +120,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
         debugVersionUuid,
       })
 
-      if (!runResult.ok) {
+      if (!Result.isOk(runResult)) {
         await emitError({
           workspaceId,
           threadUuid,
@@ -143,7 +144,7 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
       abortSignal: controller.signal,
       debugVersionUuid,
     })
-    if (!runResult.ok) {
+    if (!Result.isOk(runResult)) {
       await emitError({
         workspaceId,
         threadUuid,

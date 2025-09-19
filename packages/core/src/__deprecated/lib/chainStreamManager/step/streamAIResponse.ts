@@ -18,6 +18,7 @@ import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
 import { performAgentMessagesOptimization } from './agentOptimization'
 import { BACKGROUND } from '../../../../telemetry'
+import { Result } from '../../../../lib/Result'
 
 type StreamProps = {
   controller: ReadableStreamDefaultController
@@ -131,7 +132,7 @@ export async function executeAIResponse({
 
   const checkResult = checkValidStream({ type: aiResult.type })
 
-  if (checkResult.error) throw checkResult.error
+  if (!Result.isOk(checkResult)) throw checkResult.error
 
   const { error, finishReason } = await consumeStream({
     controller,

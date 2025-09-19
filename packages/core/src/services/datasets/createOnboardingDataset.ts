@@ -161,7 +161,7 @@ export async function createOnboardingDataset(
       transaction,
     )
 
-    if (rowsResult.error) return rowsResult
+    if (!Result.isOk(rowsResult)) return rowsResult
 
     return Result.ok(createdDataset)
   })

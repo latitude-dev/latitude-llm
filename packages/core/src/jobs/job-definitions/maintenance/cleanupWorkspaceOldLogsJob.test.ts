@@ -8,6 +8,7 @@ import { eq } from 'drizzle-orm'
 import { Providers } from '@latitude-data/constants'
 import { SubscriptionPlan } from '../../../plans'
 import { updateWorkspace } from '../../../services/workspaces'
+import { Result } from '../../../lib/Result'
 
 describe('cleanupWorkspaceOldLogsJob', () => {
   let workspace1: any
@@ -118,10 +119,11 @@ describe('cleanupWorkspaceOldLogsJob', () => {
     // Verify the result
     expect(result.ok).toBe(true)
 
-    if (result.ok) {
-      expect(result.value!.deletedDocumentLogs).toBe(2) // Only old logs from workspace1
-      expect(result.value!.deletedProviderLogs).toBe(6) // Only provider logs for old document logs from workspace1 (2 factory + 1 manual per document log)
-      expect(result.value!.workspaceId).toBe(workspace1.id)
+    if (Result.isOk(result)) {
+      const cleanupData = result.unwrap()!
+      expect(cleanupData.deletedDocumentLogs).toBe(2) // Only old logs from workspace1
+      expect(cleanupData.deletedProviderLogs).toBe(6) // Only provider logs for old document logs from workspace1 (2 factory + 1 manual per document log)
+      expect(cleanupData.workspaceId).toBe(workspace1.id)
     }
 
     // Verify old document logs from workspace1 were deleted
@@ -181,7 +183,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
     const result = await cleanupWorkspaceOldLogsJob(mockJob)
 
     expect(result.ok).toBe(true)
-    if (result.ok) expect(result.value).toBeUndefined()
+    if (Result.isOk(result)) expect(result.unwrap()).toBeUndefined()
   })
 
   it('does nothing if team v1 plan', async () => {
@@ -198,7 +200,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
     const result = await cleanupWorkspaceOldLogsJob(mockJob)
 
     expect(result.ok).toBe(true)
-    if (result.ok) expect(result.value).toBeUndefined()
+    if (Result.isOk(result)) expect(result.unwrap()).toBeUndefined()
   })
 
   it('does nothing if team v2 plan', async () => {
@@ -215,7 +217,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
     const result = await cleanupWorkspaceOldLogsJob(mockJob)
 
     expect(result.ok).toBe(true)
-    if (result.ok) expect(result.value).toBeUndefined()
+    if (Result.isOk(result)) expect(result.unwrap()).toBeUndefined()
   })
 
   it('does nothing if enterprise plan', async () => {
@@ -232,7 +234,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
     const result = await cleanupWorkspaceOldLogsJob(mockJob)
 
     expect(result.ok).toBe(true)
-    if (result.ok) expect(result.value).toBeUndefined()
+    if (Result.isOk(result)) expect(result.unwrap()).toBeUndefined()
   })
 
   it('should handle empty workspace with no logs', async () => {
@@ -243,10 +245,11 @@ describe('cleanupWorkspaceOldLogsJob', () => {
     const result = await cleanupWorkspaceOldLogsJob(mockJob)
 
     expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value!.deletedDocumentLogs).toBe(0)
-      expect(result.value!.deletedProviderLogs).toBe(0)
-      expect(result.value!.workspaceId).toBe(workspace1.id)
+    if (Result.isOk(result)) {
+      const cleanupData = result.unwrap()!
+      expect(cleanupData.deletedDocumentLogs).toBe(0)
+      expect(cleanupData.deletedProviderLogs).toBe(0)
+      expect(cleanupData.workspaceId).toBe(workspace1.id)
     }
   })
 
@@ -267,10 +270,11 @@ describe('cleanupWorkspaceOldLogsJob', () => {
     const result = await cleanupWorkspaceOldLogsJob(mockJob)
 
     expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value!.deletedDocumentLogs).toBe(0)
-      expect(result.value!.deletedProviderLogs).toBe(0) // Recent logs should not be deleted (2 provider logs per document log from factory)
-      expect(result.value!.workspaceId).toBe(workspace1.id)
+    if (Result.isOk(result)) {
+      const cleanupData = result.unwrap()!
+      expect(cleanupData.deletedDocumentLogs).toBe(0)
+      expect(cleanupData.deletedProviderLogs).toBe(0) // Recent logs should not be deleted (2 provider logs per document log from factory)
+      expect(cleanupData.workspaceId).toBe(workspace1.id)
     }
   })
 
@@ -292,10 +296,11 @@ describe('cleanupWorkspaceOldLogsJob', () => {
     const result = await cleanupWorkspaceOldLogsJob(mockJob)
 
     expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value!.deletedDocumentLogs).toBe(1)
-      expect(result.value!.deletedProviderLogs).toBe(0) // No provider logs to delete
-      expect(result.value!.workspaceId).toBe(workspace1.id)
+    if (Result.isOk(result)) {
+      const cleanupData = result.unwrap()!
+      expect(cleanupData.deletedDocumentLogs).toBe(1)
+      expect(cleanupData.deletedProviderLogs).toBe(0) // No provider logs to delete
+      expect(cleanupData.workspaceId).toBe(workspace1.id)
     }
   })
 
@@ -335,12 +340,13 @@ describe('cleanupWorkspaceOldLogsJob', () => {
     const result = await cleanupWorkspaceOldLogsJob(mockJob)
 
     expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value!.deletedDocumentLogs).toBe(1) // Only the 31-day-old log
-      expect(result.value!.workspaceId).toBe(workspace1.id)
+    if (Result.isOk(result)) {
+      const cleanupData = result.unwrap()!
+      expect(cleanupData.deletedDocumentLogs).toBe(1) // Only the 31-day-old log
+      expect(cleanupData.workspaceId).toBe(workspace1.id)
 
       // Verify cutoff date in result is approximately 30 days ago
-      const cutoffDate = new Date(result.value!.cutoffDate)
+      const cutoffDate = new Date(cleanupData.cutoffDate)
       const expectedCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
       const diffMs = Math.abs(cutoffDate.getTime() - expectedCutoff.getTime())
       const diffDays = diffMs / (1000 * 60 * 60 * 24)
@@ -381,9 +387,10 @@ describe('cleanupWorkspaceOldLogsJob', () => {
     const result = await cleanupWorkspaceOldLogsJob(mockJob)
 
     expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value!.deletedDocumentLogs).toBe(2) // Both old logs from workspace1
-      expect(result.value!.workspaceId).toBe(workspace1.id)
+    if (Result.isOk(result)) {
+      const cleanupData = result.unwrap()!
+      expect(cleanupData.deletedDocumentLogs).toBe(2) // Both old logs from workspace1
+      expect(cleanupData.workspaceId).toBe(workspace1.id)
     }
   })
 })

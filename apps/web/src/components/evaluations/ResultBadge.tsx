@@ -1,4 +1,5 @@
 import { EvaluationMetric, EvaluationType } from '@latitude-data/constants'
+import { Result } from '@latitude-data/core/lib/Result'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { EVALUATION_SPECIFICATIONS, ResultBadgeProps } from './index'
@@ -10,7 +11,7 @@ export default function ResultBadge<
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) return null
 
-  if (result.error) {
+  if (!Result.isOk(result)) {
     return (
       <Tooltip asChild trigger={<Badge variant='warningMuted'>Error</Badge>}>
         Evaluation {evaluation.name} failed with the following error:{' '}

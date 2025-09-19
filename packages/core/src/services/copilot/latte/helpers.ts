@@ -103,7 +103,8 @@ export async function getCopilotDocument(
   LatitudeError
 > {
   const supportResult = assertCopilotIsSupported()
-  if (!supportResult.ok) return supportResult as ErrorResult<LatitudeError>
+  if (!Result.isOk(supportResult))
+    return supportResult as ErrorResult<LatitudeError>
 
   const project = await unsafelyFindProject(env.COPILOT_PROJECT_ID!)
   if (!project) {
@@ -122,21 +123,21 @@ export async function getCopilotDocument(
     projectId: project.id,
     debugVersionUuid,
   })
-  if (!commitResult.ok || !commitResult.value) {
+  if (!Result.isOk(commitResult)) {
     return Result.error(
       new NotImplementedError(
         `Copilot is not supported in this environment. The desired commit does not exist in $COPILOT_PROJECT_ID`,
       ),
     )
   }
-  const commit = commitResult.unwrap()!
+  const commit = commitResult.unwrap()
 
   const documentScope = new DocumentVersionsRepository(workspace.id)
   const documentResult = await documentScope.getDocumentByPath({
     path: env.COPILOT_LATTE_PROMPT_PATH!,
     commit,
   })
-  if (!documentResult.ok) {
+  if (!Result.isOk(documentResult)) {
     return Result.error(
       new NotImplementedError(
         `Copilot is not supported in this environment. There is no document with path $COPILOT_LATTE_PROMPT_PATH`,
@@ -235,14 +236,14 @@ export async function scanDocuments(
 }> {
   const providersScope = new ProviderApiKeysRepository(workspace.id, db)
   const providersResult = await providersScope.findAll()
-  if (!providersResult.ok) {
+  if (!Result.isOk(providersResult)) {
     return Result.error(providersResult.error!)
   }
   const providers = providersResult.unwrap()
 
   const integrationsScope = new IntegrationsRepository(workspace.id, db)
   const integrationsResult = await integrationsScope.findAll()
-  if (!integrationsResult.ok) {
+  if (!Result.isOk(integrationsResult)) {
     return Result.error(integrationsResult.error!)
   }
   const integrations = integrationsResult.unwrap()
@@ -254,7 +255,7 @@ export async function scanDocuments(
     },
     db,
   )
-  if (!agentsToolMapResult.ok) {
+  if (!Result.isOk(agentsToolMapResult)) {
     return Result.error(agentsToolMapResult.error!)
   }
   const agentToolsMap = agentsToolMapResult.unwrap()

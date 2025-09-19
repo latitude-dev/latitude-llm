@@ -27,7 +27,7 @@ export function getAgentsAsToolCallsResults({
 
   return toolCalls.map(async (toolCall) => {
     const allDocsResult = await promisedAllDocsResult
-    if (allDocsResult.error) return allDocsResult
+    if (!Result.isOk(allDocsResult)) return allDocsResult
     const allDocs = allDocsResult.unwrap()
 
     const resolvedTool = resolvedTools[toolCall.name]!
@@ -48,13 +48,13 @@ export function getAgentsAsToolCallsResults({
       parameters: toolCall.arguments,
       source: LogSources.AgentAsTool,
     })
-    if (result.error) return result
+    if (!Result.isOk(result)) return result
 
     const response = result.unwrap()
     const error = await response.error
     if (error) return Result.error(error)
 
-    const resultToolCalls = await result.unwrap().toolCalls
+    const resultToolCalls = await response.toolCalls
     const [agentToolCalls, otherToolCalls] = resultToolCalls.reduce(
       (
         [agentToolCalls, otherToolCalls]: [ToolCall[], ToolCall[]],

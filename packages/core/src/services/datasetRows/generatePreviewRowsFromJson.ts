@@ -34,7 +34,7 @@ export function extractHeadersFromFirstRow({
   hashAlgorithm: HashAlgorithmFn
 }): TypedResult<{ columns: Column[]; rows: JsonRow[] }, Error> {
   const result = parseStringRows(json)
-  if (result.error) return result
+  if (!Result.isOk(result)) return result
 
   const rows = result.value
   const row = rows[0]
@@ -58,7 +58,7 @@ export function generatePreviewRowsFromJson({
   hashAlgorithm?: HashAlgorithmFn
 }) {
   const result = extractHeadersFromFirstRow({ json, hashAlgorithm })
-  if (result.error) return result
+  if (!Result.isOk(result)) return result
 
   const { columns, rows } = result.value
   const previewRows = rows.map((row) =>

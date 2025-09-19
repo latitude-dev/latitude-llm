@@ -238,7 +238,8 @@ This is my prompt`.trimStart(),
     })
 
     expect(result.ok).toBe(true)
-    expect(result.unwrap().content).toBe(`---
+    const document = result.unwrap()
+    expect(document.content).toBe(`---
 
 temperature: 1
 ---

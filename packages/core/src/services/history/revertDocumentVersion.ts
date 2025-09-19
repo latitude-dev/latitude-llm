@@ -98,7 +98,7 @@ export async function getChangesToRevertDocumentChanges({
     documentCommitUuid,
     documentUuid,
   })
-  if (documentReversionDetails.error) {
+  if (!Result.isOk(documentReversionDetails)) {
     return Result.error(documentReversionDetails.error)
   }
   const { targetDraft, changedDocument, originalDocument, draftDocument } =
@@ -111,7 +111,7 @@ export async function getChangesToRevertDocumentChanges({
     originalDocument,
   })
 
-  if (changeResult.error) return Result.error(changeResult.error)
+  if (!Result.isOk(changeResult)) return Result.error(changeResult.error)
   const change = changeResult.unwrap()
 
   const isCreated = change.deletedAt === null
@@ -172,7 +172,7 @@ export async function revertChangesToDocument({
     documentCommitUuid,
     documentUuid,
   })
-  if (documentReversionDetails.error) {
+  if (!Result.isOk(documentReversionDetails)) {
     return Result.error(documentReversionDetails.error)
   }
   const { targetDraft, changedDocument, originalDocument, changedCommit } =
@@ -185,7 +185,7 @@ export async function revertChangesToDocument({
     originalDocument,
   })
 
-  if (documentVersionChangesResult.error) {
+  if (!Result.isOk(documentVersionChangesResult)) {
     return Result.error(documentVersionChangesResult.error)
   }
 
@@ -207,7 +207,7 @@ export async function revertChangesToDocument({
         },
       })
 
-  if (finalDraft.error) return Result.error(finalDraft.error)
+  if (!Result.isOk(finalDraft)) return Result.error(finalDraft.error)
 
   await updateDocument({
     commit: finalDraft.value,

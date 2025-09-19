@@ -37,7 +37,7 @@ export async function refreshProjectStatsCache(
     const approximatedCount = await repository.approximatedCountByProject({
       projectId: project.id,
     })
-    if (approximatedCount.error) {
+    if (!Result.isOk(approximatedCount)) {
       return Result.error(approximatedCount.error)
     }
 
@@ -60,7 +60,7 @@ export async function refreshProjectStatsCache(
       { workspaceId: project.workspaceId, projectId, forceRefresh: true },
       db,
     )
-    if (stats.error) {
+    if (!Result.isOk(stats)) {
       return Result.error(stats.error)
     }
 

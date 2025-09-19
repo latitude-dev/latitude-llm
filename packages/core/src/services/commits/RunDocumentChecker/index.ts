@@ -75,7 +75,7 @@ export class RunDocumentChecker {
         parameters: this.parameters,
         config: metadata.config as LatitudePromptConfig,
       })
-      if (processedParameters.error) return processedParameters
+      if (!Result.isOk(processedParameters)) return processedParameters
 
       return Result.ok({
         chain: new Chain({
@@ -211,13 +211,13 @@ export class RunDocumentChecker {
           )
         }
         const fileResult = await this.getFileMetadata(value)
-        if (fileResult.error) return fileResult
+        if (!Result.isOk(fileResult)) return fileResult
         parameters[paramName] = fileResult.unwrap()
         return Result.nil()
       }),
     )
 
-    const fileError = fileResults.find((r) => r.error)
+    const fileError = fileResults.find((r) => !Result.isOk(r))
     if (fileError) return fileError as ErrorResult<LatitudeError>
     return Result.ok(parameters)
   }

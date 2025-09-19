@@ -25,6 +25,7 @@ import {
 } from '@latitude-data/web-ui/atoms/Table'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Ref } from 'react'
+import { Result } from '@latitude-data/core/lib/Result'
 
 function EvaluationResultsTableRow<
   T extends EvaluationType = EvaluationType,
@@ -61,7 +62,7 @@ function EvaluationResultsTableRow<
         preventDefault
         align='left'
         onClick={() => {
-          if (result.error) return
+          if (!Result.isOk(result)) return
           toggleRow(result.uuid, !isSelected(result.uuid))
         }}
         className={cn({

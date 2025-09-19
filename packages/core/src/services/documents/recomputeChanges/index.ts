@@ -226,9 +226,9 @@ export async function recomputeChanges(
       { commit: draft, workspaceId: workspace.id },
       tx,
     )
-    if (result.error) return result
+    if (!Result.isOk(result)) return result
 
-    const { headDocuments, documentsInDrafCommit } = result.value
+    const { headDocuments, documentsInDrafCommit } = result.unwrap()
     const { mergedDocuments, draftDocuments } = getMergedAndDraftDocuments({
       headDocuments,
       documentsInDrafCommit,
@@ -236,7 +236,8 @@ export async function recomputeChanges(
 
     const providersScope = new ProviderApiKeysRepository(workspace.id, tx)
     const providersResult = await providersScope.findAll()
-    if (providersResult.error) return Result.error(providersResult.error)
+    if (!Result.isOk(providersResult))
+      return Result.error(providersResult.error)
 
     const agentToolsMapResult = await buildAgentsToolsMap(
       {
@@ -248,17 +249,17 @@ export async function recomputeChanges(
 
     const integrationsScope = new IntegrationsRepository(workspace.id, tx)
     const integrations = await integrationsScope.findAll()
-    if (integrations.error) return Result.error(integrations.error)
-    if (agentToolsMapResult.error)
+    if (!Result.isOk(integrations)) return Result.error(integrations.error)
+    if (!Result.isOk(agentToolsMapResult))
       return Result.error(agentToolsMapResult.error)
 
     const { documents: documentsToUpdate, errors } =
       await resolveDocumentChanges({
         originalDocuments: mergedDocuments,
         newDocuments: draftDocuments,
-        providers: providersResult.value,
-        agentToolsMap: agentToolsMapResult.value,
-        integrationNames: integrations.value.map((i) => i.name),
+        providers: providersResult.unwrap(),
+        agentToolsMap: agentToolsMapResult.unwrap(),
+        integrationNames: integrations.unwrap().map((i) => i.name),
       })
 
     const newDraftDocuments = (

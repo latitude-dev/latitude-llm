@@ -263,11 +263,13 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
    * NOTE: By default we don't include deleted documents
    */
   async getDocumentsAtCommit(commit?: Commit) {
-    const result = await this.getAllDocumentsAtCommit({ commit })
-    if (result.error) return result
+    const documentsResult = await this.getAllDocumentsAtCommit({ commit })
+    if (!Result.isOk(documentsResult)) return documentsResult
 
-    if (this.opts.includeDeleted) return result
-    return Result.ok(result.value.filter((d) => d.deletedAt === null))
+    if (this.opts.includeDeleted) return documentsResult
+
+    const documents = documentsResult.unwrap()
+    return Result.ok(documents.filter((d) => d.deletedAt === null))
   }
 
   async getDocumentAtCommit({
@@ -280,7 +282,7 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
       projectId,
       uuid: commitUuid,
     })
-    if (commitResult.error) return commitResult
+    if (!Result.isOk(commitResult)) return commitResult
     const commit = commitResult.unwrap()
 
     const documentInCommit = await this.db

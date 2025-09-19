@@ -12,9 +12,12 @@ export default async function ForkedDocumentPage({
   const { publishedDocumentUuid } = await params
   const { workspace, user } = await getCurrentUserOrRedirect()
 
-  const result = await findSharedDocumentCached(publishedDocumentUuid)
+  const sharedDocumentResult = await findSharedDocumentCached(
+    publishedDocumentUuid,
+  )
 
-  if (result.error || !user || !workspace) return notFound()
+  if (sharedDocumentResult.error || !user || !workspace) return notFound()
 
-  return <ForkDocument shared={result.value.shared} />
+  const sharedDocument = sharedDocumentResult.unwrap()
+  return <ForkDocument shared={sharedDocument.shared} />
 }

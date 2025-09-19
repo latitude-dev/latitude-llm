@@ -107,7 +107,10 @@ describe('revokeGrant', () => {
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(30)
   })
 
@@ -123,19 +126,28 @@ describe('revokeGrant', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(0)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(0)
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(0)
   })
 
@@ -171,19 +183,28 @@ describe('revokeGrant', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(5)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual('unlimited')
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(0)
   })
 
@@ -219,19 +240,28 @@ describe('revokeGrant', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(5)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual('unlimited')
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(0)
   })
 
@@ -258,19 +288,28 @@ describe('revokeGrant', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(5)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual('unlimited')
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(20)
   })
 
@@ -323,19 +362,28 @@ describe('revokeGrant', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(0)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(0)
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(0)
   })
 })

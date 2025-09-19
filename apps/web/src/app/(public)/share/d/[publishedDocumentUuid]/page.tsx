@@ -4,6 +4,7 @@ import { ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 
 import { SharedDocument } from './_components/SharedDocument'
+import { Result } from '@latitude-data/core/lib/Result'
 
 async function buildQueryParams({
   searchParams,
@@ -57,7 +58,7 @@ export default async function SharedDocumentPage({
   const { publishedDocumentUuid } = await params
   const result = await findSharedDocumentCached(publishedDocumentUuid)
 
-  if (result.error) return notFound()
+  if (!Result.isOk(result)) return notFound()
 
   const queryParams = await buildQueryParams({ searchParams })
   const { shared, metadata } = result.value

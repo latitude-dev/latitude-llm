@@ -5,6 +5,7 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { hydrateProviderLog } from '@latitude-data/core/services/providerLogs/hydrate'
+import { Result } from '@latitude-data/core/lib/Result'
 
 export const GET = errorHandler(
   authHandler(
@@ -32,7 +33,7 @@ export const GET = errorHandler(
         Number(providerLogId),
       )
 
-      if (providerLogResult.error) {
+      if (!Result.isOk(providerLogResult)) {
         return NextResponse.json(
           { message: 'Provider log not found' },
           { status: 404 },

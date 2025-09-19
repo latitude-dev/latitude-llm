@@ -34,7 +34,7 @@ async function getTriggerName({
     commitUuid: commit.uuid,
     documentUuid: documentTrigger.documentUuid,
   })
-  if (documentResult.error) return documentResult
+  if (!Result.isOk(documentResult)) return documentResult
 
   const document = documentResult.unwrap()
   const docName = document.path.split('/').pop()!

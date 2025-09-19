@@ -4,6 +4,7 @@ import { findProjectByIdForAdmin } from '$/data-access'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { Result } from '@latitude-data/core/lib/Result'
 
 import { ProjectDashboard } from './_components/ProjectDashboard'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -30,7 +31,7 @@ export default async function ProjectInfoPage({ params }: Props) {
     userId: user.id,
   })
 
-  if (result.error) {
+  if (!Result.isOk(result)) {
     return (
       <div className='container mx-auto p-6 max-w-4xl'>
         <div className='space-y-6'>

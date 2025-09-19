@@ -37,7 +37,7 @@ export async function getUserFromCredentials({
   if (!user) return notFoundWithEmail(email)
 
   const wpResult = await getFirstWorkspace({ userId: user.id })
-  if (wpResult.error) {
+  if (!Result.isOk(wpResult)) {
     return Result.error(wpResult.error)
   }
 

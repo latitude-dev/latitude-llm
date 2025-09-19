@@ -23,7 +23,8 @@ export async function resetToDocumentVersion(
   return await transaction.call(async (tx) => {
     const docRepo = new DocumentVersionsRepository(workspace!.id, tx)
     const documentsInDraft = await docRepo.getDocumentsAtCommit(draft)
-    if (documentsInDraft.error) return Result.error(documentsInDraft.error)
+    if (!Result.isOk(documentsInDraft))
+      return Result.error(documentsInDraft.error)
 
     if (
       documentsInDraft.value.some(

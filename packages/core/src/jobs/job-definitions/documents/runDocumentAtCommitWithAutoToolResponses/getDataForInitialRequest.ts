@@ -30,13 +30,13 @@ export async function getDataForInitialRequest({
     commitUuid,
   })
 
-  if (documentResult.error) return documentResult
+  if (!Result.isOk(documentResult)) return documentResult
 
   const commitResult = await commitsScope.getCommitByUuid({
     projectId,
     uuid: commitUuid,
   })
-  if (commitResult.error) return commitResult
+  if (!Result.isOk(commitResult)) return commitResult
 
   return Result.ok({
     workspace,

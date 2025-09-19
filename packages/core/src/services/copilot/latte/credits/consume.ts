@@ -34,8 +34,8 @@ export async function consumeLatteCredits(
 ) {
   let credits = LATTE_MINIMUM_CREDITS_PER_REQUEST
   const computing = await computeLatteCredits({ usage, workspace }, tx)
-  if (computing.error) error = computing.error
-  else credits = computing.value
+  if (!Result.isOk(computing)) error = computing.error
+  else credits = computing.unwrap()
 
   const billable = !error
 
@@ -56,10 +56,10 @@ export async function consumeLatteCredits(
 
     return Result.ok(request)
   })
-  if (consuming.error) {
+  if (!Result.isOk(consuming)) {
     return Result.error(consuming.error)
   }
-  const request = consuming.value
+  const request = consuming.unwrap()
 
   try {
     const cache = await getCache()
@@ -70,8 +70,8 @@ export async function consumeLatteCredits(
   }
 
   const counting = await usageLatteCredits({ workspace, fresh: true })
-  if (counting.ok) {
-    const usage = counting.value
+  if (Result.isOk(counting)) {
+    const usage = counting.unwrap()
     WebsocketClient.sendEvent('latteThreadUpdate', {
       workspaceId: workspace.id,
       data: { type: 'usage', threadUuid, usage },

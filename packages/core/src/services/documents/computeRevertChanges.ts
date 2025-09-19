@@ -30,7 +30,8 @@ export async function computeDocumentRevertChanges(
 
   const docsRepo = new DocumentVersionsRepository(workspace!.id, db)
   const documentsInDraft = await docsRepo.getDocumentsAtCommit(draft)
-  if (documentsInDraft.error) return Result.error(documentsInDraft.error)
+  if (!Result.isOk(documentsInDraft))
+    return Result.error(documentsInDraft.error)
 
   const changesToRevert: Partial<DocumentVersion>[] =
     getChangesToRevertDocuments({

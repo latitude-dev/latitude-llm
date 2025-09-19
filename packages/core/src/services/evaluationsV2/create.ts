@@ -42,7 +42,7 @@ export async function createEvaluationV2<
       { mode: 'create', settings, options, document, commit, workspace },
       tx,
     )
-    if (validation.error) {
+    if (!Result.isOk(validation)) {
       return Result.error(validation.error)
     }
     settings = validation.value.settings

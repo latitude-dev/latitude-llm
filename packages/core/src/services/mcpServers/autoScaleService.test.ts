@@ -45,7 +45,7 @@ describe('autoScaleInactiveServers', () => {
 
     // Verify the result
     expect(result.ok).toBe(true)
-    expect(result.value).toBe(1)
+    expect(result.unwrap()).toBe(1)
 
     // Verify job was enqueued with correct parameters
     expect(mocks.maintenanceQueue).toHaveBeenCalledWith(
@@ -77,7 +77,7 @@ describe('autoScaleInactiveServers', () => {
 
     // Verify the result
     expect(result.ok).toBe(true)
-    expect(result.value).toBe(1)
+    expect(result.unwrap()).toBe(1)
 
     // Verify job was enqueued with correct parameters
     expect(mocks.maintenanceQueue).toHaveBeenCalledWith(
@@ -117,7 +117,7 @@ describe('autoScaleInactiveServers', () => {
 
     // Verify the result
     expect(result.ok).toBe(true)
-    expect(result.value).toBe(0)
+    expect(result.unwrap()).toBe(0)
 
     // Verify no jobs were enqueued
     expect(mocks.maintenanceQueue).not.toHaveBeenCalled()
@@ -144,7 +144,7 @@ describe('autoScaleInactiveServers', () => {
 
     // Verify the result
     expect(result.ok).toBe(true)
-    expect(result.value).toBe(0)
+    expect(result.unwrap()).toBe(0)
 
     // Verify no jobs were enqueued
     expect(mocks.maintenanceQueue).not.toHaveBeenCalled()
@@ -171,7 +171,7 @@ describe('autoScaleInactiveServers', () => {
 
     // Verify the result
     expect(result.ok).toBe(true)
-    expect(result.value).toBe(0)
+    expect(result.unwrap()).toBe(0)
 
     // Verify no jobs were enqueued
     expect(mocks.maintenanceQueue).not.toHaveBeenCalled()
@@ -198,7 +198,7 @@ describe('autoScaleInactiveServers', () => {
 
     // Verify the result
     expect(result.ok).toBe(true)
-    expect(result.value).toBe(0)
+    expect(result.unwrap()).toBe(0)
 
     // Verify no jobs were enqueued
     expect(mocks.maintenanceQueue).not.toHaveBeenCalled()

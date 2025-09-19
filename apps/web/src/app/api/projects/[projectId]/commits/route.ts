@@ -7,6 +7,7 @@ import {
   CommitsRepository,
   ProjectsRepository,
 } from '@latitude-data/core/repositories'
+import { Result } from '@latitude-data/core/lib/Result'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
@@ -38,7 +39,7 @@ export const GET = errorHandler(
       const status = searchParams.get('status') as CommitStatus | undefined
       const projectsScope = new ProjectsRepository(workspace.id)
       const result = await projectsScope.find(projectId)
-      if (result.error) throw new NotFoundError('Project not found')
+      if (!Result.isOk(result)) throw new NotFoundError('Project not found')
 
       const project = result.value!
       const repo = new CommitsRepository(workspace.id)

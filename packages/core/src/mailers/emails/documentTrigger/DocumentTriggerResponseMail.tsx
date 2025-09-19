@@ -12,7 +12,7 @@ export default function DocumentTriggerResponseMail({
 }: {
   result: TypedResult<AssistantMessage, Error>
 }) {
-  if (result.error) {
+  if (!Result.isOk(result)) {
     return (
       <ContainerLayout title='Error' previewText='An error occurred.'>
         <Text>There was an error running your prompt:</Text>

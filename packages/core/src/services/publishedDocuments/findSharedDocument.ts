@@ -42,7 +42,7 @@ export async function findSharedDocument(
   if (!uuid) return NotFound
 
   const sharedResult = await findByUuid(uuid, db)
-  if (sharedResult.error) return NotFound
+  if (!Result.isOk(sharedResult)) return NotFound
 
   const shared = sharedResult.value
   if (!shared) return NotFound
@@ -53,7 +53,7 @@ export async function findSharedDocument(
   const commitsRepo = new CommitsRepository(shared.workspaceId, db)
   const commitResult = await commitsRepo.getHeadCommit(shared.projectId)
 
-  if (commitResult.error) return NotFound
+  if (!Result.isOk(commitResult)) return NotFound
   const commit = commitResult.value
   if (!commit) return NotFound
 
@@ -64,7 +64,7 @@ export async function findSharedDocument(
     documentUuid: shared.documentUuid,
   })
 
-  if (result.error) return NotFound
+  if (!Result.isOk(result)) return NotFound
 
   const document = result.value
 

@@ -82,7 +82,10 @@ describe('issueGrant', () => {
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(0)
     expect(cacheMock.del).not.toHaveBeenCalled()
   })
@@ -113,7 +116,10 @@ describe('issueGrant', () => {
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(10)
     expect(cacheMock.del).toHaveBeenCalledOnce()
   })
@@ -147,7 +153,10 @@ describe('issueGrant', () => {
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual('unlimited')
     expect(cacheMock.del).toHaveBeenCalledOnce()
   })
@@ -179,7 +188,10 @@ describe('issueGrant', () => {
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(10)
     expect(cacheMock.del).toHaveBeenCalledOnce()
   })
@@ -211,7 +223,10 @@ describe('issueGrant', () => {
       await computeQuota({
         type: QuotaType.Runs,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(10)
     expect(cacheMock.del).not.toHaveBeenCalled()
   })

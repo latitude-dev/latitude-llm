@@ -86,7 +86,7 @@ export async function claimNewUserReferrals(
       },
       transaction,
     )
-    if (granting.error) {
+    if (!Result.isOk(granting)) {
       return Result.error(granting.error)
     }
 

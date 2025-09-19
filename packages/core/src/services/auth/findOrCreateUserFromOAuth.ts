@@ -121,7 +121,7 @@ export function findOrCreateUserFromOAuth(
       transaction,
     )
 
-    if (setupResult.error) {
+    if (!Result.isOk(setupResult)) {
       throw setupResult.error
     }
 

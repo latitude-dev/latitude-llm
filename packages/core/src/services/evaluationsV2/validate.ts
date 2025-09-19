@@ -66,7 +66,7 @@ export async function validateEvaluationV2<
   const parsing = typeSpecification.configuration.safeParse(
     settings.configuration,
   )
-  if (parsing.error) {
+  if (!Result.isOk(parsing)) {
     return Result.error(parsing.error)
   }
 
@@ -74,7 +74,7 @@ export async function validateEvaluationV2<
     mode: mode,
     configuration: settings.configuration.actualOutput,
   })
-  if (actualOutputValidation.error) {
+  if (!Result.isOk(actualOutputValidation)) {
     return Result.error(actualOutputValidation.error)
   }
   settings.configuration.actualOutput = actualOutputValidation.value
@@ -83,7 +83,7 @@ export async function validateEvaluationV2<
     mode: mode,
     configuration: settings.configuration.expectedOutput,
   })
-  if (expectedOutputValidation.error) {
+  if (!Result.isOk(expectedOutputValidation)) {
     return Result.error(expectedOutputValidation.error)
   }
   settings.configuration.expectedOutput = expectedOutputValidation.value
@@ -99,7 +99,7 @@ export async function validateEvaluationV2<
     },
     db,
   )
-  if (typeMetricValidation.error) {
+  if (!Result.isOk(typeMetricValidation)) {
     return Result.error(typeMetricValidation.error)
   }
   settings.configuration = {
@@ -114,7 +114,7 @@ export async function validateEvaluationV2<
     commitUuid: commit.uuid,
     documentUuid: document.documentUuid,
   })
-  if (listing.error) {
+  if (!Result.isOk(listing)) {
     return Result.error(listing.error)
   }
   const evaluations = listing.value

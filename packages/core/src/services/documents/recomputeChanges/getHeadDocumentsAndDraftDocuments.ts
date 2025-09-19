@@ -13,7 +13,7 @@ async function getProjectFromCommit(
   const projectsScope = new ProjectsRepository(workspaceId, tx)
   const projectResult = await projectsScope.getProjectById(commit.projectId)
 
-  if (projectResult.error) return projectResult
+  if (!Result.isOk(projectResult)) return projectResult
 
   return Result.ok(projectResult.value)
 }
@@ -23,7 +23,8 @@ async function getDraftDocuments(
 ) {
   const docsScope = new DocumentVersionsRepository(workspaceId, tx)
   const draftChangesResult = await docsScope.listCommitChanges(commit)
-  if (draftChangesResult.error) return Result.error(draftChangesResult.error)
+  if (!Result.isOk(draftChangesResult))
+    return Result.error(draftChangesResult.error)
   return Result.ok(draftChangesResult.value)
 }
 
@@ -32,7 +33,7 @@ async function getDocumentsAtCommit(
   tx = database,
 ) {
   const projectResult = await getProjectFromCommit({ commit, workspaceId }, tx)
-  if (projectResult.error) return projectResult
+  if (!Result.isOk(projectResult)) return projectResult
 
   const commitsScope = buildCommitsScope(workspaceId, tx)
   const headCommit = await getHeadCommitForProject(
@@ -42,7 +43,8 @@ async function getDocumentsAtCommit(
 
   const docsScope = new DocumentVersionsRepository(workspaceId, tx)
   const headDocumentsResult = await docsScope.getDocumentsAtCommit(headCommit)
-  if (headDocumentsResult.error) return Result.error(headDocumentsResult.error)
+  if (!Result.isOk(headDocumentsResult))
+    return Result.error(headDocumentsResult.error)
 
   return Result.ok(headDocumentsResult.value)
 }
@@ -61,7 +63,7 @@ export async function getHeadDocumentsAndDraftDocumentsForCommit(
     { commit, workspaceId },
     tx,
   )
-  if (headDocumentsResult.error) return headDocumentsResult
+  if (!Result.isOk(headDocumentsResult)) return headDocumentsResult
 
   const headDocuments = headDocumentsResult.value
 
@@ -69,7 +71,7 @@ export async function getHeadDocumentsAndDraftDocumentsForCommit(
     { commit, workspaceId },
     tx,
   )
-  if (draftDocumentsResult.error) return draftDocumentsResult
+  if (!Result.isOk(draftDocumentsResult)) return draftDocumentsResult
 
   return Result.ok({
     headDocuments,

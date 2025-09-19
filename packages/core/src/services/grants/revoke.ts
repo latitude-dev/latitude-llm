@@ -21,11 +21,11 @@ export async function revokeGrant(
       { filter: eq(grants.id, grant.id), workspace },
       tx,
     )
-    if (expiring.error) {
+    if (!Result.isOk(expiring)) {
       return Result.error(expiring.error)
     }
 
-    return Result.ok(expiring.value[0]!)
+    return Result.ok(expiring.unwrap()[0]!)
   })
 }
 
@@ -57,11 +57,11 @@ export async function revokeGrants(
       },
       tx,
     )
-    if (expiring.error) {
+    if (!Result.isOk(expiring)) {
       return Result.error(expiring.error)
     }
 
-    return Result.ok(expiring.value)
+    return Result.ok(expiring.unwrap())
   })
 }
 
@@ -77,10 +77,10 @@ async function expireGrants(
 ) {
   return await tx.call(async (db) => {
     const getting = await findWorkspaceSubscription({ workspace }, db)
-    if (getting.error) {
+    if (!Result.isOk(getting)) {
       return Result.error(getting.error)
     }
-    const subscription = getting.value
+    const subscription = getting.unwrap()
 
     const results = await db
       .update(grants)

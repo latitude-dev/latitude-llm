@@ -16,7 +16,8 @@ import { Providers } from '@latitude-data/constants'
 function resolveOpenAITools(openAITools: OpenAIToolList) {
   const result = openAIToolsList.safeParse(openAITools)
 
-  if (result.error) return Result.error(new NotFoundError(result.error.message))
+  if (!Result.isOk(result))
+    return Result.error(new NotFoundError(result.error.message))
 
   // TODO: Handle multiple tools when file search is supported
   // https://github.com/vercel/ai/pull/5141
@@ -70,7 +71,7 @@ export function resolveProviderTools({
 
       const openAIResult = resolveOpenAITools(tool.openai as OpenAIToolList)
 
-      if (openAIResult.error) {
+      if (!Result.isOk(openAIResult)) {
         acc.error = openAIResult.error
         return acc
       }
@@ -82,7 +83,7 @@ export function resolveProviderTools({
     {} as { tools?: ResolvedTools; error?: LatitudeError },
   )
 
-  if (result.error) {
+  if (!Result.isOk(result)) {
     return Result.error(result.error)
   }
 

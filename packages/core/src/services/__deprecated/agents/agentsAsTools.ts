@@ -101,7 +101,7 @@ export async function buildAgentsToolsMap(
 ): PromisedResult<AgentToolsMap> {
   const docsScope = new DocumentVersionsRepository(workspace.id, db)
   const docsResult = await docsScope.getDocumentsAtCommit(commit)
-  if (docsResult.error) return Result.error(docsResult.error)
+  if (!Result.isOk(docsResult)) return Result.error(docsResult.error)
   const docs = docsResult.unwrap()
 
   const agentDocs = docs.filter((doc) => doc.documentType === 'agent')

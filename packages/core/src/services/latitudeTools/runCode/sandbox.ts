@@ -33,7 +33,7 @@ export const withSafeSandbox = async <
   maxTime: number = 60_000,
 ): Promise<T> => {
   const sandboxResult = await createSandbox()
-  if (sandboxResult.error) throw sandboxResult.error
+  if (!Result.isOk(sandboxResult)) throw sandboxResult.error
   const sandbox = sandboxResult.unwrap()
 
   const timeoutPromise = new Promise<T>((resolve) => {

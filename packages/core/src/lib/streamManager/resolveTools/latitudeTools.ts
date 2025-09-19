@@ -23,7 +23,7 @@ export function resolveLatitudeTools({
     config,
     streamManager,
   })
-  if (newSchemaResult.error) return newSchemaResult
+  if (!Result.isOk(newSchemaResult)) return newSchemaResult
 
   return Result.ok(newSchemaResult.unwrap())
 }

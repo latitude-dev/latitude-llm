@@ -26,17 +26,17 @@ export async function resolveToolsFromConfig({
   chainStreamManager?: ChainStreamManager
 }): PromisedResult<ResolvedTools, LatitudeError> {
   const clientToolsResult = resolveClientTools({ config })
-  if (clientToolsResult.error) return clientToolsResult
+  if (!Result.isOk(clientToolsResult)) return clientToolsResult
 
   const latitudeToolsResult = resolveLatitudeTools({ config })
-  if (latitudeToolsResult.error) return latitudeToolsResult
+  if (!Result.isOk(latitudeToolsResult)) return latitudeToolsResult
 
   const agentsAsToolsResult = await resolveAgentsAsTools({
     workspace,
     promptSource,
     config,
   })
-  if (agentsAsToolsResult.error) return agentsAsToolsResult
+  if (!Result.isOk(agentsAsToolsResult)) return agentsAsToolsResult
 
   const integrationToolsResult = await resolveIntegrationTools({
     workspace,
@@ -44,17 +44,18 @@ export async function resolveToolsFromConfig({
     chainStreamManager,
   })
 
-  if (integrationToolsResult.error) return integrationToolsResult
+  if (!Result.isOk(integrationToolsResult)) return integrationToolsResult
 
   const agentReturnResult = resolveAgentReturnTool({
     config,
     injectAgentFinishTool,
   })
 
-  if (agentReturnResult.error) return agentReturnResult
+  if (!Result.isOk(agentReturnResult)) return agentReturnResult
 
   const providerToolsResult = resolveProviderTools({ config })
-  if (providerToolsResult.error) return Result.error(providerToolsResult.error)
+  if (!Result.isOk(providerToolsResult))
+    return Result.error(providerToolsResult.error)
 
   return Result.ok(
     Object.assign(

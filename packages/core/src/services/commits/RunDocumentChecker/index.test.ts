@@ -61,13 +61,14 @@ describe('RunDocumentChecker', () => {
         userMessage,
       })
 
-      const result = await checker.call()
+      const checkerResult = await checker.call()
 
-      expect(result.error).toBeUndefined()
-      expect(result.value).toBeDefined()
+      expect(checkerResult.error).toBeUndefined()
+      expect(checkerResult.value).toBeDefined()
 
       // The chain should be created successfully with the injected user message
-      const chain = result.unwrap().chain
+      const checkerData = checkerResult.unwrap()
+      const chain = checkerData.chain
       expect(chain).toBeDefined()
 
       // Get the first step to check the messages
@@ -103,7 +104,8 @@ describe('RunDocumentChecker', () => {
       expect(result.error).toBeUndefined()
       expect(result.value).toBeDefined()
 
-      const chain = result.unwrap().chain
+      const checkerData = result.unwrap()
+      const chain = checkerData.chain
       expect(chain).toBeDefined()
 
       const stepResult = await chain.step()
@@ -126,12 +128,13 @@ describe('RunDocumentChecker', () => {
         userMessage: '', // Empty string
       })
 
-      const result = await checker.call()
+      const checkerResult = await checker.call()
 
-      expect(result.error).toBeUndefined()
-      expect(result.value).toBeDefined()
+      expect(checkerResult.error).toBeUndefined()
+      expect(checkerResult.value).toBeDefined()
 
-      const chain = result.unwrap().chain
+      const checkerData = checkerResult.unwrap()
+      const chain = checkerData.chain
       expect(chain).toBeDefined()
 
       const stepResult = await chain.step()

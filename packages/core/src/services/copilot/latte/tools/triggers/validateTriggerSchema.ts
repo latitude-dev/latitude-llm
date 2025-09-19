@@ -38,7 +38,7 @@ export const validateTriggerSchema = defineLatteTool(
     }
 
     const pipedreamResult = getPipedreamClient()
-    if (!pipedreamResult.ok) return pipedreamResult
+    if (!Result.isOk(pipedreamResult)) return pipedreamResult
     const pipedream = pipedreamResult.unwrap()
 
     const integrationScope = new IntegrationsRepository(workspace.id)
@@ -86,9 +86,8 @@ const validateDocumentReadyForCreatingTrigger = async ({
   promptUuid: string
 }): PromisedResult<boolean> => {
   const commitsScope = new CommitsRepository(workspaceId)
-  const headCommit = await commitsScope
-    .getHeadCommit(projectId)
-    .then((r) => r.unwrap())
+  const headCommitResult = await commitsScope.getHeadCommit(projectId)
+  const headCommit = headCommitResult.unwrap()
 
   if (
     headCommit !== undefined &&
@@ -102,13 +101,11 @@ const validateDocumentReadyForCreatingTrigger = async ({
   }
 
   const documentsScope = new DocumentVersionsRepository(workspaceId)
-  const commit = await commitsScope
-    .getCommitByUuid({ uuid: versionUuid })
-    .then((r) => r.unwrap())
+  const commitResult = await commitsScope.getCommitByUuid({ uuid: versionUuid })
+  const commit = commitResult.unwrap()
 
-  const documents = await documentsScope
-    .getDocumentsAtCommit(commit)
-    .then((r) => r.unwrap())
+  const documentsResult = await documentsScope.getDocumentsAtCommit(commit)
+  const documents = documentsResult.unwrap()
 
   const document = documents.find((doc) => doc.documentUuid === promptUuid)
 

@@ -37,7 +37,7 @@ export async function runCopilot<S extends z.ZodSchema = z.ZodAny>({
   let output: S extends z.ZodSchema ? z.infer<S> : unknown = response.object
   if (schema) {
     const result = schema.safeParse(response.object)
-    if (result.error) {
+    if (!Result.isOk(result)) {
       return Result.error(
         new UnprocessableEntityError(
           `Copilot response does not follow the expected schema: ${result.error.message}`,
