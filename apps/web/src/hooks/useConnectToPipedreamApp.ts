@@ -28,7 +28,7 @@ export function useConnectToPipedreamApp(app: App | undefined) {
       return {
         token: data.token,
         expiresAt: new Date(data.expiresAt),
-        connectLinkUrl: '', // TODO: wtf is this
+        connectLinkUrl: '', // Uses the default Pipedream connect link
       }
     },
     [generateToken],
