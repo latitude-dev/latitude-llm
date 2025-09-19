@@ -1,10 +1,5 @@
 import { addMonths } from 'date-fns'
-import {
-  SubscriptionPlan,
-  SubscriptionPlanContent,
-  SubscriptionPlans,
-  Workspace,
-} from '../../../browser'
+import { Workspace } from '../../../browser'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { SubscriptionRepository } from '../../../repositories'
@@ -30,18 +25,8 @@ export async function findWorkspaceSubscription(
   if (finding.error) return Result.error(finding.error)
 
   const subscription = finding.value
-  let plan: SubscriptionPlanContent = {
-    plan: SubscriptionPlan.HobbyV2,
-    ...SubscriptionPlans[SubscriptionPlan.HobbyV2],
-  }
-  if (subscription.plan in SubscriptionPlans) {
-    plan = {
-      plan: subscription.plan,
-      ...SubscriptionPlans[subscription.plan],
-    }
-  }
   const billableFrom = getLatestRenewalDate(subscription.createdAt, new Date())
   const billableAt = addMonths(billableFrom, 1)
 
-  return Result.ok({ ...subscription, plan, billableFrom, billableAt })
+  return Result.ok({ ...subscription, billableFrom, billableAt })
 }

@@ -78,3 +78,4 @@ export const STRIPE_PLANS = [
 ]
 
 export const FREE_PLANS = [SubscriptionPlan.HobbyV1, SubscriptionPlan.HobbyV2]
+export const PRO_PLANS = [SubscriptionPlan.ProV2]

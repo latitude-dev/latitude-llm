@@ -53,7 +53,7 @@ export function WorkspaceDashboard({ workspace }: Props) {
     },
     {
       label: 'Subscription Plan',
-      value: workspace.subscription.plan.plan,
+      value: workspace.subscription.plan,
       icon: 'blocks' as const,
     },
     {
