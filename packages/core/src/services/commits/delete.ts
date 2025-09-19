@@ -16,7 +16,7 @@ export async function deleteCommitDraft(
   transaction = new Transaction(),
 ) {
   const assertionResult = assertCommitIsDraft(commit)
-  if (assertionResult.error) return assertionResult
+  if (!Result.isOk(assertionResult)) return assertionResult
 
   return transaction.call<Commit>(async (tx) => {
     try {

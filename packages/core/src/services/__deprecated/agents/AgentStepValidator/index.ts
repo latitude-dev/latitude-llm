@@ -126,19 +126,19 @@ export const validateAgentStep = async ({
   TypedResult<ValidatedAgentStep, ChainError<RunErrorCodes>>
 > => {
   const configResult = validateConfig(conversation.config)
-  if (configResult.error) return Result.error(configResult.error)
+  if (!Result.isOk(configResult)) return Result.error(configResult.error)
 
   const config = configResult.unwrap()
   const providerResult = findProvider(config.provider, providersMap)
-  if (providerResult.error) return providerResult
+  if (!Result.isOk(providerResult)) return providerResult
 
-  const provider = providerResult.value
+  const provider = providerResult.unwrap()
   const freeQuota = await checkFreeProviderQuota({
     workspace,
     provider,
     model: config.model,
   })
-  if (freeQuota.error) return freeQuota
+  if (!Result.isOk(freeQuota)) return freeQuota
 
   const messages = [...conversation.messages, ...(newMessages ?? [])]
 

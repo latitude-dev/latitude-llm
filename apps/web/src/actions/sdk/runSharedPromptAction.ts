@@ -7,6 +7,7 @@ import { RunDocumentResponse } from '$/actions/sdk/runDocumentAction'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { findSharedDocumentCached } from '$/app/(public)/_data_access'
 import { createStreamableValue } from 'ai/rsc'
+import { Result } from '@latitude-data/core/lib/Result'
 
 type RunSharedPromptActionProps = {
   publishedDocumentUuid: string
@@ -27,7 +28,7 @@ export async function runSharedPromptAction({
   >()
   const result = await findSharedDocumentCached(publishedDocumentUuid)
 
-  if (result.error) {
+  if (!Result.isOk(result)) {
     throw result.error
   }
 

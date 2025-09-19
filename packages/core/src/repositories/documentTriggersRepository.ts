@@ -139,15 +139,17 @@ export class DocumentTriggersRepository extends Repository<DocumentTrigger> {
     commit?: Commit
   }): PromisedResult<DocumentTrigger[], LatitudeError> {
     const triggersResult = await this.getTriggers({ projectId, commit })
-    if (triggersResult.error) return triggersResult
+    if (!Result.isOk(triggersResult)) return triggersResult
 
     return Result.ok(
-      triggersResult.value.sort(
-        (a, b) =>
-          (a.triggerType === DocumentTriggerType.Integration ? 1 : 0) -
-            (b.triggerType === DocumentTriggerType.Integration ? 1 : 0) ||
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-      ),
+      triggersResult
+        .unwrap()
+        .sort(
+          (a, b) =>
+            (a.triggerType === DocumentTriggerType.Integration ? 1 : 0) -
+              (b.triggerType === DocumentTriggerType.Integration ? 1 : 0) ||
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        ),
     )
   }
 

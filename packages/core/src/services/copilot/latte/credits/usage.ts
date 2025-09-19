@@ -24,10 +24,10 @@ export async function usageLatteCredits(
   db = database,
 ) {
   const getting = await findWorkspaceSubscription({ workspace }, db)
-  if (getting.error) {
+  if (!Result.isOk(getting)) {
     return Result.error(getting.error)
   }
-  const subscription = getting.value
+  const subscription = getting.unwrap()
 
   let usage: LatteUsage | undefined
 
@@ -49,19 +49,19 @@ export async function usageLatteCredits(
   const counting = await requestsRepository.usageSinceDate(
     subscription.billableFrom,
   )
-  if (counting.error) {
+  if (!Result.isOk(counting)) {
     return Result.error(counting.error)
   }
 
   const quoting = await computeQuota({ type: QuotaType.Credits, workspace })
-  if (quoting.error) {
+  if (!Result.isOk(quoting)) {
     return Result.error(quoting.error)
   }
 
   usage = {
-    limit: quoting.value.limit,
-    billable: counting.value.billable,
-    unbillable: counting.value.unbillable,
+    limit: quoting.unwrap().limit,
+    billable: counting.unwrap().billable,
+    unbillable: counting.unwrap().unbillable,
     resetsAt: subscription.billableAt,
   }
 

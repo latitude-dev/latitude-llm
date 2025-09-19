@@ -68,7 +68,7 @@ export async function getChangesToResetProjectToCommit({
     targetDraftUuid,
     commitUuid,
   })
-  if (commitDetailsResult.error) {
+  if (!Result.isOk(commitDetailsResult)) {
     return Result.error(commitDetailsResult.error)
   }
 
@@ -79,8 +79,8 @@ export async function getChangesToResetProjectToCommit({
   const newDocuments = await docsScope.getDocumentsAtCommit(targetCommit)
   const oldDocuments = await docsScope.getDocumentsAtCommit(originalCommit)
 
-  if (newDocuments.error) return Result.error(newDocuments.error)
-  if (oldDocuments.error) return Result.error(oldDocuments.error)
+  if (!Result.isOk(newDocuments)) return Result.error(newDocuments.error)
+  if (!Result.isOk(oldDocuments)) return Result.error(oldDocuments.error)
 
   return Result.ok(
     changes.map((change) => {
@@ -142,7 +142,7 @@ export async function resetProjectToCommit(
     targetDraftUuid,
     commitUuid,
   })
-  if (commitDetaulsResult.error) {
+  if (!Result.isOk(commitDetaulsResult)) {
     return Result.error(commitDetaulsResult.error)
   }
   const { targetCommit, originalCommit, changes } = commitDetaulsResult.unwrap()
@@ -158,7 +158,7 @@ export async function resetProjectToCommit(
         },
       })
 
-  if (targetDraft.error) {
+  if (!Result.isOk(targetDraft)) {
     return Result.error(targetDraft.error)
   }
 
@@ -169,7 +169,7 @@ export async function resetProjectToCommit(
     targetDraft.value,
   )
 
-  if (targetDocumentsResult.error) {
+  if (!Result.isOk(targetDocumentsResult)) {
     return Result.error(targetDocumentsResult.error)
   }
   const targetDocuments = targetDocumentsResult.unwrap()
@@ -191,7 +191,7 @@ export async function resetProjectToCommit(
   )
 
   for (const result of results) {
-    if (result.error) return result
+    if (!Result.isOk(result)) return result
   }
 
   return Result.ok(targetDraft.value)

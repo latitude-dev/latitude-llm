@@ -36,7 +36,7 @@ export const manualEmailTriggerAction = withAdmin
       })
     }
 
-    if (commitResult.error) throw commitResult.error
+    if (!Result.isOk(commitResult)) throw commitResult.error
 
     registerEmailTriggerEvent({
       recipient: input.recipient,

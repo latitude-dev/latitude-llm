@@ -26,7 +26,7 @@ export async function enqueueSpans(
 ) {
   const ingestionId = await generateIngestionId(spans)
   const uploadResult = await uploadSpansToStorage(ingestionId, spans, disk)
-  if (uploadResult.error) return uploadResult
+  if (!Result.isOk(uploadResult)) return uploadResult
 
   const payload = {
     ingestionId: ingestionId,

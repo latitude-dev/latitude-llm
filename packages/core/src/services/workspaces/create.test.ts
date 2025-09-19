@@ -42,19 +42,28 @@ describe('createWorkspace', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(5)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(10_000)
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(30)
   })
 })

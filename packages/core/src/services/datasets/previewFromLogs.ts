@@ -34,7 +34,7 @@ export const previewDatasetFromLogs = async ({
   const repo = new DatasetsRepository(workspace.id)
   const datasets = await repo.findByName(data.name)
   const dataset = datasets[0]
-  const result = await buildDocumentLogDatasetRows({
+  const datasetRowsResult = await buildDocumentLogDatasetRows({
     workspace,
     documentLogIds: data.documentLogIds,
     dataset,
@@ -42,11 +42,13 @@ export const previewDatasetFromLogs = async ({
   })
   const datasetRows = await getFirstRowsFromDataset({ dataset })
 
-  if (result.error) return result
+  if (!Result.isOk(datasetRowsResult)) return datasetRowsResult
+
+  const datasetRowsData = datasetRowsResult.unwrap()
 
   return Result.ok({
-    columns: result.value.columns,
+    columns: datasetRowsData.columns,
     existingRows: datasetRows,
-    newRows: result.value.rows,
+    newRows: datasetRowsData.rows,
   })
 }

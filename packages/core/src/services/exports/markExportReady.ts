@@ -12,7 +12,7 @@ export async function markExportReady({
     readyAt: new Date(),
   })
 
-  if (result.error) return result
+  if (!Result.isOk(result)) return result
 
   publisher.publishLater({
     type: 'exportReady',

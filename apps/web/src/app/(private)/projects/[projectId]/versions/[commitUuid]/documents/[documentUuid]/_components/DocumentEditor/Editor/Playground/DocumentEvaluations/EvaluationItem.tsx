@@ -14,6 +14,7 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useMemo } from 'react'
 import { Props } from './shared'
+import { Result } from '@latitude-data/core/lib/Result'
 
 function EvaluationItemContent({
   result,
@@ -50,7 +51,7 @@ function EvaluationItemContent({
     )
   }
 
-  if (result.error) {
+  if (!Result.isOk(result)) {
     return (
       <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
         {result.error!.message}

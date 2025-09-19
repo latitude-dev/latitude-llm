@@ -30,7 +30,7 @@ export async function issueSubscriptionGrants(
       { source: GrantSource.Subscription, workspace },
       tx,
     )
-    if (revoking.error) {
+    if (!Result.isOk(revoking)) {
       return Result.error(revoking.error)
     }
 
@@ -44,10 +44,10 @@ export async function issueSubscriptionGrants(
       },
       tx,
     )
-    if (grantingSeats.error) {
+    if (!Result.isOk(grantingSeats)) {
       return Result.error(grantingSeats.error)
     }
-    const seats = grantingSeats.value
+    const seats = grantingSeats.unwrap()
 
     const grantingRuns = await issueGrant(
       {
@@ -59,10 +59,10 @@ export async function issueSubscriptionGrants(
       },
       tx,
     )
-    if (grantingRuns.error) {
+    if (!Result.isOk(grantingRuns)) {
       return Result.error(grantingRuns.error)
     }
-    const runs = grantingRuns.value
+    const runs = grantingRuns.unwrap()
 
     const grantingCredits = await issueGrant(
       {
@@ -74,10 +74,10 @@ export async function issueSubscriptionGrants(
       },
       tx,
     )
-    if (grantingCredits.error) {
+    if (!Result.isOk(grantingCredits)) {
       return Result.error(grantingCredits.error)
     }
-    const credits = grantingCredits.value
+    const credits = grantingCredits.unwrap()
 
     return Result.ok({ seats, runs, credits })
   })

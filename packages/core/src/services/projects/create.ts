@@ -40,7 +40,7 @@ export async function createProject(
         },
         transaction,
       )
-      if (result.error) return result
+      if (!Result.isOk(result)) return result
 
       return Result.ok({ project, commit: result.value })
     },

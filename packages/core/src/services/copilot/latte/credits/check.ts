@@ -22,10 +22,10 @@ export async function checkLatteCredits(
   }
 
   const counting = await usageLatteCredits({ workspace, fresh: true }, db)
-  if (counting.error) {
+  if (!Result.isOk(counting)) {
     return Result.error(counting.error)
   }
-  const usage = counting.value
+  const usage = counting.unwrap()
 
   if (usage.limit === 'unlimited') {
     return Result.ok(true)

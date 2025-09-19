@@ -62,7 +62,7 @@ export async function resumePausedPrompt({
     commit,
   })
 
-  if (resultResolvedContent.error) return resultResolvedContent
+  if (!Result.isOk(resultResolvedContent)) return resultResolvedContent
 
   const resolvedContent = resultResolvedContent.value
   const errorableType = ErrorableEntity.DocumentLog

@@ -26,9 +26,11 @@ export async function getMcpClient(
   integration: IntegrationDto,
   streamManager?: StreamManager,
 ): Promise<TypedResult<McpClient, McpConnectionError>> {
-  const result = await createAndConnectClient(integration, streamManager)
-  if (!Result.isOk(result)) return result
-  return Result.ok(result.value.client)
+  const clientResult = await createAndConnectClient(integration, streamManager)
+  if (!Result.isOk(clientResult)) return clientResult
+
+  const clientData = clientResult.unwrap()
+  return Result.ok(clientData.client)
 }
 
 export const createMcpClientManager = (): McpClientManager => {
@@ -50,10 +52,14 @@ export const createMcpClientManager = (): McpClientManager => {
     }
 
     // Create new client
-    const result = await createAndConnectClient(integration, streamManager)
-    if (!Result.isOk(result)) return result
+    const clientResult = await createAndConnectClient(
+      integration,
+      streamManager,
+    )
+    if (!Result.isOk(clientResult)) return clientResult
 
-    const { client, transport } = result.value
+    const clientData = clientResult.unwrap()
+    const { client, transport } = clientData
 
     // Cache the client and transport
     clientMap.set(key, client)

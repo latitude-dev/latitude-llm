@@ -17,7 +17,7 @@ export async function findOnboardingDocument(
     // Get the first project in the workspace
     const projectsRepo = new ProjectsRepository(workspaceId, db)
     const projectResult = await projectsRepo.getFirstProject()
-    if (projectResult.error) {
+    if (!Result.isOk(projectResult)) {
       return Result.error(projectResult.error)
     }
     const project = projectResult.value
@@ -25,7 +25,7 @@ export async function findOnboardingDocument(
     // Get the first commit in the project
     const commitsRepo = new CommitsRepository(workspaceId, db)
     const commitsResult = await commitsRepo.getFirstCommitForProject(project)
-    if (commitsResult.error) {
+    if (!Result.isOk(commitsResult)) {
       return Result.error(commitsResult.error)
     }
     const commit = commitsResult.unwrap()
@@ -36,7 +36,7 @@ export async function findOnboardingDocument(
     // Get the first document from the commit
     const docsRepo = new DocumentVersionsRepository(workspaceId, db)
     const docsResult = await docsRepo.getDocumentsAtCommit(commit)
-    if (docsResult.error) {
+    if (!Result.isOk(docsResult)) {
       return Result.error(docsResult.error)
     }
     const documents = docsResult.unwrap()

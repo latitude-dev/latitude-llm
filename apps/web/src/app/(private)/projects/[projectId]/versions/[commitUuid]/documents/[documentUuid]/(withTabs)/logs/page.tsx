@@ -24,6 +24,7 @@ import {
 } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
 import { redirect } from 'next/navigation'
+import { Result } from '@latitude-data/core/lib/Result'
 
 import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseLogFilterParams'
 import { DocumentLogsPage } from './_components'
@@ -45,15 +46,16 @@ async function fetchDocumentLogPage({
 }) {
   if (!documentLogUuid) return undefined
 
-  const result = await fetchDocumentLogWithPosition({
+  const logsResult = await fetchDocumentLogWithPosition({
     workspace,
     filterOptions,
     documentLogUuid,
   })
 
-  if (result.error) return undefined
+  if (!Result.isOk(logsResult)) return undefined
 
-  return result.value.page.toString()
+  const logsData = logsResult.unwrap()
+  return logsData.page.toString()
 }
 
 export default async function DocumentPage({

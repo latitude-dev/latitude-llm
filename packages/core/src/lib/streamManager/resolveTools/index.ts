@@ -21,16 +21,16 @@ export async function resolveToolsFromConfig({
     config,
     streamManager,
   })
-  if (clientToolsResult.error) return clientToolsResult
+  if (!Result.isOk(clientToolsResult)) return clientToolsResult
 
   const latitudeToolsResult = resolveLatitudeTools({ config, streamManager })
-  if (latitudeToolsResult.error) return latitudeToolsResult
+  if (!Result.isOk(latitudeToolsResult)) return latitudeToolsResult
 
   const agentsAsToolsResult = await resolveAgentsAsTools({
     config,
     streamManager,
   })
-  if (agentsAsToolsResult.error) return agentsAsToolsResult
+  if (!Result.isOk(agentsAsToolsResult)) return agentsAsToolsResult
 
   let integrationToolsResult
   if (streamManager) {
@@ -38,11 +38,12 @@ export async function resolveToolsFromConfig({
       config,
       streamManager: streamManager,
     })
-    if (integrationToolsResult.error) return integrationToolsResult
+    if (!Result.isOk(integrationToolsResult)) return integrationToolsResult
   }
 
   const providerToolsResult = resolveProviderTools({ config })
-  if (providerToolsResult.error) return Result.error(providerToolsResult.error)
+  if (!Result.isOk(providerToolsResult))
+    return Result.error(providerToolsResult.error)
 
   return Result.ok(
     Object.assign(

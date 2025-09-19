@@ -55,7 +55,7 @@ async function validate<M extends RuleEvaluationMetric>(
   }
 
   const parsing = metricSpecification.configuration.safeParse(configuration)
-  if (parsing.error) {
+  if (!Result.isOk(parsing)) {
     return Result.error(parsing.error)
   }
 
@@ -63,7 +63,7 @@ async function validate<M extends RuleEvaluationMetric>(
     { configuration, ...rest },
     db,
   )
-  if (validation.error) {
+  if (!Result.isOk(validation)) {
     return Result.error(validation.error)
   }
   configuration = validation.value

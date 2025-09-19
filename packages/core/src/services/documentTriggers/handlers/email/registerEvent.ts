@@ -106,7 +106,7 @@ export async function registerEmailTriggerEvent(
     documentUuid,
     db,
   )
-  if (findResult.error) return Result.nil() // Filter out emails without existing destination
+  if (!Result.isOk(findResult)) return Result.nil() // Filter out emails without existing destination
   const { workspace, project } = findResult.unwrap()
 
   const documentTriggerScope = new DocumentTriggersRepository(workspace.id, db)
@@ -117,7 +117,7 @@ export async function registerEmailTriggerEvent(
       commit,
     })
 
-  if (documentTriggersResult.error) return Result.nil()
+  if (!Result.isOk(documentTriggersResult)) return Result.nil()
   const documentTriggers = documentTriggersResult.unwrap()
   const emailTriggers = documentTriggers.filter(
     (trigger) => trigger.triggerType === DocumentTriggerType.Email,
@@ -129,12 +129,12 @@ export async function registerEmailTriggerEvent(
     workspace,
     attachments: attachments ?? [],
   })
-  if (uploadResult.error) return uploadResult
+  if (!Result.isOk(uploadResult)) return uploadResult
   const uploadedFiles = uploadResult.unwrap()
 
   const commitsScope = new CommitsRepository(workspace.id, db)
   const headCommitResult = await commitsScope.getHeadCommit(project.id)
-  if (headCommitResult.error) return Result.nil()
+  if (!Result.isOk(headCommitResult)) return Result.nil()
   const headCommit = headCommitResult.unwrap()
 
   // TODO: Search the Live and all draft versions for each trigger, not just the Live one
@@ -156,7 +156,7 @@ export async function registerEmailTriggerEvent(
       sender: senderEmail,
       configuration: trigger.configuration,
     })
-    if (assertFilterResult.error) return assertFilterResult
+    if (!Result.isOk(assertFilterResult)) return assertFilterResult
 
     const result = await registerDocumentTriggerEvent({
       workspace,

@@ -1,4 +1,6 @@
 import { LogSources, ToolDefinition } from '@latitude-data/constants'
+import { Experiment } from '../../../../browser'
+import { Result } from '../../../../lib/Result'
 import { BACKGROUND, TelemetryContext } from '../../../../telemetry'
 import { getCopilotDataForGenerateToolResponses } from './getCopilotData'
 import {
@@ -29,10 +31,10 @@ export async function runDocumentAtCommitWithAutoToolResponses({
   context?: TelemetryContext
 }) {
   const copilotResult = await getCopilotDataForGenerateToolResponses()
-  if (copilotResult.error) return copilotResult
+  if (!Result.isOk(copilotResult)) return copilotResult
 
   const dataResult = await getDataForInitialRequest(dataParams)
-  if (dataResult.error) return dataResult
+  if (!Result.isOk(dataResult)) return dataResult
 
   const { workspace, document, commit } = dataResult.value
 

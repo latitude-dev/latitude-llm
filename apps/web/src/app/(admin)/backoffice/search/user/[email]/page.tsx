@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation'
 
 import { UserDashboard } from './_components/UserDashboard'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Result } from '@latitude-data/core/lib/Result'
 
 type Props = {
   params: Promise<{ email: string }>
@@ -26,7 +27,7 @@ export default async function UserInfoPage({ params }: Props) {
     email: decodedEmail,
   })
 
-  if (result.error) {
+  if (!Result.isOk(result)) {
     return (
       <div className='container mx-auto p-6 max-w-4xl'>
         <div className='space-y-6'>

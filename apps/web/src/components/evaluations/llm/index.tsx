@@ -14,6 +14,7 @@ import {
   LlmEvaluationSpecification,
   Providers,
 } from '@latitude-data/core/browser'
+import { Result } from '@latitude-data/core/lib/Result'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -377,7 +378,7 @@ function ResultPanelMessages<M extends LlmEvaluationMetric>({
       defaultValue: false,
     })
 
-  if (result.error) {
+  if (!Result.isOk(result)) {
     return (
       <div className='w-full flex items-center justify-center'>
         <Text.H5 color='foregroundMuted' centered>

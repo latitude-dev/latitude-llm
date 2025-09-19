@@ -58,7 +58,7 @@ async function findExpectedOutputs({
     if (existing && existing.generatedAt > provider.generatedAt) continue
 
     const hydratedProvider = await hydrateProviderLog(provider)
-    if (hydratedProvider.error) continue
+    if (!Result.isOk(hydratedProvider)) continue
 
     const output = buildProviderLogResponse(hydratedProvider.unwrap())
 

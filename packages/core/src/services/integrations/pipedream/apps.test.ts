@@ -149,18 +149,19 @@ describe('listApps', () => {
   }
 
   it('should return apps with default parameters', async () => {
-    const result = await listApps({
+    const appsResult = await listApps({
       pipedreamClientBuilder: mockPipedreamClientBuilder(),
     })
 
-    expect(result.ok).toBe(true)
-    if (Result.isOk(result)) {
-      expect(result.value.apps).toHaveLength(2)
-      expect(result.value.totalCount).toBe(2)
-      expect(result.value.cursor).toBe('test-cursor')
+    expect(appsResult.ok).toBe(true)
+    if (Result.isOk(appsResult)) {
+      const apps = appsResult.unwrap()
+      expect(apps.apps).toHaveLength(2)
+      expect(apps.totalCount).toBe(2)
+      expect(apps.cursor).toBe('test-cursor')
       // tools/triggers are always included now
-      const app1 = result.value.apps[0]
-      const app2 = result.value.apps[1]
+      const app1 = apps.apps[0]
+      const app2 = apps.apps[1]
       expect(app1.nameSlug).toBe('test-app-1')
       expect(app2.nameSlug).toBe('test-app-2')
       expect(app1.tools.length).toBeGreaterThanOrEqual(1)
@@ -171,70 +172,75 @@ describe('listApps', () => {
   })
 
   it('should return all apps when withTriggers is false', async () => {
-    const result = await listApps({
+    const appsResult = await listApps({
       withTriggers: false,
       pipedreamClientBuilder: mockPipedreamClientBuilder(),
     })
 
-    expect(result.ok).toBe(true)
-    if (Result.isOk(result)) {
-      expect(result.value.apps).toHaveLength(2)
-      expect(result.value.apps.every((a) => 'triggers' in a)).toBe(true)
+    expect(appsResult.ok).toBe(true)
+    if (Result.isOk(appsResult)) {
+      const apps = appsResult.unwrap()
+      expect(apps.apps).toHaveLength(2)
+      expect(apps.apps.every((a) => 'triggers' in a)).toBe(true)
     }
   })
 
   it('should filter apps by triggers when withTriggers is true', async () => {
-    const result = await listApps({
+    const appsResult = await listApps({
       withTriggers: true,
       pipedreamClientBuilder: mockPipedreamClientBuilder(),
     })
 
-    expect(result.ok).toBe(true)
-    if (Result.isOk(result)) {
-      expect(result.value.apps.every((a) => a.triggers.length > 0)).toBe(true)
-      expect(result.value.apps).toHaveLength(1)
-      expect(result.value.apps[0].nameSlug).toBe('test-app-2')
+    expect(appsResult.ok).toBe(true)
+    if (Result.isOk(appsResult)) {
+      const apps = appsResult.unwrap()
+      expect(apps.apps.every((a) => a.triggers.length > 0)).toBe(true)
+      expect(apps.apps).toHaveLength(1)
+      expect(apps.apps[0].nameSlug).toBe('test-app-2')
     }
   })
 
   it('should return all apps when withTools is false', async () => {
-    const result = await listApps({
+    const appsResult = await listApps({
       withTools: false,
       pipedreamClientBuilder: mockPipedreamClientBuilder(),
     })
 
-    expect(result.ok).toBe(true)
-    if (Result.isOk(result)) {
-      expect(result.value.apps).toHaveLength(2)
-      expect(result.value.apps.every((a) => 'tools' in a)).toBe(true)
+    expect(appsResult.ok).toBe(true)
+    if (Result.isOk(appsResult)) {
+      const apps = appsResult.unwrap()
+      expect(apps.apps).toHaveLength(2)
+      expect(apps.apps.every((a) => 'tools' in a)).toBe(true)
     }
   })
 
   it('should filter apps by tools when withTools is true', async () => {
-    const result = await listApps({
+    const appsResult = await listApps({
       withTools: true,
       pipedreamClientBuilder: mockPipedreamClientBuilder(),
     })
 
-    expect(result.ok).toBe(true)
-    if (Result.isOk(result)) {
-      expect(result.value.apps.every((a) => a.tools.length > 0)).toBe(true)
-      expect(result.value.apps).toHaveLength(1)
-      expect(result.value.apps[0].nameSlug).toBe('test-app-1')
+    expect(appsResult.ok).toBe(true)
+    if (Result.isOk(appsResult)) {
+      const apps = appsResult.unwrap()
+      expect(apps.apps.every((a) => a.tools.length > 0)).toBe(true)
+      expect(apps.apps).toHaveLength(1)
+      expect(apps.apps[0].nameSlug).toBe('test-app-1')
     }
   })
 
   it('should return apps with both triggers and tools when both flags are true', async () => {
-    const result = await listApps({
+    const appsResult = await listApps({
       withTriggers: true,
       withTools: true,
       pipedreamClientBuilder: mockPipedreamClientBuilder(),
     })
 
-    expect(result.ok).toBe(true)
-    if (Result.isOk(result)) {
+    expect(appsResult.ok).toBe(true)
+    if (Result.isOk(appsResult)) {
       // With our mock data, no app has both a tool and a trigger
-      expect(result.value.apps).toHaveLength(0)
+      const apps = appsResult.unwrap()
+      expect(apps.apps).toHaveLength(0)
     }
   })
 
@@ -255,26 +261,28 @@ describe('listApps', () => {
         },
       } as unknown as PipedreamClient)
 
-    const result = await listApps({
+    const appsResult = await listApps({
       pipedreamClientBuilder: emptyClientBuilder,
     })
 
-    expect(result.ok).toBe(true)
-    if (Result.isOk(result)) {
-      expect(result.value.apps).toEqual([])
+    expect(appsResult.ok).toBe(true)
+    if (Result.isOk(appsResult)) {
+      const apps = appsResult.unwrap()
+      expect(apps.apps).toEqual([])
     }
   })
 
   it('should handle cursor parameter correctly', async () => {
-    const result = await listApps({
+    const appsResult = await listApps({
       cursor: 'custom-cursor',
       pipedreamClientBuilder: mockPipedreamClientBuilder(),
     })
 
-    expect(result.ok).toBe(true)
-    if (Result.isOk(result)) {
-      expect(result.value.apps).toHaveLength(2)
-      expect(result.value.cursor).toBe('test-cursor')
+    expect(appsResult.ok).toBe(true)
+    if (Result.isOk(appsResult)) {
+      const apps = appsResult.unwrap()
+      expect(apps.apps).toHaveLength(2)
+      expect(apps.cursor).toBe('test-cursor')
     }
   })
 

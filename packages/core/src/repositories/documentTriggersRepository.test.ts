@@ -1030,18 +1030,18 @@ describe('DocumentTriggersRepository', () => {
         uuid: originalTrigger!.uuid,
         commit: mergedCommit1,
       })
+      const triggerAtCommit1 = resultAtCommit1.unwrap()
       expect(
-        (resultAtCommit1.unwrap().configuration as EmailTriggerConfiguration)
-          .name,
+        (triggerAtCommit1.configuration as EmailTriggerConfiguration).name,
       ).toBe('Version 1')
 
       // Current state should still show the email trigger
       const resultCurrent = await repo.getTriggerByUuid({
         uuid: originalTrigger!.uuid,
       })
+      const triggerCurrent = resultCurrent.unwrap()
       expect(
-        (resultCurrent.unwrap().configuration as EmailTriggerConfiguration)
-          .name,
+        (triggerCurrent.configuration as EmailTriggerConfiguration).name,
       ).toBe('Version 1')
 
       // Should have both triggers now
@@ -1121,19 +1121,22 @@ describe('DocumentTriggersRepository', () => {
       const emailResult = await repo.getTriggerByUuid({
         uuid: emailTrigger!.uuid,
       })
-      expect(emailResult.unwrap().triggerType).toBe(DocumentTriggerType.Email)
+      const emailTriggerData = emailResult.unwrap()
+      expect(emailTriggerData.triggerType).toBe(DocumentTriggerType.Email)
 
       const scheduledResult = await repo.getTriggerByUuid({
         uuid: scheduledTrigger!.uuid,
       })
-      expect(scheduledResult.unwrap().triggerType).toBe(
+      const scheduledTriggerData = scheduledResult.unwrap()
+      expect(scheduledTriggerData.triggerType).toBe(
         DocumentTriggerType.Scheduled,
       )
 
       const integrationResult = await repo.getTriggerByUuid({
         uuid: integrationTrigger!.uuid,
       })
-      expect(integrationResult.unwrap().triggerType).toBe(
+      const integrationTriggerData = integrationResult.unwrap()
+      expect(integrationTriggerData.triggerType).toBe(
         DocumentTriggerType.Integration,
       )
     })

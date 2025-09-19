@@ -48,14 +48,14 @@ async function getProjectByVersionData({
   }
 
   const projectResult = await projectsScope.getProjectById(pid)
-  if (projectResult.error) return projectResult
+  if (!Result.isOk(projectResult)) return projectResult
   const project = projectResult.value
 
   const commitResult = await commitsScope.getCommitByUuid({
     projectId: project.id,
     uuid: commitUuid,
   })
-  if (commitResult.error) return commitResult
+  if (!Result.isOk(commitResult)) return commitResult
   const commit = commitResult.value
   return Result.ok({ project, commit })
 }
@@ -75,13 +75,13 @@ export async function getAllDocumentsAtCommitWithMetadata({
     commitUuid,
   })
 
-  if (projectResult.error) return projectResult
+  if (!Result.isOk(projectResult)) return projectResult
 
   const { commit } = projectResult.value
   const docsScope = new DocumentVersionsRepository(workspace.id)
 
   const docsResult = await docsScope.getDocumentsAtCommit(commit)
-  if (docsResult.error) return docsResult
+  if (!Result.isOk(docsResult)) return docsResult
 
   const docs = docsResult.value
   const docsWithMetadata = await Promise.all(
@@ -143,7 +143,7 @@ export const getData = async ({
     commitUuid,
   })
 
-  if (projectResult.error) return projectResult
+  if (!Result.isOk(projectResult)) return projectResult
 
   const { project, commit } = projectResult.value
   const docsScope = new DocumentVersionsRepository(workspace.id)
@@ -151,7 +151,7 @@ export const getData = async ({
     commit,
     path: documentPath,
   })
-  if (documentResult.error) return documentResult
+  if (!Result.isOk(documentResult)) return documentResult
   const document = documentResult.value
 
   return Result.ok({ project, commit, document })

@@ -53,7 +53,7 @@ export async function executeLatteActions({
           { workspace, commit, documents, action },
           transaction,
         )
-        if (!actionResult.ok) {
+        if (!Result.isOk(actionResult)) {
           return Result.error(actionResult.error!)
         }
         latteChanges.push(actionResult.unwrap())
@@ -86,16 +86,15 @@ export async function executeLatteActions({
           },
           transaction,
         )
-        if (!newCheckpointsResult.ok) {
+        if (!Result.isOk(newCheckpointsResult)) {
           return Result.error(newCheckpointsResult.error!)
         }
       }
 
       // Scan the updated project for errors
       const documentsScope = new DocumentVersionsRepository(workspace.id, tx)
-      const newDocuments = await documentsScope
-        .getDocumentsAtCommit(commit)
-        .then((r) => r.unwrap())
+      const documentsResult = await documentsScope.getDocumentsAtCommit(commit)
+      const newDocuments = documentsResult.unwrap()
 
       const metadatasResult = await scanDocuments(
         {
@@ -106,7 +105,7 @@ export async function executeLatteActions({
         tx,
       )
 
-      if (!metadatasResult.ok) {
+      if (!Result.isOk(metadatasResult)) {
         return Result.error(metadatasResult.error!)
       }
 

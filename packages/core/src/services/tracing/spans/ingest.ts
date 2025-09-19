@@ -50,14 +50,14 @@ export async function ingestSpans(
     for (const { scope, spans } of scopeSpans) {
       for (const span of spans) {
         const converting = convertSpanAttributes(span.attributes || [])
-        if (converting.error) {
+        if (!Result.isOk(converting)) {
           captureException(converting.error)
           continue
         }
         const attributes = converting.value
 
         const extracting = extractSpanType(attributes)
-        if (extracting.error) {
+        if (!Result.isOk(extracting)) {
           captureException(extracting.error)
           continue
         }
@@ -68,7 +68,7 @@ export async function ingestSpans(
           { apiKeyId, workspaceId, attributes },
           db,
         )
-        if (extractingApiKeyAndWorkspace.error) {
+        if (!Result.isOk(extractingApiKeyAndWorkspace)) {
           captureException(extractingApiKeyAndWorkspace.error)
           continue
         }
@@ -79,7 +79,7 @@ export async function ingestSpans(
         apiKeys[apiKey.id] = apiKey
 
         const enriching = enrichAttributes({ resource, scope, span })
-        if (enriching.error) {
+        if (!Result.isOk(enriching)) {
           captureException(enriching.error)
           continue
         }
@@ -119,7 +119,7 @@ export async function ingestSpans(
       const workspace = workspaces[workspaceId]!
 
       const processing = await processSpansBulk({ spans, apiKey, workspace })
-      if (processing.error) {
+      if (!Result.isOk(processing)) {
         captureException(processing.error)
         continue
       }

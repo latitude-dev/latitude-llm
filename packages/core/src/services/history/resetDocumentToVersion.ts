@@ -76,7 +76,7 @@ export async function getChangesToResetDocumentToVersion({
     documentCommitUuid,
     documentUuid,
   })
-  if (documentVersionDetails.error) {
+  if (!Result.isOk(documentVersionDetails)) {
     return Result.error(documentVersionDetails.error)
   }
   const { originalDocument, targetCommit, targetDocument } =
@@ -88,7 +88,7 @@ export async function getChangesToResetDocumentToVersion({
     changedDocument: targetDocument,
     originalDocument,
   })
-  if (changeResult.error) return Result.error(changeResult.error)
+  if (!Result.isOk(changeResult)) return Result.error(changeResult.error)
   const change = changeResult.unwrap()
 
   const isCreated = change.deletedAt === null
@@ -140,7 +140,7 @@ export async function resetDocumentToVersion({
     documentCommitUuid,
     documentUuid,
   })
-  if (documentVersionDetails.error) {
+  if (!Result.isOk(documentVersionDetails)) {
     return Result.error(documentVersionDetails.error)
   }
   const { originalDocument, targetCommit, targetDocument } =
@@ -153,7 +153,7 @@ export async function resetDocumentToVersion({
     originalDocument,
   })
 
-  if (documentVersionChangesResult.error) {
+  if (!Result.isOk(documentVersionChangesResult)) {
     return Result.error(documentVersionChangesResult.error)
   }
   const documentVersionChanges = documentVersionChangesResult.unwrap()
@@ -184,7 +184,7 @@ export async function resetDocumentToVersion({
     deletedAt: documentVersionChanges.deletedAt,
   })
 
-  if (updateResult.error) {
+  if (!Result.isOk(updateResult)) {
     return Result.error(updateResult.error)
   }
 

@@ -1,4 +1,5 @@
 import { LogSources, User, Workspace } from '@latitude-data/core/browser'
+import { Result } from '@latitude-data/core/lib/Result'
 import { type Message } from '@latitude-data/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -57,7 +58,7 @@ export const POST = errorHandler(
           __internal: { source: LogSources.Playground },
         })
 
-        if (sdkResult.error) {
+        if (!Result.isOk(sdkResult)) {
           return NextResponse.json(
             { message: 'Failed to create SDK', error: sdkResult.error },
             { status: 500 },

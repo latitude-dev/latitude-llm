@@ -4,6 +4,7 @@ import { diskFactory } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { ingestSpans } from '../../../services/tracing/spans/ingest'
 import { captureException } from '../../../utils/workers/sentry'
+import { Result } from '../../../lib/Result'
 
 export type IngestSpansJobData = {
   ingestionId: string
@@ -31,7 +32,7 @@ export const ingestSpansJob = async (job: Job<IngestSpansJobData>) => {
   const { spans } = data
 
   const result = await ingestSpans({ spans, apiKeyId, workspaceId })
-  if (result.error) {
+  if (!Result.isOk(result)) {
     // @ts-expect-error ingestSpans currently ignores all errors but leaving this for the future
     if (result.error instanceof UnprocessableEntityError) {
       captureException(result.error)

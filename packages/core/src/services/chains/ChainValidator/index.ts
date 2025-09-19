@@ -80,9 +80,9 @@ export const validateChain = async ({
 > => {
   try {
     const chainResult = await getChainNextStep({ chain, newMessages })
-    if (chainResult.error) return chainResult
+    if (!Result.isOk(chainResult)) return chainResult
 
-    const { chainCompleted, conversation } = chainResult.value
+    const { chainCompleted, conversation } = chainResult.unwrap()
     const config = applyAgentRule(
       validateConfig(conversation.config as LatitudePromptConfig).unwrap(),
     )

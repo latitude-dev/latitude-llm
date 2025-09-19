@@ -6,6 +6,7 @@ import {
 import { runEvaluationV2JobKey } from '../../jobs/job-definitions'
 import { queues } from '../../jobs/queues'
 import { NotFoundError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
 import {
   CommitsRepository,
   DocumentLogsRepository,
@@ -26,7 +27,7 @@ export const evaluateLiveLogJob = async ({
   const { id, workspaceId } = event.data
   const repo = new DocumentLogsRepository(workspaceId)
   const documentLogResult = await repo.find(id)
-  if (documentLogResult.error) return
+  if (!Result.isOk(documentLogResult)) return
 
   const documentLog = documentLogResult.unwrap()
   const workspace = await findWorkspaceFromDocumentLog(documentLog)

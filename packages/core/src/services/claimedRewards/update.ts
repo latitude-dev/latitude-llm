@@ -48,7 +48,7 @@ export async function updateRewardClaim(
         },
         transaction,
       )
-      if (revoking.error) {
+      if (!Result.isOk(revoking)) {
         return Result.error(revoking.error)
       }
     }

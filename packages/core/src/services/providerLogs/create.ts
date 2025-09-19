@@ -107,7 +107,7 @@ export async function createProviderLog(
   }
 
   const fileStorageResult = await storeProviderLogFile(fileKey, fileData)
-  if (fileStorageResult.error) return fileStorageResult
+  if (!Result.isOk(fileStorageResult)) return fileStorageResult
 
   try {
     const log = await transaction

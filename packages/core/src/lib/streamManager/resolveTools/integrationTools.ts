@@ -108,11 +108,11 @@ async function addIntegrationTools({
     return Result.ok(integrationTools[integrationName])
 
   const integrationResult = await integrationsScope.findByName(integrationName)
-  if (integrationResult.error) return integrationResult
+  if (!Result.isOk(integrationResult)) return integrationResult
   const integration = integrationResult.unwrap()
 
   const toolsResult = await listTools(integration, streamManager)
-  if (toolsResult.error) return toolsResult
+  if (!Result.isOk(toolsResult)) return toolsResult
   const mcpTools = toolsResult.unwrap()
 
   integrationTools[integrationName] = Object.fromEntries(

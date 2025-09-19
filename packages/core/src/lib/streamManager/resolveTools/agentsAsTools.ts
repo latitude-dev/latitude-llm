@@ -74,7 +74,7 @@ export async function resolveAgentsAsTools({
 
   const docsScope = new DocumentVersionsRepository(workspace.id)
   const docsResult = await docsScope.getDocumentsAtCommit(promptSource.commit)
-  if (docsResult.error) return Result.error(docsResult.error)
+  if (!Result.isOk(docsResult)) return Result.error(docsResult.error)
 
   const docs = docsResult.unwrap()
   const absoluteAgentPaths = relativeAgentPaths.map((relativeAgentPath) =>
@@ -84,7 +84,7 @@ export async function resolveAgentsAsTools({
     agentPaths: absoluteAgentPaths,
     documents: docs,
   })
-  if (agentDocsResult.error) return agentDocsResult
+  if (!Result.isOk(agentDocsResult)) return agentDocsResult
 
   const referenceFn = async (target: string, from?: string) => {
     const fullPath = from ? resolveRelativePath(from, target) : target

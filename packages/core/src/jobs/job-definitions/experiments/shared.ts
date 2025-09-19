@@ -28,7 +28,7 @@ export async function updateExperimentStatus(
   if (current >= expectedTotal) {
     // Experiment has been completed
     const completeResult = await completeExperiment(experiment)
-    if (completeResult.error) {
+    if (!Result.isOk(completeResult)) {
       return Result.error(completeResult.error as LatitudeError)
     }
 

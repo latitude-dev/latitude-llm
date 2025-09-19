@@ -20,6 +20,7 @@ import { EvaluationEditor } from './_components/EvaluationEditor'
 import { LOG_UUID_PARAM } from '$/lib/useEvaluationEditorLink'
 import { DocumentLogsRepository } from '@latitude-data/core/repositories'
 import buildMetatags from '$/app/_lib/buildMetatags'
+import { Result } from '@latitude-data/core/lib/Result'
 
 export const metadata = buildMetatags({
   locationDescription: 'Prompt Evaluation Editor',
@@ -92,7 +93,7 @@ export default async function EvaluationEditorPage({
   if (logUuid) {
     const logsRepo = new DocumentLogsRepository(workspace.id)
     const logResult = await logsRepo.findByUuid(logUuid)
-    if (!logResult.error) {
+    if (Result.isOk(logResult)) {
       selectedDocumentLogUuid = logResult.value.uuid
     }
   }

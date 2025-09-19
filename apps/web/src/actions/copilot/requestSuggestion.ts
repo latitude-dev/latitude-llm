@@ -55,13 +55,12 @@ export const requestSuggestionAction = authProcedure
       .then((r) => r.unwrap())
 
     const providersScope = new ProviderApiKeysRepository(ctx.workspace.id)
-    const providers = await providersScope.findAll().then((r) =>
-      r.unwrap().map((p) => ({
-        name: p.name,
-        provider: p.provider,
-        models: Object.values(PROVIDER_MODELS[p.provider]!),
-      })),
-    )
+    const providersResult = await providersScope.findAll()
+    const providers = providersResult.unwrap().map((p) => ({
+      name: p.name,
+      provider: p.provider,
+      models: Object.values(PROVIDER_MODELS[p.provider]!),
+    }))
 
     const sdk = await createSdk({
       workspace: ctx.workspace,

@@ -1,5 +1,6 @@
 import { Workspace } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { Result } from '@latitude-data/core/lib/Result'
 import { previewDatasetFromLogs } from '@latitude-data/core/services/datasets/previewFromLogs'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
@@ -25,7 +26,7 @@ export const GET = errorHandler(
         },
       })
 
-      if (result.error) {
+      if (!Result.isOk(result)) {
         throw new BadRequestError(result.error.message)
       }
 

@@ -25,10 +25,10 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
 
   async find(id: string | number | undefined | null) {
     const result = await super.find(id)
-    if (result.error) return result
+    if (!Result.isOk(result)) return result
 
     const hydrated = await hydrateProviderLog(result.unwrap())
-    if (hydrated.error) return hydrated
+    if (!Result.isOk(hydrated)) return hydrated
 
     return Result.ok(hydrated.unwrap())
   }
@@ -45,7 +45,7 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
     }
 
     const hydrated = await hydrateProviderLog(result[0]!)
-    if (hydrated.error) return hydrated
+    if (!Result.isOk(hydrated)) return hydrated
 
     return Result.ok(hydrated.unwrap())
   }
@@ -90,7 +90,7 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
       return Result.error(new NotFoundError('ProviderLog not found'))
     }
     const hydrated = await hydrateProviderLog(result[0]!)
-    if (hydrated.error) return hydrated
+    if (!Result.isOk(hydrated)) return hydrated
 
     return Result.ok(hydrated.unwrap())
   }

@@ -138,10 +138,10 @@ export class GrantsRepository extends Repository<Grant> {
 
   async quotaSinceDate(type: QuotaType, since: Date) {
     const listing = await this.listApplicable(since, type)
-    if (listing.error) {
+    if (!Result.isOk(listing)) {
       return Result.error(listing.error as Error)
     }
-    const grants = listing.value
+    const grants = listing.unwrap()
 
     const unlimited = grants.some((grant) => grant.amount === 'unlimited')
     if (unlimited) {

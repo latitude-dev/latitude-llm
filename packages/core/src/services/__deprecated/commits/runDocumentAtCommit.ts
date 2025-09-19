@@ -100,24 +100,24 @@ export async function runDocumentAtCommitLegacy({
 
   // NOTE: We don't log these errors. If something happen
   // in getResolvedContent it will not appear in Latitude
-  if (result.error) return result
+  if (!Result.isOk(result)) return result
 
   const checker = new RunDocumentChecker({
     document,
     errorableUuid,
-    prompt: result.value,
+    prompt: result.unwrap(),
     parameters,
   })
   const checkerResult = await checker.call()
 
-  if (checkerResult.error) {
+  if (!Result.isOk(checkerResult)) {
     await createDocumentRunResult({
       workspace,
       document,
       commit,
       errorableUuid,
       parameters,
-      resolvedContent: result.value,
+      resolvedContent: result.unwrap(),
       source,
       publishEvent: false,
       experiment,
@@ -130,9 +130,9 @@ export async function runDocumentAtCommitLegacy({
     generateUUID: () => errorableUuid,
     errorableType,
     workspace,
-    chain: checkerResult.value.chain,
-    isChain: checkerResult.value.isChain,
-    globalConfig: checkerResult.value.config as LatitudePromptConfig,
+    chain: checkerResult.unwrap().chain,
+    isChain: checkerResult.unwrap().isChain,
+    globalConfig: checkerResult.unwrap().config as LatitudePromptConfig,
     promptlVersion: document.promptlVersion,
     providersMap,
     source,
@@ -148,7 +148,7 @@ export async function runDocumentAtCommitLegacy({
 
   return Result.ok({
     ...runResult,
-    resolvedContent: result.value,
+    resolvedContent: result.unwrap(),
     errorableUuid,
     lastResponse: runResult.lastResponse.then(async (response) => {
       const error = await runResult.error
@@ -162,7 +162,7 @@ export async function runDocumentAtCommitLegacy({
         commit,
         errorableUuid,
         parameters,
-        resolvedContent: result.value,
+        resolvedContent: result.unwrap(),
         customIdentifier,
         source,
         duration: await runResult.duration,

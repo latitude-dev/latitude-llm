@@ -137,7 +137,7 @@ export const migrateProviderLogsToObjectStorageJob = async (
           const fileKey = generateProviderLogFileKey(log.uuid)
           const storageResult = await storeProviderLogFile(fileKey, fileData)
 
-          if (storageResult.error) {
+          if (!Result.isOk(storageResult)) {
             failedLogs++
             console.error(
               `Failed to store provider log file for log ${log.id}:`,
@@ -166,7 +166,7 @@ export const migrateProviderLogsToObjectStorageJob = async (
             return Result.ok(result)
           })
 
-          if (updateResult.error) {
+          if (!Result.isOk(updateResult)) {
             failedLogs++
             console.error(
               `Failed to update provider log ${log.id} after storing file:`,

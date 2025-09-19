@@ -26,14 +26,14 @@ export const updateDatasetFromLogs = async (
     dataset,
     hashAlgorithm,
   })
-  if (builtLogsResult.error) return builtLogsResult
+  if (!Result.isOk(builtLogsResult)) return builtLogsResult
   const exportedLogs = builtLogsResult.value
 
   const ds = await updateDataset(
     { dataset, data: { columns: exportedLogs.columns } },
     transaction,
   )
-  if (ds.error) return ds
+  if (!Result.isOk(ds)) return ds
   const row = await insertRowsInBatch(
     {
       dataset,
@@ -41,7 +41,7 @@ export const updateDatasetFromLogs = async (
     },
     transaction,
   )
-  if (row.error) return row
+  if (!Result.isOk(row)) return row
 
   return Result.ok(ds.value)
 }

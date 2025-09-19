@@ -32,19 +32,19 @@ async function process(
   _ = database,
 ) {
   const extractingqm = extractRequestMethod(attributes)
-  if (extractingqm.error) return Result.error(extractingqm.error)
+  if (!Result.isOk(extractingqm)) return Result.error(extractingqm.error)
   const requestMethod = extractingqm.value
 
   const extractingqu = extractRequestUrl(attributes)
-  if (extractingqu.error) return Result.error(extractingqu.error)
+  if (!Result.isOk(extractingqu)) return Result.error(extractingqu.error)
   const requestUrl = extractingqu.value
 
   const extractingqh = extractRequestHeaders(attributes)
-  if (extractingqh.error) return Result.error(extractingqh.error)
+  if (!Result.isOk(extractingqh)) return Result.error(extractingqh.error)
   const requestHeaders = extractingqh.value
 
   const extractingqb = extractRequestBody(attributes)
-  if (extractingqb.error) return Result.error(extractingqb.error)
+  if (!Result.isOk(extractingqb)) return Result.error(extractingqb.error)
   const requestBody = extractingqb.value
 
   if (status === SpanStatus.Error) {
@@ -59,15 +59,15 @@ async function process(
   }
 
   const extractingss = extractResponseStatus(attributes)
-  if (extractingss.error) return Result.error(extractingss.error)
+  if (!Result.isOk(extractingss)) return Result.error(extractingss.error)
   const responseStatus = extractingss.value
 
   const extractingsh = extractResponseHeaders(attributes)
-  if (extractingsh.error) return Result.error(extractingsh.error)
+  if (!Result.isOk(extractingsh)) return Result.error(extractingsh.error)
   const responseHeaders = extractingsh.value
 
   const extractingsb = extractResponseBody(attributes)
-  if (extractingsb.error) return Result.error(extractingsb.error)
+  if (!Result.isOk(extractingsb)) return Result.error(extractingsb.error)
   const responseBody = extractingsb.value
 
   return Result.ok({

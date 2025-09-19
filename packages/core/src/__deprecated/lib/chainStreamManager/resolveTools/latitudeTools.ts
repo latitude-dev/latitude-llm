@@ -90,7 +90,7 @@ export function resolveLatitudeTools({
   config: LatitudePromptConfig
 }): TypedResult<ResolvedTools, LatitudeError> {
   const newSchemaResult = resolveLatitudeToolsFromNewSchema(config)
-  if (newSchemaResult.error) return newSchemaResult
+  if (!Result.isOk(newSchemaResult)) return newSchemaResult
 
   return Result.ok({
     ...newSchemaResult.unwrap(),

@@ -68,8 +68,8 @@ async function getDraftChanges(
   transaction = new Transaction(),
 ): PromisedResult<ChangedDocument[]> {
   const result = await recomputeChanges({ draft, workspace }, transaction)
-  if (result.error) return result
-  const changes = result.value
+  if (!Result.isOk(result)) return result
+  const changes = result.unwrap()
 
   // Include documents with errors on `changes.changedDocuments`
   for (const documentUuid of Object.keys(changes.errors)) {
@@ -107,8 +107,8 @@ export async function getCommitChanges(
         { workspace, draft: commit },
         transaction,
       )
-      if (draftResult.error) return Result.error(draftResult.error)
-      documentChanges = draftResult.value
+      if (!Result.isOk(draftResult)) return Result.error(draftResult.error)
+      documentChanges = draftResult.unwrap()
     } else {
       const commitsRepository = new CommitsRepository(workspace.id, tx)
       const previousCommit = await commitsRepository.getPreviousCommit(commit)
@@ -119,7 +119,7 @@ export async function getCommitChanges(
 
       const currentCommitChanges =
         await documentsRepository.listCommitChanges(commit)
-      if (currentCommitChanges.error) {
+      if (!Result.isOk(currentCommitChanges)) {
         return Result.error(currentCommitChanges.error)
       }
 
@@ -127,13 +127,13 @@ export async function getCommitChanges(
         ? await documentsRepository.getDocumentsAtCommit(previousCommit)
         : Result.ok([])
 
-      if (previousCommitDocuments.error) {
+      if (!Result.isOk(previousCommitDocuments)) {
         return Result.error(previousCommitDocuments.error)
       }
 
       documentChanges = changesPresenter({
-        currentCommitChanges: currentCommitChanges.value,
-        previousCommitDocuments: previousCommitDocuments.value,
+        currentCommitChanges: currentCommitChanges.unwrap(),
+        previousCommitDocuments: previousCommitDocuments.unwrap(),
         errors: {},
       })
     }
@@ -143,7 +143,7 @@ export async function getCommitChanges(
       { workspace, commit },
       transaction,
     )
-    if (triggerChangesResult.error)
+    if (!Result.isOk(triggerChangesResult))
       return Result.error(triggerChangesResult.error)
 
     // Separate documents by error status

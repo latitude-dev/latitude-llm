@@ -1,4 +1,5 @@
 import { Workspace } from '@latitude-data/core/browser'
+import { Result } from '@latitude-data/core/lib/Result'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
@@ -48,7 +49,7 @@ export const GET = errorHandler(
 
       const result = await listTools(integration)
 
-      if (result.error) {
+      if (!Result.isOk(result)) {
         return NextResponse.json(
           {
             ok: false,

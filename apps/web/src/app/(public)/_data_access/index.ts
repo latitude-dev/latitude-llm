@@ -24,7 +24,7 @@ export const findUserCache = cache(async (id: string) => {
 export const findSharedDocumentCached = cache(
   async (publishedDocumentUuid: string) => {
     const result = await findSharedDocument({ publishedDocumentUuid })
-    if (result.error) return result
+    if (!Result.isOk(result)) return result
 
     const { workspace, shared, document, commit } = result.value
     const metaResult = await scanDocumentContent({
@@ -32,7 +32,7 @@ export const findSharedDocumentCached = cache(
       document,
       commit,
     })
-    if (metaResult.error) return metaResult
+    if (!Result.isOk(metaResult)) return metaResult
 
     const { setConfig: _, ...metadata } = metaResult.value
 

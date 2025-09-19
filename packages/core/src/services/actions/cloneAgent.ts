@@ -26,7 +26,7 @@ async function execute(
   _ = new Transaction(),
 ) {
   const getting = await getSampleAgent({ documentUuid: parameters.uuid }, db)
-  if (getting.error) {
+  if (!Result.isOk(getting)) {
     return Result.error(getting.error)
   }
   const sample = getting.unwrap()
@@ -51,7 +51,7 @@ async function execute(
     destination: { workspace, user },
     defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
   })
-  if (forking.error) {
+  if (!Result.isOk(forking)) {
     return Result.error(forking.error)
   }
   const cloned = forking.unwrap()
@@ -88,7 +88,7 @@ async function getSampleAgent(
 
   const commitsRepository = new CommitsRepository(workspace.id, db)
   const gettingco = await commitsRepository.getHeadCommit(project.id)
-  if (gettingco.error) {
+  if (!Result.isOk(gettingco)) {
     return Result.error(gettingco.error)
   }
   const commit = gettingco.unwrap()
@@ -104,7 +104,7 @@ async function getSampleAgent(
     commitUuid: commit.uuid,
     documentUuid: documentUuid,
   })
-  if (gettingdo.error) {
+  if (!Result.isOk(gettingdo)) {
     return Result.error(gettingdo.error)
   }
   const document = gettingdo.unwrap()

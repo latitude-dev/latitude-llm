@@ -80,7 +80,7 @@ export async function getExperimentJobPayload(
     workspace.id,
     db,
   ).getCommitById(experiment.commitId)
-  if (commitResult.error) return commitResult
+  if (!Result.isOk(commitResult)) return commitResult
   const commit = commitResult.unwrap()
 
   const evaluationScope = new EvaluationsV2Repository(workspace.id, db)
@@ -90,7 +90,7 @@ export async function getExperimentJobPayload(
       commitUuid: commit.uuid,
       documentUuid: experiment.documentUuid,
     })
-  if (documentEvaluationsResult.error) {
+  if (!Result.isOk(documentEvaluationsResult)) {
     return Result.error(documentEvaluationsResult.error as Error)
   }
   const documentEvaluations = documentEvaluationsResult.unwrap()
@@ -114,7 +114,7 @@ export async function getExperimentJobPayload(
     datasetLabels: experiment.metadata.datasetLabels,
   })
 
-  if (requirementsResult.error) return requirementsResult
+  if (!Result.isOk(requirementsResult)) return requirementsResult
 
   if (!experiment.datasetId) {
     const from = experiment.metadata.fromRow
@@ -135,7 +135,7 @@ export async function getExperimentJobPayload(
 
   const datasetScope = new DatasetsRepository(workspace.id, db)
   const datasetResult = await datasetScope.find(experiment.datasetId)
-  if (datasetResult.error) return datasetResult
+  if (!Result.isOk(datasetResult)) return datasetResult
   const dataset = datasetResult.unwrap()
 
   const rows = await getExperimentRows(

@@ -17,7 +17,7 @@ export async function updateCommit(
 ): Promise<TypedResult<Commit, Error>> {
   return transaction.call<Commit>(async (tx) => {
     const assertResult = assertCommitIsDraft(commit)
-    if (assertResult.error) return assertResult
+    if (!Result.isOk(assertResult)) return assertResult
 
     if (Object.keys(data).length === 0) {
       return Result.error(

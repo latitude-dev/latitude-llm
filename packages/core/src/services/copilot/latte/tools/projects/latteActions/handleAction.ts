@@ -40,7 +40,7 @@ export async function executeEditAction(
       },
       transaction,
     )
-    if (!updateResult.ok) {
+    if (!Result.isOk(updateResult)) {
       return Result.error(updateResult.error!)
     }
 
@@ -75,7 +75,7 @@ export async function executeEditAction(
       },
       transaction,
     )
-    if (!createResult.ok) {
+    if (!Result.isOk(createResult)) {
       return Result.error(createResult.error!)
     }
 
@@ -109,7 +109,7 @@ export async function executeEditAction(
       },
       transaction,
     )
-    if (!deleteResult.ok) {
+    if (!Result.isOk(deleteResult)) {
       return Result.error(deleteResult.error!)
     }
 

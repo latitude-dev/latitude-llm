@@ -8,6 +8,7 @@ import { ObjectParser } from '@pilcrowjs/object-parser'
 import { decodeIdToken, OAuth2RequestError, OAuth2Tokens } from 'arctic'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { Result } from '@latitude-data/core/lib/Result'
 
 export async function GET(request: NextRequest): Promise<Response> {
   const url = new URL(request.url)
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       name: name ?? email, // Use name, fallback to email
     })
 
-    if (userResult.error) {
+    if (!Result.isOk(userResult)) {
       console.error(
         'Failed to find or create user from OAuth:',
         userResult.error,

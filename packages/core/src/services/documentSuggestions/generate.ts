@@ -107,7 +107,7 @@ export async function generateDocumentSuggestion(
     commit,
     workspace,
   })
-  if (limitsResult.error) return limitsResult
+  if (!Result.isOk(limitsResult)) return limitsResult
   if (!results) {
     const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
     results = await resultsRepository
@@ -162,7 +162,7 @@ export async function generateDocumentSuggestion(
       commitId: document.commitId,
       documentUuid: document.documentUuid,
     })
-    if (lock.error) return lock
+    if (!Result.isOk(lock)) return lock
 
     const limits = await checkSuggestionLimits({
       document,
@@ -170,7 +170,7 @@ export async function generateDocumentSuggestion(
       commit,
       workspace,
     })
-    if (limits.error) return limits
+    if (!Result.isOk(limits)) return limits
 
     const suggestion = await tx
       .insert(documentSuggestions)

@@ -86,11 +86,11 @@ export async function deleteDocumentTrigger<T extends DocumentTriggerType>(
           commit,
         })
 
-      if (currentDocumentTriggerResult.error) {
+      if (!Result.isOk(currentDocumentTriggerResult)) {
         return currentDocumentTriggerResult
       }
 
-      const currentDocumentTrigger = currentDocumentTriggerResult.value
+      const currentDocumentTrigger = currentDocumentTriggerResult.unwrap()
       const liveDocumentTriggerResult = await getLiveDocumentTrigger<T>(
         {
           workspace,
@@ -100,7 +100,8 @@ export async function deleteDocumentTrigger<T extends DocumentTriggerType>(
         transaction,
       )
 
-      if (liveDocumentTriggerResult.error) return liveDocumentTriggerResult
+      if (!Result.isOk(liveDocumentTriggerResult))
+        return liveDocumentTriggerResult
       const liveDocumentTrigger = liveDocumentTriggerResult.unwrap()
 
       const undeployResult = await undeployDocumentTrigger(

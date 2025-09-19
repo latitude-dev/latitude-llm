@@ -9,6 +9,7 @@ import {
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
 import { ConversationMetadata } from 'promptl-ai'
+import { Result } from '@latitude-data/core/lib/Result'
 
 export const documentPresenterSchema = z.object({
   versionUuid: z.string(),
@@ -86,8 +87,9 @@ export async function documentPresenter({
     if (providerName) {
       const providersScope = new ProviderApiKeysRepository(workspace.id)
       const providerResult = await providersScope.findByName(providerName)
-      if (providerResult.ok) {
-        provider = providerResult.unwrap().provider
+      if (Result.isOk(providerResult)) {
+        const providerData = providerResult.unwrap()
+        provider = providerData.provider
       }
     }
 

@@ -55,7 +55,10 @@ export async function annotateEvaluationV2<
     })
 
   const resultUuid = existingResult.ok
-    ? existingResult.unwrap().uuid
+    ? (() => {
+        const existing = existingResult.unwrap()
+        return existing.uuid
+      })()
     : generateUUIDIdentifier()
 
   const documentsRepository = new DocumentVersionsRepository(workspace.id, db)

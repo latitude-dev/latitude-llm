@@ -132,13 +132,13 @@ describe('ProviderLogsRepository', () => {
         generatedAt: new Date('2024-01-02'),
       })
 
-      const result = await providerLogsRepository.findLastByDocumentLogUuid(
-        documentLog.uuid,
-      )
+      const providerLogResult =
+        await providerLogsRepository.findLastByDocumentLogUuid(documentLog.uuid)
 
-      expect(result.ok).toBe(true)
-      expect(result.unwrap().uuid).toBe(lastLog.uuid)
-      expect(result.unwrap().uuid).not.toBe(firstLog.uuid)
+      expect(providerLogResult.ok).toBe(true)
+      const providerLog = providerLogResult.unwrap()
+      expect(providerLog.uuid).toBe(lastLog.uuid)
+      expect(providerLog.uuid).not.toBe(firstLog.uuid)
     })
 
     it('returns a NotFoundError when the document log is not found', async () => {

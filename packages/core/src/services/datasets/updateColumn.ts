@@ -33,7 +33,7 @@ export async function updateDatasetColumn(
     { dataset, data: { columns } },
     transaction,
   )
-  if (updatedDatasetResult.error) return updatedDatasetResult
+  if (!Result.isOk(updatedDatasetResult)) return updatedDatasetResult
 
   return Result.ok(updatedDatasetResult.value as Dataset)
 }

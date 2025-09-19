@@ -31,7 +31,7 @@ export async function listTools(
   }
 
   const clientResult = await getMcpClient(integration, streamManager)
-  if (clientResult.error) {
+  if (!Result.isOk(clientResult)) {
     return clientResult
   }
   const client = clientResult.unwrap()
@@ -40,7 +40,7 @@ export async function listTools(
     const { tools } = await client.listTools()
 
     const touchResult = await touchIntegration(integration.id)
-    if (touchResult.error) {
+    if (!Result.isOk(touchResult)) {
       return Result.error(new LatitudeError(touchResult.error.message))
     }
 

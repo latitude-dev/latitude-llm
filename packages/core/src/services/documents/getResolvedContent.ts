@@ -50,7 +50,8 @@ export async function getResolvedContent({
     commit,
   })
 
-  if (metadataResult.error) return metadataResult
+  if (!Result.isOk(metadataResult)) return metadataResult
 
-  return Result.ok(metadataResult.unwrap().resolvedPrompt)
+  const metadata = metadataResult.unwrap()
+  return Result.ok(metadata.resolvedPrompt)
 }

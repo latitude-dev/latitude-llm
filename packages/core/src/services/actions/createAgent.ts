@@ -40,14 +40,15 @@ ${parameters.prompt}
 `.trim()
 
   let name = 'New Agent' // Note: generating project name asynchronously
-  const ensuring = await ensureAgentName({ name, workspace }, db)
-  if (ensuring.error) {
-    return Result.error(ensuring.error)
+  const ensuringResult = await ensureAgentName({ name, workspace }, db)
+  if (!Result.isOk(ensuringResult)) {
+    return Result.error(ensuringResult.error)
   }
-  name = ensuring.unwrap().name
+  const ensuringData = ensuringResult.unwrap()
+  name = ensuringData.name
 
   const creating = await createProject({ name, user, workspace }, tx)
-  if (creating.error) {
+  if (!Result.isOk(creating)) {
     return Result.error(creating.error)
   }
   const { project, commit } = creating.unwrap()
@@ -113,7 +114,7 @@ export async function generateAgentDetails(
     { path: env.COPILOT_PROMPT_AGENT_DETAILS_GENERATOR_PATH },
     db,
   )
-  if (getting.error) {
+  if (!Result.isOk(getting)) {
     return Result.error(getting.error)
   }
   const copilot = getting.unwrap()
@@ -123,7 +124,7 @@ export async function generateAgentDetails(
     parameters: { prompt },
     schema: generatorSchema,
   })
-  if (generating.error) {
+  if (!Result.isOk(generating)) {
     return Result.error(generating.error)
   }
   details = generating.unwrap()
@@ -152,7 +153,7 @@ export async function ensureAgentName(
   const repository = new ProjectsRepository(workspace.id, db)
 
   const finding = await repository.findAllActive()
-  if (finding.error) {
+  if (!Result.isOk(finding)) {
     return Result.error(finding.error as Error)
   }
   const projects = finding.unwrap()

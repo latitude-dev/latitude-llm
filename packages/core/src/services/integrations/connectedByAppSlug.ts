@@ -57,13 +57,14 @@ export async function listConnectedIntegrationsByApp({
   const integrationsWithCounts: PipedreamIntegrationWithCounts[] =
     await Promise.all(
       connectedPipedreamApps.map(async (app) => {
-        const components = await getAllAppComponents(
+        const componentsResult = await getAllAppComponents(
           app.configuration.appName,
           pipedream,
         )
+        const components = componentsResult.unwrap()
         return {
           ...app,
-          triggerCount: components.unwrap().triggers.length,
+          triggerCount: components.triggers.length,
         }
       }),
     )

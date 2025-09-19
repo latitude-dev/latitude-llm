@@ -83,7 +83,7 @@ export async function getChangesToRevertCommit({
     targetDraftUuid,
     commitUuid,
   })
-  if (commitRevisionDetauls.error) {
+  if (!Result.isOk(commitRevisionDetauls)) {
     return Result.error(commitRevisionDetauls.error)
   }
   const {
@@ -102,7 +102,7 @@ export async function getChangesToRevertCommit({
     originalCommit,
   })
 
-  if (computedChanges.error) return Result.error(computedChanges.error)
+  if (!Result.isOk(computedChanges)) return Result.error(computedChanges.error)
 
   const changes = computedChanges.value.map((change) => {
     const isCreated = change.deletedAt === null
@@ -176,7 +176,7 @@ export async function revertCommit(
     targetDraftUuid,
     commitUuid,
   })
-  if (commitRevisionDetauls.error) {
+  if (!Result.isOk(commitRevisionDetauls)) {
     return Result.error(commitRevisionDetauls.error)
   }
 
@@ -199,7 +199,7 @@ export async function revertCommit(
       trx,
     )
 
-    if (changes.error) return Result.error(changes.error)
+    if (!Result.isOk(changes)) return Result.error(changes.error)
 
     const finalDraft = targetDraftUuid
       ? Result.ok(targetDraft)
@@ -215,7 +215,7 @@ export async function revertCommit(
           transaction,
         )
 
-    if (finalDraft.error) return Result.error(finalDraft.error)
+    if (!Result.isOk(finalDraft)) return Result.error(finalDraft.error)
 
     const computedChanges = await Promise.all(
       changes.value.map((documentVersionChanges) => {
@@ -240,7 +240,7 @@ export async function revertCommit(
     )
 
     for (const result of computedChanges) {
-      if (result.error) return Result.error(result.error)
+      if (!Result.isOk(result)) return Result.error(result.error)
     }
 
     return Result.ok(finalDraft.value)

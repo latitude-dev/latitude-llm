@@ -3,6 +3,7 @@ import {
   unsafelyFindWorkspace,
   unsafelyGetApiKeyByToken,
 } from '@latitude-data/core/data-access'
+import { Result } from '@latitude-data/core/lib/Result'
 import { bearerAuth } from 'hono/bearer-auth'
 
 declare module 'hono' {
@@ -17,7 +18,7 @@ const authMiddleware = () =>
     verifyToken: async (token: string, c) => {
       try {
         const apiKeyResult = await unsafelyGetApiKeyByToken({ token })
-        if (apiKeyResult.error) return false
+        if (!Result.isOk(apiKeyResult)) return false
 
         const workspace = await unsafelyFindWorkspace(
           apiKeyResult.value.workspaceId,

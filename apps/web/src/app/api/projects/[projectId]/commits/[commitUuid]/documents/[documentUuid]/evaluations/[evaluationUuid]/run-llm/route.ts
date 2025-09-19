@@ -19,6 +19,7 @@ import {
   NotFoundError,
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
+import { Result } from '@latitude-data/core/lib/Result'
 
 function isCustomLlmEvaluation(
   evaluation: EvaluationV2,
@@ -116,7 +117,7 @@ export const POST = errorHandler(
         evaluationUuid,
       })
 
-      if (result.error) {
+      if (!Result.isOk(result)) {
         throw new NotFoundError('Evaluation not found')
       }
 

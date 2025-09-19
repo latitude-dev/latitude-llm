@@ -9,6 +9,7 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 import { JSONSchema7 } from 'json-schema'
 import { LogSources, ProviderApiKey, Workspace } from '../../../browser'
+import { Result } from '../../Result'
 import { ai, AIReturn } from '../../../services/ai'
 import { processResponse } from '../../../services/chains/ProviderProcessor'
 import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
@@ -75,7 +76,7 @@ export async function streamAIResponse({
     abortSignal,
   }).then((r) => r.unwrap())
   const checkResult = checkValidStream({ type: aiResult.type })
-  if (checkResult.error) throw checkResult.error
+  if (!Result.isOk(checkResult)) throw checkResult.error
   const accumulatedText = { text: '' }
 
   let chunkError

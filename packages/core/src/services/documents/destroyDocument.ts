@@ -16,7 +16,7 @@ export async function destroyDocument(
   transaction = new Transaction(),
 ) {
   const assertResult = assertCommitIsDraft(commit)
-  if (assertResult.error) return assertResult
+  if (!Result.isOk(assertResult)) return assertResult
 
   return destroyOrSoftDeleteDocuments(
     {

@@ -111,9 +111,9 @@ describe('handleSubscriptionUpdate', () => {
     })
 
     expect(result.ok).toBe(true)
-    if (!result.ok) throw result.error
+    if (!Result.isOk(result)) throw result.error
 
-    const { workspace, subscription } = result.value!
+    const { workspace, subscription } = result.unwrap()!
     expect(workspace.id).toBe(testWorkspace.id)
     expect(workspace.currentSubscriptionId).toBe(subscription!.id)
     expect(subscription!.plan).toBe(SubscriptionPlan.TeamV1)
@@ -122,19 +122,28 @@ describe('handleSubscriptionUpdate', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(5)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(100_000)
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(300)
   })
 
@@ -154,9 +163,9 @@ describe('handleSubscriptionUpdate', () => {
     })
 
     expect(result.ok).toBe(true)
-    if (!result.ok) throw result.error
+    if (!Result.isOk(result)) throw result.error
 
-    const { workspace, subscription: newSubscription } = result.value!
+    const { workspace, subscription: newSubscription } = result.unwrap()!
     expect(workspace.currentSubscriptionId).toBe(newSubscription!.id)
     expect(newSubscription!.plan).toBe(SubscriptionPlan.TeamV1)
     expect(newSubscription!.id).not.toBe(oldSub.id)
@@ -164,19 +173,28 @@ describe('handleSubscriptionUpdate', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(5)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(100_000)
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(300)
   })
 
@@ -201,9 +219,9 @@ describe('handleSubscriptionUpdate', () => {
     })
 
     expect(result.ok).toBe(true)
-    if (!result.ok) throw result.error
+    if (!Result.isOk(result)) throw result.error
 
-    const { workspace, subscription } = result.value!
+    const { workspace, subscription } = result.unwrap()!
     expect(workspace.currentSubscriptionId).toBe(existingTeamSub.id)
     expect(subscription!.id).toBe(existingTeamSub.id)
     expect(subscription!.plan).toBe(SubscriptionPlan.TeamV1)
@@ -211,19 +229,28 @@ describe('handleSubscriptionUpdate', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(5)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(100_000)
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(300)
   })
 
@@ -239,9 +266,9 @@ describe('handleSubscriptionUpdate', () => {
     })
 
     expect(result.ok).toBe(true)
-    if (!result.ok) throw result.error
+    if (!Result.isOk(result)) throw result.error
 
-    const { workspace, subscription } = result.value!
+    const { workspace, subscription } = result.unwrap()!
     expect(workspace.currentSubscriptionId).toBe(
       testWorkspace.currentSubscriptionId,
     )
@@ -250,19 +277,28 @@ describe('handleSubscriptionUpdate', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(1)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(10_000)
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: workspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(30)
   })
 
@@ -283,19 +319,28 @@ describe('handleSubscriptionUpdate', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(1)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(10_000)
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(30)
   })
 
@@ -316,19 +361,28 @@ describe('handleSubscriptionUpdate', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(1)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(10_000)
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(30)
   })
 
@@ -349,19 +403,28 @@ describe('handleSubscriptionUpdate', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(1)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(10_000)
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(30)
   })
 
@@ -384,19 +447,28 @@ describe('handleSubscriptionUpdate', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(1)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(10_000)
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(30)
   })
 
@@ -423,19 +495,28 @@ describe('handleSubscriptionUpdate', () => {
       await computeQuota({
         type: QuotaType.Seats,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(1)
     expect(
       await computeQuota({
         type: QuotaType.Runs,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(10_000)
     expect(
       await computeQuota({
         type: QuotaType.Credits,
         workspace: testWorkspace,
-      }).then((r) => r.unwrap().limit),
+      }).then((quotaResult) => {
+        const quota = quotaResult.unwrap()
+        return quota.limit
+      }),
     ).toEqual(30)
   })
 })

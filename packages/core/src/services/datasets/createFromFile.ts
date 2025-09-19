@@ -34,7 +34,7 @@ export const createDatasetFromFile = async (
   const key = `workspaces/${workspace.id}/datasets/${name}${extension}`
 
   const diskResult = await disk.putFile(key, data.file)
-  if (diskResult.error) return diskResult
+  if (!Result.isOk(diskResult)) return diskResult
 
   const resultColumns = await getCsvAndBuildColumns({
     file: data.file,
@@ -42,7 +42,7 @@ export const createDatasetFromFile = async (
     hashAlgorithm,
   })
 
-  if (resultColumns.error) return resultColumns
+  if (!Result.isOk(resultColumns)) return resultColumns
 
   const columns = resultColumns.value
 
@@ -56,7 +56,7 @@ export const createDatasetFromFile = async (
         },
         transaction,
       )
-      if (result.error) return result
+      if (!Result.isOk(result)) return result
 
       const dataset = result.value
 

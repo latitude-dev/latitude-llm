@@ -1,5 +1,6 @@
 import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import { Result } from '@latitude-data/core/lib/Result'
 /**
  * Get the current workspace onboarding status
  * If the onboarding status doesn't exist, it creates a new one
@@ -15,7 +16,7 @@ export async function getWorkspaceOnboardingStatus() {
   })
 
   // If onboarding record doesn't exist, return a mock onboarding status with completed set to true
-  if (result.error) {
+  if (!Result.isOk(result)) {
     return {
       id: 'mock',
       workspaceId: workspace,

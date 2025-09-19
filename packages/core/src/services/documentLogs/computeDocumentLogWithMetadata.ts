@@ -16,7 +16,7 @@ export async function computeDocumentLogWithMetadata(
   const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspace.id, db)
 
   const result = await repo.find(documentLog.id)
-  if (result.error) return result
+  if (!Result.isOk(result)) return result
 
   return result
 }

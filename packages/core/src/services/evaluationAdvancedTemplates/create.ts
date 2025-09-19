@@ -32,7 +32,7 @@ export async function createEvaluationTemplate(
 
       if (categoryResult.error instanceof NotFoundError) {
         category = await createCategory(categoryName, transaction)
-      } else if (categoryResult.error) {
+      } else if (!Result.isOk(categoryResult)) {
         return categoryResult
       } else {
         category = categoryResult.value

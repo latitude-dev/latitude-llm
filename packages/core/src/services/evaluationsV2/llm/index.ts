@@ -62,7 +62,7 @@ async function validate<M extends LlmEvaluationMetric>(
   }
 
   const parsing = metricSpecification.configuration.safeParse(configuration)
-  if (parsing.error) {
+  if (!Result.isOk(parsing)) {
     return Result.error(parsing.error)
   }
 
@@ -74,7 +74,7 @@ async function validate<M extends LlmEvaluationMetric>(
 
     const repository = new ProviderApiKeysRepository(workspace.id, db)
     const getting = await repository.findByName(configuration.provider)
-    if (getting.error) {
+    if (!Result.isOk(getting)) {
       return Result.error(getting.error)
     }
 
@@ -88,7 +88,7 @@ async function validate<M extends LlmEvaluationMetric>(
     { mode, configuration, workspace, ...rest },
     db,
   )
-  if (validation.error) {
+  if (!Result.isOk(validation)) {
     return Result.error(validation.error)
   }
   configuration = validation.value

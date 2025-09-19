@@ -44,11 +44,11 @@ export const generateCsvFromLogs = async ({
     hashAlgorithm: nanoidHashAlgorithm,
   })
 
-  if (result.error) return result
+  if (!Result.isOk(result)) return result
 
-  const { columns, rows } = result.value
+  const { columns, rows } = result.unwrap()
   const csvResult = stringifyData({ columns, rows })
-  if (csvResult.error) return csvResult
+  if (!Result.isOk(csvResult)) return csvResult
 
-  return Result.ok(csvResult.value)
+  return Result.ok(csvResult.unwrap())
 }

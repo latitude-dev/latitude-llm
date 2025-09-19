@@ -45,7 +45,7 @@ export async function undoLatteThreadChanges(
       transaction,
     )
 
-    if (result.error) return Result.error(result.error)
+    if (!Result.isOk(result)) return Result.error(result.error)
 
     return Result.ok(checkpoints)
   })

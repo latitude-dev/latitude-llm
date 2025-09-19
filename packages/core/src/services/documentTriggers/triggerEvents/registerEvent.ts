@@ -33,9 +33,9 @@ export async function registerDocumentTriggerEvent<
       commit,
     })
 
-    if (triggerResult.error) return triggerResult
+    if (!Result.isOk(triggerResult)) return triggerResult
 
-    const trigger = triggerResult.value
+    const trigger = triggerResult.unwrap()
     const eventResult = await createDocumentTriggerEvent(
       {
         commit,
@@ -45,9 +45,9 @@ export async function registerDocumentTriggerEvent<
       transaction,
     )
 
-    if (eventResult.error) return eventResult
+    if (!Result.isOk(eventResult)) return eventResult
 
-    const event = eventResult.value
+    const event = eventResult.unwrap()
 
     // If enabled, run the trigger event automatically
     if (trigger.enabled) {
@@ -57,7 +57,7 @@ export async function registerDocumentTriggerEvent<
         commit,
       })
 
-      if (enqueuedResult.error) return enqueuedResult
+      if (!Result.isOk(enqueuedResult)) return enqueuedResult
     }
 
     return Result.ok(event)

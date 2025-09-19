@@ -35,9 +35,9 @@ async function getData({
 }): Promise<TypedResult<GetDataResult, Error>> {
   const scope = new DatasetsRepository(workspace.id)
   const result = await scope.find(Number(datasetId))
-  if (result.error) return Result.error(result.error)
+  if (!Result.isOk(result)) return Result.error(result.error)
 
-  const dataset = result.value
+  const dataset = result.unwrap()
 
   const rowsRepo = new DatasetRowsRepository(workspace.id)
 
@@ -101,7 +101,7 @@ export default async function DatasetDetail({
   const { workspace } = await getCurrentUserOrRedirect()
   if (!workspace) return notFound()
 
-  const result = await getData({
+  const datasetResult = await getData({
     workspace,
     datasetId,
     isProcessing,
@@ -110,15 +110,17 @@ export default async function DatasetDetail({
     rowId,
   })
 
-  if (result.error) return notFound()
-  if (result.value.redirectUrl) redirect(result.value.redirectUrl)
+  if (!Result.isOk(datasetResult)) return notFound()
+
+  const datasetData = datasetResult.unwrap()
+  if (datasetData.redirectUrl) redirect(datasetData.redirectUrl)
 
   return (
     <Layout size='full'>
       <DatasetDetailTable
-        dataset={result.value.dataset}
-        rows={result.value.rows}
-        count={result.value.count}
+        dataset={datasetData.dataset}
+        rows={datasetData.rows}
+        count={datasetData.count}
         initialRenderIsProcessing={isProcessing}
       />
     </Layout>

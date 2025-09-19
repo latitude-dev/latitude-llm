@@ -22,7 +22,7 @@ export async function getCsvAndBuildColumns({
     delimiter: csvDelimiter,
   })
 
-  if (readCsvResult.error) return Result.error(readCsvResult.error)
+  if (!Result.isOk(readCsvResult)) return Result.error(readCsvResult.error)
 
   const headers = readCsvResult.value?.headers ?? []
   const uniqueHeaders = new Set(headers)

@@ -6,6 +6,7 @@ import { env } from '@latitude-data/env'
 import { UnauthorizedError } from '@latitude-data/constants/errors'
 import { EmailWebhookBodySchema } from './bodySchema'
 import { registerEmailTriggerEvent } from '@latitude-data/core/services/documentTriggers/handlers/email/registerEvent'
+import { Result } from '@latitude-data/core/lib/Result'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735
@@ -70,7 +71,7 @@ export const emailWebhookHandler: AppRouteHandler<EmailWebhookRoute> = async (
     attachments,
   })
 
-  if (result.error) {
+  if (!Result.isOk(result)) {
     // Mailgun will retry the POST request if it receives any response code other than 200 or 406
     // https://documentation.mailgun.com/docs/mailgun/user-manual/receive-forward-store/#receiving-messages-via-http-through-a-forward-action
     return c.json({ error: result.error.message }, 406)

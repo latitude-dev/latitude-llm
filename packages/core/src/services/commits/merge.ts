@@ -55,10 +55,11 @@ export async function mergeCommit(
       { draft: commit, workspace },
       transaction,
     )
-    if (recomputedResults.error) return recomputedResults
-    const documentChanges = recomputedResults.unwrap().changedDocuments
+    if (!Result.isOk(recomputedResults)) return recomputedResults
+    const recomputedData = recomputedResults.unwrap()
+    const documentChanges = recomputedData.changedDocuments
 
-    if (Object.keys(recomputedResults.value.errors).length > 0) {
+    if (Object.keys(recomputedData.errors).length > 0) {
       return Result.error(
         new UnprocessableEntityError(
           'There are errors in the updated documents in this version',

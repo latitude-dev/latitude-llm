@@ -23,7 +23,7 @@ export async function assembleTrace(
 ) {
   const repository = new SpansRepository(workspace.id, db)
   const listing = await repository.list({ traceId })
-  if (listing.error) return Result.error(listing.error)
+  if (!Result.isOk(listing)) return Result.error(listing.error)
 
   const spans = listing.value
   if (spans.length < 1) {

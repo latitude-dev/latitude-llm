@@ -5,12 +5,13 @@ import { Result } from '../../../../../lib/Result'
 
 const searchAvailableIntegrations = defineLatteTool(
   async ({ query }) => {
-    const result = await listApps({
+    const appsResult = await listApps({
       query,
     })
-    if (!Result.isOk(result)) return result
+    if (!Result.isOk(appsResult)) return appsResult
 
-    const apps = result.unwrap().apps
+    const appsData = appsResult.unwrap()
+    const apps = appsData.apps
     return Result.ok(
       apps.map((app) => ({
         name: app.nameSlug,

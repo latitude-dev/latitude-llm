@@ -1,6 +1,7 @@
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { NotFoundError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
 import {
   CommitsRepository,
   DatasetRowsRepository,
@@ -122,7 +123,8 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
       await updateExperimentStatus(
         { workspaceId, experiment },
         async (progressTracker) => {
-          if (result.error) return await progressTracker.incrementErrors()
+          if (!Result.isOk(result))
+            return await progressTracker.incrementErrors()
           if (result.hasPassed) {
             await progressTracker.incrementCompleted()
             await progressTracker.incrementTotalScore(result.normalizedScore)

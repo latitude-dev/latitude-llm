@@ -10,7 +10,7 @@ export async function isFeatureEnabledByName(
 ) {
   const featuresRepo = new FeaturesRepository(db)
   const featureResult = await featuresRepo.findByName(featureName)
-  if (featureResult.error) {
+  if (!Result.isOk(featureResult)) {
     return Result.ok(false) // Feature doesn't exist, so it's disabled
   }
 

@@ -25,10 +25,11 @@ export async function createLatteJob({
   debugVersionUuid?: string
 }): PromisedResult<string> {
   const supportResult = assertCopilotIsSupported()
-  if (!supportResult.ok) return supportResult as ErrorResult<LatitudeError>
+  if (!Result.isOk(supportResult))
+    return supportResult as ErrorResult<LatitudeError>
 
   const checking = await checkLatteCredits({ workspace })
-  if (checking.error) {
+  if (!Result.isOk(checking)) {
     return Result.error(checking.error)
   }
 

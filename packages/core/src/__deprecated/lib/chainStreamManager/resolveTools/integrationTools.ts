@@ -54,13 +54,13 @@ export async function resolveIntegrationTools({
     if (!integrationTools[integrationName]) {
       const integrationResult =
         await integrationsScope.findByName(integrationName)
-      if (integrationResult.error) return integrationResult
+      if (!Result.isOk(integrationResult)) return integrationResult
       const integration = integrationResult.unwrap()
 
       // TODO(compiler): fix types
       // @ts-expect-error - TODO: fix types
       const toolsResult = await listTools(integration, chainStreamManager)
-      if (toolsResult.error) return toolsResult
+      if (!Result.isOk(toolsResult)) return toolsResult
       const mcpTools = toolsResult.unwrap()
 
       integrationTools[integrationName] = Object.fromEntries(

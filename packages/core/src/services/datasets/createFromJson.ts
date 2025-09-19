@@ -38,7 +38,7 @@ export const createDatasetFromJson = async (
   transaction = new Transaction(),
 ) => {
   const result = extractHeadersFromFirstRow({ json: data.rows, hashAlgorithm })
-  if (result.error) return result
+  if (!Result.isOk(result)) return result
 
   const { columns, rows } = result.value
 
@@ -50,7 +50,7 @@ export const createDatasetFromJson = async (
     },
     transaction,
   )
-  if (dataset.error) return dataset
+  if (!Result.isOk(dataset)) return dataset
 
   const row = await insertRowsInBatch(
     {
@@ -64,7 +64,7 @@ export const createDatasetFromJson = async (
     },
     transaction,
   )
-  if (row.error) return row
+  if (!Result.isOk(row)) return row
 
   return Result.ok(dataset.value)
 }

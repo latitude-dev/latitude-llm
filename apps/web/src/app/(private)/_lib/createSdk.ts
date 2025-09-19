@@ -33,7 +33,7 @@ export async function createSdk({
 }) {
   if (!apiKey) {
     const result = await getLatitudeApiKey(workspace)
-    if (result.error) return result
+    if (!Result.isOk(result)) return result
 
     apiKey = result.value.token
   }

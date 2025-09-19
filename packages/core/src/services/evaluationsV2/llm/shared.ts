@@ -211,7 +211,7 @@ export async function runPrompt<
 
   if (schema) {
     const result = schema.safeParse(verdict)
-    if (result.error) {
+    if (!Result.isOk(result)) {
       throw new ChainError({
         code: RunErrorCodes.InvalidResponseFormatError,
         message: result.error.message,

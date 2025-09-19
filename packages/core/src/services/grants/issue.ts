@@ -42,16 +42,16 @@ export async function issueGrant(
       { type, amount, source, workspace, periods, expiresAt, idempotencyKey },
       db,
     )
-    if (validation.error) {
+    if (!Result.isOk(validation)) {
       return Result.error(validation.error)
     }
 
     if (periods) {
       const getting = await findWorkspaceSubscription({ workspace }, db)
-      if (getting.error) {
+      if (!Result.isOk(getting)) {
         return Result.error(getting.error)
       }
-      const subscription = getting.value
+      const subscription = getting.unwrap()
       expiresAt = addMonths(subscription.billableFrom, periods)
     }
 

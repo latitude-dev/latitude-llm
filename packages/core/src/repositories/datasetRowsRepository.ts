@@ -10,6 +10,7 @@ import {
 
 import { DatasetRow, Dataset, DEFAULT_PAGINATION_SIZE } from '../browser'
 import { calculateOffset } from '../lib/pagination/calculateOffset'
+import { Result } from '../lib/Result'
 import { datasetRows } from '../schema'
 import Repository from './repositoryV2'
 
@@ -94,7 +95,7 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
   }) {
     const rowResult = await this.find(datasetRowId)
 
-    if (rowResult.error) {
+    if (!Result.isOk(rowResult)) {
       return { position: 0, page: 1 }
     }
 

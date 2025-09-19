@@ -44,7 +44,7 @@ export function getIntegrationToolCallResults({
 
     const integrationResult =
       await integrations[toolSourceData.integrationName]!
-    if (integrationResult.error) return integrationResult
+    if (!Result.isOk(integrationResult)) return integrationResult
     const integration = integrationResult.unwrap()
 
     return callIntegrationTool({

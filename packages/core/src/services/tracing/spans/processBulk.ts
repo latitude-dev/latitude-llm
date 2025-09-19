@@ -117,11 +117,11 @@ export async function processSpansBulk(
 
     // Convert span attributes
     const convertingsa = convertSpanAttributes(span.attributes || [])
-    if (convertingsa.error) {
+    if (!Result.isOk(convertingsa)) {
       console.error('Error converting span attributes:', convertingsa.error)
       continue
     }
-    const attributes = convertingsa.value
+    const attributes = convertingsa.unwrap()
 
     const id = span.spanId
     const traceId = span.traceId
@@ -130,19 +130,19 @@ export async function processSpansBulk(
 
     // Convert span kind
     const convertingsk = convertSpanKind(span.kind)
-    if (convertingsk.error) {
+    if (!Result.isOk(convertingsk)) {
       console.error('Error converting span kind:', convertingsk.error)
       continue
     }
-    const kind = convertingsk.value
+    const kind = convertingsk.unwrap()
 
     // Extract span type
     const convertingst = extractSpanType(attributes)
-    if (convertingst.error) {
+    if (!Result.isOk(convertingst)) {
       console.error('Error extracting span type:', convertingst.error)
       continue
     }
-    const type = convertingst.value
+    const type = convertingst.unwrap()
 
     // Check if span type is supported
     const specification = SPAN_SPECIFICATIONS[type]
@@ -153,28 +153,28 @@ export async function processSpansBulk(
 
     // Convert span status
     const convertingss = convertSpanStatus(span.status || { code: 0 })
-    if (convertingss.error) {
+    if (!Result.isOk(convertingss)) {
       console.error('Error converting span status:', convertingss.error)
       continue
     }
-    let status = convertingss.value
+    let status = convertingss.unwrap()
 
     let message = span.status?.message?.slice(0, 256)
 
     // Convert timestamps
     const convertingat = convertSpanTimestamp(span.startTimeUnixNano)
-    if (convertingat.error) {
+    if (!Result.isOk(convertingat)) {
       console.error('Error converting start timestamp:', convertingat.error)
       continue
     }
-    const startedAt = convertingat.value
+    const startedAt = convertingat.unwrap()
 
     const convertinget = convertSpanTimestamp(span.endTimeUnixNano)
-    if (convertinget.error) {
+    if (!Result.isOk(convertinget)) {
       console.error('Error converting end timestamp:', convertinget.error)
       continue
     }
-    const endedAt = convertinget.value
+    const endedAt = convertinget.unwrap()
 
     const duration = differenceInMilliseconds(endedAt, startedAt)
     if (duration < 0) {
@@ -184,28 +184,28 @@ export async function processSpansBulk(
 
     // Convert events and links
     const convertingse = convertSpanEvents(span.events || [])
-    if (convertingse.error) {
+    if (!Result.isOk(convertingse)) {
       console.error('Error converting span events:', convertingse.error)
       continue
     }
-    const events = convertingse.value
+    const events = convertingse.unwrap()
 
     const convertingsl = convertSpanLinks(span.links || [])
-    if (convertingsl.error) {
+    if (!Result.isOk(convertingsl)) {
       console.error('Error converting span links:', convertingsl.error)
       continue
     }
-    const links = convertingsl.value
+    const links = convertingsl.unwrap()
 
     // Extract span error
     const extractingse = extractSpanError(attributes, events)
-    if (extractingse.error) {
+    if (!Result.isOk(extractingse)) {
       console.error('Error extracting span error:', extractingse.error)
       continue
     }
-    if (extractingse.value != undefined) {
+    if (extractingse.unwrap() != undefined) {
       status = SpanStatus.Error
-      message = extractingse.value?.slice(0, 256) || undefined
+      message = extractingse.unwrap()?.slice(0, 256) || undefined
     }
 
     // Create base metadata
@@ -228,14 +228,14 @@ export async function processSpansBulk(
       apiKey,
       workspace,
     })
-    if (processing.error) {
+    if (!Result.isOk(processing)) {
       console.error(
         'Error processing span with specification:',
         processing.error,
       )
       continue
     }
-    metadata = { ...metadata, ...processing.value }
+    metadata = { ...metadata, ...processing.unwrap() }
 
     processedSpans.push({
       original: spanData,
@@ -410,9 +410,10 @@ function convertSpanAttribute(
 
   if (attribute.arrayValue != undefined) {
     const values = attribute.arrayValue.values.map(convertSpanAttribute)
-    if (values.some((v) => v.error)) return Result.error(values[0]!.error!)
+    if (values.some((v) => !Result.isOk(v)))
+      return Result.error(values[0]!.error!)
 
-    return Result.ok(values.map((v) => v.value!))
+    return Result.ok(values.map((v) => v.unwrap()))
   }
 
   return Result.error(new UnprocessableEntityError('Invalid attribute value'))
@@ -425,9 +426,9 @@ export function convertSpanAttributes(
 
   for (const attribute of attributes) {
     const converting = convertSpanAttribute(attribute.value)
-    if (converting.error) continue // ignore attributes we can't convert
+    if (!Result.isOk(converting)) continue // ignore attributes we can't convert
 
-    result[attribute.key] = converting.value
+    result[attribute.key] = converting.unwrap()
   }
 
   return Result.ok(result)
@@ -565,12 +566,12 @@ function convertSpanEvents(events: Otlp.Event[]): TypedResult<SpanEvent[]> {
 
   for (const event of events) {
     const convertinget = convertSpanTimestamp(event.timeUnixNano)
-    if (convertinget.error) return Result.error(convertinget.error)
-    const timestamp = convertinget.value
+    if (!Result.isOk(convertinget)) return Result.error(convertinget.error)
+    const timestamp = convertinget.unwrap()
 
     const convertingea = convertSpanAttributes(event.attributes || [])
-    if (convertingea.error) return Result.error(convertingea.error)
-    const attributes = convertingea.value
+    if (!Result.isOk(convertingea)) return Result.error(convertingea.error)
+    const attributes = convertingea.unwrap()
 
     result.push({ name: event.name, timestamp, attributes })
   }
@@ -583,8 +584,8 @@ function convertSpanLinks(links: Otlp.Link[]): TypedResult<SpanLink[]> {
 
   for (const link of links) {
     const converting = convertSpanAttributes(link.attributes || [])
-    if (converting.error) return Result.error(converting.error)
-    const attributes = converting.value
+    if (!Result.isOk(converting)) return Result.error(converting.error)
+    const attributes = converting.unwrap()
 
     result.push({ traceId: link.traceId, spanId: link.spanId, attributes })
   }

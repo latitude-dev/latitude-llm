@@ -20,7 +20,7 @@ export async function findForkedDocument({
   const repo = new ProjectsRepository(workspace.id)
   const resultProject = await repo.find(Number(projectId))
 
-  if (resultProject.error) return resultProject
+  if (!Result.isOk(resultProject)) return resultProject
 
   const project = resultProject.value
 
@@ -29,7 +29,7 @@ export async function findForkedDocument({
     projectId: project.id,
     uuid: commitUuid,
   })
-  if (commitsResult.error) return commitsResult
+  if (!Result.isOk(commitsResult)) return commitsResult
 
   const documentsRepo = new DocumentVersionsRepository(workspace.id)
   const documentsResult = await documentsRepo.getDocumentAtCommit({
@@ -37,7 +37,7 @@ export async function findForkedDocument({
     commitUuid,
     documentUuid,
   })
-  if (documentsResult.error) return documentsResult
+  if (!Result.isOk(documentsResult)) return documentsResult
 
   const commit = commitsResult.value
   const document = documentsResult.value

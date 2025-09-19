@@ -89,7 +89,7 @@ export async function claimReward(
           },
           transaction,
         )
-        if (granting.error) {
+        if (!Result.isOk(granting)) {
           return Result.error(granting.error)
         }
       }
