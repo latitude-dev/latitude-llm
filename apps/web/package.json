@@ -6,7 +6,7 @@
     "workers:build": "rollup -c rollup.config.workers.mjs",
     "build": "pnpm run workers:build && next build --turbopack",
     "workers:watch": "rollup -c rollup.config.workers.mjs -w",
-    "dev": "next dev --turbo",
+    "dev": "next dev --turbopack",
     "dev:debug": "NODE_DEBUG=latitude:debug NODE_OPTIONS='--inspect=0.0.0.0:9229' ./node_modules/.bin/next dev",
     "dev:local": "USE_LOCALHOST=true pnpm run dev",
     "lint": "eslint src/",
