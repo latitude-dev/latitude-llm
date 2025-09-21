@@ -9,6 +9,7 @@
     "dev": "next dev --turbopack",
     "dev:debug": "NODE_DEBUG=latitude:debug NODE_OPTIONS='--inspect=0.0.0.0:9229' ./node_modules/.bin/next dev",
     "dev:local": "USE_LOCALHOST=true pnpm run dev",
+    "dev:trace": "NEXT_TURBOPACK_TRACING=1 pnpm run dev",
     "lint": "eslint src/",
     "start": "next start",
     "tc": "tsc --noEmit",
