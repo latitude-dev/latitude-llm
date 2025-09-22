@@ -2,7 +2,10 @@ import { StreamManager, StreamManagerProps } from '.'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { Output, streamAIResponse } from './step/streamAIResponse'
 import { resolveToolsFromConfig } from './resolveTools'
-import { ValidatedChainStep } from '../../services/chains/ChainValidator'
+import {
+  applyAgentRule,
+  ValidatedChainStep,
+} from '../../services/chains/ChainValidator'
 import { ProviderApiKey } from '../../browser'
 import { JSONSchema7 } from 'json-schema'
 
@@ -56,7 +59,7 @@ export class DefaultStreamManager
 
     const toolsBySource = await this.getToolsBySource().then((r) => r.unwrap())
     const config = this.transformPromptlToVercelToolDeclarations(
-      this.config,
+      applyAgentRule(this.config),
       toolsBySource,
     )
 
