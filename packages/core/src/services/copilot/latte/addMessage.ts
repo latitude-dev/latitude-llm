@@ -162,7 +162,7 @@ async function generateLatteResponse(args: GenerateLatteResponseArgs) {
       totalTokens: 0,
     },
     threadUuid: args.threadUuid,
-    error: error && !isAbortError(error) ? error : undefined, //
+    error: error,
     user: args.user,
     workspace: args.clientWorkspace,
   }) // Note: failing silently
