@@ -52,17 +52,10 @@ export async function setupSchedules() {
     { opts: { attempts: 1 } },
   )
 
-  // Every Saturday at 2 AM - Migrates provider logs to object storage
-  await maintenanceQueue.upsertJobScheduler(
-    'scheduleProviderLogsMigrationJobs',
-    { pattern: '0 0 2 * * 6' },
-    { opts: { attempts: 1 } },
-  )
-
-  // Every Sunday at 2 AM -- Backfills document/provider logs workspace_id columns
+  // Every night at 2 AM -- Backfills document/provider logs workspace_id columns
   await maintenanceQueue.upsertJobScheduler(
     'scheduleWorkspaceLogsMigrationJobs',
-    { pattern: '0 0 2 * * 7' },
+    { pattern: '0 0 2 * * *' },
     { opts: { attempts: 1 } },
   )
 }
