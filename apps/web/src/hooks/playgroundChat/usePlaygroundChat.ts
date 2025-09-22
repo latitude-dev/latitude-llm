@@ -1,4 +1,5 @@
 import { tokenizeMessages, tokenizeText } from '$/lib/tokenize'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 import {
   Message,
@@ -6,6 +7,7 @@ import {
   ToolCall,
   ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
+import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
 import { LanguageModelUsage } from 'ai'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -72,6 +74,16 @@ export function usePlaygroundChat({
   const startedAtRef = useRef<number | null>(null)
   const durationAccRef = useRef<number>(0)
 
+  const { data: providers } = useProviderApiKeys()
+  const cost = useMemo(() => {
+    const p = providers?.find((p) => p.name === provider)
+    const m = model || p?.defaultModel
+    if (!p || !m) return undefined
+    return Math.ceil(
+      estimateCost({ usage, provider: p.provider, model: m }) * 100_000,
+    )
+  }, [providers, provider, model, usage])
+
   const incrementUsage = useCallback(
     (incr: { promptTokens?: number; completionTokens?: number }) =>
       setUsage((prev) => {
@@ -119,16 +131,19 @@ export function usePlaygroundChat({
     [incrementUsage, resetUsageDelta],
   )
 
-  const startTimer = useCallback(() => {
-    if (startedAtRef.current) return
-    startedAtRef.current = Date.now()
-    durationAccRef.current = duration
-    timerRef.current = window.setInterval(() => {
-      if (!startedAtRef.current) return
-      const elapsed = Date.now() - startedAtRef.current
-      setDuration(durationAccRef.current + elapsed)
-    }, 100)
-  }, [duration])
+  const startTimer = useCallback(
+    (startedAt?: number) => {
+      if (startedAtRef.current) return
+      startedAtRef.current = startedAt ?? Date.now()
+      durationAccRef.current = duration
+      timerRef.current = window.setInterval(() => {
+        if (!startedAtRef.current) return
+        const elapsed = Date.now() - startedAtRef.current
+        setDuration(durationAccRef.current + elapsed)
+      }, 100)
+    },
+    [duration],
+  )
 
   const stopTimer = useCallback(() => {
     if (timerRef.current) {
@@ -186,7 +201,7 @@ export function usePlaygroundChat({
   const handleLatitudeEvent = useCallback(
     (data: ChainEvent['data']) => {
       if (data.type === ChainEventTypes.ChainStarted) {
-        startTimer()
+        startTimer(data.timestamp)
         resetUsageDelta()
       }
 
@@ -438,6 +453,7 @@ export function usePlaygroundChat({
       provider,
       model,
       duration,
+      cost,
       reset,
     }),
     [
@@ -455,6 +471,7 @@ export function usePlaygroundChat({
       provider,
       model,
       duration,
+      cost,
       reset,
     ],
   )

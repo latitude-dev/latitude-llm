@@ -4,6 +4,7 @@ import { Result } from '../../../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
+  ProjectsRepository,
 } from '../../../../repositories'
 
 export type GetDataParams = {
@@ -22,25 +23,27 @@ export async function getDataForInitialRequest({
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError('Workspace not found')
 
-  const documentsScope = new DocumentVersionsRepository(workspaceId)
+  const projectsScope = new ProjectsRepository(workspaceId)
+  const projectResult = await projectsScope.getProjectById(projectId)
+  if (projectResult.error) return projectResult
+  const project = projectResult.value
+
   const commitsScope = new CommitsRepository(workspaceId)
-  const documentResult = await documentsScope.getDocumentAtCommit({
-    projectId,
-    documentUuid,
-    commitUuid,
-  })
-
-  if (documentResult.error) return documentResult
-
   const commitResult = await commitsScope.getCommitByUuid({
     projectId,
     uuid: commitUuid,
   })
   if (commitResult.error) return commitResult
+  const commit = commitResult.value
 
-  return Result.ok({
-    workspace,
-    document: documentResult.value,
-    commit: commitResult.value,
+  const documentsScope = new DocumentVersionsRepository(workspaceId)
+  const documentResult = await documentsScope.getDocumentAtCommit({
+    projectId,
+    documentUuid,
+    commitUuid,
   })
+  if (documentResult.error) return documentResult
+  const document = documentResult.value
+
+  return Result.ok({ document, commit, project, workspace })
 }

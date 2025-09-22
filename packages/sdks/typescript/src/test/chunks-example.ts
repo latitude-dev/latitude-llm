@@ -1,16 +1,17 @@
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainEvent,
   ChainEventTypes,
   LatitudeProviderCompletedEventData,
   StreamEventTypes,
 } from '@latitude-data/constants'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 
 const CHUNK_EVENTS: ChainEvent[] = [
   {
     event: StreamEventTypes.Latitude,
     data: {
       type: ChainEventTypes.ChainStarted,
+      timestamp: 965044800000,
       uuid: '123',
       messages: [],
     },
@@ -19,6 +20,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
     event: StreamEventTypes.Latitude,
     data: {
       type: ChainEventTypes.StepStarted,
+      timestamp: 965044800000,
       uuid: '123',
       messages: [
         {
@@ -32,6 +34,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
     event: StreamEventTypes.Latitude,
     data: {
       type: ChainEventTypes.ProviderStarted,
+      timestamp: 965044800000,
       uuid: '123',
       messages: [
         {
@@ -119,6 +122,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
     event: StreamEventTypes.Latitude,
     data: {
       type: ChainEventTypes.ProviderCompleted,
+      timestamp: 965044800000,
       uuid: '123',
       messages: [
         {
@@ -154,6 +158,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
     event: StreamEventTypes.Latitude,
     data: {
       type: ChainEventTypes.StepCompleted,
+      timestamp: 965044800000,
       uuid: '123',
       messages: [
         {
@@ -172,6 +177,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
     event: StreamEventTypes.Latitude,
     data: {
       type: ChainEventTypes.StepStarted,
+      timestamp: 965044800000,
       uuid: '123',
       messages: [
         {
@@ -194,6 +200,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
     event: StreamEventTypes.Latitude,
     data: {
       type: ChainEventTypes.ProviderStarted,
+      timestamp: 965044800000,
       uuid: '123',
       messages: [
         {
@@ -220,6 +227,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
     event: StreamEventTypes.Latitude,
     data: {
       type: ChainEventTypes.ProviderCompleted,
+      timestamp: 965044800000,
       uuid: '123',
       messages: [
         {
@@ -269,6 +277,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
     event: StreamEventTypes.Latitude,
     data: {
       type: ChainEventTypes.StepCompleted,
+      timestamp: 965044800000,
       uuid: '123',
       messages: [
         {
@@ -301,6 +310,7 @@ const CHUNK_EVENTS: ChainEvent[] = [
     event: StreamEventTypes.Latitude,
     data: {
       type: ChainEventTypes.ChainCompleted,
+      timestamp: 965044800000,
       uuid: '123',
       messages: [
         {

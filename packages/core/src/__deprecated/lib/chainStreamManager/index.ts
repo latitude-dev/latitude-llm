@@ -442,6 +442,7 @@ export class ChainStreamManager {
       // @ts-expect-error - TODO: fix types
       data: {
         ...event,
+        timestamp: Date.now(),
         messages: this.messages,
         uuid: this.errorableUuid,
       },

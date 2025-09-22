@@ -313,6 +313,15 @@ export const API_ROUTES = {
             }
           },
         },
+        runs: {
+          root: `${projectRoot}/runs`,
+          active: `${projectRoot}/runs/active`,
+          completed: `${projectRoot}/runs/completed`,
+          detail: (uuid: string) => ({
+            root: `${projectRoot}/runs/${uuid}`,
+            attach: `${projectRoot}/runs/${uuid}/attach`,
+          }),
+        },
       }
     },
   },

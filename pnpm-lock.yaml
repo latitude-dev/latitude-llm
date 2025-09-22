@@ -223,8 +223,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/env
       '@latitude-data/sdk':
-        specifier: 5.1.0
-        version: 5.1.0(typescript@5.8.3)(ws@8.18.3)
+        specifier: 5.2.0-beta.2
+        version: 5.2.0-beta.2(typescript@5.8.3)(ws@8.18.3)
       '@latitude-data/socket.io-react-hook':
         specifier: 2.4.5
         version: 2.4.5(react@19.0.0-rc-5d19e1c8-20240923)
@@ -266,7 +266,7 @@ importers:
         version: 2.0.5
       '@sentry/nextjs':
         specifier: 9.10.1
-        version: 9.10.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.5.2(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.101.2)
+        version: 9.10.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.5.2(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.101.2(esbuild@0.25.5))
       '@sindresorhus/slugify':
         specifier: 2.2.1
         version: 2.2.1
@@ -3542,6 +3542,11 @@ packages:
 
   '@latitude-data/sdk@5.1.0':
     resolution: {integrity: sha512-AIV8ilhXY46Rz8uAnNtxoMIYWbcPIPkjskVJvgQDDsnTD1BJ9QXZevJMgO2tms55JJZb3sB6Lciw1zoEtPkKUw==}
+    peerDependencies:
+      typescript: ^5.5.4
+
+  '@latitude-data/sdk@5.2.0-beta.2':
+    resolution: {integrity: sha512-AmpV8kjh7EiWt0mY29SydHzXaB5Oq8HA0R8RwTbKpVsMw35MBXhZPUOTC53XxGWXCFS3gUZSyBREUBEguNJ7vw==}
     peerDependencies:
       typescript: ^5.5.4
 
@@ -17052,7 +17057,7 @@ snapshots:
       - encoding
       - ws
 
-  '@latitude-data/sdk@5.1.0(typescript@5.8.3)(ws@8.18.3)':
+  '@latitude-data/sdk@5.2.0-beta.2(typescript@5.8.3)(ws@8.18.3)':
     dependencies:
       eventsource-parser: 2.0.1
       node-fetch: 2.7.0
@@ -19846,7 +19851,7 @@ snapshots:
 
   '@sentry/core@9.9.0': {}
 
-  '@sentry/nextjs@9.10.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.5.2(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.101.2)':
+  '@sentry/nextjs@9.10.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.5.2(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.101.2(esbuild@0.25.5))':
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/semantic-conventions': 1.34.0
@@ -19857,7 +19862,7 @@ snapshots:
       '@sentry/opentelemetry': 9.10.1(@opentelemetry/api@1.9.0)(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.34.0)
       '@sentry/react': 9.10.1(react@19.0.0-rc-5d19e1c8-20240923)
       '@sentry/vercel-edge': 9.10.1
-      '@sentry/webpack-plugin': 3.2.4(webpack@5.101.2)
+      '@sentry/webpack-plugin': 3.2.4(webpack@5.101.2(esbuild@0.25.5))
       chalk: 3.0.0
       next: 15.5.2(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
       resolve: 1.22.8
@@ -19983,12 +19988,12 @@ snapshots:
       '@opentelemetry/api': 1.9.0
       '@sentry/core': 9.10.1
 
-  '@sentry/webpack-plugin@3.2.4(webpack@5.101.2)':
+  '@sentry/webpack-plugin@3.2.4(webpack@5.101.2(esbuild@0.25.5))':
     dependencies:
       '@sentry/bundler-plugin-core': 3.2.4
       unplugin: 1.0.1
       uuid: 9.0.1
-      webpack: 5.101.2
+      webpack: 5.101.2(esbuild@0.25.5)
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -29310,14 +29315,16 @@ snapshots:
       - encoding
       - supports-color
 
-  terser-webpack-plugin@5.3.14(webpack@5.101.2):
+  terser-webpack-plugin@5.3.14(esbuild@0.25.5)(webpack@5.101.2(esbuild@0.25.5)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
       schema-utils: 4.3.2
       serialize-javascript: 6.0.2
       terser: 5.44.0
-      webpack: 5.101.2
+      webpack: 5.101.2(esbuild@0.25.5)
+    optionalDependencies:
+      esbuild: 0.25.5
 
   terser@5.43.1:
     dependencies:
@@ -30293,7 +30300,7 @@ snapshots:
 
   webpack-virtual-modules@0.5.0: {}
 
-  webpack@5.101.2:
+  webpack@5.101.2(esbuild@0.25.5):
     dependencies:
       '@types/eslint-scope': 3.7.7
       '@types/estree': 1.0.8
@@ -30317,7 +30324,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.2
       tapable: 2.2.3
-      terser-webpack-plugin: 5.3.14(webpack@5.101.2)
+      terser-webpack-plugin: 5.3.14(esbuild@0.25.5)(webpack@5.101.2(esbuild@0.25.5))
       watchpack: 2.4.4
       webpack-sources: 3.3.3
     transitivePeerDependencies:

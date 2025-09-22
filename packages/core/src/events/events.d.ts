@@ -8,6 +8,8 @@ import type {
   DatasetV2,
   DocumentLog,
   DocumentSuggestion,
+  DocumentTrigger,
+  DocumentTriggerEvent,
   DocumentVersion,
   EvaluationResultV2,
   EvaluationV2,
@@ -23,8 +25,6 @@ import type {
   Providers,
   User,
   Workspace,
-  DocumentTrigger,
-  DocumentTriggerEvent,
 } from '../browser'
 import { PartialConfig } from '../services/ai'
 
@@ -81,6 +81,10 @@ export type Events =
   | 'documentTriggerEventCreated'
   | 'promocodeClaimed'
   | 'subscriptionUpdated'
+  | 'runQueued'
+  | 'runStarted'
+  | 'runProgress'
+  | 'runEnded'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -609,6 +613,42 @@ export type SubscriptionUpdatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type RunQueuedEvent = LatitudeEventGeneric<
+  'runQueued',
+  {
+    workspaceId: number
+    projectId: number
+    runUuid: string
+  }
+>
+
+export type RunStartedEvent = LatitudeEventGeneric<
+  'runStarted',
+  {
+    workspaceId: number
+    projectId: number
+    runUuid: string
+  }
+>
+
+export type RunProgressEvent = LatitudeEventGeneric<
+  'runProgress',
+  {
+    workspaceId: number
+    projectId: number
+    runUuid: string
+  }
+>
+
+export type RunEndedEvent = LatitudeEventGeneric<
+  'runEnded',
+  {
+    workspaceId: number
+    projectId: number
+    runUuid: string
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -662,6 +702,10 @@ export type LatitudeEvent =
   | DocumentTriggerEventCreatedEvent
   | PromocodeClaimedEvent
   | SubscriptionUpdatedEvent
+  | RunQueuedEvent
+  | RunStartedEvent
+  | RunProgressEvent
+  | RunEndedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -716,4 +760,8 @@ export interface IEventsHandlers {
   documentTriggerEventCreated: EventHandler<DocumentTriggerEventCreatedEvent>[]
   promocodeClaimed: EventHandler<PromocodeClaimedEvent>[]
   subscriptionUpdated: EventHandler<SubscriptionUpdatedEvent>[]
+  runQueued: EventHandler<RunQueuedEvent>[]
+  runStarted: EventHandler<RunStartedEvent>[]
+  runProgress: EventHandler<RunProgressEvent>[]
+  runEnded: EventHandler<RunEndedEvent>[]
 }

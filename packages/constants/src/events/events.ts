@@ -25,11 +25,11 @@ export enum ChainEventTypes {
   ToolsRequested = 'tools-requested', // TODO(compiler): remove
   ToolResult = 'tool-result',
   ToolsStarted = 'tools-started',
-  RunQueued = 'run-queued',
 }
 
 interface GenericLatitudeEventData {
   type: ChainEventTypes
+  timestamp: number
   messages: Message[]
   uuid: string
 }
@@ -99,11 +99,6 @@ export interface LatitudeToolsRequestedEventData
   tools: ToolCall[]
 }
 
-export interface LatitudeRunQueuedEventData extends GenericLatitudeEventData {
-  type: ChainEventTypes.RunQueued
-  jobId: string
-}
-
 export type LatitudeEventData =
   | LatitudeChainStartedEventData
   | LatitudeStepStartedEventData
@@ -115,22 +110,21 @@ export type LatitudeEventData =
   | LatitudeChainCompletedEventData
   | LatitudeChainErrorEventData
   | LatitudeIntegrationWakingUpEventData
-  | LatitudeRunQueuedEventData
 
-// Just a type helper for ChainStreamManager. Omit<LatitudeEventData, 'messages' | 'uuid'> does not work.
+// Just a type helper for ChainStreamManager. Omit<LatitudeEventData, 'timestamp' | 'messages' | 'uuid'> does not work.
+// prettier-ignore
 export type OmittedLatitudeEventData =
-  | Omit<LatitudeChainStartedEventData, 'messages' | 'uuid'>
-  | Omit<LatitudeStepStartedEventData, 'messages' | 'uuid'>
-  | Omit<LatitudeProviderStartedEventData, 'messages' | 'uuid'>
-  | Omit<LatitudeProviderCompletedEventData, 'messages' | 'uuid'>
-  | Omit<LatitudeToolsStartedEventData, 'messages' | 'uuid'>
-  | Omit<LatitudeToolCompletedEventData, 'messages' | 'uuid'>
-  | Omit<LatitudeStepCompletedEventData, 'messages' | 'uuid'>
-  | Omit<LatitudeChainCompletedEventData, 'messages' | 'uuid'>
-  | Omit<LatitudeChainErrorEventData, 'messages' | 'uuid'>
-  | Omit<LatitudeToolsRequestedEventData, 'messages' | 'uuid'>
-  | Omit<LatitudeIntegrationWakingUpEventData, 'messages' | 'uuid'>
-  | Omit<LatitudeRunQueuedEventData, 'messages' | 'uuid'>
+  | Omit<LatitudeChainStartedEventData, 'timestamp' | 'messages' | 'uuid'>
+  | Omit<LatitudeStepStartedEventData, 'timestamp' | 'messages' | 'uuid'>
+  | Omit<LatitudeProviderStartedEventData, 'timestamp' | 'messages' | 'uuid'>
+  | Omit<LatitudeProviderCompletedEventData, 'timestamp' | 'messages' | 'uuid'>
+  | Omit<LatitudeToolsStartedEventData, 'timestamp' | 'messages' | 'uuid'>
+  | Omit<LatitudeToolCompletedEventData, 'timestamp' | 'messages' | 'uuid'>
+  | Omit<LatitudeStepCompletedEventData, 'timestamp' | 'messages' | 'uuid'>
+  | Omit<LatitudeChainCompletedEventData, 'timestamp' | 'messages' | 'uuid'>
+  | Omit<LatitudeChainErrorEventData, 'timestamp' | 'messages' | 'uuid'>
+  | Omit<LatitudeToolsRequestedEventData, 'timestamp' | 'messages' | 'uuid'>
+  | Omit<LatitudeIntegrationWakingUpEventData, 'timestamp' | 'messages' | 'uuid'>
 
 export type ChainEvent =
   | {

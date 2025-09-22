@@ -47,9 +47,8 @@ export const API_ROUTES = {
     },
     conversations: {
       chat: '/api/v3/conversations/:conversationUuid/chat',
-      evaluate: '/api/v3/conversations/:conversationUuid/evaluate',
-      createEvaluationResult:
-        '/api/v3/conversations/:conversationUuid/evaluations/:evaluationUuid/evaluation-results',
+      stop: '/api/v3/conversations/:conversationUuid/stop',
+      attach: '/api/v3/conversations/:conversationUuid/attach',
       annotate:
         '/api/v3/conversations/:conversationUuid/evaluations/:evaluationUuid/annotate',
     },

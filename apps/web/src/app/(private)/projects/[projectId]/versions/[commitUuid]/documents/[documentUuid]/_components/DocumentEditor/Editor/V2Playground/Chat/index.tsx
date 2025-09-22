@@ -46,7 +46,7 @@ export default function Chat({
   }, [playground.start])
 
   return (
-    <div className='flex flex-col flex-1 h-full overflow-hidden'>
+    <div className='w-full flex flex-col flex-1 h-full overflow-hidden'>
       {showHeader && (
         <Header
           expandParameters={expandParameters}

@@ -1,8 +1,6 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { formatCount } from '$/lib/formatCount'
-import useProviderApiKeys from '$/stores/providerApiKeys'
-import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
@@ -10,7 +8,6 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
 import { LanguageModelUsage } from 'ai'
-import { useMemo } from 'react'
 
 type StatusIndicatorProps = {
   playground: ReturnType<typeof usePlaygroundChat>
@@ -26,22 +23,6 @@ export function StatusIndicator({
   canChat = true,
   ...rest
 }: StatusIndicatorProps) {
-  const { data: providers } = useProviderApiKeys()
-  const cost = useMemo(() => {
-    const provider = providers?.find(
-      (provider) => provider.name === playground.provider,
-    )
-    const model = playground.model || provider?.defaultModel
-    if (!provider || !model) return undefined
-    return Math.ceil(
-      estimateCost({
-        usage: playground.usage,
-        provider: provider.provider,
-        model: model,
-      }) * 100_000,
-    )
-  }, [providers, playground.provider, playground.model, playground.usage])
-
   return (
     <div
       className={cn(
@@ -57,7 +38,7 @@ export function StatusIndicator({
         <>
           <StatusInfo
             usage={playground.usage}
-            cost={cost}
+            cost={playground.cost}
             duration={playground.duration}
           />
           <Separator orientation='vertical' className='self-stretch h-auto' />

@@ -319,6 +319,7 @@ export abstract class StreamManager {
       // @ts-expect-error - fix types
       data: {
         ...event,
+        timestamp: Date.now(),
         messages: this.messages,
         uuid: this.uuid,
       },

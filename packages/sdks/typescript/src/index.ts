@@ -1,10 +1,11 @@
 import {
+  AssertedStreamType,
   DocumentLog,
   Providers,
   PublicManualEvaluationResultV2,
-  AssertedStreamType,
   ToolRequest,
   type ChainEventDto,
+  type Run,
   type ToolCallResponse,
 } from '@latitude-data/constants'
 import {
@@ -21,12 +22,16 @@ import {
   LatitudeApiError,
 } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
+import { streamAttach } from '$sdk/utils/streamAttach'
 import { streamChat } from '$sdk/utils/streamChat'
 import { streamRun } from '$sdk/utils/streamRun'
+import { syncAttach } from '$sdk/utils/syncAttach'
 import { syncChat } from '$sdk/utils/syncChat'
 import { syncRun } from '$sdk/utils/syncRun'
 import {
+  AttachRunOptions,
   ChatOptions,
+  GenerationResponse,
   GetOrCreatePromptOptions,
   GetPromptOptions,
   HandlerType,
@@ -39,7 +44,6 @@ import {
   RenderToolCalledFn,
   RunPromptOptions,
   SDKOptions,
-  GenerationResponse,
   ToolHandler,
   ToolSpec,
   Version,
@@ -141,6 +145,17 @@ class Latitude {
     ) => Promise<{ config: Config; messages: M[] }>
   }
 
+  public runs: {
+    attach: <
+      S extends AssertedStreamType = 'text',
+      Tools extends ToolSpec = {},
+    >(
+      uuid: string,
+      args?: AttachRunOptions<Tools, S>,
+    ) => Promise<GenerationResponse<S> | undefined>
+    stop: (uuid: string) => Promise<void>
+  }
+
   public versions: {
     get: (projectId: number, commitUuid: string) => Promise<Version>
     getAll: (projectId?: number) => Promise<Version[]>
@@ -210,6 +225,12 @@ class Latitude {
       chat: this.chat.bind(this),
       render: this.renderPrompt.bind(this),
       renderChain: this.renderChain.bind(this),
+    }
+
+    // Initialize runs namespace
+    this.runs = {
+      attach: this.attachRun.bind(this),
+      stop: this.stopRun.bind(this),
     }
 
     // Initialize versions namespace
@@ -419,6 +440,45 @@ class Latitude {
     if (args?.stream) return streamChat<Tools, S>(uuid, options)
 
     return syncChat<Tools, S>(uuid, options)
+  }
+
+  private async attachRun<
+    S extends AssertedStreamType = 'text',
+    Tools extends ToolSpec = {},
+  >(uuid: string, args?: AttachRunOptions<Tools, S>) {
+    const options = {
+      ...(args || {}),
+      options: {
+        ...this.options,
+        signal: args?.signal,
+      },
+      instrumentation: Latitude.instrumentation,
+    }
+
+    if (args?.stream) return streamAttach<Tools, S>(uuid, options)
+
+    return syncAttach<Tools, S>(uuid, options)
+  }
+
+  private async stopRun(uuid: string) {
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.StopRun,
+      params: { conversationUuid: uuid },
+      options: this.options,
+    })
+
+    if (!response.ok) {
+      const error = (await response.json()) as ApiErrorJsonResponse
+
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
+      })
+    }
   }
 
   private async renderPrompt<M extends AdapterMessageType = PromptlMessage>({
@@ -890,13 +950,14 @@ export { Adapters } from 'promptl-ai'
 export type {
   ChainEventDto,
   ContentType,
+  GenerationResponse,
   Message,
   MessageRole,
   Options,
   Project,
   Prompt,
   RenderToolCallDetails,
-  GenerationResponse,
+  Run,
   ToolCall,
   ToolCallResponse,
   ToolHandler,

@@ -7,11 +7,11 @@ import {
   EvaluationMetric,
   EvaluationType,
   EvaluationV2,
+  LAST_LATTE_THREAD_CACHE_KEY,
   PROJECT_STATS_CACHE_KEY,
   ProjectLimitedView,
   Workspace,
   type Commit,
-  LAST_LATTE_THREAD_CACHE_KEY,
 } from '@latitude-data/core/browser'
 import { cache as redis } from '@latitude-data/core/cache'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
@@ -26,6 +26,7 @@ import {
   ProjectsRepository,
   ProviderApiKeysRepository,
   ProviderLogsRepository,
+  RunsRepository,
 } from '@latitude-data/core/repositories/index'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { notFound } from 'next/navigation'
@@ -414,3 +415,43 @@ export const getLastLatteThreadUuidCached = async ({
   const uuid = await client.get(key)
   return uuid || undefined
 }
+
+export const listActiveRunsCached = cache(
+  async ({
+    projectId,
+    page,
+    pageSize,
+  }: {
+    projectId: number
+    page?: number
+    pageSize?: number
+  }) => {
+    const { workspace } = await getCurrentUserOrRedirect()
+    const repository = new RunsRepository(workspace.id, projectId)
+    const runs = await repository
+      .listActive({ page, pageSize })
+      .then((r) => r.unwrap())
+
+    return runs
+  },
+)
+
+export const listCompletedRunsCached = cache(
+  async ({
+    projectId,
+    page,
+    pageSize,
+  }: {
+    projectId: number
+    page?: number
+    pageSize?: number
+  }) => {
+    const { workspace } = await getCurrentUserOrRedirect()
+    const repository = new RunsRepository(workspace.id, projectId)
+    const runs = await repository
+      .listCompleted({ page, pageSize })
+      .then((r) => r.unwrap())
+
+    return runs
+  },
+)

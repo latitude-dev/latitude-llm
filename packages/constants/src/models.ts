@@ -15,6 +15,20 @@ export enum LogSources {
   User = 'user',
 }
 
+type Commit = {
+  id: number
+  uuid: string
+  title: string
+  description: string | null
+  deletedAt: Date | null
+  createdAt: Date
+  updatedAt: Date
+  projectId: number
+  version: number | null
+  userId: string
+  mergedAt: Date | null
+}
+
 export type DocumentLog = {
   id: number
   uuid: string
@@ -29,6 +43,23 @@ export type DocumentLog = {
   createdAt: Date
   updatedAt: Date
   experimentId: number | null
+}
+
+export type DocumentLogWithMetadata = DocumentLog & {
+  commit: Commit
+  tokens: number | null
+  duration: number | null
+  costInMillicents: number | null
+}
+
+export type RunErrorField = {
+  code: string | null
+  message: string | null
+  details: string | null
+}
+
+export type DocumentLogWithMetadataAndError = DocumentLogWithMetadata & {
+  error: RunErrorField
 }
 
 // TODO(evalsv2): Remove

@@ -15,7 +15,9 @@ import {
 } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
-import { enqueueDocumentRunJob } from '@latitude-data/core/services/documents/enqueueDocumentRunJob'
+import { attachRun } from '@latitude-data/core/services/runs/attach'
+import { enqueueRun } from '@latitude-data/core/services/runs/enqueue'
+import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { streamSSE } from 'hono/streaming'
 import { runHandler as runHandlerLegacy } from './__deprecated/run.handler'
 import { RunRoute } from './run.route'
@@ -38,6 +40,12 @@ type RunHandlerContext = {
 // https://github.com/orgs/honojs/discussions/1803
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 export const runHandler: AppRouteHandler<RunRoute> = async (c, next) => {
+  const runsEnabled = await isFeatureEnabledByName(
+    c.get('workspace').id,
+    'runs',
+  ).then((r) => r.unwrap())
+  if (!runsEnabled) return runHandlerLegacy(c, next)
+
   const { stream, background } = c.req.valid('json')
   if (!background) return runHandlerLegacy(c, next)
 
@@ -89,6 +97,7 @@ async function buildRunHandlerContext(
   }
 }
 
+// TODO(runs): return active run job instead of attaching
 async function handleStreamingMode({
   c,
   workspace,
@@ -112,18 +121,24 @@ async function handleStreamingMode({
       })
 
       try {
-        let id = 0
-        const { result } = await enqueueDocumentRunJob({
-          workspaceId: workspace.id,
-          projectId: project.id,
-          commitUuid: commit.uuid,
-          documentUuid: document.documentUuid,
+        const { run } = await enqueueRun({
+          document,
+          commit,
+          project,
+          workspace,
           parameters,
           customIdentifier,
           tools,
           userMessage,
           source,
           isLegacy,
+        }).then((r) => r.unwrap())
+
+        let id = 0
+        const result = await attachRun({
+          run,
+          project,
+          workspace,
           abortSignal: abortController.signal,
           onEvent: ({ event, data }) => {
             stream.writeSSE({
@@ -162,6 +177,7 @@ async function handleStreamingMode({
   )
 }
 
+// TODO(runs): return active run job instead of attaching
 async function handleNonStreamingMode({
   c,
   workspace,
@@ -174,17 +190,23 @@ async function handleNonStreamingMode({
   source,
   isLegacy,
 }: RunHandlerContext) {
-  const { result } = await enqueueDocumentRunJob({
-    workspaceId: workspace.id,
-    projectId: project.id,
-    commitUuid: commit.uuid,
-    documentUuid: document.documentUuid,
+  const { run } = await enqueueRun({
+    document,
+    commit,
+    project,
+    workspace,
     parameters,
     customIdentifier,
     tools: undefined, // Note: tools are not supported for non streaming requests
     userMessage,
     source,
     isLegacy,
+  }).then((r) => r.unwrap())
+
+  const result = await attachRun({
+    run,
+    project,
+    workspace,
     abortSignal: c.req.raw.signal, // FIXME: this is not working
   }).then((r) => r.unwrap())
 

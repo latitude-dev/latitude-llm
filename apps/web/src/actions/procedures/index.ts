@@ -1,18 +1,20 @@
+import { getDataFromSession } from '$/data-access'
 import { getUnsafeIp } from '$/helpers/ip'
-import { DatasetsRepository } from '@latitude-data/core/repositories'
-import { Dataset } from '@latitude-data/core/browser'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { cache } from '@latitude-data/core/cache'
 import {
   LatitudeError,
   RateLimitError,
   UnauthorizedError,
 } from '@latitude-data/constants/errors'
+import { Dataset } from '@latitude-data/core/browser'
+import { cache } from '@latitude-data/core/cache'
 import {
   CommitsRepository,
+  DatasetsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
   ProjectsRepository,
+  RunsRepository,
 } from '@latitude-data/core/repositories'
 import * as Sentry from '@sentry/nextjs'
 import { ReplyError } from 'ioredis'
@@ -20,7 +22,6 @@ import { headers } from 'next/headers'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 import { z } from 'zod'
 import { createServerActionProcedure, TAnyCompleteProcedure } from 'zsa'
-import { getDataFromSession } from '$/data-access'
 
 const DEFAULT_RATE_LIMIT_POINTS = 1000
 const DEFAULT_RATE_LIMIT_DURATION = 60
@@ -130,6 +131,17 @@ export const withEvaluation = createServerActionProcedure(withDocument)
       .then((r) => r.unwrap())
 
     return { ...ctx, evaluation }
+  })
+
+export const withRun = createServerActionProcedure(withProject)
+  .input(z.object({ runUuid: z.string() }))
+  .handler(async ({ input, ctx }) => {
+    const repository = new RunsRepository(ctx.workspace.id, ctx.project.id)
+    const run = await repository
+      .get({ runUuid: input.runUuid })
+      .then((r) => r.unwrap())
+
+    return { ...ctx, run }
   })
 
 export const withAdmin = createServerActionProcedure(authProcedure).handler(

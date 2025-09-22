@@ -4,13 +4,15 @@ import {
   DocumentVersion,
   EvaluationType,
   findFirstModelForProvider,
+  HumanEvaluationMetric,
   LlmEvaluationMetric,
   Workspace,
 } from '../../browser'
+import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import { findDefaultEvaluationProvider } from '../providerApiKeys/findDefaultProvider'
 import { createEvaluationV2 } from './create'
-import Transaction from '../../lib/Transaction'
 
 export async function createDemoEvaluation(
   {
@@ -25,18 +27,18 @@ export async function createDemoEvaluation(
   transaction = new Transaction(),
 ) {
   return transaction.call(async (trx) => {
-    // Note: failing silently to avoid not letting the user create the document
     const result = await findDefaultEvaluationProvider(workspace!, trx)
-    if (result.error || !result.value) return Result.nil()
+    if (result.error) return Result.error(result.error)
     const provider = result.value
+    if (!provider) return Result.error(new NotFoundError('Provider not found'))
 
     const model = findFirstModelForProvider({
       provider,
       defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
     })
-    if (!model) return Result.nil()
+    if (!model) return Result.error(new NotFoundError('Model not found'))
 
-    return await createEvaluationV2(
+    const creatinga = await createEvaluationV2(
       {
         document,
         commit,
@@ -76,5 +78,50 @@ export async function createDemoEvaluation(
       },
       transaction,
     )
+    if (creatinga.error) return Result.error(creatinga.error)
+    const accuracy = creatinga.value.evaluation
+
+    const creatingf = await createEvaluationV2(
+      {
+        document,
+        commit,
+        settings: {
+          name: 'Feedback',
+          description: `Evaluates how well the expected behavior is followed.`,
+          type: EvaluationType.Human,
+          metric: HumanEvaluationMetric.Rating,
+          configuration: {
+            reverseScale: false,
+            actualOutput: {
+              messageSelection: 'last',
+              parsingFormat: 'string',
+            },
+            expectedOutput: {
+              parsingFormat: 'string',
+            },
+            criteria:
+              'Assess how well the response follows the expected behavior.',
+            minRating: 1,
+            minRatingDescription:
+              "Poor response, doesn't follow the instructions.",
+            maxRating: 5,
+            maxRatingDescription:
+              'Perfect response, does follow the instructions.',
+            minThreshold: 4,
+          },
+        },
+        options: {
+          evaluateLiveLogs: false,
+          enableSuggestions: true,
+          autoApplySuggestions: true,
+        },
+        workspace,
+      },
+      transaction,
+    )
+    if (creatingf.error) return Result.error(creatingf.error)
+    const feedback = creatingf.value.evaluation
+
+    return Result.ok({ accuracy, feedback })
   })
 }

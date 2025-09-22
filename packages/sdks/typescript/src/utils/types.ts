@@ -8,12 +8,8 @@ export type HandlerConfig<U, B> = {
 
 import { RouteResolver } from '$sdk/utils'
 import { LatitudeApiError } from '$sdk/utils/errors'
-import type {
-  Config,
-  Message,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
 import {
+  AssertedStreamType,
   ChainCallResponseDto,
   LegacyChainEvent as ChainEvent,
   ChainEventDto,
@@ -23,8 +19,12 @@ import {
   Providers,
   RunSyncAPIResponse,
   StreamEventTypes,
-  AssertedStreamType,
 } from '@latitude-data/constants'
+import type {
+  Config,
+  Message,
+  ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
 import {
   AdapterMessageType,
   ProviderAdapter,
@@ -50,6 +50,14 @@ export type RunDocumentUrlParams = {
 }
 
 export type ChatUrlParams = {
+  conversationUuid: string
+}
+
+export type StopRunUrlParams = {
+  conversationUuid: string
+}
+
+export type AttachRunUrlParams = {
   conversationUuid: string
 }
 
@@ -164,6 +172,8 @@ export enum HandlerType {
   RunDocument = 'run-document',
   Log = 'log',
   ToolResults = 'tool-results',
+  StopRun = 'stop-run',
+  AttachRun = 'attach-run',
 }
 
 export type HandlerConfigs = {
@@ -197,6 +207,11 @@ export type HandlerConfigs = {
   >
   [HandlerType.Log]: HandlerConfig<RunDocumentUrlParams, LogBodyParams>
   [HandlerType.ToolResults]: HandlerConfig<never, ToolResultsBodyParams>
+  [HandlerType.StopRun]: HandlerConfig<StopRunUrlParams, never>
+  [HandlerType.AttachRun]: HandlerConfig<
+    AttachRunUrlParams,
+    AttachRunBodyParams
+  >
 }
 
 export type UrlParams<H extends HandlerType> = HandlerConfigs[H]['UrlParams']
@@ -318,6 +333,16 @@ export type ChatOptions<
   signal?: AbortSignal
 }
 
+export type AttachRunOptions<
+  Tools extends ToolSpec,
+  S extends AssertedStreamType = 'text',
+> = StreamResponseCallbacks<S> & {
+  stream?: boolean
+  interactive?: boolean
+  tools?: ToolCalledFn<Tools>
+  signal?: AbortSignal
+}
+
 export type SDKOptions = {
   apiKey: string
   retryMs: number
@@ -374,4 +399,9 @@ type ChatBodyParams = {
   messages: Message[]
   stream?: boolean
   tools?: string[]
+}
+
+type AttachRunBodyParams = {
+  stream?: boolean
+  interactive?: boolean
 }

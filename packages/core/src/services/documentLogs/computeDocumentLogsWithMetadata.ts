@@ -41,11 +41,15 @@ export function getCommitFilter(draft?: Commit) {
 export async function computeDocumentLogsWithMetadata(
   {
     document,
+    projectId,
+    workspaceId,
     page = '1',
     pageSize = String(DEFAULT_PAGINATION_SIZE),
     filterOptions,
   }: {
-    document: DocumentVersion
+    document?: DocumentVersion
+    projectId?: number
+    workspaceId?: number
     page?: string
     pageSize?: string
     filterOptions?: DocumentLogFilterOptions
@@ -54,7 +58,9 @@ export async function computeDocumentLogsWithMetadata(
 ) {
   const conditions = [
     isNull(commits.deletedAt),
-    eq(documentLogs.documentUuid, document.documentUuid),
+    document ? eq(documentLogs.documentUuid, document.documentUuid) : undefined,
+    projectId ? eq(commits.projectId, projectId) : undefined,
+    workspaceId ? eq(documentLogs.workspaceId, workspaceId) : undefined,
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
   const offset = calculateOffset(page, pageSize)
@@ -139,15 +145,21 @@ export async function computeDocumentLogsWithMetadata(
 export async function computeDocumentLogsWithMetadataCount(
   {
     document,
+    projectId,
+    workspaceId,
     filterOptions,
   }: {
-    document: DocumentVersion
+    document?: DocumentVersion
+    projectId?: number
+    workspaceId?: number
     filterOptions?: DocumentLogFilterOptions
   },
   db = database,
 ) {
   const conditions = [
-    eq(documentLogs.documentUuid, document.documentUuid),
+    document ? eq(documentLogs.documentUuid, document.documentUuid) : undefined,
+    projectId ? eq(commits.projectId, projectId) : undefined,
+    workspaceId ? eq(documentLogs.workspaceId, workspaceId) : undefined,
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
   const countList = await db
@@ -155,6 +167,7 @@ export async function computeDocumentLogsWithMetadataCount(
       count: sql<number>`count(*)`.as('total_count'),
     })
     .from(documentLogs)
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .where(and(...conditions))
 
   return countList?.[0]?.count ? Number(countList[0].count) : 0
