@@ -161,4 +161,48 @@ describe('consumeLatteCredits', () => {
       },
     })
   })
+
+  it('succeeds when consuming credits from an aborted Latte request', async () => {
+    const idempotencyKey = crypto.randomUUID()
+
+    const result = await consumeLatteCredits({
+      usage: {
+        promptTokens: 100,
+        completionTokens: 100,
+        totalTokens: 200,
+      },
+      threadUuid: thread.uuid,
+      user: user,
+      workspace: workspace,
+      error: new DOMException('Operation was aborted', 'AbortError'),
+      idempotencyKey: idempotencyKey,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual({
+      id: expect.any(Number),
+      uuid: idempotencyKey,
+      threadUuid: thread.uuid,
+      workspaceId: workspace.id,
+      userId: user.id,
+      credits: 1,
+      billable: true,
+      error: 'Operation was aborted',
+      createdAt: expect.any(Date),
+      updatedAt: expect.any(Date),
+    })
+    expect(mocks.cache.del).toHaveBeenCalledOnce()
+    expect(mocks.websocket).toHaveBeenLastCalledWith('latteThreadUpdate', {
+      workspaceId: workspace.id,
+      data: {
+        type: 'usage',
+        threadUuid: thread.uuid,
+        usage: {
+          limit: 30,
+          billable: 1,
+          unbillable: 0,
+          resetsAt: expect.any(Date),
+        },
+      },
+    })
+  })
 })

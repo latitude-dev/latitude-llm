@@ -25,6 +25,7 @@ import { consumeLatteCredits } from './credits/consume'
 import { isLatteDebugSession } from './debugVersions'
 import { sendWebsockets } from './helpers'
 import { buildToolHandlers } from './tools'
+import { isAbortError } from '../../../lib/isAbortError'
 export * from './threads/checkpoints/clearCheckpoints'
 export * from './threads/checkpoints/createCheckpoint'
 export * from './threads/checkpoints/undoChanges'
@@ -161,7 +162,7 @@ async function generateLatteResponse(args: GenerateLatteResponseArgs) {
       totalTokens: 0,
     },
     threadUuid: args.threadUuid,
-    error: error,
+    error: error && !isAbortError(error) ? error : undefined, //
     user: args.user,
     workspace: args.clientWorkspace,
   }) // Note: failing silently
@@ -169,7 +170,7 @@ async function generateLatteResponse(args: GenerateLatteResponseArgs) {
     captureException(consuming.error)
   }
 
-  if (error) {
+  if (error && !isAbortError(error)) {
     WebsocketClient.sendEvent('latteThreadUpdate', {
       workspaceId: args.clientWorkspace.id,
       data: {

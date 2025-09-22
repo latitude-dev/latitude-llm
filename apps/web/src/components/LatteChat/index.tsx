@@ -109,7 +109,8 @@ function LatteChatUI() {
     resetAll()
   }, [resetAll, addFeedbackToLatteChange])
   const stopLatteChat = useCallback(() => {
-    stopChat({ jobId: jobId })
+    if (!jobId) return
+    stopChat({ jobId })
   }, [stopChat, jobId])
 
   const inConversation = interactions.length > 0

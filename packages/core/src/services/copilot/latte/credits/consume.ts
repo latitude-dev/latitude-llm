@@ -13,6 +13,7 @@ import { captureException } from '../../../../utils/workers/sentry'
 import { WebsocketClient } from '../../../../websockets/workers'
 import { computeLatteCredits } from './compute'
 import { usageLatteCredits } from './usage'
+import { isAbortError } from '../../../../lib/isAbortError'
 
 export async function consumeLatteCredits(
   {
@@ -37,7 +38,7 @@ export async function consumeLatteCredits(
   if (computing.error) error = computing.error
   else credits = computing.value
 
-  const billable = !error
+  const billable = !error || isAbortError(error)
 
   const consuming = await tx.call(async (db) => {
     const request = await db
