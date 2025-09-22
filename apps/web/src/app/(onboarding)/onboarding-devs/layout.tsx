@@ -1,24 +1,31 @@
 'use server'
 
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { CSPostHogProvider, IdentifyUser } from '$/app/providers'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { ReactNode } from 'react'
-import { env } from '@latitude-data/env'
-import NocodersHeader from './_components/header'
 
-export default async function NocodersLayout({
+export async function generateMetadata() {
+  return buildMetatags({
+    title: 'Onboarding',
+  })
+}
+
+export default async function OnboardingLayout({
   children,
 }: {
   children: ReactNode
 }) {
   const { workspace, user } = await getCurrentUserOrRedirect()
-  const isCloud = !!env.LATITUDE_CLOUD
 
   return (
     <CSPostHogProvider>
       <IdentifyUser user={user} workspace={workspace}>
-        <div className={'flex flex-col h-screen overflow-hidden relative'}>
-          <NocodersHeader currentUser={user} isCloud={isCloud} />
+        <div className='flex min-h-screen flex-col max-w-[768px] pt-12 pb-4 m-auto'>
+          <div className='flex items-center justify-center'>
+            <Icon name='logo' size='large' />
+          </div>
           {children}
         </div>
       </IdentifyUser>

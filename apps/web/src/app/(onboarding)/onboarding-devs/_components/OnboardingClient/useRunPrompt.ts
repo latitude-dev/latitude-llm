@@ -5,7 +5,7 @@ import { ROUTES } from '$/services/routes'
 import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { OnboardingStep } from '$/app/(onboarding)/onboarding/_components/OnboardingClient'
+import { OnboardingStep } from '$/app/(onboarding)/onboarding-devs/_components/OnboardingClient'
 
 const SECONDS_BEFORE_HIDING_PROMPT_IN_SECONDS = 2000
 export const DOCUMENT_PARAMETERS: OnboardingParameters = {
