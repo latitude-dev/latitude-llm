@@ -51,15 +51,19 @@ export const PIPEDREAM_MCP_URL = 'https://remote.mcp.pipedream.net'
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
 
-export function normalizeMcpUrl(url: string): TypedResult<URL, McpUrlError> {
+export function createMcpTransport(
+  url: string,
+): TypedResult<McpClientTransport, McpUrlError> {
+  const urlWithProtocol = url.match(/^https?:\/\//) ? url : `http://${url}`
   try {
-    // Add http:// protocol if the URL doesn't include a protocol
-    const urlWithProtocol = url.match(/^https?:\/\//) ? url : `http://${url}`
-    // Add /sse path if the URL doesn't include a path
-    const urlWithPath = urlWithProtocol.match(/\/sse$/)
-      ? urlWithProtocol
-      : `${urlWithProtocol}/sse`
-    return Result.ok(new URL(urlWithPath))
+    const urlObject = new URL(urlWithProtocol)
+
+    const isSSE = urlObject.pathname.endsWith('/sse')
+    if (isSSE) {
+      return Result.ok(new SSEClientTransport(urlObject))
+    }
+
+    return Result.ok(new StreamableHTTPClientTransport(urlObject))
   } catch (error) {
     return Result.error(new McpUrlError(`Invalid MCP server URL: ${url}`))
   }

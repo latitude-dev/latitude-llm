@@ -1,7 +1,6 @@
 import { IntegrationType } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { IntegrationDto, McpServer } from '../../../browser'
 import { publisher } from '../../../events/publisher'
 import { queues } from '../../../jobs/queues'
@@ -13,7 +12,7 @@ import {
   DEFAULT_RETRY_CONFIG,
   McpClientConnection,
   McpConnectionError,
-  normalizeMcpUrl,
+  createMcpTransport,
   retryWithBackoff,
 } from './utils'
 
@@ -116,10 +115,11 @@ export async function createAndConnectHostedMcpClient(
     )
   }
 
-  const urlResult = normalizeMcpUrl(configuration.url)
-  if (!Result.isOk(urlResult)) {
-    return Result.error(new McpConnectionError(urlResult.error.message))
+  const transportResult = createMcpTransport(configuration.url)
+  if (!Result.isOk(transportResult)) {
+    return Result.error(new McpConnectionError(transportResult.error.message))
   }
+  const transport = transportResult.unwrap()
 
   // Ensure MCP server is scaled up if needed
   const scaleResult = await ensureMcpServerScaled(integration, streamManager)
@@ -135,7 +135,6 @@ export async function createAndConnectHostedMcpClient(
   const GRACE_PERIOD = 10000 // 10 seconds
   const connectResult = await retryWithBackoff(
     async () => {
-      const transport = new SSEClientTransport(urlResult.value)
       await client.connect(transport)
       return { client, transport }
     },

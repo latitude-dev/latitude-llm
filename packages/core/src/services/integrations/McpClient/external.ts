@@ -1,10 +1,9 @@
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { IntegrationDto } from '../../../browser'
 import {
   McpConnectionError,
   McpClientConnection,
-  normalizeMcpUrl,
+  createMcpTransport,
   retryWithBackoff,
 } from './utils'
 import { Result } from '../../../lib/Result'
@@ -22,18 +21,18 @@ export async function createAndConnectExternalMcpClient(
     )
   }
 
-  const urlResult = normalizeMcpUrl(integration.configuration.url)
-  if (!Result.isOk(urlResult)) {
-    return Result.error(new McpConnectionError(urlResult.error.message))
+  const transportResult = createMcpTransport(integration.configuration.url)
+  if (!Result.isOk(transportResult)) {
+    return Result.error(new McpConnectionError(transportResult.error.message))
   }
-
+  const transport = transportResult.unwrap()
   const client = new McpClient({
     name: integration.name,
     version: '1.0.0',
   })
 
   const connectResult = await retryWithBackoff(async () => {
-    const transport = new SSEClientTransport(urlResult.value)
+    console.log('connecting to MCP', transport)
     await client.connect(transport)
     return { client, transport }
   })
