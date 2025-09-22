@@ -19,32 +19,30 @@ import {
   projects,
   providerApiKeys,
 } from '../schema'
-import RepositoryLegacy from './repository'
+import Repository from './repositoryV2'
 
 const tt = getTableColumns(providerApiKeys)
 
-export class ProviderApiKeysRepository extends RepositoryLegacy<
-  typeof tt,
-  ProviderApiKey
-> {
+export class ProviderApiKeysRepository extends Repository<ProviderApiKey> {
+  get scopeFilter() {
+    return and(
+      isNull(providerApiKeys.deletedAt),
+      eq(providerApiKeys.workspaceId, this.workspaceId),
+    )
+  }
+
   get scope() {
     return this.db
       .select(tt)
       .from(providerApiKeys)
-      .where(
-        and(
-          isNull(providerApiKeys.deletedAt),
-          eq(providerApiKeys.workspaceId, this.workspaceId),
-        ),
-      )
-      .as('providerApiKeysScope')
+      .where(this.scopeFilter)
+      .$dynamic()
   }
 
   async findByName(name: string) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.name, name))
+    const result = await this.scope.where(
+      and(this.scopeFilter, eq(providerApiKeys.name, name)),
+    )
 
     if (!result.length) {
       return Result.error(
@@ -56,10 +54,9 @@ export class ProviderApiKeysRepository extends RepositoryLegacy<
   }
 
   async findAllByNames(names: string[]) {
-    return await this.db
-      .select()
-      .from(this.scope)
-      .where(inArray(this.scope.name, names))
+    return await this.scope.where(
+      and(this.scopeFilter, inArray(providerApiKeys.name, names)),
+    )
   }
 
   async getUsage(name: string) {

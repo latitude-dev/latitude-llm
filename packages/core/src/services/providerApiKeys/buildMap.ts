@@ -14,18 +14,23 @@ export async function buildProvidersMap(
   db = database,
 ) {
   const cacheKey = `workspace:${workspaceId}:provider-api-keys-map`
-
-  return await getOrSet(
+  const result = await getOrSet(
     cacheKey,
     async () => {
       const scope = new ProviderApiKeysRepository(workspaceId, db)
       const result = await scope.findAll().then((r) => r.unwrap())
 
-      return result.reduce((acc, apiKey) => {
-        acc.set(apiKey.name, apiKey)
-        return acc
-      }, new Map<string, ProviderApiKey>())
+      return result.reduce(
+        (acc, apiKey) => {
+          acc[apiKey.name] = apiKey
+
+          return acc
+        },
+        {} as Record<string, ProviderApiKey>,
+      )
     },
     PROVIDER_API_KEYS_MAP_CACHE_TTL,
   )
+
+  return new Map(Object.entries(result))
 }
