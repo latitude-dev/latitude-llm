@@ -95,6 +95,10 @@ export const legacyChainEventDtoSchema = z.discriminatedUnion('event', [
   }),
 ])
 
+export const runBackgroundAPIResponseSchema = z.object({
+  uuid: z.string(),
+})
+
 export const runSyncAPIResponseSchema = z.object({
   uuid: z.string(),
   conversation: z.array(messageSchema),

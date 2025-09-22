@@ -52,6 +52,7 @@ export * from '@latitude-data/constants/actions'
 export * from '@latitude-data/constants/evaluations'
 export * from '@latitude-data/constants/grants'
 export * from '@latitude-data/constants/latte'
+export * from '@latitude-data/constants/runs'
 export * from '@latitude-data/constants/tracing'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'

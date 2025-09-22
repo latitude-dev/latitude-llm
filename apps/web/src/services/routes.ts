@@ -1,7 +1,7 @@
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
 
-import { API_ROUTES } from './routes/api'
 import { PUBLIC_ROOT_PATHS } from '$/services/auth/constants'
+import { API_ROUTES } from './routes/api'
 
 export type IDatasetSettingsModal = 'new' | 'generate'
 
@@ -239,6 +239,12 @@ export const ROUTES = {
                     },
                   }
                 },
+              },
+              runs: {
+                root: `${root}/runs`,
+                detail: ({ uuid }: { uuid: string }) => ({
+                  root: `${root}/runs/${uuid}`,
+                }),
               },
             }
           },

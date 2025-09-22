@@ -3,6 +3,7 @@ import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import {
   internalInfoSchema,
   legacyChainEventDtoSchema,
+  runBackgroundAPIResponseSchema,
   runSyncAPIResponseSchema,
 } from '$/openApi/schemas'
 import { ROUTES } from '$/routes'
@@ -36,9 +37,11 @@ export const runRoute = createRoute({
     ...GENERIC_ERROR_RESPONSES,
     [http.Status.OK]: {
       description:
-        'If stream is true, returns a SSE stream. Otherwise, returns the final event as JSON.',
+        'If stream is true, returns a SSE stream. Otherwise, returns the final event as JSON. If background is true, enqueues the run and returns the job.',
       content: {
-        [http.MediaTypes.JSON]: { schema: runSyncAPIResponseSchema },
+        [http.MediaTypes.JSON]: {
+          schema: runSyncAPIResponseSchema.or(runBackgroundAPIResponseSchema),
+        },
         [http.MediaTypes.SSE]: { schema: legacyChainEventDtoSchema },
       },
     },

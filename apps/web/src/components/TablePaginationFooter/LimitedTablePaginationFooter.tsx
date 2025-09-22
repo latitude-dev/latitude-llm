@@ -10,18 +10,22 @@ export function LimitedTablePaginationFooter({
   page,
   onPageChange,
   nextPage = false,
+  optimistic = false,
 }: {
   count?: number
   countLabel?: (count: number) => string
   page: number
   onPageChange: (page: number) => void
   nextPage?: boolean
+  optimistic?: boolean
 }) {
   return (
     <div className='w-full flex justify-between items-center'>
       {count !== undefined ? (
         <div className='flex flex-row items-center gap-x-1'>
-          <Icon name='equalApproximately' color='foregroundMuted' />
+          {!optimistic && (
+            <Icon name='equalApproximately' color='foregroundMuted' />
+          )}
           <Text.H5M color='foregroundMuted'>
             {countLabel?.(count) ?? `${count} rows`}
           </Text.H5M>

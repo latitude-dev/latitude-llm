@@ -1,14 +1,23 @@
-import { LogSources, User, Workspace } from '@latitude-data/core/browser'
-
 import { createSdk } from '$/app/(private)/_lib/createSdk'
-import { publisher } from '@latitude-data/core/events/publisher'
-import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
-
 import { captureException } from '$/helpers/captureException'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { ChainEventTypes } from '@latitude-data/constants'
+import {
+  LogSources,
+  StreamEventTypes,
+  User,
+  Workspace,
+} from '@latitude-data/core/browser'
+import { publisher } from '@latitude-data/core/events/publisher'
+import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
+import {
+  ChainEventDto,
+  GenerationResponse,
+  LatitudeApiError,
+} from '@latitude-data/sdk'
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
 const inputSchema = z.object({
   path: z.string(),
@@ -39,6 +48,11 @@ export const POST = errorHandler(
         const { path, commitUuid, parameters, userMessage } =
           inputSchema.parse(body)
         const projectId = Number(body.projectId)
+
+        const runsEnabled = await isFeatureEnabledByName(
+          workspace.id,
+          'runs',
+        ).then((r) => r.unwrap())
 
         // Publish document run event
         publisher.publishLater({
@@ -118,50 +132,81 @@ export const POST = errorHandler(
         }
         req.signal.addEventListener('abort', abortHandler)
 
+        const onEvent = async (event: {
+          event: StreamEventTypes
+          data: ChainEventDto
+        }) => {
+          try {
+            if (event.data.type === ChainEventTypes.ChainError) {
+              captureException(event.data.error)
+            }
+
+            await writer.write(
+              encoder.encode(
+                `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
+              ),
+            )
+          } catch (error) {
+            captureException(error as Error)
+            // Try to send error to client before closing
+            await writeErrorToStream(new Error('Failed to write to stream'))
+          }
+        }
+
+        const onError = async (error: LatitudeApiError) => {
+          captureException(error)
+
+          await writeErrorToStream(error)
+        }
+
+        const onFinished = async (_data: GenerationResponse) => {
+          try {
+            await writer.write(
+              encoder.encode(
+                `event: finished\ndata: ${JSON.stringify({ success: true })}\n\n`,
+              ),
+            )
+          } catch (error) {
+            captureException(error as Error)
+          } finally {
+            await safeCloseWriter()
+          }
+        }
+
         try {
-          sdk.prompts.run(path, {
-            stream: true,
-            background: true,
-            versionUuid: commitUuid,
-            parameters,
-            userMessage,
-            onEvent: async (event) => {
-              try {
-                if (event.data.type === ChainEventTypes.ChainError) {
-                  captureException(event.data.error)
-                }
+          if (runsEnabled) {
+            const result = await sdk.prompts.run(path, {
+              stream: false,
+              background: true,
+              versionUuid: commitUuid,
+              parameters,
+              userMessage,
+            })
+            if (!result?.uuid) {
+              throw new Error('Failed to create run')
+            }
 
-                await writer.write(
-                  encoder.encode(
-                    `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
-                  ),
-                )
-              } catch (error) {
-                captureException(error as Error)
-                // Try to send error to client before closing
-                await writeErrorToStream(new Error('Failed to write to stream'))
-              }
-            },
-            onError: async (error) => {
-              captureException(error)
-
-              await writeErrorToStream(error)
-            },
-            onFinished: async () => {
-              try {
-                await writer.write(
-                  encoder.encode(
-                    `event: finished\ndata: ${JSON.stringify({ success: true })}\n\n`,
-                  ),
-                )
-              } catch (error) {
-                captureException(error as Error)
-              } finally {
-                await safeCloseWriter()
-              }
-            },
-            signal: req.signal,
-          })
+            sdk.runs.attach(result.uuid, {
+              stream: true,
+              interactive: true,
+              onEvent,
+              onError,
+              onFinished,
+              signal: req.signal,
+            })
+          } else {
+            sdk.prompts.run(path, {
+              stream: true,
+              background: false,
+              versionUuid: commitUuid,
+              parameters,
+              userMessage,
+              onEvent,
+              onError,
+              onFinished,
+              signal: req.signal,
+            })
+          }
         } catch (error) {
           captureException(error as Error)
           await writeErrorToStream(new Error('Failed to execute prompt'))

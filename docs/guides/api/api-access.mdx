@@ -174,13 +174,29 @@ Run a specific document (prompt) with optional parameters.
     "key1": "value1",
     "key2": "value2"
   },
-  "stream": false
+  "stream": false,
+  "background": false,
+  "userMessage": "Optional user message",
+  "customIdentifier": "optional-custom-id",
+  "tools": ["tool1", "tool2"]
 }
 ```
 
 - `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the last event is returned.
+- `background`: Optional boolean parameter (defaults to `false`). When set to true, the request is enqueued for background processing and returns immediately with a conversation UUID.
+- `userMessage`: Optional string to start the conversation with a user message.
+- `customIdentifier`: Optional string for custom identification of the run.
+- `tools`: Optional array of tool names to enable for this run.
 
 **Response:**
+
+- If `background` is `true`: Returns immediately with a conversation UUID for background processing:
+
+```json
+{
+  "uuid": "conversation-uuid"
+}
+```
 
 - If `stream` is `true`: The response is a stream of Server-Sent Events (SSE). Check out the [Streaming Events](/guides/api/streaming-events) guide for more information about the specific events you can expect.
 
@@ -260,6 +276,80 @@ The response is a stream of Server-Sent Events (SSE) or a single JSON response c
 
 Check out the [Streaming Events](/guides/api/streaming-events) guide for more information about the specific events you can expect.
 
+#### 5. Stop a Conversation
+
+Stop an active conversation that is currently running.
+
+**Endpoint:** `POST /conversations/{conversationUuid}/stop`
+
+**Path Parameters:**
+
+- `conversationUuid`: UUID of the conversation
+
+**Request Body:**
+
+No request body is required for this endpoint.
+
+**Response:**
+
+This endpoint returns a 200 status code when the conversation is successfully stopped.
+
+#### 6. Attach to a Conversation
+
+Attach to an active conversation to receive its ongoing output.
+
+**Endpoint:** `POST /conversations/{conversationUuid}/attach`
+
+**Path Parameters:**
+
+- `conversationUuid`: UUID of the conversation
+
+**Request Body:**
+
+```json
+{
+  "stream": false,
+  "interactive": false
+}
+```
+
+- `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the final event is returned.
+- `interactive`: Optional boolean parameter (defaults to `false`). When set to true the attached conversation will be aborted when the client disconnects.
+
+**Response:**
+
+- If `stream` is `true`: The response is a stream of Server-Sent Events (SSE). Check out the [Streaming Events](/guides/api/streaming-events) guide for more information about the specific events you can expect.
+
+- If `stream` is `false`: A single JSON response is returned with the final event in the following structure:
+
+```json
+{
+  "uuid": "conversation-uuid",
+  "conversation": [
+    {
+      "role": "user" | "system" | "assistant",
+      "content": [
+        {
+          "type": "text",
+          "content": "message content"
+        }
+      ]
+    }
+  ],
+  "response": {
+    "streamType": "text" | "object",
+    "usage": {
+      "promptTokens": 10,
+      "completionTokens": 15,
+      "totalTokens": 25
+    },
+    "text": "response text",
+    "object": {},
+    "toolCalls": []
+  }
+}
+```
+
 **Error Handling**
 
 The API uses standard HTTP status codes. In case of an error, the response body will contain an error message:
@@ -272,7 +362,7 @@ The API uses standard HTTP status codes. In case of an error, the response body 
 }
 ```
 
-#### 5. Annotate a Log
+#### 7. Annotate a Log
 
 Add an annotation (evaluation score) to a log.
 
@@ -311,7 +401,7 @@ Add an annotation (evaluation score) to a log.
 }
 ```
 
-#### 6. Create Log Entry
+#### 8. Create Log Entry
 
 Create a log entry for a document.
 

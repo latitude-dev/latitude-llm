@@ -9,12 +9,12 @@ import {
   SDKOptions,
   ToolSpec,
 } from '$sdk/utils/types'
+import { AssertedStreamType, ProviderData } from '@latitude-data/constants/ai'
 import {
   ApiErrorCodes,
   ApiErrorJsonResponse,
   LatitudeErrorCodes,
 } from '@latitude-data/constants/errors'
-import { ProviderData, AssertedStreamType } from '@latitude-data/constants/ai'
 
 export async function streamRun<
   Tools extends ToolSpec,
@@ -25,8 +25,6 @@ export async function streamRun<
     projectId,
     versionUuid,
     parameters,
-    stream = false,
-    background,
     tools,
     customIdentifier,
     userMessage,
@@ -34,7 +32,7 @@ export async function streamRun<
     onFinished,
     onError,
     options,
-  }: RunPromptOptions<Tools, S> & {
+  }: RunPromptOptions<Tools, S, false> & {
     options: SDKOptions
   },
 ) {
@@ -60,8 +58,8 @@ export async function streamRun<
       params: { projectId, versionUuid },
       options,
       body: {
-        stream,
-        background,
+        stream: true,
+        background: false,
         path,
         parameters,
         customIdentifier,

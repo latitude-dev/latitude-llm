@@ -1,9 +1,11 @@
-import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
   buildResponseMessage,
   ChainStepResponse,
   StreamType,
 } from '@latitude-data/constants'
+import type { Message } from '@latitude-data/constants/legacyCompiler'
+import { env } from '@latitude-data/env'
+import type { ConfigurableProp, ConfigurePropOptions } from '@pipedream/sdk'
 import { parseISO } from 'date-fns'
 import { ProviderLogDto } from './browser'
 import {
@@ -12,8 +14,6 @@ import {
   type DateRange,
 } from './constants'
 import type { QueryParams } from './lib/pagination'
-import { env } from '@latitude-data/env'
-import type { ConfigurableProp, ConfigurePropOptions } from '@pipedream/sdk'
 
 export function buildCsvFile(csvData: CsvData, name: string): File {
   const headers = csvData.headers.map((h) => JSON.stringify(h)).join(',')
@@ -312,4 +312,9 @@ export function getPropOptions<T = string>(
       return [label, value ?? label] as [string, T]
     }),
   )
+}
+
+export type Pagination = {
+  page?: number
+  pageSize?: number
 }

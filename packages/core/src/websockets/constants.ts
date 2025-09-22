@@ -18,6 +18,7 @@ import type {
   LatteUsage,
   Project,
   ProviderLogDto,
+  Run,
 } from '../browser'
 
 const ONE_HOUR = 60 * 60 * 1000
@@ -172,10 +173,10 @@ type LatteProjectChangesArgs = {
   changes: LatteChange[]
 }
 
-export type DocumentRunEventArgs = {
-  event: string
-  data: unknown
-  jobId: string
+type RunStatusArgs = {
+  workspaceId: number
+  projectId: number
+  run: Run
 }
 
 export type WebServerToClientEvents = {
@@ -194,7 +195,7 @@ export type WebServerToClientEvents = {
   triggerEventCreated: (args: DocumentTriggerEventCreatedArgs) => void
   latteThreadUpdate: (args: LatteThreadUpdateArgs) => void
   latteProjectChanges: (args: LatteProjectChangesArgs) => void
-  documentRunEvent: (args: DocumentRunEventArgs) => void
+  runStatus: (args: RunStatusArgs) => void
 }
 
 export type WebClientToServerEvents = {
@@ -258,8 +259,5 @@ export type WorkersClientToServerEvents = {
     workspaceId: number
     data: LatteProjectChangesArgs
   }) => void
-  documentRunEvent: (args: {
-    workspaceId: number
-    data: DocumentRunEventArgs
-  }) => void
+  runStatus: (args: { workspaceId: number; data: RunStatusArgs }) => void
 }

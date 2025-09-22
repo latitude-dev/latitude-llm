@@ -1,12 +1,17 @@
 import { IEventsHandlers } from '../events'
+import { clearProviderApiKeysCache } from './clearProviderApiKeysCache'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
 import { createLoopsContact } from './createLoopsContact'
 import { evaluateLiveLogJob } from './evaluateLiveLog'
 import { notifyClientOfDocumentSuggestionCreated } from './notifyClientOfDocumentSuggestionCreated'
+import { notifyClientOfDocumentTriggerCreated } from './notifyClientOfDocumentTriggerCreated'
+import { notifyClientOfDocumentTriggerDeleted } from './notifyClientOfDocumentTriggerDeleted'
+import { notifyClientOfDocumentTriggerEventCreated } from './notifyClientOfDocumentTriggerEventCreated'
 import { notifyClientOfEvaluationResultV2Created } from './notifyClientOfEvaluationResultV2Created'
 import { notifyClientOfExportReady } from './notifyClientOfExportReady'
 import { notifyClientOfMcpServerConnected } from './notifyClientOfMcpServerConnected'
+import { notifyClientOfRunStatus } from './notifyClientOfRunStatus'
 import { notifyClientOfScaleUpMcpServer } from './notifyClientOfScaleUpMcpServer'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { pingProjectUpdateJob } from './pingProjectUpdateJob'
@@ -19,10 +24,6 @@ import { touchApiKeyJob } from './touchApiKeyJob'
 import { touchProviderApiKeyJob } from './touchProviderApiKeyJob'
 import { undeployDocumentTriggerJob } from './undeployDocumentTriggerJob'
 import { updateWebhookLastTriggeredAt } from './webhooks'
-import { notifyClientOfDocumentTriggerCreated } from './notifyClientOfDocumentTriggerCreated'
-import { notifyClientOfDocumentTriggerDeleted } from './notifyClientOfDocumentTriggerDeleted'
-import { notifyClientOfDocumentTriggerEventCreated } from './notifyClientOfDocumentTriggerEventCreated'
-import { clearProviderApiKeysCache } from './clearProviderApiKeysCache'
 
 export const EventHandlers: IEventsHandlers = {
   claimReferralInvitations: [createClaimInvitationReferralJob],
@@ -85,4 +86,8 @@ export const EventHandlers: IEventsHandlers = {
   promocodeClaimed: [],
   subscriptionUpdated: [],
   commitMerged: [],
+  runQueued: [notifyClientOfRunStatus],
+  runStarted: [notifyClientOfRunStatus],
+  runProgress: [notifyClientOfRunStatus],
+  runEnded: [notifyClientOfRunStatus],
 }

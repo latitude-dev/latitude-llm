@@ -1,3 +1,4 @@
+// FIXME: Remove unnecessary "Queue" suffixes
 export enum Queues {
   defaultQueue = 'default',
   evaluationsQueue = 'evaluations',

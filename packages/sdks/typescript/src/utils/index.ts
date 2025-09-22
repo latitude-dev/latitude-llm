@@ -1,5 +1,6 @@
 import {
   AnnotateUrlParams,
+  AttachRunUrlParams,
   ChatUrlParams,
   CreateVersionUrlParams,
   GetAllDocumentsParams,
@@ -10,6 +11,7 @@ import {
   HandlerType,
   PushVersionUrlParams,
   RunDocumentUrlParams,
+  StopRunUrlParams,
   UrlParams,
 } from '$sdk/utils/types'
 import { HEAD_COMMIT } from '@latitude-data/constants'
@@ -28,7 +30,7 @@ export class RouteResolver {
   private apiVersion: string
 
   constructor({
-    apiVersion = 'v1',
+    apiVersion = 'v3',
     gateway,
   }: {
     apiVersion?: string
@@ -79,6 +81,14 @@ export class RouteResolver {
       case HandlerType.Chat: {
         const p = params as ChatUrlParams
         return this.conversations().chat(p.conversationUuid)
+      }
+      case HandlerType.StopRun: {
+        const p = params as StopRunUrlParams
+        return this.conversations().stop(p.conversationUuid)
+      }
+      case HandlerType.AttachRun: {
+        const p = params as AttachRunUrlParams
+        return this.conversations().attach(p.conversationUuid)
       }
       case HandlerType.Annotate: {
         const p = params as AnnotateUrlParams
@@ -131,6 +141,8 @@ export class RouteResolver {
     const base = `${this.baseUrl}/conversations`
     return {
       chat: (uuid: string) => `${base}/${uuid}/chat`,
+      stop: (uuid: string) => `${base}/${uuid}/stop`,
+      attach: (uuid: string) => `${base}/${uuid}/attach`,
       annotate: (uuid: string, evaluationUuid: string) =>
         `${base}/${uuid}/evaluations/${evaluationUuid}/annotate`,
     }
