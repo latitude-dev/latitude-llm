@@ -22,6 +22,7 @@ import { updateWebhookLastTriggeredAt } from './webhooks'
 import { notifyClientOfDocumentTriggerCreated } from './notifyClientOfDocumentTriggerCreated'
 import { notifyClientOfDocumentTriggerDeleted } from './notifyClientOfDocumentTriggerDeleted'
 import { notifyClientOfDocumentTriggerEventCreated } from './notifyClientOfDocumentTriggerEventCreated'
+import { clearProviderApiKeysCache } from './clearProviderApiKeysCache'
 
 export const EventHandlers: IEventsHandlers = {
   claimReferralInvitations: [createClaimInvitationReferralJob],
@@ -42,7 +43,9 @@ export const EventHandlers: IEventsHandlers = {
   magicLinkTokenCreated: [sendMagicLinkJob],
   membershipCreated: [sendInvitationToUserJob],
   projectCreated: [],
-  providerApiKeyCreated: [],
+  providerApiKeyCreated: [clearProviderApiKeysCache],
+  providerApiKeyDestroyed: [clearProviderApiKeysCache],
+  providerApiKeyUpdated: [clearProviderApiKeysCache],
   providerLogCreated: [touchApiKeyJob, touchProviderApiKeyJob],
   sendReferralInvitation: [sendReferralInvitationJob],
   userCreated: [createLoopsContact],

@@ -23,3 +23,31 @@ export const cache = async () => {
 
   return connection
 }
+
+export const getOrSet = async <T>(
+  key: string,
+  callback: () => Promise<T>,
+  ttl: number = 3600, // Default 1 hour
+): Promise<T> => {
+  const cacheClient = await cache()
+
+  try {
+    const cached = await cacheClient.get(key)
+    if (cached !== null && cached !== undefined) {
+      return JSON.parse(cached)
+    }
+  } catch (error) {
+    // Ignore cache read errors, proceed to compute
+  }
+
+  const result = await callback()
+
+  try {
+    const serialized = JSON.stringify(result)
+    await cacheClient.set(key, serialized, 'EX', ttl)
+  } catch (error) {
+    // Ignore cache write errors
+  }
+
+  return result
+}

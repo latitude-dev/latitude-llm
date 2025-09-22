@@ -45,6 +45,8 @@ export type Events =
   | 'datasetCreated'
   | 'datasetUploaded'
   | 'providerApiKeyCreated'
+  | 'providerApiKeyDestroyed'
+  | 'providerApiKeyUpdated'
   | 'userInvited'
   | 'commitCreated'
   | 'commitPublished'
@@ -263,6 +265,22 @@ export type ProviderApiKeyCreatedEvent = LatitudeEventGeneric<
   {
     providerApiKey: ProviderApiKey
     userEmail: string
+    workspaceId: number
+  }
+>
+
+export type ProviderApiKeyDestroyedEvent = LatitudeEventGeneric<
+  'providerApiKeyDestroyed',
+  {
+    providerApiKey: ProviderApiKey
+    workspaceId: number
+  }
+>
+
+export type ProviderApiKeyUpdatedEvent = LatitudeEventGeneric<
+  'providerApiKeyUpdated',
+  {
+    providerApiKey: ProviderApiKey
     workspaceId: number
   }
 >
@@ -626,6 +644,8 @@ export type LatitudeEvent =
   | DatasetCreatedEvent
   | DatasetV2CreatedEvent
   | ProviderApiKeyCreatedEvent
+  | ProviderApiKeyDestroyedEvent
+  | ProviderApiKeyUpdatedEvent
   | UserInvitedEvent
   | CommitCreatedEvent
   | CommitPublishedEvent
@@ -680,6 +700,8 @@ export interface IEventsHandlers {
   datasetCreated: EventHandler<DatasetCreatedEvent>[]
   datasetUploaded: EventHandler<DatasetV2CreatedEvent>[]
   providerApiKeyCreated: EventHandler<ProviderApiKeyCreatedEvent>[]
+  providerApiKeyDestroyed: EventHandler<ProviderApiKeyDestroyedEvent>[]
+  providerApiKeyUpdated: EventHandler<ProviderApiKeyUpdatedEvent>[]
   userInvited: EventHandler<UserInvitedEvent>[]
   commitCreated: EventHandler<CommitCreatedEvent>[]
   commitPublished: EventHandler<CommitPublishedEvent>[]

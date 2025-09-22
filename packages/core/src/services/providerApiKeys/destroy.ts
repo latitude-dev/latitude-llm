@@ -2,6 +2,7 @@ import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 
 import { ProviderApiKey } from '../../browser'
+import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -17,19 +18,30 @@ export async function destroyProviderApiKey(
     )
   }
 
-  return transaction.call(async (tx) => {
-    await tx
-      .update(workspaces)
-      .set({ defaultProviderId: null })
-      .where(eq(workspaces.defaultProviderId, providerApiKey.id))
+  return transaction.call(
+    async (tx) => {
+      await tx
+        .update(workspaces)
+        .set({ defaultProviderId: null })
+        .where(eq(workspaces.defaultProviderId, providerApiKey.id))
 
-    const result = await tx
-      .update(providerApiKeys)
-      .set({ deletedAt: new Date(), token: `<removed-${providerApiKey.id}>` })
-      .where(eq(providerApiKeys.id, providerApiKey.id))
-      .returning()
-    const deleted = result[0]!
+      const result = await tx
+        .update(providerApiKeys)
+        .set({ deletedAt: new Date(), token: `<removed-${providerApiKey.id}>` })
+        .where(eq(providerApiKeys.id, providerApiKey.id))
+        .returning()
+      const deleted = result[0]!
 
-    return Result.ok(deleted)
-  })
+      return Result.ok(deleted)
+    },
+    (apikey) => {
+      publisher.publishLater({
+        type: 'providerApiKeyDestroyed',
+        data: {
+          providerApiKey: apikey,
+          workspaceId: providerApiKey.workspaceId,
+        },
+      })
+    },
+  )
 }
