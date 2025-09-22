@@ -1,20 +1,15 @@
 import { McpTool } from '@latitude-data/constants'
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
+import { createMcpTransport } from './utils'
 
 export async function pingCustomMCPServer(
   url: string,
 ): PromisedResult<McpTool[]> {
-  let urlObject: URL
-  try {
-    urlObject = new URL(url)
-  } catch (error) {
-    return Result.error(error as Error)
-  }
-
-  const transport = new SSEClientTransport(urlObject)
+  const transportResult = createMcpTransport(url)
+  if (!Result.isOk(transportResult)) return transportResult
+  const transport = transportResult.unwrap()
 
   const client = new McpClient({
     name: 'ping-test',
