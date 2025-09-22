@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { MaybeSessionProvider } from '@latitude-data/web-ui/browser'
 import { getDataFromSession } from '$/data-access'
