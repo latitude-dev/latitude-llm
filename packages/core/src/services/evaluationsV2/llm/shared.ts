@@ -48,7 +48,7 @@ export function promptTask() {
   - Cost: {{ cost }} cents.
   - Tokens: {{ tokens }} tokens.
   - Duration: {{ duration }} seconds.
-</user>'
+</user>
 `.trim()
 }
 

@@ -42,7 +42,7 @@
     }
   },
   "dependencies": {
-    "@latitude-data/sdk": "^4.1.8",
+    "@latitude-data/sdk": "^5.1.0",
     "chalk": "^5.4.1",
     "commander": "^11.1.0",
     "fast-sha256": "^1.3.0",

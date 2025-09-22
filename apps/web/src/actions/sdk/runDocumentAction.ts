@@ -1,13 +1,13 @@
 'use server'
 
+import { createSdk } from '$/app/(private)/_lib/createSdk'
+import { captureException } from '$/helpers/captureException'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import { ChainEvent } from '@latitude-data/constants'
 import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { Latitude, type ChainEventDto } from '@latitude-data/sdk'
-import { createSdk } from '$/app/(private)/_lib/createSdk'
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
-import { ChainEvent } from '@latitude-data/constants'
-import { captureException } from '$/helpers/captureException'
 
 type RunDocumentActionProps = {
   documentPath: string
@@ -54,6 +54,7 @@ export async function runDocumentAction({
   >()
   const response = sdk.prompts.run(documentPath, {
     stream: true,
+    background: true,
     versionUuid: commitUuid,
     parameters,
     onEvent: (event) => {

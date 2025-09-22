@@ -1,13 +1,13 @@
 import { LogSources, User, Workspace } from '@latitude-data/core/browser'
 
+import { createSdk } from '$/app/(private)/_lib/createSdk'
+import { publisher } from '@latitude-data/core/events/publisher'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { publisher } from '@latitude-data/core/events/publisher'
-import { createSdk } from '$/app/(private)/_lib/createSdk'
 
+import { captureException } from '$/helpers/captureException'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { captureException } from '$/helpers/captureException'
 import { ChainEventTypes } from '@latitude-data/constants'
 
 const inputSchema = z.object({
@@ -121,6 +121,7 @@ export const POST = errorHandler(
         try {
           sdk.prompts.run(path, {
             stream: true,
+            background: true,
             versionUuid: commitUuid,
             parameters,
             userMessage,
