@@ -134,25 +134,30 @@ export async function mergeCommit(
       return Result.ok(updatedCommit)
     },
     async (commit) => {
-      const user = await findUser(commit.userId)
-      if (!user) return
+      try {
+        const user = await findUser(commit.userId)
+        if (!user) return
 
-      await Promise.all([
-        publisher.publishLater({
-          type: 'commitMerged',
-          data: {
-            commit,
-            userEmail: user.email,
-            workspaceId: workspace.id,
-          },
-        }),
-        pingProjectUpdate(
-          {
-            projectId: commit.projectId,
-          },
-          transaction,
-        ).then((r) => r.unwrap()),
-      ])
+        await Promise.all([
+          publisher.publishLater({
+            type: 'commitMerged',
+            data: {
+              commit,
+              userEmail: user.email,
+              workspaceId: workspace.id,
+            },
+          }),
+
+          pingProjectUpdate(
+            {
+              projectId: commit.projectId,
+            },
+            transaction,
+          ).then((r) => r.unwrap()),
+        ])
+      } catch (_) {
+        // do nothing
+      }
     },
   )
 }
