@@ -69,6 +69,8 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
         toolsBySource,
       )
 
+      console.log('config', config)
+
       const {
         response,
         messages: responseMessages,

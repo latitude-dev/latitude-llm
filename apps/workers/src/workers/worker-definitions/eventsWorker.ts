@@ -40,6 +40,7 @@ const eventHandlersJobMappings = {
     jobs.notifyClientOfDocumentTriggerDeleted,
   notifyClientOfDocumentTriggerEventCreated:
     jobs.notifyClientOfDocumentTriggerEventCreated,
+  clearProviderApiKeysCache: jobs.clearProviderApiKeysCache,
 }
 
 export function startEventsWorker() {

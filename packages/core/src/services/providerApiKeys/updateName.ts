@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { ProviderApiKey } from '../../browser'
+import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { providerApiKeys } from '../../schema'
@@ -17,27 +18,40 @@ export async function updateProviderApiKeyName(
   },
   transaction = new Transaction(),
 ) {
-  return transaction.call<ProviderApiKey>(async (tx) => {
-    const validatedNameResult = await validateProviderApiKeyName(
-      {
-        name,
-        workspaceId,
-      },
-      tx,
-    )
+  return transaction.call<ProviderApiKey>(
+    async (tx) => {
+      const validatedNameResult = await validateProviderApiKeyName(
+        {
+          name,
+          workspaceId,
+        },
+        tx,
+      )
 
-    if (!Result.isOk(validatedNameResult)) {
-      return validatedNameResult
-    }
+      if (!Result.isOk(validatedNameResult)) {
+        return validatedNameResult
+      }
 
-    const validatedName = validatedNameResult.unwrap()
+      const validatedName = validatedNameResult.unwrap()
 
-    const result = await tx
-      .update(providerApiKeys)
-      .set({ name: validatedName })
-      .where(eq(providerApiKeys.id, providerApiKey.id))
-      .returning()
+      const result = await tx
+        .update(providerApiKeys)
+        .set({ name: validatedName })
+        .where(eq(providerApiKeys.id, providerApiKey.id))
+        .returning()
 
-    return Result.ok(result[0]!)
-  })
+      const updated = result[0]!
+
+      return Result.ok(updated)
+    },
+    (updated) => {
+      publisher.publishLater({
+        type: 'providerApiKeyUpdated',
+        data: {
+          providerApiKey: updated,
+          workspaceId,
+        },
+      })
+    },
+  )
 }

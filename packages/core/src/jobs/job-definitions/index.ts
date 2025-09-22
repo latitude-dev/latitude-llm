@@ -23,6 +23,7 @@ export * from '../../events/handlers/undeployDocumentTriggerJob'
 export * from '../../events/handlers/notifyClientOfDocumentTriggerCreated'
 export * from '../../events/handlers/notifyClientOfDocumentTriggerDeleted'
 export * from '../../events/handlers/notifyClientOfDocumentTriggerEventCreated'
+export * from '../../events/handlers/clearProviderApiKeysCache'
 
 // Jobs
 export * from './documentLogs/createDocumentLogJob'
