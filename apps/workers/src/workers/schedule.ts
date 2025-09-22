@@ -55,7 +55,7 @@ export async function setupSchedules() {
   // Every night at 2 AM -- Backfills document/provider logs workspace_id columns
   await maintenanceQueue.upsertJobScheduler(
     'scheduleWorkspaceLogsMigrationJobs',
-    { pattern: '0 0 2 * * *' },
+    { pattern: '0 0 0 * * *' },
     { opts: { attempts: 1 } },
   )
 }
