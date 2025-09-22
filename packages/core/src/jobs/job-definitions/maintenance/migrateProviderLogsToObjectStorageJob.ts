@@ -54,22 +54,27 @@ export const migrateProviderLogsToObjectStorageJob = async (
   try {
     // Find the oldest provider log without fileKey to determine starting point
     const oldestLogResult = await (async () => {
-      const result = await database
-        .select({
-          createdAt: providerLogs.createdAt,
-        })
-        .from(providerLogs)
-        .where(
-          and(
-            eq(providerLogs.workspaceId, workspaceId),
-            isNull(providerLogs.fileKey),
-          ),
-        )
-        .orderBy(asc(providerLogs.createdAt))
-        .limit(1)
-        .then((r: { createdAt: Date }[]) => r[0])
-
-      return Result.ok(result)
+      try {
+        const result = await database
+          .select({
+            createdAt: providerLogs.createdAt,
+          })
+          .from(providerLogs)
+          .where(
+            and(
+              eq(providerLogs.workspaceId, workspaceId),
+              isNull(providerLogs.fileKey),
+            ),
+          )
+          .orderBy(asc(providerLogs.createdAt))
+          .limit(1)
+          .then((r: { createdAt: Date }[]) => r[0])
+        return Result.ok(result)
+      } catch (e) {
+        const error =
+          'cause' in (e as Error) ? ((e as Error).cause as Error) : (e as Error)
+        throw error
+      }
     })()
 
     const oldestLog = oldestLogResult.unwrap()
