@@ -62,41 +62,41 @@ jobs:
       matrix:
         include:
           # Public images on GitHub Container Registry (without Sentry)
-          # Multi-platform builds (AMD64 + ARM64)
+          # Multi-platform builds (AMD64)
           - app: web
             dockerfile: apps/web/docker/Dockerfile
             registry: ghcr.io
             owner: latitude-dev
             repo_name: web
-            platforms: linux/amd64,linux/arm64
+            platforms: linux/amd64
             build_if: ${{ needs.check-changes.outputs.web == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: gateway
             dockerfile: apps/gateway/docker/Dockerfile
             registry: ghcr.io
             owner: latitude-dev
             repo_name: gateway
-            platforms: linux/amd64,linux/arm64
+            platforms: linux/amd64
             build_if: ${{ needs.check-changes.outputs.gateway == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: workers
             dockerfile: apps/workers/docker/Dockerfile
             registry: ghcr.io
             owner: latitude-dev
             repo_name: workers
-            platforms: linux/amd64,linux/arm64
+            platforms: linux/amd64
             build_if: ${{ needs.check-changes.outputs.workers == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: websockets
             dockerfile: apps/websockets/docker/Dockerfile
             registry: ghcr.io
             owner: latitude-dev
             repo_name: websockets
-            platforms: linux/amd64,linux/arm64
+            platforms: linux/amd64
             build_if: ${{ needs.check-changes.outputs.websockets == 'true' || needs.check-changes.outputs.shared == 'true' }}
           - app: migrations
             dockerfile: packages/core/docker/Dockerfile
             registry: ghcr.io
             owner: latitude-dev
             repo_name: migrations
-            platforms: linux/amd64,linux/arm64
+            platforms: linux/amd64
             build_if: ${{ needs.check-changes.outputs.migrations == 'true' || needs.check-changes.outputs.shared == 'true' }}
 
     steps:
