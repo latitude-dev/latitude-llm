@@ -13,10 +13,10 @@ export const stopChatLatteAction = authProcedure
     }),
   )
   .handler(async ({ input }) => {
-    const { documentsQueue } = await queues()
+    const { latteQueue } = await queues()
     const { jobId } = input
     if (!jobId) return
-    const job = await documentsQueue.getJob(jobId)
+    const job = await latteQueue.getJob(jobId)
     if (!job) return
     await cancelJob(job)
   })
