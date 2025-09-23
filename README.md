@@ -50,15 +50,15 @@ With Latitude, you can:
 ## 📚 Table Of Contents
 
 - [Getting Started](https://docs.latitude.so/guides/getting-started/introduction)
-- [Prompt Development Guide](https://docs.latitude.so/guides/prompt-manager/overview)
+- [Prompt Engineering](https://docs.latitude.so/guides/prompt-manager/overview)
+- [Agents](https://docs.latitude.so/guides/prompt-manager/agents)
 - [Evaluations](https://docs.latitude.so/guides/evaluations/overview)
-- [Data Management](https://docs.latitude.so/guides/datasets/overview)
-- [Integration & Deployment](https://docs.latitude.so/guides/integration/publishing-deployment)
+- [Datasets & Testing](https://docs.latitude.so/guides/datasets/overview)
+- [Integrations & Deployment](https://docs.latitude.so/guides/integration/publishing-deployment)
 - [Self-Hosting](https://docs.latitude.so/guides/self-hosted/production-setup)
-- [PromptL Language](https://docs.latitude.so/promptl/getting-started/introduction)
-- [Community](https://github.com/latitude-dev/latitude-llm#-community)
-- [Contributing](https://github.com/latitude-dev/latitude-llm#-contributing)
-- [License](https://github.com/latitude-dev/latitude-llm#-license)
+- [Advanced: PromptL](https://docs.latitude.so/promptl/getting-started/introduction)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ## ⚡ Quick start
 
