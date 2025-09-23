@@ -13,12 +13,14 @@ export enum LatitudeTool {
   RunCode = 'code',
   WebSearch = 'search',
   WebExtract = 'extract',
+  Today = 'today',
 }
 
 export enum LatitudeToolInternalName {
   RunCode = 'lat_tool_run_code',
   WebSearch = 'lat_tool_web_search',
   WebExtract = 'lat_tool_web_extract',
+  Today = 'lat_tool_today',
 }
 
 export const MAX_STEPS_CONFIG_NAME = 'maxSteps'
