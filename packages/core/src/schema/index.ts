@@ -62,6 +62,7 @@ export * from './models/documentTriggerEvents'
 // Integrations
 export * from './models/integrations'
 export * from './models/mcpServers'
+export * from './models/documentIntegrationReferences'
 
 export * from './models/webhooks'
 export * from './models/workspaceOnboarding'

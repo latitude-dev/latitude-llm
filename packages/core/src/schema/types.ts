@@ -64,6 +64,7 @@ import { users } from './models/users'
 import { workspaceFeatures } from './models/workspaceFeatures'
 import { workspaces } from './models/workspaces'
 import { workspaceOnboarding } from './models/workspaceOnboarding'
+import { documentIntegrationReferences } from './models/documentIntegrationReferences'
 
 export type {
   DocumentLog,
@@ -297,6 +298,9 @@ export type IntegrationDto = Omit<Integration, 'configuration' | 'type'> &
 export type PipedreamIntegration = Extract<
   IntegrationDto,
   { type: IntegrationType.Pipedream }
+>
+export type DocumentIntegrationReference = InferSelectModel<
+  typeof documentIntegrationReferences
 >
 
 export type PipedreamIntegrationWithAcountCount = PipedreamIntegration & {

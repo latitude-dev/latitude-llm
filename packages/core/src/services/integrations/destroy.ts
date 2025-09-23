@@ -9,14 +9,14 @@ import { McpServerRepository } from '../../repositories'
 import { integrations } from '../../schema'
 import { destroyMcpServer } from '../mcpServers/destroyService'
 import { destroyPipedreamAccountFromIntegration } from './pipedream/destroy'
-import { listReferences } from './references'
+import { listIntegrationReferences } from './references'
 
 export async function destroyIntegration(
   integration: IntegrationDto,
   transaction = new Transaction(),
 ) {
   return transaction.call(async (trx) => {
-    const referencesResult = await listReferences(integration, trx)
+    const referencesResult = await listIntegrationReferences(integration, trx)
 
     if (!Result.isOk(referencesResult)) {
       return referencesResult
@@ -24,9 +24,12 @@ export async function destroyIntegration(
 
     const references = referencesResult.unwrap()
     if (references.length > 0) {
+      const distinctDocumentUuids = new Set(
+        references.map((r) => r.documentUuid),
+      )
       return Result.error(
         new ForbiddenError(
-          `Cannot delete integration ${integration.name} because it has ${references.length} references.`,
+          `Cannot delete integration ${integration.name} because it is being used by ${distinctDocumentUuids.size} prompts`,
         ),
       )
     }

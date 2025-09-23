@@ -1,6 +1,6 @@
 'use server'
 
-import { forkDocument } from '@latitude-data/core/services/documents/forkDocument'
+import { forkDocument } from '@latitude-data/core/services/documents/fork/index'
 import { findSharedDocument } from '@latitude-data/core/services/publishedDocuments/findSharedDocument'
 import { env } from '@latitude-data/env'
 import { z } from 'zod'

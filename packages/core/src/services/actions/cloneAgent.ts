@@ -12,7 +12,7 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
-import { forkDocument } from '../documents/forkDocument'
+import { forkDocument } from '../documents/fork'
 import { ActionExecuteArgs } from './shared'
 import { getWorkspaceOnboarding } from '../workspaceOnboarding'
 import { isFeatureEnabledByName } from '../workspaceFeatures/isFeatureEnabledByName'

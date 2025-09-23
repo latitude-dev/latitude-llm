@@ -14,7 +14,9 @@ export async function getDocumentMetadata({
   getDocumentByPath,
 }: {
   document: DocumentVersion
-  getDocumentByPath: (path: string) => Promise<DocumentVersion | undefined>
+  getDocumentByPath:
+    | ((path: string) => Promise<DocumentVersion | undefined>)
+    | ((path: string) => DocumentVersion | undefined)
 }) {
   const referenceFn = async (refPath: string, from?: string) => {
     const fullPath = path
