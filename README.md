@@ -16,6 +16,8 @@
   <a href="https://x.com/trylatitude">X</a>
 </p>
 
+
+
 ## 🌈 Why Latitude?
 
 Latitude is an open-source platform for both prompt engineering and AI agents.  
