@@ -50,7 +50,6 @@ export function AppSelector({
   return (
     <PaginatedSelect
       loading={isLoading}
-      required
       name='app'
       value={value}
       onChange={onChange}
