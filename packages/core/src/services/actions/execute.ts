@@ -46,6 +46,9 @@ export async function executeAction<T extends ActionType = ActionType>(
   return tx.call(
     async (db) => {
       if (onboarding && !onboarding.completedAt) {
+        // TODO - think about this as we skip the onboarding here after cloning an agent
+        // check here if new, if so not mark as complete for now
+
         const marking = await markWorkspaceOnboardingComplete({ onboarding }, tx) // prettier-ignore
         if (marking.error) {
           return Result.error(marking.error)

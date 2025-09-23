@@ -14,6 +14,7 @@ async function execute({
   parameters: { projectId, commitUuid },
   router,
 }: ActionExecuteArgs<ActionType.CloneAgent>) {
+  // TODO - redirect here if the user is new
   return router.push(
     ROUTES.projects
       .detail({ id: projectId })
