@@ -23,17 +23,19 @@
 
 ## 🌈 Why Latitude?
 
-Latitude is an open-source platform for AI prompt engineering, deployment, and evaluation. It helps teams build, test, and maintain reliable AI applications by providing a complete lifecycle management system for prompts.
+Latitude is an open-source platform for both prompt engineering and AI agents.  
+It covers the entire lifecycle: from design and testing to deployment, observability, and scaling.  
 
 With Latitude, you can:
 
-- Design and version prompts collaboratively
-- Test iterations in an interactive playground
-- Evaluate and improve prompts systematically
-- Deploy prompts as API endpoints
-- Monitor performance with automatic logging
-
-Latitude is designed for cross-functional teams, enabling collaboration between developers, product managers, and domain experts throughout the entire AI development process.
+- **Collaborative Design** → version prompts and agents with your team  
+- **Playground** → test interactively with different inputs, parameters, and configurations  
+- **Evaluations** → choose from built-in evals, use LLM-as-judge, or add human-in-the-loop  
+- **AI Gateway** → deploy as API endpoints that stay up-to-date with published changes  
+- **Logs & Observability** → monitor costs, latency, and performance in real time  
+- **Experiments** → run controlled tests across models and providers  
+- **Datasets** → manage test data for batch evaluations and regression testing  
+- **Integrations** → connect with 2,500+ tools via SDKs and APIs  
 
 <a href="https://www.youtube.com/watch?v=jPVn9kf4GrE" target="_blank"><img alt="Latitude screenshot" src="https://github.com/user-attachments/assets/3d5a217d-7f75-4997-b569-e8754ce505e8"></a>
 
