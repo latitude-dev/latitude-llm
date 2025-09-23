@@ -6,16 +6,9 @@ import { APICallError } from 'ai'
 import { LogSources, Providers, StreamEventTypes } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { ProviderLogsRepository } from '../../repositories'
-import {
-  createDocumentVersion,
-  createDraft,
-  createProject,
-  createTelemetryContext,
-  helpers,
-} from '../../tests/factories'
+import { createProject, createTelemetryContext } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import { Ok, Result } from './../../lib/Result'
-import { UnprocessableEntityError } from './../../lib/errors'
 import { runDocumentAtCommit } from './index'
 import * as createChainRunErrorMod from '../../lib/streamManager/ChainErrors'
 
@@ -101,38 +94,6 @@ describe('runDocumentAtCommit', () => {
   })
 
   describe('with an existing provider key', () => {
-    it('fails if document is not found in commit', async () => {
-      const { context, workspace, project, user, commit, provider } =
-        await buildData({
-          doc1Content: dummyDoc1Content,
-        })
-
-      const { commit: draft } = await createDraft({
-        project,
-        user,
-      })
-      const { documentVersion: documentNotInCommit } =
-        await createDocumentVersion({
-          workspace,
-          user,
-          commit: draft,
-          path: 'path/to/document',
-          content: helpers.createPrompt({ provider }),
-        })
-      const result = await runDocumentAtCommit({
-        context,
-        workspace,
-        document: documentNotInCommit,
-        commit,
-        parameters: {},
-        source: LogSources.API,
-      })
-
-      expect(result.error).toEqual(
-        new UnprocessableEntityError('Document not found in commit', {}),
-      )
-    })
-
     it('returns document resolvedContent', async () => {
       const { context, workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,

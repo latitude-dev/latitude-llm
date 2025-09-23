@@ -57,7 +57,6 @@ export async function resumePausedPrompt({
   abortSignal?: AbortSignal
 }) {
   const resultResolvedContent = await getResolvedContent({
-    workspaceId: workspace.id,
     document,
     commit,
   })

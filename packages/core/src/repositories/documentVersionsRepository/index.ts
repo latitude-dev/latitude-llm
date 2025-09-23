@@ -325,9 +325,7 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
         maxMergedAt: commit.mergedAt,
       },
     ).then((r) => r.unwrap())
-
     if (commit.mergedAt !== null) {
-      // Referenced commit is merged. No additional documents to return.
       return Result.ok(documentsFromMergedCommits)
     }
 

@@ -40,14 +40,14 @@ export function documentPresenterWithProviderAndMetadata({
   const parameters =
     rawParams.length > 0
       ? rawParams.reduce(
-          (acc, rawParam) => {
-            if (acc[rawParam]) return acc
-            acc[rawParam] = { type: ParameterType.Text }
+        (acc, rawParam) => {
+          if (acc[rawParam]) return acc
+          acc[rawParam] = { type: ParameterType.Text }
 
-            return acc
-          },
-          { ...configParams },
-        )
+          return acc
+        },
+        { ...configParams },
+      )
       : configParams
 
   return {
@@ -72,7 +72,6 @@ export async function documentPresenter({
   workspace: Workspace
 }) {
   const metadataResult = await scanDocumentContent({
-    workspaceId: workspace.id,
     document,
     commit,
   })

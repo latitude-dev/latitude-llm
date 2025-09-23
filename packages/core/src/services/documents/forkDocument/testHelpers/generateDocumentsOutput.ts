@@ -22,7 +22,7 @@ export async function generateDocumentsOutput({
     allDocs.map(async (doc) => {
       const meta = await getDocumentMetadata({
         document: doc,
-        getDocumentByPath: (path) => allDocs.find((d) => d.path === path),
+        getDocumentByPath: async (path) => allDocs.find((d) => d.path === path),
       })
       return {
         path: doc.path,
