@@ -10,7 +10,7 @@ import { TelemetryContext } from '../../../telemetry'
 import { withTelemetryWrapper } from '../telemetryWrapper'
 
 async function getToday(): PromisedResult<string, LatitudeError> {
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toISOString()
   return Result.ok(today)
 }
 
@@ -20,7 +20,7 @@ export default {
   method: getToday,
   definition: (context: TelemetryContext) => ({
     description:
-      "Returns today's date in UTC timezone and ISO format (YYYY-MM-DD).",
+      'Returns the current date and time in UTC timezone and ISO format (YYYY-MM-DDTHH:mm:ss.sssZ).',
     parameters: {
       type: 'object',
       properties: {},
