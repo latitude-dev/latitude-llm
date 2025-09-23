@@ -153,7 +153,14 @@ export function TriggerWrapper({
   const canEnable = trigger.triggerStatus === DocumentTriggerStatus.Deployed
 
   const documentName = useMemo(() => {
-    return document.path.split('/').pop()
+    const parts = document.path.split('/')
+    if (parts.length <= 1) return document.path
+
+    const first = parts[0]
+    const last = parts[parts.length - 1]
+    if (parts.length === 2) return document.path
+
+    return `${first}/.../${last}`
   }, [document])
 
   const onToggleEventList = useCallback(() => {
