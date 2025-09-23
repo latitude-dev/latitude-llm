@@ -1,25 +1,20 @@
 <div align="center">
   <a href="https://ai.latitude.so?utm_source=github" target="_blank">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/latitude-dev/latitude/assets/5465249/4783e122-7150-4bcc-96e0-a3c9c4c1c53b">
-    <img alt="Latitude Logo" src="https://github.com/latitude-dev/latitude/assets/5465249/92cd5508-6177-485a-a758-67d71e2cd5ce" width="280"/>
-  </picture>
+    <img src="assets/logo.png" alt="Latitude Logo" width="280"/>
   </a>
 </div>
 
 <br/>
 
-<h1 align="center" style="border: none; margin-bottom: 8px;">The Open-Source Prompt Engineering Platform</h1>
+<h1 align="center" style="border: none; margin-bottom: 8px;">
+  The Open-Source Prompt Engineering & AI Agents Platform
+</h1>
 
-  <p align="center">
-    <br />
-    <a href="https://docs.latitude.so" rel="dofollow"><strong>See documentation →</strong></a>
-    <br />
-    <br/>
-  <a href="https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw">Join Our Slack</a>
-    ·
-    <a href="https://x.com/trylatitude">X</a>
-  </p>
+<p align="center">
+  <a href="https://docs.latitude.so" rel="dofollow">Docs</a>&nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw">Slack</a>&nbsp;&nbsp;·&nbsp;&nbsp;
+  <a href="https://x.com/trylatitude">X</a>
+</p>
 
 ## 🌈 Why Latitude?
 
