@@ -1,26 +1,29 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import {
+  StatusFlag,
+  StatusFlagState,
+} from '@latitude-data/web-ui/molecules/StatusFlag'
 
-export type NavbarTab =
-  | 'setupIntegrations'
-  | 'configureTriggers'
-  | 'triggerAgent'
-  | 'runAgent'
+export enum NavbarTab {
+  'setupIntegrations',
+  'configureTriggers',
+  'triggerAgent',
+  'runAgent',
+}
 
 export function NavBarItem({
   title,
   description,
-  onClick,
 }: {
   title: string
   description: string
-  onClick: () => void
 }) {
-  // TODO - continue with the navbar, add the new radio buttons...
   return (
     <div className='flex flex-row gap-2'>
-      <div className='flex flex-col' onClick={onClick}>
-        <Text.H5M>{title}</Text.H5M>
-        <Text.H5>{description}</Text.H5>
+      <StatusFlag state={StatusFlagState.inProgress} />
+      <div className='flex flex-col'>
+        <Text.H5M color='secondaryForeground'>{title}</Text.H5M>
+        <Text.H5 color='foregroundMuted'>{description}</Text.H5>
       </div>
     </div>
   )
