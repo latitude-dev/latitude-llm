@@ -32,9 +32,9 @@ export default async function SettingsLayout({
       <Memberships />
       <WorkspaceApiKeys />
       <ProviderApiKeys />
-      <Promocodes />
       <Integrations />
       <Webhooks />
+      <Promocodes />
     </Container>
   )
 }
