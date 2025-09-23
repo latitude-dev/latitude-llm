@@ -109,15 +109,20 @@ export enum HostedIntegrationType {
   // Loops = 'loops', // Does not exist
 }
 
-// TODO: Add support for tools: { type: 'tool', data: { ... } }
-export type IntegrationReference =
-  | {
-      type: 'trigger'
-      data: {
-        projectId: number
-        documentUuid: string
-        commitUuid: string
-        triggerUuid: string
-      }
-    }
-  | never
+interface IIntegrationReference {
+  integrationName: string
+  projectId: number
+  commitId: number
+  documentUuid: string
+}
+
+interface TriggerReference extends IIntegrationReference {
+  type: 'trigger'
+  triggerUuid: string
+}
+
+interface ToolReference extends IIntegrationReference {
+  type: 'tool'
+}
+
+export type IntegrationReference = TriggerReference | ToolReference

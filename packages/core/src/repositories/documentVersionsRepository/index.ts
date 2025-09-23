@@ -344,6 +344,10 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     return Result.ok(totalDocuments)
   }
 
+  get queries() {
+    return {}
+  }
+
   async getDocumentsFromMergedCommits({
     projectId,
     maxMergedAt,

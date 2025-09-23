@@ -62,6 +62,7 @@ import { workspaceFeatures } from './models/workspaceFeatures'
 import { documentTriggerEvents } from './models/documentTriggerEvents'
 import { promocodes } from './models/promocodes'
 import { claimedPromocodes } from './models/claimedPromocodes'
+import { documentIntegrationReferences } from './models/documentIntegrationReferences'
 
 export type {
   DocumentLog,
@@ -292,6 +293,9 @@ export type IntegrationDto = Omit<Integration, 'configuration' | 'type'> &
 export type PipedreamIntegration = Extract<
   IntegrationDto,
   { type: IntegrationType.Pipedream }
+>
+export type DocumentIntegrationReference = InferSelectModel<
+  typeof documentIntegrationReferences
 >
 
 export type PipedreamIntegrationWithAcountCount = PipedreamIntegration & {
