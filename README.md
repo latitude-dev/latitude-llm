@@ -7,7 +7,7 @@
 <br/>
 
 <h1 align="center" style="border: none; margin-bottom: 8px;">
-  The Open-Source Prompt Engineering & AI Agents Platform
+  Open-Source Prompt Engineering & Agents Platform
 </h1>
 
 <p align="center">
