@@ -1,14 +1,16 @@
 <div align="center">
   <a href="https://ai.latitude.so?utm_source=github" target="_blank">
-    <img src="assets/Logo.png?raw=true" alt="Latitude Logo" width="780"/>
+    <img src="assets/Logo.png?raw=true" alt="Latitude — Open Source AI Engineering Platform" width="700"/>
   </a>
 </div>
 
 <br/>
 
 <h1 align="center" style="border: none; margin-bottom: 8px;">
-  Open-Source Prompt Engineering & Agents Platform
+  Open Source Platform for Custom AI Agents
 </h1>
+
+
 
 <p align="center">
   <a href="https://docs.latitude.so" rel="dofollow">Docs</a>&nbsp;&nbsp;·&nbsp;&nbsp;
@@ -17,13 +19,13 @@
 </p>
 
 <p align="center">
-  <img src="assets/gif_ui.gif?raw=true" alt="Latitude demo — build an agent from a prompt" width="800"/>
+  <img src="assets/gif_ui.gif?raw=true" alt="Latitude demo — build custom AI Agents" width="800"/>
 </p>
 
 
 ## 🌈 Why Latitude?
 
-Latitude is an open-source platform for both prompt engineering and AI agents.  
+Latitude is an open-source platform for both AI agents and prompt engineering. 
 It covers the entire lifecycle: from design and testing to deployment, observability, and scaling.  
 
 **Key features include:**
@@ -118,3 +120,7 @@ Alternatively, we offer a more permissive commercial license for those who need 
 - [Documentation](https://docs.latitude.so/)
 - [Slack community](https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw)
 - [X / Twitter](https://x.com/trylatitude)
+
+
+Made with ❤️ by the Latitude Team
+
