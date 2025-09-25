@@ -177,7 +177,6 @@ export function TriggerWrapper({
 
   const handleRunTrigger = useCallback(() => {
     if (!canRunTrigger) return
-
     if (isChatTrigger(trigger)) {
       onRunChatTrigger({ trigger, document })
       return
@@ -186,6 +185,7 @@ export function TriggerWrapper({
     // Schedule triggers don't have parameters
     onRunTrigger({ document, parameters: {} })
   }, [onRunTrigger, onRunChatTrigger, trigger, document, canRunTrigger])
+
   return (
     <div className='flex flex-col relative'>
       {realtimeCount > 0 ? (

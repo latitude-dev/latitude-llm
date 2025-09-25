@@ -7,6 +7,7 @@ import {
   DocumentTrigger,
   DocumentVersion,
   IntegrationDto,
+  LogSources,
   Project,
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -21,7 +22,8 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useCallback, useRef, useState } from 'react'
 import { ChatInputBox } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/ChatInputBox'
-import { usePlaygroundLogic } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/DocumentEditor'
+import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import { useRunDocument } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/hooks/useRunDocument'
 import Chat from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
 import { ChatTriggerTextarea } from './ChatTriggerTextarea'
 import { TriggersBlankSlate } from './TriggersBlankSlate'
@@ -160,19 +162,31 @@ export function TriggersList({
     project,
     triggers,
   })
-  const togglePlaygroundOpen = useCallback(() => {}, [])
-  const setHistoryLog = useCallback(() => {}, [])
-  const { playground, hasActiveStream, stopStreaming, resetChat } =
-    usePlaygroundLogic({
-      commit,
-      project,
+  const { runDocument, addMessages, abortCurrentStream, hasActiveStream } =
+    useRunDocument({
       document: activeTrigger.document,
+      commit,
+    })
+
+  const runPromptFn = useCallback(() => {
+    return runDocument({
       parameters: activeTrigger.parameters,
       userMessage: activeTrigger.userMessage,
-      setMode,
-      togglePlaygroundOpen,
-      setHistoryLog,
     })
+  }, [runDocument, activeTrigger.parameters, activeTrigger.userMessage])
+
+  const playground = usePlaygroundChat({
+    runPromptFn,
+    addMessagesFn: addMessages,
+    onPromptRan: (documentLogUuid, error) => {
+      if (!documentLogUuid || error) return
+    },
+  })
+
+  const resetChat = useCallback(() => {
+    setMode('preview')
+    playground.reset()
+  }, [setMode, playground])
 
   const onRunTrigger: OnRunTriggerFn = useCallback(
     ({ document, parameters, userMessage }) => {
@@ -246,7 +260,7 @@ export function TriggersList({
               resetChat={resetChat}
               hasActiveStream={hasActiveStream}
               playground={playground}
-              stopStreaming={stopStreaming}
+              stopStreaming={abortCurrentStream}
               placeholder='Ask anything'
               onBack={() => {
                 setMode('preview')
