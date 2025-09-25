@@ -14,7 +14,6 @@ async function execute({
   parameters: { projectId, commitUuid, hasCompletedOnboarding },
   router,
 }: ActionExecuteArgs<ActionType.CloneAgent>) {
-  // TODO - Add a feature flag
   if (!hasCompletedOnboarding) {
     return router.push(ROUTES.onboarding.root)
   }
