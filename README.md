@@ -42,8 +42,8 @@ It covers the entire lifecycle: from design and testing to deployment, observabi
 ## 📚 Table Of Contents
 
 - [Getting Started](https://docs.latitude.so/guides/getting-started/introduction)
+- [Custom AI Agents](https://docs.latitude.so/guides/prompt-manager/agents)
 - [Prompt Engineering](https://docs.latitude.so/guides/prompt-manager/overview)
-- [Agents](https://docs.latitude.so/guides/prompt-manager/agents)
 - [Evaluations](https://docs.latitude.so/guides/evaluations/overview)
 - [Datasets & Testing](https://docs.latitude.so/guides/datasets/overview)
 - [Integrations & Deployment](https://docs.latitude.so/guides/integration/publishing-deployment)
