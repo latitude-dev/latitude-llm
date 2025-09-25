@@ -46,8 +46,8 @@ catalogs:
       specifier: 8.16.0
       version: 8.16.0
     promptl-ai:
-      specifier: 0.7.5
-      version: 0.7.5
+      specifier: 0.7.6
+      version: 0.7.6
     zod:
       specifier: 3.24.2
       version: 3.24.2
@@ -172,7 +172,7 @@ importers:
         version: 4.17.21
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.7.5(ws@8.18.3)
+        version: 0.7.6(ws@8.18.3)
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
@@ -266,7 +266,7 @@ importers:
         version: 2.0.5
       '@sentry/nextjs':
         specifier: 9.10.1
-        version: 9.10.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.5.2(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.101.2)
+        version: 9.10.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.5.2(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.101.2(esbuild@0.25.5))
       '@sindresorhus/slugify':
         specifier: 2.2.1
         version: 2.2.1
@@ -356,7 +356,7 @@ importers:
         version: 1.252.1
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.7.5(ws@8.18.3)
+        version: 0.7.6(ws@8.18.3)
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
@@ -600,7 +600,7 @@ importers:
     dependencies:
       '@latitude-data/sdk':
         specifier: ^5.1.0
-        version: 5.1.0(typescript@5.8.3)
+        version: 5.1.0(typescript@5.8.3)(ws@8.18.3)
       chalk:
         specifier: ^5.4.1
         version: 5.4.1
@@ -719,7 +719,7 @@ importers:
         version: 0.4.0
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.7.5(ws@8.18.3)
+        version: 0.7.6(ws@8.18.3)
       zod:
         specifier: 'catalog:'
         version: 3.24.2
@@ -942,7 +942,7 @@ importers:
         version: 4.2.0
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.7.5(ws@8.18.2)
+        version: 0.7.6(ws@8.18.2)
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
@@ -1076,7 +1076,7 @@ importers:
         version: 2.7.0
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.7.5(ws@8.18.3)
+        version: 0.7.6(ws@8.18.3)
       typescript:
         specifier: ^5.5.4
         version: 5.8.3
@@ -1255,7 +1255,7 @@ importers:
         version: 4.104.0(ws@8.18.3)(zod@3.24.2)
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.7.5(ws@8.18.3)
+        version: 0.7.6(ws@8.18.3)
       rollup:
         specifier: ^4.41.0
         version: 4.43.0
@@ -1472,7 +1472,7 @@ importers:
         version: 16.1.0(postcss@8.5.4)
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.7.5(ws@8.18.3)
+        version: 0.7.6(ws@8.18.3)
       recast:
         specifier: ^0.23.4
         version: 0.23.11
@@ -12063,6 +12063,9 @@ packages:
   promptl-ai@0.7.5:
     resolution: {integrity: sha512-qDJggAR34qqxc5/X6xqagMCVNVQK8U3ycohtKJNG1/1Ap5VJ/UzF4ERphWAmLrspl4KYcT2ITKQhq28TAcw3Qg==}
 
+  promptl-ai@0.7.6:
+    resolution: {integrity: sha512-pBSP296CCB25hGZ+BfectGoF8hsVbdkYITi58JJzklZzcEemIcnMLjrcofXX+9Yv0EpfB7W6ORPX/pNLmQAayQ==}
+
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
 
@@ -17041,17 +17044,6 @@ snapshots:
       '@langchain/core': 0.3.57(openai@4.104.0(ws@8.18.3)(zod@3.24.2))
       js-tiktoken: 1.0.20
 
-  '@latitude-data/sdk@5.1.0(typescript@5.8.3)':
-    dependencies:
-      eventsource-parser: 2.0.1
-      node-fetch: 2.7.0
-      promptl-ai: 0.7.5
-      typescript: 5.8.3
-      zod: 3.24.2
-    transitivePeerDependencies:
-      - encoding
-      - ws
-
   '@latitude-data/sdk@5.1.0(typescript@5.8.3)(ws@8.18.3)':
     dependencies:
       eventsource-parser: 2.0.1
@@ -19846,7 +19838,7 @@ snapshots:
 
   '@sentry/core@9.9.0': {}
 
-  '@sentry/nextjs@9.10.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.5.2(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.101.2)':
+  '@sentry/nextjs@9.10.1(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(next@15.5.2(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.101.2(esbuild@0.25.5))':
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/semantic-conventions': 1.34.0
@@ -19857,7 +19849,7 @@ snapshots:
       '@sentry/opentelemetry': 9.10.1(@opentelemetry/api@1.9.0)(@opentelemetry/context-async-hooks@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/core@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.34.0)
       '@sentry/react': 9.10.1(react@19.0.0-rc-5d19e1c8-20240923)
       '@sentry/vercel-edge': 9.10.1
-      '@sentry/webpack-plugin': 3.2.4(webpack@5.101.2)
+      '@sentry/webpack-plugin': 3.2.4(webpack@5.101.2(esbuild@0.25.5))
       chalk: 3.0.0
       next: 15.5.2(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
       resolve: 1.22.8
@@ -19983,12 +19975,12 @@ snapshots:
       '@opentelemetry/api': 1.9.0
       '@sentry/core': 9.10.1
 
-  '@sentry/webpack-plugin@3.2.4(webpack@5.101.2)':
+  '@sentry/webpack-plugin@3.2.4(webpack@5.101.2(esbuild@0.25.5))':
     dependencies:
       '@sentry/bundler-plugin-core': 3.2.4
       unplugin: 1.0.1
       uuid: 9.0.1
-      webpack: 5.101.2
+      webpack: 5.101.2(esbuild@0.25.5)
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -27018,20 +27010,6 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
-  openai@4.104.0(zod@3.25.76):
-    dependencies:
-      '@types/node': 18.19.111
-      '@types/node-fetch': 2.6.12
-      abort-controller: 3.0.0
-      agentkeepalive: 4.6.0
-      form-data-encoder: 1.7.2
-      formdata-node: 4.4.1
-      node-fetch: 2.7.0
-    optionalDependencies:
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - encoding
-
   openapi-types@12.1.3: {}
 
   openapi3-ts@4.4.0:
@@ -27553,20 +27531,20 @@ snapshots:
 
   progress@2.0.3: {}
 
-  promptl-ai@0.7.5:
+  promptl-ai@0.7.5(ws@8.18.3):
     dependencies:
       acorn: 8.15.0
       code-red: 1.0.4
       fast-sha256: 1.3.0
       locate-character: 3.0.0
-      openai: 4.104.0(zod@3.25.76)
+      openai: 4.104.0(ws@8.18.3)(zod@3.25.76)
       yaml: 2.4.5
       zod: 3.25.76
     transitivePeerDependencies:
       - encoding
       - ws
 
-  promptl-ai@0.7.5(ws@8.18.2):
+  promptl-ai@0.7.6(ws@8.18.2):
     dependencies:
       acorn: 8.15.0
       code-red: 1.0.4
@@ -27579,7 +27557,7 @@ snapshots:
       - encoding
       - ws
 
-  promptl-ai@0.7.5(ws@8.18.3):
+  promptl-ai@0.7.6(ws@8.18.3):
     dependencies:
       acorn: 8.15.0
       code-red: 1.0.4
@@ -29310,14 +29288,16 @@ snapshots:
       - encoding
       - supports-color
 
-  terser-webpack-plugin@5.3.14(webpack@5.101.2):
+  terser-webpack-plugin@5.3.14(esbuild@0.25.5)(webpack@5.101.2(esbuild@0.25.5)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
       schema-utils: 4.3.2
       serialize-javascript: 6.0.2
       terser: 5.44.0
-      webpack: 5.101.2
+      webpack: 5.101.2(esbuild@0.25.5)
+    optionalDependencies:
+      esbuild: 0.25.5
 
   terser@5.43.1:
     dependencies:
@@ -30293,7 +30273,7 @@ snapshots:
 
   webpack-virtual-modules@0.5.0: {}
 
-  webpack@5.101.2:
+  webpack@5.101.2(esbuild@0.25.5):
     dependencies:
       '@types/eslint-scope': 3.7.7
       '@types/estree': 1.0.8
@@ -30317,7 +30297,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.2
       tapable: 2.2.3
-      terser-webpack-plugin: 5.3.14(webpack@5.101.2)
+      terser-webpack-plugin: 5.3.14(esbuild@0.25.5)(webpack@5.101.2(esbuild@0.25.5))
       watchpack: 2.4.4
       webpack-sources: 3.3.3
     transitivePeerDependencies:
