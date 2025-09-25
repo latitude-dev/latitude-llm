@@ -21,7 +21,6 @@ import {
 } from '@latitude-data/constants/documentTriggers'
 import { ICONS_BY_TRIGGER } from '../../@modal/(.)triggers/new/_components/IntegrationsList'
 import { TriggerWrapper } from '../TriggerWrapper'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { OnRunTriggerFn } from '../TriggersList'
 import { OnRunChatTrigger } from '../useActiveTrigger'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
