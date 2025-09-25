@@ -6,7 +6,7 @@ import {
 } from '@pipedream/sdk/server'
 import { Result } from '../../../../lib/Result'
 import { PipedreamIntegration } from '../../../../browser'
-import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { env } from '@latitude-data/env'
 import { PipedreamIntegrationConfiguration } from '../../helpers/schema'
