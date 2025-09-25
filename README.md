@@ -61,29 +61,30 @@ Latitude offers two deployment options:
 
 Choose the option that best fits your needs and follow the corresponding instructions below.
 
-### Latitude Cloud
+### Latitude Cloud  
+To get started with Latitude, follow these steps:  
 
-To get started with Latitude, follow these steps:
+1. **Sign up for Latitude** → Visit our [website](https://latitude.so) and create your account.
+   
+3. **Create a new project** → Once logged in, create a project to organize your agents, prompts, and evaluations.
+   
+5. **Build your first agent or prompt** →  
+   - *Agent*: use the Editor to configure a simple workflow or autonomous agent.  
+   - *Prompt*: start with a basic task, like generating a short story or answering a question.
+     
+6. **Test in the playground** → Run prompts or agents interactively with different inputs and observe responses.
+   
+8. **Evaluate in batch** → Upload a dataset and run evaluations to measure performance across scenarios.
+   
+10. **Deploy** → Publish your prompt or agent as an endpoint for easy integration with your applications.
+    
+12. **Monitor and evaluate** → Use Logs & Observability to review performance, costs, and latency over time.
+    
+14. **Iterate and improve** → Refine prompts or agents based on evaluation results, or create new versions.
+    
+16. **Collaborate with your team** → Invite team members to your Latitude workspace to collaborate on building, testing, and improving.  
 
-1. **Sign up for Latitude**: Visit our [website](https://latitude.so) and follow the instructions to create your account.
-
-2. **Create a new project**: Once logged in, create a new project to organize your prompts and evaluations.
-
-3. **Write your first prompt**: Navigate to the Editor and create a new prompt. Start with a simple task, like generating a short story or answering a question.
-
-4. **Test your prompt**: Use the playground to test your prompt with different inputs and observe the model's responses.
-
-5. **Evaluate in batch**: Before deploying, you can upload a dataset and run a batch evaluation to assess your prompt's performance across various scenarios.
-
-6. **Deploy your prompt**: Once you're satisfied with your prompt's performance in batch evaluation, deploy it as an endpoint for easy integration with your applications.
-
-7. **Monitor and evaluate**: Use the Logs section to review your prompt's performance over time. Set up ongoing evaluations to systematically assess and improve your prompt's output.
-
-8. **Iterate and improve**: Based on the evaluation results, refine your prompt or create new versions to enhance its performance.
-
-9. **Collaborate with your team**: Invite team members to your Latitude workspace to collaborate on prompt engineering and evaluations.
-
-For more detailed information on each step, explore our documentation, or join our [community](https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw) for support and discussions.
+For more details on each step, see our [documentation](https://docs.latitude.so) or join the [community](https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw).  
 
 ### Latitude Self-Hosted
 
