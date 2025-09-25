@@ -16,14 +16,17 @@ Variables are defined using double curly braces (`{{ }}`) and can be used direct
 You can define a variable by assigning a value inside `{{ }}`:
 
 ```tsx
-{{ name = "Alice" }}
+{
+  {
+    name = 'Alice'
+  }
+}
 
-<user>
-  Hi! My name is {{ name }}.
-</user>
+;<user>Hi! My name is {{ name }}.</user>
 ```
 
 In this example:
+
 - The variable `name` is assigned the value `"Alice"`.
 - The variable is interpolated into the text when the prompt is processed.
 
@@ -46,12 +49,39 @@ Welcome to {{ city }}! Let me guide you through the best attractions here.
 Variables don’t have to be defined in the prompt. Instead, their values can be provided as dynamic input parameters when the prompt is executed.
 
 ```tsx
-<user>
-  Hi! My name is {{ name }}.
-</user>
+<user>Hi! My name is {{ name }}.</user>
 ```
 
 In this example, the `name` variable can be defined in the code when running this prompt, allowing you to dynamically customize the output without modifying the prompt.
+
+---
+
+## Built-in Variables
+
+PromptL provides special built-in variables that are automatically available in your prompts without needing to be defined.
+
+### Current Date and Time
+
+The `$now` variable returns the current date and time in ISO format:
+
+```tsx
+Today is {{ $now }}.
+```
+
+This will output something like: `Today is 2024-01-15T10:30:45.123Z.`
+
+You can also use `$now` in expressions:
+
+```tsx
+{{ timestamp = $now.getTime() }}
+
+The current timestamp is {{ timestamp }}.
+```
+
+<Tip>
+  `$now` is an instance of Javascript Date class, and you can call any of its
+  methods and properties.
+</Tip>
 
 ---
 
@@ -66,7 +96,8 @@ Hi! My name is {{ name || "Alice" }}.
 Here, the `name` variable will default to `"Alice"` if no value is provided.
 
 <Tip>
- **Tip**: Use default values to ensure your prompts remain functional even if some parameters are missing.
+  **Tip**: Use default values to ensure your prompts remain functional even if
+  some parameters are missing.
 </Tip>
 
 ---
@@ -76,6 +107,7 @@ Here, the `name` variable will default to `"Alice"` if no value is provided.
 PromptL supports logic expressions, enabling you to perform calculations or transformations directly in the prompt.
 
 ### Simple Expressions
+
 ```tsx
 {{ age = 30 }}
 {{ ageInMonths = age * 12 }}
@@ -84,7 +116,9 @@ I am {{ age }} years old, which is {{ ageInMonths }} months.
 ```
 
 ### Conditional Expressions
+
 You can use ternary-like conditions to modify variable values dynamically:
+
 ```tsx
 {{ isAdmin = role == "admin" ? "Yes" : "No" }}
 
@@ -96,6 +130,7 @@ Is this user an admin? {{ isAdmin }}.
 ## Advanced Examples
 
 ### Combining Input Parameters, Defaults, and Expressions
+
 ```tsx
 {{ city = input.city || "Unknown" }}
 {{ weather = input.weather || "clear" }}
@@ -104,6 +139,7 @@ The weather in {{ city }} is currently {{ weather }}.
 ```
 
 ### Nested or Structured Variables
+
 Variables can represent objects or arrays, making it easy to handle structured data:
 
 ```tsx
@@ -128,6 +164,7 @@ Hello, {{ user.name }}! You are {{ user.age }} years old and enjoy {{ user.hobbi
 ## Debugging Variables
 
 If a variable isn’t working as expected:
+
 - **Check Scope**: Ensure the variable is defined or provided as an input parameter.
 - **Validate Expressions**: Double-check calculations or transformations.
 - **Use Defaults**: Add default values to catch undefined variables.
