@@ -15,17 +15,7 @@ const jobMappings = {
   refreshProjectsStatsCacheJob: jobs.refreshProjectsStatsCacheJob,
   requestDocumentSuggestionsJob: jobs.requestDocumentSuggestionsJob,
   scaleDownMcpServerJob: jobs.scaleDownMcpServerJob,
-  scheduleWorkspaceCleanupJobs: jobs.scheduleWorkspaceCleanupJobs,
   updateMcpServerLastUsedJob: jobs.updateMcpServerLastUsedJob,
-
-  // Migrate provider logs to object storage
-  scheduleProviderLogsMigrationJobs: jobs.scheduleProviderLogsMigrationJobs,
-  migrateProviderLogsToObjectStorageJob:
-    jobs.migrateProviderLogsToObjectStorageJob,
-
-  // Migrate document logs workspace ids
-  scheduleWorkspaceLogsMigrationJobs: jobs.scheduleWorkspaceLogsMigrationJobs,
-  migrateWorkspaceLogsJob: jobs.migrateWorkspaceLogsJob,
 }
 
 export function startMaintenanceWorker() {
