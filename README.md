@@ -16,6 +16,10 @@
   <a href="https://x.com/trylatitude">X</a>
 </p>
 
+<p align="center">
+  <img src="assets/gif_ui.gif" alt="Latitude demo — build an agent from a prompt" width="800"/>
+</p>
+
 
 
 ## 🌈 Why Latitude?
