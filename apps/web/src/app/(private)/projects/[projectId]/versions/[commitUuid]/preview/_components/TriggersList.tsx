@@ -122,6 +122,16 @@ export function TriggersList({
   integrations: IntegrationDto[]
 }) {
   const [openTriggerUuid, setOpenTriggerUuid] = useState<string | null>(null)
+  const toggleOpenTriggerUuid = useCallback(
+    (uuid: string) => {
+      if (openTriggerUuid === uuid) {
+        setOpenTriggerUuid(null)
+      } else {
+        setOpenTriggerUuid(uuid)
+      }
+    },
+    [openTriggerUuid],
+  )
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { data: triggers, mutate } = useDocumentTriggers(
@@ -203,7 +213,7 @@ export function TriggersList({
                     trigger={trigger}
                     integrations={integrations}
                     openTriggerUuid={openTriggerUuid}
-                    setOpenTriggerUuid={setOpenTriggerUuid}
+                    setOpenTriggerUuid={toggleOpenTriggerUuid}
                     onRunTrigger={onRunTrigger}
                     onRunChatTrigger={activeChatTrigger.onRunChatTrigger}
                   />

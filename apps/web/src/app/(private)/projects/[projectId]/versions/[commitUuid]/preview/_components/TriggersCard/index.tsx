@@ -171,7 +171,7 @@ export function TriggersCard({
   trigger: DocumentTrigger
   integrations: IntegrationDto[]
   openTriggerUuid: string | null
-  setOpenTriggerUuid: ReactStateDispatch<string | null>
+  setOpenTriggerUuid: (uuid: string) => void
   onRunTrigger: OnRunTriggerFn
   onRunChatTrigger: OnRunChatTrigger
 }) {
