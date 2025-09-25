@@ -96,7 +96,7 @@ After setting up Latitude Self-Hosted, you can follow the same steps as in the L
 
 The Latitude community can be found on
 [Slack](https://join.slack.com/t/trylatitude/shared_invite/zt-3cl2m3xph-k5DBp3sJOtt_u6u3vxzZ0g)
-)
+
 where you can ask questions, voice ideas, and share your projects with other
 people.
 
