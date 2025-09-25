@@ -37,19 +37,6 @@ With Latitude, you can:
 - **Datasets** → manage test data for batch evaluations and regression testing  
 - **Integrations** → connect with 2,500+ tools via SDKs and APIs  
 
-<a href="https://www.youtube.com/watch?v=jPVn9kf4GrE" target="_blank"><img alt="Latitude screenshot" src="https://github.com/user-attachments/assets/3d5a217d-7f75-4997-b569-e8754ce505e8"></a>
-
-## ✨ Features
-
-- **Prompt Manager**: Create, version, and collaborate on prompts with a powerful editor supporting advanced features like variables, conditionals, and loops through PromptL
-- **Playground**: Test prompts interactively with different inputs, parameters, and tool configurations
-- **AI Gateway**: Deploy prompts as API endpoints that stay up-to-date with published changes
-- **Evaluations**: Assess prompt performance via LLM-as-judge, programmatic rules, or human review
-- **Logs & Observability**: Automatically capture all interactions with prompts and models
-- **Datasets**: Manage test data for batch evaluations and regression testing
-- **Integrations**: Seamlessly integrate with your existing stack via SDKs and APIs
-- **Open-source**: Community-driven
-
 ## 📚 Table Of Contents
 
 - [Getting Started](https://docs.latitude.so/guides/getting-started/introduction)
@@ -105,7 +92,8 @@ After setting up Latitude Self-Hosted, you can follow the same steps as in the L
 ## 👥 Community
 
 The Latitude community can be found on
-[Slack](https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw)
+[Slack](https://join.slack.com/t/trylatitude/shared_invite/zt-3cl2m3xph-k5DBp3sJOtt_u6u3vxzZ0g)
+)
 where you can ask questions, voice ideas, and share your projects with other
 people.
 
