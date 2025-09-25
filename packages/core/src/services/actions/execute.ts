@@ -5,11 +5,9 @@ import {
   Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
-import { BadRequestError, NotFoundError } from '../../lib/errors'
+import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { getWorkspaceOnboarding } from '../workspaceOnboarding/get'
-//import { markWorkspaceOnboardingComplete } from '../workspaceOnboarding/update'
 import { ActionBackendSpecification } from './shared'
 import { ACTION_SPECIFICATIONS } from './specifications'
 
@@ -37,24 +35,8 @@ export async function executeAction<T extends ActionType = ActionType>(
     return Result.error(new BadRequestError('Invalid action parameters'))
   }
 
-  const getting = await getWorkspaceOnboarding({ workspace })
-  if (getting.error && !(getting.error instanceof NotFoundError)) {
-    return Result.error(getting.error)
-  }
-  const onboarding = getting.value
-
   return tx.call(
     async (db) => {
-      // if (onboarding && !onboarding.completedAt) {
-      //   // TODO - think about this as we skip the onboarding here after cloning an agent
-      //   // check here if new, if so not mark as complete for now
-
-      //   const marking = await markWorkspaceOnboardingComplete({ onboarding }, tx) // prettier-ignore
-      //   if (marking.error) {
-      //     return Result.error(marking.error)
-      //   }
-      // }
-
       const executing = await specification.execute(
         { parameters, user, workspace },
         db,
@@ -66,10 +48,7 @@ export async function executeAction<T extends ActionType = ActionType>(
       }
       const result = executing.value
 
-      return Result.ok({
-        ...result,
-        hasCompletedOnboarding: !!onboarding?.completedAt,
-      })
+      return Result.ok(result)
     },
     async () => {
       await publisher.publishLater({

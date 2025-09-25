@@ -169,6 +169,12 @@ namespace Text {
     },
   )
 
+  export const H2M = forwardRef<HTMLSpanElement, Common>(
+    function H2M(props, ref) {
+      return <TextAtom ref={ref} size='h2' weight='medium' {...props} />
+    },
+  )
+
   export const H2B = forwardRef<HTMLSpanElement, Common>(
     function H2B(props, ref) {
       return <TextAtom ref={ref} size='h2' weight='bold' {...props} />

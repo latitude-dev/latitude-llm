@@ -1,41 +1,55 @@
-import { useMemo, Fragment } from 'react'
-import { NavBarItem, NavbarTab } from './navbarItem'
+import { useMemo, Fragment, useCallback } from 'react'
+import { NavBarItem } from './navbarItem'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Project } from '@latitude-data/core/browser'
+import { StatusFlagState } from '@latitude-data/web-ui/molecules/StatusFlag'
+import { NavbarTabName } from '../../constants'
+import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
+import { redirect } from 'next/navigation'
+import { ROUTES } from '$/services/routes'
 
 export default function NocodersNavbar({
   project,
   currentTab,
 }: {
   project: Project
-  currentTab: NavbarTab
+  currentTab: NavbarTabName
 }) {
   const navbarItems = useMemo(() => {
     return [
       {
-        key: NavbarTab.setupIntegrations,
+        key: NavbarTabName.SetupIntegrations,
         title: 'Set up integrations',
         description: 'Enable agent to connect to apps',
+        state: StatusFlagState.inProgress, // TODO - create a new column in onboardingWorkspace to have the current step, then a store, an SWR, and an update action to be able to conserve this state
       },
       {
-        key: NavbarTab.configureTriggers,
+        key: NavbarTabName.ConfigureTriggers,
         title: 'Configure triggers',
         description: 'Adjust triggers to your use case',
+        state: StatusFlagState.pending,
       },
       {
-        key: NavbarTab.triggerAgent,
+        key: NavbarTabName.TriggerAgent,
         title: 'Trigger agent',
         description: 'Wait for an event or trigger agent directly',
+        state: StatusFlagState.pending,
       },
       {
-        key: NavbarTab.runAgent,
+        key: NavbarTabName.RunAgent,
         title: 'Run',
         description: 'Watch agent perform',
+        state: StatusFlagState.pending,
       },
     ]
+  }, [])
+
+  const skipOnboarding = useCallback(() => {
+    completeOnboardingAction()
+    redirect(ROUTES.dashboard.root)
   }, [])
 
   return (
@@ -50,15 +64,17 @@ export default function NocodersNavbar({
             {navbarItems.map((item, index) => (
               <Fragment key={index}>
                 <div
-                  key={index}
                   className={cn(currentTab === item.key ? '' : 'opacity-70')}
                 >
                   <NavBarItem
                     title={item.title}
                     description={item.description}
+                    state={item.state}
                   />
                 </div>
-                {index === navbarItems.length - 1 ? null : <Separator />}
+                {index === navbarItems.length - 1 ? null : (
+                  <Separator variant='dashed' />
+                )}
               </Fragment>
             ))}
           </div>
@@ -67,7 +83,7 @@ export default function NocodersNavbar({
           <Text.H5 align='center' color='foregroundMuted'>
             Already know how Latitude works?
           </Text.H5>
-          <Button roundy fancy>
+          <Button roundy fancy onClick={skipOnboarding} variant='outline'>
             <Text.H5M>Skip Onboarding</Text.H5M>
           </Button>
         </div>

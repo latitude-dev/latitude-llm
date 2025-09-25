@@ -5,7 +5,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { unsafelyFindProject, unsafelyFindWorkspace } from '../../data-access'
-import { UnprocessableEntityError } from '../../lib/errors'
+import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import {
@@ -14,6 +14,8 @@ import {
 } from '../../repositories'
 import { forkDocument } from '../documents/forkDocument'
 import { ActionExecuteArgs } from './shared'
+import { getWorkspaceOnboarding } from '../workspaceOnboarding'
+import { isFeatureEnabledByName } from '../workspaceFeatures/isFeatureEnabledByName'
 
 export const CloneAgentActionSpecification = {
   parameters: cloneAgentActionBackendParametersSchema,
@@ -56,9 +58,36 @@ async function execute(
   }
   const cloned = forking.unwrap()
 
+  const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
+    workspace.id,
+    'nocoderOnboarding',
+  )
+
+  if (!Result.isOk(isNewOnboardingEnabledResult)) {
+    return isNewOnboardingEnabledResult
+  }
+  const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
+  if (isNewOnboardingEnabled) {
+    const workspaceOnboarding = await getWorkspaceOnboarding({ workspace })
+    if (
+      workspaceOnboarding.error &&
+      !(workspaceOnboarding.error instanceof NotFoundError)
+    ) {
+      return workspaceOnboarding
+    }
+    const onboarding = workspaceOnboarding.unwrap()
+
+    return Result.ok({
+      projectId: cloned.project.id,
+      commitUuid: cloned.commit.uuid,
+      hasCompletedOnboarding: !!onboarding?.completedAt,
+    })
+  }
+
   return Result.ok({
     projectId: cloned.project.id,
     commitUuid: cloned.commit.uuid,
+    hasCompletedOnboarding: true, // TODO - remove this once we have a new onboarding
   })
 }
 

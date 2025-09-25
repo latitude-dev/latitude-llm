@@ -18,7 +18,6 @@ export const colors = {
     successMuted: 'bg-success-muted',
     successMutedForeground: 'bg-success-muted-foreground',
     latte: 'bg-latte',
-    latteBackground: 'bg-latte-background',
   },
   textColors: {
     white: 'text-white',

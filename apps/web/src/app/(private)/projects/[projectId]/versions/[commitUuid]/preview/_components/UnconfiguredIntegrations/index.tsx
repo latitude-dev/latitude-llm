@@ -79,3 +79,14 @@ export function UnconfiguredIntegrations({
     </div>
   )
 }
+
+export function getPipedreamUnconfiguredIntegrations(
+  integrations: IntegrationDto[],
+) {
+  return integrations.filter((integration) => {
+    return (
+      integration.type === IntegrationType.Pipedream &&
+      !isIntegrationConfigured(integration)
+    )
+  })
+}

@@ -1,21 +1,15 @@
-//import { env } from '@latitude-data/env'
-import { Commit, DocumentVersion, User, Workspace } from '../../browser'
+import { User, Workspace } from '../../browser'
 import { Providers } from '../../constants'
 import { publisher } from '../../events/publisher'
-//import { LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { createApiKey } from '../apiKeys'
 import { createWorkspaceOnboarding } from '../workspaceOnboarding'
-//import { createOnboardingDataset } from '../datasets/createOnboardingDataset'
-//import { ONBOARDING_DOCUMENT_PATH } from '../documents/findOnboardingDocument'
-//import { createDemoEvaluation } from '../evaluationsV2/createDemoEvaluation'
 import { createMembership } from '../memberships/create'
-//import { createOnboardingProject } from '../projects/createOnboardingProject'
-//import { importOnboardingProject } from '../projects/import'
 import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
 import { createUser } from './createUser'
+import { isFeatureEnabledByName } from '../workspaceFeatures/isFeatureEnabledByName'
 
 const DEFAULT_MODEL = 'gpt-4o-mini'
 
@@ -70,28 +64,28 @@ export default async function setupService(
     captureException?.(firstProvider.error)
   }
 
-  // const { onboardingDocument, commit } = await createOrImportOnboardingProject(
-  //   { importDefaultProject, workspace, user },
-  //   transaction,
-  // )
-
   await createMembership(
     { confirmedAt: new Date(), user, workspace },
     transaction,
   ).then((r) => r.unwrap())
   await createApiKey({ workspace }, transaction).then((r) => r.unwrap())
-  await createWorkspaceOnboarding({ workspace }, transaction).then((r) =>
-    r.unwrap(),
+
+  const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
+    workspace.id,
+    'nocoderOnboarding',
   )
-  /*
-  await createOnboardingDataset({ workspace, author: user }, transaction).then(
-    (r) => r.unwrap(),
-  )
-  await createDemoEvaluation(
-    { workspace, document: onboardingDocument, commit },
-    transaction,
-  ).then((r) => r.unwrap())
-  */
+
+  if (!Result.isOk(isNewOnboardingEnabledResult)) {
+    return isNewOnboardingEnabledResult
+  }
+
+  const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
+  if (isNewOnboardingEnabled) {
+    await createWorkspaceOnboarding({ workspace }, transaction).then((r) =>
+      r.unwrap(),
+    )
+  }
+
   publisher.publishLater({
     type: 'userCreated',
     data: {
@@ -106,46 +100,3 @@ export default async function setupService(
     workspace,
   })
 }
-
-// async function createOrImportOnboardingProject(
-//   {
-//     importDefaultProject,
-//     workspace,
-//     user,
-//   }: {
-//     importDefaultProject: boolean
-//     workspace: Workspace
-//     user: User
-//   },
-//   transaction = new Transaction(),
-// ) {
-//   let documents: DocumentVersion[] = []
-//   let commit: Commit
-//   if (importDefaultProject) {
-//     const { documents: ds, commit: c } = await importOnboardingProject(
-//       { workspace, user },
-//       transaction,
-//     ).then((r) => r.unwrap())
-//     documents = ds
-//     commit = c
-//   } else {
-//     const { documents: ds, commit: c } = await createOnboardingProject(
-//       {
-//         workspace,
-//         user,
-//       },
-//       transaction,
-//     ).then((r) => r.unwrap())
-
-//     documents = ds
-//     commit = c
-//   }
-//   const onboardingDocument = documents.find(
-//     (document) => document.path === ONBOARDING_DOCUMENT_PATH,
-//   )
-//   if (!onboardingDocument) {
-//     throw new LatitudeError('Onboarding document not found')
-//   }
-
-//   return { commit, onboardingDocument }
-// }
