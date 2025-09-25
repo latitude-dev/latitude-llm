@@ -1,16 +1,18 @@
-import { useMemo, useState, Fragment } from 'react'
+import { useMemo, Fragment } from 'react'
 import { NavBarItem, NavbarTab } from './navbarItem'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { cn } from '@latitude-data/web-ui/utils'
+import { Project } from '@latitude-data/core/browser'
 
-export default function NocodersNavbar() {
-  // useState for the navbar state, should be a list of them as they keep completing onboarding steps
-  const [currentTab, setCurrentTab] = useState<NavbarTab>(
-    NavbarTab.setupIntegrations,
-  )
-
+export default function NocodersNavbar({
+  project,
+  currentTab,
+}: {
+  project: Project
+  currentTab: NavbarTab
+}) {
   const navbarItems = useMemo(() => {
     return [
       {
@@ -42,7 +44,7 @@ export default function NocodersNavbar() {
         <div className='flex flex-col gap-6 items-start'>
           <div className='flex flex-col gap-1'>
             <Text.H5 color='foregroundMuted'>Create your first agent</Text.H5>
-            <Text.H3M color='foreground'>Fill in here name of agent</Text.H3M>
+            <Text.H3M color='foreground'>{project.name}</Text.H3M>
           </div>
           <div className='flex flex-col gap-4'>
             {navbarItems.map((item, index) => (

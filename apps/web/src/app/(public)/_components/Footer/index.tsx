@@ -18,7 +18,8 @@ export default function AuthFooter() {
         or contact us via{' '}
         <Text.H5 asChild underline color='accentForeground'>
           <a href={LATITUDE_EMAIL} target='_blank'>
-            email
+            {' '}
+            // TODO - fix this broken link email
           </a>
         </Text.H5>{' '}
         or{' '}
