@@ -8,7 +8,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import Actions, { ActionsState } from './Actions'
 
 export default function Chat({
@@ -22,7 +22,6 @@ export default function Chat({
   playground: ReturnType<typeof usePlaygroundChat>
   showHeader: boolean
 } & ActionsState) {
-  const runOnce = useRef(false)
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { data: agentToolsMap } = useAgentToolsMap({
@@ -35,15 +34,6 @@ export default function Chat({
     () => Object.keys(parameters ?? {}),
     [parameters],
   )
-
-  // FIXME: Do not run side effects on useEffect. Move to event handler.
-  useEffect(() => {
-    if (!runOnce.current) {
-      runOnce.current = true
-      playground.start()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playground.start])
 
   return (
     <div className='w-full flex flex-col flex-1 h-full overflow-hidden'>

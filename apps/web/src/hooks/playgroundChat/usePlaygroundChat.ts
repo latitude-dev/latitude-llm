@@ -36,7 +36,7 @@ function buildMessage({ input }: { input: string | ToolMessage[] }) {
   return input
 }
 
-export type RunPromptFn = () => Promise<ReadableStream<ParsedEvent>>
+export type RunPromptFn = (args: any) => Promise<ReadableStream<ParsedEvent>>
 export type AddMessagesFn = ({
   documentLogUuid,
   messages,
@@ -57,6 +57,7 @@ export function usePlaygroundChat({
   onPromptRan?: (documentLogUuid?: string, error?: Error) => void
 }) {
   const isChat = useRef(false)
+  const [mode, setMode] = useState<'chat' | 'preview'>('preview')
   const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
   const [error, setError] = useState<Error | undefined>()
   const [isLoading, setIsLoading] = useState(false)
@@ -400,19 +401,24 @@ export function usePlaygroundChat({
     ],
   )
 
-  const start = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      const stream = await runPromptFn()
-      handleStream(stream, onPromptRan)
-    } catch (error) {
-      setIsLoading(false)
-      setError(error as Error)
-      onPromptRan?.(undefined, error as Error)
-    }
-  }, [handleStream, runPromptFn, onPromptRan])
+  const start = useCallback(
+    async (args: any = {}) => {
+      try {
+        setIsLoading(true)
+        setMode('chat')
+        const stream = await runPromptFn(args)
+        handleStream(stream, onPromptRan)
+      } catch (error) {
+        setIsLoading(false)
+        setError(error as Error)
+        onPromptRan?.(undefined, error as Error)
+      }
+    },
+    [setMode, handleStream, runPromptFn, onPromptRan],
+  )
 
   const reset = useCallback(() => {
+    setMode('preview')
     setMessages([])
     setUnrespondedToolCalls([])
     setUsage(EMPTY_USAGE())
@@ -425,6 +431,7 @@ export function usePlaygroundChat({
     setModel(undefined)
     resetTimer()
   }, [
+    setMode,
     setMessages,
     setUnrespondedToolCalls,
     setUsage,
@@ -440,6 +447,7 @@ export function usePlaygroundChat({
 
   return useMemo(
     () => ({
+      mode,
       addMessages: addMessagesFn ? addMessages : undefined,
       error,
       isLoading,
@@ -457,6 +465,7 @@ export function usePlaygroundChat({
       reset,
     }),
     [
+      mode,
       addMessages,
       addMessagesFn,
       error,
