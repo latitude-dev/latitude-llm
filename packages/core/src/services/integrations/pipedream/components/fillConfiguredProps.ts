@@ -73,11 +73,7 @@ export async function fillConfiguredProps({
     if (
       appProps.some((prop) => prop.app !== integration.configuration.appName)
     ) {
-      return Result.error(
-        new BadRequestError(
-          'Component is not configurable for this integration.',
-        ),
-      )
+      return Result.ok(configuredProps)
     }
 
     const configuredAppProps = Object.fromEntries(
