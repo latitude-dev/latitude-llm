@@ -20,7 +20,9 @@ export async function enqueueRunDocumentFromTriggerEventJob({
   }
 
   const { documentsQueue } = await queues()
-  await documentsQueue.add('runDocumentTriggerEventJob', jobData)
+  await documentsQueue.add('runDocumentTriggerEventJob', jobData, {
+    attempts: 1,
+  })
 
   return Result.nil()
 }

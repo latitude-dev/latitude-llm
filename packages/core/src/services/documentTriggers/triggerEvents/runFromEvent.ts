@@ -114,9 +114,11 @@ export async function runDocumentFromTriggerEvent<
     })
 
     if (!Result.isOk(sendResponseResult)) return sendResponseResult
+
     return Result.nil()
   }
 
   if (!Result.isOk(runResult)) return runResult
+
   return Result.nil()
 }

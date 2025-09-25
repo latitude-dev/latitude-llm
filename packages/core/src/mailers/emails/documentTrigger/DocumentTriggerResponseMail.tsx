@@ -6,6 +6,7 @@ import { Img, Text } from '@react-email/components'
 import { TypedResult } from '../../../lib/Result'
 import ContainerLayout from '../_components/ContainerLayout'
 import PlainLayout from '../_components/PlainLayout'
+import React from 'react'
 
 export default function DocumentTriggerResponseMail({
   result,

@@ -32,7 +32,6 @@ export async function registerDocumentTriggerEvent<
       uuid: triggerUuid,
       commit,
     })
-
     if (triggerResult.error) return triggerResult
 
     const trigger = triggerResult.value
