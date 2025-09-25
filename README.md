@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://ai.latitude.so?utm_source=github" target="_blank">
-    <img src="assets/Logo.png?raw=true" alt="Latitude Logo" width="700"/>
+    <img src="assets/Logo.png?raw=true" alt="Latitude Logo" width="780"/>
   </a>
 </div>
 
