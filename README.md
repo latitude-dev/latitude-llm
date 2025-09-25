@@ -26,7 +26,7 @@
 Latitude is an open-source platform for both prompt engineering and AI agents.  
 It covers the entire lifecycle: from design and testing to deployment, observability, and scaling.  
 
-With Latitude, you can:
+**Key features include:**
 
 - **Collaborative Design** → version prompts and agents with your team  
 - **Playground** → test interactively with different inputs, parameters, and configurations  
