@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://ai.latitude.so?utm_source=github" target="_blank">
-    <img src="assets/Logo.png" alt="Latitude Logo" width="700"/>
+    <img src="assets/Logo.png?raw=true" alt="Latitude Logo" width="700"/>
   </a>
 </div>
 
@@ -17,9 +17,8 @@
 </p>
 
 <p align="center">
-  <img src="assets/gif_ui.gif" alt="Latitude demo — build an agent from a prompt" width="800"/>
+  <img src="assets/gif_ui.gif?raw=true" alt="Latitude demo — build an agent from a prompt" width="800"/>
 </p>
-
 
 
 ## 🌈 Why Latitude?
