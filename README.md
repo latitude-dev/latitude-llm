@@ -7,7 +7,7 @@
 <br/>
 
 <h1 align="center" style="border: none; margin-bottom: 8px;">
-  Open Source Platform for Custom AI Agents
+  Open-Source Platform for Custom AI Agents
 </h1>
 
 
