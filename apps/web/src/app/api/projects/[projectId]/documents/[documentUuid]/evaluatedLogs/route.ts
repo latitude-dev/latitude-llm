@@ -1,6 +1,16 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { Workspace } from '@latitude-data/core/browser'
+import {
+  ActualOutputConfiguration,
+  buildConversation,
+  DocumentLog,
+  EvaluatedDocumentLog,
+  formatConversation,
+  ProviderLog,
+  ProviderLogDto,
+  Workspace,
+} from '@latitude-data/core/browser'
+import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core/data-access'
 import { UnprocessableEntityError } from '@latitude-data/core/lib/errors'
 import {
   DocumentVersionsRepository,
@@ -8,7 +18,9 @@ import {
 } from '@latitude-data/core/repositories'
 import { computeDocumentLogs } from '@latitude-data/core/services/documentLogs/computeDocumentLogs'
 import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
-import { serializeEvaluatedDocumentLog } from '@latitude-data/core/services/evaluationsV2/llm/serializeEvaluatedDocumentLog'
+import { serializeAggregatedProviderLog } from '@latitude-data/core/services/documentLogs/serialize'
+import { buildProviderLogResponse } from '@latitude-data/core/services/providerLogs/buildResponse'
+import { extractActualOutput } from '@latitude-data/core/services/evaluationsV2/outputs/extract'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
@@ -90,3 +102,36 @@ export const GET = errorHandler(
     },
   ),
 )
+
+async function serializeEvaluatedDocumentLog({
+  documentLog,
+  providerLogs,
+  configuration,
+}: {
+  documentLog: DocumentLog
+  providerLogs: ProviderLog[]
+  configuration?: ActualOutputConfiguration
+}): Promise<EvaluatedDocumentLog> {
+  const providerLog = (await findLastProviderLogFromDocumentLogUuid(
+    documentLog.uuid,
+  ))!
+  const response = buildProviderLogResponse(providerLog)
+  const providerLogDto = { ...providerLog, response } as ProviderLogDto
+  const aggregatedProviderLog = await serializeAggregatedProviderLog({
+    documentLog,
+    providerLogs,
+  }).then((r) => r.unwrap())
+  const conversation = formatConversation(buildConversation(providerLogDto))
+  const actualOutput = await extractActualOutput({
+    providerLog: providerLogDto,
+    configuration: configuration,
+  }).then((r) => r.unwrap())
+
+  return {
+    ...aggregatedProviderLog,
+    uuid: documentLog.uuid,
+    createdAt: documentLog.createdAt,
+    actualOutput,
+    conversation,
+  }
+}
