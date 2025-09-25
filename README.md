@@ -35,7 +35,7 @@ With Latitude, you can:
 - **Logs & Observability** → monitor costs, latency, and performance in real time  
 - **Experiments** → run controlled tests across models and providers  
 - **Datasets** → manage test data for batch evaluations and regression testing  
-- **Integrations** → connect with 2,500+ tools via SDKs and APIs  
+- **Integrations** → connect with 2,500+ tools
 
 ## 📚 Table Of Contents
 
