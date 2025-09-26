@@ -22,9 +22,11 @@ export function useRunDocument({
     async ({
       parameters,
       userMessage,
+      aiParameters = false,
     }: {
       parameters: Record<string, unknown>
       userMessage?: string
+      aiParameters?: boolean
     }) => {
       const response = await fetch(
         ROUTES.api.documents.detail(document.documentUuid).run,
@@ -41,6 +43,7 @@ export function useRunDocument({
             parameters: parameters ?? {},
             stream: true,
             userMessage,
+            aiParameters,
           }),
         },
       )

@@ -98,10 +98,12 @@ export type OnRunTriggerFn = ({
   document,
   parameters,
   userMessage,
+  aiParameters,
 }: {
   document: DocumentVersion
   parameters: Record<string, unknown>
   userMessage?: string
+  aiParameters?: boolean
 }) => void
 
 const FAKE_DOCUMENT = {
@@ -151,7 +153,6 @@ export function TriggersList({
     fallbackData: fallbackIntegrations,
   })
 
-  const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const [expandParameters, setExpandParameters] = useState(true)
   const [activeTrigger, setActiveTrigger] = useState<ActiveTrigger>({
     document: FAKE_DOCUMENT,
@@ -168,12 +169,16 @@ export function TriggersList({
       commit,
     })
 
-  const runPromptFn = useCallback(() => {
-    return runDocument({
-      parameters: activeTrigger.parameters,
-      userMessage: activeTrigger.userMessage,
-    })
-  }, [runDocument, activeTrigger.parameters, activeTrigger.userMessage])
+  const runPromptFn = useCallback(
+    ({ aiParameters = false }: { aiParameters: boolean }) => {
+      return runDocument({
+        parameters: activeTrigger.parameters,
+        userMessage: activeTrigger.userMessage,
+        aiParameters,
+      })
+    },
+    [runDocument, activeTrigger.parameters, activeTrigger.userMessage],
+  )
 
   const playground = usePlaygroundChat({
     runPromptFn,
@@ -183,23 +188,18 @@ export function TriggersList({
     },
   })
 
-  const resetChat = useCallback(() => {
-    setMode('preview')
-    playground.reset()
-  }, [setMode, playground])
-
   const onRunTrigger: OnRunTriggerFn = useCallback(
-    ({ document, parameters, userMessage }) => {
+    ({ document, parameters, userMessage, aiParameters = false }) => {
       setActiveTrigger({ document, parameters, userMessage })
-      setMode('chat')
+      playground.start({ aiParameters })
     },
-    [setActiveTrigger, setMode],
+    [setActiveTrigger],
   )
 
   const ref = useRef<HTMLDivElement>(null)
 
   useAutoScroll(ref, {
-    startAtBottom: mode === 'chat',
+    startAtBottom: playground.mode === 'chat',
   })
 
   if (triggers.length === 0) {
@@ -210,11 +210,11 @@ export function TriggersList({
     <div
       ref={ref}
       className={cn('relative max-h-full h-full flex flex-col p-12 space-y-8', {
-        'overflow-y-auto custom-scrollbar pb-0': mode === 'chat',
+        'overflow-y-auto custom-scrollbar pb-0': playground.mode === 'chat',
       })}
     >
-      <TriggersHeader project={project} mode={mode} />
-      {mode === 'preview' ? (
+      <TriggersHeader project={project} mode={playground.mode} />
+      {playground.mode === 'preview' ? (
         <>
           <div className='flex-1'>
             <div className='flex flex-col gap-6'>
@@ -244,7 +244,7 @@ export function TriggersList({
           </div>
         </>
       ) : null}
-      {mode === 'chat' && activeTrigger ? (
+      {playground.mode === 'chat' && activeTrigger ? (
         <>
           <div className='flex-1'>
             <Chat
@@ -257,21 +257,19 @@ export function TriggersList({
           </div>
           <div className='sticky bottom-0 w-full bg-background pb-4'>
             <ChatInputBox
-              resetChat={resetChat}
+              resetChat={playground.reset}
               hasActiveStream={hasActiveStream}
               playground={playground}
               stopStreaming={abortCurrentStream}
               placeholder='Ask anything'
-              onBack={() => {
-                setMode('preview')
-              }}
+              onBack={playground.reset}
               onBackLabel='Back to triggers'
             />
           </div>
         </>
       ) : null}
 
-      {mode !== 'chat' && activeChatTrigger.active ? (
+      {playground.mode !== 'chat' && activeChatTrigger.active ? (
         <div className='sticky bottom-6'>
           <ChatTriggerTextarea
             key={activeChatTrigger.activeKey}
