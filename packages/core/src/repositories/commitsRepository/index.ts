@@ -123,7 +123,9 @@ export class CommitsRepository extends RepositoryLegacy<
     const result = await this.db
       .select()
       .from(this.scope)
-      .where(eq(this.scope.projectId, project.id))
+      .where(
+        and(eq(this.scope.projectId, project.id), isNull(this.scope.deletedAt)),
+      )
       .orderBy(this.scope.createdAt)
       .limit(1)
 

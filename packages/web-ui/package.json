@@ -236,6 +236,7 @@
       "types": "./dist/types/ds/molecules/TrippleThemeToggle/index.d.ts",
       "import": "./src/ds/molecules/TrippleThemeToggle/index.tsx"
     },
+    "./molecules/StatusFlag": "./src/ds/molecules/StatusFlag/index.tsx",
     "./molecules/ClickToCopy": "./src/ds/molecules/ClickToCopy/index.tsx",
     "./molecules/DynamicBot": "./src/ds/molecules/DynamicBot/index.tsx",
     "./molecules/PaginatedSelect": "./src/ds/molecules/PaginatedSelect/index.tsx",

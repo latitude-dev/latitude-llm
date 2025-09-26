@@ -31,6 +31,7 @@ export type CloneAgentActionBackendParameters = z.infer<
 export const cloneAgentActionFrontendParametersSchema = z.object({
   projectId: z.number(),
   commitUuid: z.string(),
+  hasCompletedOnboarding: z.boolean(),
 })
 export type CloneAgentActionFrontendParameters = z.infer<
   typeof cloneAgentActionFrontendParametersSchema

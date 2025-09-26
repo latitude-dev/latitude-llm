@@ -1,20 +1,14 @@
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
-import { Providers } from '@latitude-data/core/browser'
 import { database, utils } from '@latitude-data/core/client'
 import { publisher } from '@latitude-data/core/events/publisher'
-import * as factories from '@latitude-data/core/factories'
 import {
   apiKeys,
-  commits,
-  documentVersions,
-  evaluations,
   memberships,
-  projects,
   providerApiKeys,
   users,
+  workspaceOnboarding,
   workspaces,
 } from '@latitude-data/core/schema'
-import { env } from '@latitude-data/env'
 import setupServiceGlobal from './setupService'
 
 const mocks = vi.hoisted(() => ({
@@ -28,9 +22,6 @@ vi.mock('@latitude-data/core/services/claimedRewards/claim', () => ({
 
 describe('setupService', () => {
   beforeAll(async () => {
-    const { project: defaultProject } = await factories.createProject()
-
-    vi.stubEnv('DEFAULT_PROJECT_ID', defaultProject.id.toString())
     vi.stubEnv('NEXT_PUBLIC_DEFAULT_PROVIDER_NAME', 'Latitude')
     vi.stubEnv('DEFAULT_PROVIDER_API_KEY', 'default-provider-api-key')
     vi.resetModules()
@@ -47,7 +38,6 @@ describe('setupService', () => {
       email: 'test@example.com',
       name: 'Test User',
       companyName: 'Test Company',
-      importDefaultProject: false,
     })
 
     expect(result.error).toBeUndefined()
@@ -93,13 +83,13 @@ describe('setupService', () => {
     expect(createdProviderApiKey).toBeDefined()
     expect(createdProviderApiKey?.authorId).toBe(user.id)
 
-    // Check if onboarding evaluation was created
-    const createdEvaluation = await database.query.evaluationVersions.findFirst(
-      {
-        where: utils.eq(evaluations.workspaceId, workspace.id),
-      },
-    )
-    expect(createdEvaluation).toBeDefined()
+    // Check onboarding creation
+    // TODO(onboarding): change this once we have a new onboarding and we remove feature flag
+    const createdOnboarding =
+      await database.query.workspaceOnboarding.findFirst({
+        where: utils.eq(workspaceOnboarding.workspaceId, workspace.id),
+      })
+    expect(createdOnboarding).not.toBeDefined()
   })
 
   it('publishes userCreated event', async () => {
@@ -107,7 +97,6 @@ describe('setupService', () => {
       email: 'test@example.com',
       name: 'Test User',
       companyName: 'Test Company',
-      importDefaultProject: false,
     })
 
     const user = result.value?.user!
@@ -120,59 +109,5 @@ describe('setupService', () => {
         workspaceId: result.value?.workspace.id,
       },
     })
-  })
-
-  it('should import the default project when calling setup service', async () => {
-    const prompt = factories.helpers.createPrompt({
-      provider: 'Latitude',
-      model: 'gpt-4o',
-    })
-    const { project } = await factories.createProject({
-      providers: [{ type: Providers.OpenAI, name: 'Latitude' }],
-      name: 'Default Project',
-      documents: {
-        onboarding: prompt,
-      },
-    })
-
-    vi.mocked(env).DEFAULT_PROJECT_ID = project.id
-
-    const result = await setupServiceGlobal({
-      email: 'test2@example.com',
-      name: 'Test User 2',
-      companyName: 'Test Company 2',
-      importDefaultProject: true,
-    })
-
-    expect(result.error).toBeUndefined()
-    expect(result.value).toBeDefined()
-    expect(result.value?.user).toBeDefined()
-    expect(result.value?.workspace).toBeDefined()
-
-    const { workspace } = result.value!
-
-    // Check if the default project was imported
-    const importedProject = await database.query.projects.findFirst({
-      where: utils.eq(projects.workspaceId, workspace.id),
-    })
-    expect(importedProject).toBeDefined()
-    expect(importedProject?.name).toBe('Default Project')
-
-    // Check if the documents were imported
-    const importedDocuments = await database
-      .select()
-      .from(documentVersions)
-      .innerJoin(commits, utils.eq(commits.id, documentVersions.commitId))
-      .where(utils.eq(commits.projectId, importedProject!.id))
-    expect(importedDocuments.length).toBe(1)
-    expect(importedDocuments[0]!.document_versions.content).toEqual(prompt)
-
-    // Check if onboarding evaluation was created
-    const createdEvaluation = await database.query.evaluationVersions.findFirst(
-      {
-        where: utils.eq(evaluations.workspaceId, workspace.id),
-      },
-    )
-    expect(createdEvaluation).toBeDefined()
   })
 })

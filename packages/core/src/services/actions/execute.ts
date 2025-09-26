@@ -5,11 +5,9 @@ import {
   Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
-import { BadRequestError, NotFoundError } from '../../lib/errors'
+import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { getWorkspaceOnboarding } from '../workspaceOnboarding/get'
-import { markWorkspaceOnboardingComplete } from '../workspaceOnboarding/update'
 import { ActionBackendSpecification } from './shared'
 import { ACTION_SPECIFICATIONS } from './specifications'
 
@@ -37,26 +35,14 @@ export async function executeAction<T extends ActionType = ActionType>(
     return Result.error(new BadRequestError('Invalid action parameters'))
   }
 
-  const getting = await getWorkspaceOnboarding({ workspace })
-  if (getting.error && !(getting.error instanceof NotFoundError)) {
-    return Result.error(getting.error)
-  }
-  const onboarding = getting.value
-
   return tx.call(
     async (db) => {
-      if (onboarding && !onboarding.completedAt) {
-        const marking = await markWorkspaceOnboardingComplete({ onboarding }, tx) // prettier-ignore
-        if (marking.error) {
-          return Result.error(marking.error)
-        }
-      }
-
       const executing = await specification.execute(
         { parameters, user, workspace },
         db,
         tx,
       )
+
       if (executing.error) {
         return Result.error(executing.error)
       }
@@ -66,7 +52,7 @@ export async function executeAction<T extends ActionType = ActionType>(
     },
     async () => {
       await publisher.publishLater({
-        type: 'actionExecuted',
+        type: 'actionExecuted', // TODO - shouldnt we call this something more specific? were only using it for metrics
         data: {
           workspaceId: workspace.id,
           userEmail: user.email,

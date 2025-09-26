@@ -1,41 +1,21 @@
-import { redirect } from 'next/navigation'
-import { isOnboardingCompleted } from '$/data-access/workspaceOnboarding'
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { getOnboardingResources, isOnboardingCompleted } from '$/data-access'
+import { ROUTES } from '$/services/routes'
+import { PageNotFoundError } from 'next/dist/shared/lib/utils'
 import { OnboardingClient } from './_components/OnboardingClient'
-import { findOnboardingDocument } from '@latitude-data/core/services/documents/findOnboardingDocument'
-import { findOnboardingDataset } from '@latitude-data/core/services/datasets/findOnboardingDataset'
+import { redirect } from 'next/navigation'
+import { Result } from '@latitude-data/core/lib/Result'
 
-export default async function OnboardingRedirect() {
+export default async function NocodersPage() {
   const isCompleted = await isOnboardingCompleted()
   if (isCompleted) {
-    redirect('/dashboard')
+    redirect(ROUTES.dashboard.root)
   }
 
-  const { workspace } = await getCurrentUserOrRedirect()
-  if (!workspace?.id) {
-    throw new NotFoundError('Workspace ID is required')
+  const resourcesResult = await getOnboardingResources()
+  if (!Result.isOk(resourcesResult)) {
+    throw new PageNotFoundError('No resources found')
   }
+  const { project } = resourcesResult.unwrap()
 
-  const documentResult = await findOnboardingDocument(workspace.id)
-  if (documentResult.error) {
-    throw documentResult.error
-  }
-  const { document, project, commit } = documentResult.value
-
-  const datasetResult = await findOnboardingDataset(workspace.id)
-  if (datasetResult.error) {
-    throw datasetResult.error
-  }
-  const dataset = datasetResult.value
-
-  return (
-    <OnboardingClient
-      workspaceName={workspace?.name}
-      document={document}
-      project={project}
-      commit={commit}
-      dataset={dataset}
-    />
-  )
+  return <OnboardingClient project={project} />
 }

@@ -34,6 +34,7 @@ export const ROUTES = {
   api: API_ROUTES,
   onboarding: {
     root: '/onboarding',
+    devs: '/onboarding-devs',
   },
   backoffice: {
     root: BACKOFFICE_ROOT,

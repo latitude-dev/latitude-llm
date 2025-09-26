@@ -11,9 +11,13 @@ export const CloneAgentActionSpecification = {
 }
 
 async function execute({
-  parameters: { projectId, commitUuid },
+  parameters: { projectId, commitUuid, hasCompletedOnboarding },
   router,
 }: ActionExecuteArgs<ActionType.CloneAgent>) {
+  if (!hasCompletedOnboarding) {
+    return router.push(ROUTES.onboarding.root)
+  }
+
   return router.push(
     ROUTES.projects
       .detail({ id: projectId })

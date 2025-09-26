@@ -137,6 +137,7 @@ import {
   Zap,
   GiftIcon,
   Accessibility,
+  SendToBack,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -337,6 +338,7 @@ const Icons = {
   stripe: Stripe,
   sun: Sun,
   supabase: Supabase,
+  sendToBack: SendToBack,
   telegram: Telegram,
   terminal: Terminal,
   thermometer: Thermometer,

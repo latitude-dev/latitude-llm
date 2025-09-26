@@ -2,9 +2,9 @@ import { eq } from 'drizzle-orm'
 
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import Transaction from '../../lib/Transaction'
 import { workspaceOnboarding } from '../../schema/models/workspaceOnboarding'
 import { workspaces } from '../../schema/models/workspaces'
+import { database } from '../../client'
 
 export async function getWorkspaceOnboarding(
   {
@@ -12,19 +12,17 @@ export async function getWorkspaceOnboarding(
   }: {
     workspace: typeof workspaces.$inferSelect
   },
-  transaction = new Transaction(),
+  db = database,
 ) {
-  return transaction.call(async (tx) => {
-    const onboardings = await tx
-      .select()
-      .from(workspaceOnboarding)
-      .where(eq(workspaceOnboarding.workspaceId, workspace.id))
+  const onboardings = await db
+    .select()
+    .from(workspaceOnboarding)
+    .where(eq(workspaceOnboarding.workspaceId, workspace.id))
 
-    const onboarding = onboardings[0]
-    if (!onboarding) {
-      return Result.error(new NotFoundError('Workspace onboarding not found'))
-    }
+  const onboarding = onboardings[0]
+  if (!onboarding) {
+    return Result.error(new NotFoundError('Workspace onboarding not found'))
+  }
 
-    return Result.ok(onboarding)
-  })
+  return Result.ok(onboarding)
 }
