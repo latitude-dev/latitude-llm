@@ -1,4 +1,4 @@
-import { captureException } from '$/common/sentry'
+import { captureException } from '$/common/tracer'
 import {
   AGENT_RETURN_TOOL_NAME,
   AssertedStreamType,

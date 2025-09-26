@@ -1,12 +1,10 @@
-import './common/sentry'
-import './common/tracer'
+import { captureException } from './common/tracer'
 
 import { serve, ServerType } from '@hono/node-server'
 import app from '$/routes/app'
 import cluster from 'cluster'
 import os from 'os'
 
-import { captureException, captureMessage } from './common/sentry'
 import { env } from '@latitude-data/env'
 
 const HOSTNAME = env.GATEWAY_BIND_ADDRESS
@@ -72,10 +70,6 @@ if (cluster.isPrimary) {
 
   process.on('uncaughtException', function (err) {
     captureException(err)
-  })
-
-  process.on('unhandledRejection', (reason: string) => {
-    captureMessage(reason)
   })
 }
 

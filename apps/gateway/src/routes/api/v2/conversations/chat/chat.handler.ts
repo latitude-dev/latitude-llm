@@ -7,7 +7,7 @@ import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { convertToLegacyChainStream } from '@latitude-data/core/lib/streamManager/index'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { addMessagesLegacy } from '@latitude-data/core/services/__deprecated/documentLogs/addMessages/index'
-import { captureException } from '@sentry/node'
+import { captureException } from '$/common/tracer'
 import { streamSSE } from 'hono/streaming'
 
 // @ts-expect-error: streamSSE has type issues

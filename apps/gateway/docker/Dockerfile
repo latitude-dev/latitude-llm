@@ -61,17 +61,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
 COPY --from=pruner /app/out/full/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-  --mount=type=secret,id=SENTRY_AUTH_TOKEN \
   BUILDING_CONTAINER=true \
-  SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN 2>/dev/null || echo '')" \
   pnpm turbo build --filter="${PROJECT}..."
-
-# Run sentry:sourcemaps if SENTRY_AUTH_TOKEN secret is present and not empty
-RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
-  if [ -s /run/secrets/SENTRY_AUTH_TOKEN ]; then \
-  cd ${PROJECT_PATH} && \
-  SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN)" pnpm sentry:sourcemaps; \
-  fi
 
 # Since `pnpm prune` doesn't handle recursive dependencies effectively,
 # we follow pnpm's recommended approach: remove node_modules entirely
