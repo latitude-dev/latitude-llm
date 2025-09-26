@@ -66,8 +66,8 @@ async function generateProviderLogs({
         typeof message.content === 'string'
           ? message.content
           : message.content
-            .map((c) => (c.type === 'text' ? c.text : ''))
-            .join('')
+              .map((c) => (c.type === 'text' ? c.text : ''))
+              .join('')
       return acc + content.length
     }, 0)
     const completionTokens = mockedResponse.length
@@ -133,7 +133,7 @@ export async function createDocumentLog({
   const duration =
     totalDuration ??
     Math.floor(Math.random() * 100) +
-    providerLogs.reduce((acc, log) => acc + (log?.duration ?? 0), 0)
+      providerLogs.reduce((acc, log) => acc + (log?.duration ?? 0), 0)
 
   let documentLog = await ogCreateDocumentLog({
     commit,

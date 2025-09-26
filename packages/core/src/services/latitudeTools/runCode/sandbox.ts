@@ -18,8 +18,8 @@ async function createSandbox() {
       return Result.error(new BadRequestError('CODESANDBOX_API_KEY is not set'))
     }
     const sdk = new CodeSandbox(env.CODESANDBOX_API_KEY)
-    const sandbox = await sdk.sandbox.create()
-    return Result.ok(sandbox)
+    const sandbox = await sdk.sandboxes.create()
+    return Result.ok({ sandbox, sdk })
   } catch (error) {
     return Result.error(error as LatitudeError)
   }
@@ -34,7 +34,7 @@ export const withSafeSandbox = async <
 ): Promise<T> => {
   const sandboxResult = await createSandbox()
   if (sandboxResult.error) throw sandboxResult.error
-  const sandbox = sandboxResult.unwrap()
+  const { sandbox, sdk } = sandboxResult.unwrap()
 
   const timeoutPromise = new Promise<T>((resolve) => {
     setTimeout(() => {
@@ -51,6 +51,6 @@ export const withSafeSandbox = async <
   } catch (error) {
     return Result.error(error as LatitudeError) as T
   } finally {
-    sandbox.shutdown()
+    await sdk.sandboxes.shutdown(sandbox.id)
   }
 }

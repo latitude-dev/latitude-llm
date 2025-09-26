@@ -9,14 +9,15 @@ export async function runCodeWithoutDependencies({
   language,
 }: CodeToolArgs): PromisedResult<CodeRunResult, LatitudeError> {
   return withSafeSandbox(async (sandbox) => {
+    const client = await sandbox.connect()
     const interpreter = (() => {
-      if (language === 'python') return sandbox.shells.python
-      if (language === 'javascript') return sandbox.shells.js
+      if (language === 'python') return client.interpreters.python
+      if (language === 'javascript') return client.interpreters.javascript
 
       throw new BadRequestError(`Language ${language} is not supported`)
     })()
 
-    const result = await interpreter.run(code)
-    return Result.ok(normalizedResult(result))
+    const result = await interpreter(code)
+    return Result.ok(normalizedResult({ output: result, exitCode: 0 }))
   })
 }

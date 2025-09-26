@@ -35,25 +35,24 @@ export async function runCodeWithDependencies({
   dependencies,
 }: CodeToolArgs): PromisedResult<CodeRunResult, LatitudeError> {
   return withSafeSandbox(async (sandbox) => {
+    const client = await sandbox.connect()
     const filename = getFilename({ language })
     const buildDependency = getDependencyBuilder({ language })
 
-    await sandbox.fs.writeFile(filename, new TextEncoder().encode(code))
+    await client.fs.writeFile(filename, new TextEncoder().encode(code))
 
     for await (const dep of dependencies!) {
-      const installResult = await sandbox.shells.run(buildDependency(dep))
-      if (installResult.exitCode !== 0) {
+      const installResult = await client.commands.run(buildDependency(dep))
+      if (!installResult) {
         return Result.error(
-          new BadRequestError(
-            `Failed to install dependency: '${dep}'\n${installResult.output}`,
-          ),
+          new BadRequestError(`Failed to install dependency: '${dep}'`),
         )
       }
     }
 
-    const scriptResult = await sandbox.shells.run(
+    const scriptResult = await client.commands.run(
       getRunCommand({ language, filename }),
     )
-    return Result.ok(normalizedResult(scriptResult))
+    return Result.ok(normalizedResult({ output: scriptResult, exitCode: 0 }))
   })
 }
