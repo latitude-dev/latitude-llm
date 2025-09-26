@@ -7,7 +7,7 @@ import {
   ProjectsRepository,
 } from '../../repositories'
 
-export const ONBOARDING_DOCUMENT_PATH = 'test'
+//export const ONBOARDING_DOCUMENT_PATH = 'onboarding'
 
 export async function findOnboardingDocument(
   workspaceId: number,

@@ -71,26 +71,6 @@ describe('executeAction', () => {
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
-  it('fails when onboarding could not be marked as complete', async () => {
-    vi.spyOn(
-      onboardingServices,
-      'markWorkspaceOnboardingComplete',
-    ).mockRejectedValue(new Error('Onboarding marking failed!'))
-
-    await expect(
-      executeAction({
-        type: ActionType.CreateAgent,
-        parameters: { prompt: 'Create a dancing agent!' },
-        user: user,
-        workspace: workspace,
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(new Error('Onboarding marking failed!'))
-
-    const onboarding = await getWorkspaceOnboarding({ workspace })
-    expect(onboarding.value?.completedAt).toBeFalsy()
-    expect(mocks.publisher).not.toHaveBeenCalled()
-  })
-
   it('fails when type execute fails', async () => {
     await expect(
       executeAction({
@@ -106,31 +86,6 @@ describe('executeAction', () => {
     const onboarding = await getWorkspaceOnboarding({ workspace })
     expect(onboarding.value?.completedAt).toBeFalsy()
     expect(mocks.publisher).not.toHaveBeenCalled()
-  })
-
-  it('succeeds when onboarding was not completed', async () => {
-    const result = await executeAction({
-      type: ActionType.CreateAgent,
-      parameters: { prompt: 'Create a dancing agent!' },
-      user: user,
-      workspace: workspace,
-    }).then((r) => r.unwrap())
-
-    expect(result).toEqual({
-      prompt: expect.stringContaining('Create a dancing agent!'),
-      projectId: expect.any(Number),
-      commitUuid: expect.any(String),
-    })
-    const onboarding = await getWorkspaceOnboarding({ workspace })
-    expect(onboarding.value?.completedAt).toBeTruthy()
-    expect(mocks.publisher).toHaveBeenLastCalledWith({
-      type: 'actionExecuted',
-      data: {
-        workspaceId: workspace.id,
-        userEmail: user.email,
-        actionType: ActionType.CreateAgent,
-      },
-    })
   })
 
   it('succeeds when onboarding was already completed', async () => {

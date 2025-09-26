@@ -324,7 +324,6 @@ describe('New workspace', () => {
       companyName: 'Alice Company',
       defaultProviderName: 'Latitude',
       defaultProviderApiKey: 'some-key',
-      importDefaultProject: false,
     }).then((r) => r.unwrap())
     user = usr
     toWorkspace = wsp

@@ -11,9 +11,7 @@ export function OnboardingClient({ project }: { project: Project }) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(
     OnboardingStep.SetupIntegrations,
   )
-  const [currentTab, setCurrentTab] = useState<NavbarTabName>(
-    NavbarTabName.SetupIntegrations,
-  )
+  const [currentTab] = useState<NavbarTabName>(NavbarTabName.SetupIntegrations)
 
   return (
     <div className='flex flex-row flex-1 items-start self-stretch'>

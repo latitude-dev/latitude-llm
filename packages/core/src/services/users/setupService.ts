@@ -22,7 +22,6 @@ export default async function setupService(
     defaultProviderApiKey,
     captureException,
     source,
-    //importDefaultProject = env.IMPORT_DEFAULT_PROJECT,
   }: {
     email: string
     name: string
@@ -31,7 +30,6 @@ export default async function setupService(
     defaultProviderApiKey: string
     source?: string
     captureException?: (error: Error) => void
-    importDefaultProject?: boolean
   },
   transaction = new Transaction(),
 ): PromisedResult<{ user: User; workspace: Workspace }> {
@@ -58,7 +56,6 @@ export default async function setupService(
     },
     transaction,
   )
-  console.log('firstProvider', firstProvider)
 
   if (firstProvider.error) {
     captureException?.(firstProvider.error)

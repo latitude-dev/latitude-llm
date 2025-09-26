@@ -21,7 +21,7 @@ export default async function OnboardingRedirect() {
   if (documentResult.error) {
     throw documentResult.error
   }
-  const { document, project, commit } = documentResult.value
+  const { documents, project, commit } = documentResult.value
 
   const datasetResult = await findOnboardingDataset(workspace.id)
   if (datasetResult.error) {
@@ -32,7 +32,7 @@ export default async function OnboardingRedirect() {
   return (
     <OnboardingClient
       workspaceName={workspace?.name}
-      document={document}
+      document={documents[0]} // TODO - change this later once we have a new onboarding
       project={project}
       commit={commit}
       dataset={dataset}

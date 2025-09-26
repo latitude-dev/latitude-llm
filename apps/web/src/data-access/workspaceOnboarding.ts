@@ -41,6 +41,9 @@ export async function isOnboardingCompleted() {
   return !!onboarding.completedAt
 }
 
+/**
+ * Get the onboarding resources (project, commit, documents)
+ */
 export async function getOnboardingResources() {
   const { workspace } = await getCurrentUserOrRedirect()
   if (!workspace?.id) {
