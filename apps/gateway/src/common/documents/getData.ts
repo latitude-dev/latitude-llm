@@ -88,7 +88,7 @@ export async function getAllDocumentsAtCommitWithMetadata({
     docs.map(async (document) => {
       const metadata = await getDocumentMetadata({
         document,
-        getDocumentByPath: (path) => docs.find((d) => d.path === path),
+        getDocumentByPath: async (path) => docs.find((d) => d.path === path),
       })
       return {
         document,

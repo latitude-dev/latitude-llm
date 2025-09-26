@@ -131,7 +131,6 @@ async function retrieveData({
   const providerLog = providerLogResult.value
 
   const metadataResult = await scanDocumentContent({
-    workspaceId: workspace.id,
     document,
     commit,
   })

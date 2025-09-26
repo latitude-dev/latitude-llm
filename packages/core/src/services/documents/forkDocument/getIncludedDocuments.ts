@@ -47,7 +47,6 @@ export async function getIncludedDocuments({
   document: DocumentVersion
 }) {
   const scannedDocuments = await scanCommitDocumentContents({
-    workspaceId: workspace.id,
     commit,
   }).then((r) => r.unwrap())
 

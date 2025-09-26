@@ -92,7 +92,6 @@ export async function runDocumentAtCommitLegacy({
     workspaceId: workspace.id,
   })
   const result = await getResolvedContent({
-    workspaceId: workspace.id,
     document,
     commit,
     customPrompt,

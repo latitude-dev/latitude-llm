@@ -18,7 +18,7 @@ export async function buildDocuments({
     origin.documents.map(async (doc) => {
       const { config, setConfig } = await getDocumentMetadata({
         document: doc,
-        getDocumentByPath: (path) =>
+        getDocumentByPath: async (path) =>
           origin.documents.find((d) => d.path === path),
       })
       delete config.model

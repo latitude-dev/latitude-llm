@@ -28,12 +28,10 @@ function calculateSelectedRangeCount({
 
 async function getPromptMetadata(
   {
-    workspace,
     commit,
     document,
     customPrompt,
   }: {
-    workspace: Workspace
     commit: Commit
     document: DocumentVersion
     customPrompt?: string // Prompt can be different than the current one
@@ -46,7 +44,6 @@ async function getPromptMetadata(
 }> {
   const metadata = await scanDocumentContent(
     {
-      workspaceId: workspace.id,
       document: {
         ...document,
         content: customPrompt ?? document.content,
@@ -104,7 +101,6 @@ export async function createExperiment(
 
     const promptMetadataResult = await getPromptMetadata(
       {
-        workspace,
         commit,
         document,
         customPrompt,

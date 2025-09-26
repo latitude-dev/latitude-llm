@@ -28,7 +28,6 @@ export const findSharedDocumentCached = cache(
 
     const { workspace, shared, document, commit } = result.value
     const metaResult = await scanDocumentContent({
-      workspaceId: shared.workspaceId,
       document,
       commit,
     })
