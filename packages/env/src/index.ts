@@ -14,10 +14,10 @@ if (environment === 'development' || environment === 'test') {
   const isTest = environment === 'test'
   const FILES_STORAGE_PATH = isTest
     ? '/tmp/uploads'
-    : (process.env.FILES_STORAGE_PATH ?? '')
+    : (process.env.FILES_STORAGE_PATH ?? '/tmp')
   const PUBLIC_FILES_STORAGE_PATH = isTest
     ? '/tmp/apps/web/public/uploads'
-    : (process.env.PUBLIC_FILES_STORAGE_PATH ?? '')
+    : (process.env.PUBLIC_FILES_STORAGE_PATH ?? '/tmp/uploads')
 
   dotenv.config({ path: pathToEnv })
   dotenv.populate(

@@ -37,7 +37,7 @@ export function createDiskDriver(visibility: 'private' | 'public') {
   if (key === 'local') {
     if (!location && !publicLocation) {
       throw new Error(
-        '(PUBLIC)_FILES_STORAGE_PATH env variable is required when using local disk.',
+        'PUBLIC_FILES_STORAGE_PATH env variable is required when using local disk.',
       )
     }
 
