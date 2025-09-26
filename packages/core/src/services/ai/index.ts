@@ -63,12 +63,14 @@ export type StreamChunk =
 export type ObjectOutput = 'object' | 'array' | 'no-schema' | undefined
 
 /**
- *
+ * Vercel SDK has several ways to limit the number of steps an AI model can take.
+ * But we are only interesting on supporting the old `maxSteps` config so
+ * this is the way of translating it to `stopWhen` option.
+ * Reference:
+ * https://ai-sdk.dev/docs/reference/ai-sdk-core/stream-text#stop-when
  */
-function getMaxSteps({ maxSteps }: { maxSteps?: number | undefined }) {
-  console.log("MAX_STEPS", maxSteps)
-
-  return { stepWhen: stepCountIs(maxSteps ?? 1) }
+function getStopWhen({ maxSteps }: { maxSteps?: number | undefined }) {
+  return { stopWhen: stepCountIs(maxSteps ?? 1) }
 }
 
 export async function ai({
@@ -150,9 +152,10 @@ export async function ai({
     const useSchema = schema && !!output && output !== 'no-schema'
     const resultType: StreamType = useSchema ? 'object' : 'text'
 
+    const stopWhen = getStopWhen({ maxSteps: config.maxSteps })
     const result = streamText({
       ...omit(config, ['schema']),
-      ...getMaxSteps({ maxSteps: config.maxSteps }),
+      ...stopWhen,
       model: languageModel,
       messages: messages as ModelMessage[],
       tools: toolsResult.value,
