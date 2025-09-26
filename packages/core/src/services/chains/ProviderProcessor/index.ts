@@ -9,6 +9,7 @@ import {
   MessageRole,
 } from '@latitude-data/constants/legacyCompiler'
 import * as vercelSdkFromV5ToV4 from '../../../lib/vercelSdkFromV5ToV4'
+import { convertResponseMessages } from '../../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
 
 function parseObject(text: string) {
   const parsed = text
@@ -36,7 +37,9 @@ export async function processResponse({
 }): Promise<ChainStepResponse<StreamType>> {
   const isObject = aiResult.type === 'object'
   const text = await aiResult.text
-  const output = await buildOutput(aiResult)
+  const response = await aiResult.response
+  const messages = response.messages
+  const output = convertResponseMessages({ messages })
 
   return {
     streamType: aiResult.type,
@@ -48,30 +51,6 @@ export async function processResponse({
     reasoning: await aiResult.reasoning,
     toolCalls: await vercelSdkFromV5ToV4.convertToolCalls(aiResult.toolCalls),
   }
-}
-
-async function buildOutput(
-  aiResult: AIReturn<StreamType>,
-): Promise<ChainStepResponse<StreamType>['output']> {
-  const messages = (await aiResult.response).messages
-  if (!messages) return []
-
-  return messages.map((m) => {
-    if (m.role === 'assistant') {
-      // FIXME: File content responses are wrong. Our types says the content is in
-      // m.content[0].file but Vercel SDK returns it in m.content[0].data
-      // We need to fix that in a future release
-      return {
-        role: 'assistant',
-        content: m.content,
-      } as AssistantMessage
-    } else {
-      return {
-        role: 'tool',
-        content: vercelSdkFromV5ToV4.convertMessageToolContent(m.content),
-      }
-    }
-  })
 }
 
 /**

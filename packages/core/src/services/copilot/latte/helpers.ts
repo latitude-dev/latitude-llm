@@ -289,8 +289,7 @@ export async function scanDocuments(
         prompt: document.content,
         fullPath: document.path,
         referenceFn,
-        // @ts-expect-error - TODO(compiler): fix types
-        configSchema: configSchema,
+        configSchema,
       })
     }),
   )

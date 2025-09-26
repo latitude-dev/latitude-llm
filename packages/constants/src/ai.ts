@@ -1,15 +1,11 @@
 import { FinishReason, TextStreamPart, Tool } from 'ai'
-import {
-  AssistantMessage,
-  Message,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
+import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 import {
-  LegacyVercelSDKVersion4ToolContent,
   LegacyVercelSDKVersion4Usage as LanguageModelUsage,
   type ReplaceTextDelta,
+  LegacyResponseMessage,
 } from './ai/vercelSdkV5ToV4'
 import { ParameterType } from './config'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
@@ -92,10 +88,7 @@ type BaseResponse = {
   usage: LanguageModelUsage
   documentLogUuid?: string
   providerLog?: ProviderLog
-  output?: (
-    | AssistantMessage
-    | { role: 'tool'; content: LegacyVercelSDKVersion4ToolContent }
-  )[]
+  output?: LegacyResponseMessage[] // TODO: Make this non-optional when we remove __deprecated
 }
 
 export type ChainStepTextResponse = BaseResponse & {

@@ -1,4 +1,5 @@
 import { ToolResultPart, ModelMessage as VercelV5Message } from 'ai'
+import { AssistantMessage, ToolMessage } from '../legacyCompiler'
 
 // TODO(compiler): Remove this type when we remove the legacy Vercel SDK v4
 // Be aware that this breaks all clients (our webapp, our api and our SDKs)
@@ -52,6 +53,7 @@ export type LegacyVercelSDKToolResultPart = Omit<ToolResultPart, 'output'> & {
 
 export type LegacyVercelSDKVersion4ToolContent =
   Array<LegacyVercelSDKToolResultPart>
+export type LegacyResponseMessage = AssistantMessage | ToolMessage
 export type LegacyVercelSDKVersion4Usage = {
   /**
    * The number of input (prompt) tokens used.
