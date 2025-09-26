@@ -176,6 +176,9 @@ export const API_ROUTES = {
                 }
               },
             },
+            integrationReferences: {
+              root: `${projectRoot}/commits/${commitUuid}/integrationReferences`,
+            },
           }),
         },
         publishedDocuments: {

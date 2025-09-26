@@ -14,25 +14,51 @@ import { IntegrationReference } from '@latitude-data/constants'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import useProjects from '$/stores/projects'
+import { useCommitsFromProject } from '$/stores/commitsStore'
 
-function TriggerReference({
-  reference: { data },
+type IntegrationReferenceGroup = {
+  projectId: number
+  documentUuid: string
+  commitIds: number[]
+}
+
+function IntegrationReferences({
+  referenceGroup,
 }: {
-  reference: Extract<IntegrationReference, { type: 'trigger' }>
+  referenceGroup: IntegrationReferenceGroup
 }) {
-  const { data: document } = useDocumentVersion(data.documentUuid)
   const { data: projects } = useProjects()
+  const { data: commits } = useCommitsFromProject(referenceGroup.projectId)
+
   const project = useMemo(() => {
-    return projects.find((p) => p.id === data.projectId)
-  }, [projects, data.projectId])
+    return projects?.find((p) => p.id === referenceGroup.projectId)
+  }, [projects, referenceGroup.projectId])
+
+  const commit = useMemo(() => {
+    if (!commits) return undefined
+
+    const referencedCommits = commits?.filter((c) =>
+      referenceGroup.commitIds.includes(c.id),
+    )
+
+    const mergedReferenceCommit = referencedCommits?.find((c) => c.mergedAt)
+    if (mergedReferenceCommit) return mergedReferenceCommit
+
+    return referencedCommits?.[0]
+  }, [commits, referenceGroup.commitIds])
+
+  const { data: document } = useDocumentVersion(referenceGroup.documentUuid, {
+    commitUuid: commit?.uuid,
+  })
 
   return (
     <Link
       href={
-        ROUTES.projects
-          .detail({ id: data.projectId })
-          .commits.detail({ uuid: data.commitUuid })
-          .preview.triggers.edit(data.triggerUuid).root
+        commit
+          ? ROUTES.projects
+              .detail({ id: referenceGroup.projectId })
+              .commits.detail({ uuid: commit.uuid }).preview.root
+          : '#'
       }
       className='flex flex-row items-center justify-between gap-2 p-4 bg-secondary rounded-md hover:bg-accent'
       target='_blank'
@@ -73,6 +99,25 @@ export default function DestroyIntegration({
 
   const { data: references, isLoading } = useIntegrationReferences(integration)
 
+  const groupedReferences = useMemo<IntegrationReferenceGroup[]>(() => {
+    if (!references) return []
+
+    const referencesByUuid = references.reduce(
+      (acc, reference) => {
+        if (!acc[reference.documentUuid]) acc[reference.documentUuid] = []
+        acc[reference.documentUuid].push(reference)
+        return acc
+      },
+      {} as Record<string, IntegrationReference[]>,
+    )
+
+    return Object.values(referencesByUuid).map((references) => ({
+      projectId: references[0].projectId,
+      documentUuid: references[0].documentUuid,
+      commitIds: references.map((r) => r.commitId),
+    }))
+  }, [references])
+
   if (!integration) return null
 
   return (
@@ -90,16 +135,17 @@ export default function DestroyIntegration({
       {references.length > 0 && (
         <div className='flex flex-col gap-4'>
           <Text.H5>
-            This integration is currently being used in {references.length}{' '}
-            prompts:
+            This integration is currently being used in{' '}
+            {groupedReferences.length} prompts:
           </Text.H5>
           <div className='flex flex-col gap-2'>
-            {references.map((reference, idx) => {
-              if (reference.type === 'trigger') {
-                return <TriggerReference key={idx} reference={reference} />
-              }
-
-              return null
+            {groupedReferences.map((referenceGroup, idx) => {
+              return (
+                <IntegrationReferences
+                  key={idx}
+                  referenceGroup={referenceGroup}
+                />
+              )
             })}
           </div>
           <Text.H5>
