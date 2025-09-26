@@ -1,12 +1,12 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { StatusFlag } from '@latitude-data/web-ui/molecules/StatusFlag'
 import { StatusFlagState } from '../../constants'
-import { colors } from '@latitude-data/web-ui/tokens'
+import { BackgroundColor } from '@latitude-data/web-ui/tokens'
 
-const statusFlagColors: Record<StatusFlagState, string> = {
-  [StatusFlagState.pending]: colors.backgrounds.mutedForeground,
-  [StatusFlagState.inProgress]: colors.backgrounds.latte,
-  [StatusFlagState.completed]: colors.backgrounds.mutedForeground,
+const statusFlagColors: Record<StatusFlagState, BackgroundColor> = {
+  [StatusFlagState.pending]: 'mutedForeground',
+  [StatusFlagState.inProgress]: 'latte',
+  [StatusFlagState.completed]: 'mutedForeground',
 }
 
 export function NavBarItem({

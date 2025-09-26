@@ -5,7 +5,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { unsafelyFindProject, unsafelyFindWorkspace } from '../../data-access'
-import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
+import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import {
@@ -67,27 +67,24 @@ async function execute(
     return isNewOnboardingEnabledResult
   }
   const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
-  if (isNewOnboardingEnabled) {
-    const workspaceOnboarding = await getWorkspaceOnboarding({ workspace })
-    if (
-      workspaceOnboarding.error &&
-      !(workspaceOnboarding.error instanceof NotFoundError)
-    ) {
-      return workspaceOnboarding
-    }
-    const onboarding = workspaceOnboarding.unwrap()
-
+  if (!isNewOnboardingEnabled) {
     return Result.ok({
       projectId: cloned.project.id,
       commitUuid: cloned.commit.uuid,
-      hasCompletedOnboarding: !!onboarding?.completedAt,
+      hasCompletedOnboarding: true, // TODO(onboarding): remove this hardcoded value once we have a new onboarding
     })
   }
+
+  const workspaceOnboarding = await getWorkspaceOnboarding({ workspace }, db)
+  if (!Result.isOk(workspaceOnboarding)) {
+    return workspaceOnboarding
+  }
+  const onboarding = workspaceOnboarding.unwrap()
 
   return Result.ok({
     projectId: cloned.project.id,
     commitUuid: cloned.commit.uuid,
-    hasCompletedOnboarding: true, // TODO - remove this once we have a new onboarding
+    hasCompletedOnboarding: !!onboarding?.completedAt,
   })
 }
 

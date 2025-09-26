@@ -84,7 +84,7 @@ describe('setupService', () => {
     expect(createdProviderApiKey?.authorId).toBe(user.id)
 
     // Check onboarding creation
-    // TODO - change this once we have a new onboarding and we remove feature flag
+    // TODO(onboarding): change this once we have a new onboarding and we remove feature flag
     const createdOnboarding =
       await database.query.workspaceOnboarding.findFirst({
         where: utils.eq(workspaceOnboarding.workspaceId, workspace.id),

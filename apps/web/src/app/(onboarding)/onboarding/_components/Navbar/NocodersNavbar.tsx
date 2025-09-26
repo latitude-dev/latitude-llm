@@ -24,7 +24,7 @@ export default function NocodersNavbar({
         key: NavbarTabName.SetupIntegrations,
         title: 'Set up integrations',
         description: 'Enable agent to connect to apps',
-        state: StatusFlagState.inProgress, // TODO - create a new column in onboardingWorkspace to have the current step, then a store, an SWR, and an update action to be able to conserve this state
+        state: StatusFlagState.inProgress, // TODO(onboarding): create a new column in onboardingWorkspace to have the current step, then a store, an SWR, and an update action to be able to conserve this state
       },
       {
         key: NavbarTabName.ConfigureTriggers,

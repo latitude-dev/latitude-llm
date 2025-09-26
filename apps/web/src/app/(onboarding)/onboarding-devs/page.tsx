@@ -33,7 +33,7 @@ export default async function OnboardingRedirect() {
   return (
     <OnboardingClient
       workspaceName={workspace?.name}
-      document={documents[0]} // TODO - change this later once we have a new onboarding
+      document={documents[0]} // TODO(onboarding): change this later once we have a new onboarding
       project={project}
       commit={commit}
       dataset={dataset}

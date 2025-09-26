@@ -4,13 +4,11 @@ import {
   PipedreamIntegration,
 } from '@latitude-data/core/schema/types'
 import { isIntegrationConfigured } from '@latitude-data/core/services/integrations/pipedream/components/fillConfiguredProps'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   StatusFlag,
   StatusFlagState,
 } from '@latitude-data/web-ui/molecules/StatusFlag'
-import { colors } from '@latitude-data/web-ui/tokens'
 import Image from 'next/image'
 import { useMemo } from 'react'
 
@@ -33,7 +31,7 @@ export function ConfiguredIntegration({
         <div className='absolute -top-1 -right-1'>
           <StatusFlag
             state={StatusFlagState.completed}
-            backgroundColor={colors.backgrounds.successMutedForeground}
+            backgroundColor='successMutedForeground'
           />
         </div>
       </div>
