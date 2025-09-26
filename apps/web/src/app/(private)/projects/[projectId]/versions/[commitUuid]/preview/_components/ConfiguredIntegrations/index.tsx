@@ -4,6 +4,7 @@ import {
   PipedreamIntegration,
 } from '@latitude-data/core/schema/types'
 import { isIntegrationConfigured } from '@latitude-data/core/services/integrations/pipedream/components/fillConfiguredProps'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   StatusFlag,
@@ -19,7 +20,7 @@ export function ConfiguredIntegration({
   integration: PipedreamIntegration
 }) {
   return (
-    <div className='flex flex-row px-4 py-3 gap-3 bg-secondary rounded-xl items-center'>
+    <div className='flex flex-row px-4 py-3 gap-3 bg-secondary rounded-xl items-center min-h-[60px]'>
       <div className='relative'>
         <Image
           src={integration.configuration.metadata?.imageUrl ?? ''}
@@ -36,11 +37,10 @@ export function ConfiguredIntegration({
           />
         </div>
       </div>
-
       <div className='flex-1'>
         <Text.H5 color='foregroundMuted'>
           <Text.H5B color='foregroundMuted'>
-            {integration.configuration.appName}{' '}
+            {integration.configuration.metadata?.displayName}{' '}
           </Text.H5B>
           integration is configured successfully
         </Text.H5>
@@ -68,7 +68,7 @@ export function ConfiguredIntegrations({
   if (configuredIntegrations.length === 0) return null
 
   return (
-    <div className='flex flex-col gap-2'>
+    <div className='flex flex-col gap-2 w-full'>
       {configuredIntegrations.map((integration) => (
         <ConfiguredIntegration key={integration.id} integration={integration} />
       ))}

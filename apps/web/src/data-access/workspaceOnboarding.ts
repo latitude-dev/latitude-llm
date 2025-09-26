@@ -2,6 +2,7 @@ import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOn
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { findOnboardingDocument } from '@latitude-data/core/services/documents/findOnboardingDocument'
 import { NotFoundError } from '@latitude-data/constants/errors'
+import { Result } from '@latitude-data/core/lib/Result'
 /**
  * Get the current workspace onboarding status
  * If the onboarding status doesn't exist, it creates a new one
@@ -47,14 +48,14 @@ export async function isOnboardingCompleted() {
 export async function getOnboardingResources() {
   const { workspace } = await getCurrentUserOrRedirect()
   if (!workspace?.id) {
-    throw new NotFoundError('Workspace ID is required')
+    return Result.error(new NotFoundError('Workspace ID is required'))
   }
 
   const documentResult = await findOnboardingDocument(workspace.id)
   if (documentResult.error) {
-    throw documentResult.error
+    return Result.error(new NotFoundError('No document found'))
   }
   const { project } = documentResult.value
 
-  return { project }
+  return Result.ok({ project })
 }

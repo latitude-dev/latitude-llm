@@ -4,7 +4,7 @@ import { CSPostHogProvider, IdentifyUser } from '$/app/providers'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ReactNode } from 'react'
 import { env } from '@latitude-data/env'
-import NocodersHeader from './_components/header'
+import NocodersHeader from './_components/NocodersHeader'
 
 export default async function NocodersLayout({
   children,

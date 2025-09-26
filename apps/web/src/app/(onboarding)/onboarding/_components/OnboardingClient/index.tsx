@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import NocodersNavbar from '../navbar/navbar'
+import NocodersNavbar from '../Navbar/NocodersNavbar'
 import { SetupIntegrationsStep } from './setupIntegrations'
 import { OnboardingStep } from '../../constants'
 import { Project } from '@latitude-data/core/browser'
