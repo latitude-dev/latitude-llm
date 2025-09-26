@@ -1,20 +1,75 @@
-import * as Sentry from '@sentry/nextjs'
+import tracer from 'dd-trace'
 import { env } from '@latitude-data/env'
 
-export const captureException = (error: Error) => {
-  if (env.SENTRY_WEB_DSN) {
-    Sentry.captureException(error)
-  } else {
-    if (env.NODE_ENV !== 'test') {
-      console.log(error)
-    }
+export const captureException = (error: Error, tags?: Record<string, any>) => {
+  if (env.NODE_ENV !== 'test') {
+    console.error('Captured exception:', error)
   }
+
+  // Add error information to the current span
+  const span = tracer.scope().active()
+  if (span) {
+    span.setTag('error', true)
+    span.setTag('error.message', error.message)
+    span.setTag('error.stack', error.stack)
+
+    // Add custom tags if provided
+    if (tags) {
+      Object.entries(tags).forEach(([key, value]) => {
+        span.setTag(key, value)
+      })
+    }
+
+    span.log({
+      event: 'error',
+      'error.object': error,
+      message: error.message,
+      stack: error.stack,
+      ...tags,
+    })
+  }
+
+  // Send to DataDog logs
+  console.error(
+    JSON.stringify({
+      level: 'error',
+      message: error.message,
+      error: error.name,
+      stack: error.stack,
+      timestamp: new Date().toISOString(),
+      service: 'latitude-web',
+      ...tags,
+    }),
+  )
 }
 
-export const captureMessage = (message: string) => {
-  if (env.SENTRY_WEB_DSN) {
-    Sentry.captureMessage(message)
-  } else {
-    console.log(message)
+export const captureMessage = (
+  message: string,
+  level: 'info' | 'warning' | 'error' = 'info',
+  tags?: Record<string, any>,
+) => {
+  if (env.NODE_ENV !== 'test') {
+    console.log(`[${level}] ${message}`)
   }
+
+  // Add message to the current span
+  const span = tracer.scope().active()
+  if (span) {
+    span.log({
+      event: level,
+      message,
+      ...tags,
+    })
+  }
+
+  // Send to DataDog logs
+  console.log(
+    JSON.stringify({
+      level,
+      message,
+      timestamp: new Date().toISOString(),
+      service: 'latitude-web',
+      ...tags,
+    }),
+  )
 }

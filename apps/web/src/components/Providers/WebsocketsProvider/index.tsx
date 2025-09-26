@@ -16,7 +16,7 @@ import {
 import { IoProvider, useSocket } from '@latitude-data/socket.io-react-hook'
 import { useSession } from '@latitude-data/web-ui/providers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import * as Sentry from '@sentry/nextjs'
+import { captureClientError } from '$/instrumentation-client'
 
 export const SocketIOProvider = ({ children }: { children: ReactNode }) => {
   return <IoProvider>{children}</IoProvider>
@@ -69,7 +69,10 @@ export function useSocketConnection({
           })
         }
       } catch (e) {
-        Sentry.captureException(e as Error)
+        captureClientError(e as Error, {
+          component: 'WebsocketsProvider',
+          context: 'connect_error',
+        })
       }
     }
   })

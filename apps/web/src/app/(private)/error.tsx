@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react'
 
+import { captureClientError } from '$/instrumentation-client'
 import { ErrorComponent, useSession } from '@latitude-data/web-ui/browser'
-import * as Sentry from '@sentry/nextjs'
 
 export default function Error({
   error,
@@ -14,7 +14,12 @@ export default function Error({
   const session = useSession()
 
   useEffect(() => {
-    Sentry.captureException(error, { user: session.currentUser })
+    captureClientError(error, {
+      component: 'Error',
+      userId: session.currentUser?.id,
+      userEmail: session.currentUser?.email,
+      digest: error.digest,
+    })
   }, [error, session.currentUser])
 
   return (
