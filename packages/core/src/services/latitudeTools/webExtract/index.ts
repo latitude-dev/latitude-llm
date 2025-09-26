@@ -79,14 +79,7 @@ export default {
   definition: (context: TelemetryContext) => ({
     description: 'Given a URL, returns the contents of the page.',
     inputSchema: z.object({
-      type: 'object',
-      properties: {
-        url: {
-          type: 'string',
-        },
-      },
-      required: ['url'],
-      additionalProperties: false,
+      url: z.url().describe('The URL of the page to extract.'),
     }),
     execute: async (args: ExtractToolArgs, toolCall) =>
       withTelemetryWrapper(webExtract, {

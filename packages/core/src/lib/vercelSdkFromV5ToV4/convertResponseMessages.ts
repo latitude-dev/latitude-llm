@@ -35,10 +35,10 @@ function normalizeToolResult(
         v.type === 'text'
           ? ({ type: 'text', text: v.text } as TextContent)
           : ({
-            type: 'file',
-            file: v.data,
-            mimeType: v.mediaType,
-          } as FileContent),
+              type: 'file',
+              file: v.data,
+              mimeType: v.mediaType,
+            } as FileContent),
       )
   }
 }

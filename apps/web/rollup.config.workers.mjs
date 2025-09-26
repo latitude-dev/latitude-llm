@@ -15,6 +15,17 @@ import terser from '@rollup/plugin-terser'
 const isProduction = process.env.NODE_ENV === 'production'
 
 export default defineConfig({
+  onwarn(warning, warn) {
+    if (
+      // Suppress circular dependency warnings from Zod v4.
+      // issue: https://github.com/colinhacks/zod/issues/5275
+      warning.code === 'CIRCULAR_DEPENDENCY' &&
+      /zod\/v4/.test(warning.message)
+    ) {
+      return
+    }
+    warn(warning)
+  },
   input: 'src/workers/readMetadata.ts',
   output: {
     entryFileNames: 'readMetadata.[hash].js',

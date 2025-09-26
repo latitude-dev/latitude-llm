@@ -75,7 +75,6 @@ export async function buildLlmEvaluationRunFunction<
   try {
     if (schema) {
       prompt = updatePromptMetadata(prompt, {
-        // FIXME: QA this works
         schema: z.toJSONSchema(schema, { target: 'openapi-3.0' }),
       })
     }

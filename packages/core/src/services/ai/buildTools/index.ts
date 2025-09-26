@@ -23,11 +23,13 @@ export const buildTools = (tools: VercelTools | undefined) => {
         // `parameters` is what users put in existing prompts.
         // In Vercel SDK v5 was renamed to `inputSchema` but we keep
         // supporting `parameters` for backward compatibility.
-        const parameters = value.parameters
+        // @ts-expect-error - inputSchema is not defined in ToolDefinition for
+        // backward compatibility we support `parameters`
+        const schema = value.inputSchema ?? jsonSchema(value.parameters)
 
         acc[key] = compactObject({
           ...omit(value, 'parameters'),
-          inputSchema: jsonSchema(parameters),
+          inputSchema: schema,
         }) as unknown as Tool
 
         return acc

@@ -66,6 +66,8 @@ export type ObjectOutput = 'object' | 'array' | 'no-schema' | undefined
  *
  */
 function getMaxSteps({ maxSteps }: { maxSteps?: number | undefined }) {
+  console.log("MAX_STEPS", maxSteps)
+
   return { stepWhen: stepCountIs(maxSteps ?? 1) }
 }
 

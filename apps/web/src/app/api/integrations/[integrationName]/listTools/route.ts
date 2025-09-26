@@ -5,8 +5,7 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { listTools } from '@latitude-data/core/services/integrations/index'
-import { LatitudeTool } from '@latitude-data/constants'
-import { getLatitudeToolDefinition } from '@latitude-data/core/services/latitudeTools/helpers'
+import { LATITUDE_TOOLS } from '@latitude-data/core/services/latitudeTools/tools'
 
 export const GET = errorHandler(
   authHandler(
@@ -23,18 +22,13 @@ export const GET = errorHandler(
       },
     ) => {
       if (params.integrationName === 'latitude') {
-        const latitudeTools = Object.values(LatitudeTool).map(
-          (latitudeTool) => {
-            const toolDefinition = getLatitudeToolDefinition(latitudeTool)!
-            return {
-              name: latitudeTool,
-              description: toolDefinition.description,
-              inputSchema: z.toJSONSchema(
-                toolDefinition.inputSchema as z.ZodTypeAny,
-              ),
-            }
-          },
-        )
+        const latitudeTools = LATITUDE_TOOLS.map((tool) => ({
+          name: tool.name,
+          description: tool.definition().description,
+          inputSchema: z.toJSONSchema(tool.definition().inputSchema, {
+            target: 'openapi-3.0',
+          }),
+        }))
         return NextResponse.json(
           {
             ok: true,
