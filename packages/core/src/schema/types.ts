@@ -62,6 +62,8 @@ import { workspaceFeatures } from './models/workspaceFeatures'
 import { documentTriggerEvents } from './models/documentTriggerEvents'
 import { promocodes } from './models/promocodes'
 import { claimedPromocodes } from './models/claimedPromocodes'
+import { workspaceOnboarding } from './models/workspaceOnboarding'
+import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 
 export type {
   DocumentLog,
@@ -436,3 +438,10 @@ export type WorkspaceLimits = {
 
 export type Promocode = InferSelectModel<typeof promocodes>
 export type ClaimedPromocode = InferSelectModel<typeof claimedPromocodes>
+
+export type WorkspaceOnboarding = Omit<
+  InferSelectModel<typeof workspaceOnboarding>,
+  'currentStep'
+> & {
+  currentStep: OnboardingStepKey
+}

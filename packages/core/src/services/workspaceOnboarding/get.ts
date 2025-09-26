@@ -3,14 +3,14 @@ import { eq } from 'drizzle-orm'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { workspaceOnboarding } from '../../schema/models/workspaceOnboarding'
-import { workspaces } from '../../schema/models/workspaces'
 import { database } from '../../client'
+import { Workspace, WorkspaceOnboarding } from '../../browser'
 
 export async function getWorkspaceOnboarding(
   {
     workspace,
   }: {
-    workspace: typeof workspaces.$inferSelect
+    workspace: Workspace
   },
   db = database,
 ) {
@@ -24,5 +24,5 @@ export async function getWorkspaceOnboarding(
     return Result.error(new NotFoundError('Workspace onboarding not found'))
   }
 
-  return Result.ok(onboarding)
+  return Result.ok(onboarding as WorkspaceOnboarding)
 }

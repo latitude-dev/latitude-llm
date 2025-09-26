@@ -3,6 +3,9 @@ import useSWR from 'swr'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
+import { useLatitudeAction } from 'zsa-react'
+import { nextOnboardingStepAction } from '$/actions/workspaceOnboarding/nextOnboardingStep'
 
 export type OnboardingStatus = {
   id?: number
@@ -24,6 +27,13 @@ export default function useWorkspaceOnboarding() {
       revalidateIfStale: false,
     },
   )
+
+  const { execute: executeCompleteOnboarding } = useLatitudeAction(
+    completeOnboardingAction,
+  )
+
+  const { execute: executeUpdateStep, isPending: isUpdatingStep } =
+    useLatitudeAction(nextOnboardingStepAction)
 
   const updateStep = useCallback(
     async (step: number) => {
@@ -56,40 +66,12 @@ export default function useWorkspaceOnboarding() {
     [mutate, toast],
   )
 
-  const completeOnboarding = useCallback(async () => {
-    try {
-      const response = await fetch(ROUTES.api.workspaces.onboarding.update, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ complete: true }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to complete onboarding')
-      }
-
-      const updatedOnboarding = await response.json()
-      mutate(updatedOnboarding)
-      return updatedOnboarding
-    } catch (error) {
-      toast({
-        title: 'Failed to complete onboarding',
-        description: error instanceof Error ? error.message : String(error),
-        variant: 'destructive',
-      })
-      throw error
-    }
-  }, [mutate, toast])
-
   return {
     onboarding: data,
     error,
     isLoading,
     updateStep,
-    completeOnboarding,
+    executeCompleteOnboarding,
     refetch: () => mutate(),
   }
 }

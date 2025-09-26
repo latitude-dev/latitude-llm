@@ -18,6 +18,7 @@
     "./legacyCompiler": "./src/legacyCompiler.ts",
     "./errors": "./src/errors/index.ts",
     "./onboarding": "./src/onboarding.ts",
+    "./onboardingSteps": "./src/onboardingSteps.ts",
     "./evaluations": "./src/evaluations/index.ts",
     "./experiments": "./src/experiments.ts",
     "./tracing": "./src/tracing/index.ts",
