@@ -1,4 +1,5 @@
 import buildMetatags from '$/app/_lib/buildMetatags'
+import { DatadogProvider } from '$/components/Providers/DatadogProvider'
 import { SWRProvider } from '$/components/Providers/SWRProvider'
 import { fontMono, fontSans } from '$/helpers/fonts'
 import { ToastProvider } from '@latitude-data/web-ui/atoms/Toast'
@@ -35,17 +36,19 @@ export default function RootLayout({
         className={`w-full h-full ${fontSans.variable} ${fontMono.variable} font-sans`}
       >
         <NextTopLoader showSpinner={false} />
-        <SWRProvider config={{ revalidateOnFocus: false }}>
-          <ThemeProvider
-            attribute='class'
-            defaultTheme='light'
-            themes={THEMES as unknown as string[]}
-            enableSystem
-            disableTransitionOnChange
-          >
-            <TooltipProvider>{children}</TooltipProvider>
-          </ThemeProvider>
-        </SWRProvider>
+        <DatadogProvider>
+          <SWRProvider config={{ revalidateOnFocus: false }}>
+            <ThemeProvider
+              attribute='class'
+              defaultTheme='light'
+              themes={THEMES as unknown as string[]}
+              enableSystem
+              disableTransitionOnChange
+            >
+              <TooltipProvider>{children}</TooltipProvider>
+            </ThemeProvider>
+          </SWRProvider>
+        </DatadogProvider>
         <ToastProvider duration={5000} />
       </body>
     </html>

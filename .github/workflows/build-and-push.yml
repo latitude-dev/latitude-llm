@@ -61,7 +61,7 @@ jobs:
     strategy:
       matrix:
         include:
-          # Public images on GitHub Container Registry (without Sentry)
+          # Public images on GitHub Container Registry (without DataDog secrets)
           # Multi-platform builds (AMD64)
           - app: web
             dockerfile: apps/web/docker/Dockerfile
@@ -151,7 +151,7 @@ jobs:
     strategy:
       matrix:
         include:
-          # Private images on AWS ECR (with Sentry)
+          # Private images on AWS ECR (with DataDog)
           - app: web
             dockerfile: apps/web/docker/Dockerfile
             repo_name: latitude-llm-app-repo-43d71dc
@@ -225,7 +225,6 @@ jobs:
           cache-from: type=registry,ref=${{ format('{0}/{1}', env.ECR_REGISTRY, matrix.repo_name) }}:latest
           cache-to: type=inline
           secrets: |
-            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
             AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
             AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -236,10 +235,10 @@ jobs:
             NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL }}
             NEXT_PUBLIC_POSTHOG_HOST=${{ secrets.NEXT_PUBLIC_POSTHOG_HOST }}
             NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
-            NEXT_PUBLIC_SENTRY_WEB_DSN=${{ vars.SENTRY_WEB_DSN }}
+            NEXT_PUBLIC_DATADOG_APPLICATION_ID=${{ secrets.NEXT_PUBLIC_DATADOG_APPLICATION_ID }}
+            NEXT_PUBLIC_DATADOG_CLIENT_TOKEN=${{ secrets.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN }}
+            NEXT_PUBLIC_DATADOG_SITE=${{ secrets.NEXT_PUBLIC_DATADOG_SITE }}
             S3_BUCKET=${{ vars.STATIC_ASSETS_S3_BUCKET }}
-            SENTRY_ORG=${{ secrets.SENTRY_ORG }}
-            SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
             STATIC_ASSETS_HOST=${{ vars.STATIC_ASSETS_HOST }}
 
   run-migrations:

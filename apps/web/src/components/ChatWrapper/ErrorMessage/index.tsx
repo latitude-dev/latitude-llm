@@ -1,10 +1,10 @@
-import * as Sentry from '@sentry/nextjs'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { useEffect } from 'react'
+import { captureClientError } from '$/instrumentation-client'
 
 export function ErrorMessage({ error }: { error: Error }) {
   useEffect(() => {
-    Sentry.captureException(error)
+    captureClientError(error, { component: 'ChatWrapper.ErrorMessage' })
   }, [error])
 
   return (

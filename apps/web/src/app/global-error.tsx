@@ -3,10 +3,10 @@
 import { useEffect } from 'react'
 
 import { fontMono, fontSans } from '$/helpers/fonts'
+import { captureClientError } from '$/instrumentation-client'
 import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ErrorComponent } from '@latitude-data/web-ui/browser'
-import * as Sentry from '@sentry/nextjs'
 import Link from 'next/link'
 
 export default function GlobalError({
@@ -15,7 +15,10 @@ export default function GlobalError({
   error: Error & { digest?: string }
 }) {
   useEffect(() => {
-    Sentry.captureException(error)
+    captureClientError(error, {
+      component: 'GlobalError',
+      digest: error.digest,
+    })
   }, [error])
 
   return (
