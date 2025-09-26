@@ -9,7 +9,7 @@ const statusFlagColors: Record<StatusFlagState, BackgroundColor> = {
   [StatusFlagState.completed]: 'mutedForeground',
 }
 
-export function NavBarItem({
+export function NavbarItem({
   title,
   description,
   state,

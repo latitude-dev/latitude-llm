@@ -1,5 +1,5 @@
 import { useMemo, Fragment, useCallback } from 'react'
-import { NavBarItem } from './NavbarItem'
+import { NavbarItem } from './NavbarItem'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -66,7 +66,7 @@ export default function NocodersNavbar({
                 <div
                   className={cn(currentTab === item.key ? '' : 'opacity-70')}
                 >
-                  <NavBarItem
+                  <NavbarItem
                     title={item.title}
                     description={item.description}
                     state={item.state}
