@@ -22,11 +22,6 @@ function parseObject(text: string) {
 
 /**
  * This function is responsible for processing the AI response
- *
- * TODO(compiler)
- * Remove all legacy stuff and try to use latest Vercel SDK types.
- * The problem with that is that it will change the output of our API and
- * SDKs.
  */
 export async function processResponse({
   aiResult,

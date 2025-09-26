@@ -35,10 +35,10 @@ function normalizeToolResult(
         v.type === 'text'
           ? ({ type: 'text', text: v.text } as TextContent)
           : ({
-              type: 'file',
-              file: v.data,
-              mimeType: v.mediaType,
-            } as FileContent),
+            type: 'file',
+            file: v.data,
+            mimeType: v.mediaType,
+          } as FileContent),
       )
   }
 }
@@ -122,6 +122,12 @@ function convertAssistantMessage(msg: AssistantModelMessage) {
 type AIMessages = Awaited<AIReturn<StreamType>['response']>['messages']
 export type LegacyMessage = AssistantMessage | ToolMessage
 
+/**
+ * RANTING:
+ *
+ * We would be happier if we would 100% with Vercel SDK message format
+ * This is a maintainance burden and also add more cycles to proccess
+ */
 export function convertResponseMessages({
   messages,
 }: {

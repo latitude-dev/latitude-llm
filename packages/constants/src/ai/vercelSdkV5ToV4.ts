@@ -1,9 +1,6 @@
 import { ToolResultPart, ModelMessage as VercelV5Message } from 'ai'
 import { AssistantMessage, ToolMessage } from '../legacyCompiler'
 
-// TODO(compiler): Remove this type when we remove the legacy Vercel SDK v4
-// Be aware that this breaks all clients (our webapp, our api and our SDKs)
-// because when streaming `text-delta` is expecting `textDelta` not what Vercel SDK v5 returns `text`
 export type ReplaceTextDelta<T> = T extends {
   type: 'text-delta'
   text: infer Text
