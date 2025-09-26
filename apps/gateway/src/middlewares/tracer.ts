@@ -1,9 +1,5 @@
-import tracer from '../common/tracer'
+import tracer, { captureException } from '../common/tracer'
 import { Context, Next } from 'hono'
-
-function isResponse(value: unknown): value is Response {
-  return value instanceof Response
-}
 
 export function tracerMiddleware() {
   return async (c: Context, next: Next) => {
@@ -30,13 +26,13 @@ export function tracerMiddleware() {
       return response
     } catch (error: unknown) {
       if (error instanceof Error) {
-        span.setTag('error', true)
-        span.setTag('error.type', error.name)
-        span.setTag('error.message', error.message)
-        span.setTag('error.stack', error.stack)
+        captureException(error)
       }
 
       throw error
     }
   }
+}
+function isResponse(value: unknown): value is Response {
+  return value instanceof Response
 }

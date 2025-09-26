@@ -1,6 +1,6 @@
 import { LogSources } from '@latitude-data/core/browser'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
-import { captureException } from '@sentry/node'
+import { captureException } from '$/common/tracer'
 import { streamSSE } from 'hono/streaming'
 
 import { AppRouteHandler } from '$/openApi/types'

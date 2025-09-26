@@ -1,4 +1,4 @@
-import { captureException } from '$/common/sentry'
+import { captureException } from '$/common/tracer'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter, runPresenterLegacy } from '$/presenters/runPresenter'
 import { ChatRoute } from '$/routes/api/v3/conversations/chat/chat.route'

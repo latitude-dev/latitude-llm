@@ -2,7 +2,6 @@ import {
   getData,
   publishDocumentRunRequestedEvent,
 } from '$/common/documents/getData'
-import { captureException } from '$/common/sentry'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter, runPresenterLegacy } from '$/presenters/runPresenter'
 import { compareVersion } from '$/utils/versionComparison'
@@ -19,6 +18,7 @@ import { enqueueDocumentRunJob } from '@latitude-data/core/services/documents/en
 import { streamSSE } from 'hono/streaming'
 import { runHandler as runHandlerLegacy } from './__deprecated/run.handler'
 import { RunRoute } from './run.route'
+import { captureException } from '$/common/tracer'
 
 type RunHandlerContext = {
   c: Parameters<AppRouteHandler<RunRoute>>[0]
@@ -150,9 +150,7 @@ async function handleStreamingMode({
     },
     (error: Error) => {
       // Don't log abort errors as they are expected when clients disconnect
-      if (isAbortError(error)) {
-        return Promise.resolve()
-      }
+      if (isAbortError(error)) return Promise.resolve()
 
       const unknownError = getUnknownError(error)
       if (unknownError) captureException(error)

@@ -11,8 +11,7 @@
     "lint": "eslint src/",
     "tc": "tsc --noEmit",
     "test": "vitest --run",
-    "test:watch": "vitest",
-    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org latitude-l5 --project latitude-gateway ./dist && sentry-cli sourcemaps upload --org latitude-l5 --project latitude-gateway ./dist"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@hono/node-server": "1.13.2",
@@ -23,8 +22,6 @@
     "@latitude-data/env": "workspace:^",
     "@latitude-data/telemetry": "workspace:*",
     "@latitude-data/sdk": "workspace:^",
-    "@sentry/cli": "2.37.0",
-    "@sentry/node": "9.9.0",
     "@t3-oss/env-core": "0.13.8",
     "drizzle-orm": "catalog:",
     "hono": "4.6.6",

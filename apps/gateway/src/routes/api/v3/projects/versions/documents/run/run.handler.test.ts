@@ -43,7 +43,7 @@ const mocks = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('$/common/sentry', async (importOriginal) => {
+vi.mock('$/common/tracer', async (importOriginal) => {
   const original = (await importOriginal()) as typeof importOriginal
 
   return {

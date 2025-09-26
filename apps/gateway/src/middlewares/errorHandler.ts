@@ -5,7 +5,7 @@ import {
   ChainError,
 } from '@latitude-data/constants/errors'
 import http from '$/common/http'
-import { captureException } from '$/common/sentry'
+import { captureException } from '$/common/tracer'
 import { HTTPException } from 'hono/http-exception'
 
 function unprocessableExtraParameters(error: UnprocessableEntityError) {

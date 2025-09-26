@@ -3,7 +3,6 @@ import {
   legacyChainEventPresenter,
   publishDocumentRunRequestedEvent,
 } from '$/common/documents/getData'
-import { captureException } from '$/common/sentry'
 import { AppRouteHandler } from '$/openApi/types'
 import { v2RunPresenter } from '$/presenters/runPresenter'
 import { RunRoute } from '$/routes/api/v2/documents/run/run.route'
@@ -13,6 +12,7 @@ import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { streamSSE } from 'hono/streaming'
 import { convertToLegacyChainStream } from '@latitude-data/core/lib/streamManager/index'
 import { runDocumentAtCommitLegacy } from '@latitude-data/core/services/__deprecated/commits/runDocumentAtCommit'
+import { captureException } from '$/common/tracer'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735
@@ -76,10 +76,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
       },
       (error: Error) => {
         const unknownError = getUnknownError(error)
-
-        if (unknownError) {
-          captureException(error)
-        }
+        if (unknownError) captureException(error)
 
         return Promise.resolve()
       },

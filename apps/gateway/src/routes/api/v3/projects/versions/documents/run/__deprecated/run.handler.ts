@@ -2,7 +2,7 @@ import {
   getData,
   publishDocumentRunRequestedEvent,
 } from '$/common/documents/getData'
-import { captureException } from '$/common/sentry'
+import { captureException } from '$/common/tracer'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter, runPresenterLegacy } from '$/presenters/runPresenter'
 import { compareVersion } from '$/utils/versionComparison'
