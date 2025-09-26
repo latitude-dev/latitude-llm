@@ -175,16 +175,23 @@ export function TriggerWrapper({
     e.stopPropagation()
   }, [])
 
-  const handleRunTrigger = useCallback(() => {
-    if (!canRunTrigger) return
-    if (isChatTrigger(trigger)) {
-      onRunChatTrigger({ trigger, document })
-      return
-    }
+  const handleRunTrigger = useCallback(
+    ({ aiParameters }: { aiParameters: boolean } = { aiParameters: false }) => {
+      if (isChatTrigger(trigger)) {
+        onRunChatTrigger({ trigger, document })
+        return
+      }
 
-    // Schedule triggers don't have parameters
-    onRunTrigger({ document, parameters: {} })
-  }, [onRunTrigger, onRunChatTrigger, trigger, document, canRunTrigger])
+      onRunTrigger({ document, parameters: {}, aiParameters })
+    },
+    [onRunTrigger, onRunChatTrigger, trigger, document, canRunTrigger],
+  )
+  const handleScheduleTriggerRun = useCallback(() => {
+    handleRunTrigger()
+  }, [handleRunTrigger])
+  const handleAITriggerRun = useCallback(() => {
+    handleRunTrigger({ aiParameters: true })
+  }, [handleRunTrigger])
 
   return (
     <div className='flex flex-col relative'>
@@ -283,16 +290,26 @@ export function TriggerWrapper({
                 trigger={trigger}
               />
             ) : null}
-            {canRunTrigger ? (
+            <div className='flex flex-row items-center gap-x-2'>
+              {canRunTrigger ? (
+                <Button
+                  fancy
+                  variant='outline'
+                  iconProps={{ name: 'circlePlay' }}
+                  onClick={handleScheduleTriggerRun}
+                >
+                  Run
+                </Button>
+              ) : null}
               <Button
                 fancy
                 variant='outline'
                 iconProps={{ name: 'circlePlay' }}
-                onClick={handleRunTrigger}
+                onClick={handleAITriggerRun}
               >
-                Run
+                Run with AI
               </Button>
-            ) : null}
+            </div>
             <EditTriggerButton
               projectId={project.id}
               commitUuid={commit.uuid}

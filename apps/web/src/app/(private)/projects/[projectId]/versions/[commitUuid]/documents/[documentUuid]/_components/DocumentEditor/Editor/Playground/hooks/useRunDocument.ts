@@ -9,10 +9,8 @@ import { ICommitContextType } from '@latitude-data/web-ui/providers'
 import { useCallback, useMemo } from 'react'
 
 export function useRunDocument({
-  document,
   commit,
 }: {
-  document: DocumentVersion
   commit: ICommitContextType['commit']
 }) {
   const { createStreamHandler, abortCurrentStream, hasActiveStream } =
@@ -20,10 +18,12 @@ export function useRunDocument({
 
   const runDocument = useCallback(
     async ({
+      document,
       parameters,
       userMessage,
       aiParameters = false,
     }: {
+      document: DocumentVersion
       parameters: Record<string, unknown>
       userMessage?: string
       aiParameters?: boolean
@@ -50,13 +50,7 @@ export function useRunDocument({
 
       return createStreamHandler(response)
     },
-    [
-      document.documentUuid,
-      document.path,
-      commit.projectId,
-      commit.uuid,
-      createStreamHandler,
-    ],
+    [commit.projectId, commit.uuid, createStreamHandler],
   )
 
   const addMessages = useCallback(

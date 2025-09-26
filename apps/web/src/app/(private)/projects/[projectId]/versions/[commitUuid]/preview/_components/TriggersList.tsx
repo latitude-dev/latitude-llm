@@ -7,7 +7,6 @@ import {
   DocumentTrigger,
   DocumentVersion,
   IntegrationDto,
-  LogSources,
   Project,
 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -165,15 +164,25 @@ export function TriggersList({
   })
   const { runDocument, addMessages, abortCurrentStream, hasActiveStream } =
     useRunDocument({
-      document: activeTrigger.document,
       commit,
     })
 
   const runPromptFn = useCallback(
-    ({ aiParameters = false }: { aiParameters: boolean }) => {
+    ({
+      document,
+      userMessage,
+      parameters = {},
+      aiParameters = false,
+    }: {
+      document: DocumentVersion
+      parameters: Record<string, unknown>
+      userMessage: string | undefined
+      aiParameters: boolean
+    }) => {
       return runDocument({
-        parameters: activeTrigger.parameters,
-        userMessage: activeTrigger.userMessage,
+        document,
+        parameters,
+        userMessage,
         aiParameters,
       })
     },
@@ -191,7 +200,7 @@ export function TriggersList({
   const onRunTrigger: OnRunTriggerFn = useCallback(
     ({ document, parameters, userMessage, aiParameters = false }) => {
       setActiveTrigger({ document, parameters, userMessage })
-      playground.start({ aiParameters })
+      playground.start({ document, parameters, userMessage, aiParameters })
     },
     [setActiveTrigger],
   )
