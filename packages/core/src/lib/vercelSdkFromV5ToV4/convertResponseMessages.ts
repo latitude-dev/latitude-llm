@@ -125,8 +125,10 @@ export type LegacyMessage = AssistantMessage | ToolMessage
 export function convertResponseMessages({
   messages,
 }: {
-  messages: AIMessages
+  messages: AIMessages | undefined
 }): LegacyMessage[] {
+  if (!messages || messages.length === 0) return []
+
   return messages.map((msg) => {
     if (msg.role === 'assistant') {
       return convertAssistantMessage(msg)
