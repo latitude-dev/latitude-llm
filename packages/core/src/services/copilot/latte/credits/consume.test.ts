@@ -80,9 +80,13 @@ describe('consumeLatteCredits', () => {
 
     const result = await consumeLatteCredits({
       usage: {
+        inputTokens: 100,
+        outputTokens: 100,
         promptTokens: 100,
         completionTokens: 100,
         totalTokens: 200,
+        reasoningTokens: 0,
+        cachedInputTokens: 0,
       },
       threadUuid: thread.uuid,
       user: user,
@@ -123,9 +127,13 @@ describe('consumeLatteCredits', () => {
 
     const result = await consumeLatteCredits({
       usage: {
+        inputTokens: 100,
+        outputTokens: 100,
         promptTokens: 100,
         completionTokens: 100,
         totalTokens: 200,
+        reasoningTokens: 0,
+        cachedInputTokens: 0,
       },
       threadUuid: thread.uuid,
       user: user,
@@ -167,9 +175,13 @@ describe('consumeLatteCredits', () => {
 
     const result = await consumeLatteCredits({
       usage: {
+        inputTokens: 100,
+        outputTokens: 100,
         promptTokens: 100,
         completionTokens: 100,
         totalTokens: 200,
+        reasoningTokens: 0,
+        cachedInputTokens: 0,
       },
       threadUuid: thread.uuid,
       user: user,

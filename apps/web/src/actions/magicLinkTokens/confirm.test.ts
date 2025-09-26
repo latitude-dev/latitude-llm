@@ -4,12 +4,12 @@ import { createProject } from '@latitude-data/core/factories'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
 import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
-import { redirect } from 'next/navigation'
+import { frontendRedirect } from '$/lib/frontendRedirect'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { confirmMagicLinkTokenAction } from './confirm'
 
-vi.mock('next/navigation', () => ({
-  redirect: vi.fn(),
+vi.mock('$/lib/frontendRedirect', () => ({
+  frontendRedirect: vi.fn(),
 }))
 
 vi.mock('$/services/auth/setSession', () => ({
@@ -34,7 +34,7 @@ describe('confirmMagicLinkTokenAction', () => {
       token: token.token,
     })
 
-    expect(redirect).toHaveBeenCalledWith(ROUTES.auth.login)
+    expect(frontendRedirect).toHaveBeenCalledWith(ROUTES.auth.login)
   })
 
   it('should redirect to login if magic link token does not exist', async () => {
@@ -42,7 +42,7 @@ describe('confirmMagicLinkTokenAction', () => {
       token: generateUUIDIdentifier(),
     })
 
-    expect(redirect).toHaveBeenCalledWith(ROUTES.auth.login)
+    expect(frontendRedirect).toHaveBeenCalledWith(ROUTES.auth.login)
   })
 
   it('redirects to dashboard when magic link exists and is not expired', async () => {
@@ -52,7 +52,7 @@ describe('confirmMagicLinkTokenAction', () => {
       token: token.token,
     })
 
-    expect(redirect).toHaveBeenCalledWith(ROUTES.dashboard.root)
+    expect(frontendRedirect).toHaveBeenCalledWith(ROUTES.dashboard.root)
   })
 
   it('redirects to returnTo when magic link exists and is not expired and has returnTo', async () => {
@@ -66,6 +66,6 @@ describe('confirmMagicLinkTokenAction', () => {
       returnTo: ROUTES.projects.root,
     })
 
-    expect(redirect).toHaveBeenCalledWith(ROUTES.projects.root)
+    expect(frontendRedirect).toHaveBeenCalledWith(ROUTES.projects.root)
   })
 })

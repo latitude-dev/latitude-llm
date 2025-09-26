@@ -22,7 +22,7 @@ export const runRoute = createRoute({
             path: z.string(),
             stream: z.boolean().default(false),
             customIdentifier: z.string().optional(),
-            parameters: z.record(z.any()).optional().default({}),
+            parameters: z.record(z.string(), z.any()).optional().default({}),
           }),
         },
       },

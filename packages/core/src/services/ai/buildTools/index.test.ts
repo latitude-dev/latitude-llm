@@ -1,8 +1,7 @@
-import { z } from 'zod'
-import { jsonSchema } from 'ai'
 import { describe, it, expect } from 'vitest'
 import { buildTools } from './index'
 import { VercelTools } from '@latitude-data/constants'
+import { jsonSchema } from 'ai'
 
 describe('buildTools', () => {
   it('builds and validate tools', () => {
@@ -22,40 +21,49 @@ describe('buildTools', () => {
           },
         },
       },
-      web_search_preview: {
+      web_search: {
         type: 'provider-defined',
-        id: 'openai.web_search_preview',
+        id: 'openai.web_search',
+        name: 'web_search',
         args: {
           searchContextSize: 'low',
         },
-        parameters: z.object({}),
+        inputSchema: jsonSchema({
+          type: 'object',
+          properties: {
+            query: { type: 'string' },
+          },
+        }),
       },
     } satisfies VercelTools
 
     const result = buildTools(tools)
-    expect(result.value).toEqual({
+    expect(result.value).toMatchObject({
       get_weather: {
         description:
           'Obtains the weather temperature from a given location id.',
-        parameters: jsonSchema({
-          type: 'object',
-          additionalProperties: false,
-          required: ['location_id'],
-          properties: {
-            location_id: {
-              type: 'number',
-              description: 'The id for the location.',
+        inputSchema: {
+          jsonSchema: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['location_id'],
+            properties: {
+              location_id: {
+                type: 'number',
+                description: 'The id for the location.',
+              },
             },
           },
-        }),
+        },
       },
-      web_search_preview: {
+      web_search: {
         type: 'provider-defined',
-        id: 'openai.web_search_preview',
+        id: 'openai.web_search',
+        name: 'web_search', // AI SDK v5 requires name property
         args: {
           searchContextSize: 'low',
         },
-        parameters: expect.anything(),
+        inputSchema: expect.anything(),
       },
     })
   })

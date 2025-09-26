@@ -6,16 +6,11 @@ import Transaction from '@latitude-data/core/lib/Transaction'
 import { createCommit } from '@latitude-data/core/services/commits/create'
 import { updateDocument } from '@latitude-data/core/services/documents/update'
 import { z } from 'zod'
-import { withDocument } from '../procedures'
+import { withDocument, withDocumentSchema } from '../procedures'
 
 export const refineApplyAction = withDocument
-  .createServerAction()
-  .input(
-    z.object({
-      prompt: z.string(),
-    }),
-  )
-  .handler(async ({ ctx, input }) => {
+  .inputSchema(withDocumentSchema.extend({ prompt: z.string() }))
+  .action(async ({ ctx, parsedInput }) => {
     const transaction = new Transaction()
     const result = transaction
       .call(
@@ -38,13 +33,13 @@ export const refineApplyAction = withDocument
               {
                 commit: draft,
                 document: ctx.document,
-                content: input.prompt,
+                content: parsedInput.prompt,
               },
               transaction,
             ).then((r) => r.unwrap())
           }
 
-          return Result.ok({ prompt: input.prompt, draft })
+          return Result.ok({ prompt: parsedInput.prompt, draft })
         },
         () =>
           publisher.publishLater({

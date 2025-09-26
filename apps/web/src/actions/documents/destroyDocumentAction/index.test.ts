@@ -56,13 +56,13 @@ describe('destroyDocumentAction', async () => {
 
   describe('unauthorized', () => {
     it('fails when the user is not authenticated', async () => {
-      const [_, error] = await destroyDocumentAction({
+      const { serverError } = await destroyDocumentAction({
         projectId: project.id,
         commitUuid: draft.uuid,
         documentUuid: document.documentUuid,
       })
 
-      expect(error!.name).toEqual('UnauthorizedError')
+      expect(serverError).toEqual('Unauthorized')
     })
   })
 
@@ -89,21 +89,21 @@ describe('destroyDocumentAction', async () => {
         },
       })
       const otherWorkspaceDocument = allDocs[0]!
-      const [_, error] = await destroyDocumentAction({
+      const { serverError } = await destroyDocumentAction({
         projectId: otherWorkspaceProject.id,
         commitUuid: otherCommit.uuid,
         documentUuid: otherWorkspaceDocument.documentUuid,
       })
-      expect(error?.name).toEqual('NotFoundError')
+      expect(serverError).toEqual('Project not found')
     })
 
     it('fails when trying to remove a document from a merged commit', async () => {
-      const [_, error] = await destroyDocumentAction({
+      const { serverError } = await destroyDocumentAction({
         projectId: project.id,
         commitUuid: merged.uuid,
         documentUuid: document.documentUuid,
       })
-      expect(error?.name).toEqual('BadRequestError')
+      expect(serverError).toEqual('Cannot modify a merged commit')
     })
 
     it('creates a soft deleted documents in draft document', async () => {

@@ -7,15 +7,12 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const destroyApiKeyAction = authProcedure
-  .createServerAction()
-  .input(
-    z.object({
-      id: z.number(),
-    }),
-  )
-  .handler(async ({ input, ctx }) => {
+  .inputSchema(z.object({ id: z.number() }))
+  .action(async ({ parsedInput, ctx }) => {
     const apiKeysRepo = new ApiKeysRepository(ctx.workspace.id)
-    const apiKey = await apiKeysRepo.find(input.id).then((r) => r.unwrap())
+    const apiKey = await apiKeysRepo
+      .find(parsedInput.id)
+      .then((r) => r.unwrap())
 
     return destroyApiKey(apiKey).then((r) => r.unwrap())
   })

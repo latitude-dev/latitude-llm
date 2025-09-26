@@ -60,7 +60,7 @@
 
 ### Action Layer (`apps/web/src/actions/`)
 
-- Server actions use `authProcedure.createServerAction()` pattern
+- Server actions use `authProcedure` pattern
 - Input validation with Zod schemas
 - Actions fetch model instances using repositories before calling services
 - **Admin-only actions**: Place under `actions/admin/` directory for backoffice functionality
@@ -68,14 +68,32 @@
 
   ```typescript
   export const updateApiKeyAction = authProcedure
-    .createServerAction()
-    .input(z.object({ id: z.number(), name: z.string() }))
-    .handler(async ({ input, ctx }) => {
+    .inputSchema(z.object({ id: z.number(), name: z.string() }))
+    .action(async ({ parsedInput, ctx }) => {
       const repo = new Repository(ctx.workspace.id)
-      const model = await repo.find(input.id).then((r) => r.unwrap())
-      return updateService(model, { name: input.name }).then((r) => r.unwrap())
+      const model = await repo.find(parsedInput.id).then((r) => r.unwrap())
+      return updateService(model, { name: parsedInput.name }).then((r) =>
+        r.unwrap(),
+      )
     })
   ```
+
+- For writing an action with a different scope. Let's say withing projects:
+
+  ```typescript
+  import { withProject, withProjectSchema } from '../../procedures'
+  export const updateProjectAction = withProject
+    .inputSchema(withProjectSchema.extend({ id: z.number(), name: z.string() }))
+    .action(async ({ parsedInput, ctx }) => {
+      const repo = new ProjectRepository(ctx.workspace.id)
+      const model = await repo.find(parsedInput.id).then((r) => r.unwrap())
+      return updateProjectService(model, { name: parsedInput.name }).then((r) =>
+        r.unwrap(),
+      )
+    })
+  ```
+
+  `withProject` procedure inherits from `authProcedure` and adds project validation.
 
 ### Store Layer (`apps/web/src/stores/`)
 

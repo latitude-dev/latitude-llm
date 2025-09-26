@@ -5,15 +5,14 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const updateUserAction = authProcedure
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       devMode: z.boolean(),
     }),
   )
-  .handler(async ({ ctx, input }) => {
+  .action(async ({ ctx, parsedInput }) => {
     const result = await updateUser(ctx.user, {
-      devMode: input.devMode,
+      devMode: parsedInput.devMode,
     }).then((r) => r.unwrap())
 
     return result

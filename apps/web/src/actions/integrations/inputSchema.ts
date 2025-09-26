@@ -8,7 +8,7 @@ import { z } from 'zod'
 
 const baseSchema = z.object({
   name: z.string(),
-  type: z.nativeEnum(IntegrationType),
+  type: z.enum(IntegrationType),
 })
 
 const fullCustomMcpConfigurationSchema = z.object({

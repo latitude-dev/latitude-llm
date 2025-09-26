@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import {
   LatitudeTool,
   LatitudeToolInternalName,
@@ -77,7 +78,7 @@ export default {
   method: webExtract,
   definition: (context: TelemetryContext) => ({
     description: 'Given a URL, returns the contents of the page.',
-    parameters: {
+    inputSchema: z.object({
       type: 'object',
       properties: {
         url: {
@@ -86,7 +87,7 @@ export default {
       },
       required: ['url'],
       additionalProperties: false,
-    },
+    }),
     execute: async (args: ExtractToolArgs, toolCall) =>
       withTelemetryWrapper(webExtract, {
         toolName: LatitudeTool.WebExtract,

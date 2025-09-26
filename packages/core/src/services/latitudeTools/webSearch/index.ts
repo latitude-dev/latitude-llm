@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import {
   LatitudeTool,
   LatitudeToolInternalName,
@@ -46,7 +47,7 @@ export default {
       'Search the web for information.\n' +
       'Given a query, this tool will search the web for information and return the results.\n' +
       'The tool will return a quick answer, and a list of links to relevant results,',
-    parameters: {
+    inputSchema: z.object({
       type: 'object',
       properties: {
         query: {
@@ -71,7 +72,7 @@ export default {
       },
       required: ['query'],
       additionalProperties: false,
-    },
+    }),
     execute: async (args: SearchToolArgs, toolCall) =>
       withTelemetryWrapper(webSearch, {
         toolName: LatitudeTool.WebSearch,

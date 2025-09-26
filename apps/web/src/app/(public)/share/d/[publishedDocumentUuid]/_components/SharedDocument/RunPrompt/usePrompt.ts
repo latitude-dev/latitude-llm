@@ -8,7 +8,7 @@ import {
   StreamEventTypes,
 } from '@latitude-data/core/browser'
 import { runSharedPromptAction } from '$/actions/sdk/runSharedPromptAction'
-import { readStreamableValue } from 'ai/rsc'
+import { readStreamableValue } from '@ai-sdk/rsc'
 import { SetStateAction } from '@latitude-data/web-ui/commonTypes'
 import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 
