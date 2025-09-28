@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import '$/instrumentation-client'
+import React from 'react'
 
 export function DatadogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {

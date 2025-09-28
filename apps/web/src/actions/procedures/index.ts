@@ -32,14 +32,14 @@ export const errorHandlingProcedure = createServerActionProcedure()
     try {
       const data = await getCurrentUserOrRedirect()
 
-      captureException(error, {
+      captureException(error as Error, {
         component: 'serverAction',
         userId: data.user.id,
         userName: data.user.name,
         userEmail: data.user.email,
       })
     } catch (_) {
-      captureException(error, { component: 'serverAction' })
+      captureException(error as Error, { component: 'serverAction' })
     }
   })
   .handler((ctx) => ({ ...ctx }))

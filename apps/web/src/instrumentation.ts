@@ -11,17 +11,17 @@ export async function register() {
       runtimeMetrics: true,
     })
 
-    await tracer.use('http', {
+    tracer.use('http', {
       service: 'latitude-web-http',
     })
 
-    await tracer.use('next', {
+    tracer.use('next', {
       service: 'latitude-web-next',
     })
   }
 }
 
-export const onRequestError = (error: Error, request: any) => {
+export const onRequestError = (error: Error, _: any) => {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const span = tracer.scope().active()
     if (span) {
