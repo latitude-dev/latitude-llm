@@ -2,9 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { WebsocketClient } from '../../websockets/workers'
 import { createDocumentLog } from '../../tests/factories/documentLogs'
-import { ErrorableEntity, LogSources, Providers } from '../../browser'
+import { LogSources, Providers } from '@latitude-data/constants'
 import { createProject, createRunError, helpers } from '../../tests/factories'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ErrorableEntity } from '../../constants'
 
 // Mock dependencies
 vi.mock('../../websockets/workers', () => ({

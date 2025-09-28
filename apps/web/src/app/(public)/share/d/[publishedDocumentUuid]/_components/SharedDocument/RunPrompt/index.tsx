@@ -1,6 +1,5 @@
 import { capitalize } from 'lodash-es'
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
-import { PublishedDocument } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -15,6 +14,7 @@ import { Messages } from '../../Messages'
 import { ServerClientMetadata } from '../types'
 import { useChat } from './useChat'
 import { usePrompt } from './usePrompt'
+import { PublishedDocument } from '@latitude-data/core/schema/types'
 
 const ParameterTypes = Object.values(ParameterType) as string[]
 

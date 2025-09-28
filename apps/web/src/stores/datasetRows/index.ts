@@ -4,7 +4,6 @@ import { updateDatasetRowAction } from '$/actions/datasetRows/update'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import type { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
@@ -14,6 +13,7 @@ import {
   serializeRow,
   serializeRows,
 } from './rowSerializationHelpers'
+import { type DatasetRow, type Dataset } from '@latitude-data/core/schema/types'
 
 export const DATASET_ROWS_ROUTE = ROUTES.api.datasetsRows.root
 export function buildDatasetRowKey({

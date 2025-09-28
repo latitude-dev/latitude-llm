@@ -1,6 +1,6 @@
 'use server'
 
-import { findAllRewardClaimsPendingToValidate } from '@latitude-data/core/data-access'
+import { findAllRewardClaimsPendingToValidate } from '@latitude-data/core/data-access/claimedRewards'
 import { withAdmin } from '../procedures'
 
 export const fetchPendingRewardClaimsAction = withAdmin

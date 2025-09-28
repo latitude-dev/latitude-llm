@@ -10,11 +10,11 @@ import {
   getCurrentUserOrRedirect,
 } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import { type Project } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { cookies } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { getRedirectUrl } from './utils'
+import { type Project } from '@latitude-data/core/schema/types'
 
 const PROJECT_ROUTE = ROUTES.projects.detail
 

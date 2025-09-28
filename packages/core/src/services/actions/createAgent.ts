@@ -1,11 +1,7 @@
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
-import {
-  ActionType,
-  CLOUD_MESSAGES,
-  createAgentActionBackendParametersSchema,
-  Workspace,
-} from '../../browser'
+import { CLOUD_MESSAGES } from '../../constants'
+import { Workspace } from '../../schema/types'
 import { cache as getCache } from '../../cache'
 import { database } from '../../client'
 import { queues } from '../../jobs/queues'
@@ -18,13 +14,17 @@ import { getCopilot, runCopilot } from '../copilot'
 import { createProject } from '../projects/create'
 import { ActionExecuteArgs } from './shared'
 
+const createAgentActionBackendParametersSchema = z.object({
+  prompt: z.string(),
+})
+
 export const CreateAgentActionSpecification = {
   parameters: createAgentActionBackendParametersSchema,
   execute: execute,
 }
 
 async function execute(
-  { parameters, user, workspace }: ActionExecuteArgs<ActionType.CreateAgent>,
+  { parameters, user, workspace }: ActionExecuteArgs<'createAgent'>,
   db = database,
   tx = new Transaction(),
 ) {

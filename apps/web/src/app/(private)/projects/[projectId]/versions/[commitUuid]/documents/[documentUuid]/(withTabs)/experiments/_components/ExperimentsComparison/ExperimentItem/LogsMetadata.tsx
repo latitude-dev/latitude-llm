@@ -1,9 +1,9 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { BestLogsMetadata } from '$/stores/experimentComparison'
-import { ExperimentWithScores } from '@latitude-data/core/browser'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
+import { ExperimentWithScores } from '@latitude-data/core/schema/types'
 
 function ExperimentLogMetadataItem({
   label,

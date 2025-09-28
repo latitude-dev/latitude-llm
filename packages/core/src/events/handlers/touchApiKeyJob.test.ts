@@ -14,9 +14,9 @@ import {
   ApiKey,
   DocumentLog,
   ProviderApiKey,
-  Providers,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 
 vi.mock('../../services/apiKeys/touch', () => ({

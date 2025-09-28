@@ -1,7 +1,7 @@
 import { Job } from 'bullmq'
 
 import { LogSources } from '@latitude-data/constants'
-import { Experiment } from '../../../browser'
+import { Experiment } from '../../../schema/types'
 import { NotFoundError } from '../../../lib/errors'
 import { ExperimentsRepository } from '../../../repositories'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'

@@ -1,5 +1,5 @@
-import { ProviderLogDto } from '../../browser'
-import { findLastProviderLogFromDocumentLogUuid } from '../../data-access'
+import { ProviderLogDto } from '../../schema/types'
+import { findLastProviderLogFromDocumentLogUuid } from '../../data-access/providerLogs'
 import { buildProviderLogResponse } from './buildResponse'
 
 export async function findLatteThreadProviderLog({

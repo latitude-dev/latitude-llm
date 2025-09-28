@@ -7,7 +7,7 @@ import {
   ProviderLog,
   StreamType,
 } from '@latitude-data/constants'
-import { ProviderApiKey, Workspace } from '../../../browser'
+import { ProviderApiKey, Workspace } from '../../../schema/types'
 import { queues } from '../../../jobs/queues'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { PartialConfig } from '../../ai'

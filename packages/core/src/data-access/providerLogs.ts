@@ -1,7 +1,7 @@
+import { providerLogs } from '../schema/models/providerLogs'
 import { desc, eq } from 'drizzle-orm'
 
 import { database } from '../client'
-import { providerLogs } from '../schema'
 import { hydrateProviderLog } from '../services/providerLogs/hydrate'
 
 export const findLastProviderLogFromDocumentLogUuid = async (

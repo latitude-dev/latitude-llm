@@ -1,4 +1,4 @@
-import { type DatasetRowDataContent } from '../../schema'
+import { type DatasetRowDataContent } from '../../schema/models/datasetRows'
 
 export function parseRowCell({ cell }: { cell: DatasetRowDataContent }) {
   if (cell === null || cell === undefined) return ''

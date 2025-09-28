@@ -1,10 +1,10 @@
-import { ProviderApiKey } from '@latitude-data/core/browser'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { memo } from 'react'
+import { ProviderApiKey } from '@latitude-data/core/schema/types'
 
 export type IProviderByName = Record<string, ProviderApiKey>
 

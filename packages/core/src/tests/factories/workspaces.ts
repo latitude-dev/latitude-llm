@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker'
 
-import { SubscriptionPlan, type User } from '../../browser'
+import { SubscriptionPlan } from '../../plans'
+import { type User } from '../../schema/types'
 import { createFeature } from '../../services/features/create'
 import { createMembership } from '../../services/memberships/create'
 import { toggleWorkspaceFeature } from '../../services/workspaceFeatures/toggle'

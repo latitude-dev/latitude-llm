@@ -5,9 +5,9 @@ import {
   LATTE_COST_PER_CREDIT,
   LATTE_COST_PROVIDER,
   LATTE_MINIMUM_CREDITS_PER_REQUEST,
-  Providers,
-  Workspace,
-} from '../../../../browser'
+} from '../../../../constants'
+import { Providers } from '@latitude-data/constants'
+import { Workspace } from '../../../../schema/types'
 import { Result } from '../../../../lib/Result'
 import Transaction from '../../../../lib/Transaction'
 import { estimateCost } from '../../../ai/estimateCost'

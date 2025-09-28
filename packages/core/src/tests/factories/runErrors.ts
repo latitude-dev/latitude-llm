@@ -1,6 +1,6 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
-import { ErrorableEntity } from '../../browser'
+import { ErrorableEntity } from '../../constants'
 import { createRunError as createRunErrorService } from '../../services/runErrors/create'
 
 interface CreateRunErrorProps {

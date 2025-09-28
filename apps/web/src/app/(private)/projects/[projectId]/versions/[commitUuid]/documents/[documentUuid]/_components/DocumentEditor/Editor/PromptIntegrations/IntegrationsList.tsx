@@ -1,5 +1,4 @@
 import { useMemo, useState, useCallback } from 'react'
-import { IntegrationDto } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   TwoColumnSelect,
@@ -11,6 +10,7 @@ import { IntegrationToolsList } from './IntegrationTools'
 import { integrationOptions } from '$/lib/integrationTypeOptions'
 import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
 import { useNavigate } from '$/hooks/useNavigate'
+import { IntegrationDto } from '@latitude-data/core/schema/types'
 
 export function IntegrationsList({
   disabled,

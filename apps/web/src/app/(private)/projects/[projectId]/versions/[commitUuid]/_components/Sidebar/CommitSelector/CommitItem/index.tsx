@@ -2,12 +2,6 @@
 import { useMemo } from 'react'
 
 import { ROUTES } from '$/services/routes'
-import {
-  DocumentVersion,
-  HEAD_COMMIT,
-  User,
-  type Commit,
-} from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -19,6 +13,12 @@ import {
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useSelectedLayoutSegment } from 'next/navigation'
+import {
+  DocumentVersion,
+  User,
+  type Commit,
+} from '@latitude-data/core/schema/types'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
 export type SimpleUser = Omit<User, 'encryptedPassword'>
 

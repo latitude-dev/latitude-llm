@@ -4,7 +4,7 @@ import {
   DocumentTrigger,
   DocumentTriggerEvent,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
 import { Result, TypedResult } from '../../../lib/Result'
 import { NotImplementedError } from '@latitude-data/constants/errors'
 import {

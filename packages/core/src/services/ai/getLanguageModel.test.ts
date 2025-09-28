@@ -3,7 +3,8 @@ import { getLanguageModel } from './getLanguageModel'
 import { LlmProvider } from './helpers'
 import * as factories from '../../tests/factories'
 import { Providers } from '@latitude-data/constants'
-import { ProviderApiKey, VercelConfigWithProviderRules } from '../../browser'
+import { ProviderApiKey } from '../../schema/types'
+import { VercelConfigWithProviderRules } from './providers/rules'
 import { LanguageModel } from 'ai'
 
 const GetLanguageModelMock = vi.hoisted(() => vi.fn())

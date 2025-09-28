@@ -1,11 +1,11 @@
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
-import { ProjectStats } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { BarChart, ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 
 import { useMemo } from 'react'
 import Panel from '$/components/Panel'
+import { ProjectStats } from '@latitude-data/core/schema/types'
 
 export function EvaluationStats({
   stats,

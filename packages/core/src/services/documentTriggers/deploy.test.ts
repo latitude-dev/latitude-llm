@@ -15,7 +15,7 @@ import {
   Workspace,
   DocumentTrigger,
   DocumentVersion,
-} from '../../browser'
+} from '../../schema/types'
 import { deployDocumentTrigger, undeployDocumentTrigger } from './deploy'
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
@@ -26,7 +26,7 @@ import {
   IntegrationTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
 import { eq } from 'drizzle-orm'
-import { documentTriggers } from '../../schema'
+import { documentTriggers } from '../../schema/models/documentTriggers'
 import { database } from '../../client'
 
 const mocks = vi.hoisted(() => ({

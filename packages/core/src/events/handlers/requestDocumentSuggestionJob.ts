@@ -1,5 +1,5 @@
-import { LogSources } from '../../browser'
-import { unsafelyFindWorkspace } from '../../data-access'
+import { LogSources } from '../../constants'
+import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { generateDocumentSuggestionJobKey } from '../../jobs/job-definitions'
 import { queues } from '../../jobs/queues'
 import { NotFoundError } from '../../lib/errors'

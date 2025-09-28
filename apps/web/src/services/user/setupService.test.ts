@@ -1,14 +1,12 @@
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
 import { database, utils } from '@latitude-data/core/client'
 import { publisher } from '@latitude-data/core/events/publisher'
-import {
-  apiKeys,
-  memberships,
-  providerApiKeys,
-  users,
-  workspaceOnboarding,
-  workspaces,
-} from '@latitude-data/core/schema'
+import { apiKeys } from '@latitude-data/core/schema/models/apiKeys'
+import { memberships } from '@latitude-data/core/schema/models/memberships'
+import { providerApiKeys } from '@latitude-data/core/schema/models/providerApiKeys'
+import { users } from '@latitude-data/core/schema/models/users'
+import { workspaceOnboarding } from '@latitude-data/core/schema/models/workspaceOnboarding'
+import { workspaces } from '@latitude-data/core/schema/models/workspaces'
 import setupServiceGlobal from './setupService'
 
 const mocks = vi.hoisted(() => ({

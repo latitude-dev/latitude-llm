@@ -3,7 +3,11 @@ import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import { ROUTES } from '$/services/routes'
 import { OnboardingParameters } from '@latitude-data/constants/onboarding'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+} from '@latitude-data/core/schema/types'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCallback, useMemo } from 'react'
 

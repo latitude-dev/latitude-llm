@@ -1,12 +1,6 @@
 import http from 'http'
 
 import {
-  TOKEN_TYPES,
-  WebClientToServerEvents,
-  WebServerToClientEvents,
-  WebSocketData,
-} from '@latitude-data/core/browser'
-import {
   buildWorkspaceRoom,
   verifyWebsocketToken,
 } from '@latitude-data/core/websockets/utils'
@@ -15,6 +9,12 @@ import cookieParser from 'cookie-parser'
 import express from 'express'
 import { Namespace, Server, Socket } from 'socket.io'
 import Redis from 'ioredis'
+import {
+  TOKEN_TYPES,
+  WebClientToServerEvents,
+  WebServerToClientEvents,
+  WebSocketData,
+} from '@latitude-data/core/websockets/constants'
 
 function parseCookie(cookieString: string): Record<string, string> {
   return cookieString.split(';').reduce(

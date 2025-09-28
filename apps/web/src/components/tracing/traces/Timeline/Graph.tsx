@@ -1,16 +1,16 @@
 import { formatDuration } from '$/app/_lib/formatUtils'
-import {
-  AssembledSpan,
-  AssembledTrace,
-  SpanStatus,
-  SpanType,
-} from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { colors } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import { memo, useMemo } from 'react'
 import { SPAN_COLORS } from '../../spans/shared'
 import { SPAN_SPECIFICATIONS } from '../../spans/specifications'
+import {
+  AssembledSpan,
+  AssembledTrace,
+  SpanStatus,
+  SpanType,
+} from '@latitude-data/core/constants'
 
 const BAR_MIN_WIDTH = 0.5 // 0.5% of the graph width
 const LABEL_MIN_WIDTH = 60 // 60px

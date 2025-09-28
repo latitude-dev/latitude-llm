@@ -2,13 +2,6 @@ import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { Message as MessageComponent } from '$/components/ChatWrapper'
 import useProviderApiKeys from '$/stores/providerApiKeys'
-import {
-  DocumentLog,
-  DocumentLogWithMetadataAndError,
-  ProviderApiKey,
-  ProviderLogDto,
-  SpanWithDetails,
-} from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
@@ -37,6 +30,12 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { FinishReasonItem } from '../../../../../../[documentUuid]/_components/FinishReasonItem'
+import { DocumentLog, SpanWithDetails } from '@latitude-data/core/constants'
+import {
+  DocumentLogWithMetadataAndError,
+  ProviderApiKey,
+  ProviderLogDto,
+} from '@latitude-data/core/schema/types'
 
 function costNotCalculatedReason({
   provider,

@@ -7,12 +7,12 @@ import {
   Project,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
-import { projects } from '../../schema'
+import { projects } from '../../schema/models/projects'
 import { createNewDocument } from '../documents'
 import { createProject } from './create'
 

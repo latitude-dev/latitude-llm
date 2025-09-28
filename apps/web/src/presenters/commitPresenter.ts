@@ -1,4 +1,4 @@
-import type { Commit } from '@latitude-data/core/browser'
+import { type Commit } from '@latitude-data/core/schema/types'
 
 export default function commitPresenter(commit: Commit) {
   return commit

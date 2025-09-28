@@ -5,11 +5,10 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   Commit,
   DocumentVersion,
-  LogSources,
   ProviderApiKey,
-  Providers,
   Workspace,
-} from '../browser'
+} from '../schema/types'
+import { LogSources, Providers } from '@latitude-data/constants'
 import { NotFoundError } from '../lib/errors'
 import * as factories from '../tests/factories'
 import { ProviderLogsRepository } from './providerLogsRepository'

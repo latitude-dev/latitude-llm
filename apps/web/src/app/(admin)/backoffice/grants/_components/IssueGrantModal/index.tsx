@@ -1,7 +1,6 @@
 'use client'
 
 import { useGrantsAdmin } from '$/stores/admin/grants'
-import { QuotaType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -9,6 +8,7 @@ import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { FormEvent, useState } from 'react'
+import { QuotaType } from '@latitude-data/core/constants'
 
 export function IssueGrantModal({
   open,

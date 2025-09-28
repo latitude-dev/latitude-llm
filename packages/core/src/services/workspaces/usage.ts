@@ -1,15 +1,11 @@
 import { count, eq, inArray } from 'drizzle-orm'
 import Redis from 'ioredis'
-import {
-  QuotaType,
-  Subscription,
-  SubscriptionPlan,
-  Workspace,
-  WorkspaceUsage,
-} from '../../browser'
+import { QuotaType, WorkspaceUsage } from '../../constants'
+import { Subscription, Workspace } from '../../schema/types'
+import { SubscriptionPlan } from '../../plans'
 import { cache } from '../../cache'
 import { database } from '../../client'
-import { unsafelyFindWorkspace } from '../../data-access'
+import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
@@ -17,7 +13,9 @@ import {
   EvaluationResultsV2Repository,
   MembershipsRepository,
 } from '../../repositories'
-import { commits, documentLogs, projects } from '../../schema'
+import { commits } from '../../schema/models/commits'
+import { documentLogs } from '../../schema/models/documentLogs'
+import { projects } from '../../schema/models/projects'
 import { computeQuota } from '../grants/quota'
 import { getLatestRenewalDate } from './utils/calculateRenewalDate'
 

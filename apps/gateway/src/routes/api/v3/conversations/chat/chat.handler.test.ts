@@ -4,15 +4,7 @@ import {
   LatitudeError,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
-import {
-  ChainStepResponse,
-  LegacyChainEventTypes,
-  LogSources,
-  ProviderLog,
-  StreamEventTypes,
-  Workspace,
-} from '@latitude-data/core/browser'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import {
   createProject,
   createTelemetryTrace,
@@ -23,10 +15,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import app from '$/routes/app'
 import { ChainEventTypes } from '@latitude-data/constants'
 import { parseSSEvent } from '$/common/parseSSEEvent'
+import {
+  ChainStepResponse,
+  LegacyChainEventTypes,
+  LogSources,
+  StreamEventTypes,
+} from '@latitude-data/core/constants'
+import { ProviderLog, Workspace } from '@latitude-data/core/schema/types'
 
 const mocks = vi.hoisted(() => ({
   addMessages: vi.fn(),
-  addMessagesLegacy: vi.fn(),
   captureException: vi.fn(),
   queues: {
     defaultQueue: {
@@ -45,14 +43,6 @@ vi.mock(
       addMessages: mocks.addMessages,
     }
   },
-)
-
-vi.mock(
-  '@latitude-data/core/services/__deprecated/documentLogs/addMessages/index',
-  async (importActual) => ({
-    ...(await importActual()),
-    addMessagesLegacy: mocks.addMessagesLegacy,
-  }),
 )
 
 vi.mock('$/common/tracer', async (importOriginal) => {
@@ -252,7 +242,6 @@ describe('POST /chat', () => {
         source: LogSources.API,
         tools: {},
         abortSignal: expect.anything(),
-        isLegacy: false,
       })
     })
 
@@ -307,7 +296,6 @@ describe('POST /chat', () => {
         source: LogSources.API,
         tools: {},
         abortSignal: expect.anything(),
-        isLegacy: false,
       })
     })
 
@@ -361,7 +349,6 @@ describe('POST /chat', () => {
         tools: {},
         source: LogSources.Playground,
         abortSignal: expect.anything(),
-        isLegacy: false,
       })
     })
 
@@ -529,46 +516,6 @@ describe('POST /chat', () => {
         source: LogSources.API,
         tools: {},
         abortSignal: expect.anything(),
-        isLegacy: false,
-      })
-    })
-
-    it('passes SDK version header to addMessages', async () => {
-      const trace = createTelemetryTrace({})
-      const sdkVersion = '4.2.1'
-
-      mocks.addMessages.mockReturnValue(
-        new Promise((resolve) => {
-          resolve(
-            Result.ok({
-              stream: new ReadableStream({}),
-              response: new Promise((resolve) => {
-                resolve(Result.ok(step))
-              }),
-              trace,
-            }),
-          )
-        }),
-      )
-
-      await app.request(route, {
-        method: 'POST',
-        body: JSON.stringify(body),
-        headers: {
-          ...headers,
-          'X-Latitude-SDK-Version': sdkVersion,
-        },
-      })
-
-      expect(mocks.addMessagesLegacy).toHaveBeenCalledWith({
-        context: expect.anything(),
-        workspace,
-        documentLogUuid: step.documentLogUuid,
-        messages: body.messages,
-        source: LogSources.API,
-        tools: {},
-        abortSignal: expect.anything(),
-        isLegacy: true,
       })
     })
 
@@ -606,7 +553,6 @@ describe('POST /chat', () => {
         source: LogSources.Playground,
         tools: {},
         abortSignal: expect.anything(),
-        isLegacy: false,
       })
     })
 

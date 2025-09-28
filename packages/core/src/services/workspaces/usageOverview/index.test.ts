@@ -6,7 +6,7 @@ import * as factories from '../../../tests/factories'
 import { getUsageOverview } from './getUsageOverview'
 import { buildAllData, onlyOverviewWorkspaces } from './testHelper'
 import { database } from '../../../client'
-import { evaluationResultsV2 } from '../../../schema'
+import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import { inArray } from 'drizzle-orm'
 
 let targetDate: Date

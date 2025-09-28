@@ -1,13 +1,13 @@
-import {
-  DocumentVersion,
-  EvaluationType,
-  EvaluationV2,
-  LlmEvaluationMetricAnyCustom,
-} from '@latitude-data/core/browser'
 import { useCallback } from 'react'
 
 import { useEvaluationParameters } from '../../../hooks/useEvaluationParamaters/index'
 import { useSerializedLogs, type OnHistoryFetchedFn } from './useSerializedLogs'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import {
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetricAnyCustom,
+} from '@latitude-data/core/constants'
 
 /**
  * `selectedDocumentLogUuid` is the log that comes from

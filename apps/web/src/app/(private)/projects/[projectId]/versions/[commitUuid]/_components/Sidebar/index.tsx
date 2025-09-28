@@ -1,10 +1,3 @@
-import {
-  Commit,
-  CommitStatus,
-  DocumentVersion,
-  Project,
-  ULTRA_LARGE_PAGE_SIZE,
-} from '@latitude-data/core/browser'
 import { CommitsRepository } from '@latitude-data/core/repositories/index'
 import {
   getDocumentsAtCommitCached,
@@ -17,6 +10,15 @@ import CommitSelector from './CommitSelector'
 import ProjectSection from './ProjectSection'
 import DocumentSidebar from '$/components/Sidebar'
 import { paginateQuery } from '@latitude-data/core/lib/pagination/paginate'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+} from '@latitude-data/core/schema/types'
+import {
+  CommitStatus,
+  ULTRA_LARGE_PAGE_SIZE,
+} from '@latitude-data/core/constants'
 
 export default async function Sidebar({
   project,

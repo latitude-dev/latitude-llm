@@ -9,16 +9,15 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import { EvaluationType, ProviderApiKey, ProviderApiKeyUsage } from '../browser'
+import { ProviderApiKey } from '../schema/types'
+import { EvaluationType, ProviderApiKeyUsage } from '../constants'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import {
-  commits,
-  documentVersions,
-  evaluationVersions,
-  projects,
-  providerApiKeys,
-} from '../schema'
+import { commits } from '../schema/models/commits'
+import { documentVersions } from '../schema/models/documentVersions'
+import { evaluationVersions } from '../schema/models/evaluationVersions'
+import { projects } from '../schema/models/projects'
+import { providerApiKeys } from '../schema/models/providerApiKeys'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(providerApiKeys)

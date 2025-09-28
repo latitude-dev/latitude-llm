@@ -1,6 +1,5 @@
 'use client'
 import { PromptHeader } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Header'
-import { PublishedDocument } from '@latitude-data/core/browser'
 import { Container } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/Container'
 import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -13,6 +12,7 @@ import {
 import { ForkButton } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/ForkButton'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
+import { PublishedDocument } from '@latitude-data/core/schema/types'
 
 export function ForkDocument({ shared }: { shared: PublishedDocument }) {
   const back = ROUTES.share.document(shared.uuid!).root

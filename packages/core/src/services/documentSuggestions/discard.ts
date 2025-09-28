@@ -1,9 +1,9 @@
 import { and, eq } from 'drizzle-orm'
-import { DocumentSuggestion, User, Workspace } from '../../browser'
+import { DocumentSuggestion, User, Workspace } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { documentSuggestions } from '../../schema'
+import { documentSuggestions } from '../../schema/models/documentSuggestions'
 
 export async function discardDocumentSuggestion(
   {

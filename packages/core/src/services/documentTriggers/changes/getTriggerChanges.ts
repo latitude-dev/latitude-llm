@@ -3,7 +3,7 @@ import {
   DocumentTriggerStatus,
   ModifiedDocumentType,
 } from '@latitude-data/constants'
-import { Commit, DocumentTrigger, Workspace } from '../../../browser'
+import { Commit, DocumentTrigger, Workspace } from '../../../schema/types'
 import { Result } from '../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import {

@@ -1,8 +1,8 @@
-import { User } from '../../browser'
+import { User } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { users } from '../../schema'
+import { users } from '../../schema/models/users'
 
 export async function createUser(
   {

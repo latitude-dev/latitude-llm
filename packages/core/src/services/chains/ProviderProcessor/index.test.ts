@@ -4,7 +4,7 @@ import { LanguageModelUsage } from 'ai'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { processResponse } from '.'
-import { LogSources, Providers } from '../../../constants'
+import { LogSources, Providers } from '@latitude-data/constants'
 import { generateUUIDIdentifier } from './../../../lib/generateUUID'
 import { buildProviderLogDto } from './saveOrPublishProviderLogs'
 

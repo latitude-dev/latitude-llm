@@ -2,11 +2,6 @@ import {
   UseDocumentParameters,
   useDocumentParameters,
 } from '$/hooks/useDocumentParameters'
-import {
-  DocumentVersion,
-  INPUT_SOURCE,
-  InputSource,
-} from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import {
@@ -30,6 +25,11 @@ import { ManualParams } from './ManualParams'
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import {
+  INPUT_SOURCE,
+  InputSource,
+} from '@latitude-data/core/lib/documentPersistedInputs'
 
 export const TABS: TabSelectorOption<InputSource>[] = [
   { label: 'Manual', value: INPUT_SOURCE.manual },

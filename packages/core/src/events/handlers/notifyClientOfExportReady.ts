@@ -1,4 +1,5 @@
-import { unsafelyFindWorkspace, unsafelyGetUser } from '../../data-access'
+import { unsafelyFindWorkspace } from '../../data-access/workspaces'
+import { unsafelyGetUser } from '../../data-access/users'
 import { ExportReadyMailer } from '../../mailers/mailers/mailers/exports/ExportReadyMailer'
 import { EventHandler, ExportReadyEvent } from '../events'
 

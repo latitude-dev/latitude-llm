@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm'
 
-import { User, Workspace } from '../../browser'
+import { User, Workspace } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { users } from '../../schema'
+import { users } from '../../schema/models/users'
 import { createMembership } from '../memberships/create'
 import { createUser } from './createUser'
 

@@ -5,11 +5,6 @@ import {
 } from '$/components/ChatWrapper'
 import { MetadataItem } from '$/components/MetadataItem'
 import { Message } from '@latitude-data/constants/legacyCompiler'
-import {
-  FINISH_REASON_DETAILS,
-  SPAN_SPECIFICATIONS,
-  SpanType,
-} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
@@ -19,6 +14,11 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useState } from 'react'
 import { DetailsPanelProps, SPAN_COLORS } from './shared'
+import {
+  FINISH_REASON_DETAILS,
+  SPAN_SPECIFICATIONS,
+  SpanType,
+} from '@latitude-data/core/constants'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Completion]
 export default {

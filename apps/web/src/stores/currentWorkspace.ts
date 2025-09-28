@@ -2,12 +2,12 @@ import { setDefaultProviderAction } from '$/actions/workspaces/setDefaultProvide
 import { updateWorkspaceAction } from '$/actions/workspaces/update'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { WorkspaceDto } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
+import { WorkspaceDto } from '@latitude-data/core/schema/types'
 
 export default function useCurrentWorkspace(opts?: SWRConfiguration) {
   const { toast } = useToast()

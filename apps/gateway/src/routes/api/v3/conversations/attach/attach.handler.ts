@@ -1,7 +1,7 @@
 import { captureException } from '$/common/tracer'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
-import { unsafelyFindActiveRun } from '@latitude-data/core/data-access'
+import { unsafelyFindActiveRun } from '@latitude-data/core/data-access/runs'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'

@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-
-import { CommitStatus } from '@latitude-data/core/browser'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -17,6 +15,7 @@ import { ChangedDocument, type CommitChanges } from '@latitude-data/constants'
 import { ChangesList } from './ChangesList'
 import { ChangeDiff } from './ChangeDiff'
 import { TriggerChangesList } from './TriggerChangesList'
+import { CommitStatus } from '@latitude-data/core/constants'
 
 function BlankSlateSelection() {
   return (

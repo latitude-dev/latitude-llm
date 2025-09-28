@@ -1,12 +1,6 @@
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
-import {
-  LatteThread,
-  Project,
-  SubscriptionPlan,
-  SubscriptionPlans,
-  User,
-  Workspace,
-} from '../../../../browser'
+import { LatteThread, Project, User, Workspace } from '../../../../schema/types'
+import { SubscriptionPlan, SubscriptionPlans } from '../../../../plans'
 import * as cache from '../../../../cache'
 import * as plans from '../../../../plans'
 import * as factories from '../../../../tests/factories'

@@ -1,11 +1,10 @@
 import { useCallback, useMemo } from 'react'
-
-import { LOG_SOURCES, LogSources } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { FilterButton, useFilterButtonColor } from '../FilterButton'
+import { LOG_SOURCES, LogSources } from '@latitude-data/core/constants'
 
 const LogSourceLabel: { [key in LogSources]: string } = {
   [LogSources.API]: 'API',

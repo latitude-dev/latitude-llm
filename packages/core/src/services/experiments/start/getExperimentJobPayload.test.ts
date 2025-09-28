@@ -4,9 +4,9 @@ import {
   Dataset,
   DocumentVersion,
   EvaluationV2,
-  Providers,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import * as factories from '../../../tests/factories'
 import { getExperimentJobPayload } from './getExperimentJobPayload'
 import { createExperiment } from '../create'

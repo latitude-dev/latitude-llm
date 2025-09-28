@@ -1,6 +1,6 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { Workspace } from '@latitude-data/core/browser'
+import { Workspace } from '@latitude-data/core/schema/types'
 import { RunsRepository } from '@latitude-data/core/repositories'
 import { NextRequest, NextResponse } from 'next/server'
 

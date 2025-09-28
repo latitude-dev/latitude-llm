@@ -1,10 +1,11 @@
 import { adminHandler } from '$/middlewares/adminHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { BadRequestError } from '@latitude-data/constants/errors'
-import { QuotaType, WorkspaceLimits } from '@latitude-data/core/browser'
-import { unsafelyFindWorkspace } from '@latitude-data/core/data-access'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
 import { computeQuota } from '@latitude-data/core/services/grants/quota'
 import { NextRequest, NextResponse } from 'next/server'
+import { QuotaType } from '@latitude-data/core/constants'
+import { WorkspaceLimits } from '@latitude-data/core/schema/types'
 
 export const GET = errorHandler(
   adminHandler(

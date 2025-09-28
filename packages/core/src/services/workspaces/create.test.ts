@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { QuotaType, SubscriptionPlan, SubscriptionPlans } from '../../browser'
+import { QuotaType } from '../../constants'
+import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
 import * as plans from '../../plans'
 import { createUser } from '../../tests/factories'
 import { computeQuota } from '../grants/quota'

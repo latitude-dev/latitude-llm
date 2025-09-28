@@ -1,6 +1,6 @@
+import { users } from '../../schema/models/users'
 import { eq } from 'drizzle-orm'
 
-import { users } from '../../schema'
 import { WorkspacesRepository } from '../../repositories'
 import { database } from '../../client'
 import { LatitudeEvent } from '../../events/events'

@@ -1,4 +1,4 @@
-import { Experiment } from '../../../browser'
+import { Experiment } from '../../../schema/types'
 import { LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'

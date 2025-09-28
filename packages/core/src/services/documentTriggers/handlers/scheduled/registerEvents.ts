@@ -1,14 +1,14 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTrigger, DocumentTriggerEvent } from '../../../../browser'
+import { DocumentTrigger, DocumentTriggerEvent } from '../../../../schema/types'
 import { database } from '../../../../client'
 import { ErrorResult, Result } from '../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../lib/Transaction'
-import { documentTriggers } from '../../../../schema'
+import { documentTriggers } from '../../../../schema/models/documentTriggers'
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { checkCronExpression, getNextRunTime } from '../../helpers/cronHelper'
 import { CommitsRepository } from '../../../../repositories'
 import { registerDocumentTriggerEvent } from '../../triggerEvents/registerEvent'
-import { unsafelyFindWorkspace } from '../../../../data-access'
+import { unsafelyFindWorkspace } from '../../../../data-access/workspaces'
 import { NotFoundError } from '@latitude-data/constants/errors'
 
 /**

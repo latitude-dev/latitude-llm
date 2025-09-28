@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { IntegrationDto, Workspace } from '../../browser'
+import { IntegrationDto, Workspace } from '../../schema/types'
 import { IntegrationType } from '@latitude-data/constants'
 import { BadRequestError, NotFoundError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
 import { updateIntegrationConfiguration } from './updateConfiguration'
 import { PipedreamIntegrationConfiguration } from './helpers/schema'
 import { database } from '../../client'
-import { integrations } from '../../schema'
+import { integrations } from '../../schema/models/integrations'
 import { eq } from 'drizzle-orm'
 
 describe('updateIntegrationConfiguration', () => {

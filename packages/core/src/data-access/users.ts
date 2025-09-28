@@ -1,8 +1,9 @@
+import { memberships } from '../schema/models/memberships'
+import { users } from '../schema/models/users'
 import { asc, eq, getTableColumns } from 'drizzle-orm'
 
-import { User, Workspace, WorkspaceDto } from '../browser'
+import { User, Workspace, WorkspaceDto } from '../schema/types'
 import { database } from '../client'
-import { memberships, users } from '../schema'
 
 export async function findFirstUserInWorkspace(
   workspace: WorkspaceDto | Workspace,

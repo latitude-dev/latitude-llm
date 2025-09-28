@@ -1,4 +1,3 @@
-import { Workspace } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { computeDocumentLogsCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogs'
 import { computeDocumentLogsWithMetadataCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
@@ -9,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { UnprocessableEntityError } from '@latitude-data/core/lib/errors'
+import { Workspace } from '@latitude-data/core/schema/types'
 
 function pageUrl(params: {
   projectId: string

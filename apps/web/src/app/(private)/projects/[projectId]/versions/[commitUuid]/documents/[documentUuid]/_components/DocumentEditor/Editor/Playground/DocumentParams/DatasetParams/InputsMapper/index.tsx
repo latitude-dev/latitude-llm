@@ -1,11 +1,12 @@
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { DocumentVersion, PlaygroundInput } from '@latitude-data/core/browser'
 import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
 
 import { InputsMapperItem, OnSelectRowCellFn } from './InputsMapperItem'
 import { type UseSelectDataset } from '../useSelectDataset'
 import { ParametersWrapper } from '../../ParametersWrapper'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { PlaygroundInput } from '@latitude-data/core/lib/documentPersistedInputs'
 
 function getTooltipValue(input: PlaygroundInput<'datasetV2'>) {
   const value = typeof input === 'string' ? input : input.value

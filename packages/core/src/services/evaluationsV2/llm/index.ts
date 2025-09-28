@@ -1,11 +1,13 @@
 import { ChainError } from '@latitude-data/constants/errors'
 import {
   ErrorableEntity,
-  EvaluationResultValue,
   EvaluationType,
   LlmEvaluationMetric,
+} from '../../../constants'
+import {
+  EvaluationResultValue,
   LlmEvaluationSpecification as specification,
-} from '../../../browser'
+} from '../../../constants'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'

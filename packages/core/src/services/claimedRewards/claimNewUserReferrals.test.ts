@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
 import { RewardType } from '../../constants'
-import { claimedRewards } from '../../schema'
+import { claimedRewards } from '../../schema/models/claimedRewards'
 import { claimReward } from './claim'
 import { claimNewUserReferrals } from './claimNewUserReferrals'
 

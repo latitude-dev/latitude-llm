@@ -22,24 +22,24 @@ import {
 } from 'drizzle-orm'
 import {
   EVALUATION_RESULT_RECENCY_DAYS,
-  EvaluationResultsV2Search,
+  EvaluationType,
+  MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
+} from '../constants'
+import { EvaluationResultsV2Search } from '../helpers'
+import {
   EvaluationResultV2,
   EvaluationResultV2WithDetails,
-  EvaluationType,
   EvaluationV2Stats,
-  MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
   ResultWithEvaluationV2,
-} from '../browser'
+} from '../schema/types'
 import { NotFoundError } from '../lib/errors'
 import { calculateOffset } from '../lib/pagination/index'
 import { Result } from '../lib/Result'
-import {
-  commits,
-  datasetRows,
-  datasets,
-  evaluationResultsV2,
-  providerLogs,
-} from '../schema'
+import { commits } from '../schema/models/commits'
+import { datasetRows } from '../schema/models/datasetRows'
+import { datasets } from '../schema/models/datasets'
+import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
+import { providerLogs } from '../schema/models/providerLogs'
 import serializeProviderLog from '../services/providerLogs/serialize'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'

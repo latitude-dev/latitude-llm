@@ -1,14 +1,13 @@
 import { eq } from 'drizzle-orm'
 
+import { Dataset, DocumentVersion } from '../../schema/types'
 import {
-  Dataset,
-  DocumentVersion,
   LinkedDataset,
   LinkedDatasetRow,
-} from '../../browser'
+} from '../../lib/documentPersistedInputs'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { documentVersions } from '../../schema'
+import { documentVersions } from '../../schema/models/documentVersions'
 
 function getLinkedData({
   inputs,

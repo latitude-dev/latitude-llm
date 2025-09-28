@@ -1,15 +1,16 @@
 import type { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
 
 import { LanguageModelUsage } from 'ai'
-import { Commit, LogSources } from '../../browser'
-import { findWorkspaceFromCommit } from '../../data-access'
+import { Commit } from '../../schema/types'
+import { LogSources } from '../../constants'
+import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { publisher } from '../../events/publisher'
 import { NotFoundError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { hashContent } from '../../lib/hashContent'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { documentLogs } from '../../schema'
+import { documentLogs } from '../../schema/models/documentLogs'
 import { createProviderLog } from '../providerLogs/create'
 
 export type CreateDocumentLogProps = {

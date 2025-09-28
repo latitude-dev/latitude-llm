@@ -1,12 +1,12 @@
 import { and, count, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
-import {
-  DocumentLogFilterOptions,
-  DocumentLogsAggregations,
-  ErrorableEntity,
-} from '../../browser'
+import { DocumentLogFilterOptions, ErrorableEntity } from '../../constants'
+import { DocumentLogsAggregations } from '../../schema/types'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { commits, documentLogs, providerLogs, runErrors } from '../../schema'
+import { commits } from '../../schema/models/commits'
+import { documentLogs } from '../../schema/models/documentLogs'
+import { providerLogs } from '../../schema/models/providerLogs'
+import { runErrors } from '../../schema/models/runErrors'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export async function computeDocumentLogsAggregations(

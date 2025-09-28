@@ -1,4 +1,4 @@
-import { Membership, User } from '../../browser'
+import { Membership, User } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { updateMembership } from '../memberships'

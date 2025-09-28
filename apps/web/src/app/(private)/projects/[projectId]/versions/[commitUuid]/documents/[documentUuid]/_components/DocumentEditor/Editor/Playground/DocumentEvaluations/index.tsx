@@ -6,12 +6,6 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import {
-  DocumentLogWithMetadata,
-  DocumentVersion,
-  EvaluationResultV2,
-  EvaluationV2,
-} from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import {
   CollapsibleBox,
@@ -28,6 +22,11 @@ import {
   ExpandedContentHeader,
 } from './BoxContent'
 import { Snapshot } from './shared'
+import {
+  DocumentLogWithMetadata,
+  DocumentVersion,
+} from '@latitude-data/core/schema/types'
+import { EvaluationResultV2, EvaluationV2 } from '@latitude-data/core/constants'
 
 const useEvaluationResultsV2Socket = ({
   evaluations,

@@ -1,8 +1,8 @@
-import { RewardType } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { z } from 'zod'
 
 import { RewardConfig } from './RewardMenuBase'
+import { RewardType } from '@latitude-data/core/constants'
 
 export const REWARD_CONFIGS: Record<RewardType, RewardConfig> = {
   [RewardType.XFollow]: {

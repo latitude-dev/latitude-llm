@@ -5,7 +5,7 @@ import {
   ProviderApiKey,
   ProviderLog,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 import { NotFoundError } from './../../lib/errors'

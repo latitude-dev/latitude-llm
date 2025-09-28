@@ -1,13 +1,8 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import {
-  Commit,
-  DocumentVersion,
-  ErrorableEntity,
-  Providers,
-  Workspace,
-} from '../../browser'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import {
   createDocumentLog,
   createProject,
@@ -15,6 +10,7 @@ import {
 } from '../../tests/factories'
 import { createRunError } from '../../tests/factories/runErrors'
 import { DocumentLogsRepository } from './index'
+import { ErrorableEntity } from '../../constants'
 
 let workspace: Workspace
 let commit: Commit

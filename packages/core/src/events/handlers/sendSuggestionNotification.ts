@@ -1,8 +1,10 @@
+import { users } from '../../schema/models/users'
 import { env } from '@latitude-data/env'
 import { subDays } from 'date-fns'
 import { eq } from 'drizzle-orm'
-import { DOCUMENT_SUGGESTION_NOTIFICATION_DAYS, User } from '../../browser'
-import { unsafelyFindWorkspace } from '../../data-access'
+import { DOCUMENT_SUGGESTION_NOTIFICATION_DAYS } from '../../constants'
+import { User } from '../../schema/types'
+import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -12,7 +14,6 @@ import {
   DocumentVersionsRepository,
   UsersRepository,
 } from '../../repositories'
-import { users } from '../../schema'
 import { DocumentSuggestionCreatedEvent } from '../events'
 
 const UTM_SOURCE = 'email'

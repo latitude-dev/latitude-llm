@@ -2,13 +2,13 @@ import { subDays } from 'date-fns'
 import { and, count, desc, eq, getTableColumns, gte } from 'drizzle-orm'
 import {
   Commit,
-  DOCUMENT_SUGGESTION_EXPIRATION_DAYS,
   DocumentSuggestion,
   DocumentSuggestionWithDetails,
   DocumentVersion,
-} from '../browser'
+} from '../schema/types'
+import { DOCUMENT_SUGGESTION_EXPIRATION_DAYS } from '../constants'
 import { Result } from '../lib/Result'
-import { documentSuggestions } from '../schema'
+import { documentSuggestions } from '../schema/models/documentSuggestions'
 import { EvaluationsV2Repository } from './evaluationsV2Repository'
 import Repository from './repositoryV2'
 

@@ -2,7 +2,6 @@ import { useDevMode } from '$/hooks/useDevMode'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { useExperimentDiff } from '$/hooks/useExperimentDiffContext'
 import { useMetadata } from '$/hooks/useMetadata'
-import { DocumentVersion } from '@latitude-data/core/browser'
 import {
   useCurrentCommit,
   useCurrentProject,
@@ -11,6 +10,7 @@ import { useEffect, useMemo } from 'react'
 import { PlaygroundBlocksEditor } from '../BlocksEditor'
 import { PlaygroundTextEditor } from '../TextEditor'
 import { useLatteDiff } from '$/hooks/useLatteDiff'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function Editors({
   document,

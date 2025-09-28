@@ -5,10 +5,12 @@ import {
   ActionType,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
 import { Database } from '../../client'
 import { TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
+
+export { ActionType }
 
 // prettier-ignore
 type ZodSchema<T = any> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny, T, T>

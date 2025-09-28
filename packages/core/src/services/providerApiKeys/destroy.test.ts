@@ -1,14 +1,15 @@
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { Providers, User, Workspace } from '../../browser'
+import { Providers } from '@latitude-data/constants'
+import { User, Workspace } from '../../schema/types'
 import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import {
   ProviderApiKeysRepository,
   WorkspacesRepository,
 } from '../../repositories'
-import { providerApiKeys } from '../../schema'
+import { providerApiKeys } from '../../schema/models/providerApiKeys'
 import * as factories from '../../tests/factories'
 import { destroyProviderApiKey } from './destroy'
 

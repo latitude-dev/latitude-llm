@@ -3,7 +3,6 @@
 import { DocumentRoutes, ROUTES } from '$/services/routes'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import { ModifiedDocumentType } from '@latitude-data/constants'
-import { LatteThreadCheckpoint } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
@@ -12,6 +11,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
+import { LatteThreadCheckpoint } from '@latitude-data/core/schema/types'
 
 function ChangeListItem({ checkpoint }: { checkpoint: LatteThreadCheckpoint }) {
   const { project } = useCurrentProject()

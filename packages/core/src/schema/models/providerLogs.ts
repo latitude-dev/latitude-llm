@@ -68,21 +68,21 @@ export const providerLogs = latitudeSchema.table(
     fileKey: varchar('file_key'), // Key for file storage containing JSON data
     ...timestamps(),
   },
-  (table) => ({
-    providerIdx: index('provider_idx').on(table.providerId),
-    createdAtIdx: index('provider_logs_created_at_idx').on(table.createdAt),
-    workspaceIdx: index().on(table.workspaceId),
-    documentUuidIdx: index('document_uuid_idx').on(table.documentLogUuid),
-    documentLogModelIdx: index('provider_logs_document_log_model_idx').on(
+  (table) => [
+    index('provider_idx').on(table.providerId),
+    index('provider_logs_created_at_idx').on(table.createdAt),
+    index().on(table.workspaceId),
+    index('document_uuid_idx').on(table.documentLogUuid),
+    index('provider_logs_document_log_model_idx').on(
       table.documentLogUuid,
       table.model,
     ),
-    createdAtBrinIdx: index('provider_logs_created_at_brin_idx')
+    index('provider_logs_created_at_brin_idx')
       .using('brin', sql`${table.createdAt}`)
       .with({
         pages_per_range: 32,
         autosummarize: true,
       })
       .concurrently(),
-  }),
+  ],
 )

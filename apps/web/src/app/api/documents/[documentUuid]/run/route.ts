@@ -2,13 +2,9 @@ import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { captureException } from '$/helpers/captureException'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { ChainEventTypes } from '@latitude-data/constants'
-import {
-  LogSources,
-  StreamEventTypes,
-  User,
-  Workspace,
-} from '@latitude-data/core/browser'
+import { ChainEventTypes, StreamEventTypes } from '@latitude-data/constants'
+import { LogSources } from '@latitude-data/core/constants'
+import { User, Workspace } from '@latitude-data/core/schema/types'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { Result } from '@latitude-data/core/lib/Result'
 import {

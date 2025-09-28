@@ -1,9 +1,7 @@
 import { ROUTES } from '$/services/routes'
-import {
-  ActionType,
-  cloneAgentActionFrontendParametersSchema,
-} from '@latitude-data/core/browser'
 import { ActionExecuteArgs } from './shared'
+import type { ActionType } from '@latitude-data/core/schema/types'
+import { cloneAgentActionFrontendParametersSchema } from '@latitude-data/core/constants'
 
 export const CloneAgentActionSpecification = {
   parameters: cloneAgentActionFrontendParametersSchema,
@@ -13,7 +11,7 @@ export const CloneAgentActionSpecification = {
 async function execute({
   parameters: { projectId, commitUuid, hasCompletedOnboarding },
   router,
-}: ActionExecuteArgs<ActionType.CloneAgent>) {
+}: ActionExecuteArgs<typeof ActionType.CloneAgent>) {
   if (!hasCompletedOnboarding) {
     return router.push(ROUTES.onboarding.root)
   }

@@ -1,4 +1,3 @@
-import { Commit, Workspace } from '@latitude-data/core/browser'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -8,6 +7,7 @@ import { createNewDocument } from '@latitude-data/core/services/documents/create
 import { documentPresenter } from '$/presenters/documentPresenter'
 import { AppRouteHandler } from '$/openApi/types'
 import { GetOrCreateRoute } from './getOrCreate.route'
+import { Commit, Workspace } from '@latitude-data/core/schema/types'
 
 async function getOrCreateDocument({
   workspace,

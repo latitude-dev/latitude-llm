@@ -1,10 +1,5 @@
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
-import {
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2Stats,
-} from '@latitude-data/core/browser'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
@@ -12,6 +7,8 @@ import {
   PanelChart,
 } from '@latitude-data/web-ui/molecules/Charts'
 import { useMemo } from 'react'
+import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
+import { EvaluationV2Stats } from '@latitude-data/core/schema/types'
 
 export default function AverageScoreChart<
   T extends EvaluationType,

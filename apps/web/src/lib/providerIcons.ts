@@ -1,5 +1,5 @@
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { Providers } from '@latitude-data/core/browser'
+import { Providers } from '@latitude-data/constants'
 
 export const ICON_BY_LLM_PROVIDER: Record<Providers, IconName> = {
   [Providers.OpenAI]: 'openai',

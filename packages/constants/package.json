@@ -7,8 +7,6 @@
   "description": "Common constants without any dependencies",
   "type": "module",
   "scripts": {
-    "types:build": "tsc -p tsconfig.build.json",
-    "types:build:watch": "tsc --watch -p tsconfig.build.json",
     "lint": "eslint src",
     "tc": "tsc --noEmit"
   },

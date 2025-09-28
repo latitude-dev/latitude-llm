@@ -1,10 +1,11 @@
+import { claimedPromocodes } from '../schema/models/claimedPromocodes'
+import { promocodes } from '../schema/models/promocodes'
 import { desc, eq } from 'drizzle-orm'
 
 import { database } from '../client'
 import { Result } from '../lib/Result'
-import { claimedPromocodes, promocodes } from '../schema'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { Promocode } from '../browser'
+import { Promocode } from '../schema/types'
 
 export async function findAll(tx = database) {
   const result = await tx

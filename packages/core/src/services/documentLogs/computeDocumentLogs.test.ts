@@ -1,18 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import {
-  Commit,
-  DocumentVersion,
-  ErrorableEntity,
-  LogSources,
-  Providers,
-} from '../../browser'
+import { Commit, DocumentVersion } from '../../schema/types'
+import { LogSources, Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import {
   computeDocumentLogs,
   computeDocumentLogsCount,
 } from './computeDocumentLogs'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { ErrorableEntity } from '../../constants'
 
 describe('computeDocumentLogs', () => {
   let doc: DocumentVersion

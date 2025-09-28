@@ -1,6 +1,6 @@
 import { bigint, bigserial, boolean, index, text } from 'drizzle-orm/pg-core'
 
-import { RewardType } from '../../browser'
+import { RewardType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'

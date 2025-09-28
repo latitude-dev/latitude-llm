@@ -1,4 +1,4 @@
-import { unsafelyFindWorkspace } from '../../data-access'
+import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { ProjectsRepository, RunsRepository } from '../../repositories'
 import { WebsocketClient } from '../../websockets/workers'

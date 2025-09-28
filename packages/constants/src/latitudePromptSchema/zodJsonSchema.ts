@@ -17,7 +17,7 @@ const JSON_ENUM_VALUES = z.union([
   z.null(),
 ])
 
-export const zodJsonSchema: z.ZodType<unknown> = z.lazy(() =>
+export const zodJsonSchema: z.ZodTypeAny = z.lazy(() =>
   z
     .object({
       // Meta‐Keywords

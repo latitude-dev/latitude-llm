@@ -4,10 +4,6 @@ import { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import {
-  EvaluationOptions,
-  EvaluationSettings,
-} from '@latitude-data/core/browser'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -19,6 +15,10 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useMemo, useState } from 'react'
+import {
+  EvaluationOptions,
+  EvaluationSettings,
+} from '@latitude-data/core/constants'
 
 const DEFAULT_EVALUATION_OPTIONS = {
   evaluateLiveLogs: true,

@@ -5,7 +5,7 @@ import {
   Providers,
 } from '@latitude-data/constants'
 import { describe, expect, beforeEach, it, vi } from 'vitest'
-import { Commit, Workspace, Project } from '../../../../../../browser'
+import { Commit, Workspace, Project } from '../../../../../../schema/types'
 import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import * as deleteDocumentTriggersModule from '../../../../../documentTriggers/delete'

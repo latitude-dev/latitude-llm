@@ -7,17 +7,17 @@ import { OnboardingStep } from '$/app/(onboarding)/onboarding-devs/_components/O
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { ParameterTable } from './ParameterTable'
 import { ExperimentVariants } from './ExperimentVariants'
-import {
-  DocumentVersion,
-  Project,
-  Commit,
-  Dataset,
-} from '@latitude-data/core/browser'
 import { useExperiments } from '$/stores/experiments'
 import { OnboardingDocumentParameterKeys } from '@latitude-data/constants/onboarding'
 import type { ExperimentVariant } from '@latitude-data/constants/experiments'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { envClient } from '$/envClient'
+import {
+  DocumentVersion,
+  Project,
+  Commit,
+  Dataset,
+} from '@latitude-data/core/schema/types'
 
 const PARAMETERS_MAP: Record<OnboardingDocumentParameterKeys, number> = {
   product_name: 0,

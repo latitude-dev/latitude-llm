@@ -1,7 +1,7 @@
 import { getPlanFromSubscriptionSlug } from '$/data-access'
-import { SubscriptionPlanContent } from '@latitude-data/core/browser'
 import { GetUsageOverviewRow } from '@latitude-data/core/services/workspaces/usageOverview/getUsageOverview'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { SubscriptionPlanContent } from '@latitude-data/core/plans'
 
 const TOLERANCE_PERCENT = 0.05
 export type UsageTrend = {

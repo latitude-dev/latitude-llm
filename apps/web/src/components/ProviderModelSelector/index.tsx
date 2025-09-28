@@ -9,11 +9,6 @@ import {
 import { ROUTES } from '$/services/routes'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { SerializedProviderApiKey } from '$/stores/providerApiKeys'
-import {
-  findFirstModelForProvider,
-  ProviderApiKey,
-  Providers,
-} from '@latitude-data/core/browser'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -29,6 +24,9 @@ import {
 import { useCallback, useMemo, useState } from 'react'
 import { ModelOption, ModelSelector } from './ModelSelector'
 import { sortProviders } from './sortProviders'
+import { Providers } from '@latitude-data/constants'
+import { findFirstModelForProvider } from '@latitude-data/core/services/ai/providers/models/index'
+import { ProviderApiKey } from '@latitude-data/core/schema/types'
 
 function getProviderIcon({
   provider,

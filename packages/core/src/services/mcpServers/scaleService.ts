@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { McpServer } from '../../browser'
+import { McpServer } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

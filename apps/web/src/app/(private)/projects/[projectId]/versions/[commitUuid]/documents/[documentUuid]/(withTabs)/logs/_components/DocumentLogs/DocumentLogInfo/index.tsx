@@ -3,13 +3,6 @@
 import { DocumentLogMessages } from '$/components/DocumentLogMessages'
 import { MetadataItem } from '$/components/MetadataItem'
 import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
-import {
-  buildConversation,
-  DocumentLogWithMetadataAndError,
-  ProviderLogDto,
-  ResultWithEvaluationV2,
-  SpanWithDetails,
-} from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { usePanelDomRef } from '@latitude-data/web-ui/atoms/SplitPane'
 import {
@@ -27,6 +20,13 @@ import {
 import { DocumentLogEvaluations } from './Evaluations'
 import { DocumentLogMetadata } from './Metadata'
 import { useProviderLog } from '$/stores/providerLogs'
+import { buildConversation } from '@latitude-data/core/helpers'
+import {
+  DocumentLogWithMetadataAndError,
+  ProviderLogDto,
+  ResultWithEvaluationV2,
+} from '@latitude-data/core/schema/types'
+import { SpanWithDetails } from '@latitude-data/core/constants'
 
 function DocumentLogMetadataLoading() {
   return (

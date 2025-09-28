@@ -1,13 +1,7 @@
 import { omit } from 'lodash-es'
 
 import { Message } from '@latitude-data/constants/legacyCompiler'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  type Workspace,
-} from '@latitude-data/core/browser'
-import { findFirstUserInWorkspace } from '@latitude-data/core/data-access'
+import { findFirstUserInWorkspace } from '@latitude-data/core/data-access/users'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
@@ -29,6 +23,12 @@ import {
 } from '@latitude-data/constants'
 import { getDocumentMetadata } from '@latitude-data/core/services/documents/scan'
 import { documentPresenterWithProviderAndMetadata } from '$/presenters/documentPresenter'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+  type Workspace,
+} from '@latitude-data/core/schema/types'
 
 async function getProjectByVersionData({
   workspace,

@@ -3,11 +3,11 @@
 import { useCallback } from 'react'
 
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 
 import { convertFileAction } from '$/actions/files/convert'
 import { uploadFileAction } from '$/actions/files/upload'
+import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/constants'
 
 export default function useFiles() {
   const { toast } = useToast()

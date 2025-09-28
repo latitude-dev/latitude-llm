@@ -1,11 +1,10 @@
 'use server'
-
-import { EvaluationResultableType } from '@latitude-data/core/browser'
 import { UnauthorizedError } from '@latitude-data/constants/errors'
 import { createEvaluationTemplate } from '@latitude-data/core/services/evaluationAdvancedTemplates/create'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
+import { EvaluationResultableType } from '@latitude-data/core/constants'
 
 export const createEvaluationTemplateAction = authProcedure
   .createServerAction()

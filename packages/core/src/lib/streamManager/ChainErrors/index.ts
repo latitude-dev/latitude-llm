@@ -1,6 +1,7 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 
-import { ErrorableEntity, RunError } from '../../../browser'
+import { ErrorableEntity } from '../../../constants'
+import { RunError } from '../../../schema/types'
 import { createRunError } from '../../../services/runErrors/create'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 

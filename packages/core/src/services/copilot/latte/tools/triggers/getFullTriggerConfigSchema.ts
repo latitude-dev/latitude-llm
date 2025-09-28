@@ -3,10 +3,8 @@ import { defineLatteTool } from '../types'
 import { Result } from '../../../../../lib/Result'
 import { getPipedreamClient } from '../../../../integrations/pipedream/apps'
 import { IntegrationsRepository } from '../../../../../repositories'
-import {
-  ConfigurablePropWithRemoteOptions,
-  PipedreamIntegration,
-} from '../../../../../browser'
+import { ConfigurablePropWithRemoteOptions } from '../../../../../constants'
+import { PipedreamIntegration } from '../../../../../schema/types'
 import { fetchFullConfigSchema } from './fetchFullConfigSchema'
 import { PromisedResult } from '../../../../../lib/Transaction'
 

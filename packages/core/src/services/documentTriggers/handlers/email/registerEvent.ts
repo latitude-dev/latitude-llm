@@ -8,9 +8,9 @@ import {
   DocumentTrigger,
   DocumentTriggerEvent,
   Workspace,
-} from '../../../../browser'
+} from '../../../../schema/types'
 import { database } from '../../../../client'
-import { unsafelyFindWorkspaceAndProjectFromDocumentUuid } from '../../../../data-access'
+import { unsafelyFindWorkspaceAndProjectFromDocumentUuid } from '../../../../data-access/workspaces'
 import { BadRequestError, LatitudeError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'
 import { PromisedResult } from '../../../../lib/Transaction'

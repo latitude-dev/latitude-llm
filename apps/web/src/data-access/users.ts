@@ -1,19 +1,13 @@
 import { database, utils } from '@latitude-data/core/client'
-import {
-  unsafelyFindWorkspace,
-  unsafelyGetUser,
-} from '@latitude-data/core/data-access'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
+import { unsafelyGetUser } from '@latitude-data/core/data-access/users'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import type { PromisedResult } from '@latitude-data/core/lib/Transaction'
-import { users } from '@latitude-data/core/schema'
+import { users } from '@latitude-data/core/schema/models/users'
 import { getFirstWorkspace } from '$/data-access/workspaces'
-import {
-  SubscriptionPlan,
-  SubscriptionPlans,
-  type User,
-  type Workspace,
-} from '@latitude-data/core/browser'
+import type { User, Workspace } from '@latitude-data/core/schema/types'
+import { SubscriptionPlan, SubscriptionPlans } from '@latitude-data/core/plans'
 import type { Session } from 'lucia'
 import { getSession } from '$/services/auth/getSession'
 

@@ -1,7 +1,8 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { ProviderApiKey, Providers, Workspace } from '../../../browser'
+import { ProviderApiKey, Workspace } from '../../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import { cache } from '../../../cache'
 import * as factories from '../../../tests/factories'
 import { buildFreeRunCacheKey, getFreeRuns } from '../../freeRunsManager'

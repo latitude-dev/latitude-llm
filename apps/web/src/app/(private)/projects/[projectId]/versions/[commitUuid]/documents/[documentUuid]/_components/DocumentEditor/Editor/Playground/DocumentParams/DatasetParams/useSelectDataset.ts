@@ -1,15 +1,13 @@
 import { useCallback, useMemo, useState } from 'react'
-
-import {
-  DocumentVersion,
-  Dataset,
-  InputSource,
-  LinkedDatasetRow,
-} from '@latitude-data/core/browser'
 import useDatasetsV2 from '$/stores/datasets'
 import { useDatasetRowsForParameters } from './useDatasetRowsForParameters'
 import { useDatasetRowPosition } from './useRowPosition'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { DocumentVersion, Dataset } from '@latitude-data/core/schema/types'
+import {
+  InputSource,
+  LinkedDatasetRow,
+} from '@latitude-data/core/lib/documentPersistedInputs'
 
 function getDatasetRowId({
   datasetId,

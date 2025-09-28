@@ -1,12 +1,13 @@
 import { MessageList } from '$/components/ChatWrapper'
 import { Message } from '@latitude-data/constants/legacyCompiler'
-import { DocumentVersion, LATITUDE_DOCS_URL } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { OnboardingStep } from '../index'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { LATITUDE_DOCS_URL } from '@latitude-data/core/constants'
 
 export function OnboardingPromptStep({
   document,

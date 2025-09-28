@@ -5,7 +5,7 @@ import type {
 import { MultipleInput } from '@latitude-data/web-ui/molecules/MultipleInput'
 import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
 import { useMemo, useState } from 'react'
-import { getPropOptions } from '@latitude-data/core/browser'
+import { getPropOptions } from '@latitude-data/core/helpers'
 
 export default function ArrayPipedreamProp<
   T extends 'text' | 'number' = 'text',

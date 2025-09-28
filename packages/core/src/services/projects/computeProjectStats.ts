@@ -2,21 +2,19 @@ import { and, count, desc, eq, inArray, isNull, sql, sum } from 'drizzle-orm'
 import {
   EvaluationType,
   PROJECT_STATS_CACHE_KEY,
-  ProjectStats,
   STATS_CACHE_TTL,
   STATS_CACHING_THRESHOLD,
-} from '../../browser'
+} from '../../constants'
+import { ProjectStats } from '../../schema/types'
 import { cache } from '../../cache'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import {
-  commits,
-  documentLogs,
-  documentVersions,
-  evaluationResultsV2,
-  evaluationVersions,
-  providerLogs,
-} from '../../schema'
+import { commits } from '../../schema/models/commits'
+import { documentLogs } from '../../schema/models/documentLogs'
+import { documentVersions } from '../../schema/models/documentVersions'
+import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
+import { evaluationVersions } from '../../schema/models/evaluationVersions'
+import { providerLogs } from '../../schema/models/providerLogs'
 
 /**
  * Computes project statistics with caching support

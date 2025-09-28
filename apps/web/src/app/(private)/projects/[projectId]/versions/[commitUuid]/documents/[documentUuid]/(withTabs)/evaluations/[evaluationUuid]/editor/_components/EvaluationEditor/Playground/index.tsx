@@ -8,13 +8,6 @@ import {
 import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
 import { ROUTES } from '$/services/routes'
 import type { ResolvedMetadata } from '$/workers/readMetadata'
-import {
-  Commit,
-  DocumentVersion,
-  EvaluationType,
-  EvaluationV2,
-  LlmEvaluationMetricAnyCustom,
-} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
@@ -31,6 +24,12 @@ import { useEvaluationParameters } from '../hooks/useEvaluationParamaters'
 import EvaluationParams from './EvaluationParams'
 import { useLogHistoryParams } from './EvaluationParams/HistoryLogParams/useLogHistoryParams'
 import { useRunEvaluationPlaygroundPrompt } from './useRunEvaluationPlaygroundPrompt'
+import { Commit, DocumentVersion } from '@latitude-data/core/schema/types'
+import {
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetricAnyCustom,
+} from '@latitude-data/core/constants'
 
 export const Playground = memo(
   ({

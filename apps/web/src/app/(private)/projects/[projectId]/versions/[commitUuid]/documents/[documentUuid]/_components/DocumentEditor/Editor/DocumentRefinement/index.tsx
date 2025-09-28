@@ -4,7 +4,6 @@ import {
 } from '$/hooks/usePlaygroundAction'
 import { useRefiner } from '$/hooks/useRefiner'
 import { ROUTES } from '$/services/routes'
-import { DocumentVersion, EvaluationV2 } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -19,6 +18,8 @@ import { Step1 } from './Step1'
 import { Step2 } from './Step2'
 import { Step3 } from './Step3'
 import { useLatteDiff } from '$/hooks/useLatteDiff'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { EvaluationV2 } from '@latitude-data/core/constants'
 
 export function DocumentRefinement({
   project,

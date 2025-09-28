@@ -10,14 +10,6 @@ import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useIntegrations from '$/stores/integrations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
-import {
-  Commit,
-  DocumentVersion,
-  EvaluationType,
-  LLM_EVALUATION_PROMPT_PARAMETERS,
-  LlmEvaluationMetricAnyCustom,
-  ProviderApiKey,
-} from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -27,6 +19,16 @@ import { EvaluationEditorHeader } from './EditorHeader'
 import { useEvaluationParameters } from './hooks/useEvaluationParamaters'
 import { Playground } from './Playground'
 import { TextEditor } from './TextEditor'
+import {
+  Commit,
+  DocumentVersion,
+  ProviderApiKey,
+} from '@latitude-data/core/schema/types'
+import {
+  EvaluationType,
+  LLM_EVALUATION_PROMPT_PARAMETERS,
+  LlmEvaluationMetricAnyCustom,
+} from '@latitude-data/core/constants'
 
 const ALLOWED_PARAMETERS =
   LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]

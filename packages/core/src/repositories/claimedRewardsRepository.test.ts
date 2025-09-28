@@ -1,7 +1,8 @@
 import { faker } from '@faker-js/faker'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { RewardType, User, Workspace } from '../browser'
+import { RewardType } from '../constants'
+import { User, Workspace } from '../schema/types'
 import { claimReward, updateRewardClaim } from '../services/claimedRewards'
 import { ClaimedRewardsRepository } from './claimedRewardsRepository'
 

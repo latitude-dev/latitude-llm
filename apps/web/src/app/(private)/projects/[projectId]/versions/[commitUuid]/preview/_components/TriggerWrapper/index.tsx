@@ -5,11 +5,6 @@ import {
   DocumentTriggerType,
   HEAD_COMMIT,
 } from '@latitude-data/constants'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-  PipedreamIntegration,
-} from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -28,6 +23,11 @@ import { OnRunTriggerFn } from '../TriggersList'
 import { OnRunChatTrigger } from '../useActiveTrigger'
 import { realtimeTriggerEventsCounters } from '../useTriggerSockets'
 import { useParams } from 'next/navigation'
+import {
+  DocumentTrigger,
+  DocumentVersion,
+  PipedreamIntegration,
+} from '@latitude-data/core/schema/types'
 
 function ToggleEnabled({
   projectId,

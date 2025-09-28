@@ -1,6 +1,6 @@
 import DiffMatchPatch from 'diff-match-patch'
 import { omit } from 'lodash-es'
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
 import { database } from '../../client'
 import { BadRequestError, ConflictError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'

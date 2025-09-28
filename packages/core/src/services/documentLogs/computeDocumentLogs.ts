@@ -3,12 +3,14 @@ import { and, desc, eq, getTableColumns, isNull, SQL, sql } from 'drizzle-orm'
 import {
   DEFAULT_PAGINATION_SIZE,
   DocumentLogFilterOptions,
-  DocumentVersion,
   ErrorableEntity,
-} from '../../browser'
+} from '../../constants'
+import { DocumentVersion } from '../../schema/types'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
-import { commits, documentLogs, runErrors } from '../../schema'
+import { commits } from '../../schema/models/commits'
+import { documentLogs } from '../../schema/models/documentLogs'
+import { runErrors } from '../../schema/models/runErrors'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export function computeDocumentLogs(

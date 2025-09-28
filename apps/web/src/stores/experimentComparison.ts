@@ -1,12 +1,5 @@
 import { ROUTES } from '$/services/routes'
 import useFetcher from '$/hooks/useFetcher'
-import {
-  Project,
-  Commit,
-  DocumentVersion,
-  EvaluationV2,
-  ExperimentWithScores,
-} from '@latitude-data/core/browser'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useEvaluationsV2 } from './evaluationsV2'
 import { useEffect, useMemo, useState } from 'react'
@@ -14,6 +7,13 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
+import {
+  Project,
+  Commit,
+  DocumentVersion,
+  ExperimentWithScores,
+} from '@latitude-data/core/schema/types'
+import { EvaluationV2 } from '@latitude-data/core/constants'
 
 const EMPTY_ARRAY: [] = []
 

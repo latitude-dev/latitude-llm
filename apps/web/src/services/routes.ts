@@ -1,7 +1,6 @@
-import { HEAD_COMMIT } from '@latitude-data/core/browser'
-
-import { PUBLIC_ROOT_PATHS } from '$/services/auth/constants'
 import { API_ROUTES } from './routes/api'
+import { PUBLIC_ROOT_PATHS } from '$/services/auth/constants'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
 export type IDatasetSettingsModal = 'new' | 'generate'
 

@@ -2,11 +2,6 @@ import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import { formatCount } from '$/lib/formatCount'
-import {
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2Stats,
-} from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -17,6 +12,8 @@ import {
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo } from 'react'
+import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
+import { EvaluationV2Stats } from '@latitude-data/core/schema/types'
 
 export default function VersionOverviewChart<
   T extends EvaluationType = EvaluationType,

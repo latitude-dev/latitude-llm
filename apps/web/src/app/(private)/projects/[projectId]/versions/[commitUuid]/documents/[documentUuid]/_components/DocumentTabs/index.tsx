@@ -3,10 +3,9 @@
 import { ReactNode } from 'react'
 
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-
-import { DocumentVersion } from '@latitude-data/core/browser'
 import { useDeployPrompt } from '../DocumentationModal'
 import { DocumentTabSelector } from './tabs'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export default function DocumentTabs({
   params,

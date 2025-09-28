@@ -3,7 +3,7 @@ import { describe, beforeAll, it, expect } from 'vitest'
 import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../tests/factories'
-import { DocumentLog } from '../../browser'
+import { DocumentLog } from '../../schema/types'
 import { generateCsvFromLogs } from './generateCsvFromLogs'
 import { ProviderLogsRepository } from '../../repositories'
 

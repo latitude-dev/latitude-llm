@@ -9,7 +9,6 @@ import {
   useEvaluationResultsV2Count,
 } from '$/stores/evaluationResultsV2'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { DocumentVersion } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
@@ -31,6 +30,7 @@ import {
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 const PAGE_SIZE = 7
 

@@ -2,7 +2,7 @@ import {
   HydratedProviderLog,
   ProviderLog,
   ProviderLogFileData,
-} from '../../browser'
+} from '../../schema/types'
 import { diskFactory } from '../../lib/disk'
 import { Result } from '../../lib/Result'
 

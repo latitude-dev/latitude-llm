@@ -1,10 +1,10 @@
 import { createCustomerPortalAction } from '$/actions/billing/createCustomerPortalAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { FREE_PLANS, SubscriptionPlan } from '@latitude-data/core/browser'
 import { Button, ButtonProps } from '@latitude-data/web-ui/atoms/Button'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useSession } from '@latitude-data/web-ui/providers'
 import { MouseEvent, ReactNode, useCallback, useMemo } from 'react'
+import { FREE_PLANS, SubscriptionPlan } from '@latitude-data/core/plans'
 
 const PRICING_PAGE = 'https://latitude.so/pricing' // Hardcoded for now.
 const TEAM_PLANS = [SubscriptionPlan.TeamV1, SubscriptionPlan.TeamV2]

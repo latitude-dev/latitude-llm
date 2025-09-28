@@ -1,7 +1,7 @@
-import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { UsedToolsDoc } from '../index'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
 function getToolsString(tools: UsedToolsDoc[]) {
   if (!tools.length) return ''

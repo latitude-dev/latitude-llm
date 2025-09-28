@@ -1,10 +1,9 @@
 'use server'
-
-import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/browser'
 import { convertFile } from '@latitude-data/core/services/files/convert'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
+import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/constants'
 
 export const convertFileAction = authProcedure
   .createServerAction()

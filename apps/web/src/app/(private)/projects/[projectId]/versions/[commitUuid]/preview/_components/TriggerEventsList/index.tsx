@@ -1,9 +1,4 @@
 import useDocumentTriggerEvents from '$/stores/documentTriggerEvents'
-import {
-  DocumentTrigger,
-  DocumentTriggerEvent,
-  DocumentVersion,
-} from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
@@ -16,6 +11,11 @@ import { OnRunTriggerFn } from '../TriggersList'
 import { useCallback } from 'react'
 import { getDocumentTriggerEventRunParameters } from '@latitude-data/core/services/documentTriggers/triggerEvents/getDocumentTriggerRunParameters'
 import { DocumentTriggerEventItem } from './TriggerEvent'
+import {
+  DocumentTrigger,
+  DocumentTriggerEvent,
+  DocumentVersion,
+} from '@latitude-data/core/schema/types'
 
 const LOADING_BLOCKS = Array.from({ length: 3 })
 

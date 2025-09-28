@@ -6,8 +6,8 @@ import {
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Tool } from 'ai'
 import { JSONSchema7, JSONSchema7TypeName } from 'json-schema'
-import { scan } from 'promptl-ai'
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import { ConversationMetadata, scan } from 'promptl-ai'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { StreamManager } from '../../lib/streamManager'
@@ -51,11 +51,11 @@ export async function getToolDefinitionFromDocument({
   streamManager: StreamManager
   context: TelemetryContext
 }): Promise<{ name: string; toolDefinition: Tool }> {
-  const metadata = await scan({
+  const metadata = (await scan({
     prompt: document.content,
     fullPath: document.path,
     referenceFn,
-  })
+  })) as ConversationMetadata
 
   const name = metadata.config['name'] as string | undefined
   const description = metadata.config['description'] as string | undefined

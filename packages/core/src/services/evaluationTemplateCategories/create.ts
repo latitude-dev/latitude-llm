@@ -1,6 +1,6 @@
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { evaluationTemplateCategories } from '../../schema'
+import { evaluationTemplateCategories } from '../../schema/legacyModels/evaluationTemplateCategories'
 type Props = {
   name: string
 }

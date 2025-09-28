@@ -1,6 +1,4 @@
 'use server'
-
-import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/browser'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import {
   createNewDocument,
@@ -10,6 +8,7 @@ import { convertFile } from '@latitude-data/core/services/files/convert'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'
+import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/constants'
 
 export const uploadDocumentAction = withProject
   .createServerAction()

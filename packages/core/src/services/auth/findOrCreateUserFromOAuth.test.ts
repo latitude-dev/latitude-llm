@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { findOrCreateUserFromOAuth } from './findOrCreateUserFromOAuth'
-import { OAuthProvider } from '../../schema' // Import OAuthProvider type
+import { OAuthProvider } from '../../schema/models/oauthAccounts'
 import { createProject, createOAuthAccount } from '../../tests/factories'
 
 describe('Auth Service: findOrCreateUserFromOAuth', () => {

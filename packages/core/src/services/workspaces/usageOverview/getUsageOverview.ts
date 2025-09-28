@@ -2,16 +2,14 @@ import { and, desc, eq, gte, isNull, max, sql } from 'drizzle-orm'
 import { database } from '../../../client'
 import { ErrorableEntity } from '../../../constants'
 import { SubscriptionPlan } from '../../../plans'
-import {
-  commits,
-  documentLogs,
-  evaluationResults,
-  evaluationResultsV2,
-  evaluations,
-  projects,
-  runErrors,
-  workspaces,
-} from '../../../schema'
+import { commits } from '../../../schema/models/commits'
+import { documentLogs } from '../../../schema/models/documentLogs'
+import { evaluationResults } from '../../../schema/legacyModels/evaluationResults'
+import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
+import { evaluations } from '../../../schema/legacyModels/evaluations'
+import { projects } from '../../../schema/models/projects'
+import { runErrors } from '../../../schema/models/runErrors'
+import { workspaces } from '../../../schema/models/workspaces'
 import { workspaceUsageInfoCTE } from './workspaceUsageInfoQuery'
 
 /**

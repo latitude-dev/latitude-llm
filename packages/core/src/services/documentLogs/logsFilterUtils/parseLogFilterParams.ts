@@ -1,5 +1,6 @@
 import { parseISO } from 'date-fns'
-import { Commit, LOG_SOURCES, LogSources } from '../../../browser'
+import { Commit } from '../../../schema/types'
+import { LOG_SOURCES, LogSources } from '../../../constants'
 import { QueryParams } from '../../../lib/pagination/buildPaginatedUrl'
 import { formatDocumentLogCreatedAtParam } from './generateDocumentLogsApiRouteWithParams'
 

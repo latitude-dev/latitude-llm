@@ -1,6 +1,7 @@
-import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ROUTES } from '$/services/routes'
+import { Commit } from '@latitude-data/core/schema/types'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
 type GetCommitUrlParams = {
   commits: Commit[]

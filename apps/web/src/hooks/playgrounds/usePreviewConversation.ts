@@ -5,8 +5,9 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 import { Adapters, Chain as PromptlChain } from 'promptl-ai'
 import { ResolvedMetadata } from '$/workers/readMetadata'
-import { AppliedRules, applyProviderRules } from '@latitude-data/core/browser'
 import useProviderApiKeys from '$/stores/providerApiKeys'
+import { AppliedRules } from '@latitude-data/core/services/ai/providers/rules/types'
+import { applyProviderRules } from '@latitude-data/core/services/ai/providers/rules/index'
 
 export function usePreviewConversation({
   promptlVersion,

@@ -2,16 +2,17 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   Commit,
-  EvaluationType,
   EvaluationV2,
-  LLM_EVALUATION_PROMPT_PARAMETERS,
-  LlmEvaluationMetric,
-  LogSources,
   ProviderApiKey,
   ProviderLog,
-  Providers,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
+import { EvaluationType } from '../../../constants'
+import {
+  LLM_EVALUATION_PROMPT_PARAMETERS,
+  LlmEvaluationMetric,
+} from '../../../constants'
+import { LogSources, Providers } from '@latitude-data/constants'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import * as factories from '../../../tests/factories'
 import * as chains from '../../chains/run'

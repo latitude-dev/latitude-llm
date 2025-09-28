@@ -22,11 +22,11 @@ import {
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { TelemetryContext } from '../../telemetry'
 
-import { Providers } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { Result, TypedResult } from '../../lib/Result'
 
 import { PartialPromptConfig } from '@latitude-data/constants'
-import { ProviderApiKey } from '../../browser'
+import { ProviderApiKey } from '../../schema/types'
 import type { ModelCost } from './estimateCost'
 import { instrumentedFetch } from './fetch'
 import {

@@ -1,7 +1,7 @@
 'use server'
 
 import { BadRequestError } from '@latitude-data/constants/errors'
-import { unsafelyFindWorkspace } from '@latitude-data/core/data-access'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
 import { GrantsRepository } from '@latitude-data/core/repositories'
 import { revokeGrant } from '@latitude-data/core/services/grants/revoke'
 import { z } from 'zod'

@@ -1,9 +1,9 @@
 import { IntegrationType } from '@latitude-data/constants'
-import type { IntegrationDto, User, Workspace } from '../../browser'
+import type { IntegrationDto, User, Workspace } from '../../schema/types'
 import { BadRequestError } from '../../lib/errors'
 import { ErrorResult, Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
-import { integrations } from '../../schema'
+import { integrations } from '../../schema/models/integrations'
 import { deployMcpServer } from '../mcpServers/deployService'
 import {
   ExternalMcpIntegrationConfiguration,

@@ -1,4 +1,4 @@
-import { Commit } from '../../browser'
+import { Commit } from '../../schema/types'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

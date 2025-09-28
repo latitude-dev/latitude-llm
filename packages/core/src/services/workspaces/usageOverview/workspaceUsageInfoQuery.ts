@@ -1,6 +1,9 @@
 import { sql, eq, max, count } from 'drizzle-orm'
 import { database } from '../../../client'
-import { memberships, subscriptions, users, workspaces } from '../../../schema'
+import { memberships } from '../../../schema/models/memberships'
+import { subscriptions } from '../../../schema/models/subscriptions'
+import { users } from '../../../schema/models/users'
+import { workspaces } from '../../../schema/models/workspaces'
 
 export const workspaceUsageInfoCTE = database.$with('workspaces_subquery').as(
   database

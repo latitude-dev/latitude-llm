@@ -1,4 +1,3 @@
-import { Promocode } from '@latitude-data/core/browser'
 import useSWR from 'swr'
 import { ROUTES } from '$/services/routes'
 import { useMemo } from 'react'
@@ -9,6 +8,7 @@ import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { deletePromocodeAction } from '$/actions/admin/promocodes/deletePromocode'
 import { createPromocodeAction } from '$/actions/admin/promocodes/createPromocode'
 import { expirePromocodeAction } from '$/actions/admin/promocodes/expirePromocode'
+import { Promocode } from '@latitude-data/core/schema/types'
 
 export function usePromocodes(
   setIsCreatePromocodeModalOpen: (open: boolean) => void,

@@ -1,13 +1,13 @@
 import { DocumentRoutes, ROUTES } from '$/services/routes'
 import { DocumentVersion } from '@latitude-data/constants'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import Link from 'next/link'
 import {
   Commit,
   ExperimentWithScores,
   Project,
-} from '@latitude-data/core/browser'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import Link from 'next/link'
+} from '@latitude-data/core/schema/types'
 
 function InnerApplyButton({ disabled }: { disabled?: boolean }) {
   return (

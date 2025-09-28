@@ -1,10 +1,7 @@
 import { env } from '@latitude-data/env'
-import {
-  EvaluationType,
-  EvaluationV2,
-  HumanEvaluationMetric,
-  ProviderLogDto,
-} from '../../../../browser'
+import { EvaluationType } from '../../../../constants'
+import { EvaluationV2, ProviderLogDto } from '../../../../schema/types'
+import { HumanEvaluationMetric } from '../../../../constants'
 import { database } from '../../../../client'
 import { Result } from '../../../../lib/Result'
 import {

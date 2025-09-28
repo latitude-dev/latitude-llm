@@ -6,7 +6,6 @@ import {
   usePlaygroundAction,
 } from '$/hooks/usePlaygroundAction'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
-import { EvaluationMetric, EvaluationType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
 import {
@@ -14,6 +13,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCallback } from 'react'
+import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
 
 export function EvaluationResultsTableActions<
   T extends EvaluationType = EvaluationType,

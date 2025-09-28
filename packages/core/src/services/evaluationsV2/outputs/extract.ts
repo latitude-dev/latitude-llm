@@ -2,13 +2,10 @@ import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
   ActualOutputConfiguration,
-  buildConversation,
-  Dataset,
-  DatasetRow,
   ExpectedOutputConfiguration,
-  formatMessage,
-  ProviderLogDto,
-} from '../../../browser'
+} from '../../../constants'
+import { buildConversation, formatMessage } from '../../../helpers'
+import { Dataset, DatasetRow, ProviderLogDto } from '../../../schema/types'
 import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { getColumnData } from '../../datasets/utils'

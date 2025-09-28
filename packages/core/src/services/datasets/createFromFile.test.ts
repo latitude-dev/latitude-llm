@@ -1,6 +1,6 @@
 import { beforeEach, afterAll, describe, expect, it, vi } from 'vitest'
 
-import { User, Workspace } from '../../browser'
+import { User, Workspace } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import * as syncReadCsv from '../../lib/readCsv'
 import getTestDisk from '../../tests/testDrive'

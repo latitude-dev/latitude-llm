@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-import { User, Workspace } from '../../../browser'
+import { User, Workspace } from '../../../schema/types'
 import { ProductEdition } from '../collectors/DataCollector'
 
 describe('PosthogProvider', () => {

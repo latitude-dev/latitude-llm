@@ -1,4 +1,4 @@
-import type { Commit, Workspace } from '../../browser'
+import type { Commit, Workspace } from '../../schema/types'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'

@@ -1,7 +1,7 @@
+import { magicLinkTokens } from '../schema/models/magicLinkTokens'
 import { eq } from 'drizzle-orm'
 
 import { database } from '../client'
-import { magicLinkTokens } from '../schema'
 
 export function unsafelyFindMagicLinkByToken(token: string, db = database) {
   return db

@@ -2,10 +2,10 @@
 
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { LatteUsage } from '@latitude-data/core/browser'
 import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { LatteUsage } from '@latitude-data/core/constants'
 
 export function useLatteUsage(opts?: SWRConfiguration) {
   const route = ROUTES.api.latte.usage.root

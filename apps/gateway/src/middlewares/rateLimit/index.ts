@@ -1,5 +1,4 @@
-import { SubscriptionPlans } from '@latitude-data/core/browser'
-import { unsafelyGetApiKeyByToken } from '@latitude-data/core/data-access'
+import { unsafelyGetApiKeyByToken } from '@latitude-data/core/data-access/apiKeys'
 import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
 import {
   NotFoundError,
@@ -11,6 +10,7 @@ import { ReplyError } from 'ioredis'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 import { getFromTokenCache, setToTokenCache } from './tokenCache'
 import { getRateLimiterForRateLimit } from './rateLimiterCache'
+import { SubscriptionPlans } from '@latitude-data/core/plans'
 
 async function getTokenRateLimit(token: string): Promise<{
   workspaceId: number

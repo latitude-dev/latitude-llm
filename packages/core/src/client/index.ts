@@ -4,7 +4,7 @@ import pg from 'pg'
 
 import { PgWithReplicas, withReplicas } from 'drizzle-orm/pg-core'
 import type { Pool as IPool, PoolConfig } from 'pg'
-import * as schema from '../schema'
+import { schema } from '../schema/schema'
 
 const { Pool } = pg
 

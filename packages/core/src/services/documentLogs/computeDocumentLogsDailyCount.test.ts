@@ -1,17 +1,11 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import {
-  Commit,
-  DocumentVersion,
-  ErrorableEntity,
-  LOG_SOURCES,
-  Project,
-  Providers,
-  User,
-} from '../../browser'
+import { Commit, DocumentVersion, Project, User } from '../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogsDailyCount } from './computeDocumentLogsDailyCount'
+import { ErrorableEntity, LOG_SOURCES } from '../../constants'
 
 describe('computeDocumentLogsDailyCount', () => {
   let user: User

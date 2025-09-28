@@ -1,7 +1,7 @@
 import { googleProvider } from '$/services/auth'
 import { setSession } from '$/services/auth/setSession'
 import { isLatitudeUrl } from '@latitude-data/constants'
-import { OAuthProvider } from '@latitude-data/core/schema'
+import { OAuthProvider } from '@latitude-data/core/schema/models/oauthAccounts'
 import { findOrCreateUserFromOAuth } from '@latitude-data/core/services/auth/findOrCreateUserFromOAuth'
 import { env } from '@latitude-data/env'
 import { ObjectParser } from '@pilcrowjs/object-parser'

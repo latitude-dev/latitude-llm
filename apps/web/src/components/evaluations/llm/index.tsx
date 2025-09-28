@@ -5,15 +5,6 @@ import { formatCount } from '$/lib/formatCount'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useProviders from '$/stores/providerApiKeys'
 import { useProviderLog } from '$/stores/providerLogs'
-import {
-  buildConversation,
-  EvaluationResultV2,
-  EvaluationType,
-  LLM_EVALUATION_PROMPT_PARAMETERS,
-  LlmEvaluationMetric,
-  LlmEvaluationSpecification,
-  Providers,
-} from '@latitude-data/core/browser'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -42,6 +33,15 @@ import LlmEvaluationCustomSpecification from './Custom'
 import LlmEvaluationCustomLabeledSpecification from './CustomLabeled'
 import LlmEvaluationRatingSpecification from './Rating'
 import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
+import { buildConversation } from '@latitude-data/core/helpers'
+import {
+  EvaluationResultV2,
+  EvaluationType,
+  LLM_EVALUATION_PROMPT_PARAMETERS,
+  LlmEvaluationMetric,
+  LlmEvaluationSpecification,
+} from '@latitude-data/core/constants'
+import { Providers } from '@latitude-data/constants'
 
 // prettier-ignore
 const METRICS: {

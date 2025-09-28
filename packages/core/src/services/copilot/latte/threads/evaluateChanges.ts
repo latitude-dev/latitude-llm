@@ -1,5 +1,5 @@
 import { env } from '@latitude-data/env'
-import { ProviderLogDto } from '../../../../browser'
+import { ProviderLogDto } from '../../../../schema/types'
 import { database } from '../../../../client'
 import { Result } from '../../../../lib/Result'
 import {

@@ -1,4 +1,3 @@
-import { Commit } from '@latitude-data/core/browser'
 import { useCurrentCommit } from '@latitude-data/web-ui/browser'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
@@ -9,6 +8,7 @@ import { getChangesToRevertCommitAction } from '$/actions/history/revertCommitVe
 import { revertCommitChangesAction } from '$/actions/history/revertCommitVersion/revertCommitAction'
 import { getChangesToResetCommitAction } from '$/actions/history/resetCommitVersion/getChangesToResetCommitAction'
 import { resetCommitVersionAction } from '$/actions/history/resetCommitVersion/resetCommitVersionAction'
+import { Commit } from '@latitude-data/core/schema/types'
 
 export function useCommitActions({ commit }: { commit: Commit }) {
   const router = useRouter()

@@ -1,6 +1,6 @@
 import app from '$/routes/app'
 import { Providers } from '@latitude-data/constants'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import {
   createDraft,
   createProject,

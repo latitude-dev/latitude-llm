@@ -1,4 +1,4 @@
-import { promocodes } from '../../schema'
+import { promocodes } from '../../schema/models/promocodes'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { eq } from 'drizzle-orm'

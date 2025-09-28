@@ -10,12 +10,11 @@ import {
   Workspace,
   DocumentVersion,
   Commit,
-  LatteThreadUpdateArgs,
-} from '../../../browser'
-import {
-  unsafelyFindProject,
-  unsafelyFindWorkspace,
-} from '../../../data-access'
+} from '../../../schema/types'
+import { LatteThreadUpdateArgs } from '../../../websockets/constants'
+import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
+import { unsafelyFindProject } from '../../../data-access/projects'
+
 import { PromisedResult } from '../../../lib/Transaction'
 import {
   CommitsRepository,
@@ -285,14 +284,11 @@ export async function scanDocuments(
         agentToolsMap,
       })
 
-      // FIXME: infinite recursion
-      // @ts-ignore
       return scan({
         prompt: document.content,
         fullPath: document.path,
         referenceFn,
-        // @ts-expect-error - TODO(compiler): fix types
-        configSchema: configSchema,
+        configSchema,
       })
     }),
   )

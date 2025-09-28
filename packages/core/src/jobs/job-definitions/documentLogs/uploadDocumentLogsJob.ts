@@ -1,6 +1,6 @@
 import { Job } from 'bullmq'
 
-import { Commit } from '../../../browser'
+import { Commit } from '../../../schema/types'
 import { LogSources, messagesSchema } from '../../../constants'
 import { queues } from '../../queues'
 

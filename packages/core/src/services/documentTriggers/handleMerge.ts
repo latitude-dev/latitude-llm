@@ -1,5 +1,5 @@
 import { BadRequestError } from '@latitude-data/constants/errors'
-import { Commit, Workspace } from '../../browser'
+import { Commit, Workspace } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import {

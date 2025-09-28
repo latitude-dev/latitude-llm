@@ -3,11 +3,10 @@ import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { objectToString } from '@latitude-data/constants'
 import {
   Message,
-  ProviderLog,
-  ProviderLogDto,
   SerializedConversation,
   SerializedProviderLog,
-} from '../../browser'
+} from '../../constants'
+import { ProviderLog, ProviderLogDto } from '../../schema/types'
 import { buildProviderLogResponse } from './buildResponse'
 
 export function formatConversation(

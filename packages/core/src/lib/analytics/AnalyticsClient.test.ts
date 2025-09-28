@@ -6,7 +6,7 @@ import {
   ProviderLogDto,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
 import * as factories from '../../tests/factories'
 import { AnalyticsClient } from './AnalyticsClient'
 

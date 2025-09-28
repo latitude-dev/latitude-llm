@@ -1,8 +1,7 @@
 'use client'
-
-import { ExperimentDto } from '@latitude-data/core/browser'
 import { Badge, BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ExperimentDto } from '@latitude-data/core/schema/types'
 
 const scoreBadgeVariant = (score: number): BadgeProps['variant'] => {
   if (score >= 80) return 'successMuted'

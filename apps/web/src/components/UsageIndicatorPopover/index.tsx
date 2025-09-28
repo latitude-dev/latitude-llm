@@ -1,11 +1,4 @@
 'use client'
-
-import {
-  FREE_PLANS,
-  Quota,
-  SubscriptionPlan,
-  WorkspaceUsage,
-} from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
@@ -17,6 +10,8 @@ import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ReactNode, useMemo } from 'react'
+import { FREE_PLANS, SubscriptionPlan } from '@latitude-data/core/plans'
+import { Quota, WorkspaceUsage } from '@latitude-data/core/constants'
 
 export function SubscriptionBadge({
   subscription: { name, plan },

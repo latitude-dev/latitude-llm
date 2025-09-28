@@ -7,7 +7,7 @@ const url =
 
 export default {
   dialect: 'postgresql',
-  schema: './src/schema/index.ts',
+  schema: './src/schema/schema.ts',
   out: './drizzle',
   dbCredentials: {
     url,

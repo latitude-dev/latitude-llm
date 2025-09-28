@@ -1,9 +1,5 @@
 import { ROUTES } from '$/services/routes'
 import useDocumentSuggestions from '$/stores/documentSuggestions'
-import {
-  DocumentSuggestionWithDetails,
-  DocumentVersion,
-} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
@@ -15,6 +11,10 @@ import DiffMatchPatch from 'diff-match-patch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
+import {
+  DocumentSuggestionWithDetails,
+  DocumentVersion,
+} from '@latitude-data/core/schema/types'
 
 const dmp = new DiffMatchPatch()
 

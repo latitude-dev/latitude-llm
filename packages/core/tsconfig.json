@@ -4,6 +4,20 @@
     "moduleResolution": "Bundler",
     "jsx": "preserve"
   },
-  "include": ["src", "drizzle.config.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src",
+    "drizzle.config.ts"
+  ],
+  "exclude": [
+    "**/*.js",
+    "**/*.spec.*",
+    "**/*.test.*",
+    "dist",
+    "node_modules",
+    "src/**/__tests__/**",
+    "src/**/testHelper.ts",
+    "src/**/testHelpers/**",
+    "src/schema/schema.ts",
+    "src/tests/**"
+  ]
 }

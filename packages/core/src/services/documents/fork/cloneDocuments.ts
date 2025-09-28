@@ -6,9 +6,9 @@ import {
   User,
   DocumentVersion,
   ProviderApiKey,
-  Providers,
-  findFirstModelForProvider,
-} from '../../../browser'
+} from '../../../schema/types'
+import { Providers } from '@latitude-data/constants'
+import { findFirstModelForProvider } from '../../ai/providers/models'
 import { Result } from '../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { ProviderApiKeysRepository } from '../../../repositories'

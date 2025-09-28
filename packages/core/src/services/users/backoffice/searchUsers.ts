@@ -2,7 +2,9 @@ import { inArray, eq } from 'drizzle-orm'
 
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
-import { users, memberships, workspaces } from '../../../schema'
+import { users } from '../../../schema/models/users'
+import { memberships } from '../../../schema/models/memberships'
+import { workspaces } from '../../../schema/models/workspaces'
 
 export type UserSearchResult = {
   id: string

@@ -13,7 +13,6 @@ import {
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { useLatteStore } from '$/stores/latte'
 import { LatitudeErrorCodes } from '@latitude-data/constants/errors'
-import type { ProviderLogDto } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -31,6 +30,7 @@ import { LatteMessageList } from './_components/MessageList'
 import { PaymentRequiredAlert } from './_components/PaymentRequiredAlert'
 import { LatteUnconfiguredIntegrations } from './_components/UnconfiguredIntegrations'
 import { LatteChatInput } from './LatteChatInput'
+import { type ProviderLogDto } from '@latitude-data/core/schema/types'
 
 export function LatteChat({
   initialThreadUuid,

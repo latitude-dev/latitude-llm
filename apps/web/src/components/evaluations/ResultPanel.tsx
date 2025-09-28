@@ -12,18 +12,6 @@ import useDatasetRows from '$/stores/datasetRows'
 import useDatasetRowCount from '$/stores/datasetRows/count'
 import useDatasetRowPosition from '$/stores/datasetRows/position'
 import useDocumentLog from '$/stores/documentLogWithMetadata'
-import {
-  ACCESSIBLE_OUTPUT_FORMATS,
-  Commit,
-  Dataset,
-  DatasetRow,
-  DocumentLog,
-  DocumentVersion,
-  EvaluationMetric,
-  EvaluationResultV2,
-  EvaluationType,
-  baseEvaluationConfiguration,
-} from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -43,6 +31,20 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
+import {
+  ACCESSIBLE_OUTPUT_FORMATS,
+  DocumentLog,
+  EvaluationMetric,
+  EvaluationResultV2,
+  EvaluationType,
+  baseEvaluationConfiguration,
+} from '@latitude-data/core/constants'
+import {
+  Commit,
+  Dataset,
+  DatasetRow,
+  DocumentVersion,
+} from '@latitude-data/core/schema/types'
 
 const PARSING_FORMAT_LABELS = baseEvaluationConfiguration.shape.actualOutput
   .unwrap()

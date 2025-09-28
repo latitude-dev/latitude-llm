@@ -1,10 +1,10 @@
+import { apiKeys } from '../schema/models/apiKeys'
 import { eq } from 'drizzle-orm'
 
-import { ApiKey } from '../browser'
+import { ApiKey } from '../schema/types'
 import { database } from '../client'
 import { NotFoundError } from '../lib/errors'
 import { Result, TypedResult } from '../lib/Result'
-import { apiKeys } from '../schema'
 
 export async function unsafelyGetApiKeyByToken(
   { token }: { token: string },

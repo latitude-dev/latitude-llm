@@ -3,7 +3,8 @@ import { captureException } from '$/helpers/captureException'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { ChainEventTypes } from '@latitude-data/constants'
-import { LogSources, Workspace } from '@latitude-data/core/browser'
+import { Workspace } from '@latitude-data/core/schema/types'
+import { LogSources } from '@latitude-data/constants'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const POST = errorHandler(

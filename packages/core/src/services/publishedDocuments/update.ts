@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 
-import { PublishedDocument } from '../../browser'
+import { PublishedDocument } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { publishedDocuments } from '../../schema'
+import { publishedDocuments } from '../../schema/models/publishedDocuments'
 type UpdatablePublishedDocument = Pick<
   PublishedDocument,
   | 'isPublished'

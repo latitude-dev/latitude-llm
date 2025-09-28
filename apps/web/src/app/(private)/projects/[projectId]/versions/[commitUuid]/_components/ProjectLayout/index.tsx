@@ -1,6 +1,4 @@
 import { ReactNode } from 'react'
-
-import type { DocumentVersion } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ProjectSidebarLayout } from '@latitude-data/web-ui/sections/ProjectSidebarLayout'
 import {
@@ -18,6 +16,7 @@ import { redirect } from 'next/navigation'
 
 import { LastSeenCommitCookie } from '../LastSeenCommitCookie'
 import Sidebar from '../Sidebar'
+import { type DocumentVersion } from '@latitude-data/core/schema/types'
 
 export default async function ProjectLayout({
   children,

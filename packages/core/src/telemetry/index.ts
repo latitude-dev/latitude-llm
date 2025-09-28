@@ -3,7 +3,7 @@ import {
   LatitudeTelemetry,
   BACKGROUND as ROOT,
 } from '@latitude-data/telemetry'
-import { propagation, SpanAttributes } from '@opentelemetry/api'
+import { propagation, Attributes, SpanStatusCode } from '@opentelemetry/api'
 import {
   ExportResult,
   ExportResultCode,
@@ -14,7 +14,15 @@ import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-node'
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
 import { captureException } from '@sentry/node'
 import { z } from 'zod'
-import { ATTR_LATITUDE_INTERNAL, Otlp } from '../browser'
+
+import { ATTR_LATITUDE_INTERNAL } from '../constants'
+import {
+  AttributeValue,
+  Attribute,
+  ResourceSpan,
+  SpanKind,
+  StatusCode,
+} from '../schema/otlp'
 import { enqueueSpans } from '../services/tracing/spans/enqueue'
 
 export type * from '@latitude-data/telemetry'
@@ -67,7 +75,7 @@ class InternalExporter implements SpanExporter {
     return Promise.resolve()
   }
 
-  private convertValue(value: unknown): Otlp.AttributeValue | undefined {
+  private convertValue(value: unknown): AttributeValue | undefined {
     if (value == null || value == undefined) return undefined
     if (typeof value === 'string') return { stringValue: value }
     if (typeof value === 'boolean') return { boolValue: value }
@@ -77,7 +85,7 @@ class InternalExporter implements SpanExporter {
     return { arrayValue: { values } }
   }
 
-  private convertAttributes(attributes: SpanAttributes): Otlp.Attribute[] {
+  private convertAttributes(attributes: Attributes): Attribute[] {
     const serialized = []
 
     for (const [key, v] of Object.entries(attributes)) {
@@ -103,7 +111,7 @@ class InternalExporter implements SpanExporter {
     return scopes
   }
 
-  private convert(spans: ReadableSpan[]): Otlp.ResourceSpan[] {
+  private convert(spans: ReadableSpan[]): ResourceSpan[] {
     return [
       {
         resource: {
@@ -118,23 +126,31 @@ class InternalExporter implements SpanExporter {
             spans: spans.map((span) => ({
               traceId: span.spanContext().traceId,
               spanId: span.spanContext().spanId,
-              parentSpanId: span.parentSpanId,
+              parentSpanId: span.parentSpanId ?? undefined,
               name: span.name,
-              kind: span.kind,
+              kind: span.kind as unknown as SpanKind,
               startTimeUnixNano: hrTimeToNanoseconds(span.startTime).toString(),
               endTimeUnixNano: hrTimeToNanoseconds(span.endTime).toString(),
-              status: span.status,
+              status: {
+                code:
+                  span.status.code === SpanStatusCode.ERROR
+                    ? StatusCode.Error
+                    : span.status.code === SpanStatusCode.OK
+                      ? StatusCode.Ok
+                      : StatusCode.Unset,
+                message: span.status.message,
+              },
               events: span.events.map((event) => ({
                 name: event.name,
                 timeUnixNano: hrTimeToNanoseconds(event.time).toString(),
-                attributes: this.convertAttributes(event.attributes || {}),
+                attributes: this.convertAttributes(event.attributes ?? {}),
               })),
               links: span.links.map((link) => ({
                 traceId: link.context.traceId,
                 spanId: link.context.spanId,
-                attributes: this.convertAttributes(link.attributes || {}),
+                attributes: this.convertAttributes(link.attributes ?? {}),
               })),
-              attributes: this.convertAttributes(span.attributes || {}),
+              attributes: this.convertAttributes(span.attributes ?? {}),
             })),
           }),
         ),

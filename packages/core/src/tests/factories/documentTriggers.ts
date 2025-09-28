@@ -5,7 +5,7 @@ import {
 } from '@latitude-data/constants'
 import { v4 as uuidv4 } from 'uuid'
 import { database } from '../../client'
-import { documentTriggers } from '../../schema'
+import { documentTriggers } from '../../schema/models/documentTriggers'
 import { createProject } from './createProject'
 import {
   DocumentTrigger,
@@ -13,7 +13,7 @@ import {
   Project,
   Commit,
   DocumentVersion,
-} from '../../browser'
+} from '../../schema/types'
 import {
   EmailTriggerConfiguration,
   EmailTriggerDeploymentSettings,

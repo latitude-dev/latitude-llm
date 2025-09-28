@@ -1,6 +1,6 @@
+import { workspaces } from '../schema/models/workspaces'
 import { database } from '../client'
 import { unsafelyFindWorkspace } from '../data-access/workspaces'
-import { workspaces } from '../schema'
 import { issueSubscriptionGrants } from '../services/subscriptions/grants'
 
 export async function backfillSubscriptionGrants(real: boolean = false) {

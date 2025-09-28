@@ -2,7 +2,7 @@ import { Providers } from '@latitude-data/constants'
 import { createChain } from 'promptl-ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Workspace } from '../../../browser'
+import { Workspace } from '../../../schema/types'
 import { Result } from '../../../lib/Result'
 import { validateChain } from './index'
 import * as checkFreeProviderQuotaModule from '../checkFreeProviderQuota'

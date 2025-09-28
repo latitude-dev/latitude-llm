@@ -12,15 +12,14 @@ vi.mock('uuid', async (importOriginal) => ({
 
 import { ChainEventTypes } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { TelemetryContext } from '@latitude-data/telemetry'
-import { Workspace } from '../../browser'
+import { Workspace } from '../../schema/types'
 import {
   ErrorableEntity,
   LogSources,
   PromptSource,
-  Providers,
   StreamEventTypes,
 } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import * as aiModule from '../ai'
@@ -67,7 +66,7 @@ describe('runChain', () => {
     })
   }
 
-  let context: TelemetryContext
+  let context: any
   let workspace: Workspace
   let promptSource: PromptSource
 

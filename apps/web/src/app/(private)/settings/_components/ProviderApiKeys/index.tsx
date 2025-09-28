@@ -1,9 +1,4 @@
 'use client'
-import {
-  Providers,
-  Workspace,
-  type ProviderApiKey,
-} from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
@@ -30,6 +25,11 @@ import { useRouter } from 'next/navigation'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
 import { useState, useMemo } from 'react'
+import { Providers } from '@latitude-data/constants'
+import {
+  Workspace,
+  type ProviderApiKey,
+} from '@latitude-data/core/schema/types'
 
 export default function ProviderApiKeys() {
   const { data: providerApiKeys, isLoading: isProviderApiKeysLoading } =

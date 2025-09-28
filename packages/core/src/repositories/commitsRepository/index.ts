@@ -11,12 +11,12 @@ import {
   or,
 } from 'drizzle-orm'
 
-import { Commit, Project } from '../../browser'
+import { Commit, Project } from '../../schema/types'
 import { CommitStatus, HEAD_COMMIT } from '../../constants'
 import { InferedReturnType } from '../../lib/commonTypes'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import { documentVersions } from '../../schema'
+import { documentVersions } from '../../schema/models/documentVersions'
 import RepositoryLegacy from '../repository'
 import { buildCommitsScope, columnSelection } from './utils/buildCommitsScope'
 import { getHeadCommitForProject } from './utils/getHeadCommit'

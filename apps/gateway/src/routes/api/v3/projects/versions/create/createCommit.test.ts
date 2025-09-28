@@ -1,6 +1,6 @@
 import app from '$/routes/app'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import { createProject } from '@latitude-data/core/factories'
 import { ProjectsRepository } from '@latitude-data/core/repositories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'

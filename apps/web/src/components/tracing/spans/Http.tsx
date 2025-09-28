@@ -1,11 +1,11 @@
 import { MetadataItem } from '$/components/MetadataItem'
-import { SPAN_SPECIFICATIONS, SpanType } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { DetailsPanelProps, SPAN_COLORS } from './shared'
+import { SPAN_SPECIFICATIONS, SpanType } from '@latitude-data/core/constants'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Http]
 export default {

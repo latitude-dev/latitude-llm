@@ -1,4 +1,3 @@
-import { CommitStatus } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -12,6 +11,7 @@ import { useCommits } from '$/stores/commitsStore'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 import { DocumentVersion } from '@latitude-data/constants'
+import { CommitStatus } from '@latitude-data/core/constants'
 
 export default function DraftCommitModal({
   open,

@@ -1,9 +1,9 @@
 import { EMAIL_TRIGGER_DOMAIN } from '@latitude-data/constants'
-import { DocumentVersion } from '@latitude-data/core/browser'
 import {
   type UseEmailTriggerConfiguration,
   EmailAvailabilityOptions,
 } from './useConfiguration'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function getEmailTriggerAddress(document: DocumentVersion) {
   return `${document.documentUuid}@${EMAIL_TRIGGER_DOMAIN}`

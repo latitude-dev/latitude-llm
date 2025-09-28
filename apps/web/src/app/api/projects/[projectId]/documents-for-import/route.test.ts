@@ -1,14 +1,14 @@
-import {
-  DocumentVersion,
-  Providers,
-  User,
-  Workspace,
-} from '@latitude-data/core/browser'
 import { createProject, helpers } from '@latitude-data/core/factories'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
+import {
+  DocumentVersion,
+  User,
+  Workspace,
+} from '@latitude-data/core/schema/types'
+import { Providers } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => {
   return {

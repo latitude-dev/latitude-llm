@@ -6,7 +6,7 @@ import { LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
 import { LATTE_TOOLS } from '../../tools'
 import { createLatteThread } from '../createThread'
 import { undoLatteThreadChanges } from './undoChanges'
-import { DocumentVersion } from '../../../../../browser'
+import { DocumentVersion } from '../../../../../schema/types'
 import { WebsocketClient } from '../../../../../websockets/workers'
 import { deleteCommitDraft } from '../../../../commits'
 

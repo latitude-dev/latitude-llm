@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DocumentSuggestion, DocumentVersion, Workspace } from '../../browser'
+import {
+  DocumentSuggestion,
+  DocumentVersion,
+  Workspace,
+} from '../../schema/types'
 import { database } from '../../client'
 import { DocumentSuggestionsRepository } from '../../repositories'
-import { documentVersions } from '../../schema'
+import { documentVersions } from '../../schema/models/documentVersions'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'
 import { inheritDocumentRelations } from './inheritRelations'

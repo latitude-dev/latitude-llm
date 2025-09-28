@@ -1,6 +1,11 @@
-import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
+import {
+  Commit,
+  DocumentVersion,
+  EvaluationV2,
+  Workspace,
+} from '../../schema/types'
 import { database } from '../../client'
-import { documentSuggestions } from '../../schema'
+import { documentSuggestions } from '../../schema/models/documentSuggestions'
 
 export async function createDocumentSuggestion({
   document,

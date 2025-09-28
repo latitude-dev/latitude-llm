@@ -1,6 +1,6 @@
 'use client'
 
-import { Project } from '@latitude-data/core/browser'
+import type { Project } from '@latitude-data/core/schema/types'
 import { createContext, ReactNode, useContext } from 'react'
 
 type IProjectContextType = {

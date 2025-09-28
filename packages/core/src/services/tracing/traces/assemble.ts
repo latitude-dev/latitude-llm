@@ -1,9 +1,5 @@
-import {
-  AssembledSpan,
-  AssembledTrace,
-  Span,
-  Workspace,
-} from '../../../browser'
+import { AssembledSpan, AssembledTrace, Span } from '../../../constants'
+import { Workspace } from '../../../schema/types'
 import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'

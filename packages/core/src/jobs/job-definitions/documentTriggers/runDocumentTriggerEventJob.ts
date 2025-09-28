@@ -4,7 +4,7 @@ import {
   DocumentTriggerEventsRepository,
 } from '../../../repositories'
 import { runDocumentFromTriggerEvent } from '../../../services/documentTriggers/triggerEvents/runFromEvent'
-import { unsafelyFindWorkspace } from '../../../data-access'
+import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { Result } from '../../../lib/Result'
 
 export type ExecuteDocumentTriggerJobData = {

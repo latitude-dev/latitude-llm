@@ -5,15 +5,15 @@ import useDocumentLogWithPaginationPosition, {
 import useEvaluatedDocumentLogs from '$/stores/evaluatedDocumentLogs'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import {
-  ActualOutputConfiguration,
-  DocumentVersion,
-  EvaluatedDocumentLog,
-} from '@latitude-data/core/browser'
-import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useMemo, useState } from 'react'
+import {
+  ActualOutputConfiguration,
+  EvaluatedDocumentLog,
+} from '@latitude-data/core/constants'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 const ONLY_ONE_PAGE = '1'
 

@@ -1,9 +1,4 @@
 import { useState } from 'react'
-import type {
-  AppDto,
-  DocumentTrigger,
-  IntegrationDto,
-} from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { PipedreamComponentPropsForm } from '$/components/Pipedream/PipedreamPropsForm'
 import { type Trigger } from '../index'
@@ -17,6 +12,11 @@ import {
   useDocumentSelection,
   SelectDocument,
 } from '../../../../../_components/SelectDocument'
+import { type AppDto } from '@latitude-data/core/constants'
+import {
+  type DocumentTrigger,
+  type IntegrationDto,
+} from '@latitude-data/core/schema/types'
 
 export function TriggerConfiguration({
   trigger,

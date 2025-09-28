@@ -6,12 +6,6 @@ import {
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useDocumentVersions from '$/stores/documentVersions'
 import { DocumentTriggerType, ParameterType } from '@latitude-data/constants'
-import {
-  Commit,
-  DocumentTrigger,
-  DocumentVersion,
-  Project,
-} from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
@@ -31,6 +25,12 @@ import {
   useState,
 } from 'react'
 import { OnRunTriggerFn } from '../TriggersList'
+import {
+  Commit,
+  DocumentTrigger,
+  DocumentVersion,
+  Project,
+} from '@latitude-data/core/schema/types'
 
 /**
  * Utility to convert localhost URLs to Cloudflare tunnel URLs for testing

@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
-import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import {
   useCurrentCommit,
   useCurrentProject,
@@ -15,6 +14,7 @@ import CreateDraftCommitModal from '../CreateDraftCommitModal'
 import MergedCommitWarningModal from '../MergedCommitWarningModal'
 import { FilesTree } from '$/components/Sidebar/Files'
 import { SidebarDocument } from '$/components/Sidebar/Files/useTree'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
 export default function ClientFilesTree({
   documents: serverDocuments,

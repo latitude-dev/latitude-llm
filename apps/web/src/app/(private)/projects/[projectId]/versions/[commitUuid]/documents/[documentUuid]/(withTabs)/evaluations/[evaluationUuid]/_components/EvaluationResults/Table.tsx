@@ -4,12 +4,6 @@ import { ResultPanel } from '$/components/evaluations/ResultPanel'
 import { DevModeProvider } from '$/hooks/useDevMode'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { useEvaluationResultsV2Count } from '$/stores/evaluationResultsV2'
-import {
-  EvaluationMetric,
-  EvaluationResultsV2Search,
-  EvaluationResultV2WithDetails,
-  EvaluationType,
-} from '@latitude-data/core/browser'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import {
   useCurrentCommit,
@@ -19,6 +13,9 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo, useRef } from 'react'
 import { EvaluationResultsTableActions } from './TableActions'
 import { EvaluationResultsTableBody } from './TableBody'
+import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
+import { EvaluationResultsV2Search } from '@latitude-data/core/helpers'
+import { EvaluationResultV2WithDetails } from '@latitude-data/core/schema/types'
 
 export function EvaluationResultsTable<
   T extends EvaluationType = EvaluationType,

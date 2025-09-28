@@ -98,3 +98,4 @@ charts/latitude/values.secrets.yaml
 **/*.secrets.yaml
 **/*.secrets.yml
 
+trace

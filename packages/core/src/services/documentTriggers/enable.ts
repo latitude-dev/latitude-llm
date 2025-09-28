@@ -1,8 +1,8 @@
 import { BadRequestError, LatitudeError } from '@latitude-data/constants/errors'
-import { Commit, DocumentTrigger, Workspace } from '../../browser'
+import { Commit, DocumentTrigger, Workspace } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
-import { documentTriggers } from '../../schema'
+import { documentTriggers } from '../../schema/models/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import {
   CommitsRepository,

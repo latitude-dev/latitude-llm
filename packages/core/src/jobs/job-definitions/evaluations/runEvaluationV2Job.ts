@@ -1,5 +1,5 @@
 import { Job } from 'bullmq'
-import { unsafelyFindWorkspace } from '../../../data-access'
+import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { NotFoundError } from '../../../lib/errors'
 import {
   CommitsRepository,

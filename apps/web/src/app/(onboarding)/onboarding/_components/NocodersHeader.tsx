@@ -3,7 +3,7 @@
 import { AppHeaderWrapper } from '$/components/layouts/AppLayout/Header'
 import AvatarDropdown from '$/components/layouts/AppLayout/Header/AvatarDropdown'
 import { HeaderBreadcrumb } from '$/components/layouts/AppLayout/Header/Breadcrumb'
-import { User } from '@latitude-data/core/browser'
+import { User } from '@latitude-data/core/schema/types'
 
 export default function NocodersHeader({
   currentUser,

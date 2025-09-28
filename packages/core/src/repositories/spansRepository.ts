@@ -1,17 +1,19 @@
 import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+
+import { parseJSON } from 'date-fns'
+
 import {
-  Span,
   SPAN_METADATA_CACHE_TTL,
   SPAN_METADATA_STORAGE_KEY,
+  Span,
   SpanMetadata,
   SpanType,
-} from '../browser'
+} from '../constants'
 import { cache as redis } from '../cache'
 import { diskFactory, DiskWrapper } from '../lib/disk'
 import { Result } from '../lib/Result'
-import { spans } from '../schema'
+import { spans } from '../schema/models/spans'
 import Repository from './repositoryV2'
-import { parseJSON } from 'date-fns'
 
 const tt = getTableColumns(spans)
 

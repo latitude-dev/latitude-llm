@@ -5,7 +5,7 @@ import {
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { PartialConfig } from '../../helpers'
-import { Providers } from '../models'
+import { Providers } from '@latitude-data/constants'
 import { applyProviderRules } from './index'
 import { ProviderRules } from './types'
 

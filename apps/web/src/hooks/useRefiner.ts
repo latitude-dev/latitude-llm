@@ -3,9 +3,13 @@
 import { refineApplyAction } from '$/actions/copilot/refineApply'
 import { refinePromptAction } from '$/actions/copilot/refinePrompt'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { RefObject, useCallback } from 'react'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+} from '@latitude-data/core/schema/types'
 
 export type Refinement = {
   prompt: string

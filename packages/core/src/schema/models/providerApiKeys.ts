@@ -9,7 +9,7 @@ import {
   jsonb,
 } from 'drizzle-orm/pg-core'
 
-import { Providers } from '../../browser'
+import { Providers } from '@latitude-data/constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'

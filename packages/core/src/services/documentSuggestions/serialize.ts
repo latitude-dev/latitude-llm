@@ -1,10 +1,6 @@
-import {
-  EvaluationMetric,
-  EvaluationResultV2,
-  EvaluationType,
-  EvaluationV2,
-  Workspace,
-} from '../../browser'
+import { EvaluationMetric, EvaluationType } from '../../constants'
+import { EvaluationResultV2 } from '../../constants'
+import { EvaluationV2, Workspace } from '../../schema/types'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import {

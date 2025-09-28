@@ -3,14 +3,12 @@ import {
   Conversation,
   Message as ConversationMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import {
-  PublishedDocument,
-  StreamEventTypes,
-} from '@latitude-data/core/browser'
 import { runSharedPromptAction } from '$/actions/sdk/runSharedPromptAction'
 import { readStreamableValue } from 'ai/rsc'
 import { SetStateAction } from '@latitude-data/web-ui/commonTypes'
 import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
+import { PublishedDocument } from '@latitude-data/core/schema/types'
+import { StreamEventTypes } from '@latitude-data/core/constants'
 
 type AccoumulatedDeltaMessage = { deltas: string[] }
 export type LastMessage = {

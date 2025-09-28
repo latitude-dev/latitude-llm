@@ -2,15 +2,15 @@
 
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import { compact } from 'lodash-es'
+import { useMemo } from 'react'
+import useSWR, { SWRConfiguration } from 'swr'
 import {
   Commit,
   DocumentVersion,
   Project,
   ResultWithEvaluationV2,
-} from '@latitude-data/core/browser'
-import { compact } from 'lodash-es'
-import { useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+} from '@latitude-data/core/schema/types'
 
 export default function useEvaluationResultsV2ByDocumentLogs(
   {

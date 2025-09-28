@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 
-import { Dataset, DocumentVersion } from '../../browser'
+import { Dataset, DocumentVersion } from '../../schema/types'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { documentVersions } from '../../schema'
+import { documentVersions } from '../../schema/models/documentVersions'
 
 export async function assignDataset(
   {

@@ -10,10 +10,11 @@ import {
   or,
   type InferSelectModel,
 } from 'drizzle-orm'
-import { Grant, GrantSource, Quota, QuotaType } from '../browser'
+
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import { grants } from '../schema'
+import { Grant, GrantSource, Quota, QuotaType } from '../schema/types'
+import { grants } from '../schema/models/grants'
 import Repository, { QueryOptions } from './repositoryV2'
 
 const tt = getTableColumns(grants)
@@ -35,10 +36,12 @@ export class GrantsRepository extends Repository<Grant> {
   // Note: overwriting all Repository methods to return the correct type because it can't
   // be done automatically with the tt as Drizzle does not call mapWith on null values!!!
   private serialize(result: InferSelectModel<typeof grants>) {
+    const amount: Quota = result.amount ?? 'unlimited'
+
     return {
       ...result,
-      amount: (result.amount ?? 'unlimited') as Quota,
-    } as Grant
+      amount,
+    } satisfies Grant
   }
 
   async find(id: number) {

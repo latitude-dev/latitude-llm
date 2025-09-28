@@ -1,10 +1,10 @@
 import {
   LATTE_USAGE_CACHE_KEY,
-  LATTE_USAGE_CACHE_TTL,
   LatteUsage,
   QuotaType,
-  Workspace,
-} from '../../../../browser'
+} from '../../../../constants'
+import { LATTE_USAGE_CACHE_TTL } from '../../../../constants'
+import { Workspace } from '../../../../schema/types'
 import { cache as getCache } from '../../../../cache'
 import { database } from '../../../../client'
 import { Result } from '../../../../lib/Result'
@@ -52,25 +52,27 @@ export async function usageLatteCredits(
   if (counting.error) {
     return Result.error(counting.error)
   }
+  const { billable, unbillable } = counting.value
 
   const quoting = await computeQuota({ type: QuotaType.Credits, workspace })
   if (quoting.error) {
     return Result.error(quoting.error)
   }
 
-  usage = {
+  const computedUsage: LatteUsage = {
     limit: quoting.value.limit,
-    billable: counting.value.billable,
-    unbillable: counting.value.unbillable,
+    billable,
+    unbillable,
     resetsAt: subscription.billableAt,
   }
+  usage = computedUsage
 
   try {
-    const item = JSON.stringify(usage)
+    const item = JSON.stringify(computedUsage)
     await cache.set(key, item, 'EX', LATTE_USAGE_CACHE_TTL)
   } catch (error) {
     captureException(error as Error) // Note: failing silently
   }
 
-  return Result.ok(usage)
+  return Result.ok(computedUsage)
 }

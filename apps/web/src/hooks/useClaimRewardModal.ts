@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
-import { RewardType } from '@latitude-data/core/browser'
 import { useToggleModal } from './useToogleModal'
+import { RewardType } from '@latitude-data/core/constants'
 
 type UseClaimRewardModalProps = {
   rewardType: RewardType

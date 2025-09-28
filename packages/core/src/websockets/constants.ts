@@ -18,8 +18,8 @@ import type {
   LatteUsage,
   Project,
   ProviderLogDto,
-  Run,
-} from '../browser'
+} from '../schema/types'
+import { Run } from '@latitude-data/constants'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
@@ -168,7 +168,7 @@ export type LatteThreadUpdateArgs = {
   | LatteThreadError
 )
 
-type LatteProjectChangesArgs = {
+export type LatteProjectChangesArgs = {
   threadUuid: string
   changes: LatteChange[]
 }

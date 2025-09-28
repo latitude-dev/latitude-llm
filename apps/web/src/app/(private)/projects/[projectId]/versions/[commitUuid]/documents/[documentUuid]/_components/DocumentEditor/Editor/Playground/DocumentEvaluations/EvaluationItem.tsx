@@ -2,11 +2,6 @@ import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import EvaluateLiveLogsSwitch from '$/components/evaluations/EvaluateLiveLogsSwitch'
 import ResultBadge from '$/components/evaluations/ResultBadge'
 import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
-import {
-  EvaluationResultV2,
-  EvaluationType,
-  EvaluationV2,
-} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -14,6 +9,11 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useMemo } from 'react'
 import { Props } from './shared'
+import {
+  EvaluationResultV2,
+  EvaluationType,
+  EvaluationV2,
+} from '@latitude-data/core/constants'
 
 function EvaluationItemContent({
   result,

@@ -1,7 +1,7 @@
 import { ROUTES } from '$/services/routes'
 import { getDataFromSession } from '$/data-access'
 import { NextRequest, NextResponse } from 'next/server'
-import { SubscriptionPlan } from '@latitude-data/core/browser'
+import { SubscriptionPlan } from '@latitude-data/core/plans'
 
 function isSubscriptionPlan(value: string): value is SubscriptionPlan {
   return Object.values(SubscriptionPlan).includes(value as SubscriptionPlan)

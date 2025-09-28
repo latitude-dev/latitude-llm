@@ -1,4 +1,4 @@
-import { Commit, DocumentVersion } from '../../browser'
+import { Commit, DocumentVersion } from '../../schema/types'
 import { LatitudeError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import { scanDocumentContent } from './scan'

@@ -20,7 +20,10 @@ import {
   EvaluationResultV2,
   EvaluationType,
   EvaluationV2,
+  GrantSource,
+  QuotaType,
 } from '../constants'
+import type { LatteUsage, Quota } from '../constants'
 import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
 import { connectedEvaluations } from './legacyModels/connectedEvaluations'
 import { evaluationAdvancedTemplates } from './legacyModels/evaluationAdvancedTemplates'
@@ -40,6 +43,7 @@ import { datasetRows } from './models/datasetRows'
 import { datasets } from './models/datasets'
 import { documentSuggestions } from './models/documentSuggestions'
 import { documentTriggerEvents } from './models/documentTriggerEvents'
+import { grants } from './models/grants'
 import { documentTriggers } from './models/documentTriggers'
 import { documentVersions } from './models/documentVersions'
 import { experiments } from './models/experiments'
@@ -77,8 +81,6 @@ export type {
   RunErrorField,
 } from '@latitude-data/constants'
 
-// Model types are out of schema files to be able to share with NextJS webpack bundler
-// otherwise, it will throw an error.
 export type Workspace = InferSelectModel<typeof workspaces>
 export type User = InferSelectModel<typeof users>
 export type Session = InferSelectModel<typeof sessions> & {
@@ -435,3 +437,43 @@ export type ProjectRuns = {
   active: ActiveRun[]
   completed: CompletedRun[]
 }
+
+// Grant types
+type GrantRecord = InferSelectModel<typeof grants>
+export type Grant = Omit<GrantRecord, 'amount'> & {
+  amount: Quota
+}
+export { GrantSource, QuotaType }
+export type { LatteUsage, Quota }
+
+// Latte change types
+export type LatteChange = {
+  type: 'usage' | 'credits'
+  amount: number
+}
+
+// Action types
+export const ActionType = {
+  CreateAgent: 'createAgent',
+  CloneAgent: 'cloneAgent',
+} as const
+
+export type ActionType = (typeof ActionType)[keyof typeof ActionType]
+
+export type ActionBackendParameters<T extends ActionType = ActionType> =
+  T extends typeof ActionType.CreateAgent
+    ? { prompt: string }
+    : T extends typeof ActionType.CloneAgent
+      ? { uuid: string }
+      : never
+
+export type ActionFrontendParameters<T extends ActionType = ActionType> =
+  T extends typeof ActionType.CreateAgent
+    ? { projectId: number; commitUuid: string; prompt: string }
+    : T extends typeof ActionType.CloneAgent
+      ? {
+          projectId: number
+          commitUuid: string
+          hasCompletedOnboarding: boolean
+        }
+      : never

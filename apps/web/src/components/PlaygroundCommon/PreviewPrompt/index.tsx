@@ -8,11 +8,6 @@ import Actions, {
 } from '$/components/PlaygroundCommon/Actions'
 import { usePreviewConversation } from '$/hooks/playgrounds/usePreviewConversation'
 import { ResolvedMetadata } from '$/workers/readMetadata'
-import {
-  AppliedRules,
-  LATITUDE_DOCS_URL,
-  ProviderRules,
-} from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -20,6 +15,11 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
+import {
+  AppliedRules,
+  ProviderRules,
+} from '@latitude-data/core/services/ai/providers/rules/types'
+import { LATITUDE_DOCS_URL } from '@latitude-data/core/constants'
 
 function WarningLink({ providerRule }: { providerRule: ProviderRules }) {
   const docPath = providerRule.startsWith('vertex') ? 'vertex' : providerRule

@@ -1,7 +1,6 @@
 'use client'
 
 import { ROUTES } from '$/services/routes'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import {
   AppLocalStorage,
   useLocalStorage,
@@ -9,6 +8,11 @@ import {
 import { omit } from 'lodash-es'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useState } from 'react'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+} from '@latitude-data/core/schema/types'
 
 export enum PlaygroundAction {
   RefinePrompt = 'refinePrompt',

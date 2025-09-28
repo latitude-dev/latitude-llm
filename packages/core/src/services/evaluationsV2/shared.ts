@@ -3,22 +3,23 @@ import {
   Commit,
   Dataset,
   DatasetRow,
-  DocumentLog,
   DocumentVersion,
+  EvaluationV2,
+  ProviderApiKey,
+  ProviderLogDto,
+  Workspace,
+} from '../../schema/types'
+import {
+  DocumentLog,
   EVALUATION_SCORE_SCALE,
   EvaluationConfiguration,
-  EvaluationMetric,
   EvaluationMetricSpecification,
   EvaluationResultMetadata,
   EvaluationResultValue,
   EvaluationSettings,
   EvaluationSpecification,
-  EvaluationType,
-  EvaluationV2,
-  ProviderApiKey,
-  ProviderLogDto,
-  Workspace,
-} from '../../browser'
+} from '../../constants'
+import { EvaluationMetric, EvaluationType } from '../../constants'
 import { Database } from '../../client'
 import { TypedResult } from '../../lib/Result'
 

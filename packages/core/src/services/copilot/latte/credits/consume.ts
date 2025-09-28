@@ -2,13 +2,12 @@ import { LanguageModelUsage } from 'ai'
 import {
   LATTE_MINIMUM_CREDITS_PER_REQUEST,
   LATTE_USAGE_CACHE_KEY,
-  User,
-  Workspace,
-} from '../../../../browser'
+} from '../../../../constants'
+import { User, Workspace } from '../../../../schema/types'
 import { cache as getCache } from '../../../../cache'
 import { Result } from '../../../../lib/Result'
 import Transaction from '../../../../lib/Transaction'
-import { latteRequests } from '../../../../schema'
+import { latteRequests } from '../../../../schema/models/latteRequests'
 import { captureException } from '../../../../utils/workers/sentry'
 import { WebsocketClient } from '../../../../websockets/workers'
 import { computeLatteCredits } from './compute'

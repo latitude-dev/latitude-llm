@@ -1,11 +1,12 @@
-import { Dataset, DatasetRow } from '../../browser'
+import { Dataset, DatasetRow } from '../../schema/types'
 import { DatasetV2CreatedEvent } from '../../events/events'
 import { diskFactory, DiskWrapper } from '../../lib/disk'
 import { csvBatchGenerator, CSVRow, type CsvBatch } from '../../lib/readCsv'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DatasetsRepository } from '../../repositories'
-import { Column, DatasetRowData } from '../../schema'
+import { Column } from '../../schema/models/datasets'
+import { DatasetRowData } from '../../schema/models/datasetRows'
 import { updateDataset } from '../datasets/update'
 import {
   buildColumns,

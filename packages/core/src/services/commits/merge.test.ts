@@ -2,9 +2,9 @@ import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
-import { Providers } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { findHeadCommit } from '../../data-access/commits'
-import { documentVersions } from '../../schema'
+import { documentVersions } from '../../schema/models/documentVersions'
 import { createNewDocument, updateDocument } from '../documents'
 import { mergeCommit } from './merge'
 

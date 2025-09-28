@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 
-import type { DocumentVersion, User, Workspace } from '../../browser'
-import { unsafelyGetUser } from '../../data-access'
+import type { DocumentVersion, User, Workspace } from '../../schema/types'
+import { unsafelyGetUser } from '../../data-access/users'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
 import { createProject as createProjectFn } from '../../services/projects'

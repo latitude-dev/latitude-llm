@@ -1,9 +1,9 @@
-import { EvaluationResultConfiguration } from '../../browser'
+import { EvaluationResultConfiguration } from '../../schema/types'
 import { findEvaluationTemplateCategoryById } from '../../data-access/evaluationTemplateCategories'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { evaluationAdvancedTemplates } from '../../schema'
+import { evaluationAdvancedTemplates } from '../../schema/legacyModels/evaluationAdvancedTemplates'
 import { createEvaluationTemplateCategory } from '../evaluationTemplateCategories/create'
 
 const DEFAULT_CATEGORY_NAME = 'Default Category'

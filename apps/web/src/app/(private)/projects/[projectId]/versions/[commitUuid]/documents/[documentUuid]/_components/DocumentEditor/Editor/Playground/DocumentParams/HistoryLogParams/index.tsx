@@ -2,7 +2,6 @@ import {
   UseDocumentParameters,
   useDocumentParameters,
 } from '$/hooks/useDocumentParameters'
-import { DocumentVersion, PlaygroundInput } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -24,6 +23,8 @@ import { ParametersWrapper } from '../ParametersWrapper'
 import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { useLimitedHistoryLogs } from '../../../V2Playground/hooks/useLimitedHistoryLogs'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { PlaygroundInput } from '@latitude-data/core/lib/documentPersistedInputs'
 
 function DebouncedTextArea({
   input,

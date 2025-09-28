@@ -1,9 +1,8 @@
 import http from '$/common/http'
-import { LogSources, messageSchema } from '@latitude-data/core/browser'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import { ROUTES } from '$/routes'
-import { documentParamsSchema } from '$/routes/api/v2/documents/paramsSchema'
 import { createRoute, z } from '@hono/zod-openapi'
+import { LogSources, messageSchema } from '@latitude-data/core/constants'
 
 const documentLogSchema = z.object({
   id: z.number(),
@@ -17,6 +16,13 @@ const documentLogSchema = z.object({
   source: z.nativeEnum(LogSources),
   createdAt: z.date(),
   updatedAt: z.date(),
+})
+
+const documentParamsSchema = z.object({
+  projectId: z.string().openapi({ description: 'The project ID' }),
+  versionUuid: z
+    .string()
+    .openapi({ description: 'The version UUID or "live"' }),
 })
 
 function createLogRouteFactory({

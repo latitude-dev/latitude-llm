@@ -1,7 +1,8 @@
 import { and, eq, getTableColumns, isNull } from 'drizzle-orm'
 
 import { database } from '../../../client'
-import { commits, projects } from '../../../schema'
+import { commits } from '../../../schema/models/commits'
+import { projects } from '../../../schema/models/projects'
 
 export const columnSelection = getTableColumns(commits)
 

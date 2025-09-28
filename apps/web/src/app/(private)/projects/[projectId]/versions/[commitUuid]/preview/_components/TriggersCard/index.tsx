@@ -4,12 +4,6 @@ import { usePipedreamApp } from '$/stores/pipedreamApp'
 import useDocumentVersions from '$/stores/documentVersions'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import {
-  DocumentTrigger,
-  DocumentVersion,
-  IntegrationDto,
-  PipedreamIntegration,
-} from '@latitude-data/core/browser'
-import {
   DocumentTriggerType,
   EMAIL_TRIGGER_DOMAIN,
 } from '@latitude-data/constants'
@@ -25,6 +19,12 @@ import { OnRunTriggerFn } from '../TriggersList'
 import { OnRunChatTrigger } from '../useActiveTrigger'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { CLIENT_TIMEZONE, DEFAULT_TIMEZONE } from '$/lib/constants'
+import {
+  DocumentTrigger,
+  DocumentVersion,
+  IntegrationDto,
+  PipedreamIntegration,
+} from '@latitude-data/core/schema/types'
 
 export function useTriggerInfo({
   trigger,

@@ -11,7 +11,7 @@ import {
   DocumentVersion,
   User,
   DocumentTrigger,
-} from '../../browser'
+} from '../../schema/types'
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
 import { createTriggerHash } from './helpers/triggerHash'
@@ -181,7 +181,9 @@ describe('handleTriggerMerge', () => {
 
     // Create a trigger directly in the database with pending status to bypass mocks
     const { database } = await import('../../client')
-    const { documentTriggers } = await import('../../schema')
+    const { documentTriggers } = await import(
+      '../../schema/models/documentTriggers'
+    )
     const { v4: uuidv4 } = await import('uuid')
 
     const triggerUuid = uuidv4()
@@ -309,7 +311,9 @@ describe('handleTriggerMerge', () => {
 
     // Create a pending integration trigger directly in the new draft
     const { database } = await import('../../client')
-    const { documentTriggers } = await import('../../schema')
+    const { documentTriggers } = await import(
+      '../../schema/models/documentTriggers'
+    )
     const { v4: uuidv4 } = await import('uuid')
 
     const pendingTriggerUuid = uuidv4()

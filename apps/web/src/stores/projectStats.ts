@@ -1,7 +1,7 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { ProjectStats } from '@latitude-data/core/browser'
 import useSWR, { SWRConfiguration } from 'swr'
+import { ProjectStats } from '@latitude-data/core/schema/types'
 
 export default function useProjectStats(
   {

@@ -4,7 +4,7 @@ import { subscriptions } from '../../schema/models/subscriptions'
 import { database } from '../../client'
 import { and, eq, lt, inArray, gt } from 'drizzle-orm'
 import { SubscriptionPlan } from '../../plans'
-import { workspaces } from '../../schema'
+import { workspaces } from '../../schema/models/workspaces'
 import { queues } from '../../jobs/queues'
 
 const INACTIVITY_THRESHOLD_MINUTES = 10

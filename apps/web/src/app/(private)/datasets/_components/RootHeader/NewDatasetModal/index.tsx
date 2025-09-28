@@ -10,11 +10,8 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'
 import DelimiterSelector from '$/app/(private)/datasets/_components/DelimiterSelector'
-import {
-  Dataset,
-  MAX_UPLOAD_SIZE_IN_MB,
-  MAX_SIZE,
-} from '@latitude-data/core/browser'
+import { Dataset } from '@latitude-data/core/schema/types'
+import { MAX_UPLOAD_SIZE_IN_MB, MAX_SIZE } from '@latitude-data/core/constants'
 
 const MAX_SIZE_MESSAGE = `Your dataset must be less than ${MAX_SIZE}MB in size.`
 

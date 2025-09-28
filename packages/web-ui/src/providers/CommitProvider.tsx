@@ -1,6 +1,6 @@
 'use client'
 
-import { Commit } from '@latitude-data/core/browser'
+import type { Commit } from '@latitude-data/core/schema/types'
 import { createContext, ReactNode, useContext } from 'react'
 
 interface ICommitContextType {

@@ -1,17 +1,17 @@
 'use server'
 
 import { z } from 'zod'
-import {
-  ChainStepResponse,
-  CLOUD_MESSAGES,
-  LogSources,
-} from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { authProcedure } from '$/actions/procedures'
 import { createDatasetFromJson } from '@latitude-data/core/services/datasets/createFromJson'
+import {
+  ChainStepResponse,
+  CLOUD_MESSAGES,
+  LogSources,
+} from '@latitude-data/core/constants'
 
 export const generateDatasetAction = authProcedure
   .createServerAction()

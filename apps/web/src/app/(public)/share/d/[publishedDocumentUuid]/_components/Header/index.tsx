@@ -1,5 +1,4 @@
 'use client'
-import { PublishedDocument } from '@latitude-data/core/browser'
 import { Avatar } from '@latitude-data/web-ui/atoms/Avatar'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -13,6 +12,7 @@ import { Container } from '../Container'
 import { ForkButton } from '../ForkButton'
 import { ReactNode } from 'react'
 import { getUserInfoFromSession } from '@latitude-data/web-ui/getUserInfo'
+import { PublishedDocument } from '@latitude-data/core/schema/types'
 
 export function PromptHeader({
   shared,

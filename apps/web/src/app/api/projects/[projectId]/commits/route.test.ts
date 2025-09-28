@@ -1,9 +1,10 @@
-import { CommitStatus, User, Workspace } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
+import { CommitStatus } from '@latitude-data/core/constants'
+import { User, Workspace } from '@latitude-data/core/schema/types'
 
 const mocks = vi.hoisted(() => {
   return {

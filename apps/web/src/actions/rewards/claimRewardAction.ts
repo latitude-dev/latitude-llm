@@ -1,10 +1,10 @@
 'use server'
-
-import { ClaimedReward, RewardType } from '@latitude-data/core/browser'
 import { claimReward } from '@latitude-data/core/services/claimedRewards/claim'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
+import { ClaimedReward } from '@latitude-data/core/schema/types'
+import { RewardType } from '@latitude-data/core/constants'
 
 export const claimRewardAction = authProcedure
   .createServerAction()

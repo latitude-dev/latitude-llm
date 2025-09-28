@@ -1,4 +1,3 @@
-import { Commit } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
@@ -15,6 +14,7 @@ import {
   type CommitChanges,
   ModifiedDocumentType,
 } from '@latitude-data/constants'
+import { Commit } from '@latitude-data/core/schema/types'
 
 function ChangeWithErrors({
   change,

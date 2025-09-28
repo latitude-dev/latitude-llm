@@ -6,7 +6,7 @@ import {
   applyAgentRule,
   ValidatedChainStep,
 } from '../../services/chains/ChainValidator'
-import { ProviderApiKey } from '../../browser'
+import { ProviderApiKey } from '../../schema/types'
 import { JSONSchema7 } from 'json-schema'
 
 /**

@@ -1,4 +1,4 @@
-import { unsafelyFindWorkspacesFromUser } from '@latitude-data/core/data-access'
+import { unsafelyFindWorkspacesFromUser } from '@latitude-data/core/data-access/workspaces'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 

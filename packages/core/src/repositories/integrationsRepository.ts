@@ -1,10 +1,10 @@
 import { and, eq, getTableColumns } from 'drizzle-orm'
 
-import { IntegrationDto, PipedreamIntegration } from '../browser'
+import { IntegrationDto, PipedreamIntegration } from '../schema/types'
 import { LatitudeError, NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { PromisedResult } from '../lib/Transaction'
-import { integrations } from '../schema'
+import { integrations } from '../schema/models/integrations'
 import Repository from './repositoryV2'
 import { IntegrationType } from '@latitude-data/constants'
 

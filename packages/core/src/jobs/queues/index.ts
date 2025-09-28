@@ -3,8 +3,6 @@ import { Queue, QueueOptions } from 'bullmq'
 import { buildRedisConnection, REDIS_KEY_PREFIX } from '../../redis'
 import { Queues } from './types'
 
-export { Queues } from './types'
-
 let _queues:
   | {
       defaultQueue: Queue

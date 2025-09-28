@@ -1,6 +1,6 @@
 import { updateExport } from './update'
 import { publisher } from '../../events/publisher'
-import { Export } from '../../browser'
+import { Export } from '../../schema/types'
 
 export async function markExportReady({
   export: exportRecord,

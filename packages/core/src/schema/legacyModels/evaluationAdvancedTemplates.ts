@@ -1,7 +1,8 @@
 import { relations } from 'drizzle-orm'
 import { bigint, bigserial, jsonb, text, varchar } from 'drizzle-orm/pg-core'
 
-import { evaluationTemplateCategories, latitudeSchema } from '..'
+import { latitudeSchema } from '../db-schema'
+import { evaluationTemplateCategories } from './evaluationTemplateCategories'
 import { timestamps } from '../schemaHelpers'
 import { EvaluationResultConfiguration } from '../types'
 

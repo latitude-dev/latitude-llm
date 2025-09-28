@@ -7,7 +7,7 @@ import {
 import { defineLatteTool } from '../types'
 import { z } from 'zod'
 import { executeLatteActions } from './latteActions/executeActions'
-import { CompileError } from '@latitude-data/compiler'
+import type { CompileError } from 'promptl-ai'
 
 const editProject = defineLatteTool(
   async ({ versionUuid, actions }, { workspace, project, threadUuid }) => {

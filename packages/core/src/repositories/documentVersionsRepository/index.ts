@@ -11,7 +11,7 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import { Commit, DocumentVersion } from '../../browser'
+import { Commit, DocumentVersion } from '../../schema/types'
 import { database } from '../../client'
 import {
   databaseErrorCodes,
@@ -19,7 +19,9 @@ import {
   UnprocessableEntityError,
 } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import { commits, documentVersions, projects } from '../../schema'
+import { commits } from '../../schema/models/commits'
+import { documentVersions } from '../../schema/models/documentVersions'
+import { projects } from '../../schema/models/projects'
 import { CommitsRepository } from '../commitsRepository'
 import RepositoryLegacy from '../repository'
 

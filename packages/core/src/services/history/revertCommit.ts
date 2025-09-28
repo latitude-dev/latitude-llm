@@ -1,4 +1,5 @@
-import { Commit, DraftChange, Project, User, Workspace } from '../../browser'
+import { Commit, Project, User, Workspace } from '../../schema/types'
+import { DraftChange } from '../../constants'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import {

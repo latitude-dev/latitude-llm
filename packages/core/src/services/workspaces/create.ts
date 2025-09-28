@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm'
-import { User, WorkspaceDto } from '../../browser'
+import { User, WorkspaceDto } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { SubscriptionPlan } from '../../plans'
-import { workspaces } from '../../schema'
+import { workspaces } from '../../schema/models/workspaces'
 import { createSubscription } from '../subscriptions/create'
 import { issueSubscriptionGrants } from '../subscriptions/grants'
 

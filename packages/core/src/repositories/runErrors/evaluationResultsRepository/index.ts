@@ -1,14 +1,12 @@
 import { and, eq, isNull, sql } from 'drizzle-orm'
 
-import { ErrorableEntity, EvaluationResultableType } from '../../../browser'
-import {
-  evaluationResultableBooleans,
-  evaluationResultableNumbers,
-  evaluationResultableTexts,
-  evaluationResults,
-  evaluations,
-  runErrors,
-} from '../../../schema'
+import { ErrorableEntity, EvaluationResultableType } from '../../../constants'
+import { evaluationResultableBooleans } from '../../../schema/legacyModels/evaluationResultableBooleans'
+import { evaluationResultableNumbers } from '../../../schema/legacyModels/evaluationResultableNumbers'
+import { evaluationResultableTexts } from '../../../schema/legacyModels/evaluationResultableTexts'
+import { evaluationResults } from '../../../schema/legacyModels/evaluationResults'
+import { evaluations } from '../../../schema/legacyModels/evaluations'
+import { runErrors } from '../../../schema/models/runErrors'
 import {
   evaluationResultDto,
   EvaluationResultWithMetadata,

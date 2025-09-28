@@ -1,16 +1,17 @@
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
   ActualOutputConfiguration,
-  Commit,
-  DocumentVersion,
-  EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
-  EvaluationType,
-  EvaluationV2,
   ExpectedOutputConfiguration,
+} from '../../constants'
+import {
+  Commit,
+  DocumentVersion,
+  EvaluationV2,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { EvaluationMetric, EvaluationType } from '../../constants'
 import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'

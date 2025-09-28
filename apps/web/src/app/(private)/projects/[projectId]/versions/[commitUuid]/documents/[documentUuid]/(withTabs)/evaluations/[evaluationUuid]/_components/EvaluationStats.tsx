@@ -1,9 +1,4 @@
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
-import {
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2Stats,
-} from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import AverageScoreChart from './charts/AverageScore'
 import DailyOverviewChart from './charts/DailyOverview'
@@ -11,6 +6,8 @@ import TotalCostChart from './charts/TotalCost'
 import TotalResultsChart from './charts/TotalResults'
 import TotalTokensChart from './charts/TotalTokens'
 import VersionOverviewChart from './charts/VersionOverview'
+import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
+import { EvaluationV2Stats } from '@latitude-data/core/schema/types'
 
 export function EvaluationStats<
   T extends EvaluationType = EvaluationType,

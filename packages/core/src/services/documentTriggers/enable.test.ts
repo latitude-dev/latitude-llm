@@ -6,7 +6,7 @@ import {
   Workspace,
   DocumentVersion,
   User,
-} from '../../browser'
+} from '../../schema/types'
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'

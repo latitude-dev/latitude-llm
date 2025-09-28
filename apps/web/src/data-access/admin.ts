@@ -1,9 +1,3 @@
-import {
-  Grant,
-  Quota,
-  QuotaType,
-  Subscription,
-} from '@latitude-data/core/browser'
 import { utils, database } from '@latitude-data/core/client'
 import {
   NotFoundError,
@@ -11,17 +5,17 @@ import {
 } from '@latitude-data/core/lib/errors'
 import { OkType, Result } from '@latitude-data/core/lib/Result'
 import { GrantsRepository } from '@latitude-data/core/repositories'
-import {
-  features,
-  memberships,
-  projects,
-  subscriptions,
-  users,
-  workspaceFeatures,
-  workspaces,
-} from '@latitude-data/core/schema'
+import { features } from '@latitude-data/core/schema/models/features'
+import { memberships } from '@latitude-data/core/schema/models/memberships'
+import { projects } from '@latitude-data/core/schema/models/projects'
+import { subscriptions } from '@latitude-data/core/schema/models/subscriptions'
+import { users } from '@latitude-data/core/schema/models/users'
+import { workspaceFeatures } from '@latitude-data/core/schema/models/workspaceFeatures'
+import { workspaces } from '@latitude-data/core/schema/models/workspaces'
 import { computeQuota } from '@latitude-data/core/services/grants/quota'
 import { findWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/data-access/find'
+import { Grant, Subscription } from '@latitude-data/core/schema/types'
+import { Quota, QuotaType } from '@latitude-data/core/constants'
 
 export type WorkspaceWithDetails = {
   id: number

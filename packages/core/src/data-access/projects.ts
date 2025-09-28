@@ -1,11 +1,10 @@
+import { commits } from '../schema/models/commits'
+import { documentVersions } from '../schema/models/documentVersions'
+import { projects } from '../schema/models/projects'
 import { and, eq, getTableColumns } from 'drizzle-orm'
 
 import { database } from '../client'
-import { commits, documentVersions, projects, workspaces } from '../schema'
-import { DocumentVersion, Project, Workspace } from '../browser'
-import { Result } from '../lib/Result'
-import { LatitudeError, NotFoundError } from '@latitude-data/constants/errors'
-import { PromisedResult } from '../lib/Transaction'
+import { DocumentVersion } from '../schema/types'
 
 export function unsafelyFindProject(projectId: number, db = database) {
   return db.query.projects.findFirst({ where: eq(projects.id, projectId) })
@@ -27,36 +26,4 @@ export function findProjectFromDocument(
       ),
     )
     .then((r) => r[0])
-}
-
-export async function unsafelyFindWorkspaceAndProjectFromDocumentUuid(
-  documentUuid: string,
-  db = database,
-): PromisedResult<
-  {
-    workspace: Workspace
-    project: Project
-  },
-  LatitudeError
-> {
-  const [result] = await db
-    .select({
-      workspace: workspaces,
-      project: projects,
-    })
-    .from(workspaces)
-    .innerJoin(projects, eq(projects.workspaceId, workspaces.id))
-    .innerJoin(commits, eq(commits.projectId, projects.id))
-    .innerJoin(documentVersions, eq(documentVersions.commitId, commits.id))
-    .where(eq(documentVersions.documentUuid, documentUuid))
-    .limit(1)
-
-  if (!result) {
-    return Result.error(new NotFoundError('Workspace and project not found'))
-  }
-
-  return Result.ok({
-    workspace: result.workspace,
-    project: result.project,
-  })
 }

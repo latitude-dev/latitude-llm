@@ -1,8 +1,8 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { Workspace } from '@latitude-data/core/browser'
 import { usageLatteCredits } from '@latitude-data/core/services/copilot/latte/credits/usage'
 import { NextRequest, NextResponse } from 'next/server'
+import { Workspace } from '@latitude-data/core/schema/types'
 
 export const GET = errorHandler(
   authHandler(

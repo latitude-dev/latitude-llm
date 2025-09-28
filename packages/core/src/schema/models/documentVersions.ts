@@ -15,7 +15,11 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { datasetsV1 } from '../legacyModels/datasetsV1'
-import { DocumentType, LinkedDataset, LinkedDatasetRow } from '../../browser'
+import { DocumentType } from '../../constants'
+import {
+  LinkedDataset,
+  LinkedDatasetRow,
+} from '../../lib/documentPersistedInputs'
 import { datasets } from './datasets'
 
 type LinkedDatasetByDatasetId = Record<number, LinkedDataset>

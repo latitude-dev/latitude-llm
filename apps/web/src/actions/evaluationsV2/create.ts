@@ -1,12 +1,11 @@
 'use server'
-
-import {
-  EvaluationOptionsSchema,
-  EvaluationSettingsSchema,
-} from '@latitude-data/core/browser'
 import { createEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/create'
 import { z } from 'zod'
 import { withDocument } from '../procedures'
+import {
+  EvaluationOptionsSchema,
+  EvaluationSettingsSchema,
+} from '@latitude-data/core/constants'
 
 export const createEvaluationV2Action = withDocument
   .createServerAction()

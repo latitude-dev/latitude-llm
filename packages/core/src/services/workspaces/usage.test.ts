@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { WorkspaceDto } from '../../browser'
-import { Providers } from '../../constants'
+import { WorkspaceDto } from '../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import { deleteCommitDraft } from '../commits'
 import { computeWorkspaceUsage } from './usage'
 import { deleteEvaluationV2 } from '../evaluationsV2/delete'

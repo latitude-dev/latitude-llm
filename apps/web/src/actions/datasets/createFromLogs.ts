@@ -3,10 +3,10 @@
 import { z } from 'zod'
 
 import { withDocument } from '../procedures'
-import { documentLogFilterOptionsSchema } from '@latitude-data/core/browser'
 import { queues } from '@latitude-data/core/queues'
 import { findOrCreateDataset } from '@latitude-data/core/services/datasets/findOrCreate'
 import { updateDatasetFromLogs } from '@latitude-data/core/services/datasets/createFromLogs'
+import { documentLogFilterOptionsSchema } from '@latitude-data/core/constants'
 
 const MAX_SYNC_LOGS_BATCH_SIZE = 25
 

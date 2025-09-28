@@ -1,17 +1,19 @@
 import { PipedreamComponentPropsForm } from '$/components/Pipedream/PipedreamPropsForm'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import {
-  DocumentVersion,
-  IntegrationDto,
-  PipedreamComponent,
-  PipedreamComponentType,
-} from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
+import {
+  DocumentVersion,
+  IntegrationDto,
+} from '@latitude-data/core/schema/types'
+import {
+  PipedreamComponent,
+  PipedreamComponentType,
+} from '@latitude-data/core/constants'
 
 function ParameterSelects({
   document,

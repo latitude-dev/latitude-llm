@@ -1,11 +1,11 @@
 import useIntegrations from '$/stores/integrations'
-import { PipedreamIntegration } from '@latitude-data/core/browser'
 import { useConnectToPipedreamApp } from './useConnectToPipedreamApp'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { useCallback, useState } from 'react'
 import useLatitudeAction from './useLatitudeAction'
 import { updateIntegrationConfigurationAction } from '$/actions/integrations/updateConfiguration'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import { PipedreamIntegration } from '@latitude-data/core/schema/types'
 
 export function useConfigureIntegrationAccount({
   integration,

@@ -8,15 +8,15 @@ import {
 } from 'react'
 
 import { refreshWebesocketTokenAction } from '$/actions/user/refreshWebsocketTokenAction'
-import {
-  WebClientToServerEvents,
-  WebServerToClientEvents,
-  Workspace,
-} from '@latitude-data/core/browser'
 import { IoProvider, useSocket } from '@latitude-data/socket.io-react-hook'
 import { useSession } from '@latitude-data/web-ui/providers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { captureClientError } from '$/instrumentation-client'
+import {
+  WebClientToServerEvents,
+  WebServerToClientEvents,
+} from '@latitude-data/core/websockets/constants'
+import { Workspace } from '@latitude-data/core/schema/types'
 
 export const SocketIOProvider = ({ children }: { children: ReactNode }) => {
   return <IoProvider>{children}</IoProvider>

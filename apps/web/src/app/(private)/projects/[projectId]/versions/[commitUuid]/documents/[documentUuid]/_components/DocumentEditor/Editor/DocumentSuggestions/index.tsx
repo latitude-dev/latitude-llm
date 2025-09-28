@@ -3,7 +3,6 @@ import {
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useDocumentSuggestions from '$/stores/documentSuggestions'
-import { DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
@@ -17,6 +16,7 @@ import {
 import { useCallback, useEffect, useState } from 'react'
 import { SuggestionItem } from './SuggestionItem'
 import { useLatteDiff } from '$/hooks/useLatteDiff'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 const useDocumentSuggestionsSocket = ({
   document,

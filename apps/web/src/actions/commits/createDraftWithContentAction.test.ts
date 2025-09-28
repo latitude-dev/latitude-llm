@@ -1,16 +1,16 @@
-import {
-  Providers,
-  type DocumentVersion,
-  type Project,
-  type User,
-  type Workspace,
-} from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { helpers } from '@latitude-data/core/factories'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Providers } from '@latitude-data/constants'
+import {
+  type DocumentVersion,
+  type Project,
+  type User,
+  type Workspace,
+} from '@latitude-data/core/schema/types'
 
 const mocks = vi.hoisted(() => {
   return {

@@ -1,12 +1,9 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import {
-  QuotaType,
-  Workspace,
-  WorkspaceLimits,
-} from '@latitude-data/core/browser'
 import { computeQuota } from '@latitude-data/core/services/grants/quota'
 import { NextRequest, NextResponse } from 'next/server'
+import { QuotaType } from '@latitude-data/core/constants'
+import { Workspace, WorkspaceLimits } from '@latitude-data/core/schema/types'
 
 export const GET = errorHandler(
   authHandler(

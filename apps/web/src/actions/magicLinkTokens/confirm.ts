@@ -5,10 +5,8 @@ import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
 import { isLatitudeUrl } from '@latitude-data/constants'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import {
-  unsafelyFindMagicLinkByToken,
-  unsafelyGetUser,
-} from '@latitude-data/core/data-access'
+import { unsafelyFindMagicLinkByToken } from '@latitude-data/core/data-access/magicLinkTokens'
+import { unsafelyGetUser } from '@latitude-data/core/data-access/users'
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'

@@ -1,4 +1,4 @@
-import { IntegrationDto, Workspace } from '@latitude-data/core/browser'
+import { IntegrationDto, Workspace } from '../../schema/types'
 import { IntegrationType } from '@latitude-data/constants'
 
 /**

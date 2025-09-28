@@ -1,16 +1,6 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import {
-  ActualOutputConfiguration,
-  buildConversation,
-  DocumentLog,
-  EvaluatedDocumentLog,
-  formatConversation,
-  ProviderLog,
-  ProviderLogDto,
-  Workspace,
-} from '@latitude-data/core/browser'
-import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core/data-access'
+import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core/data-access/providerLogs'
 import { UnprocessableEntityError } from '@latitude-data/core/lib/errors'
 import {
   DocumentVersionsRepository,
@@ -22,6 +12,20 @@ import { serializeAggregatedProviderLog } from '@latitude-data/core/services/doc
 import { buildProviderLogResponse } from '@latitude-data/core/services/providerLogs/buildResponse'
 import { extractActualOutput } from '@latitude-data/core/services/evaluationsV2/outputs/extract'
 import { NextRequest, NextResponse } from 'next/server'
+import {
+  ActualOutputConfiguration,
+  DocumentLog,
+  EvaluatedDocumentLog,
+} from '@latitude-data/core/constants'
+import {
+  buildConversation,
+  formatConversation,
+} from '@latitude-data/core/helpers'
+import {
+  ProviderLog,
+  ProviderLogDto,
+  Workspace,
+} from '@latitude-data/core/schema/types'
 
 export const GET = errorHandler(
   authHandler(

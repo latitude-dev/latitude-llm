@@ -1,10 +1,9 @@
 import { useCallback, useState } from 'react'
-
+import { readStreamableValue } from 'ai/rsc'
 import {
   LegacyChainEventTypes,
   StreamEventTypes,
-} from '@latitude-data/core/browser'
-import { readStreamableValue } from 'ai/rsc'
+} from '@latitude-data/core/constants'
 
 type OnEventHandler = (event: string, data: any) => void
 

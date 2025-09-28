@@ -1,9 +1,9 @@
-import { EvaluationV2Stats } from '@latitude-data/core/browser'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import {
   ChartWrapper,
   PanelChart,
 } from '@latitude-data/web-ui/molecules/Charts'
+import { EvaluationV2Stats } from '@latitude-data/core/schema/types'
 
 export default function TotalResultsChart({
   stats,

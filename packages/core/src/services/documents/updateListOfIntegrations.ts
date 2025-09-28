@@ -1,9 +1,9 @@
 import Transaction from '../../lib/Transaction'
 import { IntegrationsRepository } from '../../repositories'
-import { documentIntegrationReferences } from '../../schema'
+import { documentIntegrationReferences } from '../../schema/models/documentIntegrationReferences'
 import { and, eq } from 'drizzle-orm'
 import { getDocumentMetadata } from './scan'
-import { DocumentVersion, Workspace } from '../../browser'
+import { DocumentVersion, Workspace } from '../../schema/types'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Result } from '../../lib/Result'
 

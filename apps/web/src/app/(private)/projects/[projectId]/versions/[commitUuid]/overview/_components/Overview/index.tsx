@@ -1,9 +1,9 @@
 'use client'
 
 import useProjectStats from '$/stores/projectStats'
-import { Project, ProjectLimitedView } from '@latitude-data/core/browser'
 import { useMemo } from 'react'
 import { StatsPanels } from './StatsPanels'
+import { Project, ProjectLimitedView } from '@latitude-data/core/schema/types'
 
 export default function Overview({
   project,

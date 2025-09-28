@@ -2,12 +2,13 @@
 
 import { usePaywallModal } from '$/app/(private)/providers/PaywallModalProvider'
 import { formatCount } from '$/lib/formatCount'
-import { LatteUsage, SubscriptionPlan } from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { format } from 'date-fns'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { LatteUsage } from '@latitude-data/core/constants'
+import { SubscriptionPlan } from '@latitude-data/core/plans'
 
 const ANIMATION_DURATION = 4
 

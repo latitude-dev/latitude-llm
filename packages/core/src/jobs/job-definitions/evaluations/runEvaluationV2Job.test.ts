@@ -8,8 +8,8 @@ import {
   Experiment,
   ProviderLog,
   Workspace,
-} from '../../../browser'
-import { EvaluationV2, Providers } from '../../../constants'
+} from '../../../schema/types'
+import { EvaluationV2, Providers } from '@latitude-data/constants'
 import { Result } from '../../../lib/Result'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import * as evaluationsV2 from '../../../services/evaluationsV2/run'

@@ -1,4 +1,3 @@
-import type { Dataset } from '@latitude-data/core/browser'
 import { compact } from 'lodash-es'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { destroyDatasetAction } from '$/actions/datasets/destroy'
@@ -9,6 +8,7 @@ import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { useCallback, useState } from 'react'
+import { type Dataset } from '@latitude-data/core/schema/types'
 
 const EMPTY_ARRAY: Dataset[] = []
 

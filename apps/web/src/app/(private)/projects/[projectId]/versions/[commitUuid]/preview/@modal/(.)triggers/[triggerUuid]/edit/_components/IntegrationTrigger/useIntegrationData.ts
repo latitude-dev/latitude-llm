@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
-import { DocumentTrigger } from '@latitude-data/core/browser'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import type {
-  PipedreamComponent,
-  PipedreamComponentType,
-} from '@latitude-data/core/browser'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import useIntegrations from '$/stores/integrations'
 import { PipedreamIntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
+import { DocumentTrigger } from '@latitude-data/core/schema/types'
+import {
+  type PipedreamComponent,
+  type PipedreamComponentType,
+} from '@latitude-data/core/constants'
 
 type Trigger = PipedreamComponent<PipedreamComponentType.Trigger>
 const EMPTY_LIST: Trigger[] = []

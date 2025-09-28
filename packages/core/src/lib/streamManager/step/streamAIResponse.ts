@@ -8,7 +8,8 @@ import {
   Message as LegacyMessage,
 } from '@latitude-data/constants/legacyCompiler'
 import { JSONSchema7 } from 'json-schema'
-import { LogSources, ProviderApiKey, Workspace } from '../../../browser'
+import { LogSources } from '../../../constants'
+import { ProviderApiKey, Workspace } from '../../../schema/types'
 import { ai, AIReturn } from '../../../services/ai'
 import { processResponse } from '../../../services/chains/ProviderProcessor'
 import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'

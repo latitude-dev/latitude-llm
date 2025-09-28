@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { RewardType } from '../../browser'
+import { RewardType } from '../../constants'
 import { createProject, createUser } from '../../tests/factories'
 import { createMembership } from '../memberships/create'
 import { claimReward } from './claim'

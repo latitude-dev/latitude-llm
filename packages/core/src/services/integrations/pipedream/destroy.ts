@@ -1,4 +1,4 @@
-import { IntegrationDto } from '../../../browser'
+import { IntegrationDto } from '../../../schema/types'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { getPipedreamClient } from './apps'

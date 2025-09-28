@@ -1,14 +1,8 @@
 import { env } from '@latitude-data/env'
-import {
-  Commit,
-  DocumentVersion,
-  HEAD_COMMIT,
-  Workspace,
-} from '../../../../browser'
-import {
-  unsafelyFindWorkspace,
-  unsafelyGetApiKeyByToken,
-} from '../../../../data-access'
+import { Commit, DocumentVersion, Workspace } from '../../../../schema/types'
+import { HEAD_COMMIT } from '../../../../constants'
+import { unsafelyFindWorkspace } from '../../../../data-access/workspaces'
+import { unsafelyGetApiKeyByToken } from '../../../../data-access/apiKeys'
 import { Result } from '../../../../lib/Result'
 import {
   CommitsRepository,

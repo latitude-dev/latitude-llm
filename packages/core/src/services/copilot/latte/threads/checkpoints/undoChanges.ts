@@ -2,11 +2,11 @@ import {
   DocumentVersion,
   LatteThreadCheckpoint,
   Workspace,
-} from '../../../../../browser'
+} from '../../../../../schema/types'
 import { Result } from '../../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
 import { LatteThreadsRepository } from '../../../../../repositories'
-import { documentVersions } from '../../../../../schema'
+import { documentVersions } from '../../../../../schema/models/documentVersions'
 import { and, eq } from 'drizzle-orm'
 import { clearLatteThreadCheckpoints } from './clearCheckpoints'
 

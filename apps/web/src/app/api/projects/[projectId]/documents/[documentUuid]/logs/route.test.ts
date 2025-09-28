@@ -1,20 +1,19 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import {
-  Commit,
-  DocumentVersion,
-  ErrorableEntity,
-  LOG_SOURCES,
-  Project,
-  Providers,
-  User,
-  WorkspaceDto,
-} from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { createRunError } from '@latitude-data/core/services/runErrors/create'
 import { NextRequest } from 'next/server'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+  User,
+  WorkspaceDto,
+} from '@latitude-data/core/schema/types'
+import { ErrorableEntity, LOG_SOURCES } from '@latitude-data/core/constants'
+import { Providers } from '@latitude-data/constants'
 
 const LOG_SOURCES_LIST = LOG_SOURCES.join(',')
 const mocks = vi.hoisted(() => {

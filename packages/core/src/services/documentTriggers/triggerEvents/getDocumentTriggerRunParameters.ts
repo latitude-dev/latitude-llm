@@ -2,7 +2,7 @@ import {
   DocumentTriggerType,
   DocumentTriggerParameters,
 } from '@latitude-data/constants'
-import { DocumentTrigger, DocumentTriggerEvent } from '../../../browser'
+import { DocumentTrigger, DocumentTriggerEvent } from '../../../schema/types'
 
 function getEmailTriggerEventRunParameters({
   documentTrigger,

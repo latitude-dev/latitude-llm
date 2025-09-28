@@ -1,5 +1,5 @@
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/server'
-import { IntegrationDto } from '../../../../browser'
+import { IntegrationDto } from '../../../../schema/types'
 import { IntegrationType } from '@latitude-data/constants'
 import { Result } from '../../../../lib/Result'
 import { NotFoundError } from '@latitude-data/constants/errors'

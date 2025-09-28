@@ -1,4 +1,4 @@
-import { findWorkspaceFromDocumentLog } from '../../data-access'
+import { findWorkspaceFromDocumentLog } from '../../data-access/workspaces'
 import { findCommitById } from '../../data-access/commits'
 import { NotFoundError } from '../../lib/errors'
 import { DocumentLogsWithErrorsRepository } from '../../repositories'

@@ -1,9 +1,6 @@
-import {
-  DocumentLog,
-  ProviderLog,
-  SerializedDocumentLog,
-  Workspace,
-} from '../../browser'
+import { DocumentLog } from '../../constants'
+import { ProviderLog, Workspace } from '../../schema/types'
+import { SerializedDocumentLog } from '../../constants'
 import { database } from '../../client'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'

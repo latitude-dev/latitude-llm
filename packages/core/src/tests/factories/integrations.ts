@@ -1,9 +1,9 @@
 import { faker } from '@faker-js/faker'
 
-import { IntegrationDto, Workspace } from '../../browser'
+import { IntegrationDto, Workspace } from '../../schema/types'
 import { database } from '../../client'
 import { IntegrationConfiguration } from '../../services/integrations/helpers/schema'
-import { integrations } from '../../schema'
+import { integrations } from '../../schema/models/integrations'
 import { IntegrationsRepository } from '../../repositories'
 import { DatabaseError } from 'pg'
 

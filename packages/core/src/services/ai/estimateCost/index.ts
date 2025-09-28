@@ -1,6 +1,6 @@
 import { LanguageModelUsage } from 'ai'
 
-import { Providers } from '../../../browser'
+import { Providers } from '@latitude-data/constants'
 import { GROQ_MODELS } from './groq'
 import { OPENAI_MODELS } from './openai'
 import { ANTHROPIC_MODELS } from './anthropic'

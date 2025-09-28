@@ -1,13 +1,14 @@
+import { evaluationAdvancedTemplates } from '../schema/legacyModels/evaluationAdvancedTemplates'
+import { evaluationTemplateCategories } from '../schema/legacyModels/evaluationTemplateCategories'
 import { asc, eq, getTableColumns, inArray } from 'drizzle-orm'
 
-import { EvaluationTemplate, EvaluationTemplateWithCategory } from '../browser'
+import {
+  EvaluationTemplate,
+  EvaluationTemplateWithCategory,
+} from '../schema/types'
 import { database } from '../client'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result, TypedResult } from '../lib/Result'
-import {
-  evaluationAdvancedTemplates,
-  evaluationTemplateCategories,
-} from '../schema'
 
 export async function findAllEvaluationTemplates(): Promise<
   TypedResult<EvaluationTemplateWithCategory[], Error>

@@ -1,4 +1,5 @@
-import { QuotaType, Workspace } from '../../browser'
+import { QuotaType } from '../../constants'
+import { Workspace } from '../../schema/types'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { GrantsRepository } from '../../repositories'

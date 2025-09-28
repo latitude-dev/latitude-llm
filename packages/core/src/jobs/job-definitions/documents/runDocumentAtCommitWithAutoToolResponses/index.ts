@@ -6,7 +6,7 @@ import {
   GetDataParams,
 } from './getDataForInitialRequest'
 import { scan } from 'promptl-ai'
-import { Experiment } from '../../../../browser'
+import { Experiment } from '../../../../schema/types'
 import { runDocumentAtCommit } from '../../../../services/commits'
 import { isOldToolsSchema } from '../../../../lib/streamManager/resolveTools/clientTools'
 import {

@@ -1,5 +1,6 @@
-import { promocodes } from '../../schema'
-import { Promocode, QuotaType } from '../../browser'
+import { promocodes } from '../../schema/models/promocodes'
+import { Promocode } from '../../schema/types'
+import { QuotaType } from '../../constants'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { Result } from '../../lib/Result'
 

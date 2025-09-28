@@ -1,11 +1,7 @@
 import { PaymentRequiredError } from '@latitude-data/constants/errors'
-import {
-  FREE_PLANS,
-  PRO_PLANS,
-  QuotaType,
-  Subscription,
-  Workspace,
-} from '../../../browser'
+import { FREE_PLANS, PRO_PLANS } from '../../../plans'
+import { QuotaType } from '../../../constants'
+import { Subscription, Workspace } from '../../../schema/types'
 import { findWorkspaceUsers } from '../../workspaces/findUsers'
 import { Result } from '../../../lib/Result'
 import { findWorkspaceSubscription } from '../data-access/find'

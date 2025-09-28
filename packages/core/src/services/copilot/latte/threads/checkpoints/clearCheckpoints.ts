@@ -1,7 +1,8 @@
 import { Result } from '../../../../../lib/Result'
 import Transaction from '../../../../../lib/Transaction'
 import { and, eq, getTableColumns, inArray } from 'drizzle-orm'
-import { latteThreadCheckpoints, latteThreads } from '../../../../../schema'
+import { latteThreadCheckpoints } from '../../../../../schema/models/latteThreadCheckpoints'
+import { latteThreads } from '../../../../../schema/models/latteThreads'
 
 export function clearLatteThreadCheckpoints(
   {

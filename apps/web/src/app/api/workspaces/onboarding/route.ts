@@ -1,9 +1,9 @@
 import { getWorkspaceOnboarding } from '@latitude-data/core/services/workspaceOnboarding/get'
 import { NextRequest, NextResponse } from 'next/server'
 import { authHandler } from '$/middlewares/authHandler'
-import { WorkspaceDto } from '@latitude-data/core/browser'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
+import { WorkspaceDto } from '@latitude-data/core/schema/types'
 import { Result } from '@latitude-data/core/lib/Result'
 
 export const GET = errorHandler(

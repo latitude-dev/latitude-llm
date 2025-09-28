@@ -3,10 +3,12 @@ import { ROUTES } from '$/services/routes'
 import {
   Commit,
   DocumentVersion,
-  EvaluationType,
   EvaluationV2,
+} from '@latitude-data/core/schema/types'
+import {
+  EvaluationType,
   LlmEvaluationMetricAnyCustom,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/constants'
 import { useCallback } from 'react'
 
 export function useRunEvaluationPlaygroundPrompt({

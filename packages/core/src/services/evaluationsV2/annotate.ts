@@ -1,15 +1,16 @@
+import { buildConversation } from '../../helpers'
 import {
-  buildConversation,
   Commit,
-  EVALUATION_SCORE_SCALE,
-  EvaluationMetric,
-  EvaluationResultMetadata,
-  EvaluationResultValue,
-  EvaluationType,
   EvaluationV2,
   ProviderLogDto,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import {
+  EVALUATION_SCORE_SCALE,
+  EvaluationResultMetadata,
+  EvaluationResultValue,
+} from '../../constants'
+import { EvaluationMetric, EvaluationType } from '../../constants'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'

@@ -1,8 +1,8 @@
+import { users } from '../../schema/models/users'
 import { like } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
-import { users } from '../../schema'
 import * as factories from '../../tests/factories'
 import { paginateQuery } from './paginate'
 

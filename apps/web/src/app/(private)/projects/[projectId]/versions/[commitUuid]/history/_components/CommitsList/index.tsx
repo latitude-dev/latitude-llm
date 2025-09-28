@@ -1,4 +1,3 @@
-import { Commit } from '@latitude-data/core/browser'
 import { BadgeCommit } from '../../../_components/Sidebar/CommitSelector/CommitItem'
 import { cn } from '@latitude-data/web-ui/utils'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
@@ -10,6 +9,7 @@ import useUsers from '$/stores/users'
 import { relativeTime } from '$/lib/relativeTime'
 import { ReactNode, useMemo } from 'react'
 import { useCommitActions } from './commitActions'
+import { Commit } from '@latitude-data/core/schema/types'
 
 function CommitItem({
   commit,

@@ -4,11 +4,11 @@ import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { captureException } from '$/helpers/captureException'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ChainEvent } from '@latitude-data/constants'
-import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { Latitude, type ChainEventDto } from '@latitude-data/sdk'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
+import { LogSources, StreamEventTypes } from '@latitude-data/core/constants'
 
 type RunDocumentActionProps = {
   documentPath: string

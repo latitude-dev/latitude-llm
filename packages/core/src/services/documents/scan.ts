@@ -2,12 +2,12 @@ import path from 'path'
 
 import { type ConversationMetadata, scan } from 'promptl-ai'
 
-import { Commit, DocumentVersion } from '../../browser'
+import { Commit, DocumentVersion } from '../../schema/types'
 import { database } from '../../client'
 import { LatitudeError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import { DocumentVersionsRepository } from '../../repositories'
-import { findWorkspaceFromCommit } from '../../data-access'
+import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 
 export async function getDocumentMetadata({
   document,
@@ -32,11 +32,13 @@ export async function getDocumentMetadata({
     }
   }
 
-  return await scan({
+  const scaned = (await scan({
     prompt: document.content,
     fullPath: document.path,
     referenceFn,
-  })
+  })) as ConversationMetadata
+
+  return scaned
 }
 
 export async function scanDocumentContent(

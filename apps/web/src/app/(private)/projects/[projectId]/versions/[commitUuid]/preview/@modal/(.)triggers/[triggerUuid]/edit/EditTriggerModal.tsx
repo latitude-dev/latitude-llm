@@ -4,7 +4,6 @@ import useDocumentTriggers from '$/stores/documentTriggers'
 import useDocumentVersions from '$/stores/documentVersions'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
@@ -25,6 +24,10 @@ import {
   SelectDocument,
   useDocumentSelection,
 } from '../../../(.)triggers/_components/SelectDocument'
+import {
+  DocumentTrigger,
+  DocumentVersion,
+} from '@latitude-data/core/schema/types'
 
 function useDocumentTrigger({
   triggerUuid,

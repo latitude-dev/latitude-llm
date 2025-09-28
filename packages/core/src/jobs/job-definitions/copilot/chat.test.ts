@@ -1,7 +1,8 @@
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import * as dataAccess from '../../../data-access'
+import * as dataAccess from '../../../data-access/workspaces'
+import * as dataAccessProjects from '../../../data-access/projects'
 import {
   CommitsRepository,
   DocumentLogsRepository,
@@ -12,7 +13,7 @@ import * as addMessageLatte from '../../../services/copilot/latte/addMessage'
 import * as chatHelpers from '../../../services/copilot/latte/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
 import { runLatteJob } from './chat'
-import { Project } from '../../../browser'
+import { Project } from '../../../schema/types'
 
 describe('runLatteJob', () => {
   let mockJob: Job<any>
@@ -45,7 +46,7 @@ describe('runLatteJob', () => {
     vi.spyOn(dataAccess, 'unsafelyFindWorkspace').mockResolvedValue(
       workspace as any,
     )
-    vi.spyOn(dataAccess, 'unsafelyFindProject').mockResolvedValue(
+    vi.spyOn(dataAccessProjects, 'unsafelyFindProject').mockResolvedValue(
       project as any,
     )
     vi.spyOn(UsersRepository.prototype, 'find').mockResolvedValue({

@@ -12,24 +12,19 @@ import {
   sum,
 } from 'drizzle-orm'
 
+import { Commit, Cursor, DocumentVersion, Workspace } from '../../schema/types'
 import {
-  Commit,
-  Cursor,
   DEFAULT_PAGINATION_SIZE,
   DocumentLogFilterOptions,
-  DocumentVersion,
   ErrorableEntity,
-  Workspace,
-} from '../../browser'
+} from '../../constants'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
-import {
-  commits,
-  documentLogs,
-  projects,
-  providerLogs,
-  runErrors,
-} from '../../schema'
+import { commits } from '../../schema/models/commits'
+import { documentLogs } from '../../schema/models/documentLogs'
+import { projects } from '../../schema/models/projects'
+import { providerLogs } from '../../schema/models/providerLogs'
+import { runErrors } from '../../schema/models/runErrors'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export function getCommitFilter(draft?: Commit) {

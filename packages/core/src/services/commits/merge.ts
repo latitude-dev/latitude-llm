@@ -1,6 +1,6 @@
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 
-import { Commit, Workspace } from '../../browser'
+import { Commit, Workspace } from '../../schema/types'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -9,7 +9,7 @@ import {
   NotFoundError,
   UnprocessableEntityError,
 } from '../../lib/errors'
-import { commits } from '../../schema'
+import { commits } from '../../schema/models/commits'
 import { recomputeChanges } from '../documents'
 import { pingProjectUpdate } from '../projects'
 import { handleTriggerMerge } from '../documentTriggers/handleMerge'

@@ -1,9 +1,9 @@
 import { Result } from '../../../../../lib/Result'
 import Transaction from '../../../../../lib/Transaction'
 import { restoreThreadCheckpoint } from './undoChanges'
-import { Workspace } from '../../../../../browser'
+import { Workspace } from '../../../../../schema/types'
 import { LatteThreadsRepository } from '../../../../../repositories'
-import { latteThreadCheckpoints } from '../../../../../schema'
+import { latteThreadCheckpoints } from '../../../../../schema/models/latteThreadCheckpoints'
 import { inArray } from 'drizzle-orm'
 
 export async function partialRejectLatteChanges(

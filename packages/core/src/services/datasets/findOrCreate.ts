@@ -1,4 +1,4 @@
-import { User, Workspace } from '../../browser'
+import { User, Workspace } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DatasetsRepository } from '../../repositories'

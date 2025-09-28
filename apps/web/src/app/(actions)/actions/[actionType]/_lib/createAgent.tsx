@@ -1,9 +1,7 @@
 import { PlaygroundAction } from '$/hooks/usePlaygroundAction'
-import {
-  ActionType,
-  createAgentActionFrontendParametersSchema,
-} from '@latitude-data/core/browser'
 import { ActionExecuteArgs } from './shared'
+import type { ActionType } from '@latitude-data/core/schema/types'
+import { createAgentActionFrontendParametersSchema } from '@latitude-data/core/constants'
 
 export const CreateAgentActionSpecification = {
   parameters: createAgentActionFrontendParametersSchema,
@@ -13,7 +11,7 @@ export const CreateAgentActionSpecification = {
 async function execute({
   parameters: { prompt, projectId, commitUuid },
   setPlaygroundAction,
-}: ActionExecuteArgs<ActionType.CreateAgent>) {
+}: ActionExecuteArgs<typeof ActionType.CreateAgent>) {
   return setPlaygroundAction({
     action: PlaygroundAction.RunLatte,
     payload: { prompt: prompt },

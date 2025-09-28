@@ -2,10 +2,10 @@ import { createExperimentAction } from '$/actions/experiments'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { Experiment, ExperimentDto } from '@latitude-data/core/browser'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { Experiment, ExperimentDto } from '@latitude-data/core/schema/types'
 
 const EMPTY_ARRAY: [] = []
 

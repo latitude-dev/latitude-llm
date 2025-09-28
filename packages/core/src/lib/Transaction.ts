@@ -3,7 +3,7 @@ import { PgQueryResultHKT, PgTransaction } from 'drizzle-orm/pg-core'
 import { type DatabaseError } from 'pg'
 
 import { database, Database } from '../client'
-import * as schema from '../schema'
+import { schema } from '../schema/schema'
 import { ConflictError, UnprocessableEntityError } from './errors'
 import { ErrorResult, Result, TypedResult } from './Result'
 import { captureException } from '@sentry/node'

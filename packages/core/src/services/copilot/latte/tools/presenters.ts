@@ -4,10 +4,10 @@ import {
   DocumentTrigger,
   DocumentVersion,
   IntegrationDto,
-  listModelsForProvider,
   Project,
   ProviderApiKey,
-} from '../../../../browser'
+} from '../../../../schema/types'
+import { listModelsForProvider } from '../../../ai/providers/models'
 import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { IntegrationsRepository } from '../../../../repositories'

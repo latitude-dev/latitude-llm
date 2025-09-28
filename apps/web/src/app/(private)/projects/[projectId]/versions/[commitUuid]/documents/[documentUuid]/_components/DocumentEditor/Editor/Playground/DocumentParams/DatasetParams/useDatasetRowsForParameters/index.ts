@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import useDatasetRows from '$/stores/datasetRows'
-import {
-  DatasetRow,
-  Dataset,
-  DocumentVersion,
-  Inputs,
-  LinkedDatasetRow,
-  parseRowCell,
-} from '@latitude-data/core/browser'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useMetadataParameters } from '$/hooks/useDocumentParameters/metadataParametersStore'
 import { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
+import {
+  DatasetRow,
+  Dataset,
+  DocumentVersion,
+} from '@latitude-data/core/schema/types'
+import {
+  Inputs,
+  LinkedDatasetRow,
+} from '@latitude-data/core/lib/documentPersistedInputs'
+import { parseRowCell } from '@latitude-data/core/services/datasetRows/utils'
 
 function mapDatasetColumnsToParameters({
   parameters,

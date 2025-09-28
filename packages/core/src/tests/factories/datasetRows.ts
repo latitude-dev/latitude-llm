@@ -1,7 +1,8 @@
-import { Dataset, Workspace } from '../../browser'
+import { Dataset, Workspace } from '../../schema/types'
 import { createDatasetRow as createDatasetRowFn } from '../../services/datasetRows/create'
-import { Column, DatasetRowData } from '../../schema'
+import { DatasetRowData } from '../../schema/models/datasetRows'
 import { faker } from '@faker-js/faker'
+import { Column } from '../../schema/models/datasets'
 
 export type InputData = {
   workspace: Workspace

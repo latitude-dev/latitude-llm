@@ -1,12 +1,13 @@
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 
-import { ProviderApiKey } from '../../browser'
+import { ProviderApiKey } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { providerApiKeys, workspaces } from '../../schema'
+import { providerApiKeys } from '../../schema/models/providerApiKeys'
+import { workspaces } from '../../schema/models/workspaces'
 
 export async function destroyProviderApiKey(
   providerApiKey: ProviderApiKey,

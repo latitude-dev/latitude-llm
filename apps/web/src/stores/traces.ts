@@ -2,10 +2,10 @@
 
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { AssembledTrace } from '@latitude-data/core/browser'
 import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { AssembledTrace } from '@latitude-data/core/constants'
 
 export function useTrace(
   {

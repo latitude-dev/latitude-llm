@@ -3,16 +3,15 @@ import {
   QuotaType,
   REWARD_VALUES,
   RewardType,
-  User,
-  Workspace,
-} from '../../browser'
-import { unsafelyFindUserByEmail } from '../../data-access'
+} from '../../constants'
+import { User, Workspace } from '../../schema/types'
+import { unsafelyFindUserByEmail } from '../../data-access/users'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { ClaimedRewardsRepository } from '../../repositories'
-import { claimedRewards } from '../../schema'
+import { claimedRewards } from '../../schema/models/claimedRewards'
 import { issueGrant } from '../grants/issue'
 
 export async function claimReward(

@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { Dataset } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { dateFormatter } from '@latitude-data/web-ui/dateUtils'
 import {
@@ -24,6 +23,7 @@ import DeleteDatasetModal from '../DeleteDatasetModal'
 import { NewDatasetModal } from '../RootHeader/NewDatasetModal'
 import { useNavigate } from '$/hooks/useNavigate'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Dataset } from '@latitude-data/core/schema/types'
 
 export const DATASET_TABLE_PAGE_SIZE = '25'
 export function DatasetsTable({

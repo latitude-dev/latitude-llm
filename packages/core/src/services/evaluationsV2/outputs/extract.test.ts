@@ -1,12 +1,8 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { beforeEach, describe, expect, it } from 'vitest'
-import {
-  DEFAULT_DATASET_LABEL,
-  Dataset,
-  DatasetRow,
-  ProviderLogDto,
-  Providers,
-} from '../../../browser'
+import { DEFAULT_DATASET_LABEL } from '../../../constants'
+import { Dataset, DatasetRow, ProviderLogDto } from '../../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
 import * as factories from '../../../tests/factories'
 import serializeProviderLog from '../../providerLogs/serialize'

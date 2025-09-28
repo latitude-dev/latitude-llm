@@ -1,4 +1,3 @@
-import { ModifiedDocumentType, DraftChange } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
@@ -17,6 +16,10 @@ import {
   useEffect,
   useCallback,
 } from 'react'
+import {
+  ModifiedDocumentType,
+  DraftChange,
+} from '@latitude-data/core/constants'
 
 interface HistoryActionModalContextProps {
   isOpen: boolean

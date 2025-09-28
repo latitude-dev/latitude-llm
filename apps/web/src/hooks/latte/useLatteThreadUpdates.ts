@@ -1,7 +1,6 @@
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useLatteStore } from '$/stores/latte/index'
 import { LatteEditAction, LatteTool } from '@latitude-data/constants/latte'
-import { LatteThreadUpdateArgs } from '@latitude-data/core/browser'
 import { useCallback, useEffect } from 'react'
 import { getDescriptionFromToolCall } from './helpers'
 import {
@@ -11,6 +10,7 @@ import {
   LatteToolStep,
 } from './types'
 import { useLatteUsage } from './usage'
+import { LatteThreadUpdateArgs } from '@latitude-data/core/websockets/constants'
 
 /**
  * Creates a tool step from the tool started update

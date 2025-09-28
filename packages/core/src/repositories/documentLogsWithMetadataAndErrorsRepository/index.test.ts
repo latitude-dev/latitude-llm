@@ -9,7 +9,7 @@ import {
   ProviderApiKey,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
 import { mergeCommit } from '../../services/commits'
 import { updateDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'

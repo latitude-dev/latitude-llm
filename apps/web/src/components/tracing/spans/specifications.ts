@@ -1,4 +1,3 @@
-import { Span, SpanType } from '@latitude-data/core/browser'
 import CompletionSpanSpecification from './Completion'
 import EmbeddingSpanSpecification from './Embedding'
 import HttpSpanSpecification from './Http'
@@ -8,6 +7,7 @@ import ToolSpanSpecification from './Tool'
 import PromptSpanSpecification from './Prompt'
 import UnknownSpanSpecification from './Unknown'
 import { SpanFrontendSpecification } from './shared'
+import { Span, SpanType } from '@latitude-data/core/constants'
 
 // prettier-ignore
 export const SPAN_SPECIFICATIONS: {

@@ -1,9 +1,10 @@
 import { endOfDay, subDays } from 'date-fns'
 import { and, eq } from 'drizzle-orm'
-import { Grant, GrantSource, Quota, QuotaType, Workspace } from '../../browser'
+import { Grant, Quota, Workspace } from '../../schema/types'
+import { GrantSource, QuotaType } from '../../constants'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { grants } from '../../schema'
+import { grants } from '../../schema/models/grants'
 import { findWorkspaceSubscription } from '../subscriptions/data-access/find'
 
 export async function revokeGrant(

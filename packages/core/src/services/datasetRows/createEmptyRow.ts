@@ -1,6 +1,6 @@
-import { Dataset, Workspace } from '../../browser'
+import { Dataset, Workspace } from '../../schema/types'
 import Transaction from '../../lib/Transaction'
-import { DatasetRowData } from '../../schema'
+import { DatasetRowData } from '../../schema/models/datasetRows'
 import { createDatasetRow } from './create'
 
 /**

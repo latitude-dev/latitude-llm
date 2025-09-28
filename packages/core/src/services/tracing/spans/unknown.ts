@@ -1,4 +1,4 @@
-import { SPAN_SPECIFICATIONS, SpanType } from '../../../browser'
+import { SPAN_SPECIFICATIONS, SpanType } from '../../../constants'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { SpanProcessArgs } from './shared'

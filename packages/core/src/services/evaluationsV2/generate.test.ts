@@ -1,15 +1,13 @@
 import * as env from '@latitude-data/env'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { ZodObject } from 'zod'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { EvaluationSettings } from '../../constants'
 import {
-  Commit,
-  DocumentVersion,
-  EvaluationSettings,
   EvaluationType,
   LlmEvaluationMetric,
   Providers,
-  Workspace,
-} from '../../browser'
+} from '@latitude-data/constants'
 import * as cache from '../../cache'
 import { Result } from '../../lib/Result'
 import { UnprocessableEntityError } from '../../lib/errors'

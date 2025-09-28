@@ -2,7 +2,7 @@ import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import { ROUTES } from '$/routes'
 import { createRoute } from '@hono/zod-openapi'
-import { Otlp } from '@latitude-data/core/browser'
+import { Otlp } from '@latitude-data/constants'
 
 export const ingestRoute = createRoute({
   method: http.Methods.POST,

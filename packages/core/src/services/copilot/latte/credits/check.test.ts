@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  Project,
-  SubscriptionPlan,
-  SubscriptionPlans,
-  Workspace,
-} from '../../../../browser'
+import { Project, Workspace } from '../../../../schema/types'
+import { SubscriptionPlan, SubscriptionPlans } from '../../../../plans'
 import { PaymentRequiredError } from '../../../../lib/errors'
 import * as plans from '../../../../plans'
 import * as factories from '../../../../tests/factories'

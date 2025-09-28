@@ -1,4 +1,4 @@
-import { Project, User, Workspace } from '../../../browser'
+import { Project, User, Workspace } from '../../../schema/types'
 import { ProjectsRepository } from '../../../repositories'
 import { createProject } from '../../projects'
 

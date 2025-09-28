@@ -1,13 +1,6 @@
 import { useSerializedLogs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/evaluations/[evaluationUuid]/editor/_components/EvaluationEditor/Playground/EvaluationParams/HistoryLogParams/useSerializedLogs'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
-import {
-  ACCESSIBLE_OUTPUT_FORMATS,
-  ActualOutputConfiguration,
-  EvaluationMetric,
-  EvaluationType,
-  baseEvaluationConfiguration,
-} from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
@@ -27,6 +20,13 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useDebounce } from 'use-debounce'
 import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
+import {
+  ACCESSIBLE_OUTPUT_FORMATS,
+  ActualOutputConfiguration,
+  EvaluationMetric,
+  EvaluationType,
+  baseEvaluationConfiguration,
+} from '@latitude-data/core/constants'
 
 const MESSAGE_SELECTION_OPTIONS = baseEvaluationConfiguration.shape.actualOutput
   .unwrap()

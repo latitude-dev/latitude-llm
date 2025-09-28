@@ -7,7 +7,7 @@ import { IntegrationType } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import useIntegrations from '$/stores/integrations'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { IntegrationDto } from '@latitude-data/core/browser'
+import { IntegrationDto } from '@latitude-data/core/schema/types'
 
 const NO_TOKEN_MSG =
   'Authentication token not available. Please wait a few seconds and try again.'

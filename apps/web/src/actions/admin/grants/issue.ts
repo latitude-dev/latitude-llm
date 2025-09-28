@@ -1,11 +1,11 @@
 'use server'
 
 import { BadRequestError } from '@latitude-data/constants/errors'
-import { GrantSource, QuotaType } from '@latitude-data/core/browser'
-import { unsafelyFindWorkspace } from '@latitude-data/core/data-access'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
 import { issueGrant } from '@latitude-data/core/services/grants/issue'
 import { z } from 'zod'
 import { withAdmin } from '../../procedures'
+import { GrantSource, QuotaType } from '@latitude-data/core/constants'
 
 export const issueGrantAction = withAdmin
   .createServerAction()

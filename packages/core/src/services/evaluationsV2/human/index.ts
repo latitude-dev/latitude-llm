@@ -1,8 +1,8 @@
+import { EvaluationType } from '../../../constants'
 import {
-  EvaluationType,
   HumanEvaluationMetric,
   HumanEvaluationSpecification as specification,
-} from '../../../browser'
+} from '../../../constants'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'

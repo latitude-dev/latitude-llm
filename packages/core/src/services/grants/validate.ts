@@ -1,4 +1,5 @@
-import { GrantSource, Quota, QuotaType, Workspace } from '../../browser'
+import { GrantSource, QuotaType } from '../../constants'
+import { Quota, Workspace } from '../../schema/types'
 import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'

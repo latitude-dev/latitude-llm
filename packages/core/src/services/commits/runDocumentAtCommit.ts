@@ -1,11 +1,10 @@
 import {
   Commit,
-  ErrorableEntity,
   Experiment,
-  LogSources,
   type DocumentVersion,
   type Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { ErrorableEntity, LogSources } from '../../constants'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import { createChainRunError } from '../../lib/streamManager/ChainErrors'

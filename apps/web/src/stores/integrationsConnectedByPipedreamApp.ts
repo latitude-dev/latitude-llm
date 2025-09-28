@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import type { PipedreamIntegrationWithCounts } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import { type PipedreamIntegrationWithCounts } from '@latitude-data/core/schema/types'
 
 const EMPTY_ARRAY: PipedreamIntegrationWithCounts[] = []
 

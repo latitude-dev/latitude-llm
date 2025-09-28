@@ -1,7 +1,5 @@
 'use client'
 import { FormEvent, useCallback, useState } from 'react'
-
-import { Providers } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -14,6 +12,7 @@ import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { ProviderConfigurationForm } from '$/app/(private)/settings/_components/ProviderApiKeys/New/_components/Configuration'
 import { buildProviderPayload } from './buildProviderPayload'
+import { Providers } from '@latitude-data/constants'
 
 const CUSTOM_LABELS: Partial<Record<Providers, string>> = {
   [Providers.GoogleVertex]: 'Google Vertex (Gemini models)',

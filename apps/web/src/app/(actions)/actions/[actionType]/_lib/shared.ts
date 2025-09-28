@@ -1,12 +1,12 @@
 import { useDeferredPlaygroundAction } from '$/hooks/usePlaygroundAction'
+import { useRouter } from 'next/navigation'
+import { z } from 'zod'
 import {
   ActionFrontendParameters,
   ActionType,
   User,
   Workspace,
-} from '@latitude-data/core/browser'
-import { useRouter } from 'next/navigation'
-import { z } from 'zod'
+} from '@latitude-data/core/schema/types'
 
 // prettier-ignore
 type ZodSchema<T = any> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny, T, T>

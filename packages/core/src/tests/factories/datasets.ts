@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
 
-import { User, Workspace } from '../../browser'
+import { User, Workspace } from '../../schema/types'
 import { DatasetV2CreatedEvent } from '../../events/events'
 import { DiskWrapper } from '../../lib/disk'
 import { createRowsFromUploadedDataset } from '../../services/datasetRows/createRowsFromUploadedDataset'

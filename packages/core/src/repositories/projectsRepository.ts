@@ -1,9 +1,11 @@
 import { and, desc, eq, getTableColumns, isNull } from 'drizzle-orm'
 
-import { Project } from '../browser'
+import { Project } from '../schema/types'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import { commits, documentVersions, projects } from '../schema'
+import { commits } from '../schema/models/commits'
+import { documentVersions } from '../schema/models/documentVersions'
+import { projects } from '../schema/models/projects'
 import RepositoryLegacy from './repository'
 
 const NOT_FOUND_MSG = 'Project not found'

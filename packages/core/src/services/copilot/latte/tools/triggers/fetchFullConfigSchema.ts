@@ -5,9 +5,9 @@ import {
 } from '@pipedream/sdk'
 import {
   ConfigurablePropWithRemoteOptions,
-  PipedreamIntegration,
   RemoteOptions,
-} from '../../../../../browser'
+} from '../../../../../constants'
+import { PipedreamIntegration } from '../../../../../schema/types'
 import { Result } from '../../../../../lib/Result'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import {

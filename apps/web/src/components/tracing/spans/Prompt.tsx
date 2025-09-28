@@ -1,4 +1,4 @@
-import { SPAN_SPECIFICATIONS, SpanType } from '@latitude-data/core/browser'
+import { SPAN_SPECIFICATIONS, SpanType } from '@latitude-data/constants'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { SPAN_COLORS } from './shared'
 import { MetadataItem } from '$/components/MetadataItem'

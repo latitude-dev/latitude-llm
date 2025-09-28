@@ -4,8 +4,8 @@ import { LanguageModel } from 'ai'
 import { VercelConfigWithProviderRules } from './providers/rules'
 import { LlmProvider } from './helpers'
 import { OpenAIProvider } from '@ai-sdk/openai'
-import { ProviderApiKey } from '../../browser'
-import { ProviderConfiguration } from '../../schema'
+import { ProviderApiKey } from '../../schema/types'
+import { ProviderConfiguration } from '../../schema/models/providerApiKeys'
 
 function buildGenericLanguageModel({
   model,

@@ -2,11 +2,11 @@
 import { useMemo } from 'react'
 
 import useRewards from '$/stores/rewards'
-import { RewardType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 
 import { REWARD_CONFIGS } from './RewardConfigs'
 import { RewardMenuBase } from './RewardMenuBase'
+import { RewardType } from '@latitude-data/core/constants'
 
 export function RewardMenu({
   type,

@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { processWebhookJob } from './processWebhookJob'
 import * as factories from '../../../tests/factories'
-import { Commit, Providers } from '../../../browser'
+import { Commit } from '../../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import {
   CommitPublishedEvent,
   DocumentLogCreatedEvent,

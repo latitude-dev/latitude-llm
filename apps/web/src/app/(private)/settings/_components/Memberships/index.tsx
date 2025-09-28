@@ -1,7 +1,5 @@
 'use client'
 import { useState } from 'react'
-
-import type { User } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import {
@@ -22,6 +20,7 @@ import Link from 'next/link'
 import NewUser from './New'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
+import { type User } from '@latitude-data/core/schema/types'
 
 export default function Memberships() {
   const [open, setOpen] = useState(false)

@@ -1,15 +1,11 @@
 import { addMonths } from 'date-fns'
-import {
-  Grant,
-  GrantSource,
-  LATTE_USAGE_CACHE_KEY,
-  Quota,
-  QuotaType,
-  Workspace,
-} from '../../browser'
+import { Grant, Quota } from '../../schema/types'
+import { GrantSource, QuotaType } from '../../constants'
+import { LATTE_USAGE_CACHE_KEY } from '../../constants'
+import { Workspace } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { grants } from '../../schema'
+import { grants } from '../../schema/models/grants'
 import { findWorkspaceSubscription } from '../subscriptions/data-access/find'
 import { validateGrant } from './validate'
 import { captureException } from '../../utils/workers/sentry'

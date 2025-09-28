@@ -1,4 +1,3 @@
-import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentChangeSkeleton } from '@latitude-data/web-ui/molecules/DocumentChange'
@@ -17,6 +16,8 @@ import useDocumentVersions from '$/stores/documentVersions'
 import { ReactNode, useMemo } from 'react'
 import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
 import { CleanTriggers } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/Sidebar/PublishDraftCommitModal/TriggerChangesList'
+import { Commit } from '@latitude-data/core/schema/types'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
 function useCanRevert({
   commit,

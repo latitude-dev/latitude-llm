@@ -13,16 +13,16 @@ import { updateDocumentContentAction } from '$/actions/documents/updateContent'
 import { uploadDocumentAction } from '$/actions/documents/upload'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import {
-  HEAD_COMMIT,
-  MAX_SIZE,
-  MAX_UPLOAD_SIZE_IN_MB,
-  type DocumentVersion,
-} from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useRouter } from 'next/navigation'
 import useSWR, { SWRConfiguration } from 'swr'
 import { inferServerActionReturnData } from 'zsa'
+import {
+  HEAD_COMMIT,
+  MAX_SIZE,
+  MAX_UPLOAD_SIZE_IN_MB,
+} from '@latitude-data/core/constants'
+import { type DocumentVersion } from '@latitude-data/core/schema/types'
 
 const EMPTY_DATA = [] as DocumentVersion[]
 

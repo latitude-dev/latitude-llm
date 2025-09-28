@@ -4,14 +4,14 @@ import { v4 as uuid } from 'uuid'
 import {
   Commit,
   DocumentVersion,
-  LogSources,
   ProviderLog,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { LogSources } from '../../constants'
 import { database } from '../../client'
-import { findWorkspaceFromCommit } from '../../data-access'
+import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { ProviderApiKeysRepository } from '../../repositories'
-import { documentLogs } from '../../schema'
+import { documentLogs } from '../../schema/models/documentLogs'
 import { createDocumentLog as ogCreateDocumentLog } from '../../services/documentLogs/create'
 import { getResolvedContent } from '../../services/documents'
 import { createProviderLog } from '../../services/providerLogs/create'

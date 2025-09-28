@@ -4,7 +4,7 @@ import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
 import { TypedResult } from '../../../../lib/Result'
 import Mailer from '../../Mailer'
-import { User } from '../../../../browser'
+import { User } from '../../../../schema/types'
 import ExportReadyMail from '../../../emails/exports/ExportReadyMail'
 
 export class ExportReadyMailer extends Mailer {

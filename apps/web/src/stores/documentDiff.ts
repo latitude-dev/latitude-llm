@@ -1,7 +1,8 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
-import { Commit, DiffValue } from '@latitude-data/core/browser'
+import { Commit } from '@latitude-data/core/schema/types'
+import { DiffValue } from '@latitude-data/core/constants'
 
 export function useDocumentDiff(
   {

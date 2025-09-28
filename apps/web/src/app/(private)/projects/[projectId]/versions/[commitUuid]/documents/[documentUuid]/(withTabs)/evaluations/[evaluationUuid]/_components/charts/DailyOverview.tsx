@@ -2,17 +2,14 @@ import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import { formatCount } from '$/lib/formatCount'
-import {
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2Stats,
-} from '@latitude-data/core/browser'
 import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { AreaChart, ChartWrapper } from '@latitude-data/web-ui/molecules/Charts'
 import { cn } from '@latitude-data/web-ui/utils'
 import { format } from 'date-fns'
 import { useMemo } from 'react'
+import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
+import { EvaluationV2Stats } from '@latitude-data/core/schema/types'
 
 export default function DailyOverviewChart<
   T extends EvaluationType = EvaluationType,

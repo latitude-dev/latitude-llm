@@ -1,9 +1,12 @@
+import { claimedRewards } from '../schema/models/claimedRewards'
+import { users } from '../schema/models/users'
+import { workspaces } from '../schema/models/workspaces'
 import { and, desc, eq, getTableColumns, isNull, not } from 'drizzle-orm'
 
-import { ClaimedRewardWithUserInfo, RewardType } from '../browser'
+import { ClaimedRewardWithUserInfo } from '../schema/types'
+import { RewardType } from '../constants'
 import { database } from '../client'
 import { Ok, Result } from '../lib/Result'
-import { claimedRewards, users, workspaces } from '../schema'
 
 export async function findAllRewardClaimsPendingToValidate(
   tx = database,

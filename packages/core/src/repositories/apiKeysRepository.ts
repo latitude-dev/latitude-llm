@@ -1,9 +1,9 @@
 import { asc, eq, getTableColumns, isNull } from 'drizzle-orm'
 
-import { ApiKey } from '../browser'
+import { ApiKey } from '../schema/types'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import { apiKeys } from '../schema'
+import { apiKeys } from '../schema/models/apiKeys'
 import RepositoryLegacy from './repository'
 
 const tt = getTableColumns(apiKeys)

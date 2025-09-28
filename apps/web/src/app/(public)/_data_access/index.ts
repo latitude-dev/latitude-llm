@@ -1,10 +1,8 @@
 import { cache } from 'react'
 
-import {
-  unsafelyFindMembershipByToken,
-  unsafelyFindWorkspace,
-  unsafelyGetUser,
-} from '@latitude-data/core/data-access'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
+import { unsafelyGetUser } from '@latitude-data/core/data-access/users'
+import { unsafelyFindMembershipByToken } from '@latitude-data/core/data-access/memberships'
 import { Result } from '@latitude-data/core/lib/Result'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
 import { findSharedDocument } from '@latitude-data/core/services/publishedDocuments/findSharedDocument'

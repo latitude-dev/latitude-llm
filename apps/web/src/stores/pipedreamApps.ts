@@ -2,10 +2,10 @@ import { useCurrentUrl } from '$/hooks/useCurrentUrl'
 import { executeFetch } from '$/hooks/useFetcher'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import { AppDto } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useMemo } from 'react'
 import useSWRInfinite, { SWRInfiniteConfiguration } from 'swr/infinite'
+import { AppDto } from '@latitude-data/core/constants'
 
 type PipedreamAppsResponse = {
   apps: AppDto[]

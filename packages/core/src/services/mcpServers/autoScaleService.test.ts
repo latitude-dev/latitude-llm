@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm'
 import { SubscriptionPlan } from '../../plans'
 import { autoScaleInactiveServers } from './autoScaleService'
 import { createWorkspace, createMcpServer } from '../../tests/factories'
-import { workspaces } from '../../schema'
+import { workspaces } from '../../schema/models/workspaces'
 
 const mocks = vi.hoisted(() => ({
   maintenanceQueue: vi.fn(),

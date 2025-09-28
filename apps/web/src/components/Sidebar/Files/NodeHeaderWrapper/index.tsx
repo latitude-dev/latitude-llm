@@ -95,7 +95,7 @@ function NodeHeaderWrapper({
   // by the click event in the menu item that created this node.
   useEffect(() => {
     const timeout = setTimeout(() => {
-      inputRef.current?.focus(), 100
+      ;(inputRef.current?.focus(), 100)
     })
 
     return () => {

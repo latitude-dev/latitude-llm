@@ -1,8 +1,9 @@
+import { subscriptions } from '../../../schema/models/subscriptions'
+import { workspaces } from '../../../schema/models/workspaces'
 import { Job } from 'bullmq'
 import { eq, inArray } from 'drizzle-orm'
 import { FREE_PLANS } from '../../../plans'
 import { database } from '../../../client'
-import { subscriptions, workspaces } from '../../../schema'
 import { queues } from '../../queues'
 
 export type ScheduleWorkspaceCleanupJobsData = Record<string, never>

@@ -1,7 +1,7 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Job } from 'bullmq'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { LogSources, Providers } from '../../../browser'
+import { LogSources, Providers } from '@latitude-data/constants'
 import { Result } from '../../../lib/Result'
 import * as factories from '../../../tests/factories'
 import { mockToolRequestsCopilot } from '../../../tests/helpers'

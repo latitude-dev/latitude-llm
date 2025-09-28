@@ -4,14 +4,19 @@ import {
   ATTR_OTEL_STATUS_CODE,
   ATTR_OTEL_STATUS_DESCRIPTION,
 } from '@opentelemetry/semantic-conventions'
+import { ApiKey, Workspace } from '../../../schema/types'
+import type {
+  ResourceSpan,
+  Span,
+  Scope,
+  Resource,
+  Attribute,
+} from '../../../schema/otlp'
 import {
-  ApiKey,
   ATTR_LATITUDE_INTERNAL,
-  Otlp,
   SpanStatus,
   SpanType,
-  Workspace,
-} from '../../../browser'
+} from '../../../constants'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { captureException } from '../../../utils/workers/sentry'
@@ -29,7 +34,7 @@ export async function ingestSpans(
     apiKeyId,
     workspaceId,
   }: {
-    spans: Otlp.ResourceSpan[]
+    spans: ResourceSpan[]
     apiKeyId?: number
     workspaceId?: number
   },
@@ -38,9 +43,9 @@ export async function ingestSpans(
   const workspaces: Record<number, Workspace> = {}
   const apiKeys: Record<number, ApiKey> = {}
   const processedSpans: Array<{
-    span: Otlp.Span
-    scope: Otlp.Scope
-    resource: Otlp.Resource
+    span: Span
+    scope: Scope
+    resource: Resource
     apiKey: ApiKey
     workspace: Workspace
   }> = []
@@ -134,11 +139,11 @@ function enrichAttributes({
   scope,
   span,
 }: {
-  resource: Otlp.Resource
-  scope: Otlp.Scope
-  span: Otlp.Span
+  resource: Resource
+  scope: Scope
+  span: Span
 }) {
-  const attributes: Otlp.Attribute[] = []
+  const attributes: Attribute[] = []
 
   attributes.push(...(resource.attributes || []))
 

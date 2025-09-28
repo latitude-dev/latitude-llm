@@ -1,6 +1,5 @@
 import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
 import { ROUTES } from '$/services/routes'
-import { DocumentType, DocumentVersion } from '@latitude-data/core/browser'
 import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { type ParamValue } from 'next/dist/server/request/params'
@@ -12,6 +11,8 @@ import NodeHeaderWrapper, {
 } from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
+import { DocumentType } from '@latitude-data/core/constants'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export default function DocumentHeader({
   open,

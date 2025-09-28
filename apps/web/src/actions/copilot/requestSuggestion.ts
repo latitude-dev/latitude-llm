@@ -1,6 +1,4 @@
 'use server'
-
-import { CLOUD_MESSAGES, PROVIDER_MODELS } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import {
@@ -12,6 +10,8 @@ import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
+import { CLOUD_MESSAGES } from '@latitude-data/core/constants'
+import { PROVIDER_MODELS } from '@latitude-data/core/services/ai/providers/models/index'
 
 // TODO: Make this generic. Pass prompts: string
 // Pass entityUuid and entityType so this can be used to track

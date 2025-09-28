@@ -1,11 +1,5 @@
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
-import {
-  DocumentVersion,
-  EvaluationType,
-  EvaluationV2,
-  LlmEvaluationMetricAnyCustom,
-} from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -16,6 +10,12 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { EditableParameters } from './EditableParameters'
 import { type UseLogHistoryParams } from './useLogHistoryParams'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import {
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetricAnyCustom,
+} from '@latitude-data/core/constants'
 
 function DocumentLogsNavigation({ data }: { data: UseLogHistoryParams }) {
   const urlData = usePaginatedDocumentLogUrl({

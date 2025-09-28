@@ -5,12 +5,9 @@ import {
   useCompletedRuns,
   useCompletedRunsCount,
 } from '$/stores/runs/completedRuns'
-import {
-  ActiveRun,
-  CompletedRun,
-  Pagination,
-  ProjectLimitedView,
-} from '@latitude-data/core/browser'
+import { ProjectLimitedView } from '@latitude-data/core/schema/types'
+import { ActiveRun, CompletedRun } from '@latitude-data/constants'
+import { Pagination } from '@latitude-data/core/helpers'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'

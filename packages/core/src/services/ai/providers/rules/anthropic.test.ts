@@ -5,7 +5,7 @@ import {
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { applyProviderRules } from '.'
-import { Providers } from '../models'
+import { Providers } from '@latitude-data/constants'
 import { AppliedRules, ProviderRules } from './types'
 
 const providerType = Providers.Anthropic

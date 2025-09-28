@@ -1,6 +1,9 @@
-import { DocumentLog, DocumentLogWithMetadataAndError } from '../../browser'
+import {
+  DocumentLog,
+  DocumentLogWithMetadataAndError,
+} from '../../schema/types'
 import { database } from '../../client'
-import { findWorkspaceFromDocumentLog } from '../../data-access'
+import { findWorkspaceFromDocumentLog } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'

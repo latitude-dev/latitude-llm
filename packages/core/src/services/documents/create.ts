@@ -1,20 +1,20 @@
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 import { scan } from 'promptl-ai'
+import { DOCUMENT_PATH_REGEXP } from '../../constants'
+import { findFirstModelForProvider } from '../ai/providers/models'
 import {
-  DOCUMENT_PATH_REGEXP,
-  findFirstModelForProvider,
   User,
   Workspace,
   type Commit,
   type DocumentVersion,
-} from '../../browser'
+} from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
-import { documentVersions } from '../../schema'
+import { documentVersions } from '../../schema/models/documentVersions'
 import { createDemoEvaluation } from '../evaluationsV2/createDemoEvaluation'
 import { pingProjectUpdate } from '../projects'
 import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'

@@ -1,12 +1,12 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import { useMemo, useState } from 'react'
+import useSWR, { SWRConfiguration } from 'swr'
 import {
   ActualOutputConfiguration,
   DocumentLogFilterOptions,
   EvaluatedDocumentLog,
-} from '@latitude-data/core/browser'
-import { useMemo, useState } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+} from '@latitude-data/core/constants'
 
 const EMPTY_ARRAY: [] = []
 export default function useEvaluatedDocumentLogs(

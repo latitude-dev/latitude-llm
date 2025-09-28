@@ -1,8 +1,8 @@
 import { nanoid } from 'nanoid'
 
-import { Dataset, DatasetRow } from '../../browser'
+import { Dataset, DatasetRow } from '../../schema/types'
 import { DATASET_COLUMN_ROLES, DatasetColumnRole } from '../../constants'
-import { type Column } from '../../schema'
+import { type Column } from '../../schema/models/datasets'
 
 export type HashAlgorithmFn = (args: { columnName: string }) => string
 export type hashAlgorithmArgs = Parameters<HashAlgorithmFn>[0]

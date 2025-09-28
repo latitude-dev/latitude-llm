@@ -4,7 +4,7 @@ import {
   StreamEventTypes,
   traceContextSchema,
 } from '@latitude-data/constants'
-import { messageSchema } from '@latitude-data/core/browser'
+import { messageSchema } from '@latitude-data/core/constants'
 
 export const languageModelUsageSchema = z.object({
   completionTokens: z.number().optional(),

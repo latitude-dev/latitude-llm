@@ -1,9 +1,9 @@
 import app from '$/routes/app'
-import { Project } from '@latitude-data/core/browser'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import { createProject } from '@latitude-data/core/factories'
 import { ProjectsRepository } from '@latitude-data/core/repositories'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { Project } from '@latitude-data/core/schema/types'
 
 vi.mock('$/jobs', () => ({
   queues: { jobs: { enqueueUpdateApiKeyProviderJob: vi.fn() } },

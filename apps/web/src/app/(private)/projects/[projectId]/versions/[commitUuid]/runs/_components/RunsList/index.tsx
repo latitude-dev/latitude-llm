@@ -3,12 +3,8 @@
 import { RealtimeToggle } from '$/components/RealtimeToggle'
 import { LogicTablePaginationFooter } from '$/components/TablePaginationFooter/LogicTablePaginationFooter'
 import { useActiveRuns } from '$/stores/runs/activeRuns'
-import {
-  ActiveRun,
-  CompletedRun,
-  Pagination,
-  Run,
-} from '@latitude-data/core/browser'
+import { Pagination } from '@latitude-data/core/helpers'
+import { ActiveRun, CompletedRun, Run } from '@latitude-data/constants'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useEffect, useRef, useState } from 'react'

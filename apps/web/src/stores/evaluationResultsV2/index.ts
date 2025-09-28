@@ -2,21 +2,25 @@
 
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import {
-  Commit,
-  DocumentVersion,
-  EvaluationMetric,
-  EvaluationResultsV2Search,
-  evaluationResultsV2SearchToQueryParams,
-  EvaluationResultV2WithDetails,
-  EvaluationType,
-  EvaluationV2,
-  Project,
-} from '@latitude-data/core/browser'
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import {
+  Commit,
+  DocumentVersion,
+  EvaluationResultV2WithDetails,
+  Project,
+} from '@latitude-data/core/schema/types'
+import {
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+} from '@latitude-data/core/constants'
+import {
+  EvaluationResultsV2Search,
+  evaluationResultsV2SearchToQueryParams,
+} from '@latitude-data/core/helpers'
 
 export function useEvaluationResultsV2<
   T extends EvaluationType = EvaluationType,

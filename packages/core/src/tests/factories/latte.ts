@@ -1,11 +1,8 @@
-import {
-  LATTE_MINIMUM_CREDITS_PER_REQUEST,
-  User,
-  Workspace,
-  Project,
-} from '../../browser'
+import { LATTE_MINIMUM_CREDITS_PER_REQUEST } from '../../constants'
+import { User, Workspace, Project } from '../../schema/types'
 import { database } from '../../client'
-import { latteRequests, latteThreads } from '../../schema'
+import { latteRequests } from '../../schema/models/latteRequests'
+import { latteThreads } from '../../schema/models/latteThreads'
 
 export async function createLatteThread({
   user,

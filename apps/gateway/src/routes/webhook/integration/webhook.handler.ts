@@ -8,9 +8,9 @@ import { CommitsRepository } from '@latitude-data/core/repositories'
 import { unsafelyFindDocumentTrigger } from '@latitude-data/core/data-access/documentTriggers'
 import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
 import { PromisedResult } from '@latitude-data/core/lib/Transaction'
-import { Commit, Workspace } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
+import { Commit, Workspace } from '@latitude-data/core/schema/types'
 
 async function resolveWorkspaceAndCommit(
   triggerUuid: string,

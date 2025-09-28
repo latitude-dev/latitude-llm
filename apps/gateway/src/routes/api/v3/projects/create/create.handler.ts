@@ -1,7 +1,7 @@
 import { Context } from 'hono'
 import { z } from '@hono/zod-openapi'
 import { createProject } from '@latitude-data/core/services/projects/create'
-import { findFirstUserInWorkspace } from '@latitude-data/core/data-access'
+import { findFirstUserInWorkspace } from '@latitude-data/core/data-access/users'
 import { AppRouteHandler } from '$/openApi/types'
 import { createRoute } from './create.route'
 

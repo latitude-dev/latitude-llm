@@ -1,14 +1,13 @@
 // @vitest-environment jsdom
-
-import {
-  DocumentLogFilterOptions,
-  LOG_SOURCES,
-  LogSources,
-} from '@latitude-data/core/browser'
 import { act, renderHook } from '@testing-library/react'
 import { parseISO } from 'date-fns'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useProcessLogFilters } from './useProcessLogFilters'
+import {
+  DocumentLogFilterOptions,
+  LOG_SOURCES,
+  LogSources,
+} from '@latitude-data/core/constants'
 
 const mocks = vi.hoisted(() => ({
   push: vi.fn(async (path: string) => {

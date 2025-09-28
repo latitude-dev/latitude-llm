@@ -1,11 +1,11 @@
 import { usePromocodes } from '$/stores/admin/promocodes'
-import { QuotaType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { useCallback, useEffect, useState } from 'react'
+import { QuotaType } from '@latitude-data/core/constants'
 
 export default function CreatePromocodeModal({
   isCreatePromocodeModalOpen,

@@ -9,13 +9,6 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/constants'
-import {
-  Commit,
-  Dataset,
-  DatasetRow,
-  DocumentLog,
-  ProviderLogDto,
-} from '@latitude-data/core/browser'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { TabSelectorOption } from '@latitude-data/web-ui/molecules/TabSelector'
 import { TextColor } from '@latitude-data/web-ui/tokens'
@@ -23,6 +16,13 @@ import React from 'react'
 import HumanEvaluationSpecification from './human'
 import LlmEvaluationSpecification from './llm'
 import RuleEvaluationSpecification from './rule'
+import {
+  Commit,
+  Dataset,
+  DatasetRow,
+  ProviderLogDto,
+} from '@latitude-data/core/schema/types'
+import { DocumentLog } from '@latitude-data/core/constants'
 
 export type ConfigurationFormProps<
   T extends EvaluationType = EvaluationType,

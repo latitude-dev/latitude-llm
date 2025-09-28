@@ -1,11 +1,9 @@
 import { scan } from 'promptl-ai'
 import { z } from 'zod'
-import {
-  EvaluationType,
-  formatConversation,
-  LlmEvaluationMetric,
-  LlmEvaluationCustomSpecification as specification,
-} from '../../../browser'
+import { EvaluationType } from '../../../constants'
+import { LlmEvaluationMetric } from '../../../constants'
+import { LlmEvaluationCustomSpecification as specification } from '../../../constants'
+import { formatConversation } from '../../../helpers'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'

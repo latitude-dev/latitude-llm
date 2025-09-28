@@ -1,4 +1,4 @@
-import { Workspace } from '../../../browser'
+import { Workspace } from '../../../schema/types'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'

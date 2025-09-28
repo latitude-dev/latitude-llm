@@ -2,11 +2,6 @@ import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  DocumentTrigger,
-  PipedreamComponent,
-  PipedreamIntegration,
-} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -18,6 +13,11 @@ import {
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
+import {
+  DocumentTrigger,
+  PipedreamIntegration,
+} from '@latitude-data/core/schema/types'
+import { PipedreamComponent } from '@latitude-data/core/constants'
 
 function DeleteTriggerButton({
   trigger,

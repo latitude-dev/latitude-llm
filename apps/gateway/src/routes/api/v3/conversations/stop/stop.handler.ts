@@ -1,5 +1,5 @@
 import { AppRouteHandler } from '$/openApi/types'
-import { unsafelyFindActiveRun } from '@latitude-data/core/data-access'
+import { unsafelyFindActiveRun } from '@latitude-data/core/data-access/runs'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ProjectsRepository } from '@latitude-data/core/repositories'
 import { stopRun } from '@latitude-data/core/services/runs/stop'

@@ -1,10 +1,9 @@
 import { env } from '@latitude-data/env'
-import {
-  ActionType,
-  cloneAgentActionBackendParametersSchema,
-} from '../../browser'
+import { z } from 'zod'
+
 import { database } from '../../client'
-import { unsafelyFindProject, unsafelyFindWorkspace } from '../../data-access'
+import { unsafelyFindWorkspace } from '../../data-access/workspaces'
+import { unsafelyFindProject } from '../../data-access/projects'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -17,13 +16,17 @@ import { ActionExecuteArgs } from './shared'
 import { getWorkspaceOnboarding } from '../workspaceOnboarding'
 import { isFeatureEnabledByName } from '../workspaceFeatures/isFeatureEnabledByName'
 
+const cloneAgentActionBackendParametersSchema = z.object({
+  uuid: z.string(),
+})
+
 export const CloneAgentActionSpecification = {
   parameters: cloneAgentActionBackendParametersSchema,
   execute: execute,
 }
 
 async function execute(
-  { parameters, user, workspace }: ActionExecuteArgs<ActionType.CloneAgent>,
+  { parameters, user, workspace }: ActionExecuteArgs<'cloneAgent'>,
   db = database,
   _ = new Transaction(),
 ) {

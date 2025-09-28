@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { partialAcceptLatteChanges } from './partialAcceptChanges'
 import { LatteThreadsRepository } from '../../../../../repositories'
 import Transaction from '../../../../../lib/Transaction'
-import { latteThreadCheckpoints } from '../../../../../schema'
+import { latteThreadCheckpoints } from '../../../../../schema/models/latteThreadCheckpoints'
 
 vi.mock('../../../../../repositories', () => ({
   LatteThreadsRepository: vi.fn(),

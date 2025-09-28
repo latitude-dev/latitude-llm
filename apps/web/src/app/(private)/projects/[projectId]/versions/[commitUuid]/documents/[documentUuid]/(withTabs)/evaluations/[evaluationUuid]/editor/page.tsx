@@ -7,10 +7,6 @@ import {
 import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import {
-  EvaluationType,
-  LlmEvaluationMetric,
-} from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
@@ -20,6 +16,10 @@ import { EvaluationEditor } from './_components/EvaluationEditor'
 import { LOG_UUID_PARAM } from '$/lib/useEvaluationEditorLink'
 import { DocumentLogsRepository } from '@latitude-data/core/repositories'
 import buildMetatags from '$/app/_lib/buildMetatags'
+import {
+  EvaluationType,
+  LlmEvaluationMetric,
+} from '@latitude-data/core/constants'
 
 export const metadata = buildMetatags({
   locationDescription: 'Prompt Evaluation Editor',

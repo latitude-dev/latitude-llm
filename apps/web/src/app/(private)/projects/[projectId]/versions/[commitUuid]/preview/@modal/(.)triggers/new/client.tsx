@@ -15,7 +15,7 @@ import { ChatTrigger } from './_components/TriggerTypes/ChatTrigger'
 import { ScheduleTrigger } from './_components/TriggerTypes/ScheduleTrigger'
 import { EmailTrigger } from './_components/TriggerTypes/EmailTrigger'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import type { DocumentTrigger } from '@latitude-data/core/browser'
+import { type DocumentTrigger } from '@latitude-data/core/schema/types'
 
 export type OnTriggerCreated = (dt?: DocumentTrigger) => void
 

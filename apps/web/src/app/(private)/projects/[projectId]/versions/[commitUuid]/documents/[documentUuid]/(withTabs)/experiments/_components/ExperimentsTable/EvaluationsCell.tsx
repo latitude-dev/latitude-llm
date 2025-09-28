@@ -1,6 +1,5 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { EvaluationV2, ExperimentDto } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -9,6 +8,8 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useMemo } from 'react'
+import { EvaluationV2 } from '@latitude-data/core/constants'
+import { ExperimentDto } from '@latitude-data/core/schema/types'
 
 function EvaluationsList({
   evaluations,

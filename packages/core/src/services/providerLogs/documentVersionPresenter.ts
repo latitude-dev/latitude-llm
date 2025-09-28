@@ -1,4 +1,5 @@
-import { Commit, DocumentVersion, DocumentVersionDto } from '../../browser'
+import { Commit, DocumentVersion } from '../../schema/types'
+import { DocumentVersionDto } from '../../constants'
 
 export function documentVersionPresenter({
   documentVersion,
