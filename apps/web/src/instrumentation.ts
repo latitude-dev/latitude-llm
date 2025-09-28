@@ -1,11 +1,11 @@
-import tracer from 'dd-trace'
-import { env } from '@latitude-data/env'
-
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { tracer } = await import('dd-trace')
+    const { envClient } = await import('./envClient')
+
     tracer.init({
       service: 'latitude-web',
-      env: env.NODE_ENV || 'development',
+      env: envClient.NEXT_PUBLIC_NODE_ENV || 'development',
       version: process.env.npm_package_version || '1.0.0',
       logInjection: true,
       runtimeMetrics: true,
@@ -19,22 +19,4 @@ export async function register() {
       service: 'latitude-web-next',
     })
   }
-}
-
-export const onRequestError = (error: Error, _: any) => {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    const span = tracer.scope().active()
-    if (span) {
-      span.setTag('error', true)
-      span.setTag('error.message', error.message)
-      span.setTag('error.stack', error.stack)
-      span.log({
-        event: 'error',
-        'error.object': error,
-        message: error.message,
-        stack: error.stack,
-      })
-    }
-  }
-  console.error('Request error:', error)
 }
