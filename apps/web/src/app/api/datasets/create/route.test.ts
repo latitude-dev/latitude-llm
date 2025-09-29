@@ -144,7 +144,9 @@ describe('POST handler for datasets/create', () => {
         expect(response.status).toBe(400)
         const data = await response.json()
         expect(data.success).toBe(false)
-        expect(data.errors.name).toContain('Expected string, received null')
+        expect(data.errors.name).toContain(
+          'Invalid input: expected string, received null',
+        )
       })
 
       it('should return 400 if csvDelimiter is invalid', async () => {

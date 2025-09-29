@@ -114,7 +114,7 @@ describe('createDatasetFromLogsAction', () => {
       // Setup unauthorized session
       mocks.getSession.mockResolvedValue(null)
 
-      const [_, error] = await createDatasetFromLogsAction({
+      const { serverError } = await createDatasetFromLogsAction({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
@@ -125,7 +125,7 @@ describe('createDatasetFromLogsAction', () => {
         filterOptions,
       })
 
-      expect(error!.name).toEqual('UnauthorizedError')
+      expect(serverError).toEqual('Unauthorized')
     })
   })
 
@@ -133,19 +133,21 @@ describe('createDatasetFromLogsAction', () => {
     it('processes logs synchronously when in PARTIAL mode with fewer logs than the batch limit', async () => {
       const selectedDocumentLogIds = [1, 2, 3]
 
-      const [result, error] = await createDatasetFromLogsAction({
-        projectId: project.id,
-        commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
-        name: 'Test Dataset',
-        selectionMode: 'PARTIAL',
-        selectedDocumentLogIds,
-        excludedDocumentLogIds: [],
-        filterOptions,
-      })
+      const { data, serverError, validationErrors } =
+        await createDatasetFromLogsAction({
+          projectId: project.id,
+          commitUuid: commit.uuid,
+          documentUuid: document.documentUuid,
+          name: 'Test Dataset',
+          selectionMode: 'PARTIAL',
+          selectedDocumentLogIds,
+          excludedDocumentLogIds: [],
+          filterOptions,
+        })
 
-      expect(error).toBeNull()
-      expect(result).toEqual({ mode: 'sync', result: { success: true } })
+      expect(serverError).toBeUndefined()
+      expect(validationErrors).toBeUndefined()
+      expect(data).toEqual({ mode: 'sync', result: { success: true } })
 
       // Verify findOrCreateDataset was called with correct params
       expect(mocks.findOrCreateDataset).toHaveBeenCalledWith({
@@ -171,19 +173,21 @@ describe('createDatasetFromLogsAction', () => {
       // Create an array with more IDs than the batch limit
       const manyIds = Array.from({ length: 30 }, (_, i) => i + 1)
 
-      const [result, error] = await createDatasetFromLogsAction({
-        projectId: project.id,
-        commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
-        name: 'Test Dataset',
-        selectionMode: 'PARTIAL',
-        selectedDocumentLogIds: manyIds,
-        excludedDocumentLogIds: [],
-        filterOptions,
-      })
+      const { data, serverError, validationErrors } =
+        await createDatasetFromLogsAction({
+          projectId: project.id,
+          commitUuid: commit.uuid,
+          documentUuid: document.documentUuid,
+          name: 'Test Dataset',
+          selectionMode: 'PARTIAL',
+          selectedDocumentLogIds: manyIds,
+          excludedDocumentLogIds: [],
+          filterOptions,
+        })
 
-      expect(error).toBeNull()
-      expect(result).toEqual({ mode: 'async' })
+      expect(serverError).toBeUndefined()
+      expect(validationErrors).toBeUndefined()
+      expect(data).toEqual({ mode: 'async' })
 
       // Verify findOrCreateDataset was not called
       expect(mocks.findOrCreateDataset).not.toHaveBeenCalled()
@@ -208,19 +212,21 @@ describe('createDatasetFromLogsAction', () => {
     })
 
     it('processes logs asynchronously when in ALL mode', async () => {
-      const [result, error] = await createDatasetFromLogsAction({
-        projectId: project.id,
-        commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
-        name: 'Test Dataset',
-        selectionMode: 'ALL',
-        selectedDocumentLogIds: [],
-        excludedDocumentLogIds: [],
-        filterOptions,
-      })
+      const { data, serverError, validationErrors } =
+        await createDatasetFromLogsAction({
+          projectId: project.id,
+          commitUuid: commit.uuid,
+          documentUuid: document.documentUuid,
+          name: 'Test Dataset',
+          selectionMode: 'ALL',
+          selectedDocumentLogIds: [],
+          excludedDocumentLogIds: [],
+          filterOptions,
+        })
 
-      expect(error).toBeNull()
-      expect(result).toEqual({ mode: 'async' })
+      expect(serverError).toBeUndefined()
+      expect(validationErrors).toBeUndefined()
+      expect(data).toEqual({ mode: 'async' })
 
       // Verify queue was used with correct params
       expect(mocks.defaultQueueAddMock).toHaveBeenCalledWith(
@@ -239,19 +245,21 @@ describe('createDatasetFromLogsAction', () => {
     })
 
     it('processes logs asynchronously when in ALL_EXCEPT mode', async () => {
-      const [result, error] = await createDatasetFromLogsAction({
-        projectId: project.id,
-        commitUuid: commit.uuid,
-        documentUuid: document.documentUuid,
-        name: 'Test Dataset',
-        selectionMode: 'ALL_EXCEPT',
-        selectedDocumentLogIds: [],
-        excludedDocumentLogIds: [1, 2],
-        filterOptions,
-      })
+      const { data, serverError, validationErrors } =
+        await createDatasetFromLogsAction({
+          projectId: project.id,
+          commitUuid: commit.uuid,
+          documentUuid: document.documentUuid,
+          name: 'Test Dataset',
+          selectionMode: 'ALL_EXCEPT',
+          selectedDocumentLogIds: [],
+          excludedDocumentLogIds: [1, 2],
+          filterOptions,
+        })
 
-      expect(error).toBeNull()
-      expect(result).toEqual({ mode: 'async' })
+      expect(serverError).toBeUndefined()
+      expect(validationErrors).toBeUndefined()
+      expect(data).toEqual({ mode: 'async' })
 
       // Verify queue was used with correct params
       expect(mocks.defaultQueueAddMock).toHaveBeenCalledWith(

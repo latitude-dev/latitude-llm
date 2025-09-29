@@ -6,9 +6,8 @@ import { authProcedure } from '$/actions/procedures'
 /**
  * Creates a Stripe customer portal session for subscription management
  */
-export const createCustomerPortalAction = authProcedure
-  .createServerAction()
-  .handler(async ({ ctx }) => {
+export const createCustomerPortalAction = authProcedure.action(
+  async ({ ctx }) => {
     const url = await createCustomerPortalSession({
       currentUser: ctx.user,
     })
@@ -16,4 +15,5 @@ export const createCustomerPortalAction = authProcedure
     if (!url) throw new Error('No customer portal URL returned')
 
     return { url }
-  })
+  },
+)

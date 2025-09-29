@@ -132,28 +132,29 @@ function adaptContentFields({
 
     switch (c.type) {
       case 'file': {
-        const adaptedContent = {
-          ...c,
-          data: (c as any)['file'] as FilePart['data'],
-        } as FilePart
-
-        delete (adaptedContent as any)['file']
-
-        return adaptedContent
+        return {
+          type: 'file',
+          data: c.file,
+          mediaType: c.mimeType, // v4 -> v5 migration
+        } satisfies FilePart
       }
 
       case 'tool-call': {
-        const adaptedContent = {
-          ...c,
-          args: c.args || ((c as any)['toolArguments'] as ToolCallPart['args']),
-        } as ToolCallPart
-
-        delete (adaptedContent as any)['toolArguments']
-
-        return adaptedContent
+        // FIXME: This is a crazy setup. We have to support both
+        // @ts-expect-error - toolArguments is not part of the types
+        const crazyArguments = c.args || c.toolArguments // v4 -> v5 migration
+        return {
+          type: 'tool-call',
+          toolCallId: c.toolCallId,
+          toolName: c.toolName,
+          input: crazyArguments, // v4 -> v5 migration
+        } satisfies ToolCallPart
       }
 
       case 'text':
+        if ('reasoningText' in c) delete c.reasoningText
+        // Legacy field it was renamed to `reasoningText` but is here in case we
+        // send old messages.
         if ('reasoning' in c) delete c.reasoning
         if ('isReasoning' in c) delete c.isReasoning
 

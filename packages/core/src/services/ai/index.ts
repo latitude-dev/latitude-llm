@@ -3,10 +3,11 @@ import { omit } from 'lodash-es'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import {
-  CoreMessage,
+  ModelMessage,
   jsonSchema,
   ObjectStreamPart,
   streamText as originalStreamText,
+  stepCountIs,
   Output,
   StreamTextResult,
   TextStreamPart,
@@ -32,19 +33,26 @@ type AISDKProvider = typeof DEFAULT_AI_SDK_PROVIDER
 
 type PARTIAL_OUTPUT = object
 
-export type AIReturn<T extends StreamType> = Pick<
-  StreamTextResult<Record<string, Tool<any, any>>, PARTIAL_OUTPUT>,
+type VercelAIReturn = Pick<
+  StreamTextResult<Record<string, Tool<unknown, unknown>>, PARTIAL_OUTPUT>,
   | 'fullStream'
   | 'text'
   | 'usage'
   | 'toolCalls'
   | 'providerMetadata'
   | 'reasoning'
+  | 'reasoningText'
   | 'finishReason'
   | 'response'
+>
+
+export type AIReturn<T extends StreamType> = Omit<
+  VercelAIReturn,
+  'reasoning' | 'reasoningText'
 > & {
   type: T
   providerName: Providers
+  reasoning: VercelAIReturn['reasoningText']
   object?: T extends 'object' ? PARTIAL_OUTPUT : undefined
 }
 
@@ -54,20 +62,20 @@ export type StreamChunk =
 
 export type ObjectOutput = 'object' | 'array' | 'no-schema' | undefined
 
-export type ToolSchema<
-  T extends Record<string, { type: string; description: string }> = {},
-> = {
-  description: string
-  parameters: {
-    type: 'object'
-    properties: T
-  }
+/**
+ * Vercel SDK has several ways to limit the number of steps an AI model can take.
+ * But we are only interesting on supporting the old `maxSteps` config so
+ * this is the way of translating it to `stopWhen` option.
+ * Reference:
+ * https://ai-sdk.dev/docs/reference/ai-sdk-core/stream-text#stop-when
+ */
+function getStopWhen({ maxSteps }: { maxSteps?: number | undefined }) {
+  return { stopWhen: stepCountIs(maxSteps ?? 1) }
 }
 
 export async function ai({
   context,
   provider,
-  prompt,
   messages: originalMessages,
   config: originalConfig,
   schema,
@@ -79,7 +87,6 @@ export async function ai({
   provider: ProviderApiKey
   config: VercelConfig
   messages: Message[]
-  prompt?: string
   schema?: JSONSchema7
   output?: ObjectOutput
   aiSdkProvider?: Partial<AISDKProvider>
@@ -145,13 +152,15 @@ export async function ai({
     const useSchema = schema && !!output && output !== 'no-schema'
     const resultType: StreamType = useSchema ? 'object' : 'text'
 
+    const stopWhen = getStopWhen({ maxSteps: config.maxSteps })
     const result = streamText({
       ...omit(config, ['schema']),
+      ...stopWhen,
       model: languageModel,
-      prompt,
-      messages: messages as CoreMessage[],
+      messages: messages as ModelMessage[],
       tools: toolsResult.value,
       abortSignal,
+      maxOutputTokens: config.maxOutputTokens ?? config.maxTokens,
       providerOptions: config.providerOptions,
       experimental_telemetry: { isEnabled: false }, // Note: avoid conflicts with our own telemetry
       experimental_output: useSchema
@@ -164,7 +173,7 @@ export async function ai({
       providerName: providerType,
       fullStream: result.fullStream,
       text: result.text,
-      reasoning: result.reasoning,
+      reasoning: result.reasoningText,
       usage: result.usage,
       toolCalls: result.toolCalls,
       providerMetadata: result.providerMetadata,

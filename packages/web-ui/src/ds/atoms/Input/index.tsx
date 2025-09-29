@@ -50,21 +50,6 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   },
   ref,
 ) {
-  const inputComp = (
-    <input
-      ref={ref}
-      type={type}
-      className={cn(inputVariants({ size }), className, {
-        'border-red-500 focus-visible:ring-red-500': errors,
-        hidden: !!props.hidden,
-        'appearance-none': hideNativeAppearance,
-      })}
-      {...props}
-    />
-  )
-
-  if (props.hidden) return inputComp
-
   return (
     <FormField
       label={label}
@@ -73,7 +58,16 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       errors={errors}
       errorStyle={errorStyle}
     >
-      {inputComp}
+      <input
+        ref={ref}
+        type={type}
+        className={cn(inputVariants({ size }), className, {
+          'border-red-500 focus-visible:ring-red-500': errors,
+          hidden: !!props.hidden,
+          'appearance-none': hideNativeAppearance,
+        })}
+        {...props}
+      />
     </FormField>
   )
 })

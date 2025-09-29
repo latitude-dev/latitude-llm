@@ -9,7 +9,7 @@ import {
 } from '@latitude-data/core/browser'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCallback } from 'react'
-import { readStreamableValue } from 'ai/rsc'
+import { readStreamableValue } from '@ai-sdk/rsc'
 import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 
 export function useChat({

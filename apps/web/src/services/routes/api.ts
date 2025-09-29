@@ -379,6 +379,11 @@ export const API_ROUTES = {
     promocodes: {
       root: '/api/admin/promocodes',
     },
+    rewards: {
+      pending: {
+        root: '/api/admin/rewards/pending',
+      },
+    },
   },
   conversations: {
     root: '/api/conversations',

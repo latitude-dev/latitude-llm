@@ -7,11 +7,10 @@ import { z } from 'zod'
 import { authProcedure } from '../../procedures'
 
 export const forkDocumentAction = authProcedure
-  .createServerAction()
-  .input(z.object({ publishedDocumentUuid: z.string() }))
-  .handler(async ({ ctx, input }) => {
+  .inputSchema(z.object({ publishedDocumentUuid: z.string() }))
+  .action(async ({ ctx, parsedInput }) => {
     const { workspace, commit, document, shared } = await findSharedDocument({
-      publishedDocumentUuid: input.publishedDocumentUuid,
+      publishedDocumentUuid: parsedInput.publishedDocumentUuid,
     }).then((r) => r.unwrap())
 
     return forkDocument({

@@ -1,5 +1,3 @@
-import { LanguageModelUsage } from 'ai'
-
 import { Providers } from '../../../browser'
 import { GROQ_MODELS } from './groq'
 import { OPENAI_MODELS } from './openai'
@@ -13,6 +11,7 @@ import { AMAZON_BEDROCK_MODELS } from './amazonBedrock'
 import { DEEPSEEK_MODELS } from './deepseek'
 import { PERPLEXITY_MODELS } from './perplexity'
 import { NON_IMPLEMENTED_COST } from './helpers'
+import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
 
 export type ModelCost = {
   input: number
@@ -120,6 +119,9 @@ export function estimateCost({
   provider: Providers
   model: string
 }): number {
+  // TODO:: Calculate the cost for reasoning tokens and cached tokens.
+  // `usage` contains `reasoningTokens` and `cachedTokens` but we
+  // don't have mapped the cost for those yet.
   const { promptTokens, completionTokens } = usage
   const costSpec = getCostPer1M({ provider, model }).cost
 

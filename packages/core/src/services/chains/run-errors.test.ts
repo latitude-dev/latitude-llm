@@ -27,15 +27,14 @@ function buildMockAIresponse(chunks: TextStreamPart<any>[]) {
     text: new Promise((resolve) => resolve('MY TEXT')),
     usage: new Promise((resolve) =>
       resolve({
-        promptTokens: 3,
-        completionTokens: 7,
+        inputTokens: 3,
+        outputTokens: 7,
         totalTokens: 10,
       }),
     ),
     toolCalls: new Promise((resolve) => resolve([])),
     fullStream: new ReadableStream({
       start(controller) {
-        // @ts-expect-error - TODO(compiler): fix types
         chunks.forEach((chunk) => controller.enqueue(chunk))
         controller.close()
       },
@@ -70,7 +69,7 @@ describe('run chain error handling', () => {
     providersMap = new Map(providers.map((p) => [p.name, p]))
     workspace = w
     promptSource = { document: documents[0]!, commit }
-    context = await factories.createTelemetryContext({ workspace })
+    context = factories.createTelemetryContext({ workspace })
 
     vi.mocked(mockChain.step!)
       .mockResolvedValue({

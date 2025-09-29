@@ -6,21 +6,15 @@ import { applyUserPlanLimit } from '@latitude-data/core/services/subscriptions/l
 import { authProcedure } from '../procedures'
 
 export const inviteUserAction = authProcedure
-  .createServerAction()
-  .input(
-    z.object({
-      email: z.string(),
-      name: z.string(),
-    }),
-  )
-  .handler(async ({ input, ctx }) => {
+  .inputSchema(z.object({ email: z.email(), name: z.string() }))
+  .action(async ({ parsedInput, ctx }) => {
     await applyUserPlanLimit({ workspace: ctx.workspace }).then((r) =>
       r.unwrap(),
     )
 
     return await inviteUser({
-      email: input.email,
-      name: input.name,
+      email: parsedInput.email,
+      name: parsedInput.name,
       workspace: ctx.workspace,
       author: ctx.user,
     }).then((r) => r.unwrap())

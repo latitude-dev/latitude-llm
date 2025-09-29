@@ -15,7 +15,7 @@ function generateKey({
 }: {
   filename: string
   prefix?: string
-  workspace?: Workspace
+  workspace?: Workspace | null
 }) {
   let keyPrefix = prefix
   if (!keyPrefix && workspace) keyPrefix = `workspaces/${workspace.id}`
@@ -36,7 +36,7 @@ export async function uploadFile(
   }: {
     file: File
     prefix?: string
-    workspace?: Workspace
+    workspace?: Workspace | null
   },
   disk: DiskWrapper = diskFactory('public'),
 ): Promise<TypedResult<PromptLFile, Error>> {

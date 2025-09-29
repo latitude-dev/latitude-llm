@@ -11,7 +11,7 @@ import { TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 
 // prettier-ignore
-type ZodSchema<T = any> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny, T, T>
+type ZodSchema<T = unknown> = z.ZodType<T>
 
 export type ActionExecuteArgs<T extends ActionType = ActionType> = {
   parameters: ActionBackendParameters<T>

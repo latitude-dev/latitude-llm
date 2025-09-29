@@ -1,6 +1,6 @@
 'use server'
 
-import { withProject } from '$/actions/procedures'
+import { withProject, withProjectSchema } from '$/actions/procedures'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -9,21 +9,26 @@ import { destroyDocument } from '@latitude-data/core/services/documents/destroyD
 import { z } from 'zod'
 
 export const destroyDocumentAction = withProject
-  .createServerAction()
-  .input(z.object({ documentUuid: z.string(), commitUuid: z.string() }), {
-    type: 'json',
-  })
-  .handler(async ({ input, ctx }) => {
+  .inputSchema(
+    withProjectSchema.extend({
+      documentUuid: z.string(),
+      commitUuid: z.string(),
+    }),
+  )
+  .action(async ({ parsedInput, ctx }) => {
     const commitsScope = new CommitsRepository(ctx.workspace.id)
     const commit = await commitsScope
-      .getCommitByUuid({ uuid: input.commitUuid, projectId: ctx.project.id })
+      .getCommitByUuid({
+        uuid: parsedInput.commitUuid,
+        projectId: ctx.project.id,
+      })
       .then((r) => r.unwrap())
     const docsScope = new DocumentVersionsRepository(ctx.workspace.id)
     const document = await docsScope
       .getDocumentAtCommit({
-        commitUuid: input.commitUuid,
+        commitUuid: parsedInput.commitUuid,
         projectId: ctx.project.id,
-        documentUuid: input.documentUuid,
+        documentUuid: parsedInput.documentUuid,
       })
       .then((r) => r.unwrap())
     await destroyDocument({

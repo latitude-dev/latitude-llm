@@ -2,23 +2,22 @@
 
 import { createDocumentTrigger } from '@latitude-data/core/services/documentTriggers/create'
 
-import { withCommit } from '../../procedures'
+import { withCommit, withCommitSchema } from '../../procedures'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { z } from 'zod'
 import { documentTriggerConfigurationSchema } from '@latitude-data/constants/documentTriggers'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 
 export const createDocumentTriggerAction = withCommit
-  .createServerAction()
-  .input(
-    z.object({
+  .inputSchema(
+    withCommitSchema.extend({
       documentUuid: z.string(),
-      triggerType: z.nativeEnum(DocumentTriggerType),
+      triggerType: z.enum(DocumentTriggerType),
       configuration: documentTriggerConfigurationSchema,
     }),
   )
-  .handler(async ({ input, ctx }) => {
-    const { documentUuid, triggerType, configuration } = input
+  .action(async ({ parsedInput, ctx }) => {
+    const { documentUuid, triggerType, configuration } = parsedInput
     const { workspace, project, commit } = ctx
 
     const documentsScope = new DocumentVersionsRepository(workspace.id)
