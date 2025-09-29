@@ -33,7 +33,7 @@ export default function LoginForm({
   })
   const errors = error?.fieldErrors
   return (
-    <form action={executeFormAction}>
+    <form action={executeFormAction as any}>
       <input type='hidden' name='returnTo' value={returnTo} />
       <FormWrapper>
         <Input

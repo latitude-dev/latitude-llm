@@ -56,7 +56,7 @@ export function Messages({
   lastMessage: LastMessage | undefined
 }) {
   const [showPromptMessages, setPromptVisibility] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
   const { fakeIsStreaming, fakeResponseStream } = useFakeStream({ lastMessage })
   const streaming = showPromptMessages ? isStreaming : fakeIsStreaming

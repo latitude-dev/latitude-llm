@@ -38,7 +38,7 @@ export function DynamicBot({
 }: DynamicBotIconProps) {
   const isThinking = emotion === 'thinking'
   const ref = useRef<HTMLDivElement>(null)
-  const position = useFollowedPosition(ref, {
+  const position = useFollowedPosition<HTMLDivElement | null>(ref, {
     activeOnHover: true,
     threshold: 1,
   })

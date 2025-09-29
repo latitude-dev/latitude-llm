@@ -36,7 +36,7 @@ export default function InvitationForm({
   const errors = error?.fieldErrors
 
   return (
-    <form action={executeFormAction}>
+    <form action={executeFormAction as any}>
       <FormWrapper>
         <Input
           hidden

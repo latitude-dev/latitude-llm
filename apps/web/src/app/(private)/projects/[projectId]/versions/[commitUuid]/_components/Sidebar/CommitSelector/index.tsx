@@ -37,7 +37,7 @@ import { DocsRoute } from '$/components/Documentation/routes'
 const MIN_WIDTH_SELECTOR_PX = 380
 const TRIGGER_X_PADDING_PX = 26
 
-function useObserveSelectWidth(ref: RefObject<HTMLButtonElement>) {
+function useObserveSelectWidth(ref: RefObject<HTMLButtonElement | null>) {
   const [width, setWidth] = useState(MIN_WIDTH_SELECTOR_PX)
   useEffect(() => {
     const resizeObserver = new ResizeObserver((entries) => {
@@ -60,7 +60,7 @@ function useObserveSelectWidth(ref: RefObject<HTMLButtonElement>) {
 const BOTTOM_PADDING_PX = 32
 
 function useCalculateMaxHeight() {
-  const ref = useRef<HTMLButtonElement>(null)
+  const ref = useRef<HTMLButtonElement | null>(null)
   const [maxHeight, setMaxHeight] = useState<string | number>('auto')
 
   const calculateMaxHeight = useCallback(

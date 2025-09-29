@@ -73,8 +73,8 @@ export type ResultPanelProps<
   evaluatedDatasetRow?: DatasetRow
   evaluatedProviderLog: ProviderLogDto
   evaluatedDocumentLog: DocumentLog
-  panelRef: React.RefObject<HTMLDivElement>
-  tableRef: React.RefObject<HTMLTableElement>
+  panelRef: React.RefObject<HTMLDivElement | null>
+  tableRef: React.RefObject<HTMLTableElement | null>
   selectedTab: string
 }
 

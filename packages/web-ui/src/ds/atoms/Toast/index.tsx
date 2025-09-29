@@ -2,7 +2,7 @@
 
 import {
   ComponentPropsWithRef,
-  ElementRef,
+  ComponentRef,
   forwardRef,
   ReactElement,
 } from 'react'
@@ -15,12 +15,12 @@ import { Icon } from '../Icons'
 const ToastProviderPrimitive = ToastPrimitives.Provider
 
 const ToastViewport = forwardRef<
-  ElementRef<typeof ToastPrimitives.Viewport>,
+  ComponentRef<typeof ToastPrimitives.Viewport>,
   ComponentPropsWithRef<typeof ToastPrimitives.Viewport>
->(function ToastViewport({ className, ...props }, _ref) {
+>(function ToastViewport({ className, ...props }, ref) {
   return (
     <ToastPrimitives.Viewport
-      ref={props.ref}
+      ref={ref}
       className={cn(
         'fixed z-[100] flex max-h-screen w-full gap-y-4 flex-col-reverse p-4 sm:flex-col md:max-w-[420px]',
         'top-0 sm:bottom-0 sm:left-0 sm:top-auto',
@@ -55,10 +55,10 @@ const toastVariants = cva(
 )
 
 const Toast = forwardRef<
-  ElementRef<typeof ToastPrimitives.Root>,
+  ComponentRef<typeof ToastPrimitives.Root>,
   ComponentPropsWithRef<typeof ToastPrimitives.Root> &
     VariantProps<typeof toastVariants>
->(function Toast({ className, variant, ref, ...props }, _ref) {
+>(function Toast({ className, variant, ...props }, ref) {
   return (
     <ToastPrimitives.Root
       ref={ref}
@@ -69,9 +69,9 @@ const Toast = forwardRef<
 })
 
 const ToastAction = forwardRef<
-  ElementRef<typeof ToastPrimitives.Action>,
+  ComponentRef<typeof ToastPrimitives.Action>,
   ComponentPropsWithRef<typeof ToastPrimitives.Action>
->(function ToastAction({ className, ref, ...props }, _ref) {
+>(function ToastAction({ className, ...props }, ref) {
   return (
     <ToastPrimitives.Action
       ref={ref}
@@ -85,9 +85,9 @@ const ToastAction = forwardRef<
 })
 
 const ToastClose = forwardRef<
-  ElementRef<typeof ToastPrimitives.Close>,
+  ComponentRef<typeof ToastPrimitives.Close>,
   ComponentPropsWithRef<typeof ToastPrimitives.Close>
->(function ToastClose({ className, ref, ...props }, _ref) {
+>(function ToastClose({ className, ...props }, ref) {
   return (
     <ToastPrimitives.Close
       ref={ref}
@@ -104,9 +104,9 @@ const ToastClose = forwardRef<
 })
 
 const ToastTitle = forwardRef<
-  ElementRef<typeof ToastPrimitives.Title>,
+  ComponentRef<typeof ToastPrimitives.Title>,
   ComponentPropsWithRef<typeof ToastPrimitives.Title>
->(function ToastTitle({ className, ref, ...props }, _ref) {
+>(function ToastTitle({ className, ...props }, ref) {
   return (
     <ToastPrimitives.Title
       ref={ref}
@@ -117,9 +117,9 @@ const ToastTitle = forwardRef<
 })
 
 const ToastDescription = forwardRef<
-  ElementRef<typeof ToastPrimitives.Description>,
+  ComponentRef<typeof ToastPrimitives.Description>,
   ComponentPropsWithRef<typeof ToastPrimitives.Description>
->(function ToastDescription({ className, ref, ...props }, _ref) {
+>(function ToastDescription({ className, ...props }, ref) {
   return (
     <ToastPrimitives.Description
       ref={ref}

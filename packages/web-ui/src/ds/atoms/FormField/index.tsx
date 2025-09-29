@@ -1,7 +1,7 @@
 import { Slot } from '@radix-ui/react-slot'
 import {
   ComponentPropsWithRef,
-  ElementRef,
+  ComponentRef,
   forwardRef,
   HTMLAttributes,
   ReactNode,
@@ -44,17 +44,17 @@ export function InlineFormErrorMessage({
 }
 
 export const FormControl = forwardRef<
-  ElementRef<typeof Slot>,
+  ComponentRef<typeof Slot>,
   ComponentPropsWithRef<typeof Slot> & {
     error?: string | undefined
     formItemId: string
     formDescriptionId: string
     formMessageId: string
   }
->(({ error, formItemId, formMessageId, formDescriptionId, ...props }, _ref) => {
+>(({ error, formItemId, formMessageId, formDescriptionId, ...props }, ref) => {
   return (
     <Slot
-      ref={props.ref}
+      ref={ref}
       id={formItemId}
       aria-describedby={
         !error

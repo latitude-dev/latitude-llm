@@ -16,7 +16,7 @@ export function ResizableLayout({
 }: {
   leftPane: ReactNode
   rightPane: ReactNode
-  rightPaneRef: RefObject<HTMLDivElement>
+  rightPaneRef: RefObject<HTMLDivElement | null>
   showRightPane: boolean
   floatingPanel?: ReactNode
 }) {

@@ -3,7 +3,7 @@
 import { RefObject, useEffect } from 'react'
 
 export function useAutoScroll(
-  ref: RefObject<HTMLDivElement>,
+  ref: RefObject<HTMLDivElement | null>,
   options?: {
     startAtBottom?: boolean
     onScrollChange?: (isScrolledToBottom: boolean) => void
