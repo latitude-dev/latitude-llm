@@ -104,7 +104,7 @@
     "@types/react-dom": "18.3.0",
     "autoprefixer": "^10.4.19",
     "drizzle-kit": "catalog:",
-    "import-in-the-middle": "^1.14.2",
+    "import-in-the-middle": "^1.14.4",
     "node-mocks-http": "^1.15.0",
     "postcss": "^8.4.39",
     "react-markdown": "^9.1.0",
