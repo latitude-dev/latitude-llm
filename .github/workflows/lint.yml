@@ -49,7 +49,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install Node.js dependencies
-        run: pnpm install
+        run: pnpm install --ignore-scripts
 
       - name: Use Turbo to build affected packages
         run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
