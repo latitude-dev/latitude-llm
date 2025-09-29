@@ -151,7 +151,7 @@ function DocumentEditorContent({
     [isPlaygroundOpen, isPlaygroundTransitioning],
   )
 
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
   useAutoScroll(containerRef, { startAtBottom: mode === 'chat' })
 

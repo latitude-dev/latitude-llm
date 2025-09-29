@@ -14,7 +14,7 @@ import { DocsRoute } from './routes'
 type DocumentationContextProps = {
   open: (route: DocsRoute) => void
   navigateTo: (route: DocsRoute) => void
-  ref: RefObject<HTMLIFrameElement>
+  ref: RefObject<HTMLIFrameElement | null>
 }
 
 const DOCS_DOMAIN = envClient.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.latitude.so'
@@ -38,7 +38,7 @@ export function DocumentationProvider({
   children: ReactNode
   onOpen?: () => void
 }) {
-  const ref = useRef<HTMLIFrameElement>(null)
+  const ref = useRef<HTMLIFrameElement | null>(null)
 
   const navigateTo = useCallback((route: DocsRoute) => {
     if (!ref.current) return

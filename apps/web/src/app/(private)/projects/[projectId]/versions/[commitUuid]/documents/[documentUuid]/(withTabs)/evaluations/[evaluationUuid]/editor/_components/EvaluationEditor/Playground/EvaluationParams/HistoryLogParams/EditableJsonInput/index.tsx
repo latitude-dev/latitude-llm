@@ -81,7 +81,7 @@ export function EditableJsonInput({
   input: LogInput | undefined
   setInputs: UseEvaluationParameters['history']['setInputs']
 }) {
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLDivElement | null>(null)
   const [editing, setEditing] = useState(false)
   const onClickEdit = useCallback(() => {
     setEditing(true)

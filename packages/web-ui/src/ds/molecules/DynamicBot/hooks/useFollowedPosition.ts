@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, RefObject } from 'react'
 
-export function useFollowedPosition<T extends HTMLElement>(
+export function useFollowedPosition<T extends HTMLElement | null>(
   ref: RefObject<T>,
   {
     activeOnHover = false,

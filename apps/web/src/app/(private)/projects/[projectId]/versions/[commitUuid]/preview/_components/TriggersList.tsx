@@ -182,7 +182,7 @@ export function TriggersList({
     [setActiveTrigger, setMode],
   )
 
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLDivElement | null>(null)
 
   useAutoScroll(ref, {
     startAtBottom: mode === 'chat',

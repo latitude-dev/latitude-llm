@@ -66,7 +66,7 @@ export default function PreviewPrompt({
   actions?: ReactNode
 } & ActionsState) {
   const { document } = useCurrentDocument()
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
   useAutoScroll(containerRef, { startAtBottom: true })
   const preview = usePreviewConversation({
     parameters,

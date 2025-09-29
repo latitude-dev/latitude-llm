@@ -62,8 +62,8 @@ export function DocumentLogInfo({
   isLoading?: boolean
   error?: Error
   className?: string
-  stickyRef?: RefObject<HTMLTableElement>
-  sidebarWrapperRef?: RefObject<HTMLDivElement>
+  stickyRef?: RefObject<HTMLTableElement | null>
+  sidebarWrapperRef?: RefObject<HTMLDivElement | null>
   children?: ReactNode
   bottomActions?: ReactNode
   offset?: StickyOffset

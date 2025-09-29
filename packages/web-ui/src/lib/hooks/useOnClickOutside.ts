@@ -1,12 +1,12 @@
 import { RefObject, useEffect } from 'react'
 
-export function useOnClickOutside<E extends HTMLElement>({
+export function useOnClickOutside<E extends HTMLDivElement>({
   enabled,
   ref,
   handler,
 }: {
   enabled: boolean
-  ref: RefObject<E>
+  ref: RefObject<E | null>
   handler: (event: MouseEvent | TouchEvent) => void
 }) {
   useEffect(() => {

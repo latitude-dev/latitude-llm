@@ -48,7 +48,7 @@ export default function Chat({
   const runOnce = useRef(false)
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const { data: agentToolsMap } = useAgentToolsMap({
     commitUuid: commit.uuid,
     projectId: project.id,
@@ -135,7 +135,7 @@ function Messages({
   toolContentMap,
 }: {
   playground: ReturnType<typeof usePlaygroundChat>
-  containerRef: React.RefObject<HTMLDivElement>
+  containerRef: React.RefObject<HTMLDivElement | null>
   parameterKeys: string[]
   expandParameters: boolean
   agentToolsMap: AgentToolsMap

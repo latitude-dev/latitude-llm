@@ -114,7 +114,7 @@ function LatteChatUI() {
   }, [stopChat, jobId])
 
   const inConversation = interactions.length > 0
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
   const scrollToBottom = useCallback(() => {
     if (!containerRef.current) return
