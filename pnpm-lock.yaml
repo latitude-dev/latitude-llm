@@ -221,7 +221,7 @@ importers:
         version: link:../../packages/env
       '@latitude-data/sdk':
         specifier: 5.1.0
-        version: 5.1.0(typescript@5.8.3)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: link:../../packages/sdks/typescript
       '@latitude-data/socket.io-react-hook':
         specifier: 2.4.5
         version: 2.4.5(bufferutil@4.0.9)(react@19.0.0-rc-5d19e1c8-20240923)(utf-8-validate@6.0.5)
@@ -962,8 +962,8 @@ importers:
         specifier: 18.1.0
         version: 18.1.0(@types/node@22.15.31)
       uuid:
-        specifier: 11.1.0
-        version: 11.1.0
+        specifier: 13.0.0
+        version: 13.0.0
       zod:
         specifier: 'catalog:'
         version: 3.24.2
@@ -1181,8 +1181,8 @@ importers:
         specifier: ^5.5.4
         version: 5.8.3
       uuid:
-        specifier: 11.1.0
-        version: 11.1.0
+        specifier: 13.0.0
+        version: 13.0.0
       zod:
         specifier: 'catalog:'
         version: 3.24.2
@@ -8390,10 +8390,6 @@ packages:
     resolution: {integrity: sha512-9iSbB8XZ7aIrhUtWI5ulEOJ+IyUN+axquodHK+bZO4r7HfY/xwmo6I4fYYf+aiDom+WMcN/wnzCz+pKvHDDCug==}
     engines: {node: '>=12.17'}
 
-  dc-polyfill@0.1.9:
-    resolution: {integrity: sha512-D5mJThEEk9hf+CJPwTf9JFsrWdlWp8Pccjxkhf7uUT/E/cU9Mx3ebWe2Bz2OawRmJ6WS9eaDPBkeBE4uOKq9uw==}
-    engines: {node: '>=12.17'}
-
   dd-trace@5.43.0:
     resolution: {integrity: sha512-WtPUSZfEosSHYVBFR48FqfYBFor8QchKwAKo+LYtbgTPtFzYKyBV/FJUqYE6sDF15Raf4sJVt/LOscywgj2zEw==}
     engines: {node: '>=18'}
@@ -12153,9 +12149,6 @@ packages:
     resolution: {integrity: sha512-hgyCYMyzMvuF3qWMw6JvS8gT55v7Mtp5wKWcnDrw+nu39D0Tk9BXD7I0LOBp0lGlHEPaXCEVYUtviNKrhMALGA==}
     engines: {node: '>=15.0.0'}
 
-  pprof-format@2.1.0:
-    resolution: {integrity: sha512-0+G5bHH0RNr8E5hoZo/zJYsL92MhkZjwrHp3O2IxmY8RJL9ooKeuZ8Tm0ZNBw5sGZ9TiM71sthTjWoR2Vf5/xw==}
-
   pprof-format@2.2.1:
     resolution: {integrity: sha512-p4tVN7iK19ccDqQv8heyobzUmbHyds4N2FI6aBMcXz6y99MglTWDxIyhFkNaLeEXs6IFUEzT0zya0icbSLLY0g==}
 
@@ -12295,7 +12288,6 @@ packages:
     engines: {node: '>=0.6.0', teleport: '>=0.2.0'}
     deprecated: |-
       You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
-
       (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
 
   qs@6.11.2:
@@ -13928,8 +13920,8 @@ packages:
     resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
     hasBin: true
 
-  uuid@11.1.0:
-    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
+  uuid@13.0.0:
+    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
     hasBin: true
 
   uuid@8.3.2:
@@ -14342,11 +14334,6 @@ packages:
   yaml@2.4.5:
     resolution: {integrity: sha512-aBx2bnqDzVOyNKfsysjA2ms5ZlnjSAW2eG3/L5G/CSujfjLJTJsEw1bGw8kCf04KodQWk1pxlGnZ56CRxiawmg==}
     engines: {node: '>= 14'}
-    hasBin: true
-
-  yaml@2.8.0:
-    resolution: {integrity: sha512-4lLa/EcQCB0cJkyts+FpIRx5G/llPxfP6VQU5KByHEhLxY3IJCH0f0Hy1MHI8sClTvsIb8qwRJ6R/ZdlDJ/leQ==}
-    engines: {node: '>= 14.6'}
     hasBin: true
 
   yaml@2.8.1:
@@ -16302,7 +16289,7 @@ snapshots:
       delay: 5.0.0
       node-gyp-build: 3.9.0
       p-limit: 3.1.0
-      pprof-format: 2.1.0
+      pprof-format: 2.2.1
       source-map: 0.7.4
 
   '@datadog/sketches-js@2.1.1': {}
@@ -17426,9 +17413,9 @@ snapshots:
     dependencies:
       '@langchain/core': 0.3.57(openai@4.104.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@3.24.2))
       js-tiktoken: 1.0.20
-      openai: 4.104.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@3.24.2)
-      zod: 3.24.2
-      zod-to-json-schema: 3.24.5(zod@3.24.2)
+      openai: 4.104.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@3.25.76)
+      zod: 3.25.76
+      zod-to-json-schema: 3.24.5(zod@3.25.76)
     transitivePeerDependencies:
       - encoding
       - ws
@@ -17738,8 +17725,8 @@ snapshots:
       '@llamaindex/env': 0.1.27(@aws-crypto/sha256-js@5.2.0)(@huggingface/transformers@3.5.2)(gpt-tokenizer@2.9.0)(js-tiktoken@1.0.20)(pathe@1.1.2)
       '@types/node': 22.15.31
       magic-bytes.js: 1.12.1
-      zod: 3.24.2
-      zod-to-json-schema: 3.24.5(zod@3.24.2)
+      zod: 3.25.76
+      zod-to-json-schema: 3.24.5(zod@3.25.76)
     transitivePeerDependencies:
       - '@aws-crypto/sha256-js'
       - '@huggingface/transformers'
@@ -18256,7 +18243,7 @@ snapshots:
       ajv-formats: 3.0.1(ajv@8.17.1)
       jsonpointer: 5.0.1
       leven: 4.0.0
-      yaml: 2.8.1
+      yaml: 2.4.5
 
   '@mintlify/prebuild@1.0.545(@types/react@18.3.0)(bufferutil@4.0.9)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(typescript@5.8.3)(utf-8-validate@6.0.5)':
     dependencies:
@@ -23088,8 +23075,6 @@ snapshots:
 
   dc-polyfill@0.1.10: {}
 
-  dc-polyfill@0.1.9: {}
-
   dd-trace@5.43.0:
     dependencies:
       '@datadog/libdatadog': 0.5.1
@@ -23103,7 +23088,7 @@ snapshots:
       '@opentelemetry/api': 1.8.0
       '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.8.0)
       crypto-randomuuid: 1.0.0
-      dc-polyfill: 0.1.9
+      dc-polyfill: 0.1.10
       ignore: 5.3.2
       import-in-the-middle: 1.13.1
       istanbul-lib-coverage: 3.2.0
@@ -23115,7 +23100,7 @@ snapshots:
       module-details-from-path: 1.0.4
       opentracing: 0.14.7
       path-to-regexp: 0.1.12
-      pprof-format: 2.1.0
+      pprof-format: 2.2.1
       protobufjs: 7.5.4
       retry: 0.13.1
       rfdc: 1.4.1
@@ -27354,7 +27339,7 @@ snapshots:
 
   openapi3-ts@4.4.0:
     dependencies:
-      yaml: 2.8.0
+      yaml: 2.8.1
 
   openid-client@6.3.4:
     dependencies:
@@ -27852,8 +27837,6 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  pprof-format@2.1.0: {}
-
   pprof-format@2.2.1: {}
 
   preact@10.27.0: {}
@@ -27917,9 +27900,9 @@ snapshots:
       code-red: 1.0.4
       fast-sha256: 1.3.0
       locate-character: 3.0.0
-      openai: 4.104.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@3.24.2)
+      openai: 4.104.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@3.25.76)
       yaml: 2.4.5
-      zod: 3.24.2
+      zod: 3.25.76
     transitivePeerDependencies:
       - encoding
       - ws
@@ -30279,7 +30262,7 @@ snapshots:
 
   uuid@10.0.0: {}
 
-  uuid@11.1.0: {}
+  uuid@13.0.0: {}
 
   uuid@8.3.2: {}
 
@@ -30310,7 +30293,7 @@ snapshots:
   vfile-matter@5.0.1:
     dependencies:
       vfile: 6.0.3
-      yaml: 2.8.1
+      yaml: 2.4.5
 
   vfile-message@4.0.2:
     dependencies:
@@ -30879,8 +30862,6 @@ snapshots:
   yallist@5.0.0: {}
 
   yaml@2.4.5: {}
-
-  yaml@2.8.0: {}
 
   yaml@2.8.1: {}
 
