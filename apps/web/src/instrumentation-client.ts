@@ -1,26 +1,59 @@
-// This file configures the initialization of Sentry on the client.
-// The added config here will be used whenever a users loads a page in their browser.
-// https://docs.sentry.io/platforms/javascript/guides/nextjs/
-
-import * as Sentry from '@sentry/nextjs'
+// This file configures DataDog RUM (Real User Monitoring) for browser-side monitoring
+import { datadogRum, Site } from '@datadog/browser-rum'
 import { envClient } from './envClient'
 
-Sentry.init({
-  dsn: envClient.NEXT_PUBLIC_SENTRY_WEB_DSN,
+// Initialize DataDog RUM according to the official documentation
+if (
+  typeof window !== 'undefined' &&
+  envClient.NEXT_PUBLIC_DATADOG_APPLICATION_ID &&
+  envClient.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN
+) {
+  datadogRum.init({
+    applicationId: envClient.NEXT_PUBLIC_DATADOG_APPLICATION_ID,
+    clientToken: envClient.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN,
+    site: (envClient.NEXT_PUBLIC_DATADOG_SITE as Site) || 'datadoghq.com',
+    service: 'latitude-web',
+    env: envClient.NEXT_PUBLIC_NODE_ENV || 'development',
+    version: '1.0.0',
+    sessionSampleRate: 100,
+    sessionReplaySampleRate: 10,
+    trackUserInteractions: true,
+    trackResources: true,
+    trackLongTasks: true,
+    defaultPrivacyLevel: 'mask-user-input',
+  })
 
-  // Define how likely Replay events are sampled.
-  // This sets the sample rate to be 10%. You may want this to be 100% while
-  // in development and sample at a lower rate in production
-  replaysSessionSampleRate: 0.1,
+  datadogRum.startSessionReplayRecording()
+}
 
-  // Define how likely Replay events are sampled when an error occurs.
-  replaysOnErrorSampleRate: 1.0,
+// Enhanced client error capture function
+export const captureClientError = (
+  error: Error,
+  context?: Record<string, any>,
+) => {
+  console.error('Client error:', error)
 
-  // Setting this option to true will print useful information to the console while you're setting up Sentry.
-  debug: false,
+  if (typeof window !== 'undefined' && datadogRum.getInternalContext()) {
+    datadogRum.addError(error, {
+      ...context,
+      source: 'custom',
+    })
+  }
+}
 
-  skipOpenTelemetrySetup: true,
-  tracesSampleRate: 0,
-  defaultIntegrations: false,
-  integrations: [Sentry.replayIntegration()],
-})
+// Enhanced client message capture function
+export const captureClientMessage = (
+  message: string,
+  level: 'info' | 'warn' | 'error' = 'info',
+  context?: Record<string, any>,
+) => {
+  console.log(`[${level}] ${message}`)
+
+  if (typeof window !== 'undefined' && datadogRum.getInternalContext()) {
+    datadogRum.addAction('custom_message', {
+      message,
+      level,
+      ...context,
+    })
+  }
+}

@@ -4,7 +4,7 @@ import {
   QuotaType,
   Subscription,
 } from '@latitude-data/core/browser'
-import { database } from '@latitude-data/core/client'
+import { utils, database } from '@latitude-data/core/client'
 import {
   NotFoundError,
   UnauthorizedError,
@@ -22,7 +22,6 @@ import {
 } from '@latitude-data/core/schema'
 import { computeQuota } from '@latitude-data/core/services/grants/quota'
 import { findWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/data-access/find'
-import { and, desc, eq } from 'drizzle-orm'
 
 export type WorkspaceWithDetails = {
   id: number
@@ -76,7 +75,7 @@ async function assertUserIsAdmin(userId: string, db = database) {
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.id, userId))
+    .where(utils.eq(users.id, userId))
     .limit(1)
   if (!user) {
     return Result.error(new NotFoundError('User not found'))
@@ -99,8 +98,8 @@ async function findWorkspaceSubscriptionsForAdmin(
   return await db
     .select()
     .from(subscriptions)
-    .where(eq(subscriptions.workspaceId, workspaceId))
-    .orderBy(desc(subscriptions.createdAt))
+    .where(utils.eq(subscriptions.workspaceId, workspaceId))
+    .orderBy(utils.desc(subscriptions.createdAt))
 }
 
 /**
@@ -124,7 +123,7 @@ export async function findWorkspaceByIdForAdmin(
     const workspaceResult = await db
       .select()
       .from(workspaces)
-      .where(eq(workspaces.id, workspaceId))
+      .where(utils.eq(workspaces.id, workspaceId))
       .limit(1)
 
     const workspace = workspaceResult[0]
@@ -167,8 +166,8 @@ export async function findWorkspaceByIdForAdmin(
         name: users.name,
       })
       .from(memberships)
-      .innerJoin(users, eq(memberships.userId, users.id))
-      .where(eq(memberships.workspaceId, workspaceId))
+      .innerJoin(users, utils.eq(memberships.userId, users.id))
+      .where(utils.eq(memberships.workspaceId, workspaceId))
 
     // Get workspace projects
     const workspaceProjects = await db
@@ -177,7 +176,7 @@ export async function findWorkspaceByIdForAdmin(
         name: projects.name,
       })
       .from(projects)
-      .where(eq(projects.workspaceId, workspaceId))
+      .where(utils.eq(projects.workspaceId, workspaceId))
 
     // Get workspace features
     const workspaceFeaturesList = await db
@@ -190,12 +189,12 @@ export async function findWorkspaceByIdForAdmin(
       .from(features)
       .leftJoin(
         workspaceFeatures,
-        and(
-          eq(features.id, workspaceFeatures.featureId),
-          eq(workspaceFeatures.workspaceId, workspaceId),
+        utils.and(
+          utils.eq(features.id, workspaceFeatures.featureId),
+          utils.eq(workspaceFeatures.workspaceId, workspaceId),
         ),
       )
-      .where(eq(workspaceFeatures.enabled, true)) // Only show enabled features
+      .where(utils.eq(workspaceFeatures.enabled, true)) // Only show enabled features
 
     const repository = new GrantsRepository(workspaceId)
     const grantsResult = await repository.listApplicable(
@@ -261,7 +260,7 @@ export async function findUserByEmailForAdmin(
         name: users.name,
       })
       .from(users)
-      .where(eq(users.email, email))
+      .where(utils.eq(users.email, email))
       .limit(1)
 
     const user = userResult[0]
@@ -276,8 +275,8 @@ export async function findUserByEmailForAdmin(
         name: workspaces.name,
       })
       .from(memberships)
-      .innerJoin(workspaces, eq(memberships.workspaceId, workspaces.id))
-      .where(eq(memberships.userId, user.id))
+      .innerJoin(workspaces, utils.eq(memberships.workspaceId, workspaces.id))
+      .where(utils.eq(memberships.userId, user.id))
 
     const result: UserWithDetails = {
       ...user,
@@ -315,8 +314,8 @@ export async function findProjectByIdForAdmin(
         workspaceName: workspaces.name,
       })
       .from(projects)
-      .innerJoin(workspaces, eq(projects.workspaceId, workspaces.id))
-      .where(eq(projects.id, projectId))
+      .innerJoin(workspaces, utils.eq(projects.workspaceId, workspaces.id))
+      .where(utils.eq(projects.id, projectId))
       .limit(1)
 
     const project = result[0]

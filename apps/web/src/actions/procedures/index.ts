@@ -14,7 +14,7 @@ import {
   EvaluationsV2Repository,
   ProjectsRepository,
 } from '@latitude-data/core/repositories'
-import * as Sentry from '@sentry/nextjs'
+import { captureException } from '$/helpers/captureException'
 import { ReplyError } from 'ioredis'
 import { headers } from 'next/headers'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
@@ -32,15 +32,14 @@ export const errorHandlingProcedure = createServerActionProcedure()
     try {
       const data = await getCurrentUserOrRedirect()
 
-      Sentry.captureException(error, {
-        user: {
-          id: data.user.id,
-          name: data.user.name,
-          email: data.user.email,
-        },
+      captureException(error as Error, {
+        component: 'serverAction',
+        userId: data.user.id,
+        userName: data.user.name,
+        userEmail: data.user.email,
       })
     } catch (_) {
-      Sentry.captureException(error)
+      captureException(error as Error, { component: 'serverAction' })
     }
   })
   .handler((ctx) => ({ ...ctx }))

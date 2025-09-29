@@ -1,5 +1,5 @@
 import { useMemo, Fragment, useCallback } from 'react'
-import { NavbarItem } from './navbarItem'
+import { NavbarItem } from './NavbarItem'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
