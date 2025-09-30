@@ -1,95 +1,49 @@
-import { useCallback } from 'react'
 import useSWR from 'swr'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-
-export type OnboardingStatus = {
-  id?: number
-  workspaceId?: number
-  completedAt?: Date | null
-}
+import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { moveNextOnboardingStepAction } from '$/actions/workspaceOnboarding/moveNextStep'
+import { WorkspaceOnboarding } from '@latitude-data/core/browser'
 
 export default function useWorkspaceOnboarding() {
-  const { toast } = useToast()
-  const fetcher = useFetcher<OnboardingStatus>(
+  const fetcher = useFetcher<WorkspaceOnboarding>(
     ROUTES.api.workspaces.onboarding.root,
   )
 
-  const { data, error, mutate, isLoading } = useSWR<OnboardingStatus, Error>(
+  const { data, error, mutate, isLoading } = useSWR<WorkspaceOnboarding, Error>(
     'api/workspaces/onboarding',
     fetcher,
     {
-      revalidateOnFocus: false,
-      revalidateIfStale: false,
+      revalidateOnFocus: true,
+      revalidateIfStale: true,
     },
   )
 
-  const updateStep = useCallback(
-    async (step: number) => {
-      try {
-        const response = await fetch(ROUTES.api.workspaces.onboarding.update, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ step }),
-        })
-
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || 'Failed to update onboarding step')
-        }
-
-        const updatedOnboarding = await response.json()
-        mutate(updatedOnboarding)
-        return updatedOnboarding
-      } catch (error) {
-        toast({
-          title: 'Failed to update onboarding step',
-          description: error instanceof Error ? error.message : String(error),
-          variant: 'destructive',
-        })
-        throw error
-      }
-    },
-    [mutate, toast],
+  const { execute: executeCompleteOnboarding } = useLatitudeAction(
+    completeOnboardingAction,
   )
 
-  const completeOnboarding = useCallback(async () => {
-    try {
-      const response = await fetch(ROUTES.api.workspaces.onboarding.update, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ complete: true }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to complete onboarding')
+  const {
+    execute: moveNextOnboardingStep,
+    isPending: isPendingNextOnboardingStep,
+  } = useLatitudeAction(moveNextOnboardingStepAction, {
+    onSuccess: ({ data: updatedOnboarding }) => {
+      if (!updatedOnboarding) {
+        return
       }
 
-      const updatedOnboarding = await response.json()
-      mutate(updatedOnboarding)
-      return updatedOnboarding
-    } catch (error) {
-      toast({
-        title: 'Failed to complete onboarding',
-        description: error instanceof Error ? error.message : String(error),
-        variant: 'destructive',
-      })
-      throw error
-    }
-  }, [mutate, toast])
+      mutate(updatedOnboarding, { revalidate: false })
+    },
+  })
 
   return {
     onboarding: data,
     error,
     isLoading,
-    updateStep,
-    completeOnboarding,
+    moveNextOnboardingStep,
+    isPendingNextOnboardingStep,
+    executeCompleteOnboarding,
     refetch: () => mutate(),
   }
 }

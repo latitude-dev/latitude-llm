@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."workspace_onboarding" ADD COLUMN "current_step" varchar(128) DEFAULT 'setupIntegrations';

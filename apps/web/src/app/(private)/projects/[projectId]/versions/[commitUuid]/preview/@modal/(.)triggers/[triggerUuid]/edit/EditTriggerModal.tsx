@@ -1,11 +1,8 @@
 'use client'
 
-import { useParams } from 'next/navigation'
-import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useDocumentVersions from '$/stores/documentVersions'
-import { DocumentTriggerType, HEAD_COMMIT } from '@latitude-data/constants'
+import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -20,6 +17,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { EditEmailTrigger } from './_components/EmailTrigger'
 import { EditIntegrationTrigger } from './_components/IntegrationTrigger'
 import { EditScheduleTrigger } from './_components/ScheduleTrigger'
@@ -28,28 +26,31 @@ import {
   useDocumentSelection,
 } from '../../../(.)triggers/_components/SelectDocument'
 
-function useDocumentTrigger({ triggerUuid }: { triggerUuid: string }) {
-  const navigate = useNavigate()
+function useDocumentTrigger({
+  triggerUuid,
+  redirectPath,
+  onClose,
+}: {
+  triggerUuid: string
+  redirectPath?: string
+  onClose?: () => void
+}) {
+  const router = useRouter()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { commitUuid: paramCommitUuid } = useParams()
-  const isHead = paramCommitUuid === HEAD_COMMIT ? HEAD_COMMIT : null
+
+  const onCloseModal = useCallback(() => {
+    if (onClose) {
+      onClose()
+    } else if (redirectPath) {
+      router.push(redirectPath)
+    }
+  }, [onClose, router, redirectPath])
   const { data: documents, isLoading: isLoadingDocuments } =
     useDocumentVersions({
       commitUuid: commit.uuid,
       projectId: project.id,
     })
-  const previewPath = useMemo(
-    () =>
-      ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({ uuid: isHead ? HEAD_COMMIT : commit.uuid }).preview
-        .root,
-    [project.id, commit.uuid, isHead],
-  )
-  const onCloseModal = useCallback(() => {
-    navigate.push(previewPath, { scroll: false })
-  }, [navigate, previewPath])
   const {
     update,
     isUpdating,
@@ -153,19 +154,31 @@ function EditTrigger<T extends DocumentTriggerType>(
   return <Text.H5>Unsupported trigger type: {type}</Text.H5>
 }
 
-export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
+export function EditTriggerModal({
+  triggerUuid,
+  redirectPath,
+  onClose,
+  withDeleteButton = true,
+}: {
+  triggerUuid: string
+  redirectPath?: string
+  onClose?: () => void
+  withDeleteButton?: boolean
+}) {
   const {
     update,
     trigger,
     document,
     isMerged,
-    onCloseModal,
     isLoading,
     isUpdating,
     onDeleteTrigger,
     isDeleting,
+    onCloseModal,
   } = useDocumentTrigger({
     triggerUuid,
+    redirectPath,
+    onClose,
   })
 
   const [configuration, setTriggerConfiguration] =
@@ -199,25 +212,35 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
     // Close modal if trigger is not found
     onCloseModal()
   }, [trigger, isLoading, onCloseModal])
+
   const footer = useMemo(() => {
     if (isMerged) return null
 
     return (
       <>
-        <Button
-          fancy
-          disabled={isDeleting}
-          variant='outlineDestructive'
-          onClick={onDeleteTrigger}
-        >
-          {isDeleting ? 'Deleting...' : 'Delete'}
-        </Button>
+        {withDeleteButton && (
+          <Button
+            fancy
+            disabled={isDeleting}
+            variant='outlineDestructive'
+            onClick={onDeleteTrigger}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        )}
         <Button disabled={isUpdating} fancy onClick={onUpdate}>
           Update
         </Button>
       </>
     )
-  }, [isMerged, isDeleting, onDeleteTrigger, isUpdating, onUpdate])
+  }, [
+    isMerged,
+    isDeleting,
+    onDeleteTrigger,
+    isUpdating,
+    onUpdate,
+    withDeleteButton,
+  ])
 
   return (
     <Modal
@@ -226,7 +249,7 @@ export function EditTriggerModal({ triggerUuid }: { triggerUuid: string }) {
       title={isLoading ? 'Edit' : `Edit ${trigger?.triggerType} trigger`}
       description='Edit the trigger configuration'
       onOpenChange={onCloseModal}
-      footerAlign='justify'
+      footerAlign={withDeleteButton ? 'justify' : 'right'}
       footer={footer}
     >
       {isLoading ? <LoadingTrigger /> : null}

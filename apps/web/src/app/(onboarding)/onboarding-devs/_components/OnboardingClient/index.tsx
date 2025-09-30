@@ -9,13 +9,12 @@ import {
 } from '@latitude-data/core/browser'
 import { useCallback, useState } from 'react'
 import { ROUTES } from '$/services/routes'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
-import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useRunOnboardingPrompt } from '$/app/(onboarding)/onboarding-devs/_components/OnboardingClient/useRunPrompt'
 import { OnboardingPromptStep } from '$/app/(onboarding)/onboarding-devs/_components/OnboardingClient/PromptStep'
 import { ExperimentStep } from '$/app/(onboarding)/onboarding-devs/_components/OnboardingClient/ExperimentStep'
+import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 
 type OnboardingStep1ContentProps = {
   workspaceName: string
@@ -49,12 +48,11 @@ export function OnboardingClient({
     setCurrentStep,
   })
 
-  const { execute: completeOnboarding } = useLatitudeAction(
-    completeOnboardingAction,
-  )
+  const { executeCompleteOnboarding } = useWorkspaceOnboarding()
+
   const onCompleteOnboarding = useCallback(
     async ({ experimentUuids }: { experimentUuids: string[] }) => {
-      await completeOnboarding()
+      await executeCompleteOnboarding()
       toast({
         title: 'Experiment started!',
         description:
@@ -71,7 +69,7 @@ export function OnboardingClient({
       }, 1000)
     },
     [
-      completeOnboarding,
+      executeCompleteOnboarding,
       navigate,
       project.id,
       commit.uuid,

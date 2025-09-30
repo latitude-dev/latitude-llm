@@ -1,13 +1,12 @@
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { workspaceOnboarding } from '../../schema/models/workspaceOnboarding'
-import { workspaces } from '../../schema/models/workspaces'
 
 export async function createWorkspaceOnboarding(
   {
-    workspace,
+    workspaceId,
   }: {
-    workspace: typeof workspaces.$inferSelect
+    workspaceId: number
   },
   transaction = new Transaction(),
 ) {
@@ -15,7 +14,7 @@ export async function createWorkspaceOnboarding(
     const insertedOnboardings = await tx
       .insert(workspaceOnboarding)
       .values({
-        workspaceId: workspace.id,
+        workspaceId,
       })
       .returning()
 

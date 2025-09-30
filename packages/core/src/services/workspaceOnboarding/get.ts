@@ -3,17 +3,19 @@ import { eq } from 'drizzle-orm'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { workspaceOnboarding } from '../../schema/models/workspaceOnboarding'
-import { workspaces } from '../../schema/models/workspaces'
 import { database } from '../../client'
+import { Workspace } from '../../browser'
+import { WorkspaceOnboarding } from '../../schema/types'
+import { PromisedResult } from '../../lib/Transaction'
 
 export async function getWorkspaceOnboarding(
   {
     workspace,
   }: {
-    workspace: typeof workspaces.$inferSelect
+    workspace: Workspace
   },
   db = database,
-) {
+): PromisedResult<WorkspaceOnboarding> {
   const onboardings = await db
     .select()
     .from(workspaceOnboarding)

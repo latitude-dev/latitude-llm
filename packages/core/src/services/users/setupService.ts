@@ -80,9 +80,10 @@ export default async function setupService(
 
     const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
     if (isNewOnboardingEnabled) {
-      await createWorkspaceOnboarding({ workspace }, transaction).then((r) =>
-        r.unwrap(),
-      )
+      await createWorkspaceOnboarding(
+        { workspaceId: workspace.id },
+        transaction,
+      ).then((r) => r.unwrap())
     }
 
     publisher.publishLater({

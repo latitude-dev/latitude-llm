@@ -37,7 +37,9 @@ export async function createWorkspace(
   await createMembership({ workspace, user: userData }).then((r) => r.unwrap())
 
   if (workspaceData.onboarding) {
-    await createWorkspaceOnboarding({ workspace }).then((r) => r.unwrap())
+    await createWorkspaceOnboarding({ workspaceId: workspace.id }).then((r) =>
+      r.unwrap(),
+    )
   }
 
   if (workspaceData.features) {
