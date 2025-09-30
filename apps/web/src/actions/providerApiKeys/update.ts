@@ -7,19 +7,18 @@ import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { updateProviderApiKeyName } from '@latitude-data/core/services/providerApiKeys/updateName'
 
 export const updateProviderApiKeyAction = authProcedure
-  .createServerAction()
-  .input(z.object({ id: z.coerce.number(), name: z.string() }))
-  .handler(async ({ input, ctx }) => {
+  .inputSchema(z.object({ id: z.coerce.number(), name: z.string() }))
+  .action(async ({ parsedInput, ctx }) => {
     const providerApiKeysRepository = new ProviderApiKeysRepository(
       ctx.workspace.id,
     )
     const providerApiKey = await providerApiKeysRepository
-      .find(input.id)
+      .find(parsedInput.id)
       .then((r) => r.unwrap())
 
     return await updateProviderApiKeyName({
       providerApiKey,
-      name: input.name,
+      name: parsedInput.name,
       workspaceId: ctx.workspace.id,
     })
       .then((r) => r.unwrap())

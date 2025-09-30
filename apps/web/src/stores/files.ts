@@ -23,7 +23,7 @@ export default function useFiles() {
       onError: async (error) => {
         toast({
           title: 'Error uploading file',
-          description: error?.err?.message,
+          description: error?.message,
           variant: 'destructive',
         })
       },
@@ -40,7 +40,7 @@ export default function useFiles() {
       onError: async (error) => {
         toast({
           title: 'Error converting file',
-          description: error?.err?.message,
+          description: error?.message,
           variant: 'destructive',
         })
       },

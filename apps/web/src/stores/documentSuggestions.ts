@@ -63,7 +63,7 @@ export default function useDocumentSuggestions(
     onError: async (error) => {
       toast({
         title: 'Error applying suggestion',
-        description: error?.err?.message,
+        description: error?.message,
         variant: 'destructive',
       })
     },
@@ -97,7 +97,7 @@ export default function useDocumentSuggestions(
     onError: async (error) => {
       toast({
         title: 'Error discarding suggestion',
-        description: error?.err?.message,
+        description: error?.message,
         variant: 'destructive',
       })
     },

@@ -101,7 +101,7 @@ async function validate(
 }
 
 const promptSchema = z.object({
-  score: z.number().int().min(0).max(100),
+  score: z.int().min(0).max(100),
   reason: z.string(),
 })
 

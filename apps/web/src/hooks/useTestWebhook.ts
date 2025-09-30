@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { testWebhookAction } from '$/actions/webhooks/testWebhook'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 interface UseTestWebhookOptions {
   getUrl: () => string | null
@@ -10,6 +11,7 @@ export function useTestWebhook({ getUrl }: UseTestWebhookOptions) {
   const [isTestingEndpoint, setIsTestingEndpoint] = useState(false)
   const { toast } = useToast()
 
+  const { execute: executeTestWebhook } = useLatitudeAction(testWebhookAction)
   const testEndpoint = async () => {
     const url = getUrl()
 
@@ -24,7 +26,7 @@ export function useTestWebhook({ getUrl }: UseTestWebhookOptions) {
 
     setIsTestingEndpoint(true)
     try {
-      const [_, error] = await testWebhookAction({ url })
+      const [_, error] = await executeTestWebhook({ url })
       if (error) throw error
 
       toast({

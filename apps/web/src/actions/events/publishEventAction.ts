@@ -6,15 +6,14 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const publishEventAction = authProcedure
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       eventType: z.string(),
-      payload: z.record(z.any()).optional(),
+      payload: z.record(z.string(), z.any()).optional(),
     }),
   )
-  .handler(async ({ ctx, input }) => {
-    const { eventType, payload } = input
+  .action(async ({ ctx, parsedInput }) => {
+    const { eventType, payload } = parsedInput
     const data = {
       userEmail: ctx.user.email,
       workspaceId: ctx.workspace.id,

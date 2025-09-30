@@ -37,7 +37,7 @@
     "@types/json-schema": "^7.0.15"
   },
   "dependencies": {
-    "ai": "^4.2.9",
+    "ai": "catalog:",
     "json-schema": "^0.4.0",
     "promptl-ai": "catalog:",
     "zod": "catalog:"

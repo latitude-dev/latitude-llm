@@ -7,7 +7,8 @@ import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { acceptInvitationAction } from '$/actions/invitations/accept'
-import { useServerAction } from 'zsa-react'
+import { useFormAction } from '$/hooks/useFormAction'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 export default function InvitationForm({
   user,
@@ -19,24 +20,20 @@ export default function InvitationForm({
   footer: ReactNode
 }) {
   const { toast } = useToast()
-  const { isPending, error, executeFormAction } = useServerAction(
-    acceptInvitationAction,
-    {
-      onError: ({ err }) => {
-        if (err.code === 'ERROR') {
-          toast({
-            title: 'Saving failed',
-            description: err.message,
-            variant: 'destructive',
-          })
-        }
-      },
+  const { execute, isPending } = useLatitudeAction(acceptInvitationAction)
+  const { error, action } = useFormAction(execute, {
+    onError: (error) => {
+      toast({
+        title: 'Saving failed',
+        description: error.message,
+        variant: 'destructive',
+      })
     },
-  )
+  })
   const errors = error?.fieldErrors
 
   return (
-    <form action={executeFormAction as any}>
+    <form action={action}>
       <FormWrapper>
         <Input
           hidden

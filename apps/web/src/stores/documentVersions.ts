@@ -22,7 +22,6 @@ import {
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useRouter } from 'next/navigation'
 import useSWR, { SWRConfiguration } from 'swr'
-import { inferServerActionReturnData } from 'zsa'
 
 const EMPTY_DATA = [] as DocumentVersion[]
 
@@ -278,11 +277,7 @@ export default function useDocumentVersions(
   const { execute: updateContent, isPending: isUpdatingContent } =
     useLatitudeAction(updateDocumentContentAction, {
       onSuccess: useCallback(
-        ({
-          data: document,
-        }: {
-          data: inferServerActionReturnData<typeof updateDocumentContentAction>
-        }) => {
+        ({ data: document }: { data: DocumentVersion }) => {
           if (!document) return
 
           const prevDocuments = data || []
@@ -300,11 +295,7 @@ export default function useDocumentVersions(
   const { execute: assignDataset, isPending: isAssigningDataset } =
     useLatitudeAction(assignDatasetAction, {
       onSuccess: useCallback(
-        ({
-          data: document,
-        }: {
-          data: inferServerActionReturnData<typeof assignDatasetAction>
-        }) => {
+        ({ data: document }: { data: DocumentVersion }) => {
           if (!document) return
 
           const prevDocuments = data || []
@@ -321,11 +312,7 @@ export default function useDocumentVersions(
   const { execute: saveLinkedDataset, isPending: isLinkingDataset } =
     useLatitudeAction(saveLinkedDatasetAction, {
       onSuccess: useCallback(
-        ({
-          data: document,
-        }: {
-          data: inferServerActionReturnData<typeof saveLinkedDatasetAction>
-        }) => {
+        ({ data: document }: { data: DocumentVersion }) => {
           if (!document) return
 
           const prevDocuments = data || []

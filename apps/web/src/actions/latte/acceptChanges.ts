@@ -6,15 +6,14 @@ import { clearLatteThreadCheckpoints } from '@latitude-data/core/services/copilo
 import { evaluateLatteThreadChanges } from '@latitude-data/core/services/copilot/latte/threads/evaluateChanges'
 
 export const acceptLatteChangesAction = authProcedure
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       threadUuid: z.string(),
     }),
   )
-  .handler(async ({ ctx, input }) => {
+  .action(async ({ ctx, parsedInput }) => {
     const { workspace } = ctx
-    const { threadUuid } = input
+    const { threadUuid } = parsedInput
 
     const checkpoints = await clearLatteThreadCheckpoints({
       threadUuid,

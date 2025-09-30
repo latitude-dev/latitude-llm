@@ -1,12 +1,12 @@
 import { z } from 'zod'
 import { LogSources } from '../../browser'
 import { UnprocessableEntityError } from '../../lib/errors'
-import { Result } from '../../lib/Result'
+import { Result, TypedResult } from '../../lib/Result'
 import { BACKGROUND } from '../../telemetry'
 import { runDocumentAtCommit } from '../commits/runDocumentAtCommit'
 import { Copilot } from './shared'
 
-export async function runCopilot<S extends z.ZodSchema = z.ZodAny>({
+export async function runCopilot<S extends z.ZodType = z.ZodType>({
   copilot,
   parameters = {},
   schema,
@@ -14,7 +14,12 @@ export async function runCopilot<S extends z.ZodSchema = z.ZodAny>({
   copilot: Copilot
   parameters?: Record<string, unknown>
   schema?: S
-}) {
+}): Promise<
+  TypedResult<
+    S extends z.ZodType ? z.infer<S> : unknown,
+    UnprocessableEntityError
+  >
+> {
   const result = await runDocumentAtCommit({
     context: BACKGROUND({ workspaceId: copilot.workspace.id }),
     workspace: copilot.workspace,
@@ -34,7 +39,6 @@ export async function runCopilot<S extends z.ZodSchema = z.ZodAny>({
     )
   }
 
-  let output: S extends z.ZodSchema ? z.infer<S> : unknown = response.object
   if (schema) {
     const result = schema.safeParse(response.object)
     if (result.error) {
@@ -44,8 +48,10 @@ export async function runCopilot<S extends z.ZodSchema = z.ZodAny>({
         ),
       )
     }
-    output = result.data
+    return Result.ok(result.data as S extends z.ZodType ? z.infer<S> : unknown)
   }
 
-  return Result.ok(output)
+  return Result.ok(
+    response.object as S extends z.ZodType ? z.infer<S> : unknown,
+  )
 }
