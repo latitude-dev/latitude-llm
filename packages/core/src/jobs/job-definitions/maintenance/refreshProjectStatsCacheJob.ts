@@ -9,5 +9,5 @@ export const refreshProjectStatsCacheJob = async (
   job: Job<RefreshProjectStatsCacheJobData>,
 ) => {
   const { projectId } = job.data
-  return await refreshProjectStatsCache(projectId).then((r) => r.unwrap())
+  await refreshProjectStatsCache(projectId).then((r) => r.unwrap())
 }

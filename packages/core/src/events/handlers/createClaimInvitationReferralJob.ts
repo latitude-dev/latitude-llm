@@ -6,5 +6,5 @@ export const createClaimInvitationReferralJob = ({
 }: {
   data: ClaimReferralInvitationEvent
 }) => {
-  return claimNewUserReferrals({ email: event.data.newUser.email })
+  claimNewUserReferrals({ email: event.data.newUser.email })
 }

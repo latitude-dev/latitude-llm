@@ -13,7 +13,7 @@ export const createProviderLogJob = async ({
 }: {
   data: CreateProviderLogJobProps
 }) => {
-  return await createProviderLog({
+  await createProviderLog({
     ...data,
     generatedAt: new Date(data.generatedAt),
   }).then((r) => r.unwrap())

@@ -9,5 +9,5 @@ export const refreshDocumentStatsCacheJob = async (
   job: Job<RefreshDocumentStatsCacheJobData>,
 ) => {
   const { documentUuid } = job.data
-  return await refreshDocumentStatsCache(documentUuid).then((r) => r.unwrap())
+  await refreshDocumentStatsCache(documentUuid).then((r) => r.unwrap())
 }

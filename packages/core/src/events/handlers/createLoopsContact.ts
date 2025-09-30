@@ -40,6 +40,4 @@ export async function createLoopsContact({
 
     throw new Error(`For email: ${userEmail}: ${response.message}`)
   }
-
-  return Result.ok(response.id)
 }

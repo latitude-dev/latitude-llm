@@ -12,7 +12,7 @@ export const refreshDocumentsStatsCacheJob = async (
 ) => {
   const projectIds = env.LIMITED_VIEW_PROJECT_IDS?.split(',').map(Number) || []
   if (!projectIds.length) {
-    return { success: true, documents: 0 }
+    return
   }
 
   const commitIds = await database
@@ -23,7 +23,7 @@ export const refreshDocumentsStatsCacheJob = async (
     )
     .then((r) => r.map(({ id }) => id))
   if (!commitIds.length) {
-    return { success: true, documents: 0 }
+    return
   }
 
   const candidates = await database
@@ -45,6 +45,4 @@ export const refreshDocumentsStatsCacheJob = async (
       { attempts: 1 },
     )
   }
-
-  return { success: true, documents: candidates.length }
 }

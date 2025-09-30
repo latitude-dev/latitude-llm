@@ -40,6 +40,4 @@ export const runDocumentTriggerEventJob = async (
     documentTriggerEvent,
     commit,
   }).then((r) => r.unwrap())
-
-  return { success: true }
 }

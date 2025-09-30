@@ -24,7 +24,7 @@ export const touchProviderApiKeyJob: EventHandler<
   const providerId = providerLog.providerId
   const cacheKey = `touch_provider_api_key:${providerId}`
 
-  return await bufferOperation(
+  await bufferOperation(
     cacheKey,
     () => touchProviderApiKey(providerId),
     BUFFER_TIME_SECONDS,

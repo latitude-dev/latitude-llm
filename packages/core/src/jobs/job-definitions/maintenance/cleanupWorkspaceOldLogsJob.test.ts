@@ -113,16 +113,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
     } as Job
 
     // Run the cleanup job
-    const result = await cleanupWorkspaceOldLogsJob(mockJob)
-
-    // Verify the result
-    expect(result.ok).toBe(true)
-
-    if (result.ok) {
-      expect(result.value!.deletedDocumentLogs).toBe(2) // Only old logs from workspace1
-      expect(result.value!.deletedProviderLogs).toBe(6) // Only provider logs for old document logs from workspace1 (2 factory + 1 manual per document log)
-      expect(result.value!.workspaceId).toBe(workspace1.id)
-    }
+    await cleanupWorkspaceOldLogsJob(mockJob)
 
     // Verify old document logs from workspace1 were deleted
     const remainingDocLogsWorkspace1 = await database
@@ -178,10 +169,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
       data: { workspaceId: workspace1.id },
     } as Job
 
-    const result = await cleanupWorkspaceOldLogsJob(mockJob)
-
-    expect(result.ok).toBe(true)
-    if (result.ok) expect(result.value).toBeUndefined()
+    await cleanupWorkspaceOldLogsJob(mockJob)
   })
 
   it('does nothing if team v1 plan', async () => {
@@ -195,10 +183,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
       data: { workspaceId: workspace1.id },
     } as Job
 
-    const result = await cleanupWorkspaceOldLogsJob(mockJob)
-
-    expect(result.ok).toBe(true)
-    if (result.ok) expect(result.value).toBeUndefined()
+    await cleanupWorkspaceOldLogsJob(mockJob)
   })
 
   it('does nothing if team v2 plan', async () => {
@@ -212,10 +197,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
       data: { workspaceId: workspace1.id },
     } as Job
 
-    const result = await cleanupWorkspaceOldLogsJob(mockJob)
-
-    expect(result.ok).toBe(true)
-    if (result.ok) expect(result.value).toBeUndefined()
+    await cleanupWorkspaceOldLogsJob(mockJob)
   })
 
   it('does nothing if enterprise plan', async () => {
@@ -229,10 +211,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
       data: { workspaceId: workspace1.id },
     } as Job
 
-    const result = await cleanupWorkspaceOldLogsJob(mockJob)
-
-    expect(result.ok).toBe(true)
-    if (result.ok) expect(result.value).toBeUndefined()
+    await cleanupWorkspaceOldLogsJob(mockJob)
   })
 
   it('should handle empty workspace with no logs', async () => {
@@ -240,14 +219,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
       data: { workspaceId: workspace1.id },
     } as Job
 
-    const result = await cleanupWorkspaceOldLogsJob(mockJob)
-
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value!.deletedDocumentLogs).toBe(0)
-      expect(result.value!.deletedProviderLogs).toBe(0)
-      expect(result.value!.workspaceId).toBe(workspace1.id)
-    }
+    await cleanupWorkspaceOldLogsJob(mockJob)
   })
 
   it('should handle workspace with only recent logs', async () => {
@@ -264,14 +236,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
       data: { workspaceId: workspace1.id },
     } as Job
 
-    const result = await cleanupWorkspaceOldLogsJob(mockJob)
-
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value!.deletedDocumentLogs).toBe(0)
-      expect(result.value!.deletedProviderLogs).toBe(0) // Recent logs should not be deleted (2 provider logs per document log from factory)
-      expect(result.value!.workspaceId).toBe(workspace1.id)
-    }
+    await cleanupWorkspaceOldLogsJob(mockJob)
   })
 
   it('should handle document logs without associated provider logs', async () => {
@@ -289,14 +254,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
       data: { workspaceId: workspace1.id },
     } as Job
 
-    const result = await cleanupWorkspaceOldLogsJob(mockJob)
-
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value!.deletedDocumentLogs).toBe(1)
-      expect(result.value!.deletedProviderLogs).toBe(0) // No provider logs to delete
-      expect(result.value!.workspaceId).toBe(workspace1.id)
-    }
+    await cleanupWorkspaceOldLogsJob(mockJob)
   })
 
   it('should correctly calculate cutoff date', async () => {
@@ -332,20 +290,7 @@ describe('cleanupWorkspaceOldLogsJob', () => {
       data: { workspaceId: workspace1.id },
     } as Job
 
-    const result = await cleanupWorkspaceOldLogsJob(mockJob)
-
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value!.deletedDocumentLogs).toBe(1) // Only the 31-day-old log
-      expect(result.value!.workspaceId).toBe(workspace1.id)
-
-      // Verify cutoff date in result is approximately 30 days ago
-      const cutoffDate = new Date(result.value!.cutoffDate)
-      const expectedCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      const diffMs = Math.abs(cutoffDate.getTime() - expectedCutoff.getTime())
-      const diffDays = diffMs / (1000 * 60 * 60 * 24)
-      expect(diffDays).toBeLessThan(0.1) // Within 0.1 days tolerance
-    }
+    await cleanupWorkspaceOldLogsJob(mockJob)
   })
 
   it('should handle multiple projects within the same workspace', async () => {
@@ -378,12 +323,6 @@ describe('cleanupWorkspaceOldLogsJob', () => {
       data: { workspaceId: workspace1.id },
     } as Job
 
-    const result = await cleanupWorkspaceOldLogsJob(mockJob)
-
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value!.deletedDocumentLogs).toBe(2) // Both old logs from workspace1
-      expect(result.value!.workspaceId).toBe(workspace1.id)
-    }
+    await cleanupWorkspaceOldLogsJob(mockJob)
   })
 })

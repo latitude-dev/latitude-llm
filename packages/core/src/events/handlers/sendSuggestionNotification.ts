@@ -80,6 +80,6 @@ export const sendSuggestionNotification = async ({
 
     await mailer.send().then((r) => r.unwrap())
 
-    return Result.ok({ suggestion })
+    return Result.nil()
   })
 }

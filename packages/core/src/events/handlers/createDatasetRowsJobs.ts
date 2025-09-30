@@ -7,7 +7,7 @@ export async function createDatasetRowsJob({
 }: {
   data: DatasetV2CreatedEvent
 }) {
-  return await createRowsFromUploadedDataset({
+  await createRowsFromUploadedDataset({
     event,
     onRowsCreated: ({ rows }) => {
       WebsocketClient.sendEvent('datasetRowsCreated', {

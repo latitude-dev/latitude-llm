@@ -38,9 +38,9 @@ export const cleanupWorkspaceOldLogsJob = async (
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - 30)
 
-  return await new Transaction().call(async (tx) => {
-    let totalDeletedProviderLogs = 0
-    let totalDeletedDocumentLogs = 0
+  await new Transaction().call(async (tx) => {
+    let _totalDeletedProviderLogs = 0
+    let _totalDeletedDocumentLogs = 0
 
     // Delete provider logs in batches to avoid memory issues and long-running transactions
     const batchSize = 1000
@@ -98,16 +98,10 @@ export const cleanupWorkspaceOldLogsJob = async (
         deletedProviderLogsBatch = deletedProviderLogResult.length
       }
 
-      totalDeletedDocumentLogs += deletedDocumentLogsBatch
-      totalDeletedProviderLogs += deletedProviderLogsBatch
+      _totalDeletedDocumentLogs += deletedDocumentLogsBatch
+      _totalDeletedProviderLogs += deletedProviderLogsBatch
     } while (deletedDocumentLogsBatch === batchSize)
 
-    return Result.ok({
-      success: true,
-      workspaceId,
-      deletedDocumentLogs: totalDeletedDocumentLogs,
-      deletedProviderLogs: totalDeletedProviderLogs,
-      cutoffDate: cutoffDate.toISOString(),
-    })
+    return Result.nil()
   })
 }

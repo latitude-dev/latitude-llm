@@ -243,8 +243,6 @@ export const downloadLogsJob = async (
       .then((r) => r.unwrap())
 
     await markExportReady({ export: exportRecord }).then((r) => r.unwrap())
-
-    return { totalProcessed }
   } finally {
     await cursorState.cleanup()
   }

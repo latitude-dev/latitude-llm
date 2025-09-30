@@ -23,6 +23,4 @@ export const refreshProjectsStatsCacheJob = async (
       { attempts: 1 },
     )
   }
-
-  return { success: true, projects: candidates.length }
 }

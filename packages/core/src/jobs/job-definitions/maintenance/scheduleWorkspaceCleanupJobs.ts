@@ -31,7 +31,7 @@ export const scheduleWorkspaceCleanupJobs = async (
     .where(inArray(subscriptions.plan, FREE_PLANS))
     .then((r) => r)
 
-  let enqueuedJobs = 0
+  let _enqueuedJobs = 0
 
   // Enqueue individual cleanup job for each free workspace
   for (const workspace of freeWorkspaces) {
@@ -41,12 +41,6 @@ export const scheduleWorkspaceCleanupJobs = async (
       { workspaceId: workspace.id },
       { attempts: 3 },
     )
-    enqueuedJobs++
-  }
-
-  return {
-    success: true,
-    freeWorkspacesCount: freeWorkspaces.length,
-    enqueuedJobs,
+    _enqueuedJobs++
   }
 }
