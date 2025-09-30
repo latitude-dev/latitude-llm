@@ -16,6 +16,7 @@ export const moveNextOnboardingStepAction = authProcedure
 
     const nextOnboardingStep = await moveNextOnboardingStep({
       onboarding,
+      workspace: ctx.workspace,
     }).then((r) => r.unwrap())
 
     return nextOnboardingStep

@@ -5,7 +5,6 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { cn } from '@latitude-data/web-ui/utils'
 import { StatusFlagState } from '@latitude-data/web-ui/molecules/StatusFlag'
-import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
 import { ROUTES } from '$/services/routes'
 import { ONBOARDING_STEP_CONTENT } from '../../constants'
 import { calculateState } from './calculateState'
@@ -16,16 +15,18 @@ import { redirect } from 'next/navigation'
 export default function NocodersNavbar({
   currentStep,
   isLoadingOnboarding,
+  executeCompleteOnboarding,
 }: {
+  executeCompleteOnboarding: () => void
   currentStep: OnboardingStepKey | undefined | null // TODO(onboarding): remove null when data migration is done
   isLoadingOnboarding: boolean
 }) {
   const project = useCurrentProject()
 
   const skipOnboarding = useCallback(() => {
-    completeOnboardingAction()
+    executeCompleteOnboarding()
     redirect(ROUTES.dashboard.root)
-  }, [])
+  }, [executeCompleteOnboarding])
 
   return (
     <div className='flex flex-col p-6 items-start gap-8 h-full'>

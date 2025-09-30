@@ -39,7 +39,7 @@ export function ConfigureTriggersStep({
         (trigger) => trigger.triggerType === DocumentTriggerType.Integration,
       )
       .sort((a) => {
-        return a.triggerStatus === DocumentTriggerStatus.Deployed ? 1 : -1
+        return a.triggerStatus === DocumentTriggerStatus.Pending ? -1 : 1
       })
   }, [triggers])
 

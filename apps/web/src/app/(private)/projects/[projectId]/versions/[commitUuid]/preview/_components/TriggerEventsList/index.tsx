@@ -1,14 +1,12 @@
 import useDocumentTriggerEvents from '$/stores/documentTriggerEvents'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { OnRunTriggerFn } from '../TriggersList'
-import { useCallback } from 'react'
+import { ReactNode, useCallback } from 'react'
 import { getDocumentTriggerEventRunParameters } from '@latitude-data/core/services/documentTriggers/triggerEvents/getDocumentTriggerRunParameters'
 import { DocumentTriggerEventItem } from './TriggerEvent'
 import {
@@ -41,31 +39,16 @@ function LoadingTriggerEvents() {
   )
 }
 
-function TriggerEventsEmptyState() {
-  return (
-    <div className='flex items-center justify-center '>
-      <div className='flex flex-col items-center justify-center py-20 gap-y-3 max-w-[400px]'>
-        <Icon name='clockFading' size='large' color='foregroundMuted' />
-        <Text.H5M>Waiting for events...</Text.H5M>
-        <Text.H5 centered color='foregroundMuted'>
-          There are no events for this trigger yet.
-        </Text.H5>
-        <Text.H5 centered color='foregroundMuted'>
-          When the trigger receives an event, it will be listed here.
-        </Text.H5>
-      </div>
-    </div>
-  )
-}
-
 export function TriggerEventsList({
   trigger,
   document,
   onRunTrigger,
+  emptyState,
 }: {
   trigger: DocumentTrigger
   document: DocumentVersion
   onRunTrigger: OnRunTriggerFn
+  emptyState: ReactNode
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -90,7 +73,7 @@ export function TriggerEventsList({
   }
 
   if (triggerEvents.length === 0) {
-    return <TriggerEventsEmptyState />
+    return emptyState
   }
 
   return (

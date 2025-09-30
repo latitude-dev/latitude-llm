@@ -5,6 +5,7 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { ChainEventTypes, StreamEventTypes } from '@latitude-data/constants'
 import { LogSources } from '@latitude-data/core/constants'
 import { User, Workspace } from '@latitude-data/core/schema/types'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { Result } from '@latitude-data/core/lib/Result'
 import {
@@ -267,9 +268,18 @@ async function generateAIParameters({
         path,
       })
       .then((r) => r.unwrap())
-    const sdk = new Latitude(env.COPILOT_WORKSPACE_API_KEY!, {
+
+    const copilotWorkspace = await unsafelyFindWorkspace(
+      env.COPILOT_WORKSPACE_ID!,
+    )
+
+    const sdk = await createSdk({
+      workspace: copilotWorkspace,
+      apiKey: env.COPILOT_WORKSPACE_API_KEY!,
       projectId: env.COPILOT_PROJECT_ID,
-    })
+      __internal: { source: LogSources.Copilot },
+    }).then((r) => r.unwrap())
+
     const { parameters } = await scanDocumentContent({ document, commit }).then(
       (r) => r.unwrap(),
     )

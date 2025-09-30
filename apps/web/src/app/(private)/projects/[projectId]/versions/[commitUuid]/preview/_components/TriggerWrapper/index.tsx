@@ -315,8 +315,26 @@ export function TriggerWrapper({
           document={document}
           trigger={trigger}
           onRunTrigger={onRunTrigger}
+          emptyState={<TriggerEventsEmptyState />}
         />
       ) : null}
+    </div>
+  )
+}
+
+function TriggerEventsEmptyState() {
+  return (
+    <div className='flex items-center justify-center '>
+      <div className='flex flex-col items-center justify-center py-20 gap-y-3 max-w-[400px]'>
+        <Icon name='clockFading' size='large' color='foregroundMuted' />
+        <Text.H5M>Waiting for events...</Text.H5M>
+        <Text.H5 centered color='foregroundMuted'>
+          There are no events for this trigger yet.
+        </Text.H5>
+        <Text.H5 centered color='foregroundMuted'>
+          When the trigger receives an event, it will be listed here.
+        </Text.H5>
+      </div>
     </div>
   )
 }

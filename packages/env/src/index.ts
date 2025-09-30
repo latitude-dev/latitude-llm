@@ -211,6 +211,7 @@ export const env = createEnv({
     COPILOT_PROJECT_ID: z.coerce.number().optional(),
     COPILOT_PROMPT_REFINE_PATH: z.string().optional(),
     COPILOT_WORKSPACE_API_KEY: z.string().optional(),
+    COPILOT_WORKSPACE_ID: z.coerce.number().optional(),
     COPILOT_LATTE_PROMPT_PATH: z.string().optional(),
     COPILOT_LATTE_CHANGES_FEEDBACK_HITL_EVALUATION_UUID: z.string().optional(),
 
