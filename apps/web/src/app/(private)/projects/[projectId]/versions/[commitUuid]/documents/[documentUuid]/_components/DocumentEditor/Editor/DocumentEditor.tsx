@@ -27,7 +27,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { useDeployPrompt } from '../../DocumentationModal'
 import { DocumentTabSelector } from '../../DocumentTabs/tabs'
 import { ChatInputBox } from './ChatInputBox'
@@ -96,7 +96,6 @@ function DocumentEditorContent({
   initialProviderLog,
 }: Omit<DocumentEditorProps, 'experimentDiff'>) {
   const { updateDocumentContent } = useDocumentValue()
-  const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const { metadata } = useMetadata()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -127,7 +126,6 @@ function DocumentEditorContent({
       project,
       document,
       parameters,
-      setMode,
       togglePlaygroundOpen,
       setHistoryLog,
     })
@@ -139,10 +137,10 @@ function DocumentEditorContent({
   } = useEditorCallbacks({
     isPlaygroundOpen,
     togglePlaygroundOpen,
-    setMode,
     resetChat,
     parameters,
     source,
+    playground,
   })
   const isDocumentParamsOpen = useMemo(
     () =>
@@ -153,7 +151,7 @@ function DocumentEditorContent({
 
   const containerRef = useRef<HTMLDivElement | null>(null)
 
-  useAutoScroll(containerRef, { startAtBottom: mode === 'chat' })
+  useAutoScroll(containerRef, { startAtBottom: playground.mode === 'chat' })
 
   return (
     <LatteLayout
@@ -253,7 +251,7 @@ function DocumentEditorContent({
               isPlaygroundOpen) && (
               <V2Playground
                 metadata={metadata}
-                mode={mode}
+                mode={playground.mode}
                 parameters={parameters}
                 playground={playground}
               />
@@ -269,7 +267,7 @@ function DocumentEditorContent({
               },
             )}
           >
-            {mode === 'preview' && (
+            {playground.mode === 'preview' && (
               <RunButton
                 metadata={metadata}
                 runPromptButtonLabel={runPromptButtonLabel}
@@ -277,7 +275,7 @@ function DocumentEditorContent({
                 toggleExperimentModal={toggleExperimentModal}
               />
             )}
-            {mode === 'chat' && (
+            {playground.mode === 'chat' && (
               <ChatInputBox
                 onBack={onBack}
                 resetChat={resetChat}
@@ -308,7 +306,6 @@ function DocumentEditorContent({
  * @param params.project - The project containing the document
  * @param params.document - The document version to execute in playground
  * @param params.parameters - Document parameters for execution context
- * @param params.setMode - Function to switch between preview and chat modes
  * @param params.togglePlaygroundOpen - Function to toggle playground visibility
  * @param params.setHistoryLog - Function to log execution history
  * @param params.userMessage - Inject user message into the prompt
@@ -325,7 +322,6 @@ export function usePlaygroundLogic({
   document,
   parameters,
   userMessage,
-  setMode,
   togglePlaygroundOpen,
   setHistoryLog,
 }: {
@@ -333,7 +329,6 @@ export function usePlaygroundLogic({
   project: Project
   document: DocumentVersion
   parameters: Record<string, any> | undefined
-  setMode: (mode: 'preview' | 'chat') => void
   togglePlaygroundOpen: () => void
   setHistoryLog: (log: { uuid: string; source: LogSources }) => void
   userMessage?: string
@@ -363,9 +358,8 @@ export function usePlaygroundLogic({
   })
 
   const resetChat = useCallback(() => {
-    setMode('preview')
     playground.reset()
-  }, [setMode, playground])
+  }, [playground])
 
   const onBack = useCallback(() => {
     togglePlaygroundOpen()
@@ -393,22 +387,21 @@ export function usePlaygroundLogic({
  * @param params - Configuration parameters
  * @param params.isPlaygroundOpen - Whether the playground is currently open
  * @param params.togglePlaygroundOpen - Function to toggle playground open/closed
- * @param params.setMode - Function to set preview/chat mode
  * @param params.parameters - Document parameters object
  * @param params.source - Input source type (manual, dataset, history)
  * @returns Object containing callback functions and height calculation utility
  */
 function useEditorCallbacks({
+  playground,
   isPlaygroundOpen,
   togglePlaygroundOpen,
-  setMode,
   resetChat,
   parameters,
   source,
 }: {
+  playground: ReturnType<typeof usePlaygroundChat>
   isPlaygroundOpen: boolean
   togglePlaygroundOpen: () => void
-  setMode: (mode: 'preview' | 'chat') => void
   resetChat: () => void
   parameters: Record<string, any> | undefined
   source: (typeof INPUT_SOURCE)[keyof typeof INPUT_SOURCE]
@@ -433,10 +426,10 @@ function useEditorCallbacks({
         focusFirstParameterInput(parameters)
       }
     } else {
-      setMode('chat')
+      playground.start()
     }
   }, [
-    setMode,
+    playground,
     togglePlaygroundOpen,
     parameters,
     focusFirstParameterInput,

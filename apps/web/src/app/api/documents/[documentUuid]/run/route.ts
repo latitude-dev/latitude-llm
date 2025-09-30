@@ -10,7 +10,15 @@ import {
   Workspace,
 } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
+import { Result } from '@latitude-data/core/lib/Result'
+import {
+  CommitsRepository,
+  DocumentVersionsRepository,
+} from '@latitude-data/core/repositories'
+import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
+import { env } from '@latitude-data/env'
+import { Latitude } from '@latitude-data/sdk'
 import {
   ChainEventDto,
   GenerationResponse,
@@ -25,6 +33,7 @@ const inputSchema = z.object({
   parameters: z.record(z.any()),
   stream: z.boolean().default(true),
   userMessage: z.string().optional(),
+  aiParameters: z.boolean().optional(),
 })
 
 export const POST = errorHandler(
@@ -35,18 +44,19 @@ export const POST = errorHandler(
         workspace,
         user,
       }: {
-        params: {
-          documentUuid: string
-        }
         workspace: Workspace
         user: User
       },
     ) => {
-      const body = await req.json()
-
       try {
-        const { path, commitUuid, parameters, userMessage } =
-          inputSchema.parse(body)
+        const body = await req.json()
+        const {
+          path,
+          commitUuid,
+          parameters: _parameters,
+          userMessage,
+          aiParameters,
+        } = inputSchema.parse(body)
         const projectId = Number(body.projectId)
 
         const runsEnabled = await isFeatureEnabledByName(
@@ -61,28 +71,27 @@ export const POST = errorHandler(
             projectId,
             commitUuid,
             documentPath: path,
-            parameters,
+            parameters: _parameters,
             workspaceId: workspace.id,
             userEmail: user.email,
             userMessage,
           },
         })
 
-        // Create SDK
-        const sdkResult = await createSdk({
+        const parameters = aiParameters
+          ? await generateAIParameters({
+              workspace,
+              commitUuid,
+              projectId,
+              path,
+            }).then((r) => r.unwrap())
+          : _parameters
+
+        const sdk = await createSdk({
           workspace,
           projectId,
           __internal: { source: LogSources.Playground },
-        })
-
-        if (sdkResult.error) {
-          return NextResponse.json(
-            { message: 'Failed to create SDK', error: sdkResult.error },
-            { status: 500 },
-          )
-        }
-
-        const sdk = sdkResult.unwrap()
+        }).then((r) => r.unwrap())
 
         // Create a TransformStream to handle the streaming response
         const { readable, writable } = new TransformStream()
@@ -223,8 +232,6 @@ export const POST = errorHandler(
           },
         })
       } catch (error) {
-        captureException(error as Error)
-
         if (error instanceof z.ZodError) {
           return NextResponse.json(
             { message: 'Invalid input', details: error.errors },
@@ -232,19 +239,52 @@ export const POST = errorHandler(
           )
         }
 
-        // When client closes the connection, the SDK will throw an undefined
-        // error or AbortError which we can safely ignore
-        if (!error || (error as Error).name === 'AbortError') return
-
-        // For any other error, return a 500 response
-        return NextResponse.json(
-          {
-            message: 'An unexpected error occurred',
-            error: error instanceof Error ? error.message : String(error),
-          },
-          { status: 500 },
-        )
+        throw error
       }
     },
   ),
 )
+
+async function generateAIParameters({
+  workspace,
+  commitUuid,
+  projectId,
+  path,
+}: {
+  workspace: Workspace
+  commitUuid: string
+  projectId: number
+  path: string
+}) {
+  try {
+    const commit = await new CommitsRepository(workspace.id)
+      .getCommitByUuid({ uuid: commitUuid, projectId })
+      .then((r) => r.unwrap())
+    const document = await new DocumentVersionsRepository(workspace.id)
+      .getDocumentByPath({
+        commit,
+        path,
+      })
+      .then((r) => r.unwrap())
+    const sdk = new Latitude(env.COPILOT_WORKSPACE_API_KEY!, {
+      projectId: env.COPILOT_PROJECT_ID,
+    })
+    const { parameters } = await scanDocumentContent({ document, commit }).then(
+      (r) => r.unwrap(),
+    )
+    const result = await sdk.prompts.run<Record<string, unknown>>(
+      'other/simulation/parameters', // TODO: env var
+      {
+        parameters: {
+          prompt_template: document.content,
+          parameters_list: JSON.stringify(Array.from(parameters)),
+        },
+        stream: false,
+      },
+    )
+
+    return Result.ok(result?.response?.object)
+  } catch (error) {
+    return Result.error(error as Error)
+  }
+}

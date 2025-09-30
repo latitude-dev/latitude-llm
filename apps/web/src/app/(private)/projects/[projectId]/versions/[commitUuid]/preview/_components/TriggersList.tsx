@@ -21,7 +21,8 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useCallback, useRef, useState } from 'react'
 import { ChatInputBox } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/ChatInputBox'
-import { usePlaygroundLogic } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/DocumentEditor'
+import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import { useRunDocument } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/hooks/useRunDocument'
 import Chat from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
 import { ChatTriggerTextarea } from './ChatTriggerTextarea'
 import { TriggersBlankSlate } from './TriggersBlankSlate'
@@ -96,10 +97,12 @@ export type OnRunTriggerFn = ({
   document,
   parameters,
   userMessage,
+  aiParameters,
 }: {
   document: DocumentVersion
   parameters: Record<string, unknown>
   userMessage?: string
+  aiParameters?: boolean
 }) => void
 
 const FAKE_DOCUMENT = {
@@ -149,7 +152,6 @@ export function TriggersList({
     fallbackData: fallbackIntegrations,
   })
 
-  const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const [expandParameters, setExpandParameters] = useState(true)
   const [activeTrigger, setActiveTrigger] = useState<ActiveTrigger>({
     document: FAKE_DOCUMENT,
@@ -160,32 +162,52 @@ export function TriggersList({
     project,
     triggers,
   })
-  const togglePlaygroundOpen = useCallback(() => {}, [])
-  const setHistoryLog = useCallback(() => {}, [])
-  const { playground, hasActiveStream, stopStreaming, resetChat } =
-    usePlaygroundLogic({
+  const { runDocument, addMessages, abortCurrentStream, hasActiveStream } =
+    useRunDocument({
       commit,
-      project,
-      document: activeTrigger.document,
-      parameters: activeTrigger.parameters,
-      userMessage: activeTrigger.userMessage,
-      setMode,
-      togglePlaygroundOpen,
-      setHistoryLog,
     })
 
-  const onRunTrigger: OnRunTriggerFn = useCallback(
-    ({ document, parameters, userMessage }) => {
-      setActiveTrigger({ document, parameters, userMessage })
-      setMode('chat')
+  const runPromptFn = useCallback(
+    ({
+      document,
+      userMessage,
+      parameters = {},
+      aiParameters = false,
+    }: {
+      document: DocumentVersion
+      parameters: Record<string, unknown>
+      userMessage: string | undefined
+      aiParameters: boolean
+    }) =>
+      runDocument({
+        document,
+        parameters,
+        userMessage,
+        aiParameters,
+      }),
+    [runDocument],
+  )
+
+  const playground = usePlaygroundChat({
+    runPromptFn,
+    addMessagesFn: addMessages,
+    onPromptRan: (documentLogUuid, error) => {
+      if (!documentLogUuid || error) return
     },
-    [setActiveTrigger, setMode],
+  })
+
+  const onRunTrigger: OnRunTriggerFn = useCallback(
+    ({ document, parameters, userMessage, aiParameters = false }) => {
+      setActiveTrigger({ document, parameters, userMessage })
+      playground.start({ document, parameters, userMessage, aiParameters })
+    },
+    [setActiveTrigger, playground],
   )
 
   const ref = useRef<HTMLDivElement | null>(null)
 
   useAutoScroll(ref, {
-    startAtBottom: mode === 'chat',
+    startAtBottom: playground.mode === 'chat',
   })
 
   if (triggers.length === 0) {
@@ -196,11 +218,11 @@ export function TriggersList({
     <div
       ref={ref}
       className={cn('relative max-h-full h-full flex flex-col p-12 space-y-8', {
-        'overflow-y-auto custom-scrollbar pb-0': mode === 'chat',
+        'overflow-y-auto custom-scrollbar pb-0': playground.mode === 'chat',
       })}
     >
-      <TriggersHeader project={project} mode={mode} />
-      {mode === 'preview' ? (
+      <TriggersHeader project={project} mode={playground.mode} />
+      {playground.mode === 'preview' ? (
         <>
           <div className='flex-1'>
             <div className='flex flex-col gap-6'>
@@ -230,7 +252,7 @@ export function TriggersList({
           </div>
         </>
       ) : null}
-      {mode === 'chat' && activeTrigger ? (
+      {playground.mode === 'chat' && activeTrigger ? (
         <>
           <div className='flex-1'>
             <Chat
@@ -243,21 +265,19 @@ export function TriggersList({
           </div>
           <div className='sticky bottom-0 w-full bg-background pb-4'>
             <ChatInputBox
-              resetChat={resetChat}
+              resetChat={playground.reset}
               hasActiveStream={hasActiveStream}
               playground={playground}
-              stopStreaming={stopStreaming}
+              stopStreaming={abortCurrentStream}
               placeholder='Ask anything'
-              onBack={() => {
-                setMode('preview')
-              }}
+              onBack={playground.reset}
               onBackLabel='Back to triggers'
             />
           </div>
         </>
       ) : null}
 
-      {mode !== 'chat' && activeChatTrigger.active ? (
+      {playground.mode !== 'chat' && activeChatTrigger.active ? (
         <div className='sticky bottom-6'>
           <ChatTriggerTextarea
             key={activeChatTrigger.activeKey}

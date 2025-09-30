@@ -15,7 +15,7 @@ export function OnboardingPromptStep({
   currentStep,
   messages,
 }: {
-  start: () => Promise<void>
+  start: (args: any) => Promise<void>
   activeStream: boolean
   document: DocumentVersion
   currentStep: OnboardingStep

@@ -176,16 +176,14 @@ export function TriggerWrapper({
   }, [])
 
   const handleRunTrigger = useCallback(() => {
-    if (!canRunTrigger) return
-
     if (isChatTrigger(trigger)) {
       onRunChatTrigger({ trigger, document })
       return
     }
-
-    // Schedule triggers don't have parameters
-    onRunTrigger({ document, parameters: {} })
-  }, [onRunTrigger, onRunChatTrigger, trigger, document, canRunTrigger])
+  }, [onRunChatTrigger, trigger, document])
+  const handleScheduleTriggerRun = useCallback(() => {
+    handleRunTrigger()
+  }, [handleRunTrigger])
   return (
     <div className='flex flex-col relative'>
       {realtimeCount > 0 ? (
@@ -283,16 +281,18 @@ export function TriggerWrapper({
                 trigger={trigger}
               />
             ) : null}
-            {canRunTrigger ? (
-              <Button
-                fancy
-                variant='outline'
-                iconProps={{ name: 'circlePlay' }}
-                onClick={handleRunTrigger}
-              >
-                Run
-              </Button>
-            ) : null}
+            <div className='flex flex-row items-center gap-x-2'>
+              {canRunTrigger ? (
+                <Button
+                  fancy
+                  variant='outline'
+                  iconProps={{ name: 'circlePlay' }}
+                  onClick={handleScheduleTriggerRun}
+                >
+                  Run
+                </Button>
+              ) : null}
+            </div>
             <EditTriggerButton
               projectId={project.id}
               commitUuid={commit.uuid}
