@@ -20,6 +20,7 @@ import { pingProjectUpdate } from '../projects'
 import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
 import { getDocumentType } from './update'
 import { database } from '../../client'
+import { updateListOfIntegrations } from './updateListOfIntegrations'
 
 async function hasMetadata(content: string) {
   try {
@@ -128,6 +129,15 @@ export async function createNewDocument(
       .update(documentVersions)
       .set({ resolvedContent: null })
       .where(eq(documentVersions.commitId, commit.id))
+
+    await updateListOfIntegrations(
+      {
+        workspace,
+        projectId: commit.projectId,
+        documentVersion: document,
+      },
+      transaction,
+    )
 
     await pingProjectUpdate({ projectId: commit.projectId }, transaction)
 

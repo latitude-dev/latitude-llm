@@ -55,7 +55,7 @@ export function SetupIntegrationsStep({
         )}
       </div>
       <div className='flex flex-col items-center gap-2 border-dashed border-2 rounded-xl p-2'>
-        <UnconfiguredIntegrations integrations={integrations} />
+        <UnconfiguredIntegrations />
         <ConfiguredIntegrations integrations={integrations} />
       </div>
       <Button

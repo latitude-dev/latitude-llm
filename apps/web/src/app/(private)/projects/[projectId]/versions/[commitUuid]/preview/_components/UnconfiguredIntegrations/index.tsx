@@ -1,14 +1,69 @@
 import { useConfigureIntegrationAccount } from '$/hooks/useConfigureIntegrationAccount'
-import { IntegrationType } from '@latitude-data/constants'
+import useDocumentIntegrationReferences from '$/stores/documentIntegrationReferences'
+import useDocumentTriggers from '$/stores/documentTriggers'
+import useIntegrations from '$/stores/integrations'
+import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
+import { IntegrationDto } from '@latitude-data/core/browser'
 import {
-  IntegrationDto,
+  Commit,
+  DocumentTrigger,
   PipedreamIntegration,
 } from '@latitude-data/core/schema/types'
 import { isIntegrationConfigured } from '@latitude-data/core/services/integrations/pipedream/components/fillConfiguredProps'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import Image from 'next/image'
 import { useMemo } from 'react'
+
+function useReferencedUnconfiguredIntegrations({ commit }: { commit: Commit }) {
+  const { data: integrations } = useIntegrations()
+  const unconfiguredIntegrations = useMemo(
+    () =>
+      integrations.filter(
+        (integration) =>
+          integration.type === IntegrationType.Pipedream &&
+          !isIntegrationConfigured(integration),
+      ) as PipedreamIntegration[],
+    [integrations],
+  )
+
+  const { data: triggers } = useDocumentTriggers({
+    projectId: commit.projectId,
+    commitUuid: commit.uuid,
+  })
+
+  const { data: toolReferences } = useDocumentIntegrationReferences({
+    projectId: commit.projectId,
+    commitUuid: commit.uuid,
+  })
+
+  const referencedUnconfiguredIntegrations = useMemo(
+    () =>
+      unconfiguredIntegrations.filter((integration) => {
+        const usedByTrigger = triggers?.some(
+          (trigger) =>
+            trigger.triggerType === DocumentTriggerType.Integration &&
+            (trigger as DocumentTrigger<DocumentTriggerType.Integration>)
+              .configuration.integrationId === integration.id,
+        )
+        if (usedByTrigger) return true
+
+        const usedByTool = toolReferences?.some(
+          (toolReference) => toolReference.integrationId === integration.id,
+        )
+        if (usedByTool) return true
+
+        return false
+      }),
+    [unconfiguredIntegrations, triggers, toolReferences],
+  )
+
+  return useMemo(
+    () => ({ referencedUnconfiguredIntegrations }),
+    [referencedUnconfiguredIntegrations],
+  )
+}
 
 export function UnconfiguredIntegration({
   integration,
@@ -50,27 +105,16 @@ export function UnconfiguredIntegration({
   )
 }
 
-export function UnconfiguredIntegrations({
-  integrations,
-}: {
-  integrations: IntegrationDto[]
-}) {
-  const unconfiguredIntegrations = useMemo(
-    () =>
-      integrations.filter((integration) => {
-        return (
-          integration.type === IntegrationType.Pipedream &&
-          !isIntegrationConfigured(integration)
-        )
-      }) as PipedreamIntegration[],
-    [integrations],
-  )
+export function UnconfiguredIntegrations() {
+  const { commit } = useCurrentCommit()
+  const { referencedUnconfiguredIntegrations } =
+    useReferencedUnconfiguredIntegrations({ commit })
 
-  if (unconfiguredIntegrations.length === 0) return null
+  if (referencedUnconfiguredIntegrations.length === 0) return null
 
   return (
     <div className='flex flex-col gap-2'>
-      {unconfiguredIntegrations.map((integration) => (
+      {referencedUnconfiguredIntegrations.map((integration) => (
         <UnconfiguredIntegration
           key={integration.id}
           integration={integration}

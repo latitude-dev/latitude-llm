@@ -13,6 +13,7 @@ import { DocumentVersionsRepository } from '../../repositories/documentVersionsR
 import { documentVersions } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 import { inheritDocumentRelations } from './inheritRelations'
+import { updateListOfIntegrations } from './updateListOfIntegrations'
 
 export async function getDocumentType({
   content,
@@ -103,7 +104,7 @@ export async function updateDocument(
       ...updatedDocData,
       commitId: commit.id,
       documentType,
-    }
+    } as DocumentVersion
 
     const updatedDocs = await tx
       .insert(documentVersions)
@@ -132,6 +133,15 @@ export async function updateDocument(
       .update(documentVersions)
       .set({ resolvedContent: null })
       .where(eq(documentVersions.commitId, commit.id))
+
+    await updateListOfIntegrations(
+      {
+        workspace: workspace!,
+        projectId: commit.projectId,
+        documentVersion: newVersion,
+      },
+      transaction,
+    )
 
     await pingProjectUpdate(
       {

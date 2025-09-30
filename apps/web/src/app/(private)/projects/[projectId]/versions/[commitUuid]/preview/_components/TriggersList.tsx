@@ -204,7 +204,7 @@ export function TriggersList({
         <>
           <div className='flex-1'>
             <div className='flex flex-col gap-6'>
-              <UnconfiguredIntegrations integrations={integrations} />
+              <UnconfiguredIntegrations />
 
               <div className='flex flex-col border rounded-xl divide-y divide-border flex-1 overflow-hidden'>
                 {triggers.map((trigger) => (

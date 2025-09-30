@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Project, IntegrationDto, Workspace, Commit } from '../../browser'
-import { listReferences } from './references'
+import { listIntegrationReferences } from './references'
 import {
   DocumentVersion,
   IntegrationType,
@@ -62,7 +62,7 @@ describe('listReferences', () => {
   })
 
   it('should not find any references for an integration with no configured triggers', async () => {
-    const result = await listReferences(integration)
+    const result = await listIntegrationReferences(integration)
 
     expect(Result.isOk(result)).toBe(true)
     expect(result.unwrap()).toEqual([])
@@ -77,18 +77,17 @@ describe('listReferences', () => {
       integrationId: integration.id,
     })
 
-    const result = await listReferences(integration)
+    const result = await listIntegrationReferences(integration)
 
     expect(Result.isOk(result)).toBe(true)
     expect(result.unwrap()).toEqual([
       {
+        integrationName: integration.name,
+        projectId: trigger.projectId,
+        commitId: commit.id,
+        documentUuid: trigger.documentUuid,
+        triggerUuid: trigger.uuid,
         type: 'trigger',
-        data: {
-          projectId: trigger.projectId,
-          documentUuid: trigger.documentUuid,
-          commitUuid: commit.uuid,
-          triggerUuid: trigger.uuid,
-        },
       },
     ])
   })

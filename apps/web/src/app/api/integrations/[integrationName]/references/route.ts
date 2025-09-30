@@ -3,7 +3,7 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
-import { listReferences } from '@latitude-data/core/services/integrations/index'
+import { listIntegrationReferences } from '@latitude-data/core/services/integrations/references'
 import { LatitudeTool, McpTool } from '@latitude-data/constants'
 import { getLatitudeToolDefinition } from '@latitude-data/core/services/latitudeTools/helpers'
 
@@ -46,7 +46,7 @@ export const GET = errorHandler(
         .findByName(params.integrationName)
         .then((r) => r.unwrap())
 
-      const result = await listReferences(integration)
+      const result = await listIntegrationReferences(integration)
 
       if (result.error) {
         return NextResponse.json(
