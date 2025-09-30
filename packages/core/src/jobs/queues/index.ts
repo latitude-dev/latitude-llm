@@ -37,8 +37,8 @@ export async function queues() {
         type: 'exponential',
         delay: 1000,
       },
-      removeOnFail: 100,
-      removeOnComplete: 100,
+      removeOnFail: true,
+      removeOnComplete: true,
     },
   }
 
