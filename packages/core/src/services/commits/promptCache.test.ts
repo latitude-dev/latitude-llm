@@ -26,13 +26,9 @@ describe('promptCache', async () => {
     text: 'cached response',
     reasoning: undefined,
     usage: {
-      inputTokens: 0,
-      outputTokens: 0,
       promptTokens: 0,
       completionTokens: 0,
       totalTokens: 0,
-      reasoningTokens: 0,
-      cachedInputTokens: 0,
     },
     toolCalls: [],
     // This should not be cached
@@ -136,13 +132,9 @@ describe('promptCache', async () => {
           streamType: 'text',
           text: 'cached response',
           usage: {
-            inputTokens: 0,
-            outputTokens: 0,
             promptTokens: 0,
             completionTokens: 0,
             totalTokens: 0,
-            reasoningTokens: 0,
-            cachedInputTokens: 0,
           },
           toolCalls: [],
         }),

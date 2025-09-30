@@ -43,14 +43,14 @@ describe('updateDocumentAction', async () => {
 
     it('errors when the user is not authenticated', async () => {
       const commit = await findCommitById(doc1.commitId)
-      const { serverError } = await updateDocumentContentAction({
+      const [_, error] = await updateDocumentContentAction({
         projectId,
         documentUuid: doc1.documentUuid,
         commitUuid: commit!.uuid,
         content: 'foo2',
       })
 
-      expect(serverError).toEqual('Unauthorized')
+      expect(error!.name).toEqual('UnauthorizedError')
     })
   })
 
@@ -91,16 +91,14 @@ describe('updateDocumentAction', async () => {
         content: 'foo2',
       })
 
-      const { data, serverError, validationErrors } =
-        await updateDocumentContentAction({
-          projectId: project.id,
-          documentUuid: doc1.documentUuid,
-          commitUuid: draft.uuid,
-          content: 'foo3',
-        })
+      const [data, error] = await updateDocumentContentAction({
+        projectId: project.id,
+        documentUuid: doc1.documentUuid,
+        commitUuid: draft.uuid,
+        content: 'foo3',
+      })
 
-      expect(serverError).toBeUndefined()
-      expect(validationErrors).toBeUndefined()
+      expect(error).toBeNull()
       expect(data).toMatchObject({
         documentUuid: doc1.documentUuid,
         commitId: draft.id,
@@ -111,16 +109,14 @@ describe('updateDocumentAction', async () => {
     it('creates a new document version when it does not exist in the draft', async () => {
       const { commit: draft } = await factories.createDraft({ project, user })
 
-      const { data, serverError, validationErrors } =
-        await updateDocumentContentAction({
-          projectId: project.id,
-          documentUuid: doc1.documentUuid,
-          commitUuid: draft.uuid,
-          content: 'foo2',
-        })
+      const [data, error] = await updateDocumentContentAction({
+        projectId: project.id,
+        documentUuid: doc1.documentUuid,
+        commitUuid: draft.uuid,
+        content: 'foo2',
+      })
 
-      expect(serverError).toBeUndefined()
-      expect(validationErrors).toBeUndefined()
+      expect(error).toBeNull()
       expect(data).toMatchObject({
         documentUuid: doc1.documentUuid,
         commitId: draft.id,

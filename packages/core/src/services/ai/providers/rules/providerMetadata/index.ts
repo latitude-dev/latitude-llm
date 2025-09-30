@@ -23,13 +23,11 @@ const CONTENT_DEFINED_ATTRIBUTES = [
   'text',
   'type',
   'image',
-  'mimeType', // Deprecated in v5, use 'mediaType' instead
-  'mediaType', // v4 -> v5 migration
+  'mimeType',
   'data',
   'toolCallId',
   'toolName',
-  'args', // Deprecated in v5, use 'input' instead for tool calls
-  'input', // v4 -> v5 migration
+  'args',
   // TODO: Add a test for this
   'result',
 ] as const

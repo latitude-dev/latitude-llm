@@ -9,11 +9,12 @@ import {
 import { convertFile } from '@latitude-data/core/services/files/convert'
 import { z } from 'zod'
 
-import { withProject, withProjectSchema } from '../procedures'
+import { withProject } from '../procedures'
 
 export const uploadDocumentAction = withProject
-  .inputSchema(
-    withProjectSchema.extend({
+  .createServerAction()
+  .input(
+    z.object({
       path: z.string(),
       commitUuid: z.string(),
       file: z.instanceof(File).refine(async (file) => {
@@ -21,16 +22,13 @@ export const uploadDocumentAction = withProject
       }, `Your file must be less than ${MAX_SIZE}MB in size. You can split it into smaller files and upload them separately.`),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const commitsScope = new CommitsRepository(ctx.project.workspaceId)
     const commit = await commitsScope
-      .getCommitByUuid({
-        uuid: parsedInput.commitUuid,
-        projectId: ctx.project.id,
-      })
+      .getCommitByUuid({ uuid: input.commitUuid, projectId: ctx.project.id })
       .then((r) => r.unwrap())
 
-    const content = await convertFile(parsedInput.file).then((r) => r.unwrap())
+    const content = await convertFile(input.file).then((r) => r.unwrap())
     const { metadata } = await defaultDocumentContent({
       workspace: ctx.workspace,
     })
@@ -39,7 +37,7 @@ export const uploadDocumentAction = withProject
       workspace: ctx.workspace,
       user: ctx.user,
       commit: commit,
-      path: parsedInput.path,
+      path: input.path,
       content: metadata + content,
     })
 

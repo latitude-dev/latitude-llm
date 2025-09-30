@@ -126,11 +126,10 @@ export function handleToolCallFactory<T extends ToolSpec>({
   return async (data: ProviderData) => {
     if (data.type !== 'tool-call') return
 
-    const toolName = data.toolName as keyof T
-    const tool = tools?.[toolName]
+    const tool = tools?.[data.toolName]
     if (!tool) return
 
-    const result = await tool(data.args as T[typeof toolName], {
+    const result = await tool(data.args, {
       id: data.toolCallId,
       name: data.toolName,
       arguments: data.args,

@@ -6,17 +6,18 @@ import { authProcedure } from '../procedures'
 import { inputSchema } from './inputSchema'
 
 export const createProviderApiKeyAction = authProcedure
-  .inputSchema(inputSchema)
-  .action(async ({ parsedInput, ctx }) => {
+  .createServerAction()
+  .input(inputSchema)
+  .handler(async ({ input, ctx }) => {
     return await createProviderApiKey({
       workspace: ctx.workspace,
-      provider: parsedInput.provider,
-      token: parsedInput.token,
-      url: parsedInput.url,
-      name: parsedInput.name,
-      defaultModel: parsedInput.defaultModel,
+      provider: input.provider,
+      token: input.token,
+      url: input.url,
+      name: input.name,
+      defaultModel: input.defaultModel,
       author: ctx.user,
-      configuration: parsedInput.configuration,
+      configuration: input.configuration,
     })
       .then((r) => r.unwrap())
       .then(providerApiKeyPresenter)

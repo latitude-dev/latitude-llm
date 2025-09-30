@@ -1,4 +1,4 @@
-import { EMPTY_USAGE, LogSources } from '@latitude-data/constants'
+import { LogSources } from '@latitude-data/constants'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import {
   Message,
@@ -156,13 +156,16 @@ async function generateLatteResponse(args: GenerateLatteResponseArgs) {
   }
 
   const consuming = await consumeLatteCredits({
-    usage: usage ?? EMPTY_USAGE(),
+    usage: usage ?? {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    },
     threadUuid: args.threadUuid,
     error: error,
     user: args.user,
     workspace: args.clientWorkspace,
   }) // Note: failing silently
-
   if (consuming.error) {
     captureException(consuming.error)
   }

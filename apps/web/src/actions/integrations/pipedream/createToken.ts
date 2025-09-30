@@ -5,13 +5,14 @@ import { authProcedure } from '../../procedures'
 import { createConnectToken } from '@latitude-data/core/services/integrations/pipedream/createConnectToken'
 
 export const createPipedreamTokenAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       externalUserId: z.string(),
     }),
   )
-  .action(async ({ ctx, parsedInput }) => {
-    const { externalUserId } = parsedInput
+  .handler(async ({ input, ctx }) => {
+    const { externalUserId } = input
 
     return createConnectToken({
       workspace: ctx.workspace,

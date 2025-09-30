@@ -3,6 +3,7 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { Adapters, Chain, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
+import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   Commit,
   EvaluationType,
@@ -68,14 +69,14 @@ export async function buildLlmEvaluationRunFunction<
   evaluation: EvaluationV2<EvaluationType.Llm, M>
   prompt: string
   parameters?: Record<string, unknown>
-  schema?: z.ZodType
+  schema?: z.ZodSchema
 }) {
   let promptConfig: LatitudePromptConfig
   let promptChain: PromptlChain
   try {
     if (schema) {
       prompt = updatePromptMetadata(prompt, {
-        schema: z.toJSONSchema(schema, { target: 'openapi-3.0' }),
+        schema: zodToJsonSchema(schema, { target: 'openAi' }),
       })
     }
 
@@ -126,7 +127,7 @@ export async function buildLlmEvaluationRunFunction<
 
 export async function runPrompt<
   M extends LlmEvaluationMetric,
-  S extends z.ZodType = z.ZodType,
+  S extends z.ZodSchema = z.ZodAny,
 >(
   {
     prompt,
@@ -205,7 +206,21 @@ export async function runPrompt<
     })
   }
 
-  const verdict = parseVerdict({ response, schema })
+  let verdict: S extends z.ZodSchema ? z.infer<S> : unknown
+  verdict = parseVerdict(response)
+
+  if (schema) {
+    const result = schema.safeParse(verdict)
+    if (result.error) {
+      throw new ChainError({
+        code: RunErrorCodes.InvalidResponseFormatError,
+        message: result.error.message,
+      })
+    }
+
+    verdict = result.data
+  }
+
   const repository = new ProviderLogsRepository(workspace.id, db)
   const stats = await repository
     .statsByDocumentLogUuid(response.providerLog.documentLogUuid)
@@ -214,13 +229,7 @@ export async function runPrompt<
   return { response, stats, verdict }
 }
 
-function parseVerdict<T extends z.ZodTypeAny>({
-  response,
-  schema,
-}: {
-  response: ChainStepResponse<StreamType>
-  schema?: T
-}): z.infer<T> {
+function parseVerdict(response: ChainStepResponse<StreamType>) {
   if (response.streamType !== 'object') {
     throw new ChainError({
       code: RunErrorCodes.InvalidResponseFormatError,
@@ -228,16 +237,5 @@ function parseVerdict<T extends z.ZodTypeAny>({
     })
   }
 
-  const object = response.object
-  if (!schema) return response.object
-
-  const result = schema.safeParse(object)
-  if (!result.success) {
-    throw new ChainError({
-      code: RunErrorCodes.InvalidResponseFormatError,
-      message: result.error.message,
-    })
-  }
-
-  return result.data
+  return response.object
 }

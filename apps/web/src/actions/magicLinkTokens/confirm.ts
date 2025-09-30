@@ -10,35 +10,35 @@ import {
   unsafelyGetUser,
 } from '@latitude-data/core/data-access'
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
+import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { errorHandlingProcedure } from '../procedures'
-import { frontendRedirect } from '$/lib/frontendRedirect'
+import { createServerAction } from 'zsa'
 
-export const confirmMagicLinkTokenAction = errorHandlingProcedure
-  .inputSchema(
+export const confirmMagicLinkTokenAction = createServerAction()
+  .input(
     z.object({
       token: z.string(),
       returnTo: z.string().optional(),
     }),
   )
-  .action(async ({ parsedInput }) => {
-    const magicLinkToken = await unsafelyFindMagicLinkByToken(
-      parsedInput.token,
-    ).then((r) => r[0])
+  .handler(async ({ input }) => {
+    const magicLinkToken = await unsafelyFindMagicLinkByToken(input.token).then(
+      (r) => r[0],
+    )
     if (!magicLinkToken || !!magicLinkToken.expiredAt) {
-      if (!parsedInput.returnTo) {
-        return frontendRedirect(ROUTES.auth.login)
+      if (!input.returnTo) {
+        return redirect(ROUTES.auth.login)
       }
 
-      return frontendRedirect(
-        `${ROUTES.auth.login}?returnTo=${encodeURIComponent(parsedInput.returnTo)}`,
+      redirect(
+        `${ROUTES.auth.login}?returnTo=${encodeURIComponent(input.returnTo)}`,
       )
     }
 
     const user = await unsafelyGetUser(magicLinkToken.userId)
     if (!user) throw new NotFoundError('User not found')
 
-    await confirmMagicLinkToken(parsedInput.token).then((r) => r.unwrap())
+    await confirmMagicLinkToken(input.token).then((r) => r.unwrap())
 
     const workspace = await getFirstWorkspace({ userId: user.id }).then((r) =>
       r.unwrap(),
@@ -53,9 +53,9 @@ export const confirmMagicLinkTokenAction = errorHandlingProcedure
       },
     })
 
-    if (!parsedInput.returnTo || !isLatitudeUrl(parsedInput.returnTo)) {
-      return frontendRedirect(ROUTES.dashboard.root)
+    if (!input.returnTo || !isLatitudeUrl(input.returnTo)) {
+      return redirect(ROUTES.dashboard.root)
     }
 
-    return frontendRedirect(parsedInput.returnTo)
+    return redirect(input.returnTo)
   })

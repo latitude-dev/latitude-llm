@@ -39,7 +39,7 @@ export function useRefiner(
         if (cancelled?.current) return
         toast({
           title: 'Error refining prompt',
-          description: error?.message,
+          description: error?.err?.message,
           variant: 'destructive',
         })
       },
@@ -70,7 +70,7 @@ export function useRefiner(
         if (cancelled?.current) return
         toast({
           title: 'Error applying refinement',
-          description: error?.message,
+          description: error?.err?.message,
           variant: 'destructive',
         })
       },

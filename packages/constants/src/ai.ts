@@ -1,12 +1,17 @@
-import { FinishReason, TextStreamPart, Tool } from 'ai'
-import { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
+import {
+  AssistantMessage,
+  Message,
+  ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
+import {
+  FinishReason,
+  LanguageModelUsage,
+  TextStreamPart,
+  ToolContent,
+} from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
-import {
-  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
-  type ReplaceTextDelta,
-  LegacyResponseMessage,
-} from './ai/vercelSdkV5ToV4'
+
 import { ParameterType } from './config'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
 import { AzureConfig, LatitudePromptConfig } from './latitudePromptSchema'
@@ -27,12 +32,11 @@ export type ToolDefinition = JSONSchema7 & {
 export type VercelProviderTool = {
   type: 'provider-defined'
   id: `${string}.${string}`
-  name: string
   args: Record<string, unknown>
-  inputSchema: Tool['inputSchema']
+  parameters: z.ZodObject<{}, 'strip', z.ZodTypeAny, {}, {}>
 }
 
-export type VercelTools = Record<string, ToolDefinition | VercelProviderTool>
+export type VercelTools = Record<string, VercelProviderTool | ToolDefinition>
 
 export type ToolDefinitionsMap = Record<string, ToolDefinition>
 export type ToolsItem =
@@ -49,23 +53,11 @@ export type VercelConfig = {
   parameters?: Record<string, { type: ParameterType }>
   tools?: VercelTools
   azure?: AzureConfig
-  /**
-   * DEPRECATED: Legacy before SDK v5. Use `maxOutputTokens` instead.
-   */
-  maxTokens?: number
-  maxOutputTokens?: number
-
-  /**
-   * Max steps the run can take.
-   */
-  maxSteps?: number
 }
 
 export type PartialPromptConfig = Omit<LatitudePromptConfig, 'provider'>
 
-export type VercelChunk = TextStreamPart<any> // Original Vercel SDK v5 type
-
-export type ProviderData = ReplaceTextDelta<VercelChunk>
+export type ProviderData = TextStreamPart<any>
 
 export type ChainEventDto = ProviderData | LatitudeEventData
 
@@ -82,13 +74,12 @@ export type ChainEventDtoResponse =
   | Omit<ChainStepResponse<'text'>, 'providerLog'>
 
 export type StreamType = 'object' | 'text'
-
 type BaseResponse = {
   text: string
   usage: LanguageModelUsage
   documentLogUuid?: string
   providerLog?: ProviderLog
-  output?: LegacyResponseMessage[] // TODO: Make this non-optional when we remove __deprecated
+  output?: (AssistantMessage | { role: 'tool'; content: ToolContent })[]
 }
 
 export type ChainStepTextResponse = BaseResponse & {
@@ -224,15 +215,3 @@ export type ToolResultPayload = {
   value: unknown
   isError: boolean
 }
-
-export * from './ai/vercelSdkV5ToV4'
-
-export const EMPTY_USAGE = () => ({
-  inputTokens: 0,
-  outputTokens: 0,
-  promptTokens: 0,
-  completionTokens: 0,
-  totalTokens: 0,
-  reasoningTokens: 0,
-  cachedInputTokens: 0,
-})

@@ -5,17 +5,18 @@ import { withAdmin } from '../../procedures'
 import { toggleWorkspaceFeature } from '@latitude-data/core/services/workspaceFeatures/toggle'
 
 export const toggleWorkspaceFeatureAction = withAdmin
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       featureId: z.number(),
       enabled: z.boolean(),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const result = await toggleWorkspaceFeature(
       ctx.workspace.id,
-      parsedInput.featureId,
-      parsedInput.enabled,
+      input.featureId,
+      input.enabled,
     )
 
     return result.unwrap()

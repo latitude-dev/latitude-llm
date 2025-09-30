@@ -1,4 +1,3 @@
-import { FinishReason } from 'ai'
 import {
   AssistantMessage,
   Conversation,
@@ -10,8 +9,6 @@ import {
   ChainEvent,
   ChainEventTypes,
   ChainStepResponse,
-  EMPTY_USAGE,
-  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
   LogSources,
   OmittedLatitudeEventData,
   StreamEventTypes,
@@ -19,6 +16,7 @@ import {
 } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { FinishReason, LanguageModelUsage } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { omit } from 'lodash-es'
 import { IntegrationDto, ProviderApiKey, Workspace } from '../../../browser'
@@ -29,7 +27,6 @@ import { resolveToolsFromConfig } from './resolveTools'
 import { ToolSource } from './resolveTools/types'
 import { streamAIResponse } from './step/streamAIResponse'
 import { getBuiltInToolCallResponses } from './step/toolExecution'
-import { incrementTokens } from '../../../lib/streamManager'
 
 const createPromiseWithResolver = <T>(): readonly [
   Promise<T>,
@@ -74,7 +71,11 @@ export class ChainStreamManager {
     workspace,
     errorableUuid,
     messages = [],
-    tokenUsage = EMPTY_USAGE(),
+    tokenUsage = {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    },
     promptSource,
   }: {
     workspace: Workspace
@@ -243,10 +244,12 @@ export class ChainStreamManager {
     this.addMessageFromResponse(response)
 
     this.finishReason = response.finishReason
-    this.tokenUsage = incrementTokens({
-      prev: this.tokenUsage,
-      next: tokenUsage,
-    })
+    this.tokenUsage = {
+      promptTokens: this.tokenUsage.promptTokens + tokenUsage.promptTokens,
+      completionTokens:
+        this.tokenUsage.completionTokens + tokenUsage.completionTokens,
+      totalTokens: this.tokenUsage.totalTokens + tokenUsage.totalTokens,
+    }
     this.setLastResponse(response)
 
     this.sendEvent({

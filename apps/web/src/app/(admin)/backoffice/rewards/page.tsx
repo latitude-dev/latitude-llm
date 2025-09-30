@@ -1,6 +1,6 @@
 'use client'
 import { REWARD_CONFIGS } from '$/components/layouts/AppLayout/Header/Rewards/Content/RewardMenu/RewardConfigs'
-import { usePendingRewardClaims } from '$/stores/admin/pendingRewardClaims'
+import usePendingRewardClaims from '$/stores/pendingRewardClaims'
 import { RewardType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'

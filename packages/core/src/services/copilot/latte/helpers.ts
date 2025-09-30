@@ -285,11 +285,14 @@ export async function scanDocuments(
         agentToolsMap,
       })
 
+      // FIXME: infinite recursion
+      // @ts-ignore
       return scan({
         prompt: document.content,
         fullPath: document.path,
         referenceFn,
-        configSchema,
+        // @ts-expect-error - TODO(compiler): fix types
+        configSchema: configSchema,
       })
     }),
   )

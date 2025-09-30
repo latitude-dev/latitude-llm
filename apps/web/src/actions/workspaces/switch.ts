@@ -9,18 +9,19 @@ import { cookies } from 'next/headers'
 import { removeSession, Session } from '$/services/auth/removeSession'
 
 export const switchWorkspaceAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       workspaceId: z.number(),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const userId = ctx.session.userId
     const workspacesScope = new WorkspacesRepository(userId)
 
     // Verify the user has access to this workspace
     const workspace = await workspacesScope
-      .find(parsedInput.workspaceId)
+      .find(input.workspaceId)
       .then((r) => r.unwrap())
 
     // Get the current user

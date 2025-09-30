@@ -6,19 +6,20 @@ import { z } from 'zod'
 import { withProject } from '../procedures'
 
 export const createDraftCommitAction = withProject
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
-      title: z.string().min(1, { error: 'Title is required' }),
+      title: z.string().min(1, { message: 'Title is required' }),
       description: z.string().optional().default(''),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const result = await createCommit({
       project: ctx.project,
       user: ctx.user,
       data: {
-        title: parsedInput.title,
-        description: parsedInput.description,
+        title: input.title,
+        description: input.description,
       },
     })
 

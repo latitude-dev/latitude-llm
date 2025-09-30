@@ -9,7 +9,7 @@ import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
-import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
+import { LanguageModelUsage } from 'ai'
 import { useMemo } from 'react'
 
 type StatusIndicatorProps = {
@@ -142,13 +142,7 @@ function InnerIndicator({
 }
 
 function StatusInfo({
-  usage: {
-    promptTokens,
-    completionTokens,
-    totalTokens,
-    reasoningTokens,
-    cachedInputTokens,
-  },
+  usage: { promptTokens, completionTokens, totalTokens },
   cost,
   duration,
 }: {
@@ -170,14 +164,7 @@ function StatusInfo({
           </Text.H6M>
           <Separator orientation='vertical' className='self-stretch h-auto' />
           <Text.H6M color='foregroundMuted' centered>
-            {formatCount(
-              totalTokens ||
-                promptTokens ||
-                completionTokens ||
-                cachedInputTokens ||
-                reasoningTokens ||
-                0,
-            )}{' '}
+            {formatCount(totalTokens || promptTokens || completionTokens || 0)}{' '}
             tokens
           </Text.H6M>
         </span>
@@ -187,8 +174,8 @@ function StatusInfo({
         <div className='flex flex-col justify-between gap-y-2 divide-y divider-background'>
           <div className='w-full flex flex-col'>
             <StatusInfoItem label='Prompt' value={promptTokens} />
-            <StatusInfoItem label='Cached' value={cachedInputTokens} />
-            <StatusInfoItem label='Reasoning' value={reasoningTokens} />
+            <StatusInfoItem label='Cached' />
+            <StatusInfoItem label='Reasoning' />
             <StatusInfoItem label='Completion' value={completionTokens} />
           </div>
           <div className='pt-2'>

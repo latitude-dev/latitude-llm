@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation'
 import { z } from 'zod'
 
 // prettier-ignore
-type ZodSchema<_T = any> = z.ZodObject
+type ZodSchema<T = any> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny, T, T>
 
 export type ActionExecuteArgs<T extends ActionType = ActionType> = {
   parameters: ActionFrontendParameters<T>

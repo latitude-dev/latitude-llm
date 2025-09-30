@@ -1,21 +1,14 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { LanguageModelUsage } from 'ai'
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import * as factories from '../../../tests/factories'
+import { LanguageModelUsage } from 'ai'
+import { beforeEach, describe, expect, it } from 'vitest'
+
+import { processResponse } from '.'
 import { LogSources, Providers } from '../../../constants'
 import { generateUUIDIdentifier } from './../../../lib/generateUUID'
 import { buildProviderLogDto } from './saveOrPublishProviderLogs'
-import { processResponse } from './index'
-import { AIReturn } from '../../ai'
-import { StreamType } from '@latitude-data/constants'
 
-let data: Omit<
-  ReturnType<typeof buildProviderLogDto>,
-  'usage' | 'toolCalls'
-> & {
-  usage: LanguageModelUsage
-  toolCalls: AIReturn<StreamType>['toolCalls']
-}
+let data: ReturnType<typeof buildProviderLogDto>
 
 describe('ProviderProcessor', () => {
   beforeEach(async () => {
@@ -52,30 +45,15 @@ describe('ProviderProcessor', () => {
       generatedAt: new Date(),
       model: 'gpt-4o',
       config: { model: 'gpt-4o' },
-      usage: {
-        inputTokens: 3,
-        outputTokens: 7,
-        totalTokens: 10,
-        reasoningTokens: 0,
-        cachedInputTokens: 0,
-      },
+      usage: { promptTokens: 3, completionTokens: 7, totalTokens: 10 },
       messages: [
         {
           role: MessageRole.user,
           content: [{ text: 'Hello', type: 'text' }],
         },
       ],
+      toolCalls: [],
       responseText: 'MY TEXT',
-      toolCalls: new Promise((resolve) =>
-        resolve([
-          {
-            type: 'tool-call',
-            toolCallId: '1',
-            toolName: 'tool1',
-            input: { param1: 'abc' },
-          },
-        ]),
-      ) as AIReturn<StreamType>['toolCalls'],
     }
   })
 
@@ -85,7 +63,7 @@ describe('ProviderProcessor', () => {
       // @ts-expect-error - mock implementation
       aiResult: {
         type: 'text' as const,
-        toolCalls: data.toolCalls,
+        toolCalls: new Promise((resolve) => resolve([])),
         reasoning: new Promise<string | undefined>((resolve) =>
           resolve(undefined),
         ),
@@ -107,24 +85,14 @@ describe('ProviderProcessor', () => {
     expect(result).toEqual({
       streamType: 'text',
       text: 'MY TEXT',
-      toolCalls: [
-        {
-          id: '1',
-          name: 'tool1',
-          arguments: { param1: 'abc' },
-        },
-      ],
+      toolCalls: [],
       object: undefined,
       output: [],
       reasoning: undefined,
       usage: {
-        inputTokens: 3,
-        outputTokens: 7,
         promptTokens: 3,
         completionTokens: 7,
         totalTokens: 10,
-        cachedInputTokens: 0,
-        reasoningTokens: 0,
       },
       documentLogUuid: data.documentLogUuid,
     })

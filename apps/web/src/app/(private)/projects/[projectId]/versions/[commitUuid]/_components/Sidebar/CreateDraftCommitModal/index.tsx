@@ -45,7 +45,7 @@ export default function DraftCommitModal({
   const { error, data: input, action } = useFormAction(createDraft)
   const { project } = useCurrentProject()
   const router = useRouter()
-  const formattedErrors = error?.fieldErrors
+  const formattedErrors = error?.fieldErrors as Record<string, string[]>
 
   return (
     <Modal

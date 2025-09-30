@@ -1,6 +1,6 @@
 import type { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
 
-import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
+import { LanguageModelUsage } from 'ai'
 import { Commit, LogSources } from '../../browser'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { publisher } from '../../events/publisher'

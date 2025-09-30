@@ -32,7 +32,7 @@ export enum EvaluationType {
   Human = 'human',
 }
 
-export const EvaluationTypeSchema = z.enum(EvaluationType)
+export const EvaluationTypeSchema = z.nativeEnum(EvaluationType)
 
 // prettier-ignore
 export type EvaluationMetric<T extends EvaluationType = EvaluationType> =
@@ -42,9 +42,9 @@ export type EvaluationMetric<T extends EvaluationType = EvaluationType> =
   never;
 
 export const EvaluationMetricSchema = z.union([
-  z.enum(RuleEvaluationMetric),
-  z.enum(LlmEvaluationMetric),
-  z.enum(HumanEvaluationMetric),
+  z.nativeEnum(RuleEvaluationMetric),
+  z.nativeEnum(LlmEvaluationMetric),
+  z.nativeEnum(HumanEvaluationMetric),
 ])
 
 // prettier-ignore
@@ -85,7 +85,8 @@ export type EvaluationResultError<
 // prettier-ignore
 export const EvaluationResultErrorSchema = z.custom<EvaluationResultError>()
 
-type ZodSchema<_T = any> = z.ZodObject
+// prettier-ignore
+type ZodSchema<T = any> = z.ZodObject<z.ZodRawShape, z.UnknownKeysParam, z.ZodTypeAny, T, T>
 
 export type EvaluationMetricSpecification<
   T extends EvaluationType = EvaluationType,
@@ -126,10 +127,10 @@ type EvaluationMetricSpecificationFilter<
   F extends keyof EvaluationMetricSpecification,
   T extends EvaluationType = EvaluationType
 > = { [K in EvaluationType]: {
-  [M in keyof EvaluationSpecifications[K]['metrics']]:
-  // @ts-expect-error F can indeed index M type
-  EvaluationSpecifications[K]['metrics'][M][F] extends true ? M : never
-}[keyof EvaluationSpecifications[K]['metrics']]
+    [M in keyof EvaluationSpecifications[K]['metrics']]:
+      // @ts-expect-error F can indeed index M type
+      EvaluationSpecifications[K]['metrics'][M][F] extends true ? M : never
+  }[keyof EvaluationSpecifications[K]['metrics']]
 }[T] & EvaluationMetric<T>
 
 export type LiveEvaluationMetric<T extends EvaluationType = EvaluationType> =

@@ -17,7 +17,8 @@ import { authProcedure } from '../procedures'
 // Pass entityUuid and entityType so this can be used to track
 // events for documents and evaluations. Now the event is tied to documents
 export const requestSuggestionAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       projectId: z.number(),
       commitUuid: z.string(),
@@ -25,7 +26,7 @@ export const requestSuggestionAction = authProcedure
       request: z.string(),
     }),
   )
-  .action(async ({ ctx, parsedInput }) => {
+  .handler(async ({ ctx, input }) => {
     if (!env.LATITUDE_CLOUD) {
       throw new BadRequestError(CLOUD_MESSAGES.promptSuggestions)
     }
@@ -42,7 +43,7 @@ export const requestSuggestionAction = authProcedure
       throw new BadRequestError('COPILOT_PROMPT_EDITOR_COPILOT_PATH is not set')
     }
 
-    const { projectId, commitUuid, documentUuid, request } = parsedInput
+    const { projectId, commitUuid, documentUuid, request } = input
 
     const documentsScope = new DocumentVersionsRepository(ctx.workspace.id)
     const document = await documentsScope

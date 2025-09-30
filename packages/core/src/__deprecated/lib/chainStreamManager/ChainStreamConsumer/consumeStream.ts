@@ -3,7 +3,7 @@ import { capitalize } from 'lodash-es'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError, FinishReason, RetryError } from 'ai'
 
-import { ProviderData, VercelChunk } from '@latitude-data/constants'
+import { ProviderData } from '@latitude-data/constants'
 import {
   LegacyChainEvent,
   Providers,
@@ -33,38 +33,10 @@ export async function consumeStream({
   let error: ChainError<PosibleErrorCode, NoRunError> | undefined
   let finishReason: FinishReason = 'stop'
 
-  for await (const value of streamToGenerator<VercelChunk>(result.fullStream)) {
-    const vercelChunk = value as VercelChunk
-    let chunk = value as ProviderData
-
-    if (vercelChunk.type === 'text-delta') {
-      chunk = {
-        type: 'text-delta',
-        id: vercelChunk.id,
-        textDelta: vercelChunk.text,
-        providerMetadata: vercelChunk.providerMetadata,
-      } as ProviderData
-    } else if (vercelChunk.type === 'tool-call') {
-      chunk = {
-        type: 'tool-call',
-        toolCallId: vercelChunk.toolCallId,
-        toolName: vercelChunk.toolName,
-        args: vercelChunk.input,
-      } as ProviderData
-    } else if (vercelChunk.type === 'tool-result') {
-      chunk = {
-        type: 'tool-result',
-        toolCallId: vercelChunk.toolCallId,
-        toolName: vercelChunk.toolName,
-        args: vercelChunk.input,
-        result: vercelChunk.output,
-      } as ProviderData
-    } else if (vercelChunk.type === 'reasoning-delta') {
-      chunk = {
-        type: 'reasoning',
-        textDelta: vercelChunk.text,
-      } as ProviderData
-    } else if (chunk.type === 'error') {
+  for await (const chunk of streamToGenerator<ProviderData>(
+    result.fullStream,
+  )) {
+    if (chunk.type === 'error') {
       finishReason = 'error'
       error = createAIError(
         getErrorMessage({

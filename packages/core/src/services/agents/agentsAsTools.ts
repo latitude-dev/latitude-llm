@@ -5,7 +5,6 @@ import {
 } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Tool } from 'ai'
-import { jsonSchema } from '@ai-sdk/provider-utils'
 import { JSONSchema7, JSONSchema7TypeName } from 'json-schema'
 import { scan } from 'promptl-ai'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
@@ -81,12 +80,12 @@ export async function getToolDefinitionFromDocument({
 
   const toolDefinition: Tool = {
     description: description ?? 'An AI agent',
-    inputSchema: jsonSchema({
+    parameters: {
       type: 'object',
       properties: params,
       required: Object.keys(params),
       additionalProperties: false,
-    }),
+    },
     execute: async (args: Record<string, unknown>, toolCall) => {
       const $tool = telemetry.tool(context, {
         name: getAgentToolName(document.path),

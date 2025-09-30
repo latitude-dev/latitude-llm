@@ -16,7 +16,7 @@ describe('createProvider', () => {
 
     user = userData
     workspace = w
-    context = factories.createTelemetryContext({ workspace })
+    context = await factories.createTelemetryContext({ workspace })
 
     vi.resetModules()
   })

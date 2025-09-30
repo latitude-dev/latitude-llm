@@ -130,10 +130,7 @@ export function createProvider({
   messages: Message[]
   apiKey: string
   url?: string
-  config?: {
-    model: string
-    azure?: PartialPromptConfig['azure']
-  }
+  config?: PartialPromptConfig
 }): TypedResult<LlmProvider, ChainError<RunErrorCodes.AIProviderConfigError>> {
   const type = provider.provider
   switch (type) {
@@ -142,6 +139,8 @@ export function createProvider({
         createOpenAI({
           fetch: instrumentedFetch({ context }),
           apiKey,
+          // Needed for OpenAI to return token usage
+          compatibility: 'strict',
         }),
       )
     case Providers.Groq:
@@ -149,6 +148,7 @@ export function createProvider({
         createOpenAI({
           fetch: instrumentedFetch({ context }),
           apiKey,
+          compatibility: 'compatible',
           baseURL: GROQ_API_URL,
         }),
       )
@@ -191,12 +191,12 @@ export function createProvider({
         maybeConfig: provider.configuration,
       })
       if (result.error) return result
-      const vertexConfig = result.value
+      const config = result.value
 
       return Result.ok(
         createVertex({
           fetch: instrumentedFetch({ context }),
-          ...vertexConfig,
+          ...config,
         }),
       )
     }
@@ -207,12 +207,12 @@ export function createProvider({
         maybeConfig: provider.configuration,
       })
       if (result.error) return result
-      const vertexConfig = result.value
+      const config = result.value
 
       return Result.ok(
         createVertexAnthropic({
           fetch: instrumentedFetch({ context }),
-          ...vertexConfig,
+          ...config,
         }),
       )
     }
@@ -242,6 +242,7 @@ export function createProvider({
         createOpenAI({
           fetch: instrumentedFetch({ context }),
           apiKey,
+          compatibility: 'compatible',
           baseURL: url,
         }),
       )

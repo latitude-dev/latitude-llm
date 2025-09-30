@@ -10,18 +10,18 @@ import { authProcedure } from '$/actions/procedures'
 import { DatasetRowDataContent } from '@latitude-data/core/schema'
 
 const rowDataSchema = z.record(
-  z.string(),
-  z.custom<DatasetRowDataContent>(
-    (val): val is DatasetRowDataContent =>
+  z.custom<DatasetRowDataContent>((val) => {
+    return (
+      ['string', 'number', 'boolean', 'object'].includes(typeof val) ||
       val === null ||
-      val === undefined ||
-      ['string', 'number', 'boolean', 'object'].includes(typeof val),
-    { message: 'Invalid row data' },
-  ),
+      val === undefined
+    )
+  }),
 )
 
 export const updateDatasetRowAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       datasetId: z.number(),
       rows: z.array(
@@ -31,18 +31,19 @@ export const updateDatasetRowAction = authProcedure
         }),
       ),
     }),
+    { type: 'json' },
   )
-  .action(async ({ ctx, parsedInput }) => {
+  .handler(async ({ ctx, input }) => {
     const datasetRepo = new DatasetsRepository(ctx.workspace.id)
     const dataset = await datasetRepo
-      .find(parsedInput.datasetId)
+      .find(input.datasetId)
       .then((r) => r.unwrap())
     const scope = new DatasetRowsRepository(ctx.workspace.id)
     const rows = await scope.findManyByDataset({
       dataset,
-      rowIds: parsedInput.rows.map((r) => r.rowId),
+      rowIds: input.rows.map((r) => r.rowId),
     })
-    const rowsByRowId = new Map(parsedInput.rows.map((r) => [r.rowId, r]))
+    const rowsByRowId = new Map(input.rows.map((r) => [r.rowId, r]))
     const rowsMap = rows.map((r) => ({
       rowId: rowsByRowId.get(r.id)!.rowId,
       rowData: rowsByRowId.get(r.id)!.rowData,
