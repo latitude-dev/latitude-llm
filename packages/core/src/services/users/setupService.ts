@@ -10,6 +10,7 @@ import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
 import { createUser } from './createUser'
 import { isFeatureEnabledByName } from '../workspaceFeatures/isFeatureEnabledByName'
+import { createCompletedWorkspaceOnboarding } from '../workspaceOnboarding/createCompleted'
 
 const DEFAULT_MODEL = 'gpt-4o-mini'
 
@@ -81,6 +82,12 @@ export default async function setupService(
     const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
     if (isNewOnboardingEnabled) {
       await createWorkspaceOnboarding(
+        { workspaceId: workspace.id },
+        transaction,
+      ).then((r) => r.unwrap())
+    } else {
+      // TODO(onboarding): creating completed onboarding for now so old users dont get onboarded (rm later)
+      await createCompletedWorkspaceOnboarding(
         { workspaceId: workspace.id },
         transaction,
       ).then((r) => r.unwrap())
