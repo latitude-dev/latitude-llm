@@ -48,14 +48,14 @@ export async function isOnboardingCompleted() {
 export async function getOnboardingResources() {
   const { workspace } = await getCurrentUserOrRedirect()
   if (!workspace?.id) {
-    return Result.error(new NotFoundError('Workspace ID is required'))
+    throw new NotFoundError('Workspace ID is required')
   }
 
   const documentResult = await findOnboardingDocument(workspace.id)
-  if (documentResult.error) {
-    return Result.error(new NotFoundError('No document found'))
+  if (!Result.isOk(documentResult)) {
+    throw new NotFoundError('No document found')
   }
-  const { project } = documentResult.value
+  const { project, commit } = documentResult.unwrap()
 
-  return Result.ok({ project })
+  return { project, commit }
 }

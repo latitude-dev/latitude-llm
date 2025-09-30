@@ -26,7 +26,7 @@ import { OnRunChatTrigger } from '../useActiveTrigger'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { CLIENT_TIMEZONE, DEFAULT_TIMEZONE } from '$/lib/constants'
 
-function useTriggerInfo({
+export function useTriggerInfo({
   trigger,
   document,
   integrations,

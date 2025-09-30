@@ -140,6 +140,8 @@ import {
   XIcon,
   Youtube,
   Zap,
+  Wrench,
+  MousePointerClick,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -389,6 +391,8 @@ const Icons = {
   rocket: RocketIcon,
   gift: GiftIcon,
   accessibility: Accessibility,
+  wrench: Wrench,
+  mousePointerClick: MousePointerClick,
 }
 
 export type IconName = keyof typeof Icons

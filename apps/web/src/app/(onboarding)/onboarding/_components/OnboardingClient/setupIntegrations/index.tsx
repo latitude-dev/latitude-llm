@@ -1,5 +1,4 @@
-import { useCallback } from 'react'
-import { OnboardingStep } from '../../../constants'
+import { useCallback, useMemo } from 'react'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -11,15 +10,19 @@ import {
 import { ConfiguredIntegrations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/ConfiguredIntegrations'
 
 export function SetupIntegrationsStep({
-  setCurrentStep,
+  moveNextOnboardingStep,
 }: {
-  setCurrentStep: (step: OnboardingStep) => void
+  moveNextOnboardingStep: () => void
 }) {
   const handleNext = useCallback(() => {
-    setCurrentStep(OnboardingStep.ConfigureTriggers)
-  }, [setCurrentStep])
+    moveNextOnboardingStep()
+  }, [moveNextOnboardingStep])
 
   const { data: integrations } = useIntegrations()
+
+  const allIntegrationsConfigured = useMemo(() => {
+    return getPipedreamUnconfiguredIntegrations(integrations).length === 0
+  }, [integrations])
 
   return (
     <div className='flex flex-col h-full items-center p-32 gap-10'>
@@ -27,16 +30,29 @@ export function SetupIntegrationsStep({
         <div className='p-2 border-2 rounded-lg'>
           <Icon className='' name='sendToBack' size='medium' />
         </div>
-        <Text.H2M color='foreground' noWrap>
-          Set up{' '}
-          <Text.H2M color='foregroundMuted'>
-            {getPipedreamUnconfiguredIntegrations(integrations).length}
-          </Text.H2M>{' '}
-          integrations
-        </Text.H2M>
-        <Text.H5 color='foregroundMuted'>
-          Integrations allow your agent to connect to other apps
-        </Text.H5>
+        {!allIntegrationsConfigured ? (
+          <>
+            <Text.H2M color='foreground' noWrap>
+              Set up{' '}
+              <Text.H2M color='foregroundMuted'>
+                {getPipedreamUnconfiguredIntegrations(integrations).length}
+              </Text.H2M>{' '}
+              integrations
+            </Text.H2M>
+            <Text.H5 color='foregroundMuted'>
+              Integrations allow your agent to connect to other apps
+            </Text.H5>
+          </>
+        ) : (
+          <>
+            <Text.H2M color='foreground' noWrap>
+              All integrations configured!
+            </Text.H2M>
+            <Text.H5 color='foregroundMuted'>
+              You can proceed to the next step
+            </Text.H5>
+          </>
+        )}
       </div>
       <div className='flex flex-col items-center gap-2 border-dashed border-2 rounded-xl p-2'>
         <UnconfiguredIntegrations integrations={integrations} />
@@ -46,6 +62,7 @@ export function SetupIntegrationsStep({
         fancy
         onClick={handleNext}
         iconProps={{ name: 'chevronRight', placement: 'right' }}
+        disabled={!allIntegrationsConfigured}
       >
         Next
       </Button>

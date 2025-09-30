@@ -63,6 +63,7 @@ import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
 import { workspaceFeatures } from './models/workspaceFeatures'
 import { workspaces } from './models/workspaces'
+import { workspaceOnboarding } from './models/workspaceOnboarding'
 
 export type {
   DocumentLog,
@@ -423,6 +424,8 @@ export type WorkspaceLimits = {
 
 export type Promocode = InferSelectModel<typeof promocodes>
 export type ClaimedPromocode = InferSelectModel<typeof claimedPromocodes>
+
+export type WorkspaceOnboarding = InferSelectModel<typeof workspaceOnboarding>
 
 export type ProjectRuns = {
   active: ActiveRun[]
