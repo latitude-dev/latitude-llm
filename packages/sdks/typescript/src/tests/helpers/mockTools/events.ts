@@ -1,9 +1,9 @@
-import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import {
   ChainEvent,
   ChainEventTypes,
   StreamEventTypes,
 } from '@latitude-data/constants'
+import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 
 export const TOOLS_DOCUMENT_UUID = '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b'
 type ToolsEventsObject<T> = {
@@ -17,6 +17,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.ChainStarted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [],
       },
@@ -25,6 +26,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.StepStarted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -56,6 +58,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.ProviderStarted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -88,6 +91,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.ProviderCompleted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -211,6 +215,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.StepCompleted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -294,6 +299,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.StepCompleted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -379,6 +385,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.ChainStarted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -462,6 +469,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.StepStarted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -599,6 +607,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.ProviderStarted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -737,6 +746,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.ProviderCompleted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -975,6 +985,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.StepCompleted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -1172,6 +1183,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.ChainStarted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -1367,6 +1379,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.StepStarted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -1616,6 +1629,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.ProviderStarted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -1866,6 +1880,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.ProviderCompleted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -2143,6 +2158,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.StepCompleted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
@@ -2402,6 +2418,7 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.ChainCompleted,
+        timestamp: 965044800000,
         uuid: TOOLS_DOCUMENT_UUID,
         tokenUsage: {
           promptTokens: 523,

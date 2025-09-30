@@ -7,11 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.2.0-beta.4] - 2025-09-29
+
+### Fixed
+
+- Fixed `prompts.run()` method return types of the TypeScript SDK
+
+## [5.2.0-beta.3] - 2025-09-29
+
+### Changed
+
+- Now `prompts.run()` method, of the TypeScript SDK, returns a `GenerationJob` instead of a `GenerationResponse` when `background` is `true`
+
+## [5.2.0-beta.2] - 2025-09-25
+
+### Fixed
+
+- Fixed TypeScript SDK build
+
+## [5.2.0-beta.1] - 2025-09-25
+
+### Added
+
+- Added `runs.attach()` method to TypeScript SDK
+- Added `runs.stop()` method to TypeScript SDK
+
 ## [5.1.0] - 2025-09-19
 
 ### Added
 
-- Add background option when running a prompt
+- Added background option when running a prompt
 
 ## [5.0.1] - 2025-09-09
 

@@ -47,6 +47,7 @@ Check out our [Examples](/examples) section for more examples of how to use the 
 The Latitude SDK is organized into several namespaces:
 
 - `prompts`: Methods for managing and running prompts
+- `runs`: Methods for managing active runs
 - `logs`: Methods for pushing logs to Latitude
 - `evaluations`: Methods for pushing evaluation results to Latitude
 - `projects`: Methods for managing projects
@@ -229,9 +230,77 @@ console.log('Conversation messages:', result.conversation)
   messages accordingly.
 </Note>
 
-### Rendering Prompts
+### Running a Prompt in the Background
 
-#### Prompt Rendering
+For long-running prompts, such as large Agent systems, that you don't need to wait for, use background runs:
+
+```typescript
+const job = await latitude.prompts.run('prompt-path', {
+  parameters: {
+    productName: 'CloudSync Pro',
+    audience: 'Small Business Owners',
+  },
+  // Enable background processing
+  background: true,
+})
+
+console.log('Job UUID:', job.uuid)
+// The request returns immediately with a conversation UUID
+// You can use this UUID to attach to the run later to check its status or stop it programmatically
+
+const result = await latitude.runs.attach(job.uuid, {
+  stream: true,
+  onEvent: ({ event, data }) => {
+    console.log('Received event:', event, data)
+  },
+})
+
+console.log('Conversation UUID:', result.uuid)
+console.log('Conversation messages:', result.conversation)
+```
+
+## Run Management
+
+### Stop a Run
+
+Stop an active conversation that is currently running:
+
+```typescript
+await latitude.runs.stop('conversation-uuid')
+console.log('Run stopped successfully')
+```
+
+### Attach to a Run
+
+Attach to an active conversation to receive its ongoing output:
+
+```typescript
+const result = await latitude.runs.attach('conversation-uuid', {
+  // Optional: Enable streaming for real-time updates
+  stream: true,
+  // Optional: Make the run interactive (abort when client disconnects)
+  interactive: false,
+  // Optional: Provide callbacks for events
+  onEvent: ({ event, data }) => {
+    if (event === StreamEventTypes.Provider && data.type === 'text-delta') {
+      console.log(data.textDelta)
+    }
+  },
+  onFinished: (result) => {
+    console.log('Attach completed:', result.uuid)
+  },
+  onError: (error) => {
+    console.error('Attach error:', error.message)
+  },
+})
+
+console.log('Conversation UUID:', result.uuid)
+console.log('Conversation messages:', result.conversation)
+```
+
+## Rendering Prompts
+
+### Prompt Rendering
 
 Render a prompt locally without running it:
 
@@ -252,7 +321,7 @@ console.log('Rendered config:', result.config)
 console.log('Rendered messages:', result.messages)
 ```
 
-#### Chain Rendering
+### Chain Rendering
 
 Render a chain of prompts locally:
 
@@ -290,7 +359,7 @@ console.log('Rendered config:', result.config)
 console.log('Rendered messages:', result.messages)
 ```
 
-#### Agent Rendering
+### Agent Rendering
 
 Render an agent prompt locally (similar to `renderChain` but with a final agent result):
 
@@ -431,7 +500,7 @@ latitude.prompts.getOrCreate(
 ): Promise<Prompt>
 
 // Run a prompt
-latitude.prompts.run<S extends AssertedStreamType = 'text', Tools extends ToolSpec = {}>(
+latitude.prompts.run<S extends AssertedStreamType = 'text', Tools extends ToolSpec = {}, Background extends boolean = false>(
   path: string,
   options: {
     projectId?: number,
@@ -439,13 +508,14 @@ latitude.prompts.run<S extends AssertedStreamType = 'text', Tools extends ToolSp
     customIdentifier?: string,
     parameters?: Record<string, unknown>,
     stream?: boolean,
+    background?: Background,
     tools?: ToolCalledFn<Tools>,
     signal?: AbortSignal,
     onEvent?: ({ event, data }: { event: StreamEventTypes, data: ChainEventDto }) => void,
     onFinished?: (data: GenerationResponse<S>) => void,
     onError?: (error: LatitudeApiError) => void
   }
-): Promise<GenerationResponse<S> | undefined>
+): Promise<RunPromptResult<S, Background> | undefined>
 
 // Chat with a prompt
 latitude.prompts.chat<S extends AssertedStreamType = 'text', Tools extends ToolSpec = {}>(
@@ -481,6 +551,27 @@ latitude.prompts.renderChain<M extends AdapterMessageType = PromptlMessage>(
     logResponses?: boolean
   }
 ): Promise<{ config: Config, messages: M[] }>
+```
+
+### Runs Namespace
+
+```typescript
+// Attach to a run
+latitude.runs.attach<S extends AssertedStreamType = 'text', Tools extends ToolSpec = {}>(
+  uuid: string,
+  options?: {
+    stream?: boolean,
+    interactive?: boolean,
+    tools?: ToolCalledFn<Tools>,
+    signal?: AbortSignal,
+    onEvent?: ({ event, data }: { event: StreamEventTypes, data: ChainEventDto }) => void,
+    onFinished?: (data: GenerationResponse<S>) => void,
+    onError?: (error: LatitudeApiError) => void
+  }
+): Promise<GenerationResponse<S> | undefined>
+
+// Stop a run
+latitude.runs.stop(uuid: string): Promise<void>
 ```
 
 ### Projects Namespace

@@ -4,7 +4,7 @@ import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 import { createWorker } from '../utils/createWorker'
 
 const jobMappings = {
-  runDocumentApiJob: jobs.runDocumentApiJob,
+  backgroundRunJob: jobs.backgroundRunJob,
 }
 
 export function startRunsWorker() {

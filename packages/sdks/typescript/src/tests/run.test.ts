@@ -138,6 +138,7 @@ describe('/run', () => {
           customIdentifier: 'miau',
           tools: [],
           stream: true,
+          background: false,
           __internal: { source: LogSources.API },
         })
       }),
@@ -165,6 +166,7 @@ describe('/run', () => {
           userMessage: 'Hello, this is a test message',
           tools: [],
           stream: true,
+          background: false,
           __internal: { source: LogSources.API },
         })
       }),
@@ -365,6 +367,7 @@ data: ${JSON.stringify({
           parameters: { foo: 'bar', lol: 'foo' },
           customIdentifier: 'miau',
           stream: false,
+          background: false,
           tools: [],
           __internal: { source: LogSources.API },
         })
@@ -393,6 +396,7 @@ data: ${JSON.stringify({
           parameters: { foo: 'bar' },
           userMessage: 'Hello, this is a test message for non-streaming',
           stream: false,
+          background: false,
           tools: [],
           __internal: { source: LogSources.API },
         })

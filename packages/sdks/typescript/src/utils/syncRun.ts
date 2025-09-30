@@ -8,12 +8,12 @@ import {
   SDKOptions,
   ToolSpec,
 } from '$sdk/utils/types'
+import { AssertedStreamType } from '@latitude-data/constants'
 import {
   ApiErrorCodes,
   ApiErrorJsonResponse,
   LatitudeErrorCodes,
 } from '@latitude-data/constants/errors'
-import { AssertedStreamType } from '@latitude-data/constants'
 
 export async function syncRun<
   Tools extends ToolSpec,
@@ -24,13 +24,12 @@ export async function syncRun<
     projectId,
     versionUuid,
     parameters,
-    background,
     customIdentifier,
     userMessage,
     onFinished,
     onError,
     options,
-  }: RunPromptOptions<Tools, S> & {
+  }: RunPromptOptions<Tools, S, false> & {
     options: SDKOptions
   },
 ): Promise<GenerationResponse<S> | undefined> {
@@ -57,7 +56,7 @@ export async function syncRun<
     options,
     body: {
       stream: false,
-      background,
+      background: false,
       path,
       parameters,
       customIdentifier,

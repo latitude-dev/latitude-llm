@@ -33,6 +33,7 @@ const buttonContainerVariants = cva(
         // TODO: apply a color token for this
         latte: 'bg-[#E5B217] hover:bg-[#E5B217]/90 border-latte-border',
         primaryMuted: 'bg-primary-muted hover:bg-primary-muted-hover',
+        destructiveMuted: 'bg-destructive-muted',
       },
       fanciness: {
         default: 'bg-transparent hover:bg-transparent',
@@ -101,6 +102,8 @@ const buttonVariants = cva(
           'bg-latte text-latte-input-foreground group-hover:bg-latte/90 border-latte-border',
         primaryMuted:
           'border border-transparent bg-primary-muted text-primary group-hover:bg-primary-muted-hover',
+        destructiveMuted:
+          'border border-destructive-muted-foreground/10 bg-destructive-muted text-destructive-muted-foreground',
       },
       size: {
         default: 'py-buttonDefaultVertical px-3 min-h-8',
@@ -178,6 +181,7 @@ const textColorVariants = ({
   if (variant === 'latte') return 'latteInputForeground'
   if (variant === 'primaryMuted') return 'primary'
   if (variant === 'outlineDestructive') return 'destructive'
+  if (variant === 'destructiveMuted') return 'destructiveMutedForeground'
   return 'foreground'
 }
 

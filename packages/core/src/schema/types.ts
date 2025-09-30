@@ -1,13 +1,19 @@
 import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
 
 import {
-  DocumentLog,
   DocumentTriggerType,
   EvaluationResultDto,
   ExperimentScores,
   IntegrationType,
 } from '@latitude-data/constants'
 import {
+  DocumentTriggerConfiguration,
+  DocumentTriggerDeploymentSettings,
+  DocumentTriggerEventPayload,
+} from '@latitude-data/constants/documentTriggers'
+import {
+  ActiveRun,
+  CompletedRun,
   EvaluationMetadataType,
   EvaluationMetric,
   EvaluationResultableType,
@@ -15,11 +21,6 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '../constants'
-import {
-  DocumentTriggerConfiguration,
-  DocumentTriggerDeploymentSettings,
-  DocumentTriggerEventPayload,
-} from '@latitude-data/constants/documentTriggers'
 import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
 import { connectedEvaluations } from './legacyModels/connectedEvaluations'
 import { evaluationAdvancedTemplates } from './legacyModels/evaluationAdvancedTemplates'
@@ -32,20 +33,27 @@ import { evaluationMetadataLlmAsJudgeSimple } from './legacyModels/evaluationMet
 import { evaluations } from './legacyModels/evaluations'
 import { evaluationTemplateCategories } from './legacyModels/evaluationTemplateCategories'
 import { apiKeys } from './models/apiKeys'
+import { claimedPromocodes } from './models/claimedPromocodes'
 import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
 import { datasetRows } from './models/datasetRows'
 import { datasets } from './models/datasets'
 import { documentSuggestions } from './models/documentSuggestions'
+import { documentTriggerEvents } from './models/documentTriggerEvents'
 import { documentTriggers } from './models/documentTriggers'
 import { documentVersions } from './models/documentVersions'
 import { experiments } from './models/experiments'
 import { latitudeExports } from './models/exports'
+import { features } from './models/features'
 import { integrations } from './models/integrations'
+import { latteRequests } from './models/latteRequests'
+import { latteThreadCheckpoints } from './models/latteThreadCheckpoints'
+import { latteThreads } from './models/latteThreads'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { mcpServers } from './models/mcpServers'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
+import { promocodes } from './models/promocodes'
 import { providerApiKeys } from './models/providerApiKeys'
 import { providerLogs } from './models/providerLogs'
 import { publishedDocuments } from './models/publishedDocuments'
@@ -53,22 +61,18 @@ import { runErrors } from './models/runErrors'
 import { sessions } from './models/sessions'
 import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
-import { workspaces } from './models/workspaces'
-import { latteThreads } from './models/latteThreads'
-import { latteThreadCheckpoints } from './models/latteThreadCheckpoints'
-import { latteRequests } from './models/latteRequests'
-import { features } from './models/features'
 import { workspaceFeatures } from './models/workspaceFeatures'
-import { documentTriggerEvents } from './models/documentTriggerEvents'
-import { promocodes } from './models/promocodes'
-import { claimedPromocodes } from './models/claimedPromocodes'
+import { workspaces } from './models/workspaces'
 
 export type {
   DocumentLog,
+  DocumentLogWithMetadata,
+  DocumentLogWithMetadataAndError,
   EvaluationResult,
   EvaluationResultDto,
   EvaluationResultV2,
   EvaluationV2,
+  RunErrorField,
 } from '@latitude-data/constants'
 
 // Model types are out of schema files to be able to share with NextJS webpack bundler
@@ -381,23 +385,6 @@ export type ExperimentWithScores = ExperimentDto & {
   logsMetadata: ExperimentLogsMetadata
 }
 
-export type RunErrorField = {
-  code: string | null
-  message: string | null
-  details: string | null
-}
-
-export type DocumentLogWithMetadata = DocumentLog & {
-  commit: Commit
-  tokens: number | null
-  duration: number | null
-  costInMillicents: number | null
-}
-
-export type DocumentLogWithMetadataAndError = DocumentLogWithMetadata & {
-  error: RunErrorField
-}
-
 export type DocumentLogsAggregations = {
   totalCount: number
   totalTokens: number
@@ -436,3 +423,8 @@ export type WorkspaceLimits = {
 
 export type Promocode = InferSelectModel<typeof promocodes>
 export type ClaimedPromocode = InferSelectModel<typeof claimedPromocodes>
+
+export type ProjectRuns = {
+  active: ActiveRun[]
+  completed: CompletedRun[]
+}

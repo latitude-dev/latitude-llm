@@ -232,8 +232,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/env
       '@latitude-data/sdk':
-        specifier: 5.1.0
-        version: link:../../packages/sdks/typescript
+        specifier: 5.2.0-beta.4
+        version: 5.2.0-beta.4(typescript@5.8.3)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       '@latitude-data/socket.io-react-hook':
         specifier: 2.4.5
         version: 2.4.5(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@6.0.5)
@@ -3739,6 +3739,11 @@ packages:
 
   '@latitude-data/sdk@5.1.0':
     resolution: {integrity: sha512-AIV8ilhXY46Rz8uAnNtxoMIYWbcPIPkjskVJvgQDDsnTD1BJ9QXZevJMgO2tms55JJZb3sB6Lciw1zoEtPkKUw==}
+    peerDependencies:
+      typescript: ^5.5.4
+
+  '@latitude-data/sdk@5.2.0-beta.4':
+    resolution: {integrity: sha512-e7MXvOC+/hkvXOi4dX3iSIt2lK+tcgg4KpWuKQJgSIcX/QgTA/SfSC4VEngb1n2s5AMVR8m2ceFiDy7gBJHXFQ==}
     peerDependencies:
       typescript: ^5.5.4
 
@@ -17412,6 +17417,17 @@ snapshots:
       js-tiktoken: 1.0.20
 
   '@latitude-data/sdk@5.1.0(typescript@5.8.3)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))':
+    dependencies:
+      eventsource-parser: 2.0.1
+      node-fetch: 2.7.0
+      promptl-ai: 0.7.5(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+      typescript: 5.8.3
+      zod: 3.24.2
+    transitivePeerDependencies:
+      - encoding
+      - ws
+
+  '@latitude-data/sdk@5.2.0-beta.4(typescript@5.8.3)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))':
     dependencies:
       eventsource-parser: 2.0.1
       node-fetch: 2.7.0

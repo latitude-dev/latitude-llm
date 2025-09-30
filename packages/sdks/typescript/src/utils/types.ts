@@ -8,12 +8,8 @@ export type HandlerConfig<U, B> = {
 
 import { RouteResolver } from '$sdk/utils'
 import { LatitudeApiError } from '$sdk/utils/errors'
-import type {
-  Config,
-  Message,
-  ToolCall,
-} from '@latitude-data/constants/legacyCompiler'
 import {
+  AssertedStreamType,
   ChainCallResponseDto,
   LegacyChainEvent as ChainEvent,
   ChainEventDto,
@@ -23,8 +19,12 @@ import {
   Providers,
   RunSyncAPIResponse,
   StreamEventTypes,
-  AssertedStreamType,
 } from '@latitude-data/constants'
+import type {
+  Config,
+  Message,
+  ToolCall,
+} from '@latitude-data/constants/legacyCompiler'
 import {
   AdapterMessageType,
   ProviderAdapter,
@@ -50,6 +50,14 @@ export type RunDocumentUrlParams = {
 }
 
 export type ChatUrlParams = {
+  conversationUuid: string
+}
+
+export type StopRunUrlParams = {
+  conversationUuid: string
+}
+
+export type AttachRunUrlParams = {
   conversationUuid: string
 }
 
@@ -164,6 +172,8 @@ export enum HandlerType {
   RunDocument = 'run-document',
   Log = 'log',
   ToolResults = 'tool-results',
+  StopRun = 'stop-run',
+  AttachRun = 'attach-run',
 }
 
 export type HandlerConfigs = {
@@ -197,10 +207,19 @@ export type HandlerConfigs = {
   >
   [HandlerType.Log]: HandlerConfig<RunDocumentUrlParams, LogBodyParams>
   [HandlerType.ToolResults]: HandlerConfig<never, ToolResultsBodyParams>
+  [HandlerType.StopRun]: HandlerConfig<StopRunUrlParams, never>
+  [HandlerType.AttachRun]: HandlerConfig<
+    AttachRunUrlParams,
+    AttachRunBodyParams
+  >
 }
 
 export type UrlParams<H extends HandlerType> = HandlerConfigs[H]['UrlParams']
 export type BodyParams<H extends HandlerType> = HandlerConfigs[H]['BodyParams']
+
+export type GenerationJob = {
+  uuid: string
+}
 
 export type GenerationResponse<S extends AssertedStreamType = 'text'> = {
   uuid: string
@@ -272,17 +291,24 @@ export type GetOrCreatePromptOptions = {
 export type RunPromptOptions<
   Tools extends ToolSpec,
   S extends AssertedStreamType = 'text',
+  Background extends boolean = false,
 > = StreamResponseCallbacks<S> & {
   projectId?: number
   versionUuid?: string
   customIdentifier?: string
   parameters?: Record<string, unknown>
   stream?: boolean
-  background?: boolean
   tools?: ToolCalledFn<Tools>
   signal?: AbortSignal
   userMessage?: string
-}
+} & (Background extends true
+    ? { background: Background }
+    : { background?: Background })
+
+export type RunPromptResult<
+  S extends AssertedStreamType = 'text',
+  Background extends boolean = false,
+> = Background extends true ? GenerationJob : GenerationResponse<S>
 
 export type RenderPromptOptions<M extends AdapterMessageType = PromptlMessage> =
   {
@@ -314,6 +340,16 @@ export type ChatOptions<
 > = StreamResponseCallbacks<S> & {
   messages: Message[]
   stream?: boolean
+  tools?: ToolCalledFn<Tools>
+  signal?: AbortSignal
+}
+
+export type AttachRunOptions<
+  Tools extends ToolSpec,
+  S extends AssertedStreamType = 'text',
+> = StreamResponseCallbacks<S> & {
+  stream?: boolean
+  interactive?: boolean
   tools?: ToolCalledFn<Tools>
   signal?: AbortSignal
 }
@@ -374,4 +410,9 @@ type ChatBodyParams = {
   messages: Message[]
   stream?: boolean
   tools?: string[]
+}
+
+type AttachRunBodyParams = {
+  stream?: boolean
+  interactive?: boolean
 }

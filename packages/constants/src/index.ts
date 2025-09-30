@@ -74,6 +74,7 @@ export * from './history'
 export * from './integrations'
 export * from './mcp'
 export * from './models'
+export * from './runs'
 export * from './tools'
 export * from './tracing'
 

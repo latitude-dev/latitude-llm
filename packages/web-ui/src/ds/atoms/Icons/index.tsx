@@ -1,4 +1,5 @@
 import {
+  Accessibility,
   ALargeSmallIcon,
   AlertCircle,
   AppWindow,
@@ -28,8 +29,10 @@ import {
   ChevronUp,
   CircleAlert,
   CircleArrowUp,
+  CircleCheck,
   CircleChevronLeft,
   CircleChevronRight,
+  CircleDashed,
   CircleDollarSign,
   CircleGauge,
   CircleHelp,
@@ -65,6 +68,7 @@ import {
   FolderOpen,
   FolderPlus,
   Forward,
+  GiftIcon,
   GitCompareArrows,
   Github,
   Gitlab,
@@ -110,6 +114,7 @@ import {
   RotateCcw,
   ScrollTextIcon,
   SearchIcon,
+  SendToBack,
   SettingsIcon,
   Slack,
   Space,
@@ -135,9 +140,6 @@ import {
   XIcon,
   Youtube,
   Zap,
-  GiftIcon,
-  Accessibility,
-  SendToBack,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -242,6 +244,8 @@ const Icons = {
   circleHelp: CircleHelp,
   circleStop: CircleStop,
   circleUser: CircleUser,
+  circleCheck: CircleCheck,
+  circleDashed: CircleDashed,
   clipboard: Copy,
   clock: Clock,
   clockFading: ClockFadingIcon,

@@ -1,6 +1,7 @@
 'use client'
 
 import { ROUTES } from '$/services/routes'
+import useFeature from '$/stores/useFeature'
 import { Commit, Project } from '@latitude-data/core/browser'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -41,6 +42,7 @@ export default function ProjectSection({
   project: Project
   commit: Commit
 }) {
+  const runs = useFeature('runs')
   const PROJECT_ROUTES: ProjectRoute[] = [
     {
       label: 'Preview',
@@ -49,6 +51,17 @@ export default function ProjectSection({
         .commits.detail({ uuid: commit.uuid }).preview.root,
       iconName: 'eye',
     },
+    ...(runs.isEnabled
+      ? ([
+          {
+            label: 'Runs',
+            route: ROUTES.projects
+              .detail({ id: project.id })
+              .commits.detail({ uuid: commit.uuid }).runs.root,
+            iconName: 'logs',
+          },
+        ] as const)
+      : []),
     {
       label: 'Analytics',
       route: ROUTES.projects

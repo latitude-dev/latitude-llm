@@ -1,7 +1,10 @@
-import Chat from './Chat'
-import { ResolvedMetadata } from '$/workers/readMetadata'
-import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandParametersOrEvaluations'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import { ResolvedMetadata } from '$/workers/readMetadata'
+import {
+  AppLocalStorage,
+  useLocalStorage,
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
+import Chat from './Chat'
 import PreviewPrompt from './PreviewPrompt'
 
 export function V2Playground({
@@ -15,25 +18,27 @@ export function V2Playground({
   parameters: Record<string, unknown> | undefined
   playground: ReturnType<typeof usePlaygroundChat>
 }) {
-  const expander = useExpandParametersOrEvaluations({
-    initialExpanded: 'parameters',
-  })
+  const { value: expandParameters, setValue: setExpandParameters } =
+    useLocalStorage({
+      key: AppLocalStorage.expandParameters,
+      defaultValue: false,
+    })
 
   return mode === 'preview' ? (
     <PreviewPrompt
       showHeader
       metadata={metadata}
       parameters={parameters}
-      expandParameters={expander.parametersExpanded}
-      setExpandParameters={expander.onToggle('parameters')}
+      expandParameters={expandParameters}
+      setExpandParameters={setExpandParameters}
     />
   ) : (
     <Chat
       showHeader
       playground={playground}
       parameters={parameters}
-      expandParameters={expander.parametersExpanded}
-      setExpandParameters={expander.onToggle('parameters')}
+      expandParameters={expandParameters}
+      setExpandParameters={setExpandParameters}
     />
   )
 }

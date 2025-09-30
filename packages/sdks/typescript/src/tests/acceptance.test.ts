@@ -1,5 +1,5 @@
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { Latitude } from '../../dist/index.js'
-import { describe, expect, it, vi, beforeAll } from 'vitest'
 
 // HOW TO RUN THESE TESTS:
 //
