@@ -3,22 +3,18 @@ title: Production Deployment
 description: Deploying and managing a self-hosted Latitude instance for production use.
 ---
 
-# Production Deployment
-
-This guide covers deploying and managing a self-hosted Latitude instance in a production environment.
-
 ## Infrastructure Components
 
 A typical production deployment involves several key services:
 
-1.  **Web Application**: The main Next.js frontend (e.g., `app` service).
-2.  **API Gateway**: Handles incoming API requests (e.g., `gateway` service).
-3.  **Workers**: Processes background jobs like evaluations and dataset generation (e.g., `worker` service).
-4.  **WebSockets**: Manages real-time connections (e.g., `websockets` service).
-5.  **Database**: PostgreSQL for storing persistent data.
-6.  **Cache/Queue**: Redis for caching and message queuing.
-7.  **Reverse Proxy/Load Balancer**: (e.g., Traefik, Nginx, Caddy, Cloud Load Balancer) Handles incoming traffic, SSL termination, and routing to services.
-8.  **Object Storage (Recommended)**: S3-compatible storage for files like uploaded datasets or images.
+1. **Web Application**: The main Next.js frontend (e.g., `app` service).
+2. **API Gateway**: Handles incoming API requests (e.g., `gateway` service).
+3. **Workers**: Processes background jobs like evaluations and dataset generation (e.g., `worker` service).
+4. **WebSockets**: Manages real-time connections (e.g., `websockets` service).
+5. **Database**: PostgreSQL for storing persistent data.
+6. **Cache/Queue**: Redis for caching and message queuing.
+7. **Reverse Proxy/Load Balancer**: (e.g., Traefik, Nginx, Caddy, Cloud Load Balancer) Handles incoming traffic, SSL termination, and routing to services.
+8. **Object Storage (Recommended)**: S3-compatible storage for files like uploaded datasets or images.
 
 ## Installation Methods
 
@@ -29,6 +25,7 @@ While Latitude can be run using `docker compose` on a single machine, production
 - **Pros**: Simple setup for smaller deployments or initial testing.
 - **Cons**: Limited scalability and fault tolerance.
 - **Setup**: Follow the Docker Compose instructions, ensuring production-ready configuration in your `.env` file (strong passwords, S3 storage, proper domain/SSL setup via Traefik or another proxy).
+
   ```bash
   # Ensure .env is configured for production
   cp .env.example .env
@@ -36,6 +33,11 @@ While Latitude can be run using `docker compose` on a single machine, production
   docker network create web # If using Traefik default config
   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
   ```
+
+<Tip>
+  We only provide amd64 images, if you are using Mac OS with Apple Sillicon, you
+  will need to enable amd64 emulation and download the amd64 images.
+</Tip>
 
 ### 2. Container Orchestration (Kubernetes, ECS, etc.)
 
