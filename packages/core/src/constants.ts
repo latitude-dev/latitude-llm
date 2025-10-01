@@ -21,7 +21,8 @@ import {
   ConfigurePropResponse,
   PropOption,
 } from '@pipedream/sdk'
-import { FinishReason, LanguageModelUsage, Tool, ToolResultPart } from 'ai'
+import { FinishReason, Tool, ToolResultPart } from 'ai'
+import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
 import { z } from 'zod'
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
@@ -259,7 +260,7 @@ export const DOCUMENT_PATH_REGEXP = /^([\w-]+\/)*([\w-.])+$/
 export const toolCallSchema = z.object({
   id: z.string(),
   name: z.string(),
-  arguments: z.record(z.any()),
+  arguments: z.record(z.string(), z.unknown()),
 })
 
 const textContentSchema = z.object({
@@ -291,14 +292,14 @@ const toolCallContentSchema = z.object({
   type: z.literal('tool-call'),
   toolCallId: z.string(),
   toolName: z.string(),
-  args: z.record(z.any()),
+  args: z.record(z.string(), z.unknown()),
 })
 
 const toolResultContentSchema = z.object({
   type: z.literal('tool-result'),
   toolCallId: z.string(),
   toolName: z.string(),
-  result: z.any(),
+  result: z.unknown(),
   isError: z.boolean().optional(),
 })
 
@@ -331,7 +332,7 @@ export const messageSchema = z
           z.object({
             id: z.string(),
             name: z.string(),
-            arguments: z.record(z.any()),
+            arguments: z.record(z.string(), z.unknown()),
           }),
         )
         .optional(),
@@ -344,7 +345,7 @@ export const messageSchema = z
     }),
   )
 
-export const messagesSchema = z.array(z.any(messageSchema))
+export const messagesSchema = z.array(messageSchema)
 
 export const resultConfigurationSchema = z.discriminatedUnion('type', [
   z.object({
@@ -396,7 +397,7 @@ export type DocumentVersionDto = DocumentVersion & {
 
 export const documentLogFilterOptionsSchema = z.object({
   commitIds: z.array(z.number()),
-  logSources: z.array(z.nativeEnum(LogSources)),
+  logSources: z.array(z.enum(LogSources)),
   createdAt: z
     .object({ from: z.date().optional(), to: z.date().optional() })
     .optional(),

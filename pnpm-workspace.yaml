@@ -5,12 +5,13 @@ packages:
   - 'tools/*'
   - '!examples/**'
 catalog:
+  ai: 5.0.44
   pg: 8.16.0
   drizzle-orm: 0.44.2
   drizzle-kit: 0.31.1
   dd-trace: 5.43.0
-  promptl-ai: 0.9.2
-  zod: 3.24.2
+  promptl-ai: 0.8.0
+  zod: 4.1.8
   react: 19.1.1
   react-dom: 19.1.1
   '@types/react': 19.1.15

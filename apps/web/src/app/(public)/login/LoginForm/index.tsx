@@ -10,7 +10,8 @@ import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import Link from 'next/link'
-import { useServerAction } from 'zsa-react'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { useFormAction } from '$/hooks/useFormAction'
 
 export default function LoginForm({
   footer,
@@ -20,12 +21,13 @@ export default function LoginForm({
   returnTo?: string
 }) {
   const { toast } = useToast()
-  const { isPending, error, executeFormAction } = useServerAction(loginAction, {
-    onError: ({ err }) => {
-      if (err.code === 'ERROR') {
+  const { isPending, execute } = useLatitudeAction(loginAction)
+  const { error, action } = useFormAction(execute, {
+    onError: (error) => {
+      if (error.code === 'ERROR') {
         toast({
           title: 'Error',
-          description: err.message,
+          description: error.message,
           variant: 'destructive',
         })
       }
@@ -33,7 +35,7 @@ export default function LoginForm({
   })
   const errors = error?.fieldErrors
   return (
-    <form action={executeFormAction as any}>
+    <form action={action}>
       <input type='hidden' name='returnTo' value={returnTo} />
       <FormWrapper>
         <Input

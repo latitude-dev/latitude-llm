@@ -7,20 +7,19 @@ import { createCommit } from '@latitude-data/core/services/commits/create'
 import { updateDocument } from '@latitude-data/core/services/documents/update'
 import { z } from 'zod'
 
-import { withProject } from '../procedures'
 import { Commit } from '@latitude-data/core/schema/types'
+import { withProject, withProjectSchema } from '../procedures'
 
 export const createDraftWithPromptlUpgradeAction = withProject
-  .createServerAction()
-  .input(
-    z.object({
+  .inputSchema(
+    withProjectSchema.extend({
       documentUuid: z.string().optional(),
       draftUuid: z.string().optional(),
     }),
   )
-  .handler(async ({ input, ctx }) => {
+  .action(async ({ parsedInput, ctx }) => {
     const { user, workspace, project } = ctx
-    const { documentUuid, draftUuid } = input
+    const { documentUuid, draftUuid } = parsedInput
 
     let draft: Commit
 

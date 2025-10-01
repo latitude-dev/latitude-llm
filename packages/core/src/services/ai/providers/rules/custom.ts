@@ -1,5 +1,6 @@
 import { AppliedRules, ProviderRules } from './types'
 
+const ASSISTANT_VALID_CONTENT_TYPES = ['text', 'tool-call', 'reasoning']
 export function applyCustomRules(rules: AppliedRules): AppliedRules {
   const unsupportedSystemContent = rules.messages.some(
     (message) =>
@@ -23,7 +24,7 @@ export function applyCustomRules(rules: AppliedRules): AppliedRules {
       message.role === 'assistant' &&
       Array.isArray(message.content) &&
       message.content.some(
-        (content) => !['text', 'tool-call'].includes(content.type),
+        (content) => !ASSISTANT_VALID_CONTENT_TYPES.includes(content.type),
       ),
   )
 

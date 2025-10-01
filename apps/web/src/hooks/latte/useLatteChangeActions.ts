@@ -5,10 +5,10 @@ import { addFeedbackToLatteChangeAction } from '$/actions/latte/addFeedbackToLat
 import { discardLatteChangesActions } from '$/actions/latte/discardChanges'
 import { partialAcceptLatteChangesAction } from '$/actions/latte/partialAcceptChanges'
 import { partialRejectLatteChangesAction } from '$/actions/latte/partialRejectChanges'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { trigger } from '$/lib/events'
 import { useLatteStore } from '$/stores/latte/index'
 import { useCallback, useMemo } from 'react'
-import { useServerAction } from 'zsa-react'
 
 /**
  * Provides actions for managing Latte project changes including accepting,
@@ -22,7 +22,7 @@ export function useLatteChangeActions() {
     setError,
   } = useLatteStore()
 
-  const { execute: executeAcceptChanges } = useServerAction(
+  const { execute: executeAcceptChanges } = useLatitudeAction(
     acceptLatteChangesAction,
     {
       onSuccess: ({ data: { checkpoints, evaluationUuid } }) => {
@@ -35,13 +35,13 @@ export function useLatteChangeActions() {
           setLatteActionsFeedbackUuid(evaluationUuid)
         }
       },
-      onError: ({ err }) => {
-        setError(err)
+      onError: (error) => {
+        setError(error)
       },
     },
   )
 
-  const { execute: executeUndoChanges } = useServerAction(
+  const { execute: executeUndoChanges } = useLatitudeAction(
     discardLatteChangesActions,
     {
       onSuccess: ({ data: { checkpoints, evaluationUuid } }) => {
@@ -54,13 +54,13 @@ export function useLatteChangeActions() {
           setLatteActionsFeedbackUuid(evaluationUuid)
         }
       },
-      onError: ({ err }) => {
-        setError(err)
+      onError: (error) => {
+        setError(error)
       },
     },
   )
 
-  const { execute: executeAcceptPartialChanges } = useServerAction(
+  const { execute: executeAcceptPartialChanges } = useLatitudeAction(
     partialAcceptLatteChangesAction,
     {
       onSuccess: ({ data: { evaluationUuid, checkpoints } }) => {
@@ -73,13 +73,13 @@ export function useLatteChangeActions() {
           setLatteActionsFeedbackUuid(evaluationUuid)
         }
       },
-      onError: ({ err }) => {
-        setError(err)
+      onError: (error) => {
+        setError(error)
       },
     },
   )
 
-  const { execute: executeRejectPartialChanges } = useServerAction(
+  const { execute: executeRejectPartialChanges } = useLatitudeAction(
     partialRejectLatteChangesAction,
     {
       onSuccess: ({ data: { evaluationUuid, checkpoints } }) => {
@@ -92,17 +92,17 @@ export function useLatteChangeActions() {
           setLatteActionsFeedbackUuid(evaluationUuid)
         }
       },
-      onError: ({ err }) => {
-        setError(err)
+      onError: (error) => {
+        setError(error)
       },
     },
   )
 
-  const { execute: executeAddFeedbackToLatteChange } = useServerAction(
+  const { execute: executeAddFeedbackToLatteChange } = useLatitudeAction(
     addFeedbackToLatteChangeAction,
     {
-      onError: ({ err }) => {
-        setError(err)
+      onError: (error) => {
+        setError(error)
       },
     },
   )

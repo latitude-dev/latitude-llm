@@ -1,21 +1,19 @@
 'use server'
-import { UnauthorizedError } from '@latitude-data/constants/errors'
 import { createEvaluationTemplate } from '@latitude-data/core/services/evaluationAdvancedTemplates/create'
 import { z } from 'zod'
 
-import { authProcedure } from '../procedures'
 import { EvaluationResultableType } from '@latitude-data/core/constants'
+import { withAdmin } from '../procedures'
 
-export const createEvaluationTemplateAction = authProcedure
-  .createServerAction()
-  .input(
+export const createEvaluationTemplateAction = withAdmin
+  .inputSchema(
     z.object({
       name: z.string(),
       description: z.string(),
       categoryId: z.number().optional().default(1),
       categoryName: z.string().optional(),
       configuration: z.object({
-        type: z.nativeEnum(EvaluationResultableType),
+        type: z.enum(EvaluationResultableType),
         detail: z
           .object({ range: z.object({ from: z.number(), to: z.number() }) })
           .optional(),
@@ -23,13 +21,7 @@ export const createEvaluationTemplateAction = authProcedure
       prompt: z.string(),
     }),
   )
-  .handler(async ({ ctx, input }) => {
-    // TODO: move this check to a procedure
-    if (!ctx.user.admin)
-      throw new UnauthorizedError(
-        'You must be an admin to create an evaluation template',
-      )
-
+  .action(async ({ parsedInput }) => {
     const {
       name,
       description,
@@ -37,7 +29,7 @@ export const createEvaluationTemplateAction = authProcedure
       categoryName,
       configuration,
       prompt,
-    } = input
+    } = parsedInput
 
     return await createEvaluationTemplate({
       name,

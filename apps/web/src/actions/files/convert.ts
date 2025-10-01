@@ -6,16 +6,15 @@ import { authProcedure } from '../procedures'
 import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/constants'
 
 export const convertFileAction = authProcedure
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       file: z.instanceof(File).refine(async (file) => {
         return file?.size <= MAX_UPLOAD_SIZE_IN_MB
       }, `Your file must be less than ${MAX_SIZE}MB in size. You can split it into smaller files and upload them separately.`),
     }),
   )
-  .handler(async ({ input }) => {
-    const result = await convertFile(input.file)
+  .action(async ({ parsedInput }) => {
+    const result = await convertFile(parsedInput.file)
 
     return result.unwrap()
   })

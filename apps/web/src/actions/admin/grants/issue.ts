@@ -8,28 +8,27 @@ import { withAdmin } from '../../procedures'
 import { GrantSource, QuotaType } from '@latitude-data/core/constants'
 
 export const issueGrantAction = withAdmin
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
-      type: z.nativeEnum(QuotaType),
+      type: z.enum(QuotaType),
       amount: z.union([z.number(), z.literal('unlimited')]),
       periods: z.number().optional(),
       workspaceId: z.number(),
     }),
   )
-  .handler(async ({ ctx, input }) => {
-    const workspace = await unsafelyFindWorkspace(input.workspaceId)
+  .action(async ({ ctx, parsedInput }) => {
+    const workspace = await unsafelyFindWorkspace(parsedInput.workspaceId)
     if (!workspace) {
       throw new BadRequestError('Workspace not found')
     }
 
     const grant = await issueGrant({
-      type: input.type,
-      amount: input.amount,
+      type: parsedInput.type,
+      amount: parsedInput.amount,
       source: GrantSource.System,
       referenceId: ctx.user.id,
       workspace: workspace,
-      periods: input.periods,
+      periods: parsedInput.periods,
     }).then((r) => r.unwrap())
 
     return grant

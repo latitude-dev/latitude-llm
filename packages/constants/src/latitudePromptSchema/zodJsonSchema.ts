@@ -21,8 +21,8 @@ export const zodJsonSchema: z.ZodTypeAny = z.lazy(() =>
   z
     .object({
       // Meta‐Keywords
-      $id: z.string().url().optional(),
-      $schema: z.string().url().optional(),
+      $id: z.url().optional(),
+      $schema: z.url().optional(),
       $ref: z.string().optional(),
 
       title: z.string().optional(),
@@ -34,7 +34,7 @@ export const zodJsonSchema: z.ZodTypeAny = z.lazy(() =>
       type: z
         .union([
           z.enum(JSON_SCHEMA_TYPES),
-          z.array(z.enum(JSON_SCHEMA_TYPES)).nonempty(),
+          z.array(z.enum(JSON_SCHEMA_TYPES)).min(1),
         ])
         .optional(),
 
@@ -59,9 +59,7 @@ export const zodJsonSchema: z.ZodTypeAny = z.lazy(() =>
       minItems: z.number().int().min(0).optional(),
       uniqueItems: z.boolean().optional(),
 
-      items: z
-        .union([zodJsonSchema, z.array(zodJsonSchema).nonempty()])
-        .optional(),
+      items: z.union([zodJsonSchema, z.array(zodJsonSchema).min(1)]).optional(),
       additionalItems: z.union([z.boolean(), zodJsonSchema]).optional(),
       contains: zodJsonSchema.optional(),
 
@@ -69,11 +67,14 @@ export const zodJsonSchema: z.ZodTypeAny = z.lazy(() =>
       maxProperties: z.number().int().min(0).optional(),
       minProperties: z.number().int().min(0).optional(),
       required: z.array(z.string()).optional(),
-      properties: z.record(zodJsonSchema).optional(),
-      patternProperties: z.record(zodJsonSchema).optional(),
+      properties: z.record(z.string(), zodJsonSchema).optional(),
+      patternProperties: z.record(z.string(), zodJsonSchema).optional(),
       additionalProperties: z.union([z.boolean(), zodJsonSchema]).optional(),
       dependencies: z
-        .record(z.union([z.array(z.string()).nonempty(), zodJsonSchema]))
+        .record(
+          z.string(),
+          z.union([z.array(z.string()).min(1), zodJsonSchema]),
+        )
         .optional(),
       propertyNames: zodJsonSchema.optional(),
 
@@ -94,8 +95,8 @@ export const zodJsonSchema: z.ZodTypeAny = z.lazy(() =>
       deprecated: z.boolean().optional(),
 
       // Definitions / $defs
-      definitions: z.record(zodJsonSchema).optional(),
-      $defs: z.record(zodJsonSchema).optional(),
+      definitions: z.record(z.string(), zodJsonSchema).optional(),
+      $defs: z.record(z.string(), zodJsonSchema).optional(),
     })
     .superRefine((obj, ctx) => {
       // 1) items requires type: array
@@ -104,7 +105,7 @@ export const zodJsonSchema: z.ZodTypeAny = z.lazy(() =>
           const types = Array.isArray(obj.type) ? obj.type : [obj.type]
           if (!types.includes('array')) {
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: 'custom',
               message: "`items` is only allowed when `type` includes 'array'.",
               path: ['items'],
             })
@@ -130,7 +131,7 @@ export const zodJsonSchema: z.ZodTypeAny = z.lazy(() =>
             const types = Array.isArray(obj.type) ? obj.type : [obj.type]
             if (!types.includes('object')) {
               ctx.addIssue({
-                code: z.ZodIssueCode.custom,
+                code: 'custom',
                 message: `\`${key}\` is only allowed when \`type\` includes 'object'.`,
                 path: [key],
               })
@@ -152,7 +153,7 @@ export const zodJsonSchema: z.ZodTypeAny = z.lazy(() =>
             const types = Array.isArray(obj.type) ? obj.type : [obj.type]
             if (!types.includes('string')) {
               ctx.addIssue({
-                code: z.ZodIssueCode.custom,
+                code: 'custom',
                 message: `\`${key}\` is only allowed when \`type\` includes 'string'.`,
                 path: [key],
               })
@@ -175,7 +176,7 @@ export const zodJsonSchema: z.ZodTypeAny = z.lazy(() =>
             const types = Array.isArray(obj.type) ? obj.type : [obj.type]
             if (!types.includes('number') && !types.includes('integer')) {
               ctx.addIssue({
-                code: z.ZodIssueCode.custom,
+                code: 'custom',
                 message: `\`${key}\` is only allowed when \`type\` includes 'number' or 'integer'.`,
                 path: [key],
               })

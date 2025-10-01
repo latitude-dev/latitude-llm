@@ -297,16 +297,16 @@ describe('cronHelper', () => {
     })
 
     describe('Error handling', () => {
-      it('should return null for invalid cron expressions', () => {
+      it('should return undefined for invalid cron expressions', () => {
         const invalidCronExpression = 'invalid cron'
         const startDate = new Date('2025-01-15T10:00:00.000Z')
 
         const result = getNextRunTime(invalidCronExpression, 'UTC', startDate)
 
-        expect(result).toBeNull()
+        expect(result).toBeUndefined()
       })
 
-      it('should return null for invalid timezones', () => {
+      it('should return undefined for invalid timezones', () => {
         const cronExpression = '0 * * * *'
         const startDate = new Date('2025-01-15T10:00:00.000Z')
 
@@ -316,7 +316,7 @@ describe('cronHelper', () => {
           startDate,
         )
 
-        expect(result).toBeNull()
+        expect(result).toBeUndefined()
       })
     })
   })

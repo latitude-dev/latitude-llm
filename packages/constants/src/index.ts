@@ -81,6 +81,6 @@ export * from './tracing'
 // TODO: Move to env
 export const EMAIL_TRIGGER_DOMAIN = 'run.latitude.so' as const
 export const OPENAI_PROVIDER_ENDPOINTS = [
-  'chat_completions',
   'responses',
+  'chat_completions', // (DEPRECATED)
 ] as const

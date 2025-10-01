@@ -21,14 +21,14 @@ describe('createProviderApiKeyAction', () => {
     it('errors when the user is not authenticated', async () => {
       mocks.getSession.mockResolvedValue(null)
 
-      const [_, error] = await createProviderApiKeyAction({
+      const { serverError } = await createProviderApiKeyAction({
         provider: Providers.OpenAI,
         token: 'test-token',
         url: 'https://api.openai.com',
         name: 'Test API Key',
       })
 
-      expect(error!.name).toEqual('UnauthorizedError')
+      expect(serverError).toEqual('Unauthorized')
     })
   })
 
@@ -49,17 +49,19 @@ describe('createProviderApiKeyAction', () => {
     })
 
     it('successfully creates a provider API key', async () => {
-      const [result, error] = await createProviderApiKeyAction({
+      const {
+        data: provider,
+        serverError,
+        validationErrors,
+      } = await createProviderApiKeyAction({
         provider: Providers.OpenAI,
         token: 'test-token',
         name: 'Test API Key',
         configuration: { endpoint: 'chat_completions' },
       })
 
-      expect(error).toBeNull()
-
-      const provider = result!
-
+      expect(serverError).toBeUndefined()
+      expect(validationErrors).toBeUndefined()
       expect(provider.provider).toEqual(Providers.OpenAI)
       expect(provider.name).toEqual('Test API Key')
       expect(provider.token).toEqual('tes********oken')
@@ -70,20 +72,24 @@ describe('createProviderApiKeyAction', () => {
     })
 
     it('successfully creates an OpenAI provider for responses endpoint', async () => {
-      const [result] = await createProviderApiKeyAction({
+      const { data } = await createProviderApiKeyAction({
         provider: Providers.OpenAI,
         token: 'test-token',
         name: 'Test API Key',
         configuration: { endpoint: 'responses' },
       })
 
-      expect(result!.configuration).toEqual({
+      expect(data!.configuration).toEqual({
         endpoint: 'responses',
       })
     })
 
     it('successfully creates a provider API key with a default model', async () => {
-      const [result, error] = await createProviderApiKeyAction({
+      const {
+        data: provider,
+        serverError,
+        validationErrors,
+      } = await createProviderApiKeyAction({
         provider: Providers.OpenAI,
         token: 'test-token',
         name: 'Test API Key',
@@ -91,37 +97,37 @@ describe('createProviderApiKeyAction', () => {
         configuration: { endpoint: 'chat_completions' },
       })
 
-      expect(error).toBeNull()
-
-      const provider = result!
-
-      expect(provider.provider).toEqual(Providers.OpenAI)
-      expect(provider.name).toEqual('Test API Key')
-      expect(provider.token).toEqual('tes********oken')
-      expect(provider.defaultModel).toEqual('gpt-4o')
+      expect(serverError).toBeUndefined()
+      expect(validationErrors).toBeUndefined()
+      expect(provider?.provider).toEqual(Providers.OpenAI)
+      expect(provider?.name).toEqual('Test API Key')
+      expect(provider?.token).toEqual('tes********oken')
+      expect(provider?.defaultModel).toEqual('gpt-4o')
     })
 
     it('handles errors when creating a provider API key fails', async () => {
-      const [data, error] = await createProviderApiKeyAction({
+      const { data, validationErrors } = await createProviderApiKeyAction({
         provider: Providers.OpenAI,
-        // @ts-expect-error - Testing invalid input
+        // @ts-expect-error - testing invalid input
         token: null,
         name: 'Test API Key',
       })
 
-      expect(data).toBeNull()
-      expect(error).toBeDefined()
+      expect(data).toBeUndefined()
+      expect(validationErrors?.fieldErrors?.token).toContain(
+        'Invalid input: expected string, received null',
+      )
     })
 
     it('fails creating a custom provider without url', async () => {
-      const [data, error] = await createProviderApiKeyAction({
+      const { data, serverError } = await createProviderApiKeyAction({
         provider: Providers.Custom,
         token: 'test-token',
         name: 'Test API Key',
       })
 
-      expect(data).toBeNull()
-      expect(error).toBeDefined()
+      expect(data).toBeUndefined()
+      expect(serverError).toEqual('Custom provider requires a URL')
     })
 
     it('returns proper error when duplicate name', async () => {
@@ -129,20 +135,22 @@ describe('createProviderApiKeyAction', () => {
         workspace,
         type: Providers.OpenAI,
         name: 'foo',
-        // @ts-expect-error - Mock
+        // @ts-expect-error - testing
         user,
         configuration: { endpoint: 'chat_completions' },
       })
 
-      const [data, error] = await createProviderApiKeyAction({
+      const { data, validationErrors } = await createProviderApiKeyAction({
         provider: Providers.OpenAI,
         token: 'test-token',
         name: 'foo',
         url: 'https://api.openai.com',
       })
 
-      expect(data).toBeNull()
-      expect(error).toBeDefined()
+      expect(data).toBeUndefined()
+      expect(validationErrors?.fieldErrors.configuration).toContain(
+        'Invalid input: expected object, received undefined',
+      )
     })
 
     it('allows creating two providers with same name if one is deleted', async () => {
@@ -150,21 +158,23 @@ describe('createProviderApiKeyAction', () => {
         workspace,
         type: Providers.OpenAI,
         name: 'foo',
-        // @ts-expect-error - Mock
+        // @ts-expect-error - testing
         user,
         deletedAt: new Date(),
         configuration: { endpoint: 'chat_completions' },
       })
 
-      const [_, error] = await createProviderApiKeyAction({
-        provider: Providers.OpenAI,
-        token: 'test-token',
-        name: 'foo',
-        url: 'https://api.openai.com',
-        configuration: { endpoint: 'chat_completions' },
-      })
+      const { serverError, validationErrors } =
+        await createProviderApiKeyAction({
+          provider: Providers.OpenAI,
+          token: 'test-token',
+          name: 'foo',
+          url: 'https://api.openai.com',
+          configuration: { endpoint: 'chat_completions' },
+        })
 
-      expect(error).toBeNull()
+      expect(serverError).toBeUndefined()
+      expect(validationErrors).toBeUndefined()
     })
   })
 })

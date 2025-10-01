@@ -684,11 +684,17 @@ async function enrichCost(
   const repository = new ProviderApiKeysRepository(workspace.id, db)
   const finding = await repository.findByName(provider)
 
+  const totalTokens =
+    inputTokens + outputTokens + tokens.reasoning + tokens.cached
   let cost = estimateCost({
     usage: {
+      inputTokens,
+      outputTokens,
       promptTokens: inputTokens,
       completionTokens: outputTokens,
-      totalTokens: inputTokens + outputTokens,
+      totalTokens,
+      reasoningTokens: tokens.reasoning,
+      cachedInputTokens: tokens.cached,
     },
     provider: finding.value?.provider ?? (provider as Providers),
     model: model,

@@ -7,9 +7,8 @@ import { moveNextOnboardingStep } from '@latitude-data/core/services/workspaceOn
 /**
  * Move to the next onboarding step
  */
-export const moveNextOnboardingStepAction = authProcedure
-  .createServerAction()
-  .handler(async ({ ctx }) => {
+export const moveNextOnboardingStepAction = authProcedure.action(
+  async ({ ctx }) => {
     const onboarding = await getWorkspaceOnboarding({
       workspace: ctx.workspace,
     }).then((r) => r.unwrap())
@@ -20,4 +19,5 @@ export const moveNextOnboardingStepAction = authProcedure
     }).then((r) => r.unwrap())
 
     return nextOnboardingStep
-  })
+  },
+)
