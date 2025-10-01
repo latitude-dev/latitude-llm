@@ -1,6 +1,9 @@
 import { Conversation } from '@latitude-data/compiler'
-import { VercelConfig } from '@latitude-data/constants'
-import { FinishReason, LanguageModelUsage } from 'ai'
+import {
+  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
+  VercelConfig,
+} from '@latitude-data/constants'
+import { FinishReason } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { LogSources, ProviderApiKey, Workspace } from '../../../../browser'
 import { ChainStepResponse, StreamType } from '../../../../constants'
@@ -55,7 +58,7 @@ export async function streamAIResponse({
   })
 }
 
-export async function executeAIResponse({
+async function executeAIResponse({
   controller,
   workspace,
   provider,
@@ -111,9 +114,13 @@ export async function executeAIResponse({
     return {
       response,
       tokenUsage: {
+        inputTokens: 0,
+        outputTokens: 0,
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 0,
+        reasoningTokens: 0,
+        cachedInputTokens: 0,
       },
     }
   }
@@ -175,6 +182,6 @@ export async function executeAIResponse({
     // TODO(compiler): fix types
     // @ts-expect-error - TODO: fix types
     response,
-    tokenUsage: await aiResult.usage,
+    tokenUsage: processedResponse.usage,
   }
 }

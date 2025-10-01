@@ -77,7 +77,15 @@ const step: ChainStepResponse<'text'> = {
   streamType: 'text',
   text: 'fake-response-text',
   reasoning: undefined,
-  usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+  usage: {
+    inputTokens: 4,
+    outputTokens: 6,
+    promptTokens: 4,
+    completionTokens: 6,
+    totalTokens: 10,
+    reasoningTokens: 0,
+    cachedInputTokens: 0,
+  },
   toolCalls: [],
   documentLogUuid: 'fake-document-log-uuid',
   providerLog: {

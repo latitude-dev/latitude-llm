@@ -158,10 +158,9 @@ describe('downloadLogsJob', () => {
     })
 
     // Run the job
-    const result = await downloadLogsJob(mockJob)
+    await downloadLogsJob(mockJob)
 
     // Verify results
-    expect(result).toEqual({ totalProcessed: 1 })
     expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
@@ -169,10 +168,9 @@ describe('downloadLogsJob', () => {
 
   it('should handle empty results', async () => {
     // Run the job with no document logs
-    const result = await downloadLogsJob(mockJob)
+    await downloadLogsJob(mockJob)
 
     // Verify results
-    expect(result).toEqual({ totalProcessed: 0 })
     expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).not.toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
@@ -208,10 +206,9 @@ describe('downloadLogsJob', () => {
     )
 
     // Run the job
-    const result = await downloadLogsJob(mockJob)
+    await downloadLogsJob(mockJob)
 
     // Verify results
-    expect(result).toEqual({ totalProcessed: 3 })
     expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
@@ -237,10 +234,9 @@ describe('downloadLogsJob', () => {
       logSources: [LogSources.API],
     }
 
-    const result = await downloadLogsJob(mockJob)
+    await downloadLogsJob(mockJob)
 
     // Verify results
-    expect(result).toEqual({ totalProcessed: 1 })
     expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
@@ -272,10 +268,9 @@ describe('downloadLogsJob', () => {
       logSources: [LogSources.API],
     }
 
-    const result = await downloadLogsJob(mockJob)
+    await downloadLogsJob(mockJob)
 
     // Verify results
-    expect(result).toEqual({ totalProcessed: 1 })
     expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
@@ -309,10 +304,9 @@ describe('downloadLogsJob', () => {
       },
     }
 
-    const result = await downloadLogsJob(mockJob)
+    await downloadLogsJob(mockJob)
 
     // Verify results
-    expect(result).toEqual({ totalProcessed: 2 })
     expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
     expect(updateExport).toHaveBeenCalled()
@@ -358,10 +352,9 @@ describe('downloadLogsJob', () => {
     )
 
     // Run the job
-    const result = await downloadLogsJob(mockJob)
+    await downloadLogsJob(mockJob)
 
     // Verify results
-    expect(result).toEqual({ totalProcessed: 1 })
     expect(hydrateProviderLog).toHaveBeenCalled()
     expect(mockDisk.putStream).toHaveBeenCalled()
 

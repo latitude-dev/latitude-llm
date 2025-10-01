@@ -70,7 +70,7 @@ export const validateTriggerSchema = defineLatteTool(
     componentId: z.string(),
     promptUuid: z.string(),
     integrationId: z.number(),
-    configuration: z.record(z.any()),
+    configuration: z.record(z.string(), z.unknown()),
   }),
 )
 

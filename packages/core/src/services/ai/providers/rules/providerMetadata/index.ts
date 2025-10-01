@@ -23,11 +23,13 @@ const CONTENT_DEFINED_ATTRIBUTES = [
   'text',
   'type',
   'image',
-  'mimeType',
+  'mimeType', // Deprecated in v5, use 'mediaType' instead
+  'mediaType', // v4 -> v5 migration
   'data',
   'toolCallId',
   'toolName',
-  'args',
+  'args', // Deprecated in v5, use 'input' instead for tool calls
+  'input', // v4 -> v5 migration
   // TODO: Add a test for this
   'result',
 ] as const
@@ -70,7 +72,7 @@ export function extractContentMetadata({
   )
 
   const definedData = definedAttributes.reduce(
-    // @ts-ignore
+    // @ts-error - we are sure about the type here
     (acc, key) => ({ ...acc, [key]: content[key] }),
     {} as Record<(typeof CONTENT_DEFINED_ATTRIBUTES)[number], unknown>,
   )
@@ -119,7 +121,7 @@ export function extractMessageMetadata({
   if (Object.keys(rest).length === 0) return common
 
   if (role === 'user' && Object.hasOwnProperty.call(rest, 'name')) {
-    // @ts-ignore
+    // @ts-expect-error - name is not in Message type
     const name = rest.name
     common = {
       ...common,

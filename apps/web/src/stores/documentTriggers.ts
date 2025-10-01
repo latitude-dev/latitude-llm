@@ -66,11 +66,11 @@ export default function useDocumentTriggers(
         mutate([...data, createdDocumentTrigger])
         onCreated?.(createdDocumentTrigger)
       },
-      onError: ({ err }) => {
+      onError: (error) => {
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: `Failed to create document trigger: ${err.message}`,
+          description: `Failed to create document trigger: ${error.message}`,
         })
       },
     },
@@ -116,6 +116,8 @@ export default function useDocumentTriggers(
           title: 'Success',
           description: 'Deleted the document trigger successfully.',
         })
+
+        if (deletedTrigger == null) return
 
         mutate(data.filter((t) => t.id !== deletedTrigger.id))
         onDeleted?.(deletedTrigger)

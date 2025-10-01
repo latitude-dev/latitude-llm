@@ -8,22 +8,21 @@ import { z } from 'zod'
 import { withAdmin } from '../../procedures'
 
 export const revokeGrantAction = withAdmin
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       grantId: z.number(),
       workspaceId: z.number(),
     }),
   )
-  .handler(async ({ input }) => {
-    const workspace = await unsafelyFindWorkspace(input.workspaceId)
+  .action(async ({ parsedInput }) => {
+    const workspace = await unsafelyFindWorkspace(parsedInput.workspaceId)
     if (!workspace) {
       throw new BadRequestError('Workspace not found')
     }
 
-    const grantsRepository = new GrantsRepository(input.workspaceId)
+    const grantsRepository = new GrantsRepository(parsedInput.workspaceId)
     let grant = await grantsRepository
-      .find(input.grantId)
+      .find(parsedInput.grantId)
       .then((r) => r.unwrap())
 
     grant = await revokeGrant({ grant, workspace }).then((r) => r.unwrap())

@@ -37,7 +37,7 @@ export function createDiskDriver(visibility: 'private' | 'public') {
   if (key === 'local') {
     if (!location && !publicLocation) {
       throw new Error(
-        '(PUBLIC)_FILES_STORAGE_PATH env variable is required when using local disk.',
+        'PUBLIC_FILES_STORAGE_PATH env variable is required when using local disk.',
       )
     }
 
@@ -61,7 +61,6 @@ export function createDiskDriver(visibility: 'private' | 'public') {
 
   if (visibility === 'public') {
     return new S3Driver({
-      // @ts-ignore
       credentials: awsConfig.credentials,
       region: awsConfig.region,
       bucket: awsConfig.publicBucket,
@@ -71,7 +70,6 @@ export function createDiskDriver(visibility: 'private' | 'public') {
   }
 
   return new S3Driver({
-    // @ts-ignore
     credentials: awsConfig.credentials,
     region: awsConfig.region,
     bucket: awsConfig.bucket,

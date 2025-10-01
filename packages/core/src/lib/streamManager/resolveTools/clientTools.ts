@@ -1,4 +1,8 @@
-import { LogSources, ToolDefinition } from '@latitude-data/constants'
+import {
+  LogSources,
+  ToolDefinition,
+  ToolExecutionOptions,
+} from '@latitude-data/constants'
 import { LatitudeError } from '../../errors'
 import { Result, TypedResult } from '../../Result'
 import { ResolvedTools, ToolSource } from './types'
@@ -9,7 +13,6 @@ import {
 import { StreamManager } from '..'
 import { telemetry, TelemetryContext } from '../../../telemetry'
 import { Tool } from 'ai'
-import { ToolExecutionOptions } from 'ai'
 import {
   awaitClientToolResult,
   mockClientToolResult,
@@ -94,13 +97,21 @@ function filterProviderTools([name]: ToolTuple) {
 }
 
 /**
+ * Vercel AI SDK changed `parameters` by `inputSchema` in their Tool
+ * definition. We want to ignore this difference here
+ * and get the rest of the Vercel Tool
+ */
+type AdaptedVercelToolDefinition = Omit<Tool, 'inputSchema'> & {
+  parameters: ToolDefinition['parameters']
+}
+/**
  * Builds a tool definition. if the tool has a defined handler in the stream
  * manager, it will be added to the definition so that it's automatically
  * executed by vercel AI sdk downstream.
  */
 function buildDefinition(streamManager: StreamManager) {
   return ([name, toolDefinition]: ToolTuple) => {
-    const definition = { ...toolDefinition } as Tool
+    const definition = toolDefinition as AdaptedVercelToolDefinition
     if (streamManager.source === LogSources.Playground) {
       definition.execute = instrumentToolHandler(awaitClientToolResult, {
         workspaceId: streamManager.workspace.id,
@@ -155,7 +166,10 @@ function instrumentToolHandler(
     toolDefinition: ToolDefinition
   },
 ) {
-  return async (args: any, toolCall: ToolExecutionOptions) => {
+  return async (
+    args: Record<string, unknown>,
+    toolCall: ToolExecutionOptions,
+  ) => {
     const $tool = telemetry.tool(context, {
       name: toolName,
       call: {

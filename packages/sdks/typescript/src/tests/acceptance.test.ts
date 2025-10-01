@@ -8,7 +8,7 @@ import { Latitude } from '../../dist/index.js'
 // 3. Set the TEST_LATITUDE_API_KEY environment variable with a valid API key
 // 4. Ensure a provider with valid api key that matches the promptContent :point_down: is available
 // 5. Build the sdk package with `pnpm build`
-// 6. Run the test
+// 6. Run the test `TEST_LATITUDE_API_KEY={your_key} pnpm test ./tests/acceptance.test.ts`
 
 describe.skip('SDK Integration Tests (E2E)', () => {
   const apiKey = process.env.TEST_LATITUDE_API_KEY!

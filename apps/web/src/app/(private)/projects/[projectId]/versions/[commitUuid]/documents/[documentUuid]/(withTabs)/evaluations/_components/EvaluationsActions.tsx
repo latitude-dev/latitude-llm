@@ -1,6 +1,7 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
-import { ActionErrors } from '$/hooks/useLatitudeAction'
+import EvaluationV2Form, {
+  EvaluationV2FormErrors,
+} from '$/components/evaluations/EvaluationV2Form'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
@@ -143,14 +144,15 @@ function AddEvaluation({
   const [options, setOptions] = useState<Partial<EvaluationOptions>>(
     DEFAULT_EVALUATION_OPTIONS,
   )
-  const [errors, setErrors] =
-    useState<ActionErrors<typeof useEvaluationsV2, 'createEvaluation'>>()
+  const [errors, setErrors] = useState<EvaluationV2FormErrors>()
 
   const onCreate = useCallback(async () => {
     if (isCreatingEvaluation) return
     const [result, errors] = await createEvaluation({ settings, options })
-    if (errors) setErrors(errors)
-    else {
+
+    if (errors) {
+      setErrors(errors)
+    } else if (result?.evaluation) {
       setSettings(DEFAULT_EVALUATION_SETTINGS)
       setOptions(DEFAULT_EVALUATION_OPTIONS)
       setErrors(undefined)

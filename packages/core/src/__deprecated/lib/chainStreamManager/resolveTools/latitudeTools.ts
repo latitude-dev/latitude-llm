@@ -68,11 +68,11 @@ function resolveLatitudeToolsFromNewSchema(config: LatitudePromptConfig) {
       )
     }
 
+    // TODO(compiler): fix types
+    // @ts-expect-error - TODO: fix types
     resolvedTools[
       getLatitudeToolInternalName(latitudeToolName as LatitudeTool)
     ] = {
-      // TODO(compiler): fix types
-      // @ts-expect-error - TODO: fix types
       definition: getLatitudeToolDefinition(latitudeToolName as LatitudeTool)!,
       sourceData: {
         source: ToolSource.Latitude,

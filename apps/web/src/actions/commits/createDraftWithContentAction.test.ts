@@ -47,7 +47,7 @@ describe('createDraftWithContentAction', () => {
 
   describe('unauthorized', () => {
     it('errors when the user is not authenticated', async () => {
-      const [_, error] = await createDraftWithContentAction({
+      const { serverError } = await createDraftWithContentAction({
         projectId: project.id,
         title: 'New Draft',
         description: 'Draft Description',
@@ -55,7 +55,7 @@ describe('createDraftWithContentAction', () => {
         content: 'New content',
       })
 
-      expect(error!.name).toEqual('UnauthorizedError')
+      expect(serverError).toEqual('Unauthorized')
     })
   })
 
@@ -68,7 +68,7 @@ describe('createDraftWithContentAction', () => {
     })
 
     it('returns error when project is not found', async () => {
-      const [_, error] = await createDraftWithContentAction({
+      const { serverError } = await createDraftWithContentAction({
         projectId: 999992,
         title: 'New Draft',
         description: 'Draft Description',
@@ -76,11 +76,11 @@ describe('createDraftWithContentAction', () => {
         content: 'New content',
       })
 
-      expect(error!.name).toEqual('NotFoundError')
+      expect(serverError).toEqual('Project not found')
     })
 
     it('returns error when document is not found', async () => {
-      const [_, error] = await createDraftWithContentAction({
+      const { serverError } = await createDraftWithContentAction({
         projectId: project.id,
         title: 'New Draft',
         description: 'Draft Description',
@@ -88,32 +88,33 @@ describe('createDraftWithContentAction', () => {
         content: 'New content',
       })
 
-      expect(error!.name).toEqual('NotFoundError')
+      expect(serverError).toEqual('Document not found')
     })
 
     it('creates a draft and updates document content', async () => {
       const newContent = 'Updated content'
-      const [draft, error] = await createDraftWithContentAction({
-        projectId: project.id,
-        title: 'New Draft',
-        description: 'Draft Description',
-        documentUuid: document.documentUuid,
-        content: newContent,
-      })
-
-      expect(error).toBeNull()
+      const { data, serverError, validationErrors } =
+        await createDraftWithContentAction({
+          projectId: project.id,
+          title: 'New Draft',
+          description: 'Draft Description',
+          documentUuid: document.documentUuid,
+          content: newContent,
+        })
 
       const docsRepo = new DocumentVersionsRepository(workspace.id)
       const newDocumentVersion = await docsRepo
         .getDocumentAtCommit({
           projectId: project.id,
-          commitUuid: draft!.uuid,
+          commitUuid: data?.uuid,
           documentUuid: document.documentUuid,
         })
         .then((r) => r.unwrap())
 
-      expect(draft!.mergedAt).toBeNull()
-      expect(draft!.title).toEqual('New Draft')
+      expect(serverError).toBeUndefined()
+      expect(validationErrors).toBeUndefined()
+      expect(data?.mergedAt).toBeNull()
+      expect(data?.title).toEqual('New Draft')
 
       expect(newDocumentVersion.content).toEqual(newContent)
     })
