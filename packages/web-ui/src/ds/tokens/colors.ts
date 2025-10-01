@@ -44,6 +44,8 @@ export const colors = {
     latteInputForeground: 'text-latte-input-foreground',
     latteOutputForeground: 'text-latte-output-foreground',
     latteOutputForegroundMuted: 'text-latte-output-foreground/50',
+    latteBackground: 'text-latte',
+    latteBadgeBorder: 'text-latte-badge-border',
   },
   darkTextColors: {
     white: 'dark:text-white',

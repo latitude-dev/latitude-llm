@@ -2,8 +2,9 @@ import { ReactNode } from 'react'
 import { cn } from '@latitude-data/web-ui/utils'
 
 import AppHeader, { AppHeaderProps } from './Header'
-import RightSidebarLayout from './RightSidebarLayout'
 import { User } from '@latitude-data/core/schema/types'
+import DocumentationSidebarLayout from './DocumentationSidebarLayout'
+import { DocumentationProvider } from '$/components/Documentation/Provider'
 
 export type AppLayoutProps = AppHeaderProps & {
   children: ReactNode
@@ -14,7 +15,6 @@ export type AppLayoutProps = AppHeaderProps & {
 export default function AppLayout({
   children,
   currentUser,
-  navigationLinks,
   scrollable = true,
   cloudInfo,
   isCloud,
@@ -25,17 +25,18 @@ export default function AppLayout({
         'overflow-y-auto custom-scrollbar': scrollable,
       })}
     >
-      <AppHeader
-        navigationLinks={navigationLinks}
-        currentUser={currentUser}
-        cloudInfo={cloudInfo}
-        isCloud={isCloud}
-      />
-      <RightSidebarLayout>
-        <main className='w-full flex-grow min-h-0 h-full relative'>
-          {children}
-        </main>
-      </RightSidebarLayout>
+      <DocumentationProvider>
+        <AppHeader
+          currentUser={currentUser}
+          cloudInfo={cloudInfo}
+          isCloud={isCloud}
+        />
+        <DocumentationSidebarLayout>
+          <main className='w-full flex-grow min-h-0 h-full relative'>
+            {children}
+          </main>
+        </DocumentationSidebarLayout>
+      </DocumentationProvider>
     </div>
   )
 }

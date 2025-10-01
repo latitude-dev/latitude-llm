@@ -23,11 +23,12 @@ const IntercomContext = createContext<IntercomContextValue | undefined>(
 export function IntercomProvider({
   identity,
   children,
-  showDefaultLauncher = false,
+  floatingButton = 'left',
 }: {
   identity: SupportUserIdentity
   children: ReactNode
   showDefaultLauncher?: boolean
+  floatingButton?: 'left' | 'right' | 'none'
 }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const unreadCountHandler = useCallback((count: number) => {
@@ -44,11 +45,12 @@ export function IntercomProvider({
       name: identity.userData.name,
       email: identity.userData.email,
       created_at: identity.userData.createdAt,
-      hide_default_launcher: !showDefaultLauncher,
+      hide_default_launcher: floatingButton === 'none',
+      alignment: floatingButton,
     })
 
     onUnreadCountChange(unreadCountHandler)
-  }, [identity, unreadCountHandler, showDefaultLauncher])
+  }, [identity, unreadCountHandler, floatingButton])
 
   return (
     <IntercomContext.Provider

@@ -1,15 +1,43 @@
 import { logoutAction } from '$/actions/user/logoutAction'
 import { ROUTES } from '$/services/routes'
 import { Avatar } from '@latitude-data/web-ui/atoms/Avatar'
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  MenuOption,
-} from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Popover } from '@latitude-data/web-ui/atoms/Popover'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { getUserInfoFromSession } from '@latitude-data/web-ui/getUserInfoFromSession'
+import { TripleThemeToggle } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
+import { TextColor } from '@latitude-data/web-ui/tokens'
+import { cn } from '@latitude-data/web-ui/utils'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 import { User } from '@latitude-data/core/schema/types'
+
+type DropdownItemProps = {
+  label: string
+  icon?: IconName
+  color?: TextColor
+  onClick?: () => void
+}
+
+function DropdownItem({
+  label,
+  icon,
+  color = 'foreground',
+  onClick,
+}: DropdownItemProps) {
+  return (
+    <div
+      className={cn('w-full flex items-center gap-x-2 px-2 py-1 rounded-md', {
+        'cursor-pointer hover:bg-muted': !!onClick,
+      })}
+      onClick={onClick}
+    >
+      {icon && <Icon name={icon} color={color} />}
+      <Text.H5 color={color}>{label}</Text.H5>
+    </div>
+  )
+}
 
 export default function AvatarDropdown({
   currentUser,
@@ -27,33 +55,25 @@ export default function AvatarDropdown({
     await logoutAction()
   }, [])
 
-  let options = useMemo(
+  const options = useMemo(
     () =>
       [
-        ...(currentUser?.email
-          ? [
-              {
-                label: currentUser.email,
-              },
-            ]
-          : []),
-        ...(currentUser?.admin && isCloud
-          ? [
-              {
-                label: 'Backoffice',
-                iconProps: {
-                  name: 'terminal',
-                },
-                onClick: onClickBackoffice,
-              },
-            ]
-          : []),
+        currentUser?.email && {
+          label: currentUser.email,
+        },
+        currentUser?.admin &&
+          isCloud && {
+            label: 'Backoffice',
+            icon: 'terminal',
+            onClick: onClickBackoffice,
+          },
         {
           label: 'Logout',
-          type: 'destructive',
+          icon: 'logOut',
+          color: 'destructive',
           onClick: onClickLogout,
         },
-      ] as MenuOption[],
+      ].filter(Boolean) as DropdownItemProps[],
     [currentUser, isCloud, onClickBackoffice, onClickLogout],
   )
 
@@ -61,19 +81,32 @@ export default function AvatarDropdown({
   if (!info) return null
 
   return (
-    <DropdownMenu
-      trigger={() => (
-        <DropdownMenuTrigger>
+    <Popover.Root>
+      <Popover.Trigger asChild>
+        <Button variant='ghost'>
           <Avatar
             alt={info.name}
             fallback={info.fallback}
             className='w-6 h-6'
           />
-        </DropdownMenuTrigger>
-      )}
-      options={options}
-      side='bottom'
-      align='end'
-    />
+        </Button>
+      </Popover.Trigger>
+      <Popover.Content
+        side='bottom'
+        align='end'
+        size='large'
+        className='flex flex-col gap-4 min-w-52 px-1 py-2'
+      >
+        <div className='flex flex-col gap-0'>
+          {options.map((option) => (
+            <DropdownItem key={option.label} {...option} />
+          ))}
+        </div>
+
+        <div className='flex flex-row items-center justify-start px-2'>
+          <TripleThemeToggle direction='horizontal' />
+        </div>
+      </Popover.Content>
+    </Popover.Root>
   )
 }

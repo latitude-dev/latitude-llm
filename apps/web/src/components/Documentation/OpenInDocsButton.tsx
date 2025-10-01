@@ -6,7 +6,7 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useState } from 'react'
 
 export function OpenInDocsButton({ route }: { route: DocsRoute }) {
-  const { open } = useDocs()
+  const { navigateTo } = useDocs()
 
   const [isHovered, setIsHovered] = useState(false)
 
@@ -26,7 +26,7 @@ export function OpenInDocsButton({ route }: { route: DocsRoute }) {
           onClick={(e) => {
             e.stopPropagation()
             e.preventDefault()
-            open(route)
+            navigateTo(route)
           }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}

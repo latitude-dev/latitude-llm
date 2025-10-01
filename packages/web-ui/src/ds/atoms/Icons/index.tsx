@@ -142,6 +142,8 @@ import {
   Zap,
   Wrench,
   MousePointerClick,
+  LogOut,
+  Headset,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -279,6 +281,7 @@ const Icons = {
   globe: Globe,
   googleWorkspace: Google,
   gridVertical: GridVertical,
+  headset: Headset,
   history: History,
   house: House,
   hyperbrowser: Hyperbrowser,
@@ -300,6 +303,7 @@ const Icons = {
   lock: Lock,
   logo: LatitudeLogo,
   logoMonochrome: LatitudeLogoMonochrome,
+  logOut: LogOut,
   logs: Logs,
   mail: Mail,
   mapPin: MapPin,

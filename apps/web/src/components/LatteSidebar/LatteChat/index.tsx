@@ -16,6 +16,7 @@ import { LatitudeErrorCodes } from '@latitude-data/constants/errors'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { StarburstBadge } from '@latitude-data/web-ui/atoms/StarburstBadge'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import {
   useCurrentCommit,
@@ -155,18 +156,29 @@ function LatteChatUI() {
             {!inConversation ? (
               <div className='flex flex-col items-center justify-center h-full gap-8 min-w-[50%] p-8'>
                 <div className='flex flex-col items-center justify-center gap-6'>
-                  <Image
-                    src='/latte.svg'
-                    alt='Latte'
-                    width={80}
-                    height={80}
-                    className={cn('select-none duration-500 h-auto', {
-                      'animate-spin': animateLatte,
-                    })}
-                    onDoubleClick={() => setAnimateLatte((prev) => !prev)}
-                    unselectable='on'
-                    unoptimized
-                  />
+                  <StarburstBadge
+                    className='w-40 h-40'
+                    backgroundColor='latteBackground'
+                    borderColor='latteBadgeBorder'
+                    spin
+                  >
+                    <div
+                      style={{ transform: 'translate(4px, -5px)' }} // Custom adjustments because the Latte image looks off center to the naked eye due to the handle
+                    >
+                      <Image
+                        src='/latte.svg'
+                        alt='Latte'
+                        width={100}
+                        height={100}
+                        className={cn('select-none duration-500 h-auto', {
+                          'animate-spin': animateLatte,
+                        })}
+                        onDoubleClick={() => setAnimateLatte((prev) => !prev)}
+                        unselectable='on'
+                        unoptimized
+                      />
+                    </div>
+                  </StarburstBadge>
                   <div className='flex flex-col items-center justify-center gap-2'>
                     <Text.H3M centered>
                       What do you want to automate today?
