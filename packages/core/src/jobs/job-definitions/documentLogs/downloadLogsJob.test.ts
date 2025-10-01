@@ -157,6 +157,9 @@ describe('downloadLogsJob', () => {
       source: LogSources.API,
     })
 
+    // Run the job
+    await downloadLogsJob(mockJob)
+
     // Verify results
     expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
@@ -164,6 +167,9 @@ describe('downloadLogsJob', () => {
   })
 
   it('should handle empty results', async () => {
+    // Run the job with no document logs
+    await downloadLogsJob(mockJob)
+
     // Verify results
     expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).not.toHaveBeenCalled()
@@ -199,6 +205,9 @@ describe('downloadLogsJob', () => {
       ),
     )
 
+    // Run the job
+    await downloadLogsJob(mockJob)
+
     // Verify results
     expect(mockDisk.putStream).toHaveBeenCalled()
     expect(mockJob.updateProgress).toHaveBeenCalled()
@@ -224,6 +233,8 @@ describe('downloadLogsJob', () => {
       commitIds: [commit.id],
       logSources: [LogSources.API],
     }
+
+    await downloadLogsJob(mockJob)
 
     // Verify results
     expect(mockDisk.putStream).toHaveBeenCalled()
@@ -256,6 +267,8 @@ describe('downloadLogsJob', () => {
       commitIds: [commit.id],
       logSources: [LogSources.API],
     }
+
+    await downloadLogsJob(mockJob)
 
     // Verify results
     expect(mockDisk.putStream).toHaveBeenCalled()
@@ -290,6 +303,8 @@ describe('downloadLogsJob', () => {
         to: now.toISOString(),
       },
     }
+
+    await downloadLogsJob(mockJob)
 
     // Verify results
     expect(mockDisk.putStream).toHaveBeenCalled()
@@ -335,6 +350,9 @@ describe('downloadLogsJob', () => {
     vi.mocked(hydrateProviderLog).mockResolvedValue(
       Result.ok(mockHydratedLog as any),
     )
+
+    // Run the job
+    await downloadLogsJob(mockJob)
 
     // Verify results
     expect(hydrateProviderLog).toHaveBeenCalled()
