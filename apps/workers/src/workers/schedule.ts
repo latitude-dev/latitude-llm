@@ -51,4 +51,11 @@ export async function setupSchedules() {
     { pattern: '0 0 1 * * *' },
     { opts: { attempts: 1 } },
   )
+
+  // Every day at 2 AM - Removes logs older than 30 days from free plan accounts
+  await maintenanceQueue.upsertJobScheduler(
+    'scheduleMigrateSpansJobs',
+    { pattern: '0 0 1 * * *' },
+    { opts: { attempts: 1 } },
+  )
 }
