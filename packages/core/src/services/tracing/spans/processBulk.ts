@@ -257,9 +257,7 @@ export async function processSpansBulk(
     })
   }
 
-  if (processedSpans.length === 0) {
-    return Result.nil()
-  }
+  if (processedSpans.length === 0) return Result.nil()
 
   // Bulk insert spans and save metadata
   return await transaction.call(async (tx) => {
@@ -453,7 +451,9 @@ export function extractSpanType(
       return Result.ok(SpanType.Reranking)
     case SpanType.Http:
       return Result.ok(SpanType.Http)
-    case SpanType.Unknown:
+    case SpanType.Prompt:
+      return Result.ok(SpanType.Prompt)
+    default:
       return Result.ok(SpanType.Unknown)
   }
 

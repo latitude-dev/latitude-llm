@@ -66,13 +66,13 @@ export async function runDocumentAtCommit({
   // Note: run document retries always produce new traces)
   const $prompt = telemetry.prompt(context, {
     documentLogUuid: errorableUuid,
-    versionUuid: commit.uuid,
-    promptUuid: document.documentUuid,
     experimentUuid: experiment?.uuid,
     externalId: customIdentifier,
-    template: result.value,
-    parameters: parameters,
     name: document.path.split('/').at(-1),
+    parameters: parameters,
+    promptUuid: document.documentUuid,
+    template: result.value,
+    versionUuid: commit.uuid,
   })
 
   const checker = new RunDocumentChecker({

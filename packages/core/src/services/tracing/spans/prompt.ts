@@ -1,4 +1,8 @@
-import { SPAN_SPECIFICATIONS, SpanType } from '../../../browser'
+import {
+  ATTR_GEN_AI_REQUEST_PARAMETERS,
+  SPAN_SPECIFICATIONS,
+  SpanType,
+} from '../../../browser'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { SpanProcessArgs } from './shared'
@@ -12,20 +16,22 @@ export const PromptSpanSpecification = {
 async function process(args: SpanProcessArgs<SpanType.Prompt>, _ = database) {
   let parameters: Record<string, unknown>
   try {
-    parameters = JSON.parse(args.attributes.parameters as string)
+    parameters = JSON.parse(
+      attributes[ATTR_GEN_AI_REQUEST_PARAMETERS] as string,
+    )
   } catch (error) {
     parameters = {}
   }
 
   return Result.ok({
-    externalId: args.attributes.customIdentifier as string,
-    name: args.attributes.name as string,
+    externalId: attributes.externalId as string,
+    name: attributes.name as string,
     parameters,
-    template: args.attributes.template as string,
+    template: attributes.template as string,
 
     // References
-    experimentUuid: args.attributes.experimentUuid as string,
-    promptUuid: args.attributes.promptUuid as string,
-    versionUuid: args.attributes.versionUuid as string,
+    experimentUuid: attributes.experimentUuid as string,
+    promptUuid: attributes.promptUuid as string,
+    versionUuid: attributes.versionUuid as string,
   })
 }
