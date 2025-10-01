@@ -10,7 +10,7 @@ import {
 export const publisher = {
   publishLater: async (event: LatitudeEvent) => {
     const { eventsQueue, webhooksQueue } = await queues()
-    eventsQueue.add('createEventJob', event)
+
     eventsQueue.add('publishEventJob', event)
     eventsQueue.add('publishToAnalyticsJob', event)
 
