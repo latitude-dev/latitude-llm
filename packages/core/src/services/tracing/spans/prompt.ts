@@ -13,7 +13,10 @@ export const PromptSpanSpecification = {
   process: process,
 }
 
-async function process(args: SpanProcessArgs<SpanType.Prompt>, _ = database) {
+async function process(
+  { attributes }: SpanProcessArgs<SpanType.Prompt>,
+  _ = database,
+) {
   let parameters: Record<string, unknown>
   try {
     parameters = JSON.parse(
