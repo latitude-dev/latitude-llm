@@ -329,6 +329,7 @@ export type DocumentCreatedEvent = LatitudeEventGeneric<
 type CommonDataDocumentRunRequestedEvent = {
   projectId: number
   commitUuid: string
+  isLiveCommit: boolean
   documentPath: string
   parameters: Record<string, unknown>
   workspaceId: number

@@ -232,6 +232,12 @@ export async function publishDocumentRunRequestedEvent({
   parameters: Record<string, any>
 }) {
   const user = await findFirstUserInWorkspace(workspace)
+
+  const commitsScope = new CommitsRepository(workspace.id)
+  const headCommit = await commitsScope
+    .getHeadCommit(project.id)
+    .then((r) => r.unwrap())
+
   if (user) {
     publisher.publishLater({
       type: 'documentRunRequested',
@@ -239,6 +245,7 @@ export async function publishDocumentRunRequestedEvent({
         parameters,
         projectId: project.id,
         commitUuid: commit.uuid,
+        isLiveCommit: headCommit.uuid === commit.uuid,
         documentPath: document.path,
         workspaceId: workspace.id,
         userEmail: user.email,
