@@ -34,30 +34,28 @@ export const spans = latitudeSchema.table(
     duration: bigint('duration', { mode: 'number' }).notNull(),
     startedAt: timestamp('started_at').notNull(),
     endedAt: timestamp('ended_at').notNull(),
+    documentUuid: uuid('document_uuid'),
+    commitUuid: uuid('uuid'),
+    experimentId: bigint('experiment_id', { mode: 'number' }),
     ...timestamps(),
   },
-  (table) => ({
-    primaryKey: primaryKey({ columns: [table.traceId, table.id] }),
-    idIdx: index('spans_id_idx').on(table.id),
-    traceIdIdx: index('spans_trace_id_idx').on(table.traceId),
-    documentLogUuidIdx: index('spans_document_log_uuid_idx').on(
-      table.documentLogUuid,
-    ),
+  (table) => [
+    primaryKey({ columns: [table.traceId, table.id] }),
+    index('spans_id_idx').on(table.id),
+    index('spans_trace_id_idx').on(table.traceId),
+    index('spans_document_log_uuid_idx').on(table.documentLogUuid),
     // traceIdIdIdx Note: already done with the primary key
-    parentIdIdx: index('spans_parent_id_idx').on(table.parentId),
-    workspaceIdIdx: index('spans_workspace_id_idx').on(table.workspaceId),
-    apiKeyIdIdx: index('spans_api_key_id_idx').on(table.apiKeyId),
-    typeStartedAtIdx: index('spans_type_started_at_idx').on(
-      table.type,
-      table.startedAt,
-    ),
-    statusStartedAtIdx: index('spans_status_started_at_idx').on(
-      table.status,
-      table.startedAt,
-    ),
-    startedAtIdx: index('spans_started_at_idx').on(table.startedAt),
-    startedAtBrinIdx: index('spans_started_at_brin_idx')
+    index('spans_parent_id_idx').on(table.parentId),
+    index('spans_workspace_id_idx').on(table.workspaceId),
+    index('spans_api_key_id_idx').on(table.apiKeyId),
+    index('spans_type_started_at_idx').on(table.type, table.startedAt),
+    index('spans_status_started_at_idx').on(table.status, table.startedAt),
+    index('spans_started_at_idx').on(table.startedAt),
+    index('spans_started_at_brin_idx')
       .using('brin', sql`${table.startedAt}`)
       .with({ pages_per_range: 32, autosummarize: true }),
-  }),
+    index('spans_document_uuid_idx').on(table.documentUuid),
+    index('spans_commit_uuid_idx').on(table.commitUuid),
+    index('spans_experiment_id_idx').on(table.experimentId),
+  ],
 )
