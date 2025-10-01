@@ -9,6 +9,23 @@ export const PromptSpanSpecification = {
   process: process,
 }
 
-async function process(_: SpanProcessArgs<SpanType.Prompt>, __ = database) {
-  return Result.ok({})
+async function process(args: SpanProcessArgs<SpanType.Prompt>, _ = database) {
+  let parameters: Record<string, unknown>
+  try {
+    parameters = JSON.parse(args.attributes.parameters as string)
+  } catch (error) {
+    parameters = {}
+  }
+
+  return Result.ok({
+    externalId: args.attributes.customIdentifier as string,
+    name: args.attributes.name as string,
+    parameters,
+    template: args.attributes.template as string,
+
+    // References
+    experimentUuid: args.attributes.experimentUuid as string,
+    promptUuid: args.attributes.promptUuid as string,
+    versionUuid: args.attributes.versionUuid as string,
+  })
 }

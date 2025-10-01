@@ -132,6 +132,16 @@ export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
   }
 }
 
+export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> & {
+  experimentUuid: string
+  externalId: string
+  name: string
+  parameters: Record<string, unknown>
+  promptUuid: string
+  template: string
+  versionUuid: string
+}
+
 export type CompletionSpanMetadata = BaseSpanMetadata<SpanType.Completion> & {
   provider: string
   model: string
@@ -167,6 +177,7 @@ export type HttpSpanMetadata = BaseSpanMetadata<SpanType.Http> & {
 // prettier-ignore
 export type SpanMetadata<T extends SpanType = SpanType> =
   T extends SpanType.Tool ? ToolSpanMetadata :
+  T extends SpanType.Prompt ? PromptSpanMetadata :
   T extends SpanType.Completion ? CompletionSpanMetadata :
   T extends SpanType.Embedding ? BaseSpanMetadata<T> :
   T extends SpanType.Retrieval ? BaseSpanMetadata<T> :
