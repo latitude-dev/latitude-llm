@@ -86,8 +86,6 @@ export function EvaluationsTemplates({
         },
       })
       if (errors) return
-      if (!result?.evaluation) return
-
       setOpenUseModal(false)
 
       const { evaluation } = result

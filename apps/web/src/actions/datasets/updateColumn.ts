@@ -16,25 +16,24 @@ const datasetColumnRoleSchema = z.enum(
   ],
 )
 export const updateDatasetColumnAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       datasetId: z.string(),
       identifier: z.string(),
-      name: z.string().min(1, { error: 'Name is required' }),
+      name: z.string().min(1, { message: 'Name is required' }),
       role: datasetColumnRoleSchema,
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const repo = new DatasetsRepository(ctx.workspace.id)
-    const dataset = await repo
-      .find(parsedInput.datasetId)
-      .then((r) => r.unwrap())
+    const dataset = await repo.find(input.datasetId).then((r) => r.unwrap())
     return updateDatasetColumn({
       dataset,
       data: {
-        identifier: parsedInput.identifier,
-        name: parsedInput.name,
-        role: parsedInput.role,
+        identifier: input.identifier,
+        name: input.name,
+        role: input.role,
       },
     }).then((r) => r.unwrap())
   })

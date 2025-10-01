@@ -5,10 +5,15 @@ import { withAdmin } from '../../procedures'
 import { deletePromocode } from '@latitude-data/core/services/promocodes/delete'
 
 export const deletePromocodeAction = withAdmin
-  .inputSchema(z.object({ code: z.string() }))
-  .action(async ({ parsedInput }) => {
+  .createServerAction()
+  .input(
+    z.object({
+      code: z.string(),
+    }),
+  )
+  .handler(async ({ input }) => {
     const deletedPromocodeResult = await deletePromocode({
-      code: parsedInput.code,
+      code: input.code,
     })
     return deletedPromocodeResult.unwrap()
   })

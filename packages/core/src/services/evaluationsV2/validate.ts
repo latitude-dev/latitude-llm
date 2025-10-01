@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
   ActualOutputConfiguration,
@@ -60,7 +59,6 @@ export async function validateEvaluationV2<
   }
 
   const metricSpecification = typeSpecification.metrics[settings.metric]
-
   if (!metricSpecification) {
     return Result.error(new BadRequestError('Invalid metric'))
   }
@@ -68,7 +66,6 @@ export async function validateEvaluationV2<
   const parsing = typeSpecification.configuration.safeParse(
     settings.configuration,
   )
-
   if (parsing.error) {
     return Result.error(parsing.error)
   }
@@ -128,14 +125,9 @@ export async function validateEvaluationV2<
     )
   ) {
     return Result.error(
-      new z.ZodError([
-        {
-          code: 'custom',
-          path: ['name'],
-          message:
-            'An evaluation with this name already exists for this document',
-        },
-      ]),
+      new BadRequestError(
+        'An evaluation with this name already exists for this document',
+      ),
     )
   }
 

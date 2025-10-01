@@ -6,11 +6,12 @@ import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { authProcedure } from '$/actions/procedures'
 
 export const createDatasetRowAction = authProcedure
-  .inputSchema(z.object({ datasetId: z.number() }))
-  .action(async ({ ctx, parsedInput }) => {
+  .createServerAction()
+  .input(z.object({ datasetId: z.number() }), { type: 'json' })
+  .handler(async ({ ctx, input }) => {
     const datasetRepo = new DatasetsRepository(ctx.workspace.id)
     const dataset = await datasetRepo
-      .find(parsedInput.datasetId)
+      .find(input.datasetId)
       .then((r) => r.unwrap())
 
     return createDatasetEmptyRow({

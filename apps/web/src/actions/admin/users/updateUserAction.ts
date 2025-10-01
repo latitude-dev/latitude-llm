@@ -8,20 +8,21 @@ import { unsafelyGetUserByEmail } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/constants/errors'
 
 export const updateUserAction = withAdmin
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       userEmail: z.string(),
       email: z.string(),
     }),
   )
-  .action(async ({ parsedInput }) => {
-    const user = await unsafelyGetUserByEmail(parsedInput.userEmail)
+  .handler(async ({ input }) => {
+    const user = await unsafelyGetUserByEmail(input.userEmail)
 
     if (!user) {
-      throw new NotFoundError(`Not found user with email: ${parsedInput.email}`)
+      throw new NotFoundError(`Not found user with email: ${input.email}`)
     }
 
     return updateUser(user, {
-      email: parsedInput.email,
+      email: input.email,
     }).then((r) => r.unwrap())
   })

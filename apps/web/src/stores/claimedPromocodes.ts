@@ -30,7 +30,7 @@ export default function useClaimedPromocodes() {
       onError: (error) => {
         toast({
           title: 'Error',
-          description: error.message,
+          description: error.err.message,
           variant: 'destructive',
         })
       },

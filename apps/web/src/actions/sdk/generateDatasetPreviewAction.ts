@@ -9,13 +9,14 @@ import { authProcedure } from '$/actions/procedures'
 import { z } from 'zod'
 
 export const generateDatasetPreviewAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       description: z.string(),
       parameters: z.string(),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     if (!env.LATITUDE_CLOUD) {
       throw new BadRequestError(CLOUD_MESSAGES.generateDatasets)
     }
@@ -44,8 +45,8 @@ export const generateDatasetPreviewAction = authProcedure
       stream: false,
       parameters: {
         row_count: 10,
-        parameters: parsedInput.parameters,
-        user_message: parsedInput.description,
+        parameters: input.parameters,
+        user_message: input.description,
       },
     })
     if (!result) {

@@ -1,3 +1,10 @@
+import {
+  EvaluationResultableType,
+  LatitudeTool,
+  LatitudeToolInternalName,
+  LogSources,
+  Quota,
+} from '@latitude-data/constants'
 import type {
   AssistantMessage,
   Message as CompilerMessage,
@@ -5,16 +12,7 @@ import type {
   ToolCall,
   UserMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import {
-  Quota,
-  EvaluationResultableType,
-  LatitudeTool,
-  LatitudeToolInternalName,
-  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
-  LogSources,
-  ChainStepResponse as ConstantsChainStepResponse,
-} from '@latitude-data/constants'
-import { FinishReason, Tool } from 'ai'
+import { FinishReason, LanguageModelUsage, Tool, ToolResultPart } from 'ai'
 import { z } from 'zod'
 
 import { TelemetryContext } from '@latitude-data/telemetry'
@@ -92,7 +90,7 @@ type BaseResponse = {
   documentLogUuid?: string
   providerLog?: ProviderLog
   // TODO(promptl): move this message type to promptl and call it ToolResultMessage
-  output?: ConstantsChainStepResponse<StreamType>['output'] // This is a union of AssistantMessage and ToolResultPart
+  output?: (AssistantMessage | { role: 'tool'; content: ToolResultPart[] })[]
 }
 
 export type ChainStepTextResponse = BaseResponse & {
@@ -266,7 +264,7 @@ export const DOCUMENT_PATH_REGEXP = /^([\w-]+\/)*([\w-.])+$/
 export const toolCallSchema = z.object({
   id: z.string(),
   name: z.string(),
-  arguments: z.record(z.string(), z.unknown()),
+  arguments: z.record(z.any()),
 })
 
 const textContentSchema = z.object({
@@ -298,14 +296,14 @@ const toolCallContentSchema = z.object({
   type: z.literal('tool-call'),
   toolCallId: z.string(),
   toolName: z.string(),
-  args: z.record(z.string(), z.unknown()),
+  args: z.record(z.any()),
 })
 
 const toolResultContentSchema = z.object({
   type: z.literal('tool-result'),
   toolCallId: z.string(),
   toolName: z.string(),
-  result: z.unknown(),
+  result: z.any(),
   isError: z.boolean().optional(),
 })
 
@@ -338,7 +336,7 @@ export const messageSchema = z
           z.object({
             id: z.string(),
             name: z.string(),
-            arguments: z.record(z.string(), z.unknown()),
+            arguments: z.record(z.any()),
           }),
         )
         .optional(),
@@ -351,7 +349,7 @@ export const messageSchema = z
     }),
   )
 
-export const messagesSchema = z.array(messageSchema)
+export const messagesSchema = z.array(z.any(messageSchema))
 
 export const resultConfigurationSchema = z.discriminatedUnion('type', [
   z.object({
@@ -403,7 +401,7 @@ export type DocumentVersionDto = DocumentVersion & {
 
 export const documentLogFilterOptionsSchema = z.object({
   commitIds: z.array(z.number()),
-  logSources: z.array(z.enum(LogSources)),
+  logSources: z.array(z.nativeEnum(LogSources)),
   createdAt: z
     .object({ from: z.date().optional(), to: z.date().optional() })
     .optional(),

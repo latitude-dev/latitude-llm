@@ -6,11 +6,9 @@ import {
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Chain as PromptlChain } from 'promptl-ai'
 
-import {
-  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
-  MAX_STEPS_CONFIG_NAME,
-} from '@latitude-data/constants'
+import { MAX_STEPS_CONFIG_NAME } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { LanguageModelUsage } from 'ai'
 import { ChainStreamManager } from '../../../__deprecated/lib/chainStreamManager'
 import { createChainRunError } from '../../../__deprecated/lib/chainStreamManager/ChainErrors'
 import { ProviderApiKey, Workspace } from '../../../browser'

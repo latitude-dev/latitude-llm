@@ -9,24 +9,28 @@ import { z } from 'zod'
 
 import { maybeAuthProcedure, withRateLimit } from '../procedures'
 
-export const uploadFileAction = maybeAuthProcedure
-  .use(withRateLimit({ limit: 10, period: 60 }))
-  .inputSchema(
+export const uploadFileAction = (
+  await withRateLimit(maybeAuthProcedure, {
+    limit: 10,
+    period: 60,
+  })
+)
+  .createServerAction()
+  .input(
     z.object({
       file: z.instanceof(File).refine(async (file) => {
         return file?.size <= MAX_UPLOAD_SIZE_IN_MB
       }, `Your file must be less than ${MAX_SIZE}MB in size. You can split it into smaller files and upload them separately.`),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const ip = getUnsafeIp(await headers()) || 'unknown'
     const fingerprint = createHash('sha1').update(ip).digest('hex')
 
-    const workspace = ctx.workspace === null ? undefined : ctx.workspace
     const result = await uploadFile({
-      file: parsedInput.file,
+      file: input.file,
       prefix: ctx.workspace ? undefined : fingerprint,
-      workspace,
+      workspace: ctx.workspace,
     })
 
     return result.unwrap()

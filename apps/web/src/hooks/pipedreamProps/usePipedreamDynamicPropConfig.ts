@@ -1,5 +1,4 @@
 import { configurePipedreamComponentAction } from '$/actions/integrations/pipedream/configureComponent'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { IntegrationDto, PipedreamComponent } from '@latitude-data/core/browser'
 import type {
   ConfigurableProp,
@@ -9,6 +8,7 @@ import type {
 } from '@pipedream/sdk/browser'
 import { useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
+import { useServerAction } from 'zsa-react'
 
 export function usePipedreamDynamicPropConfig({
   integration,
@@ -28,7 +28,7 @@ export function usePipedreamDynamicPropConfig({
     execute,
     isPending: isLoading,
     error: executeError,
-  } = useLatitudeAction(configurePipedreamComponentAction, {
+  } = useServerAction(configurePipedreamComponentAction, {
     onSuccess: ({ data }) => {
       setConfig(data)
     },

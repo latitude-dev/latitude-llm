@@ -7,8 +7,8 @@ import useFetcher from '$/hooks/useFetcher'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { ROUTES } from '$/services/routes'
 import useSWR from 'swr'
+import { useServerAction } from 'zsa-react'
 import { useNavigate } from '$/hooks/useNavigate'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 export default function useAvailableWorkspaces() {
   const { toast } = useToast()
@@ -21,8 +21,9 @@ export default function useAvailableWorkspaces() {
     fetcher,
   )
 
-  const { execute: switchWorkspace, isPending: isSwitching } =
-    useLatitudeAction(switchWorkspaceAction)
+  const { execute: switchWorkspace, isPending: isSwitching } = useServerAction(
+    switchWorkspaceAction,
+  )
 
   const switchToWorkspace = useCallback(
     async (workspaceId: number) => {

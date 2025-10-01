@@ -1,5 +1,4 @@
 import { ChainStepResponse, StreamType } from '../../../../browser'
-import * as vercelSdkFromV5ToV4 from '../../../../lib/vercelSdkFromV5ToV4'
 import { AIReturn } from '../../../ai'
 
 function parseObject(text: string) {
@@ -30,8 +29,12 @@ export async function processResponse({
     documentLogUuid,
     text,
     object: isObject ? parseObject(text) : undefined,
-    usage: await vercelSdkFromV5ToV4.convertTokenUsage(aiResult.usage),
+    usage: await aiResult.usage,
     reasoning: await aiResult.reasoning,
-    toolCalls: await vercelSdkFromV5ToV4.convertToolCalls(aiResult.toolCalls),
+    toolCalls: (await aiResult.toolCalls).map((t) => ({
+      id: t.toolCallId,
+      name: t.toolName,
+      arguments: t.args,
+    })),
   }
 }

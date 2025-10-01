@@ -1,8 +1,8 @@
-import { Tool } from 'ai'
 import {
   LatitudeTool,
   Providers,
   ToolDefinition,
+  VercelProviderTool,
 } from '@latitude-data/constants'
 
 export enum ToolSource {
@@ -55,7 +55,7 @@ type ResolvedTool = {
 }
 
 export type ResolvedProviderTool = {
-  definition: Tool
+  definition: VercelProviderTool
   sourceData: {
     source: ToolSource.ProviderTool
     provider: Providers

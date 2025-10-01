@@ -7,17 +7,18 @@ import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { IntegrationType } from '@latitude-data/constants'
 
 export const reloadPipedreamComponentPropsAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       integrationName: z.string(),
       componentId: z.string(),
-      configuredProps: z.record(z.string(), z.any()).optional(),
+      configuredProps: z.record(z.any()).optional(),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const integrationScope = new IntegrationsRepository(ctx.workspace.id)
     const integrationResult = await integrationScope.findByName(
-      parsedInput.integrationName,
+      input.integrationName,
     )
     const integration = integrationResult.unwrap()
 
@@ -27,7 +28,7 @@ export const reloadPipedreamComponentPropsAction = authProcedure
 
     return reloadComponentProps({
       integration,
-      componentId: parsedInput.componentId,
-      configuredProps: parsedInput.configuredProps ?? {},
+      componentId: input.componentId,
+      configuredProps: input.configuredProps ?? {},
     }).then((r) => r.unwrap())
   })

@@ -11,7 +11,7 @@ import {
   UnprocessableEntityError,
 } from '../../../../lib/errors'
 import { openai } from '@ai-sdk/openai'
-import { Providers, VercelProviderTool } from '@latitude-data/constants'
+import { Providers } from '@latitude-data/constants'
 
 function resolveOpenAITools(openAITools: OpenAIToolList) {
   const result = openAIToolsList.safeParse(openAITools)
@@ -40,13 +40,12 @@ function resolveOpenAITools(openAITools: OpenAIToolList) {
     )
   }
 
-  const webSearchDefinition = openai.tools.webSearch({
-    searchContextSize: tool.search_context_size,
-    userLocation: tool.user_location,
-  }) as unknown as VercelProviderTool
   return Result.ok({
     web_search_preview: {
-      definition: webSearchDefinition,
+      definition: openai.tools.webSearchPreview({
+        searchContextSize: tool.search_context_size,
+        userLocation: tool.user_location,
+      }),
       sourceData: {
         source: ToolSource.ProviderTool,
         provider: Providers.OpenAI,

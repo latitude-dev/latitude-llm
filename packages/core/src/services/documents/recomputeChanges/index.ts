@@ -65,10 +65,13 @@ async function resolveDocumentChanges({
         integrationNames,
       })
 
+      // FIXME: infinite recursion
+      // @ts-ignore
       const metadata = await scan({
         prompt: d.content ?? '',
         fullPath: d.path,
         referenceFn: getDocumentContent,
+        // @ts-expect-error - TODO(compiler): fix types
         configSchema,
       })
 

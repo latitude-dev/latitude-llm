@@ -14,7 +14,8 @@ import { authProcedure } from '$/actions/procedures'
 import { createDatasetFromJson } from '@latitude-data/core/services/datasets/createFromJson'
 
 export const generateDatasetAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       parameters: z.string(),
       description: z.string(),
@@ -22,7 +23,7 @@ export const generateDatasetAction = authProcedure
       name: z.string(),
     }),
   )
-  .action(async ({ parsedInput }) => {
+  .handler(async ({ input }) => {
     if (!env.LATITUDE_CLOUD) {
       throw new BadRequestError(CLOUD_MESSAGES.generateDatasets)
     }
@@ -51,9 +52,9 @@ export const generateDatasetAction = authProcedure
       {
         stream: false,
         parameters: {
-          row_count: parsedInput.rowCount,
-          parameters: parsedInput.parameters,
-          user_message: parsedInput.description,
+          row_count: input.rowCount,
+          parameters: input.parameters,
+          user_message: input.description,
         },
       },
     )
@@ -66,7 +67,7 @@ export const generateDatasetAction = authProcedure
     }
 
     const response = sdkResult.response as ChainStepResponse<'object'>
-    const name = parsedInput.name
+    const name = input.name
     const result = await createDatasetFromJson({
       author: user,
       workspace,

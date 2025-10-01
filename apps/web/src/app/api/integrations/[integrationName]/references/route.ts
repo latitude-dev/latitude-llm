@@ -4,6 +4,8 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { listIntegrationReferences } from '@latitude-data/core/services/integrations/references'
+import { LatitudeTool, McpTool } from '@latitude-data/constants'
+import { getLatitudeToolDefinition } from '@latitude-data/core/services/latitudeTools/helpers'
 
 export const GET = errorHandler(
   authHandler(
@@ -20,7 +22,23 @@ export const GET = errorHandler(
       },
     ) => {
       if (params.integrationName === 'latitude') {
-        return NextResponse.json({ ok: true, data: [] }, { status: 200 })
+        const latitudeTools: McpTool[] = Object.values(LatitudeTool).map(
+          (latitudeTool) => {
+            const toolDefinition = getLatitudeToolDefinition(latitudeTool)!
+            return {
+              name: latitudeTool,
+              description: toolDefinition.description,
+              inputSchema: toolDefinition.parameters,
+            }
+          },
+        )
+        return NextResponse.json(
+          {
+            ok: true,
+            data: latitudeTools,
+          },
+          { status: 200 },
+        )
       }
 
       const integrationsScope = new IntegrationsRepository(workspace.id)

@@ -4,7 +4,7 @@ import { LogSources } from '@latitude-data/core/browser'
 export const internalInfoSchema = z.object({
   __internal: z
     .object({
-      source: z.enum(LogSources).optional(),
+      source: z.nativeEnum(LogSources).optional(),
     })
     .optional(),
 })

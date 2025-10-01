@@ -1,33 +1,29 @@
 'use server'
 
-import { z } from 'zod'
-import { returnValidationErrors } from 'next-safe-action'
 import {
   EvaluationOptionsSchema,
   EvaluationSettingsSchema,
 } from '@latitude-data/core/browser'
 import { createEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/create'
-import { withDocument, withDocumentSchema } from '../procedures'
+import { z } from 'zod'
+import { withDocument } from '../procedures'
 
-const evaluationSchema = withDocumentSchema.extend({
-  settings: EvaluationSettingsSchema,
-  options: EvaluationOptionsSchema.partial().optional(),
-})
 export const createEvaluationV2Action = withDocument
-  .inputSchema(evaluationSchema)
-  .action(async ({ ctx, parsedInput }) => {
+  .createServerAction()
+  .input(
+    z.object({
+      settings: EvaluationSettingsSchema,
+      options: EvaluationOptionsSchema.partial().optional(),
+    }),
+  )
+  .handler(async ({ ctx, input }) => {
     const result = await createEvaluationV2({
       document: ctx.document,
       commit: ctx.commit,
-      settings: parsedInput.settings,
-      options: parsedInput.options,
+      settings: input.settings,
+      options: input.options,
       workspace: ctx.workspace,
-    })
+    }).then((r) => r.unwrap())
 
-    const error = result.error
-    if (error && error instanceof z.ZodError) {
-      return returnValidationErrors(evaluationSchema, error.format())
-    }
-
-    return result.unwrap()
+    return result
   })

@@ -17,7 +17,6 @@ import { IoProvider, useSocket } from '@latitude-data/socket.io-react-hook'
 import { useSession } from '@latitude-data/web-ui/providers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { captureClientError } from '$/instrumentation-client'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 export const SocketIOProvider = ({ children }: { children: ReactNode }) => {
   return <IoProvider>{children}</IoProvider>
@@ -55,13 +54,10 @@ export function useSocketConnection({
     },
   )
 
-  const { execute: refreshToken } = useLatitudeAction(
-    refreshWebesocketTokenAction,
-  )
   connection.socket.on('connect_error', async (error) => {
     if (error.message.startsWith('AUTH_ERROR')) {
       try {
-        const [data] = await refreshToken()
+        const [data] = await refreshWebesocketTokenAction()
 
         if (data && data.success) {
           connection.socket.connect()

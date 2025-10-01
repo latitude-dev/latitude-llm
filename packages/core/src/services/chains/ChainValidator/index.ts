@@ -222,7 +222,7 @@ function validateConfig(
   const parseResult = schema.safeParse(config)
 
   if (!parseResult.success) {
-    const validationError = parseResult.error.issues[0]
+    const validationError = parseResult.error.errors[0]
     const message = validationError
       ? validationError.message
       : 'Error validating document configuration'

@@ -5,8 +5,9 @@ import { Result } from '../../../../../lib/Result'
 
 const searchAvailableIntegrations = defineLatteTool(
   async ({ query }) => {
-    const result = await listApps({ query })
-
+    const result = await listApps({
+      query,
+    })
     if (!Result.isOk(result)) return result
 
     const apps = result.unwrap().apps

@@ -5,6 +5,7 @@ import { applyAnthropicRules } from './anthropic'
 import { applyCustomRules } from './custom'
 import { applyGoogleRules } from './google'
 import { AppliedRules } from './types'
+import { vercelSdkRules } from './vercel'
 import { applyOpenAiRules } from './openai'
 import { applyVertexAnthropicRules } from './vertexAnthropic'
 import { applyVertexGoogleRules } from './vertexGoogle'
@@ -13,7 +14,6 @@ import { getProviderMetadataKey } from './providerMetadata'
 import { JSONValue } from 'ai'
 import { VercelConfig } from '@latitude-data/constants'
 import { toCamelCaseDeep } from '../../../../lib/camelCaseRecursive'
-import { convertLatitudeMessagesToVercelFormat } from '../../convertLatitudeMessagesToVercelFormat'
 
 type Props = {
   providerType: Providers
@@ -66,14 +66,11 @@ export function applyAllRules({ providerType, messages, config }: Props) {
   }
 
   rules = applyProviderRules({ providerType, messages, config: rules.config })
-  const vercelMessages = convertLatitudeMessagesToVercelFormat({
-    messages: rules.messages,
-    provider: providerType,
-  })
+  rules = vercelSdkRules(rules, providerType)
+
   const providerOptions = toCamelCaseDeep(config)
   return {
     ...rules,
-    messages: vercelMessages,
     config: {
       ...rules.config,
       providerOptions: {

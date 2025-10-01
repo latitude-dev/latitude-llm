@@ -16,9 +16,9 @@ export const documentPresenterSchema = z.object({
   path: z.string(),
   content: z.string(),
   contentHash: z.string().optional(),
-  config: z.record(z.string(), z.any()),
-  parameters: z.record(z.string(), z.object({ type: z.enum(ParameterType) })),
-  provider: z.enum(Providers).optional(),
+  config: z.object({}).passthrough(),
+  parameters: z.record(z.object({ type: z.nativeEnum(ParameterType) })),
+  provider: z.nativeEnum(Providers).optional(),
 })
 type Parameters = z.infer<typeof documentPresenterSchema>['parameters']
 

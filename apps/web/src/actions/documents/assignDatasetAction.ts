@@ -1,12 +1,12 @@
 'use server'
 
 import { assignDataset } from '@latitude-data/core/services/documents/assignDataset'
-import { withDataset, withDatasetSchema } from '../procedures'
+import { withDataset } from '../procedures'
 
 export const assignDatasetAction = withDataset
-  .inputSchema(withDatasetSchema.extend({}))
-  .action(async ({ ctx }) => {
-    return assignDataset({
+  .createServerAction()
+  .handler(async ({ ctx }) => {
+    return await assignDataset({
       document: ctx.document,
       dataset: ctx.dataset,
     }).then((r) => r.unwrap())

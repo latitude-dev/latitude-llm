@@ -290,12 +290,12 @@ export class ReadMetadata {
         this.configSchema?.parse(parsedObj)
       } catch (err) {
         if (err instanceof z.ZodError) {
-          err.issues.forEach((issue) => {
-            const message = issue.message
+          err.errors.forEach((error) => {
+            const issue = error.message
 
             const range = findYAMLItemPosition(
               parsedYaml.contents as YAMLItem,
-              issue.path,
+              error.path,
             )
 
             const errorStart = range
@@ -305,7 +305,7 @@ export class ReadMetadata {
               ? node.start! + CONFIG_START_OFFSET + range[1] + 1
               : node.end!
 
-            this.baseNodeError(errors.invalidConfig(message), node, {
+            this.baseNodeError(errors.invalidConfig(issue), node, {
               start: errorStart,
               end: errorEnd,
             })

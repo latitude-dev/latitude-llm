@@ -7,7 +7,7 @@ import { ChainEvent } from '@latitude-data/constants'
 import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { Latitude, type ChainEventDto } from '@latitude-data/sdk'
-import { createStreamableValue, StreamableValue } from '@ai-sdk/rsc'
+import { createStreamableValue, StreamableValue } from 'ai/rsc'
 
 type RunDocumentActionProps = {
   documentPath: string

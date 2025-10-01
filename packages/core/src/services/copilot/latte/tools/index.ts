@@ -90,7 +90,7 @@ export function buildToolHandlers({
   )
 }
 
-function serializeError(error: Error): Record<string, unknown> {
+function serializeError(error: Error): Record<string, any> {
   if (error instanceof LatteInvalidChoiceError) {
     return {
       name: error.name,

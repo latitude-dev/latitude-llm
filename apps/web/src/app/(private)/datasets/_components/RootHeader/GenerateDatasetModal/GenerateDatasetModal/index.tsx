@@ -1,5 +1,6 @@
 import { FormEvent } from 'react'
 
+import { useServerAction } from 'zsa-react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { generateDatasetAction } from '$/actions/datasets/generateDataset'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -7,7 +8,6 @@ import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'
 import { GenerateDatasetModalComponent } from './GenerateDatasetModalComponent'
 import { useDatasetPreviewModal } from './useDatasetPreviewModal'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 export function GenerateDatasetModal({
   open,
@@ -29,11 +29,11 @@ export function GenerateDatasetModal({
     execute: runGenerateAction,
     isPending: generateIsLoading,
     error: generateError,
-  } = useLatitudeAction(generateDatasetAction, {
+  } = useServerAction(generateDatasetAction, {
     onError: (error) => {
       toast({
         title: 'Failed to generate dataset',
-        description: error.message,
+        description: error.err.message,
         variant: 'destructive',
       })
     },

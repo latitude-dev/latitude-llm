@@ -8,27 +8,28 @@ import { z } from 'zod'
 import { withAdmin } from '../../procedures'
 
 export const issueGrantAction = withAdmin
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
-      type: z.enum(QuotaType),
+      type: z.nativeEnum(QuotaType),
       amount: z.union([z.number(), z.literal('unlimited')]),
       periods: z.number().optional(),
       workspaceId: z.number(),
     }),
   )
-  .action(async ({ ctx, parsedInput }) => {
-    const workspace = await unsafelyFindWorkspace(parsedInput.workspaceId)
+  .handler(async ({ ctx, input }) => {
+    const workspace = await unsafelyFindWorkspace(input.workspaceId)
     if (!workspace) {
       throw new BadRequestError('Workspace not found')
     }
 
     const grant = await issueGrant({
-      type: parsedInput.type,
-      amount: parsedInput.amount,
+      type: input.type,
+      amount: input.amount,
       source: GrantSource.System,
       referenceId: ctx.user.id,
       workspace: workspace,
-      periods: parsedInput.periods,
+      periods: input.periods,
     }).then((r) => r.unwrap())
 
     return grant

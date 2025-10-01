@@ -12,7 +12,8 @@ import { z } from 'zod'
 import { withDocument } from '../procedures'
 
 export const uploadDocumentLogsAction = withDocument
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       csvDelimiter: z.enum(DELIMITERS_KEYS, {
         message: 'Choose a valid delimiter option',
@@ -28,7 +29,7 @@ export const uploadDocumentLogsAction = withDocument
         ),
     }),
   )
-  .action(async ({ ctx, parsedInput }) => {
+  .handler(async ({ ctx, input }) => {
     const commitsScope = new CommitsRepository(ctx.workspace.id)
     const commit = await commitsScope
       .getCommitByUuid({
@@ -41,8 +42,8 @@ export const uploadDocumentLogsAction = withDocument
       workspace: ctx.workspace,
       document: ctx.document,
       commit,
-      csvDelimiter: parsedInput.csvDelimiter,
-      logsFile: parsedInput.logsFile,
+      csvDelimiter: input.csvDelimiter,
+      logsFile: input.logsFile,
     })
 
     return { success: true }

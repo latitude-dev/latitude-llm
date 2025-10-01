@@ -1,6 +1,5 @@
 'use server'
 
-import { z } from 'zod'
 import {
   unsafelyFindMembershipByToken,
   unsafelyFindWorkspace,
@@ -10,18 +9,20 @@ import { NotFoundError } from '@latitude-data/constants/errors'
 import { acceptInvitation } from '@latitude-data/core/services/invitations/accept'
 import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
-import { errorHandlingProcedure } from '$/actions/procedures'
-import { frontendRedirect } from '$/lib/frontendRedirect'
+import { redirect } from 'next/navigation'
+import { z } from 'zod'
+import { createServerAction } from 'zsa'
 
-export const acceptInvitationAction = errorHandlingProcedure
-  .inputSchema(
+export const acceptInvitationAction = createServerAction()
+  .input(
     z.object({
       membershipToken: z.string(),
       email: z.string().optional(),
     }),
+    { type: 'formData' },
   )
-  .action(async ({ parsedInput }) => {
-    const { membershipToken } = parsedInput
+  .handler(async ({ input }) => {
+    const { membershipToken } = input
     const membership = await unsafelyFindMembershipByToken(
       membershipToken,
     ).then((r) => r.unwrap())
@@ -42,5 +43,5 @@ export const acceptInvitationAction = errorHandlingProcedure
       },
     })
 
-    return frontendRedirect(ROUTES.root)
+    return redirect(ROUTES.root)
   })

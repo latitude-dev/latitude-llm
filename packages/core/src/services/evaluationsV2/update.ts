@@ -61,21 +61,19 @@ export async function updateEvaluationV2<
     if (!options) options = {}
     options = compactObject(options)
 
-    const validateResult = await validateEvaluationV2(
-      {
-        mode: 'update',
-        evaluation: evaluation,
-        settings: { ...evaluation, ...settings },
-        options: { ...evaluation, ...options },
-        document: document,
-        commit: commit,
-        workspace: workspace,
-      },
-      tx,
-    )
-    if (validateResult.error) return validateResult
-
-    const { settings: vSettings, options: vOptions } = validateResult.value
+    const { settings: vSettings, options: vOptions } =
+      await validateEvaluationV2(
+        {
+          mode: 'update',
+          evaluation: evaluation,
+          settings: { ...evaluation, ...settings },
+          options: { ...evaluation, ...options },
+          document: document,
+          commit: commit,
+          workspace: workspace,
+        },
+        tx,
+      ).then((r) => r.unwrap())
     settings = vSettings
     options = vOptions
 
