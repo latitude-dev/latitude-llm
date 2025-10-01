@@ -56,6 +56,7 @@ export async function runSharedPromptAction({
   }).then((r) => r.unwrap())
   const response = sdk.prompts.run(documentPath, {
     stream: true,
+    background: false,
     versionUuid: commitUuid,
     parameters,
     onEvent: (event) => {

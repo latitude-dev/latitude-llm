@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 
 import httpx
 
-from latitude_sdk import OnToolCallDetails, RunPromptOptions, RunPromptResult, StreamEvent
+from latitude_sdk import OnToolCallDetails, RunPromptOptions, StreamEvent
 from tests.utils import TestCase, fixtures
 
 
@@ -20,6 +20,7 @@ class TestRunPromptSync(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=False,
+            background=False,
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -38,10 +39,11 @@ class TestRunPromptSync(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
+        self.assertEqual(result, fixtures.CONVERSATION_FINISHED_RESULT)
         on_event_mock.assert_not_awaited()
         on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_awaited()
@@ -60,6 +62,7 @@ class TestRunPromptSync(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=False,
+            background=False,
         )
         endpoint = f"/projects/{options.project_id}/versions/{options.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -78,10 +81,11 @@ class TestRunPromptSync(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
+        self.assertEqual(result, fixtures.CONVERSATION_FINISHED_RESULT)
         on_event_mock.assert_not_awaited()
         on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_awaited()
@@ -99,6 +103,7 @@ class TestRunPromptSync(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=False,
+            background=False,
         )
         endpoint = f"/projects/{self.project_id}/versions/live/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -117,10 +122,11 @@ class TestRunPromptSync(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
+        self.assertEqual(result, fixtures.CONVERSATION_FINISHED_RESULT)
         on_event_mock.assert_not_awaited()
         on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_awaited()
@@ -144,6 +150,7 @@ class TestRunPromptSync(TestCase):
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             tools={"calculator": actual_tool_mock, "other_tool": other_tool_mock},
             stream=False,
+            background=False,
         )
         run_endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         run_endpoint_mock = self.gateway_mock.post(run_endpoint).mock(
@@ -164,11 +171,12 @@ class TestRunPromptSync(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(run_endpoint_mock.call_count, 1)
         self.assertEqual(tools_endpoint_mock.call_count, 0)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
+        self.assertEqual(result, fixtures.CONVERSATION_FINISHED_RESULT)
         on_event_mock.assert_not_awaited()
         on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_awaited()
@@ -187,6 +195,7 @@ class TestRunPromptSync(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=False,
+            background=False,
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -206,6 +215,7 @@ class TestRunPromptSync(TestCase):
                     "customIdentifier": options.custom_identifier,
                     "parameters": options.parameters,
                     "stream": options.stream,
+                    "background": options.background,
                 },
             )
             for request in requests
@@ -226,6 +236,7 @@ class TestRunPromptSync(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=False,
+            background=False,
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -245,6 +256,7 @@ class TestRunPromptSync(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -263,6 +275,7 @@ class TestRunPromptSync(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=False,
+            background=False,
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -281,6 +294,7 @@ class TestRunPromptSync(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -303,6 +317,7 @@ class TestRunPromptStream(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=True,
+            background=False,
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -322,10 +337,11 @@ class TestRunPromptStream(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
+        self.assertEqual(result, fixtures.CONVERSATION_FINISHED_RESULT)
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
         self.assertEqual(on_event_mock.await_count, len(fixtures.CONVERSATION_EVENTS))
         on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
@@ -345,6 +361,7 @@ class TestRunPromptStream(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=True,
+            background=False,
         )
         endpoint = f"/projects/{options.project_id}/versions/{options.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -366,10 +383,11 @@ class TestRunPromptStream(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
+        self.assertEqual(result, fixtures.CONVERSATION_FINISHED_RESULT)
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
         self.assertEqual(on_event_mock.await_count, len(fixtures.CONVERSATION_EVENTS))
         on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
@@ -388,6 +406,7 @@ class TestRunPromptStream(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=True,
+            background=False,
         )
         endpoint = f"/projects/{self.project_id}/versions/live/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -407,10 +426,11 @@ class TestRunPromptStream(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
+        self.assertEqual(result, fixtures.CONVERSATION_FINISHED_RESULT)
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
         self.assertEqual(on_event_mock.await_count, len(fixtures.CONVERSATION_EVENTS))
         on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
@@ -435,6 +455,7 @@ class TestRunPromptStream(TestCase):
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             tools={"calculator": actual_tool_mock, "other_tool": other_tool_mock},
             stream=True,
+            background=False,
         )
         run_endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         run_endpoint_mock = self.gateway_mock.post(run_endpoint).mock(
@@ -458,6 +479,7 @@ class TestRunPromptStream(TestCase):
                 "parameters": options.parameters,
                 "tools": list((options.tools or {}).keys()),
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(run_endpoint_mock.call_count, 1)
@@ -475,7 +497,7 @@ class TestRunPromptStream(TestCase):
             for index, request in enumerate(tools_requests)
         ]
         self.assertEqual(tools_endpoint_mock.call_count, len(fixtures.CONVERSATION_TOOL_CALLS))
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
+        self.assertEqual(result, fixtures.CONVERSATION_FINISHED_RESULT)
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
         self.assertEqual(on_event_mock.await_count, len(fixtures.CONVERSATION_EVENTS))
         on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
@@ -509,6 +531,7 @@ class TestRunPromptStream(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=True,
+            background=False,
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -528,6 +551,7 @@ class TestRunPromptStream(TestCase):
                     "customIdentifier": options.custom_identifier,
                     "parameters": options.parameters,
                     "stream": options.stream,
+                    "background": options.background,
                 },
             )
             for request in requests
@@ -548,6 +572,7 @@ class TestRunPromptStream(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=True,
+            background=False,
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -567,6 +592,7 @@ class TestRunPromptStream(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -585,6 +611,7 @@ class TestRunPromptStream(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=True,
+            background=False,
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -603,6 +630,7 @@ class TestRunPromptStream(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -610,3 +638,6 @@ class TestRunPromptStream(TestCase):
         on_event_mock.assert_not_awaited()
         on_finished_mock.assert_not_awaited()
         on_error_mock.assert_awaited_once_with(fixtures.CONVERSATION_ERROR)
+
+
+# TODO(runs): TestRunPromptBackground

@@ -65,6 +65,7 @@ asyncio.run(main())
 The Latitude SDK is organized into several namespaces:
 
 - `prompts`: Methods for managing and running prompts
+- `runs`: Methods for managing active runs
 - `logs`: Methods for pushing logs to Latitude
 - `evaluations`: Methods for pushing evaluation results to Latitude
 - `projects`: Methods for managing projects
@@ -241,6 +242,90 @@ print('Conversation messages:', result.conversation)
   using a different method to run your prompts, you'll need to format your
   messages accordingly.
 </Note>
+
+### Running a Prompt in the Background
+
+For long-running prompts, such as large Agent systems, that you don't need to wait for, use background runs:
+
+```python
+job = await latitude.prompts.run('prompt-path', RunPromptOptions(
+    parameters={
+        'productName': 'CloudSync Pro',
+        'audience': 'Small Business Owners',
+    },
+    # Enable background processing
+    background=True,
+))
+
+print('Job UUID:', job.uuid)
+# The request returns immediately with a conversation UUID
+# You can use this UUID to attach to the run later to check its status or stop it programmatically
+
+async def on_event(event: StreamEvent):
+    # Provider event
+    if isinstance(event, dict) and event.get("type") == "text-delta":
+        print(event)
+
+    # Latitude event
+    elif isinstance(event, ChainEventChainCompleted):
+        print("Conversation UUID:", event.uuid)
+        print("Conversation messages:", event.messages)
+
+result = await latitude.runs.attach(job.uuid, AttachRunOptions(
+    stream=True,
+    on_event=on_event,
+))
+
+print('Conversation UUID:', result.uuid)
+print('Conversation messages:', result.conversation)
+```
+
+## Run Management
+
+### Stop a Run
+
+Stop an active conversation that is currently running:
+
+```python
+await latitude.runs.stop('conversation-uuid')
+print('Run stopped successfully')
+```
+
+### Attach to a Run
+
+Attach to an active conversation to receive its ongoing output:
+
+```python
+async def on_event(event: StreamEvent):
+    # Provider event
+    if isinstance(event, dict) and event.get("type") == "text-delta":
+        print(event)
+
+    # Latitude event
+    elif isinstance(event, ChainEventChainCompleted):
+        print("Conversation UUID:", event.uuid)
+        print("Conversation messages:", event.messages)
+
+async def on_finished(result: FinishedResult):
+    print('Attach completed:', result.uuid)
+
+async def on_error(error: ApiError):
+    print('Attach error:', error.message)
+
+result = await latitude.runs.attach('conversation-uuid', AttachRunOptions(
+    # Optional: Enable streaming for real-time updates
+    stream=True,
+    # Optional: Make the run interactive (abort when client disconnects)
+    interactive=False,
+    # Optional: Provide callbacks for events
+    on_event=on_event,
+    on_finished=on_finished,
+    on_error=on_error,
+))
+
+print('Conversation UUID:', result.uuid)
+print('Conversation messages:', result.conversation)
+```
 
 ### Rendering Prompts
 
@@ -419,11 +504,17 @@ class RunPromptOptions:
     parameters: Optional[dict[str, Any]]
     tools: Optional[dict[str, OnToolCall]]
     stream: Optional[bool]
+    background: Optional[bool]
 
-class RunPromptResult:
+class FinishedResult:
     uuid: str
     conversation: List[Message]
     response: ChainResponse
+
+class BackgroundResult:
+    uuid: str
+
+RunPromptResult = Union[FinishedResult, BackgroundResult]
 
 latitude.prompts.run(
     path: str,
@@ -477,6 +568,34 @@ latitude.prompts.render_chain(
     on_step: OnStep,
     options: Optional[RenderChainOptions]
 ) -> RenderChainResult
+```
+
+### Runs Namespace
+
+```python
+# Attach to a run
+class AttachRunOptions:
+    on_event: Optional[OnEvent]
+    on_finished: Optional[OnFinished]
+    on_error: Optional[OnError]
+    tools: Optional[dict[str, OnToolCall]]
+    stream: Optional[bool]
+    interactive: Optional[bool]
+
+class AttachRunResult:
+    uuid: str
+    conversation: List[Message]
+    response: ChainResponse
+
+latitude.runs.attach(
+    uuid: str,
+    options: Optional[AttachRunOptions]
+) -> Optional[AttachRunResult]
+
+# Stop a run
+latitude.runs.stop(
+    uuid: str
+) -> None
 ```
 
 ### Projects Namespace

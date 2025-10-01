@@ -7,7 +7,6 @@ from latitude_sdk import (
     GetOrCreatePromptResult,
     GetPromptResult,
     RunPromptOptions,
-    RunPromptResult,
     StreamEvent,
     __version_semver__,
 )
@@ -76,6 +75,7 @@ class TestClient(TestCase):
             custom_identifier="custom-identifier",
             parameters={"parameter_1": "value_1", "parameter_2": "value_2"},
             stream=True,
+            background=False,
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
@@ -101,10 +101,11 @@ class TestClient(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
+                "background": options.background,
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
+        self.assertEqual(result, fixtures.CONVERSATION_FINISHED_RESULT)
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
         self.assertEqual(on_event_mock.await_count, len(fixtures.CONVERSATION_EVENTS))
         on_finished_mock.assert_awaited_once_with(fixtures.CONVERSATION_FINISHED_RESULT)

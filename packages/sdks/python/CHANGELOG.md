@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.0-beta.1] - 2025-09-30
+
+### Added
+
+- Added `runs.attach()` method
+- Added `runs.stop()` method
+- Added background option when running a prompt
+- Bump PromptL to 0.8.0
+
+### Changed
+
+- Now `prompts.run()` method returns a `BackgroundResult` instead of a `FinishedResult` when `background` is `true`
+- Now `prompts.run()`, `prompts.chat()` and `runs.attach()` methods have `stream` option set to `true` by default
+
 ## [5.2.0] - 2025-17-09
 
 ### Added

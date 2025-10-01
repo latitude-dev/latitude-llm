@@ -415,6 +415,7 @@ class Latitude {
   ): Promise<RunPromptResult<S, Background> | undefined> {
     const _options = {
       ...options,
+      stream: options.stream ?? true, // Note: making stream the default
       options: {
         ...this.options,
         signal: options.signal,
@@ -439,40 +440,42 @@ class Latitude {
   >(
     uuid: string,
     messages: Message[],
-    args?: Omit<ChatOptions<Tools, S>, 'messages'>,
+    options?: Omit<ChatOptions<Tools, S>, 'messages'>,
   ) {
-    // Note: Args is optional and messages is omitted to maintain backwards compatibility
-    const options = {
-      ...(args || {}),
+    // Note: options is optional and messages is omitted to maintain backwards compatibility
+    const _options = {
+      ...(options || {}),
       messages,
+      stream: options?.stream ?? true, // Note: making stream the default
       options: {
         ...this.options,
-        signal: args?.signal,
+        signal: options?.signal,
       },
       instrumentation: Latitude.instrumentation,
     }
 
-    if (args?.stream) return streamChat<Tools, S>(uuid, options)
+    if (_options.stream) return streamChat<Tools, S>(uuid, _options)
 
-    return syncChat<Tools, S>(uuid, options)
+    return syncChat<Tools, S>(uuid, _options)
   }
 
   private async attachRun<
     S extends AssertedStreamType = 'text',
     Tools extends ToolSpec = {},
-  >(uuid: string, args?: AttachRunOptions<Tools, S>) {
-    const options = {
-      ...(args || {}),
+  >(uuid: string, options?: AttachRunOptions<Tools, S>) {
+    const _options = {
+      ...(options || {}),
+      stream: options?.stream ?? true, // Note: making stream the default
       options: {
         ...this.options,
-        signal: args?.signal,
+        signal: options?.signal,
       },
       instrumentation: Latitude.instrumentation,
     }
 
-    if (args?.stream) return streamAttach<Tools, S>(uuid, options)
+    if (_options.stream) return streamAttach<Tools, S>(uuid, _options)
 
-    return syncAttach<Tools, S>(uuid, options)
+    return syncAttach<Tools, S>(uuid, _options)
   }
 
   private async stopRun(uuid: string) {

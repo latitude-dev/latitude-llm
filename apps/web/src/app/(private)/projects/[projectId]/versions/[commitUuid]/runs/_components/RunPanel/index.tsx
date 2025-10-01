@@ -6,6 +6,7 @@ import Chat from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/doc
 import { MessageList } from '$/components/ChatWrapper'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import { useOnce } from '$/hooks/useMount'
 import { ROUTES } from '$/services/routes'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
@@ -286,6 +287,7 @@ function ActiveRunPanel({
   }, [run.uuid, stopRun])
 
   const playground = usePlaygroundChat({ runPromptFn })
+  useOnce(() => playground.start(), !!run.startedAt)
 
   if (!run.startedAt) {
     return (
@@ -307,6 +309,7 @@ function ActiveRunPanel({
       <div className='w-full min-h-0 flex flex-1 flex-col justify-start items-start gap-6'>
         <RunPanelStats
           tokens={
+            // TODO(runs): add all token types
             (playground.usage.totalTokens ||
               playground.usage.promptTokens ||
               playground.usage.completionTokens) ??

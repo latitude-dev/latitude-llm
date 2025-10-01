@@ -46,16 +46,34 @@ class RunPromptRequestBody(Model):
     custom_identifier: Optional[str] = Field(default=None, alias=str("customIdentifier"))
     tools: Optional[List[str]] = None
     stream: Optional[bool] = None
+    background: Optional[bool] = None
 
 
-class ChatPromptRequestParams(Model):
+class ConversationRequestParams(Model):
     conversation_uuid: str
+
+
+class ChatPromptRequestParams(ConversationRequestParams, Model):
+    pass
 
 
 class ChatPromptRequestBody(Model):
     messages: List[Message]
     tools: Optional[List[str]] = None
     stream: Optional[bool] = None
+
+
+class AttachRunRequestParams(ConversationRequestParams, Model):
+    pass
+
+
+class AttachRunRequestBody(Model):
+    stream: Optional[bool] = None
+    interactive: Optional[bool] = None
+
+
+class StopRunRequestParams(ConversationRequestParams, Model):
+    pass
 
 
 class LogRequestParams(Model):
@@ -73,11 +91,7 @@ class CreateLogRequestBody(Model):
     response: Optional[str] = None
 
 
-class EvaluationRequestParams(Model):
-    conversation_uuid: str
-
-
-class AnnotateEvaluationRequestParams(EvaluationRequestParams, Model):
+class AnnotateEvaluationRequestParams(ConversationRequestParams, Model):
     evaluation_uuid: str
 
 
@@ -109,6 +123,8 @@ RequestParams = Union[
     GetOrCreatePromptRequestParams,
     RunPromptRequestParams,
     ChatPromptRequestParams,
+    AttachRunRequestParams,
+    StopRunRequestParams,
     CreateLogRequestParams,
     AnnotateEvaluationRequestParams,
     GetAllVersionsRequestParams,
@@ -119,6 +135,7 @@ RequestBody = Union[
     GetOrCreatePromptRequestBody,
     RunPromptRequestBody,
     ChatPromptRequestBody,
+    AttachRunRequestBody,
     CreateLogRequestBody,
     AnnotateEvaluationRequestBody,
     ToolResultsRequestBody,
@@ -132,6 +149,8 @@ class RequestHandler(StrEnum):
     GetOrCreatePrompt = "GET_OR_CREATE_PROMPT"
     RunPrompt = "RUN_PROMPT"
     ChatPrompt = "CHAT_PROMPT"
+    AttachRun = "ATTACH_RUN"
+    StopRun = "STOP_RUN"
     CreateLog = "CREATE_LOG"
     AnnotateEvaluation = "ANNOTATE_EVALUATION"
     ToolResults = "TOOL_RESULTS"

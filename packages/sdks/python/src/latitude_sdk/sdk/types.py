@@ -56,6 +56,7 @@ class Prompt(Model):
     provider: Optional[Providers] = None
 
 
+# TODO(andres): update this to use the new ModelUsage type from V4
 class ModelUsage(Model):
     prompt_tokens: int = Field(alias=str("promptTokens"))
     completion_tokens: int = Field(alias=str("completionTokens"))
@@ -151,6 +152,7 @@ class ChainEvents(StrEnum):
 
 class GenericChainEvent(Model):
     event: Literal[StreamEvents.Latitude] = StreamEvents.Latitude
+    timestamp: int
     messages: List[Message]
     uuid: str
 
@@ -220,6 +222,10 @@ class FinishedResult(Model):
     uuid: str
     conversation: List[Message]
     response: ChainResponse
+
+
+class BackgroundResult(Model):
+    uuid: str
 
 
 StreamEvent = Union[ProviderEvent, LatitudeEvent]

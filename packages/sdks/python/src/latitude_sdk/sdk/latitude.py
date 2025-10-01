@@ -8,6 +8,8 @@ from latitude_sdk.sdk.evaluations import Evaluations
 from latitude_sdk.sdk.logs import Logs
 from latitude_sdk.sdk.projects import Projects
 from latitude_sdk.sdk.prompts import Prompts
+from latitude_sdk.sdk.runs import Runs
+from latitude_sdk.sdk.stream import Streamer
 from latitude_sdk.sdk.types import GatewayOptions, LogSources, SdkOptions
 from latitude_sdk.sdk.versions import Versions
 from latitude_sdk.util import Model
@@ -80,9 +82,11 @@ class Latitude:
         )
 
         self.promptl = Promptl(self._options.promptl)
+        self._streamer = Streamer(self._client)
 
         self.projects = Projects(self._client, self._options)
-        self.prompts = Prompts(self._client, self.promptl, self._options)
+        self.versions = Versions(self._client, self._options)
+        self.prompts = Prompts(self._client, self._streamer, self.promptl, self._options)
+        self.runs = Runs(self._client, self._streamer, self._options)
         self.logs = Logs(self._client, self._options)
         self.evaluations = Evaluations(self._client, self._options)
-        self.versions = Versions(self._client, self._options)
