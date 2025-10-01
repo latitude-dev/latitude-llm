@@ -270,9 +270,6 @@ export async function processSpansBulk(
       parentId: processed.parentId,
       workspaceId: workspace.id,
       apiKeyId: apiKey.id,
-      documentLogUuid: processed.attributes.documentLogUuid as
-        | string
-        | undefined,
       name: processed.name,
       kind: processed.kind,
       type: processed.type,
@@ -281,6 +278,12 @@ export async function processSpansBulk(
       duration: processed.duration,
       startedAt: processed.startedAt,
       endedAt: processed.endedAt,
+
+      // References
+      documentLogUuid: processed.attributes.documentLogUuid as | string | undefined, // prettier-ignore
+      documentUuid: processed.attributes.documentUuid as string | undefined,
+      commitUuid: processed.attributes.versionUuid as string | undefined,
+      experimentUuid: processed.attributes.experimentUuid as string | undefined,
     }))
 
     // Bulk insert spans
