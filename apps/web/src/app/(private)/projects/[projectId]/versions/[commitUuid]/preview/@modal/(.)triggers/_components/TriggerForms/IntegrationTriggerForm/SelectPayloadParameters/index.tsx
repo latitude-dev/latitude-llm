@@ -1,5 +1,5 @@
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { useCallback, useMemo } from 'react'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
