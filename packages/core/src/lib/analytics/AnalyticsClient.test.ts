@@ -86,28 +86,7 @@ describe('AnalyticsClient', () => {
 
       await client.capture()
 
-      expect(captureMock).toHaveBeenCalledWith({
-        disableGeoip: true,
-        distinctId: 'owner@example.com',
-        event: 'membershipCreated',
-        properties: {
-          productEdition: 'cloud',
-          appDomain: 'latitude.so',
-          workspaceId: undefined,
-          workspaceUuid: undefined,
-          data: {
-            id: 1,
-            workspaceId: 123,
-            userId: '234',
-            invitationToken: 'a-token',
-            confirmedAt: null,
-            authorId: '123',
-            createdAt: expect.any(Date),
-            updatedAt: expect.any(Date),
-            userEmail: 'owner@example.com',
-          },
-        },
-      })
+      expect(captureMock).not.toHaveBeenCalled()
     })
 
     it('does not send workspace without existing workspace', async () => {
@@ -133,24 +112,7 @@ describe('AnalyticsClient', () => {
 
       await client.capture()
 
-      expect(captureMock).toHaveBeenCalledWith({
-        disableGeoip: true,
-        distinctId: user.email,
-        event: 'workspaceCreated',
-        properties: {
-          productEdition: 'cloud',
-          appDomain: 'latitude.so',
-          workspaceId: undefined,
-          workspaceUuid: undefined,
-          data: {
-            source: 'default',
-            workspace: {},
-            user,
-            workspaceId: 123,
-            userEmail: user.email,
-          },
-        },
-      })
+      expect(captureMock).not.toHaveBeenCalled()
     })
 
     it('sends workspace with existing workspace', async () => {
