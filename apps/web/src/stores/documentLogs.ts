@@ -1,11 +1,11 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import useSWR, { SWRConfiguration } from 'swr'
 import {
   DocumentLog,
   DocumentLogFilterOptions,
+  DocumentLogWithMetadataAndError,
 } from '@latitude-data/core/constants'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/schema/types'
+import useSWR, { SWRConfiguration } from 'swr'
 
 type MaybeBoolean = boolean | undefined
 const EMPTY_ARRAY: [] = []

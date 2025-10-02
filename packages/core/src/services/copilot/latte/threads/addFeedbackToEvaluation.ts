@@ -1,17 +1,20 @@
+import { NotImplementedError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
-import { EvaluationType } from '../../../../constants'
-import { EvaluationV2, ProviderLogDto } from '../../../../schema/types'
-import { HumanEvaluationMetric } from '../../../../constants'
 import { database } from '../../../../client'
+import {
+  EvaluationType,
+  EvaluationV2,
+  HumanEvaluationMetric,
+} from '../../../../constants'
 import { Result } from '../../../../lib/Result'
 import {
   EvaluationResultsV2Repository,
   EvaluationsV2Repository,
   ProviderLogsRepository,
 } from '../../../../repositories'
+import { ProviderLogDto } from '../../../../schema/types'
 import { annotateEvaluationV2 } from '../../../evaluationsV2/annotate'
 import { getCopilotDocument } from '../helpers'
-import { NotImplementedError } from '@latitude-data/constants/errors'
 
 export async function addFeedbackToEvaluationResult(
   {

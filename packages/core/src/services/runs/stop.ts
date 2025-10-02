@@ -1,9 +1,9 @@
-import { Project, Workspace } from '../../schema/types'
-import { Run } from '@latitude-data/constants'
+import { Run } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { queues } from '../../jobs/queues'
 import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
+import { Project, Workspace } from '../../schema/types'
 import { JOB_FINISHED_STATES, subscribeQueue } from './shared'
 
 export async function stopRun({

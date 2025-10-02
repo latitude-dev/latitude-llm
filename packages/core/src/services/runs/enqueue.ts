@@ -1,5 +1,4 @@
 import { LogSources } from '@latitude-data/constants'
-import { Commit, DocumentVersion, Project, Workspace } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { BackgroundRunJobData } from '../../jobs/job-definitions/runs/backgroundRunJob'
 import { queues } from '../../jobs/queues'
@@ -7,6 +6,7 @@ import { UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import { RunsRepository } from '../../repositories'
+import { Commit, DocumentVersion, Project, Workspace } from '../../schema/types'
 
 export async function enqueueRun({
   runUuid,

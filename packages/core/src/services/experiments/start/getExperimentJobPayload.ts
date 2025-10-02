@@ -1,19 +1,14 @@
-import {
-  Commit,
-  Dataset,
-  EvaluationV2,
-  Experiment,
-  Workspace,
-} from '../../../schema/types'
 import { database } from '../../../client'
-import { PromisedResult } from '../../../lib/Transaction'
+import { EvaluationV2 } from '../../../constants'
 import { Result } from '../../../lib/Result'
+import { PromisedResult } from '../../../lib/Transaction'
 import { NotFoundError } from '../../../lib/errors'
 import {
   CommitsRepository,
   DatasetsRepository,
   EvaluationsV2Repository,
 } from '../../../repositories'
+import { Commit, Dataset, Experiment, Workspace } from '../../../schema/types'
 import { getRowsFromRange } from '../../datasetRows/getRowsFromRange'
 import { assertEvaluationRequirements } from '../assertRequirements'
 

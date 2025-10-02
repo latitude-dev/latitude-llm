@@ -1,18 +1,14 @@
-import { buildConversation } from '../../helpers'
-import {
-  Commit,
-  EvaluationV2,
-  ProviderLogDto,
-  Workspace,
-} from '../../schema/types'
+import { database } from '../../client'
 import {
   EVALUATION_SCORE_SCALE,
+  EvaluationMetric,
   EvaluationResultMetadata,
   EvaluationResultValue,
+  EvaluationType,
+  EvaluationV2,
 } from '../../constants'
-import { EvaluationMetric, EvaluationType } from '../../constants'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
+import { buildConversation } from '../../helpers'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
@@ -22,6 +18,7 @@ import {
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
 } from '../../repositories'
+import { Commit, ProviderLogDto, Workspace } from '../../schema/types'
 import { extractActualOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { updateEvaluationResultV2 } from './results/update'

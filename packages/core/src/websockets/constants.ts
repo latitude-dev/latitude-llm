@@ -3,22 +3,25 @@
 // All this can be seen in the browser. If you want something private
 // put in other place.
 
-import { LatteChange, LatteUsage } from '../constants'
+import {
+  DocumentLogWithMetadataAndError,
+  EvaluationResultV2,
+  EvaluationV2,
+  LatteChange,
+  LatteUsage,
+  Run,
+} from '../constants'
 import type {
   Commit,
   Dataset,
   DatasetRow,
-  DocumentLogWithMetadataAndError,
   DocumentSuggestion,
   DocumentTrigger,
   DocumentTriggerEvent,
-  EvaluationResultV2,
-  EvaluationV2,
   ExperimentDto,
   Project,
   ProviderLogDto,
 } from '../schema/types'
-import { Run } from '@latitude-data/constants'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR

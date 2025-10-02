@@ -2,6 +2,7 @@ import {
   ATTR_HTTP_REQUEST_METHOD,
   ATTR_HTTP_RESPONSE_STATUS_CODE,
 } from '@opentelemetry/semantic-conventions'
+import { database } from '../../../client'
 import {
   ATTR_HTTP_REQUEST_BODY,
   ATTR_HTTP_REQUEST_HEADER,
@@ -16,7 +17,6 @@ import {
   SpanStatus,
   SpanType,
 } from '../../../constants'
-import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import { SpanProcessArgs, toCamelCase } from './shared'

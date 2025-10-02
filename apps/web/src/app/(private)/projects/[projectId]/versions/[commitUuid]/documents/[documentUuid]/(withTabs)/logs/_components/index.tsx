@@ -13,6 +13,11 @@ import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
 import useDocumentLogsLimited from '$/stores/documentLogsLimited'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import {
+  DocumentLogFilterOptions,
+  DocumentLogWithMetadataAndError,
+} from '@latitude-data/core/constants'
+import { DocumentLogsLimitedView } from '@latitude-data/core/schema/types'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -28,11 +33,6 @@ import { useCallback, useMemo, useState } from 'react'
 import { useDebounce } from 'use-debounce'
 import { DocumentLogs } from './DocumentLogs'
 import { DocumentLogFilters } from './Filters'
-import { DocumentLogFilterOptions } from '@latitude-data/core/constants'
-import {
-  DocumentLogsLimitedView,
-  DocumentLogWithMetadataAndError,
-} from '@latitude-data/core/schema/types'
 
 const useDocumentLogSocket = (
   documentUuid: string,

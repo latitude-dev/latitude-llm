@@ -1,8 +1,11 @@
 import { distance } from 'fastest-levenshtein'
 import * as rouge from 'js-rouge'
-import { EvaluationType, RuleEvaluationMetric } from '../../../constants'
-import { RuleEvaluationLexicalOverlapSpecification as specification } from '../../../constants'
 import { database } from '../../../client'
+import {
+  EvaluationType,
+  RuleEvaluationMetric,
+  RuleEvaluationLexicalOverlapSpecification as specification,
+} from '../../../constants'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {

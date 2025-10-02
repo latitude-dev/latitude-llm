@@ -1,21 +1,18 @@
+import { database } from '../../client'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
   ActualOutputConfiguration,
+  EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
+  EvaluationType,
+  EvaluationV2,
   ExpectedOutputConfiguration,
 } from '../../constants'
-import {
-  Commit,
-  DocumentVersion,
-  EvaluationV2,
-  Workspace,
-} from '../../schema/types'
-import { EvaluationMetric, EvaluationType } from '../../constants'
-import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { EvaluationsV2Repository } from '../../repositories'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
 
 export async function validateEvaluationV2<

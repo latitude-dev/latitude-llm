@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm'
-import { Commit, EvaluationV2, Workspace } from '../../schema/types'
-import { EvaluationMetric, EvaluationType } from '../../constants'
+import { EvaluationMetric, EvaluationType, EvaluationV2 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { EvaluationsV2Repository } from '../../repositories'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
+import { Commit, Workspace } from '../../schema/types'
 
 export async function deleteEvaluationV2<
   T extends EvaluationType = EvaluationType,

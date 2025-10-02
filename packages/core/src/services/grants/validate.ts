@@ -1,10 +1,9 @@
-import { GrantSource, QuotaType } from '../../constants'
-import { Workspace } from '../../schema/types'
-import { Quota } from '@latitude-data/constants/grants'
 import { database } from '../../client'
+import { GrantSource, Quota, QuotaType } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { GrantsRepository } from '../../repositories'
+import { Workspace } from '../../schema/types'
 
 export async function validateGrant(
   {

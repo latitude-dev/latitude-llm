@@ -1,7 +1,11 @@
 import { isEqual } from 'lodash-es'
-import { Commit, EvaluationV2, Workspace } from '../../schema/types'
-import { EvaluationMetric, EvaluationType } from '../../constants'
-import { EvaluationOptions, EvaluationSettings } from '../../constants'
+import {
+  EvaluationMetric,
+  EvaluationOptions,
+  EvaluationSettings,
+  EvaluationType,
+  EvaluationV2,
+} from '../../constants'
 import { publisher } from '../../events/publisher'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { compactObject } from '../../lib/compactObject'
@@ -9,6 +13,7 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
+import { Commit, Workspace } from '../../schema/types'
 import { validateEvaluationV2 } from './validate'
 
 export async function updateEvaluationV2<

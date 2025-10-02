@@ -1,16 +1,16 @@
+import { Providers } from '@latitude-data/constants'
 import * as env from '@latitude-data/env'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { ZodObject } from 'zod'
-import { Commit, DocumentVersion, Workspace } from '../../schema/types'
-import { EvaluationSettings } from '../../constants'
+import * as cache from '../../cache'
 import {
+  EvaluationSettings,
   EvaluationType,
   LlmEvaluationMetric,
-  Providers,
-} from '@latitude-data/constants'
-import * as cache from '../../cache'
+} from '../../constants'
 import { Result } from '../../lib/Result'
 import { UnprocessableEntityError } from '../../lib/errors'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
 import * as factories from '../../tests/factories'
 import * as copilot from '../copilot'
 import * as providerApiKeys from '../providerApiKeys/findDefaultProvider'

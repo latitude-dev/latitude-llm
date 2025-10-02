@@ -1,8 +1,5 @@
-import {
-  DocumentLog,
-  DocumentLogWithMetadataAndError,
-} from '../../schema/types'
 import { database } from '../../client'
+import { DocumentLog, DocumentLogWithMetadataAndError } from '../../constants'
 import { findWorkspaceFromDocumentLog } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'

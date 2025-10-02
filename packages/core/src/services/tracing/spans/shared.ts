@@ -1,20 +1,20 @@
-import { ApiKey, Workspace } from '../../../schema/types'
-import { Scope } from '../../../schema/otlp'
+import { Database } from '../../../client'
 import {
   BaseSpanMetadata,
+  Otlp,
   SpanAttribute,
   SpanMetadata,
+  SpanSpecification,
   SpanStatus,
   SpanType,
 } from '../../../constants'
-import { SpanSpecification } from '../../../constants'
-import { Database } from '../../../client'
 import { TypedResult } from '../../../lib/Result'
+import { ApiKey, Workspace } from '../../../schema/types'
 
 export type SpanProcessArgs<T extends SpanType = SpanType> = {
   attributes: Record<string, SpanAttribute>
   status: SpanStatus
-  scope: Scope
+  scope: Otlp.Scope
   apiKey: ApiKey
   workspace: Workspace
   _type?: T // TODO(tracing): required for type inference, remove this when something in the specification uses the type

@@ -1,27 +1,28 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
-import {
-  Commit,
-  Dataset,
-  DatasetRow,
-  DocumentVersion,
-  EvaluationV2,
-  ProviderApiKey,
-  ProviderLogDto,
-  Workspace,
-} from '../../schema/types'
+import { Database } from '../../client'
 import {
   DocumentLog,
   EVALUATION_SCORE_SCALE,
   EvaluationConfiguration,
+  EvaluationMetric,
   EvaluationMetricSpecification,
   EvaluationResultMetadata,
   EvaluationResultValue,
   EvaluationSettings,
   EvaluationSpecification,
+  EvaluationType,
+  EvaluationV2,
 } from '../../constants'
-import { EvaluationMetric, EvaluationType } from '../../constants'
-import { Database } from '../../client'
 import { TypedResult } from '../../lib/Result'
+import {
+  Commit,
+  Dataset,
+  DatasetRow,
+  DocumentVersion,
+  ProviderApiKey,
+  ProviderLogDto,
+  Workspace,
+} from '../../schema/types'
 
 export type EvaluationMetricValidateArgs<
   T extends EvaluationType = EvaluationType,

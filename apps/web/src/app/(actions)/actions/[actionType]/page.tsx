@@ -3,12 +3,12 @@
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { CSPostHogProvider, IdentifyUser } from '$/app/providers'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { ClientPage } from './_lib'
 import {
   ActionBackendParameters,
   ActionType,
 } from '@latitude-data/constants/actions'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { ClientPage } from './_lib'
 
 export async function generateMetadata() {
   return buildMetatags({

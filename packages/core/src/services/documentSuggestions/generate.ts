@@ -1,17 +1,13 @@
 import { env } from '@latitude-data/env'
 import { and, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
+import { database } from '../../client'
 import {
   CLOUD_MESSAGES,
+  EvaluationResultV2,
+  EvaluationV2,
   MAX_DOCUMENT_SUGGESTIONS_PER_EVALUATION,
 } from '../../constants'
-import {
-  Commit,
-  DocumentVersion,
-  EvaluationV2,
-  Workspace,
-} from '../../schema/types'
-import { EvaluationResultV2 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -23,12 +19,12 @@ import {
 } from '../../repositories'
 import { documentSuggestions } from '../../schema/models/documentSuggestions'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
 import { getCopilot, runCopilot } from '../copilot'
 import {
   serializeEvaluationResult as serializeEvaluationResultV2,
   serializeEvaluation as serializeEvaluationV2,
 } from './serialize'
-import { database } from '../../client'
 
 async function checkSuggestionLimits(
   {

@@ -1,7 +1,10 @@
 import safeRegex from 'safe-regex'
-import { EvaluationType, RuleEvaluationMetric } from '../../../constants'
-import { RuleEvaluationRegularExpressionSpecification as specification } from '../../../constants'
 import { database } from '../../../client'
+import {
+  EvaluationType,
+  RuleEvaluationMetric,
+  RuleEvaluationRegularExpressionSpecification as specification,
+} from '../../../constants'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {

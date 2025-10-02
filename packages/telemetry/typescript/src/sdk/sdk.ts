@@ -125,7 +125,7 @@ export type TelemetryOptions = {
     [Instrumentation.AzureOpenAI]?: typeof azure
     [Instrumentation.VercelAI]?: 'manual'
     [Instrumentation.VertexAI]?: typeof vertexai
-    [Instrumentation.AIPlatform]?: any
+    [Instrumentation.AIPlatform]?: any // Note: Any because this type is huge
     [Instrumentation.Bedrock]?: typeof bedrock
     [Instrumentation.TogetherAI]?: typeof togetherai.Together
     [Instrumentation.Cohere]?: typeof cohere
@@ -136,7 +136,7 @@ export type TelemetryOptions = {
       vectorStoreModule: typeof langchain_vectorstores
       runnablesModule: typeof langchain_runnables
     }
-    [Instrumentation.LlamaIndex]?: any
+    [Instrumentation.LlamaIndex]?: any // Note: Any because this type is huge
   }
   disableBatch?: boolean
   exporter?: SpanExporter
@@ -255,8 +255,7 @@ export class LatitudeTelemetry {
       const provider = this.tracerProvider(Instrumentation.OpenAI)
       const instrumentation = new OpenAIInstrumentation({ enrichTokens: true })
       instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(openai as any)
-
+      instrumentation.manuallyInstrument(openai)
       registerInstrumentations({
         instrumentations: [instrumentation],
         tracerProvider: provider,

@@ -1,8 +1,7 @@
-import { Workspace } from '../../schema/types'
-import { Grant, Quota } from '@latitude-data/constants/grants'
-import { GrantSource, QuotaType } from '../../constants'
 import { database } from '../../client'
+import { Grant, GrantSource, Quota, QuotaType } from '../../constants'
 import { grants } from '../../schema/models/grants'
+import { Workspace } from '../../schema/types'
 
 export async function createGrant({
   type,

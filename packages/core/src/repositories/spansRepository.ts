@@ -1,15 +1,13 @@
-import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
-
 import { parseJSON } from 'date-fns'
-
+import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import { cache as redis } from '../cache'
 import {
+  Span,
   SPAN_METADATA_CACHE_TTL,
   SPAN_METADATA_STORAGE_KEY,
-  Span,
   SpanMetadata,
   SpanType,
 } from '../constants'
-import { cache as redis } from '../cache'
 import { diskFactory, DiskWrapper } from '../lib/disk'
 import { Result } from '../lib/Result'
 import { spans } from '../schema/models/spans'

@@ -1,12 +1,13 @@
 import {
+  DocumentLogWithMetadata,
+  EvaluationResultV2,
+  EvaluationV2,
+} from '@latitude-data/core/constants'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import {
   ICommitContextType,
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
-import {
-  DocumentLogWithMetadata,
-  DocumentVersion,
-} from '@latitude-data/core/schema/types'
-import { EvaluationResultV2, EvaluationV2 } from '@latitude-data/core/constants'
 
 export type Props = {
   results: Record<string, EvaluationResultV2>

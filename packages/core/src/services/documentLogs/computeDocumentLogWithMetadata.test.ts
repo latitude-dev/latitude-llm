@@ -1,14 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-
-import {
-  DocumentLog,
-  ProviderApiKey,
-  ProviderLog,
-  Workspace,
-} from '../../schema/types'
+import { DocumentLog } from '../../constants'
+import { ProviderApiKey, ProviderLog, Workspace } from '../../schema/types'
 import * as factories from '../../tests/factories'
-import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 import { NotFoundError } from './../../lib/errors'
+import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 
 describe('computeDocumentLogWithMetadata', () => {
   let workspace: Workspace

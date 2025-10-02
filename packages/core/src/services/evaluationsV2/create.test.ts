@@ -1,16 +1,17 @@
+import { Providers } from '@latitude-data/constants'
 import { desc, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
-import { Commit, DocumentVersion, Workspace } from '../../schema/types'
-import { EvaluationOptions, EvaluationSettings } from '../../constants'
-import {
-  EvaluationType,
-  Providers,
-  RuleEvaluationMetric,
-} from '@latitude-data/constants'
 import { database } from '../../client'
+import {
+  EvaluationOptions,
+  EvaluationSettings,
+  EvaluationType,
+  RuleEvaluationMetric,
+} from '../../constants'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
 import * as factories from '../../tests/factories'
 import { createEvaluationV2 } from './create'
 

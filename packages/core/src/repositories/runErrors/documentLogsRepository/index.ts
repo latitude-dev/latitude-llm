@@ -1,7 +1,8 @@
 import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
-
-import { DocumentLogWithMetadataAndError } from '../../../schema/types'
-import { ErrorableEntity } from '../../../constants'
+import {
+  DocumentLogWithMetadataAndError,
+  ErrorableEntity,
+} from '../../../constants'
 import { NotFoundError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { commits } from '../../../schema/models/commits'

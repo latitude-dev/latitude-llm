@@ -1,9 +1,8 @@
 import { GrantSource, QuotaType } from '../../constants'
-import { Subscription, Workspace } from '../../schema/types'
-import { SubscriptionPlans } from '../../plans'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { SubscriptionPlan } from '../../plans'
+import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
+import { Subscription, Workspace } from '../../schema/types'
 import { issueGrant } from '../grants/issue'
 import { revokeGrants } from '../grants/revoke'
 

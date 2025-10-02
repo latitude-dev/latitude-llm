@@ -1,18 +1,18 @@
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
+import { cache as getCache } from '../../cache'
+import { database } from '../../client'
 import {
   CLOUD_MESSAGES,
+  EvaluationSettings,
   EvaluationType,
   LlmEvaluationMetric,
 } from '../../constants'
-import { Commit, DocumentVersion, Workspace } from '../../schema/types'
-import { EvaluationSettings } from '../../constants'
-import { findFirstModelForProvider } from '../ai/providers/models'
-import { cache as getCache } from '../../cache'
-import { database } from '../../client'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { hashContent } from '../../lib/hashContent'
 import { Result } from '../../lib/Result'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { findFirstModelForProvider } from '../ai/providers/models'
 import { getCopilot, runCopilot } from '../copilot'
 import { findDefaultEvaluationProvider } from '../providerApiKeys/findDefaultProvider'
 
