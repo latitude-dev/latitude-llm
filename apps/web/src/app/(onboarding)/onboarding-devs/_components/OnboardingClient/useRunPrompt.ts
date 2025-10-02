@@ -58,10 +58,10 @@ export function useRunOnboardingPrompt({
     }
   }, [
     document,
-    createAbortController,
-    createStreamHandler,
     project.id,
     commit.uuid,
+    createAbortController,
+    createStreamHandler,
   ])
 
   const { start, messages } = usePlaygroundChat({

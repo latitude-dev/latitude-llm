@@ -56,7 +56,7 @@ export function useActiveRuns(
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          signal,
+          signal: signal,
         },
       )
 

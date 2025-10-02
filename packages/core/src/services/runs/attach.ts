@@ -4,7 +4,7 @@ import {
   LatitudeError,
   LatitudeErrorDto,
 } from '@latitude-data/constants/errors'
-import { QueueEventsListener } from 'bullmq'
+import { Job, QueueEventsListener } from 'bullmq'
 import { Project, Run, Workspace } from '../../browser'
 import { BackgroundRunJobResult } from '../../jobs/job-definitions/runs/backgroundRunJob'
 import { queues } from '../../jobs/queues'
@@ -43,19 +43,20 @@ export async function attachRun({
     )
   }
 
-  // TODO(runs): defend to possible data race?
   let idx = 0
+  if (job.progress && onEvent) {
+    idx = forwardEvents(job.progress, idx, onEvent)
+  }
+
   const onProgress = ({
     jobId,
     data,
   }: Parameters<QueueEventsListener['progress']>[0]) => {
     if (jobId !== job.id) return
-    if (!data || typeof data !== 'object' || !Array.isArray(data)) return
 
-    for (let i = idx; i < data.length; i++) {
-      onEvent?.(data[i] as ChainEvent)
+    if (data && onEvent) {
+      idx = forwardEvents(data, idx, onEvent)
     }
-    idx = data.length
   }
 
   const onCompleted = ({
@@ -132,4 +133,21 @@ export async function attachRun({
     toolCalls: promisedToolCalls,
     error: promisedError,
   })
+}
+
+// TODO(runs): defend to possible data race?
+function forwardEvents(
+  progress: Job['progress'],
+  index: number,
+  onEvent: (event: ChainEvent) => void,
+) {
+  if (!progress) return index
+  if (typeof progress !== 'object') return index
+  if (!Array.isArray(progress)) return index
+
+  for (let i = index; i < progress.length; i++) {
+    onEvent?.(progress[i] as ChainEvent)
+  }
+
+  return progress.length
 }
