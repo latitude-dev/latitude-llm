@@ -41,6 +41,7 @@ export async function runSharedPromptAction({
     data: {
       workspaceId: workspace.id,
       commitUuid,
+      isLiveCommit: true, // Shared prompts always run on the live commit
       projectId,
       documentPath,
       publishedDocumentUuid,

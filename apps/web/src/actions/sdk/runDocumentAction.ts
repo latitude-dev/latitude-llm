@@ -6,6 +6,7 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ChainEvent } from '@latitude-data/constants'
 import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
+import { CommitsRepository } from '@latitude-data/core/repositories'
 import { Latitude, type ChainEventDto } from '@latitude-data/sdk'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 
@@ -31,11 +32,17 @@ export async function runDocumentAction({
 }: RunDocumentActionProps) {
   const { workspace, user } = await getCurrentUserOrRedirect()
 
+  const commitsScope = new CommitsRepository(workspace.id)
+  const headCommit = await commitsScope
+    .getHeadCommit(projectId)
+    .then((r) => r.unwrap())
+
   publisher.publishLater({
     type: 'documentRunRequested',
     data: {
       projectId,
       commitUuid,
+      isLiveCommit: headCommit.uuid === commitUuid,
       documentPath,
       parameters,
       workspaceId: workspace.id,

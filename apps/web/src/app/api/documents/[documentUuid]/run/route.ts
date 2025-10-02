@@ -64,12 +64,18 @@ export const POST = errorHandler(
           'runs',
         ).then((r) => r.unwrap())
 
+        const commitsScope = new CommitsRepository(workspace.id)
+        const headCommit = await commitsScope
+          .getHeadCommit(projectId)
+          .then((r) => r.unwrap())
+
         // Publish document run event
         publisher.publishLater({
           type: 'documentRunRequested',
           data: {
             projectId,
             commitUuid,
+            isLiveCommit: headCommit.uuid === commitUuid,
             documentPath: path,
             parameters: _parameters,
             workspaceId: workspace.id,
