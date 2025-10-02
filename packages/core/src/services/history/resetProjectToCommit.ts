@@ -1,3 +1,4 @@
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { Commit, DraftChange, Project, User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
@@ -24,14 +25,14 @@ async function fetchCommitDetails({
   try {
     const commitScope = new CommitsRepository(workspace.id)
 
-    const headCommit = await commitScope
-      .getHeadCommit(project.id)
-      .then((r) => r.unwrap()!)
+    const headCommit = await commitScope.getHeadCommit(project.id)
+    if (!headCommit)
+      return Result.error(new NotFoundError('Head commit not found'))
 
     const targetCommit = targetDraftUuid
       ? await commitScope
-          .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
-          .then((r) => r.unwrap())
+        .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
+        .then((r) => r.unwrap())
       : headCommit
 
     const originalCommit = await commitScope
@@ -150,13 +151,13 @@ export async function resetProjectToCommit(
   const targetDraft = targetDraftUuid
     ? Result.ok(targetCommit)
     : await createCommit({
-        project: project,
-        user: user,
-        data: {
-          title: `Reset project to v${originalCommit.version} "${originalCommit.title}"`,
-          description: `Resetted the project to the state of commit v${originalCommit.version} "${originalCommit.title}"`,
-        },
-      })
+      project: project,
+      user: user,
+      data: {
+        title: `Reset project to v${originalCommit.version} "${originalCommit.title}"`,
+        description: `Resetted the project to the state of commit v${originalCommit.version} "${originalCommit.title}"`,
+      },
+    })
 
   if (targetDraft.error) {
     return Result.error(targetDraft.error)

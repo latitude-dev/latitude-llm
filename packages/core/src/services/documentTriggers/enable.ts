@@ -29,10 +29,7 @@ export async function setDocumentTriggerEnabled<T extends DocumentTriggerType>(
 ): PromisedResult<DocumentTrigger<T>> {
   return await transaction.call(async (tx) => {
     const commitsScope = new CommitsRepository(workspace.id, tx)
-    const liveCommitResult = await commitsScope.getHeadCommit(commit.projectId)
-    if (!Result.isOk(liveCommitResult)) return liveCommitResult
-    const liveCommit = liveCommitResult.unwrap()
-
+    const liveCommit = await commitsScope.getHeadCommit(commit.projectId)
     if (commit.uuid !== liveCommit?.uuid) {
       return Result.error(
         new BadRequestError(

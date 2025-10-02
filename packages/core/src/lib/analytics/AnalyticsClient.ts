@@ -78,7 +78,7 @@ export class AnalyticsClient {
 
     const repo = new WorkspacesRepository(user.id)
 
-    // TODO: remove, it's very expensive to have a read operation on each analytics event 
+    // TODO: remove, it's very expensive to have a read operation on each analytics event
     const result = await repo.find(this.workspaceId)
 
     if (result.error) return undefined

@@ -98,11 +98,9 @@ async function registerSingleScheduledTriggerEvent(
       // However, the trigger's associated commit may not be the Live commit,
       // but rather just the last merged commit where it has been updated.
       // Thus, we need to find the Live commit
-      const liveCommitResult = await commitsScope.getHeadCommit(
+      const liveCommit = await commitsScope.getHeadCommit(
         documentTrigger.projectId,
       )
-      if (!Result.isOk(liveCommitResult)) return liveCommitResult
-      const liveCommit = liveCommitResult.unwrap()
       eventCommit = liveCommit!
     }
 

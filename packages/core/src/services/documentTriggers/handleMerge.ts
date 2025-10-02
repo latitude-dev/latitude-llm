@@ -32,11 +32,7 @@ export async function handleTriggerMerge(
     const triggersScope = new DocumentTriggersRepository(workspace.id, tx)
     const commitsScope = new CommitsRepository(workspace.id, tx)
 
-    const liveCommitResult = await commitsScope.getHeadCommit(draft.projectId)
-    if (!Result.isOk(liveCommitResult)) return liveCommitResult
-
-    const liveCommit = liveCommitResult.unwrap()
-
+    const liveCommit = await commitsScope.getHeadCommit(draft.projectId)
     const triggerUpdatesResult =
       await triggersScope.getTriggerUpdatesInDraft(draft)
     if (!Result.isOk(triggerUpdatesResult)) return triggerUpdatesResult

@@ -7,6 +7,7 @@ import {
 } from '../../repositories'
 import { recomputeChanges } from './recomputeChanges'
 import { updateDocument } from './update'
+import { NotFoundError } from '@latitude-data/constants/errors'
 
 describe('updateDocument', () => {
   it('modifies a document that was created in a previous commit', async (ctx) => {
@@ -295,9 +296,8 @@ describe('updateDocument', () => {
     })
     const commitsScope = new CommitsRepository(project.workspaceId)
 
-    const commit = await commitsScope
-      .getHeadCommit(project.id)
-      .then((r) => r.unwrap())
+    const commit = await commitsScope.getHeadCommit(project.id)
+    if (!commit) throw new NotFoundError('Head commit not found')
     const fooDoc = documents.find((d) => d.path === 'foo')!
 
     const result = await updateDocument({

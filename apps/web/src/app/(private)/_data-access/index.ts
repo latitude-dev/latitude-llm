@@ -179,8 +179,7 @@ export const getHeadCommitCached = cache(
     projectId: number
   }) => {
     const commitsScope = new CommitsRepository(workspace.id)
-    const headCommitResult = await commitsScope.getHeadCommit(projectId)
-    return headCommitResult.value
+    return await commitsScope.getHeadCommit(projectId)
   },
 )
 
