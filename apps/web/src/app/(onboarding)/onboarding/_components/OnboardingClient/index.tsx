@@ -16,7 +16,7 @@ import {
 import { useRunDocument } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/hooks/useRunDocument'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function OnboardingClient() {
   const {
