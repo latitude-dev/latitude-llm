@@ -24,18 +24,11 @@ export const POST = errorHandler(
       try {
         const { projectId, runUuid } = params
 
-        const creating = await createSdk({
+        const sdk = await createSdk({
           workspace: workspace,
           projectId: projectId,
           __internal: { source: LogSources.Playground },
-        })
-        if (creating.error) {
-          return NextResponse.json(
-            { message: 'Failed to create SDK', error: creating.error },
-            { status: 500 },
-          )
-        }
-        const sdk = creating.value
+        }).then((r) => r.unwrap())
 
         const { readable, writable } = new TransformStream()
         const writer = writable.getWriter()

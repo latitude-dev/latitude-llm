@@ -1,6 +1,6 @@
 import os
 from typing import Any
-from unittest import IsolatedAsyncioTestCase
+from unittest import IsolatedAsyncioTestCase, mock
 from unittest.mock import AsyncMock
 
 import pytest
@@ -28,15 +28,17 @@ class TestEndToEnd(IsolatedAsyncioTestCase):
 ---
 provider: openai
 model: gpt-4.1-mini
+type: agent
 tools:
-  get_weather:
-    description: Obtains the weather temperature from a given location.
-    parameters:
-      type: object
-      properties:
-        location:
-          type: string
-          description: The location for the weather report.
+  - latitude/search
+  - get_weather:
+      description: Obtains the weather temperature from a given location.
+      parameters:
+        type: object
+        properties:
+          location:
+            type: string
+            description: The location for the weather report.
 ---
 
 You're a mother-based AI. Given a location, your task is to obtain the weather for that location and then generate a
@@ -50,6 +52,7 @@ Location: {{ location }}
 
 <step>
   Finally, create a mother-like recommendation based on the weather report.
+  You must use the search tool for your research! Make sure you call it once before answering!
 </step>
 """.strip()
 
@@ -151,26 +154,12 @@ Location: {{ location }}
         get_weather_mock = AsyncMock()
 
         async def get_weather(arguments: dict[str, Any], details: OnToolCallDetails):
+            print(f"[TEST] Tool called: {arguments}, {details}")
             get_weather_mock(arguments, details)
+
             return "Temperature is 22°C and cloudy"
 
-        # Try non-streaming first to see if that works
-        print("[TEST] Trying non-streaming request first")
-        non_stream_result = await sdk.prompts.run(
-            self.prompt_path,
-            options=RunPromptOptions(
-                stream=False,
-                parameters={"location": "Madrid"},
-                tools={"get_weather": get_weather},
-            ),
-        )
-        assert non_stream_result is not None
-
-        # Non-streaming request do not call the tool automatically
-        get_weather_mock.assert_not_called()
-
         # Make real streaming API call
-        print("[TEST] Now trying streaming request")
         result = await sdk.prompts.run(
             self.prompt_path,
             options=RunPromptOptions(
@@ -194,6 +183,9 @@ Location: {{ location }}
 
         # Verify callbacks were called appropriately
         assert on_finished_mock.called
+
+        # Streaming request should call the tool handler
+        get_weather_mock.assert_called()
 
     @pytest.mark.skip(reason="Acceptance test. Does not run on CI for now.")
     async def test_tool_handler_gets_called_when_requested(self):
@@ -232,6 +224,12 @@ Location: {{ location }}
         assert not hasattr(result.response, "error")  # type: ignore
         assert "error" not in result.response.text.lower()  # type: ignore
 
+        # Verify the tool handler was called
+        get_weather_mock.assert_called_once_with(
+            {"location": "Paris"},
+            OnToolCallDetails.model_construct(id=mock.ANY, name="get_weather", arguments={"location": "Paris"}),
+        )
+
     @pytest.mark.skip(reason="Acceptance test. Does not run on CI for now.")
     async def test_authentication_and_project_validation(self):
         """Should handle authentication and project validation"""
@@ -246,8 +244,9 @@ Location: {{ location }}
         await sdk.prompts.run(
             self.prompt_path,
             options=RunPromptOptions(
-                stream=False,
                 parameters={"location": "London"},
                 tools={"get_weather": get_weather},
             ),
         )
+
+    # TODO(runs): test_run_prompt_background_then_attach_then_stop

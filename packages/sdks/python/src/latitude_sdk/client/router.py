@@ -2,6 +2,7 @@ from typing import Callable, Optional, Tuple
 
 from latitude_sdk.client.payloads import (
     AnnotateEvaluationRequestParams,
+    AttachRunRequestParams,
     ChatPromptRequestParams,
     CreateLogRequestParams,
     GetAllPromptsRequestParams,
@@ -11,6 +12,7 @@ from latitude_sdk.client.payloads import (
     RequestHandler,
     RequestParams,
     RunPromptRequestParams,
+    StopRunRequestParams,
 )
 from latitude_sdk.sdk.types import GatewayOptions
 from latitude_sdk.util import Model
@@ -75,6 +77,16 @@ class Router:
 
             return "POST", self.conversations().chat(params.conversation_uuid)
 
+        elif handler == RequestHandler.AttachRun:
+            assert isinstance(params, AttachRunRequestParams)
+
+            return "POST", self.conversations().attach(params.conversation_uuid)
+
+        elif handler == RequestHandler.StopRun:
+            assert isinstance(params, StopRunRequestParams)
+
+            return "POST", self.conversations().stop(params.conversation_uuid)
+
         elif handler == RequestHandler.CreateLog:
             assert isinstance(params, CreateLogRequestParams)
 
@@ -108,6 +120,8 @@ class Router:
 
     class Conversations(Model):
         chat: Callable[[str], str]
+        attach: Callable[[str], str]
+        stop: Callable[[str], str]
         annotate: Callable[[str, str], str]
 
     def conversations(self) -> Conversations:
@@ -115,6 +129,8 @@ class Router:
 
         return self.Conversations(
             chat=lambda uuid: f"{base_url}/{uuid}/chat",
+            attach=lambda uuid: f"{base_url}/{uuid}/attach",
+            stop=lambda uuid: f"{base_url}/{uuid}/stop",
             annotate=lambda uuid, evaluation_uuid: f"{base_url}/{uuid}/evaluations/{evaluation_uuid}/annotate",
         )
 

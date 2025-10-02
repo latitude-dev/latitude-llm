@@ -125,6 +125,7 @@ export function handleToolCallFactory<T extends ToolSpec>({
     if (data.type !== 'tool-call') return
 
     const tool = tools?.[data.toolName]
+    // NOTE: If handler not found, do not handle tool call because it could be a built-in tool
     if (!tool) return
 
     const result = await tool(data.args, {

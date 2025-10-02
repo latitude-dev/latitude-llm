@@ -294,6 +294,7 @@ event: latitude-event
 data: {
         json.dumps(
             {
+                "timestamp": 965044800000,
                 "type": "chain-started",
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
                 "messages": [],
@@ -306,6 +307,7 @@ event: latitude-event
 data: {
         json.dumps(
             {
+                "timestamp": 965044800000,
                 "type": "step-started",
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
                 "messages": [
@@ -327,6 +329,7 @@ event: latitude-event
 data: {
         json.dumps(
             {
+                "timestamp": 965044800000,
                 "type": "provider-started",
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
                 "messages": [
@@ -404,6 +407,7 @@ event: latitude-event
 data: {
         json.dumps(
             {
+                "timestamp": 965044800000,
                 "type": "provider-completed",
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
                 "providerLogUuid": "456",
@@ -442,6 +446,7 @@ event: latitude-event
 data: {
         json.dumps(
             {
+                "timestamp": 965044800000,
                 "type": "step-completed",
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
                 "tokenUsage": {"promptTokens": 31, "completionTokens": 9, "totalTokens": 40},
@@ -470,6 +475,7 @@ event: latitude-event
 data: {
         json.dumps(
             {
+                "timestamp": 965044800000,
                 "type": "step-started",
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
                 "messages": [
@@ -504,6 +510,7 @@ event: latitude-event
 data: {
         json.dumps(
             {
+                "timestamp": 965044800000,
                 "type": "provider-started",
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
                 "tokenUsage": {"promptTokens": 31, "completionTokens": 9, "totalTokens": 40},
@@ -632,6 +639,7 @@ event: latitude-event
 data: {
         json.dumps(
             {
+                "timestamp": 965044800000,
                 "type": "provider-completed",
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
                 "providerLogUuid": "456",
@@ -705,6 +713,7 @@ event: latitude-event
 data: {
         json.dumps(
             {
+                "timestamp": 965044800000,
                 "type": "step-completed",
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
                 "messages": [
@@ -757,6 +766,7 @@ event: latitude-event
 data: {
         json.dumps(
             {
+                "timestamp": 965044800000,
                 "type": "chain-completed",
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
                 "finishReason": "tool-calls",
@@ -811,12 +821,14 @@ data: {
 CONVERSATION_EVENTS: list[StreamEvent] = [
     ChainEventChainStarted(
         event=StreamEvents.Latitude,
+        timestamp=965044800000,
         type=ChainEvents.ChainStarted,
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         messages=[],
     ),
     ChainEventStepStarted(
         event=StreamEvents.Latitude,
+        timestamp=965044800000,
         type=ChainEvents.StepStarted,
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         messages=[
@@ -826,6 +838,7 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
     ),
     ChainEventProviderStarted(
         event=StreamEvents.Latitude,
+        timestamp=965044800000,
         type=ChainEvents.ProviderStarted,
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         messages=[
@@ -869,6 +882,7 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
     },
     ChainEventProviderCompleted(
         event=StreamEvents.Latitude,
+        timestamp=965044800000,
         type=ChainEvents.ProviderCompleted,
         provider_log_uuid="456",
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
@@ -887,6 +901,7 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
     ),
     ChainEventStepCompleted(
         event=StreamEvents.Latitude,
+        timestamp=965044800000,
         type=ChainEvents.StepCompleted,
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         messages=[
@@ -896,6 +911,9 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
         ],
     ),
     ChainEventStepStarted(
+        event=StreamEvents.Latitude,
+        timestamp=965044800000,
+        type=ChainEvents.StepStarted,
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         messages=[
             SystemMessage(content=[TextContent(text="Reason before answering.")]),
@@ -907,6 +925,7 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
     ),
     ChainEventProviderStarted(
         event=StreamEvents.Latitude,
+        timestamp=965044800000,
         type=ChainEvents.ProviderStarted,
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         messages=[
@@ -981,6 +1000,7 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
     },
     ChainEventProviderCompleted(
         event=StreamEvents.Latitude,
+        timestamp=965044800000,
         type=ChainEvents.ProviderCompleted,
         provider_log_uuid="456",
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
@@ -1028,6 +1048,7 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
     # NOTE: At this time tool calls are executed
     ChainEventStepCompleted(
         event=StreamEvents.Latitude,
+        timestamp=965044800000,
         type=ChainEvents.StepCompleted,
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         messages=[
@@ -1055,6 +1076,7 @@ CONVERSATION_EVENTS: list[StreamEvent] = [
     ),
     ChainEventChainCompleted(
         event=StreamEvents.Latitude,
+        timestamp=965044800000,
         type=ChainEvents.ChainCompleted,
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         messages=[
@@ -1090,6 +1112,7 @@ event: latitude-event
 data: {
         json.dumps(
             {
+                "timestamp": 965044800000,
                 "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
                 "messages": [],
                 "type": "chain-error",
@@ -1105,6 +1128,7 @@ data: {
 
 CONVERSATION_ERROR_EVENT = ChainEventChainError(
     event=StreamEvents.Latitude,
+    timestamp=965044800000,
     type=ChainEvents.ChainError,
     error=ChainError(
         name="AIRunError",
