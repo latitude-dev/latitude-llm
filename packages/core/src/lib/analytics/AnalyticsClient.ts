@@ -77,11 +77,17 @@ export class AnalyticsClient {
     if (!user) return undefined
 
     const repo = new WorkspacesRepository(user.id)
+
+    // TODO: remove, it's very expensive to have a read operation on each analytics event 
     const result = await repo.find(this.workspaceId)
 
     if (result.error) return undefined
 
     const workspace = result.value
+
+    // Filtering out some expensive workspaces that are skewing our analytics...
+    if (workspace.id === 13605) return
+
     return {
       user: {
         id: user.id,
