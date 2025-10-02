@@ -1,6 +1,6 @@
 import { ROUTES } from '$/services/routes'
 import { ActionExecuteArgs } from './shared'
-import type { ActionType } from '@latitude-data/core/schema/types'
+import type { ActionType } from '@latitude-data/constants/actions'
 import { cloneAgentActionFrontendParametersSchema } from '@latitude-data/core/constants'
 
 export const CloneAgentActionSpecification = {

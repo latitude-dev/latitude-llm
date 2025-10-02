@@ -11,13 +11,12 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { ActionFrontendSpecification } from './shared'
 import { ACTION_SPECIFICATIONS } from './specifications'
+import { User, Workspace } from '@latitude-data/core/schema/types'
 import {
   ActionBackendParameters,
   ActionFrontendParameters,
   ActionType,
-  User,
-  Workspace,
-} from '@latitude-data/core/schema/types'
+} from '@latitude-data/constants/actions'
 
 export function ClientPage<T extends ActionType = ActionType>({
   type,

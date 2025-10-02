@@ -1,6 +1,6 @@
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
-import { CLOUD_MESSAGES } from '../../constants'
+import { ActionType, CLOUD_MESSAGES } from '../../constants'
 import { Workspace } from '../../schema/types'
 import { cache as getCache } from '../../cache'
 import { database } from '../../client'
@@ -24,7 +24,7 @@ export const CreateAgentActionSpecification = {
 }
 
 async function execute(
-  { parameters, user, workspace }: ActionExecuteArgs<'createAgent'>,
+  { parameters, user, workspace }: ActionExecuteArgs<ActionType.CreateAgent>,
   db = database,
   tx = new Transaction(),
 ) {

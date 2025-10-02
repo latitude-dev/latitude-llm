@@ -1,4 +1,4 @@
-import { ActionType } from '../../schema/types'
+import { ActionType } from '@latitude-data/constants/actions'
 import { CloneAgentActionSpecification } from './cloneAgent'
 import { CreateAgentActionSpecification } from './createAgent'
 import { ActionBackendSpecification } from './shared'

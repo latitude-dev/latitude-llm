@@ -67,8 +67,8 @@ import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
 import { workspaceFeatures } from './models/workspaceFeatures'
 import { workspaces } from './models/workspaces'
-import { workspaceOnboarding } from './models/workspaceOnboarding'
 import { documentIntegrationReferences } from './models/documentIntegrationReferences'
+import { workspaceOnboarding } from './models/WorkspaceOnboarding'
 
 export type {
   DocumentLog,
@@ -451,29 +451,3 @@ export type LatteChange = {
   type: 'usage' | 'credits'
   amount: number
 }
-
-// Action types
-export const ActionType = {
-  CreateAgent: 'createAgent',
-  CloneAgent: 'cloneAgent',
-} as const
-
-export type ActionType = (typeof ActionType)[keyof typeof ActionType]
-
-export type ActionBackendParameters<T extends ActionType = ActionType> =
-  T extends typeof ActionType.CreateAgent
-    ? { prompt: string }
-    : T extends typeof ActionType.CloneAgent
-      ? { uuid: string }
-      : never
-
-export type ActionFrontendParameters<T extends ActionType = ActionType> =
-  T extends typeof ActionType.CreateAgent
-    ? { projectId: number; commitUuid: string; prompt: string }
-    : T extends typeof ActionType.CloneAgent
-      ? {
-          projectId: number
-          commitUuid: string
-          hasCompletedOnboarding: boolean
-        }
-      : never

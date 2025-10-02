@@ -12,7 +12,7 @@ import {
   DocumentVersionsRepository,
 } from '../../repositories'
 import { forkDocument } from '../documents/fork'
-import { ActionExecuteArgs } from './shared'
+import { ActionExecuteArgs, ActionType } from './shared'
 import { getWorkspaceOnboarding } from '../workspaceOnboarding'
 import { isFeatureEnabledByName } from '../workspaceFeatures/isFeatureEnabledByName'
 
@@ -26,7 +26,7 @@ export const CloneAgentActionSpecification = {
 }
 
 async function execute(
-  { parameters, user, workspace }: ActionExecuteArgs<'cloneAgent'>,
+  { parameters, user, workspace }: ActionExecuteArgs<ActionType.CloneAgent>,
   db = database,
   _ = new Transaction(),
 ) {

@@ -1,14 +1,13 @@
 import { z } from 'zod'
+import { User, Workspace } from '../../schema/types'
+import { Database } from '../../client'
+import { TypedResult } from '../../lib/Result'
+import Transaction from '../../lib/Transaction'
 import {
   ActionBackendParameters,
   ActionFrontendParameters,
   ActionType,
-  User,
-  Workspace,
-} from '../../schema/types'
-import { Database } from '../../client'
-import { TypedResult } from '../../lib/Result'
-import Transaction from '../../lib/Transaction'
+} from '@latitude-data/constants/actions'
 
 export { ActionType }
 

@@ -6,7 +6,7 @@ import {
   ActionBackendParameters,
   ActionFrontendParameters,
   ActionType,
-} from '@latitude-data/core/schema/types'
+} from '@latitude-data/constants/actions'
 
 export const executeBackendAction = (
   await withRateLimit(authProcedure, {

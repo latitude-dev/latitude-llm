@@ -8,7 +8,7 @@ import { ClientPage } from './_lib'
 import {
   ActionBackendParameters,
   ActionType,
-} from '@latitude-data/core/schema/types'
+} from '@latitude-data/constants/actions'
 
 export async function generateMetadata() {
   return buildMetatags({
