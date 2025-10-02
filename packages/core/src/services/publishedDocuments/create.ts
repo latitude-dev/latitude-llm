@@ -29,10 +29,7 @@ export async function createPublishedDocument(
   transaction = new Transaction(),
 ) {
   const commitRepo = new CommitsRepository(workspace.id)
-  const liveCommit = await commitRepo
-    .getHeadCommit(project.id)
-    .then((r) => r.unwrap())
-
+  const liveCommit = await commitRepo.getHeadCommit(project.id)
   if (!liveCommit) {
     return Result.error(
       new UnprocessableEntityError('Project has no commits.', {

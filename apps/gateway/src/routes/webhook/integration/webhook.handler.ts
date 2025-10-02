@@ -43,8 +43,7 @@ async function resolveWorkspaceAndCommit(
     return Result.ok({ workspace, commit })
   }
 
-  const headCommitResult = await commitsRepo.getHeadCommit(rawTrigger.projectId)
-  const commit = headCommitResult.unwrap()
+  const commit = await commitsRepo.getHeadCommit(rawTrigger.projectId)
   if (!commit) {
     return Result.error(
       new NotFoundError(

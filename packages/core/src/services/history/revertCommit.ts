@@ -1,5 +1,6 @@
 import { Commit, Project, User, Workspace } from '../../schema/types'
 import { DraftChange } from '../../constants'
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import {
@@ -23,9 +24,9 @@ async function fetchCommitReversionDetails({
 }) {
   try {
     const commitScope = new CommitsRepository(workspace.id)
-    const headCommit = await commitScope
-      .getHeadCommit(project.id)
-      .then((r) => r.unwrap()!)
+    const headCommit = await commitScope.getHeadCommit(project.id)
+    if (!headCommit)
+      return Result.error(new NotFoundError('Head commit not found'))
 
     const targetDraft = targetDraftUuid
       ? await commitScope

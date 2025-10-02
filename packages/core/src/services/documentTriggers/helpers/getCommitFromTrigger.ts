@@ -23,12 +23,9 @@ export async function getCommitFromTrigger(
     }
 
     // Commit is merged. This means that the latest commit active for this trigger is Live
-    const liveCommitResult = await commitsScope.getHeadCommit(
+    const liveCommit = await commitsScope.getHeadCommit(
       documentTrigger.projectId,
     )
-    if (!Result.isOk(liveCommitResult)) return liveCommitResult
-    const liveCommit = liveCommitResult.unwrap()
-
     if (!liveCommit) {
       return Result.error(
         new NotFoundError(

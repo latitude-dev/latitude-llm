@@ -38,7 +38,7 @@ async function getDocumentsAtCommit(
   const headCommit = await getHeadCommitForProject(
     { projectId: projectResult.value.id, commitsScope },
     tx,
-  ).then((r) => r.unwrap())
+  )
 
   const docsScope = new DocumentVersionsRepository(workspaceId, tx)
   const headDocumentsResult = await docsScope.getDocumentsAtCommit(headCommit)

@@ -114,11 +114,7 @@ async function getSampleAgent(
   }
 
   const commitsRepository = new CommitsRepository(workspace.id, db)
-  const gettingco = await commitsRepository.getHeadCommit(project.id)
-  if (gettingco.error) {
-    return Result.error(gettingco.error)
-  }
-  const commit = gettingco.unwrap()
+  const commit = await commitsRepository.getHeadCommit(project.id)
   if (!commit) {
     return Result.error(
       new UnprocessableEntityError('Sample Agents commit not found'),
