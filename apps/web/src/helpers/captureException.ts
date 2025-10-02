@@ -1,13 +1,18 @@
 import tracer from 'dd-trace'
 import { env } from '@latitude-data/env'
 
+function getCauseAsError(cause: unknown) {
+  const causeString = JSON.stringify(cause)
+  return new Error(causeString)
+}
+
 export const captureException = (error: Error, tags?: Record<string, any>) => {
   if (env.NODE_ENV !== 'test') {
     console.error('Captured exception:', error)
   }
 
-  if ('cause' in error) {
-    captureException(error.cause as Error, tags)
+  if (error && 'cause' in error && error.cause) {
+    captureException(getCauseAsError(error.cause), tags)
     return
   }
 
