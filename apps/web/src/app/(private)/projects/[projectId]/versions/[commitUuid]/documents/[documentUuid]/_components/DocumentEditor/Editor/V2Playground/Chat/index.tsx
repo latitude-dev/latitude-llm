@@ -47,7 +47,7 @@ export default function Chat({
       <Messages
         playground={playground}
         parameterKeys={parameterKeys}
-        expandParameters={expandParameters}
+        expandParameters={expandParameters ?? true} // by default, we show the parameters
         agentToolsMap={agentToolsMap}
         toolContentMap={toolContentMap}
       />

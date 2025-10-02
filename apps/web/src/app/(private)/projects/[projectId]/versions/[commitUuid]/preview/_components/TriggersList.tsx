@@ -105,14 +105,14 @@ export type OnRunTriggerFn = ({
   aiParameters?: boolean
 }) => void
 
-const FAKE_DOCUMENT = {
+export const FAKE_DOCUMENT = {
   id: 0,
   documentUuid: '',
   content: '',
   path: '',
 } as DocumentVersion
 
-type ActiveTrigger = {
+export type ActiveTrigger = {
   document: DocumentVersion
   parameters: Record<string, unknown>
   userMessage?: string

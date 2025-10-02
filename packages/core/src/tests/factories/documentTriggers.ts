@@ -158,6 +158,7 @@ export async function createIntegrationDocumentTrigger({
   integrationId,
   properties = {},
   payloadParameters = [],
+  triggerStatus = DocumentTriggerStatus.Deployed,
 }: {
   workspaceId?: number
   projectId?: number
@@ -167,6 +168,7 @@ export async function createIntegrationDocumentTrigger({
   integrationId: number
   properties?: Record<string, unknown>
   payloadParameters?: string[]
+  triggerStatus?: DocumentTriggerStatus
 }): Promise<DocumentTrigger> {
   // Create project if not provided
   if (!commitId || !projectId || !workspaceId) {
@@ -195,7 +197,7 @@ export async function createIntegrationDocumentTrigger({
       commitId,
       documentUuid,
       triggerType: DocumentTriggerType.Integration,
-      triggerStatus: 'deployed',
+      triggerStatus,
       configuration,
       deploymentSettings,
       triggerHash: createTriggerHash({ configuration }),

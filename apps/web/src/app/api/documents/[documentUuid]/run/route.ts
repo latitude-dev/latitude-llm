@@ -17,7 +17,6 @@ import { env } from '@latitude-data/env'
 import {
   ChainEventDto,
   GenerationResponse,
-  Latitude,
   LatitudeApiError,
 } from '@latitude-data/sdk'
 import { NextRequest, NextResponse } from 'next/server'
@@ -267,9 +266,14 @@ async function generateAIParameters({
         path,
       })
       .then((r) => r.unwrap())
-    const sdk = new Latitude(env.COPILOT_WORKSPACE_API_KEY!, {
+
+    const sdk = await createSdk({
+      workspace: workspace,
+      apiKey: env.COPILOT_WORKSPACE_API_KEY!,
       projectId: env.COPILOT_PROJECT_ID,
-    })
+      __internal: { source: LogSources.Copilot },
+    }).then((r) => r.unwrap())
+
     const { parameters } = await scanDocumentContent({ document, commit }).then(
       (r) => r.unwrap(),
     )

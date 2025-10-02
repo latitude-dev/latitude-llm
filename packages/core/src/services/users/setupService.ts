@@ -81,10 +81,9 @@ export default async function setupService(
 
     const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
     if (isNewOnboardingEnabled) {
-      await createWorkspaceOnboarding(
-        { workspaceId: workspace.id },
-        transaction,
-      ).then((r) => r.unwrap())
+      await createWorkspaceOnboarding({ workspace }, transaction).then((r) =>
+        r.unwrap(),
+      )
     } else {
       // TODO(onboarding): creating completed onboarding for now so old users dont get onboarded (rm later)
       await createCompletedWorkspaceOnboarding(

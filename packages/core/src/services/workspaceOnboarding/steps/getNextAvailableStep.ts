@@ -4,19 +4,41 @@ import {
   ONBOARDING_STEPS,
   OnboardingStepKey,
 } from '@latitude-data/constants/onboardingSteps'
+import { checkNextStepNecessary } from './checkNextStepNecessary'
+import { Workspace } from '../../../schema/types'
+import { database } from '../../../client'
 
-export async function getNextAvailableStep({
-  currentStep,
-}: {
-  currentStep: OnboardingStepKey
-}): PromisedResult<OnboardingStepKey> {
-  const nextStep = getNextStep(currentStep)
-
-  if (!nextStep) {
-    return Result.error(new Error('Onboarding is complete'))
+export async function getNextAvailableStep(
+  {
+    currentStep,
+    workspace,
+  }: {
+    currentStep: OnboardingStepKey
+    workspace: Workspace
+  },
+  db = database,
+): PromisedResult<OnboardingStepKey> {
+  while (true) {
+    const nextStep = getNextStep(currentStep)
+    if (!nextStep) {
+      return Result.error(new Error('Onboarding is complete'))
+    }
+    const checkNextStepNecessaryResult = await checkNextStepNecessary(
+      {
+        currentStep: nextStep,
+        workspace,
+      },
+      db,
+    )
+    if (!Result.isOk(checkNextStepNecessaryResult)) {
+      return checkNextStepNecessaryResult
+    }
+    const nextStepNecessary = checkNextStepNecessaryResult.unwrap()
+    if (nextStepNecessary) {
+      return Result.ok(nextStep)
+    }
+    currentStep = nextStep
   }
-
-  return Result.ok(nextStep)
 }
 
 function getNextStep(

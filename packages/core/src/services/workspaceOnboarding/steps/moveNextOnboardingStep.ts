@@ -3,13 +3,15 @@ import Transaction from '../../../lib/Transaction'
 import { workspaceOnboarding } from '../../../schema/models/workspaceOnboarding'
 import { Result } from '../../../lib/Result'
 import { getNextAvailableStep } from './getNextAvailableStep'
-import { WorkspaceOnboarding } from '../../../schema/types'
+import { Workspace, WorkspaceOnboarding } from '../../../schema/types'
 
 export async function moveNextOnboardingStep(
   {
     onboarding,
+    workspace,
   }: {
     onboarding: WorkspaceOnboarding
+    workspace: Workspace
   },
   transaction = new Transaction(),
 ) {
@@ -18,9 +20,13 @@ export async function moveNextOnboardingStep(
       return Result.error(new Error('Onboarding current step is not set'))
     }
 
-    const getNextAvailableStepResult = await getNextAvailableStep({
-      currentStep: onboarding.currentStep,
-    })
+    const getNextAvailableStepResult = await getNextAvailableStep(
+      {
+        currentStep: onboarding.currentStep,
+        workspace,
+      },
+      tx,
+    )
 
     if (!Result.isOk(getNextAvailableStepResult)) {
       return getNextAvailableStepResult

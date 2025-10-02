@@ -1,23 +1,25 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
-import { WorkspaceOnboarding } from '../../../../src/schema/types'
+import { Workspace, WorkspaceOnboarding } from '../../../../src/schema/types'
 import { database } from '../../../../src/client'
 import { workspaceOnboarding as workspaceOnboardingTable } from '../../../../src/schema/models/workspaceOnboarding'
 import * as factories from '../../../../src/tests/factories'
 import { moveNextOnboardingStep } from './moveNextOnboardingStep'
+import {
+  DocumentTriggerStatus,
+  IntegrationType,
+} from '@latitude-data/constants'
 
 describe('moveNextOnboardingStep', () => {
   let workspaceOnboarding: WorkspaceOnboarding
+  let workspace: Workspace
 
   beforeEach(async () => {
-    vi.resetAllMocks()
-    vi.clearAllMocks()
-    vi.restoreAllMocks()
-
-    const { workspace } = await factories.createWorkspace({
+    const { workspace: createdWorkspace } = await factories.createWorkspace({
       onboarding: true,
     })
+    workspace = createdWorkspace
 
     // Get the created onboarding
     const onboardings = await database
@@ -28,7 +30,34 @@ describe('moveNextOnboardingStep', () => {
     workspaceOnboarding = onboardings[0]!
   })
 
-  it('succeeds when moving from first step to second', async () => {
+  it('moves from first step to second when pending integration triggers exist', async () => {
+    // Create a project with a merged commit
+    const { project, commit } = await factories.createProject({
+      workspace,
+      documents: {
+        'test.promptl': 'test content',
+      },
+    })
+
+    // Create a Pipedream integration
+    const integration = await factories.createIntegration({
+      workspace,
+      type: IntegrationType.Pipedream,
+      configuration: {
+        appName: 'slack',
+        authType: 'oauth',
+      },
+    })
+
+    // Create a pending integration trigger
+    await factories.createIntegrationDocumentTrigger({
+      workspaceId: workspace.id,
+      projectId: project.id,
+      commitId: commit.id,
+      integrationId: integration.id,
+      triggerStatus: DocumentTriggerStatus.Pending,
+    })
+
     const updatedOnboarding = {
       ...workspaceOnboarding,
       currentStep: OnboardingStepKey.SetupIntegrations,
@@ -36,6 +65,7 @@ describe('moveNextOnboardingStep', () => {
 
     const result = await moveNextOnboardingStep({
       onboarding: updatedOnboarding,
+      workspace,
     })
 
     expect(result.ok).toBe(true)
@@ -43,7 +73,23 @@ describe('moveNextOnboardingStep', () => {
     expect(updated.currentStep).toBe(OnboardingStepKey.ConfigureTriggers)
   })
 
-  it('succeeds when moving from second step to third', async () => {
+  it('moves from first step directly to third when no pending integration triggers exist', async () => {
+    const updatedOnboarding = {
+      ...workspaceOnboarding,
+      currentStep: OnboardingStepKey.SetupIntegrations,
+    }
+
+    const result = await moveNextOnboardingStep({
+      onboarding: updatedOnboarding,
+      workspace,
+    })
+
+    expect(result.ok).toBe(true)
+    const updated = result.unwrap()
+    expect(updated.currentStep).toBe(OnboardingStepKey.TriggerAgent)
+  })
+
+  it('moves always from second step to third', async () => {
     // Set current step to second step
     await database
       .update(workspaceOnboardingTable)
@@ -57,6 +103,7 @@ describe('moveNextOnboardingStep', () => {
 
     const result = await moveNextOnboardingStep({
       onboarding: updatedOnboarding,
+      workspace,
     })
 
     expect(result.ok).toBe(true)
@@ -64,7 +111,7 @@ describe('moveNextOnboardingStep', () => {
     expect(updated.currentStep).toBe(OnboardingStepKey.TriggerAgent)
   })
 
-  it('succeeds when moving from third step to fourth', async () => {
+  it('moves always from third step to fourth', async () => {
     // Set current step to third step
     await database
       .update(workspaceOnboardingTable)
@@ -78,6 +125,7 @@ describe('moveNextOnboardingStep', () => {
 
     const result = await moveNextOnboardingStep({
       onboarding: updatedOnboarding,
+      workspace,
     })
 
     expect(result.ok).toBe(true)
@@ -93,6 +141,7 @@ describe('moveNextOnboardingStep', () => {
 
     const result = await moveNextOnboardingStep({
       onboarding: onboardingWithoutStep,
+      workspace,
     })
 
     expect(result.ok).toBe(false)
@@ -115,6 +164,7 @@ describe('moveNextOnboardingStep', () => {
 
     const result = await moveNextOnboardingStep({
       onboarding: updatedOnboarding,
+      workspace,
     })
 
     expect(result.ok).toBe(false)
