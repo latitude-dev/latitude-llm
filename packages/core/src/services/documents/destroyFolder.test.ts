@@ -121,9 +121,10 @@ describe('removing folders', () => {
       workspace: workspace,
     }).then((r) => r.unwrap())
 
-    const documents = await database.query.documentVersions.findMany({
-      where: eq(documentVersions.commitId, draft.id),
-    })
+    const documents = await database
+      .select()
+      .from(documentVersions)
+      .where(eq(documentVersions.commitId, draft.id))
 
     expect(documents.length).toBe(3)
     const paths = documents.map((d) => d.path).sort()
@@ -158,9 +159,10 @@ describe('removing folders', () => {
       workspace: workspace,
     }).then((r) => r.unwrap())
 
-    const documents = await database.query.documentVersions.findMany({
-      where: and(eq(documentVersions.commitId, draft.id)),
-    })
+    const documents = await database
+      .select()
+      .from(documentVersions)
+      .where(and(eq(documentVersions.commitId, draft.id)))
 
     const drafDocuments = documents.filter((d) => d.commitId === draft.id)
     expect(drafDocuments.length).toBe(2)
@@ -212,9 +214,10 @@ describe('removing folders', () => {
       workspace: workspace,
     }).then((r) => r.unwrap())
 
-    const draftDocuments = await database.query.documentVersions.findMany({
-      where: and(eq(documentVersions.commitId, draft.id)),
-    })
+    const draftDocuments = await database
+      .select()
+      .from(documentVersions)
+      .where(and(eq(documentVersions.commitId, draft.id)))
 
     expect(draftDocuments.length).toBe(2)
     const deletedData = draftDocuments.map((d) => ({

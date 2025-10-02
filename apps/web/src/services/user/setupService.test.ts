@@ -46,46 +46,56 @@ describe('setupService', () => {
     const { user, workspace } = result.value!
 
     // Check user creation
-    const createdUser = await database.query.users.findFirst({
-      where: utils.eq(users.id, user.id),
-    })
+    const createdUser = await database
+      .select()
+      .from(users)
+      .where(utils.eq(users.id, user.id))
+      .then((rows) => rows[0])
     expect(createdUser).toBeDefined()
     expect(createdUser?.email).toBe('test@example.com')
     expect(createdUser?.name).toBe('Test User')
 
     // Check workspace creation
-    const createdWorkspace = await database.query.workspaces.findFirst({
-      where: utils.eq(workspaces.id, workspace.id),
-    })
+    const createdWorkspace = await database
+      .select()
+      .from(workspaces)
+      .where(utils.eq(workspaces.id, workspace.id))
+      .then((r) => r[0])
     expect(createdWorkspace).toBeDefined()
     expect(createdWorkspace?.name).toBe('Test Company')
 
     // Check membership creation
-    const createdMembership = await database.query.memberships.findFirst({
-      where: utils.eq(memberships.userId, user.id),
-    })
+    const createdMembership = await database
+      .select()
+      .from(memberships)
+      .where(utils.eq(memberships.userId, user.id))
+      .then((r) => r[0])
     expect(createdMembership).toBeDefined()
     expect(createdMembership?.workspaceId).toBe(workspace.id)
 
     // Check API key creation
-    const createdApiKey = await database.query.apiKeys.findFirst({
-      where: utils.eq(apiKeys.workspaceId, workspace.id),
-    })
+    const createdApiKey = await database
+      .select()
+      .from(apiKeys)
+      .where(utils.eq(apiKeys.workspaceId, workspace.id))
+      .then((r) => r[0])
     expect(createdApiKey).toBeDefined()
 
     // Check provider API key creation when ENV variables are present
-    const createdProviderApiKey =
-      await database.query.providerApiKeys.findFirst({
-        where: utils.eq(providerApiKeys.workspaceId, workspace.id),
-      })
+    const createdProviderApiKey = await database
+      .select()
+      .from(providerApiKeys)
+      .where(utils.eq(providerApiKeys.workspaceId, workspace.id))
+      .then((r) => r[0])
     expect(createdProviderApiKey).toBeDefined()
     expect(createdProviderApiKey?.authorId).toBe(user.id)
 
     // Check onboarding creation
-    const createdOnboarding =
-      await database.query.workspaceOnboarding.findFirst({
-        where: utils.eq(workspaceOnboarding.workspaceId, workspace.id),
-      })
+    const createdOnboarding = await database
+      .select()
+      .from(workspaceOnboarding)
+      .where(utils.eq(workspaceOnboarding.workspaceId, workspace.id))
+      .then((r) => r[0])
     expect(createdOnboarding).toBeDefined()
     // TODO(onboarding): change this once we have a new onboarding and we remove feature flag
     expect(createdOnboarding?.completedAt).toBeDefined()

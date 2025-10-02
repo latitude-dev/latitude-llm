@@ -77,9 +77,11 @@ describe('destroyProviderApiKey', () => {
 
     expect(providers.map((p) => p.id)).not.toContain(provider.id)
 
-    const removedProvidedData = await database.query.providerApiKeys.findFirst({
-      where: eq(providerApiKeys.id, provider.id),
-    })
+    const removedProvidedData = await database
+      .select()
+      .from(providerApiKeys)
+      .where(eq(providerApiKeys.id, provider.id))
+      .then((r) => r[0])
 
     expect(removedProvidedData).toBeDefined()
     expect(removedProvidedData?.token).not.toBe(provider.token)
@@ -109,9 +111,11 @@ describe('destroyProviderApiKey', () => {
 
     expect(providers.map((p) => p.id)).not.toContain(provider.id)
 
-    const removedProvidedData = await database.query.providerApiKeys.findFirst({
-      where: eq(providerApiKeys.id, provider.id),
-    })
+    const removedProvidedData = await database
+      .select()
+      .from(providerApiKeys)
+      .where(eq(providerApiKeys.id, provider.id))
+      .then((r) => r[0])
 
     expect(removedProvidedData).toBeDefined()
     expect(removedProvidedData?.token).not.toBe(provider.token)

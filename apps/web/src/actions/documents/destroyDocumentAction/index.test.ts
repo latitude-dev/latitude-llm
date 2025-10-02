@@ -113,10 +113,11 @@ describe('destroyDocumentAction', async () => {
         documentUuid: document.documentUuid,
       })
       // TODO: move to core
-      const documents = await database.query.documentVersions.findMany({
-        // @ts-ignore
-        where: and(eq(documentVersions.documentUuid, document.documentUuid)),
-      })
+      const documents = await database
+        .select()
+        .from(documentVersions)
+        // @ts-expect-error - mocking
+        .where(and(eq(documentVersions.documentUuid, document.documentUuid)))
 
       const drafDocument = documents.find(
         (d: DocumentVersion) => d.commitId === draft.id,

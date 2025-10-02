@@ -37,14 +37,16 @@ describe('destroyOrSoftDeleteDocuments', () => {
       workspace: workspace,
     }).then((r) => r.unwrap())
 
-    const documents = await database.query.documentVersions.findMany({
-      where: eq(documentVersions.documentUuid, draftDocument.documentUuid),
-    })
+    const documents = await database
+      .select()
+      .from(documentVersions)
+      .where(eq(documentVersions.documentUuid, draftDocument.documentUuid))
     expect(documents.length).toBe(0)
 
-    const evaluations = await database.query.evaluationVersions.findMany({
-      where: eq(evaluationVersions.documentUuid, draftDocument.documentUuid),
-    })
+    const evaluations = await database
+      .select()
+      .from(evaluationVersions)
+      .where(eq(evaluationVersions.documentUuid, draftDocument.documentUuid))
     expect(evaluations.length).toBe(0)
   })
 
@@ -71,16 +73,18 @@ describe('destroyOrSoftDeleteDocuments', () => {
       workspace: workspace,
     }).then((r) => r.unwrap())
 
-    const documents = await database.query.documentVersions.findMany({
-      where: eq(documentVersions.documentUuid, document.documentUuid),
-    })
+    const documents = await database
+      .select()
+      .from(documentVersions)
+      .where(eq(documentVersions.documentUuid, document.documentUuid))
     const drafDocument = documents.find((d) => d.commitId === draft.id)
     expect(documents.length).toBe(2)
     expect(drafDocument!.deletedAt).not.toBe(null)
 
-    const evaluations = await database.query.evaluationVersions.findMany({
-      where: eq(evaluationVersions.documentUuid, document.documentUuid),
-    })
+    const evaluations = await database
+      .select()
+      .from(evaluationVersions)
+      .where(eq(evaluationVersions.documentUuid, document.documentUuid))
     const draftEvaluation = evaluations.find((e) => e.commitId === draft.id)
     expect(evaluations.length).toBe(2)
     expect(draftEvaluation!.deletedAt).not.toBe(null)
@@ -132,17 +136,19 @@ describe('destroyOrSoftDeleteDocuments', () => {
       workspace,
     }).then((r) => r.unwrap())
 
-    const documents = await database.query.documentVersions.findMany({
-      where: eq(documentVersions.documentUuid, document.documentUuid),
-    })
+    const documents = await database
+      .select()
+      .from(documentVersions)
+      .where(eq(documentVersions.documentUuid, document.documentUuid))
     const drafDocument = documents.find((d) => d.commitId === draft.id)
     expect(documents.length).toBe(2)
     expect(drafDocument!.resolvedContent).toBeNull()
     expect(drafDocument!.deletedAt).not.toBe(null)
 
-    const evaluations = await database.query.evaluationVersions.findMany({
-      where: eq(evaluationVersions.documentUuid, document.documentUuid),
-    })
+    const evaluations = await database
+      .select()
+      .from(evaluationVersions)
+      .where(eq(evaluationVersions.documentUuid, document.documentUuid))
     const draftEvaluation = evaluations.find((e) => e.commitId === draft.id)
     expect(evaluations.length).toBe(2)
     expect(draftEvaluation!.deletedAt).not.toBe(null)
