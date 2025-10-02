@@ -1,12 +1,13 @@
 import * as env from '@latitude-data/env'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
-import { ActionType, User, Workspace } from '../../schema/types'
+import { User, Workspace } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
 import { getWorkspaceOnboarding } from '../workspaceOnboarding/get'
 import * as onboardingServices from '../workspaceOnboarding/update'
 import { executeAction } from './execute'
+import { ActionType } from '@latitude-data/constants/actions'
 
 describe('executeAction', () => {
   let mocks: {
