@@ -4,7 +4,6 @@ import { users } from '../../schema'
 import { WorkspacesRepository } from '../../repositories'
 import { database } from '../../client'
 import { LatitudeEvent } from '../../events/events'
-import debug from '../debug'
 import {
   CollectorInput,
   DataCollector,
@@ -51,14 +50,11 @@ export class AnalyticsClient {
   }
 
   private async collect() {
-    if (this.skipAnalytics) {
-      debug('Latitude analytics disabled')
-      return
-    }
-
+    if (this.skipAnalytics) return
     if (!this.userEmail) return
 
     const data = await this.getData()
+    if (!data) return
 
     return this.collector.collect({
       email: this.userEmail,
@@ -76,17 +72,14 @@ export class AnalyticsClient {
     const user = await this.getUser()
     if (!user) return undefined
 
+    // TODO: remove, it's very expensive to have a read operation on each analytics event
     const repo = new WorkspacesRepository(user.id)
-
-    // TODO: remove, it's very expensive to have a read operation on each analytics event 
     const result = await repo.find(this.workspaceId)
-
     if (result.error) return undefined
-
     const workspace = result.value
 
     // Filtering out some expensive workspaces that are skewing our analytics...
-    if (workspace.id === 13605) return
+    if (workspace.id === 13605) return undefined
 
     return {
       user: {
