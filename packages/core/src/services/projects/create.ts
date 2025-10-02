@@ -1,8 +1,8 @@
-import { Commit, Project, User, Workspace } from '../../browser'
+import { Commit, Project, User, Workspace } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { projects } from '../../schema'
+import { projects } from '../../schema/models/projects'
 import { createCommit } from '../commits/create'
 
 export async function createProject(

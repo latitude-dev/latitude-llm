@@ -1,16 +1,12 @@
 import { addMonths, startOfDay, subMonths } from 'date-fns'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  GrantSource,
-  QuotaType,
-  SubscriptionPlan,
-  SubscriptionPlans,
-  Workspace,
-} from '../../browser'
+import { GrantSource, QuotaType } from '../../constants'
+import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
+import { Workspace } from '../../schema/types'
 import { database } from '../../client'
 import * as plans from '../../plans'
-import { grants } from '../../schema'
+import { grants } from '../../schema/models/grants'
 import * as factories from '../../tests/factories'
 import { computeQuota } from './quota'
 

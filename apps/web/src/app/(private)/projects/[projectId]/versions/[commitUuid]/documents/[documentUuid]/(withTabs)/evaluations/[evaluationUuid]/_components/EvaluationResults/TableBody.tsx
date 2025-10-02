@@ -5,14 +5,6 @@ import {
 } from '$/components/evaluations/ResultRow'
 import { LogicTablePaginationFooter } from '$/components/TablePaginationFooter/LogicTablePaginationFooter'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
-import {
-  DEFAULT_PAGINATION_SIZE,
-  EvaluationMetric,
-  EvaluationResultsV2Search,
-  EvaluationResultV2WithDetails,
-  EvaluationType,
-  EvaluationV2,
-} from '@latitude-data/core/browser'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
@@ -25,6 +17,14 @@ import {
 } from '@latitude-data/web-ui/atoms/Table'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Ref } from 'react'
+import {
+  DEFAULT_PAGINATION_SIZE,
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+} from '@latitude-data/core/constants'
+import { EvaluationResultsV2Search } from '@latitude-data/core/helpers'
+import { EvaluationResultV2WithDetails } from '@latitude-data/core/schema/types'
 
 function EvaluationResultsTableRow<
   T extends EvaluationType = EvaluationType,

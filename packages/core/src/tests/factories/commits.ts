@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
 
-import { Project, User } from '../../browser'
+import { Project, User } from '../../schema/types'
 import { hasOwnProperty } from '../../lib/commonTypes'
 import { createCommit as createCommitFn } from '../../services/commits/create'
 import { createProject } from './createProject'

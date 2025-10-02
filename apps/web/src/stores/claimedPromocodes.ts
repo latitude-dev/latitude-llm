@@ -6,7 +6,7 @@ import { ROUTES } from '$/services/routes'
 import { claimPromocodeAction } from '$/actions/promocodes/claim'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useSWR from 'swr'
-import { Promocode } from '@latitude-data/core/browser'
+import { Promocode } from '@latitude-data/core/schema/types'
 
 const EMPTY_ARRAY: Promocode[] = []
 

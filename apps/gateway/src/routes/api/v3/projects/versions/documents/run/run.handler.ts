@@ -4,9 +4,8 @@ import {
 } from '$/common/documents/getData'
 import { captureException } from '$/common/tracer'
 import { AppRouteHandler } from '$/openApi/types'
-import { runPresenter, runPresenterLegacy } from '$/presenters/runPresenter'
-import { compareVersion } from '$/utils/versionComparison'
-import { LogSources } from '@latitude-data/core/browser'
+import { runPresenter } from '$/presenters/runPresenter'
+import { LogSources } from '@latitude-data/core/constants'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
@@ -15,14 +14,7 @@ import {
   ToolHandler,
 } from '@latitude-data/core/lib/streamManager/clientTools/handlers'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
-import {
-  runDocumentAtCommitLegacy,
-  type RunDocumentAtCommitLegacyArgs,
-} from '@latitude-data/core/services/__deprecated/commits/runDocumentAtCommit'
-import {
-  runDocumentAtCommit,
-  type RunDocumentAtCommitArgs,
-} from '@latitude-data/core/services/commits/runDocumentAtCommit'
+import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
 import { enqueueRun } from '@latitude-data/core/services/runs/enqueue'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { BACKGROUND } from '@latitude-data/core/telemetry'
@@ -46,8 +38,6 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   } = c.req.valid('json')
   const workspace = c.get('workspace')
   const source = __internal?.source ?? LogSources.API
-  const sdkVersion = c.req.header('X-Latitude-SDK-Version')
-  const isLegacy = !compareVersion(sdkVersion, '5.0.0')
   const { document, commit, project } = await getData({
     workspace,
     projectId: Number(projectId!),
@@ -85,13 +75,12 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
       tools: tools,
       userMessage: userMessage,
       source: source,
-      isLegacy: isLegacy,
     }).then((r) => r.unwrap())
 
     return c.json({ uuid: run.uuid })
   }
 
-  const legacyArgs = {
+  const result = await runDocumentAtCommit({
     workspace,
     document,
     commit,
@@ -99,23 +88,10 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     customIdentifier,
     source: __internal?.source ?? LogSources.API,
     abortSignal: c.req.raw.signal, // FIXME: This does not seem to work
-  }
-  const result = await _runDocumentAtCommit(
-    isLegacy
-      ? {
-          isLegacy: true,
-          data: legacyArgs,
-        }
-      : {
-          isLegacy: false,
-          data: {
-            ...legacyArgs,
-            context: BACKGROUND({ workspaceId: workspace.id }),
-            tools: useSSE ? buildClientToolHandlersMap(tools ?? []) : {},
-            userMessage,
-          },
-        },
-  ).then((r) => r.unwrap())
+    context: BACKGROUND({ workspaceId: workspace.id }),
+    tools: useSSE ? buildClientToolHandlersMap(tools ?? []) : {},
+    userMessage,
+  }).then((r) => r.unwrap())
 
   if (useSSE) {
     return streamSSE(
@@ -172,20 +148,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   const error = await result.error
   if (error) throw error
 
-  let body
-  if (isLegacy) {
-    body = runPresenterLegacy({
-      response: (await result.lastResponse)!,
-      toolCalls: await result.toolCalls,
-      // @ts-expect-error: trace is not in the type of new runDocumentAtCommit
-      // (but it is in the legacy version)
-      trace: await result.trace,
-    }).unwrap()
-  } else {
-    body = runPresenter({
-      response: (await result.lastResponse)!,
-    }).unwrap()
-  }
+  const body = runPresenter({ response: (await result.lastResponse)! }).unwrap()
 
   return c.json(body)
 }
@@ -195,21 +158,4 @@ export function buildClientToolHandlersMap(tools: string[]) {
     acc[toolName] = awaitClientToolResult
     return acc
   }, {})
-}
-
-type RunDocumentArgs<T extends boolean> = T extends true
-  ? { isLegacy: true; data: RunDocumentAtCommitLegacyArgs }
-  : T extends false
-    ? { isLegacy: false; data: RunDocumentAtCommitArgs }
-    : never
-async function _runDocumentAtCommit<T extends boolean>(
-  args: RunDocumentArgs<T>,
-) {
-  const { isLegacy } = args
-
-  if (isLegacy) {
-    return runDocumentAtCommitLegacy(args.data)
-  } else {
-    return runDocumentAtCommit(args.data)
-  }
 }

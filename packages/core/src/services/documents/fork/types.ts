@@ -2,7 +2,7 @@ import {
   DocumentTrigger,
   DocumentVersion,
   IntegrationDto,
-} from '../../../browser'
+} from '../../../schema/types'
 
 export type ImportProps = {
   document: DocumentVersion

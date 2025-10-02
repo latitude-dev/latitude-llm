@@ -5,13 +5,8 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
-import {
-  Dataset,
-  DocumentLogFilterOptions,
-  parseRowCell,
-} from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
-import { DatasetRowData } from '@latitude-data/core/schema'
+import { DatasetRowData } from '@latitude-data/core/schema/models/datasetRows'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import {
   useCurrentCommit,
@@ -19,6 +14,9 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useMemo, useState } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { Dataset } from '@latitude-data/core/schema/types'
+import { DocumentLogFilterOptions } from '@latitude-data/core/constants'
+import { parseRowCell } from '@latitude-data/core/services/datasetRows/utils'
 
 type InputItem = {
   columns: Dataset['columns']

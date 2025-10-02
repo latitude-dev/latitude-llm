@@ -1,6 +1,5 @@
 import { useCallback } from 'react'
 import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import { DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useEmailTriggerConfiguration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/TriggerForms/EmailTriggerForm/useConfiguration'
 import {
@@ -8,6 +7,7 @@ import {
   getEmailTriggerAddress,
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/TriggerForms/EmailTriggerForm/utils'
 import { EmailTriggerForm } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/TriggerForms/EmailTriggerForm'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function EmailTriggerConfig({
   document,

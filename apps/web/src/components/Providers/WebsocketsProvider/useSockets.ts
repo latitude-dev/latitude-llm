@@ -1,7 +1,7 @@
-import { WebServerToClientEvents } from '@latitude-data/core/browser'
 import { useSocketEvent } from '@latitude-data/socket.io-react-hook'
 
 import { useWebsocketConfig } from './index'
+import { WebServerToClientEvents } from '@latitude-data/core/websockets/constants'
 
 type ServerEventType = keyof WebServerToClientEvents
 export type EventArgs<T extends ServerEventType> = Parameters<

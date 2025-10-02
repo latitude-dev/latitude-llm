@@ -7,9 +7,9 @@ import {
   ToolCall,
   ToolRequestContent,
 } from '@latitude-data/constants/legacyCompiler'
-import { StreamEventTypes } from '@latitude-data/core/browser'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import React, { useCallback } from 'react'
+import { StreamEventTypes } from '@latitude-data/core/constants'
 
 type SetMessagesFunction = React.Dispatch<React.SetStateAction<Message[]>>
 type SetUnrespondedToolCallsFunction = React.Dispatch<

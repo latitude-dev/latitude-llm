@@ -3,10 +3,10 @@ import {
   Commit,
   DocumentVersion,
   Project,
-  Providers,
   User,
   Workspace,
-} from '../browser'
+} from '../schema/types'
+import { Providers } from '@latitude-data/constants'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import * as factories from '../tests/factories'
@@ -14,7 +14,7 @@ import { mergeCommit } from '../services/commits'
 import { updateDocument } from '../services/documents'
 import { DocumentTriggersRepository } from './documentTriggersRepository'
 import { database } from '../client'
-import { documentTriggers } from '../schema'
+import { documentTriggers } from '../schema/models/documentTriggers'
 import { eq } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import { DocumentTriggerType } from '@latitude-data/constants'

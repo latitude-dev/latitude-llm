@@ -1,8 +1,6 @@
-import { LogSources } from '../../browser'
-import {
-  findLastProviderLogFromDocumentLogUuid,
-  findWorkspaceFromDocumentLog,
-} from '../../data-access'
+import { LogSources } from '../../constants'
+import { findWorkspaceFromDocumentLog } from '../../data-access/workspaces'
+import { findLastProviderLogFromDocumentLogUuid } from '../../data-access/providerLogs'
 import { runEvaluationV2JobKey } from '../../jobs/job-definitions'
 import { queues } from '../../jobs/queues'
 import { NotFoundError } from '../../lib/errors'

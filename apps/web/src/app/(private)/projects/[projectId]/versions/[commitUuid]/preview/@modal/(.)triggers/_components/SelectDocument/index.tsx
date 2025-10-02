@@ -7,8 +7,8 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { DocumentVersion } from '@latitude-data/core/browser'
 import { useMetadata } from '$/hooks/useMetadata'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function useDocumentSelection({
   initialDocumentUuid = '',

@@ -12,7 +12,6 @@ import {
   AI_OPERATION_ID_VALUE_STREAM_OBJECT,
   AI_OPERATION_ID_VALUE_STREAM_TEXT,
   AI_OPERATION_ID_VALUE_TOOL,
-  ApiKey,
   ATTR_AI_OPERATION_ID,
   ATTR_LATITUDE_TYPE,
   ATTR_LLM_REQUEST_TYPE,
@@ -25,22 +24,27 @@ import {
   LLM_REQUEST_TYPE_VALUE_COMPLETION,
   LLM_REQUEST_TYPE_VALUE_EMBEDDING,
   LLM_REQUEST_TYPE_VALUE_RERANK,
-  Otlp,
   SpanAttribute,
   SpanStatus,
   SpanType,
-  Workspace,
-} from '../../../browser'
+} from '../../../constants'
+import { ApiKey, Workspace } from '../../../schema/types'
+import {
+  StatusCode,
+  Status,
+  AttributeValue,
+  Attribute,
+} from '../../../schema/otlp'
 import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
-import { unsafelyFindWorkspace } from '../../../data-access'
+import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { internalBaggageSchema } from '../../../telemetry'
-import { ATTR_LATITUDE_INTERNAL } from '../../../browser'
+import { ATTR_LATITUDE_INTERNAL } from '../../../constants'
 import { ApiKeysRepository } from '../../../repositories'
 
 export function convertSpanAttribute(
-  attribute: Otlp.AttributeValue,
+  attribute: AttributeValue,
 ): TypedResult<SpanAttribute> {
   if (attribute.stringValue != undefined) {
     return Result.ok(attribute.stringValue)
@@ -65,7 +69,7 @@ export function convertSpanAttribute(
 }
 
 export function convertSpanAttributes(
-  attributes: Otlp.Attribute[],
+  attributes: Attribute[],
 ): TypedResult<Record<string, SpanAttribute>> {
   const result: Record<string, SpanAttribute> = {}
 
@@ -148,13 +152,11 @@ export function extractSpanType(
   return Result.ok(SpanType.Unknown)
 }
 
-export function convertSpanStatus(
-  status: Otlp.Status,
-): TypedResult<SpanStatus> {
+export function convertSpanStatus(status: Status): TypedResult<SpanStatus> {
   switch (status.code) {
-    case Otlp.StatusCode.Ok:
+    case StatusCode.Ok:
       return Result.ok(SpanStatus.Ok)
-    case Otlp.StatusCode.Error:
+    case StatusCode.Error:
       return Result.ok(SpanStatus.Error)
     default:
       return Result.ok(SpanStatus.Unset)

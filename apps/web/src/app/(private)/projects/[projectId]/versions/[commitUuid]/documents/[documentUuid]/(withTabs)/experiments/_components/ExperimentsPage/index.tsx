@@ -2,7 +2,6 @@
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useExperiments } from '$/stores/experiments'
-import { Commit, Project } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
@@ -16,6 +15,7 @@ import { ExperimentComparison } from '../ExperimentsComparison'
 import { EmptyPage } from './EmptyPage'
 import { useSearchParams } from 'next/navigation'
 import { MetadataProvider } from '$/components/MetadataProvider'
+import { Commit, Project } from '@latitude-data/core/schema/types'
 
 export function ExperimentsPageContent({
   initialCount,

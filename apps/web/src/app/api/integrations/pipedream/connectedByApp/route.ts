@@ -1,8 +1,8 @@
-import { Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { listConnectedIntegrationsByApp } from '@latitude-data/core/services/integrations/connectedByAppSlug'
+import { Workspace } from '@latitude-data/core/schema/types'
 
 type ListArguments = Parameters<typeof listConnectedIntegrationsByApp>[0]
 

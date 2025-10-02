@@ -4,16 +4,14 @@ import { z } from 'zod'
 import {
   Commit,
   DocumentVersion,
-  EVALUATION_SCORE_SCALE,
-  EvaluationType,
   EvaluationV2,
-  HumanEvaluationMetric,
   Project,
   ProviderLogDto,
-  Providers,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { EVALUATION_SCORE_SCALE, HumanEvaluationMetric } from '../../constants'
+import { EvaluationType, Providers } from '@latitude-data/constants'
 import { publisher } from '../../events/publisher'
 import * as helpers from '../../helpers'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'

@@ -1,8 +1,3 @@
-import {
-  Inputs,
-  InputSource,
-  PlaygroundInput,
-} from '@latitude-data/core/browser'
 import { TABS } from '../index'
 import { ParameterInputSkeleton } from '$/components/ParameterInput'
 import { ParameterTypeSelector } from '../ManualParams/ParameterTypeSelector'
@@ -11,6 +6,11 @@ import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
+import {
+  Inputs,
+  InputSource,
+  PlaygroundInput,
+} from '@latitude-data/core/lib/documentPersistedInputs'
 
 const FAKE_INPUTS: Inputs<InputSource> = {
   '...': {

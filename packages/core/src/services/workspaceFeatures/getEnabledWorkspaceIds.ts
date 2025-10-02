@@ -2,7 +2,7 @@ import { eq, and } from 'drizzle-orm'
 
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { workspaceFeatures } from '../../schema'
+import { workspaceFeatures } from '../../schema/models/workspaceFeatures'
 
 export async function getEnabledWorkspaceIdsForFeature(
   featureId: number,

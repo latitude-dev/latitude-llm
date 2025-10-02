@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { Commit, DocumentVersion, Project } from '../../browser'
-import { HEAD_COMMIT, Providers } from '../../constants'
+import type { Commit, DocumentVersion, Project } from '../../schema/types'
+import { HEAD_COMMIT, Providers } from '@latitude-data/constants'
 import { mergeCommit } from '../../services/commits'
 import { updateDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'

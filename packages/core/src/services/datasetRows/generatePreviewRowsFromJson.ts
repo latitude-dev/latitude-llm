@@ -1,5 +1,6 @@
 import { Result, TypedResult } from '../../lib/Result'
-import { Column, DatasetRowDataContent } from '../../schema'
+import { Column } from '../../schema/models/datasets'
+import { DatasetRowDataContent } from '../../schema/models/datasetRows'
 import {
   buildColumns,
   HashAlgorithmFn,

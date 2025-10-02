@@ -3,7 +3,7 @@ import { useLatteStore } from '$/stores/latte/index'
 
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { buildInteractionsFromProviderLog } from './buildInteractionsFromProviderLog'
-import type { ProviderLogDto } from '@latitude-data/core/browser'
+import { type ProviderLogDto } from '@latitude-data/core/schema/types'
 
 /**
  * Hook to load and initialize a thread in the Latte store based on the current project.

@@ -1,4 +1,4 @@
-import { ProviderApiKey } from '../../browser'
+import { ProviderApiKey } from '../../schema/types'
 import { database } from '../../client'
 import { getOrSet } from '../../cache'
 import { ProviderApiKeysRepository } from '../../repositories'

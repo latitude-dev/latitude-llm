@@ -4,19 +4,14 @@ import type {
 } from '@latitude-data/constants/legacyCompiler'
 import { FinishReason, LanguageModelUsage } from 'ai'
 
-import {
-  LogSources,
-  ProviderLog,
-  ProviderLogFileData,
-  Providers,
-  Workspace,
-} from '../../browser'
+import { LogSources, Providers } from '@latitude-data/constants'
+import { ProviderLog, ProviderLogFileData, Workspace } from '../../schema/types'
 import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
 import { publisher } from '../../events/publisher'
 import { diskFactory } from '../../lib/disk'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { providerLogs } from '../../schema'
+import { providerLogs } from '../../schema/models/providerLogs'
 import { estimateCost, PartialConfig } from '../ai'
 const TO_MILLICENTS_FACTOR = 100_000
 

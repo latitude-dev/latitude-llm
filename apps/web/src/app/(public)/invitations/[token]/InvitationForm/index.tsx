@@ -1,13 +1,12 @@
 'use client'
 import { ReactNode } from 'react'
-
-import { Membership, User } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { acceptInvitationAction } from '$/actions/invitations/accept'
 import { useServerAction } from 'zsa-react'
+import { Membership, User } from '@latitude-data/core/schema/types'
 
 export default function InvitationForm({
   user,

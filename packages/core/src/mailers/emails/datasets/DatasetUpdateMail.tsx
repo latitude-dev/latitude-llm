@@ -4,7 +4,7 @@ import React from 'react'
 import { Link, Text } from '@react-email/components'
 
 import ContainerLayout from '../_components/ContainerLayout'
-import { Dataset, User } from '../../../browser'
+import { Dataset, User } from '../../../schema/types'
 
 type Props = {
   user: User

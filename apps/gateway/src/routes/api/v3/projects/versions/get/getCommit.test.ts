@@ -1,5 +1,5 @@
 import app from '$/routes/app'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import { createProject } from '@latitude-data/core/factories'
 import { randomUUID } from 'crypto'
 import { beforeAll, describe, expect, it } from 'vitest'

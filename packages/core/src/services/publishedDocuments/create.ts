@@ -1,16 +1,16 @@
 import {
   DocumentVersion,
-  HEAD_COMMIT,
   Project,
   PublishedDocument,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { HEAD_COMMIT } from '../../constants'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { CommitsRepository } from '../../repositories'
 import { PublishedDocumentRepository } from '../../repositories/publishedDocumentsRepository'
-import { publishedDocuments } from '../../schema'
+import { publishedDocuments } from '../../schema/models/publishedDocuments'
 
 export async function createPublishedDocument(
   {

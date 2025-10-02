@@ -1,8 +1,8 @@
+import { EvaluationType } from '../../../constants'
 import {
-  EvaluationType,
   HumanEvaluationMetric,
   HumanEvaluationBinarySpecification as specification,
-} from '../../../browser'
+} from '../../../constants'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import {

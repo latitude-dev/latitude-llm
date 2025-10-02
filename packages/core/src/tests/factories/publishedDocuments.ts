@@ -1,4 +1,4 @@
-import { DocumentVersion, Project, Workspace } from '../../browser'
+import { DocumentVersion, Project, Workspace } from '../../schema/types'
 import { createPublishedDocument as createFn } from '../../services/publishedDocuments/create'
 
 export async function createPublishedDocument({

@@ -4,7 +4,7 @@ import {
   DocumentVersion,
   Providers,
 } from '@latitude-data/constants'
-import { Commit, Project, Workspace } from '../../browser'
+import { Commit, Project, Workspace } from '../../schema/types'
 import { createDocumentTrigger } from './create'
 import { BadRequestError, LatitudeError } from '../../lib/errors'
 import * as factories from '../../tests/factories'

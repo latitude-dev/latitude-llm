@@ -63,13 +63,13 @@ import {
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_STOP,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_TOOL_CALLS,
   GEN_AI_RESPONSE_FINISH_REASON_VALUE_UNKNOWN,
-  Providers,
   SPAN_SPECIFICATIONS,
   SpanAttribute,
   SpanStatus,
   SpanType,
-  Workspace,
-} from '../../../browser'
+} from '../../../constants'
+import { Providers } from '@latitude-data/constants'
+import { Workspace } from '../../../schema/types'
 import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'

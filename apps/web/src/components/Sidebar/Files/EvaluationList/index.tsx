@@ -1,5 +1,4 @@
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { EvaluationV2, DocumentVersion } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
 import {
@@ -13,12 +12,16 @@ import {
 } from '$/components/evaluations'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { TextColor } from '@latitude-data/web-ui/tokens'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
 import { IndentationLine } from '$/components/Sidebar/Files/IndentationBar'
 import { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
 import { type ParamValue } from 'next/dist/server/request/params'
+import {
+  EvaluationV2,
+  ModifiedDocumentType,
+} from '@latitude-data/core/constants'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 const INDENTATION_UNIT_PX = 24
 function IndentationBar({

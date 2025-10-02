@@ -3,7 +3,7 @@ import {
   ActionType,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'

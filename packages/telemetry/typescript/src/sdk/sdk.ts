@@ -55,7 +55,6 @@ import {
 import type * as anthropic from '@anthropic-ai/sdk'
 import type * as bedrock from '@aws-sdk/client-bedrock-runtime'
 import type * as azure from '@azure/openai'
-import type * as aiplatform from '@google-cloud/aiplatform'
 import type * as vertexai from '@google-cloud/vertexai'
 import type * as langchain_runnables from '@langchain/core/runnables'
 import type * as langchain_vectorstores from '@langchain/core/vectorstores'
@@ -64,7 +63,6 @@ import type * as cohere from 'cohere-ai'
 import type * as langchain_agents from 'langchain/agents'
 import type * as langchain_chains from 'langchain/chains'
 import type * as langchain_tools from 'langchain/tools'
-import type * as llamaindex from 'llamaindex'
 import type * as openai from 'openai'
 import type * as togetherai from 'together-ai'
 
@@ -127,7 +125,7 @@ export type TelemetryOptions = {
     [Instrumentation.AzureOpenAI]?: typeof azure
     [Instrumentation.VercelAI]?: 'manual'
     [Instrumentation.VertexAI]?: typeof vertexai
-    [Instrumentation.AIPlatform]?: typeof aiplatform
+    [Instrumentation.AIPlatform]?: any
     [Instrumentation.Bedrock]?: typeof bedrock
     [Instrumentation.TogetherAI]?: typeof togetherai.Together
     [Instrumentation.Cohere]?: typeof cohere
@@ -138,7 +136,7 @@ export type TelemetryOptions = {
       vectorStoreModule: typeof langchain_vectorstores
       runnablesModule: typeof langchain_runnables
     }
-    [Instrumentation.LlamaIndex]?: typeof llamaindex
+    [Instrumentation.LlamaIndex]?: any
   }
   disableBatch?: boolean
   exporter?: SpanExporter
@@ -257,7 +255,8 @@ export class LatitudeTelemetry {
       const provider = this.tracerProvider(Instrumentation.OpenAI)
       const instrumentation = new OpenAIInstrumentation({ enrichTokens: true })
       instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(openai)
+      instrumentation.manuallyInstrument(openai as any)
+
       registerInstrumentations({
         instrumentations: [instrumentation],
         tracerProvider: provider,

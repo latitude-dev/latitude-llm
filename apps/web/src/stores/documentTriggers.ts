@@ -1,4 +1,3 @@
-import { DocumentTrigger } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
@@ -11,6 +10,7 @@ import { useCallback, useMemo } from 'react'
 import { updateDocumentTriggerConfigurationAction } from '$/actions/documents/triggers/updateDocumentTriggerConfigurationAction'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { toggleEnabledDocumentTriggerAction } from '$/actions/documents/triggers/toggleEnabledDocumentTriggerAction'
+import { DocumentTrigger } from '@latitude-data/core/schema/types'
 
 const EMPTY_ARRAY: DocumentTrigger[] = []
 export default function useDocumentTriggers(

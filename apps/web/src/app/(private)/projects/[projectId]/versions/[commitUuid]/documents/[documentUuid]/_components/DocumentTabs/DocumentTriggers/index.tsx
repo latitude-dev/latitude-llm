@@ -1,6 +1,4 @@
 'use client'
-
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
@@ -12,6 +10,10 @@ import { NotEditableBanner } from '../_components/NotEditableBanner'
 import { useCallback, useState } from 'react'
 import { TriggerConfigModal } from './Modal'
 import { DocumentTriggerType } from '@latitude-data/constants'
+import {
+  DocumentTrigger,
+  DocumentVersion,
+} from '@latitude-data/core/schema/types'
 
 export function DocumentTriggersButton({
   document,

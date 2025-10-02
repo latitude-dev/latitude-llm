@@ -1,7 +1,11 @@
 import { updateContentFn } from '$/hooks/useDocumentValueContext'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import { ConversationMetadata } from 'promptl-ai'
 import { BlockRootNode } from './Editor/state/promptlToLexical/types'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+} from '@latitude-data/core/schema/types'
 
 export type IncludedPrompt = {
   url: string

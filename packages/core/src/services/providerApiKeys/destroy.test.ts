@@ -1,14 +1,15 @@
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { Providers, User, Workspace } from '../../browser'
+import { Providers } from '@latitude-data/constants'
+import { User, Workspace } from '../../schema/types'
 import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import {
   ProviderApiKeysRepository,
   WorkspacesRepository,
 } from '../../repositories'
-import { providerApiKeys } from '../../schema'
+import { providerApiKeys } from '../../schema/models/providerApiKeys'
 import * as factories from '../../tests/factories'
 import { destroyProviderApiKey } from './destroy'
 
@@ -76,9 +77,11 @@ describe('destroyProviderApiKey', () => {
 
     expect(providers.map((p) => p.id)).not.toContain(provider.id)
 
-    const removedProvidedData = await database.query.providerApiKeys.findFirst({
-      where: eq(providerApiKeys.id, provider.id),
-    })
+    const removedProvidedData = await database
+      .select()
+      .from(providerApiKeys)
+      .where(eq(providerApiKeys.id, provider.id))
+      .then((r) => r[0])
 
     expect(removedProvidedData).toBeDefined()
     expect(removedProvidedData?.token).not.toBe(provider.token)
@@ -108,9 +111,11 @@ describe('destroyProviderApiKey', () => {
 
     expect(providers.map((p) => p.id)).not.toContain(provider.id)
 
-    const removedProvidedData = await database.query.providerApiKeys.findFirst({
-      where: eq(providerApiKeys.id, provider.id),
-    })
+    const removedProvidedData = await database
+      .select()
+      .from(providerApiKeys)
+      .where(eq(providerApiKeys.id, provider.id))
+      .then((r) => r[0])
 
     expect(removedProvidedData).toBeDefined()
     expect(removedProvidedData?.token).not.toBe(provider.token)

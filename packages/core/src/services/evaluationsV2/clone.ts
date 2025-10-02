@@ -1,10 +1,5 @@
-import {
-  Commit,
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2,
-  Workspace,
-} from '../../browser'
+import { Commit, EvaluationV2, Workspace } from '../../schema/types'
+import { EvaluationMetric, EvaluationType } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

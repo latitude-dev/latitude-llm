@@ -1,6 +1,6 @@
 import { IntegrationType } from '@latitude-data/constants'
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
-import { IntegrationDto } from '../../../browser'
+import { IntegrationDto } from '../../../schema/types'
 import { Result, TypedResult } from '../../../lib/Result'
 import { StreamManager } from '../../../lib/streamManager'
 import { createAndConnectExternalMcpClient } from './external'

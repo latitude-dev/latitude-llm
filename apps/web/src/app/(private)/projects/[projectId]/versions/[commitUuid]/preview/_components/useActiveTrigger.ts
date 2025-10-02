@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import useDocumentVersions from '$/stores/documentVersions'
 import { DocumentTriggerType } from '@latitude-data/constants'
+import { useMetadata } from '$/hooks/useMetadata'
 import {
   Commit,
   DocumentTrigger,
   DocumentVersion,
   Project,
-} from '@latitude-data/core/browser'
-import { useMetadata } from '$/hooks/useMetadata'
+} from '@latitude-data/core/schema/types'
 
 type ActiveChatTrigger = {
   document: DocumentVersion

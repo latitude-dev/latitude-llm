@@ -10,7 +10,7 @@ import {
   DocumentVersion,
   ProviderLog,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
 import * as factories from '../../../tests/factories'
 import { createMembership } from '../../memberships/create'
 import { generateWorkspaceFixtures, type WorkspaceInfo } from './fixtures'

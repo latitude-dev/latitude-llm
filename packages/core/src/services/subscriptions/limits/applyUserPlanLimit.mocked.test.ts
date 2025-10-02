@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  QuotaType,
-  SubscriptionPlan,
-  type Subscription,
-  type Workspace,
-} from '../../../browser'
+import { QuotaType } from '../../../constants'
+import { SubscriptionPlan } from '../../../plans'
+import { type Subscription, type Workspace } from '../../../schema/types'
 import { createSubscription } from '../../../tests/factories'
 import { createWorkspace } from '../../../tests/factories'
 import { applyUserPlanLimit } from './applyUserPlanLimit'

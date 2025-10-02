@@ -2,9 +2,9 @@
 
 import { z } from 'zod'
 import { withDocument } from '../procedures'
-import { documentLogFilterOptionsSchema } from '@latitude-data/core/browser'
 import { queues } from '@latitude-data/core/queues'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
+import { documentLogFilterOptionsSchema } from '@latitude-data/core/constants'
 
 export const downloadLogsAsyncAction = withDocument
   .createServerAction()

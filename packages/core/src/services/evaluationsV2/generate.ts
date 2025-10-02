@@ -2,14 +2,12 @@ import { env } from '@latitude-data/env'
 import { z } from 'zod'
 import {
   CLOUD_MESSAGES,
-  Commit,
-  DocumentVersion,
-  EvaluationSettings,
   EvaluationType,
-  findFirstModelForProvider,
   LlmEvaluationMetric,
-  Workspace,
-} from '../../browser'
+} from '../../constants'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { EvaluationSettings } from '../../constants'
+import { findFirstModelForProvider } from '../ai/providers/models'
 import { cache as getCache } from '../../cache'
 import { database } from '../../client'
 import { UnprocessableEntityError } from '../../lib/errors'

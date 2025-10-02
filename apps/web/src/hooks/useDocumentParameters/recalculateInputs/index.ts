@@ -1,6 +1,9 @@
 import { ParameterType } from '@latitude-data/constants'
-import { Inputs, InputSource } from '@latitude-data/core/browser'
 import { ResolvedMetadata } from '$/workers/readMetadata'
+import {
+  Inputs,
+  InputSource,
+} from '@latitude-data/core/lib/documentPersistedInputs'
 
 const ParameterTypes = Object.values(ParameterType) as string[]
 

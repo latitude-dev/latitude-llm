@@ -4,7 +4,7 @@ import {
   Message,
 } from 'promptl-ai'
 
-import { Workspace } from '../../../browser'
+import { Workspace } from '../../../schema/types'
 import { cache } from '../../../cache'
 import { ChainStepResponse, StreamType } from '../../../constants'
 

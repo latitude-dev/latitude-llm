@@ -1,4 +1,3 @@
-import { Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
@@ -6,6 +5,7 @@ import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { listTools } from '@latitude-data/core/services/integrations/index'
 import { LatitudeTool, McpTool } from '@latitude-data/constants'
 import { getLatitudeToolDefinition } from '@latitude-data/core/services/latitudeTools/helpers'
+import { Workspace } from '@latitude-data/core/schema/types'
 
 export const GET = errorHandler(
   authHandler(

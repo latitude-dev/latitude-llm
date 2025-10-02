@@ -1,18 +1,6 @@
 import { cache } from 'react'
 
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import {
-  DOCUMENT_STATS_CACHE_KEY,
-  DocumentLogsLimitedView,
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2,
-  LAST_LATTE_THREAD_CACHE_KEY,
-  PROJECT_STATS_CACHE_KEY,
-  ProjectLimitedView,
-  Workspace,
-  type Commit,
-} from '@latitude-data/core/browser'
 import { cache as redis } from '@latitude-data/core/cache'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
@@ -30,6 +18,20 @@ import {
 } from '@latitude-data/core/repositories/index'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { notFound } from 'next/navigation'
+import {
+  DOCUMENT_STATS_CACHE_KEY,
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+  PROJECT_STATS_CACHE_KEY,
+  LAST_LATTE_THREAD_CACHE_KEY,
+} from '@latitude-data/core/constants'
+import {
+  DocumentLogsLimitedView,
+  ProjectLimitedView,
+  Workspace,
+  type Commit,
+} from '@latitude-data/core/schema/types'
 
 export const getFirstProjectCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {

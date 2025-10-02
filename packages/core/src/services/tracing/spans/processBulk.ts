@@ -18,7 +18,6 @@ import {
   AI_OPERATION_ID_VALUE_STREAM_OBJECT,
   AI_OPERATION_ID_VALUE_STREAM_TEXT,
   AI_OPERATION_ID_VALUE_TOOL,
-  ApiKey,
   ATTR_AI_OPERATION_ID,
   ATTR_LATITUDE_TYPE,
   ATTR_LLM_REQUEST_TYPE,
@@ -32,7 +31,6 @@ import {
   LLM_REQUEST_TYPE_VALUE_COMPLETION,
   LLM_REQUEST_TYPE_VALUE_EMBEDDING,
   LLM_REQUEST_TYPE_VALUE_RERANK,
-  Otlp,
   Span,
   SPAN_METADATA_STORAGE_KEY,
   SpanAttribute,
@@ -42,8 +40,20 @@ import {
   SpanMetadata,
   SpanStatus,
   SpanType,
-  Workspace,
-} from '../../../browser'
+} from '../../../constants'
+import { ApiKey, Workspace } from '../../../schema/types'
+import {
+  Span as OtlpSpan,
+  Scope,
+  Resource,
+  Attribute,
+  AttributeValue,
+  Status,
+  StatusCode,
+  SpanKind as OtlpSpanKind,
+  Event as OtlpEvent,
+  Link,
+} from '../../../schema/otlp'
 import { cache as redis } from '../../../cache'
 import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
@@ -51,8 +61,8 @@ import { diskFactory, DiskWrapper } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
+import { spans } from '../../../schema/models/spans'
 import { SpansRepository } from '../../../repositories'
-import { spans } from '../../../schema'
 import { convertTimestamp } from './shared'
 import { SPAN_SPECIFICATIONS } from './specifications'
 
@@ -63,9 +73,9 @@ export async function processSpansBulk(
     workspace,
   }: {
     spans: Array<{
-      span: Otlp.Span
-      scope: Otlp.Scope
-      resource: Otlp.Resource
+      span: OtlpSpan
+      scope: Scope
+      resource: Resource
       apiKey: ApiKey
       workspace: Workspace
     }>
@@ -395,7 +405,7 @@ async function saveMetadataBatch(
 }
 
 function convertSpanAttribute(
-  attribute: Otlp.AttributeValue,
+  attribute: AttributeValue,
 ): TypedResult<SpanAttribute> {
   if (attribute.stringValue != undefined) {
     return Result.ok(attribute.stringValue)
@@ -420,7 +430,7 @@ function convertSpanAttribute(
 }
 
 export function convertSpanAttributes(
-  attributes: Otlp.Attribute[],
+  attributes: Attribute[],
 ): TypedResult<Record<string, SpanAttribute>> {
   const result: Record<string, SpanAttribute> = {}
 
@@ -501,13 +511,11 @@ export function extractSpanType(
   return Result.ok(SpanType.Unknown)
 }
 
-export function convertSpanStatus(
-  status: Otlp.Status,
-): TypedResult<SpanStatus> {
+export function convertSpanStatus(status: Status): TypedResult<SpanStatus> {
   switch (status.code) {
-    case Otlp.StatusCode.Ok:
+    case StatusCode.Ok:
       return Result.ok(SpanStatus.Ok)
-    case Otlp.StatusCode.Error:
+    case StatusCode.Error:
       return Result.ok(SpanStatus.Error)
     default:
       return Result.ok(SpanStatus.Unset)
@@ -543,15 +551,15 @@ function extractSpanError(
 
 function convertSpanKind(kind: number): TypedResult<SpanKind> {
   switch (kind) {
-    case Otlp.SpanKind.Internal:
+    case OtlpSpanKind.Internal:
       return Result.ok(SpanKind.Internal)
-    case Otlp.SpanKind.Server:
+    case OtlpSpanKind.Server:
       return Result.ok(SpanKind.Server)
-    case Otlp.SpanKind.Client:
+    case OtlpSpanKind.Client:
       return Result.ok(SpanKind.Client)
-    case Otlp.SpanKind.Producer:
+    case OtlpSpanKind.Producer:
       return Result.ok(SpanKind.Producer)
-    case Otlp.SpanKind.Consumer:
+    case OtlpSpanKind.Consumer:
       return Result.ok(SpanKind.Consumer)
     default:
       return Result.error(new UnprocessableEntityError('Invalid span kind'))
@@ -563,7 +571,7 @@ function convertSpanTimestamp(timestamp: string): TypedResult<Date> {
   return Result.ok(date)
 }
 
-function convertSpanEvents(events: Otlp.Event[]): TypedResult<SpanEvent[]> {
+function convertSpanEvents(events: OtlpEvent[]): TypedResult<SpanEvent[]> {
   const result: SpanEvent[] = []
 
   for (const event of events) {
@@ -581,7 +589,7 @@ function convertSpanEvents(events: Otlp.Event[]): TypedResult<SpanEvent[]> {
   return Result.ok(result)
 }
 
-function convertSpanLinks(links: Otlp.Link[]): TypedResult<SpanLink[]> {
+function convertSpanLinks(links: Link[]): TypedResult<SpanLink[]> {
   const result: SpanLink[] = []
 
   for (const link of links) {

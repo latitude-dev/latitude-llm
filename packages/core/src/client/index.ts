@@ -4,11 +4,10 @@ import pg from 'pg'
 
 import { PgWithReplicas, withReplicas } from 'drizzle-orm/pg-core'
 import type { Pool as IPool, PoolConfig } from 'pg'
-import * as schema from '../schema'
 
 const { Pool } = pg
 
-type Connection = NodePgDatabase<typeof schema> & { $client: IPool }
+type Connection = NodePgDatabase & { $client: IPool }
 export type Database = Connection | PgWithReplicas<Connection>
 
 // TODO: Send pool vitals to datadog when they change
@@ -32,7 +31,7 @@ if (env.READ_DATABASE_URL) {
     ...POOL_CONFIG,
     connectionString: env.READ_DATABASE_URL,
   })
-  readReplicas.push(drizzle(read1Pool, { schema }))
+  readReplicas.push(drizzle(read1Pool))
 }
 
 if (env.READ_2_DATABASE_URL) {
@@ -40,12 +39,12 @@ if (env.READ_2_DATABASE_URL) {
     ...POOL_CONFIG,
     connectionString: env.READ_2_DATABASE_URL,
   })
-  readReplicas.push(drizzle(read2Pool, { schema }))
+  readReplicas.push(drizzle(read2Pool))
 }
 
 export * as utils from './utils'
 
-const primary = drizzle(pool, { schema })
+const primary = drizzle(pool)
 
 export const database =
   readReplicas.length > 0
@@ -85,7 +84,7 @@ export function setupLRO() {
       connectionString: env.READ_DATABASE_URL,
     })
     pools.push(pool)
-    replicas.push(drizzle(pool, { schema }))
+    replicas.push(drizzle(pool))
   }
 
   if (env.READ_2_DATABASE_URL) {
@@ -94,7 +93,7 @@ export function setupLRO() {
       connectionString: env.READ_2_DATABASE_URL,
     })
     pools.push(pool)
-    replicas.push(drizzle(pool, { schema }))
+    replicas.push(drizzle(pool))
   }
 
   const database =

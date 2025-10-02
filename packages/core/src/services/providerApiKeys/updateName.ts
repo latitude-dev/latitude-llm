@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
-import { ProviderApiKey } from '../../browser'
+import { ProviderApiKey } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { providerApiKeys } from '../../schema'
+import { providerApiKeys } from '../../schema/models/providerApiKeys'
 import { validateProviderApiKeyName } from './helpers/validateName'
 
 export async function updateProviderApiKeyName(

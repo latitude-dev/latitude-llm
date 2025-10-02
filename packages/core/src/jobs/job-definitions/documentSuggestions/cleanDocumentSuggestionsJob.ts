@@ -1,9 +1,9 @@
+import { documentSuggestions } from '../../../schema/models/documentSuggestions'
 import { Job } from 'bullmq'
 import { subDays } from 'date-fns'
 import { lt } from 'drizzle-orm'
-import { DOCUMENT_SUGGESTION_EXPIRATION_DAYS } from '../../../browser'
+import { DOCUMENT_SUGGESTION_EXPIRATION_DAYS } from '../../../constants'
 import { database } from '../../../client'
-import { documentSuggestions } from '../../../schema'
 
 export type CleanDocumentSuggestionsJobData = {}
 

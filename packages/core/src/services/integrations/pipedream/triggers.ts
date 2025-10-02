@@ -2,10 +2,10 @@ import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk'
 import {
   Commit,
   DocumentTrigger,
-  gatewayPath,
   PipedreamIntegration,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
+import { gatewayPath } from '../../../helpers'
 import { getPipedreamClient } from './apps'
 import { Result } from '../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ProjectStats, Providers } from '../../browser'
+import { ProjectStats } from '../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
 import { computeProjectStats } from './computeProjectStats'

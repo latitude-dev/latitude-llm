@@ -3,8 +3,8 @@
 import { ROUTES } from '$/services/routes'
 import useSWR from 'swr'
 import useFetcher from '../hooks/useFetcher'
-import { AppDto } from '@latitude-data/core/browser'
 import { useMemo } from 'react'
+import { AppDto } from '@latitude-data/core/constants'
 
 type AppResponse =
   | { data: AppDto; ok: true }

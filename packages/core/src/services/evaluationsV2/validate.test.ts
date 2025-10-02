@@ -1,15 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ZodError } from 'zod'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { EvaluationOptions, EvaluationSettings } from '../../constants'
 import {
-  Commit,
-  DocumentVersion,
-  EvaluationOptions,
-  EvaluationSettings,
   EvaluationType,
   Providers,
   RuleEvaluationMetric,
-  Workspace,
-} from '../../browser'
+} from '@latitude-data/constants'
 import { BadRequestError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
 import { RuleEvaluationExactMatchSpecification } from './rule/exactMatch'

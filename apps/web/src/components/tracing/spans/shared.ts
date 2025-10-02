@@ -1,10 +1,3 @@
-import {
-  SpanKind,
-  SpanSpecification,
-  SpanStatus,
-  SpanType,
-  SpanWithDetails,
-} from '@latitude-data/core/browser'
 import { BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import {
@@ -13,6 +6,13 @@ import {
   TextColor,
 } from '@latitude-data/web-ui/tokens'
 import React from 'react'
+import {
+  SpanKind,
+  SpanSpecification,
+  SpanStatus,
+  SpanType,
+  SpanWithDetails,
+} from '@latitude-data/core/constants'
 
 export type DetailsPanelProps<T extends SpanType = SpanType> = {
   span: SpanWithDetails<T> & {

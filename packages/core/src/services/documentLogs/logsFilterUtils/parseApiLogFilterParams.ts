@@ -1,4 +1,4 @@
-import { Cursor } from '../../../browser'
+import { Cursor } from '../../../schema/types'
 import { DEFAULT_PAGINATION_SIZE, LogSources } from '../../../constants'
 import {
   parseSafeCreatedAtRange,

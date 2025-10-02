@@ -1,9 +1,7 @@
 import { env } from '@latitude-data/env'
 import { database } from '../../client'
-import {
-  unsafelyFindWorkspace,
-  unsafelyGetApiKeyByToken,
-} from '../../data-access'
+import { unsafelyFindWorkspace } from '../../data-access/workspaces'
+import { unsafelyGetApiKeyByToken } from '../../data-access/apiKeys'
 import { Result } from '../../lib/Result'
 import {
   CommitsRepository,

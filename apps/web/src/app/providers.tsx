@@ -1,11 +1,10 @@
 'use client'
 
 import { ReactNode, useEffect } from 'react'
-
-import { User, Workspace } from '@latitude-data/core/browser'
 import { envClient } from '$/envClient'
 import posthog from 'posthog-js'
 import { PostHogProvider, usePostHog } from 'posthog-js/react'
+import { User, Workspace } from '@latitude-data/core/schema/types'
 
 if (
   typeof window !== 'undefined' &&

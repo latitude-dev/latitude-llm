@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from 'react'
-import { AppDto, IntegrationDto } from '@latitude-data/core/browser'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IntegrationType } from '@latitude-data/constants'
 import {
@@ -10,6 +9,8 @@ import {
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import useIntegrations from '$/stores/integrations'
 import { PipedreamConnect } from './PipedreamConnect'
+import { AppDto } from '@latitude-data/core/constants'
+import { IntegrationDto } from '@latitude-data/core/schema/types'
 
 function useConnectedPipedreamAccounts({
   pipedreamSlug,

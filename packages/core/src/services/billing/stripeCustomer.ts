@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { User } from '../../browser'
+import { User } from '../../schema/types'
 import { getStripe } from '../../lib/stripe'
 
 /**

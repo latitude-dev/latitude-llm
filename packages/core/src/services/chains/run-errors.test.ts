@@ -2,13 +2,9 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Workspace } from '../../browser'
-import {
-  ErrorableEntity,
-  LogSources,
-  PromptSource,
-  Providers,
-} from '../../constants'
+import { Workspace } from '../../schema/types'
+import { ErrorableEntity, LogSources, PromptSource } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'

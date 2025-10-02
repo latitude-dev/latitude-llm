@@ -1,9 +1,12 @@
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { useMemo } from 'react'
 import { TriggersBlankSlate } from './BlankSlate'
 import { IntegrationTriggerList } from './TriggerList'
+import {
+  DocumentTrigger,
+  DocumentVersion,
+} from '@latitude-data/core/schema/types'
 
 export function IntegrationTriggerSettings({
   document,

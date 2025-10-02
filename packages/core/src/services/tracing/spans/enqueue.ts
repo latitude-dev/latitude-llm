@@ -1,11 +1,10 @@
+import { ApiKey, Workspace } from '../../../schema/types'
+import { ResourceSpan } from '../../../schema/otlp'
 import {
-  ApiKey,
-  Otlp,
   SPAN_INGESTION_STORAGE_KEY,
   SpanIngestionData,
-  TRACING_JOBS_MAX_ATTEMPTS,
-  Workspace,
-} from '../../../browser'
+} from '../../../constants'
+import { TRACING_JOBS_MAX_ATTEMPTS } from '../../../constants'
 import { ingestSpansJobKey } from '../../../jobs/job-definitions/tracing/ingestSpansJob'
 import { queues } from '../../../jobs/queues'
 import { diskFactory, DiskWrapper } from '../../../lib/disk'
@@ -18,7 +17,7 @@ export async function enqueueSpans(
     apiKey,
     workspace,
   }: {
-    spans: Otlp.ResourceSpan[]
+    spans: ResourceSpan[]
     apiKey?: ApiKey
     workspace?: Workspace
   },
@@ -45,7 +44,7 @@ export async function enqueueSpans(
 
 async function uploadSpansToStorage(
   ingestionId: string,
-  spans: Otlp.ResourceSpan[],
+  spans: ResourceSpan[],
   disk: DiskWrapper,
 ): Promise<TypedResult<void, Error>> {
   const key = SPAN_INGESTION_STORAGE_KEY(ingestionId)
@@ -60,9 +59,7 @@ async function uploadSpansToStorage(
   }
 }
 
-async function generateIngestionId(
-  spans: Otlp.ResourceSpan[],
-): Promise<string> {
+async function generateIngestionId(spans: ResourceSpan[]): Promise<string> {
   let ingestionId = ''
   for (const { scopeSpans } of spans) {
     for (const { spans } of scopeSpans) {

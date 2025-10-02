@@ -12,18 +12,6 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import {
-  Commit,
-  DocumentVersion,
-  EvaluationMetric,
-  EvaluationOptions,
-  EvaluationSettings,
-  EvaluationType,
-  EvaluationV2,
-  LlmEvaluationCustomSpecification,
-  LlmEvaluationMetric,
-  Project,
-} from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
@@ -34,6 +22,20 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+} from '@latitude-data/core/schema/types'
+import {
+  EvaluationMetric,
+  EvaluationOptions,
+  EvaluationSettings,
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationCustomSpecification,
+  LlmEvaluationMetric,
+} from '@latitude-data/core/constants'
 
 export function EvaluationActions<
   T extends EvaluationType = EvaluationType,

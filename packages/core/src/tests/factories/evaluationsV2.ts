@@ -2,16 +2,18 @@ import { eq } from 'drizzle-orm'
 import {
   Commit,
   DocumentVersion,
+  EvaluationV2,
+  Workspace,
+} from '../../schema/types'
+import {
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
   EvaluationType,
-  EvaluationV2,
   RuleEvaluationMetric,
-  Workspace,
-} from '../../browser'
+} from '../../constants'
 import { database } from '../../client'
-import { evaluationVersions } from '../../schema'
+import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { createEvaluationV2 as createEvaluationSvc } from '../../services/evaluationsV2/create'
 import { faker } from '@faker-js/faker'
 

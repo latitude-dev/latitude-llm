@@ -2,7 +2,7 @@ import { eq, and } from 'drizzle-orm'
 
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { workspaceFeatures } from '../../schema'
+import { workspaceFeatures } from '../../schema/models/workspaceFeatures'
 
 export async function toggleWorkspaceFeature(
   workspaceId: number,

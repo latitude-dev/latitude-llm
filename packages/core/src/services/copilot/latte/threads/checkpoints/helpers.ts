@@ -1,4 +1,7 @@
-import { DocumentVersion, LatteThreadCheckpoint } from '../../../../../browser'
+import {
+  DocumentVersion,
+  LatteThreadCheckpoint,
+} from '../../../../../schema/types'
 
 export function groupCheckpointsByCommitId(
   checkpoints: LatteThreadCheckpoint[],

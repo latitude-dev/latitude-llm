@@ -1,6 +1,4 @@
 'use client'
-
-import { RewardType } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { useState } from 'react'
@@ -8,6 +6,7 @@ import { RewardItem } from './RewardItem'
 import { RewardMenu } from './RewardMenu'
 import { REWARD_CONFIGS } from './RewardMenu/RewardConfigs'
 import { RewardsProgress } from './RewardsProgress'
+import { RewardType } from '@latitude-data/core/constants'
 
 export function RewardsContent() {
   const [selectedType, setSelectedType] = useState<RewardType>()

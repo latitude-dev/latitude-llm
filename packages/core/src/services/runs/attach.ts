@@ -5,7 +5,8 @@ import {
   LatitudeErrorDto,
 } from '@latitude-data/constants/errors'
 import { Job, QueueEventsListener } from 'bullmq'
-import { Project, Run, Workspace } from '../../browser'
+import { Project, Workspace } from '../../schema/types'
+import { Run } from '@latitude-data/constants'
 import { BackgroundRunJobResult } from '../../jobs/job-definitions/runs/backgroundRunJob'
 import { queues } from '../../jobs/queues'
 import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'

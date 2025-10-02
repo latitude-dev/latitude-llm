@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { LogSources } from '../../browser'
+import { LogSources } from '../../constants'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { BACKGROUND } from '../../telemetry'

@@ -1,6 +1,5 @@
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import { DatasetRow, Dataset, Workspace } from '@latitude-data/core/browser'
 import { Result, TypedResult } from '@latitude-data/core/lib/Result'
 import {
   DatasetRowsRepository,
@@ -9,6 +8,11 @@ import {
 import { notFound, redirect } from 'next/navigation'
 import Layout from '../_components/Layout'
 import { DatasetDetailTable } from './DatasetDetailTable'
+import {
+  DatasetRow,
+  Dataset,
+  Workspace,
+} from '@latitude-data/core/schema/types'
 
 type GetDataResult = {
   redirectUrl?: string

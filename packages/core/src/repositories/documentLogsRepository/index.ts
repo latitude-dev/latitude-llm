@@ -9,11 +9,15 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import { DocumentLog, ErrorableEntity, LogSources } from '../../browser'
+import { DocumentLog } from '../../schema/types'
+import { ErrorableEntity, LogSources } from '../../constants'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import rowsFromQueryPlan from '../../lib/rowsFromQueryPlan'
-import { commits, documentLogs, projects, runErrors } from '../../schema'
+import { commits } from '../../schema/models/commits'
+import { documentLogs } from '../../schema/models/documentLogs'
+import { projects } from '../../schema/models/projects'
+import { runErrors } from '../../schema/models/runErrors'
 import Repository from '../repositoryV2'
 
 const tt = getTableColumns(documentLogs)

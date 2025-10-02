@@ -2,7 +2,6 @@
 
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { EvaluationV2 } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import {
@@ -12,6 +11,7 @@ import {
 import { EvaluationsActions } from './EvaluationsActions'
 import { EvaluationsTable } from './EvaluationsTable'
 import { EvaluationsTemplates } from './EvaluationsTemplates'
+import { EvaluationV2 } from '@latitude-data/core/constants'
 
 export function EvaluationsPage({
   evaluations: serverEvaluations,

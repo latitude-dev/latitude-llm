@@ -1,13 +1,9 @@
 import { eq } from 'drizzle-orm'
 import Stripe from 'stripe'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  QuotaType,
-  SubscriptionPlan,
-  SubscriptionPlans,
-  User,
-  Workspace,
-} from '../../browser'
+import { QuotaType } from '../../constants'
+import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
+import { User, Workspace } from '../../schema/types'
 import { database } from '../../client'
 import { LatitudeError } from '../../lib/errors'
 import * as plans from '../../plans'

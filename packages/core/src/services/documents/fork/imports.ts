@@ -7,7 +7,7 @@ import {
   DocumentVersion,
   IntegrationDto,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
 import { Result } from '../../../lib/Result'
 import {
   DocumentTriggersRepository,

@@ -15,14 +15,15 @@ import {
 import { JSONSchema7 } from 'json-schema'
 
 import { VercelConfig } from '@latitude-data/constants'
-import { ProviderApiKey, StreamType } from '../../browser'
+import { ProviderApiKey } from '../../schema/types'
+import { StreamType } from '../../constants'
 import { Result, TypedResult } from '../../lib/Result'
 import { TelemetryContext } from '../../telemetry'
 import { buildTools } from './buildTools'
 import { getLanguageModel } from './getLanguageModel'
 import { handleAICallAPIError } from './handleError'
 import { createProvider } from './helpers'
-import { Providers } from './providers/models'
+import { Providers } from '@latitude-data/constants'
 import { applyAllRules } from './providers/rules'
 
 const DEFAULT_AI_SDK_PROVIDER = {

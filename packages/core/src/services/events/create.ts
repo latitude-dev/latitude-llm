@@ -1,7 +1,7 @@
 import { LatitudeEvent } from '../../events/events'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { events } from '../../schema'
+import { events } from '../../schema/models/events'
 
 export async function createEvent(
   event: LatitudeEvent,

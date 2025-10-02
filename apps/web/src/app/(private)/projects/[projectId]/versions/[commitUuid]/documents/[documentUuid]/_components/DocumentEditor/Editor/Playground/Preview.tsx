@@ -1,6 +1,5 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ResolvedMetadata } from '$/workers/readMetadata'
-import { Commit, Project } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useCallback, useState } from 'react'
 
@@ -11,6 +10,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
+import { Commit, Project } from '@latitude-data/core/schema/types'
 
 export default function Preview({
   metadata,

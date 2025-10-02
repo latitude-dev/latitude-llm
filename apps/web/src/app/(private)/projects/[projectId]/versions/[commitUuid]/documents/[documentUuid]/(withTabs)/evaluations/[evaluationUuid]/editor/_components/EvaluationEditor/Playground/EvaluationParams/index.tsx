@@ -1,11 +1,5 @@
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
-import {
-  DocumentVersion,
-  EvaluationType,
-  EvaluationV2,
-  LlmEvaluationMetricAnyCustom,
-} from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import {
@@ -15,6 +9,12 @@ import {
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
 import { HistoryLogParams } from './HistoryLogParams'
 import { UseLogHistoryParams } from './HistoryLogParams/useLogHistoryParams'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import {
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetricAnyCustom,
+} from '@latitude-data/core/constants'
 
 export type Props = {
   document: DocumentVersion

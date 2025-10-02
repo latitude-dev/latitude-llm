@@ -4,8 +4,8 @@ import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { capitalize } from 'lodash-es'
 import { useMcpServer } from '$/stores/mcpServer'
-import { McpServer } from '@latitude-data/core/browser'
 import { UpgradeLink } from '$/components/UpgradeLink'
+import { McpServer } from '@latitude-data/core/schema/types'
 
 interface McpServerStatusProps {
   mcpServerId?: number

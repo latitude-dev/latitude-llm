@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from 'react'
 import useSWR, { mutate as globalMutate, SWRConfiguration } from 'swr'
-import { Commit, DocumentTriggerEvent } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import { Commit, DocumentTriggerEvent } from '@latitude-data/core/schema/types'
 
 function buildkey({
   projectId,

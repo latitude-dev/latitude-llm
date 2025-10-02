@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 
-import { User } from '../../browser'
+import { User } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { users } from '../../schema'
+import { users } from '../../schema/models/users'
 export const updateUser = async (
   user: User,
   values: Partial<User>,

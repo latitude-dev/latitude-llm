@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm'
 
-import { User, Workspace } from '../../browser'
+import { User, Workspace } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { users } from '../../schema'
+import { users } from '../../schema/models/users'
 import { createMembership } from '../memberships/create'
 import { createUser } from './createUser'
 
@@ -24,9 +24,12 @@ export async function inviteUser(
 ) {
   return transaction.call(
     async (tx) => {
-      let user = await tx.query.users.findFirst({
-        where: eq(users.email, email),
-      })
+      let user = await tx
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1)
+        .then((rows) => rows[0])
       if (!user) {
         const result = await createUser({ email, name }, transaction)
         user = result.unwrap()

@@ -1,7 +1,6 @@
 'use client'
 import { REWARD_CONFIGS } from '$/components/layouts/AppLayout/Header/Rewards/Content/RewardMenu/RewardConfigs'
 import usePendingRewardClaims from '$/stores/pendingRewardClaims'
-import { RewardType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import {
@@ -17,6 +16,7 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import Link from 'next/link'
+import { RewardType } from '@latitude-data/core/constants'
 
 const LINKABLE_REWARDS = [
   RewardType.XPost,

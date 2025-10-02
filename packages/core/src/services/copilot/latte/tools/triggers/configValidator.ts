@@ -1,7 +1,5 @@
-import {
-  ConfigurablePropWithRemoteOptions,
-  PipedreamIntegration,
-} from '../../../../../browser'
+import { ConfigurablePropWithRemoteOptions } from '../../../../../constants'
+import { PipedreamIntegration } from '../../../../../schema/types'
 import { PromisedResult } from '../../../../../lib/Transaction'
 import {
   PipedreamClient,

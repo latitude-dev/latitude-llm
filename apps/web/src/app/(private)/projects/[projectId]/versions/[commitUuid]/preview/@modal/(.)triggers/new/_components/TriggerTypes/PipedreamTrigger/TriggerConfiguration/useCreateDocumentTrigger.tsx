@@ -1,12 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import type {
-  DocumentTrigger,
-  DocumentVersion,
-  IntegrationDto,
-  PipedreamComponent,
-  PipedreamComponentType,
-} from '@latitude-data/core/browser'
 import {
   useCurrentCommit,
   useCurrentProject,
@@ -14,6 +7,15 @@ import {
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 import { DocumentTriggerType } from '@latitude-data/constants'
+import {
+  type DocumentTrigger,
+  type DocumentVersion,
+  type IntegrationDto,
+} from '@latitude-data/core/schema/types'
+import {
+  type PipedreamComponent,
+  type PipedreamComponentType,
+} from '@latitude-data/core/constants'
 
 export function useCreateDocumentTrigger({
   account,

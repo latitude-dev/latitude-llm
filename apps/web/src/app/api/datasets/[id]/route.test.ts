@@ -1,10 +1,10 @@
-import { Workspace } from '@latitude-data/core/browser'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createWorkspace, createDataset } from '@latitude-data/core/factories'
 import { destroyDataset } from '@latitude-data/core/services/datasets/destroy'
 
 import { GET } from './route'
+import { Workspace } from '@latitude-data/core/schema/types'
 
 const mocks = vi.hoisted(() => {
   return {

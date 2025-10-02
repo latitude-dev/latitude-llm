@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 import { IntegrationType } from '@latitude-data/constants'
-import { IntegrationDto, User, Workspace } from '../../../browser'
+import { IntegrationDto, User, Workspace } from '../../../schema/types'
 import * as factories from '../../../tests/factories'
 import { cloneIntegrations } from './cloneIntegrations'
 import { IntegrationsRepository } from '../../../repositories'

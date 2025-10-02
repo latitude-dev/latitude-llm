@@ -3,7 +3,7 @@ import {
   NotFoundError,
   NotImplementedError,
 } from '@latitude-data/constants/errors'
-import { Commit, DocumentTrigger, Workspace } from '../../browser'
+import { Commit, DocumentTrigger, Workspace } from '../../schema/types'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { Result, TypedResult } from '../../lib/Result'
 import {
@@ -19,7 +19,7 @@ import {
   DocumentTriggerDeploymentSettings,
 } from '@latitude-data/constants/documentTriggers'
 import { deployScheduledTrigger } from './deploy/scheduleTrigger'
-import { documentTriggers } from '../../schema'
+import { documentTriggers } from '../../schema/models/documentTriggers'
 import { eq } from 'drizzle-orm'
 
 /**

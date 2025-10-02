@@ -14,24 +14,20 @@ import {
   ne,
   sql,
 } from 'drizzle-orm'
+import { Commit, EvaluationDto, EvaluationResultDto } from '../../schema/types'
 import {
-  Commit,
   ErrorableEntity,
   EVALUATION_RESULT_RECENCY_DAYS,
-  EvaluationDto,
   EvaluationResultableType,
-  EvaluationResultDto,
   MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
-} from '../../browser'
+} from '../../constants'
 import { Result } from '../../lib/Result'
-import {
-  evaluationResultableBooleans,
-  evaluationResultableNumbers,
-  evaluationResultableTexts,
-  evaluationResults,
-  evaluations,
-  runErrors,
-} from '../../schema'
+import { evaluationResultableBooleans } from '../../schema/legacyModels/evaluationResultableBooleans'
+import { evaluationResultableNumbers } from '../../schema/legacyModels/evaluationResultableNumbers'
+import { evaluationResultableTexts } from '../../schema/legacyModels/evaluationResultableTexts'
+import { evaluationResults } from '../../schema/legacyModels/evaluationResults'
+import { evaluations } from '../../schema/legacyModels/evaluations'
+import { runErrors } from '../../schema/models/runErrors'
 import { EvaluationsRepository } from '../evaluationsRepository'
 import Repository from '../repositoryV2'
 

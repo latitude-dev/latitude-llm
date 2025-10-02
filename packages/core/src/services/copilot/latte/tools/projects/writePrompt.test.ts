@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Providers } from '../../../../../constants'
+import { Providers } from '@latitude-data/constants'
 import writePrompt from './writePrompt'
 import { DocumentVersionsRepository } from '../../../../../repositories'
-import { Commit, Project, User, Workspace } from '../../../../../browser'
+import { Commit, Project, User, Workspace } from '../../../../../schema/types'
 import * as factories from '../../../../../tests/factories'
 import { createLatteThread } from '../../threads/createThread'
 import { LatteToolContext } from '../types'
 import { WebsocketClient } from '../../../../../websockets/workers'
-import { CompileError } from '@latitude-data/compiler'
+import type { CompileError } from 'promptl-ai'
 
 vi.spyOn(WebsocketClient, 'sendEvent').mockImplementation(vi.fn())
 

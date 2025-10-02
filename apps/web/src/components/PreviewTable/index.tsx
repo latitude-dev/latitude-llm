@@ -7,7 +7,7 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { type Column } from '@latitude-data/core/schema'
+import { type Column } from '@latitude-data/core/schema/models/datasets'
 
 export function PreviewTable({
   rows,

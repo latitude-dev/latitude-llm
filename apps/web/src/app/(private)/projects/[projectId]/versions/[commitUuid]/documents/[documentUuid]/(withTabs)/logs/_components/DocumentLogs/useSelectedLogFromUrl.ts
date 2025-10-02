@@ -1,6 +1,6 @@
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/browser'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/schema/types'
 
 /**
  * Custom hook for managing selected log state with URL synchronization.

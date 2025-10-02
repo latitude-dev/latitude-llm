@@ -1,5 +1,5 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { Commit, DocumentTrigger } from '../../../../../../browser'
+import { Commit, DocumentTrigger } from '../../../../../../schema/types'
 import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { Result } from '../../../../../../lib/Result'
 import { PromisedResult } from '../../../../../../lib/Transaction'

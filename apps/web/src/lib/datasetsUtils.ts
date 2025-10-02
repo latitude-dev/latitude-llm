@@ -1,4 +1,4 @@
-import { Dataset } from '@latitude-data/core/browser'
+import { Dataset } from '@latitude-data/core/schema/types'
 
 export function buildColumnList(dataset: Dataset | null | undefined) {
   if (!dataset) return []

@@ -1,6 +1,11 @@
 import type { ExperimentVariant } from '@latitude-data/constants/experiments'
-import { Dataset, Experiment, User } from '../../browser'
-import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
+import { Dataset, Experiment, User } from '../../schema/types'
+import {
+  Commit,
+  DocumentVersion,
+  EvaluationV2,
+  Workspace,
+} from '../../schema/types'
 import { ProviderApiKeysRepository } from '../../repositories'
 import Transaction from '../../lib/Transaction'
 import { Result } from '../../lib/Result'

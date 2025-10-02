@@ -1,7 +1,7 @@
 import { FinishReason, LanguageModelUsage } from 'ai'
 
 import { ExperimentVariant } from '@latitude-data/constants/experiments'
-import type {
+import {
   Commit,
   Dataset,
   DatasetRow,
@@ -25,7 +25,8 @@ import type {
   Providers,
   User,
   Workspace,
-} from '../browser'
+} from '../schema/types'
+import { Providers } from '@latitude-data/constants'
 import { PartialConfig } from '../services/ai'
 
 export type Events =

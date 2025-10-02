@@ -14,15 +14,13 @@ import {
   ConnectedEvaluation,
   DocumentVersion,
   EvaluationDto,
-} from '../../browser'
+} from '../../schema/types'
 import { LatitudeError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
-import {
-  connectedEvaluations,
-  documentLogs,
-  evaluations,
-  providerLogs,
-} from '../../schema'
+import { connectedEvaluations } from '../../schema/legacyModels/connectedEvaluations'
+import { documentLogs } from '../../schema/models/documentLogs'
+import { evaluations } from '../../schema/legacyModels/evaluations'
+import { providerLogs } from '../../schema/models/providerLogs'
 import { DocumentVersionsRepository } from '../documentVersionsRepository'
 import { EvaluationResultsRepository } from '../evaluationResultsRepository'
 import { EvaluationsRepository } from '../evaluationsRepository'

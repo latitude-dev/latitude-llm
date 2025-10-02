@@ -1,7 +1,6 @@
 import crypto from 'crypto'
-
-import { User } from '@latitude-data/core/browser'
 import { env } from '@latitude-data/env'
+import { User } from '@latitude-data/core/schema/types'
 
 function getCredentials() {
   if (!env.SUPPORT_APP_ID || !env.SUPPORT_APP_SECRET_KEY) return

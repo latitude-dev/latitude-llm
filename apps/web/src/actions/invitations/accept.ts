@@ -1,10 +1,8 @@
 'use server'
 
-import {
-  unsafelyFindMembershipByToken,
-  unsafelyFindWorkspace,
-  unsafelyGetUser,
-} from '@latitude-data/core/data-access'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
+import { unsafelyGetUser } from '@latitude-data/core/data-access/users'
+import { unsafelyFindMembershipByToken } from '@latitude-data/core/data-access/memberships'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { acceptInvitation } from '@latitude-data/core/services/invitations/accept'
 import { setSession } from '$/services/auth/setSession'

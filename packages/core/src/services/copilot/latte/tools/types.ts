@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { User, Workspace, Project } from '../../../../browser'
+import { User, Workspace, Project } from '../../../../schema/types'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../lib/Result'

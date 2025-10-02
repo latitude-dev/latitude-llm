@@ -4,7 +4,7 @@ import { ROUTES } from '$/services/routes'
 import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { moveNextOnboardingStepAction } from '$/actions/workspaceOnboarding/moveNextStep'
-import { WorkspaceOnboarding } from '@latitude-data/core/browser'
+import { WorkspaceOnboarding } from '@latitude-data/core/schema/types'
 
 export default function useWorkspaceOnboarding() {
   const fetcher = useFetcher<WorkspaceOnboarding>(

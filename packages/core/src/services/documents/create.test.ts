@@ -4,10 +4,10 @@ import {
   Commit,
   Project,
   ProviderApiKey,
-  Providers,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import {
   DocumentVersionsRepository,
   WorkspacesRepository,

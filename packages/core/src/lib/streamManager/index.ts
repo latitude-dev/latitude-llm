@@ -13,13 +13,8 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { omit } from 'lodash-es'
-import {
-  IntegrationDto,
-  LogSources,
-  PromptSource,
-  ProviderApiKey,
-  Workspace,
-} from '../../browser'
+import { IntegrationDto, ProviderApiKey, Workspace } from '../../schema/types'
+import { LogSources, PromptSource } from '../../constants'
 import { ValidatedChainStep } from '../../services/chains/ChainValidator'
 import {
   createMcpClientManager,

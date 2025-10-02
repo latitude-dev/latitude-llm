@@ -1,4 +1,4 @@
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { DocumentTriggersRepository } from '../../repositories'

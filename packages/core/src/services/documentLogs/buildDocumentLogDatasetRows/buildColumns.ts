@@ -1,10 +1,7 @@
-import {
-  Dataset,
-  DATASET_COLUMN_ROLES,
-  DEFAULT_DATASET_LABEL,
-  DocumentLogWithMetadataAndError,
-} from '../../../browser'
-import { Column } from '../../../schema'
+import { Dataset, DocumentLogWithMetadataAndError } from '../../../schema/types'
+import { DATASET_COLUMN_ROLES } from '../../../constants'
+import { DEFAULT_DATASET_LABEL } from '../../../constants'
+import { Column } from '../../../schema/models/datasets'
 import {
   buildColumns as buildColumnsFn,
   HashAlgorithmFn,

@@ -1,6 +1,5 @@
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { DocumentTrigger, DocumentVersion } from '@latitude-data/core/browser'
 import { DotIndicator } from '@latitude-data/web-ui/atoms/DotIndicator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
@@ -8,6 +7,10 @@ import { useState } from 'react'
 import { EmailTriggerSettings } from './EmailTrigger'
 import { IntegrationTriggerSettings } from './IntegrationTriggers'
 import { ScheduleTriggerSettings } from './ScheduleTrigger'
+import {
+  DocumentTrigger,
+  DocumentVersion,
+} from '@latitude-data/core/schema/types'
 
 enum ShareSettingsTabs {
   Email = 'email',

@@ -1,11 +1,9 @@
 import { eq } from 'drizzle-orm'
 import Stripe from 'stripe'
-import { Subscription, Workspace } from '../../browser'
+import { Subscription, Workspace } from '../../schema/types'
 import { Database } from '../../client'
-import {
-  unsafelyFindUserByEmail,
-  unsafelyFindWorkspacesFromUser,
-} from '../../data-access'
+import { unsafelyFindUserByEmail } from '../../data-access/users'
+import { unsafelyFindWorkspacesFromUser } from '../../data-access/workspaces'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { LatitudeError } from '../../lib/errors'

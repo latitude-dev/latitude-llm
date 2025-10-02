@@ -1,6 +1,6 @@
 import { env } from '@latitude-data/env'
 import { QueueEvents } from 'bullmq'
-import { Queues } from '../../jobs/queues'
+import { Queues } from '../../jobs/queues/types'
 import { buildRedisConnection, REDIS_KEY_PREFIX } from '../../redis'
 
 export const JOB_FINISHED_STATES = ['completed', 'failed', 'unknown']

@@ -1,5 +1,5 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { Commit, DocumentTriggerEvent, Workspace } from '../../../browser'
+import { Commit, DocumentTriggerEvent, Workspace } from '../../../schema/types'
 import { DocumentTriggerEventPayload } from '@latitude-data/constants/documentTriggers'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'

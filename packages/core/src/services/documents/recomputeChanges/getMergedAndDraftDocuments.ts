@@ -1,4 +1,4 @@
-import { DocumentVersion } from '../../../browser'
+import { DocumentVersion } from '../../../schema/types'
 
 export function getMergedAndDraftDocuments({
   headDocuments,

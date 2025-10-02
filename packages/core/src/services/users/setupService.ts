@@ -1,5 +1,5 @@
-import { User, Workspace } from '../../browser'
-import { Providers } from '../../constants'
+import { User, Workspace } from '../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'

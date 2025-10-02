@@ -14,14 +14,7 @@ import {
   type ToolHandler,
 } from '../../../lib/streamManager/clientTools/handlers'
 import { RunsRepository } from '../../../repositories'
-import {
-  runDocumentAtCommitLegacy,
-  type RunDocumentAtCommitLegacyArgs,
-} from '../../../services/__deprecated/commits/runDocumentAtCommit'
-import {
-  runDocumentAtCommit,
-  type RunDocumentAtCommitArgs,
-} from '../../../services/commits/runDocumentAtCommit'
+import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtCommit'
 import { BACKGROUND } from '../../../telemetry'
 import { getDataForInitialRequest } from '../documents/runDocumentAtCommitWithAutoToolResponses/getDataForInitialRequest'
 
@@ -36,7 +29,6 @@ export type BackgroundRunJobData = {
   tools?: string[]
   userMessage?: string
   source?: LogSources
-  isLegacy: boolean
 }
 
 export type BackgroundRunJobResult = {
@@ -58,7 +50,6 @@ export const backgroundRunJob = async (
     tools = [],
     userMessage,
     source = LogSources.API,
-    isLegacy,
   } = job.data
 
   const abortController = new AbortController()
@@ -87,7 +78,7 @@ export const backgroundRunJob = async (
 
     publisher.subscribe('cancelJob', onAborted)
 
-    const legacyArgs = {
+    const result = await runDocumentAtCommit({
       workspace,
       document,
       commit,
@@ -96,23 +87,10 @@ export const backgroundRunJob = async (
       customIdentifier,
       source,
       abortSignal: abortController.signal,
-    }
-    const result = await _runDocumentAtCommit(
-      isLegacy
-        ? {
-            isLegacy: true,
-            data: legacyArgs,
-          }
-        : {
-            isLegacy: false,
-            data: {
-              ...legacyArgs,
-              context: BACKGROUND({ workspaceId }),
-              tools: buildClientToolHandlersMap(tools),
-              userMessage,
-            },
-          },
-    ).then((r) => r.unwrap())
+      context: BACKGROUND({ workspaceId }),
+      tools: buildClientToolHandlersMap(tools),
+      userMessage,
+    }).then((r) => r.unwrap())
 
     forwardStreamEvents(
       { workspaceId, projectId, runUuid, stream: result.stream, job, repository }, // prettier-ignore
@@ -148,23 +126,6 @@ function buildClientToolHandlersMap(tools: string[]) {
     acc[toolName] = awaitClientToolResult
     return acc
   }, {})
-}
-
-type RunDocumentArgs<T extends boolean> = T extends true
-  ? { isLegacy: true; data: RunDocumentAtCommitLegacyArgs }
-  : T extends false
-    ? { isLegacy: false; data: RunDocumentAtCommitArgs }
-    : never
-async function _runDocumentAtCommit<T extends boolean>(
-  args: RunDocumentArgs<T>,
-) {
-  const { isLegacy } = args
-
-  if (isLegacy) {
-    return runDocumentAtCommitLegacy(args.data)
-  } else {
-    return runDocumentAtCommit(args.data)
-  }
 }
 
 async function forwardStreamEvents({

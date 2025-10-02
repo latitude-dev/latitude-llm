@@ -3,16 +3,15 @@ import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
   Commit,
   DocumentVersion,
-  EvaluationResultV2,
-  EvaluationType,
   EvaluationV2,
-  Providers,
-  RuleEvaluationMetric,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
+import { EvaluationResultV2 } from '../../../constants'
+import { Providers } from '@latitude-data/constants'
+import { EvaluationType, RuleEvaluationMetric } from '../../../constants'
 import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
-import { evaluationResultsV2 } from '../../../schema'
+import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import * as factories from '../../../tests/factories'
 import serializeProviderLog from '../../providerLogs/serialize'
 import { updateEvaluationResultV2 } from './update'

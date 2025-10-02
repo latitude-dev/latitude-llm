@@ -5,7 +5,7 @@ import {
   DocumentVersion,
   Project,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import {

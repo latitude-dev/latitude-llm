@@ -1,5 +1,6 @@
 import * as factories from '../../../tests/factories'
-import { DocumentVersion, Experiment, Providers, User } from '../../../browser'
+import { DocumentVersion, Experiment, User } from '../../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { runDocumentForExperimentJob } from './runDocumentForExperimentJob'

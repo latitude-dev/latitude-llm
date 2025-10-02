@@ -11,7 +11,7 @@ import {
   User,
   Workspace,
   Project,
-} from '../../../browser'
+} from '../../../schema/types'
 
 import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'

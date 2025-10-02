@@ -1,10 +1,9 @@
 import { create } from 'zustand'
-
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
   EvaluatedDocumentLog,
   LLM_EVALUATION_PROMPT_PARAMETERS,
-} from '@latitude-data/core/browser'
-import { ResolvedMetadata } from '$/workers/readMetadata'
+} from '@latitude-data/core/constants'
 
 export type LogInput = {
   value: string

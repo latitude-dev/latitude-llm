@@ -2,13 +2,13 @@ import { and, eq } from 'drizzle-orm'
 
 import {
   DocumentVersion,
-  LinkedDataset,
   User,
   Workspace,
   type Commit,
-} from '../../browser'
+} from '../../schema/types'
+import { LinkedDataset } from '../../lib/documentPersistedInputs'
 import { database } from '../../client'
-import { documentVersions } from '../../schema'
+import { documentVersions } from '../../schema/models/documentVersions'
 import { destroyDocument } from '../../services/documents'
 import { createNewDocument } from '../../services/documents/create'
 import { updateDocument } from '../../services/documents/update'

@@ -6,7 +6,7 @@ import {
   Commit,
   DocumentTrigger,
   DocumentTriggerEvent,
-} from '../../../../browser'
+} from '../../../../schema/types'
 import { DocumentTriggerMailer } from '../../../../mailers'
 import type { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
 import { Result, TypedResult } from '../../../../lib/Result'

@@ -1,16 +1,16 @@
-import {
-  Providers,
-  type Commit,
-  type DocumentVersion,
-  type Project,
-  type User,
-  type Workspace,
-} from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { helpers } from '@latitude-data/core/factories'
 import { PublishedDocumentRepository } from '@latitude-data/core/repositories/publishedDocumentsRepository'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { publishDocumentAction } from './publishDocumentAction'
+import { Providers } from '@latitude-data/constants'
+import {
+  type Commit,
+  type DocumentVersion,
+  type Project,
+  type User,
+  type Workspace,
+} from '@latitude-data/core/schema/types'
 
 const mocks = vi.hoisted(() => {
   return {

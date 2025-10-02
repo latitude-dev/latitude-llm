@@ -2,7 +2,8 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LanguageModelUsage, TextStreamPart, Tool } from 'ai'
 import { describe, expect, it } from 'vitest'
 
-import { LegacyChainEvent, Providers, StreamType } from '../../../constants'
+import { Providers } from '@latitude-data/constants'
+import { LegacyChainEvent, StreamType } from '../../../constants'
 import { AIReturn } from '../../../services/ai'
 import { consumeStream } from './consumeStream'
 

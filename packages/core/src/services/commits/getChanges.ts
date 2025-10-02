@@ -4,12 +4,8 @@ import {
   DocumentTriggerStatus,
 } from '@latitude-data/constants'
 import type { CompileError } from 'promptl-ai'
-import {
-  Commit,
-  DocumentVersion,
-  ModifiedDocumentType,
-  Workspace,
-} from '../../browser'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { ModifiedDocumentType } from '../../constants'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import {

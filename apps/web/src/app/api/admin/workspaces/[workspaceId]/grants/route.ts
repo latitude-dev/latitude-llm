@@ -1,7 +1,7 @@
 import { adminHandler } from '$/middlewares/adminHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { BadRequestError } from '@latitude-data/constants/errors'
-import { unsafelyFindWorkspace } from '@latitude-data/core/data-access'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
 import { GrantsRepository } from '@latitude-data/core/repositories'
 import { findWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/data-access/find'
 import { NextRequest, NextResponse } from 'next/server'

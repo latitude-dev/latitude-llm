@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { providerApiKeys } from '../../schema'
+import { providerApiKeys } from '../../schema/models/providerApiKeys'
 
 export function touchProviderApiKey(
   id: number,

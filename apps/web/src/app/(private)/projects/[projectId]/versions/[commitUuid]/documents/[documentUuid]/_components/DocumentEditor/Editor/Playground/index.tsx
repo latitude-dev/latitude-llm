@@ -6,7 +6,6 @@ import { useExpandParametersOrEvaluations } from '$/hooks/playgrounds/useExpandP
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
 import { ResolvedMetadata } from '$/workers/readMetadata'
-import { DocumentVersion, LogSources } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   AppLocalStorage,
@@ -22,6 +21,8 @@ import DocumentParams from './DocumentParams'
 import DocumentParamsLoading from './DocumentParams/DocumentParamsLoading'
 import { useRunPlaygroundPrompt } from './hooks/useRunPlaygroundPrompt'
 import Preview from './Preview'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { LogSources } from '@latitude-data/core/constants'
 
 export const Playground = memo(
   ({

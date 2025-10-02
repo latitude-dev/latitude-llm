@@ -30,7 +30,7 @@ export async function createTestCsvFile({
   }
 
   const bytes = await fs.readFile(filePath)
-  const file = new File([bytes], name, { type: 'text/csv' })
+  const file = new File([new Uint8Array(bytes)], name, { type: 'text/csv' })
 
   return { file, fileKey: name }
 }

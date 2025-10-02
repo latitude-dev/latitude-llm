@@ -2,19 +2,21 @@ import { desc, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
   Commit,
-  EvaluationType,
   EvaluationV2,
   Project,
-  Providers,
-  RuleEvaluationMetric,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import {
+  EvaluationType,
+  Providers,
+  RuleEvaluationMetric,
+} from '@latitude-data/constants'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import * as repositories from '../../repositories'
-import { evaluationVersions } from '../../schema'
+import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import * as factories from '../../tests/factories'
 import { deleteEvaluationV2 } from './delete'
 import { updateEvaluationV2 } from './update'

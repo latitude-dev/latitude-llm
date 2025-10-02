@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { Commit, DocumentVersion, Providers, Workspace } from '../../../browser'
+import { Commit, DocumentVersion, Workspace } from '../../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import {
   createDocumentLog,
   createProject,

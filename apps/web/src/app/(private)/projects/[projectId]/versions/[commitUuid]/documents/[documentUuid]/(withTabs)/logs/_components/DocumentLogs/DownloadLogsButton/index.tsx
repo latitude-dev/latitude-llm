@@ -8,7 +8,6 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { ROUTES } from '$/services/routes'
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -18,6 +17,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
+import { DocumentLogFilterOptions } from '@latitude-data/core/constants'
 
 const MAX_IMMEDIATE_DOWNLOAD = 25
 

@@ -1,5 +1,5 @@
 import { IntegrationType } from '@latitude-data/constants'
-import { IntegrationDto, User, Workspace } from '../../../browser'
+import { IntegrationDto, User, Workspace } from '../../../schema/types'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { IntegrationsRepository } from '../../../repositories'

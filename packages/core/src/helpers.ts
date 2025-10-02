@@ -7,7 +7,7 @@ import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { env } from '@latitude-data/env'
 import type { ConfigurableProp, ConfigurePropOptions } from '@pipedream/sdk'
 import { parseISO } from 'date-fns'
-import { ProviderLogDto } from './browser'
+import { ProviderLogDto } from './schema/types'
 import {
   DEFAULT_PAGINATION_SIZE,
   type CsvData,

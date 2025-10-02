@@ -1,4 +1,4 @@
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

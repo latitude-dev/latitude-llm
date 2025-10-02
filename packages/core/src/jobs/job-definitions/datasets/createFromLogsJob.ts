@@ -1,6 +1,9 @@
+import { commits } from '../../../schema/models/commits'
+import { documentLogs } from '../../../schema/models/documentLogs'
+import { providerLogs } from '../../../schema/models/providerLogs'
 import { Job } from 'bullmq'
 import { DocumentLogFilterOptions } from '../../../constants'
-import { unsafelyFindWorkspace } from '../../../data-access'
+import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import {
   DocumentVersionsRepository,
   UsersRepository,
@@ -8,7 +11,6 @@ import {
 import { findOrCreateDataset } from '../../../services/datasets/findOrCreate'
 import { CursorState } from '../documentLogs/downloadLogsJob'
 import { database } from '../../../client'
-import { commits, documentLogs, providerLogs } from '../../../schema'
 import { and, desc, eq, isNull, lt, notInArray } from 'drizzle-orm'
 import { buildLogsFilterSQLConditions } from '../../../services/documentLogs/logsFilterUtils'
 import { updateDatasetFromLogs } from '../../../services/datasets/createFromLogs'

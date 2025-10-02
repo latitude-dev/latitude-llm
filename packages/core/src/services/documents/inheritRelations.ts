@@ -1,9 +1,9 @@
-import { DocumentVersion, Workspace } from '../../browser'
+import { DocumentVersion, Workspace } from '../../schema/types'
 import { ConflictError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentSuggestionsRepository } from '../../repositories'
-import { documentSuggestions } from '../../schema'
+import { documentSuggestions } from '../../schema/models/documentSuggestions'
 
 async function inheritSuggestions(
   {

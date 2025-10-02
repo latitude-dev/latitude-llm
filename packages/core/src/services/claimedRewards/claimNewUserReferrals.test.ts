@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
 import { RewardType } from '../../constants'
-import { claimedRewards } from '../../schema'
+import { claimedRewards } from '../../schema/models/claimedRewards'
 import { claimReward } from './claim'
 import { claimNewUserReferrals } from './claimNewUserReferrals'
 
@@ -36,24 +36,30 @@ describe('claimNewUserReferrals', () => {
       reference: email,
     })
 
-    const pendingClaims = await database.query.claimedRewards.findMany({
-      where: and(
-        eq(claimedRewards.rewardType, RewardType.Referral),
-        eq(claimedRewards.reference, email),
-      ),
-    })
+    const pendingClaims = await database
+      .select()
+      .from(claimedRewards)
+      .where(
+        and(
+          eq(claimedRewards.rewardType, RewardType.Referral),
+          eq(claimedRewards.reference, email),
+        ),
+      )
 
     expect(pendingClaims.length).toBe(3)
     expect(pendingClaims.every((c) => c.isValid === null)).toBe(true)
 
     await claimNewUserReferrals({ email })
 
-    const updatedClaims = await database.query.claimedRewards.findMany({
-      where: and(
-        eq(claimedRewards.rewardType, RewardType.Referral),
-        eq(claimedRewards.reference, email),
-      ),
-    })
+    const updatedClaims = await database
+      .select()
+      .from(claimedRewards)
+      .where(
+        and(
+          eq(claimedRewards.rewardType, RewardType.Referral),
+          eq(claimedRewards.reference, email),
+        ),
+      )
 
     expect(updatedClaims.length).toBe(3)
     expect(updatedClaims.filter((c) => c.isValid === true).length).toBe(1)
@@ -87,23 +93,29 @@ describe('claimNewUserReferrals', () => {
       reference: email3,
     })
 
-    const pendingClaims = await database.query.claimedRewards.findMany({
-      where: and(
-        eq(claimedRewards.rewardType, RewardType.Referral),
-        eq(claimedRewards.workspaceId, workspace.id),
-      ),
-    })
+    const pendingClaims = await database
+      .select()
+      .from(claimedRewards)
+      .where(
+        and(
+          eq(claimedRewards.rewardType, RewardType.Referral),
+          eq(claimedRewards.workspaceId, workspace.id),
+        ),
+      )
 
     expect(pendingClaims.length).toBe(3)
 
     await claimNewUserReferrals({ email: email1 })
 
-    const updatedClaims1 = await database.query.claimedRewards.findMany({
-      where: and(
-        eq(claimedRewards.rewardType, RewardType.Referral),
-        eq(claimedRewards.workspaceId, workspace.id),
-      ),
-    })
+    const updatedClaims1 = await database
+      .select()
+      .from(claimedRewards)
+      .where(
+        and(
+          eq(claimedRewards.rewardType, RewardType.Referral),
+          eq(claimedRewards.workspaceId, workspace.id),
+        ),
+      )
 
     expect(updatedClaims1.filter((c) => c.isValid === true).length).toBe(1)
     expect(updatedClaims1.filter((c) => c.isValid === false).length).toBe(2)
@@ -111,12 +123,15 @@ describe('claimNewUserReferrals', () => {
 
     await claimNewUserReferrals({ email: email2 })
 
-    const updatedClaims2 = await database.query.claimedRewards.findMany({
-      where: and(
-        eq(claimedRewards.rewardType, RewardType.Referral),
-        eq(claimedRewards.workspaceId, workspace.id),
-      ),
-    })
+    const updatedClaims2 = await database
+      .select()
+      .from(claimedRewards)
+      .where(
+        and(
+          eq(claimedRewards.rewardType, RewardType.Referral),
+          eq(claimedRewards.workspaceId, workspace.id),
+        ),
+      )
 
     expect(updatedClaims2.filter((c) => c.isValid === true).length).toBe(1)
     expect(updatedClaims2.filter((c) => c.isValid === false).length).toBe(2)
@@ -131,12 +146,15 @@ describe('claimNewUserReferrals', () => {
 
     expect(result.ok).toBe(false)
 
-    const updatedClaims3 = await database.query.claimedRewards.findMany({
-      where: and(
-        eq(claimedRewards.rewardType, RewardType.Referral),
-        eq(claimedRewards.workspaceId, workspace.id),
-      ),
-    })
+    const updatedClaims3 = await database
+      .select()
+      .from(claimedRewards)
+      .where(
+        and(
+          eq(claimedRewards.rewardType, RewardType.Referral),
+          eq(claimedRewards.workspaceId, workspace.id),
+        ),
+      )
 
     expect(updatedClaims3.filter((c) => c.isValid === true).length).toBe(1)
     expect(updatedClaims3.filter((c) => c.isValid === false).length).toBe(2)

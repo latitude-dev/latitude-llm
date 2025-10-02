@@ -1,5 +1,5 @@
 import { LatitudeError } from '@latitude-data/constants/errors'
-import { DocumentTrigger, IntegrationDto } from '../../browser'
+import { DocumentTrigger, IntegrationDto } from '../../schema/types'
 import { PromisedResult } from '../../lib/Transaction'
 import { DocumentTriggersRepository } from '../../repositories'
 import { database } from '../../client'

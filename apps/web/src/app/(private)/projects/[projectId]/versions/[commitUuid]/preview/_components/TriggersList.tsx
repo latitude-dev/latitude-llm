@@ -3,12 +3,6 @@
 import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-  IntegrationDto,
-  Project,
-} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -30,6 +24,12 @@ import { TriggersCard } from './TriggersCard'
 import { UnconfiguredIntegrations } from './UnconfiguredIntegrations'
 import { useActiveChatTrigger } from './useActiveTrigger'
 import { useTriggerSockets } from './useTriggerSockets'
+import {
+  DocumentTrigger,
+  DocumentVersion,
+  IntegrationDto,
+  Project,
+} from '@latitude-data/core/schema/types'
 
 const ADD_BUTTON_LABEL = 'Add trigger'
 

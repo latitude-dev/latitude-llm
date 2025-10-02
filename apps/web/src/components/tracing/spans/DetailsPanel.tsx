@@ -1,6 +1,5 @@
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { MetadataItem } from '$/components/MetadataItem'
-import { SpanKind, SpanStatus, SpanType } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -17,6 +16,7 @@ import {
   SPAN_STATUS_DETAILS,
 } from './shared'
 import { SPAN_SPECIFICATIONS } from './specifications'
+import { SpanKind, SpanStatus, SpanType } from '@latitude-data/core/constants'
 
 function TypeBadge({ type }: { type: SpanType }) {
   const specification = SPAN_SPECIFICATIONS[type]

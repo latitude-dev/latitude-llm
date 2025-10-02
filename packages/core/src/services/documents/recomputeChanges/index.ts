@@ -5,14 +5,13 @@ import { and, eq, inArray, not } from 'drizzle-orm'
 import { scan } from 'promptl-ai'
 
 import { AgentToolsMap } from '@latitude-data/constants'
-import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 
 import {
   Commit,
   DocumentVersion,
   ProviderApiKey,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
 import { assertCommitIsDraft } from '../../../lib/assertCommitIsDraft'
 import { Result, TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
@@ -20,7 +19,7 @@ import {
   IntegrationsRepository,
   ProviderApiKeysRepository,
 } from '../../../repositories'
-import { documentVersions } from '../../../schema'
+import { documentVersions } from '../../../schema/models/documentVersions'
 import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
 import { inheritDocumentRelations } from '../inheritRelations'
 import { getHeadDocumentsAndDraftDocumentsForCommit } from './getHeadDocumentsAndDraftDocuments'
@@ -29,9 +28,6 @@ import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
 async function resolveDocumentChanges({
   originalDocuments,
   newDocuments,
-  providers,
-  integrationNames,
-  agentToolsMap,
 }: {
   originalDocuments: DocumentVersion[]
   newDocuments: DocumentVersion[]
@@ -58,21 +54,10 @@ async function resolveDocumentChanges({
 
   const newDocumentsWithUpdatedHash = await Promise.all(
     newDocuments.map(async (d) => {
-      const configSchema = latitudePromptConfigSchema({
-        fullPath: d.path,
-        providerNames: providers.map((p) => p.name),
-        agentToolsMap,
-        integrationNames,
-      })
-
-      // FIXME: infinite recursion
-      // @ts-ignore
       const metadata = await scan({
         prompt: d.content ?? '',
         fullPath: d.path,
         referenceFn: getDocumentContent,
-        // @ts-expect-error - TODO(compiler): fix types
-        configSchema,
       })
 
       if (!d.deletedAt && metadata.errors.length > 0) {

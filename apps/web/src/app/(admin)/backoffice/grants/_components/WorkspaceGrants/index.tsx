@@ -3,7 +3,6 @@
 import { DataTable } from '$/app/(admin)/backoffice/search/_components/DataTable'
 import { useGrantsAdmin } from '$/stores/admin/grants'
 import { useWorkspaceLimitsAdmin } from '$/stores/admin/workspaceLimits'
-import { Grant, GrantSource } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Card, CardContent, CardHeader } from '@latitude-data/web-ui/atoms/Card'
@@ -14,6 +13,8 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { useState } from 'react'
 import { IssueGrantModal } from '../IssueGrantModal'
+import { Grant } from '@latitude-data/core/schema/types'
+import { GrantSource } from '@latitude-data/core/constants'
 
 export function WorkspaceGrants({ workspaceId }: { workspaceId: number }) {
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false)

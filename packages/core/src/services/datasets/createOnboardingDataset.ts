@@ -1,7 +1,11 @@
-import { User, Workspace } from '../../browser'
+import { User, Workspace } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import { nanoidHashAlgorithm } from './utils'
-import { Column, DatasetRowData, DatasetRowDataContent } from '../../schema'
+import { Column } from '../../schema/models/datasets'
+import {
+  DatasetRowData,
+  DatasetRowDataContent,
+} from '../../schema/models/datasetRows'
 import { OnboardingParameters } from '@latitude-data/constants/onboarding'
 import { DATASET_COLUMN_ROLES } from '../../constants'
 import Transaction from '../../lib/Transaction'

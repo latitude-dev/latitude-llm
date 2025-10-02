@@ -1,7 +1,7 @@
 import { useCommits } from '$/stores/commitsStore'
-import { LOG_SOURCES } from '@latitude-data/core/browser'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { useMemo } from 'react'
+import { LOG_SOURCES } from '@latitude-data/core/constants'
 
 export function useDefaultLogFilterOptions() {
   const { commit } = useCurrentCommit()

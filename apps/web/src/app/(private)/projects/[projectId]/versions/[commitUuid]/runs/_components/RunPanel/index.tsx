@@ -12,13 +12,13 @@ import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/b
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs, { useProviderLog } from '$/stores/providerLogs'
 import { useActiveRuns } from '$/stores/runs/activeRuns'
+import { buildConversation } from '@latitude-data/core/helpers'
 import {
-  ActiveRun,
-  buildConversation,
-  CompletedRun,
   EvaluationResultV2,
+  CompletedRun,
+  ActiveRun,
   Run,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'

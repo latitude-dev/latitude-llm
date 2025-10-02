@@ -5,13 +5,16 @@ import { PromptIntegrations } from '$/app/(private)/projects/[projectId]/version
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { ProviderModelSelector } from '$/components/ProviderModelSelector'
 import { ResolvedMetadata } from '$/workers/readMetadata'
-import { DocumentVersion, ProviderApiKey } from '@latitude-data/core/browser'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
+import {
+  DocumentVersion,
+  ProviderApiKey,
+} from '@latitude-data/core/schema/types'
 
 export type IProviderByName = Record<string, ProviderApiKey>
 

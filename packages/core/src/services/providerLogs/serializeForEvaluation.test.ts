@@ -1,7 +1,7 @@
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { describe, expect, it } from 'vitest'
 
-import { ProviderLog, ProviderLogDto } from '../../browser'
+import { ProviderLog, ProviderLogDto } from '../../schema/types'
 import { formatContext, formatConversation } from './serializeForEvaluation'
 
 describe('serialize', () => {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Providers, User, Workspace } from '../../browser'
+import { Providers } from '@latitude-data/constants'
+import { User, Workspace } from '../../schema/types'
 import { WorkspacesRepository } from '../../repositories'
 import {
   createProject,

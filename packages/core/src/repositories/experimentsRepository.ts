@@ -10,21 +10,19 @@ import {
   isNotNull,
 } from 'drizzle-orm'
 
+import { ErrorableEntity } from '../constants'
 import {
-  ErrorableEntity,
   Experiment,
   ExperimentDto,
   ExperimentLogsMetadata,
-} from '../browser'
-import {
-  commits,
-  documentLogs,
-  evaluationResultsV2,
-  experiments,
-  projects,
-  providerLogs,
-  runErrors,
-} from '../schema'
+} from '../schema/types'
+import { commits } from '../schema/models/commits'
+import { documentLogs } from '../schema/models/documentLogs'
+import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
+import { experiments } from '../schema/models/experiments'
+import { projects } from '../schema/models/projects'
+import { providerLogs } from '../schema/models/providerLogs'
+import { runErrors } from '../schema/models/runErrors'
 import Repository from './repositoryV2'
 import { omit } from 'lodash-es'
 import { PromisedResult } from '../lib/Transaction'

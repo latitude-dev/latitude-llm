@@ -3,7 +3,7 @@ import useDocumentIntegrationReferences from '$/stores/documentIntegrationRefere
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
 import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
-import { IntegrationDto } from '@latitude-data/core/browser'
+import { IntegrationDto } from '@latitude-data/core/schema/types'
 import {
   Commit,
   DocumentTrigger,

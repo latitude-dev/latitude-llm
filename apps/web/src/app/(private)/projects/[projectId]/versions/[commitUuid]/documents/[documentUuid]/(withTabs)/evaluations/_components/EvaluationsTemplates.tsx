@@ -6,14 +6,6 @@ import { ROUTES } from '$/services/routes'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviders from '$/stores/providerApiKeys'
-import {
-  EvaluationMetric,
-  EvaluationSettings,
-  EvaluationType,
-  EvaluationV2,
-  LlmEvaluationMetric,
-  Providers,
-} from '@latitude-data/core/browser'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -35,6 +27,14 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useCallback, useMemo, useState } from 'react'
+import {
+  EvaluationMetric,
+  EvaluationSettings,
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetric,
+} from '@latitude-data/core/constants'
+import { Providers } from '@latitude-data/constants'
 
 export function EvaluationsTemplates({
   evaluations,

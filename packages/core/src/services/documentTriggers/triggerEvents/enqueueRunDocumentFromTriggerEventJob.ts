@@ -1,5 +1,5 @@
 import { ExecuteDocumentTriggerJobData } from '../../../jobs/job-definitions/documentTriggers/runDocumentTriggerEventJob'
-import { Commit, DocumentTriggerEvent, Workspace } from '../../../browser'
+import { Commit, DocumentTriggerEvent, Workspace } from '../../../schema/types'
 import { queues } from '../../../jobs/queues'
 import { PromisedResult } from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'

@@ -1,10 +1,10 @@
 'use client'
 
 import useRewards from '$/stores/rewards'
-import { RewardType } from '@latitude-data/core/browser'
 import { CircularProgress } from '@latitude-data/web-ui/atoms/CircularProgress'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useMemo } from 'react'
+import { RewardType } from '@latitude-data/core/constants'
 
 const REWARD_TYPES = Object.keys(RewardType).length
 

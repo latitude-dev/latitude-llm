@@ -1,6 +1,6 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 
-import { Providers } from '../models'
+import { Providers } from '@latitude-data/constants'
 import { applyAnthropicRules } from './anthropic'
 import { applyCustomRules } from './custom'
 import { applyGoogleRules } from './google'

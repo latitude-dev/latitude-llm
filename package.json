@@ -6,7 +6,6 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "buildExamples": "tsx ./examples/scripts/docs/buildDocs.ts",
-    "buildTypes": "turbo types:build --cache-dir=.turbo --filter=\"./packages/**\"",
     "watch:buildExamples": "chokidar 'examples/src/**/*' -c 'pnpm buildExamples'",
     "mintlify_docs": "cd docs && mintlify dev",
     "latitudeDocs": "pnpm buildExamples && concurrently \"pnpm watch:buildExamples\" \"pnpm mintlify_docs\"",
@@ -14,8 +13,7 @@
     "prettier": "prettier --write \"{apps,packages}/**/*.{ts,tsx,md}\" --ignore-path .prettierrcignore",
     "prettier:check": "prettier --check \"**/*.{ts,tsx,md}\" --ignore-path .prettierrcignore",
     "test": "turbo test",
-    "types:build": "pnpm --filter @latitude-data/core --filter @latitude-data/web-ui --filter @latitude-data/constants types:build",
-    "catchup": "pnpm i --ignore-scripts && pnpm build --filter=\"./packages/**/*\" && pnpm --filter \"@latitude-data/web\" workers:build && pnpm types:build && pnpm --filter \"@latitude-data/core\" db:migrate",
+    "catchup": "pnpm i --ignore-scripts && pnpm build --filter=\"./packages/**/*\" && pnpm --filter \"@latitude-data/web\" workers:build && pnpm --filter \"@latitude-data/core\" db:migrate",
     "console": "clear && ./bin/console.ts"
   },
   "devDependencies": {
@@ -31,7 +29,7 @@
     "recast": "^0.23.11",
     "tsx": "^4.16.2",
     "turbo": "^2.5.5",
-    "typescript": "^5.8.2"
+    "typescript": "5.8.3"
   },
   "packageManager": "pnpm@9.8.0+sha512.8e4c3550fb500e808dbc30bb0ce4dd1eb614e30b1c55245f211591ec2cdf9c611cabd34e1364b42f564bd54b3945ed0f49d61d1bbf2ec9bd74b866fcdc723276",
   "engines": {

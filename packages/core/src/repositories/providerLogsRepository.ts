@@ -1,9 +1,10 @@
 import { and, asc, desc, eq, getTableColumns, inArray, sum } from 'drizzle-orm'
 
-import { ProviderLog } from '../browser'
+import { ProviderLog } from '../schema/types'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import { documentLogs, providerLogs } from '../schema'
+import { documentLogs } from '../schema/models/documentLogs'
+import { providerLogs } from '../schema/models/providerLogs'
 import { hydrateProviderLog } from '../services/providerLogs/hydrate'
 import { QueryOptions } from './repository'
 import Repository from './repositoryV2'

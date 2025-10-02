@@ -1,4 +1,4 @@
-import { unsafelyFindWorkspace } from '../../../../data-access'
+import { unsafelyFindWorkspace } from '../../../../data-access/workspaces'
 import { NotFoundError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'
 import {

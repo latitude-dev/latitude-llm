@@ -4,6 +4,8 @@ import { database } from '../../client'
 import { LatitudeEvent } from '../../events/events'
 import { createProject } from '../../tests/factories'
 import { createEvent } from './create'
+import { events } from '../../schema/models/events'
+import { eq } from 'drizzle-orm'
 
 describe('createEvent', () => {
   it('creates an event in the database', async () => {
@@ -21,9 +23,11 @@ describe('createEvent', () => {
       expect(createdEvent.data).toEqual(testEvent.data)
 
       // Verify the event was actually inserted into the database
-      const dbEvent = await database.query.events.findFirst({
-        where: (events, { eq }) => eq(events.id, createdEvent.id),
-      })
+      const dbEvent = await database
+        .select()
+        .from(events)
+        .where(eq(events.id, createdEvent.id))
+        .then((r) => r[0])
 
       expect(dbEvent).toBeDefined()
       expect(dbEvent?.type).toBe(testEvent.type)

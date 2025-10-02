@@ -19,7 +19,7 @@ import {
   SpanStatus,
   SpanType,
   ToolSpanMetadata,
-} from '../../../browser'
+} from '../../../constants'
 import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'

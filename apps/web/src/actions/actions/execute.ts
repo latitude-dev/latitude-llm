@@ -1,13 +1,12 @@
 'use server'
-
+import { executeAction } from '@latitude-data/core/services/actions/execute'
+import { z } from 'zod'
+import { authProcedure, withRateLimit } from '../procedures'
 import {
   ActionBackendParameters,
   ActionFrontendParameters,
   ActionType,
-} from '@latitude-data/core/browser'
-import { executeAction } from '@latitude-data/core/services/actions/execute'
-import { z } from 'zod'
-import { authProcedure, withRateLimit } from '../procedures'
+} from '@latitude-data/core/schema/types'
 
 export const executeBackendAction = (
   await withRateLimit(authProcedure, {

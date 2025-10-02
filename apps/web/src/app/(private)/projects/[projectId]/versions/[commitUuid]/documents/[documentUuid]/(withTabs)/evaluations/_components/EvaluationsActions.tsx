@@ -4,13 +4,6 @@ import { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import {
-  DocumentVersion,
-  EvaluationOptions,
-  EvaluationSettings,
-  EvaluationType,
-  RuleEvaluationMetric,
-} from '@latitude-data/core/browser'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import {
@@ -21,6 +14,13 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
 import { EvaluationsGenerator } from './EvaluationsGenerator'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import {
+  EvaluationOptions,
+  EvaluationSettings,
+  EvaluationType,
+  RuleEvaluationMetric,
+} from '@latitude-data/core/constants'
 
 const DEFAULT_EVALUATION_SETTINGS = {
   name: 'Accuracy',

@@ -1,4 +1,4 @@
-import { PipedreamIntegration } from '../../../../../browser'
+import { PipedreamIntegration } from '../../../../../schema/types'
 import { IntegrationType } from '@latitude-data/constants'
 import * as fetchFullConfigSchemaModule from './fetchFullConfigSchema'
 import * as reloadComponentPropsModule from '../../../../integrations/pipedream/components/reloadComponentProps'

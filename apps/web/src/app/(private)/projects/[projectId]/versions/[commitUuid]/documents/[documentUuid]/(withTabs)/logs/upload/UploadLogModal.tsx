@@ -1,5 +1,4 @@
 'use client'
-import { LATITUDE_DOCS_URL } from '@latitude-data/core/browser'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DropzoneInput } from '@latitude-data/web-ui/atoms/DropzoneInput'
@@ -14,6 +13,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import DelimiterSelector from '$/app/(private)/datasets/_components/DelimiterSelector'
+import { LATITUDE_DOCS_URL } from '@latitude-data/core/constants'
 
 interface UploadLogModalProps {
   documentUuid: string

@@ -6,9 +6,13 @@ import {
   Project,
   ProviderApiKey,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
 import * as cacheModule from '../../cache'
-import { EvaluationType, LlmEvaluationMetric, Providers } from '../../constants'
+import {
+  EvaluationType,
+  LlmEvaluationMetric,
+  Providers,
+} from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { computeProjectStats } from './computeProjectStats'
 

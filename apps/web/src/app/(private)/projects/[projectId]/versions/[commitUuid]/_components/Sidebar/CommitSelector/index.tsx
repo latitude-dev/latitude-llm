@@ -7,12 +7,6 @@ import {
   useRef,
   useState,
 } from 'react'
-
-import {
-  DocumentVersion,
-  HELP_CENTER,
-  type Commit,
-} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
@@ -33,6 +27,8 @@ import { CurrentCommitsList } from './CurrentCommitsList'
 import DeleteDraftCommitModal from './DeleteDraftCommitModal'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
+import { DocumentVersion, type Commit } from '@latitude-data/core/schema/types'
+import { HELP_CENTER } from '@latitude-data/core/constants'
 
 const MIN_WIDTH_SELECTOR_PX = 380
 const TRIGGER_X_PADDING_PX = 26

@@ -4,10 +4,10 @@ import {
   Commit,
   DocumentVersion,
   Project,
-  Providers,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import {
   DocumentTriggerType,
   ModifiedDocumentType,
@@ -17,7 +17,7 @@ import { destroyDocument, updateDocument } from '../documents'
 import * as factories from '../../tests/factories'
 import { createDocumentTrigger } from '../documentTriggers/create'
 import { database } from '../../client'
-import { documentTriggers } from '../../schema'
+import { documentTriggers } from '../../schema/models/documentTriggers'
 import {
   createDocumentVersion,
   createDraft,

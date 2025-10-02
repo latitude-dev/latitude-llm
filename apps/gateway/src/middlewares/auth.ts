@@ -1,9 +1,7 @@
-import type { ApiKey, Workspace } from '@latitude-data/core/browser'
-import {
-  unsafelyFindWorkspace,
-  unsafelyGetApiKeyByToken,
-} from '@latitude-data/core/data-access'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
+import { unsafelyGetApiKeyByToken } from '@latitude-data/core/data-access/apiKeys'
 import { bearerAuth } from 'hono/bearer-auth'
+import { type ApiKey, type Workspace } from '@latitude-data/core/schema/types'
 
 declare module 'hono' {
   interface ContextVariableMap {

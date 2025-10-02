@@ -1,6 +1,7 @@
-import { Grant, GrantSource, Quota, QuotaType, Workspace } from '../../browser'
+import { Grant, Quota, Workspace } from '../../schema/types'
+import { GrantSource, QuotaType } from '../../constants'
 import { database } from '../../client'
-import { grants } from '../../schema'
+import { grants } from '../../schema/models/grants'
 
 export async function createGrant({
   type,

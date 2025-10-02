@@ -8,9 +8,9 @@ import {
   DocumentVersion,
   EvaluationV2,
   ProviderApiKey,
-  Providers,
   Workspace,
-} from '../browser'
+} from '../schema/types'
+import { Providers } from '@latitude-data/constants'
 import { NotFoundError } from '../lib/errors'
 import * as factories from '../tests/factories'
 import { createExperiment } from '../services/experiments'

@@ -3,18 +3,17 @@ import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
   Commit,
   DocumentVersion,
-  EvaluationResultValue,
-  EvaluationType,
   EvaluationV2,
   ProviderLogDto,
-  Providers,
-  RuleEvaluationMetric,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
+import { EvaluationResultValue } from '../../../constants'
+import { Providers } from '@latitude-data/constants'
+import { EvaluationType, RuleEvaluationMetric } from '../../../constants'
 import { database } from '../../../client'
 import { publisher } from '../../../events/publisher'
 import { UnprocessableEntityError } from '../../../lib/errors'
-import { evaluationResultsV2 } from '../../../schema'
+import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import * as factories from '../../../tests/factories'
 import serializeProviderLog from '../../providerLogs/serialize'
 import { createEvaluationResultV2 } from './create'

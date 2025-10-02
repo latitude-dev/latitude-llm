@@ -11,24 +11,28 @@ import {
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import {
-  Commit,
-  DocumentVersion,
-  EvaluationMetric,
-  EvaluationOptions,
-  EvaluationResultMetadata,
-  EvaluationResultsV2Search,
-  evaluationResultsV2SearchToQueryParams,
-  EvaluationSettings,
-  EvaluationType,
-  EvaluationV2,
-  EvaluationV2Stats,
-  Project,
-} from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact, isEmpty } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import {
+  Commit,
+  DocumentVersion,
+  EvaluationV2Stats,
+  Project,
+} from '@latitude-data/core/schema/types'
+import {
+  EvaluationMetric,
+  EvaluationOptions,
+  EvaluationResultMetadata,
+  EvaluationSettings,
+  EvaluationType,
+  EvaluationV2,
+} from '@latitude-data/core/constants'
+import {
+  EvaluationResultsV2Search,
+  evaluationResultsV2SearchToQueryParams,
+} from '@latitude-data/core/helpers'
 
 export function useEvaluationsV2(
   {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
-import { WorkspaceOnboarding } from '../../../../src/browser'
+import { WorkspaceOnboarding } from '../../../../src/schema/types'
 import { database } from '../../../../src/client'
 import { workspaceOnboarding as workspaceOnboardingTable } from '../../../../src/schema/models/workspaceOnboarding'
 import * as factories from '../../../../src/tests/factories'

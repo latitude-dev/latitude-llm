@@ -1,6 +1,4 @@
 import { ReactNode, useCallback, useMemo, useState } from 'react'
-
-import { ClaimedReward, RewardType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -9,6 +7,8 @@ import Link from 'next/link'
 import { ZodType } from 'zod'
 
 import { Step } from './Step'
+import { ClaimedReward } from '@latitude-data/core/schema/types'
+import { RewardType } from '@latitude-data/core/constants'
 
 export type RewardConfig = {
   type: RewardType

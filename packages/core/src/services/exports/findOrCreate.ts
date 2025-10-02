@@ -1,5 +1,5 @@
-import { NewExport, Workspace } from '../../browser'
-import { latitudeExports } from '../../schema'
+import { NewExport, Workspace } from '../../schema/types'
+import { latitudeExports } from '../../schema/models/exports'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { findByUuid } from '../../data-access/exports/findByUuid'

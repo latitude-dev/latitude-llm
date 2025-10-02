@@ -6,7 +6,7 @@ import {
   Workspace,
   DocumentVersion,
   User,
-} from '../../../../browser'
+} from '../../../../schema/types'
 import { Result } from '../../../../lib/Result'
 import * as factories from '../../../../tests/factories'
 import { mergeCommit } from '../../../commits'
@@ -14,7 +14,8 @@ import { createNewDocument } from '../../../documents'
 import { findAndRegisterScheduledTriggerEvents } from './registerEvents'
 import { database } from '../../../../client'
 import { eq } from 'drizzle-orm'
-import { documentTriggers, documentTriggerEvents } from '../../../../schema'
+import { documentTriggers } from '../../../../schema/models/documentTriggers'
+import { documentTriggerEvents } from '../../../../schema/models/documentTriggerEvents'
 import { ScheduledTriggerDeploymentSettings } from '@latitude-data/constants/documentTriggers'
 
 const mocks = vi.hoisted(() => ({

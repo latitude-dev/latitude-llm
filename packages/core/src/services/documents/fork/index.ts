@@ -1,4 +1,4 @@
-import { Commit, DocumentVersion, User, Workspace } from '../../../browser'
+import { Commit, DocumentVersion, User, Workspace } from '../../../schema/types'
 import { publisher } from '../../../events/publisher'
 import { Result } from '../../../lib/Result'
 import { cloneDocuments } from './cloneDocuments'

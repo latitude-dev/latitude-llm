@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as factories from '../../tests/factories'
 
-import { ProviderApiKey, Workspace } from '../../browser'
-import { LogSources, Providers } from '../../constants'
+import { ProviderApiKey, Workspace } from '../../schema/types'
+import { Providers, LogSources } from '@latitude-data/constants'
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'
 import { createProviderLog, type CreateProviderLogProps } from './create'

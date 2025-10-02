@@ -5,7 +5,7 @@ import {
   listActiveRunsCached,
   listCompletedRunsCached,
 } from '$/app/(private)/_data-access'
-import { LIMITED_VIEW_THRESHOLD } from '@latitude-data/core/browser'
+import { LIMITED_VIEW_THRESHOLD } from '@latitude-data/core/constants'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { RunsPage as ClientRunsPage } from './_components/RunsPage'
 

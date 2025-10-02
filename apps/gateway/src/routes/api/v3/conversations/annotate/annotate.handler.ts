@@ -7,14 +7,12 @@ import {
 import { AnnotateRoute } from './annotate.route'
 import { annotateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/annotate'
 import serializeProviderLog from '@latitude-data/core/services/providerLogs/serialize'
-import {
-  findDocumentFromLog,
-  findLastProviderLogFromDocumentLogUuid,
-  findProjectFromDocument,
-} from '@latitude-data/core/data-access'
+import { findDocumentFromLog } from '@latitude-data/core/data-access/documentLogs'
+import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core/data-access/providerLogs'
+import { findProjectFromDocument } from '@latitude-data/core/data-access/projects'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import { serializeEvaluationResultV2 } from './serializeEvaluationResultV2'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
 // @ts-expect-error: broken types
 export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {

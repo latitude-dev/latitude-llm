@@ -1,10 +1,7 @@
 'use client'
 
-import {
-  SubscriptionPlanContent,
-  User,
-  WorkspaceDto,
-} from '@latitude-data/core/browser'
+import type { SubscriptionPlanContent } from '@latitude-data/core/plans'
+import type { User, WorkspaceDto } from '@latitude-data/core/schema/types'
 import { createContext, ReactNode, useContext } from 'react'
 
 interface ISessionContext {

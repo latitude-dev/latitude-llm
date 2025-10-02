@@ -1,10 +1,11 @@
 import { usePipedreamDynamicPropConfig } from '$/hooks/pipedreamProps/usePipedreamDynamicPropConfig'
-import { IntegrationDto, PipedreamComponent } from '@latitude-data/core/browser'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
 import { cn } from '@latitude-data/web-ui/utils'
 import type { ConfigurableProp } from '@pipedream/sdk/browser'
 import { useMemo } from 'react'
+import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { PipedreamComponent } from '@latitude-data/core/constants'
 
 export function isDynamicProp(prop: ConfigurableProp): boolean {
   if (prop.remoteOptions) return true

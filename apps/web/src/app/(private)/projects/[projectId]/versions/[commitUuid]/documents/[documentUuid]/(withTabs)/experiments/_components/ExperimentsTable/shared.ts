@@ -1,4 +1,4 @@
-import { ExperimentDto } from '@latitude-data/core/browser'
+import { ExperimentDto } from '@latitude-data/core/schema/types'
 
 export type ExperimentStatus = {
   isPending: boolean

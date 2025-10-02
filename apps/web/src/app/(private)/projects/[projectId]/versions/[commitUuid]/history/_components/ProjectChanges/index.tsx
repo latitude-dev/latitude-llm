@@ -1,7 +1,6 @@
 'use client'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersion from '$/stores/useDocumentVersion'
-import { Commit } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -17,6 +16,7 @@ import { CommitsList } from '../CommitsList'
 import { CommitChangesList } from '../CommitChangesList'
 import { ChangeDiffViewer } from '../ChangeDiffViewer'
 import { HistoryActionModal, HistoryActionModalProvider } from '../ActionModal'
+import { Commit } from '@latitude-data/core/schema/types'
 
 function DocumentFilterBanner({
   documentUuid,

@@ -1,10 +1,10 @@
 import pg from 'pg'
-import { User, Workspace } from '../../browser'
+import { User, Workspace } from '../../schema/types'
 import { BadRequestError, databaseErrorCodes } from '../../lib/errors'
 import { syncReadCsv } from '../../lib/readCsv'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { datasets } from '../../schema'
+import { datasets } from '../../schema/models/datasets'
 import { Column } from '../../schema/models/datasets'
 import { buildColumns, HashAlgorithmFn, nanoidHashAlgorithm } from './utils'
 const { DatabaseError } = pg

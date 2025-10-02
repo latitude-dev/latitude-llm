@@ -2,11 +2,6 @@ import {
   UseDocumentParameters,
   useDocumentParameters,
 } from '$/hooks/useDocumentParameters'
-import {
-  DocumentVersion,
-  INPUT_SOURCE,
-  InputSource,
-} from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import {
   CollapsibleBox,
@@ -31,6 +26,11 @@ import {
   useLogHistoryParams,
 } from '../../Playground/DocumentParams/HistoryLogParams/useLogHistoryParams'
 import { ManualParams } from '../../Playground/DocumentParams/ManualParams'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import {
+  INPUT_SOURCE,
+  InputSource,
+} from '@latitude-data/core/lib/documentPersistedInputs'
 
 export const TABS: TabSelectorOption<InputSource>[] = [
   { label: 'Manual', value: INPUT_SOURCE.manual },

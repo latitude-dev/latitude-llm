@@ -2,11 +2,9 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { env } from '@latitude-data/env'
 import { embedMany } from 'ai'
 import similarity from 'compute-cosine-similarity'
-import {
-  EvaluationType,
-  RuleEvaluationMetric,
-  RuleEvaluationSemanticSimilaritySpecification as specification,
-} from '../../../browser'
+import { EvaluationType } from '../../../constants'
+import { RuleEvaluationMetric } from '../../../constants'
+import { RuleEvaluationSemanticSimilaritySpecification as specification } from '../../../constants'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'

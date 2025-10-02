@@ -9,14 +9,6 @@ import {
 import { RealtimeToggle } from '$/components/RealtimeToggle'
 import { useEvaluationResultsV2 } from '$/stores/evaluationResultsV2'
 import { useEvaluationV2Stats } from '$/stores/evaluationsV2'
-import {
-  EvaluationMetric,
-  EvaluationResultsV2Search,
-  evaluationResultsV2SearchToQueryParams,
-  EvaluationResultV2WithDetails,
-  EvaluationType,
-  EvaluationV2,
-} from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
@@ -31,6 +23,16 @@ import { EvaluationActions } from './EvaluationActions'
 import { EvaluationFilters } from './EvaluationFilters'
 import { EvaluationResultsTable } from './EvaluationResults/Table'
 import { EvaluationStats } from './EvaluationStats'
+import {
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+} from '@latitude-data/core/constants'
+import {
+  EvaluationResultsV2Search,
+  evaluationResultsV2SearchToQueryParams,
+} from '@latitude-data/core/helpers'
+import { EvaluationResultV2WithDetails } from '@latitude-data/core/schema/types'
 
 const useEvaluationResultsV2Socket = <
   T extends EvaluationType = EvaluationType,

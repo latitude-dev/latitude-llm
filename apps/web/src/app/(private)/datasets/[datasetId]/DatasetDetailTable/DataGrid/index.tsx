@@ -5,7 +5,6 @@ import { DatasetRoleStyle } from '$/hooks/useDatasetRoles'
 import useDatasetRows from '$/stores/datasetRows'
 import { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
 import useDatasets from '$/stores/datasets'
-import { Dataset } from '@latitude-data/core/browser'
 import { ClientPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import type {
@@ -27,6 +26,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Suspense, useCallback, useMemo, useState } from 'react'
+import { Dataset } from '@latitude-data/core/schema/types'
 
 function rowKeyGetter(row: ClientDatasetRow) {
   return row.id

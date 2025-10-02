@@ -1,6 +1,6 @@
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
-import { unsafelyFindWorkspace } from '../../../data-access'
+import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { NotFoundError, UnprocessableEntityError } from '../../../lib/errors'
 import {
   CommitsRepository,

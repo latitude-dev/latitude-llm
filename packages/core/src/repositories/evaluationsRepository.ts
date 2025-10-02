@@ -1,20 +1,18 @@
 import { and, eq, getTableColumns, inArray, isNull } from 'drizzle-orm'
 import { omit } from 'lodash-es'
 
-import { EvaluationDto } from '../browser'
+import { EvaluationDto } from '../schema/types'
 import { EvaluationMetadataType, EvaluationResultableType } from '../constants'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { PromisedResult } from '../lib/Transaction'
-import {
-  connectedEvaluations,
-  evaluationConfigurationBoolean,
-  evaluationConfigurationNumerical,
-  evaluationConfigurationText,
-  evaluationMetadataLlmAsJudgeAdvanced,
-  evaluationMetadataLlmAsJudgeSimple,
-  evaluations,
-} from '../schema'
+import { connectedEvaluations } from '../schema/legacyModels/connectedEvaluations'
+import { evaluationConfigurationBoolean } from '../schema/legacyModels/evaluationConfigurationBoolean'
+import { evaluationConfigurationNumerical } from '../schema/legacyModels/evaluationConfigurationNumerical'
+import { evaluationConfigurationText } from '../schema/legacyModels/evaluationConfigurationText'
+import { evaluationMetadataLlmAsJudgeAdvanced } from '../schema/legacyModels/evaluationMetadataLlmAsJudgeAdvanced'
+import { evaluationMetadataLlmAsJudgeSimple } from '../schema/legacyModels/evaluationMetadataLlmAsJudgeSimple'
+import { evaluations } from '../schema/legacyModels/evaluations'
 import { evaluationMetadataManual } from '../schema/legacyModels/evaluationMetadataDefault'
 import { getSharedTableColumns } from '../schema/schemaHelpers'
 import RepositoryLegacy from './repository'

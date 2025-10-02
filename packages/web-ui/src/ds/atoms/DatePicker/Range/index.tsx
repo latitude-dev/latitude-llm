@@ -3,7 +3,7 @@
 import { format } from 'date-fns'
 import { useCallback, useMemo, useState } from 'react'
 
-import { RelativeDate } from '@latitude-data/core/browser'
+import type { RelativeDate } from '@latitude-data/core/constants'
 import { DateRange } from 'react-day-picker'
 import { cn } from '../../../../lib/utils'
 import { Button } from '../../Button'

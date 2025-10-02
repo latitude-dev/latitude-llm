@@ -12,8 +12,6 @@ import { AMAZON_BEDROCK_MODELS } from '../../estimateCost/amazonBedrock'
 import { DEEPSEEK_MODELS } from '../../estimateCost/deepseek'
 import { PERPLEXITY_MODELS } from '../../estimateCost/perplexity'
 
-export { Providers } from '@latitude-data/constants'
-
 export const DEFAULT_PROVIDER_SUPPORTED_MODELS = [
   'gpt-4o-mini',
   'gpt-4o',

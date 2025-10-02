@@ -6,7 +6,9 @@ import {
 } from '../../constants'
 import { Result } from '../../lib/Result'
 import { DocumentLogsRepository } from '../../repositories'
-import { commits, documentLogs, projects } from '../../schema'
+import { commits } from '../../schema/models/commits'
+import { documentLogs } from '../../schema/models/documentLogs'
+import { projects } from '../../schema/models/projects'
 import { computeProjectStats } from './computeProjectStats'
 
 async function countByProject(projectId: number, db = database) {

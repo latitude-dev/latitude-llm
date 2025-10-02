@@ -1,9 +1,6 @@
 import Ajv from 'ajv'
-import {
-  EvaluationType,
-  RuleEvaluationMetric,
-  RuleEvaluationSchemaValidationSpecification as specification,
-} from '../../../browser'
+import { EvaluationType, RuleEvaluationMetric } from '../../../constants'
+import { RuleEvaluationSchemaValidationSpecification as specification } from '../../../constants'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'

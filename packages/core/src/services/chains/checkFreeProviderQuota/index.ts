@@ -1,14 +1,11 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 
-import {
-  DEFAULT_PROVIDER_MAX_FREE_RUNS,
-  DEFAULT_PROVIDER_SUPPORTED_MODELS,
-  ProviderApiKey,
-  Workspace,
-} from '../../../browser'
+import { DEFAULT_PROVIDER_MAX_FREE_RUNS } from '../../../constants'
+import { ProviderApiKey, Workspace } from '../../../schema/types'
 import { Result } from '../../../lib/Result'
 import { incrFreeRuns } from '../../freeRunsManager'
+import { DEFAULT_PROVIDER_SUPPORTED_MODELS } from '../../ai/providers/models'
 
 export async function checkFreeProviderQuota({
   workspace,

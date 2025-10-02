@@ -1,14 +1,14 @@
 import { and, eq } from 'drizzle-orm'
 
 import { database } from '../../client'
-import { unsafelyFindWorkspace } from '../../data-access'
+import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
-import { publishedDocuments } from '../../schema'
+import { publishedDocuments } from '../../schema/models/publishedDocuments'
 
 const NotFound = Result.error(
   new NotFoundError(
@@ -18,12 +18,17 @@ const NotFound = Result.error(
 
 async function findByUuid(uuid: string, db = database) {
   try {
-    const shared = await db.query.publishedDocuments.findFirst({
-      where: and(
-        eq(publishedDocuments.uuid, uuid),
-        eq(publishedDocuments.isPublished, true),
-      ),
-    })
+    const shared = await db
+      .select()
+      .from(publishedDocuments)
+      .where(
+        and(
+          eq(publishedDocuments.uuid, uuid),
+          eq(publishedDocuments.isPublished, true),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0])
     return Result.ok(shared)
   } catch {
     return NotFound

@@ -1,6 +1,6 @@
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { LogSources, Providers } from '../../../constants'
+import { LogSources, Providers } from '@latitude-data/constants'
 import { diskFactory } from '../../../lib/disk'
 import { Result } from '../../../lib/Result'
 import { buildRedisConnection } from '../../../redis'

@@ -4,17 +4,15 @@ import {
   DEFAULT_PAGINATION_SIZE,
   DocumentLogFilterOptions,
   ErrorableEntity,
-  Workspace,
-} from '../../browser'
+} from '../../constants'
+import { Workspace } from '../../schema/types'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import {
-  commits,
-  documentLogs,
-  projects,
-  runErrors,
-  workspaces,
-} from '../../schema'
+import { commits } from '../../schema/models/commits'
+import { documentLogs } from '../../schema/models/documentLogs'
+import { projects } from '../../schema/models/projects'
+import { runErrors } from '../../schema/models/runErrors'
+import { workspaces } from '../../schema/models/workspaces'
 import { fetchDocumentLogWithMetadata } from './fetchDocumentLogWithMetadata'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 

@@ -1,6 +1,6 @@
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { features } from '../../schema'
+import { features } from '../../schema/models/features'
 
 export type CreateFeatureProps = {
   name: string

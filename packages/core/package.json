@@ -4,118 +4,95 @@
   "description": "Core services used across the latitude LLM stack",
   "type": "module",
   "exports": {
-    "./__deprecated/*": {
-      "types": "./dist/types/__deprecated/*.d.ts",
-      "import": "./src/__deprecated/*.ts"
-    },
-    "./browser": {
-      "types": "./dist/types/browser.d.ts",
-      "import": "./src/browser.ts"
-    },
-    "./cache": {
-      "types": "./dist/types/cache/index.d.ts",
-      "import": "./src/cache/index.ts"
-    },
     "./client": {
-      "types": "./dist/types/client/index.d.ts",
       "import": "./src/client/index.ts"
     },
+    "./constants": {
+      "import": "./src/constants.ts"
+    },
+    "./helpers": {
+      "import": "./src/helpers.ts"
+    },
+    "./plans": {
+      "import": "./src/plans.ts"
+    },
+    "./cache": {
+      "import": "./src/cache/index.ts"
+    },
     "./data-access": {
-      "types": "./dist/types/data-access/index.d.ts",
       "import": "./src/data-access/index.ts"
     },
     "./data-access/*": {
-      "types": "./dist/types/data-access/*.d.ts",
       "import": "./src/data-access/*.ts"
     },
     "./data-migrations": {
-      "types": "./dist/types/data-migrations/index.d.ts",
       "import": "./src/data-migrations/index.ts"
     },
     "./events/*": {
-      "types": "./dist/types/events/*.d.ts",
       "import": "./src/events/*.ts"
     },
     "./factories": {
-      "types": "./dist/types/tests/factories/index.d.ts",
       "import": "./src/tests/factories/index.ts"
     },
     "./jobs": {
-      "types": "./dist/types/jobs/index.d.ts",
       "import": "./src/jobs/index.ts"
     },
     "./jobs/constants": {
-      "types": "./dist/types/jobs/constants.d.ts",
       "import": "./src/jobs/constants.ts"
     },
     "./jobs/definitions": {
-      "types": "./dist/types/jobs/job-definitions/index.d.ts",
       "import": "./src/jobs/job-definitions/index.ts"
     },
     "./lib/*": {
-      "types": "./dist/types/lib/*.d.ts",
       "import": "./src/lib/*.ts"
     },
     "./mailers": {
-      "types": "./dist/types/mailers/index.d.ts",
       "import": "./src/mailers/index.ts"
     },
     "./queues": {
-      "types": "./dist/types/jobs/queues/index.d.ts",
       "import": "./src/jobs/queues/index.ts"
     },
     "./queues/types": {
-      "types": "./dist/types/jobs/queues/types.d.ts",
       "import": "./src/jobs/queues/types.ts"
     },
     "./redis": {
-      "types": "./dist/types/redis/index.d.ts",
       "import": "./src/redis/index.ts"
     },
     "./repositories": {
-      "types": "./dist/types/repositories/index.d.ts",
       "import": "./src/repositories/index.ts"
     },
     "./repositories/*": {
-      "types": "./dist/types/repositories/*.d.ts",
       "import": "./src/repositories/*.ts"
     },
-    "./schema": {
-      "types": "./dist/types/schema/index.d.ts",
-      "import": "./src/schema/index.ts"
+    "./schema/types": {
+      "import": "./src/schema/types.ts"
     },
-    "./schema/*": {
-      "types": "./dist/types/schema/*.d.ts",
-      "import": "./src/schema/*.ts"
+    "./schema/models/*": {
+      "import": "./src/schema/models/*.ts"
+    },
+    "./schema/legacyModels/*": {
+      "import": "./src/schema/legacyModels/*.ts"
     },
     "./services/*": {
-      "types": "./dist/types/services/*.d.ts",
       "import": "./src/services/*.ts"
     },
     "./test": {
-      "types": "./dist/types/tests/useTestDatabase.d.ts",
       "import": "./src/tests/useTestDatabase.ts"
     },
     "./websockets/*": {
-      "types": "./dist/types/websockets/*.d.ts",
       "import": "./src/websockets/*.ts"
     },
     "./workers/*": {
-      "types": "./dist/types/workers/*.d.ts",
       "import": "./src/workers/*.js"
     },
     "./utils/*": {
-      "types": "./dist/types/utils/*.d.ts",
       "import": "./src/utils/*.ts"
     },
     "./telemetry": {
-      "types": "./dist/types/telemetry/index.d.ts",
       "import": "./src/telemetry/index.ts"
     }
   },
   "scripts": {
-    "types:build": "tsc -p tsconfig.build.json",
-    "types:build:watch": "tsc --watch -p tsconfig.build.json",
     "db:generate": "drizzle-kit generate",
     "db:generate:custom": "pnpm run db:generate --custom",
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
@@ -143,10 +120,9 @@
     "@anthropic-ai/sdk": "0.32.1",
     "@aws-sdk/client-s3": "3.850.0",
     "@aws-sdk/s3-request-presigner": "3.850.0",
-    "@google-cloud/storage": "^7.7.0",
     "@codesandbox/sdk": "2.2.1",
+    "@google-cloud/storage": "^7.7.0",
     "@kubernetes/client-node": "1.0.0",
-    "@latitude-data/compiler": "workspace:^",
     "@latitude-data/constants": "workspace:*",
     "@latitude-data/env": "workspace:*",
     "@latitude-data/eslint-config": "workspace:*",
@@ -180,7 +156,6 @@
     "fastest-levenshtein": "1.0.16",
     "flydrive": "1.3.0",
     "ioredis": "5.6.0",
-    "rate-limiter-flexible": "5.0.3",
     "istextorbinary": "9.5.0",
     "jose": "5.8.0",
     "js-rouge": "3.0.0",
@@ -199,6 +174,7 @@
     "piscina": "5.0.0",
     "posthog-node": "4.2.0",
     "promptl-ai": "catalog:",
+    "rate-limiter-flexible": "5.0.3",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-email": "4.0.3",
@@ -225,10 +201,12 @@
     "@types/react-dom": "catalog:",
     "@types/safe-regex": "^1.1.6",
     "@types/uuid": "^10.0.0",
+    "@typescript/analyze-trace": "^0.10.1",
     "drizzle-kit": "catalog:",
     "eslint": "8",
     "eslint-plugin-drizzle": "^0.2.3",
     "pg-transactional-tests": "^1.0.9",
+    "recast": "^0.23.11",
     "supertest": "^7.0.0",
     "svelte": "^4.2.19",
     "vitest": "^3.1.4",

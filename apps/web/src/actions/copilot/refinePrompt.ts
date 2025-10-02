@@ -1,7 +1,6 @@
 'use server'
 
 import { createSdk } from '$/app/(private)/_lib/createSdk'
-import { CLOUD_MESSAGES } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
 import {
   BadRequestError,
@@ -18,6 +17,7 @@ import {
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
 import { withDocument } from '../procedures'
+import { CLOUD_MESSAGES } from '@latitude-data/core/constants'
 
 export const refinePromptAction = withDocument
   .createServerAction()

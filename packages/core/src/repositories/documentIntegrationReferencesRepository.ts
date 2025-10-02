@@ -9,13 +9,11 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import { Commit, DocumentIntegrationReference } from '../browser'
-import {
-  documentIntegrationReferences,
-  documentVersions,
-  commits,
-  projects,
-} from '../schema'
+import { Commit, DocumentIntegrationReference } from '../schema/types'
+import { documentIntegrationReferences } from '../schema/models/documentIntegrationReferences'
+import { documentVersions } from '../schema/models/documentVersions'
+import { commits } from '../schema/models/commits'
+import { projects } from '../schema/models/projects'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(documentIntegrationReferences)

@@ -1,5 +1,3 @@
-import { Workspace } from '@latitude-data/core/browser'
-
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -19,6 +17,7 @@ import {
   NotFoundError,
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
+import { Workspace } from '@latitude-data/core/schema/types'
 
 function isCustomLlmEvaluation(
   evaluation: EvaluationV2,

@@ -4,19 +4,20 @@ import {
   Commit,
   Dataset,
   DatasetRow,
-  DEFAULT_DATASET_LABEL,
   DocumentVersion,
-  EvaluationType,
   EvaluationV2,
   Experiment,
-  HumanEvaluationMetric,
   Project,
   ProviderLogDto,
-  Providers,
-  RuleEvaluationMetric,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { DEFAULT_DATASET_LABEL, HumanEvaluationMetric } from '../../constants'
+import {
+  EvaluationType,
+  Providers,
+  RuleEvaluationMetric,
+} from '@latitude-data/constants'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import * as factories from '../../tests/factories'

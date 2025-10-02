@@ -2,16 +2,16 @@
 
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2,
-} from '@latitude-data/core/browser'
-import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { createContext, ReactNode, useContext, useMemo } from 'react'
 import { useCurrentDocument } from './DocumentProvider'
+import {
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+} from '@latitude-data/core/constants'
 
 type IEvaluationV2ContextType<
   T extends EvaluationType = EvaluationType,

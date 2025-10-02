@@ -1,4 +1,4 @@
-import { Workspace } from '../../browser'
+import { Workspace } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { SubscriptionPlans } from '../../plans'

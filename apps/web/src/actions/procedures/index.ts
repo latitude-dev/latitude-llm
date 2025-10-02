@@ -7,15 +7,15 @@ import {
   RateLimitError,
   UnauthorizedError,
 } from '@latitude-data/constants/errors'
-import { Dataset } from '@latitude-data/core/browser'
+import { Dataset } from '@latitude-data/core/schema/types'
 import { cache } from '@latitude-data/core/cache'
 import {
   CommitsRepository,
-  DatasetsRepository,
   DocumentVersionsRepository,
   EvaluationsV2Repository,
   ProjectsRepository,
 } from '@latitude-data/core/repositories'
+import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { ReplyError } from 'ioredis'
 import { headers } from 'next/headers'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'

@@ -2,13 +2,13 @@ import { eq } from 'drizzle-orm'
 import pg from 'pg'
 const { DatabaseError } = pg
 
-import { Commit } from '../../browser'
+import { Commit } from '../../schema/types'
 import { unsafelyFindCommitsByProjectId } from '../../data-access/commits'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError, databaseErrorCodes } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { commits } from '../../schema'
+import { commits } from '../../schema/models/commits'
 import { pingProjectUpdate } from '../projects'
 
 export async function deleteCommitDraft(

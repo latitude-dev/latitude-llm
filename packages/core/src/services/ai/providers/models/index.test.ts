@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { ProviderApiKey } from '../../../../schema/types'
-import { findFirstModelForProvider, PROVIDER_MODELS, Providers } from './index'
+import { findFirstModelForProvider, PROVIDER_MODELS } from './index'
+import { Providers } from '@latitude-data/constants'
 
 describe('findFirstModelForProvider', () => {
   let provider: ProviderApiKey

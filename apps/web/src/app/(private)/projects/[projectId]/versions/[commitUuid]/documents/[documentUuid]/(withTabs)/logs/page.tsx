@@ -8,14 +8,6 @@ import {
 } from '$/app/(private)/_data-access'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import {
-  Commit,
-  Cursor,
-  DocumentLogFilterOptions,
-  DocumentVersion,
-  LIMITED_VIEW_THRESHOLD,
-  Workspace,
-} from '@latitude-data/core/browser'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import {
   computeDocumentLogLimitedCursor,
@@ -29,6 +21,16 @@ import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs
 import { DocumentLogsPage } from './_components'
 import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
 import buildMetatags from '$/app/_lib/buildMetatags'
+import {
+  Commit,
+  Cursor,
+  DocumentVersion,
+  Workspace,
+} from '@latitude-data/core/schema/types'
+import {
+  DocumentLogFilterOptions,
+  LIMITED_VIEW_THRESHOLD,
+} from '@latitude-data/core/constants'
 
 export const metadata = buildMetatags({
   locationDescription: 'Document Logs Page',

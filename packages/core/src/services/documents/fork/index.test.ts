@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { Commit, DocumentVersion, User, Workspace } from '../../../browser'
+import { Commit, DocumentVersion, User, Workspace } from '../../../schema/types'
 import { forkDocument } from '.'
 
 const publisherSpy = vi.spyOn(

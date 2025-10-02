@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 
-import { Membership } from '../../browser'
+import { Membership } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { memberships } from '../../schema'
+import { memberships } from '../../schema/models/memberships'
 
 export function destroyMembership(
   membership: Membership,

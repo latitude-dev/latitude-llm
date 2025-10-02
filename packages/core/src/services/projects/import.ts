@@ -7,12 +7,12 @@ import {
   Project,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
-import { projects } from '../../schema'
+import { projects } from '../../schema/models/projects'
 import { createNewDocument } from '../documents'
 import { createProject } from './create'
 
@@ -31,9 +31,12 @@ export async function importOnboardingProject(
     commit: Commit
     documents: DocumentVersion[]
   }>(async (tx) => {
-    const defaultProject = await tx.query.projects.findFirst({
-      where: eq(projects.id, env.DEFAULT_PROJECT_ID ?? -1),
-    })
+    const defaultProject = await tx
+      .select()
+      .from(projects)
+      .where(eq(projects.id, env.DEFAULT_PROJECT_ID ?? -1))
+      .limit(1)
+      .then((rows) => rows[0])
     if (!defaultProject) {
       return Result.error(new NotFoundError('Default project not found'))
     }

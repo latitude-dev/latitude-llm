@@ -1,4 +1,4 @@
-import { unsafelyFindWorkspace } from '../../data-access'
+import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { WebsocketClient } from '../../websockets/workers'
 import { DocumentTriggerEventCreatedEvent } from '../events'

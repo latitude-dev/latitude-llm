@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { Providers, User, Workspace } from '../browser'
+import { Providers } from '@latitude-data/constants'
+import { User, Workspace } from '../schema/types'
 import { NotFoundError } from '../lib/errors'
 import * as factories from '../tests/factories'
 import { ProviderApiKeysRepository } from './providerApiKeysRepository'

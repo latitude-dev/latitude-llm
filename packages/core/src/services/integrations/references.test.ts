@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Project, IntegrationDto, Workspace, Commit } from '../../browser'
+import { Project, IntegrationDto, Workspace, Commit } from '../../schema/types'
 import { listIntegrationReferences } from './references'
 import {
   DocumentVersion,
@@ -21,7 +21,7 @@ vi.mock('../documentTriggers/deploy', () => ({
   undeployDocumentTrigger: mocks.undeployDocumentTrigger,
 }))
 
-describe('listReferences', () => {
+describe('listIntegrationReferences', () => {
   let workspace: Workspace
   let project: Project
   let document: DocumentVersion

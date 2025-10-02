@@ -1,5 +1,4 @@
 import { ROUTES } from '$/services/routes'
-import { User } from '@latitude-data/core/browser'
 import { createProject } from '@latitude-data/core/factories'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
@@ -7,6 +6,7 @@ import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkToke
 import { redirect } from 'next/navigation'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { confirmMagicLinkTokenAction } from './confirm'
+import { User } from '@latitude-data/core/schema/types'
 
 vi.mock('next/navigation', () => ({
   redirect: vi.fn(),

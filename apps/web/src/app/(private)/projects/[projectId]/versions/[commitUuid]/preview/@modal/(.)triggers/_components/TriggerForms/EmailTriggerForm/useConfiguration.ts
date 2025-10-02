@@ -4,7 +4,7 @@ import useUsers from '$/stores/users'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { DocumentTriggerParameters } from '@latitude-data/constants'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export enum EmailAvailabilityOptions {
   Public = 'public',

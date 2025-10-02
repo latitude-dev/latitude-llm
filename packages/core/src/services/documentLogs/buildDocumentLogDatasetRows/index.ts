@@ -3,12 +3,14 @@ import {
   Dataset,
   DocumentLogWithMetadataAndError,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { ProviderLogsRepository } from '../../../repositories'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../../repositories/documentLogsWithMetadataAndErrorsRepository'
-import { Column, DatasetRowData, documentLogs } from '../../../schema'
+import { Column } from '../../../schema/models/datasets'
+import { DatasetRowData } from '../../../schema/models/datasetRows'
+import { documentLogs } from '../../../schema/models/documentLogs'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from '../../datasets/utils'
 import { buildProviderLogResponse } from '../../providerLogs/buildResponse'
 import { hydrateProviderLog } from '../../providerLogs/hydrate'

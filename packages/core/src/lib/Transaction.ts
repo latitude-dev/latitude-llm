@@ -1,19 +1,11 @@
-import type { ExtractTablesWithRelations } from 'drizzle-orm'
-import { PgQueryResultHKT, PgTransaction } from 'drizzle-orm/pg-core'
+import { PgTransaction } from 'drizzle-orm/pg-core'
 import { type DatabaseError } from 'pg'
 
 import { database, Database } from '../client'
-import * as schema from '../schema'
 import { ConflictError, UnprocessableEntityError } from './errors'
 import { ErrorResult, Result, TypedResult } from './Result'
 import { captureException } from '@sentry/node'
 
-export type DBSchema = typeof schema
-export type ITransaction<T extends DBSchema = DBSchema> = PgTransaction<
-  PgQueryResultHKT,
-  T,
-  ExtractTablesWithRelations<typeof schema>
->
 export type PromisedResult<F, E extends Error = Error> = Promise<
   TypedResult<F, E>
 >

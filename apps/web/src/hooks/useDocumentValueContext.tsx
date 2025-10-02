@@ -6,7 +6,6 @@ import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import useDocumentVersions from '$/stores/documentVersions'
 import useIntegrations from '$/stores/integrations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import {
   useCurrentCommit,
@@ -23,6 +22,11 @@ import {
 } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import type { ReadMetadataWorkerProps } from '../workers/readMetadata'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+} from '@latitude-data/core/schema/types'
 
 export type updateContentFn = (
   content: string,

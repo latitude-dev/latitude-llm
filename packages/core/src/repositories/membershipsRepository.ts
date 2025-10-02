@@ -1,9 +1,9 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
-import { Membership } from '../browser'
+import { Membership } from '../schema/types'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import { memberships } from '../schema'
+import { memberships } from '../schema/models/memberships'
 import RepositoryLegacy from './repository'
 
 const tt = getTableColumns(memberships)

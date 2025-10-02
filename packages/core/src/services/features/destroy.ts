@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { features } from '../../schema'
+import { features } from '../../schema/models/features'
 
 export async function destroyFeature(
   feature: { id: number; name: string; description?: string | null },

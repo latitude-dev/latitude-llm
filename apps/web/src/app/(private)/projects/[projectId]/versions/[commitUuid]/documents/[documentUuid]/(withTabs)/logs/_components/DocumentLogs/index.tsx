@@ -9,14 +9,6 @@ import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs from '$/stores/providerLogs'
 import { useSpan } from '$/stores/spans'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-import {
-  DocumentLogFilterOptions,
-  DocumentLogsAggregations,
-  DocumentLogsLimitedView,
-  DocumentLogWithMetadataAndError,
-  EvaluationV2,
-  ResultWithEvaluationV2,
-} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -37,6 +29,16 @@ import { ResizableLayout } from './ResizableLayout'
 import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
 import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
 import { useSelectedLogFromUrl } from './useSelectedLogFromUrl'
+import {
+  DocumentLogFilterOptions,
+  EvaluationV2,
+} from '@latitude-data/core/constants'
+import {
+  DocumentLogsAggregations,
+  DocumentLogsLimitedView,
+  DocumentLogWithMetadataAndError,
+  ResultWithEvaluationV2,
+} from '@latitude-data/core/schema/types'
 
 export function DocumentLogs({
   documentLogFilterOptions,

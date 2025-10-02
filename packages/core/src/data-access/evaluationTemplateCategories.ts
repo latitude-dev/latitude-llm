@@ -1,18 +1,21 @@
+import { evaluationTemplateCategories } from '../schema/legacyModels/evaluationTemplateCategories'
 import { eq } from 'drizzle-orm'
 
-import { EvaluationTemplateCategory } from '../browser'
+import { EvaluationTemplateCategory } from '../schema/types'
 import { database } from '../client'
 import { NotFoundError } from '../lib/errors'
 import { Result, TypedResult } from '../lib/Result'
-import { evaluationTemplateCategories } from '../schema'
 
 export async function findEvaluationTemplateCategoryById(
   id: number,
   db = database,
 ): Promise<TypedResult<EvaluationTemplateCategory, Error>> {
-  const result = await db.query.evaluationTemplateCategories.findFirst({
-    where: eq(evaluationTemplateCategories.id, id),
-  })
+  const result = await db
+    .select()
+    .from(evaluationTemplateCategories)
+    .where(eq(evaluationTemplateCategories.id, id))
+    .limit(1)
+    .then((rows) => rows[0])
 
   if (!result) {
     return Result.error(

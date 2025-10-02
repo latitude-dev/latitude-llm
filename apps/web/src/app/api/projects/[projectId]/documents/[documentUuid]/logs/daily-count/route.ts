@@ -1,10 +1,10 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { Workspace } from '@latitude-data/core/browser'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { computeDocumentLogsDailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
 import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 import { NextRequest, NextResponse } from 'next/server'
+import { Workspace } from '@latitude-data/core/schema/types'
 
 export const GET = errorHandler(
   authHandler(

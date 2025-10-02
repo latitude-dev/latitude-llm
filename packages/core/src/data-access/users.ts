@@ -1,8 +1,9 @@
+import { memberships } from '../schema/models/memberships'
+import { users } from '../schema/models/users'
 import { asc, eq, getTableColumns } from 'drizzle-orm'
 
-import { User, Workspace, WorkspaceDto } from '../browser'
+import { User, Workspace, WorkspaceDto } from '../schema/types'
 import { database } from '../client'
-import { memberships, users } from '../schema'
 
 export async function findFirstUserInWorkspace(
   workspace: WorkspaceDto | Workspace,
@@ -19,23 +20,31 @@ export async function findFirstUserInWorkspace(
 }
 
 export function unsafelyGetUser(id?: string) {
-  return database.query.users.findFirst({
-    where: eq(users.id, id ?? ''),
-  }) as Promise<User | null>
+  return database
+    .select()
+    .from(users)
+    .where(eq(users.id, id ?? ''))
+    .limit(1)
+    .then((rows) => rows[0] || null) as Promise<User | null>
 }
 
 export function unsafelyGetUserByEmail(email?: string) {
-  return database.query.users.findFirst({
-    where: eq(users.email, email ?? ''),
-  }) as Promise<User | null>
+  return database
+    .select()
+    .from(users)
+    .where(eq(users.email, email ?? ''))
+    .limit(1)
+    .then((rows) => rows[0] || null) as Promise<User | null>
 }
 
 export async function unsafelyFindUserByEmail(email: string, db = database) {
-  return db.query.users.findFirst({
-    columns: {
-      id: true,
-      email: true,
-    },
-    where: eq(users.email, email),
-  })
+  return db
+    .select({
+      id: users.id,
+      email: users.email,
+    })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1)
+    .then((rows) => rows[0])
 }

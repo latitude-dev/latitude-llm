@@ -2,15 +2,6 @@ import { useCallback, useMemo, useRef } from 'react'
 
 import { useDatasetUtils } from '$/hooks/useDocumentParameters/datasetUtils'
 import {
-  DocumentLog,
-  DocumentVersion,
-  INPUT_SOURCE,
-  Inputs,
-  InputSource,
-  LogSources,
-  PlaygroundInput,
-} from '@latitude-data/core/browser'
-import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
@@ -28,6 +19,14 @@ import {
 } from './utils'
 import { type ResolvedMetadata } from '$/workers/readMetadata'
 import { useEvents } from '$/lib/events'
+import { DocumentLog, LogSources } from '@latitude-data/core/constants'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import {
+  INPUT_SOURCE,
+  Inputs,
+  InputSource,
+  PlaygroundInput,
+} from '@latitude-data/core/lib/documentPersistedInputs'
 
 function convertToParams(inputs: Inputs<InputSource>) {
   return Object.fromEntries(

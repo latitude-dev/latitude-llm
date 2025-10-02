@@ -7,8 +7,8 @@ import useDocumentLogWithPaginationPosition, {
   LogWithPosition,
 } from '$/stores/documentLogWithPaginationPosition'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-import { DocumentVersion } from '@latitude-data/core/browser'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 const ONLY_ONE_PAGE = '1'
 

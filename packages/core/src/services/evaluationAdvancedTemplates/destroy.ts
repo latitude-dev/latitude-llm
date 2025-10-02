@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { evaluationAdvancedTemplates } from '../../schema'
+import { evaluationAdvancedTemplates } from '../../schema/legacyModels/evaluationAdvancedTemplates'
 
 export function destroyEvaluationTemplate(
   { id }: { id: number },

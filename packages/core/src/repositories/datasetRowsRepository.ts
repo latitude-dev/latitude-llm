@@ -8,9 +8,10 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import { DatasetRow, Dataset, DEFAULT_PAGINATION_SIZE } from '../browser'
+import { DatasetRow, Dataset } from '../schema/types'
+import { DEFAULT_PAGINATION_SIZE } from '../constants'
 import { calculateOffset } from '../lib/pagination/calculateOffset'
-import { datasetRows } from '../schema'
+import { datasetRows } from '../schema/models/datasetRows'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(datasetRows)

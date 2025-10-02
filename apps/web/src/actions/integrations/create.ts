@@ -10,8 +10,8 @@ import {
   hostedMcpIntegrationConfigurationFormSchema,
   pipedreamIntegrationConfigurationSchema,
 } from '@latitude-data/core/services/integrations/helpers/schema'
-import { Workspace } from '@latitude-data/core/browser'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
+import { Workspace } from '@latitude-data/core/schema/types'
 
 const nameSchema = (workspace: Workspace) =>
   z

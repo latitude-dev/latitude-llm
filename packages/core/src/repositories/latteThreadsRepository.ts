@@ -1,9 +1,10 @@
 import { and, eq, getTableColumns, inArray } from 'drizzle-orm'
 
-import { LatteThread, LatteThreadCheckpoint } from '../browser'
+import { LatteThread, LatteThreadCheckpoint } from '../schema/types'
 import { Result } from '../lib/Result'
 import { PromisedResult } from '../lib/Transaction'
-import { latteThreadCheckpoints, latteThreads } from '../schema'
+import { latteThreadCheckpoints } from '../schema/models/latteThreadCheckpoints'
+import { latteThreads } from '../schema/models/latteThreads'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(latteThreads)

@@ -5,7 +5,12 @@ import {
   IntegrationType,
   Providers,
 } from '@latitude-data/constants'
-import { Commit, DocumentVersion, Project, Workspace } from '../../../browser'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+  Workspace,
+} from '../../../schema/types'
 import * as factories from '../../../tests/factories'
 import { cloneDocumentTriggers } from './cloneTriggers'
 import { IntegrationMapping } from './types'

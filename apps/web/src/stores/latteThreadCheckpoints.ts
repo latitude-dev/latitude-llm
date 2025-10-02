@@ -1,10 +1,9 @@
 'use client'
-
-import { LatteThreadCheckpoint } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import useSWR from 'swr'
 import { ROUTES } from '$/services/routes'
 import { useMemo } from 'react'
+import { LatteThreadCheckpoint } from '@latitude-data/core/schema/types'
 
 export default function useLatteThreadCheckpoints({
   threadUuid,

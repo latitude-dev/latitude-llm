@@ -7,12 +7,12 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
-import { PublishedDocument } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { ButtonProps } from '@latitude-data/web-ui/atoms/Button'
 import { useMaybeSession } from '@latitude-data/web-ui/providers'
 import { MouseEvent, useCallback, useState } from 'react'
+import { PublishedDocument } from '@latitude-data/core/schema/types'
 
 export function ForkButton({
   shared,

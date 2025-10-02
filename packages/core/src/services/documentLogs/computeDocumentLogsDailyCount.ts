@@ -1,9 +1,10 @@
 import { subDays } from 'date-fns'
 import { and, eq, gte, inArray, isNull, sql } from 'drizzle-orm'
-import { DocumentLogFilterOptions } from '../../browser'
+import { DocumentLogFilterOptions } from '../../constants'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { commits, documentLogs } from '../../schema'
+import { commits } from '../../schema/models/commits'
+import { documentLogs } from '../../schema/models/documentLogs'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export type DailyCount = {

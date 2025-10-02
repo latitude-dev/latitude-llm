@@ -1,6 +1,6 @@
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { workspaces } from '../../schema'
+import { workspaces } from '../../schema/models/workspaces'
 
 export async function findAllWorkspacesForAdmin(db = database) {
   const allWorkspaces = await db

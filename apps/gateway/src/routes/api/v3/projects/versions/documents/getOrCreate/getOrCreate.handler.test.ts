@@ -1,13 +1,6 @@
 import app from '$/routes/app'
 import { LatitudeErrorCodes } from '@latitude-data/constants/errors'
-import {
-  Commit,
-  Project,
-  ProviderApiKey,
-  User,
-  Workspace,
-} from '@latitude-data/core/browser'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import {
   createDocumentVersion,
   createDraft,
@@ -20,6 +13,13 @@ import {
 } from '@latitude-data/core/repositories'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  Commit,
+  Project,
+  ProviderApiKey,
+  User,
+  Workspace,
+} from '@latitude-data/core/schema/types'
 
 const mocks = vi.hoisted(() => ({
   queues: {

@@ -8,7 +8,7 @@ import {
   PipedreamIntegration,
   User,
   Project,
-} from '../../../../../browser'
+} from '../../../../../schema/types'
 import { Result } from '../../../../../lib/Result'
 import { validateTriggerSchema } from './validateTriggerSchema'
 import { LatteToolContext } from '../types'

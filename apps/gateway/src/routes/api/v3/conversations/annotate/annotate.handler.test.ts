@@ -1,4 +1,4 @@
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import {
   createProject,
   createDocumentLog,
@@ -7,18 +7,20 @@ import {
   helpers,
 } from '@latitude-data/core/factories'
 import { MessageRole, Message } from '@latitude-data/constants/legacyCompiler'
-import {
-  LogSources,
-  Providers,
-  EvaluationType,
-  HumanEvaluationMetric,
-  ApiKey,
-  EvaluationV2,
-  DocumentLog,
-} from '@latitude-data/core/browser'
 import app from '$/routes/app'
 import { describe, expect, it } from 'vitest'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
+import {
+  LogSources,
+  EvaluationType,
+  HumanEvaluationMetric,
+} from '@latitude-data/core/constants'
+import { Providers } from '@latitude-data/constants'
+import {
+  ApiKey,
+  EvaluationV2,
+  DocumentLog,
+} from '@latitude-data/core/schema/types'
 
 describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/annotate', () => {
   // Default test messages for provider logs

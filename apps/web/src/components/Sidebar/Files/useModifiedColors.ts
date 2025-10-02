@@ -1,10 +1,10 @@
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
 import {
   MODIFICATION_BACKGROUNDS,
   MODIFICATION_BACKGROUNDS_HOVER,
   MODIFICATION_COLORS,
 } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { useMemo } from 'react'
+import { ModifiedDocumentType } from '@latitude-data/core/constants'
 
 export function useModifiedColors({
   changeType,

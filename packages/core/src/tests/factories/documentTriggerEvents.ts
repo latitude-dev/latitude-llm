@@ -1,6 +1,6 @@
-import { DocumentTrigger, DocumentTriggerEvent } from '../../browser'
+import { DocumentTrigger, DocumentTriggerEvent } from '../../schema/types'
 import { database } from '../../client'
-import { documentTriggerEvents } from '../../schema'
+import { documentTriggerEvents } from '../../schema/models/documentTriggerEvents'
 import { createProject } from './createProject'
 
 export async function createDocumentTriggerEventBase({

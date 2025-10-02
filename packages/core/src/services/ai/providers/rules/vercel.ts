@@ -5,7 +5,7 @@ import type {
 } from '@latitude-data/constants/legacyCompiler'
 import { FilePart, ToolCallPart } from 'ai'
 
-import { Providers } from '../models'
+import { Providers } from '@latitude-data/constants'
 import {
   extractContentMetadata,
   extractMessageMetadata,

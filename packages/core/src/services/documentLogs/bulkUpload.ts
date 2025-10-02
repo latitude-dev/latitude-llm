@@ -1,4 +1,4 @@
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
 import { LogSources } from '../../constants'
 import { queues } from '../../jobs/queues'
 import { syncReadCsv } from '../../lib/readCsv'

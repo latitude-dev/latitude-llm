@@ -28,7 +28,5 @@ export const apiKeys = latitudeSchema.table(
     deletedAt: timestamp('deleted_at'),
     ...timestamps(),
   },
-  (table) => ({
-    workspaceIdIdx: index('workspace_id_idx').on(table.workspaceId),
-  }),
+  (table) => [index('workspace_id_idx').on(table.workspaceId)],
 )

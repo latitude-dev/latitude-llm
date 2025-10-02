@@ -1,7 +1,7 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { Job } from 'bullmq'
 
-import { Commit } from '../../../browser'
+import { Commit } from '../../../schema/types'
 import { LogSources } from '../../../constants'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { DocumentVersionsRepository } from '../../../repositories'

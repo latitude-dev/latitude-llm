@@ -2,10 +2,10 @@ import {
   getEvaluationMetricSpecification,
   getEvaluationTypeSpecification,
 } from '$/components/evaluations'
-import { type EvaluationV2 } from '@latitude-data/core/browser'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { type EvaluationV2 } from '@latitude-data/core/constants'
 
 export function EvaluationBadge({ evaluation }: { evaluation: EvaluationV2 }) {
   const typeSpec = getEvaluationTypeSpecification(evaluation)

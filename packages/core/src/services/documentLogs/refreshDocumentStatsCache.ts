@@ -12,7 +12,10 @@ import {
   DocumentLogsRepository,
   DocumentVersionsRepository,
 } from '../../repositories'
-import { commits, documentLogs, documentVersions, projects } from '../../schema'
+import { commits } from '../../schema/models/commits'
+import { documentLogs } from '../../schema/models/documentLogs'
+import { documentVersions } from '../../schema/models/documentVersions'
+import { projects } from '../../schema/models/projects'
 import { computeDocumentLogsAggregations } from './computeDocumentLogsAggregations'
 import { computeDocumentLogsDailyCount } from './computeDocumentLogsDailyCount'
 

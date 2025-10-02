@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { User, Workspace } from '../browser'
+import { User, Workspace } from '../schema/types'
 import * as factories from '../tests/factories'
 import { DatasetsRepository } from './datasetsRepository'
 import { database } from '../client'
-import { datasets } from '../schema'
+import { datasets } from '../schema/models/datasets'
 import { eq } from 'drizzle-orm'
 
 describe('DatasetsRepository', () => {

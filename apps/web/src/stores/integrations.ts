@@ -1,6 +1,4 @@
 'use client'
-
-import type { IntegrationDto } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createIntegrationAction } from '$/actions/integrations/create'
 import { destroyIntegrationAction } from '$/actions/integrations/destroy'
@@ -12,6 +10,7 @@ import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { IntegrationType } from '@latitude-data/constants'
 import { useMemo } from 'react'
+import { type IntegrationDto } from '@latitude-data/core/schema/types'
 
 const EMPTY_ARRAY: IntegrationDto[] = []
 

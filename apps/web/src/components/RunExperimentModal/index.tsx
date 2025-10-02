@@ -1,11 +1,4 @@
 import { useExperiments } from '$/stores/experiments'
-import {
-  Commit,
-  DocumentVersion,
-  EvaluationV2,
-  ExperimentDto,
-  Project,
-} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { useCallback, useEffect } from 'react'
@@ -13,6 +6,13 @@ import { useExperimentFormPayload } from './ExperimentForm/useExperimentFormPayl
 import ExperimentModalForm from './ExperimentForm'
 import { useNavigate } from '$/hooks/useNavigate'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
+import {
+  Commit,
+  DocumentVersion,
+  ExperimentDto,
+  Project,
+} from '@latitude-data/core/schema/types'
+import { EvaluationV2 } from '@latitude-data/core/constants'
 
 export function RunExperimentModal({
   project,

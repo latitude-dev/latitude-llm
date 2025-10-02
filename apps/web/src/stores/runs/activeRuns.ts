@@ -1,5 +1,8 @@
 'use client'
 
+import { compact } from 'lodash-es'
+import { useCallback, useMemo } from 'react'
+import useSWR, { SWRConfiguration } from 'swr'
 import { stopRunAction } from '$/actions/runs/stop'
 import {
   EventArgs,
@@ -9,10 +12,8 @@ import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { ActiveRun, Project } from '@latitude-data/core/browser'
-import { compact } from 'lodash-es'
-import { useCallback, useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
+import type { Project } from '@latitude-data/core/schema/types'
+import { ActiveRun } from '@latitude-data/constants'
 
 export function useActiveRuns(
   {

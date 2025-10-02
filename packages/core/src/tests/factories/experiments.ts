@@ -5,11 +5,11 @@ import {
   DocumentVersion,
   EvaluationV2,
   Experiment,
-  LogSources,
   ProviderApiKey,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { LogSources } from '../../constants'
 import { createExperiment as createExperimentFn } from '../../services/experiments/create'
 import { createDataset, ICreateDatasetV2 } from './datasets'
 import { createDocumentLog } from './documentLogs'

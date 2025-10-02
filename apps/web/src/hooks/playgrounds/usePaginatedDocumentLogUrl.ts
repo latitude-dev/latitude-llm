@@ -1,6 +1,9 @@
 import { format } from 'date-fns'
-import { DocumentLog, EvaluatedDocumentLog } from '@latitude-data/core/browser'
 import { useGenerateDocumentLogDetailUrl } from '$/hooks/useGenerateDocumentLogDetailUrl'
+import {
+  DocumentLog,
+  EvaluatedDocumentLog,
+} from '@latitude-data/core/constants'
 
 export function usePaginatedDocumentLogUrl({
   page,

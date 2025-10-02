@@ -1,5 +1,4 @@
 import { reloadPipedreamComponentPropsAction } from '$/actions/integrations/pipedream/reloadComponentProps'
-import { IntegrationDto, PipedreamComponent } from '@latitude-data/core/browser'
 import type {
   ConfigurableProp,
   ConfigurableProps,
@@ -8,6 +7,8 @@ import type {
 import { useCallback, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { useServerAction } from 'zsa-react'
+import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { PipedreamComponent } from '@latitude-data/core/constants'
 
 const IGNORED_PROP_TYPES: ConfigurableProp['type'][] = [
   'app',

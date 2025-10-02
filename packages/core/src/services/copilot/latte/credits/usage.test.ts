@@ -1,12 +1,7 @@
 import { addMonths, startOfDay, subMonths } from 'date-fns'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
-import {
-  LatteThread,
-  Project,
-  SubscriptionPlan,
-  SubscriptionPlans,
-  Workspace,
-} from '../../../../browser'
+import { LatteThread, Project, Workspace } from '../../../../schema/types'
+import { SubscriptionPlan, SubscriptionPlans } from '../../../../plans'
 import * as cache from '../../../../cache'
 import * as plans from '../../../../plans'
 import * as factories from '../../../../tests/factories'

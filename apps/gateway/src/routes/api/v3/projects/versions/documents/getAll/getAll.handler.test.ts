@@ -1,6 +1,5 @@
 import app from '$/routes/app'
-import { Commit } from '@latitude-data/core/browser'
-import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access/apiKeys'
 import {
   createDocumentVersion,
   createDraft,
@@ -10,6 +9,7 @@ import {
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { Commit } from '@latitude-data/core/schema/types'
 
 vi.mock('$/jobs', () => ({
   queues: { jobs: { enqueueUpdateApiKeyProviderJob: vi.fn() } },

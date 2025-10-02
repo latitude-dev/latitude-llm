@@ -1,7 +1,5 @@
 'use client'
 import { useState } from 'react'
-
-import { Project } from '@latitude-data/core/browser'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import {
   Table,
@@ -17,6 +15,7 @@ import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 
 import RenameProjectModal from './RenameProjectModal'
+import { Project } from '@latitude-data/core/schema/types'
 
 type ProjectWithAgreggatedData = Project & {
   lastEditedAt: Date | null

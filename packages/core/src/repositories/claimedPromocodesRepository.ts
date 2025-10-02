@@ -1,7 +1,8 @@
 import { eq, and, desc } from '../client/utils'
-import { promocodes, claimedPromocodes } from '../schema'
+import { promocodes } from '../schema/models/promocodes'
+import { claimedPromocodes } from '../schema/models/claimedPromocodes'
 import Repository from './repositoryV2'
-import { ClaimedPromocode, Promocode } from '../browser'
+import { ClaimedPromocode, Promocode } from '../schema/types'
 import { getTableColumns } from 'drizzle-orm'
 import { Result } from '../lib/Result'
 

@@ -4,7 +4,7 @@ import { omit } from 'lodash-es'
 import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
 import { cache } from '../../cache'
 import { Config, Conversation } from 'promptl-ai'
-import { Workspace } from '../../browser'
+import { Workspace } from '../../schema/types'
 
 function cleanResponse<T extends StreamType>(response: ChainStepResponse<T>) {
   return omit<ChainStepResponse<T>, ['documentLogUuid', 'providerLog']>(

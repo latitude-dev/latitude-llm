@@ -2,12 +2,12 @@
 
 import { ROUTES } from '$/services/routes'
 import useFeature from '$/stores/useFeature'
-import { Commit, Project } from '@latitude-data/core/browser'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Commit, Project } from '@latitude-data/core/schema/types'
 
 type ProjectRoute = { label: string; route: string; iconName: IconName }
 

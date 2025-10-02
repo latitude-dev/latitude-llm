@@ -1,7 +1,9 @@
 import { eq, and, sql, getTableColumns, desc, isNull } from 'drizzle-orm'
 
-import { Dataset, DEFAULT_PAGINATION_SIZE } from '../browser'
-import { datasets, users } from '../schema'
+import { Dataset } from '../schema/types'
+import { DEFAULT_PAGINATION_SIZE } from '../constants'
+import { datasets } from '../schema/models/datasets'
+import { users } from '../schema/models/users'
 import Repository from './repositoryV2'
 import { calculateOffset } from '../lib/pagination/calculateOffset'
 

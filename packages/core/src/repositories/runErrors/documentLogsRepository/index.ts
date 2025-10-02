@@ -1,18 +1,14 @@
 import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
 
-import {
-  DocumentLogWithMetadataAndError,
-  ErrorableEntity,
-} from '../../../browser'
+import { DocumentLogWithMetadataAndError } from '../../../schema/types'
+import { ErrorableEntity } from '../../../constants'
 import { NotFoundError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import {
-  commits,
-  documentLogs,
-  projects,
-  runErrors,
-  workspaces,
-} from '../../../schema'
+import { commits } from '../../../schema/models/commits'
+import { documentLogs } from '../../../schema/models/documentLogs'
+import { projects } from '../../../schema/models/projects'
+import { runErrors } from '../../../schema/models/runErrors'
+import { workspaces } from '../../../schema/models/workspaces'
 import Repository from '../../repositoryV2'
 
 const tt = {

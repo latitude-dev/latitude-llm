@@ -1,7 +1,7 @@
 import { MetadataItemTooltip } from '$/components/MetadataItem'
-import { ProviderLogDto } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { FinishReason } from 'ai'
+import { ProviderLogDto } from '@latitude-data/core/schema/types'
 
 const REASONS_FINISH: Record<FinishReason, string> = {
   stop: 'This indicates that the response ended because it reached a stopping point naturally.',

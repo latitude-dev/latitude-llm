@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm'
 
-import { ApiKey } from '../../browser'
+import { ApiKey } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { apiKeys } from '../../schema'
+import { apiKeys } from '../../schema/models/apiKeys'
 
 export async function updateApiKey(
   apiKey: ApiKey,

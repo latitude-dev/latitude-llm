@@ -1,8 +1,9 @@
+import { commits } from '../../../schema/models/commits'
+import { documentVersions } from '../../../schema/models/documentVersions'
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 import { and, inArray, isNull } from 'drizzle-orm'
 import { database } from '../../../client'
-import { commits, documentVersions } from '../../../schema'
 import { queues } from '../../queues'
 
 export type RefreshDocumentsStatsCacheJobData = Record<string, never>

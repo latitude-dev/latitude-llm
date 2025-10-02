@@ -3,7 +3,7 @@ import {
   DocumentTrigger,
   DocumentVersion,
   IntegrationDto,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core/schema/types'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useTriggerInfo } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersCard'

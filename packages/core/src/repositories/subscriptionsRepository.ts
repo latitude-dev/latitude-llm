@@ -1,6 +1,6 @@
 import { desc, eq, getTableColumns } from 'drizzle-orm'
-import { Subscription } from '../browser'
-import { subscriptions } from '../schema'
+import { Subscription } from '../schema/types'
+import { subscriptions } from '../schema/models/subscriptions'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(subscriptions)

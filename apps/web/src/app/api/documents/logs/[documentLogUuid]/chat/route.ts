@@ -1,4 +1,3 @@
-import { LogSources, User, Workspace } from '@latitude-data/core/browser'
 import { type Message } from '@latitude-data/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
@@ -7,6 +6,8 @@ import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { publisher } from '@latitude-data/core/events/publisher'
+import { LogSources } from '@latitude-data/core/constants'
+import { User, Workspace } from '@latitude-data/core/schema/types'
 
 const inputSchema = z.object({
   messages: z.array(

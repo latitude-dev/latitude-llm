@@ -1,11 +1,10 @@
 import { useCallback } from 'react'
-
-import { ClaimedRewardWithUserInfo } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { fetchPendingRewardClaimsAction } from '$/actions/rewards/fetchPendingRewardClaimsAction'
 import { updateRewardClaimValidityAction } from '$/actions/rewards/updateRewardClaimValidityAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import useSWR, { SWRConfiguration } from 'swr'
+import { ClaimedRewardWithUserInfo } from '@latitude-data/core/schema/types'
 
 const EMPTY_ARRAY: ClaimedRewardWithUserInfo[] = []
 

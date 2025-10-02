@@ -1,12 +1,6 @@
 'use server'
 
 import { ReactNode } from 'react'
-
-import {
-  HEAD_COMMIT,
-  type Commit,
-  type Project,
-} from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import {
   CommitProvider,
@@ -25,6 +19,8 @@ import {
 import { ROUTES } from '$/services/routes'
 import { notFound, redirect } from 'next/navigation'
 import { LatteRealtimeUpdatesProvider } from './providers/LatteRealtimeUpdatesProvider'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
+import { type Commit, type Project } from '@latitude-data/core/schema/types'
 
 export type CommitPageParams = {
   children: ReactNode

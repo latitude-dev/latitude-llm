@@ -1,11 +1,10 @@
 'use server'
-
-import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { type ChainEventDto, type Message } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { createStreamableValue } from 'ai/rsc'
+import { LogSources, StreamEventTypes } from '@latitude-data/core/constants'
 
 type AddMessagesActionProps = {
   documentLogUuid: string

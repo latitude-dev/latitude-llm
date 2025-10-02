@@ -1,5 +1,5 @@
 'use client'
-import { HEAD_COMMIT } from '@latitude-data/core/browser'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
 import { Badge } from '../../atoms/Badge'
 import { Text } from '../../atoms/Text'

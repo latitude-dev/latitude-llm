@@ -1,12 +1,6 @@
 'use client'
 
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  DocumentVersion,
-  Project,
-  Commit,
-  Dataset,
-} from '@latitude-data/core/browser'
 import { useCallback, useState } from 'react'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -15,6 +9,12 @@ import { useRunOnboardingPrompt } from '$/app/(onboarding)/onboarding-devs/_comp
 import { OnboardingPromptStep } from '$/app/(onboarding)/onboarding-devs/_components/OnboardingClient/PromptStep'
 import { ExperimentStep } from '$/app/(onboarding)/onboarding-devs/_components/OnboardingClient/ExperimentStep'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
+import {
+  DocumentVersion,
+  Project,
+  Commit,
+  Dataset,
+} from '@latitude-data/core/schema/types'
 
 type OnboardingStep1ContentProps = {
   workspaceName: string

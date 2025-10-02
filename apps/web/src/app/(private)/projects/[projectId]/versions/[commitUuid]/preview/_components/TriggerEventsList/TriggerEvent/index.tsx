@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import { DefaultTriggerEvent } from './Default'
-import { DocumentTriggerEvent } from '@latitude-data/core/browser'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { EmailTriggerEvent } from './Email'
 import { IntegrationTriggerEvent } from './Integration'
+import { DocumentTriggerEvent } from '@latitude-data/core/schema/types'
 
 export function DocumentTriggerEventItem<T extends DocumentTriggerType>({
   event,

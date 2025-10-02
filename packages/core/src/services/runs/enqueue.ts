@@ -1,5 +1,5 @@
 import { LogSources } from '@latitude-data/constants'
-import { Commit, DocumentVersion, Project, Workspace } from '../../browser'
+import { Commit, DocumentVersion, Project, Workspace } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { BackgroundRunJobData } from '../../jobs/job-definitions/runs/backgroundRunJob'
 import { queues } from '../../jobs/queues'
@@ -19,7 +19,6 @@ export async function enqueueRun({
   tools = [],
   userMessage,
   source = LogSources.API,
-  isLegacy,
 }: {
   runUuid?: string
   document: DocumentVersion
@@ -31,7 +30,6 @@ export async function enqueueRun({
   tools?: string[]
   userMessage?: string
   source?: LogSources
-  isLegacy: boolean
 }) {
   runUuid = runUuid ?? generateUUIDIdentifier()
 
@@ -49,7 +47,6 @@ export async function enqueueRun({
       tools: tools,
       userMessage: userMessage,
       source: source,
-      isLegacy: isLegacy,
     } satisfies BackgroundRunJobData,
     {
       jobId: runUuid,

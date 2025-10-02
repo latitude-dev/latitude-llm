@@ -6,14 +6,16 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   Commit,
-  EvaluationType,
   EvaluationV2,
-  LLM_EVALUATION_PROMPT_PARAMETERS,
-  LlmEvaluationMetric,
-  LogSources,
   ProviderApiKey,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
+import { EvaluationType } from '../../../constants'
+import {
+  LLM_EVALUATION_PROMPT_PARAMETERS,
+  LlmEvaluationMetric,
+} from '../../../constants'
+import { LogSources } from '../../../constants'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { updatePromptMetadata } from '../../../lib/updatePromptMetadata'

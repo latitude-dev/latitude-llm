@@ -1,7 +1,5 @@
 'use client'
 import { ReactNode } from 'react'
-
-import { User } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 
@@ -9,6 +7,7 @@ import AvatarDropdown from './AvatarDropdown'
 import { HeaderBreadcrumb } from './Breadcrumb'
 import { RewardsButton } from './Rewards'
 import { UsageIndicator } from './UsageIndicator'
+import { User } from '@latitude-data/core/schema/types'
 
 export function AppHeaderWrapper({
   children,

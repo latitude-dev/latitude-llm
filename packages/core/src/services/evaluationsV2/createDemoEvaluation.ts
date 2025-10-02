@@ -1,13 +1,11 @@
 import { env } from '@latitude-data/env'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
 import {
-  Commit,
-  DocumentVersion,
   EvaluationType,
-  findFirstModelForProvider,
-  HumanEvaluationMetric,
   LlmEvaluationMetric,
-  Workspace,
-} from '../../browser'
+  HumanEvaluationMetric,
+} from '../../constants'
+import { findFirstModelForProvider } from '../ai/providers/models'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { findDefaultEvaluationProvider } from '../providerApiKeys/findDefaultProvider'

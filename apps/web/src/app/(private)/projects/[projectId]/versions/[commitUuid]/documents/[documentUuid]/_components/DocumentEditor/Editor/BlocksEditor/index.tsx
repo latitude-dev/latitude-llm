@@ -8,7 +8,6 @@ import { useDevMode } from '$/hooks/useDevMode'
 import { updateContentFn } from '$/hooks/useDocumentValueContext'
 import { useEvents } from '$/lib/events'
 import useDocumentVersions from '$/stores/documentVersions'
-import { type DocumentVersion } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import {
   ICommitContextType,
@@ -18,6 +17,7 @@ import { Config, scan } from 'promptl-ai'
 import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { stringify as stringifyObjectToYaml } from 'yaml'
 import { useIncludabledPrompts } from './useIncludabledPrompts'
+import { type DocumentVersion } from '@latitude-data/core/schema/types'
 
 export const PlaygroundBlocksEditor = memo(
   ({

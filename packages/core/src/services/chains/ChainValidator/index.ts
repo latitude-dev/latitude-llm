@@ -12,7 +12,8 @@ import {
   LatitudePromptConfig,
 } from '@latitude-data/constants/latitudePromptSchema'
 import { CompileError as PromptlCompileError } from 'promptl-ai'
-import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
+import { applyProviderRules } from '../../ai/providers/rules'
+import { ProviderApiKey, Workspace } from '../../../schema/types'
 import { Result, TypedResult } from '../../../lib/Result'
 import { Output } from '../../../lib/streamManager/step/streamAIResponse'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'

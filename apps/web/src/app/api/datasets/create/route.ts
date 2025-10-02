@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import {
-  DELIMITER_VALUES,
-  DELIMITERS_KEYS,
-  MAX_SIZE,
-  MAX_UPLOAD_SIZE_IN_MB,
-  User,
-  Workspace,
-} from '@latitude-data/core/browser'
 import { createDatasetFromFile } from '@latitude-data/core/services/datasets/createFromFile'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { z } from 'zod'
+import {
+  DELIMITER_VALUES,
+  DELIMITERS_KEYS,
+  MAX_SIZE,
+  MAX_UPLOAD_SIZE_IN_MB,
+} from '@latitude-data/core/constants'
+import { User, Workspace } from '@latitude-data/core/schema/types'
 
 const MAX_SIZE_MESSAGE = `Your dataset must be less than ${MAX_SIZE}MB in size.`
 

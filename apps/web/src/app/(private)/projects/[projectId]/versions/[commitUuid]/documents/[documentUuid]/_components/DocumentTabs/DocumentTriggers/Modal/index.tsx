@@ -1,13 +1,5 @@
 import useIntegrations from '$/stores/integrations'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-  IntegrationDto,
-  PipedreamComponent,
-  PipedreamComponentType,
-  PipedreamIntegration,
-} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { FormEvent, useCallback, useEffect, useState } from 'react'
@@ -16,6 +8,16 @@ import { TriggerTypeSelector } from './TriggerTypeSelector'
 import { IntegrationTriggerConfig } from './IntegrationTriggerConfig'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
+import {
+  DocumentTrigger,
+  DocumentVersion,
+  IntegrationDto,
+  PipedreamIntegration,
+} from '@latitude-data/core/schema/types'
+import {
+  PipedreamComponent,
+  PipedreamComponentType,
+} from '@latitude-data/core/constants'
 
 export function TriggerConfigModal({
   document,

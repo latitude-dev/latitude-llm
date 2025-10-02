@@ -1,12 +1,12 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { Workspace } from '@latitude-data/core/browser'
 import {
   SpanMetadatasRepository,
   SpansRepository,
 } from '@latitude-data/core/repositories'
 import { notFound } from 'next/navigation'
 import { NextRequest, NextResponse } from 'next/server'
+import { Workspace } from '@latitude-data/core/schema/types'
 
 export const GET = errorHandler(
   authHandler(

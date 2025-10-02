@@ -1,7 +1,7 @@
 import { endOfDay } from 'date-fns'
 import { and, between, eq, inArray, like, or, sql } from 'drizzle-orm'
+import { documentLogs } from '../../../schema/models/documentLogs'
 import { DocumentLogFilterOptions } from '../../../constants'
-import { documentLogs } from '../../../schema'
 
 function safeCreatedAt(createdAt: DocumentLogFilterOptions['createdAt']) {
   if (!createdAt) return undefined

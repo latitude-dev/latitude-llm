@@ -1,7 +1,7 @@
 import { IntegrationType } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
-import { IntegrationDto, McpServer } from '../../../browser'
+import { IntegrationDto, McpServer } from '../../../schema/types'
 import { publisher } from '../../../events/publisher'
 import { queues } from '../../../jobs/queues'
 import { Result, TypedResult } from '../../../lib/Result'

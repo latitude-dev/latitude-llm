@@ -15,22 +15,22 @@ import type {
 import { FinishReason, LanguageModelUsage, Tool, ToolResultPart } from 'ai'
 import { z } from 'zod'
 
-import { TelemetryContext } from '@latitude-data/telemetry'
 import {
   ConfigurableProp,
   ConfigurePropResponse,
   PropOption,
 } from '@pipedream/sdk'
-import { App, Component } from '@pipedream/sdk/browser'
-import type {
+
+import type { App, Component } from '@pipedream/sdk'
+import {
   ApiKey,
   Commit,
   DocumentVersion,
   EvaluationV2,
-  Otlp,
   ProviderLog,
   Workspace,
-} from './browser'
+} from './schema/types'
+import { Span, Scope, Resource } from './schema/otlp'
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
 
@@ -54,6 +54,7 @@ export * from '@latitude-data/constants/grants'
 export * from '@latitude-data/constants/latte'
 export * from '@latitude-data/constants/runs'
 export * from '@latitude-data/constants/tracing'
+export type { DocumentLog } from './schema/types'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
@@ -68,12 +69,6 @@ export enum CommitStatus {
   Merged = 'merged',
   Draft = 'draft',
 }
-
-export {
-  DEFAULT_PROVIDER_SUPPORTED_MODELS,
-  PROVIDER_MODELS,
-  Providers,
-} from './services/ai/providers/models'
 
 export type Message = CompilerMessage
 
@@ -475,7 +470,7 @@ export type PromptSource = EvaluationV2 | DocumentRunPromptSource
 export type LatitudeToolDefinition = {
   name: LatitudeTool
   internalName: LatitudeToolInternalName
-  definition: (context?: TelemetryContext) => Tool
+  definition: (context?: any) => Tool
   method: (args: unknown) => PromisedResult<unknown, LatitudeError>
 }
 
@@ -539,9 +534,9 @@ export type AppDto = App & {
 
 export type SpanBulkProcessingData = {
   spans: Array<{
-    span: Otlp.Span
-    scope: Otlp.Scope
-    resource: Otlp.Resource
+    span: Span
+    scope: Scope
+    resource: Resource
     apiKey: ApiKey
     workspace: Workspace
   }>

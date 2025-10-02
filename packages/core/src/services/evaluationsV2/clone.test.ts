@@ -2,13 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   Commit,
   DocumentVersion,
-  EvaluationType,
   EvaluationV2,
-  LlmEvaluationMetric,
   ProviderApiKey,
-  Providers,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import {
+  EvaluationType,
+  LlmEvaluationMetric,
+  Providers,
+} from '@latitude-data/constants'
 import { BadRequestError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
 import { cloneEvaluationV2 } from './clone'

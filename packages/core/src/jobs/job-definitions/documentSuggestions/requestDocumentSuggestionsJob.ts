@@ -1,3 +1,9 @@
+import { commits } from '../../../schema/models/commits'
+import { documentSuggestions } from '../../../schema/models/documentSuggestions'
+import { documentVersions } from '../../../schema/models/documentVersions'
+import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
+import { evaluationVersions } from '../../../schema/models/evaluationVersions'
+import { projects } from '../../../schema/models/projects'
 import { Job } from 'bullmq'
 import { subDays } from 'date-fns'
 import {
@@ -14,16 +20,8 @@ import {
 import {
   DOCUMENT_SUGGESTION_EXPIRATION_DAYS,
   EVALUATION_RESULT_RECENCY_DAYS,
-} from '../../../browser'
+} from '../../../constants'
 import { database } from '../../../client'
-import {
-  commits,
-  documentSuggestions,
-  documentVersions,
-  evaluationResultsV2,
-  evaluationVersions,
-  projects,
-} from '../../../schema'
 import { queues } from '../../queues'
 import { generateDocumentSuggestionJobKey } from './generateDocumentSuggestionJob'
 

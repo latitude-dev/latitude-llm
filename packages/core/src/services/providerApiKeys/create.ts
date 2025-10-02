@@ -1,12 +1,16 @@
 import pg from 'pg'
 const { DatabaseError } = pg
 
-import { Providers, User, Workspace } from '../../browser'
+import { Providers } from '@latitude-data/constants'
+import { User, Workspace } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, databaseErrorCodes } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { providerApiKeys, ProviderConfiguration } from '../../schema'
+import {
+  providerApiKeys,
+  ProviderConfiguration,
+} from '../../schema/models/providerApiKeys'
 import { amazonBedrockConfigurationSchema } from '../ai'
 import { validateProviderApiKeyName } from './helpers/validateName'
 

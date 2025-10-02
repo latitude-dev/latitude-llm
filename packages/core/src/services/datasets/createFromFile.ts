@@ -1,7 +1,7 @@
 import path from 'path'
 import slugify from '@sindresorhus/slugify'
 
-import { User, Workspace } from '../../browser'
+import { User, Workspace } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import { diskFactory, DiskWrapper } from '../../lib/disk'

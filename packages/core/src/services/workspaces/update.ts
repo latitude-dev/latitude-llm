@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm'
 
-import type { Workspace, WorkspaceDto } from '../../browser'
-import { unsafelyFindWorkspace } from '../../data-access'
+import type { Workspace, WorkspaceDto } from '../../schema/types'
+import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { workspaces } from '../../schema'
+import { workspaces } from '../../schema/models/workspaces'
 
 export async function updateWorkspace(
   workspace: Workspace | WorkspaceDto,

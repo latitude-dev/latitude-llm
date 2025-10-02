@@ -6,7 +6,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { Commit, Project } from '@latitude-data/core/browser'
+import { Commit, Project } from '@latitude-data/core/schema/types'
 
 export function ExperimentComparison({
   selectedExperimentUuids,

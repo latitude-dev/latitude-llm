@@ -1,13 +1,13 @@
 'use server'
 
 import { getUnsafeIp } from '$/helpers/ip'
-import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/browser'
 import { uploadFile } from '@latitude-data/core/services/files/upload'
 import { createHash } from 'crypto'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 
 import { maybeAuthProcedure, withRateLimit } from '../procedures'
+import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/constants'
 
 export const uploadFileAction = (
   await withRateLimit(maybeAuthProcedure, {

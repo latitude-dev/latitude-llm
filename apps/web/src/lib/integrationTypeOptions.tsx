@@ -2,10 +2,10 @@ import {
   HostedIntegrationType,
   IntegrationType,
 } from '@latitude-data/constants'
-import { IntegrationDto } from '@latitude-data/core/browser'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import Image from 'next/image'
 import React from 'react'
+import { IntegrationDto } from '@latitude-data/core/schema/types'
 
 export type IntegrationTypeOption = {
   label: string

@@ -1,8 +1,3 @@
-import {
-  Commit,
-  ExperimentWithScores,
-  Project,
-} from '@latitude-data/core/browser'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -30,6 +25,11 @@ import { DocumentVersion } from '@latitude-data/constants'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { stopExperimentAction } from '$/actions/experiments'
 import { useCallback } from 'react'
+import {
+  Commit,
+  ExperimentWithScores,
+  Project,
+} from '@latitude-data/core/schema/types'
 
 export function ExperimentItemPlaceholder({
   isLast,

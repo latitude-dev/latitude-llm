@@ -1,4 +1,4 @@
-import { Commit } from '../../../browser'
+import { Commit } from '../../../schema/types'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { ProjectsRepository } from '../../../repositories'

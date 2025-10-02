@@ -5,12 +5,12 @@ import {
   Project,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
-import { documentSuggestions } from '../../schema'
+import { documentSuggestions } from '../../schema/models/documentSuggestions'
 import { createCommit } from '../commits/create'
 import { updateDocument } from '../documents/update'
 

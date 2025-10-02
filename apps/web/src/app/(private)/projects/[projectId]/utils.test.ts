@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { ROUTES } from '$/services/routes'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 
 import { getRedirectUrl } from './utils'
+import { Commit } from '@latitude-data/core/schema/types'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
 export const PROJECT_ROUTE = ROUTES.projects.detail
 describe('getCommitUrl', () => {

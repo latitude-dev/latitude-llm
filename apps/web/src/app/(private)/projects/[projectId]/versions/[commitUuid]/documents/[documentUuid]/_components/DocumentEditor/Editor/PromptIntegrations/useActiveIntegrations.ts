@@ -1,11 +1,11 @@
 import { ToolsItem } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { IntegrationDto } from '@latitude-data/core/browser'
 import { useCallback, useState } from 'react'
 import { useEvents } from '$/lib/events'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import useIntegrations from '$/stores/integrations'
+import { IntegrationDto } from '@latitude-data/core/schema/types'
 
 export type ActiveIntegrations = Record<string, true | string[]> // true means '*'
 

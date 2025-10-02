@@ -4,7 +4,7 @@ import { ReactNode } from 'react'
 import { LatteChat } from '$/components/LatteChat'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
-import type { ProviderLogDto } from '@latitude-data/core/browser'
+import { type ProviderLogDto } from '@latitude-data/core/schema/types'
 
 export function LatteLayout({
   children,

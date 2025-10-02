@@ -1,6 +1,6 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 
-import { Providers } from '../../models'
+import { Providers } from '@latitude-data/constants'
 import { toCamelCaseDeep } from '../../../../../lib/camelCaseRecursive'
 
 export const PROVIDER_TO_METADATA_KEY: Record<Providers, string> = {

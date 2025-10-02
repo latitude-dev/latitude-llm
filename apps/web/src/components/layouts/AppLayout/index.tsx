@@ -1,10 +1,9 @@
 import { ReactNode } from 'react'
-
-import { User } from '@latitude-data/core/browser'
 import { cn } from '@latitude-data/web-ui/utils'
 
 import AppHeader, { AppHeaderProps } from './Header'
 import RightSidebarLayout from './RightSidebarLayout'
+import { User } from '@latitude-data/core/schema/types'
 
 export type AppLayoutProps = AppHeaderProps & {
   children: ReactNode

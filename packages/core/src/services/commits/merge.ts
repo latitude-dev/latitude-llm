@@ -1,6 +1,6 @@
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 
-import { Commit, Workspace } from '../../browser'
+import { Commit, Workspace } from '../../schema/types'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -9,7 +9,7 @@ import {
   NotFoundError,
   UnprocessableEntityError,
 } from '../../lib/errors'
-import { commits } from '../../schema'
+import { commits } from '../../schema/models/commits'
 import { recomputeChanges } from '../documents'
 import { pingProjectUpdate } from '../projects'
 import { handleTriggerMerge } from '../documentTriggers/handleMerge'
@@ -116,13 +116,18 @@ export async function mergeCommit(
   // Phase 3: finalize merge in a new short transaction
   return transaction.call<Commit>(
     async (tx) => {
-      const lastMergedCommit = await tx.query.commits.findFirst({
-        where: and(
-          isNotNull(commits.version),
-          eq(commits.projectId, commit.projectId),
-        ),
-        orderBy: desc(commits.version),
-      })
+      const lastMergedCommit = await tx
+        .select()
+        .from(commits)
+        .where(
+          and(
+            isNotNull(commits.version),
+            eq(commits.projectId, commit.projectId),
+          ),
+        )
+        .orderBy(desc(commits.version))
+        .limit(1)
+        .then((rows) => rows[0])
       const version = (lastMergedCommit?.version ?? 0) + 1
       const result = await tx
         .update(commits)

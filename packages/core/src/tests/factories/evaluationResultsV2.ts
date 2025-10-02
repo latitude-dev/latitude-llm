@@ -3,20 +3,22 @@ import {
   Commit,
   Dataset,
   DatasetRow,
+  EvaluationV2,
+  Experiment,
+  ProviderLog,
+  ProviderLogDto,
+  Workspace,
+} from '../../schema/types'
+import {
   DEFAULT_DATASET_LABEL,
   EvaluationMetric,
   EvaluationResultV2,
   EvaluationResultValue,
   EvaluationType,
-  EvaluationV2,
-  Experiment,
-  ProviderLog,
-  ProviderLogDto,
   RuleEvaluationMetric,
-  Workspace,
-} from '../../browser'
+} from '../../constants'
 import { database } from '../../client'
-import { evaluationResultsV2 } from '../../schema'
+import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { createEvaluationResultV2 as createEvaluationResultSvc } from '../../services/evaluationsV2/results/create'
 import serializeProviderLog from '../../services/providerLogs/serialize'
 

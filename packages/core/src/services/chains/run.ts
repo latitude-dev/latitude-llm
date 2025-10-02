@@ -3,7 +3,7 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { LanguageModelUsage } from 'ai'
 import { Chain as PromptlChain } from 'promptl-ai'
-import { ProviderApiKey, Workspace } from '../../browser'
+import { ProviderApiKey, Workspace } from '../../schema/types'
 import {
   ChainStepResponse,
   LogSources,

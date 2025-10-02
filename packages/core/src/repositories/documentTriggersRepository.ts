@@ -8,8 +8,9 @@ import {
   max,
 } from 'drizzle-orm'
 
-import { Commit, DocumentTrigger } from '../browser'
-import { commits, documentTriggers } from '../schema'
+import { Commit, DocumentTrigger } from '../schema/types'
+import { commits } from '../schema/models/commits'
+import { documentTriggers } from '../schema/models/documentTriggers'
 import Repository from './repositoryV2'
 import { Result } from '../lib/Result'
 import { PromisedResult } from '../lib/Transaction'

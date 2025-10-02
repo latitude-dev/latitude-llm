@@ -1,9 +1,3 @@
-import {
-  AssembledSpan,
-  AssembledTrace,
-  SpanStatus,
-  SpanType,
-} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -12,6 +6,12 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { memo, useMemo } from 'react'
 import { SPAN_COLORS } from '../../spans/shared'
 import { SPAN_SPECIFICATIONS } from '../../spans/specifications'
+import {
+  AssembledSpan,
+  AssembledTrace,
+  SpanStatus,
+  SpanType,
+} from '@latitude-data/core/constants'
 
 const IndentationLine = memo(
   ({

@@ -2,11 +2,11 @@ import { faker } from '@faker-js/faker'
 import { eq } from 'drizzle-orm'
 
 import { IntegrationType } from '@latitude-data/constants'
-import { Providers, User, Workspace, WorkspaceDto } from '../../browser'
+import { Providers } from '@latitude-data/constants'
+import { User, Workspace, WorkspaceDto } from '../../schema/types'
 import { database } from '../../client'
-import { unsafelyGetUser } from '../../data-access'
 import { DocumentVersionsRepository } from '../../repositories'
-import { projects, ProviderConfiguration } from '../../schema'
+import { projects } from '../../schema/models/projects'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
 import { createIntegration } from '../../services/integrations'
@@ -19,6 +19,8 @@ import {
   defaultProviderFakeData,
 } from './providerApiKeys'
 import { createWorkspace, type ICreateWorkspace } from './workspaces'
+import { unsafelyGetUser } from '../../data-access/users'
+import { ProviderConfiguration } from '../../schema/models/providerApiKeys'
 
 export type IDocumentStructure = { [key: string]: string | IDocumentStructure }
 

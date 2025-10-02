@@ -1,4 +1,4 @@
-import { unsafelyGetUser } from '../../data-access'
+import { unsafelyGetUser } from '../../data-access/users'
 import { NotFoundError } from '../../lib/errors'
 import { InvitationMailer } from '../../mailers'
 import { MembershipCreatedEvent } from '../events'

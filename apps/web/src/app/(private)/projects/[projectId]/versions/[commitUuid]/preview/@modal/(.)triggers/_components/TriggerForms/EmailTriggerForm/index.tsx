@@ -15,7 +15,7 @@ import {
   EmailAvailabilityOptions,
   UseEmailTriggerConfiguration,
 } from './useConfiguration'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 const PARAMETER_OPTIONS: Record<DocumentTriggerParameters, string> = {
   [DocumentTriggerParameters.SenderName]: 'Sender Name',

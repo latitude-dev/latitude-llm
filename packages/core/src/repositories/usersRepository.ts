@@ -1,9 +1,10 @@
 import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 
-import { User } from '../browser'
+import { User } from '../schema/types'
 import { databaseErrorCodes, UnprocessableEntityError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import { memberships, users } from '../schema'
+import { memberships } from '../schema/models/memberships'
+import { users } from '../schema/models/users'
 import RepositoryLegacy from './repository'
 
 const tt = {

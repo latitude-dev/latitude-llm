@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
-
-import { listModelsForProvider, Providers } from '@latitude-data/core/browser'
 import { envClient } from '$/envClient'
+import { Providers } from '@latitude-data/constants'
+import { listModelsForProvider } from '@latitude-data/core/services/ai/providers/models/index'
 
 export function getModelOptionsForProvider({
   provider,

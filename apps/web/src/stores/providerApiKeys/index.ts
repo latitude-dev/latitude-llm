@@ -4,10 +4,10 @@ import { updateProviderApiKeyAction } from '$/actions/providerApiKeys/update'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import type { ProviderApiKey } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { type ProviderApiKey } from '@latitude-data/core/schema/types'
 
 export type SerializedProviderApiKey = Omit<
   ProviderApiKey,

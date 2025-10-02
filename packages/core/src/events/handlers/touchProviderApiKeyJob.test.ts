@@ -9,12 +9,8 @@ import {
   helpers,
 } from '../../tests/factories'
 import { createProviderLog } from '../../tests/factories/providerLogs'
-import {
-  DocumentLog,
-  ProviderApiKey,
-  Providers,
-  Workspace,
-} from '../../browser'
+import { DocumentLog, ProviderApiKey, Workspace } from '../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 
 vi.mock('../../services/providerApiKeys/touch', () => ({

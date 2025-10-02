@@ -1,15 +1,14 @@
 'use server'
-
-import {
-  DELIMITERS_KEYS,
-  MAX_SIZE,
-  MAX_UPLOAD_SIZE_IN_MB,
-} from '@latitude-data/core/browser'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { bulkUploadDocumentLogs } from '@latitude-data/core/services/documentLogs/bulkUpload'
 import { z } from 'zod'
 
 import { withDocument } from '../procedures'
+import {
+  DELIMITERS_KEYS,
+  MAX_SIZE,
+  MAX_UPLOAD_SIZE_IN_MB,
+} from '@latitude-data/core/constants'
 
 export const uploadDocumentLogsAction = withDocument
   .createServerAction()

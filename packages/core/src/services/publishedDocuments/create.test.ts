@@ -4,10 +4,10 @@ import {
   Commit,
   DocumentVersion,
   Project,
-  Providers,
   User,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { UnprocessableEntityError } from './../../lib/errors'
 import { createPublishedDocument } from './create'

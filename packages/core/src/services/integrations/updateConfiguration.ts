@@ -1,11 +1,11 @@
-import { IntegrationDto } from '../../browser'
+import { IntegrationDto } from '../../schema/types'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { PipedreamIntegrationConfiguration } from './helpers/schema'
 import { IntegrationType } from '@latitude-data/constants'
 import { BadRequestError, NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { isIntegrationConfigured } from './pipedream/components/fillConfiguredProps'
-import { integrations } from '../../schema'
+import { integrations } from '../../schema/models/integrations'
 import { eq } from 'drizzle-orm'
 
 export async function updateIntegrationConfiguration(

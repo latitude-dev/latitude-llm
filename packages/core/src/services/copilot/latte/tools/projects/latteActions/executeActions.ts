@@ -1,4 +1,8 @@
-import { Commit, Workspace, DocumentVersion } from '../../../../../../browser'
+import {
+  Commit,
+  Workspace,
+  DocumentVersion,
+} from '../../../../../../schema/types'
 import { LatteChange, LatteEditAction } from '@latitude-data/constants/latte'
 import Transaction, { PromisedResult } from '../../../../../../lib/Transaction'
 import { executeEditAction } from './handleAction'
@@ -10,7 +14,7 @@ import {
   LatteThreadsRepository,
 } from '../../../../../../repositories'
 import { scanDocuments } from '../../../helpers'
-import { ConversationMetadata } from '@latitude-data/compiler'
+import type { ConversationMetadata } from 'promptl-ai'
 
 export async function executeLatteActions({
   workspace,

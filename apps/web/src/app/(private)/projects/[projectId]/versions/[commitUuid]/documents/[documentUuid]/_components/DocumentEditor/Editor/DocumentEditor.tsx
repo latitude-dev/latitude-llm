@@ -13,13 +13,6 @@ import { ExperimentDiffProvider } from '$/hooks/useExperimentDiffContext'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useToggleModal } from '$/hooks/useToogleModal'
-import {
-  Commit,
-  DocumentVersion,
-  INPUT_SOURCE,
-  LogSources,
-  Project,
-} from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import {
@@ -39,10 +32,15 @@ import { RunButton } from './RunButton'
 import { V2Playground } from './V2Playground'
 import DocumentParams from './V2Playground/DocumentParams'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import type {
-  ProviderApiKey,
-  ProviderLogDto,
-} from '@latitude-data/core/browser'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+  type ProviderApiKey,
+  type ProviderLogDto,
+} from '@latitude-data/core/schema/types'
+import { INPUT_SOURCE } from '@latitude-data/core/lib/documentPersistedInputs'
+import { LogSources } from '@latitude-data/core/constants'
 
 export type DocumentEditorProps = {
   document: DocumentVersion

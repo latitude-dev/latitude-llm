@@ -1,8 +1,8 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import useSWR, { SWRConfiguration } from 'swr'
+import { DocumentLogFilterOptions } from '@latitude-data/core/constants'
 
 export default function useDocumentLogsPagination(
   {

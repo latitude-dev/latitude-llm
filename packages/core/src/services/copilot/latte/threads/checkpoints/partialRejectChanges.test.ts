@@ -4,7 +4,7 @@ import { LatteThreadsRepository } from '../../../../../repositories'
 import { restoreThreadCheckpoint } from './undoChanges'
 import Transaction from '../../../../../lib/Transaction'
 import { Result } from '../../../../../lib/Result'
-import { latteThreadCheckpoints } from '../../../../../schema'
+import { latteThreadCheckpoints } from '../../../../../schema/models/latteThreadCheckpoints'
 
 vi.mock('./undoChanges', () => ({
   restoreThreadCheckpoint: vi.fn(),

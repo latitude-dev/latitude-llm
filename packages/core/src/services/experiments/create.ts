@@ -1,7 +1,12 @@
-import { Dataset, Experiment } from '../../browser'
-import { Commit, DocumentVersion, EvaluationV2, Workspace } from '../../browser'
+import { Dataset, Experiment } from '../../schema/types'
+import {
+  Commit,
+  DocumentVersion,
+  EvaluationV2,
+  Workspace,
+} from '../../schema/types'
 import { scanDocumentContent } from '../documents'
-import { experiments } from '../../schema'
+import { experiments } from '../../schema/models/experiments'
 import { DatasetRowsRepository } from '../../repositories'
 import { assertEvaluationRequirements } from './assertRequirements'
 import Transaction, { PromisedResult } from '../../lib/Transaction'

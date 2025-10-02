@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { Providers } from '../../browser'
+import { Providers } from '@latitude-data/constants'
 import { CommitsRepository } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { deleteCommitDraft } from './delete'

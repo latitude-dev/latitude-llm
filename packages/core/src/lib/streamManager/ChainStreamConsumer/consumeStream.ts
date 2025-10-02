@@ -6,10 +6,10 @@ import { APICallError, RetryError } from 'ai'
 import { ProviderData } from '@latitude-data/constants'
 import {
   LegacyChainEvent,
-  Providers,
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
+import { Providers } from '@latitude-data/constants'
 import { AIReturn } from '../../../services/ai'
 
 interface ConsumeStreamParams {

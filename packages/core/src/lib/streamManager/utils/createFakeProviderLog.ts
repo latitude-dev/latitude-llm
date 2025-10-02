@@ -1,6 +1,7 @@
 import { VercelConfig } from '@latitude-data/constants'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
-import { LogSources, ProviderApiKey, Workspace } from '../../../browser'
+import { LogSources } from '../../../constants'
+import { ProviderApiKey, Workspace } from '../../../schema/types'
 import { fakeResponse } from '../../../services/chains/ProviderProcessor'
 import { buildProviderLogDto } from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
 import { createProviderLog } from '../../../services/providerLogs/create'

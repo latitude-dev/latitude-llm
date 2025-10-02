@@ -3,13 +3,15 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   CLOUD_MESSAGES,
+  MAX_DOCUMENT_SUGGESTIONS_PER_EVALUATION,
+} from '../../constants'
+import {
   Commit,
   DocumentVersion,
-  EvaluationResultV2,
   EvaluationV2,
-  MAX_DOCUMENT_SUGGESTIONS_PER_EVALUATION,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { EvaluationResultV2 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
@@ -19,7 +21,8 @@ import {
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
 } from '../../repositories'
-import { documentSuggestions, evaluationResultsV2 } from '../../schema'
+import { documentSuggestions } from '../../schema/models/documentSuggestions'
+import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { getCopilot, runCopilot } from '../copilot'
 import {
   serializeEvaluationResult as serializeEvaluationResultV2,

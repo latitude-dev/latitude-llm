@@ -3,7 +3,6 @@
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { ROUTES } from '$/services/routes'
 import useDatasetRows from '$/stores/datasetRows'
-import { DatasetRow, Dataset } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -18,6 +17,7 @@ import { useCallback, useMemo } from 'react'
 import { useDatasetRowsSocket } from './useDatasetRowsSocket'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { format } from 'date-fns'
+import { DatasetRow, Dataset } from '@latitude-data/core/schema/types'
 
 export const DeletedDatasetAlert = ({ deletedAt }: { deletedAt: Date }) => {
   return (

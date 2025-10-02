@@ -7,7 +7,7 @@ import {
   DatasetsRepository,
 } from '@latitude-data/core/repositories'
 import { authProcedure } from '$/actions/procedures'
-import { DatasetRowDataContent } from '@latitude-data/core/schema'
+import { DatasetRowDataContent } from '@latitude-data/core/schema/models/datasetRows'
 
 const rowDataSchema = z.record(
   z.custom<DatasetRowDataContent>((val) => {

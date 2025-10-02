@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm'
 
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { features, workspaceFeatures } from '../../schema'
+import { features } from '../../schema/models/features'
+import { workspaceFeatures } from '../../schema/models/workspaceFeatures'
 
 export async function findAllFeaturesWithWorkspaceStatus(
   workspaceId: number,

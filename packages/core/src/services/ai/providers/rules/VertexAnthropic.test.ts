@@ -4,7 +4,7 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { Providers } from '../models'
+import { Providers } from '@latitude-data/constants'
 import { applyProviderRules } from './index'
 import { AppliedRules, ProviderRules } from './types'
 

@@ -1,10 +1,9 @@
 import {
   EvaluationResultValue,
-  EvaluationType,
-  EvaluationV2,
-  LlmEvaluationMetric,
   LlmEvaluationCustomLabeledSpecification as specification,
-} from '../../../browser'
+} from '../../../constants'
+import { EvaluationType, LlmEvaluationMetric } from '../../../constants'
+import { EvaluationV2 } from '../../../schema/types'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import {

@@ -4,13 +4,6 @@ import { executeBackendAction as executeBackendLatitudeAction } from '$/actions/
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useOnce } from '$/hooks/useMount'
 import { useDeferredPlaygroundAction } from '$/hooks/usePlaygroundAction'
-import {
-  ActionBackendParameters,
-  ActionFrontendParameters,
-  ActionType,
-  User,
-  Workspace,
-} from '@latitude-data/core/browser'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -18,6 +11,13 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { ActionFrontendSpecification } from './shared'
 import { ACTION_SPECIFICATIONS } from './specifications'
+import {
+  ActionBackendParameters,
+  ActionFrontendParameters,
+  ActionType,
+  User,
+  Workspace,
+} from '@latitude-data/core/schema/types'
 
 export function ClientPage<T extends ActionType = ActionType>({
   type,

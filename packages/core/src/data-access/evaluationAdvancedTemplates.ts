@@ -1,13 +1,14 @@
+import { evaluationAdvancedTemplates } from '../schema/legacyModels/evaluationAdvancedTemplates'
+import { evaluationTemplateCategories } from '../schema/legacyModels/evaluationTemplateCategories'
 import { asc, eq, getTableColumns, inArray } from 'drizzle-orm'
 
-import { EvaluationTemplate, EvaluationTemplateWithCategory } from '../browser'
+import {
+  EvaluationTemplate,
+  EvaluationTemplateWithCategory,
+} from '../schema/types'
 import { database } from '../client'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result, TypedResult } from '../lib/Result'
-import {
-  evaluationAdvancedTemplates,
-  evaluationTemplateCategories,
-} from '../schema'
 
 export async function findAllEvaluationTemplates(): Promise<
   TypedResult<EvaluationTemplateWithCategory[], Error>
@@ -36,9 +37,12 @@ export async function findEvaluationTemplateById(
   id: number,
   db = database,
 ): Promise<TypedResult<EvaluationTemplate, Error>> {
-  const result = await db.query.evaluationAdvancedTemplates.findFirst({
-    where: eq(evaluationAdvancedTemplates.id, id),
-  })
+  const result = await db
+    .select()
+    .from(evaluationAdvancedTemplates)
+    .where(eq(evaluationAdvancedTemplates.id, id))
+    .limit(1)
+    .then((rows) => rows[0])
 
   if (!result) {
     return Result.error(new NotFoundError('Evaluation template not found'))

@@ -1,5 +1,5 @@
 import { DocumentLog } from '@latitude-data/constants'
-import { DocumentLogWithMetadataAndError } from '../../browser'
+import { DocumentLogWithMetadataAndError } from '../../schema/types'
 import { database } from '../../client'
 import { NotFoundError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'

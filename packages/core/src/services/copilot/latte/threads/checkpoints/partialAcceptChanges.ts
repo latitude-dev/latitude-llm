@@ -1,9 +1,9 @@
 import { Result } from '../../../../../lib/Result'
 import Transaction from '../../../../../lib/Transaction'
 import { inArray } from 'drizzle-orm'
-import { latteThreadCheckpoints } from '../../../../../schema'
+import { latteThreadCheckpoints } from '../../../../../schema/models/latteThreadCheckpoints'
 import { LatteThreadsRepository } from '../../../../../repositories'
-import { Workspace } from '../../../../../browser'
+import { Workspace } from '../../../../../schema/types'
 
 export async function partialAcceptLatteChanges(
   {

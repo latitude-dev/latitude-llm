@@ -1,8 +1,8 @@
-import { DocumentIntegrationReference } from '@latitude-data/core/browser'
-import useFetcher from '$/hooks/useFetcher'
-import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useMemo } from 'react'
+import { DocumentIntegrationReference } from '@latitude-data/core/schema/types'
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
 
 const EMPTY_ARRAY: DocumentIntegrationReference[] = []
 export default function useDocumentIntegrationReferences(

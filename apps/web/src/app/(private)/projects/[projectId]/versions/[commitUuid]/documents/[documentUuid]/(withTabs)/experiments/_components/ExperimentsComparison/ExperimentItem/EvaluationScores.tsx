@@ -1,16 +1,16 @@
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import { EvaluationWithBestExperiment } from '$/stores/experimentComparison'
-import {
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2,
-  ExperimentWithScores,
-} from '@latitude-data/core/browser'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo } from 'react'
+import {
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+} from '@latitude-data/core/constants'
+import { ExperimentWithScores } from '@latitude-data/core/schema/types'
 
 function EvaluationScore<
   T extends EvaluationType,

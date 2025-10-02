@@ -1,7 +1,5 @@
 'use client'
 import { useCallback, useState } from 'react'
-
-import { DocumentVersion } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -17,6 +15,7 @@ import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function UpgradeToPromptlModal({
   open,

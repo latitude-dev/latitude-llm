@@ -1,6 +1,5 @@
 import { logoutAction } from '$/actions/user/logoutAction'
 import { ROUTES } from '$/services/routes'
-import { User } from '@latitude-data/core/browser'
 import { Avatar } from '@latitude-data/web-ui/atoms/Avatar'
 import {
   DropdownMenu,
@@ -10,6 +9,7 @@ import {
 import { getUserInfoFromSession } from '@latitude-data/web-ui/getUserInfoFromSession'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
+import { User } from '@latitude-data/core/schema/types'
 
 export default function AvatarDropdown({
   currentUser,

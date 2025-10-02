@@ -1,12 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { PaymentRequiredError } from '@latitude-data/constants/errors'
-import {
-  FREE_PLANS,
-  PRO_PLANS,
-  SubscriptionPlan,
-  type Subscription,
-  type Workspace,
-} from '../../../browser'
+import { FREE_PLANS, PRO_PLANS, SubscriptionPlan } from '../../../plans'
+import { type Subscription, type Workspace } from '../../../schema/types'
 import { createSubscription } from '../../../tests/factories'
 import { createUser } from '../../../tests/factories'
 import { createWorkspace } from '../../../tests/factories'

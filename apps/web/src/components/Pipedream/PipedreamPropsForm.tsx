@@ -1,9 +1,4 @@
 import { usePipedreamComponentProps } from '$/hooks/pipedreamProps/usePipedreamComponentProps'
-import {
-  IntegrationDto,
-  PipedreamComponent,
-  PipedreamComponentType,
-} from '@latitude-data/core/browser'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -27,6 +22,11 @@ import type {
   ConfigurablePropAlertType,
   ConfigurablePropTimer,
 } from '@pipedream/sdk'
+import { IntegrationDto } from '@latitude-data/core/schema/types'
+import {
+  PipedreamComponent,
+  PipedreamComponentType,
+} from '@latitude-data/core/constants'
 
 type Defined<T> = Exclude<T, undefined | null>
 type AlertVariant = Defined<AlertProps['variant']>

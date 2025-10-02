@@ -1,10 +1,11 @@
-import { Providers, User, Workspace } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { createProviderApiKey } from '@latitude-data/core/services/providerApiKeys/create'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
+import { Providers } from '@latitude-data/constants'
+import { User, Workspace } from '@latitude-data/core/schema/types'
 
 const mocks = vi.hoisted(() => {
   return {

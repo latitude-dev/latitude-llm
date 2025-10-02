@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { magicLinkTokens } from '../../schema'
+import { magicLinkTokens } from '../../schema/models/magicLinkTokens'
 
 export async function confirmMagicLinkToken(
   token: string,

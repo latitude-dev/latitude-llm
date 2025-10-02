@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { Project, ProviderApiKey, User, Workspace } from '../../browser'
+import type {
+  Project,
+  ProviderApiKey,
+  User,
+  Workspace,
+} from '../../schema/types'
 import { CommitStatus } from '../../constants'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument } from '../../services/documents'

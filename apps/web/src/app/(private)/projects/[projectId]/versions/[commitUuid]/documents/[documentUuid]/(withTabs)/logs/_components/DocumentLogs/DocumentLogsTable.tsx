@@ -8,13 +8,6 @@ import { KeysetTablePaginationFooter } from '$/components/TablePaginationFooter/
 import { OnSelectedSpanFn } from '$/components/tracing/traces/Timeline'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
-import {
-  DocumentLogsLimitedView,
-  DocumentLogWithMetadataAndError,
-  EvaluationV2,
-  LOG_FILTERS_ENCODED_PARAMS,
-  ResultWithEvaluationV2,
-} from '@latitude-data/core/browser'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import {
   buildPagination,
@@ -37,6 +30,15 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { capitalize } from 'lodash-es'
 import { forwardRef, Fragment, useMemo } from 'react'
 import { DocumentLogTraces } from './DocumentLogInfo/Traces'
+import {
+  DocumentLogsLimitedView,
+  DocumentLogWithMetadataAndError,
+  ResultWithEvaluationV2,
+} from '@latitude-data/core/schema/types'
+import {
+  EvaluationV2,
+  LOG_FILTERS_ENCODED_PARAMS,
+} from '@latitude-data/core/constants'
 
 type DocumentLogRow = DocumentLogWithMetadataAndError & {
   realtimeAdded?: boolean

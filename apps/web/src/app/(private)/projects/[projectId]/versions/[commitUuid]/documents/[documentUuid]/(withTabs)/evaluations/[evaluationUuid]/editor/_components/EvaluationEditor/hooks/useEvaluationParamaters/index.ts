@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
-  DocumentVersion,
-  EvaluationType,
-  EvaluationV2,
-  LlmEvaluationMetricAnyCustom,
-} from '@latitude-data/core/browser'
-import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
@@ -14,6 +8,12 @@ import {
 import { EVALUATION_EMPTY_INPUTS, EvaluationInputsByDocument } from './types'
 import { getDocState } from './utils'
 import { useEvaluatedLogInputs } from './logInputParamaters'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import {
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetricAnyCustom,
+} from '@latitude-data/core/constants'
 
 export function useEvaluationParameters({
   commitVersionUuid,

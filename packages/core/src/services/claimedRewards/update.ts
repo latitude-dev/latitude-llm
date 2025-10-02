@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm'
-import { GrantSource } from '../../browser'
-import { unsafelyFindWorkspace } from '../../data-access'
+import { GrantSource } from '../../constants'
+import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { claimedRewards } from '../../schema'
+import { claimedRewards } from '../../schema/models/claimedRewards'
 import { revokeGrants } from '../grants/revoke'
 
 export async function updateRewardClaim(

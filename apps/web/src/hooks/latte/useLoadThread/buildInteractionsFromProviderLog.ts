@@ -1,4 +1,3 @@
-import { ProviderLogDto } from '@latitude-data/core/browser'
 import { LatteInteraction, LatteStepGroupItem, LatteToolStep } from '../types'
 import {
   TextContent,
@@ -8,6 +7,7 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 
 import { getDescriptionFromToolCall } from '$/hooks/latte/helpers'
+import { ProviderLogDto } from '@latitude-data/core/schema/types'
 
 function isToolCall(m: MessageContent): m is ToolRequestContent {
   return m.type === 'tool-call'

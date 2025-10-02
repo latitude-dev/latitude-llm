@@ -2,16 +2,16 @@ import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import AnnotationForm from '$/components/evaluations/AnnotationForm'
 import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/byDocumentLogs'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { isEqual } from 'lodash-es'
+import { ComponentProps, useCallback, useEffect, useState } from 'react'
 import {
   EvaluationMetric,
   EvaluationResultMetadata,
   EvaluationResultV2,
   EvaluationType,
-} from '@latitude-data/core/browser'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
-import { isEqual } from 'lodash-es'
-import { ComponentProps, useCallback, useEffect, useState } from 'react'
+} from '@latitude-data/core/constants'
 
 export function DocumentLogAnnotation<
   T extends EvaluationType,

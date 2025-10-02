@@ -2,9 +2,9 @@ import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
-import { Providers } from '../../constants'
+import { Providers } from '@latitude-data/constants'
 import { findHeadCommit } from '../../data-access/commits'
-import { documentVersions } from '../../schema'
+import { documentVersions } from '../../schema/models/documentVersions'
 import { createNewDocument, updateDocument } from '../documents'
 import { mergeCommit } from './merge'
 
@@ -51,9 +51,10 @@ describe('mergeCommit', () => {
       content: ctx.factories.helpers.createPrompt({ provider: providers[0]! }),
     })
 
-    const currentChanges = await database.query.documentVersions.findMany({
-      where: eq(documentVersions.commitId, commit.id),
-    })
+    const currentChanges = await database
+      .select()
+      .from(documentVersions)
+      .where(eq(documentVersions.commitId, commit.id))
 
     expect(currentChanges.length).toBe(1)
     expect(currentChanges[0]!.path).toBe('foo')
@@ -61,9 +62,10 @@ describe('mergeCommit', () => {
 
     await mergeCommit(commit)
 
-    const mergedChanges = await database.query.documentVersions.findMany({
-      where: eq(documentVersions.commitId, commit.id),
-    })
+    const mergedChanges = await database
+      .select()
+      .from(documentVersions)
+      .where(eq(documentVersions.commitId, commit.id))
 
     expect(mergedChanges.length).toBe(1)
     expect(mergedChanges[0]!.path).toBe('foo')

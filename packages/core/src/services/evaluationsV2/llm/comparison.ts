@@ -1,12 +1,12 @@
 import { z } from 'zod'
+import { EvaluationType } from '../../../constants'
 import {
-  EvaluationType,
-  formatConversation,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationMetric,
-  ProviderApiKey,
-  LlmEvaluationComparisonSpecification as specification,
-} from '../../../browser'
+} from '../../../constants'
+import { LlmEvaluationComparisonSpecification as specification } from '../../../constants'
+import { formatConversation } from '../../../helpers'
+import { ProviderApiKey } from '../../../schema/types'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'

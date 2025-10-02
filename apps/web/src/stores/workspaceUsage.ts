@@ -4,8 +4,8 @@ import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useUsers from '$/stores/users'
-import { WorkspaceUsage } from '@latitude-data/core/browser'
 import useSWR, { SWRConfiguration } from 'swr'
+import { WorkspaceUsage } from '@latitude-data/core/constants'
 
 export default function useWorkspaceUsage(opts?: SWRConfiguration) {
   const { data: users } = useUsers()

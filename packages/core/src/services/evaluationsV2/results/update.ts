@@ -1,16 +1,11 @@
 import { and, eq } from 'drizzle-orm'
-import {
-  Commit,
-  EvaluationMetric,
-  EvaluationResultV2,
-  EvaluationResultValue,
-  EvaluationType,
-  Workspace,
-} from '../../../browser'
+import { Commit, Workspace } from '../../../schema/types'
+import { EvaluationMetric, EvaluationType } from '../../../constants'
+import { EvaluationResultV2, EvaluationResultValue } from '../../../constants'
 import { publisher } from '../../../events/publisher'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
-import { evaluationResultsV2 } from '../../../schema'
+import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 
 export async function updateEvaluationResultV2<
   T extends EvaluationType,

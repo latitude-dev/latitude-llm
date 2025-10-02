@@ -1,12 +1,11 @@
 'use client'
-
-import { ApiKey, DocumentVersion } from '@latitude-data/core/browser'
 import { TabItem, Tabs } from '@latitude-data/web-ui/molecules/Tabs'
 import { useMemo, useState } from 'react'
 import { UsedToolsDoc } from '../index'
 import { APIUsage } from './APIUsage'
 import { JavascriptUsage } from './JavascriptUsage'
 import { PythonUsage } from './PythonUsage'
+import { ApiKey, DocumentVersion } from '@latitude-data/core/schema/types'
 
 const tabs: TabItem[] = [
   { id: 'javascript', label: 'Javascript' },

@@ -1,14 +1,14 @@
 import { z } from '@hono/zod-openapi'
 import { ParameterType } from '@latitude-data/constants'
-import {
-  Commit,
-  DocumentVersion,
-  Providers,
-  Workspace,
-} from '@latitude-data/core/browser'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
 import { ConversationMetadata } from 'promptl-ai'
+import {
+  Commit,
+  DocumentVersion,
+  Workspace,
+} from '@latitude-data/core/schema/types'
+import { Providers } from '@latitude-data/constants'
 
 export const documentPresenterSchema = z.object({
   versionUuid: z.string(),

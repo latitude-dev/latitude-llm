@@ -1,18 +1,16 @@
 import {
   Commit,
   DocumentVersion,
-  EvaluationMetric,
-  EvaluationOptions,
-  EvaluationSettings,
-  EvaluationType,
   EvaluationV2,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { EvaluationMetric, EvaluationType } from '../../constants'
+import { EvaluationOptions, EvaluationSettings } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { compactObject } from '../../lib/compactObject'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { evaluationVersions } from '../../schema'
+import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { validateEvaluationV2 } from './validate'
 
 export async function createEvaluationV2<

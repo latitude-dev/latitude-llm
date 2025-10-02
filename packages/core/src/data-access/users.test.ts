@@ -1,8 +1,8 @@
+import { memberships } from '../schema/models/memberships'
 import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { database } from '../client'
-import { memberships } from '../schema'
 import { createUser, createWorkspace } from '../tests/factories'
 import { findFirstUserInWorkspace } from './users'
 

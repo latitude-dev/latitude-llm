@@ -1,6 +1,4 @@
 'use server'
-
-import { Commit } from '@latitude-data/core/browser'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -10,6 +8,7 @@ import { updateDocument } from '@latitude-data/core/services/documents/update'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'
+import { Commit } from '@latitude-data/core/schema/types'
 
 export const createDraftWithPromptlUpgradeAction = withProject
   .createServerAction()

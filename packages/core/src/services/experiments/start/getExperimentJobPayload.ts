@@ -4,7 +4,7 @@ import {
   EvaluationV2,
   Experiment,
   Workspace,
-} from '../../../browser'
+} from '../../../schema/types'
 import { database } from '../../../client'
 import { PromisedResult } from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'

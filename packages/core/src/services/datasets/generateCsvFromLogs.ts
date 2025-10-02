@@ -1,9 +1,10 @@
 import { stringify } from 'csv-stringify/sync'
 import { Result } from '../../lib/Result'
-import { Workspace } from '../../browser'
+import { Workspace } from '../../schema/types'
 import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
 import { nanoidHashAlgorithm } from './utils'
-import { Column, DatasetRowData } from '../../schema'
+import { Column } from '../../schema/models/datasets'
+import { DatasetRowData } from '../../schema/models/datasetRows'
 
 function stringifyData({
   columns,

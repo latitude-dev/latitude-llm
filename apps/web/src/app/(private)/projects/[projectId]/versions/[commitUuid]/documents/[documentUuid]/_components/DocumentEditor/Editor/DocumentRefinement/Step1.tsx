@@ -2,12 +2,6 @@ import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2, useEvaluationV2Stats } from '$/stores/evaluationsV2'
-import {
-  DocumentVersion,
-  EvaluationMetric,
-  EvaluationType,
-  EvaluationV2,
-} from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
@@ -30,6 +24,12 @@ import {
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useEffect, useMemo } from 'react'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import {
+  EvaluationMetric,
+  EvaluationType,
+  EvaluationV2,
+} from '@latitude-data/core/constants'
 
 export function Step1({
   project,

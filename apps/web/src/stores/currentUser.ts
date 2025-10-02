@@ -4,11 +4,11 @@ import { updateUserAction } from '$/actions/user/update'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { User } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { User } from '@latitude-data/core/schema/types'
 
 export function useCurrentUser(opts?: SWRConfiguration) {
   const { toast } = useToast()

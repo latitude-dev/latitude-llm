@@ -1,6 +1,6 @@
 import * as env from '@latitude-data/env'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
-import { ActionType, User, Workspace } from '../../browser'
+import { ActionType, User, Workspace } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import * as factories from '../../tests/factories'

@@ -1,7 +1,7 @@
-import { RunError, RunErrorInsert } from '../../browser'
+import { RunError, RunErrorInsert } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { runErrors } from '../../schema'
+import { runErrors } from '../../schema/models/runErrors'
 export type CreateRunErrorProps = { data: RunErrorInsert }
 
 export async function createRunError(

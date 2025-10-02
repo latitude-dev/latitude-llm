@@ -1,7 +1,8 @@
 import { faker } from '@faker-js/faker'
 
-import { ProviderApiKey, Providers, User, Workspace } from '../../browser'
-import { ProviderConfiguration } from '../../schema'
+import { ProviderApiKey, User, Workspace } from '../../schema/types'
+import { Providers } from '@latitude-data/constants'
+import { ProviderConfiguration } from '../../schema/models/providerApiKeys'
 import {
   createProviderApiKey as createFn,
   destroyProviderApiKey,

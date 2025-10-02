@@ -1,9 +1,9 @@
 import { relativeTimeForDate } from '$/lib/relativeTime'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { DocumentTriggerEvent } from '@latitude-data/core/browser'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { DocumentTriggerEvent } from '@latitude-data/core/schema/types'
 
 export function IntegrationTriggerEvent({
   event,

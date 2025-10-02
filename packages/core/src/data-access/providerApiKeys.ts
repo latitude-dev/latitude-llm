@@ -1,13 +1,16 @@
+import { providerApiKeys } from '../schema/models/providerApiKeys'
 import { eq } from 'drizzle-orm'
 
-import { ProviderApiKey } from '../browser'
+import { ProviderApiKey } from '../schema/types'
 import { database } from '../client'
-import { providerApiKeys } from '../schema'
 
 export function unsafelyFindProviderApiKey(
   providerId: number,
 ): Promise<ProviderApiKey | undefined> {
-  return database.query.providerApiKeys.findFirst({
-    where: eq(providerApiKeys.id, providerId),
-  })
+  return database
+    .select()
+    .from(providerApiKeys)
+    .where(eq(providerApiKeys.id, providerId))
+    .limit(1)
+    .then((rows) => rows[0])
 }

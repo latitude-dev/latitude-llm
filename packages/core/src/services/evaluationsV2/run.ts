@@ -3,20 +3,18 @@ import {
   NotFoundError,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
+import { buildConversation } from '../../helpers'
 import {
-  buildConversation,
   Commit,
   Dataset,
   DatasetRow,
-  EVALUATION_SCORE_SCALE,
-  EvaluationMetric,
-  EvaluationResultValue,
-  EvaluationType,
   EvaluationV2,
   Experiment,
   ProviderLogDto,
   Workspace,
-} from '../../browser'
+} from '../../schema/types'
+import { EVALUATION_SCORE_SCALE, EvaluationResultValue } from '../../constants'
+import { EvaluationMetric, EvaluationType } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'

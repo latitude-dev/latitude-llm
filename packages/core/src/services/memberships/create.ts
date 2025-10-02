@@ -1,8 +1,8 @@
-import { Membership, User, Workspace } from '../../browser'
+import { Membership, User, Workspace } from '../../schema/types'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { memberships } from '../../schema'
+import { memberships } from '../../schema/models/memberships'
 export const createMembership = async (
   {
     author,

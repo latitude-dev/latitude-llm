@@ -1,4 +1,4 @@
-import { Commit, DocumentVersion, Workspace } from '../../browser'
+import { Commit, DocumentVersion, Workspace } from '../../schema/types'
 
 export type Copilot = {
   workspace: Workspace

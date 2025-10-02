@@ -1,7 +1,7 @@
-import { LatteThread, User, Workspace, Project } from '../../../../browser'
+import { LatteThread, User, Workspace, Project } from '../../../../schema/types'
 import { Result } from '../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../lib/Transaction'
-import { latteThreads } from '../../../../schema'
+import { latteThreads } from '../../../../schema/models/latteThreads'
 import { cache as redis } from '../../../../cache'
 import { LAST_LATTE_THREAD_CACHE_KEY } from '../../../../constants'
 

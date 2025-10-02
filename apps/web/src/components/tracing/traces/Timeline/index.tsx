@@ -1,10 +1,10 @@
-import { AssembledSpan, AssembledTrace } from '@latitude-data/core/browser'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { TimelineGraph } from './Graph'
 import { TimelineScale } from './Scale'
 import { TimelineTree } from './Tree'
+import { AssembledSpan, AssembledTrace } from '@latitude-data/core/constants'
 
 const TREE_MIN_WIDTH = 125 // 125px
 const GRAPH_MIN_WIDTH = 450 // 450px

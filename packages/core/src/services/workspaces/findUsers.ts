@@ -1,4 +1,4 @@
-import { User, Workspace, WorkspaceDto } from '../../browser'
+import { User, Workspace, WorkspaceDto } from '../../schema/types'
 import { database } from '../../client'
 import { PromisedResult } from '../../lib/Transaction'
 import { UsersRepository } from '../../repositories'

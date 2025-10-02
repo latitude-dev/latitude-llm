@@ -1,6 +1,4 @@
 'use client'
-
-import { Commit, CommitStatus } from '@latitude-data/core/browser'
 import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createDraftCommitAction } from '$/actions/commits/create'
@@ -10,6 +8,8 @@ import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
+import { Commit } from '@latitude-data/core/schema/types'
+import { CommitStatus } from '@latitude-data/core/constants'
 
 type CommitOptions = SWRConfiguration & {
   onSuccessCreate?: (commit: Commit) => void

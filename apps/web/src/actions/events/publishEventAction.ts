@@ -22,7 +22,9 @@ export const publishEventAction = authProcedure
     }
 
     publisher.publishLater({
+      // @ts-expect-error - eventtype is more strict than string
       type: eventType,
+      // @ts-expect-error - data is more strict than any() record
       data: data,
     })
   })

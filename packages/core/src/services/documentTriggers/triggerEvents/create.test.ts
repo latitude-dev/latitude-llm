@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { EmailTriggerEventPayload } from '@latitude-data/constants/documentTriggers'
-import { Commit, Project, Workspace, DocumentTrigger } from '../../../browser'
+import {
+  Commit,
+  Project,
+  Workspace,
+  DocumentTrigger,
+} from '../../../schema/types'
 import { createDocumentTriggerEvent } from './create'
 import * as factories from '../../../tests/factories'
 import { DocumentTriggerEventsRepository } from '../../../repositories'

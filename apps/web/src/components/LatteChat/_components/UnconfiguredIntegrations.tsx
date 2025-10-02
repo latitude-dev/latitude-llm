@@ -2,8 +2,8 @@ import { UnconfiguredIntegration } from '$/app/(private)/projects/[projectId]/ve
 import useIntegrations from '$/stores/integrations'
 import { useLatteStore } from '$/stores/latte'
 import { IntegrationType } from '@latitude-data/constants'
-import { PipedreamIntegration } from '@latitude-data/core/browser'
 import { useEffect, useMemo } from 'react'
+import { PipedreamIntegration } from '@latitude-data/core/schema/types'
 
 export function LatteUnconfiguredIntegrations() {
   const { data: integrations, mutate } = useIntegrations()

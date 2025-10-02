@@ -6,10 +6,10 @@ import {
   ICommitContextType,
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
-import { DocumentVersion } from '@latitude-data/core/browser'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 /**
  * DEPRECATED: This will be not needed once new editor header

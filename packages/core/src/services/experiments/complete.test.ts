@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { completeExperiment } from './complete'
 import { database } from '../../client'
-import { experiments } from '../../schema'
+import { experiments } from '../../schema/models/experiments'
 import { WebsocketClient } from '../../websockets/workers'
 import { ProgressTracker } from '../../jobs/utils/progressTracker'
 import { eq } from 'drizzle-orm'
 import { createExperiment, createProject, helpers } from '../../tests/factories'
 import { Providers } from '@latitude-data/constants'
-import { Commit, Workspace, User, DocumentVersion } from '../../browser'
+import { Commit, Workspace, User, DocumentVersion } from '../../schema/types'
 
 // Mock external dependencies
 vi.mock('../../websockets/workers')

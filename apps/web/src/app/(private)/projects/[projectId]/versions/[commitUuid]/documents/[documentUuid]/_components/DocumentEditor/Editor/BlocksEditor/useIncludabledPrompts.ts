@@ -1,11 +1,12 @@
 import { IncludedPrompt } from '$/components/BlocksEditor'
 import { ROUTES } from '$/services/routes'
-import { type DocumentVersion, DocumentType } from '@latitude-data/core/browser'
 import {
   ICommitContextType,
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
 import { useMemo } from 'react'
+import { type DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentType } from '@latitude-data/core/constants'
 
 const docUrl = (projectId: number, commitUuid: string, uuid: string) =>
   ROUTES.projects

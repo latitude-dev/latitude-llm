@@ -9,7 +9,8 @@ import {
 } from 'promptl-ai'
 
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { DocumentVersion, ErrorableEntity } from '../../../browser'
+import { DocumentVersion } from '../../../schema/types'
+import { ErrorableEntity } from '../../../constants'
 import { BadRequestError, LatitudeError } from '../../../lib/errors'
 import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'

@@ -6,9 +6,9 @@ import {
   DocumentVersion,
   EvaluationV2,
   Workspace,
-  Providers,
   User,
-} from '../../browser'
+} from '../../schema/types'
+import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { createExperimentVariants } from './createVariants'
 

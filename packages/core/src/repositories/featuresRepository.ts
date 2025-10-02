@@ -2,7 +2,7 @@ import { asc, eq, getTableColumns } from 'drizzle-orm'
 
 import { Result } from '../lib/Result'
 import { NotFoundError } from '../lib/errors'
-import { features } from '../schema'
+import { features } from '../schema/models/features'
 import { database } from '../client'
 
 const tt = getTableColumns(features)

@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
-import { Export } from '../../browser'
+import { Export } from '../../schema/types'
 import Transaction from '../../lib/Transaction'
-import { latitudeExports } from '../../schema'
+import { latitudeExports } from '../../schema/models/exports'
 import { Result } from '../../lib/Result'
 
 export async function updateExport(

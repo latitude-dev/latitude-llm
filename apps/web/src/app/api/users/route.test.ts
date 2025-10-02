@@ -1,9 +1,9 @@
-import { User, Workspace } from '@latitude-data/core/browser'
 import { createWorkspace } from '@latitude-data/core/factories'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
+import { User, Workspace } from '@latitude-data/core/schema/types'
 
 const mocks = vi.hoisted(() => {
   return {

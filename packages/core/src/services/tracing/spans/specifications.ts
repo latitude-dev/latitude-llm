@@ -1,4 +1,4 @@
-import { Span, SpanType } from '../../../browser'
+import { Span, SpanType } from '../../../constants'
 import { CompletionSpanSpecification } from './completion'
 import { EmbeddingSpanSpecification } from './embedding'
 import { HttpSpanSpecification } from './http'

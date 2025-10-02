@@ -1,10 +1,8 @@
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import {
-  DocumentLogFilterOptions,
-  DocumentLogWithMetadataAndError,
-} from '@latitude-data/core/browser'
 import useSWR, { SWRConfiguration } from 'swr'
+import { DocumentLogFilterOptions } from '@latitude-data/core/constants'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/schema/types'
 
 type UseDocumentLogsLimitedResult = {
   items: DocumentLogWithMetadataAndError[]

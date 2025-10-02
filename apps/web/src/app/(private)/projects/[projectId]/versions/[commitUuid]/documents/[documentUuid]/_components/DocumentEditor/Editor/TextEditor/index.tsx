@@ -2,7 +2,6 @@ import { requestSuggestionAction } from '$/actions/copilot/requestSuggestion'
 import { publishEventAction } from '$/actions/events/publishEventAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import type { AstError } from '@latitude-data/constants/promptl'
-import { DocumentVersion } from '@latitude-data/core/browser'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
 import type { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
@@ -16,6 +15,7 @@ import { DocumentRefinement } from '../DocumentRefinement'
 import { DocumentSuggestions } from '../DocumentSuggestions'
 import { EditorSettings } from '../EditorSettings'
 import { LatteDiffManager } from './LatteDiffManager'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export const PlaygroundTextEditor = memo(
   ({

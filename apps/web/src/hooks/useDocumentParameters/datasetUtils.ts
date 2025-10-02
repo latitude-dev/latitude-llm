@@ -1,11 +1,12 @@
 import { useCallback } from 'react'
-import { DocumentVersion, LinkedDatasetRow } from '@latitude-data/core/browser'
 import {
   getDocState,
   InputsByDocument,
 } from '$/hooks/useDocumentParameters/utils'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { LinkedDatasetRow } from '@latitude-data/core/lib/documentPersistedInputs'
 
 export function useDatasetUtils({
   key,

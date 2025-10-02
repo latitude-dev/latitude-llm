@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm'
 
-import { Commit } from '../../browser'
+import { Commit } from '../../schema/types'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { commits } from '../../schema'
+import { commits } from '../../schema/models/commits'
 
 export async function updateCommit(
   commit: Commit,

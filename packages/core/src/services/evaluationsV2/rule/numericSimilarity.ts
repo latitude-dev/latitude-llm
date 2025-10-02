@@ -1,8 +1,5 @@
-import {
-  EvaluationType,
-  RuleEvaluationMetric,
-  RuleEvaluationNumericSimilaritySpecification as specification,
-} from '../../../browser'
+import { EvaluationType, RuleEvaluationMetric } from '../../../constants'
+import { RuleEvaluationNumericSimilaritySpecification as specification } from '../../../constants'
 import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'

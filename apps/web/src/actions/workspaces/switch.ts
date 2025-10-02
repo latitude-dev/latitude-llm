@@ -1,7 +1,7 @@
 'use server'
 
 import { WorkspacesRepository } from '@latitude-data/core/repositories'
-import { unsafelyGetUser } from '@latitude-data/core/data-access'
+import { unsafelyGetUser } from '@latitude-data/core/data-access/users'
 import { z } from 'zod'
 import { setSession } from '$/services/auth/setSession'
 import { authProcedure } from '../procedures'

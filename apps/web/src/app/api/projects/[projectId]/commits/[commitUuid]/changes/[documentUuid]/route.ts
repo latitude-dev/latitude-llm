@@ -1,10 +1,4 @@
 'use server'
-
-import {
-  DiffValue,
-  DocumentVersion,
-  Workspace,
-} from '@latitude-data/core/browser'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -12,6 +6,8 @@ import {
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
+import { DiffValue } from '@latitude-data/core/constants'
+import { DocumentVersion, Workspace } from '@latitude-data/core/schema/types'
 
 function documentContent(document?: DocumentVersion) {
   if (!document) return undefined

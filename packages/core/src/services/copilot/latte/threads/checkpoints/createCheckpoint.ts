@@ -1,7 +1,10 @@
-import { DocumentVersion, LatteThreadCheckpoint } from '../../../../../browser'
+import {
+  DocumentVersion,
+  LatteThreadCheckpoint,
+} from '../../../../../schema/types'
 import { Result } from '../../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
-import { latteThreadCheckpoints } from '../../../../../schema'
+import { latteThreadCheckpoints } from '../../../../../schema/models/latteThreadCheckpoints'
 
 export function createLatteThreadCheckpoints(
   {

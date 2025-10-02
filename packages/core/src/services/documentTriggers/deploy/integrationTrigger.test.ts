@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { IntegrationType, DocumentTriggerType } from '@latitude-data/constants'
-import { Commit, Workspace, DocumentTrigger } from '../../../browser'
+import { Commit, Workspace, DocumentTrigger } from '../../../schema/types'
 import * as factories from '../../../tests/factories'
 import { undeployIntegrationTrigger } from './integrationTrigger'
 

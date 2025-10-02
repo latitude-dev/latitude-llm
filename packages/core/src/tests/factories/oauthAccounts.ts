@@ -1,8 +1,8 @@
 import { faker } from '@faker-js/faker'
 
 import { database } from '../../client'
-import { oauthAccounts, OAuthProvider } from '../../schema'
-import type { oauthAccounts as OauthAccountsTable } from '../../schema'
+import { oauthAccounts, OAuthProvider } from '../../schema/models/oauthAccounts'
+import type { oauthAccounts as OauthAccountsTable } from '../../schema/models/oauthAccounts'
 import { createUser } from './users'
 import type { ICreateUser } from './users'
 

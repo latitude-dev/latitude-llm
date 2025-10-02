@@ -6,7 +6,6 @@ import {
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
-import { EvaluationV2 } from '@latitude-data/core/browser'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
@@ -31,6 +30,7 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { useCallback, useState } from 'react'
 import { EvaluationsGenerator } from './EvaluationsGenerator'
+import { EvaluationV2 } from '@latitude-data/core/constants'
 
 export function EvaluationsTable({
   evaluations,

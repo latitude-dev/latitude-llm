@@ -1,14 +1,14 @@
 import { create } from 'zustand'
 import { useCallback } from 'react'
 import { KeyedMutator } from 'swr'
+import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
+import useDocumentTriggerEvents from '$/stores/documentTriggerEvents'
 import {
   Commit,
   Project,
   DocumentTrigger,
   DocumentTriggerEvent,
-} from '@latitude-data/core/browser'
-import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
-import useDocumentTriggerEvents from '$/stores/documentTriggerEvents'
+} from '@latitude-data/core/schema/types'
 
 type RealtimeTriggerEventCounters = {
   eventsByTrigger: Record<string, number | undefined>

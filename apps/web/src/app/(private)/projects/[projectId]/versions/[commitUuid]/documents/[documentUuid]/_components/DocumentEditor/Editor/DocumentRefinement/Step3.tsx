@@ -1,4 +1,3 @@
-import { DocumentVersion } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
@@ -7,6 +6,7 @@ import {
   IProjectContextType,
 } from '@latitude-data/web-ui/providers'
 import { useEffect } from 'react'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function Step3({
   refine,

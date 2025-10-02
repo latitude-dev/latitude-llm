@@ -2,10 +2,10 @@ import { useCurrentUrl } from '$/hooks/useCurrentUrl'
 import { executeFetch } from '$/hooks/useFetcher'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import { Dataset } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useState } from 'react'
+import { Dataset } from '@latitude-data/core/schema/types'
 
 export type WithPositionData = {
   position: number

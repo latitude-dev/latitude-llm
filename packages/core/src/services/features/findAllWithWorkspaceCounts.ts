@@ -2,7 +2,9 @@ import { and, eq } from 'drizzle-orm'
 
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { features, workspaceFeatures, workspaces } from '../../schema'
+import { features } from '../../schema/models/features'
+import { workspaceFeatures } from '../../schema/models/workspaceFeatures'
+import { workspaces } from '../../schema/models/workspaces'
 
 export async function findAllFeaturesWithWorkspaceCounts(db = database) {
   const featuresWithCounts = await db

@@ -1,7 +1,6 @@
 'use client'
 
 import { usePromocodes } from '$/stores/admin/promocodes'
-import { QuotaType } from '@latitude-data/core/browser'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
@@ -18,6 +17,7 @@ import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { useState } from 'react'
 import CreatePromocodeModal from './_components/CreatePromocodeModal/createPromocodeModal'
+import { QuotaType } from '@latitude-data/core/constants'
 
 function QuotaTypeCell({ quotaType }: { quotaType: QuotaType }) {
   const getQuotaTypeLabel = (type: QuotaType) => {

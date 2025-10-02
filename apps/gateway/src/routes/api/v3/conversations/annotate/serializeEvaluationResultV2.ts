@@ -2,7 +2,7 @@ import {
   EvaluationResultV2,
   PublicManualEvaluationResultV2,
 } from '@latitude-data/constants'
-import { Commit } from '@latitude-data/core/browser'
+import { Commit } from '@latitude-data/core/schema/types'
 
 export function serializeEvaluationResultV2(
   evaluationResult: EvaluationResultV2,

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { useMetadata } from '$/hooks/useMetadata'
 import {
   Commit,
   Dataset,
   DocumentVersion,
-  EvaluationV2,
   Project,
-} from '@latitude-data/core/browser'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { useMetadata } from '$/hooks/useMetadata'
+} from '@latitude-data/core/schema/types'
+import { EvaluationV2 } from '@latitude-data/core/constants'
 
 export type ExperimentFormPayload = {
   project: Project

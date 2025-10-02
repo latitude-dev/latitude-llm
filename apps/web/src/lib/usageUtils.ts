@@ -1,4 +1,4 @@
-import type { WorkspaceUsage } from '@latitude-data/core/browser'
+import { type WorkspaceUsage } from '@latitude-data/core/constants'
 
 export function calculateUsage(workspaceUsage: WorkspaceUsage | undefined) {
   if (!workspaceUsage) {

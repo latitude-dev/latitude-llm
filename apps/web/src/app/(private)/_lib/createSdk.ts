@@ -1,10 +1,11 @@
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { LogSources, Workspace } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { Result } from '@latitude-data/core/lib/Result'
 import { LatitudeApiKeysRepository } from '@latitude-data/core/repositories'
 import { env } from '@latitude-data/env'
 import { Latitude } from '@latitude-data/sdk'
+import { LogSources } from '@latitude-data/core/constants'
+import { Workspace } from '@latitude-data/core/schema/types'
 
 // NOTE: this would be a great candidate for a cache function with redis
 async function getLatitudeApiKey(workspace: Workspace) {

@@ -1,12 +1,12 @@
-import {
-  DocumentLogFilterOptions,
-  LogSources,
-  Providers,
-} from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createDatasetFromLogsAction } from './createFromLogs'
+import {
+  DocumentLogFilterOptions,
+  LogSources,
+} from '@latitude-data/core/constants'
+import { Providers } from '@latitude-data/constants'
 
 // Mock dependencies
 const mocks = vi.hoisted(() => {

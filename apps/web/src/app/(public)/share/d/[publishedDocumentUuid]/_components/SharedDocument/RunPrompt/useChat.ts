@@ -3,14 +3,12 @@ import {
   Message as ConversationMessage,
   MessageRole,
 } from '@latitude-data/constants/legacyCompiler'
-import {
-  PublishedDocument,
-  StreamEventTypes,
-} from '@latitude-data/core/browser'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCallback } from 'react'
 import { readStreamableValue } from 'ai/rsc'
 import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
+import { PublishedDocument } from '@latitude-data/core/schema/types'
+import { StreamEventTypes } from '@latitude-data/core/constants'
 
 export function useChat({
   shared,

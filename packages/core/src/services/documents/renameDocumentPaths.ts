@@ -1,5 +1,5 @@
-import type { Commit, DocumentVersion } from '../../browser'
-import { findWorkspaceFromCommit } from '../../data-access'
+import type { Commit, DocumentVersion } from '../../schema/types'
+import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

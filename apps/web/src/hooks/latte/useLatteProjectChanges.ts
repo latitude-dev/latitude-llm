@@ -2,9 +2,9 @@
 
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useLatteStore } from '$/stores/latte/index'
-import { LatteChange } from '@latitude-data/constants/latte'
 import { useCallback } from 'react'
 import { useUpdateLocalState } from './useUpdateLocalState'
+import type { LatteProjectChangesArgs } from '@latitude-data/core/websockets/constants'
 
 /**
  * Handles real-time project changes from the Latte thread via WebSocket connections.
@@ -15,7 +15,7 @@ export function useLatteProjectChanges() {
   const { threadUuid, setLatteActionsFeedbackUuid } = useLatteStore()
   const updateLocalState = useUpdateLocalState()
   const onMessage = useCallback(
-    async (msg: { threadUuid: string; changes: LatteChange[] }) => {
+    async (msg: LatteProjectChangesArgs) => {
       if (!msg) {
         console.warn('Received empty latteProjectChanges event from server')
         return
