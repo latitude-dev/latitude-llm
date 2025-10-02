@@ -18,10 +18,10 @@ import {
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { env } from '@latitude-data/env'
-import { Latitude } from '@latitude-data/sdk'
 import {
   ChainEventDto,
   GenerationResponse,
+  Latitude,
   LatitudeApiError,
 } from '@latitude-data/sdk'
 import { NextRequest, NextResponse } from 'next/server'
@@ -191,7 +191,6 @@ export const POST = errorHandler(
         try {
           if (runsEnabled) {
             const result = await sdk.prompts.run(path, {
-              stream: false,
               background: true,
               versionUuid: commitUuid,
               parameters,

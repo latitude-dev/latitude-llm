@@ -1,4 +1,5 @@
-import { useCallback } from 'react'
+import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
+import { ROUTES } from '$/services/routes'
 import {
   Commit,
   DocumentVersion,
@@ -6,8 +7,7 @@ import {
   EvaluationV2,
   LlmEvaluationMetricAnyCustom,
 } from '@latitude-data/core/browser'
-import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
-import { ROUTES } from '$/services/routes'
+import { useCallback } from 'react'
 
 export function useRunEvaluationPlaygroundPrompt({
   projectId,
@@ -22,29 +22,38 @@ export function useRunEvaluationPlaygroundPrompt({
   evaluation: EvaluationV2<EvaluationType.Llm, LlmEvaluationMetricAnyCustom>
   parameters: Record<string, unknown> | undefined
 }) {
-  const { createStreamHandler, abortCurrentStream, hasActiveStream } =
-    useStreamHandler()
+  const {
+    createStreamHandler,
+    abortCurrentStream,
+    hasActiveStream,
+    createAbortController,
+  } = useStreamHandler()
   const runPromptFn = useCallback(async () => {
     const route = ROUTES.api.projects
       .detail(projectId)
       .commits.detail(commit.uuid)
       .documents.detail(document.documentUuid)
       .evaluations.detail(evaluation.uuid).runLlm.root
+
+    const signal = createAbortController()
+
     const response = await fetch(route, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ parameters }),
+      signal: signal,
     })
 
-    return createStreamHandler(response)
+    return createStreamHandler(response, signal)
   }, [
     parameters,
-    createStreamHandler,
     projectId,
     commit.uuid,
     document.documentUuid,
     evaluation.uuid,
+    createAbortController,
+    createStreamHandler,
   ])
 
   return { runPromptFn, abortCurrentStream, hasActiveStream }

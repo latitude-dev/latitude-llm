@@ -1,9 +1,9 @@
 import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
+import { ROUTES } from '$/services/routes'
 import {
   Message as ConversationMessage,
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
-import { ROUTES } from '$/services/routes'
 import { DocumentVersion, TraceContext } from '@latitude-data/core/browser'
 import { ICommitContextType } from '@latitude-data/web-ui/providers'
 import { useCallback, useMemo } from 'react'
@@ -21,9 +21,15 @@ export function useRunPlaygroundPrompt({
   parameters: Record<string, unknown> | undefined
   userMessage?: string
 }) {
-  const { createStreamHandler, abortCurrentStream, hasActiveStream } =
-    useStreamHandler()
+  const {
+    createStreamHandler,
+    abortCurrentStream,
+    hasActiveStream,
+    createAbortController,
+  } = useStreamHandler()
   const runPromptFn = useCallback(async () => {
+    const signal = createAbortController()
+
     const response = await fetch(
       ROUTES.api.documents.detail(document.documentUuid).run,
       {
@@ -40,18 +46,20 @@ export function useRunPlaygroundPrompt({
           stream: true, // Explicitly request streaming
           userMessage,
         }),
+        signal: signal,
       },
     )
 
-    return createStreamHandler(response)
+    return createStreamHandler(response, signal)
   }, [
     projectId,
     document.path,
     document.documentUuid,
     commit.uuid,
     parameters,
-    createStreamHandler,
     userMessage,
+    createAbortController,
+    createStreamHandler,
   ])
 
   const addMessagesFn = useCallback(

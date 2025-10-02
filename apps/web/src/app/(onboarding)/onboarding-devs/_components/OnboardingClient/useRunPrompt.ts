@@ -1,11 +1,11 @@
-import { useMemo, useCallback } from 'react'
-import { DocumentVersion, Project, Commit } from '@latitude-data/core/browser'
-import { OnboardingParameters } from '@latitude-data/constants/onboarding'
-import { ROUTES } from '$/services/routes'
-import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding-devs/_components/OnboardingClient'
+import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
+import { ROUTES } from '$/services/routes'
+import { OnboardingParameters } from '@latitude-data/constants/onboarding'
+import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { useCallback, useMemo } from 'react'
 
 const SECONDS_BEFORE_HIDING_PROMPT_IN_SECONDS = 2000
 export const DOCUMENT_PARAMETERS: OnboardingParameters = {
@@ -27,9 +27,12 @@ export function useRunOnboardingPrompt({
   document: DocumentVersion
   setCurrentStep: ReactStateDispatch<OnboardingStep>
 }) {
-  const { createStreamHandler, hasActiveStream } = useStreamHandler()
+  const { createStreamHandler, hasActiveStream, createAbortController } =
+    useStreamHandler()
   const runDocument = useCallback(async () => {
     try {
+      const signal = createAbortController()
+
       const response = await fetch(
         ROUTES.api.documents.detail(document.documentUuid).run,
         {
@@ -43,16 +46,23 @@ export function useRunOnboardingPrompt({
             projectId: project.id,
             stream: true,
           }),
+          signal: signal,
         },
       )
 
-      return createStreamHandler(response)
+      return createStreamHandler(response, signal)
     } catch (error) {
       console.error('Error running prompt:', error)
       // Consider user-facing error handling here
       throw error
     }
-  }, [document, createStreamHandler, project.id, commit.uuid])
+  }, [
+    document,
+    createAbortController,
+    createStreamHandler,
+    project.id,
+    commit.uuid,
+  ])
 
   const { start, messages } = usePlaygroundChat({
     runPromptFn: () => {
