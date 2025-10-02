@@ -48,9 +48,12 @@ export async function findCommitByUuid(
     return findHeadCommit({ projectId }, tx)
   }
 
-  const commit = await tx.query.commits.findFirst({
-    where: eq(commits.uuid, uuid),
-  })
+  const commit = await tx
+    .select()
+    .from(commits)
+    .where(eq(commits.uuid, uuid))
+    .limit(1)
+    .then((rows) => rows[0])
 
   if (!commit) return Result.error(new NotFoundError('Commit not found'))
 
@@ -58,16 +61,17 @@ export async function findCommitByUuid(
 }
 
 export async function findCommitById(id: number, tx = database) {
-  return await tx.query.commits.findFirst({
-    where: eq(commits.id, id),
-  })
+  return await tx
+    .select()
+    .from(commits)
+    .where(eq(commits.id, id))
+    .limit(1)
+    .then((rows) => rows[0])
 }
 
 export async function unsafelyFindCommitsByProjectId(
   projectId: number,
   db = database,
 ) {
-  return db.query.commits.findMany({
-    where: eq(commits.projectId, projectId),
-  })
+  return db.select().from(commits).where(eq(commits.projectId, projectId))
 }

@@ -24,9 +24,12 @@ export async function inviteUser(
 ) {
   return transaction.call(
     async (tx) => {
-      let user = await tx.query.users.findFirst({
-        where: eq(users.email, email),
-      })
+      let user = await tx
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1)
+        .then((rows) => rows[0])
       if (!user) {
         const result = await createUser({ email, name }, transaction)
         user = result.unwrap()

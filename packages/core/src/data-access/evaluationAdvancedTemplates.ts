@@ -37,9 +37,12 @@ export async function findEvaluationTemplateById(
   id: number,
   db = database,
 ): Promise<TypedResult<EvaluationTemplate, Error>> {
-  const result = await db.query.evaluationAdvancedTemplates.findFirst({
-    where: eq(evaluationAdvancedTemplates.id, id),
-  })
+  const result = await db
+    .select()
+    .from(evaluationAdvancedTemplates)
+    .where(eq(evaluationAdvancedTemplates.id, id))
+    .limit(1)
+    .then((rows) => rows[0])
 
   if (!result) {
     return Result.error(new NotFoundError('Evaluation template not found'))

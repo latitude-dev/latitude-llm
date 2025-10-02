@@ -18,12 +18,17 @@ const NotFound = Result.error(
 
 async function findByUuid(uuid: string, db = database) {
   try {
-    const shared = await db.query.publishedDocuments.findFirst({
-      where: and(
-        eq(publishedDocuments.uuid, uuid),
-        eq(publishedDocuments.isPublished, true),
-      ),
-    })
+    const shared = await db
+      .select()
+      .from(publishedDocuments)
+      .where(
+        and(
+          eq(publishedDocuments.uuid, uuid),
+          eq(publishedDocuments.isPublished, true),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0])
     return Result.ok(shared)
   } catch {
     return NotFound

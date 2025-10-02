@@ -96,9 +96,12 @@ export class AnalyticsClient {
   private async getUser() {
     if (!this.userEmail) return undefined
 
-    const user = await database.query.users.findFirst({
-      where: eq(users.email, this.userEmail),
-    })
+    const user = await database
+      .select()
+      .from(users)
+      .where(eq(users.email, this.userEmail))
+      .limit(1)
+      .then((rows) => rows[0])
     if (!user) return undefined
 
     return { id: user.id, email: user.email }

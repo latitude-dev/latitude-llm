@@ -13,10 +13,15 @@ export async function findByUuid(
   },
   db = database,
 ): Promise<Export | undefined> {
-  return await db.query.latitudeExports.findFirst({
-    where: and(
-      eq(latitudeExports.uuid, uuid),
-      eq(latitudeExports.workspaceId, workspace.id),
-    ),
-  })
+  return await db
+    .select()
+    .from(latitudeExports)
+    .where(
+      and(
+        eq(latitudeExports.uuid, uuid),
+        eq(latitudeExports.workspaceId, workspace.id),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0])
 }

@@ -25,9 +25,11 @@ export async function getUserFromCredentials({
 }: {
   email: string
 }): PromisedResult<ReturnType, NotFoundError> {
-  const user = await database.query.users.findFirst({
-    where: utils.eq(users.email, email),
-  })
+  const user = await database
+    .select()
+    .from(users)
+    .where(utils.eq(users.email, email))
+    .then(([user]) => user)
   if (!user) return notFoundWithEmail(email)
 
   const wpResult = await getFirstWorkspace({ userId: user.id })

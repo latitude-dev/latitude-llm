@@ -10,9 +10,12 @@ export async function unsafelyGetApiKeyByToken(
   { token }: { token: string },
   db = database,
 ): Promise<TypedResult<ApiKey, Error>> {
-  const apiKey = await db.query.apiKeys.findFirst({
-    where: eq(apiKeys.token, token),
-  })
+  const apiKey = await db
+    .select()
+    .from(apiKeys)
+    .where(eq(apiKeys.token, token))
+    .limit(1)
+    .then((rows) => rows[0])
 
   if (!apiKey) return Result.error(new NotFoundError('API key not found'))
 
@@ -24,9 +27,12 @@ export async function unsafelyGetFirstApiKeyByWorkspaceId({
 }: {
   workspaceId: number
 }) {
-  const apiKey = await database.query.apiKeys.findFirst({
-    where: eq(apiKeys.workspaceId, workspaceId),
-  })
+  const apiKey = await database
+    .select()
+    .from(apiKeys)
+    .where(eq(apiKeys.workspaceId, workspaceId))
+    .limit(1)
+    .then((rows) => rows[0])
 
   if (!apiKey) return Result.error(new NotFoundError('API key not found'))
 

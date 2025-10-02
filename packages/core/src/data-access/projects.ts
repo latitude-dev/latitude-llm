@@ -7,7 +7,12 @@ import { database } from '../client'
 import { DocumentVersion } from '../schema/types'
 
 export function unsafelyFindProject(projectId: number, db = database) {
-  return db.query.projects.findFirst({ where: eq(projects.id, projectId) })
+  return db
+    .select()
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1)
+    .then((rows) => rows[0])
 }
 
 export function findProjectFromDocument(
