@@ -33,11 +33,8 @@ async function getLiveDocumentTrigger<T extends DocumentTriggerType>(
 ): PromisedResult<DocumentTrigger<T> | undefined> {
   return transaction.call(async (tx) => {
     const commitsScope = new CommitsRepository(workspace.id, tx)
-    const liveCommitResult = await commitsScope.getHeadCommit(projectId)
-    if (!Result.isOk(liveCommitResult) || !liveCommitResult.value) {
-      return Result.ok(undefined)
-    }
-    const liveCommit = liveCommitResult.unwrap()
+    const liveCommit = await commitsScope.getHeadCommit(projectId)
+    if (!liveCommit) return Result.ok(undefined)
 
     const triggersScope = new DocumentTriggersRepository(workspace.id, tx)
     const liveTriggerResult = await triggersScope.getTriggerByUuid<T>({

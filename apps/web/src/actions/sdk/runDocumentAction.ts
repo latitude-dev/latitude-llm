@@ -33,9 +33,7 @@ export async function runDocumentAction({
   const { workspace, user } = await getCurrentUserOrRedirect()
 
   const commitsScope = new CommitsRepository(workspace.id)
-  const headCommit = await commitsScope
-    .getHeadCommit(projectId)
-    .then((r) => r.unwrap())
+  const headCommit = await commitsScope.getHeadCommit(projectId)
 
   publisher.publishLater({
     type: 'documentRunRequested',

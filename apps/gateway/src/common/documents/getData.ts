@@ -234,9 +234,7 @@ export async function publishDocumentRunRequestedEvent({
   const user = await findFirstUserInWorkspace(workspace)
 
   const commitsScope = new CommitsRepository(workspace.id)
-  const headCommit = await commitsScope
-    .getHeadCommit(project.id)
-    .then((r) => r.unwrap())
+  const headCommit = await commitsScope.getHeadCommit(project.id)
 
   if (user) {
     publisher.publishLater({
