@@ -6,6 +6,11 @@ export const captureException = (error: Error, tags?: Record<string, any>) => {
     console.error('Captured exception:', error)
   }
 
+  if ('cause' in error) {
+    captureException(error.cause as Error, tags)
+    return
+  }
+
   // Add error information to the current span
   const span = tracer.scope().active()
   if (span) {
