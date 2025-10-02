@@ -1,4 +1,4 @@
-import { BadRequestError } from '@latitude-data/constants/errors'
+import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { Commit, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
@@ -32,10 +32,9 @@ export async function handleTriggerMerge(
     const triggersScope = new DocumentTriggersRepository(workspace.id, tx)
     const commitsScope = new CommitsRepository(workspace.id, tx)
 
-    const liveCommitResult = await commitsScope.getHeadCommit(draft.projectId)
-    if (!Result.isOk(liveCommitResult)) return liveCommitResult
-
-    const liveCommit = liveCommitResult.unwrap()
+    const liveCommit = await commitsScope.getHeadCommit(draft.projectId)
+    if (!liveCommit)
+      return Result.error(new NotFoundError('Head commit not found'))
 
     const triggerUpdatesResult =
       await triggersScope.getTriggerUpdatesInDraft(draft)

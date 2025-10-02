@@ -1,4 +1,8 @@
-import { BadRequestError, LatitudeError } from '@latitude-data/constants/errors'
+import {
+  BadRequestError,
+  LatitudeError,
+  NotFoundError,
+} from '@latitude-data/constants/errors'
 import { Commit, DocumentTrigger, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
@@ -29,9 +33,9 @@ export async function setDocumentTriggerEnabled<T extends DocumentTriggerType>(
 ): PromisedResult<DocumentTrigger<T>> {
   return await transaction.call(async (tx) => {
     const commitsScope = new CommitsRepository(workspace.id, tx)
-    const liveCommitResult = await commitsScope.getHeadCommit(commit.projectId)
-    if (!Result.isOk(liveCommitResult)) return liveCommitResult
-    const liveCommit = liveCommitResult.unwrap()
+    const liveCommit = await commitsScope.getHeadCommit(commit.projectId)
+    if (!liveCommit)
+      return Result.error(new NotFoundError('Head commit not found'))
 
     if (commit.uuid !== liveCommit?.uuid) {
       return Result.error(

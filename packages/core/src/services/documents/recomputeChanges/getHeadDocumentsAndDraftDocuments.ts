@@ -1,3 +1,4 @@
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { Commit } from '../../../browser'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
@@ -38,7 +39,8 @@ async function getDocumentsAtCommit(
   const headCommit = await getHeadCommitForProject(
     { projectId: projectResult.value.id, commitsScope },
     tx,
-  ).then((r) => r.unwrap())
+  )
+  if (!headCommit) return Result.error(new NotFoundError('No head commit found'))
 
   const docsScope = new DocumentVersionsRepository(workspaceId, tx)
   const headDocumentsResult = await docsScope.getDocumentsAtCommit(headCommit)

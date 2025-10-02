@@ -1,3 +1,4 @@
+import { NotFoundError } from '@latitude-data/constants/errors'
 import { Commit, DraftChange, Project, User, Workspace } from '../../browser'
 import { Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
@@ -33,14 +34,14 @@ async function fetchDocumentVersionDetails({
       .then((r) => r.value)
 
     const commitScope = new CommitsRepository(workspace.id)
-    const headCommit = await commitScope
-      .getHeadCommit(project.id)
-      .then((r) => r.unwrap()!)
+    const headCommit = await commitScope.getHeadCommit(project.id)
+    if (!headCommit)
+      return Result.error(new NotFoundError('Head commit not found'))
 
     const targetCommit = targetDraftUuid
       ? await commitScope
-          .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
-          .then((r) => r.unwrap())
+        .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
+        .then((r) => r.unwrap())
       : headCommit
 
     const targetDocument = await docsScope
@@ -166,13 +167,13 @@ export async function resetDocumentToVersion({
   const targetDraftResult = targetDraftUuid
     ? Result.ok(targetCommit)
     : await createCommit({
-        project: project,
-        user: user,
-        data: {
-          title: `Reset "${oldDocumentPath}"`,
-          description: `Reset document "${oldDocumentPath}" to version "${targetCommit.title}"`,
-        },
-      })
+      project: project,
+      user: user,
+      data: {
+        title: `Reset "${oldDocumentPath}"`,
+        description: `Reset document "${oldDocumentPath}" to version "${targetCommit.title}"`,
+      },
+    })
 
   const targetDraft = targetDraftResult.unwrap()
 

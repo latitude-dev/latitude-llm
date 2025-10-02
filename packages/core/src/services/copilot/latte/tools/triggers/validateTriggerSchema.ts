@@ -86,10 +86,7 @@ const validateDocumentReadyForCreatingTrigger = async ({
   promptUuid: string
 }): PromisedResult<boolean> => {
   const commitsScope = new CommitsRepository(workspaceId)
-  const headCommit = await commitsScope
-    .getHeadCommit(projectId)
-    .then((r) => r.unwrap())
-
+  const headCommit = await commitsScope.getHeadCommit(projectId)
   if (
     headCommit !== undefined &&
     (versionUuid === headCommit.uuid || versionUuid === HEAD_COMMIT)
@@ -111,11 +108,10 @@ const validateDocumentReadyForCreatingTrigger = async ({
     .then((r) => r.unwrap())
 
   const document = documents.find((doc) => doc.documentUuid === promptUuid)
-
   if (!document) {
     return Result.error(
       new NotFoundError(
-        `Document with UUID ${promptUuid} not found in commit ${headCommit.uuid}.`,
+        `Document with UUID ${promptUuid} not found in commit ${commit?.uuid ?? headCommit?.uuid}.`,
       ),
     )
   }
