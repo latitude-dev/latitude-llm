@@ -5,7 +5,6 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { ChainEventTypes, StreamEventTypes } from '@latitude-data/constants'
 import { LogSources } from '@latitude-data/core/constants'
 import { User, Workspace } from '@latitude-data/core/schema/types'
-import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspaces'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { Result } from '@latitude-data/core/lib/Result'
 import {
