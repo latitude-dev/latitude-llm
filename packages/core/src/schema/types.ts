@@ -68,7 +68,7 @@ import { users } from './models/users'
 import { workspaceFeatures } from './models/workspaceFeatures'
 import { workspaces } from './models/workspaces'
 import { documentIntegrationReferences } from './models/documentIntegrationReferences'
-import { workspaceOnboarding } from './models/WorkspaceOnboarding'
+import { workspaceOnboarding } from './models/workspaceOnboarding'
 
 export type {
   DocumentLog,

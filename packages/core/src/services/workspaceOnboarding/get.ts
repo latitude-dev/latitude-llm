@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import { workspaceOnboarding } from '../../schema/models/WorkspaceOnboarding'
+import { workspaceOnboarding } from '../../schema/models/workspaceOnboarding'
 import { database } from '../../client'
 import { WorkspaceOnboarding, Workspace } from '../../schema/types'
 import { PromisedResult } from '../../lib/Transaction'

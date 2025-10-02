@@ -1,6 +1,6 @@
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { workspaceOnboarding } from '../../schema/models/WorkspaceOnboarding'
+import { workspaceOnboarding } from '../../schema/models/workspaceOnboarding'
 
 export async function createWorkspaceOnboarding(
   {

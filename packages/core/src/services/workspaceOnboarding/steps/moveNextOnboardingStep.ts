@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import Transaction from '../../../lib/Transaction'
-import { workspaceOnboarding } from '../../../schema/models/WorkspaceOnboarding'
+import { workspaceOnboarding } from '../../../schema/models/workspaceOnboarding'
 import { Result } from '../../../lib/Result'
 import { getNextAvailableStep } from './getNextAvailableStep'
 import { WorkspaceOnboarding } from '../../../schema/types'
