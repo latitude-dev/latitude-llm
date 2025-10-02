@@ -93,7 +93,7 @@ export function LatteLayout({
 
       <ResizableBox
         className={cn(
-          'absolute top-4 bottom-4 w-full rounded-l-lg',
+          'absolute top-4 bottom-4 w-full rounded-l-2xl',
           {
             'right-0 translate-x-[0%]': isOpen,
             'right-6 translate-x-[100%]': !isOpen,
@@ -109,12 +109,12 @@ export function LatteLayout({
         onResizeStop={onResizeStop}
       >
         <div
-          className='w-full h-full overflow-hidden border border-r-0 border-latte-border rounded-l-lg'
+          className='w-full h-full overflow-hidden border border-r-0 border-latte-border rounded-l-2xl'
           ref={sidebarRef}
         >
           {!isOpen && isSidebarHovered && (
             <div
-              className='absolute rounded-l-lg top-0 left-0 right-0 bottom-0 cursor-pointer bg-latte-widget/20 z-10'
+              className='absolute rounded-l-2xl top-0 left-0 right-0 bottom-0 cursor-pointer bg-latte-widget/20 z-10'
               onClick={() => setIsOpen(true)}
             />
           )}
