@@ -1,5 +1,6 @@
 import { GrantSource, QuotaType } from '../../constants'
-import { Quota, Workspace } from '../../schema/types'
+import { Workspace } from '../../schema/types'
+import { Quota } from '@latitude-data/constants/grants'
 import { database } from '../../client'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'

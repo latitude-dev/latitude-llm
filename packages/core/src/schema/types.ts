@@ -20,10 +20,7 @@ import {
   EvaluationResultV2,
   EvaluationType,
   EvaluationV2,
-  GrantSource,
-  QuotaType,
 } from '../constants'
-import type { LatteUsage, Quota } from '../constants'
 import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
 import { connectedEvaluations } from './legacyModels/connectedEvaluations'
 import { evaluationAdvancedTemplates } from './legacyModels/evaluationAdvancedTemplates'
@@ -43,7 +40,6 @@ import { datasetRows } from './models/datasetRows'
 import { datasets } from './models/datasets'
 import { documentSuggestions } from './models/documentSuggestions'
 import { documentTriggerEvents } from './models/documentTriggerEvents'
-import { grants } from './models/grants'
 import { documentTriggers } from './models/documentTriggers'
 import { documentVersions } from './models/documentVersions'
 import { experiments } from './models/experiments'
@@ -437,14 +433,6 @@ export type ProjectRuns = {
   active: ActiveRun[]
   completed: CompletedRun[]
 }
-
-// Grant types
-type GrantRecord = InferSelectModel<typeof grants>
-export type Grant = Omit<GrantRecord, 'amount'> & {
-  amount: Quota
-}
-export { GrantSource, QuotaType }
-export type { LatteUsage, Quota }
 
 // Latte change types
 export type LatteChange = {

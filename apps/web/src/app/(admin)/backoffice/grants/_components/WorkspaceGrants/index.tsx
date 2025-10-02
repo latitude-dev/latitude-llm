@@ -13,7 +13,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { useState } from 'react'
 import { IssueGrantModal } from '../IssueGrantModal'
-import { Grant } from '@latitude-data/core/schema/types'
+import { Grant } from '@latitude-data/constants/grants'
 import { GrantSource } from '@latitude-data/core/constants'
 
 export function WorkspaceGrants({ workspaceId }: { workspaceId: number }) {

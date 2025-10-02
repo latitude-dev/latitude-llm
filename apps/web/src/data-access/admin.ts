@@ -14,8 +14,8 @@ import { workspaceFeatures } from '@latitude-data/core/schema/models/workspaceFe
 import { workspaces } from '@latitude-data/core/schema/models/workspaces'
 import { computeQuota } from '@latitude-data/core/services/grants/quota'
 import { findWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/data-access/find'
-import { Grant, Subscription } from '@latitude-data/core/schema/types'
-import { Quota, QuotaType } from '@latitude-data/core/constants'
+import { Subscription } from '@latitude-data/core/schema/types'
+import { Grant, Quota, QuotaType } from '@latitude-data/core/constants'
 
 export type WorkspaceWithDetails = {
   id: number

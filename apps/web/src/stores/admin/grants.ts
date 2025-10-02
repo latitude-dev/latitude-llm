@@ -8,8 +8,7 @@ import { ROUTES } from '$/services/routes'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import { Grant } from '@latitude-data/core/schema/types'
-import { Quota, QuotaType } from '@latitude-data/core/constants'
+import { Grant, Quota, QuotaType } from '@latitude-data/core/constants'
 
 export function useGrantsAdmin(
   { workspaceId }: { workspaceId: number },

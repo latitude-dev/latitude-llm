@@ -1,8 +1,9 @@
 import { and, desc, eq, getTableColumns, gte, sql } from 'drizzle-orm'
-import { LatteRequest, LatteUsage } from '../schema/types'
+import { LatteRequest } from '../schema/types'
 import { Result } from '../lib/Result'
 import { latteRequests } from '../schema/models/latteRequests'
 import Repository from './repositoryV2'
+import { LatteUsage } from '../constants'
 
 const tt = getTableColumns(latteRequests)
 

@@ -1,5 +1,5 @@
 import { addMonths } from 'date-fns'
-import { Grant, Quota } from '../../schema/types'
+import { Grant, Quota } from '@latitude-data/constants/grants'
 import { GrantSource, QuotaType } from '../../constants'
 import { LATTE_USAGE_CACHE_KEY } from '../../constants'
 import { Workspace } from '../../schema/types'

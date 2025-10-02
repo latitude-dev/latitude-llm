@@ -13,9 +13,9 @@ import {
 
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
-import { Grant, GrantSource, Quota, QuotaType } from '../schema/types'
 import { grants } from '../schema/models/grants'
 import Repository, { QueryOptions } from './repositoryV2'
+import { Grant, GrantSource, Quota, QuotaType } from '@latitude-data/constants'
 
 const tt = getTableColumns(grants)
 

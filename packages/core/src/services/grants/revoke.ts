@@ -1,6 +1,7 @@
 import { endOfDay, subDays } from 'date-fns'
 import { and, eq } from 'drizzle-orm'
-import { Grant, Quota, Workspace } from '../../schema/types'
+import { Workspace } from '../../schema/types'
+import { Grant, Quota } from '@latitude-data/constants/grants'
 import { GrantSource, QuotaType } from '../../constants'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
