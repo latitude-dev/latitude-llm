@@ -37,33 +37,43 @@ export const PaneWrapper = ({
 }
 
 const SplitHandle =
-  ({ visibleHandle }: { visibleHandle: boolean }) =>
+  ({
+    visibleHandle,
+    hoverColor = 'accent',
+    className,
+  }: {
+    visibleHandle: boolean
+    hoverColor?: 'accent' | 'latte'
+    className?: string
+  }) =>
   (resizeHandle: ResizeHandle, ref: RefObject<HTMLDivElement>) => {
     const direction =
       resizeHandle === 'e' || resizeHandle === 'w' ? 'horizontal' : 'vertical'
     return (
       <div
         ref={ref}
-        className={cn('group/handler z-10 flex justify-center bg-transparent', {
-          'absolute w-2 h-full cursor-col-resize top-0 bottom-0':
-            direction === 'horizontal',
-          '-right-1': resizeHandle === 'e',
-          '-left-1': resizeHandle === 'w',
-          'h-3 items-center w-full cursor-row-resize left-0 right-0':
-            direction === 'vertical',
-        })}
+        className={cn(
+          'group/handler z-10 flex justify-center bg-transparent',
+          {
+            'absolute w-2 h-full cursor-col-resize top-0 bottom-0':
+              direction === 'horizontal',
+            '-right-1': resizeHandle === 'e',
+            '-left-1': resizeHandle === 'w',
+            'h-3 items-center w-full cursor-row-resize left-0 right-0':
+              direction === 'vertical',
+          },
+          className,
+        )}
       >
         <div
-          className={cn(
-            'bg-border duration-200 transition-all group-hover/handler:bg-accent-foreground',
-            {
-              'bg-border': visibleHandle,
-              'bg-transparent': !visibleHandle,
-              'w-px h-full group-hover/handler:w-0.5':
-                direction === 'horizontal',
-              'h-px w-full group-hover/handler:h-0.5': direction === 'vertical',
-            },
-          )}
+          className={cn('bg-border duration-200 transition-all', {
+            'bg-border': visibleHandle,
+            'bg-transparent': !visibleHandle,
+            'w-px h-full group-hover/handler:w-0.5': direction === 'horizontal',
+            'h-px w-full group-hover/handler:h-0.5': direction === 'vertical',
+            'group-hover/handler:bg-latte-badge-border': hoverColor === 'latte',
+            'group-hover/handler:bg-accent-foreground': hoverColor === 'accent',
+          })}
         />
       </div>
     )

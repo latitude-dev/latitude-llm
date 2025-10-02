@@ -105,7 +105,15 @@ export function LatteLayout({
         axis='x'
         minConstraints={[MIN_WIDTH, Infinity]}
         resizeHandles={['w']}
-        handle={isOpen ? SplitHandle({ visibleHandle: false }) : null}
+        handle={
+          isOpen
+            ? SplitHandle({
+                visibleHandle: false,
+                className: 'h-auto top-4 bottom-4',
+                hoverColor: 'latte',
+              })
+            : null
+        }
         onResizeStop={onResizeStop}
       >
         <div
