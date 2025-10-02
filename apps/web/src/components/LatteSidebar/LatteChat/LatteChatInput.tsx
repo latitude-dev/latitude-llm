@@ -17,6 +17,7 @@ import {
 import { cn } from '@latitude-data/web-ui/utils'
 import React, {
   KeyboardEvent,
+  RefObject,
   useCallback,
   useEffect,
   useMemo,
@@ -48,6 +49,7 @@ export function LatteChatInput({
   scrollToBottom,
   inConversation,
   stopLatteChat,
+  inputRef,
 }: {
   inConversation: boolean
   scrollToBottom: () => void
@@ -55,6 +57,7 @@ export function LatteChatInput({
   error?: Error
   resetChat: () => void
   stopLatteChat?: () => void
+  inputRef?: RefObject<HTMLTextAreaElement>
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -150,6 +153,7 @@ export function LatteChatInput({
         />
       ) : null}
       <TextArea
+        ref={inputRef}
         className={cn(
           'bg-background w-full px-3 pt-3 pb-14 resize-none text-sm',
           'rounded-2xl border-latte-widget border shadow-sm text-muted-foreground',

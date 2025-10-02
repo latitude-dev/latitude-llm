@@ -24,7 +24,8 @@ import {
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
-import { ReactNode, useCallback, useRef, useState } from 'react'
+import { ReactNode, RefObject, useCallback, useRef, useState } from 'react'
+import React from 'react'
 import { ChatSkeleton } from './_components/ChatSkeleton'
 import { LatteUsageInfo } from './_components/LatteUsageInfo'
 import { LatteMessageList } from './_components/MessageList'
@@ -36,9 +37,11 @@ import { type ProviderLogDto } from '@latitude-data/core/schema/types'
 export function LatteChat({
   initialThreadUuid,
   initialProviderLog,
+  inputRef,
 }: {
   initialThreadUuid?: string
   initialProviderLog?: ProviderLogDto
+  inputRef?: RefObject<HTMLTextAreaElement>
 }) {
   const isLoading = useLoadThread({ initialThreadUuid, initialProviderLog })
 
@@ -49,7 +52,7 @@ export function LatteChat({
       </ChatWrapper>
     )
 
-  return <LatteChatUI />
+  return <LatteChatUI inputRef={inputRef} />
 }
 
 function ChatWrapper({ children }: { children: ReactNode }) {
@@ -67,6 +70,7 @@ function LatteChatInputSection({
   scrollToBottom,
   sendMessage,
   stopLatteChat,
+  inputRef: inputRef,
 }: {
   error?: Error
   inConversation: boolean
@@ -74,6 +78,7 @@ function LatteChatInputSection({
   scrollToBottom: () => void
   sendMessage: (message: string) => void
   stopLatteChat?: () => void
+  inputRef?: RefObject<HTMLTextAreaElement>
 }) {
   const { data: workspace } = useCurrentWorkspace()
   const { usage } = useLatteStore()
@@ -87,6 +92,7 @@ function LatteChatInputSection({
         scrollToBottom={scrollToBottom}
         sendMessage={sendMessage}
         stopLatteChat={stopLatteChat}
+        inputRef={inputRef}
       />
       {!!usage && !!workspace && (
         <LatteUsageInfo
@@ -98,7 +104,11 @@ function LatteChatInputSection({
   )
 }
 
-function LatteChatUI() {
+function LatteChatUI({
+  inputRef,
+}: {
+  inputRef?: RefObject<HTMLTextAreaElement>
+}) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { isBrewing, resetAll, interactions, error, jobId } = useLatteStore()
@@ -194,6 +204,7 @@ function LatteChatUI() {
                   resetChat={resetChat}
                   scrollToBottom={scrollToBottom}
                   sendMessage={sendMessage}
+                  inputRef={inputRef}
                 />
               </div>
             ) : (
@@ -247,6 +258,7 @@ function LatteChatUI() {
                 scrollToBottom={scrollToBottom}
                 sendMessage={sendMessage}
                 stopLatteChat={stopLatteChat}
+                inputRef={inputRef}
               />
             </div>
           )}
