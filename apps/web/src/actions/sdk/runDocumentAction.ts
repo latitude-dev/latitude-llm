@@ -42,7 +42,7 @@ export async function runDocumentAction({
     data: {
       projectId,
       commitUuid,
-      isLiveCommit: headCommit.uuid === commitUuid,
+      isLiveCommit: headCommit?.uuid === commitUuid,
       documentPath,
       parameters,
       workspaceId: workspace.id,

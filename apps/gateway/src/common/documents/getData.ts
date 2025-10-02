@@ -245,7 +245,7 @@ export async function publishDocumentRunRequestedEvent({
         parameters,
         projectId: project.id,
         commitUuid: commit.uuid,
-        isLiveCommit: headCommit.uuid === commit.uuid,
+        isLiveCommit: headCommit?.uuid === commit.uuid,
         documentPath: document.path,
         workspaceId: workspace.id,
         userEmail: user.email,
