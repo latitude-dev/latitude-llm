@@ -6,7 +6,7 @@ export const captureException = (error: Error, tags?: Record<string, any>) => {
     console.error('Captured exception:', error)
   }
 
-  if ('cause' in error) {
+  if ('cause' in error && error.cause) {
     captureException(error.cause as Error, tags)
     return
   }
