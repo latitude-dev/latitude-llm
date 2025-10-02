@@ -18,7 +18,6 @@ import { env } from '@latitude-data/env'
 import {
   ChainEventDto,
   GenerationResponse,
-  Latitude,
   LatitudeApiError,
 } from '@latitude-data/sdk'
 import { NextRequest, NextResponse } from 'next/server'
