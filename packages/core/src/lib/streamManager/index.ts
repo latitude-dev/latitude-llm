@@ -310,8 +310,6 @@ export abstract class StreamManager {
 
     this.controller.enqueue({
       event: StreamEventTypes.Latitude,
-      // TODO(compiler)
-      // @ts-expect-error - fix types
       data: {
         ...event,
         timestamp: Date.now(),

@@ -22,7 +22,6 @@ export enum ChainEventTypes {
   StepCompleted = 'step-completed',
   StepStarted = 'step-started',
   ToolCompleted = 'tool-completed',
-  ToolsRequested = 'tools-requested', // TODO(compiler): remove
   ToolResult = 'tool-result',
   ToolsStarted = 'tools-started',
 }
@@ -92,13 +91,6 @@ export interface LatitudeIntegrationWakingUpEventData
   integrationName: string
 }
 
-// TODO(compiler): remove
-export interface LatitudeToolsRequestedEventData
-  extends GenericLatitudeEventData {
-  type: ChainEventTypes.ToolsRequested
-  tools: ToolCall[]
-}
-
 export type LatitudeEventData =
   | LatitudeChainStartedEventData
   | LatitudeStepStartedEventData
@@ -123,7 +115,6 @@ export type OmittedLatitudeEventData =
   | Omit<LatitudeStepCompletedEventData, 'timestamp' | 'messages' | 'uuid'>
   | Omit<LatitudeChainCompletedEventData, 'timestamp' | 'messages' | 'uuid'>
   | Omit<LatitudeChainErrorEventData, 'timestamp' | 'messages' | 'uuid'>
-  | Omit<LatitudeToolsRequestedEventData, 'timestamp' | 'messages' | 'uuid'>
   | Omit<LatitudeIntegrationWakingUpEventData, 'timestamp' | 'messages' | 'uuid'>
 
 export type ChainEvent =

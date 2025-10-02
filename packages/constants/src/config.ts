@@ -4,8 +4,6 @@ export enum ParameterType {
   File = 'file',
 }
 
-export const FAKE_AGENT_START_TOOL_NAME = 'start_autonomous_chain' // TODO(compiler): remove
-export const AGENT_RETURN_TOOL_NAME = 'end_autonomous_chain' // TODO(compiler): remove
 export const AGENT_TOOL_PREFIX = 'lat_agent'
 export const LATITUDE_TOOL_PREFIX = 'lat_tool'
 

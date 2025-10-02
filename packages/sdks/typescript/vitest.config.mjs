@@ -9,10 +9,9 @@ const root = dirname(filename)
 export default defineConfig({
   resolve: {
     alias: {
-      "$compiler": `${root}/../compiler/src`,
-      "$core": `${root}/../core/src`,
-      "$sdk": `${root}/src`,
-    }
+      $core: `${root}/../core/src`,
+      $sdk: `${root}/src`,
+    },
   },
   test: {
     globals: true,
