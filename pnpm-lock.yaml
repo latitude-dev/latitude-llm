@@ -232,8 +232,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/env
       '@latitude-data/sdk':
-        specifier: 5.2.0-beta.4
-        version: 5.2.0-beta.4(typescript@5.8.3)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        specifier: 5.2.0-beta.5
+        version: 5.2.0-beta.5(typescript@5.8.3)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       '@latitude-data/socket.io-react-hook':
         specifier: 2.4.5
         version: 2.4.5(bufferutil@4.0.9)(react@19.1.1)(utf-8-validate@6.0.5)
@@ -3742,8 +3742,8 @@ packages:
     peerDependencies:
       typescript: ^5.5.4
 
-  '@latitude-data/sdk@5.2.0-beta.4':
-    resolution: {integrity: sha512-e7MXvOC+/hkvXOi4dX3iSIt2lK+tcgg4KpWuKQJgSIcX/QgTA/SfSC4VEngb1n2s5AMVR8m2ceFiDy7gBJHXFQ==}
+  '@latitude-data/sdk@5.2.0-beta.5':
+    resolution: {integrity: sha512-pBmCmVdaXwpnOgwkh9EiCHKR8ZOllJZNPGAM8ZIABN15g2l91yti0QTd0CETVPiMzDgGcGUQdwD3eJpIQwX2ZQ==}
     peerDependencies:
       typescript: ^5.5.4
 
@@ -17427,11 +17427,11 @@ snapshots:
       - encoding
       - ws
 
-  '@latitude-data/sdk@5.2.0-beta.4(typescript@5.8.3)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))':
+  '@latitude-data/sdk@5.2.0-beta.5(typescript@5.8.3)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))':
     dependencies:
       eventsource-parser: 2.0.1
       node-fetch: 2.7.0
-      promptl-ai: 0.7.5(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+      promptl-ai: 0.7.6(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       typescript: 5.8.3
       zod: 3.24.2
     transitivePeerDependencies:
@@ -20738,7 +20738,7 @@ snapshots:
 
   '@stoplight/json-ref-readers@1.2.2':
     dependencies:
-      node-fetch: 2.6.7
+      node-fetch: 2.7.0
       tslib: 1.14.1
     transitivePeerDependencies:
       - encoding

@@ -44,21 +44,25 @@ export function useActiveRuns(
     ...rest
   } = useSWR<ActiveRun[]>(compact([route, query]), fetcher, opts)
 
-  const { createStreamHandler, hasActiveStream } = useStreamHandler()
+  const { createStreamHandler, hasActiveStream, createAbortController } =
+    useStreamHandler()
   const attachRun = useCallback(
     async ({ runUuid }: { runUuid: string }) => {
+      const signal = createAbortController()
+
       const response = await fetch(
         ROUTES.api.projects.detail(project.id).runs.detail(runUuid).attach,
         {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
+          signal,
         },
       )
 
-      return createStreamHandler(response)
+      return createStreamHandler(response, signal)
     },
-    [project, createStreamHandler],
+    [project, createAbortController, createStreamHandler],
   )
 
   const { execute: executeStopRun, isPending: isStoppingRun } =
