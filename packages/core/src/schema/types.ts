@@ -433,9 +433,3 @@ export type ProjectRuns = {
   active: ActiveRun[]
   completed: CompletedRun[]
 }
-
-// Latte change types
-export type LatteChange = {
-  type: 'usage' | 'credits'
-  amount: number
-}

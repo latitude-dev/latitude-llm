@@ -3,7 +3,7 @@
 // All this can be seen in the browser. If you want something private
 // put in other place.
 
-import { LatteUsage } from '../constants'
+import { LatteChange, LatteUsage } from '../constants'
 import type {
   Commit,
   Dataset,
@@ -15,7 +15,6 @@ import type {
   EvaluationResultV2,
   EvaluationV2,
   ExperimentDto,
-  LatteChange,
   Project,
   ProviderLogDto,
 } from '../schema/types'
