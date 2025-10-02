@@ -102,13 +102,13 @@ function EditTriggerButton({
   )
 }
 
-function isChatTrigger(
+export function isChatTrigger(
   trigger: DocumentTrigger,
 ): trigger is DocumentTrigger<DocumentTriggerType.Chat> {
   return trigger.triggerType === DocumentTriggerType.Chat
 }
 
-const RUNNABLE_TRIGGERS = [
+export const RUNNABLE_TRIGGERS = [
   DocumentTriggerType.Scheduled,
   DocumentTriggerType.Chat,
 ]

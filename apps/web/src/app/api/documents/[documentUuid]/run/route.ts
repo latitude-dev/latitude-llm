@@ -268,12 +268,8 @@ async function generateAIParameters({
       })
       .then((r) => r.unwrap())
 
-    const copilotWorkspace = await unsafelyFindWorkspace(
-      env.COPILOT_WORKSPACE_ID!,
-    )
-
     const sdk = await createSdk({
-      workspace: copilotWorkspace,
+      workspace: workspace,
       apiKey: env.COPILOT_WORKSPACE_API_KEY!,
       projectId: env.COPILOT_PROJECT_ID,
       __internal: { source: LogSources.Copilot },

@@ -3,7 +3,7 @@ import {
   DocumentTrigger,
   DocumentVersion,
   IntegrationDto,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/core/schema/types'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -13,23 +13,16 @@ import { OnRunTriggerFn } from '$/app/(private)/projects/[projectId]/versions/[c
 import { useTriggerInfo } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersCard'
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import useDocumentVersions from '$/stores/documentVersions'
-
-function isChatTrigger(
-  trigger: DocumentTrigger,
-): trigger is DocumentTrigger<DocumentTriggerType.Chat> {
-  return trigger.triggerType === DocumentTriggerType.Chat
-}
+import {
+  isChatTrigger,
+  RUNNABLE_TRIGGERS,
+} from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggerWrapper'
 
 function isIntegrationTrigger(
   trigger: DocumentTrigger,
 ): trigger is DocumentTrigger<DocumentTriggerType.Integration> {
   return trigger.triggerType === DocumentTriggerType.Integration
 }
-
-const RUNNABLE_TRIGGERS = [
-  DocumentTriggerType.Scheduled,
-  DocumentTriggerType.Chat,
-]
 
 export function RunTrigger({
   trigger,
