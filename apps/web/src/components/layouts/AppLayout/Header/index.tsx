@@ -1,5 +1,7 @@
 'use client'
 import { ReactNode } from 'react'
+
+import { LATITUDE_SLACK_URL } from '@latitude-data/core/constants'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 
@@ -8,6 +10,9 @@ import { HeaderBreadcrumb } from './Breadcrumb'
 import { RewardsButton } from './Rewards'
 import { UsageIndicator } from './UsageIndicator'
 import { User } from '@latitude-data/core/schema/types'
+import Link from 'next/link'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { useDocs } from '$/components/Documentation/Provider'
 
 export function AppHeaderWrapper({
   children,
@@ -31,40 +36,22 @@ export function AppHeaderWrapper({
   )
 }
 
-type INavigationLink = {
-  label: string
-  href?: string
-  index?: boolean
-  onClick?: () => void
-  _target?: '_blank' | '_self'
-}
-
-function NavLink({ label, href, onClick, _target }: INavigationLink) {
-  return (
-    <Text.H5 asChild>
-      <a href={href} onClick={onClick} target={_target}>
-        {label}
-      </a>
-    </Text.H5>
-  )
-}
-
 export type AppHeaderProps = {
-  navigationLinks: INavigationLink[]
   currentUser: User | undefined
   cloudInfo?: { paymentUrl: string }
   isCloud: boolean
 }
 export default function AppHeader({
-  navigationLinks,
   currentUser,
   cloudInfo,
   isCloud,
 }: AppHeaderProps) {
+  const { open, isOpen } = useDocs()
+
   return (
     <AppHeaderWrapper>
       <HeaderBreadcrumb />
-      <div className='flex flex-row items-center gap-x-6 pl-6'>
+      <div className='flex flex-row items-center pl-6'>
         <nav className='flex flex-row gap-x-4 items-center'>
           {cloudInfo ? (
             <>
@@ -72,9 +59,14 @@ export default function AppHeader({
               <RewardsButton />
             </>
           ) : null}
-          {navigationLinks.map((link, idx) => (
-            <NavLink key={idx} {...link} />
-          ))}
+
+          <Link href={LATITUDE_SLACK_URL} target='_blank'>
+            <Text.H5>Slack</Text.H5>
+          </Link>
+
+          <Button variant='ghost' className='p-0' onClick={() => open(!isOpen)}>
+            <Text.H5>Docs</Text.H5>
+          </Button>
         </nav>
         <AvatarDropdown currentUser={currentUser} isCloud={isCloud} />
       </div>

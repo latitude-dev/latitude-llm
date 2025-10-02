@@ -194,6 +194,7 @@
     --latte-input-background: 43 100% 91%;
     --latte-input-foreground: 43 100% 23%;
     --latte-output-foreground: 43 25% 33%;
+    --latte-badge-border: 45 81% 44%;
   }
 
   .dark {

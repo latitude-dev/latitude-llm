@@ -11,7 +11,7 @@ export default async function NoWorkspace() {
   const supportIdentity = createSupportUserIdentity(user)
 
   return (
-    <IntercomProvider showDefaultLauncher identity={supportIdentity}>
+    <IntercomProvider identity={supportIdentity}>
       <div className='flex items-center justify-center p-4 h-screen'>
         <div className='max-w-xl flex flex-col items-center justify-center gap-y-2'>
           <Alert

@@ -7,14 +7,25 @@ import {
   RefObject,
   useCallback,
   useContext,
+  useEffect,
+  useMemo,
   useRef,
+  useState,
 } from 'react'
-import { DocsRoute } from './routes'
+import { DocsRoute, getRouteFromPathname } from './routes'
+import { usePathname } from 'next/navigation'
 
 type DocumentationContextProps = {
-  open: (route: DocsRoute) => void
-  navigateTo: (route: DocsRoute) => void
+  isOpen: boolean
+  homeRoute: DocsRoute
+  currentRoute: DocsRoute
+  docTitle: string
+
+  open: (open?: boolean) => void
+  navigateTo: (route: DocsRoute, forceOpen?: boolean) => void
+
   ref: RefObject<HTMLIFrameElement | null>
+  init: boolean
 }
 
 const DOCS_DOMAIN = envClient.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.latitude.so'
@@ -31,37 +42,77 @@ export const useDocs = (): DocumentationContextProps => {
   return context
 }
 
-export function DocumentationProvider({
-  children,
-  onOpen,
-}: {
-  children: ReactNode
-  onOpen?: () => void
-}) {
+export function DocumentationProvider({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLIFrameElement | null>(null)
+  const [init, setInit] = useState(false)
 
-  const navigateTo = useCallback((route: DocsRoute) => {
-    if (!ref.current) return
-    ref.current.src = `${DOCS_DOMAIN}${route}`
+  const [isOpen, setIsOpen] = useState(false)
+
+  const [currentRoute, setCurrentRoute] = useState<DocsRoute>(
+    DocsRoute.Introduction,
+  )
+  const [docTitle, setDocTitle] = useState('Documentation')
+
+  const pathname = usePathname()
+  const homeRoute = useMemo(() => getRouteFromPathname(pathname), [pathname])
+
+  // Setup iframe listener
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'docs.update') {
+        const { title, route } = e.data.value
+        setDocTitle(title)
+        setCurrentRoute(route)
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
   }, [])
 
+  const initialize = useCallback(() => {
+    setInit(true)
+    setCurrentRoute(homeRoute)
+  }, [homeRoute])
+
   const open = useCallback(
+    (newOpen?: boolean) => {
+      setIsOpen(newOpen ?? true)
+      initialize()
+    },
+    [initialize],
+  )
+
+  const navigateTo = useCallback(
     (route: DocsRoute) => {
-      onOpen?.()
-      if (ref.current) {
-        navigateTo(route)
+      setCurrentRoute(route)
+
+      if (init && ref.current) {
+        ref.current.src = `${DOCS_DOMAIN}${route}`
       } else {
-        // It may not have been loaded yet, it's always unloaded until the sidebar is opened for the first time
         setTimeout(() => {
-          navigateTo(route)
+          ref.current!.src = `${DOCS_DOMAIN}${route}`
         }, 50)
       }
+
+      open()
     },
-    [onOpen, navigateTo],
+    [open, init],
   )
 
   return (
-    <DocumentationContext.Provider value={{ open, navigateTo, ref }}>
+    <DocumentationContext.Provider
+      value={{
+        ref,
+        init,
+        isOpen,
+        homeRoute,
+        currentRoute,
+        docTitle,
+        open,
+        navigateTo,
+      }}
+    >
       {children}
     </DocumentationContext.Provider>
   )

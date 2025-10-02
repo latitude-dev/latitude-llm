@@ -33,7 +33,6 @@ const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
     const props = {
       ...rest,
       className: cn(
-        className,
         'animate-in fade-in-0 slide-in-from-top-2',
         'bg-background shadow-lg rounded-xl',
         'mt-1 border border-border',
@@ -48,6 +47,7 @@ const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
           'max-h-96': maxHeight === 'normal',
           'w-[var(--radix-popover-trigger-width)]': size === 'auto',
         },
+        className,
       ),
       style: {
         ...rest.style,

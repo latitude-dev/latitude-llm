@@ -16,7 +16,6 @@ import { SessionProvider } from '@latitude-data/web-ui/browser'
 import { redirect } from 'next/navigation'
 
 import { CSPostHogProvider, IdentifyUser } from '../providers'
-import { NAV_LINKS } from './_lib/constants'
 import { PaywallModalProvider } from './providers/PaywallModalProvider'
 
 export const metadata = buildMetatags({
@@ -57,7 +56,6 @@ export default async function PrivateLayout({
                 <PaywallModalProvider>
                   <AppLayout
                     currentUser={user}
-                    navigationLinks={NAV_LINKS}
                     cloudInfo={cloudInfo}
                     isCloud={isCloud}
                   >

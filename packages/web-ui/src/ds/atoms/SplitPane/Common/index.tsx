@@ -45,10 +45,12 @@ const SplitHandle =
       <div
         ref={ref}
         className={cn('group/handler z-10 flex justify-center bg-transparent', {
-          'absolute w-2 h-full cursor-col-resize': direction === 'horizontal',
+          'absolute w-2 h-full cursor-col-resize top-0 bottom-0':
+            direction === 'horizontal',
           '-right-1': resizeHandle === 'e',
           '-left-1': resizeHandle === 'w',
-          'h-3 items-center w-full cursor-row-resize': direction === 'vertical',
+          'h-3 items-center w-full cursor-row-resize left-0 right-0':
+            direction === 'vertical',
         })}
       >
         <div

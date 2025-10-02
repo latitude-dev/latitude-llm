@@ -2,23 +2,39 @@
 
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { useIntercom } from '.'
-import { ButtonWithBadge } from '@latitude-data/web-ui/molecules/ButtonWithBadge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { cn } from '@latitude-data/web-ui/utils'
 
 export function IntercomTrigger() {
   const { open, unreadCount } = useIntercom()
 
   return (
-    <ButtonWithBadge
-      variant='ghost'
-      className='p-0 bg-primary rounded-full w-8 h-8'
-      iconProps={{
-        name: 'intercomChat',
-        color: 'white',
-      }}
-      onClick={open}
-      badge={unreadCount > 0 && <Badge variant='accent'>{unreadCount}</Badge>}
-      badgeAnchor='end'
-      badgeClassName='-right-1'
-    />
+    <Tooltip
+      asChild
+      trigger={
+        <Button
+          variant='ghost'
+          className={cn('rounded-full h-8', {
+            'p-0': unreadCount === 0,
+            'bg-primary px-2': unreadCount > 0,
+          })}
+          iconProps={{
+            name: 'headset',
+            color: unreadCount > 0 ? 'white' : 'primary',
+            size: 'medium',
+          }}
+          onClick={open}
+        >
+          {unreadCount > 0 && (
+            <Badge variant='white' shape='rounded'>
+              {unreadCount}
+            </Badge>
+          )}
+        </Button>
+      }
+    >
+      Chat with support
+    </Tooltip>
   )
 }

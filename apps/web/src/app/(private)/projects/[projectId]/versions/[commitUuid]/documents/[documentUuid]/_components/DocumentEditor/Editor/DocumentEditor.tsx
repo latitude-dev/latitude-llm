@@ -1,5 +1,4 @@
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
-import { LatteLayout } from '$/components/LatteLayout'
 import { MetadataProvider } from '$/components/MetadataProvider'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
@@ -37,7 +36,6 @@ import {
   DocumentVersion,
   Project,
   type ProviderApiKey,
-  type ProviderLogDto,
 } from '@latitude-data/core/schema/types'
 import { INPUT_SOURCE } from '@latitude-data/core/lib/documentPersistedInputs'
 import { LogSources } from '@latitude-data/core/constants'
@@ -50,8 +48,6 @@ export type DocumentEditorProps = {
   copilotEnabled: boolean
   refinementEnabled: boolean
   experimentDiff?: string
-  initialThreadUuid?: string
-  initialProviderLog?: ProviderLogDto
 }
 
 export function DocumentEditor(props: DocumentEditorProps) {
@@ -90,8 +86,6 @@ function DocumentEditorContent({
   document: doc,
   freeRunsCount,
   refinementEnabled,
-  initialThreadUuid,
-  initialProviderLog,
 }: Omit<DocumentEditorProps, 'experimentDiff'>) {
   const { updateDocumentContent } = useDocumentValue()
   const { metadata } = useMetadata()
@@ -152,10 +146,7 @@ function DocumentEditorContent({
   useAutoScroll(containerRef, { startAtBottom: playground.mode === 'chat' })
 
   return (
-    <LatteLayout
-      initialThreadUuid={initialThreadUuid}
-      initialProviderLog={initialProviderLog}
-    >
+    <>
       <div className='relative flex flex-col pt-6 h-full min-h-0'>
         <div className='w-full flex flex-col justify-center items-start gap-4 px-4 pb-4'>
           <div className='w-full flex flex-row items-center justify-between gap-4'>
@@ -293,7 +284,7 @@ function DocumentEditorContent({
         isOpen={isExperimentModalOpen}
         setOpen={toggleExperimentModal}
       />
-    </LatteLayout>
+    </>
   )
 }
 

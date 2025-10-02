@@ -46,6 +46,7 @@ const badgeVariants = cva(
           'bg-muted border-none text-muted-foreground hover:bg-muted/80',
         noBorderLatte:
           'bg-latte-input border-none text-latte-input-foreground hover:bg-latte/15',
+        white: 'bg-white text-primary hover:bg-white/80',
       },
       shape: {
         default: 'max-h-5',

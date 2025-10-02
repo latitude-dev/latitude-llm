@@ -117,6 +117,10 @@
     "./atoms/SplitPane": {
       "import": "./src/ds/atoms/SplitPane/index.tsx"
     },
+    "./atoms/StarburstBadge": {
+      "types": "./dist/types/ds/atoms/StarburstBadge/index.d.ts",
+      "import": "./src/ds/atoms/StarburstBadge/index.tsx"
+    },
     "./atoms/Switch": {
       "import": "./src/ds/atoms/Switch/index.tsx"
     },

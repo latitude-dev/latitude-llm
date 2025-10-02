@@ -10,6 +10,7 @@ import {
   findCommitsByProjectCached,
   findProjectCached,
   getHeadCommitCached,
+  getLastLatteThreadUuidCached,
 } from '$/app/(private)/_data-access'
 import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
 import {
@@ -21,6 +22,8 @@ import { notFound, redirect } from 'next/navigation'
 import { LatteRealtimeUpdatesProvider } from './providers/LatteRealtimeUpdatesProvider'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 import { type Commit, type Project } from '@latitude-data/core/schema/types'
+import { LatteLayout } from '$/components/LatteSidebar/LatteLayout'
+import { findLatteThreadProviderLog } from '@latitude-data/core/services/providerLogs/findLatteThreadProviderLog'
 
 export type CommitPageParams = {
   children: ReactNode
@@ -70,10 +73,24 @@ export default async function CommitLayout({
     throw error
   }
 
+  const lastThreadUuid = await getLastLatteThreadUuidCached({
+    projectId: project.id,
+  })
+  const initialProviderLog = await findLatteThreadProviderLog({
+    lastThreadUuid,
+  })
+
   return (
     <ProjectProvider project={project}>
       <CommitProvider commit={commit} isHead={isHead}>
-        <LatteRealtimeUpdatesProvider>{children}</LatteRealtimeUpdatesProvider>
+        <LatteRealtimeUpdatesProvider>
+          <LatteLayout
+            initialThreadUuid={lastThreadUuid}
+            initialProviderLog={initialProviderLog}
+          >
+            {children}
+          </LatteLayout>
+        </LatteRealtimeUpdatesProvider>
       </CommitProvider>
     </ProjectProvider>
   )

@@ -104,6 +104,9 @@ export default {
         'latte-widget': {
           DEFAULT: 'hsl(var(--latte-widget-background) / <alpha-value>)',
         },
+        'latte-badge-border': {
+          DEFAULT: 'hsl(var(--latte-badge-border) / <alpha-value>)',
+        },
       },
       borderRadius: {
         '2xl': 'calc(2 * var(--radius))',
