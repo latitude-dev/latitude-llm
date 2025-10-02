@@ -75,7 +75,7 @@ export const POST = errorHandler(
           data: {
             projectId,
             commitUuid,
-            isLiveCommit: headCommit.uuid === commitUuid,
+            isLiveCommit: headCommit?.uuid === commitUuid,
             documentPath: path,
             parameters: _parameters,
             workspaceId: workspace.id,
