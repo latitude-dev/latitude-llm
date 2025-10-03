@@ -1,14 +1,19 @@
 'use client'
 
 import NocodersNavbar from '../Navbar/NocodersNavbar'
-import { SetupIntegrationsStep } from './setupIntegrations'
+import {
+  SetupIntegrationsIconAndTitle,
+  SetupIntegrationsContent,
+} from './setupIntegrations'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
-import { ConfigureTriggersStep } from './configureTriggers'
-import { TriggerAgentStep } from './triggerAgent'
-import { useCallback, useRef, useState } from 'react'
-import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import { RunAgentStep } from './runAgent'
+import {
+  ConfigureTriggersIconAndTitle,
+  ConfigureTriggersContent,
+} from './configureTriggers'
+import { TriggerAgentIconAndTitle, TriggerAgentContent } from './triggerAgent'
+import { useCallback, useState } from 'react'
+import { RunAgentIconAndTitle, RunAgentContent } from './runAgent'
 import {
   ActiveTrigger,
   FAKE_DOCUMENT,
@@ -17,20 +22,25 @@ import { useRunDocument } from '$/app/(private)/projects/[projectId]/versions/[c
 import { useCurrentCommit } from '@latitude-data/web-ui/providers'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { OnboardingStep } from '$/app/(onboarding)/onboarding/lib/OnboardingStep'
 
-export function OnboardingClient() {
+export function OnboardingClient({
+  onboardingSteps,
+}: {
+  onboardingSteps: OnboardingStepKey[]
+}) {
   const {
-    onboarding: currentOnboarding,
+    onboarding,
     moveNextOnboardingStep,
     isLoading: isLoadingOnboarding,
     executeCompleteOnboarding,
   } = useWorkspaceOnboarding()
 
-  const currentStep = currentOnboarding?.currentStep
+  const currentStep = onboarding?.currentStep
+    ? onboarding?.currentStep
+    : onboardingSteps[0]
 
-  const containerRef = useRef<HTMLDivElement | null>(null)
-
-  useAutoScroll(containerRef, { startAtBottom: true })
+  console.log('currentStep', currentStep)
 
   const [activeTrigger, setActiveTrigger] = useState<ActiveTrigger>({
     document: FAKE_DOCUMENT,
@@ -38,24 +48,32 @@ export function OnboardingClient() {
   })
 
   return (
-    <div className='flex flex-row flex-1 items-start custom-scrollbar'>
+    <div className='flex flex-row flex-1 items-start'>
       <NocodersNavbar
+        onboardingSteps={onboardingSteps}
         executeCompleteOnboarding={executeCompleteOnboarding}
         currentStep={currentStep}
         isLoadingOnboarding={isLoadingOnboarding}
       />
-      <div
-        ref={containerRef}
-        className='flex-row flex-1 h-full overflow-y-auto'
-      >
+      <div className='flex-row flex-1 h-full'>
         {currentStep === OnboardingStepKey.SetupIntegrations && (
-          <SetupIntegrationsStep
-            moveNextOnboardingStep={moveNextOnboardingStep}
+          <OnboardingStep
+            iconAndTitle={<SetupIntegrationsIconAndTitle />}
+            content={
+              <SetupIntegrationsContent
+                moveNextOnboardingStep={moveNextOnboardingStep}
+              />
+            }
           />
         )}
         {currentStep === OnboardingStepKey.ConfigureTriggers && (
-          <ConfigureTriggersStep
-            moveNextOnboardingStep={moveNextOnboardingStep}
+          <OnboardingStep
+            iconAndTitle={<ConfigureTriggersIconAndTitle />}
+            content={
+              <ConfigureTriggersContent
+                moveNextOnboardingStep={moveNextOnboardingStep}
+              />
+            }
           />
         )}
         {(currentStep === OnboardingStepKey.TriggerAgent ||
@@ -80,7 +98,11 @@ function PlaygroundSteps({
   executeCompleteOnboarding,
   activeTrigger,
 }: {
-  moveNextOnboardingStep: () => void
+  moveNextOnboardingStep: ({
+    currentStep,
+  }: {
+    currentStep: OnboardingStepKey
+  }) => void
   setActiveTrigger: (trigger: ActiveTrigger) => void
   currentStep: OnboardingStepKey
   executeCompleteOnboarding: () => void
@@ -88,7 +110,7 @@ function PlaygroundSteps({
 }) {
   const commit = useCurrentCommit()
 
-  const { runDocument, addMessages } = useRunDocument({
+  const { runDocument, addMessages, hasActiveStream } = useRunDocument({
     commit: commit.commit,
   })
 
@@ -124,17 +146,33 @@ function PlaygroundSteps({
   return (
     <>
       {currentStep === OnboardingStepKey.TriggerAgent && (
-        <TriggerAgentStep
-          moveNextOnboardingStep={moveNextOnboardingStep}
-          setActiveTrigger={setActiveTrigger}
-          playground={playground}
+        <OnboardingStep
+          iconAndTitle={<TriggerAgentIconAndTitle />}
+          content={
+            <TriggerAgentContent
+              moveNextOnboardingStep={moveNextOnboardingStep}
+              setActiveTrigger={setActiveTrigger}
+              playground={playground}
+            />
+          }
         />
       )}
       {currentStep === OnboardingStepKey.RunAgent && (
-        <RunAgentStep
-          moveNextOnboardingStep={executeCompleteOnboarding}
-          activeTrigger={activeTrigger}
-          playground={playground}
+        <OnboardingStep
+          iconAndTitle={
+            <RunAgentIconAndTitle
+              playground={playground}
+              hasActiveStream={hasActiveStream}
+            />
+          }
+          content={
+            <RunAgentContent
+              executeCompleteOnboarding={executeCompleteOnboarding}
+              activeTrigger={activeTrigger}
+              playground={playground}
+              hasActiveStream={hasActiveStream}
+            />
+          }
         />
       )}
     </>

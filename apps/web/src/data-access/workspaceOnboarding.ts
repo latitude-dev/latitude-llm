@@ -3,6 +3,7 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { findOnboardingDocument } from '@latitude-data/core/services/documents/findOnboardingDocument'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
+import { calculateAllSteps } from '@latitude-data/core/services/workspaceOnboarding/steps/calculateAllSteps'
 /**
  * Get the current workspace onboarding status
  * If the onboarding status doesn't exist, it creates a new one
@@ -58,4 +59,18 @@ export async function getOnboardingResources() {
   const { project, commit } = documentResult.unwrap()
 
   return { project, commit }
+}
+
+export async function getNecessaryOnboardingSteps() {
+  const { workspace } = await getCurrentUserOrRedirect()
+  if (!workspace?.id) {
+    throw new NotFoundError('Workspace ID is required')
+  }
+  const stepsResult = await calculateAllSteps({
+    workspace,
+  })
+  if (!Result.isOk(stepsResult)) {
+    throw new NotFoundError('Steps not found')
+  }
+  return stepsResult.unwrap()
 }

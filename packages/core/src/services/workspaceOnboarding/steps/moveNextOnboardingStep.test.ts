@@ -58,14 +58,10 @@ describe('moveNextOnboardingStep', () => {
       triggerStatus: DocumentTriggerStatus.Pending,
     })
 
-    const updatedOnboarding = {
-      ...workspaceOnboarding,
-      currentStep: OnboardingStepKey.SetupIntegrations,
-    }
-
     const result = await moveNextOnboardingStep({
-      onboarding: updatedOnboarding,
+      onboarding: workspaceOnboarding,
       workspace,
+      currentStep: OnboardingStepKey.SetupIntegrations,
     })
 
     expect(result.ok).toBe(true)
@@ -74,14 +70,10 @@ describe('moveNextOnboardingStep', () => {
   })
 
   it('moves from first step directly to third when no pending integration triggers exist', async () => {
-    const updatedOnboarding = {
-      ...workspaceOnboarding,
-      currentStep: OnboardingStepKey.SetupIntegrations,
-    }
-
     const result = await moveNextOnboardingStep({
-      onboarding: updatedOnboarding,
+      onboarding: workspaceOnboarding,
       workspace,
+      currentStep: OnboardingStepKey.SetupIntegrations,
     })
 
     expect(result.ok).toBe(true)
@@ -96,13 +88,9 @@ describe('moveNextOnboardingStep', () => {
       .set({ currentStep: OnboardingStepKey.ConfigureTriggers })
       .where(eq(workspaceOnboardingTable.id, workspaceOnboarding.id))
 
-    const updatedOnboarding = {
-      ...workspaceOnboarding,
-      currentStep: OnboardingStepKey.ConfigureTriggers,
-    }
-
     const result = await moveNextOnboardingStep({
-      onboarding: updatedOnboarding,
+      onboarding: workspaceOnboarding,
+      currentStep: OnboardingStepKey.ConfigureTriggers,
       workspace,
     })
 
@@ -118,36 +106,15 @@ describe('moveNextOnboardingStep', () => {
       .set({ currentStep: OnboardingStepKey.TriggerAgent })
       .where(eq(workspaceOnboardingTable.id, workspaceOnboarding.id))
 
-    const updatedOnboarding = {
-      ...workspaceOnboarding,
-      currentStep: OnboardingStepKey.TriggerAgent,
-    }
-
     const result = await moveNextOnboardingStep({
-      onboarding: updatedOnboarding,
+      onboarding: workspaceOnboarding,
+      currentStep: OnboardingStepKey.TriggerAgent,
       workspace,
     })
 
     expect(result.ok).toBe(true)
     const updated = result.unwrap()
     expect(updated.currentStep).toBe(OnboardingStepKey.RunAgent)
-  })
-
-  it('fails when current step is not set', async () => {
-    const onboardingWithoutStep = {
-      ...workspaceOnboarding,
-      currentStep: null,
-    }
-
-    const result = await moveNextOnboardingStep({
-      onboarding: onboardingWithoutStep,
-      workspace,
-    })
-
-    expect(result.ok).toBe(false)
-    expect(() => result.unwrap()).toThrow(
-      new Error('Onboarding current step is not set'),
-    )
   })
 
   it('fails when already at the last step', async () => {
@@ -157,13 +124,9 @@ describe('moveNextOnboardingStep', () => {
       .set({ currentStep: OnboardingStepKey.RunAgent })
       .where(eq(workspaceOnboardingTable.id, workspaceOnboarding.id))
 
-    const updatedOnboarding = {
-      ...workspaceOnboarding,
-      currentStep: OnboardingStepKey.RunAgent,
-    }
-
     const result = await moveNextOnboardingStep({
-      onboarding: updatedOnboarding,
+      onboarding: workspaceOnboarding,
+      currentStep: OnboardingStepKey.RunAgent,
       workspace,
     })
 
