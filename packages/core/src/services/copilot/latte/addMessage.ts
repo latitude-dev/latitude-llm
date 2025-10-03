@@ -16,7 +16,6 @@ import {
 import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { BACKGROUND, TelemetryContext } from '../../../telemetry'
-import { captureException } from '../../../utils/workers/sentry'
 import { WebsocketClient } from '../../../websockets/workers'
 import { runDocumentAtCommit } from '../../commits'
 import { addMessages } from '../../documentLogs/addMessages/index'
@@ -164,7 +163,8 @@ async function generateLatteResponse(args: GenerateLatteResponseArgs) {
   }) // Note: failing silently
 
   if (consuming.error) {
-    captureException(consuming.error)
+    // FIXME: Add captureExeption
+    console.log(consuming.error)
   }
 
   if (error && !isAbortError(error)) {

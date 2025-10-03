@@ -15,7 +15,6 @@ import {
   runEvaluationV2,
 } from '../../../services/evaluationsV2/run'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
-import { captureException } from '../../../utils/workers/sentry'
 import { updateExperimentStatus } from '../experiments/shared'
 
 export type RunEvaluationV2JobData = {
@@ -132,8 +131,6 @@ export const runEvaluationV2Job = async (job: Job<RunEvaluationV2JobData>) => {
     }
   } catch (error) {
     if (isErrorRetryable(error as Error)) throw error
-
-    captureException(error as Error)
 
     if (experiment) {
       await updateExperimentStatus(

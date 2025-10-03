@@ -5,10 +5,6 @@ import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js'
 import { ExpressAdapter } from '@bull-board/express'
 
-import {
-  captureException,
-  captureMessage,
-} from '@latitude-data/core/utils/workers/sentry'
 import { startWorkers } from './workers'
 import { setupSchedules } from './workers/schedule'
 import { env } from '@latitude-data/env'
@@ -94,10 +90,3 @@ const gracefulShutdown = async (signal: string) => {
 process.on('SIGINT', () => gracefulShutdown('SIGINT'))
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
 
-process.on('uncaughtException', function (err) {
-  captureException(err)
-})
-
-process.on('unhandledRejection', (reason: string) => {
-  captureMessage(reason)
-})

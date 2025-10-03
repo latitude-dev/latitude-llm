@@ -5,6 +5,11 @@ tracer.init({
   apmTracingEnabled: process.env.NODE_ENV === 'production',
   service: 'latitude-llm-gateway',
   env: process.env.NODE_ENV,
+  blocklist: []
+})
+
+tracer.use('http', {
+  blocklist: [/AI_NoOutputGeneratedError/]
 })
 
 export default tracer

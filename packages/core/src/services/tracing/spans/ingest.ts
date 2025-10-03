@@ -13,7 +13,6 @@ import {
 } from '../../../constants'
 import { Result } from '../../../lib/Result'
 import { ApiKey, Workspace } from '../../../schema/types'
-import { captureException } from '../../../utils/workers/sentry'
 import {
   convertSpanAttributes,
   convertSpanStatus,
@@ -50,14 +49,12 @@ export async function ingestSpans(
       for (const span of spans) {
         const converting = convertSpanAttributes(span.attributes || [])
         if (converting.error) {
-          captureException(converting.error)
           continue
         }
         const attributes = converting.value
 
         const extracting = extractSpanType(attributes)
         if (extracting.error) {
-          captureException(extracting.error)
           continue
         }
         const type = extracting.value
@@ -68,7 +65,6 @@ export async function ingestSpans(
           db,
         )
         if (extractingApiKeyAndWorkspace.error) {
-          captureException(extractingApiKeyAndWorkspace.error)
           continue
         }
         const { apiKey, workspace } = extractingApiKeyAndWorkspace.value
@@ -79,7 +75,6 @@ export async function ingestSpans(
 
         const enriching = enrichAttributes({ resource, scope, span })
         if (enriching.error) {
-          captureException(enriching.error)
           continue
         }
         span.attributes = enriching.value.filter(
@@ -119,7 +114,6 @@ export async function ingestSpans(
 
       const processing = await processSpansBulk({ spans, apiKey, workspace })
       if (processing.error) {
-        captureException(processing.error)
         continue
       }
     }

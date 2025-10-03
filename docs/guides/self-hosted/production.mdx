@@ -69,7 +69,7 @@ Make sure this network is created before running the containers with `docker com
   - `DISABLE_EMAIL_AUTHENTICATION`: Disable email authentication (optional, default: `false`)
 
   If `MAIL_TRANSPORT` is set to `smtp`, you must provide the following environment variables:
-  
+
   - `SMTP_HOST`: The SMTP server host (e.g., `smtp.gmail.com`)
   - `SMTP_PORT`: The SMTP port number (e.g., `465` for SMTPS or `587` for STARTTLS)
   - `SMTP_SECURE`: Set to `true` for SMTPS (`465`) or `false` for STARTTLS (`587`)
@@ -157,7 +157,6 @@ Make sure this network is created before running the containers with `docker com
       AWS SDK automatically handles credentials from attached IAM roles.
 
 - **Optional Features**:
-  - Sentry integration for error tracking
   - PostHog for analytics
 
 ## Starting the Services

@@ -8,7 +8,6 @@ import { cache as getCache } from '../../../../cache'
 import { Result } from '../../../../lib/Result'
 import Transaction from '../../../../lib/Transaction'
 import { latteRequests } from '../../../../schema/models/latteRequests'
-import { captureException } from '../../../../utils/workers/sentry'
 import { WebsocketClient } from '../../../../websockets/workers'
 import { computeLatteCredits } from './compute'
 import { usageLatteCredits } from './usage'
@@ -66,7 +65,8 @@ export async function consumeLatteCredits(
     const key = LATTE_USAGE_CACHE_KEY(workspace.id)
     await cache.del(key)
   } catch (error) {
-    captureException(error as Error) // Note: failing silently
+    // FIXME: Add captureExeption
+    console.log(error as Error) // Note: failing silently
   }
 
   const counting = await usageLatteCredits({ workspace, fresh: true })
