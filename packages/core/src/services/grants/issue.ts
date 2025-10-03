@@ -11,7 +11,6 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { grants } from '../../schema/models/grants'
 import { Workspace } from '../../schema/types'
-import { captureException } from '../../utils/workers/sentry'
 import { findWorkspaceSubscription } from '../subscriptions/data-access/find'
 import { validateGrant } from './validate'
 
@@ -76,13 +75,9 @@ export async function issueGrant(
     } as Grant
 
     if (type === QuotaType.Credits) {
-      try {
-        const cache = await getCache()
-        const key = LATTE_USAGE_CACHE_KEY(workspace.id)
-        await cache.del(key)
-      } catch (error) {
-        captureException(error as Error) // Note: failing silently
-      }
+      const cache = await getCache()
+      const key = LATTE_USAGE_CACHE_KEY(workspace.id)
+      await cache.del(key)
     }
 
     // TODO - runs dont update automatically when granted an issue

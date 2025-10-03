@@ -9,7 +9,6 @@ import {
 import { Result } from '../../../../lib/Result'
 import { LatteRequestsRepository } from '../../../../repositories'
 import { Workspace } from '../../../../schema/types'
-import { captureException } from '../../../../utils/workers/sentry'
 import { computeQuota } from '../../../grants/quota'
 import { findWorkspaceSubscription } from '../../../subscriptions/data-access/find'
 
@@ -69,7 +68,8 @@ export async function usageLatteCredits(
     const item = JSON.stringify(usage)
     await cache.set(key, item, 'EX', LATTE_USAGE_CACHE_TTL)
   } catch (error) {
-    captureException(error as Error) // Note: failing silently
+    // FIXME: Add captureExeption
+    console.log(error as Error) // Note: failing silently
   }
 
   return Result.ok(usage)

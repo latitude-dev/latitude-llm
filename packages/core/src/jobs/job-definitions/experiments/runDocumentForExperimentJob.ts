@@ -6,7 +6,6 @@ import { NotFoundError } from '../../../lib/errors'
 import { ExperimentsRepository } from '../../../repositories'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 import { BACKGROUND } from '../../../telemetry'
-import { captureException } from '../../../utils/workers/sentry'
 import { queues } from '../../queues'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
 import {
@@ -88,8 +87,6 @@ export const runDocumentForExperimentJob = async (
     })
   } catch (error) {
     if (isErrorRetryable(error as Error)) throw error
-
-    captureException(error as Error)
 
     await updateExperimentStatus(
       {

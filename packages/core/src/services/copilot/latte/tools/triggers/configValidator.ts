@@ -15,7 +15,6 @@ import {
 import { reloadComponentProps } from '../../../../integrations/pipedream/components/reloadComponentProps'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { PipedreamIntegrationConfiguration } from '../../../../integrations/helpers/schema'
-import { captureMessage } from '../../../../../utils/workers/sentry'
 
 export async function validateLattesChoices({
   pipedream,
@@ -242,7 +241,8 @@ export function isValidPropType(propType: string, value: any): boolean {
 
     default:
       // For unknown types, don't be permissive and capture a warning message
-      captureMessage(`Unknown Pipedream prop type: ${propType}`, 'warning')
+      // FIXME: Replace captureException
+      console.log(`Unknown Pipedream prop type: ${propType}`, 'warning')
       return false
   }
 }
