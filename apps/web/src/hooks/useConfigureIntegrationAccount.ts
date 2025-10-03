@@ -6,6 +6,7 @@ import useLatitudeAction from './useLatitudeAction'
 import { updateIntegrationConfigurationAction } from '$/actions/integrations/updateConfiguration'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { PipedreamIntegration } from '@latitude-data/core/schema/types'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
 
 export function useConfigureIntegrationAccount({
   integration,
@@ -15,14 +16,11 @@ export function useConfigureIntegrationAccount({
   const { mutate } = useIntegrations()
   const { toast } = useToast()
 
+  const { data: workspace } = useCurrentWorkspace()
   const { data: app, isLoading: isLoadingApp } = usePipedreamApp(
     integration.configuration.appName,
   )
-  const {
-    connect,
-    externalUserId,
-    isLoading: isLoadingConnect,
-  } = useConnectToPipedreamApp(app)
+  const { connect, isLoading: isLoadingConnect } = useConnectToPipedreamApp(app)
 
   const { execute: updateIntegrationConfiguration } = useLatitudeAction(
     updateIntegrationConfigurationAction,
@@ -50,7 +48,7 @@ export function useConfigureIntegrationAccount({
       showError('Please select an app')
       return
     }
-    if (!externalUserId) {
+    if (!workspace) {
       showError(
         'Authentication token not available. Please wait a few seconds and try again.',
       )
@@ -69,7 +67,7 @@ export function useConfigureIntegrationAccount({
     const configuration = {
       appName: app.nameSlug,
       connectionId,
-      externalUserId,
+      externalUserId: String(workspace.id),
       authType: app.authType ?? 'none',
       oauthAppId: app.id,
       metadata: {
@@ -108,7 +106,7 @@ export function useConfigureIntegrationAccount({
   }, [
     app,
     connect,
-    externalUserId,
+    workspace,
     integration.name,
     integration.id,
     mutate,
