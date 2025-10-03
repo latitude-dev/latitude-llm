@@ -16,6 +16,8 @@ import {
 import type { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
 import type { ExtractToolArgs } from '@latitude-data/core/services/latitudeTools/webExtract/types'
 import type { SearchToolArgs } from '@latitude-data/core/services/latitudeTools/webSearch/types'
+import type { TodoToolArgs } from '@latitude-data/core/services/latitudeTools/todo/types'
+import type { ThinkToolArgs } from '@latitude-data/core/services/latitudeTools/think/types'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
@@ -28,6 +30,8 @@ import { CodeLatitudeToolCallContent } from './LatitudeTools/Code'
 import { WebExtractLatitudeToolCallContent } from './LatitudeTools/Extract'
 import { WebSearchLatitudeToolCallContent } from './LatitudeTools/Search'
 import { LatitudeToolCallContent } from './LatitudeTools/SubAgent'
+import { TodoLatitudeToolCallContent } from './LatitudeTools/Todo'
+import { ThinkLatitudeToolCallContent } from './LatitudeTools/Think'
 import { ToolResultContent, ToolResultFooter } from './ToolResult'
 
 function toolArgs(
@@ -75,6 +79,26 @@ export function ToolCallContent({
       <WebExtractLatitudeToolCallContent
         toolCallId={value.toolCallId}
         args={args as ExtractToolArgs}
+        toolResponse={toolResponse}
+      />
+    )
+  }
+
+  if (value.toolName === LatitudeToolInternalName.TODO) {
+    return (
+      <TodoLatitudeToolCallContent
+        toolCallId={value.toolCallId}
+        args={args as TodoToolArgs}
+        toolResponse={toolResponse}
+      />
+    )
+  }
+
+  if (value.toolName === LatitudeToolInternalName.Think) {
+    return (
+      <ThinkLatitudeToolCallContent
+        toolCallId={value.toolCallId}
+        args={args as ThinkToolArgs}
         toolResponse={toolResponse}
       />
     )

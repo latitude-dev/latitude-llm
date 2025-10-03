@@ -144,6 +144,8 @@ import {
   MousePointerClick,
   LogOut,
   Headset,
+  ListTodo,
+  CircleArrowRight,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -242,6 +244,7 @@ const Icons = {
   chevronsUpDown: ChevronsUpDown,
   circle: CircleIcon,
   circleArrowUp: CircleArrowUp,
+  circleArrowRight: CircleArrowRight,
   circleChevronLeft: CircleChevronLeft,
   circleChevronRight: CircleChevronRight,
   circleDollarSign: CircleDollarSign,
@@ -249,6 +252,7 @@ const Icons = {
   circleStop: CircleStop,
   circleUser: CircleUser,
   circleCheck: CircleCheck,
+  circleX: CircleX,
   circleDashed: CircleDashed,
   clipboard: Copy,
   clock: Clock,
@@ -298,6 +302,7 @@ const Icons = {
   link: Link2,
   listCheck: ListCheck,
   listOrdered: ListOrdered,
+  listTodo: ListTodo,
   listVideo: ListVideo,
   loader: LoaderCircle,
   lock: Lock,
@@ -389,7 +394,6 @@ const Icons = {
   expand: Expand,
   forward: Forward,
   circleGauge: CircleGauge,
-  circleX: CircleX,
   users: UsersIcon,
   coins: CoinsIcon,
   rocket: RocketIcon,
