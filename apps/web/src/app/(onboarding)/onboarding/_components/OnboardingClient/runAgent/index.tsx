@@ -93,7 +93,7 @@ export function RunAgentContent({
     <Fragment>
       <div
         ref={containerRef}
-        className='flex flex-col items-center gap-8 border-dashed border-2 rounded-xl p-2 w-full max-w-[600px] overflow-y-auto custom-scrollbar scrollable-indicator lg:max-h-[400px] xl:max-h-[400px] 2xl:max-h-[600px]'
+        className='flex flex-col items-center gap-8 border-dashed border-2 rounded-xl p-2 w-full max-w-[600px] overflow-y-auto custom-scrollbar scrollable-indicator max-h-[400px] 2xl:max-h-[600px]'
       >
         {/* TODO(onboarding): Add loading state */}
         <Chat
@@ -103,15 +103,17 @@ export function RunAgentContent({
         />
         <div className='sticky bottom-0 w-full bg-background pb-6'>
           <div className='flex relative flex-row w-full items-center justify-center'>
-            <StatusIndicator
-              playground={playground}
-              resetChat={() => {}}
-              stopStreaming={() => {}}
-              canStopStreaming={false}
-              streamAborted={false}
-              canChat={false}
-              position='bottom'
-            />
+            {!playground.error && (
+              <StatusIndicator
+                playground={playground}
+                resetChat={() => {}}
+                stopStreaming={() => {}}
+                canStopStreaming={false}
+                streamAborted={false}
+                canChat={false}
+                position='bottom'
+              />
+            )}
           </div>
         </div>
       </div>
