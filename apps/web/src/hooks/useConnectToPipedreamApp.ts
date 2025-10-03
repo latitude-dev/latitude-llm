@@ -2,7 +2,6 @@ import { createPipedreamTokenAction } from '$/actions/integrations/pipedream/cre
 import { useCallback, useMemo, useState } from 'react'
 import { createFrontendClient, type App } from '@pipedream/sdk/browser'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
-import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import type { TokenCallback } from 'node_modules/@pipedream/sdk/dist/esm/core/index.mjs'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 
@@ -10,12 +9,6 @@ export function useConnectToPipedreamApp(app: App | undefined) {
   const { data: workspace } = useCurrentWorkspace()
 
   const [isConnecting, setIsConnecting] = useState(false)
-  const externalUserId = useMemo(
-    () =>
-      workspace ? workspace.id + ':' + generateUUIDIdentifier() : undefined,
-    [workspace],
-  )
-
   const [connectionId, setConnectionId] = useState<string | undefined>(
     undefined,
   )
@@ -24,24 +17,21 @@ export function useConnectToPipedreamApp(app: App | undefined) {
     createPipedreamTokenAction,
   )
 
-  const tokenCallback = useCallback<TokenCallback>(
-    async ({ externalUserId }: { externalUserId: string }) => {
-      const [data, error] = await generateToken({ externalUserId })
-      if (error) throw error
+  const tokenCallback = useCallback<TokenCallback>(async () => {
+    const [data, error] = await generateToken()
+    if (error) throw error
 
-      return {
-        token: data.token,
-        expiresAt: new Date(data.expiresAt),
-        connectLinkUrl: '', // Uses the default Pipedream connect link
-      }
-    },
-    [generateToken],
-  )
+    return {
+      token: data.token,
+      expiresAt: new Date(data.expiresAt),
+      connectLinkUrl: '', // Uses the default Pipedream connect link
+    }
+  }, [generateToken])
 
   const connect = useCallback((): Promise<
     [string, undefined] | [undefined, Error]
   > => {
-    if (!externalUserId) {
+    if (!workspace) {
       return Promise.resolve([
         undefined,
         new Error('Something went wrong, please try again.'),
@@ -62,7 +52,7 @@ export function useConnectToPipedreamApp(app: App | undefined) {
     )
 
     const pipedream = createFrontendClient({
-      externalUserId,
+      externalUserId: String(workspace.id),
       tokenCallback,
     })
 
@@ -84,15 +74,14 @@ export function useConnectToPipedreamApp(app: App | undefined) {
     })
 
     return promise
-  }, [app, externalUserId, tokenCallback])
+  }, [app, workspace, tokenCallback])
 
   return useMemo(
     () => ({
       connect,
       isLoading: isConnecting,
       connectionId,
-      externalUserId,
     }),
-    [connect, isConnecting, connectionId, externalUserId],
+    [connect, isConnecting, connectionId],
   )
 }

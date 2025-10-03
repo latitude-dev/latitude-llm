@@ -6,19 +6,21 @@ import type { App } from '@pipedream/sdk/browser'
 import { IntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
 import { IntegrationType } from '@latitude-data/constants'
 import { PipedreamAppCard } from './Pipedream/AppCard'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
 
 export const PipedreamIntegrationConfiguration = forwardRef<{
   validate: () => Promise<IntegrationConfiguration>
 }>((_, ref) => {
   const [app, setApp] = useState<App>()
-  const { connect, externalUserId } = useConnectToPipedreamApp(app)
+  const { data: workspace } = useCurrentWorkspace()
+  const { connect } = useConnectToPipedreamApp(app)
 
   useImperativeHandle(
     ref,
     () => ({
       validate: async () => {
         if (!app) throw new Error('Please select an app')
-        if (!externalUserId) {
+        if (!workspace) {
           throw new Error(
             'Authentication token not available. Please wait a few seconds and try again.',
           )
@@ -32,7 +34,7 @@ export const PipedreamIntegrationConfiguration = forwardRef<{
           configuration: {
             appName: app.nameSlug,
             connectionId,
-            externalUserId,
+            externalUserId: String(workspace.id),
             authType: app.authType ?? 'none',
             oauthAppId: app.id,
             metadata: {
@@ -43,12 +45,12 @@ export const PipedreamIntegrationConfiguration = forwardRef<{
         }
       },
     }),
-    [app, connect, externalUserId],
+    [app, connect, workspace],
   )
 
   return (
     <div className='flex flex-col gap-4'>
-      <AppSelector value={app} onChange={setApp} isLoading={!externalUserId} />
+      <AppSelector value={app} onChange={setApp} isLoading={!workspace} />
       <PipedreamAppCard app={app} />
     </div>
   )

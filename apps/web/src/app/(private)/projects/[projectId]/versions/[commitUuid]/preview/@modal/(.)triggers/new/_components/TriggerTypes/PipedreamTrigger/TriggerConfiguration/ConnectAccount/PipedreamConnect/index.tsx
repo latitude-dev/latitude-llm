@@ -8,6 +8,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import useIntegrations from '$/stores/integrations'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { IntegrationDto } from '@latitude-data/core/schema/types'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
 
 const NO_TOKEN_MSG =
   'Authentication token not available. Please wait a few seconds and try again.'
@@ -28,8 +29,9 @@ export function PipedreamConnect({
   onCancel: () => void
   showCancel: boolean
 }) {
+  const { data: workspace } = useCurrentWorkspace()
   const { toast } = useToast()
-  const { connect, externalUserId } = useConnectToPipedreamApp(app)
+  const { connect } = useConnectToPipedreamApp(app)
   const { create } = useIntegrations({
     withTriggers: true,
   })
@@ -41,7 +43,7 @@ export function PipedreamConnect({
       const integrationName = (e.target as HTMLFormElement).integrationName
         .value
 
-      if (!externalUserId) {
+      if (!workspace) {
         toast({
           title: 'Authentication failed',
           description: NO_TOKEN_MSG,
@@ -58,7 +60,7 @@ export function PipedreamConnect({
         configuration: {
           appName: app.nameSlug,
           connectionId,
-          externalUserId,
+          externalUserId: String(workspace.id),
           authType: app.authType ?? 'none',
           oauthAppId: app.id,
           metadata: {
@@ -81,7 +83,7 @@ export function PipedreamConnect({
 
       onAccountConnected(integration as IntegrationDto)
     },
-    [app, connect, externalUserId, create, toast, onAccountConnected],
+    [app, connect, workspace, create, toast, onAccountConnected],
   )
 
   return (
@@ -112,7 +114,7 @@ export function PipedreamConnect({
               fancy
               size='small'
               type='submit'
-              disabled={!externalUserId}
+              disabled={!workspace}
             >
               Connect
             </Button>
