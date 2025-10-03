@@ -39,33 +39,55 @@ export function LatteLayout({
   initialThreadUuid?: string
   initialProviderLog?: ProviderLogDto
 }) {
+  const openBadgeRef = useRef<HTMLDivElement>(null)
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+
   const { value: width, setValue: setWidth } = useLocalStorage<number>({
     key: AppLocalStorage.latteSidebarWidth,
     defaultValue: MIN_WIDTH,
   })
   const [localWidth, setLocalWidth] = useState(MIN_WIDTH)
+  const onResizeStop = useCallback(
+    (_: SyntheticEvent, data: ResizeCallbackData) => setWidth(data.size.width),
+    [setWidth],
+  )
+
   const [isOpen, _setIsOpen] = useState(false)
   const setIsOpen = useCallback(
     (isOpen: boolean) => {
       if (isOpen) setLocalWidth(width)
       _setIsOpen(isOpen)
+
+      // Focus/unfocus Latte input when opening/closing sidebar
+      if (isOpen) inputRef.current?.focus({ preventScroll: true })
+      else inputRef.current?.blur()
     },
     [_setIsOpen, setLocalWidth, width],
   )
+  useEffect(() => {
+    // Keyboard shortcut for toggling sidebar (Cmd+E / Ctrl+E)
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'e' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault()
+        const newIsOpen = !isOpen
+        setIsOpen(newIsOpen)
 
-  const onResizeStop = useCallback(
-    (_: SyntheticEvent, data: ResizeCallbackData) => {
-      console.log('onResizeStop', data.size.width)
-      setWidth(data.size.width)
-    },
-    [setWidth],
-  )
+        // Auto-focus textarea when opening sidebar
+        if (newIsOpen && inputRef.current) {
+          // Small delay to ensure the sidebar animation has started
+          setTimeout(() => {
+            inputRef.current?.focus()
+          }, 100)
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, setIsOpen])
+
   const [isSidebarHovered, setIsSidebarHovered] = useState(false)
-
-  const openBadgeRef = useRef<HTMLDivElement>(null)
-  const sidebarRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
-
   useEffect(() => {
     if (!sidebarRef.current) return
     if (!openBadgeRef.current) return
@@ -88,31 +110,6 @@ export function LatteLayout({
       openBadge.removeEventListener('mouseleave', onMouseLeave)
     }
   }, [])
-
-  // Keyboard shortcut for toggling sidebar (Cmd+E / Ctrl+E)
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'e' && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault()
-        const newIsOpen = !isOpen
-        setIsOpen(newIsOpen)
-
-        // Auto-focus textarea when opening sidebar
-        if (newIsOpen && inputRef.current) {
-          // Small delay to ensure the sidebar animation has started
-          setTimeout(() => {
-            inputRef.current?.focus()
-          }, 100)
-        }
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isOpen, setIsOpen])
 
   return (
     <div className='w-full h-full relative overflow-hidden pr-6'>
