@@ -54,7 +54,6 @@ export function useActiveChatTrigger({
   )
   const onRunChatTrigger: OnRunChatTrigger = useCallback(
     ({ trigger, document }) => {
-      console.log('Running chat trigger', trigger.uuid)
       activateTrigger({ trigger, document })
       setChatBoxFocused(true)
 

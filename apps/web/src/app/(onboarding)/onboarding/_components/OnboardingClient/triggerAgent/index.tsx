@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { Fragment, useCallback, useMemo, useState } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import useDocumentTriggers from '$/stores/documentTriggers'
@@ -16,8 +16,25 @@ import {
   OnRunTriggerFn,
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersList'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import { IsLoadingOnboardingItem } from '../../../lib/IsLoadingOnboardingItem'
 
-export function TriggerAgentStep({
+export function TriggerAgentIconAndTitle() {
+  return (
+    <Fragment>
+      <div className='p-2 border-2 rounded-lg'>
+        <Icon className='' name='mousePointerClick' size='medium' />
+      </div>
+      <Text.H2M color='foreground' noWrap>
+        Trigger the agent
+      </Text.H2M>
+      <Text.H5 color='foregroundMuted'>
+        Perform one of the below actions to trigger and run the agent
+      </Text.H5>
+    </Fragment>
+  )
+}
+
+export function TriggerAgentContent({
   moveNextOnboardingStep,
   setActiveTrigger,
   playground,
@@ -26,20 +43,9 @@ export function TriggerAgentStep({
   setActiveTrigger: (trigger: ActiveTrigger) => void
   playground: ReturnType<typeof usePlaygroundChat>
 }) {
-  const [openChatInput, setOpenChatInput] = useState<boolean>(false)
-  const toggleOpenChatInput = useCallback(() => {
-    if (openChatInput) {
-      setOpenChatInput(false)
-    } else {
-      setOpenChatInput(true)
-    }
-  }, [openChatInput])
-
-  const { data: integrations } = useIntegrations()
   const project = useCurrentProject()
   const commit = useCurrentCommit()
-
-  const { data: triggers } = useDocumentTriggers({
+  const { data: triggers, isLoading: isLoadingTriggers } = useDocumentTriggers({
     projectId: project.project.id,
     commitUuid: commit.commit.uuid,
   })
@@ -49,6 +55,18 @@ export function TriggerAgentStep({
     project: project.project,
     triggers,
   })
+
+  const [openChatInput, setOpenChatInput] = useState<boolean>(false)
+  const toggleOpenChatInput = useCallback(() => {
+    if (openChatInput) {
+      setOpenChatInput(false)
+    } else {
+      setOpenChatInput(true)
+    }
+  }, [openChatInput])
+
+  const { data: integrations, isLoading: isLoadingIntegrations } =
+    useIntegrations()
 
   const sortedTriggersByIntegrationFirst = useMemo(() => {
     return triggers.sort((a) => {
@@ -66,30 +84,26 @@ export function TriggerAgentStep({
   )
 
   return (
-    <div className='flex flex-col items-center p-32 gap-10'>
-      <div className='flex flex-col items-center gap-2'>
-        <div className='p-2 border-2 rounded-lg'>
-          <Icon className='' name='mousePointerClick' size='medium' />
-        </div>
-        <Text.H2M color='foreground' noWrap>
-          Trigger the agent
-        </Text.H2M>
-        <Text.H5 color='foregroundMuted'>
-          Perform one of the below actions to trigger and run the agent
-        </Text.H5>
-      </div>
-      <div className='flex flex-col items-center gap-2 border-dashed border-2 rounded-xl p-2 w-full max-w-[600px]'>
-        {sortedTriggersByIntegrationFirst.map((trigger) => (
-          <RunTrigger
-            key={trigger.uuid}
-            trigger={trigger}
-            onRunTrigger={onRunTrigger}
-            onRunChatTrigger={toggleOpenChatInput}
-            integrations={integrations}
+    <Fragment>
+      <div className='flex flex-col items-center gap-2 border-dashed border-2 rounded-xl p-2 w-full max-w-[500px]'>
+        {isLoadingTriggers || isLoadingIntegrations ? (
+          <IsLoadingOnboardingItem
+            highlightedText='Triggers'
+            nonHighlightedText='will appear in a moment...'
           />
-        ))}
+        ) : (
+          sortedTriggersByIntegrationFirst.map((trigger) => (
+            <RunTrigger
+              key={trigger.uuid}
+              trigger={trigger}
+              onRunTrigger={onRunTrigger}
+              onRunChatTrigger={toggleOpenChatInput}
+              integrations={integrations}
+            />
+          ))
+        )}
       </div>
-      <div className='flex flex-col gap-6 w-full max-w-[600px]'>
+      <div className='flex flex-col gap-6 w-full max-w-[500px]'>
         {activeChatTrigger.active && openChatInput ? (
           <div className='sticky bottom-6'>
             <ChatTriggerTextarea
@@ -98,7 +112,7 @@ export function TriggerAgentStep({
               project={project.project}
               document={activeChatTrigger.active.document}
               chatTrigger={activeChatTrigger.active.trigger}
-              chatFocused={activeChatTrigger.chatBoxFocused}
+              chatFocused={openChatInput}
               onRunTrigger={onRunTrigger}
               options={activeChatTrigger.options}
               onChange={activeChatTrigger.onChange}
@@ -113,6 +127,6 @@ export function TriggerAgentStep({
           </Text.H5>
         </div>
       </div>
-    </div>
+    </Fragment>
   )
 }

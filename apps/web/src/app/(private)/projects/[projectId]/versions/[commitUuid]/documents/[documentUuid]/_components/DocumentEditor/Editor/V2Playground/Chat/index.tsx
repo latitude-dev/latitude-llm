@@ -36,7 +36,7 @@ export default function Chat({
   )
 
   return (
-    <div className='w-full flex flex-col flex-1 h-full overflow-hidden'>
+    <div className='w-full flex flex-col flex-1'>
       {showHeader && (
         <Header
           expandParameters={expandParameters}
@@ -81,7 +81,7 @@ function Messages({
   toolContentMap: ReturnType<typeof useToolContentMap>
 }) {
   return (
-    <div className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 pb-12'>
+    <div className='flex flex-col gap-3 flex-grow flex-shrink min-h-0'>
       <MessageList
         messages={playground.messages}
         parameters={parameterKeys}
