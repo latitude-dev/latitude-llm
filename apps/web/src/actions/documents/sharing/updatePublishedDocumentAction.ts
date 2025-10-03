@@ -4,7 +4,7 @@ import { PublishedDocumentRepository } from '@latitude-data/core/repositories/pu
 import { updatePublishedDocument } from '@latitude-data/core/services/publishedDocuments/update'
 import { z } from 'zod'
 
-import { withDocument } from '../../procedures'
+import { withDocument, withDocumentSchema } from '../../procedures'
 
 const input = z.object({
   uuid: z.string(),
@@ -17,12 +17,11 @@ const input = z.object({
 export type UpdatePublishedDocumentInput = z.infer<typeof input>
 
 export const updatePublishedDocumentAction = withDocument
-  .createServerAction()
-  .input(input)
-  .handler(async ({ ctx, input }) => {
+  .inputSchema(withDocumentSchema.extend(input.shape))
+  .action(async ({ ctx, parsedInput }) => {
     const repo = new PublishedDocumentRepository(ctx.workspace.id)
     const publishedDocument = await repo
-      .findByUuid(input.uuid)
+      .findByUuid(parsedInput.uuid)
       .then((r) => r.unwrap())
     return updatePublishedDocument({
       publishedDocument,

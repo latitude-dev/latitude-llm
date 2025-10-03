@@ -150,10 +150,10 @@ export function useSelectedLogs({
       selectableState.clearSelections()
       previewModalState.onClose()
     },
-    onError: ({ err }) => {
+    onError: (error) => {
       toast({
         title: 'Error',
-        description: err.message,
+        description: error.message,
         variant: 'destructive',
       })
     },

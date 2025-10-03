@@ -5,17 +5,16 @@ import { withAdmin } from '../procedures'
 import { ClaimedReward } from '@latitude-data/core/schema/types'
 
 export const updateRewardClaimValidityAction = withAdmin
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       claimId: z.number(),
       isValid: z.boolean().nullable(),
     }),
   )
-  .handler(async ({ input }) => {
+  .action(async ({ parsedInput }) => {
     const result = await updateRewardClaim({
-      claimId: input.claimId,
-      isValid: input.isValid,
+      claimId: parsedInput.claimId,
+      isValid: parsedInput.isValid,
     })
 
     return result.unwrap() as ClaimedReward | undefined

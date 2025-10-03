@@ -17,7 +17,7 @@ describe('createProvider', () => {
 
     user = userData
     workspace = w
-    context = await factories.createTelemetryContext({ workspace })
+    context = factories.createTelemetryContext({ workspace })
 
     vi.resetModules()
   })
@@ -33,7 +33,6 @@ describe('createProvider', () => {
     const result = createProviderGlobal({
       context,
       provider,
-      messages: [],
       apiKey: provider.token,
       url: undefined,
       config: { model: 'gemini-1.5-pro' },
@@ -77,7 +76,6 @@ describe('createProvider', () => {
     const result = createProvider({
       context,
       provider,
-      messages: [],
       apiKey: provider.token,
       url: undefined,
       config: { model: 'gemini-1.5-pro' },
@@ -124,7 +122,6 @@ describe('createProvider', () => {
     const result = createProvider({
       context,
       provider,
-      messages: [],
       apiKey: provider.token,
       url: undefined,
       config: { model: 'gemini-1.5-pro' },

@@ -7,8 +7,8 @@ import { ChainEvent } from '@latitude-data/constants'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { Latitude, type ChainEventDto } from '@latitude-data/sdk'
-import { createStreamableValue, StreamableValue } from 'ai/rsc'
 import { LogSources, StreamEventTypes } from '@latitude-data/core/constants'
+import { createStreamableValue, StreamableValue } from '@ai-sdk/rsc'
 
 type RunDocumentActionProps = {
   documentPath: string

@@ -8,15 +8,14 @@ import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { updateIntegrationConfiguration } from '@latitude-data/core/services/integrations/updateConfiguration'
 
 export const updateIntegrationConfigurationAction = authProcedure
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       integrationName: z.string(),
       configuration: pipedreamIntegrationConfigurationSchema,
     }),
   )
-  .handler(async ({ input, ctx }) => {
-    const { integrationName, configuration } = input
+  .action(async ({ parsedInput, ctx }) => {
+    const { integrationName, configuration } = parsedInput
     const { workspace } = ctx
 
     const integrationsScope = new IntegrationsRepository(workspace.id)

@@ -35,6 +35,10 @@ describe('applyCustomRules', () => {
             type: 'text',
             text: 'The image is a lie',
           },
+          {
+            type: 'reasoning',
+            text: 'This is an assistant reasoning text',
+          },
         ],
       },
       {

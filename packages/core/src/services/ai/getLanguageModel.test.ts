@@ -8,9 +8,9 @@ import { VercelConfigWithProviderRules } from './providers/rules'
 import { LanguageModel } from 'ai'
 
 const GetLanguageModelMock = vi.hoisted(() => vi.fn())
-const GetResponsesLanguageModelMock = vi.hoisted(() => vi.fn())
+const GetChatLanguageModelMock = vi.hoisted(() => vi.fn())
 const MockLlmProvider = Object.assign(GetLanguageModelMock, {
-  responses: GetResponsesLanguageModelMock,
+  chat: GetChatLanguageModelMock,
 }) as unknown as LlmProvider
 
 let setup: Awaited<ReturnType<typeof factories.createProject>>
@@ -73,11 +73,7 @@ describe('getLanguageModel', () => {
       config,
     })
 
-    expect(GetLanguageModelMock).toHaveBeenCalledWith('gpt-4o', {
-      cacheControl: false,
-      model: 'gpt-4o',
-      provider: 'openai',
-    })
+    expect(GetChatLanguageModelMock).toHaveBeenCalledWith('gpt-4o')
   })
 
   it('get model for OpenAI responses', () => {
@@ -88,7 +84,11 @@ describe('getLanguageModel', () => {
       config,
     })
 
-    expect(GetResponsesLanguageModelMock).toHaveBeenCalledWith('gpt-4o')
+    expect(GetLanguageModelMock).toHaveBeenCalledWith('gpt-4o', {
+      cacheControl: false,
+      model: 'gpt-4o',
+      provider: 'openai',
+    })
   })
 
   it('get model for Anthropic', () => {

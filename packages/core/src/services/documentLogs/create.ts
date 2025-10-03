@@ -1,9 +1,9 @@
 import type { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
 
-import { LanguageModelUsage } from 'ai'
 import { Commit } from '../../schema/types'
 import { LogSources } from '../../constants'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'
+import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
 import { publisher } from '../../events/publisher'
 import { NotFoundError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'

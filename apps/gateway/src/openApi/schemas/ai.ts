@@ -15,11 +15,11 @@ export const languageModelUsageSchema = z.object({
 export const toolCallSchema = z.object({
   id: z.string(),
   name: z.string(),
-  arguments: z.record(z.any()),
+  arguments: z.record(z.string(), z.any()),
 })
 
-export const configSchema = z.object({}).passthrough()
-export const providerLogSchema = z.object({}).passthrough()
+export const configSchema = z.record(z.string(), z.any())
+export const providerLogSchema = z.record(z.string(), z.any())
 export const chainStepResponseSchema = z.discriminatedUnion('streamType', [
   z.object({
     streamType: z.literal('text'),
@@ -58,7 +58,7 @@ export const chainEventDtoResponseSchema = z.discriminatedUnion('streamType', [
 export const legacyChainEventDtoSchema = z.discriminatedUnion('event', [
   z.object({
     event: z.literal(StreamEventTypes.Provider),
-    data: z.object({}).passthrough(),
+    data: z.record(z.string(), z.any()),
   }),
   z.object({
     event: z.literal(StreamEventTypes.Latitude),
@@ -79,7 +79,7 @@ export const legacyChainEventDtoSchema = z.discriminatedUnion('event', [
         type: z.literal(LegacyChainEventTypes.Complete),
         config: configSchema,
         messages: z.array(messageSchema).optional(),
-        object: z.object({}).passthrough().optional(),
+        object: z.record(z.string(), z.any()).optional(),
         response: chainEventDtoResponseSchema,
         uuid: z.string().optional(),
       }),
@@ -110,8 +110,8 @@ export const ProjectSchema = z.object({
   id: z.number(),
   name: z.string(),
   workspaceId: z.number(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  lastEditedAt: z.string().datetime().optional(),
-  deletedAt: z.string().datetime().nullable().optional(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+  lastEditedAt: z.iso.datetime().optional(),
+  deletedAt: z.iso.datetime().nullable().optional(),
 })

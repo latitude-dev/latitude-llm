@@ -10,10 +10,10 @@ const documentLogSchema = z.object({
   commitId: z.number(),
   resolvedContent: z.string(),
   contentHash: z.string(),
-  parameters: z.record(z.any()),
+  parameters: z.record(z.string(), z.any()),
   customIdentifier: z.string().optional(),
   duration: z.number().optional(),
-  source: z.nativeEnum(LogSources),
+  source: z.enum(LogSources),
   createdAt: z.date(),
   updatedAt: z.date(),
 })

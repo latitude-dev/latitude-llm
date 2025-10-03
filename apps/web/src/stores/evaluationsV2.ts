@@ -85,12 +85,13 @@ export function useEvaluationsV2(
       })
     },
     onError: async (error) => {
-      if (error?.err?.name === 'ZodError') return
-      toast({
-        title: 'Error creating evaluation',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
+      if (error.code === 'ERROR') {
+        toast({
+          title: 'Error creating evaluation',
+          description: error?.message,
+          variant: 'destructive',
+        })
+      }
     },
   })
   const createEvaluation = useCallback(
@@ -132,12 +133,13 @@ export function useEvaluationsV2(
     },
     onError: async (error) => {
       if (!notifyUpdate) return
-      if (error?.err?.name === 'ZodError') return
-      toast({
-        title: 'Error updating evaluation',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
+      if (error.code === 'ERROR') {
+        toast({
+          title: 'Error updating evaluation',
+          description: error?.message,
+          variant: 'destructive',
+        })
+      }
     },
   })
   const updateEvaluation = useCallback(
@@ -174,12 +176,13 @@ export function useEvaluationsV2(
       })
     },
     onError: async (error) => {
-      if (error?.err?.name === 'ZodError') return
-      toast({
-        title: 'Error deleting evaluation',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
+      if (error.code === 'ERROR') {
+        toast({
+          title: 'Error deleting evaluation',
+          description: error?.message,
+          variant: 'destructive',
+        })
+      }
     },
   })
   const deleteEvaluation = useCallback(
@@ -205,12 +208,13 @@ export function useEvaluationsV2(
       })
     },
     onError: async (error) => {
-      if (error?.err?.name === 'ZodError') return
-      toast({
-        title: 'Error generating evaluation',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
+      if (error.code === 'ERROR') {
+        toast({
+          title: 'Error generating evaluation',
+          description: error?.message,
+          variant: 'destructive',
+        })
+      }
     },
   })
   const generateEvaluation = useCallback(
@@ -235,12 +239,13 @@ export function useEvaluationsV2(
         })
       },
       onError: async (error) => {
-        if (error?.err?.name === 'ZodError') return
-        toast({
-          title: 'Error cloning evaluation',
-          description: error?.err?.message,
-          variant: 'destructive',
-        })
+        if (error.code === 'ERROR') {
+          toast({
+            title: 'Error cloning evaluation',
+            description: error?.message,
+            variant: 'destructive',
+          })
+        }
       },
     })
   const cloneEvaluation = useCallback(
@@ -266,12 +271,13 @@ export function useEvaluationsV2(
       })
     },
     onError: async (error) => {
-      if (error?.err?.name === 'ZodError') return
-      toast({
-        title: 'Error annotating evaluation',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
+      if (error.code === 'ERROR') {
+        toast({
+          title: 'Error annotating evaluation',
+          description: error?.message,
+          variant: 'destructive',
+        })
+      }
     },
   })
   const annotateEvaluation = useCallback(

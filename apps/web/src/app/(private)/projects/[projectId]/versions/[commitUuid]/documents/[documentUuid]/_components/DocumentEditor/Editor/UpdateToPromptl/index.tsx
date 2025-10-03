@@ -1,4 +1,3 @@
-'use client'
 import { useCallback, useState } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
