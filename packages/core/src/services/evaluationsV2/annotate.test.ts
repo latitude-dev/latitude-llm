@@ -1,20 +1,24 @@
+import { Providers } from '@latitude-data/constants'
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import { z } from 'zod'
 import {
+  EVALUATION_SCORE_SCALE,
+  EvaluationType,
+  EvaluationV2,
+  HumanEvaluationMetric,
+} from '../../constants'
+import { publisher } from '../../events/publisher'
+import * as helpers from '../../helpers'
+import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
+import {
   Commit,
   DocumentVersion,
-  EvaluationV2,
   Project,
   ProviderLogDto,
   User,
   Workspace,
 } from '../../schema/types'
-import { EVALUATION_SCORE_SCALE, HumanEvaluationMetric } from '../../constants'
-import { EvaluationType, Providers } from '@latitude-data/constants'
-import { publisher } from '../../events/publisher'
-import * as helpers from '../../helpers'
-import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
 import serializeProviderLog from '../providerLogs/serialize'
 import { annotateEvaluationV2 } from './annotate'

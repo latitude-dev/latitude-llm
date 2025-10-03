@@ -1,5 +1,4 @@
-import { EvaluationMetric, EvaluationType } from '../../constants'
-import { EvaluationV2 } from '../../schema/types'
+import { EvaluationMetric, EvaluationType, EvaluationV2 } from '../../constants'
 import { HumanEvaluationSpecification } from './human'
 import { LlmEvaluationSpecification } from './llm'
 import { RuleEvaluationSpecification } from './rule'

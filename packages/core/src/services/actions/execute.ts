@@ -1,11 +1,11 @@
-import { User, Workspace } from '../../schema/types'
+import { ActionBackendParameters, ActionType } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { ActionBackendSpecification, ActionType } from './shared'
+import { User, Workspace } from '../../schema/types'
+import { ActionBackendSpecification } from './shared'
 import { ACTION_SPECIFICATIONS } from './specifications'
-import { ActionBackendParameters } from '@latitude-data/constants/actions'
 
 export async function executeAction<T extends ActionType = ActionType>(
   {

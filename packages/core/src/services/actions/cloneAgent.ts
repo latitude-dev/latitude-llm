@@ -1,9 +1,11 @@
 import { env } from '@latitude-data/env'
-import { z } from 'zod'
-
 import { database } from '../../client'
-import { unsafelyFindWorkspace } from '../../data-access/workspaces'
+import {
+  ActionType,
+  cloneAgentActionBackendParametersSchema,
+} from '../../constants'
 import { unsafelyFindProject } from '../../data-access/projects'
+import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -12,13 +14,9 @@ import {
   DocumentVersionsRepository,
 } from '../../repositories'
 import { forkDocument } from '../documents/fork'
-import { ActionExecuteArgs, ActionType } from './shared'
-import { getWorkspaceOnboarding } from '../workspaceOnboarding'
 import { isFeatureEnabledByName } from '../workspaceFeatures/isFeatureEnabledByName'
-
-const cloneAgentActionBackendParametersSchema = z.object({
-  uuid: z.string(),
-})
+import { getWorkspaceOnboarding } from '../workspaceOnboarding'
+import { ActionExecuteArgs } from './shared'
 
 export const CloneAgentActionSpecification = {
   parameters: cloneAgentActionBackendParametersSchema,

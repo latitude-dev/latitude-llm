@@ -23,7 +23,7 @@ export type Grant = {
   type: QuotaType
   amount: Quota
   balance: number
-  expiresAt?: Date | null
+  expiresAt?: Date
   createdAt: Date
   updatedAt: Date
 }

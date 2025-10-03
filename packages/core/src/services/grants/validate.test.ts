@@ -1,10 +1,10 @@
 import { addMonths, subMonths } from 'date-fns'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GrantSource, QuotaType } from '../../constants'
-import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
-import { Workspace } from '../../schema/types'
 import { BadRequestError } from '../../lib/errors'
 import * as plans from '../../plans'
+import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
+import { Workspace } from '../../schema/types'
 import * as factories from '../../tests/factories'
 import { validateGrant } from './validate'
 

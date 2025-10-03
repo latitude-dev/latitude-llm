@@ -6,13 +6,13 @@ import {
 import { relativeTime } from '$/lib/relativeTime'
 import { useConversation } from '$/stores/conversations'
 import { useTrace } from '$/stores/traces'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/constants'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useState } from 'react'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/schema/types'
 
 // TODO(tracing): lazy load traces if not expanded when the trace model is persisted
 

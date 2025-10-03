@@ -1,14 +1,11 @@
 import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import { ROUTES } from '$/services/routes'
 import {
-  Commit,
-  DocumentVersion,
-  EvaluationV2,
-} from '@latitude-data/core/schema/types'
-import {
   EvaluationType,
+  EvaluationV2,
   LlmEvaluationMetricAnyCustom,
 } from '@latitude-data/constants'
+import { Commit, DocumentVersion } from '@latitude-data/core/schema/types'
 import { useCallback } from 'react'
 
 export function useRunEvaluationPlaygroundPrompt({

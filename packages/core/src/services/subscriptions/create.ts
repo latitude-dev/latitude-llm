@@ -1,8 +1,8 @@
-import { Workspace } from '../../schema/types'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { SubscriptionPlans } from '../../plans'
 import { subscriptions } from '../../schema/models/subscriptions'
+import { Workspace } from '../../schema/types'
 
 export function createSubscription(
   {

@@ -8,11 +8,20 @@ import { KeysetTablePaginationFooter } from '$/components/TablePaginationFooter/
 import { OnSelectedSpanFn } from '$/components/tracing/traces/Timeline'
 import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
+import {
+  DocumentLogWithMetadataAndError,
+  EvaluationV2,
+  LOG_FILTERS_ENCODED_PARAMS,
+} from '@latitude-data/core/constants'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import {
   buildPagination,
   IPagination,
 } from '@latitude-data/core/lib/pagination/buildPagination'
+import {
+  DocumentLogsLimitedView,
+  ResultWithEvaluationV2,
+} from '@latitude-data/core/schema/types'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -30,15 +39,6 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { capitalize } from 'lodash-es'
 import { forwardRef, Fragment, useMemo } from 'react'
 import { DocumentLogTraces } from './DocumentLogInfo/Traces'
-import {
-  DocumentLogsLimitedView,
-  DocumentLogWithMetadataAndError,
-  ResultWithEvaluationV2,
-} from '@latitude-data/core/schema/types'
-import {
-  EvaluationV2,
-  LOG_FILTERS_ENCODED_PARAMS,
-} from '@latitude-data/core/constants'
 
 type DocumentLogRow = DocumentLogWithMetadataAndError & {
   realtimeAdded?: boolean

@@ -1,12 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  Commit,
-  EvaluationResultV2,
-  EvaluationV2,
-  ProviderLogDto,
-  User,
-  Workspace,
-} from '../../schema/types'
+import { EvaluationResultV2, EvaluationV2 } from '../../constants'
+import { Commit, ProviderLogDto, User, Workspace } from '../../schema/types'
 import * as factories from '../../tests/factories'
 import { AnalyticsClient } from './AnalyticsClient'
 

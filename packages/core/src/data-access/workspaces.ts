@@ -1,3 +1,10 @@
+import { LatitudeError, NotFoundError } from '@latitude-data/constants/errors'
+import { desc, eq } from 'drizzle-orm'
+import { database } from '../client'
+import { DocumentLog } from '../constants'
+import { Result } from '../lib/Result'
+import { PromisedResult } from '../lib/Transaction'
+import { workspacesDtoColumns } from '../repositories'
 import { commits } from '../schema/models/commits'
 import { documentVersions } from '../schema/models/documentVersions'
 import { memberships } from '../schema/models/memberships'
@@ -5,21 +12,13 @@ import { projects } from '../schema/models/projects'
 import { providerApiKeys } from '../schema/models/providerApiKeys'
 import { subscriptions } from '../schema/models/subscriptions'
 import { workspaces } from '../schema/models/workspaces'
-import { desc, eq } from 'drizzle-orm'
-
 import {
-  DocumentVersion,
-  ProviderApiKey,
   Commit,
-  DocumentLog,
-  Workspace,
+  DocumentVersion,
   Project,
+  ProviderApiKey,
+  Workspace,
 } from '../schema/types'
-import { database } from '../client'
-import { workspacesDtoColumns } from '../repositories'
-import { LatitudeError, NotFoundError } from '@latitude-data/constants/errors'
-import { PromisedResult } from '../lib/Transaction'
-import { Result } from '../lib/Result'
 
 export async function unsafelyFindWorkspace(id: number, db = database) {
   const result = await db

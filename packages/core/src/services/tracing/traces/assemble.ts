@@ -1,9 +1,9 @@
-import { AssembledSpan, AssembledTrace, Span } from '../../../constants'
-import { Workspace } from '../../../schema/types'
 import { database } from '../../../client'
+import { AssembledSpan, AssembledTrace, Span } from '../../../constants'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { SpansRepository } from '../../../repositories'
+import { Workspace } from '../../../schema/types'
 
 export async function assembleTrace(
   {

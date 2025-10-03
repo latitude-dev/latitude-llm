@@ -1,4 +1,4 @@
-import { ActionType } from '@latitude-data/constants/actions'
+import { ActionType } from '../../constants'
 import { CloneAgentActionSpecification } from './cloneAgent'
 import { CreateAgentActionSpecification } from './createAgent'
 import { ActionBackendSpecification } from './shared'

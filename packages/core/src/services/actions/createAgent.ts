@@ -1,22 +1,22 @@
 import { env } from '@latitude-data/env'
 import { z } from 'zod'
-import { ActionType, CLOUD_MESSAGES } from '../../constants'
-import { Workspace } from '../../schema/types'
 import { cache as getCache } from '../../cache'
 import { database } from '../../client'
+import {
+  ActionType,
+  CLOUD_MESSAGES,
+  createAgentActionBackendParametersSchema,
+} from '../../constants'
 import { queues } from '../../jobs/queues'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { hashContent } from '../../lib/hashContent'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { ProjectsRepository } from '../../repositories'
+import { Workspace } from '../../schema/types'
 import { getCopilot, runCopilot } from '../copilot'
 import { createProject } from '../projects/create'
 import { ActionExecuteArgs } from './shared'
-
-const createAgentActionBackendParametersSchema = z.object({
-  prompt: z.string(),
-})
 
 export const CreateAgentActionSpecification = {
   parameters: createAgentActionBackendParametersSchema,

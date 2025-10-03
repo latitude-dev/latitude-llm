@@ -2,6 +2,7 @@ import {
   ATTR_GEN_AI_TOOL_CALL_ID,
   ATTR_GEN_AI_TOOL_NAME,
 } from '@opentelemetry/semantic-conventions/incubating'
+import { database } from '../../../client'
 import {
   ATTR_AI_TOOL_CALL_ARGS,
   ATTR_AI_TOOL_CALL_ID,
@@ -20,7 +21,6 @@ import {
   SpanType,
   ToolSpanMetadata,
 } from '../../../constants'
-import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import { SpanProcessArgs } from './shared'

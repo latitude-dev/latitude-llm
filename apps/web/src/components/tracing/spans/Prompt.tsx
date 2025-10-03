@@ -1,13 +1,11 @@
+import { MetadataItem } from '$/components/MetadataItem'
 import { SPAN_SPECIFICATIONS, SpanType } from '@latitude-data/constants'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { SPAN_COLORS } from './shared'
-import { MetadataItem } from '$/components/MetadataItem'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
-import { DetailsPanelProps } from './shared'
+import { DetailsPanelProps, SPAN_COLORS } from './shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Prompt]
-
 export default {
   ...specification,
   icon: 'bot' as IconName,
@@ -25,7 +23,7 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
               copyValue={span.metadata.attributes.commitUuid as string}
             >
               <Text.H5 align='right' color='foregroundMuted'>
-                {span.metadata.attributes.commitUuid}
+                {(span.metadata.attributes.commitUuid as string).slice(0, 8)}
               </Text.H5>
             </ClickToCopy>
           </MetadataItem>
@@ -35,7 +33,10 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
                 copyValue={span.metadata.attributes.documentUuid as string}
               >
                 <Text.H5 align='right' color='foregroundMuted'>
-                  {span.metadata.attributes.documentUuid}
+                  {(span.metadata.attributes.documentUuid as string).slice(
+                    0,
+                    8,
+                  )}
                 </Text.H5>
               </ClickToCopy>
             </MetadataItem>
@@ -46,7 +47,10 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
                 copyValue={span.metadata.attributes.experimentUuid as string}
               >
                 <Text.H5 align='right' color='foregroundMuted'>
-                  {span.metadata.attributes.experimentUuid}
+                  {(span.metadata.attributes.experimentUuid as string).slice(
+                    0,
+                    8,
+                  )}
                 </Text.H5>
               </ClickToCopy>
             </MetadataItem>

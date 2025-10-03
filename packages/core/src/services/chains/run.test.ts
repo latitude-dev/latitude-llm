@@ -1,3 +1,4 @@
+import { TelemetryContext } from '@latitude-data/telemetry'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -10,25 +11,24 @@ vi.mock('uuid', async (importOriginal) => ({
   v4: mocks.v4,
 }))
 
-import { ChainEventTypes } from '@latitude-data/constants'
+import { ChainEventTypes, Providers } from '@latitude-data/constants'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { Workspace } from '../../schema/types'
+import { Chain, MessageRole } from 'promptl-ai'
 import {
   ErrorableEntity,
   LogSources,
   PromptSource,
   StreamEventTypes,
 } from '../../constants'
-import { Providers } from '@latitude-data/constants'
+import * as consumeStreamModule from '../../lib/streamManager/ChainStreamConsumer/consumeStream'
+import * as createFakeProviderLogModule from '../../lib/streamManager/utils/createFakeProviderLog'
+import { Workspace } from '../../schema/types'
 import * as factories from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import * as aiModule from '../ai'
-import { runChain } from './run'
 import { Result, TypedResult } from './../../lib/Result'
-import { Chain, MessageRole } from 'promptl-ai'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import * as consumeStreamModule from '../../lib/streamManager/ChainStreamConsumer/consumeStream'
-import * as createFakeProviderLogModule from '../../lib/streamManager/utils/createFakeProviderLog'
+import { runChain } from './run'
 
 describe('runChain', () => {
   const mockChain: Partial<Chain> = {
@@ -66,7 +66,7 @@ describe('runChain', () => {
     })
   }
 
-  let context: any
+  let context: TelemetryContext
   let workspace: Workspace
   let promptSource: PromptSource
 

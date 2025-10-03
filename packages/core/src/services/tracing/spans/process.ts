@@ -6,6 +6,7 @@ import {
   GEN_AI_OPERATION_NAME_VALUE_GENERATE_CONTENT,
   GEN_AI_OPERATION_NAME_VALUE_TEXT_COMPLETION,
 } from '@opentelemetry/semantic-conventions/incubating'
+import { database } from '../../../client'
 import {
   AI_OPERATION_ID_VALUE_GENERATE_OBJECT,
   AI_OPERATION_ID_VALUE_GENERATE_TEXT,
@@ -13,6 +14,7 @@ import {
   AI_OPERATION_ID_VALUE_STREAM_TEXT,
   AI_OPERATION_ID_VALUE_TOOL,
   ATTR_AI_OPERATION_ID,
+  ATTR_LATITUDE_INTERNAL,
   ATTR_LATITUDE_TYPE,
   ATTR_LLM_REQUEST_TYPE,
   GEN_AI_OPERATION_NAME_VALUE_COMPLETION,
@@ -24,27 +26,20 @@ import {
   LLM_REQUEST_TYPE_VALUE_COMPLETION,
   LLM_REQUEST_TYPE_VALUE_EMBEDDING,
   LLM_REQUEST_TYPE_VALUE_RERANK,
+  Otlp,
   SpanAttribute,
   SpanStatus,
   SpanType,
 } from '../../../constants'
-import { ApiKey, Workspace } from '../../../schema/types'
-import {
-  StatusCode,
-  Status,
-  AttributeValue,
-  Attribute,
-} from '../../../schema/otlp'
-import { database } from '../../../client'
+import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
-import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
-import { internalBaggageSchema } from '../../../telemetry'
-import { ATTR_LATITUDE_INTERNAL } from '../../../constants'
 import { ApiKeysRepository } from '../../../repositories'
+import { ApiKey, Workspace } from '../../../schema/types'
+import { internalBaggageSchema } from '../../../telemetry'
 
 export function convertSpanAttribute(
-  attribute: AttributeValue,
+  attribute: Otlp.AttributeValue,
 ): TypedResult<SpanAttribute> {
   if (attribute.stringValue != undefined) {
     return Result.ok(attribute.stringValue)
@@ -69,7 +64,7 @@ export function convertSpanAttribute(
 }
 
 export function convertSpanAttributes(
-  attributes: Attribute[],
+  attributes: Otlp.Attribute[],
 ): TypedResult<Record<string, SpanAttribute>> {
   const result: Record<string, SpanAttribute> = {}
 
@@ -152,11 +147,13 @@ export function extractSpanType(
   return Result.ok(SpanType.Unknown)
 }
 
-export function convertSpanStatus(status: Status): TypedResult<SpanStatus> {
+export function convertSpanStatus(
+  status: Otlp.Status,
+): TypedResult<SpanStatus> {
   switch (status.code) {
-    case StatusCode.Ok:
+    case Otlp.StatusCode.Ok:
       return Result.ok(SpanStatus.Ok)
-    case StatusCode.Error:
+    case Otlp.StatusCode.Error:
       return Result.ok(SpanStatus.Error)
     default:
       return Result.ok(SpanStatus.Unset)

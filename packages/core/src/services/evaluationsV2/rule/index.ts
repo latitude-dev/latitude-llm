@@ -1,6 +1,9 @@
-import { EvaluationType, RuleEvaluationMetric } from '../../../constants'
-import { RuleEvaluationSpecification as specification } from '../../../constants'
 import { database } from '../../../client'
+import {
+  EvaluationType,
+  RuleEvaluationMetric,
+  RuleEvaluationSpecification as specification,
+} from '../../../constants'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import {

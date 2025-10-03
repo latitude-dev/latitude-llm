@@ -38,6 +38,7 @@ import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
 import { datasetRows } from './models/datasetRows'
 import { datasets } from './models/datasets'
+import { documentIntegrationReferences } from './models/documentIntegrationReferences'
 import { documentSuggestions } from './models/documentSuggestions'
 import { documentTriggerEvents } from './models/documentTriggerEvents'
 import { documentTriggers } from './models/documentTriggers'
@@ -62,19 +63,13 @@ import { sessions } from './models/sessions'
 import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
 import { workspaceFeatures } from './models/workspaceFeatures'
-import { workspaces } from './models/workspaces'
-import { documentIntegrationReferences } from './models/documentIntegrationReferences'
 import { workspaceOnboarding } from './models/workspaceOnboarding'
+import { workspaces } from './models/workspaces'
 
+// TODO(evalsv2): deprecated, remove
 export type {
-  DocumentLog,
-  DocumentLogWithMetadata,
-  DocumentLogWithMetadataAndError,
   EvaluationResult,
   EvaluationResultDto,
-  EvaluationResultV2,
-  EvaluationV2,
-  RunErrorField,
 } from '@latitude-data/constants'
 
 export type Workspace = InferSelectModel<typeof workspaces>

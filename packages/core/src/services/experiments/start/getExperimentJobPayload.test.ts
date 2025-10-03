@@ -1,15 +1,15 @@
+import { Providers } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { EvaluationV2 } from '../../../constants'
 import {
   Commit,
   Dataset,
   DocumentVersion,
-  EvaluationV2,
   Workspace,
 } from '../../../schema/types'
-import { Providers } from '@latitude-data/constants'
 import * as factories from '../../../tests/factories'
-import { getExperimentJobPayload } from './getExperimentJobPayload'
 import { createExperiment } from '../create'
+import { getExperimentJobPayload } from './getExperimentJobPayload'
 
 describe('getExperimentJobPayload', () => {
   let workspace: Workspace

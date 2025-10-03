@@ -1,3 +1,4 @@
+import { Providers } from '@latitude-data/constants'
 import {
   ATTR_GEN_AI_RESPONSE_FINISH_REASONS,
   ATTR_GEN_AI_RESPONSE_MODEL,
@@ -13,6 +14,7 @@ import {
   ToolCallContent,
   ToolMessage,
 } from 'promptl-ai'
+import { database } from '../../../client'
 import {
   ATTR_AI_MODEL_ID,
   ATTR_AI_MODEL_PROVIDER,
@@ -68,12 +70,10 @@ import {
   SpanStatus,
   SpanType,
 } from '../../../constants'
-import { Providers } from '@latitude-data/constants'
-import { Workspace } from '../../../schema/types'
-import { database } from '../../../client'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import { ProviderApiKeysRepository } from '../../../repositories'
+import { Workspace } from '../../../schema/types'
 import { estimateCost } from '../../ai/estimateCost'
 import {
   setField,

@@ -1,8 +1,10 @@
 import {
   EvaluationResultableType,
+  EvaluationV2,
   LatitudeTool,
   LatitudeToolInternalName,
   LogSources,
+  Otlp,
   Quota,
 } from '@latitude-data/constants'
 import type {
@@ -12,27 +14,24 @@ import type {
   ToolCall,
   UserMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import { FinishReason, LanguageModelUsage, Tool, ToolResultPart } from 'ai'
-import { z } from 'zod'
-
+import { TelemetryContext } from '@latitude-data/telemetry'
+import type { App, Component } from '@pipedream/sdk'
 import {
   ConfigurableProp,
   ConfigurePropResponse,
   PropOption,
 } from '@pipedream/sdk'
-
-import type { App, Component } from '@pipedream/sdk'
+import { FinishReason, LanguageModelUsage, Tool, ToolResultPart } from 'ai'
+import { z } from 'zod'
+import { PromisedResult } from './lib/Transaction'
+import { LatitudeError } from './lib/errors'
 import {
   ApiKey,
   Commit,
   DocumentVersion,
-  EvaluationV2,
   ProviderLog,
   Workspace,
 } from './schema/types'
-import { Span, Scope, Resource } from './schema/otlp'
-import { PromisedResult } from './lib/Transaction'
-import { LatitudeError } from './lib/errors'
 
 export {
   DocumentType,
@@ -46,6 +45,9 @@ export {
   LogSources,
   ModifiedDocumentType,
   StreamEventTypes,
+  type DocumentLog,
+  type DocumentLogWithMetadata,
+  type DocumentLogWithMetadataAndError,
   type LegacyChainEvent,
 } from '@latitude-data/constants'
 export * from '@latitude-data/constants/actions'
@@ -54,7 +56,6 @@ export * from '@latitude-data/constants/grants'
 export * from '@latitude-data/constants/latte'
 export * from '@latitude-data/constants/runs'
 export * from '@latitude-data/constants/tracing'
-export type { DocumentLog } from './schema/types'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
@@ -469,7 +470,7 @@ export type PromptSource = EvaluationV2 | DocumentRunPromptSource
 export type LatitudeToolDefinition = {
   name: LatitudeTool
   internalName: LatitudeToolInternalName
-  definition: (context?: any) => Tool
+  definition: (context?: TelemetryContext) => Tool
   method: (args: unknown) => PromisedResult<unknown, LatitudeError>
 }
 
@@ -533,9 +534,9 @@ export type AppDto = App & {
 
 export type SpanBulkProcessingData = {
   spans: Array<{
-    span: Span
-    scope: Scope
-    resource: Resource
+    span: Otlp.ResourceSpan
+    scope: Otlp.Scope
+    resource: Otlp.Resource
     apiKey: ApiKey
     workspace: Workspace
   }>

@@ -1,12 +1,16 @@
-import { EvaluationMetric, EvaluationType } from '../../constants'
-import { EvaluationResultV2 } from '../../constants'
-import { EvaluationV2, Workspace } from '../../schema/types'
 import { database } from '../../client'
+import {
+  EvaluationMetric,
+  EvaluationResultV2,
+  EvaluationType,
+  EvaluationV2,
+} from '../../constants'
 import { Result } from '../../lib/Result'
 import {
   DocumentLogsRepository,
   ProviderLogsRepository,
 } from '../../repositories'
+import { Workspace } from '../../schema/types'
 import { serialize as serializeDocumentLog } from '../documentLogs/serialize'
 import { EVALUATION_SPECIFICATIONS } from '../evaluationsV2/specifications'
 

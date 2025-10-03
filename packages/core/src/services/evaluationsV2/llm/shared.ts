@@ -4,22 +4,18 @@ import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSch
 import { Adapters, Chain, Chain as PromptlChain, scan } from 'promptl-ai'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
+import { database } from '../../../client'
 import {
-  Commit,
+  EvaluationType,
   EvaluationV2,
-  ProviderApiKey,
-  Workspace,
-} from '../../../schema/types'
-import { EvaluationType } from '../../../constants'
-import {
   LLM_EVALUATION_PROMPT_PARAMETERS,
   LlmEvaluationMetric,
+  LogSources,
 } from '../../../constants'
-import { LogSources } from '../../../constants'
-import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { updatePromptMetadata } from '../../../lib/updatePromptMetadata'
 import { ProviderLogsRepository } from '../../../repositories'
+import { Commit, ProviderApiKey, Workspace } from '../../../schema/types'
 import { BACKGROUND, telemetry } from '../../../telemetry'
 import { runChain } from '../../chains/run'
 import { parsePrompt } from '../../documents/parse'

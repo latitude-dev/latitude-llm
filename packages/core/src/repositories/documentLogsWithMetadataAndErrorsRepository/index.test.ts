@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { DocumentLogsWithMetadataAndErrorsRepository } from '.'
+import { DocumentLog } from '../../constants'
 import {
   Commit,
-  DocumentLog,
   DocumentVersion,
   Project,
   ProviderApiKey,

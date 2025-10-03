@@ -20,6 +20,15 @@ import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { Message } from '@latitude-data/constants/legacyCompiler'
+import {
+  DocumentLog,
+  DocumentLogWithMetadataAndError,
+  SpanWithDetails,
+} from '@latitude-data/core/constants'
+import {
+  ProviderApiKey,
+  ProviderLogDto,
+} from '@latitude-data/core/schema/types'
 import { getCostPer1M } from '@latitude-data/core/services/ai/estimateCost/index'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
@@ -30,12 +39,6 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { FinishReasonItem } from '../../../../../../[documentUuid]/_components/FinishReasonItem'
-import { DocumentLog, SpanWithDetails } from '@latitude-data/core/constants'
-import {
-  DocumentLogWithMetadataAndError,
-  ProviderApiKey,
-  ProviderLogDto,
-} from '@latitude-data/core/schema/types'
 
 function costNotCalculatedReason({
   provider,

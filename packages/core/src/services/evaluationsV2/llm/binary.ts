@@ -1,15 +1,15 @@
 import { z } from 'zod'
+import { database } from '../../../client'
 import {
   EvaluationType,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationMetric,
+  LlmEvaluationBinarySpecification as specification,
 } from '../../../constants'
 import { formatConversation } from '../../../helpers'
-import { ProviderApiKey } from '../../../schema/types'
-import { LlmEvaluationBinarySpecification as specification } from '../../../constants'
-import { database } from '../../../client'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
+import { ProviderApiKey } from '../../../schema/types'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
 import {
   EvaluationMetricCloneArgs,

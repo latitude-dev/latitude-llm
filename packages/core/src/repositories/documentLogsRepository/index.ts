@@ -8,9 +8,7 @@ import {
   isNull,
   sql,
 } from 'drizzle-orm'
-
-import { DocumentLog } from '../../schema/types'
-import { ErrorableEntity, LogSources } from '../../constants'
+import { DocumentLog, ErrorableEntity, LogSources } from '../../constants'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import rowsFromQueryPlan from '../../lib/rowsFromQueryPlan'

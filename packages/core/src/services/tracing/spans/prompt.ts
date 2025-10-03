@@ -1,9 +1,9 @@
+import { database } from '../../../client'
 import {
   ATTR_GEN_AI_REQUEST_PARAMETERS,
   SPAN_SPECIFICATIONS,
   SpanType,
 } from '../../../constants'
-import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { SpanProcessArgs } from './shared'
 

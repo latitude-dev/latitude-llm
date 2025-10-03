@@ -7,6 +7,17 @@ import ResultBadge from '$/components/evaluations/ResultBadge'
 import { MetadataItem } from '$/components/MetadataItem'
 import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
 import { ROUTES } from '$/services/routes'
+import {
+  DocumentLogWithMetadataAndError,
+  EvaluationMetric,
+  EvaluationResultV2,
+  EvaluationType,
+} from '@latitude-data/core/constants'
+import {
+  Commit,
+  DocumentVersion,
+  ResultWithEvaluationV2,
+} from '@latitude-data/core/schema/types'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -15,17 +26,6 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import Link from 'next/link'
-import {
-  Commit,
-  DocumentLogWithMetadataAndError,
-  DocumentVersion,
-  ResultWithEvaluationV2,
-} from '@latitude-data/core/schema/types'
-import {
-  EvaluationMetric,
-  EvaluationResultV2,
-  EvaluationType,
-} from '@latitude-data/core/constants'
 
 type Props<
   T extends EvaluationType = EvaluationType,

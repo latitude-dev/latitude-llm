@@ -1,5 +1,4 @@
-import { Commit, EvaluationV2, Workspace } from '../../schema/types'
-import { EvaluationMetric, EvaluationType } from '../../constants'
+import { EvaluationMetric, EvaluationType, EvaluationV2 } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -7,6 +6,7 @@ import {
   DocumentVersionsRepository,
   EvaluationsV2Repository,
 } from '../../repositories'
+import { Commit, Workspace } from '../../schema/types'
 import { createEvaluationV2 } from './create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
 

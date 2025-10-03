@@ -1,9 +1,8 @@
+import { and, eq } from 'drizzle-orm'
+import { database } from '../client'
+import { DocumentLog } from '../constants'
 import { documentLogs } from '../schema/models/documentLogs'
 import { documentVersions } from '../schema/models/documentVersions'
-import { and, eq } from 'drizzle-orm'
-
-import { DocumentLog } from '../schema/types'
-import { database } from '../client'
 
 export const unsafelyFindDocumentLogByUuid = async (
   documentLogUuid: string,

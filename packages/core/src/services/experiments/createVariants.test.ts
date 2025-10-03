@@ -1,14 +1,14 @@
-import { vi, beforeEach, describe, expect, it } from 'vitest'
+import { Providers } from '@latitude-data/constants'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { EvaluationV2 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import {
   Commit,
   Dataset,
   DocumentVersion,
-  EvaluationV2,
-  Workspace,
   User,
+  Workspace,
 } from '../../schema/types'
-import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { createExperimentVariants } from './createVariants'
 

@@ -10,12 +10,13 @@ import {
   ne,
   sql,
 } from 'drizzle-orm'
-import { Commit, EvaluationV2 } from '../schema/types'
+import { EvaluationV2 } from '../constants'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { commits } from '../schema/models/commits'
 import { evaluationVersions } from '../schema/models/evaluationVersions'
 import { projects } from '../schema/models/projects'
+import { Commit } from '../schema/types'
 import { CommitsRepository } from './commitsRepository'
 import Repository from './repositoryV2'
 

@@ -1,17 +1,17 @@
+import { Providers } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetric,
+} from '../../constants'
+import { BadRequestError } from '../../lib/errors'
 import {
   Commit,
   DocumentVersion,
-  EvaluationV2,
   ProviderApiKey,
   Workspace,
 } from '../../schema/types'
-import {
-  EvaluationType,
-  LlmEvaluationMetric,
-  Providers,
-} from '@latitude-data/constants'
-import { BadRequestError } from '../../lib/errors'
 import * as factories from '../../tests/factories'
 import { cloneEvaluationV2 } from './clone'
 import { LlmEvaluationRatingSpecification, buildPrompt } from './llm/rating'

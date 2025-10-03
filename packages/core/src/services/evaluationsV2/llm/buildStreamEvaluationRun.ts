@@ -1,10 +1,13 @@
 import { ChainEvent } from '@latitude-data/constants'
 import { z } from 'zod'
-import { EvaluationType } from '../../../constants'
-import { LlmEvaluationMetricAnyCustom } from '../../../constants'
-import { EvaluationV2, Workspace } from '../../../schema/types'
+import {
+  EvaluationType,
+  EvaluationV2,
+  LlmEvaluationMetricAnyCustom,
+} from '../../../constants'
 import { Result, TypedResult } from '../../../lib/Result'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import { Workspace } from '../../../schema/types'
 import { BACKGROUND, telemetry } from '../../../telemetry'
 import { runChain } from '../../chains/run'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
