@@ -4,11 +4,10 @@ import {
   EVALUATION_SPECIFICATIONS,
   getEvaluationMetricSpecification,
 } from '$/components/evaluations'
-import EvaluationV2Form, {
-  EvaluationV2FormErrors,
-} from '$/components/evaluations/EvaluationV2Form'
+import EvaluationV2Form from '$/components/evaluations/EvaluationV2Form'
 import { MetadataProvider } from '$/components/MetadataProvider'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
+import { ActionErrors } from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
@@ -211,7 +210,8 @@ function EditEvaluation<
   const [openUpdateModal, setOpenUpdateModal] = useState(false)
   const [settings, setSettings] = useState<EvaluationSettings<T, M>>(evaluation)
   const [options, setOptions] = useState<EvaluationOptions>(evaluation)
-  const [errors, setErrors] = useState<EvaluationV2FormErrors>()
+  const [errors, setErrors] =
+    useState<ActionErrors<typeof useEvaluationsV2, 'updateEvaluation'>>()
 
   const onUpdate = useCallback(async () => {
     if (isUpdatingEvaluation) return
@@ -220,9 +220,8 @@ function EditEvaluation<
       settings: settings,
       options: options,
     })
-    if (errors) {
-      setErrors(errors)
-    } else {
+    if (errors) setErrors(errors)
+    else {
       setErrors(undefined)
       setOpenUpdateModal(false)
     }

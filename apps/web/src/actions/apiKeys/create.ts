@@ -6,14 +6,15 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const createApiKeyAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       name: z.string(),
     }),
   )
-  .action(async ({ parsedInput, ctx }) =>
+  .handler(async ({ input, ctx }) =>
     createApiKey({
-      name: parsedInput.name,
+      name: input.name,
       workspace: ctx.workspace,
     }).then((r) => r.unwrap()),
   )

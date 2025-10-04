@@ -162,6 +162,7 @@ async function run(
     aliasVerdict,
     z.object({
       score: z
+        .number()
         .int()
         .min(metadata.configuration.minScore)
         .max(metadata.configuration.maxScore),

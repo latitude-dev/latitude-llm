@@ -1,4 +1,4 @@
-import { LegacyVercelSDKToolResultPart as ToolResultPart } from './ai'
+import { ToolResultPart } from 'ai'
 
 export enum MessageRole {
   system = 'system',

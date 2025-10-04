@@ -8,7 +8,8 @@ import { z } from 'zod'
 import { withProject } from '../procedures'
 
 export const createDraftWithContentAction = withProject
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       title: z.string(),
       description: z.string().optional().default(''),
@@ -16,15 +17,15 @@ export const createDraftWithContentAction = withProject
       content: z.string(),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const { user, workspace, project } = ctx
 
     const draft = await createCommit({
       project,
       user,
       data: {
-        title: parsedInput.title,
-        description: parsedInput.description,
+        title: input.title,
+        description: input.description,
       },
     }).then((r) => r.unwrap())
 
@@ -33,14 +34,14 @@ export const createDraftWithContentAction = withProject
       .getDocumentAtCommit({
         commitUuid: draft.uuid,
         projectId: project.id,
-        documentUuid: parsedInput.documentUuid,
+        documentUuid: input.documentUuid,
       })
       .then((r) => r.unwrap())
 
     await updateDocument({
       commit: draft,
       document,
-      content: parsedInput.content,
+      content: input.content,
     }).then((r) => r.unwrap())
 
     return draft

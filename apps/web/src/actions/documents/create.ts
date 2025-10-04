@@ -1,35 +1,34 @@
 'use server'
 
-import { z } from 'zod'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { createNewDocument } from '@latitude-data/core/services/documents/create'
-import { withProject, withProjectSchema } from '../procedures'
+import { z } from 'zod'
+import { withProject } from '../procedures'
 
 export const createDocumentVersionAction = withProject
-  .inputSchema(
-    withProjectSchema.extend({
+  .createServerAction()
+  .input(
+    z.object({
       commitUuid: z.string(),
       path: z.string(),
       agent: z.boolean().optional().default(false),
       content: z.string().optional(),
     }),
+    { type: 'json' },
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const commitsScope = new CommitsRepository(ctx.project.workspaceId)
     const commit = await commitsScope
-      .getCommitByUuid({
-        uuid: parsedInput.commitUuid,
-        projectId: ctx.project.id,
-      })
+      .getCommitByUuid({ uuid: input.commitUuid, projectId: ctx.project.id })
       .then((r) => r.unwrap())
 
     const result = await createNewDocument({
       workspace: ctx.workspace,
       user: ctx.user,
       commit,
-      path: parsedInput.path,
-      content: parsedInput.content,
-      agent: parsedInput.agent,
+      path: input.path,
+      content: input.content,
+      agent: input.agent,
       createDemoEvaluation: true,
     })
 

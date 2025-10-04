@@ -47,7 +47,7 @@ export default function useProjects() {
       toast({
         title: 'Error',
         variant: 'destructive',
-        description: error.message,
+        description: error.err.message,
       })
     },
   })

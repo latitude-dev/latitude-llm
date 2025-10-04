@@ -4,9 +4,9 @@ import { z } from 'zod'
 
 import { ParameterType } from '@latitude-data/constants'
 import { saveLinkedDataset } from '@latitude-data/core/services/documents/saveLinkedDataset'
-import { withDataset, withDatasetSchema } from '../procedures'
+import { withDataset } from '../procedures'
 
-const parameterTypeSchema = z.enum(ParameterType)
+const parameterTypeSchema = z.nativeEnum(ParameterType)
 const datasetInputMetadataSchema = z.object({
   type: parameterTypeSchema.optional(),
   filename: z.string().optional(),
@@ -19,21 +19,22 @@ const datasetInputSchema = z.object({
 })
 
 export const saveLinkedDatasetAction = withDataset
-  .inputSchema(
-    withDatasetSchema.extend({
+  .createServerAction()
+  .input(
+    z.object({
       datasetRowId: z.number(),
-      mappedInputs: z.record(z.string(), z.string()),
-      inputs: z.record(z.string(), datasetInputSchema),
+      mappedInputs: z.record(z.string()),
+      inputs: z.record(datasetInputSchema),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     return await saveLinkedDataset({
       document: ctx.document,
       dataset: ctx.dataset,
       data: {
-        datasetRowId: parsedInput.datasetRowId,
-        mappedInputs: parsedInput.mappedInputs,
-        inputs: parsedInput.inputs,
+        datasetRowId: input.datasetRowId,
+        mappedInputs: input.mappedInputs,
+        inputs: input.inputs,
       },
     }).then((r) => r.unwrap())
   })

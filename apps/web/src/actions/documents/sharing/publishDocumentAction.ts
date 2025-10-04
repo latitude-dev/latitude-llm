@@ -1,13 +1,13 @@
 'use server'
 
-import { withDocument, withDocumentSchema } from '$/actions/procedures'
+import { withDocument } from '$/actions/procedures'
 import { PublishedDocumentRepository } from '@latitude-data/core/repositories/publishedDocumentsRepository'
 import { createPublishedDocument } from '@latitude-data/core/services/publishedDocuments/create'
 import { updatePublishedDocument } from '@latitude-data/core/services/publishedDocuments/update'
 
 export const publishDocumentAction = withDocument
-  .inputSchema(withDocumentSchema.extend({}))
-  .action(async ({ ctx }) => {
+  .createServerAction()
+  .handler(async ({ ctx }) => {
     const scope = new PublishedDocumentRepository(ctx.workspace.id)
     const rows = await scope.findByProject(Number(ctx.project.id))
     const publishedDocument = rows.find(

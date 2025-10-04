@@ -3,10 +3,12 @@
 import { authProcedure } from '$/actions/procedures'
 import { removeSession } from '$/services/auth/removeSession'
 import { ROUTES } from '$/services/routes'
-import { frontendRedirect } from '$/lib/frontendRedirect'
+import { redirect } from 'next/navigation'
 
-export const logoutAction = authProcedure.action(async ({ ctx }) => {
-  await removeSession({ session: ctx.session })
+export const logoutAction = authProcedure
+  .createServerAction()
+  .handler(async ({ ctx }) => {
+    await removeSession({ session: ctx.session })
 
-  return frontendRedirect(ROUTES.auth.login)
-})
+    redirect(ROUTES.auth.login)
+  })

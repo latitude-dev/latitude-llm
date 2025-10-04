@@ -1,44 +1,48 @@
 'use server'
 
-import { z } from 'zod'
 import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
 import { isLatitudeUrl } from '@latitude-data/constants'
 import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access/users'
+import { redirect } from 'next/navigation'
+import { z } from 'zod'
 
 import { errorHandlingProcedure } from '../procedures'
-import { frontendRedirect } from '$/lib/frontendRedirect'
 
 export const setupAction = errorHandlingProcedure
-  .inputSchema(
-    z.object({
-      returnTo: z.string().optional(),
-      source: z.string().optional(),
-      name: z.string().min(1, { error: 'Name is a required field' }),
-      email: z
-        .string()
-        .pipe(z.email())
-        .refine(
-          async (email) => {
-            const existingUser = await unsafelyFindUserByEmail(email)
-            return !existingUser
-          },
-          { error: 'Email is already in use' },
-        )
-        .refine(
-          async (email) =>
-            !email.match(/^[A-Z0-9_!#$%&'*+/=?`{|}~^.-]+@[A-Z0-9.-]+$/) &&
-            !email.match(/^[^+]+\+\d+@[A-Z0-9.-]+$/i),
-          { error: 'Email is not valid' },
-        ),
-      companyName: z
-        .string()
-        .min(1, { error: 'Workspace name is a required field' }),
-    }),
+  .createServerAction()
+  .input(
+    async () => {
+      return z.object({
+        returnTo: z.string().optional(),
+        source: z.string().optional(),
+        name: z.string().min(1, { message: 'Name is a required field' }),
+        email: z
+          .string()
+          .email()
+          .refine(
+            async (email) => {
+              const existingUser = await unsafelyFindUserByEmail(email)
+              return !existingUser
+            },
+            { message: 'Email is already in use' },
+          )
+          .refine(
+            async (email) =>
+              !email.match(/^[A-Z0-9_!#$%&'*+/=?`{|}~^.-]+@[A-Z0-9.-]+$/) &&
+              !email.match(/^[^+]+\+\d+@[A-Z0-9.-]+$/i),
+            { message: 'Email is not valid' },
+          ),
+        companyName: z
+          .string()
+          .min(1, { message: 'Workspace name is a required field' }),
+      })
+    },
+    { type: 'formData' },
   )
-  .action(async ({ parsedInput }) => {
-    const result = await setupService(parsedInput)
+  .handler(async ({ input }) => {
+    const result = await setupService(input)
     const { workspace, user } = result.unwrap()
 
     await setSession({
@@ -51,9 +55,9 @@ export const setupAction = errorHandlingProcedure
       },
     })
 
-    if (!parsedInput.returnTo || !isLatitudeUrl(parsedInput.returnTo)) {
-      return frontendRedirect(ROUTES.dashboard.root)
+    if (!input.returnTo || !isLatitudeUrl(input.returnTo)) {
+      return redirect(ROUTES.dashboard.root)
     }
 
-    return frontendRedirect(parsedInput.returnTo)
+    return redirect(input.returnTo)
   })

@@ -6,14 +6,8 @@ import {
 } from './shared'
 
 const llmEvaluationConfiguration = baseEvaluationConfiguration.extend({
-  provider: z.string({
-    error: (issue) =>
-      issue.input === undefined ? 'Provider is required' : 'Not a string',
-  }),
-  model: z.string({
-    error: (issue) =>
-      issue.input === undefined ? 'Model is required' : 'Not a string',
-  }),
+  provider: z.string(),
+  model: z.string(),
 })
 const llmEvaluationResultMetadata = baseEvaluationResultMetadata.extend({
   evaluationLogId: z.number(),

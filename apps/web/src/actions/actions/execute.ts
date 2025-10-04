@@ -8,18 +8,23 @@ import {
   ActionType,
 } from '@latitude-data/constants/actions'
 
-export const executeBackendAction = authProcedure
-  .use(withRateLimit({ limit: 10, period: 60 }))
-  .inputSchema(
+export const executeBackendAction = (
+  await withRateLimit(authProcedure, {
+    limit: 10,
+    period: 60,
+  })
+)
+  .createServerAction()
+  .input(
     z.object({
-      type: z.enum(ActionType),
+      type: z.nativeEnum(ActionType),
       parameters: z.custom<ActionBackendParameters>(),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const result = await executeAction({
-      type: parsedInput.type,
-      parameters: parsedInput.parameters,
+      type: input.type,
+      parameters: input.parameters,
       user: ctx.user,
       workspace: ctx.workspace,
     }).then((r) => r.unwrap())

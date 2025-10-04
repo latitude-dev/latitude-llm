@@ -9,21 +9,23 @@ import {
 import { authProcedure } from '$/actions/procedures'
 
 export const deleteRowsAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       datasetId: z.number(),
       rowIds: z.array(z.number()),
     }),
+    { type: 'json' },
   )
-  .action(async ({ ctx, parsedInput }) => {
+  .handler(async ({ ctx, input }) => {
     const datasetRepo = new DatasetsRepository(ctx.workspace.id)
     const dataset = await datasetRepo
-      .find(parsedInput.datasetId)
+      .find(input.datasetId)
       .then((r) => r.unwrap())
     const scope = new DatasetRowsRepository(ctx.workspace.id)
     const rows = await scope.findManyByDataset({
       dataset,
-      rowIds: parsedInput.rowIds,
+      rowIds: input.rowIds,
     })
 
     return deleteManyRows({

@@ -3,14 +3,15 @@
 import { RunsRepository } from '@latitude-data/core/repositories'
 import { stopRun } from '@latitude-data/core/services/runs/stop'
 import { z } from 'zod'
-import { withProject, withProjectSchema } from '../procedures'
+import { withProject } from '../procedures'
 
 export const stopRunAction = withProject
-  .inputSchema(withProjectSchema.extend({ runUuid: z.string() }))
-  .action(async ({ parsedInput, ctx }) => {
+  .createServerAction()
+  .input(z.object({ runUuid: z.string() }))
+  .handler(async ({ input, ctx }) => {
     const repository = new RunsRepository(ctx.workspace.id, ctx.project.id)
     const run = await repository
-      .get({ runUuid: parsedInput.runUuid })
+      .get({ runUuid: input.runUuid })
       .then((r) => r.unwrap())
 
     const result = await stopRun({

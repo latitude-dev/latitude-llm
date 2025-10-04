@@ -1,3 +1,5 @@
+import { FinishReason, LanguageModelUsage } from 'ai'
+
 import { ExperimentVariant } from '@latitude-data/constants/experiments'
 import {
   Commit,
@@ -12,6 +14,7 @@ import {
   EvaluationResultV2,
   EvaluationV2,
   Experiment,
+  LogSources,
   MagicLinkToken,
   Membership,
   Message,
@@ -19,9 +22,12 @@ import {
   ProviderApiKey,
   ProviderLog,
   ProviderLogDto,
+  Providers,
   User,
   Workspace,
 } from '../schema/types'
+import { Providers } from '@latitude-data/constants'
+import { PartialConfig } from '../services/ai'
 
 export type Events =
   | 'magicLinkTokenCreated'
@@ -124,6 +130,23 @@ export type ProviderLogCreatedEvent = LatitudeEventGeneric<
   'providerLogCreated',
   Pick<ProviderLog, 'id'> & { workspaceId: number }
 >
+
+export type StreamCommonData = {
+  workspaceId: number
+  uuid: string
+  source: LogSources
+  generatedAt: Date
+  documentLogUuid?: string
+  providerId: number
+  providerType: Providers
+  model: string
+  config: PartialConfig
+  messages: Message[]
+  usage: LanguageModelUsage
+  duration: number
+  chainCompleted: boolean
+  finishReason: FinishReason
+}
 
 type StreamTextData = {
   toolCalls: {

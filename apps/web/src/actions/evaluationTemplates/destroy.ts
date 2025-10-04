@@ -1,14 +1,26 @@
 'use server'
 
+import { UnauthorizedError } from '@latitude-data/constants/errors'
 import { destroyEvaluationTemplate } from '@latitude-data/core/services/evaluationAdvancedTemplates/destroy'
 import { z } from 'zod'
 
-import { withAdmin } from '../procedures'
+import { authProcedure } from '../procedures'
 
-export const destroyEvaluationTemplateAction = withAdmin
-  .inputSchema(z.object({ id: z.number() }))
-  .action(async ({ parsedInput }) => {
-    const { id } = parsedInput
+export const destroyEvaluationTemplateAction = authProcedure
+  .createServerAction()
+  .input(
+    z.object({
+      id: z.number(),
+    }),
+  )
+  .handler(async ({ ctx, input }) => {
+    // TODO: move this check to a procedure
+    if (!ctx.user.admin)
+      throw new UnauthorizedError(
+        'You must be an admin to destroy an evaluation template',
+      )
+
+    const { id } = input
 
     return await destroyEvaluationTemplate({
       id,

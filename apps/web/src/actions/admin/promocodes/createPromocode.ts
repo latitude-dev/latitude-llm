@@ -6,20 +6,21 @@ import { createPromocode } from '@latitude-data/core/services/promocodes/create'
 import { QuotaType } from '@latitude-data/constants'
 
 export const createPromocodeAction = withAdmin
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       code: z.string(),
-      quotaType: z.enum(QuotaType),
+      quotaType: z.nativeEnum(QuotaType),
       description: z.string(),
       amount: z.number(),
     }),
   )
-  .action(async ({ parsedInput }) => {
+  .handler(async ({ input }) => {
     const createdPromocodeResult = await createPromocode({
-      code: parsedInput.code,
-      quotaType: parsedInput.quotaType,
-      description: parsedInput.description,
-      amount: parsedInput.amount,
+      code: input.code,
+      quotaType: input.quotaType,
+      description: input.description,
+      amount: input.amount,
     })
 
     return createdPromocodeResult.unwrap()

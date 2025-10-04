@@ -6,8 +6,9 @@ import { cookies } from 'next/headers'
 
 import { authProcedure } from '../procedures'
 
-export const refreshWebesocketTokenAction = authProcedure.action(
-  async ({ ctx: { user, workspace } }) => {
+export const refreshWebesocketTokenAction = authProcedure
+  .createServerAction()
+  .handler(async ({ ctx: { user, workspace } }) => {
     const cks = await cookies()
     const refreshWebsocketCookie = cks.get('websocketRefresh')
     const refreshToken = refreshWebsocketCookie?.value
@@ -28,5 +29,4 @@ export const refreshWebesocketTokenAction = authProcedure.action(
     })
 
     return { success: true }
-  },
-)
+  })

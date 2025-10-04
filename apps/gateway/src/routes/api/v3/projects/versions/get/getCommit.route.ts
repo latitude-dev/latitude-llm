@@ -11,8 +11,8 @@ export const VersionSchema = z.object({
   authorName: z.string().nullable(),
   aucommitUuidthorEmail: z.string().nullable(),
   authorId: z.number().nullable(),
-  createdAt: z.iso.datetime(),
-  updatedAt: z.iso.datetime(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
   status: z.string(),
   parentCommitUuid: z.string().nullable(),
 })

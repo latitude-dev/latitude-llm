@@ -1,8 +1,5 @@
 import * as factories from '@latitude-data/core/factories'
-import {
-  LatitudeError,
-  PaymentRequiredError,
-} from '@latitude-data/constants/errors'
+import { PaymentRequiredError } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { inviteUserAction } from './invite'
@@ -35,11 +32,12 @@ describe('inviteUserAction', () => {
     it('errors when the user is not authenticated', async () => {
       mocks.getSession.mockResolvedValue(null)
 
-      const { serverError } = await inviteUserAction({
+      const [_, error] = await inviteUserAction({
         email: 'test@example.com',
         name: 'Test User',
       })
-      expect(serverError).toEqual('Unauthorized')
+
+      expect(error!.name).toEqual('UnauthorizedError')
     })
   })
 
@@ -73,13 +71,12 @@ describe('inviteUserAction', () => {
         mocks.applyUserPlanLimit.mockResolvedValue({ unwrap: () => {} })
         mocks.inviteUser.mockResolvedValue({ unwrap: () => mockInvitedUser })
 
-        const { data, serverError, validationErrors } = await inviteUserAction({
+        const [data, error] = await inviteUserAction({
           email: 'test@example.com',
           name: 'Test User',
         })
 
-        expect(serverError).toBeUndefined()
-        expect(validationErrors).toBeUndefined()
+        expect(error).toBeNull()
         expect(data).toEqual(mockInvitedUser)
         expect(mocks.applyUserPlanLimit).toHaveBeenCalledWith({ workspace })
         expect(mocks.inviteUser).toHaveBeenCalledWith({
@@ -101,15 +98,13 @@ describe('inviteUserAction', () => {
           },
         })
 
-        const { data, serverError } = await inviteUserAction({
+        const [data, error] = await inviteUserAction({
           email: 'test@example.com',
           name: 'Test User',
         })
 
-        expect(data).toBeUndefined()
-        expect(serverError).toBe(
-          'You have reached the maximum number of users allowed for this plan. Upgrade now.',
-        )
+        expect(data).toBeNull()
+        expect(error).toBeDefined()
         expect(mocks.applyUserPlanLimit).toHaveBeenCalledWith({ workspace })
         expect(mocks.inviteUser).not.toHaveBeenCalled()
       })
@@ -124,13 +119,13 @@ describe('inviteUserAction', () => {
         })
         mocks.inviteUser.mockResolvedValue({ unwrap: () => ({ id: 1 }) })
 
-        const { data, serverError } = await inviteUserAction({
+        const [data, error] = await inviteUserAction({
           email: 'test@example.com',
           name: 'Test User',
         })
 
-        expect(data).toBeUndefined()
-        expect(serverError).toEqual('Plan limit exceeded')
+        expect(data).toBeNull()
+        expect(error).toBeDefined()
 
         // Verify order of operations: plan limit check happens first
         expect(mocks.applyUserPlanLimit).toHaveBeenCalled()
@@ -145,13 +140,12 @@ describe('inviteUserAction', () => {
       })
 
       it('successfully invites user with valid input', async () => {
-        const { data, serverError, validationErrors } = await inviteUserAction({
+        const [data, error] = await inviteUserAction({
           email: 'valid@example.com',
           name: 'Valid User',
         })
 
-        expect(serverError).toBeUndefined()
-        expect(validationErrors).toBeUndefined()
+        expect(error).toBeNull()
         expect(data).toBeDefined()
         expect(mocks.inviteUser).toHaveBeenCalledWith({
           email: 'valid@example.com',
@@ -162,20 +156,20 @@ describe('inviteUserAction', () => {
       })
 
       it('passes through invitation service errors', async () => {
-        const inviteError = new LatitudeError('User already exists')
+        const inviteError = new Error('User already exists')
         mocks.inviteUser.mockResolvedValue({
           unwrap: () => {
             throw inviteError
           },
         })
 
-        const { data, serverError } = await inviteUserAction({
+        const [data, error] = await inviteUserAction({
           email: 'test@example.com',
           name: 'Test User',
         })
 
-        expect(data).toBeUndefined()
-        expect(serverError).toBe('User already exists')
+        expect(data).toBeNull()
+        expect(error).toBeDefined()
       })
     })
 

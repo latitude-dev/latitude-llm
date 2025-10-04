@@ -8,10 +8,7 @@ export const REWARD_CONFIGS: Record<RewardType, RewardConfig> = {
   [RewardType.XFollow]: {
     type: RewardType.XFollow,
     title: 'Follow us on X',
-    referenceSchema: z.string({
-      error: (issue) =>
-        issue.input === undefined ? 'Handle is required' : 'Not a string',
-    }),
+    referenceSchema: z.string({ required_error: 'Handle is required' }),
     placeholder: '@trylatitude',
     steps: [
       {
@@ -27,10 +24,7 @@ export const REWARD_CONFIGS: Record<RewardType, RewardConfig> = {
   [RewardType.LinkedInFollow]: {
     type: RewardType.LinkedInFollow,
     title: 'Follow us on LinkedIn',
-    referenceSchema: z.string({
-      error: (issue) =>
-        issue.input === undefined ? 'Handle is required' : 'Not a string',
-    }),
+    referenceSchema: z.string({ required_error: 'Handle is required' }),
     placeholder: '@trylatitude',
     steps: [
       {
@@ -51,10 +45,7 @@ export const REWARD_CONFIGS: Record<RewardType, RewardConfig> = {
   [RewardType.GithubStar]: {
     type: RewardType.GithubStar,
     title: 'Give us a Star on GitHub',
-    referenceSchema: z.string({
-      error: (issue) =>
-        issue.input === undefined ? 'Handle is required' : 'Not a string',
-    }),
+    referenceSchema: z.string({ required_error: 'Handle is required' }),
     placeholder: '@latitude-dev',
     steps: [
       {
@@ -75,12 +66,7 @@ export const REWARD_CONFIGS: Record<RewardType, RewardConfig> = {
   [RewardType.XPost]: {
     type: RewardType.XPost,
     title: 'Share Latitude on X',
-    referenceSchema: z
-      .string({
-        error: (issue) =>
-          issue.input === undefined ? 'Link is required' : 'Not a string',
-      })
-      .pipe(z.url()),
+    referenceSchema: z.string({ required_error: 'Link is required' }).url(),
     placeholder: 'https://x.com/post/...',
     steps: [
       {
@@ -95,12 +81,7 @@ export const REWARD_CONFIGS: Record<RewardType, RewardConfig> = {
   [RewardType.LinkedInPost]: {
     type: RewardType.LinkedInPost,
     title: 'Share Latitude on LinkedIn',
-    referenceSchema: z
-      .string({
-        error: (issue) =>
-          issue.input === undefined ? 'Link is required' : 'Not a string',
-      })
-      .pipe(z.url()),
+    referenceSchema: z.string({ required_error: 'Link is required' }).url(),
     placeholder: 'https://linkedin.com/post/...',
     steps: [
       {
@@ -115,12 +96,7 @@ export const REWARD_CONFIGS: Record<RewardType, RewardConfig> = {
   [RewardType.AgentShare]: {
     type: RewardType.AgentShare,
     title: 'Share your Agent to the World',
-    referenceSchema: z
-      .string({
-        error: (issue) =>
-          issue.input === undefined ? 'Link is required' : 'Not a string',
-      })
-      .pipe(z.url()),
+    referenceSchema: z.string({ required_error: 'Link is required' }).url(),
     placeholder: 'https://x.com/post/...',
     steps: [
       {
@@ -135,10 +111,7 @@ export const REWARD_CONFIGS: Record<RewardType, RewardConfig> = {
   [RewardType.ProductHuntUpvote]: {
     type: RewardType.ProductHuntUpvote,
     title: 'Upvote us on Product Hunt',
-    referenceSchema: z.string({
-      error: (issue) =>
-        issue.input === undefined ? 'Handle is required' : 'Not a string',
-    }),
+    referenceSchema: z.string({ required_error: 'Handle is required' }),
     placeholder: '@trylatitude',
     steps: [
       {
@@ -159,12 +132,7 @@ export const REWARD_CONFIGS: Record<RewardType, RewardConfig> = {
   [RewardType.Referral]: {
     type: RewardType.Referral,
     title: 'Refer Latitude to a friend',
-    referenceSchema: z
-      .string({
-        error: (issue) =>
-          issue.input === undefined ? 'Email is required' : 'Not a string',
-      })
-      .pipe(z.email()),
+    referenceSchema: z.string({ required_error: 'Email is required' }).email(),
     placeholder: 'name@email.com',
     steps: [
       {

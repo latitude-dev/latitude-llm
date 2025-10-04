@@ -3,6 +3,7 @@
 import { getFirstWorkspace, getUserFromCredentials } from '$/data-access'
 import { ROUTES } from '$/services/routes'
 import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
+import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
 import { setSession } from '$/services/auth/setSession'
@@ -10,19 +11,18 @@ import { isLatitudeUrl } from '@latitude-data/constants'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 import { errorHandlingProcedure } from '../procedures'
-import { frontendRedirect } from '$/lib/frontendRedirect'
 
 export const loginAction = errorHandlingProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
-      email: z.email(),
+      email: z.string().email(),
       returnTo: z.string().optional(),
     }),
+    { type: 'formData' },
   )
-  .action(async ({ parsedInput }) => {
-    const { user } = await getUserFromCredentials(parsedInput).then((r) =>
-      r.unwrap(),
-    )
+  .handler(async ({ input }) => {
+    const { user } = await getUserFromCredentials(input).then((r) => r.unwrap())
 
     if (env.DISABLE_EMAIL_AUTHENTICATION) {
       if (!user) throw new NotFoundError('User not found')
@@ -40,15 +40,16 @@ export const loginAction = errorHandlingProcedure
         },
       })
 
-      if (!parsedInput.returnTo || !isLatitudeUrl(parsedInput.returnTo)) {
-        return frontendRedirect(ROUTES.dashboard.root)
+      if (!input.returnTo || !isLatitudeUrl(input.returnTo)) {
+        return redirect(ROUTES.dashboard.root)
       }
 
-      return frontendRedirect(parsedInput.returnTo)
+      return redirect(input.returnTo)
     } else {
-      await createMagicLinkToken({ user, returnTo: parsedInput.returnTo }).then(
-        (r) => r.unwrap(),
+      await createMagicLinkToken({ user, returnTo: input.returnTo }).then((r) =>
+        r.unwrap(),
       )
-      return frontendRedirect(ROUTES.auth.magicLinkSent(user.email))
+
+      redirect(ROUTES.auth.magicLinkSent(user.email))
     }
   })

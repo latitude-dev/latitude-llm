@@ -18,11 +18,11 @@ describe('createApiKeyAction', () => {
     it('errors when the user is not authenticated', async () => {
       mocks.getSession.mockResolvedValue(null)
 
-      const { serverError } = await createApiKeyAction({
+      const [_, error] = await createApiKeyAction({
         name: 'Test API Key',
       })
 
-      expect(serverError).toEqual('Unauthorized')
+      expect(error!.name).toEqual('UnauthorizedError')
     })
   })
 
@@ -37,12 +37,11 @@ describe('createApiKeyAction', () => {
     })
 
     it('successfully creates an API key', async () => {
-      const { data, serverError, validationErrors } = await createApiKeyAction({
+      const [data, error] = await createApiKeyAction({
         name: 'Test API Key',
       })
 
-      expect(serverError).toBeUndefined()
-      expect(validationErrors).toBeUndefined()
+      expect(error).toBeNull()
       expect(data).toBeDefined()
       expect(data!.name).toEqual('Test API Key')
       expect(data!.id).toBeDefined()

@@ -6,8 +6,8 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
+import { useServerAction } from 'zsa-react'
 import { WorkspaceDto } from '@latitude-data/core/schema/types'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 export default function useCurrentWorkspace(opts?: SWRConfiguration) {
   const { toast } = useToast()
@@ -21,7 +21,7 @@ export default function useCurrentWorkspace(opts?: SWRConfiguration) {
     ...rest
   } = useSWR<WorkspaceDto>(compact(route), fetcher, opts)
 
-  const { execute: updateWorkspace } = useLatitudeAction(updateWorkspaceAction)
+  const { execute: updateWorkspace } = useServerAction(updateWorkspaceAction)
   const updateName = useCallback(
     async (payload: { name: string }) => {
       if (!data) return
@@ -51,7 +51,7 @@ export default function useCurrentWorkspace(opts?: SWRConfiguration) {
     [mutate, data, toast, updateWorkspace],
   )
 
-  const { execute: setDefaultProvider } = useLatitudeAction(
+  const { execute: setDefaultProvider } = useServerAction(
     setDefaultProviderAction,
   )
   const updateDefaultProvider = useCallback(

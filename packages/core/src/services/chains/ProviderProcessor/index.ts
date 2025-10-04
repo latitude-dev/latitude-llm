@@ -1,15 +1,9 @@
-import {
-  ChainStepResponse,
-  EMPTY_USAGE,
-  StreamType,
-} from '@latitude-data/constants/ai'
+import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
 import { AIReturn } from '../../ai'
 import {
   AssistantMessage,
   MessageRole,
 } from '@latitude-data/constants/legacyCompiler'
-import * as vercelSdkFromV5ToV4 from '../../../lib/vercelSdkFromV5ToV4'
-import { convertResponseMessages } from '../../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
 
 function parseObject(text: string) {
   const parsed = text
@@ -32,9 +26,7 @@ export async function processResponse({
 }): Promise<ChainStepResponse<StreamType>> {
   const isObject = aiResult.type === 'object'
   const text = await aiResult.text
-  const response = await aiResult.response
-  const messages = response.messages
-  const output = convertResponseMessages({ messages })
+  const output = await buildOutput(aiResult)
 
   return {
     streamType: aiResult.type,
@@ -42,10 +34,35 @@ export async function processResponse({
     text,
     object: isObject ? parseObject(text) : undefined,
     output,
-    usage: await vercelSdkFromV5ToV4.convertTokenUsage(aiResult.usage),
+    usage: await aiResult.usage,
     reasoning: await aiResult.reasoning,
-    toolCalls: await vercelSdkFromV5ToV4.convertToolCalls(aiResult.toolCalls),
+    toolCalls: (await aiResult.toolCalls).map((t) => ({
+      id: t.toolCallId,
+      name: t.toolName,
+      arguments: t.args,
+    })),
   }
+}
+
+async function buildOutput(
+  aiResult: AIReturn<StreamType>,
+): Promise<ChainStepResponse<StreamType>['output']> {
+  const messages = (await aiResult.response).messages
+  if (!messages) return []
+
+  return messages.map((m) => {
+    if (m.role === 'assistant') {
+      return {
+        role: 'assistant',
+        content: m.content,
+      } as AssistantMessage
+    } else {
+      return {
+        role: 'tool',
+        content: m.content,
+      }
+    }
+  })
 }
 
 /**
@@ -64,10 +81,16 @@ export async function fakeResponse({
     documentLogUuid,
     text: accumulatedText.text,
     output: [fakeAssistantMessage(accumulatedText.text)],
-    usage: EMPTY_USAGE(),
+    usage: nullLanguageModelUse,
     reasoning: undefined,
     toolCalls: [],
   }
+}
+
+const nullLanguageModelUse = {
+  promptTokens: 0,
+  completionTokens: 0,
+  totalTokens: 0,
 }
 
 const fakeAssistantMessage = (accumulatedText: string): AssistantMessage => {

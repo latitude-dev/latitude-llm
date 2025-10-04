@@ -2,15 +2,18 @@
 
 import { generateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/generate'
 import { z } from 'zod'
-import { withDocument, withDocumentSchema } from '../procedures'
+import { withDocument } from '../procedures'
 
 export const generateEvaluationV2Action = withDocument
-  .inputSchema(
-    withDocumentSchema.extend({ instructions: z.string().optional() }),
+  .createServerAction()
+  .input(
+    z.object({
+      instructions: z.string().optional(),
+    }),
   )
-  .action(async ({ ctx, parsedInput }) => {
+  .handler(async ({ ctx, input }) => {
     const result = await generateEvaluationV2({
-      instructions: parsedInput.instructions,
+      instructions: input.instructions,
       document: ctx.document,
       commit: ctx.commit,
       workspace: ctx.workspace,

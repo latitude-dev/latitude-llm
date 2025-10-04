@@ -41,15 +41,8 @@ export function ClientPage<T extends ActionType = ActionType>({
     setTimeout(async () => {
       try {
         const [result, error] = await executeBackendAction({ type, parameters })
-
-        if (error) {
-          setError(error)
-        } else if (result) {
-          await executeFrontendAction({
-            type,
-            parameters: result as ActionFrontendParameters<T>,
-          })
-        }
+        if (error) setError(error)
+        if (result) await executeFrontendAction({ type, parameters: result })
         setTimeout(() => setEnded(true), 5000)
       } catch (error) {
         setError(error as Error)

@@ -20,7 +20,6 @@ export function getOpenAIResponsesBuiltinTools({
         const builtinTools = definition.map((tool) => {
           const type = tool.type
           switch (type) {
-            case 'web_search':
             case 'web_search_preview':
             case 'web_search_preview_2025_03_11': {
               const result = WebSearchToolSchema.safeParse(tool)

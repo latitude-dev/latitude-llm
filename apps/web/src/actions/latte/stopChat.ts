@@ -7,10 +7,15 @@ import { queues } from '@latitude-data/core/queues'
 import { NotFoundError } from '@latitude-data/constants/errors'
 
 export const stopChatLatteAction = authProcedure
-  .inputSchema(z.object({ jobId: z.string() }))
-  .action(async ({ parsedInput }) => {
+  .createServerAction()
+  .input(
+    z.object({
+      jobId: z.string(),
+    }),
+  )
+  .handler(async ({ input }) => {
     const { latteQueue } = await queues()
-    const { jobId } = parsedInput
+    const { jobId } = input
     const job = await latteQueue.getJob(jobId)
     if (!job) {
       throw new NotFoundError('No job found to stop Latte chat')

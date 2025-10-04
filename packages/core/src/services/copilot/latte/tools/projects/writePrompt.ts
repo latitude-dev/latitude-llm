@@ -58,11 +58,9 @@ const writePrompt = defineLatteTool(
       documents,
       actions: [latteAction],
     })
-
     if (!actionResults.ok) {
       return Result.error(actionResults.error!)
     }
-
     const { changes, metadatas } = actionResults.unwrap()
 
     if (changes.length !== 1) {

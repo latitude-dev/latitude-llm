@@ -57,7 +57,6 @@ export function useCommitsFromProject(
     mutate,
     ...rest
   } = useSWR<Commit[]>(['commits', projectId, commitStatus], fetcher, opts)
-
   const { execute: createDraft, isPending: isCreating } = useLatitudeAction(
     createDraftCommitAction,
     {

@@ -1,22 +1,27 @@
 'use server'
 
-import { z } from 'zod'
 import { createLatteJob } from '@latitude-data/core/services/copilot/latte/createLatteJob'
 import { createLatteThread } from '@latitude-data/core/services/copilot/latte/threads/createThread'
-import { withProject, withProjectSchema, withRateLimit } from '../procedures'
+import { z } from 'zod'
+import { withProject, withRateLimit } from '../procedures'
 
-export const createNewLatteAction = withProject
-  .use(withRateLimit({ limit: 10, period: 60 }))
-  .inputSchema(
-    withProjectSchema.extend({
+export const createNewLatteAction = (
+  await withRateLimit(withProject, {
+    limit: 10,
+    period: 60,
+  })
+)
+  .createServerAction()
+  .input(
+    z.object({
       message: z.string(),
       context: z.string(),
       debugVersionUuid: z.string().optional(),
     }),
   )
-  .action(async ({ ctx, parsedInput }) => {
+  .handler(async ({ ctx, input }) => {
     const { workspace, user, project } = ctx
-    const { message, context, debugVersionUuid } = parsedInput
+    const { message, context, debugVersionUuid } = input
     const thread = await createLatteThread({
       user,
       workspace,

@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import {
   LatitudeTool,
   LatitudeToolInternalName,
@@ -47,25 +46,32 @@ export default {
       'Search the web for information.\n' +
       'Given a query, this tool will search the web for information and return the results.\n' +
       'The tool will return a quick answer, and a list of links to relevant results,',
-    inputSchema: z.object({
-      query: z.string().min(1).max(200).describe('The query to search for.'),
-      topic: z
-        .enum(['general', 'news', 'finance'])
-        .default('general')
-        .describe('The category of the search. Defaults to "general".'),
-      days: z
-        .int()
-        .optional()
-        .describe(
-          'The number of days to search for. Available only if topic is `news`.',
-        ),
-      maxResults: z
-        .int()
-        .min(1)
-        .max(20)
-        .default(5)
-        .describe('The maximum number of results to return. Defaults to 5.'),
-    }),
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'The query to search for.',
+        },
+        topic: {
+          type: 'string',
+          enum: ['general', 'news', 'finance'],
+          description: 'The category of the search. Defaults to "general".',
+        },
+        days: {
+          type: 'integer',
+          description:
+            'The number of days to search for. Available only if topic is `news`.',
+        },
+        maxResults: {
+          type: 'integer',
+          description:
+            'The maximum number of results to return. Defaults to 5.',
+        },
+      },
+      required: ['query'],
+      additionalProperties: false,
+    },
     execute: async (args: SearchToolArgs, toolCall) =>
       withTelemetryWrapper(webSearch, {
         toolName: LatitudeTool.WebSearch,

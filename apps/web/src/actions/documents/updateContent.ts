@@ -8,37 +8,36 @@ import {
 import { updateDocument } from '@latitude-data/core/services/documents/update'
 import { z } from 'zod'
 
-import { withProject, withProjectSchema } from '../procedures'
+import { withProject } from '../procedures'
 
 export const updateDocumentContentAction = withProject
-  .inputSchema(
-    withProjectSchema.extend({
+  .createServerAction()
+  .input(
+    z.object({
       documentUuid: z.string(),
       commitUuid: z.string(),
       content: z.string(),
     }),
+    { type: 'json' },
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const commitsScope = new CommitsRepository(ctx.project.workspaceId)
     const commit = await commitsScope
-      .getCommitByUuid({
-        uuid: parsedInput.commitUuid,
-        projectId: ctx.project.id,
-      })
+      .getCommitByUuid({ uuid: input.commitUuid, projectId: ctx.project.id })
       .then((r) => r.unwrap())
     const docsScope = new DocumentVersionsRepository(ctx.project.workspaceId)
     const document = await docsScope
       .getDocumentAtCommit({
-        commitUuid: parsedInput.commitUuid,
+        commitUuid: input.commitUuid,
         projectId: ctx.project.id,
-        documentUuid: parsedInput.documentUuid,
+        documentUuid: input.documentUuid,
       })
       .then((r) => r.unwrap())
 
     const result = await updateDocument({
       commit,
       document,
-      content: parsedInput.content,
+      content: input.content,
     })
     const updatedDocument = result.unwrap()
 

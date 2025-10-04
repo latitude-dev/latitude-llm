@@ -4,25 +4,26 @@ import { updateDocumentTriggerConfiguration } from '@latitude-data/core/services
 
 import { documentTriggerConfigurationSchema } from '@latitude-data/constants/documentTriggers'
 import { z } from 'zod'
-import { withCommit, withCommitSchema } from '$/actions/procedures'
+import { withCommit } from '$/actions/procedures'
 
 export const updateDocumentTriggerConfigurationAction = withCommit
-  .inputSchema(
-    withCommitSchema.extend({
+  .createServerAction()
+  .input(
+    z.object({
       documentTriggerUuid: z.string(),
       documentUuid: z.string().optional(),
       configuration: documentTriggerConfigurationSchema,
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
-    const { documentTriggerUuid, configuration } = parsedInput
+  .handler(async ({ input, ctx }) => {
+    const { documentTriggerUuid, configuration } = input
     const { workspace, commit } = ctx
 
     return updateDocumentTriggerConfiguration({
       workspace,
       commit,
       triggerUuid: documentTriggerUuid,
-      documentUuid: parsedInput.documentUuid,
+      documentUuid: input.documentUuid,
       configuration,
     }).then((r) => r.unwrap())
   })

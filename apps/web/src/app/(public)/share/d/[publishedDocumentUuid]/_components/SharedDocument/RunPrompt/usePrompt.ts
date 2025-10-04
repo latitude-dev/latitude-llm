@@ -4,7 +4,7 @@ import {
   Message as ConversationMessage,
 } from '@latitude-data/constants/legacyCompiler'
 import { runSharedPromptAction } from '$/actions/sdk/runSharedPromptAction'
-import { readStreamableValue } from '@ai-sdk/rsc'
+import { readStreamableValue } from 'ai/rsc'
 import { SetStateAction } from '@latitude-data/web-ui/commonTypes'
 import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 import { PublishedDocument } from '@latitude-data/core/schema/types'

@@ -5,14 +5,15 @@ import { authProcedure } from '../procedures'
 import { testWebhookEndpoint } from '@latitude-data/core/services/webhooks/testWebhook'
 
 export const testWebhookAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
-      url: z.string().pipe(z.url({ error: 'Invalid URL format' })),
+      url: z.string().url({ message: 'Invalid URL format' }),
     }),
   )
-  .action(async ({ parsedInput }) => {
+  .handler(async ({ input }) => {
     const result = await testWebhookEndpoint({
-      url: parsedInput.url,
+      url: input.url,
     })
 
     return result.unwrap()

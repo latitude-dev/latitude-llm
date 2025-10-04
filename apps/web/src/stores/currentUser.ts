@@ -30,7 +30,7 @@ export function useCurrentUser(opts?: SWRConfiguration) {
       onError: async (error) => {
         toast({
           title: 'Error updating editor mode',
-          description: error?.message,
+          description: error?.err?.message,
           variant: 'destructive',
         })
       },

@@ -9,12 +9,11 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const destroyProjectAction = authProcedure
-  .inputSchema(z.object({ id: z.string() }))
-  .action(async ({ parsedInput, ctx }) => {
+  .createServerAction()
+  .input(z.object({ id: z.string() }))
+  .handler(async ({ input, ctx }) => {
     const scope = new ProjectsRepository(ctx.workspace.id)
-    const project = await scope
-      .find(Number(parsedInput.id))
-      .then((r) => r.unwrap())
+    const project = await scope.find(Number(input.id)).then((r) => r.unwrap())
     const result = await destroyProject({ project })
 
     revalidatePath(ROUTES.dashboard.root)

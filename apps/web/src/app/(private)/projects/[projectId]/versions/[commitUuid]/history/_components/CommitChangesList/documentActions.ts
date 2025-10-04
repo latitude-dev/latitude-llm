@@ -28,7 +28,7 @@ export function useDocumentActions({
       onSuccess: ({ data: changes }) => {
         setChanges(changes)
       },
-      onError: (error) => setError(error.message),
+      onError: ({ err: error }) => setError(error.message),
     },
   )
 
@@ -38,7 +38,7 @@ export function useDocumentActions({
       onSuccess: ({ data: changes }) => {
         setChanges(changes)
       },
-      onError: (error) => setError(error.message),
+      onError: ({ err: error }) => setError(error.message),
     },
   )
 
@@ -54,7 +54,7 @@ export function useDocumentActions({
           : commitBaseRoute.root
         router.push(route)
       },
-      onError: (error) => setError(error.message),
+      onError: ({ err: error }) => setError(error.message),
     },
   )
 
@@ -70,7 +70,7 @@ export function useDocumentActions({
           : commitBaseRoute.root
         router.push(route)
       },
-      onError: (error) => setError(error.message),
+      onError: ({ err: error }) => setError(error.message),
     },
   )
 

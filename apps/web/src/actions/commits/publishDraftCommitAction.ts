@@ -5,25 +5,26 @@ import { CommitsRepository } from '@latitude-data/core/repositories'
 import { updateAndMergeCommit } from '@latitude-data/core/services/commits/updateAndMerge'
 import { z } from 'zod'
 
-import { withProject, withProjectSchema } from '../procedures'
+import { withProject } from '../procedures'
 
 export const publishDraftCommitAction = withProject
-  .inputSchema(
-    withProjectSchema.extend({
+  .createServerAction()
+  .input(
+    z.object({
       id: z.number(),
       title: z.string().optional(),
       description: z.string().optional(),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const commitScope = new CommitsRepository(ctx.workspace.id)
     const commit = await commitScope
-      .getCommitById(parsedInput.id)
+      .getCommitById(input.id)
       .then((r) => r.unwrap())
 
     const merged = await updateAndMergeCommit(commit, {
-      title: parsedInput.title,
-      description: parsedInput.description,
+      title: input.title,
+      description: input.description,
     }).then((r) => r.unwrap())
 
     publisher.publishLater({

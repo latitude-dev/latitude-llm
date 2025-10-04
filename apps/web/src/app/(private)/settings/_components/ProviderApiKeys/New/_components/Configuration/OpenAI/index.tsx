@@ -2,7 +2,6 @@ import { buildConfigFieldName } from '$/app/(private)/settings/_components/Provi
 import { OPENAI_PROVIDER_ENDPOINTS } from '@latitude-data/constants'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 
-const CURRENT_ENDPOINT = OPENAI_PROVIDER_ENDPOINTS[0] // responses
 const ENDPOINT_OPTIONS = OPENAI_PROVIDER_ENDPOINTS.reduce((acc, endpoint) => {
   acc.push({
     label: endpoint,
@@ -16,9 +15,9 @@ export function OpenAIConfiguration() {
     <Select
       label='Endpoint'
       name={buildConfigFieldName({ fieldNamespace: 'endpoint' })}
-      defaultValue={CURRENT_ENDPOINT}
+      defaultValue={OPENAI_PROVIDER_ENDPOINTS[0]}
       options={ENDPOINT_OPTIONS}
-      description='"responses" is the new standard endpoint for OpenAI text completions. "chat_completions" is deprecated but still supported for backwards compatibility.'
+      description='Oldest version is "chat_completions" but if you want to use OpenAI built-in tools you need to use "responses" endpoint'
     />
   )
 }

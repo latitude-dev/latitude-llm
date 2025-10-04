@@ -5,7 +5,7 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCallback } from 'react'
-import { readStreamableValue } from '@ai-sdk/rsc'
+import { readStreamableValue } from 'ai/rsc'
 import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 import { PublishedDocument } from '@latitude-data/core/schema/types'
 import { StreamEventTypes } from '@latitude-data/core/constants'

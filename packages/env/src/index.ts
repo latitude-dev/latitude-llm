@@ -8,18 +8,56 @@ import z from 'zod'
 const environment = process.env.NODE_ENV || 'development'
 const UPLOADS_PATH = 'uploads'
 
+const buildPublicWebPath = (rootPath: string) =>
+  `${rootPath}/apps/web/public/${UPLOADS_PATH}`
+
+/**
+ * Dear developer. You only need to do this once.
+ * Create a .env.development file in the root of the project if
+ * you haven't already. Add the following line to the file:
+ *
+ * FILE_STORAGE_ROOT_PATH=/path/to/latitude
+ *
+ * Example: FILE_STORAGE_ROOT_PATH=/Users/YOUR_MACHINE_NAME/your-path-to/latitude
+ * It has to be an absolute path.
+ */
+function buildDevStoragePaths() {
+  const devRootPath = process.env.FILE_STORAGE_ROOT_PATH
+
+  if (!devRootPath) {
+    console.warn(`
+  \x1b[33m[WARNING]\x1b[0m
+  \x1b[1mFILE_STORAGE_ROOT_PATH\x1b[0m is missing. Without it, file storage features will not work.
+  Please add the \x1b[1mFILE_STORAGE_ROOT_PATH\x1b[0m environment variable in \x1b[36m.env.development\x1b[0m (located in the project root).
+  Example: FILE_STORAGE_ROOT_PATH=/Users/YOUR_MACHINE_NAME/your-path-to/latitude/tmp/data
+  `)
+
+    return {
+      storagePath: '',
+      publicStoragePath: buildPublicWebPath(''),
+    }
+  }
+
+  const storagePath = `${devRootPath}/${UPLOADS_PATH}`
+
+  return { storagePath, publicStoragePath: buildPublicWebPath(devRootPath) }
+}
+
+const TEST_STORAGE_PATHS = {
+  storagePath: `/tmp/${UPLOADS_PATH}`,
+  publicStoragePath: buildPublicWebPath('/tmp'),
+}
+
 if (environment === 'development' || environment === 'test') {
   const pathToEnv = resolve(cwd(), `../../.env.${environment}`)
 
-  const isTest = environment === 'test'
-  const FILES_STORAGE_PATH = isTest
-    ? '/tmp/uploads'
-    : (process.env.FILES_STORAGE_PATH ?? '/tmp')
-  const PUBLIC_FILES_STORAGE_PATH = isTest
-    ? '/tmp/apps/web/public/uploads'
-    : (process.env.PUBLIC_FILES_STORAGE_PATH ?? '/tmp/uploads')
-
   dotenv.config({ path: pathToEnv })
+  const {
+    storagePath: FILES_STORAGE_PATH,
+    publicStoragePath: PUBLIC_FILES_STORAGE_PATH,
+  } =
+    environment === 'development' ? buildDevStoragePaths() : TEST_STORAGE_PATHS
+
   dotenv.populate(
     process.env as DotenvPopulateInput,
     {
@@ -79,9 +117,9 @@ export const env = createEnv({
     CACHE_PASSWORD: z.string().optional(),
 
     // Postgres
-    DATABASE_URL: z.url(),
-    READ_DATABASE_URL: z.url().optional(),
-    READ_2_DATABASE_URL: z.url().optional(),
+    DATABASE_URL: z.string().url(),
+    READ_DATABASE_URL: z.string().url().optional(),
+    READ_2_DATABASE_URL: z.string().url().optional(),
 
     // Default settings when creating a new workspace
     DEFAULT_PROJECT_ID: z.coerce.number().optional(),
@@ -90,7 +128,7 @@ export const env = createEnv({
     NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: z.string(),
 
     APP_DOMAIN: z.string(),
-    APP_URL: z.url(),
+    APP_URL: z.string().url(),
 
     // Posthog
     NEXT_PUBLIC_POSTHOG_HOST: z.string(),
@@ -158,10 +196,10 @@ export const env = createEnv({
       .enum(['true', 'false'])
       .transform((value) => value === 'true')
       .optional()
-      .default(true),
+      .default('true'),
 
     LATITUDE_CLOUD: z.boolean().optional().default(false),
-    LATITUDE_CLOUD_PAYMENT_URL: z.url().optional(),
+    LATITUDE_CLOUD_PAYMENT_URL: z.string().url().optional(),
 
     // Copilot
     COPILOT_PROMPT_EDITOR_COPILOT_PATH: z.string().optional(),

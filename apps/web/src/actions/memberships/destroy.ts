@@ -7,13 +7,20 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const destroyMembershipAction = authProcedure
-  .inputSchema(z.object({ id: z.string() }))
-  .action(async ({ parsedInput: { id }, ctx: { workspace, user } }) => {
+  .createServerAction()
+  .input(
+    z.object({
+      id: z.string(),
+    }),
+  )
+  .handler(async ({ input, ctx }) => {
+    const { id } = input
+    const { user } = ctx
     if (user.id === id) {
       throw new Error('You cannot remove yourself from the workspace.')
     }
 
-    const membershipsScope = new MembershipsRepository(workspace.id)
+    const membershipsScope = new MembershipsRepository(ctx.workspace.id)
     const membership = await membershipsScope
       .findByUserId(id)
       .then((r) => r.unwrap())

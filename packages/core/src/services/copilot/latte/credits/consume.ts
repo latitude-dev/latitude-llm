@@ -1,4 +1,4 @@
-import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
+import { LanguageModelUsage } from 'ai'
 import {
   LATTE_MINIMUM_CREDITS_PER_REQUEST,
   LATTE_USAGE_CACHE_KEY,

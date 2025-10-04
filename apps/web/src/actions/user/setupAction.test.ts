@@ -6,6 +6,7 @@ import { setupAction } from './setupAction'
 const mocks = vi.hoisted(() => {
   return {
     createMagicLinkToken: vi.fn(),
+    redirect: vi.fn(),
   }
 })
 
@@ -13,115 +14,120 @@ vi.mock('@latitude-data/core/services/magicLinkTokens/create', () => ({
   createMagicLinkToken: mocks.createMagicLinkToken,
 }))
 
+vi.mock('next/navigation', () => ({
+  redirect: mocks.redirect,
+}))
+
 describe('setupAction', () => {
   beforeEach(() => {
     mocks.createMagicLinkToken.mockResolvedValue({ unwrap: () => ({}) })
+    mocks.redirect.mockImplementation(() => {})
   })
 
   // TODO: unskip once we have email signup again
   it.skip('accepts a valid email', async () => {
-    const { data, serverError, validationErrors } = await setupAction({
+    const [_, error] = await setupAction({
+      // @ts-expect-error - testing
       name: 'John Doe',
       email: 'john@example.com',
       companyName: 'Acme Inc',
     })
 
-    expect(validationErrors).toBeUndefined()
-    expect(serverError).toBeUndefined()
+    expect(error).toBeNull()
     expect(mocks.createMagicLinkToken).toHaveBeenCalled()
-    expect(data.frontendRedirect).toBeDefined()
+    expect(mocks.redirect).toHaveBeenCalled()
   })
 
   it('rejects an email that is already in use', async () => {
     await factories.createUser({ email: 'existing@example.com' })
 
-    const { data, validationErrors } = await setupAction({
+    const [data, error] = await setupAction({
+      // @ts-expect-error - testing
       name: 'John Doe',
       email: 'existing@example.com',
       companyName: 'Acme Inc',
     })
 
-    expect(data).toBeUndefined()
-    expect(validationErrors).toBeDefined()
-    expect(validationErrors?.fieldErrors.email).toContain(
-      'Email is already in use',
-    )
+    expect(error).toBeDefined()
+    expect(error!.message).toContain('Email is already in use')
+    expect(data).toBeNull()
   })
 
   it('rejects an email with a plus sign and number', async () => {
-    const { data, validationErrors } = await setupAction({
+    const [data, error] = await setupAction({
+      // @ts-expect-error - testing
       name: 'John Doe',
       email: 'john+123@example.com',
       companyName: 'Acme Inc',
     })
 
-    expect(data).toBeUndefined()
-    expect(validationErrors?.fieldErrors.email).toContain('Email is not valid')
+    expect(error).not.toBeNull()
+    expect(error!.message).toContain('Email is not valid')
+    expect(data).toBeNull()
   })
 
   // TODO: unskip once we have email signup again
   it.skip('accepts an email with a subdomain', async () => {
-    const { data, validationErrors, serverError } = await setupAction({
+    const [_, error] = await setupAction({
+      // @ts-expect-error - testing
       name: 'John Doe',
       email: 'john@subdomain.example.com',
       companyName: 'Acme Inc',
     })
 
-    expect(validationErrors).toBeUndefined()
-    expect(serverError).toBeUndefined()
+    expect(error).toBeNull()
     expect(mocks.createMagicLinkToken).toHaveBeenCalled()
-    expect(data.frontendRedirect).toBeDefined()
+    expect(mocks.redirect).toHaveBeenCalled()
   })
 
   it('rejects an email with invalid characters', async () => {
-    const { data, validationErrors } = await setupAction({
+    const [data, error] = await setupAction({
+      // @ts-expect-error - testing
       name: 'John Doe',
       email: 'john@exa!mple.com',
       companyName: 'Acme Inc',
     })
 
-    expect(data).toBeUndefined()
-    expect(validationErrors?.fieldErrors.email).toContain(
-      'Invalid email address',
-    )
+    expect(error).toBeDefined()
+    expect(data).toBeNull()
   })
 
   it('rejects an email without a domain', async () => {
-    const { data, validationErrors } = await setupAction({
+    const [data, error] = await setupAction({
+      // @ts-expect-error - testing
       name: 'John Doe',
       email: 'johndoe',
       companyName: 'Acme Inc',
     })
 
-    expect(data).toBeUndefined()
-    expect(validationErrors?.fieldErrors.email).toContain(
-      'Invalid email address',
-    )
+    expect(error).toBeDefined()
+    expect(error!.message).toContain('Invalid email')
+    expect(data).toBeNull()
   })
 
   it('rejects an empty name', async () => {
-    const { data, validationErrors } = await setupAction({
+    const [data, error] = await setupAction({
+      // @ts-expect-error - testing
       name: '',
       email: 'john@example.com',
       companyName: 'Acme Inc',
     })
 
-    expect(data).toBeUndefined()
-    expect(validationErrors?.fieldErrors.name).toContain(
-      'Name is a required field',
-    )
+    expect(error).toBeDefined()
+    expect(error!.message).toContain('Name is a required field')
+    expect(data).toBeNull()
   })
 
   it('rejects an empty company name', async () => {
-    const { data, validationErrors } = await setupAction({
+    const [data, error] = await setupAction({
+      // @ts-expect-error - testing
       name: 'John Doe',
       email: 'john@example.com',
       companyName: '',
     })
 
-    expect(data).toBeUndefined()
-    expect(validationErrors?.fieldErrors.companyName).toContain(
-      'Workspace name is a required field',
-    )
+    expect(error).toBeDefined()
+    expect(error!.message).toContain('Workspace name is a required field')
+    expect(data).toBeNull()
   })
 })

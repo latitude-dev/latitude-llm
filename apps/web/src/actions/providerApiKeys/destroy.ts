@@ -8,13 +8,18 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const destroyProviderApiKeyAction = authProcedure
-  .inputSchema(z.object({ id: z.number().or(z.string()) }))
-  .action(async ({ parsedInput, ctx }) => {
+  .createServerAction()
+  .input(
+    z.object({
+      id: z.number().or(z.string()),
+    }),
+  )
+  .handler(async ({ input, ctx }) => {
     const providerApiKeysRepository = new ProviderApiKeysRepository(
       ctx.workspace.id,
     )
     const apiKeyProvider = await providerApiKeysRepository
-      .find(Number(parsedInput.id))
+      .find(Number(input.id))
       .then((r) => r.unwrap())
 
     return await destroyProviderApiKey(apiKeyProvider)

@@ -7,11 +7,16 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const scaleDownMcpServerAction = authProcedure
-  .inputSchema(z.object({ mcpServerId: z.number() }))
-  .action(async ({ parsedInput, ctx }) => {
+  .createServerAction()
+  .input(
+    z.object({
+      mcpServerId: z.number(),
+    }),
+  )
+  .handler(async ({ input, ctx }) => {
     const mcpServerRepo = new McpServerRepository(ctx.workspace.id)
     const mcpServer = await mcpServerRepo
-      .find(parsedInput.mcpServerId)
+      .find(input.mcpServerId)
       .then((r) => r.unwrap())
 
     return scaleMcpServer({

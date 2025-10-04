@@ -162,15 +162,7 @@ describe('runChain', () => {
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         text: 'AI response 2',
-        usage: {
-          inputTokens: 0,
-          outputTokens: 0,
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 15,
-          reasoningTokens: 0,
-          cachedInputTokens: 0,
-        },
+        usage: { totalTokens: 15 },
         toolCalls: [],
       }),
     )
@@ -265,17 +257,13 @@ describe('runChain', () => {
           {
             toolCallId: 'tool-call-id',
             toolName: 'tool-call-name',
-            input: { arg1: 'value1', arg2: 'value2' },
+            args: { arg1: 'value1', arg2: 'value2' },
           },
         ]),
         usage: Promise.resolve({
-          inputTokens: 0,
-          outputTokens: 0,
           promptTokens: 0,
           completionTokens: 0,
           totalTokens: 0,
-          reasoningTokens: 0,
-          cachedInputTokens: 0,
         }),
         fullStream: new ReadableStream({
           start: (controller) => controller.close(),
@@ -291,7 +279,7 @@ describe('runChain', () => {
                   type: 'tool-call',
                   toolCallId: 'tool-call-id',
                   toolName: 'tool-call-name',
-                  input: { arg1: 'value1', arg2: 'value2' },
+                  args: { arg1: 'value1', arg2: 'value2' },
                 },
               ],
             },

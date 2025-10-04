@@ -78,8 +78,8 @@ export function ExperimentItem({
   const stopExperiment = useCallback(() => {
     if (!experiment) return
     execute({
-      projectId: project.id,
       experimentUuid: experiment.uuid,
+      projectId: project.id,
       commitUuid: commit.uuid,
       documentUuid: document.documentUuid,
     })

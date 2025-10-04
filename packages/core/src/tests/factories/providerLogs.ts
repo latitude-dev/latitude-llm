@@ -41,13 +41,9 @@ export async function createProviderLog(
     responseObject: data.responseObject,
     toolCalls: [],
     usage: {
-      inputTokens: data.tokens ?? faker.number.int({ min: 10, max: 100 }),
-      outputTokens: data.tokens ?? faker.number.int({ min: 10, max: 100 }),
       promptTokens: data.tokens ?? faker.number.int({ min: 10, max: 100 }),
       completionTokens: data.tokens ?? faker.number.int({ min: 10, max: 100 }),
       totalTokens: data.tokens ?? faker.number.int({ min: 20, max: 200 }),
-      reasoningTokens: 0,
-      cachedInputTokens: 0,
     },
     duration: data.duration ?? faker.number.int({ min: 100, max: 5000 }),
     source: data.source ?? LogSources.Playground,

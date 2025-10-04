@@ -1,4 +1,4 @@
-import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
+import { LanguageModelUsage } from 'ai'
 import {
   LATTE_COST_FEE_FACTOR,
   LATTE_COST_MODEL,

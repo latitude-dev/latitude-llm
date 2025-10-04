@@ -1,3 +1,5 @@
+'use client'
+
 import { memo, ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
@@ -254,9 +256,8 @@ const Content = ({
     }
   }
 
-  if (value.type === 'reasoning') {
+  if (value.type === 'reasoning')
     return <ContentReasoning reasoning={value.text} />
-  }
 
   if (value.type === 'image') {
     return (

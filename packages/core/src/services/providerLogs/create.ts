@@ -2,15 +2,11 @@ import type {
   Message as LegacyMessage,
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
-import { FinishReason } from 'ai'
+import { FinishReason, LanguageModelUsage } from 'ai'
 
 import { LogSources, Providers } from '@latitude-data/constants'
 import { ProviderLog, ProviderLogFileData, Workspace } from '../../schema/types'
-import {
-  ChainStepResponse,
-  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
-  StreamType,
-} from '@latitude-data/constants/ai'
+import { ChainStepResponse, StreamType } from '@latitude-data/constants/ai'
 import { publisher } from '../../events/publisher'
 import { diskFactory } from '../../lib/disk'
 import { Result } from '../../lib/Result'
@@ -138,7 +134,7 @@ export async function createProviderLog(
               messages: [],
               toolCalls: [],
               tokens: usage
-                ? usage.totalTokens === undefined || isNaN(usage.totalTokens)
+                ? isNaN(usage.totalTokens)
                   ? 0
                   : (usage.totalTokens ?? 0)
                 : undefined,

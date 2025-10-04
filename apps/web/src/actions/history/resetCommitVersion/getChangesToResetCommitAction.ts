@@ -2,19 +2,20 @@
 
 import { z } from 'zod'
 
-import { withProject, withProjectSchema } from '../../procedures'
+import { withProject } from '../../procedures'
 import { getChangesToResetProjectToCommit } from '@latitude-data/core/services/history/resetProjectToCommit'
 
 export const getChangesToResetCommitAction = withProject
-  .inputSchema(
-    withProjectSchema.extend({
+  .createServerAction()
+  .input(
+    z.object({
       targetDraftUuid: z.string().optional(),
       commitUuid: z.string(),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const { workspace, project } = ctx
-    const { targetDraftUuid, commitUuid } = parsedInput
+    const { targetDraftUuid, commitUuid } = input
 
     const changes = await getChangesToResetProjectToCommit({
       workspace,

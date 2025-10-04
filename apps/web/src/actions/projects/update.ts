@@ -8,12 +8,13 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const updateProjectAction = authProcedure
-  .inputSchema(z.object({ id: z.number().or(z.string()), name: z.string() }))
-  .action(async ({ parsedInput, ctx }) => {
+  .createServerAction()
+  .input(z.object({ id: z.number().or(z.string()), name: z.string() }))
+  .handler(async ({ input, ctx }) => {
     const workspace = ctx.workspace
     const scope = new ProjectsRepository(workspace.id)
-    const project = await scope.find(parsedInput.id).then((r) => r.unwrap())
-    const result = await updateProject(project, { name: parsedInput.name })
+    const project = await scope.find(input.id).then((r) => r.unwrap())
+    const result = await updateProject(project, { name: input.name })
 
     revalidatePath('/dashboard')
 

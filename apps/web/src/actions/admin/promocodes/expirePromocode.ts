@@ -5,10 +5,15 @@ import { withAdmin } from '../../procedures'
 import { expirePromocode } from '@latitude-data/core/services/promocodes/expire'
 
 export const expirePromocodeAction = withAdmin
-  .inputSchema(z.object({ code: z.string() }))
-  .action(async ({ parsedInput }) => {
+  .createServerAction()
+  .input(
+    z.object({
+      code: z.string(),
+    }),
+  )
+  .handler(async ({ input }) => {
     const expiredPromocodeResult = await expirePromocode({
-      code: parsedInput.code,
+      code: input.code,
     })
     return expiredPromocodeResult.unwrap()
   })
