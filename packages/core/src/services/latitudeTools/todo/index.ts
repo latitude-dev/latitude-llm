@@ -21,7 +21,7 @@ export default {
   name: LatitudeTool.TODO,
   internalName: LatitudeToolInternalName.TODO,
   method: todo,
-  definition: (context: TelemetryContext) => ({
+  definition: (context?: TelemetryContext) => ({
     description,
     parameters: {
       type: 'object',

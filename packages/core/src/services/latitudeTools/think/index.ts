@@ -17,7 +17,7 @@ export default {
   name: LatitudeTool.Think,
   internalName: LatitudeToolInternalName.Think,
   method: think,
-  definition: (context: TelemetryContext) => ({
+  definition: (context?: TelemetryContext) => ({
     description:
       'Allows you to explicitly understand, plan, and reflect on actions.',
     parameters: {
