@@ -46,7 +46,7 @@ export function getNextRunTime(
   cronExpression: string,
   timezone: string = 'UTC',
   startDate: Date = new Date(),
-): Date | undefined {
+): Date | null {
   try {
     // Parse the cron expression
     const interval = CronExpressionParser.parse(cronExpression, {
@@ -58,6 +58,6 @@ export function getNextRunTime(
     return interval.next().toDate()
   } catch (error) {
     console.error('Error calculating next run time:', error)
-    return undefined
+    return null
   }
 }

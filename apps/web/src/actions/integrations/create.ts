@@ -1,9 +1,9 @@
 'use server'
 
 import { createIntegration } from '@latitude-data/core/services/integrations/create'
-import { returnValidationErrors } from 'next-safe-action'
 import { z } from 'zod'
 
+import { authProcedure } from '../procedures'
 import { IntegrationType } from '@latitude-data/constants'
 import {
   externalMcpIntegrationConfigurationSchema,
@@ -12,64 +12,58 @@ import {
 } from '@latitude-data/core/services/integrations/helpers/schema'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/types'
-import { authProcedure } from '../procedures'
 
-const nameSchema = z
-  .string()
-  .min(1)
-  .max(255)
-  .refine((name) => !name.includes(' '), {
-    error: 'Name cannot contain spaces',
-  })
-  .refine((name) => !name.includes('/'), {
-    error: 'Name cannot contain slashes',
-  })
-
-async function validateNameUnique(
-  name: string,
-  workspace: Workspace,
-): Promise<boolean> {
-  const integrationsScope = new IntegrationsRepository(workspace.id)
-  const integration = await integrationsScope.findByName(name)
-  return !integration.ok
-}
-
-const integrationSchema = z.discriminatedUnion('type', [
-  z.object({
-    name: nameSchema,
-    type: z.literal(IntegrationType.ExternalMCP),
-    configuration: externalMcpIntegrationConfigurationSchema,
-  }),
-  z.object({
-    name: nameSchema,
-    type: z.literal(IntegrationType.HostedMCP),
-    configuration: hostedMcpIntegrationConfigurationFormSchema,
-  }),
-  z.object({
-    name: nameSchema,
-    type: z.literal(IntegrationType.Pipedream),
-    configuration: pipedreamIntegrationConfigurationSchema,
-  }),
-])
+const nameSchema = (workspace: Workspace) =>
+  z
+    .string()
+    .min(1)
+    .max(255)
+    .refine((name) => !name.includes(' '), {
+      message: 'Name cannot contain spaces',
+    })
+    .refine((name) => !name.includes('/'), {
+      message: 'Name cannot contain slashes',
+    })
+    .refine((name) => name !== 'latitude', {
+      message: 'An integration with this name already exists',
+    })
+    .refine(
+      async (name) => {
+        const integrationsScope = new IntegrationsRepository(workspace.id)
+        const integration = await integrationsScope.findByName(name)
+        return !integration.ok
+      },
+      { message: 'An integration with this name already exists' },
+    )
 
 export const createIntegrationAction = authProcedure
-  .inputSchema(integrationSchema)
-  .action(async ({ parsedInput, ctx }) => {
-    const uniqueName = await validateNameUnique(parsedInput.name, ctx.workspace)
-
-    if (!uniqueName) {
-      return returnValidationErrors(integrationSchema, {
-        name: {
-          _errors: ['An integration with this name already exists'],
-        },
-      })
-    }
-
-    return await createIntegration<typeof parsedInput.type>({
-      workspace: ctx.workspace,
-      name: parsedInput.name,
-      type: parsedInput.type,
-      configuration: parsedInput.configuration,
-      author: ctx.user,
-    }).then((r) => r.unwrap())
-  })
+  .createServerAction()
+  .input(async ({ ctx }) =>
+    z.discriminatedUnion('type', [
+      z.object({
+        name: nameSchema(ctx.workspace),
+        type: z.literal(IntegrationType.ExternalMCP),
+        configuration: externalMcpIntegrationConfigurationSchema,
+      }),
+      z.object({
+        name: nameSchema(ctx.workspace),
+        type: z.literal(IntegrationType.HostedMCP),
+        configuration: hostedMcpIntegrationConfigurationFormSchema,
+      }),
+      z.object({
+        name: nameSchema(ctx.workspace),
+        type: z.literal(IntegrationType.Pipedream),
+        configuration: pipedreamIntegrationConfigurationSchema,
+      }),
+    ]),
+  )
+  .handler(
+    async ({ input, ctx }) =>
+      await createIntegration<typeof input.type>({
+        workspace: ctx.workspace,
+        name: input.name,
+        type: input.type,
+        configuration: input.configuration,
+        author: ctx.user,
+      }).then((r) => r.unwrap()),
+  )

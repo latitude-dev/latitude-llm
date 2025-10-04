@@ -2,7 +2,7 @@ import {
   LatitudeTool,
   LatitudeToolInternalName,
 } from '@latitude-data/constants'
-import { ToolModelMessage, Tool, ToolResultPart, JSONValue } from 'ai'
+import { CoreToolMessage, Tool } from 'ai'
 import { AssistantMessage, MessageRole } from 'promptl-ai'
 import { LatitudeToolCall } from '../../constants'
 import { TypedResult } from '../../lib/Result'
@@ -54,27 +54,7 @@ export function buildToolMessage({
   toolName: string
   toolId: string
   result: TypedResult<unknown, Error>
-}): ToolModelMessage {
-  let output: ToolResultPart['output']
-
-  if (result.ok) {
-    if (typeof result.value === 'string') {
-      output = {
-        type: 'text',
-        value: result.value,
-      }
-    } else {
-      output = {
-        type: 'json',
-        value: result.value as JSONValue,
-      }
-    }
-  } else {
-    output = {
-      type: 'error-text',
-      value: result.error?.message ?? 'Unknown error',
-    }
-  }
+}): CoreToolMessage {
   return {
     role: MessageRole.tool,
     content: [
@@ -82,7 +62,8 @@ export function buildToolMessage({
         type: 'tool-result',
         toolName: toolName,
         toolCallId: toolId,
-        output,
+        result: result.value ?? result.error?.message,
+        isError: !result.ok,
       },
     ],
   }

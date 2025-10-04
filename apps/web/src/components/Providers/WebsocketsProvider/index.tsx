@@ -16,7 +16,6 @@ import {
   WebClientToServerEvents,
   WebServerToClientEvents,
 } from '@latitude-data/core/websockets/constants'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { Workspace } from '@latitude-data/core/schema/types'
 
 export const SocketIOProvider = ({ children }: { children: ReactNode }) => {
@@ -55,13 +54,10 @@ export function useSocketConnection({
     },
   )
 
-  const { execute: refreshToken } = useLatitudeAction(
-    refreshWebesocketTokenAction,
-  )
   connection.socket.on('connect_error', async (error) => {
     if (error.message.startsWith('AUTH_ERROR')) {
       try {
-        const [data] = await refreshToken()
+        const [data] = await refreshWebesocketTokenAction()
 
         if (data && data.success) {
           connection.socket.connect()

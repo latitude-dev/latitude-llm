@@ -10,10 +10,11 @@ import { Result, TypedResult } from '@latitude-data/core/lib/Result'
 import { Commit } from '@latitude-data/core/schema/types'
 
 export const manualEmailTriggerAction = withAdmin
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
-      recipient: z.string().pipe(z.email()),
-      senderEmail: z.string().pipe(z.email()),
+      recipient: z.string().email(),
+      senderEmail: z.string().email(),
       senderName: z.string(),
       subject: z.string(),
       body: z.string(),
@@ -24,7 +25,7 @@ export const manualEmailTriggerAction = withAdmin
       commitUuid: z.string().optional(),
     }),
   )
-  .action(async ({ ctx, parsedInput: input }) => {
+  .handler(async ({ ctx, input }) => {
     let commitResult: TypedResult<Commit | undefined> = Result.ok(undefined)
 
     if (input.commitUuid && input.projectId) {

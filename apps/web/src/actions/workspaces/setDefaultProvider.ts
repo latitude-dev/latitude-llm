@@ -7,21 +7,22 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const setDefaultProviderAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
       workspaceId: z.number(),
       defaultProviderId: z.number().nullable(),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const userId = ctx.session.userId
     const workspacesScope = new WorkspacesRepository(userId)
     const workspace = await workspacesScope
-      .find(parsedInput.workspaceId)
+      .find(input.workspaceId)
       .then((r) => r.unwrap())
 
     const updatedWorkspace = await updateWorkspace(workspace, {
-      defaultProviderId: parsedInput.defaultProviderId,
+      defaultProviderId: input.defaultProviderId,
     }).then((r) => r.unwrap())
 
     return updatedWorkspace

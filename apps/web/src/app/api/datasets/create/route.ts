@@ -11,7 +11,6 @@ import {
   MAX_UPLOAD_SIZE_IN_MB,
 } from '@latitude-data/core/constants'
 import { User, Workspace } from '@latitude-data/core/schema/types'
-import { flattenErrors } from '@latitude-data/core/lib/zodUtils'
 
 const MAX_SIZE_MESSAGE = `Your dataset must be less than ${MAX_SIZE}MB in size.`
 
@@ -20,7 +19,7 @@ const createDatasetSchema = (workspaceId: number) =>
     .object({
       name: z
         .string()
-        .min(1, { error: 'Name is required' })
+        .min(1, { message: 'Name is required' })
         .refine(
           async (name) => {
             const scope = new DatasetsRepository(workspaceId)
@@ -112,10 +111,19 @@ export const POST = errorHandler(
       const validation = await schema.safeParseAsync(data)
 
       if (!validation.success) {
+        const errors: Record<string, string[]> = {}
+        validation.error.issues.forEach((issue) => {
+          const path = issue.path.join('.')
+          if (!errors[path]) {
+            errors[path] = []
+          }
+          errors[path].push(issue.message)
+        })
+
         return NextResponse.json(
           {
             success: false,
-            errors: flattenErrors(validation),
+            errors,
           },
           { status: 400 },
         )

@@ -255,12 +255,13 @@ describe('runPrompt', () => {
         code: RunErrorCodes.InvalidResponseFormatError,
         message: `[
   {
-    "expected": "boolean",
     "code": "invalid_type",
+    "expected": "boolean",
+    "received": "undefined",
     "path": [
       "passed"
     ],
-    "message": "Invalid input: expected boolean, received undefined"
+    "message": "Required"
   }
 ]`,
       }),

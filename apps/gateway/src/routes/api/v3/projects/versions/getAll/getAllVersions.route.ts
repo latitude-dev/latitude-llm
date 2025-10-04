@@ -12,8 +12,8 @@ export const VersionSchema = z.object({
   version: z.number().nullable(),
   userId: z.string(),
   mergedAt: z.string().nullable(),
-  createdAt: z.iso.datetime(),
-  updatedAt: z.iso.datetime(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
   deletedAt: z.string().nullable(),
 })
 

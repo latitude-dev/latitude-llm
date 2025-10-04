@@ -1,25 +1,24 @@
 import { ChangeEvent, useCallback, useEffect, useState } from 'react'
+import { useServerAction } from 'zsa-react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { generateDatasetPreviewAction } from '$/actions/sdk/generateDatasetPreviewAction'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 function usePreviewData() {
   const { toast } = useToast()
   const {
-    result,
+    data,
     execute: runPreviewAction,
     isPending: previewIsLoading,
     error: previewError,
-  } = useLatitudeAction(generateDatasetPreviewAction, {
+  } = useServerAction(generateDatasetPreviewAction, {
     onError: (error) => {
       toast({
         title: 'Failed to generate dataset',
-        description: error.message,
+        description: error.err.message,
         variant: 'destructive',
       })
     },
   })
-  const data = result.data
 
   return {
     explanation: data?.explanation,

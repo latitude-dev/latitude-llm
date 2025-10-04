@@ -5,8 +5,6 @@ import { AppliedRules, ProviderRules } from './types'
  * OpenAI oficial 'o1' model supports system messages.
  * It's backward compatible but o1-mini and o1-preview doesn't support system messages.
  * VercelSKD removes these messages and the prompt fails.
- *
- * TODO: `o1-mini`and `o1-preview` are deprecated models. At some point we can remove this check.
  */
 function doesSupportSystemMessages(modelId: string): boolean {
   if (modelId === 'o1') return true
@@ -14,9 +12,6 @@ function doesSupportSystemMessages(modelId: string): boolean {
   return modelId.startsWith('o1-') ? false : true
 }
 
-/**
- * TODO: Review these rules. I don't
- */
 export function applyOpenAiRules(appliedRule: AppliedRules): AppliedRules {
   const config = appliedRule.config
   const model = config.model as string | undefined
