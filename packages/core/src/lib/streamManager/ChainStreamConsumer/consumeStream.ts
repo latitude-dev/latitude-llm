@@ -35,6 +35,8 @@ export async function consumeStream({
   const reader = result.fullStream.getReader()
 
   while (true) {
+    if (error) break
+
     const { value, done } = await reader.read()
     if (done) break
 

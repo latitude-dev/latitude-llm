@@ -1,3 +1,4 @@
+import tracer from 'dd-trace'
 import { omit } from 'lodash-es'
 
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
@@ -155,8 +156,21 @@ export async function ai({
     const result = streamText({
       ...omit(config, ['schema']),
       ...stopWhen,
-      model: languageModel,
       messages,
+      onError: ({ error }) => {
+        const span = tracer.scope().active()
+        if (!span) {
+          console.error(error)
+          return
+        }
+
+        span.log({
+          event: '[Latitude]: AI Provider Call Error',
+          message: (error as Error)?.message,
+          error,
+        })
+      },
+      model: languageModel,
       tools: toolsResult.value,
       abortSignal,
       maxOutputTokens: config.maxOutputTokens ?? config.maxTokens,
@@ -168,17 +182,17 @@ export async function ai({
     })
 
     return Result.ok({
-      type: resultType,
-      providerName: providerType,
-      fullStream: result.fullStream,
-      text: result.text,
-      reasoning: result.reasoningText,
-      usage: result.usage,
-      toolCalls: result.toolCalls,
-      providerMetadata: result.providerMetadata,
-      sources: result.sources,
       finishReason: result.finishReason,
+      fullStream: result.fullStream,
+      providerMetadata: result.providerMetadata,
+      providerName: providerType,
+      reasoning: result.reasoningText,
       response: result.response,
+      sources: result.sources,
+      text: result.text,
+      toolCalls: result.toolCalls,
+      type: resultType,
+      usage: result.usage,
     })
   } catch (e) {
     return handleAICallAPIError(e)
