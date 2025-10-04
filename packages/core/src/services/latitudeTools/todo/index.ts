@@ -8,7 +8,6 @@ import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { TelemetryContext } from '../../../telemetry'
 import { withTelemetryWrapper } from '../telemetryWrapper'
-import z from 'zod'
 
 async function todo(): PromisedResult<unknown, LatitudeError> {
   return Result.ok({
@@ -22,29 +21,45 @@ export default {
   name: LatitudeTool.TODO,
   internalName: LatitudeToolInternalName.TODO,
   method: todo,
-  definition: (context?: TelemetryContext) => ({
+  definition: (context: TelemetryContext) => ({
     description,
-    inputSchema: z.object({
-      merge: z
-        .boolean()
-        .describe(
-          'Whether to merge the todos with the existing todos. If true, the todos will be merged into the existing todos based on the id field. You can leave unchanged properties undefined. If false, the new todos will replace the existing todos.',
-        ),
-      todos: z
-        .array(
-          z.object({
-            content: z
-              .string()
-              .describe('The description/content of the todo item'),
-            id: z.string().describe('Unique identifier for the todo item'),
-            status: z
-              .enum(['pending', 'in_progress', 'completed', 'cancelled'])
-              .describe('The current status of the todo item'),
-          }),
-        )
-        .min(2)
-        .describe('Array of todo items to write'),
-    }),
+    parameters: {
+      type: 'object',
+      properties: {
+        merge: {
+          type: 'boolean',
+          description:
+            'Whether to merge the todos with the existing todos. If true, the todos will be merged into the existing todos based on the id field. You can leave unchanged properties undefined. If false, the new todos will replace the existing todos.',
+        },
+        todos: {
+          type: 'array',
+          description: 'Array of todo items to write',
+          minItems: 2,
+          items: {
+            type: 'object',
+            properties: {
+              content: {
+                type: 'string',
+                description: 'The description/content of the todo item',
+              },
+              id: {
+                type: 'string',
+                description: 'Unique identifier for the todo item',
+              },
+              status: {
+                type: 'string',
+                enum: ['pending', 'in_progress', 'completed', 'cancelled'],
+                description: 'The current status of the todo item',
+              },
+            },
+            required: ['content', 'id', 'status'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['merge', 'todos'],
+      additionalProperties: false,
+    },
     execute: async (args, toolCall) =>
       withTelemetryWrapper(todo, {
         toolName: LatitudeTool.TODO,
