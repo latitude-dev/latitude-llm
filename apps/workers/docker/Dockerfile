@@ -1,8 +1,6 @@
 ARG PROJECT="@latitude-data/workers"
 ARG PROJECT_PATH="apps/workers"
-ARG NEXT_PUBLIC_DATADOG_APPLICATION_ID
-ARG NEXT_PUBLIC_DATADOG_CLIENT_TOKEN
-ARG NEXT_PUBLIC_DATADOG_SITE
+ARG DATADOG_API_KEY
 ARG DD_GIT_REPOSITORY_URL
 ARG DD_GIT_COMMIT_SHA
 
@@ -38,6 +36,9 @@ FROM base AS builder
 
 ARG PROJECT
 ARG PROJECT_PATH
+ARG DATADOG_API_KEY
+
+ENV DATADOG_API_KEY=$DATADOG_API_KEY
 
 WORKDIR /app
 
@@ -58,12 +59,12 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   pnpm turbo build --filter="${PROJECT}..."
 
 # Upload source maps to Datadog
-RUN if [ -n "$DD_GIT_COMMIT_SHA" ] && [ -n "$DD_GIT_REPOSITORY_URL" ] && [ -n "$NEXT_PUBLIC_DATADOG_APPLICATION_ID" ] && [ -n "$NEXT_PUBLIC_DATADOG_CLIENT_TOKEN" ]; then \
+RUN if [ -n "$DATADOG_API_KEY" ]; then \
   echo "Uploading workers source maps to Datadog..."; \
   cd apps/workers && \
-  DD_API_KEY=$NEXT_PUBLIC_DATADOG_APPLICATION_ID DD_APP_KEY=$NEXT_PUBLIC_DATADOG_CLIENT_TOKEN pnpm datadog:sourcemaps; \
+  pnpm datadog:sourcemaps; \
 else \
-  echo "Skipping Datadog source map upload for workers - missing required environment variables"; \
+  echo "Skipping Datadog source map upload for workers - missing required environment variables (DATADOG_API_KEY)"; \
 fi
 
 # Since `pnpm prune` doesn't handle recursive dependencies effectively,
