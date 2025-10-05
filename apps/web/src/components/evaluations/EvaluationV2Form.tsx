@@ -1,4 +1,5 @@
-import { ActionErrors } from '$/hooks/useLatitudeAction'
+import { ActionErrors, parseActionErrors } from '$/hooks/useLatitudeAction'
+import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationMetric,
   EvaluationOptions,
@@ -24,7 +25,6 @@ import {
   ConfigurationSimpleForm,
 } from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
-import { StandardSchemaV1 } from '@standard-schema/spec'
 
 const EVALUATION_TYPE_OPTIONS = Object.values(EvaluationType).map((type) => {
   const specification = EVALUATION_SPECIFICATIONS[type]
@@ -34,31 +34,6 @@ const EVALUATION_TYPE_OPTIONS = Object.values(EvaluationType).map((type) => {
     icon: specification.icon,
   }
 })
-
-/**
- * This can be improved by passing specific schemas per type/metric
- * But I'm fed up of fixing zod errors sorry
- */
-type EvaluationV2FormSchema = StandardSchemaV1<{
-  type: string
-  name: string
-  description: string
-  metric: string
-  options: string
-  settings: string
-  evaluateLiveLogs: string
-  enableSuggestions: string
-}>
-
-export type EvaluationV2FormErrors = ActionErrors<EvaluationV2FormSchema>
-
-/**
- * Helper: normalize validation errors into a flat map
- */
-export function parseActionErrors(errors?: EvaluationV2FormErrors) {
-  if (!errors) return {}
-  return errors.fieldErrors
-}
 
 const EVALUATION_METRIC_OPTIONS = <
   T extends EvaluationType = EvaluationType,
@@ -113,7 +88,10 @@ export default function EvaluationV2Form<
   setSettings: (settings: EvaluationSettings<T, M>) => void
   options: Partial<EvaluationOptions>
   setOptions: (options: Partial<EvaluationOptions>) => void
-  errors?: EvaluationV2FormErrors
+  errors?: ActionErrors<
+    typeof useEvaluationsV2,
+    'createEvaluation' | 'updateEvaluation'
+  >
   commit: ICommitContextType['commit']
   disabled?: boolean
 }) {
@@ -159,7 +137,7 @@ export default function EvaluationV2Form<
             description={typeSpecification.description}
             options={EVALUATION_TYPE_OPTIONS}
             onChange={(value) => setSettings({ ...settings, type: value as T })}
-            errors={errors?.type}
+            errors={errors?.['type']}
             fancy
             disabled={disabled || commitMerged}
             required
@@ -171,7 +149,7 @@ export default function EvaluationV2Form<
           label='Name'
           placeholder='Give your evaluation a name'
           onChange={(e) => setSettings({ ...settings, name: e.target.value })}
-          errors={errors?.name}
+          errors={errors?.['name']}
           className='w-full'
           disabled={disabled || commitMerged}
           required
@@ -186,7 +164,7 @@ export default function EvaluationV2Form<
           onChange={(e) =>
             setSettings({ ...settings, description: e.target.value })
           }
-          errors={errors?.description}
+          errors={errors?.['description']}
           className='w-full'
           disabled={disabled || commitMerged}
           required
@@ -207,7 +185,7 @@ export default function EvaluationV2Form<
             onChange={(value) =>
               setSettings({ ...settings, metric: value as M })
             }
-            errors={errors?.metric}
+            errors={errors?.['metric']}
             disabled={disabled || commitMerged}
             required
           />
@@ -270,7 +248,7 @@ export default function EvaluationV2Form<
                     onCheckedChange={(value) =>
                       setOptions({ ...options, evaluateLiveLogs: value })
                     }
-                    errors={errors?.evaluateLiveLogs}
+                    errors={errors?.['evaluateLiveLogs']}
                     disabled={
                       disabled || !metricSpecification?.supportsLiveEvaluation
                     }
@@ -284,9 +262,21 @@ export default function EvaluationV2Form<
                   onCheckedChange={(value) =>
                     setOptions({ ...options, enableSuggestions: value })
                   }
-                  errors={errors?.enableSuggestions}
+                  errors={errors?.['enableSuggestions']}
                   disabled={disabled}
                 />
+                {/* TODO(exps): Uncomment when experiments are implemented */}
+                {/* <SwitchInput
+                  checked={!!options.autoApplySuggestions}
+                  name='autoApplySuggestions'
+                  label='Auto apply suggestions'
+                  description='Automatically apply the generated suggestions to your prompt'
+                  onCheckedChange={(value) =>
+                    setOptions({ ...options, autoApplySuggestions: value })
+                  }
+                  errors={errors?.['autoApplySuggestions']}
+                  disabled={disabled}
+                /> */}
               </FormFieldGroup>
             </FormWrapper>
           }

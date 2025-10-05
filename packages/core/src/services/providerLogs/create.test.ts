@@ -42,15 +42,7 @@ describe('createProviderLog', () => {
       model: 'gpt-4o',
       config: { model: 'gpt-4o' },
       apiKeyId,
-      usage: {
-        inputTokens: 3,
-        promptTokens: 3,
-        outputTokens: 7,
-        completionTokens: 7,
-        totalTokens: 10,
-        reasoningTokens: 0,
-        cachedInputTokens: 0,
-      },
+      usage: { promptTokens: 3, completionTokens: 7, totalTokens: 10 },
       responseText: 'This is the response',
       messages: [],
       toolCalls: [],
@@ -140,15 +132,7 @@ describe('createProviderLog', () => {
     it('handles NaN tokens gracefully', async () => {
       const providerLog = await createProviderLog({
         ...providerProps,
-        usage: {
-          inputTokens: 3,
-          outputTokens: 7,
-          promptTokens: 3,
-          completionTokens: 7,
-          totalTokens: NaN,
-          reasoningTokens: 0,
-          cachedInputTokens: 0,
-        },
+        usage: { promptTokens: 3, completionTokens: 7, totalTokens: NaN },
       }).then((r) => r.unwrap())
       expect(providerLog.tokens).toBe(0)
     })

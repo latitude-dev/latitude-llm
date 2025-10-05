@@ -4,18 +4,19 @@ import { CommitsRepository } from '@latitude-data/core/repositories'
 import { deleteCommitDraft } from '@latitude-data/core/services/commits/delete'
 import { z } from 'zod'
 
-import { withProject, withProjectSchema } from '../procedures'
+import { withProject } from '../procedures'
 
 export const deleteDraftCommitAction = withProject
-  .inputSchema(
-    withProjectSchema.extend({
+  .createServerAction()
+  .input(
+    z.object({
       id: z.number(),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     const commitScope = new CommitsRepository(ctx.workspace.id)
     const commit = await commitScope
-      .getCommitById(parsedInput.id)
+      .getCommitById(input.id)
       .then((r) => r.unwrap())
 
     return deleteCommitDraft(commit).then((r) => r.unwrap())

@@ -1,4 +1,3 @@
-import { ReactNode } from 'react'
 import { AnimatedDots } from '@latitude-data/web-ui/molecules/AnimatedDots'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
@@ -6,14 +5,21 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { useFormAction } from '$/hooks/useFormAction'
 import {
-  LatitudeGenericActionFunc,
-  LatitudeData,
-  SuccessActionCallback,
-} from '$/hooks/useLatitudeAction'
+  inferServerActionError,
+  inferServerActionInput,
+  inferServerActionReturnData,
+  TAnyZodSafeFunctionHandler,
+} from 'zsa'
+import { ReactNode } from 'react'
 
-type Props<F extends LatitudeGenericActionFunc> = {
-  action: F
-  onSuccess?: SuccessActionCallback<LatitudeData<F>>
+type Props<TServerAction extends TAnyZodSafeFunctionHandler> = {
+  action: (
+    data: inferServerActionInput<TServerAction>,
+  ) => Promise<
+    | [inferServerActionReturnData<TServerAction>, null]
+    | [null, inferServerActionError<TServerAction>]
+  >
+  onSuccess?: (payload: inferServerActionReturnData<TServerAction>) => void
   onOpenChange?: (open: boolean) => void
   title: string
   description: string
@@ -23,7 +29,9 @@ type Props<F extends LatitudeGenericActionFunc> = {
   disabled?: boolean
   children?: ReactNode
 }
-export default function DestroyModal<F extends LatitudeGenericActionFunc>({
+export default function DestroyModal<
+  TServerAction extends TAnyZodSafeFunctionHandler,
+>({
   action,
   isDestroying,
   onSuccess,
@@ -34,7 +42,7 @@ export default function DestroyModal<F extends LatitudeGenericActionFunc>({
   model,
   disabled,
   children,
-}: Props<F>) {
+}: Props<TServerAction>) {
   const { toast } = useToast()
   const { action: actionFn } = useFormAction(action, {
     onError: (error) => {

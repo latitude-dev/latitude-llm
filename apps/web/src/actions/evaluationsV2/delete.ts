@@ -1,11 +1,13 @@
 'use server'
 
 import { deleteEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/delete'
-import { withEvaluation, withEvaluationSchema } from '../procedures'
+import { z } from 'zod'
+import { withEvaluation } from '../procedures'
 
 export const deleteEvaluationV2Action = withEvaluation
-  .inputSchema(withEvaluationSchema.extend({}))
-  .action(async ({ ctx }) => {
+  .createServerAction()
+  .input(z.object({}))
+  .handler(async ({ ctx }) => {
     const result = await deleteEvaluationV2({
       evaluation: ctx.evaluation,
       commit: ctx.commit,

@@ -46,12 +46,12 @@ describe('createWebhookAction', () => {
     it('errors when the user is not authenticated', async () => {
       mocks.getSession.mockResolvedValue(null)
 
-      const { serverError } = await createWebhookAction({
+      const [_, error] = await createWebhookAction({
         name: 'Test Webhook',
         url: 'https://test.com',
       })
 
-      expect(serverError).toEqual('Unauthorized')
+      expect(error!.name).toEqual('UnauthorizedError')
       expect(mocks.publisher.publishLater).not.toHaveBeenCalled()
     })
   })
@@ -65,15 +65,12 @@ describe('createWebhookAction', () => {
     })
 
     it('successfully creates a webhook', async () => {
-      const { data, serverError, validationErrors } = await createWebhookAction(
-        {
-          name: 'Test Webhook',
-          url: 'https://test.com',
-        },
-      )
+      const [data, error] = await createWebhookAction({
+        name: 'Test Webhook',
+        url: 'https://test.com',
+      })
 
-      expect(serverError).toBeUndefined()
-      expect(validationErrors).toBeUndefined()
+      expect(error).toBeNull()
       expect(data).toBeDefined()
       expect(data!.name).toBe('Test Webhook')
       expect(data!.url).toBe('https://test.com')
@@ -84,65 +81,63 @@ describe('createWebhookAction', () => {
     })
 
     it('successfully creates a webhook with project IDs', async () => {
-      const { data, serverError, validationErrors } = await createWebhookAction(
-        {
-          name: 'Test Webhook',
-          url: 'https://test.com',
-          projectIds: JSON.stringify([1, 2, 3]),
-        },
-      )
+      const [data, error] = await createWebhookAction({
+        name: 'Test Webhook',
+        url: 'https://test.com',
+        projectIds: JSON.stringify([1, 2, 3]),
+      })
 
-      expect(serverError).toBeUndefined()
-      expect(validationErrors).toBeUndefined()
+      expect(error).toBeNull()
       expect(data).toBeDefined()
       expect(data!.projectIds).toEqual([1, 2, 3])
       expect(mocks.publisher.publishLater).not.toHaveBeenCalled()
     })
 
     it('successfully creates an inactive webhook', async () => {
-      const { data, serverError, validationErrors } = await createWebhookAction(
-        {
-          name: 'Test Webhook',
-          url: 'https://test.com',
-          isActive: 'false',
-        },
-      )
+      const [data, error] = await createWebhookAction({
+        name: 'Test Webhook',
+        url: 'https://test.com',
+        isActive: 'false',
+      })
 
-      expect(serverError).toBeUndefined()
-      expect(validationErrors).toBeUndefined()
+      expect(error).toBeNull()
       expect(data).toBeDefined()
       expect(data!.isActive).toBe(false)
       expect(mocks.publisher.publishLater).not.toHaveBeenCalled()
     })
 
     it('rejects invalid project IDs format', async () => {
-      const { serverError } = await createWebhookAction({
+      const [_, error] = await createWebhookAction({
         name: 'Test Webhook',
         url: 'https://test.com',
         projectIds: 'invalid-json',
       })
 
-      expect(serverError).toEqual('Invalid project IDs')
+      expect(error).toBeDefined()
+      expect(error!.name).toEqual('BadRequestError')
+      expect(error!.message).toContain('Invalid project IDs')
       expect(mocks.publisher.publishLater).not.toHaveBeenCalled()
     })
 
     it('rejects invalid URL format', async () => {
-      const { validationErrors } = await createWebhookAction({
+      const [_, error] = await createWebhookAction({
         name: 'Test Webhook',
         url: 'not-a-url',
       })
 
-      expect(validationErrors?.fieldErrors.url).toContain('Invalid URL format')
+      expect(error).toBeDefined()
+      expect(error!.message).toContain('Invalid URL format')
       expect(mocks.publisher.publishLater).not.toHaveBeenCalled()
     })
 
     it('rejects empty name', async () => {
-      const { validationErrors } = await createWebhookAction({
+      const [_, error] = await createWebhookAction({
         name: '',
         url: 'https://test.com',
       })
 
-      expect(validationErrors?.fieldErrors.name).toContain('Name is required')
+      expect(error).toBeDefined()
+      expect(error!.message).toContain('Name is required')
       expect(mocks.publisher.publishLater).not.toHaveBeenCalled()
     })
   })

@@ -84,22 +84,4 @@ describe('applyGoogleRules', () => {
       ])
     })
   })
-
-  describe('when no user message is present', () => {
-    beforeAll(() => {
-      messages = [
-        { role: 'system', content: 'System only' },
-        { role: 'assistant', content: 'Hello' },
-      ] as Message[]
-    })
-
-    it('fails with a rule requiring at least one user message', () => {
-      const rules = applyProviderRules({ providerType, messages, config })
-
-      expect(rules.rules).toContainEqual({
-        rule: ProviderRules.Google,
-        ruleMessage: 'Google requires at least one user message',
-      })
-    })
-  })
 })

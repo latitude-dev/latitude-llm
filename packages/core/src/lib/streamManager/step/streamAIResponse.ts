@@ -2,7 +2,6 @@ import {
   ChainStepResponse,
   StreamType,
   VercelConfig,
-  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
 } from '@latitude-data/constants'
 import {
   Conversation,
@@ -63,8 +62,8 @@ export async function streamAIResponse({
 }): Promise<{
   response: ChainStepResponse<StreamType>
   messages: LegacyMessage[]
-  tokenUsage: Awaited<LanguageModelUsage>
-  finishReason: Awaited<AIReturn<StreamType>['finishReason']> | undefined
+  tokenUsage: Awaited<AIReturn<StreamType>['usage']>
+  finishReason: Awaited<AIReturn<StreamType>['finishReason']>
 }> {
   const startTime = Date.now()
   const aiResult = await ai({
@@ -111,17 +110,10 @@ export async function streamAIResponse({
     aiResult,
     documentLogUuid,
   })
-
-  let finishReason
-  try {
-    finishReason = await aiResult.finishReason
-  } catch (_) {
-    // do nothing
-  }
-
+  const responseMessages = (await aiResult.response).messages as LegacyMessage[]
   const providerLog = await createProviderLog({
     workspace,
-    finishReason,
+    finishReason: await aiResult.finishReason,
     ...buildProviderLogDto({
       workspace,
       source,
@@ -141,9 +133,8 @@ export async function streamAIResponse({
 
   return {
     response,
-    // FIXME: Make response.output non optional when we remove `__deprecated`
-    messages: response.output ?? [],
-    tokenUsage: response.usage,
-    finishReason,
+    messages: responseMessages,
+    tokenUsage: await aiResult.usage,
+    finishReason: await aiResult.finishReason,
   }
 }

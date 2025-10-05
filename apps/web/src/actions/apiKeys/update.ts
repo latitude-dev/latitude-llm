@@ -7,14 +7,16 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const updateApiKeyAction = authProcedure
-  .inputSchema(z.object({ id: z.coerce.number(), name: z.string() }))
-  .action(async ({ parsedInput, ctx }) => {
+  .createServerAction()
+  .input(
+    z.object({
+      id: z.coerce.number(),
+      name: z.string(),
+    }),
+  )
+  .handler(async ({ input, ctx }) => {
     const apiKeysRepo = new ApiKeysRepository(ctx.workspace.id)
-    const apiKey = await apiKeysRepo
-      .find(parsedInput.id)
-      .then((r) => r.unwrap())
+    const apiKey = await apiKeysRepo.find(input.id).then((r) => r.unwrap())
 
-    return updateApiKey(apiKey, { name: parsedInput.name }).then((r) =>
-      r.unwrap(),
-    )
+    return updateApiKey(apiKey, { name: input.name }).then((r) => r.unwrap())
   })

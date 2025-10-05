@@ -6,30 +6,29 @@ import { createWebhook } from '@latitude-data/core/services/webhooks/createWebho
 import { BadRequestError } from '@latitude-data/constants/errors'
 
 export const createWebhookAction = authProcedure
-  .inputSchema(
+  .createServerAction()
+  .input(
     z.object({
-      name: z.string().min(1, { error: 'Name is required' }),
-      url: z.string().pipe(z.url({ error: 'Invalid URL format' })),
+      name: z.string().min(1, { message: 'Name is required' }),
+      url: z.string().url({ message: 'Invalid URL format' }),
       projectIds: z.string().optional(),
       isActive: z.string().optional().default('true'),
     }),
   )
-  .action(async ({ parsedInput, ctx }) => {
+  .handler(async ({ input, ctx }) => {
     let projectIds: number[] | undefined
     try {
-      projectIds = parsedInput.projectIds
-        ? JSON.parse(parsedInput.projectIds)
-        : undefined
+      projectIds = input.projectIds ? JSON.parse(input.projectIds) : undefined
     } catch (error) {
       throw new BadRequestError('Invalid project IDs')
     }
 
     const result = await createWebhook({
       workspaceId: ctx.workspace.id,
-      name: parsedInput.name,
-      url: parsedInput.url,
+      name: input.name,
+      url: input.url,
       projectIds: projectIds || [],
-      isActive: parsedInput.isActive === 'true',
+      isActive: input.isActive === 'true',
     })
 
     return result.unwrap()

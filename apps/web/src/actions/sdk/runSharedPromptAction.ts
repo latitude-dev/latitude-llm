@@ -4,7 +4,7 @@ import { type ChainEventDto } from '@latitude-data/sdk'
 import { RunDocumentResponse } from '$/actions/sdk/runDocumentAction'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { findSharedDocumentCached } from '$/app/(public)/_data_access'
-import { createStreamableValue } from '@ai-sdk/rsc'
+import { createStreamableValue } from 'ai/rsc'
 import { LogSources, StreamEventTypes } from '@latitude-data/core/constants'
 
 type RunSharedPromptActionProps = {

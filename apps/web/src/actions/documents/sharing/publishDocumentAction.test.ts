@@ -50,12 +50,13 @@ describe('publishDocumentAction', () => {
 
   describe('unauthorized', () => {
     it('errors when the user is not authenticated', async () => {
-      const { serverError } = await publishDocumentAction({
+      const [_, error] = await publishDocumentAction({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
       })
-      expect(serverError).toEqual('Unauthorized')
+
+      expect(error!.name).toEqual('UnauthorizedError')
     })
   })
 
@@ -68,17 +69,17 @@ describe('publishDocumentAction', () => {
     })
 
     it('returns error when project is not found', async () => {
-      const { serverError } = await publishDocumentAction({
+      const [_, error] = await publishDocumentAction({
         projectId: 999992,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
       })
 
-      expect(serverError).toEqual('Project not found')
+      expect(error!.name).toEqual('NotFoundError')
     })
 
     it('creates a new published document when document has not been published before', async () => {
-      const { data } = await publishDocumentAction({
+      const [data] = await publishDocumentAction({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
@@ -104,7 +105,7 @@ describe('publishDocumentAction', () => {
       expect(publishedDocs.length).toBe(1)
 
       // Update the published document
-      const { data } = await publishDocumentAction({
+      const [data] = await publishDocumentAction({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: document.documentUuid,
@@ -130,13 +131,13 @@ describe('publishDocumentAction', () => {
         },
       })
 
-      const { serverError } = await publishDocumentAction({
+      const [_, error] = await publishDocumentAction({
         projectId: project.id,
         commitUuid: commit.uuid,
         documentUuid: otherDocs[0]!.documentUuid,
       })
 
-      expect(serverError).toEqual('Document not found')
+      expect(error!.name).toEqual('NotFoundError')
     })
   })
 })

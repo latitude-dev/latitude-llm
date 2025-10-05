@@ -14,7 +14,7 @@ export default function NewUser({
   setOpen: (open: boolean) => void
 }) {
   const { invite } = useUsers()
-  const { isPending, error, data, action } = useFormAction(invite, {
+  const { data, action } = useFormAction(invite, {
     onSuccess: () => setOpen(false),
   })
   return (
@@ -27,13 +27,8 @@ export default function NewUser({
       footer={
         <>
           <CloseTrigger />
-          <Button
-            disabled={isPending}
-            fancy
-            form='createUserform'
-            type='submit'
-          >
-            {isPending ? 'Sending...' : 'Send invite'}
+          <Button fancy form='createUserform' type='submit'>
+            Send invite
           </Button>
         </>
       }
@@ -45,16 +40,14 @@ export default function NewUser({
             type='text'
             label='Name'
             name='name'
-            errors={error?.fieldErrors?.name}
-            defaultValue={data?.name ?? ''}
+            defaultValue={data?.name}
             placeholder='Jon Snow'
           />
           <Input
             required
-            type='text'
+            type='email'
             label='Email'
             name='email'
-            errors={error?.fieldErrors?.email}
             defaultValue={data?.email}
             placeholder='jon@latitude.so'
           />

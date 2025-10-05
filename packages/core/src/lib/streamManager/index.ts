@@ -2,7 +2,6 @@ import {
   ChainEvent,
   ChainEventTypes,
   ChainStepResponse,
-  EMPTY_USAGE,
   OmittedLatitudeEventData,
   StreamEventTypes,
   StreamType,
@@ -12,8 +11,7 @@ import {
   Message as LegacyMessage,
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
-import { FinishReason } from 'ai'
-import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants/ai'
+import { FinishReason, LanguageModelUsage } from 'ai'
 import { omit } from 'lodash-es'
 import { IntegrationDto, ProviderApiKey, Workspace } from '../../schema/types'
 import { LogSources, PromptSource } from '../../constants'
@@ -29,33 +27,11 @@ import { ToolHandler } from './clientTools/handlers'
 import { ResolvedTools } from './resolveTools/types'
 import { createPromiseWithResolver } from './utils/createPromiseResolver'
 
-const addTokens = ({
-  attr,
-  prev,
-  next,
-}: {
-  attr: keyof LanguageModelUsage
-  prev: LanguageModelUsage | undefined
-  next: LanguageModelUsage
-}) => (prev?.[attr] ?? 0) + next[attr]
-
-export const incrementTokens = ({
-  prev,
-  next,
-}: {
-  prev: LanguageModelUsage | undefined
-  next: LanguageModelUsage
-}) => {
-  return {
-    inputTokens: addTokens({ attr: 'inputTokens', prev, next }),
-    outputTokens: addTokens({ attr: 'outputTokens', prev, next }),
-    promptTokens: addTokens({ attr: 'promptTokens', prev, next }),
-    completionTokens: addTokens({ attr: 'completionTokens', prev, next }),
-    totalTokens: addTokens({ attr: 'totalTokens', prev, next }),
-    reasoningTokens: addTokens({ attr: 'reasoningTokens', prev, next }),
-    cachedInputTokens: addTokens({ attr: 'cachedInputTokens', prev, next }),
-  }
-}
+const EMPTY_USAGE = (): LanguageModelUsage => ({
+  promptTokens: 0,
+  completionTokens: 0,
+  totalTokens: 0,
+})
 
 export type StreamManagerProps = {
   workspace: Workspace
@@ -284,8 +260,8 @@ export abstract class StreamManager {
       output: responseMessages,
       tokens: {
         prompt: tokenUsage.promptTokens,
-        cached: tokenUsage.cachedInputTokens,
-        reasoning: tokenUsage.reasoningTokens,
+        cached: 0, // Note: not given by Vercel AI SDK yet
+        reasoning: 0, // Note: not given by Vercel AI SDK yet
         completion: tokenUsage.completionTokens,
       },
       finishReason,
@@ -393,12 +369,24 @@ export abstract class StreamManager {
     }
   }
 
-  protected incrementLogUsage(next: LanguageModelUsage) {
-    this.logUsage = incrementTokens({ prev: this.logUsage, next })
+  protected incrementLogUsage(tokenUsage: LanguageModelUsage) {
+    this.logUsage = {
+      promptTokens:
+        (this.logUsage?.promptTokens ?? 0) + tokenUsage.promptTokens,
+      completionTokens:
+        (this.logUsage?.completionTokens ?? 0) + tokenUsage.completionTokens,
+      totalTokens: (this.logUsage?.totalTokens ?? 0) + tokenUsage.totalTokens,
+    }
   }
 
-  incrementRunUsage(next: LanguageModelUsage) {
-    this.runUsage = incrementTokens({ prev: this.runUsage, next })
+  incrementRunUsage(tokenUsage: LanguageModelUsage) {
+    this.runUsage = {
+      promptTokens:
+        (this.runUsage?.promptTokens ?? 0) + tokenUsage.promptTokens,
+      completionTokens:
+        (this.runUsage?.completionTokens ?? 0) + tokenUsage.completionTokens,
+      totalTokens: (this.runUsage?.totalTokens ?? 0) + tokenUsage.totalTokens,
+    }
   }
 
   protected async updateStateFromResponse({

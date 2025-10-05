@@ -62,19 +62,14 @@ export function latitudePromptConfigSchema({
     .object({
       provider: z
         .string({
-          error: (issue) =>
-            issue.input === undefined
-              ? ''
-              : `You must select a provider.\nFor example: 'provider: ${providerNames[0] ?? '<your-provider-name>'}'. Read more here: ${LATITUDE_DOC}`,
+          required_error: '',
+          message: `You must select a provider.\nFor example: 'provider: ${providerNames[0] ?? '<your-provider-name>'}'. Read more here: ${LATITUDE_DOC}`,
         })
         .refine((p) => providerNames.includes(p), {
           message: `Provider not available. You must use one of the following:\n${providerNames.map((p) => `'${p}'`).join(', ')}`,
         }),
       model: z.string({
-        error: (issue) =>
-          issue.input === undefined
-            ? `The model attribute is required. Read more here: ${LATITUDE_DOC}`
-            : 'Invalid model value',
+        required_error: `The model attribute is required. Read more here: ${LATITUDE_DOC}`,
       }),
       temperature: z.number().min(0).max(2).optional(),
       type: z.enum(['agent']).optional(),
@@ -92,7 +87,6 @@ export function latitudePromptConfigSchema({
       disableAgentOptimization: z.boolean().optional(),
       parameters: z
         .record(
-          z.string(),
           z.object({
             type: z.enum(PARAMETER_TYPES),
             description: z.string().optional(),

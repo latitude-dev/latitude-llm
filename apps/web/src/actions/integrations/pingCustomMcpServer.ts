@@ -6,8 +6,13 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const pingCustomMcpAction = authProcedure
-  .inputSchema(z.object({ url: z.string() }))
-  .action(
-    async ({ parsedInput }) =>
-      await pingCustomMCPServer(parsedInput.url).then((r) => r.unwrap()),
+  .createServerAction()
+  .input(
+    z.object({
+      url: z.string(),
+    }),
+  )
+  .handler(
+    async ({ input }) =>
+      await pingCustomMCPServer(input.url).then((r) => r.unwrap()),
   )

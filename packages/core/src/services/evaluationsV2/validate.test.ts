@@ -231,16 +231,11 @@ describe('validateEvaluationV2', () => {
         commit: commit,
         workspace: workspace,
       }).then((r) => r.unwrap()),
-    ).rejects.toMatchObject({
-      issues: [
-        {
-          code: 'custom',
-          path: ['name'],
-          message:
-            'An evaluation with this name already exists for this document',
-        },
-      ],
-    })
+    ).rejects.toThrowError(
+      new BadRequestError(
+        'An evaluation with this name already exists for this document',
+      ),
+    )
   })
 
   it('fails when evaluate live logs option is not valid', async () => {

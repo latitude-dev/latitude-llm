@@ -29,9 +29,9 @@ const PROVIDER_PAYLOAD: ProviderApiKey = {
 describe('ai function', () => {
   it('should throw an error if rules are violated', async () => {
     const { workspace } = await factories.createWorkspace()
-    const context = factories.createTelemetryContext({ workspace })
+    const context = await factories.createTelemetryContext({ workspace })
 
-    // @ts-expect-error - Incomplete provider for testing
+    // @ts-expect-error
     const provider: ProviderApiKey = {
       name: 'openai',
       provider: Providers.OpenAI,
@@ -68,9 +68,43 @@ There are rule violations:
     )
   })
 
+  it('should throw an error if Google provider is used without a user message', async () => {
+    const { workspace } = await factories.createWorkspace()
+    const context = await factories.createTelemetryContext({ workspace })
+
+    // @ts-expect-error
+    const provider: ProviderApiKey = {
+      name: 'google',
+      provider: Providers.Google,
+      token: 'google-api-key',
+      url: 'https://api.google.com',
+    }
+
+    const config = {
+      provider: provider.name,
+      model: 'test-model',
+    }
+
+    const messages: Message[] = [
+      {
+        role: MessageRole.system,
+        content: [{ type: 'text', text: 'System message' }],
+      },
+    ]
+
+    await expect(
+      ai({ context, provider, config, messages }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new ChainError({
+        code: RunErrorCodes.AIProviderConfigError,
+        message: 'Google provider requires at least one user message',
+      }),
+    )
+  })
+
   it('throw a ChainError when AI fails with APICallError', async () => {
     const { workspace } = await factories.createWorkspace()
-    const context = factories.createTelemetryContext({ workspace })
+    const context = await factories.createTelemetryContext({ workspace })
 
     const streamTextModk = vi.fn()
     streamTextModk.mockImplementation(() => {
@@ -104,7 +138,7 @@ There are rule violations:
 
   it('throw a ChainError when AI fails with generic Error', async () => {
     const { workspace } = await factories.createWorkspace()
-    const context = factories.createTelemetryContext({ workspace })
+    const context = await factories.createTelemetryContext({ workspace })
 
     const streamTextModk = vi.fn()
     streamTextModk.mockImplementation(() => {

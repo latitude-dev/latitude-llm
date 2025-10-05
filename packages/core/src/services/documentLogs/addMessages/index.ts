@@ -1,5 +1,6 @@
 import { type Message } from '@latitude-data/constants/legacyCompiler'
 
+import { VercelConfig } from '@latitude-data/constants'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { buildConversation } from '../../../helpers'
@@ -78,7 +79,7 @@ export async function addMessages({
   const streamManager = new DefaultStreamManager({
     context,
     uuid: providerLog.documentLogUuid!,
-    config: conversation.config,
+    config: conversation.config as VercelConfig,
     provider,
     output: getOutputType(conversation)!,
     schema: getInputSchema(conversation)!,
