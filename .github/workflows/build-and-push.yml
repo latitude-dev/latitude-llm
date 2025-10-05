@@ -234,6 +234,7 @@ jobs:
             BUILD_ID=${{ github.sha }}
             DD_GIT_COMMIT_SHA=${{ github.sha }}
             DD_GIT_REPOSITORY_URL=${{ github.server_url }}/${{ github.repository }}
+            DD_SITE=${{ vars.DD_SITE }}
             NEXT_PUBLIC_DATADOG_APPLICATION_ID=${{ secrets.NEXT_PUBLIC_DATADOG_APPLICATION_ID }}
             NEXT_PUBLIC_DATADOG_CLIENT_TOKEN=${{ secrets.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN }}
             NEXT_PUBLIC_DATADOG_SITE=${{ secrets.NEXT_PUBLIC_DATADOG_SITE }}
