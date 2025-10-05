@@ -60,7 +60,8 @@
     "GIT_PAGER",
     "PAGER",
     "TEST_LATITUDE_API_KEY",
-    "ECS_AGENT_URI"
+    "ECS_AGENT_URI",
+    "RELEASE_VERSION"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
