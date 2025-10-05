@@ -12,7 +12,7 @@ import {
 import { Providers } from '@latitude-data/constants'
 import { AIReturn } from '../../../services/ai'
 
-interface ConsumeStreamParams {
+type ConsumeStreamParams = {
   result: AIReturn<StreamType>
   controller: ReadableStreamDefaultController
   accumulatedText: { text: string }
@@ -35,8 +35,6 @@ export async function consumeStream({
   const reader = result.fullStream.getReader()
 
   while (true) {
-    if (error) break
-
     const { value, done } = await reader.read()
     if (done) break
 

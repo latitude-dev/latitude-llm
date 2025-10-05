@@ -20,6 +20,7 @@ import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { checkValidStream } from '../checkValidStream'
 import { isAbortError } from '../../isAbortError'
 import { createFakeProviderLog } from '../utils/createFakeProviderLog'
+import { handleAIError } from './handleAIError'
 
 export type ExecuteStepArgs = {
   controller: ReadableStreamDefaultController
@@ -64,7 +65,7 @@ export async function streamAIResponse({
   response: ChainStepResponse<StreamType>
   messages: LegacyMessage[]
   tokenUsage: Awaited<LanguageModelUsage>
-  finishReason: Awaited<AIReturn<StreamType>['finishReason']> | undefined
+  finishReason: Awaited<AIReturn<StreamType>['finishReason']>
 }> {
   const startTime = Date.now()
   const aiResult = await ai({
@@ -75,7 +76,9 @@ export async function streamAIResponse({
     schema,
     output,
     abortSignal,
+    onError: handleAIError,
   }).then((r) => r.unwrap())
+
   const checkResult = checkValidStream({ type: aiResult.type })
   if (checkResult.error) throw checkResult.error
   const accumulatedText = { text: '' }
@@ -112,16 +115,9 @@ export async function streamAIResponse({
     documentLogUuid,
   })
 
-  let finishReason
-  try {
-    finishReason = await aiResult.finishReason
-  } catch (_) {
-    // do nothing
-  }
-
   const providerLog = await createProviderLog({
     workspace,
-    finishReason,
+    finishReason: await aiResult.finishReason,
     ...buildProviderLogDto({
       workspace,
       source,
@@ -144,6 +140,6 @@ export async function streamAIResponse({
     // FIXME: Make response.output non optional when we remove `__deprecated`
     messages: response.output ?? [],
     tokenUsage: response.usage,
-    finishReason,
+    finishReason: await aiResult.finishReason,
   }
 }

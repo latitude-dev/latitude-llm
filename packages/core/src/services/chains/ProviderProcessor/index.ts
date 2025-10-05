@@ -31,18 +31,11 @@ export async function processResponse({
   documentLogUuid?: string
 }): Promise<ChainStepResponse<StreamType>> {
   const isObject = aiResult.type === 'object'
-  let text, response, reasoning, messages, output, usage, toolCalls
-  try {
-    text = await aiResult.text
-    response = await aiResult.response
-    messages = response.messages
-    output = convertResponseMessages({ messages })
-    usage = await aiResult.usage
-    toolCalls = await aiResult.toolCalls
-    reasoning = await aiResult.reasoning
-  } catch (_) {
-    // do nothing
-  }
+  const text = await aiResult.text
+  const response = await aiResult.response
+  const messages = response.messages
+  const output = convertResponseMessages({ messages })
+  const reasoning = await aiResult.reasoning
 
   return {
     streamType: aiResult.type,
@@ -50,9 +43,9 @@ export async function processResponse({
     text: text ?? '',
     object: isObject ? parseObject(text ?? '') : undefined,
     output,
-    usage: await vercelSdkFromV5ToV4.convertTokenUsage(usage),
+    usage: await vercelSdkFromV5ToV4.convertTokenUsage(aiResult.usage),
     reasoning,
-    toolCalls: await vercelSdkFromV5ToV4.convertToolCalls(toolCalls),
+    toolCalls: await vercelSdkFromV5ToV4.convertToolCalls(aiResult.toolCalls),
   }
 }
 

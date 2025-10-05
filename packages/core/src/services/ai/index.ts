@@ -1,4 +1,3 @@
-import tracer from 'dd-trace'
 import { omit } from 'lodash-es'
 
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
@@ -12,6 +11,7 @@ import {
   StreamTextResult,
   TextStreamPart,
   Tool,
+  StreamTextOnErrorCallback,
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 
@@ -74,11 +74,14 @@ function getStopWhen({ maxSteps }: { maxSteps?: number | undefined }) {
   return { stopWhen: stepCountIs(maxSteps ?? 1) }
 }
 
+export type OnErrorParameters = Parameters<StreamTextOnErrorCallback>[0]
+
 export async function ai({
   context,
   provider,
   messages: originalMessages,
   config: originalConfig,
+  onError,
   schema,
   output,
   aiSdkProvider,
@@ -87,6 +90,7 @@ export async function ai({
   context: TelemetryContext
   provider: ProviderApiKey
   config: VercelConfig
+  onError: (event: OnErrorParameters) => void
   messages: Message[]
   schema?: JSONSchema7
   output?: ObjectOutput
@@ -157,19 +161,7 @@ export async function ai({
       ...omit(config, ['schema']),
       ...stopWhen,
       messages,
-      onError: ({ error }) => {
-        const span = tracer.scope().active()
-        if (!span) {
-          console.error(error)
-          return
-        }
-
-        span.log({
-          event: '[Latitude]: AI Provider Call Error',
-          message: (error as Error)?.message,
-          error,
-        })
-      },
+      onError,
       model: languageModel,
       tools: toolsResult.value,
       abortSignal,

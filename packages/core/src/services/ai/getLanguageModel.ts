@@ -48,7 +48,9 @@ export function getLanguageModel({
 
   const configuration =
     provider.configuration as ProviderConfiguration<Providers.OpenAI>
-  const usingChatCompletions = configuration?.endpoint === 'chat_completions'
+
+  const isLegacyProvider = !configuration || !('endpoint' in configuration)
+  const usingChatCompletions = isLegacyProvider || configuration.endpoint === 'chat_completions'
 
   if (usingChatCompletions) return openAiProvider.chat(model)
 
