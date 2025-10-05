@@ -240,6 +240,8 @@ jobs:
             NEXT_PUBLIC_DATADOG_SITE=${{ secrets.NEXT_PUBLIC_DATADOG_SITE }}
             S3_BUCKET=${{ vars.STATIC_ASSETS_S3_BUCKET }}
             STATIC_ASSETS_HOST=${{ vars.STATIC_ASSETS_HOST }}
+            DD_GIT_REPOSITORY_URL=${{ github.server_url }}/${{ github.repository }}
+            DD_GIT_COMMIT_SHA=${{ github.sha }}
 
   run-migrations:
     needs: [build-and-push-private]

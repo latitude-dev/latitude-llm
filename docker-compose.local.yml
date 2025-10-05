@@ -94,7 +94,7 @@ services:
       context: .
       dockerfile: apps/websockets/docker/Dockerfile
       args:
-        PROJECT: '@latitude-data/websockets'
+        PROJECT: '@latitude-data/websockets-server'
         PROJECT_PATH: 'apps/websockets'
     restart: on-failure
     env_file:

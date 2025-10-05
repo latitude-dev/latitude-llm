@@ -7,6 +7,8 @@ ARG NEXT_PUBLIC_DATADOG_SITE
 ARG AWS_REGION
 ARG S3_BUCKET
 ARG BUILD_ID
+ARG DD_GIT_REPOSITORY_URL
+ARG DD_GIT_COMMIT_SHA
 
 
 FROM node:22-alpine AS alpine
@@ -47,7 +49,7 @@ RUN npm install -g corepack@0.31.0 && corepack enable
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
-# Install turbo with npm instead of pnpm to avoid key verification issues
+# Install turbo globally
 RUN pnpm install -g turbo
 
 FROM base AS pruner
@@ -87,12 +89,16 @@ ARG AWS_REGION
 ARG S3_BUCKET
 ARG BUILD_ID
 ARG STATIC_ASSETS_HOST
+ARG DD_GIT_REPOSITORY_URL
+ARG DD_GIT_COMMIT_SHA
 
 # Set environment variables with defaults
 ENV AWS_REGION=${AWS_REGION:-}
 ENV S3_BUCKET=${S3_BUCKET:-}
 ENV BUILD_ID=${BUILD_ID:-}
 ENV STATIC_ASSETS_HOST=${STATIC_ASSETS_HOST:-}
+ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL:-}
+ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA:-}
 
 WORKDIR /app
 
@@ -148,18 +154,31 @@ else \
   echo "Skipping S3 upload - S3_BUCKET or BUILD_ID not provided"; \
 fi
 
+# Upload source maps to Datadog
+RUN if [ -n "$DD_GIT_COMMIT_SHA" ] && [ -n "$DD_GIT_REPOSITORY_URL" ] && [ -n "$NEXT_PUBLIC_DATADOG_APPLICATION_ID" ] && [ -n "$NEXT_PUBLIC_DATADOG_CLIENT_TOKEN" ]; then \
+  echo "Uploading source maps to Datadog..."; \
+  cd apps/web && \
+  DD_API_KEY=$NEXT_PUBLIC_DATADOG_APPLICATION_ID DD_APP_KEY=$NEXT_PUBLIC_DATADOG_CLIENT_TOKEN pnpm datadog:sourcemaps; \
+else \
+  echo "Skipping Datadog source map upload - missing required environment variables"; \
+fi
+
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
 
 # PRODUCTION
-FROM alpine AS runner
+FROM node:22-alpine AS runner
 
 ARG PROJECT_PATH
+ARG DD_GIT_REPOSITORY_URL
+ARG DD_GIT_COMMIT_SHA
 
 ENV HOSTNAME=0.0.0.0
 ENV KEEP_ALIVE_TIMEOUT=601000
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV PORT=8080
+ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL:-}
+ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA:-}
 
 WORKDIR /app
 
@@ -192,9 +211,9 @@ RUN chown nextjs:nodejs apps/web/.next
 RUN chown nextjs:nodejs apps/web/.next/cache
 
 # Copy the standalone server and node_modules
-COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder --chown=nodejs:nextjs /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/node_modules ./apps/web/node_modules
 # Set permissions for local storage
 # User ID and Group ID 1001 is used to match the user 'nextjs' and group 'nodejs' in the runner image.
 RUN set -e; \

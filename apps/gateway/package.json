@@ -11,7 +11,8 @@
     "lint": "eslint src/",
     "tc": "tsc --noEmit",
     "test": "vitest --run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "datadog:sourcemaps": "datadog-ci sourcemaps upload dist --service=latitude-gateway --minified-path-prefix=/app/apps/gateway/dist"
   },
   "dependencies": {
     "@hono/node-server": "1.13.2",
@@ -33,6 +34,7 @@
     "dd-trace": "catalog:"
   },
   "devDependencies": {
+    "@datadog/datadog-ci": "catalog:",
     "@latitude-data/eslint-config": "workspace:^",
     "@latitude-data/typescript-config": "workspace:^",
     "@types/lodash-es": "^4.17.12",

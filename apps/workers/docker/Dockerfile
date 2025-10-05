@@ -1,5 +1,10 @@
 ARG PROJECT="@latitude-data/workers"
 ARG PROJECT_PATH="apps/workers"
+ARG NEXT_PUBLIC_DATADOG_APPLICATION_ID
+ARG NEXT_PUBLIC_DATADOG_CLIENT_TOKEN
+ARG NEXT_PUBLIC_DATADOG_SITE
+ARG DD_GIT_REPOSITORY_URL
+ARG DD_GIT_COMMIT_SHA
 
 FROM node:22-alpine AS alpine
 
@@ -49,17 +54,17 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
 COPY --from=pruner /app/out/full/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-  --mount=type=secret,id=SENTRY_AUTH_TOKEN \
   BUILDING_CONTAINER=true \
-  SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN 2>/dev/null || echo '')" \
   pnpm turbo build --filter="${PROJECT}..."
 
-# Run sentry:sourcemaps if SENTRY_AUTH_TOKEN secret is present and not empty
-RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
-  if [ -s /run/secrets/SENTRY_AUTH_TOKEN ]; then \
-  cd ${PROJECT_PATH} && \
-  SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN)" pnpm sentry:sourcemaps; \
-  fi
+# Upload source maps to Datadog
+RUN if [ -n "$DD_GIT_COMMIT_SHA" ] && [ -n "$DD_GIT_REPOSITORY_URL" ] && [ -n "$NEXT_PUBLIC_DATADOG_APPLICATION_ID" ] && [ -n "$NEXT_PUBLIC_DATADOG_CLIENT_TOKEN" ]; then \
+  echo "Uploading workers source maps to Datadog..."; \
+  cd apps/workers && \
+  DD_API_KEY=$NEXT_PUBLIC_DATADOG_APPLICATION_ID DD_APP_KEY=$NEXT_PUBLIC_DATADOG_CLIENT_TOKEN pnpm datadog:sourcemaps; \
+else \
+  echo "Skipping Datadog source map upload for workers - missing required environment variables"; \
+fi
 
 # Since `pnpm prune` doesn't handle recursive dependencies effectively,
 # we follow pnpm's recommended approach: remove node_modules entirely
@@ -71,11 +76,19 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --shamefully-hoist \
   --filter "${PROJECT}..."
 
-FROM alpine AS runner
+FROM node:22-alpine AS runner
 
 ARG PROJECT_PATH
+ARG DD_GIT_REPOSITORY_URL
+ARG DD_GIT_COMMIT_SHA
+ARG PORT=8080
 
+ENV PORT=$PORT
 ENV NODE_ENV=production
+ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL:-}
+ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA:-}
+
+EXPOSE $PORT
 
 # Install AWS CLI using Alpine package manager
 RUN apk add --no-cache \
@@ -95,19 +108,11 @@ USER latitude
 
 WORKDIR /app
 
-COPY --from=builder --chown=nodejs:latitude /app/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:latitude /app/${PROJECT_PATH} ./${PROJECT_PATH}
-COPY --from=builder --chown=nodejs:latitude /app/packages/telemetry/typescript ./packages/telemetry/typescript
-COPY --from=builder --chown=nodejs:latitude /app/packages/core/src/assets/eu-central-1-bundle.pem ./packages/core/src/assets/eu-central-1-bundle.pem
+COPY --from=builder --chown=latitude:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=latitude:nodejs /app/${PROJECT_PATH} ./${PROJECT_PATH}
+COPY --from=builder --chown=latitude:nodejs /app/packages/telemetry/typescript ./packages/telemetry/typescript
+COPY --from=builder --chown=latitude:nodejs /app/packages/core/src/assets/eu-central-1-bundle.pem ./packages/core/src/assets/eu-central-1-bundle.pem
 
 WORKDIR /app/${PROJECT_PATH}
 
-ARG PORT=8080
-
-ENV PORT=$PORT
-ENV NODE_ENV=production
-
-EXPOSE $PORT
-
 CMD ["node", "dist/server.js"]
-
