@@ -15,6 +15,7 @@ export const envClient = createEnv({
     NEXT_PUBLIC_DATADOG_CLIENT_TOKEN: z.string().optional(),
     NEXT_PUBLIC_DATADOG_SITE: z.string().optional(),
     NEXT_PUBLIC_NODE_ENV: z.string().optional(),
+    NEXT_PUBLIC_RELEASE_VERSION: z.string().optional(),
   },
   runtimeEnv: {
     NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL:
@@ -32,5 +33,6 @@ export const envClient = createEnv({
     NEXT_PUBLIC_DATADOG_SITE:
       process.env.NEXT_PUBLIC_DATADOG_SITE ?? 'datadoghq.eu',
     NEXT_PUBLIC_NODE_ENV: process.env.NODE_ENV ?? 'development',
+    NEXT_PUBLIC_RELEASE_VERSION: process.env.RELEASE_VERSION ?? '',
   },
 })

@@ -301,6 +301,8 @@ export const env = createEnv({
       .string()
       .optional()
       .default('709a3398-ed26-4e77-beef-90ed288cdd0a'),
+
+    RELEASE_VERSION: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,

@@ -9,7 +9,6 @@ ARG S3_BUCKET
 ARG BUILD_ID
 ARG DD_GIT_REPOSITORY_URL
 ARG DD_GIT_COMMIT_SHA
-ARG DATADOK_API_KEY
 
 
 FROM node:22-alpine AS alpine
@@ -68,11 +67,9 @@ RUN turbo prune "${PROJECT}" --docker
 FROM base AS builder
 
 ARG AWS_REGION
-ARG S3_BUCKET
 
 ARG BUILD_ID
 
-ARG DATADOK_API_KEY
 ARG DD_GIT_COMMIT_SHA
 ARG DD_GIT_REPOSITORY_URL
 
@@ -92,7 +89,6 @@ ENV S3_BUCKET=${S3_BUCKET:-}
 
 ENV BUILD_ID=${BUILD_ID:-}
 
-ENV DATADOG_API_KEY=$DATADOG_API_KEY
 ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA:-}
 ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL:-}
 
@@ -105,6 +101,7 @@ ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
 ENV NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
 
 ENV STATIC_ASSETS_HOST=${STATIC_ASSETS_HOST:-}
+ENV RELEASE_VERSION=${DD_GIT_COMMIT_SHA:-unknown}
 
 WORKDIR /app
 
@@ -135,6 +132,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   AWS_REGION=$AWS_REGION && \
   S3_BUCKET=$S3_BUCKET && \
   BUILD_ID=$BUILD_ID && \
+  RELEASE_VERSION=$RELEASE_VERSION && \
   STATIC_ASSETS_HOST=$STATIC_ASSETS_HOST && \
   if [ -n "$STATIC_ASSETS_HOST" ] && [ -n "$BUILD_ID" ]; then NEXT_PUBLIC_STATIC_ASSETS_URL="https://$STATIC_ASSETS_HOST/static-assets/$BUILD_ID"; fi && \
   NODE_OPTIONS="--max-old-space-size=8192" && \
@@ -161,13 +159,15 @@ else \
 fi
 
 # Upload source maps to Datadog
-RUN if [ -n "$DATADOG_API_KEY" ]; then \
-  echo "Uploading source maps to Datadog..."; \
-  cd apps/web && \
-  pnpm datadog:sourcemaps; \
-else \
-  echo "Skipping Datadog source map upload - missing required environment variables (DATADOG_API_KEY)"; \
-fi
+RUN --mount=type=secret,id=DATADOG_API_KEY \
+  if [ -s /run/secrets/DATADOG_API_KEY ]; then \
+    echo "Uploading source maps to Datadog..."; \
+    export DATADOG_API_KEY="$(cat /run/secrets/DATADOG_API_KEY)" && \
+    cd apps/web && \
+    pnpm datadog:sourcemaps; \
+  else \
+    echo "Skipping Datadog source map upload - DATADOG_API_KEY secret not provided"; \
+  fi
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
 
@@ -185,6 +185,7 @@ ENV NODE_ENV=production
 ENV PORT=8080
 ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL:-}
 ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA:-}
+ENV RELEASE_VERSION=${DD_GIT_COMMIT_SHA:-}
 
 WORKDIR /app
 

@@ -15,7 +15,7 @@
     "tc": "tsc --noEmit",
     "test": "TZ=UTC vitest --run",
     "test:watch": "TZ=UTC vitest",
-    "datadog:sourcemaps": "datadog-ci sourcemaps upload .next/static --service=latitude-web --minified-path-prefix=/_next/static"
+    "datadog:sourcemaps": "datadog-ci sourcemaps upload .next/static --service=latitude-llm-web --minified-path-prefix=/_next/static --release-version=${RELEASE_VERSION:-unknown}"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.850.0",

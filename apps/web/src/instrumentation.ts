@@ -4,7 +4,7 @@ export async function register() {
     const { envClient } = await import('./envClient')
 
     tracer.init({
-      service: 'latitude-web',
+      service: 'latitude-llm-web',
       env: envClient.NEXT_PUBLIC_NODE_ENV || 'development',
       version: process.env.npm_package_version || '1.0.0',
       logInjection: true,

@@ -1,6 +1,5 @@
 ARG PROJECT="@latitude-data/workers"
 ARG PROJECT_PATH="apps/workers"
-ARG DATADOG_API_KEY
 ARG DD_GIT_REPOSITORY_URL
 ARG DD_GIT_COMMIT_SHA
 
@@ -36,9 +35,9 @@ FROM base AS builder
 
 ARG PROJECT
 ARG PROJECT_PATH
-ARG DATADOG_API_KEY
+ARG DD_GIT_COMMIT_SHA
 
-ENV DATADOG_API_KEY=$DATADOG_API_KEY
+ENV RELEASE_VERSION=${DD_GIT_COMMIT_SHA:-unknown}
 
 WORKDIR /app
 
@@ -59,13 +58,15 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   pnpm turbo build --filter="${PROJECT}..."
 
 # Upload source maps to Datadog
-RUN if [ -n "$DATADOG_API_KEY" ]; then \
-  echo "Uploading workers source maps to Datadog..."; \
-  cd apps/workers && \
-  pnpm datadog:sourcemaps; \
-else \
-  echo "Skipping Datadog source map upload for workers - missing required environment variables (DATADOG_API_KEY)"; \
-fi
+RUN --mount=type=secret,id=DATADOG_API_KEY \
+  if [ -s /run/secrets/DATADOG_API_KEY ]; then \
+    echo "Uploading workers source maps to Datadog..."; \
+    export DATADOG_API_KEY="$(cat /run/secrets/DATADOG_API_KEY)" && \
+    cd apps/workers && \
+    pnpm datadog:sourcemaps; \
+  else \
+    echo "Skipping Datadog source map upload for workers - DATADOG_API_KEY secret not provided"; \
+  fi
 
 # Since `pnpm prune` doesn't handle recursive dependencies effectively,
 # we follow pnpm's recommended approach: remove node_modules entirely
@@ -88,6 +89,7 @@ ENV PORT=$PORT
 ENV NODE_ENV=production
 ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL:-}
 ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA:-}
+ENV RELEASE_VERSION=${DD_GIT_COMMIT_SHA:-}
 
 EXPOSE $PORT
 

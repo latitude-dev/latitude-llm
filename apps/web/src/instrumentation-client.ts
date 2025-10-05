@@ -12,7 +12,7 @@ if (
     applicationId: envClient.NEXT_PUBLIC_DATADOG_APPLICATION_ID,
     clientToken: envClient.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN,
     site: (envClient.NEXT_PUBLIC_DATADOG_SITE as Site) || 'datadoghq.com',
-    service: 'latitude-web',
+    service: 'latitude-llm-web',
     env: envClient.NEXT_PUBLIC_NODE_ENV || 'development',
     version: '1.0.0',
     sessionSampleRate: 100,

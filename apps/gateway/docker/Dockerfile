@@ -2,7 +2,6 @@ ARG PROJECT="@latitude-data/gateway"
 ARG PROJECT_PATH="apps/gateway"
 ARG DD_GIT_REPOSITORY_URL
 ARG DD_GIT_COMMIT_SHA
-ARG DATADOG_API_KEY
 
 FROM node:22-alpine AS alpine
 
@@ -48,9 +47,9 @@ FROM base AS builder
 
 ARG PROJECT
 ARG PROJECT_PATH
-ARG DATADOG_API_KEY
+ARG DD_GIT_COMMIT_SHA
 
-ENV DATADOG_API_KEY=$DATADOG_API_KEY
+ENV RELEASE_VERSION=${DD_GIT_COMMIT_SHA:-unknown}
 
 WORKDIR /app
 
@@ -71,13 +70,15 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   pnpm turbo build --filter="${PROJECT}..."
 
 # Upload source maps to Datadog
-RUN if [ -n "$DATADOG_API_KEY" ]; then \
-  echo "Uploading gateway source maps to Datadog..."; \
-  cd apps/gateway && \
-  pnpm datadog:sourcemaps; \
-else \
-  echo "Skipping Datadog source map upload for gateway - missing required environment variables (DATADOG_API_KEY)"; \
-fi
+RUN --mount=type=secret,id=DATADOG_API_KEY \
+  if [ -s /run/secrets/DATADOG_API_KEY ]; then \
+    echo "Uploading gateway source maps to Datadog..."; \
+    export DATADOG_API_KEY="$(cat /run/secrets/DATADOG_API_KEY)" && \
+    cd apps/gateway && \
+    pnpm datadog:sourcemaps; \
+  else \
+    echo "Skipping Datadog source map upload for gateway - DATADOG_API_KEY secret not provided"; \
+  fi
 
 # Since `pnpm prune` doesn't handle recursive dependencies effectively,
 # we follow pnpm's recommended approach: remove node_modules entirely
@@ -104,6 +105,7 @@ ENV NODE_ENV=production
 ENV KEEP_ALIVE_TIMEOUT=601000
 ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL:-}
 ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA:-}
+ENV RELEASE_VERSION=${DD_GIT_COMMIT_SHA:-}
 
 EXPOSE $PORT
 

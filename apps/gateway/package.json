@@ -12,7 +12,7 @@
     "tc": "tsc --noEmit",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "datadog:sourcemaps": "datadog-ci sourcemaps upload dist --service=latitude-gateway --minified-path-prefix=/app/apps/gateway/dist"
+    "datadog:sourcemaps": "datadog-ci sourcemaps upload dist --service=latitude-llm-gateway --minified-path-prefix=/app/apps/gateway/dist --release-version=${RELEASE_VERSION:-unknown}"
   },
   "dependencies": {
     "@hono/node-server": "1.13.2",

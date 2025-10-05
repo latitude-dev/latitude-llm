@@ -11,7 +11,7 @@
     "lint": "eslint src/",
     "start": "node -r module-alias/register ./dist --env=production",
     "tc": "tsc --noEmit",
-    "datadog:sourcemaps": "datadog-ci sourcemaps upload dist --service=latitude-workers --minified-path-prefix=/app/apps/workers/dist"
+    "datadog:sourcemaps": "datadog-ci sourcemaps upload dist --service=latitude-llm-workers --minified-path-prefix=/app/apps/workers/dist --release-version=${RELEASE_VERSION:-unknown}"
   },
   "dependencies": {
     "@bull-board/api": "6.10.1",

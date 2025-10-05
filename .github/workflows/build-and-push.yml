@@ -228,21 +228,21 @@ jobs:
             NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
             AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
             AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
           build-args: |
             AWS_REGION=${{ vars.AWS_REGION }}
             BUILD_ID=${{ github.sha }}
+            DD_GIT_COMMIT_SHA=${{ github.sha }}
+            DD_GIT_REPOSITORY_URL=${{ github.server_url }}/${{ github.repository }}
+            NEXT_PUBLIC_DATADOG_APPLICATION_ID=${{ secrets.NEXT_PUBLIC_DATADOG_APPLICATION_ID }}
+            NEXT_PUBLIC_DATADOG_CLIENT_TOKEN=${{ secrets.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN }}
+            NEXT_PUBLIC_DATADOG_SITE=${{ secrets.NEXT_PUBLIC_DATADOG_SITE }}
             NEXT_PUBLIC_DOCS_URL=${{ vars.NEXT_PUBLIC_DOCS_URL }}
             NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL=${{ vars.NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL }}
             NEXT_PUBLIC_POSTHOG_HOST=${{ secrets.NEXT_PUBLIC_POSTHOG_HOST }}
             NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
-            NEXT_PUBLIC_DATADOG_APPLICATION_ID=${{ secrets.NEXT_PUBLIC_DATADOG_APPLICATION_ID }}
-            NEXT_PUBLIC_DATADOG_CLIENT_TOKEN=${{ secrets.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN }}
-            NEXT_PUBLIC_DATADOG_SITE=${{ secrets.NEXT_PUBLIC_DATADOG_SITE }}
-            DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
             S3_BUCKET=${{ vars.STATIC_ASSETS_S3_BUCKET }}
             STATIC_ASSETS_HOST=${{ vars.STATIC_ASSETS_HOST }}
-            DD_GIT_REPOSITORY_URL=${{ github.server_url }}/${{ github.repository }}
-            DD_GIT_COMMIT_SHA=${{ github.sha }}
 
   run-migrations:
     needs: [build-and-push-private]
