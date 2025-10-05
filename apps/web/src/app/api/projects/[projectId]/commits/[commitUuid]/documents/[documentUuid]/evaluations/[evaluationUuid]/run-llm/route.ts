@@ -84,7 +84,7 @@ const buildWriteErrorToStream =
   }
 
 const inputSchema = z.object({
-  parameters: z.record(z.any()),
+  parameters: z.record(z.string(), z.any()),
 })
 
 export const POST = errorHandler(

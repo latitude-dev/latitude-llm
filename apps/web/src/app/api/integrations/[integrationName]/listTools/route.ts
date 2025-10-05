@@ -1,10 +1,10 @@
+import { z } from 'zod'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { listTools } from '@latitude-data/core/services/integrations/index'
-import { LatitudeTool, McpTool } from '@latitude-data/constants'
-import { getLatitudeToolDefinition } from '@latitude-data/core/services/latitudeTools/helpers'
+import { LATITUDE_TOOLS } from '@latitude-data/core/services/latitudeTools/tools'
 import { Workspace } from '@latitude-data/core/schema/types'
 
 export const GET = errorHandler(
@@ -22,16 +22,16 @@ export const GET = errorHandler(
       },
     ) => {
       if (params.integrationName === 'latitude') {
-        const latitudeTools: McpTool[] = Object.values(LatitudeTool).map(
-          (latitudeTool) => {
-            const toolDefinition = getLatitudeToolDefinition(latitudeTool)!
-            return {
-              name: latitudeTool,
-              description: toolDefinition.description,
-              inputSchema: toolDefinition.parameters,
-            }
-          },
-        )
+        const latitudeTools = LATITUDE_TOOLS.map((tool) => ({
+          name: tool.name,
+          description: tool.definition().description,
+          inputSchema: z.toJSONSchema(
+            tool.definition().inputSchema as z.ZodType,
+            {
+              target: 'openapi-3.0',
+            },
+          ),
+        }))
         return NextResponse.json(
           {
             ok: true,

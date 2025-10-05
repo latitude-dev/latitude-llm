@@ -1,9 +1,9 @@
 import { createPipedreamTokenAction } from '$/actions/integrations/pipedream/createToken'
 import { useCallback, useMemo, useState } from 'react'
-import { useServerAction } from 'zsa-react'
 import { createFrontendClient, type App } from '@pipedream/sdk/browser'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import type { TokenCallback } from 'node_modules/@pipedream/sdk/dist/esm/core/index.mjs'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 export function useConnectToPipedreamApp(app: App | undefined) {
   const { data: workspace } = useCurrentWorkspace()
@@ -13,7 +13,9 @@ export function useConnectToPipedreamApp(app: App | undefined) {
     undefined,
   )
 
-  const { execute: generateToken } = useServerAction(createPipedreamTokenAction)
+  const { execute: generateToken } = useLatitudeAction(
+    createPipedreamTokenAction,
+  )
 
   const tokenCallback = useCallback<TokenCallback>(async () => {
     const [data, error] = await generateToken()

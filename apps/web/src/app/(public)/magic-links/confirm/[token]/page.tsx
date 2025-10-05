@@ -1,7 +1,8 @@
 'use client'
 
-import { use, useEffect } from 'react'
+import { use } from 'react'
 
+import { useOnce } from '$/hooks/useMount'
 import { confirmMagicLinkTokenAction } from '$/actions/magicLinkTokens/confirm'
 import { FocusLayout } from '$/components/layouts'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
@@ -20,9 +21,9 @@ export default function ConfirmMagicLink({
     onSuccess: () => {}, // We don't want the default toast message in this case
   })
 
-  useEffect(() => {
+  useOnce(() => {
     setTimeout(() => execute({ token, returnTo }), 1000)
-  }, [execute, returnTo, token])
+  })
 
   return (
     <FocusLayout

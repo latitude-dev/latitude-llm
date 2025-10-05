@@ -1,5 +1,4 @@
-import { LatitudeTool } from '@latitude-data/constants'
-import { ToolExecutionOptions } from 'ai'
+import { LatitudeTool, ToolExecutionOptions } from '@latitude-data/constants'
 import { TypedResult } from '../../lib/Result'
 import { telemetry, TelemetryContext } from '../../telemetry'
 

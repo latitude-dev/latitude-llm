@@ -1,3 +1,5 @@
+import { Tool } from 'ai'
+import { jsonSchema } from '@ai-sdk/provider-utils'
 import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
 import { PromisedResult } from '../../Transaction'
 import { Result } from '../../Result'
@@ -5,7 +7,6 @@ import { ResolvedTools, ToolSource } from './types'
 import { IntegrationsRepository } from '../../../repositories'
 import { listTools } from '../../../services/integrations'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { Tool } from 'ai'
 import { callIntegrationTool } from '../../../services/integrations/McpClient/callTool'
 import { StreamManager } from '..'
 import { LATITUDE_TOOL_PREFIX } from '@latitude-data/constants'
@@ -104,8 +105,9 @@ async function addIntegrationTools({
   integrationsScope: IntegrationsRepository
   streamManager: StreamManager
 }) {
-  if (integrationTools[integrationName])
+  if (integrationTools[integrationName]) {
     return Result.ok(integrationTools[integrationName])
+  }
 
   const integrationResult = await integrationsScope.findByName(integrationName)
   if (integrationResult.error) return integrationResult
@@ -120,7 +122,7 @@ async function addIntegrationTools({
       `${mcpTool.name}`,
       {
         description: mcpTool?.description?.slice(0, 1023) ?? '',
-        parameters: mcpTool.inputSchema,
+        inputSchema: jsonSchema(mcpTool.inputSchema),
         execute: async (args, toolCall) => {
           const $tool = telemetry.tool(streamManager.$completion!.context, {
             name: `${LATITUDE_TOOL_PREFIX}_${integrationName}_${mcpTool.name}`,
@@ -169,7 +171,7 @@ async function addIntegrationTools({
             return result
           }
         },
-      },
+      } satisfies Tool,
     ]),
   )
 

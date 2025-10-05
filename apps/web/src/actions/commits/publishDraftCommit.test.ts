@@ -49,12 +49,12 @@ describe('publishDraftCommitAction', () => {
 
   describe('unauthorized', () => {
     it('errors when the user is not authenticated', async () => {
-      const [_, error] = await publishDraftCommitAction({
+      const { serverError } = await publishDraftCommitAction({
         projectId: project.id,
         id: commit.id,
       })
 
-      expect(error!.name).toEqual('UnauthorizedError')
+      expect(serverError).toEqual('Unauthorized')
     })
   })
 
@@ -67,12 +67,12 @@ describe('publishDraftCommitAction', () => {
     })
 
     it('returns error when project is not found', async () => {
-      const [_, error] = await publishDraftCommitAction({
+      const { serverError } = await publishDraftCommitAction({
         projectId: 999992,
         id: commit.id,
       })
 
-      expect(error!.name).toEqual('NotFoundError')
+      expect(serverError).toEqual('Project not found')
     })
 
     it('returns error when commit does not belongs to project', async () => {
@@ -82,20 +82,20 @@ describe('publishDraftCommitAction', () => {
         project: urelatedProject,
         user: unrelatedUser,
       })
-      const [_, error] = await publishDraftCommitAction({
+      const { serverError } = await publishDraftCommitAction({
         projectId: project.id,
         id: unrelatedCommit.id,
       })
 
-      expect(error!.name).toEqual('NotFoundError')
+      expect(serverError).toEqual('Commit not found')
     })
 
     it('returns error when the commit is merged', async () => {
-      const [_, error] = await publishDraftCommitAction({
+      const { serverError } = await publishDraftCommitAction({
         projectId: project.id,
         id: commit.id,
       })
-      expect(error!.name).toEqual('BadRequestError')
+      expect(serverError).toEqual('Cannot modify a merged commit')
     })
 
     it('merge the commit', async () => {
@@ -108,7 +108,7 @@ describe('publishDraftCommitAction', () => {
         content: 'conentt updated',
         commit: draft,
       }).then((r) => r.unwrap())
-      const [data] = await publishDraftCommitAction({
+      const { data } = await publishDraftCommitAction({
         projectId: project.id,
         id: draft.id,
       })

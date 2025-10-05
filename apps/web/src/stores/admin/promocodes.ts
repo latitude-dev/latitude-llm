@@ -35,7 +35,7 @@ export function usePromocodes(
       onError: (error) => {
         toast({
           title: 'Error',
-          description: error.err.message,
+          description: error.message,
           variant: 'destructive',
         })
       },
@@ -53,7 +53,7 @@ export function usePromocodes(
       onError: (error) => {
         toast({
           title: 'Error',
-          description: error.err.message,
+          description: error.message,
           variant: 'destructive',
         })
       },
@@ -75,7 +75,7 @@ export function usePromocodes(
       onError: (error) => {
         toast({
           title: 'Error',
-          description: error.err.message,
+          description: error.message,
           variant: 'destructive',
         })
       },

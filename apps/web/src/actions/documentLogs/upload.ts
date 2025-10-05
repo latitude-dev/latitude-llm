@@ -11,8 +11,7 @@ import {
 } from '@latitude-data/core/constants'
 
 export const uploadDocumentLogsAction = withDocument
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       csvDelimiter: z.enum(DELIMITERS_KEYS, {
         message: 'Choose a valid delimiter option',
@@ -28,7 +27,7 @@ export const uploadDocumentLogsAction = withDocument
         ),
     }),
   )
-  .handler(async ({ ctx, input }) => {
+  .action(async ({ ctx, parsedInput }) => {
     const commitsScope = new CommitsRepository(ctx.workspace.id)
     const commit = await commitsScope
       .getCommitByUuid({
@@ -41,8 +40,8 @@ export const uploadDocumentLogsAction = withDocument
       workspace: ctx.workspace,
       document: ctx.document,
       commit,
-      csvDelimiter: input.csvDelimiter,
-      logsFile: input.logsFile,
+      csvDelimiter: parsedInput.csvDelimiter,
+      logsFile: parsedInput.logsFile,
     })
 
     return { success: true }

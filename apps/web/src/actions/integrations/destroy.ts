@@ -7,16 +7,11 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const destroyIntegrationAction = authProcedure
-  .createServerAction()
-  .input(
-    z.object({
-      id: z.number(),
-    }),
-  )
-  .handler(async ({ input, ctx }) => {
+  .inputSchema(z.object({ id: z.number() }))
+  .action(async ({ parsedInput, ctx }) => {
     const integrationsRepo = new IntegrationsRepository(ctx.workspace.id)
     const integration = await integrationsRepo
-      .find(input.id)
+      .find(parsedInput.id)
       .then((r) => r.unwrap())
 
     return destroyIntegration(integration).then((r) => r.unwrap())

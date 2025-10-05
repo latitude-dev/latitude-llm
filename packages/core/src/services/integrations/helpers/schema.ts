@@ -13,8 +13,8 @@ export type ExternalMcpIntegrationConfiguration = z.infer<
 >
 
 export const hostedMcpIntegrationConfigurationFormSchema = z.object({
-  type: z.nativeEnum(HostedIntegrationType),
-  env: z.record(z.string()).optional(),
+  type: z.enum(HostedIntegrationType),
+  env: z.record(z.string(), z.string()).optional(),
 })
 
 export type HostedMcpIntegrationConfigurationForm = z.infer<
@@ -22,7 +22,7 @@ export type HostedMcpIntegrationConfigurationForm = z.infer<
 >
 
 export const hostedMcpIntegrationConfigurationSchema = z.object({
-  type: z.nativeEnum(HostedIntegrationType),
+  type: z.enum(HostedIntegrationType),
   url: z.string(),
 })
 

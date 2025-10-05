@@ -53,11 +53,11 @@ describe('deleteWebhookAction', () => {
     it('errors when the user is not authenticated', async () => {
       mocks.getSession.mockResolvedValue(null)
 
-      const [_, error] = await deleteWebhookAction({
+      const { serverError } = await deleteWebhookAction({
         id: webhook.id,
       })
 
-      expect(error!.name).toEqual('UnauthorizedError')
+      expect(serverError).toEqual('Unauthorized')
       expect(mocks.publisher.publishLater).not.toHaveBeenCalled()
     })
   })
@@ -71,23 +71,25 @@ describe('deleteWebhookAction', () => {
     })
 
     it('successfully deletes a webhook', async () => {
-      const [data, error] = await deleteWebhookAction({
-        id: webhook.id,
-      })
+      const { data, serverError, validationErrors } = await deleteWebhookAction(
+        {
+          id: webhook.id,
+        },
+      )
 
-      expect(error).toBeNull()
+      expect(serverError).toBeUndefined()
+      expect(validationErrors).toBeUndefined()
       expect(data).toBeDefined()
       expect(data!.id).toEqual(webhook.id)
       expect(mocks.publisher.publishLater).not.toHaveBeenCalled()
     })
 
     it('returns error when webhook is not found', async () => {
-      const [_, error] = await deleteWebhookAction({
+      const { serverError } = await deleteWebhookAction({
         id: 999999,
       })
 
-      expect(error).toBeDefined()
-      expect(error!.name).toEqual('NotFoundError')
+      expect(serverError).toEqual('Webhook not found')
       expect(mocks.publisher.publishLater).not.toHaveBeenCalled()
     })
   })

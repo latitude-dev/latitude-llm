@@ -15,10 +15,6 @@ import { createMistral, MistralProvider } from '@ai-sdk/mistral'
 import { createOpenAI, type OpenAIProvider } from '@ai-sdk/openai'
 import { createPerplexity, PerplexityProvider } from '@ai-sdk/perplexity'
 import { createXai, XaiProvider } from '@ai-sdk/xai'
-import {
-  type Message,
-  MessageRole,
-} from '@latitude-data/constants/legacyCompiler'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { TelemetryContext } from '../../telemetry'
 
@@ -38,19 +34,6 @@ import { vertexConfigurationSchema } from './providers/helpers/vertex'
 export { type PartialPromptConfig as PartialConfig } from '@latitude-data/constants'
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1'
-
-function isFirstMessageOfUserType(messages: Message[]) {
-  const message = messages.find((m) => m.role === MessageRole.user)
-
-  if (message) return Result.nil()
-
-  return Result.error(
-    new ChainError({
-      code: RunErrorCodes.AIProviderConfigError,
-      message: 'Google provider requires at least one user message',
-    }),
-  )
-}
 
 function createAmazonBedrockProvider(
   context: TelemetryContext,
@@ -120,17 +103,18 @@ export type LlmProvider =
 export function createProvider({
   context,
   provider,
-  messages,
   apiKey,
   url,
   config,
 }: {
   context: TelemetryContext
   provider: ProviderApiKey
-  messages: Message[]
   apiKey: string
   url?: string
-  config?: PartialPromptConfig
+  config?: {
+    model: string
+    azure?: PartialPromptConfig['azure']
+  }
 }): TypedResult<LlmProvider, ChainError<RunErrorCodes.AIProviderConfigError>> {
   const type = provider.provider
   switch (type) {
@@ -139,8 +123,6 @@ export function createProvider({
         createOpenAI({
           fetch: instrumentedFetch({ context }),
           apiKey,
-          // Needed for OpenAI to return token usage
-          compatibility: 'strict',
         }),
       )
     case Providers.Groq:
@@ -148,7 +130,6 @@ export function createProvider({
         createOpenAI({
           fetch: instrumentedFetch({ context }),
           apiKey,
-          compatibility: 'compatible',
           baseURL: GROQ_API_URL,
         }),
       )
@@ -175,9 +156,6 @@ export function createProvider({
         }),
       )
     case Providers.Google: {
-      const firstMessageResult = isFirstMessageOfUserType(messages)
-      if (firstMessageResult.error) return firstMessageResult
-
       return Result.ok(
         createGoogleGenerativeAI({
           fetch: instrumentedFetch({ context }),
@@ -191,12 +169,12 @@ export function createProvider({
         maybeConfig: provider.configuration,
       })
       if (result.error) return result
-      const config = result.value
+      const vertexConfig = result.value
 
       return Result.ok(
         createVertex({
           fetch: instrumentedFetch({ context }),
-          ...config,
+          ...vertexConfig,
         }),
       )
     }
@@ -207,12 +185,12 @@ export function createProvider({
         maybeConfig: provider.configuration,
       })
       if (result.error) return result
-      const config = result.value
+      const vertexConfig = result.value
 
       return Result.ok(
         createVertexAnthropic({
           fetch: instrumentedFetch({ context }),
-          ...config,
+          ...vertexConfig,
         }),
       )
     }
@@ -242,7 +220,6 @@ export function createProvider({
         createOpenAI({
           fetch: instrumentedFetch({ context }),
           apiKey,
-          compatibility: 'compatible',
           baseURL: url,
         }),
       )
