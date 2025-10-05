@@ -11,7 +11,7 @@ export const createPipedreamTokenAction = authProcedure
       externalUserId: z.string(),
     }),
   )
-  .handler(async ({ input, ctx }) =>
+  .handler(async ({ ctx }) =>
     createConnectToken({
       workspace: ctx.workspace,
     }).then((r) => r.unwrap()),

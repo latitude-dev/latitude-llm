@@ -21,7 +21,7 @@ export default {
   definition: (context?: TelemetryContext) => ({
     description:
       'Allows you to explicitly understand, plan, and reflect on actions.',
-    inputSchema: z.object({
+    parameters: z.object({
       action: z
         .enum(['understand', 'plan', 'reflect'])
         .describe(
