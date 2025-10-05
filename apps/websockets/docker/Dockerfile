@@ -61,7 +61,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --shamefully-hoist \
   --filter "${PROJECT}..."
 
-FROM alpine AS runner
+FROM node:22-alpine AS runner
 
 ARG PROJECT_PATH
 
@@ -73,15 +73,14 @@ USER latitude
 
 WORKDIR /app
 
-COPY --from=builder --chown=nodejs:latitude /app/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:latitude /app/${PROJECT_PATH} ./${PROJECT_PATH}
+COPY --from=builder --chown=latitude:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=latitude:nodejs /app/${PROJECT_PATH} ./${PROJECT_PATH}
 
 WORKDIR /app/${PROJECT_PATH}
 
 ARG PORT=8080
 
 ENV PORT=$PORT
-ENV NODE_ENV=production
 
 EXPOSE $PORT
 

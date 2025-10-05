@@ -14,7 +14,8 @@
     "start": "next start",
     "tc": "tsc --noEmit",
     "test": "TZ=UTC vitest --run",
-    "test:watch": "TZ=UTC vitest"
+    "test:watch": "TZ=UTC vitest",
+    "datadog:sourcemaps": "datadog-ci sourcemaps upload .next/static --service=latitude-web --minified-path-prefix=/_next/static"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.850.0",
@@ -84,6 +85,7 @@
     "zustand": "4.5.6"
   },
   "devDependencies": {
+    "@datadog/datadog-ci": "catalog:",
     "@faker-js/faker": "^8.4.1",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
