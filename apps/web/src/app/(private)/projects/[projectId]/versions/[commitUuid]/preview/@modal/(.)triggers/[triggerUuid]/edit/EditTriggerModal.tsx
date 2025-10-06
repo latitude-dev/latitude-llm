@@ -11,10 +11,8 @@ import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { EditEmailTrigger } from './_components/EmailTrigger'

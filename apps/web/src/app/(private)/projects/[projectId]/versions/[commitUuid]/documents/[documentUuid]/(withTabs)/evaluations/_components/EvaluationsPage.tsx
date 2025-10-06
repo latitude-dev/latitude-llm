@@ -4,10 +4,8 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { EvaluationsActions } from './EvaluationsActions'
 import { EvaluationsTable } from './EvaluationsTable'
 import { EvaluationsTemplates } from './EvaluationsTemplates'

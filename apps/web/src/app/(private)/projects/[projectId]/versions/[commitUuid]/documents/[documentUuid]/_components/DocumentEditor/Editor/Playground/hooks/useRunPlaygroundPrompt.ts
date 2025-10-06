@@ -6,7 +6,7 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 import { DocumentVersion } from '@latitude-data/core/schema/types'
 import { TraceContext } from '@latitude-data/constants'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { useCallback, useMemo } from 'react'
 
 export function useRunPlaygroundPrompt({

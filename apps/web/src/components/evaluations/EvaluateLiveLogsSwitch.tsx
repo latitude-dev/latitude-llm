@@ -7,10 +7,8 @@ import {
 } from '@latitude-data/constants'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback } from 'react'
 import { EVALUATION_SPECIFICATIONS } from './index'
 

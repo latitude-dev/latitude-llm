@@ -12,10 +12,8 @@ import { useEvaluationV2Stats } from '$/stores/evaluationsV2'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback, useEffect, useState } from 'react'
 import { useDebounce, useDebouncedCallback } from 'use-debounce'
 import { EvaluationTitle } from '../../_components/EvaluationTitle'

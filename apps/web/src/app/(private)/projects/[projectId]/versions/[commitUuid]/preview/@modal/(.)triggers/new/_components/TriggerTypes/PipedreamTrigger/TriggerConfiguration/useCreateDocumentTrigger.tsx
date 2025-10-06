@@ -1,9 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 import { DocumentTriggerType } from '@latitude-data/constants'

@@ -2,10 +2,8 @@ import { useMemo, useRef, useState } from 'react'
 import { cn } from '@latitude-data/web-ui/utils'
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { DocumentRoutes } from '$/services/routes'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'

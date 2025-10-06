@@ -24,10 +24,8 @@ import {
   BlankSlateStep,
   BlankSlateWithSteps,
 } from '@latitude-data/web-ui/molecules/BlankSlateWithSteps'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback, useState } from 'react'
 import { EvaluationsGenerator } from './EvaluationsGenerator'
 import { EvaluationV2 } from '@latitude-data/core/constants'

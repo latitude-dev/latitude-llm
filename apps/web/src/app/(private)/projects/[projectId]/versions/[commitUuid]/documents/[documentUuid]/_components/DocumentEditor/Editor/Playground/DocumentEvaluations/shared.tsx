@@ -4,10 +4,8 @@ import {
   EvaluationV2,
 } from '@latitude-data/core/constants'
 import { DocumentVersion } from '@latitude-data/core/schema/types'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 
 export type Props = {
   results: Record<string, EvaluationResultV2>

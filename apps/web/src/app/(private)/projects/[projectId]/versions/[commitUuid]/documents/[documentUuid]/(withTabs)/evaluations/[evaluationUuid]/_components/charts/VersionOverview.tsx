@@ -9,7 +9,7 @@ import {
   ChartWrapper,
   ScatterChart,
 } from '@latitude-data/web-ui/molecules/Charts'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo } from 'react'
 import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'

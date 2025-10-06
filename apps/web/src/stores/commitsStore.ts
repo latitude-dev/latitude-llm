@@ -1,5 +1,5 @@
 'use client'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { createDraftCommitAction } from '$/actions/commits/create'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
@@ -10,6 +10,9 @@ import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { Commit } from '@latitude-data/core/schema/types'
 import { CommitStatus } from '@latitude-data/core/constants'
+import { setCommitMainDocumentAction } from '$/actions/commits/setCommitMainDocumentAction'
+import { useEvents } from '$/lib/events'
+import { useCallback } from 'react'
 
 type CommitOptions = SWRConfiguration & {
   onSuccessCreate?: (commit: Commit) => void
@@ -88,7 +91,6 @@ export function useCommitsFromProject(
       },
     },
   )
-
   const { execute: publishDraft, isPending: isPublishing } = useLatitudeAction(
     publishDraftCommitAction,
     {
@@ -107,6 +109,52 @@ export function useCommitsFromProject(
       },
     },
   )
+  const {
+    execute: executeSetCommitMainDocument,
+    isPending: isSettingMainDocument,
+  } = useLatitudeAction(setCommitMainDocumentAction, {
+    onSuccess: async ({ data: updatedCommit }) => {
+      mutate(
+        data.map((item) =>
+          item.id === updatedCommit.id ? updatedCommit : item,
+        ),
+      )
+    },
+  })
+  const setCommitMainDocument = useCallback(
+    ({
+      projectId,
+      commitId,
+      documentUuid,
+    }: {
+      projectId: number
+      commitId: number
+      documentUuid: string | undefined
+    }) => {
+      // Optimistically update the commit main document
+      mutate((data) =>
+        data?.map((item) =>
+          item.id === commitId
+            ? { ...item, mainDocumentUuid: documentUuid ?? null }
+            : item,
+        ),
+      )
+
+      executeSetCommitMainDocument({
+        projectId,
+        commitId,
+        documentUuid,
+      })
+    },
+    [executeSetCommitMainDocument, mutate],
+  )
+
+  useEvents({
+    onCommitUpdated: (commit) => {
+      if (commit.projectId !== projectId) return
+      mutate(data.map((item) => (item.id === commit.id ? commit : item)))
+    },
+  })
 
   return {
     data: data ?? [],
@@ -118,5 +166,7 @@ export function useCommitsFromProject(
     isDestroying,
     publishDraft,
     isPublishing,
+    setCommitMainDocument,
+    isSettingMainDocument,
   }
 }

@@ -1,10 +1,8 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ExperimentItem } from './ExperimentItem/index'
 import { useExperimentComparison } from '$/stores/experimentComparison'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { Commit, Project } from '@latitude-data/core/schema/types'
 

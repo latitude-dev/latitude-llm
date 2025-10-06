@@ -21,6 +21,7 @@ import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
 import { getDocumentType } from './update'
 import { database } from '../../client'
 import { updateListOfIntegrations } from './updateListOfIntegrations'
+import { updateCommit } from '../commits'
 
 async function hasMetadata(content: string) {
   try {
@@ -111,7 +112,7 @@ export async function createNewDocument(
     }
 
     const documentType = await getDocumentType({ content: docContent })
-    const newDoc = await tx
+    const [document] = await tx
       .insert(documentVersions)
       .values({
         commitId: commit.id,
@@ -122,13 +123,31 @@ export async function createNewDocument(
       })
       .returning()
 
-    const document = newDoc[0]!
+    if (!document) {
+      return Result.error(new BadRequestError('Failed to create document'))
+    }
 
     // Invalidate all resolvedContent for this commit
     await tx
       .update(documentVersions)
       .set({ resolvedContent: null })
       .where(eq(documentVersions.commitId, commit.id))
+
+    // If there's no other main document in the commit, set this one
+    if (!commit.mainDocumentUuid) {
+      const commitUpdateResult = await updateCommit(
+        {
+          workspace,
+          commit,
+          data: {
+            mainDocumentUuid: document.documentUuid,
+          },
+        },
+        transaction,
+      )
+
+      if (commitUpdateResult.error) return commitUpdateResult
+    }
 
     await updateListOfIntegrations(
       {

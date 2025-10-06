@@ -27,6 +27,7 @@ type Commit = {
   version: number | null
   userId: string
   mergedAt: Date | null
+  mainDocumentUuid: string | null
 }
 
 export type DocumentLog = {

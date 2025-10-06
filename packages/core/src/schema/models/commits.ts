@@ -29,6 +29,7 @@ export const commits = latitudeSchema.table(
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
     version: bigint('version', { mode: 'number' }),
+    mainDocumentUuid: uuid('main_document_uuid'),
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'set null' }),
@@ -36,22 +37,17 @@ export const commits = latitudeSchema.table(
     deletedAt: timestamp('deleted_at'),
     ...timestamps(),
   },
-  (table) => ({
-    projectCommitOrderIdx: index('project_commit_order_idx').on(
-      table.mergedAt,
-      table.projectId,
-    ),
-    uniqueCommitVersion: uniqueIndex('unique_commit_version').on(
-      table.version,
-      table.projectId,
-    ),
-    userIdx: index('user_idx').on(table.userId),
-    mergedAtIdx: index('merged_at_idx').on(table.mergedAt),
-    projectIdIdx: index('project_id_idx').on(table.projectId),
-    deletedAtIdx: index('commits_deleted_at_indx').on(table.deletedAt),
-    projectDeletedAtIdx: index('commits_project_deleted_at_idx').on(
+  (table) => [
+    index('project_commit_order_idx').on(table.mergedAt, table.projectId),
+    uniqueIndex('unique_commit_version').on(table.version, table.projectId),
+    index('user_idx').on(table.userId),
+    index('merged_at_idx').on(table.mergedAt),
+    index('project_id_idx').on(table.projectId),
+    index('commits_deleted_at_indx').on(table.deletedAt),
+    index('commits_project_deleted_at_idx').on(
       table.projectId,
       table.deletedAt,
     ),
-  }),
+    index('commits_main_document_uuid_idx').on(table.mainDocumentUuid),
+  ],
 )

@@ -3,10 +3,6 @@
 import { ReactNode } from 'react'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import {
-  CommitProvider,
-  ProjectProvider,
-} from '@latitude-data/web-ui/providers'
-import {
   findCommitsByProjectCached,
   findProjectCached,
   getHeadCommitCached,
@@ -24,6 +20,8 @@ import { HEAD_COMMIT } from '@latitude-data/core/constants'
 import { type Commit, type Project } from '@latitude-data/core/schema/types'
 import { LatteLayout } from '$/components/LatteSidebar/LatteLayout'
 import { findLatteThreadProviderLog } from '@latitude-data/core/services/providerLogs/findLatteThreadProviderLog'
+import { ProjectProvider } from '$/app/providers/ProjectProvider'
+import { CommitProvider } from '$/app/providers/CommitProvider'
 
 export type CommitPageParams = {
   children: ReactNode
@@ -82,7 +80,7 @@ export default async function CommitLayout({
 
   return (
     <ProjectProvider project={project}>
-      <CommitProvider commit={commit} isHead={isHead}>
+      <CommitProvider project={project} commit={commit} isHead={isHead}>
         <LatteRealtimeUpdatesProvider>
           <LatteLayout
             initialThreadUuid={lastThreadUuid}

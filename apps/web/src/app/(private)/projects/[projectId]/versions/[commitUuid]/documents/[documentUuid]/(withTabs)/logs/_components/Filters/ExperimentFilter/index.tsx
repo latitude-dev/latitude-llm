@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useExperiments } from '$/stores/experiments'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'

@@ -24,6 +24,8 @@ import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 type IFilesContext = {
   isLoading: boolean
   isMerged: boolean
+  mainDocumentUuid: string | undefined
+  setMainDocumentUuid: (documentUuid: string | undefined) => void
   onCreateFile: (path: string) => void
   onCreateAgent: (path: string) => void
   onUploadFile: (args: { path: string; file: File }) => void
@@ -41,6 +43,8 @@ const FileTreeProvider = ({
   isLoading,
   isMerged,
   onMergeCommitClick,
+  mainDocumentUuid,
+  setMainDocumentUuid,
   children,
   currentUuid,
   onCreateFile,
@@ -97,6 +101,8 @@ const FileTreeProvider = ({
           isMerged,
           onMergeCommitClick,
           currentUuid,
+          mainDocumentUuid,
+          setMainDocumentUuid,
           onCreateFile,
           onCreateAgent,
           onUploadFile,

@@ -1,9 +1,7 @@
 import useDocumentTriggerEvents from '$/stores/documentTriggerEvents'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { OnRunTriggerFn } from '../TriggersList'
 import { ReactNode, useCallback } from 'react'

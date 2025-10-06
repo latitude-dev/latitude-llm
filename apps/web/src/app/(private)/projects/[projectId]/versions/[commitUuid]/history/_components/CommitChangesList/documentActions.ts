@@ -1,4 +1,4 @@
-import { useCurrentCommit } from '@latitude-data/web-ui/browser'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
 import { useHistoryActionModalContext } from '../ActionModal'

@@ -9,11 +9,9 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-  useTypeWriterValue,
-} from '@latitude-data/web-ui/browser'
+import { useTypeWriterValue } from '@latitude-data/web-ui/browser'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import React, {
   KeyboardEvent,

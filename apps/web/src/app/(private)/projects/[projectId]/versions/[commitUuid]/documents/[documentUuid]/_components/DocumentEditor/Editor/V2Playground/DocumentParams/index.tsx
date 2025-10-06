@@ -7,7 +7,7 @@ import {
   TabSelector,
   TabSelectorOption,
 } from '@latitude-data/web-ui/molecules/TabSelector'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
 
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'

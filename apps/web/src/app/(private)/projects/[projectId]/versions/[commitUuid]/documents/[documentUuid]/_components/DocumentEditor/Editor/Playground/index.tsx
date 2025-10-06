@@ -11,10 +11,8 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import DocumentEvaluations from './DocumentEvaluations'
 import DocumentParams from './DocumentParams'

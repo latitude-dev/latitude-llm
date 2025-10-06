@@ -6,11 +6,9 @@ import { ReactNode } from 'react'
 import { env } from '@latitude-data/env'
 import NocodersHeader from './_components/NocodersHeader'
 import { getOnboardingResources } from '$/data-access/workspaceOnboarding'
-import {
-  CommitProvider,
-  ProjectProvider,
-} from '@latitude-data/web-ui/providers'
 import { notFound } from 'next/navigation'
+import { CommitProvider } from '$/app/providers/CommitProvider'
+import { ProjectProvider } from '$/app/providers/ProjectProvider'
 
 export default async function NocodersLayout({
   children,
@@ -30,7 +28,7 @@ export default async function NocodersLayout({
     <CSPostHogProvider>
       <IdentifyUser user={user} workspace={workspace}>
         <ProjectProvider project={project}>
-          <CommitProvider commit={commit} isHead={false}>
+          <CommitProvider project={project} commit={commit} isHead={false}>
             <div className={'flex flex-col h-screen overflow-hidden relative'}>
               <NocodersHeader currentUser={user} isCloud={isCloud} />
               {children}

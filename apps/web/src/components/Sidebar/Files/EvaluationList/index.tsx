@@ -1,10 +1,8 @@
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { ROUTES } from '$/services/routes'
 import {
   getEvaluationMetricSpecification,

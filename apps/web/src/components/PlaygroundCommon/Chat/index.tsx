@@ -1,9 +1,7 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import {

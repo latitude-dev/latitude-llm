@@ -13,10 +13,8 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { DurationCell } from './DurationCell'
 import { ScoreCell } from './ScoreCell'
 import { cn } from '@latitude-data/web-ui/utils'

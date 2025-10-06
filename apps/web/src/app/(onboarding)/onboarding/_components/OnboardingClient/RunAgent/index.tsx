@@ -6,10 +6,8 @@ import Chat from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/doc
 import { ActiveTrigger } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersList'
 import { redirect } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { StatusIndicator } from '$/components/PlaygroundCommon/StatusIndicator'
 import { OnboardingStep } from '../../../lib/OnboardingStep'

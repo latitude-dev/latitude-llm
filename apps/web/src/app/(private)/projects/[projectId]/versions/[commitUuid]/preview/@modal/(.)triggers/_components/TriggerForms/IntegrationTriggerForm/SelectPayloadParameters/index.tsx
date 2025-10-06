@@ -6,7 +6,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function SelectPayloadParameters({

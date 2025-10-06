@@ -1,10 +1,8 @@
 import { useDevMode } from '$/hooks/useDevMode'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { useMetadata } from '$/hooks/useMetadata'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useEffect, useMemo, useState } from 'react'
 import { PlaygroundBlocksEditor } from '../BlocksEditor'
 import { PlaygroundTextEditor } from '../TextEditor'

@@ -41,8 +41,9 @@ export async function createProject(
         transaction,
       )
       if (result.error) return result
+      const commit = result.unwrap()
 
-      return Result.ok({ project, commit: result.value })
+      return Result.ok({ project, commit })
     },
     ({ project, commit }) =>
       publisher.publishLater({

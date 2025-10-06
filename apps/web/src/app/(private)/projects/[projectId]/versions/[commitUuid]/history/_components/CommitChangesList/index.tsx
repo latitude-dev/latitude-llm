@@ -3,10 +3,8 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentChangeSkeleton } from '@latitude-data/web-ui/molecules/DocumentChange'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import { useCommitsChanges } from '$/stores/commitChanges'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/browser'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useDocumentDiff } from '$/stores/documentDiff'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '$/services/routes'

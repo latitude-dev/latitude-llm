@@ -15,10 +15,8 @@ import {
   ExperimentEvaluationScores,
   ExperimentEvaluationScoresPlaceholder,
 } from './EvaluationScores'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ActionButtons } from './ActionButtons'
 import { DocumentVersion } from '@latitude-data/constants'

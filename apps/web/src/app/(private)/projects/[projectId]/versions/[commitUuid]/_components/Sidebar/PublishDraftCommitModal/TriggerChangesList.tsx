@@ -18,10 +18,8 @@ import {
 } from '@latitude-data/web-ui/molecules/DocumentChange'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { ROUTES } from '$/services/routes'
 import { CurrentTheme } from '@latitude-data/web-ui/browser'
 

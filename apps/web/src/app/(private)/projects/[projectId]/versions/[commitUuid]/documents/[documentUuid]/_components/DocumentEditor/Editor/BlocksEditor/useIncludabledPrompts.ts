@@ -1,9 +1,7 @@
 import { IncludedPrompt } from '$/components/BlocksEditor'
 import { ROUTES } from '$/services/routes'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { useMemo } from 'react'
 import { type DocumentVersion } from '@latitude-data/core/schema/types'
 import { DocumentType } from '@latitude-data/core/constants'

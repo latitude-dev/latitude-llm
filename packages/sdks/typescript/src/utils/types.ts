@@ -93,6 +93,7 @@ export type Commit = {
   userId: string
   mergedAt: string
   deletedAt: string | null
+  mainDocumentUuid: string | null
 }
 
 export type Version = {

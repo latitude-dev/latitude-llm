@@ -6,10 +6,8 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
 import { useMemo, useState } from 'react'

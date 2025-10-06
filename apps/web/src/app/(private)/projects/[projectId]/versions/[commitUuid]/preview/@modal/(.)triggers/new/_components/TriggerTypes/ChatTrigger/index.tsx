@@ -1,10 +1,8 @@
 import { useCallback, useMemo } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { type OnTriggerCreated } from '../../../client'
 import {

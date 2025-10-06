@@ -23,10 +23,8 @@ import {
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'

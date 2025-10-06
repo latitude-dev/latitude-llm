@@ -2,10 +2,8 @@ import { useCallback, useMemo, useState } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import useDocumentTriggers from '$/stores/documentTriggers'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { RunTrigger } from './_components/RunTrigger'
 import useIntegrations from '$/stores/integrations'

@@ -7,10 +7,8 @@ import useDocumentVersions from '$/stores/documentVersions'
 import useIntegrations from '$/stores/integrations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import {
   createContext,
   ReactNode,

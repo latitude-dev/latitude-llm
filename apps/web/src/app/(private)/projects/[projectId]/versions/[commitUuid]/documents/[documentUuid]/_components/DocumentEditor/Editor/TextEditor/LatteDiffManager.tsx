@@ -8,10 +8,8 @@ import { useDevMode } from '$/hooks/useDevMode'
 import { useLatteDiff } from '$/hooks/useLatteDiff'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
-import {
-  useCurrentProject,
-  useCurrentCommit,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import useLatteThreadCheckpoints from '$/stores/latteThreadCheckpoints'
 

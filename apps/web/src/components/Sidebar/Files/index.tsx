@@ -213,12 +213,14 @@ export function FilesTree({
   currentUuid,
   documents,
   liveDocuments,
+  mainDocumentUuid,
   onMergeCommitClick,
   createFile,
   uploadFile,
   renamePaths,
   destroyFile,
   destroyFolder,
+  setMainDocumentUuid,
   isDestroying,
 }: {
   sidebarLinkContext: SidebarLinkContext
@@ -234,6 +236,8 @@ export function FilesTree({
   liveDocuments?: SidebarDocument[]
   currentUuid: string | undefined
   isDestroying: boolean
+  mainDocumentUuid: string | undefined
+  setMainDocumentUuid: (documentUuid: string | undefined) => void
 }) {
   const { evaluationUuid: currentEvaluationUuid } = useParams()
   const isMount = useRef(false)
@@ -299,6 +303,8 @@ export function FilesTree({
         onMergeCommitClick={onMergeCommitClick}
         currentUuid={currentUuid}
         renamePaths={renamePaths}
+        mainDocumentUuid={mainDocumentUuid}
+        setMainDocumentUuid={setMainDocumentUuid}
         onCreateFile={(path) => {
           createFile({ path, agent: false })
         }}

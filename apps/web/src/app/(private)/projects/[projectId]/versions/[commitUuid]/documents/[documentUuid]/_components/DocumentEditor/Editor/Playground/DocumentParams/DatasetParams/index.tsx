@@ -2,7 +2,7 @@ import { ROUTES } from '$/services/routes'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import Link from 'next/link'
 
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'

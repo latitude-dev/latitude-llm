@@ -17,7 +17,7 @@ import { ICONS_BY_TRIGGER } from '../../@modal/(.)triggers/new/_components/Integ
 import { TriggerWrapper } from '../TriggerWrapper'
 import { OnRunTriggerFn } from '../TriggersList'
 import { OnRunChatTrigger } from '../useActiveTrigger'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { CLIENT_TIMEZONE, DEFAULT_TIMEZONE } from '$/lib/constants'
 import {
   DocumentTrigger,

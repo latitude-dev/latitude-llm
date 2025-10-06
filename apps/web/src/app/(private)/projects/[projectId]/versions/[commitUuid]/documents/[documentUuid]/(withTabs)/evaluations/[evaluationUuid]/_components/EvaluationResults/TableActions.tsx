@@ -8,10 +8,8 @@ import {
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback } from 'react'
 import { EvaluationMetric, EvaluationType } from '@latitude-data/core/constants'
 

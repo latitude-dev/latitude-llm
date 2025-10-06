@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useLatteStore } from '$/stores/latte/index'
 
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { buildInteractionsFromProviderLog } from './buildInteractionsFromProviderLog'
 import { type ProviderLogDto } from '@latitude-data/core/schema/types'
 

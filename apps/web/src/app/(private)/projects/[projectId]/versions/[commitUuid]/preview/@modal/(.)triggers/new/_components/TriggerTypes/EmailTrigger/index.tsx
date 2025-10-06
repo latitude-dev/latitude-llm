@@ -2,10 +2,8 @@ import { useCallback } from 'react'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { type OnTriggerCreated } from '../../../client'
 import {
   SelectDocument,

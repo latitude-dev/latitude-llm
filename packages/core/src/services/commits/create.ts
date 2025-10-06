@@ -4,6 +4,7 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { commits } from '../../schema/models/commits'
 import { pingProjectUpdate } from '../projects'
+import { CommitsRepository } from '../../repositories/commitsRepository'
 
 export async function createCommit(
   {
@@ -24,7 +25,10 @@ export async function createCommit(
 ) {
   return transaction.call<Commit>(
     async (tx) => {
-      const result = await tx
+      const commitsScope = new CommitsRepository(project.workspaceId, tx)
+      const liveCommit = await commitsScope.getHeadCommit(project.id)
+
+      const [commit] = await tx
         .insert(commits)
         .values({
           projectId: project.id,
@@ -33,9 +37,9 @@ export async function createCommit(
           description,
           version,
           mergedAt,
+          mainDocumentUuid: liveCommit?.mainDocumentUuid,
         })
         .returning()
-      const createdCommit = result[0]
 
       await pingProjectUpdate(
         {
@@ -44,13 +48,13 @@ export async function createCommit(
         transaction,
       ).then((r) => r.unwrap())
 
-      return Result.ok(createdCommit!)
+      return Result.ok(commit!)
     },
-    (createdCommit) =>
+    (commit) =>
       publisher.publishLater({
         type: 'commitCreated',
         data: {
-          commit: createdCommit,
+          commit,
           userEmail: user.email,
           workspaceId: project.workspaceId,
         },

@@ -22,9 +22,9 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
-  IProjectContextType,
+  type IProjectContextType,
   useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+} from '$/app/providers/ProjectProvider'
 import Link from 'next/link'
 
 type Props<

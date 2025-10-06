@@ -17,9 +17,13 @@ describe('updateAndMergeCommit', () => {
       content: ctx.factories.helpers.createPrompt({ provider: providers[0]! }),
     })
 
-    const result = await updateAndMergeCommit(draft, {
-      title: 'Updated Title',
-      description: 'Updated Description',
+    const result = await updateAndMergeCommit({
+      workspace,
+      commit: draft,
+      data: {
+        title: 'Updated Title',
+        description: 'Updated Description',
+      },
     })
 
     expect(result.ok).toBe(true)
@@ -36,10 +40,14 @@ describe('updateAndMergeCommit', () => {
   })
 
   it('fails when trying to update and merge a merged commit', async (ctx) => {
-    const { commit } = await ctx.factories.createProject()
+    const { workspace, commit } = await ctx.factories.createProject()
 
-    const result = await updateAndMergeCommit(commit, {
-      title: 'Updated Title',
+    const result = await updateAndMergeCommit({
+      workspace,
+      commit,
+      data: {
+        title: 'Updated Title',
+      },
     })
 
     expect(result.ok).toBe(false)
@@ -59,7 +67,11 @@ describe('updateAndMergeCommit', () => {
       content: ctx.factories.helpers.createPrompt({ provider: providers[0]! }),
     })
 
-    const result = await updateAndMergeCommit(draft, {})
+    const result = await updateAndMergeCommit({
+      workspace,
+      commit: draft,
+      data: {},
+    })
 
     expect(result.ok).toBe(true)
     const mergedCommit = result.unwrap()

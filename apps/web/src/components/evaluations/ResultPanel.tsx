@@ -22,9 +22,9 @@ import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import {
-  IProjectContextType,
   useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+  type IProjectContextType,
+} from '$/app/providers/ProjectProvider'
 import { format } from 'date-fns'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'

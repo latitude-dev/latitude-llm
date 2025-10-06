@@ -1,6 +1,6 @@
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
 
 import { InputsMapperItem, OnSelectRowCellFn } from './InputsMapperItem'
 import { type UseSelectDataset } from '../useSelectDataset'

@@ -1,7 +1,7 @@
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TriggersPreview } from './Preview'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 
 export function TriggersBlankSlate({
   openTriggerModal,

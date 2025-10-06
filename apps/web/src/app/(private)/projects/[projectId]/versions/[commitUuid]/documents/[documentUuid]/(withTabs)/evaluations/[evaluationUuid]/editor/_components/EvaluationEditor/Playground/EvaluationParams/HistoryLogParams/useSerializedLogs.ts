@@ -4,10 +4,8 @@ import useDocumentLogWithPaginationPosition, {
 } from '$/stores/documentLogWithPaginationPosition'
 import useEvaluatedDocumentLogs from '$/stores/evaluatedDocumentLogs'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback, useMemo, useState } from 'react'
 import {
   ActualOutputConfiguration,

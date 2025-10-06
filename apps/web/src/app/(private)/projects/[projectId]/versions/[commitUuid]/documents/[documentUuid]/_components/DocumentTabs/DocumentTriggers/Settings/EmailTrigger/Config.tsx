@@ -11,7 +11,7 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { ReactNode, useCallback, useState } from 'react'
 
 enum EmailAvailabilityOptions {
