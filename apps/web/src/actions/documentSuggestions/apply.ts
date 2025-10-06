@@ -3,28 +3,27 @@
 import { DocumentSuggestionsRepository } from '@latitude-data/core/repositories'
 import { applyDocumentSuggestion } from '@latitude-data/core/services/documentSuggestions/apply'
 import { z } from 'zod'
-import { withDocument } from '../procedures'
+import { withDocument, withDocumentSchema } from '../procedures'
 
 export const applyDocumentSuggestionAction = withDocument
-  .createServerAction()
-  .input(
-    z.object({
+  .inputSchema(
+    withDocumentSchema.extend({
       suggestionId: z.number(),
       prompt: z.string().optional(),
     }),
   )
-  .handler(async ({ ctx, input }) => {
+  .action(async ({ ctx, parsedInput }) => {
     const suggestionsRepository = new DocumentSuggestionsRepository(
       ctx.workspace.id,
     )
     const suggestion = await suggestionsRepository
-      .find(input.suggestionId)
+      .find(parsedInput.suggestionId)
       .then((r) => r.unwrap())
 
     const result = await applyDocumentSuggestion({
       suggestion: suggestion,
       commit: ctx.commit,
-      prompt: input.prompt,
+      prompt: parsedInput.prompt,
       workspace: ctx.workspace,
       project: ctx.project,
       user: ctx.user,

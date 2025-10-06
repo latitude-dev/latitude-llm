@@ -2,20 +2,19 @@
 
 import { z } from 'zod'
 
-import { withProject } from '../../procedures'
+import { withProject, withProjectSchema } from '../../procedures'
 import { revertCommit } from '@latitude-data/core/services/history/revertCommit'
 
 export const revertCommitChangesAction = withProject
-  .createServerAction()
-  .input(
-    z.object({
+  .inputSchema(
+    withProjectSchema.extend({
       targetDraftUuid: z.string().optional(),
       commitUuid: z.string(),
     }),
   )
-  .handler(async ({ input, ctx }) => {
+  .action(async ({ parsedInput, ctx }) => {
     const { user, workspace, project } = ctx
-    const { targetDraftUuid, commitUuid } = input
+    const { targetDraftUuid, commitUuid } = parsedInput
 
     const draft = await revertCommit({
       workspace,

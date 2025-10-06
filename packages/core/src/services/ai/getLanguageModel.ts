@@ -45,11 +45,17 @@ export function getLanguageModel({
   }
 
   const openAiProvider = llmProvider as OpenAIProvider
+
   const configuration =
     provider.configuration as ProviderConfiguration<Providers.OpenAI>
-  const usingOpenAIResponses = configuration?.endpoint === 'responses'
 
-  if (usingOpenAIResponses) return openAiProvider.responses(model)
+  const isLegacyProvider = !configuration || !('endpoint' in configuration)
+  const usingChatCompletions = isLegacyProvider || configuration.endpoint === 'chat_completions'
 
+  if (usingChatCompletions) return openAiProvider.chat(model)
+
+  // Default for text completions in OpenAI is `/responses` endpoint since
+  // vercel SDK v5:
+  // https://github.com/vercel/ai/pull/6833
   return buildGenericLanguageModel({ model, config, llmProvider })
 }

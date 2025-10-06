@@ -9,28 +9,24 @@ import { z } from 'zod'
 import { maybeAuthProcedure, withRateLimit } from '../procedures'
 import { MAX_SIZE, MAX_UPLOAD_SIZE_IN_MB } from '@latitude-data/core/constants'
 
-export const uploadFileAction = (
-  await withRateLimit(maybeAuthProcedure, {
-    limit: 10,
-    period: 60,
-  })
-)
-  .createServerAction()
-  .input(
+export const uploadFileAction = maybeAuthProcedure
+  .use(withRateLimit({ limit: 10, period: 60 }))
+  .inputSchema(
     z.object({
       file: z.instanceof(File).refine(async (file) => {
         return file?.size <= MAX_UPLOAD_SIZE_IN_MB
       }, `Your file must be less than ${MAX_SIZE}MB in size. You can split it into smaller files and upload them separately.`),
     }),
   )
-  .handler(async ({ input, ctx }) => {
+  .action(async ({ parsedInput, ctx }) => {
     const ip = getUnsafeIp(await headers()) || 'unknown'
     const fingerprint = createHash('sha1').update(ip).digest('hex')
 
+    const workspace = ctx.workspace === null ? undefined : ctx.workspace
     const result = await uploadFile({
-      file: input.file,
+      file: parsedInput.file,
       prefix: ctx.workspace ? undefined : fingerprint,
-      workspace: ctx.workspace,
+      workspace,
     })
 
     return result.unwrap()

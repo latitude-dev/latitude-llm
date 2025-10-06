@@ -24,7 +24,7 @@ export default {
   method: todo,
   definition: (context?: TelemetryContext) => ({
     description,
-    parameters: z.object({
+    inputSchema: z.object({
       merge: z
         .boolean()
         .describe(

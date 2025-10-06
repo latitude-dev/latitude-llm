@@ -21,7 +21,7 @@ export function useCommitActions({ commit }: { commit: Commit }) {
       onSuccess: ({ data: changes }) => {
         setChanges(changes)
       },
-      onError: ({ err: error }) => setError(error.message),
+      onError: (error) => setError(error.message),
     },
   )
 
@@ -31,7 +31,7 @@ export function useCommitActions({ commit }: { commit: Commit }) {
       onSuccess: ({ data: changes }) => {
         setChanges(changes)
       },
-      onError: ({ err: error }) => setError(error.message),
+      onError: (error) => setError(error.message),
     },
   )
 
@@ -45,7 +45,7 @@ export function useCommitActions({ commit }: { commit: Commit }) {
             .commits.detail({ uuid: commitUuid }).root,
         )
       },
-      onError: ({ err: error }) => setError(error.message),
+      onError: (error) => setError(error.message),
     },
   )
 
@@ -59,7 +59,7 @@ export function useCommitActions({ commit }: { commit: Commit }) {
             .commits.detail({ uuid: commitUuid }).documents.root,
         )
       },
-      onError: ({ err: error }) => setError(error.message),
+      onError: (error) => setError(error.message),
     },
   )
 

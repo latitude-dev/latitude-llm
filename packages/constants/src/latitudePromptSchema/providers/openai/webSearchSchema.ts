@@ -10,6 +10,7 @@ const UserLocationSchema = z.object({
 })
 
 const OPEN_AI_SEARCH_TYPES = [
+  'web_search',
   'web_search_preview',
   'web_search_preview_2025_03_11',
 ] as const

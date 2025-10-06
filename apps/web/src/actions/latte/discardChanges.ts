@@ -6,15 +6,14 @@ import { undoLatteThreadChanges } from '@latitude-data/core/services/copilot/lat
 import { evaluateLatteThreadChanges } from '@latitude-data/core/services/copilot/latte/threads/evaluateChanges'
 
 export const discardLatteChangesActions = authProcedure
-  .createServerAction()
-  .input(
+  .inputSchema(
     z.object({
       threadUuid: z.string(),
     }),
   )
-  .handler(async ({ ctx, input }) => {
+  .action(async ({ ctx, parsedInput }) => {
     const { workspace } = ctx
-    const { threadUuid } = input
+    const { threadUuid } = parsedInput
 
     const checkpoints = await undoLatteThreadChanges({
       workspace,

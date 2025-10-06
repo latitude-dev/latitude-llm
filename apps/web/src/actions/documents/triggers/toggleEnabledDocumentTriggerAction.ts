@@ -2,19 +2,15 @@
 
 import { setDocumentTriggerEnabled } from '@latitude-data/core/services/documentTriggers/enable'
 
-import { withCommit } from '../../procedures'
+import { withCommit, withCommitSchema } from '../../procedures'
 import { z } from 'zod'
 
 export const toggleEnabledDocumentTriggerAction = withCommit
-  .createServerAction()
-  .input(
-    z.object({
-      triggerUuid: z.string(),
-      enabled: z.boolean(),
-    }),
+  .inputSchema(
+    withCommitSchema.extend({ triggerUuid: z.string(), enabled: z.boolean() }),
   )
-  .handler(async ({ input, ctx }) => {
-    const { triggerUuid, enabled } = input
+  .action(async ({ parsedInput, ctx }) => {
+    const { triggerUuid, enabled } = parsedInput
     const { workspace, commit } = ctx
 
     return setDocumentTriggerEnabled({
