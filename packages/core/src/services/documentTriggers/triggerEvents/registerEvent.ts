@@ -26,39 +26,37 @@ export async function registerDocumentTriggerEvent<
   },
   transaction = new Transaction(),
 ): PromisedResult<DocumentTriggerEvent<T>> {
-  return transaction.call(async (db) => {
-    const triggerScope = new DocumentTriggersRepository(workspace.id, db)
-    const triggerResult = await triggerScope.getTriggerByUuid({
-      uuid: triggerUuid,
-      commit,
-    })
-    if (triggerResult.error) return triggerResult
-
-    const trigger = triggerResult.value
-    const eventResult = await createDocumentTriggerEvent(
-      {
+  return transaction.call(
+    async (db) => {
+      const triggerScope = new DocumentTriggersRepository(workspace.id, db)
+      const triggerResult = await triggerScope.getTriggerByUuid({
+        uuid: triggerUuid,
         commit,
-        trigger,
-        eventPayload,
-      },
-      transaction,
-    )
+      })
+      if (triggerResult.error) return triggerResult
 
-    if (eventResult.error) return eventResult
+      const trigger = triggerResult.value
+      const eventResult = await createDocumentTriggerEvent(
+        {
+          commit,
+          trigger,
+          eventPayload,
+        },
+        transaction,
+      )
 
-    const event = eventResult.value
+      if (eventResult.error) return eventResult
 
-    // If enabled, run the trigger event automatically
-    if (trigger.enabled) {
-      const enqueuedResult = await enqueueRunDocumentFromTriggerEventJob({
+      const event = eventResult.value
+
+      return Result.ok(event)
+    },
+    async (event) => {
+      await enqueueRunDocumentFromTriggerEventJob({
         workspace,
         documentTriggerEvent: event,
         commit,
       })
-
-      if (enqueuedResult.error) return enqueuedResult
-    }
-
-    return Result.ok(event)
-  })
+    },
+  )
 }
