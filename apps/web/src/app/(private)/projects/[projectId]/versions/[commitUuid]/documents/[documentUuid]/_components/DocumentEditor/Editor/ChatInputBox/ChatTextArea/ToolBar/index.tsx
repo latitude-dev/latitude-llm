@@ -23,7 +23,7 @@ export function ToolBar({
   onBack,
   disabledSubmit = false,
   disabledBack = false,
-  onBackLabel = 'Back to editor',
+  onBackLabel = 'Edit',
 }: {
   onSubmit?: () => void
   onBack?: () => void
@@ -37,6 +37,7 @@ export function ToolBar({
         <Button
           variant='outline'
           disabled={disabledBack}
+          iconProps={{ name: 'arrowLeft' }}
           onClick={onBack}
           fancy={true}
           roundy={true}

@@ -2,11 +2,7 @@ import {
   UseDocumentParameters,
   useDocumentParameters,
 } from '$/hooks/useDocumentParameters'
-import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
-import {
-  CollapsibleBox,
-  OnToggleFn,
-} from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   TabSelector,
   TabSelectorOption,
@@ -43,8 +39,6 @@ export type Props = {
   commit: ICommitContextType['commit']
   prompt: string
   setPrompt: (prompt: string) => void
-  onToggle?: OnToggleFn
-  isExpanded?: boolean
 }
 type ContentProps = Props & {
   source: InputSource
@@ -94,18 +88,12 @@ function ParamsTabs({
 }
 
 type DocumentParamsProps = Props & {
-  maxHeight?: string
-  expandedHeight?: number
   source: UseDocumentParameters['source']
   setSource: UseDocumentParameters['setSource']
 }
 export default function DocumentParams({
-  onToggle,
-  isExpanded,
   setSource,
   source,
-  maxHeight,
-  expandedHeight,
   ...props
 }: DocumentParamsProps) {
   const commit = props.commit
@@ -128,21 +116,24 @@ export default function DocumentParams({
   }
 
   return (
-    <ClientOnly>
-      <CollapsibleBox
-        title='Preview'
-        icon='braces'
-        isExpanded={isExpanded}
-        maxHeight={maxHeight}
-        expandedHeight={expandedHeight}
-        onToggle={onToggle}
-        expandedContent={<ParamsTabs {...contentProps} />}
-        expandedContentHeader={
-          <div className='flex flex-row flex-grow items-center justify-start'>
-            <OpenInDocsButton route={DocsRoute.Playground} />
+    <div className='w-full border rounded-xl relative overflow-hidden custom-scrollbar'>
+      <div className='flex flex-col cursor-pointer sticky top-0 z-10 bg-background'>
+        <div className='flex flex-shrink-0 justify-between items-center py-3.5 gap-x-4 px-4'>
+          <div className='flex flex-row items-center gap-x-2'>
+            <Text.H5M userSelect={false}>Preview</Text.H5M>
           </div>
-        }
-      />
-    </ClientOnly>
+          <div className='flex flex-row flex-grow min-w-0 items-center gap-x-2'>
+            <div className='flex-grow min-w-0'>
+              <div className='flex flex-row flex-grow items-center justify-start'>
+                <OpenInDocsButton route={DocsRoute.Playground} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className='px-4 pb-3.5'>
+        <ParamsTabs {...contentProps} />
+      </div>
+    </div>
   )
 }
