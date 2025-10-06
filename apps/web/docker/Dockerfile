@@ -67,6 +67,7 @@ RUN turbo prune "${PROJECT}" --docker
 FROM base AS builder
 
 ARG AWS_REGION
+ARG S3_BUCKET
 
 ARG BUILD_ID
 
