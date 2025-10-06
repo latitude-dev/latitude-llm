@@ -166,8 +166,13 @@ RUN --mount=type=secret,id=DATADOG_API_KEY \
   if [ -s /run/secrets/DATADOG_API_KEY ]; then \
     echo "Uploading source maps to Datadog..."; \
     export DATADOG_API_KEY="$(cat /run/secrets/DATADOG_API_KEY)" && \
-    cd ${PROJECT_PATH} && \
-    echo "Current directory: $(pwd)" && \
+    echo "Current working directory: $(pwd)" && \
+    echo "Contents of /app directory:" && \
+    ls -la /app/ && \
+    echo "Contents of /app/${PROJECT_PATH} directory:" && \
+    ls -la /app/${PROJECT_PATH}/ && \
+    cd /app/${PROJECT_PATH} && \
+    echo "Changed to directory: $(pwd)" && \
     echo "Contents of .next directory:" && \
     ls -la .next/ 2>/dev/null || echo ".next directory not found" && \
     echo "Contents of .next/static directory:" && \
