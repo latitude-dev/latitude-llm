@@ -12,9 +12,6 @@ import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 export const moveNextOnboardingStepAction = authProcedure
   .inputSchema(z.object({ currentStep: z.nativeEnum(OnboardingStepKey) }))
   .action(async ({ parsedInput, ctx }) => {
-    if (!parsedInput.currentStep) {
-      throw new Error('Current step is required')
-    }
     const onboarding = await getWorkspaceOnboarding({
       workspace: ctx.workspace,
     }).then((r) => r.unwrap())

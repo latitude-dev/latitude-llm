@@ -23,7 +23,7 @@ export default function NocodersNavbar({
   currentStep: OnboardingStepKey | undefined | null // TODO(onboarding): remove null when data migration is done
   isLoadingOnboarding: boolean
 }) {
-  const project = useCurrentProject()
+  const { project } = useCurrentProject()
 
   const skipOnboarding = useCallback(() => {
     executeCompleteOnboarding()
@@ -40,7 +40,7 @@ export default function NocodersNavbar({
         <div className='flex flex-col gap-6 items-start'>
           <div className='flex flex-col gap-1'>
             <Text.H5 color='foregroundMuted'>Create your first agent</Text.H5>
-            <Text.H3M color='foreground'>{project.project.name}</Text.H3M>
+            <Text.H3M color='foreground'>{project.name}</Text.H3M>
           </div>
           <div className='flex flex-col gap-4'>
             {filteredNavbarSteps.map(([key, item], index) => (

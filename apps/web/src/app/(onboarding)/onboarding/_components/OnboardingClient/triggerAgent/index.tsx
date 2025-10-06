@@ -18,6 +18,7 @@ import {
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { IsLoadingOnboardingItem } from '../../../lib/IsLoadingOnboardingItem'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
+import { useTriggerSockets } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/useTriggerSockets'
 
 export function TriggerAgentIconAndTitle() {
   return (
@@ -48,16 +49,22 @@ export function TriggerAgentContent({
   setActiveTrigger: (trigger: ActiveTrigger) => void
   playground: ReturnType<typeof usePlaygroundChat>
 }) {
-  const project = useCurrentProject()
-  const commit = useCurrentCommit()
-  const { data: triggers, isLoading: isLoadingTriggers } = useDocumentTriggers({
-    projectId: project.project.id,
-    commitUuid: commit.commit.uuid,
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const {
+    data: triggers,
+    isLoading: isLoadingTriggers,
+    mutate,
+  } = useDocumentTriggers({
+    projectId: project.id,
+    commitUuid: commit.uuid,
   })
 
+  useTriggerSockets({ commit: commit, project: project, mutate })
+
   const activeChatTrigger = useActiveChatTrigger({
-    commit: commit.commit,
-    project: project.project,
+    commit: commit,
+    project: project,
     triggers,
   })
 
@@ -113,8 +120,8 @@ export function TriggerAgentContent({
           <div className='sticky bottom-6'>
             <ChatTriggerTextarea
               key={activeChatTrigger.activeKey}
-              commit={commit.commit}
-              project={project.project}
+              commit={commit}
+              project={project}
               document={activeChatTrigger.active.document}
               chatTrigger={activeChatTrigger.active.trigger}
               chatFocused={openChatInput}

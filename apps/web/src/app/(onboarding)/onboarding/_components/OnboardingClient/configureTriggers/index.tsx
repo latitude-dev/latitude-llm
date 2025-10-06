@@ -18,12 +18,12 @@ import { IsLoadingOnboardingItem } from '../../../lib/IsLoadingOnboardingItem'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 
 export function ConfigureTriggersIconAndTitle() {
-  const project = useCurrentProject()
-  const commit = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
 
   const { data: triggers } = useDocumentTriggers({
-    projectId: project.project.id,
-    commitUuid: commit.commit.uuid,
+    projectId: project.id,
+    commitUuid: commit.uuid,
   })
 
   const sortedIntegrationTriggersByPendingFirst = useMemo(() => {
@@ -93,12 +93,12 @@ export function ConfigureTriggersContent({
 
   const { data: integrations, isLoading: isLoadingIntegrations } =
     useIntegrations()
-  const project = useCurrentProject()
-  const commit = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
 
   const { data: triggers, isLoading: isLoadingTriggers } = useDocumentTriggers({
-    projectId: project.project.id,
-    commitUuid: commit.commit.uuid,
+    projectId: project.id,
+    commitUuid: commit.uuid,
   })
 
   const sortedIntegrationTriggersByPendingFirst = useMemo(() => {

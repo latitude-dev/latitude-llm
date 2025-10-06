@@ -40,8 +40,6 @@ export function OnboardingClient({
     ? onboarding?.currentStep
     : onboardingSteps[0]
 
-  console.log('currentStep', currentStep)
-
   const [activeTrigger, setActiveTrigger] = useState<ActiveTrigger>({
     document: FAKE_DOCUMENT,
     parameters: {},
