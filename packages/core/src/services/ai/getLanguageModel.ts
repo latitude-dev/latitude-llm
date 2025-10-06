@@ -39,8 +39,7 @@ export function getLanguageModel({
   customLanguageModel?: LanguageModel
 }): LanguageModel {
   if (customLanguageModel) return customLanguageModel
-
-  if (provider.provider !== Providers.OpenAI) {
+  if (![Providers.OpenAI, Providers.Custom].includes(provider.provider)) {
     return buildGenericLanguageModel({ model, config, llmProvider })
   }
 
