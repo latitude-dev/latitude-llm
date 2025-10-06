@@ -24,10 +24,14 @@ import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
 import { inheritDocumentRelations } from '../inheritRelations'
 import { getHeadDocumentsAndDraftDocumentsForCommit } from './getHeadDocumentsAndDraftDocuments'
 import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
+import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 
 async function resolveDocumentChanges({
   originalDocuments,
   newDocuments,
+  providers,
+  integrationNames,
+  agentToolsMap,
 }: {
   originalDocuments: DocumentVersion[]
   newDocuments: DocumentVersion[]
@@ -54,10 +58,18 @@ async function resolveDocumentChanges({
 
   const newDocumentsWithUpdatedHash = await Promise.all(
     newDocuments.map(async (d) => {
+      const configSchema = latitudePromptConfigSchema({
+        fullPath: d.path,
+        providerNames: providers.map((p) => p.name),
+        agentToolsMap,
+        integrationNames,
+      })
+
       const metadata = await scan({
         prompt: d.content ?? '',
         fullPath: d.path,
         referenceFn: getDocumentContent,
+        configSchema,
       })
 
       if (!d.deletedAt && metadata.errors.length > 0) {
