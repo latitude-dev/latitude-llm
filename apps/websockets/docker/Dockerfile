@@ -63,6 +63,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
 
 FROM node:22-alpine AS runner
 
+# Required for the health check
+RUN apk add --update --no-cache curl
+
 ARG PROJECT_PATH
 
 ENV NODE_ENV=production

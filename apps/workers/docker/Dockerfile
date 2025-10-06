@@ -82,6 +82,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
 
 FROM node:22-alpine AS runner
 
+# Required for the health check
+RUN apk add --update --no-cache curl
+
 ARG PROJECT_PATH
 ARG DD_GIT_REPOSITORY_URL
 ARG DD_GIT_COMMIT_SHA
