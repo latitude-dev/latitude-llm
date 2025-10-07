@@ -34,22 +34,30 @@ export function VertexConfiguration() {
           fieldNamespace: '[googleCredentials][clientEmail]',
         })}
       />
-      <Input
+      <TextArea
         required
+        label='Private Key'
+        info='The private key from the service account JSON file. The credentials file can be obtained from the Google Cloud Console: https://console.cloud.google.com/apis/credentials'
+        name={buildConfigFieldName({
+          fieldNamespace: '[googleCredentials][privateKey]',
+        })}
+      />
+      <Input
         type='text'
-        label='Private Key ID'
-        info='The private key ID from the service account JSON file.'
+        label='Private Key ID (Optional)'
+        info='The private key ID from the service account JSON file. The credentials file can be obtained from the Google Cloud Console: https://console.cloud.google.com/apis/credentials'
         name={buildConfigFieldName({
           fieldNamespace: '[googleCredentials][privateKeyId]',
         })}
       />
-      <TextArea
-        required
-        label='Private Key'
-        info='The private key from the service account JSON file.'
+      <Input
+        type='text'
+        label='Base URL (Optional)'
+        info='Base URL for the Google Vertex API calls e.g. to use proxy servers. By default, it is constructed using the location and project. https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/publishers/google'
         name={buildConfigFieldName({
-          fieldNamespace: '[googleCredentials][privateKey]',
+          fieldNamespace: 'baseUrl',
         })}
+        placeholder='https://${location}-aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/publishers/google'
       />
     </>
   )

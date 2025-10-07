@@ -65,7 +65,7 @@ describe('createProvider', () => {
       },
     })
     const createVertexMock = vi.fn().mockReturnValue('fake-vertex')
-    vi.doMock('@ai-sdk/google-vertex/edge', () => {
+    vi.doMock('@ai-sdk/google-vertex', () => {
       return {
         createVertex: createVertexMock,
       }
@@ -90,6 +90,12 @@ describe('createProvider', () => {
         privateKey: 'secret',
         privateKeyId: 'my-key-id',
       },
+      googleAuthOptions: {
+        credentials: {
+          client_email: 'my-email',
+          private_key: 'secret',
+        },
+      },
     })
     expect(result.value).toEqual('fake-vertex')
   })
@@ -111,7 +117,7 @@ describe('createProvider', () => {
       },
     })
     const createVertexMock = vi.fn().mockReturnValue('fake-vertex')
-    vi.doMock('@ai-sdk/google-vertex/anthropic/edge', () => {
+    vi.doMock('@ai-sdk/google-vertex/anthropic', () => {
       return {
         createVertexAnthropic: createVertexMock,
       }
@@ -133,8 +139,14 @@ describe('createProvider', () => {
       location: 'us-central1',
       googleCredentials: {
         clientEmail: 'my-email',
-        privateKey: 'super\nsecret',
+        privateKey: 'super\\nsecret',
         privateKeyId: 'my-key-id',
+      },
+      googleAuthOptions: {
+        credentials: {
+          client_email: 'my-email',
+          private_key: 'super\nsecret',
+        },
       },
     })
     expect(result.value).toEqual('fake-vertex')
