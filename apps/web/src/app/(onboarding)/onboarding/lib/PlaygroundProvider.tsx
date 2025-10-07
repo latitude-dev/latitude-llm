@@ -9,6 +9,7 @@ interface IPlaygroundContextType {
   addMessages: ReturnType<typeof useRunDocument>['addMessages']
   hasActiveStream: ReturnType<typeof useRunDocument>['hasActiveStream']
   runDocument: ReturnType<typeof useRunDocument>['runDocument']
+  abortCurrentStream: ReturnType<typeof useRunDocument>['abortCurrentStream']
 }
 
 const PlaygroundContext = createContext<IPlaygroundContextType>(
@@ -18,9 +19,10 @@ const PlaygroundContext = createContext<IPlaygroundContextType>(
 const PlaygroundProvider = ({ children }: { children: ReactNode }) => {
   const commit = useCurrentCommit()
 
-  const { runDocument, addMessages, hasActiveStream } = useRunDocument({
-    commit: commit.commit,
-  })
+  const { runDocument, addMessages, hasActiveStream, abortCurrentStream } =
+    useRunDocument({
+      commit: commit.commit,
+    })
 
   const runPromptFn = useCallback(
     ({
@@ -53,7 +55,13 @@ const PlaygroundProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <PlaygroundContext.Provider
-      value={{ playground, addMessages, hasActiveStream, runDocument }}
+      value={{
+        playground,
+        addMessages,
+        hasActiveStream,
+        runDocument,
+        abortCurrentStream,
+      }}
     >
       {children}
     </PlaygroundContext.Provider>
