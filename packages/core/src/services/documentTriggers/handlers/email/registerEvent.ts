@@ -133,9 +133,7 @@ export async function registerEmailTriggerEvent(
   const uploadedFiles = uploadResult.unwrap()
 
   const commitsScope = new CommitsRepository(workspace.id, db)
-  const headCommitResult = await commitsScope.getHeadCommit(project.id)
-  if (headCommitResult.error) return Result.nil()
-  const headCommit = headCommitResult.unwrap()
+  const headCommit = await commitsScope.getHeadCommit(project.id)
 
   // TODO: Search the Live and all draft versions for each trigger, not just the Live one
   if (!headCommit) return Result.nil()

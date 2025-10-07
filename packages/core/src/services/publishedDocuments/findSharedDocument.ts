@@ -56,10 +56,7 @@ export async function findSharedDocument(
   if (!workspace) return NotFound
 
   const commitsRepo = new CommitsRepository(shared.workspaceId, db)
-  const commitResult = await commitsRepo.getHeadCommit(shared.projectId)
-
-  if (commitResult.error) return NotFound
-  const commit = commitResult.value
+  const commit = await commitsRepo.getHeadCommit(shared.projectId)
   if (!commit) return NotFound
 
   const repo = new DocumentVersionsRepository(shared.workspaceId, db)

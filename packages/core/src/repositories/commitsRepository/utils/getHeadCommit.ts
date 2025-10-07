@@ -2,8 +2,8 @@ import { and, desc, eq, isNotNull } from 'drizzle-orm'
 
 import { database } from '../../../client'
 import { InferedReturnType } from '../../../lib/commonTypes'
-import { Result } from '../../../lib/Result'
 import { buildCommitsScope } from './buildCommitsScope'
+import { Commit } from '../../../schema/types'
 
 export async function getHeadCommitForProject(
   {
@@ -27,5 +27,5 @@ export async function getHeadCommitForProject(
     .orderBy(desc(commitsScope.mergedAt))
     .limit(1)
 
-  return Result.ok(result[0])
+  return result[0] as Commit | undefined
 }

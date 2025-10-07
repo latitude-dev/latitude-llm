@@ -71,12 +71,9 @@ export class CommitsRepository extends RepositoryLegacy<
         return Result.error(new NotFoundError('Project ID is required'))
       }
 
-      const headCommit = await this.getHeadCommit(projectId).then((r) =>
-        r.unwrap(),
-      )
-      if (!headCommit) {
+      const headCommit = await this.getHeadCommit(projectId)
+      if (!headCommit)
         return Result.error(new NotFoundError('Head commit not found'))
-      }
 
       return Result.ok(headCommit)
     }

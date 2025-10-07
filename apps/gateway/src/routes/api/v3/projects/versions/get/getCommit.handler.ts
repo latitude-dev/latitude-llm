@@ -4,7 +4,7 @@ import { BadRequestError } from '@latitude-data/constants/errors'
 import { AppRouteHandler } from '$/openApi/types'
 import { getVersionRoute } from './getCommit.route'
 
-// @ts-expect-error: broken types
+// @ts-expect-error: Types are not working as expected
 export const getVersionHandler: AppRouteHandler<
   typeof getVersionRoute
 > = async (c: Context) => {

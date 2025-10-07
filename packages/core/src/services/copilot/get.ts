@@ -34,9 +34,7 @@ export async function getCopilot({ path }: { path: string }, db = database) {
   }
 
   const commitsRepository = new CommitsRepository(workspace.id, db)
-  const commit = await commitsRepository
-    .getHeadCommit(env.COPILOT_PROJECT_ID)
-    .then((r) => r.unwrap())
+  const commit = await commitsRepository.getHeadCommit(env.COPILOT_PROJECT_ID)
   if (!commit) {
     return Result.error(new Error('Copilot commit not found'))
   }

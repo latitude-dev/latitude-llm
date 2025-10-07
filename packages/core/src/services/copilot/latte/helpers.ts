@@ -77,10 +77,7 @@ async function getCommitResult({
     })
   }
 
-  const headCommitResult = await commitScope.getHeadCommit(projectId)
-  if (!Result.isOk(headCommitResult)) return headCommitResult
-  const headCommit = headCommitResult.unwrap()
-
+  const headCommit = await commitScope.getHeadCommit(projectId)
   if (!headCommit) {
     return Result.error(
       new NotFoundError('Live commit not found in Latte project'),
