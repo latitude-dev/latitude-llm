@@ -7,6 +7,7 @@ import { OpenAIProvider } from '@ai-sdk/openai'
 import { ProviderApiKey } from '../../schema/types'
 import { ProviderConfiguration } from '../../schema/models/providerApiKeys'
 
+// FIXME: Is this doing anything? There are no options available here.
 function buildGenericLanguageModel({
   model,
   config,
@@ -52,6 +53,7 @@ export function getLanguageModel({
   const usingChatCompletions =
     isLegacyProvider || configuration.endpoint === 'chat_completions'
 
+  // FIXME: Not using buildGenericLanguageModel?
   if (usingChatCompletions) return openAiProvider.chat(model)
 
   // Default for text completions in OpenAI is `/responses` endpoint since

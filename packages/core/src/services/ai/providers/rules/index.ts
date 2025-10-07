@@ -71,13 +71,20 @@ export function applyAllRules({ providerType, messages, config }: Props) {
     provider: providerType,
   })
   const providerOptions = toCamelCaseDeep(config)
+  const providerMetadataKey = getProviderMetadataKey(providerType)
   return {
     ...rules,
     messages: vercelMessages,
     config: {
       ...rules.config,
       providerOptions: {
-        [getProviderMetadataKey(providerType)]: providerOptions,
+        [providerMetadataKey]: {
+          ...providerOptions,
+          ...(providerMetadataKey === 'openai' && {
+            structuredOutputs: true,
+            strictJsonSchema: true,
+          }),
+        },
       },
     } as VercelConfigWithProviderRules,
   }
