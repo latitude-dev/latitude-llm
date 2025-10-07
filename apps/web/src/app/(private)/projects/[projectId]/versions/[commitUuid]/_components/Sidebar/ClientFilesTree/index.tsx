@@ -4,10 +4,8 @@ import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 
 import CreateDraftCommitModal from '../CreateDraftCommitModal'
@@ -15,6 +13,7 @@ import MergedCommitWarningModal from '../MergedCommitWarningModal'
 import { FilesTree } from '$/components/Sidebar/Files'
 import { SidebarDocument } from '$/components/Sidebar/Files/useTree'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
+import { useCommits } from '$/stores/commitsStore'
 
 export default function ClientFilesTree({
   documents: serverDocuments,
@@ -29,6 +28,7 @@ export default function ClientFilesTree({
   const [createDraftCommitModalOpen, setDraftCommitModalOpen] = useState(false)
   const [warningOpen, setWarningOpen] = useState(false)
   const { commit, isHead } = useCurrentCommit()
+  const { setCommitMainDocument } = useCommits()
   const isMerged = !!commit.mergedAt
   const { project } = useCurrentProject()
   const documentUuid = currentDocument?.documentUuid
@@ -90,6 +90,25 @@ export default function ClientFilesTree({
     setWarningOpen(true)
   }, [setWarningOpen])
 
+  const setMainDocumentUuid = useCallback(
+    (documentUuid: string | undefined) => {
+      if (isMerged) return onMergeCommitClick()
+
+      setCommitMainDocument({
+        projectId: project.id,
+        commitId: commit.id,
+        documentUuid,
+      })
+    },
+    [
+      setCommitMainDocument,
+      project.id,
+      commit.id,
+      isMerged,
+      onMergeCommitClick,
+    ],
+  )
+
   return (
     <>
       <FilesTree
@@ -97,6 +116,7 @@ export default function ClientFilesTree({
         isLoading={isLoading}
         isMerged={isMerged}
         documents={data}
+        mainDocumentUuid={commit.mainDocumentUuid ?? undefined}
         currentUuid={documentUuid}
         onMergeCommitClick={onMergeCommitClick}
         createFile={createFile}
@@ -104,6 +124,7 @@ export default function ClientFilesTree({
         renamePaths={renamePaths}
         destroyFile={destroyFile}
         destroyFolder={destroyFolder}
+        setMainDocumentUuid={setMainDocumentUuid}
         isDestroying={isDestroying}
         liveDocuments={commit.mergedAt ? undefined : liveDocuments}
       />

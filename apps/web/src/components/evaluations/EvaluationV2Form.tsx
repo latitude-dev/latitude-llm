@@ -17,7 +17,7 @@ import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ConfigurationAdvancedForm,

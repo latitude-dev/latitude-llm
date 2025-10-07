@@ -5,10 +5,8 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
 import { UnconfiguredTriggers } from './_components/UnconfiguredTriggers'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import {
   DocumentTriggerStatus,
   DocumentTriggerType,

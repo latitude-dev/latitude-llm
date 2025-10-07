@@ -5,10 +5,8 @@ import { DevModeProvider } from '$/hooks/useDevMode'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { useEvaluationResultsV2Count } from '$/stores/evaluationResultsV2'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useMemo, useRef } from 'react'
 import { EvaluationResultsTableActions } from './TableActions'

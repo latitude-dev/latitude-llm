@@ -2,7 +2,7 @@ import { ReactNode } from 'react'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function ParametersWrapper({

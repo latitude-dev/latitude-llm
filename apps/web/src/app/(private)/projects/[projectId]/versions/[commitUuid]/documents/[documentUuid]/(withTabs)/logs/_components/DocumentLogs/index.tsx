@@ -23,10 +23,8 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useSearchParams } from 'next/navigation'
 import { useMemo, useRef, useState } from 'react'
 import { LogsOverTime } from '../../../../../../overview/_components/Overview/LogsOverTime'

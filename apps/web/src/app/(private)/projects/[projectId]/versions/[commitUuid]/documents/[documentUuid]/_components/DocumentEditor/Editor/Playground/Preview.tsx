@@ -6,10 +6,8 @@ import { useCallback, useState } from 'react'
 import { type ActionsState } from '$/components/PlaygroundCommon/Actions'
 import PreviewPrompt from '$/components/PlaygroundCommon/PreviewPrompt'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { Commit, Project } from '@latitude-data/core/schema/types'
 
 export default function Preview({

@@ -8,7 +8,7 @@ import {
   TabSelector,
   TabSelectorOption,
 } from '@latitude-data/web-ui/molecules/TabSelector'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { OnToggleFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 
 import { DatasetParams } from './DatasetParams'

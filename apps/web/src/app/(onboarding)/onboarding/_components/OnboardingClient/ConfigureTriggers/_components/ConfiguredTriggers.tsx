@@ -12,7 +12,7 @@ import {
   StatusFlag,
   StatusFlagState,
 } from '@latitude-data/web-ui/molecules/StatusFlag'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 
 export function ConfiguredTriggers({
   trigger,

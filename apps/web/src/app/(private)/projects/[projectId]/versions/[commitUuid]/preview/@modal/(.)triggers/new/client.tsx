@@ -5,10 +5,8 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { IntegrationsList } from './_components/IntegrationsList'
 import { PipedreamTrigger } from './_components/TriggerTypes/PipedreamTrigger'
 import { ChatTrigger } from './_components/TriggerTypes/ChatTrigger'

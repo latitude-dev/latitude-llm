@@ -16,14 +16,21 @@ export const publishDraftCommitAction = withProject
     }),
   )
   .action(async ({ parsedInput, ctx }) => {
+    const { workspace } = ctx
+    const { id: commitId, title, description } = parsedInput
+
     const commitScope = new CommitsRepository(ctx.workspace.id)
     const commit = await commitScope
-      .getCommitById(parsedInput.id)
+      .getCommitById(commitId)
       .then((r) => r.unwrap())
 
-    const merged = await updateAndMergeCommit(commit, {
-      title: parsedInput.title,
-      description: parsedInput.description,
+    const merged = await updateAndMergeCommit({
+      commit,
+      workspace,
+      data: {
+        title,
+        description,
+      },
     }).then((r) => r.unwrap())
 
     publisher.publishLater({

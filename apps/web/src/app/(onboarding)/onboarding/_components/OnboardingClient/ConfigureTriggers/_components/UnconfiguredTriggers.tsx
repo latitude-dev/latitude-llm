@@ -10,7 +10,7 @@ import { useTriggerInfo } from '$/app/(private)/projects/[projectId]/versions/[c
 import useDocumentVersions from '$/stores/documentVersions'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { EditTriggerModal } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/[triggerUuid]/edit/EditTriggerModal'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 
 export function UnconfiguredTriggers({
   trigger,

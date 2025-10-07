@@ -3,10 +3,8 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { createDraftWithPromptlUpgradeAction } from '$/actions/commits/createDraftWithPromptlUpgrade'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useLatitudeAction from '$/hooks/useLatitudeAction'

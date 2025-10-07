@@ -4,10 +4,8 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useExperiments } from '$/stores/experiments'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { ExperimentsTable } from '../ExperimentsTable'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { useCallback, useEffect, useState } from 'react'

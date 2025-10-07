@@ -9,10 +9,8 @@ import { updateContentFn } from '$/hooks/useDocumentValueContext'
 import { useEvents } from '$/lib/events'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { Config, scan } from 'promptl-ai'
 import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { stringify as stringifyObjectToYaml } from 'yaml'

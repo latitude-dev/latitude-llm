@@ -1,4 +1,4 @@
-import { Commit } from '../../schema/types'
+import { Commit, Workspace } from '../../schema/types'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -6,10 +6,17 @@ import { mergeCommit } from './merge'
 import { updateCommit } from './update'
 
 export async function updateAndMergeCommit(
-  commit: Commit,
-  data: {
-    title?: string
-    description?: string | null
+  {
+    commit,
+    workspace,
+    data,
+  }: {
+    commit: Commit
+    workspace: Workspace
+    data: {
+      title?: string
+      description?: string | null
+    }
   },
   transaction = new Transaction(),
 ): Promise<TypedResult<Commit, Error>> {
@@ -17,7 +24,14 @@ export async function updateAndMergeCommit(
   if (assertResult.error) return assertResult
 
   if (Object.keys(data).length > 0) {
-    const updateResult = await updateCommit(commit, data, transaction)
+    const updateResult = await updateCommit(
+      {
+        workspace,
+        commit,
+        data,
+      },
+      transaction,
+    )
     if (updateResult.error) return updateResult
     commit = updateResult.value
   }

@@ -6,10 +6,8 @@ import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentTextEditor'
 import type { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { memo, Suspense, useCallback } from 'react'
 import { DocumentRefinement } from '../DocumentRefinement'
 import { DocumentSuggestions } from '../DocumentSuggestions'

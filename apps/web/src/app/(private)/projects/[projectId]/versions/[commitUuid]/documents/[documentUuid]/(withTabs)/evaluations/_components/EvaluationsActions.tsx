@@ -8,11 +8,13 @@ import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import {
-  ICommitContextType,
-  IProjectContextType,
   useCurrentCommit,
+  type ICommitContextType,
+} from '$/app/providers/CommitProvider'
+import {
   useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+  type IProjectContextType,
+} from '$/app/providers/ProjectProvider'
 import { useCallback, useState } from 'react'
 import { EvaluationsGenerator } from './EvaluationsGenerator'
 import { DocumentVersion } from '@latitude-data/core/schema/types'

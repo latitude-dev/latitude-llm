@@ -3,10 +3,8 @@ import useDocumentSuggestions from '$/stores/documentSuggestions'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import DiffMatchPatch from 'diff-match-patch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'

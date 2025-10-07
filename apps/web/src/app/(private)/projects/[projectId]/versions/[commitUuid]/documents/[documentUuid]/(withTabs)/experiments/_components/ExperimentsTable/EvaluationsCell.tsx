@@ -3,10 +3,8 @@ import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useMemo } from 'react'
 import { EvaluationV2 } from '@latitude-data/core/constants'
 import { ExperimentDto } from '@latitude-data/core/schema/types'

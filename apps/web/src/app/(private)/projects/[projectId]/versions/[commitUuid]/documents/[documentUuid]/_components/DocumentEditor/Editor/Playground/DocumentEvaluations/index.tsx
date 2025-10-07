@@ -17,10 +17,8 @@ import {
   CollapsibleBox,
   OnToggleFn,
 } from '@latitude-data/web-ui/molecules/CollapsibleBox'
-import {
-  ICommitContextType,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CollapsedContentHeader,

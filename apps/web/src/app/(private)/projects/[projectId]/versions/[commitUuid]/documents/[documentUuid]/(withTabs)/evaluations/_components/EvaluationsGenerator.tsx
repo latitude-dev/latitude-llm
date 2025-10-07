@@ -11,10 +11,8 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback, useMemo, useState } from 'react'
 import {
   EvaluationOptions,

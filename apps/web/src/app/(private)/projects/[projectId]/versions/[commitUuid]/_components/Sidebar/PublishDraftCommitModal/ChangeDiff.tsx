@@ -1,6 +1,6 @@
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import { TextEditorPlaceholder } from '@latitude-data/web-ui/molecules/TextEditorPlaceholder'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { DiffViewer } from '@latitude-data/web-ui/molecules/DiffViewer'
 import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
 

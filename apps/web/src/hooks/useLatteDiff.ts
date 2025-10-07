@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useLatteStore } from '$/stores/latte/index'
 import useLatteThreadCheckpoints from '$/stores/latteThreadCheckpoints'
 

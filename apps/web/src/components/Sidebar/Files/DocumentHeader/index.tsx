@@ -39,6 +39,8 @@ export default function DocumentHeader({
     onCreateFile,
     onRenameFile,
     sidebarLinkContext,
+    mainDocumentUuid,
+    setMainDocumentUuid,
   } = useFileTreeContext()
   const { deleteTmpFolder, reset } = useTempNodes((state) => ({
     reset: state.reset,
@@ -57,6 +59,12 @@ export default function DocumentHeader({
       reset()
     },
     [reset, onCreateFile, onRenameFile, node],
+  )
+  const setMainDocument = useCallback(
+    (asMainDocument: boolean) => {
+      setMainDocumentUuid(asMainDocument ? node.doc!.documentUuid : undefined)
+    },
+    [setMainDocumentUuid, node.doc],
   )
   const documentUuid = node.doc!.documentUuid
   const url = useMemo(() => {
@@ -133,6 +141,8 @@ export default function DocumentHeader({
       draggble={draggble}
       isEditing={isEditing}
       setIsEditing={setIsEditing}
+      isMainDocument={mainDocumentUuid === documentUuid}
+      setMainDocument={setMainDocument}
       hasChildren={false}
       actions={actions}
       selected={selected}

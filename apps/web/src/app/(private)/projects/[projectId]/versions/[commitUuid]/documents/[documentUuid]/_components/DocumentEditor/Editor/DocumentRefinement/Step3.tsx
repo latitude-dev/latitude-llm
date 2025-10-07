@@ -1,10 +1,8 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { useEffect } from 'react'
 import { DocumentVersion } from '@latitude-data/core/schema/types'
 

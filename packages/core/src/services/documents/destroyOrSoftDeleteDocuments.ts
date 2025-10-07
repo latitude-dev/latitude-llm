@@ -11,6 +11,7 @@ import { documentVersions } from '../../schema/models/documentVersions'
 import { deleteEvaluationV2 } from '../evaluationsV2/delete'
 import { pingProjectUpdate } from '../projects'
 import { deleteDocumentTriggersFromDocuments } from '../documentTriggers/deleteDocumentTriggersFromDocuments'
+import { updateCommit } from '../commits'
 
 async function findUuidsInOtherCommits({
   tx,
@@ -172,6 +173,25 @@ export async function destroyOrSoftDeleteDocuments(
 
     if (!Result.isOk(deleteAllTriggerDocumentsResult)) {
       return deleteAllTriggerDocumentsResult
+    }
+
+    // If main document has been deleted, set it to null
+    if (
+      commit.mainDocumentUuid &&
+      documents.map((d) => d.documentUuid).includes(commit.mainDocumentUuid)
+    ) {
+      const commitUpdateResult = await updateCommit(
+        {
+          workspace,
+          commit,
+          data: {
+            mainDocumentUuid: null,
+          },
+        },
+        transaction,
+      )
+
+      if (commitUpdateResult.error) return commitUpdateResult
     }
 
     const existingUuids = await findUuidsInOtherCommits({

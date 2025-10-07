@@ -1,8 +1,8 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 
-export function useHover() {
-  const ref = useRef<HTMLElement>(null)
+export function useHover<T extends HTMLElement = HTMLElement>() {
+  const ref = useRef<T>(null)
   const [hovered, setHovered] = useState(false)
 
   useEffect(() => {

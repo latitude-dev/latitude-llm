@@ -8,10 +8,8 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import type { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { useRouter } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
 import { Step1 } from './Step1'

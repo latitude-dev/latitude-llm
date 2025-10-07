@@ -2,10 +2,8 @@ import { useMemo } from 'react'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { UpdateToPromptLButton } from '../UpdateToPromptl'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Button } from '@latitude-data/web-ui/atoms/Button'

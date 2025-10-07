@@ -17,7 +17,7 @@ import {
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import Link from 'next/link'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { useEvaluationParameters } from '../hooks/useEvaluationParamaters'

@@ -6,6 +6,7 @@ import { cloneIntegrations } from './cloneIntegrations'
 import { cloneDocumentTriggers } from './cloneTriggers'
 import { createForkProject } from './createProject'
 import { getImports } from './imports'
+import { updateCommit } from '../../commits'
 
 type ForkProps = {
   title: string
@@ -75,6 +76,14 @@ export async function forkDocument({
   const clonedDocument = clonedDocuments.find(
     (d) => d.path === origin.document.path,
   )!
+
+  await updateCommit({
+    workspace: destination.workspace,
+    commit,
+    data: {
+      mainDocumentUuid: clonedDocument.documentUuid,
+    },
+  }).then((r) => r.unwrap())
 
   const triggers = await cloneDocumentTriggers({
     workspace: destination.workspace,

@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import useDocumentVersions from '$/stores/documentVersions'
 import { DocumentType } from '@latitude-data/constants'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useMetadata } from '$/hooks/useMetadata'

@@ -1,9 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { DocumentRoutes } from '$/services/routes'
 import { useMetadata } from '$/hooks/useMetadata'
@@ -40,7 +38,6 @@ export function DocumentEditorHeader({
   const { toggleDocumentation } = useDeployPrompt()
   const onPreviewToggle = useCallback(
     (openPlayground: boolean) => {
-
       if (openPlayground === isPlaygroundOpen) return
 
       setSelectedTab(openPlayground ? 'preview' : DocumentRoutes.editor)

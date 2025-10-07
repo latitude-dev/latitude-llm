@@ -9,7 +9,7 @@ import { ROUTES } from '$/services/routes'
 import { ONBOARDING_STEP_CONTENT } from '../../constants'
 import { calculateState } from './calculateState'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { redirect } from 'next/navigation'
 
 export default function NocodersNavbar({

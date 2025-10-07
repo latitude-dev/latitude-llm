@@ -9,10 +9,8 @@ import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
-import {
-  ICommitContextType,
-  IProjectContextType,
-} from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { useCallback, useEffect, useState } from 'react'
 import { SuggestionItem } from './SuggestionItem'
 import { useLatteDiff } from '$/hooks/useLatteDiff'

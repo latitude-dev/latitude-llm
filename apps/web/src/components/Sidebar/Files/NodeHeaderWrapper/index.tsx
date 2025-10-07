@@ -16,6 +16,7 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { ReactNode, RefObject, useEffect, useRef, useState } from 'react'
 import { useNodeValidator } from './useNodeValidator'
+import { MainPromptIcon } from './MainPromptIcon'
 
 export type IndentType = { isLast: boolean }
 
@@ -34,6 +35,8 @@ export type NodeHeaderWrapperProps = {
   hasChildren?: boolean
   isFile?: boolean
   isAgent?: boolean
+  isMainDocument?: boolean
+  setMainDocument?: (isMainDocument: boolean) => void
   selected?: boolean
   childrenSelected?: boolean
   isEditing: boolean
@@ -57,6 +60,8 @@ function NodeHeaderWrapper({
   isFile = false,
   isAgent = false,
   isEditing,
+  isMainDocument,
+  setMainDocument,
   setIsEditing,
   onSaveValue,
   onSaveValueAndTab,
@@ -140,18 +145,27 @@ function NodeHeaderWrapper({
           {...(draggble ? draggble.listeners : {})}
           {...(draggble ? draggble.attributes : {})}
         >
-          {canDrag ? (
-            <div className='absolute left-1 top-0 bottom-0 w-4 flex items-center transition opacity-0 group-hover/row:opacity-100'>
-              <Icon name='gridVertical' color='foregroundMuted' />
-            </div>
-          ) : null}
-          <IndentationBar
-            indentation={indentation}
-            hasChildren={open && hasChildren}
-          />
           <div className='flex flex-row items-center gap-x-1 mr-2'>
+            {canDrag ? (
+              <div className='absolute left-1 top-0 bottom-0 w-4 flex items-center transition opacity-0 group-hover/row:opacity-100'>
+                <Icon name='gridVertical' color='foregroundMuted' />
+              </div>
+            ) : null}
+
+            <IndentationBar
+              indentation={indentation}
+              hasChildren={open && hasChildren}
+            />
+
+            <MainPromptIcon
+              isHovered={isHovered}
+              isFile={isFile}
+              isMainDocument={isMainDocument}
+              setMainDocument={setMainDocument}
+            />
+
             {icons.map((icon, index) => (
-              <Icon key={index} name={icon} color={color} />
+              <Icon key={index} name={icon} color={color} className='w-4 h-4' />
             ))}
           </div>
           <div className='flex flex-col min-w-0'>

@@ -4,10 +4,8 @@ import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import { AgentToolsMap } from '@latitude-data/constants'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useMemo } from 'react'
 import Actions, { ActionsState } from './Actions'
 

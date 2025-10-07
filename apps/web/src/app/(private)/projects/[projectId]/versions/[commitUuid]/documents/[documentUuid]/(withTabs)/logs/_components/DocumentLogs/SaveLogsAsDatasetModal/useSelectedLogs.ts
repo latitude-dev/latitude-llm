@@ -8,10 +8,8 @@ import { ROUTES } from '$/services/routes'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { DatasetRowData } from '@latitude-data/core/schema/models/datasetRows'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback, useMemo, useState } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 import { Dataset } from '@latitude-data/core/schema/types'

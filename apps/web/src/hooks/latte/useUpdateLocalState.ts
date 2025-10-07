@@ -1,8 +1,6 @@
 import { useLatteStore } from '$/stores/latte/index'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback } from 'react'
 import { useDocumentValueMaybe } from '../useDocumentValueContext'
 import useLatteThreadCheckpoints from '$/stores/latteThreadCheckpoints'

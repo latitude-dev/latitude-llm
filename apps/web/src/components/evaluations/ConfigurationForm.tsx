@@ -12,10 +12,8 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
 import { SelectableSwitch } from '@latitude-data/web-ui/molecules/SelectableSwitch'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useDebounce } from 'use-debounce'

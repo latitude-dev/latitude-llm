@@ -6,10 +6,8 @@ import { ModifiedDocumentType } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import Link from 'next/link'
 import { LatteThreadCheckpoint } from '@latitude-data/core/schema/types'
 

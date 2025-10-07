@@ -11,7 +11,7 @@ import { useCallback, useMemo } from 'react'
 import { TriggerEventsList } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggerEventsList'
 import { OnRunTriggerFn } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersList'
 import { useTriggerInfo } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersCard'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import useDocumentVersions from '$/stores/documentVersions'
 import {
   isChatTrigger,

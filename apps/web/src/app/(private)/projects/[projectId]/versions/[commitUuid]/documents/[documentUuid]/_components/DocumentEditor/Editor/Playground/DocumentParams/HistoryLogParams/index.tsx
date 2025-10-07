@@ -9,7 +9,7 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import Link from 'next/link'
 
 import { type UseLogHistoryParams } from './useLogHistoryParams'

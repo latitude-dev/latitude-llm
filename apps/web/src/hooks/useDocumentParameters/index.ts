@@ -5,7 +5,7 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { useCurrentProject } from '@latitude-data/web-ui/providers'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { detectParamChanges } from './detectParameterChanges'
 import { useMetadataParameters } from './metadataParametersStore'
 import {

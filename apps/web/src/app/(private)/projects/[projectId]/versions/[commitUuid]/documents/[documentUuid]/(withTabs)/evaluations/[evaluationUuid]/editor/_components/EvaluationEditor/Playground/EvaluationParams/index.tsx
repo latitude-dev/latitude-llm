@@ -6,7 +6,7 @@ import {
   CollapsibleBox,
   OnToggleFn,
 } from '@latitude-data/web-ui/molecules/CollapsibleBox'
-import { ICommitContextType } from '@latitude-data/web-ui/providers'
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { HistoryLogParams } from './HistoryLogParams'
 import { UseLogHistoryParams } from './HistoryLogParams/useLogHistoryParams'
 import { DocumentVersion } from '@latitude-data/core/schema/types'

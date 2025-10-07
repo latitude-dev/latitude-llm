@@ -18,10 +18,8 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { StarburstBadge } from '@latitude-data/web-ui/atoms/StarburstBadge'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-} from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
 import { ReactNode, RefObject, useCallback, useRef, useState } from 'react'

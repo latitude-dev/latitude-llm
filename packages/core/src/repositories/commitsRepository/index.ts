@@ -202,6 +202,7 @@ export class CommitsRepository extends RepositoryLegacy<
         description: this.scope.description,
         projectId: this.scope.projectId,
         userId: this.scope.userId,
+        mainDocumentUuid: this.scope.mainDocumentUuid,
         mergedAt: this.scope.mergedAt,
         createdAt: this.scope.createdAt,
         updatedAt: this.scope.updatedAt,

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { CronFormField } from '@latitude-data/web-ui/organisms/CronInput'
 import { CLIENT_TIMEZONE } from '$/lib/constants'

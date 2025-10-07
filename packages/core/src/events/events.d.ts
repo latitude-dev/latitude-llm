@@ -646,6 +646,14 @@ export type RunEndedEvent = LatitudeEventGeneric<
   }
 >
 
+export type CommitUpdatedEvent = LatitudeEventGeneric<
+  'commitUpdated',
+  {
+    workspaceId: number
+    commit: Commit
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -705,6 +713,7 @@ export type LatitudeEvent =
   | RunStartedEvent
   | RunProgressEvent
   | RunEndedEvent
+  | CommitUpdatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -765,4 +774,5 @@ export interface IEventsHandlers {
   runStarted: EventHandler<RunStartedEvent>[]
   runProgress: EventHandler<RunProgressEvent>[]
   runEnded: EventHandler<RunEndedEvent>[]
+  commitUpdated: EventHandler<CommitUpdatedEvent>[]
 }
