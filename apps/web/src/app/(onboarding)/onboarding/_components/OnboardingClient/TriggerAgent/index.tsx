@@ -51,6 +51,7 @@ export function TriggerAgentBody({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { playground } = usePlayground()
+
   const {
     data: triggers,
     isLoading: isLoadingTriggers,
