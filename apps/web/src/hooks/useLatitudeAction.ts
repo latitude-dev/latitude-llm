@@ -1,14 +1,14 @@
-import { useCallback, useMemo } from 'react'
+import { isFrontendRedirect } from '$/lib/frontendRedirect'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
+import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { FlattenedValidationErrors, ValidationErrors } from 'next-safe-action'
 import {
+  HookCallbacks,
   HookSafeActionFn,
   useAction,
-  HookCallbacks,
 } from 'next-safe-action/hooks'
-import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { useRouter } from 'next/navigation'
-import { isFrontendRedirect } from '$/lib/frontendRedirect'
+import { useCallback, useMemo } from 'react'
 
 export type InferInputOrDefault<MaybeSchema, Default> =
   MaybeSchema extends StandardSchemaV1
@@ -93,6 +93,28 @@ export type ExecuteFn<S extends ActionSchema, Data> = (
   | readonly [null, ActionErrorKlass<S> | ServerErrorKlass]
 >
 
+const capitalize = (str: string) => {
+  return str
+    .replace(/([A-Z])/g, ' $1')
+    .toLowerCase()
+    .replace(/^./, (match) => match.toUpperCase())
+    .trim()
+}
+
+const ZOD_REQUIRED_ERROR_PATTERN =
+  /Invalid input: expected (.*), received undefined/
+
+function humanizeError(key: string, error: string) {
+  const field = capitalize(key)
+
+  if (ZOD_REQUIRED_ERROR_PATTERN.test(error)) {
+    if (field) return `${field} is required`
+    return 'Required'
+  }
+
+  return error
+}
+
 export function buildActionError<S extends StandardSchemaV1>({
   validationErrors,
   serverError,
@@ -100,7 +122,23 @@ export function buildActionError<S extends StandardSchemaV1>({
   validationErrors?: ActionError<S>
   serverError?: unknown
 }) {
-  if (validationErrors) return new ActionErrorKlass<S>(validationErrors)
+  if (validationErrors) {
+    validationErrors.formErrors = (validationErrors.formErrors || []).map(
+      (error) => humanizeError('', error),
+    )
+    validationErrors.fieldErrors = Object.entries(
+      (validationErrors.fieldErrors || {}) as Record<string, string[]>,
+    ).reduce(
+      (acc, [field, errors]) => {
+        acc[field] = errors.map((error) => humanizeError(field, error))
+        return acc
+      },
+      {} as Record<string, string[]>,
+    )
+
+    return new ActionErrorKlass<S>(validationErrors)
+  }
+
   return new ServerErrorKlass(serverError)
 }
 

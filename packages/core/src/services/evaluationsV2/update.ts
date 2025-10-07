@@ -60,7 +60,7 @@ export async function updateEvaluationV2<
     if (!options) options = {}
     options = compactObject(options)
 
-    const validateResult = await validateEvaluationV2(
+    const validating = await validateEvaluationV2(
       {
         mode: 'update',
         evaluation: evaluation,
@@ -72,11 +72,9 @@ export async function updateEvaluationV2<
       },
       tx,
     )
-    if (validateResult.error) return validateResult
-
-    const { settings: vSettings, options: vOptions } = validateResult.value
-    settings = vSettings
-    options = vOptions
+    if (validating.error) return Result.error(validating.error)
+    settings = validating.value.settings
+    options = validating.value.options
 
     const result = await tx
       .insert(evaluationVersions)

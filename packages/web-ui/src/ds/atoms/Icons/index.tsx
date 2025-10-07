@@ -28,6 +28,7 @@ import {
   ChevronsUpDown,
   ChevronUp,
   CircleAlert,
+  CircleArrowRight,
   CircleArrowUp,
   CircleCheck,
   CircleChevronLeft,
@@ -73,6 +74,7 @@ import {
   Github,
   Gitlab,
   Globe,
+  Headset,
   History,
   House,
   Image,
@@ -84,9 +86,11 @@ import {
   Link2,
   ListCheck,
   ListOrdered,
+  ListTodo,
   ListVideo,
   LoaderCircle,
   Lock,
+  LogOut,
   Logs,
   Mail,
   MapPin,
@@ -96,6 +100,7 @@ import {
   MinusIcon,
   MonitorIcon,
   Moon,
+  MousePointerClick,
   Newspaper,
   Paperclip,
   Pause,
@@ -137,21 +142,17 @@ import {
   UserRound,
   UsersIcon,
   WholeWord,
+  Wrench,
   XIcon,
   Youtube,
   Zap,
-  Wrench,
-  MousePointerClick,
-  LogOut,
-  Headset,
-  ListTodo,
-  CircleArrowRight,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { colors, DarkTextColor, type TextColor } from '../../tokens'
 import {
+  FilledBadgeCheckIcon,
   GridVertical,
   LatitudeLogo,
   LatitudeLogoMonochrome,
@@ -401,6 +402,7 @@ const Icons = {
   accessibility: Accessibility,
   wrench: Wrench,
   mousePointerClick: MousePointerClick,
+  filledBadgeCheck: FilledBadgeCheckIcon,
 }
 
 export type IconName = keyof typeof Icons

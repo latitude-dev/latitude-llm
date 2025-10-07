@@ -12,13 +12,15 @@ import useEvaluationResultsV2ByDocumentLogs from '$/stores/evaluationResultsV2/b
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useProviderLogs, { useProviderLog } from '$/stores/providerLogs'
 import { useActiveRuns } from '$/stores/runs/activeRuns'
-import { buildConversation } from '@latitude-data/core/helpers'
+import { useCompletedRuns } from '$/stores/runs/completedRuns'
 import {
-  EvaluationResultV2,
-  CompletedRun,
   ActiveRun,
+  CompletedRun,
+  EvaluationResultV2,
   Run,
+  RunAnnotation,
 } from '@latitude-data/constants'
+import { buildConversation } from '@latitude-data/core/helpers'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
@@ -42,12 +44,14 @@ export function RunPanel({
   isAttachingRun,
   stopRun,
   isStoppingRun,
+  mutateCompletedRuns,
 }: {
   run: Run
   attachRun: ReturnType<typeof useActiveRuns>['attachRun']
   isAttachingRun: ReturnType<typeof useActiveRuns>['isAttachingRun']
   stopRun: ReturnType<typeof useActiveRuns>['stopRun']
   isStoppingRun: ReturnType<typeof useActiveRuns>['isStoppingRun']
+  mutateCompletedRuns: ReturnType<typeof useCompletedRuns>['mutate']
 }) {
   const { value: expandParameters, setValue: setExpandParameters } =
     useLocalStorage({
@@ -59,6 +63,7 @@ export function RunPanel({
     return (
       <CompletedRunPanel
         run={run as CompletedRun}
+        mutateCompletedRuns={mutateCompletedRuns}
         expandParameters={expandParameters}
         setExpandParameters={setExpandParameters}
       />
@@ -80,10 +85,12 @@ export function RunPanel({
 
 function CompletedRunPanel({
   run,
+  mutateCompletedRuns,
   expandParameters,
   setExpandParameters,
 }: {
   run: CompletedRun
+  mutateCompletedRuns: ReturnType<typeof useCompletedRuns>['mutate']
   expandParameters: boolean
   setExpandParameters: (value: boolean) => void
 }) {
@@ -135,6 +142,28 @@ function CompletedRunPanel({
       {},
     )
   }, [results, run.log.uuid, manualEvaluations])
+
+  const syncAnnotations: typeof mutateResults = useCallback(
+    async (data, opts) => {
+      const mutated = (await mutateResults(data, opts)) as typeof results
+
+      const annotations = (mutated?.[run.log.uuid]?.filter(({ evaluation }) =>
+        manualEvaluations.find((e) => evaluation.uuid === e.uuid),
+      ) ?? []) as RunAnnotation[]
+
+      mutateCompletedRuns(
+        (prev) =>
+          prev?.map((r) => {
+            if (r.uuid !== run.uuid) return r
+            return { ...r, annotations }
+          }) ?? [],
+        { revalidate: false },
+      )
+
+      return mutated
+    },
+    [mutateResults, mutateCompletedRuns, run, manualEvaluations],
+  )
 
   const { data: providerLogs, isLoading: isLoadingProviderLogs } =
     useProviderLogs({ documentLogUuid: run.log.uuid })
@@ -246,7 +275,7 @@ function CompletedRunPanel({
                 key={evaluation.uuid}
                 evaluation={evaluation}
                 result={manualResults[evaluation.uuid]}
-                mutateEvaluationResults={mutateResults}
+                mutateEvaluationResults={syncAnnotations}
                 providerLog={responseLog}
                 documentLog={run.log}
                 commit={run.log.commit}

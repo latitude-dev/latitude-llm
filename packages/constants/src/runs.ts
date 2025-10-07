@@ -1,4 +1,18 @@
+import {
+  EvaluationResultV2,
+  EvaluationType,
+  EvaluationV2,
+  ManualEvaluationMetric,
+} from './evaluations'
 import { DocumentLogWithMetadataAndError } from './models'
+
+export type RunAnnotation<
+  T extends EvaluationType = EvaluationType,
+  M extends ManualEvaluationMetric<T> = ManualEvaluationMetric<T>,
+> = {
+  result: EvaluationResultV2<T, M>
+  evaluation: EvaluationV2<T, M>
+}
 
 export type Run = {
   uuid: string
@@ -7,6 +21,7 @@ export type Run = {
   endedAt?: Date
   caption?: string
   log?: DocumentLogWithMetadataAndError
+  annotations?: RunAnnotation[]
 }
 
 export type ActiveRun = Pick<Run, 'uuid' | 'queuedAt' | 'startedAt' | 'caption'>
