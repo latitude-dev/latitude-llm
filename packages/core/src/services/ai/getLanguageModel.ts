@@ -1,11 +1,11 @@
-import { omit } from 'lodash-es'
+import { OpenAIProvider } from '@ai-sdk/openai'
 import { Providers } from '@latitude-data/constants'
 import { LanguageModel } from 'ai'
-import { VercelConfigWithProviderRules } from './providers/rules'
-import { LlmProvider } from './helpers'
-import { OpenAIProvider } from '@ai-sdk/openai'
-import { ProviderApiKey } from '../../schema/types'
+import { omit } from 'lodash-es'
 import { ProviderConfiguration } from '../../schema/models/providerApiKeys'
+import { ProviderApiKey } from '../../schema/types'
+import { LlmProvider } from './helpers'
+import { VercelConfigWithProviderRules } from './providers/rules'
 
 // FIXME: Is this doing anything? There are no options available here.
 function buildGenericLanguageModel({
@@ -44,8 +44,6 @@ export function getLanguageModel({
     return buildGenericLanguageModel({ model, config, llmProvider })
   }
 
-  const openAiProvider = llmProvider as OpenAIProvider
-
   const configuration =
     provider.configuration as ProviderConfiguration<Providers.OpenAI>
 
@@ -53,8 +51,9 @@ export function getLanguageModel({
   const usingChatCompletions =
     isLegacyProvider || configuration.endpoint === 'chat_completions'
 
-  // FIXME: Not using buildGenericLanguageModel?
-  if (usingChatCompletions) return openAiProvider.chat(model)
+  if (usingChatCompletions) {
+    llmProvider = (llmProvider as OpenAIProvider).chat as OpenAIProvider
+  }
 
   // Default for text completions in OpenAI is `/responses` endpoint since
   // vercel SDK v5:

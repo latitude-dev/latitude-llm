@@ -1,11 +1,11 @@
-import { describe, it, vi, expect, beforeAll } from 'vitest'
+import { Providers } from '@latitude-data/constants'
+import { LanguageModel } from 'ai'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { ProviderApiKey } from '../../schema/types'
+import * as factories from '../../tests/factories'
 import { getLanguageModel } from './getLanguageModel'
 import { LlmProvider } from './helpers'
-import * as factories from '../../tests/factories'
-import { Providers } from '@latitude-data/constants'
-import { ProviderApiKey } from '../../schema/types'
 import { VercelConfigWithProviderRules } from './providers/rules'
-import { LanguageModel } from 'ai'
 
 const GetLanguageModelMock = vi.hoisted(() => vi.fn())
 const GetChatLanguageModelMock = vi.hoisted(() => vi.fn())
@@ -73,7 +73,11 @@ describe('getLanguageModel', () => {
       config,
     })
 
-    expect(GetChatLanguageModelMock).toHaveBeenCalledWith('gpt-4o')
+    expect(GetChatLanguageModelMock).toHaveBeenCalledWith('gpt-4o', {
+      cacheControl: false,
+      model: 'gpt-4o',
+      provider: 'openai',
+    })
   })
 
   it('get model for OpenAI responses', () => {

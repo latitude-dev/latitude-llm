@@ -1,19 +1,18 @@
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 
-import { Providers } from '@latitude-data/constants'
+import { Providers, VercelConfig } from '@latitude-data/constants'
+import { JSONValue } from 'ai'
+import { toCamelCaseDeep } from '../../../../lib/camelCaseRecursive'
+import { convertLatitudeMessagesToVercelFormat } from '../../convertLatitudeMessagesToVercelFormat'
 import { applyAnthropicRules } from './anthropic'
 import { applyCustomRules } from './custom'
 import { applyGoogleRules } from './google'
-import { AppliedRules } from './types'
 import { applyOpenAiRules } from './openai'
-import { applyVertexAnthropicRules } from './vertexAnthropic'
-import { applyVertexGoogleRules } from './vertexGoogle'
 import { applyPerplexityRules } from './perplexity'
 import { getProviderMetadataKey } from './providerMetadata'
-import { JSONValue } from 'ai'
-import { VercelConfig } from '@latitude-data/constants'
-import { toCamelCaseDeep } from '../../../../lib/camelCaseRecursive'
-import { convertLatitudeMessagesToVercelFormat } from '../../convertLatitudeMessagesToVercelFormat'
+import { AppliedRules } from './types'
+import { applyVertexAnthropicRules } from './vertexAnthropic'
+import { applyVertexGoogleRules } from './vertexGoogle'
 
 type Props = {
   providerType: Providers
@@ -80,10 +79,12 @@ export function applyAllRules({ providerType, messages, config }: Props) {
       providerOptions: {
         [providerMetadataKey]: {
           ...providerOptions,
-          ...(providerMetadataKey === 'openai' && {
-            structuredOutputs: true,
-            strictJsonSchema: true,
-          }),
+          ...(providerMetadataKey === 'openai' &&
+            !!config.schema &&
+            !config.tools && {
+              structuredOutputs: true,
+              strictJsonSchema: true,
+            }),
         },
       },
     } as VercelConfigWithProviderRules,
