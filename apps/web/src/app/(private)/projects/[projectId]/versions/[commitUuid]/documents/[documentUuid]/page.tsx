@@ -15,13 +15,17 @@ import DocumentEditor from './_components/DocumentEditor/Editor'
 
 export default async function DocumentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{
     projectId: string
     commitUuid: string
     documentUuid: string
   }>
+  searchParams: Promise<{ showPreview?: string }>
 }) {
+  const queryParams = await searchParams
+  const showPreview = queryParams.showPreview === 'true'
   const { projectId: pjid, commitUuid, documentUuid } = await params
   const projectId = Number(pjid)
   const { workspace } = await getCurrentUserOrRedirect()
@@ -48,6 +52,7 @@ export default async function DocumentPage({
 
   return (
     <DocumentEditor
+      showPreview={showPreview}
       documents={documents}
       document={document}
       providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}

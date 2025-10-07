@@ -9,6 +9,7 @@ import {
   useDocumentValue,
 } from '$/hooks/useDocumentValueContext'
 import { ExperimentDiffProvider } from '$/hooks/useExperimentDiffContext'
+import { DocumentRoutes } from '$/services/routes'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useToggleModal } from '$/hooks/useToogleModal'
@@ -19,9 +20,9 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useDeployPrompt } from '../../DocumentationModal'
-import { DocumentTabSelector } from '../../DocumentTabs/tabs'
+import { DocumentTabSelector, TabValue } from '../../DocumentTabs/tabs'
 import { ChatInputBox } from './ChatInputBox'
 import { AgentToolbar } from './EditorHeader/AgentToolbar'
 import { TitleRow } from './EditorHeader/TitleRow'
@@ -39,6 +40,7 @@ import {
 } from '@latitude-data/core/schema/types'
 import { INPUT_SOURCE } from '@latitude-data/core/lib/documentPersistedInputs'
 import { LogSources } from '@latitude-data/core/constants'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 
 export type DocumentEditorProps = {
   document: DocumentVersion
@@ -48,6 +50,7 @@ export type DocumentEditorProps = {
   copilotEnabled: boolean
   refinementEnabled: boolean
   experimentDiff?: string
+  showPreview?: boolean
 }
 
 export function DocumentEditor(props: DocumentEditorProps) {
@@ -67,13 +70,6 @@ export function DocumentEditor(props: DocumentEditorProps) {
   )
 }
 
-const MANUAL_BASE_HEIGHT = 64
-const DATASET_BASE_HEIGHT = 64 + 49 + 16
-const HISTORY_BASE_HEIGHT = 64 + 41 + 16
-const MANUAL_ELM_HEIGHT = 44
-const DATASET_ELM_HEIGHT = 52 + 16
-const HISTORY_ELM_HEIGHT = 44
-
 /**
  * Main content component for the document editor that handles the UI layout and state management
  * @param props - Document editor properties
@@ -86,6 +82,7 @@ function DocumentEditorContent({
   document: doc,
   freeRunsCount,
   refinementEnabled,
+  showPreview = false,
 }: Omit<DocumentEditorProps, 'experimentDiff'>) {
   const { updateDocumentContent } = useDocumentValue()
   const { metadata } = useMetadata()
@@ -99,7 +96,7 @@ function DocumentEditorContent({
     isExperimentModalOpen,
     togglePlaygroundOpen,
     toggleExperimentModal,
-  } = useToggleStates()
+  } = useToggleStates({ showPreview })
   const name = useMemo(() => doc.path.split('/').pop() ?? doc.path, [doc.path])
   const isMerged = useMemo(() => commit.mergedAt !== null, [commit.mergedAt])
   const isLatitudeProvider = useIsLatitudeProvider({ metadata })
@@ -112,6 +109,9 @@ function DocumentEditorContent({
     commitVersionUuid: commit.uuid,
     document,
   })
+  const [selectedTab, setSelectedTab] = useState<TabValue>(
+    showPreview ? 'preview' : DocumentRoutes.editor,
+  )
   const { playground, hasActiveStream, resetChat, onBack, stopStreaming } =
     usePlaygroundLogic({
       commit,
@@ -120,40 +120,52 @@ function DocumentEditorContent({
       parameters,
       togglePlaygroundOpen,
       setHistoryLog,
+      setSelectedTab,
     })
-  const {
-    calcExpandedHeight,
-    runPromptButtonLabel,
-    runPromptButtonHandler,
-    toggleDocumentParamsHandler,
-  } = useEditorCallbacks({
+  const { runPromptButtonHandler } = useEditorCallbacks({
     isPlaygroundOpen,
     togglePlaygroundOpen,
     resetChat,
-    parameters,
     source,
     playground,
+    setSelectedTab,
   })
-  const isDocumentParamsOpen = useMemo(
-    () =>
-      (!isPlaygroundOpen && isPlaygroundTransitioning) ||
-      (isPlaygroundOpen && !isPlaygroundTransitioning),
-    [isPlaygroundOpen, isPlaygroundTransitioning],
-  )
-
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const onPreviewToggle = useCallback(
+    (showPreview: boolean) => {
+      setSelectedTab(showPreview ? 'preview' : DocumentRoutes.editor)
+
+      if (showPreview) {
+        // Show preview (open playground)
+        if (!isPlaygroundOpen) togglePlaygroundOpen()
+      } else {
+        // Show editor
+        if (isPlaygroundOpen) togglePlaygroundOpen()
+        resetChat()
+      }
+    },
+    [isPlaygroundOpen, togglePlaygroundOpen, resetChat],
+  )
 
   useAutoScroll(containerRef, { startAtBottom: playground.mode === 'chat' })
 
+  const showPlayground =
+    (!isPlaygroundTransitioning && isPlaygroundOpen) ||
+    (isPlaygroundTransitioning && !isPlaygroundOpen)
+
   return (
     <>
-      <div className='relative flex flex-col pt-6 h-full min-h-0'>
+      <div className='relative flex flex-col pt-6 h-full min-h-0 overflow-hidden'>
+        {/* Header Section */}
         <div className='w-full flex flex-col justify-center items-start gap-4 px-4 pb-4'>
           <div className='w-full flex flex-row items-center justify-between gap-4'>
             <DocumentTabSelector
+              selectedTab={selectedTab}
+              onSelectTab={setSelectedTab}
               projectId={String(project.id)}
               commitUuid={commit.uuid}
               documentUuid={document.documentUuid}
+              onPreviewToggle={onPreviewToggle}
             />
             <Button
               variant='ghost'
@@ -174,108 +186,126 @@ function DocumentEditorContent({
             onChangePrompt={updateDocumentContent}
           />
         </div>
-        <div
-          ref={containerRef}
-          className={cn(
-            'relative flex flex-col flex-1 px-4 custom-scrollbar scrollable-indicator',
-            {
-              'overflow-y-auto': isPlaygroundOpen && !isPlaygroundTransitioning,
-            },
-          )}
-        >
-          <div
-            className={cn(
-              'flex flex-col gap-4 pb-4 transition-all duration-300 ease-in-out h-full min-h-0',
-              {
-                'h-0 opacity-0 pb-0':
-                  (isPlaygroundTransitioning && !isPlaygroundOpen) ||
-                  (!isPlaygroundTransitioning && isPlaygroundOpen),
-              },
-            )}
-          >
-            <AgentToolbar
-              isMerged={isMerged}
-              isAgent={metadata?.config?.type === 'agent'}
-              config={metadata?.config}
-              prompt={document.content}
-              onChangePrompt={updateDocumentContent}
-            />
-            <FreeRunsBanner
-              isLatitudeProvider={isLatitudeProvider}
-              freeRunsCount={freeRunsCount}
-            />
-            <div className='flex-1 overflow-y-auto'>
-              <Editors
-                document={document}
-                refinementEnabled={refinementEnabled}
-              />
+
+        <div className='relative flex-1 overflow-hidden'>
+          <div className='absolute inset-4 bottom-0 overflow-hidden'>
+            {/* === EDITOR SCREEN === */}
+            <div
+              className={cn(
+                'absolute inset-0 transition-transform duration-200',
+                {
+                  '-translate-x-full': showPlayground,
+                  'translate-x-0': !showPlayground,
+                },
+              )}
+            >
+              <div className='flex flex-col gap-4 h-full pb-4'>
+                <AgentToolbar
+                  isMerged={isMerged}
+                  isAgent={metadata?.config?.type === 'agent'}
+                  config={metadata?.config}
+                  prompt={document.content}
+                  onChangePrompt={updateDocumentContent}
+                />
+                <FreeRunsBanner
+                  isLatitudeProvider={isLatitudeProvider}
+                  freeRunsCount={freeRunsCount}
+                />
+                <div className='flex-1 overflow-y-auto custom-scrollbar'>
+                  <Editors
+                    document={document}
+                    refinementEnabled={refinementEnabled}
+                  />
+                </div>
+              </div>
+              <div
+                className={cn(
+                  'sticky left-0 -bottom-2 z-[11] flex flex-row items-center justify-center',
+                  'absolute left-1/2 -translate-x-1/2 bottom-2',
+                )}
+              >
+                <RunButton
+                  metadata={metadata}
+                  showPlayground={showPlayground}
+                  runPromptButtonProps={{
+                    label: 'Preview',
+                    iconProps: { name: 'arrowRight' },
+                  }}
+                  runPromptButtonHandler={runPromptButtonHandler}
+                  onBack={onBack}
+                  toggleExperimentModal={toggleExperimentModal}
+                />
+              </div>
             </div>
-          </div>
-          <div className='pb-4'>
-            <DocumentParams
-              commit={commit}
-              document={document}
-              prompt={document.content}
-              source={source}
-              setSource={setSource}
-              setPrompt={updateDocumentContent}
-              onToggle={toggleDocumentParamsHandler}
-              isExpanded={isDocumentParamsOpen}
-              expandedHeight={
-                isPlaygroundTransitioning
-                  ? calcExpandedHeight(parameters)
-                  : undefined
-              }
-              maxHeight='calc((100vh / 2) - 10rem)'
-            />
-          </div>
-          <div
-            className={cn('flex-1 h-0 opacity-0 py-4', {
-              'h-auto opacity-1':
-                (!isPlaygroundTransitioning && isPlaygroundOpen) ||
-                (isPlaygroundTransitioning && !isPlaygroundOpen),
-            })}
-          >
-            {((isPlaygroundTransitioning && !isPlaygroundOpen) ||
-              isPlaygroundOpen) && (
-              <V2Playground
-                metadata={metadata}
-                mode={playground.mode}
-                parameters={parameters}
-                playground={playground}
-              />
-            )}
-          </div>
-          <div
-            className={cn(
-              'sticky left-0 bottom-0 pb-4 z-[11] flex flex-row items-center justify-center bg-background',
-              {
-                'absolute left-[calc(50%-124px)]':
-                  !isPlaygroundOpen ||
-                  (isPlaygroundTransitioning && isPlaygroundOpen),
-              },
-            )}
-          >
-            {playground.mode === 'preview' && (
-              <RunButton
-                metadata={metadata}
-                runPromptButtonLabel={runPromptButtonLabel}
-                runPromptButtonHandler={runPromptButtonHandler}
-                toggleExperimentModal={toggleExperimentModal}
-              />
-            )}
-            {playground.mode === 'chat' && (
-              <ChatInputBox
-                onBack={onBack}
-                resetChat={resetChat}
-                hasActiveStream={hasActiveStream}
-                playground={playground}
-                stopStreaming={stopStreaming}
-              />
-            )}
+
+            {/* === PREVIEW / CHAT SCREEN === */}
+            <div
+              className={cn(
+                'absolute inset-0 transition-transform duration-200',
+                {
+                  'translate-x-full': !showPlayground,
+                  'translate-x-0': showPlayground,
+                },
+              )}
+            >
+              <div className='flex flex-col gap-4 h-full'>
+                <div
+                  ref={containerRef}
+                  className='flex-1 overflow-y-auto custom-scrollbar scollable-indicator'
+                >
+                  <div className='flex flex-col gap-4 min-h-full'>
+                    <div className='pb-4'>
+                      <DocumentParams
+                        commit={commit}
+                        document={document}
+                        prompt={document.content}
+                        source={source}
+                        setSource={setSource}
+                        setPrompt={updateDocumentContent}
+                      />
+                    </div>
+                    <V2Playground
+                      metadata={metadata}
+                      mode={playground.mode}
+                      parameters={parameters}
+                      playground={playground}
+                    />
+                  </div>
+                  <div
+                    className={cn(
+                      'sticky bottom-2 left-0 z-[11] flex flex-row items-center justify-center',
+                    )}
+                  >
+                    {playground.mode === 'preview' && (
+                      <RunButton
+                        metadata={metadata}
+                        showPlayground={showPlayground}
+                        runPromptButtonProps={{
+                          label: 'Run',
+                          iconProps: { name: 'circlePlay' },
+                        }}
+                        runPromptButtonHandler={runPromptButtonHandler}
+                        onBack={onBack}
+                        toggleExperimentModal={toggleExperimentModal}
+                      />
+                    )}
+                    {playground.mode === 'chat' && (
+                      <ChatInputBox
+                        onBack={onBack}
+                        resetChat={resetChat}
+                        hasActiveStream={hasActiveStream}
+                        playground={playground}
+                        stopStreaming={stopStreaming}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
       <RunExperimentModal
         navigateOnCreate
         project={project as Project}
@@ -313,6 +343,7 @@ export function usePlaygroundLogic({
   userMessage,
   togglePlaygroundOpen,
   setHistoryLog,
+  setSelectedTab,
 }: {
   commit: Commit
   project: Project
@@ -320,6 +351,7 @@ export function usePlaygroundLogic({
   parameters: Record<string, any> | undefined
   togglePlaygroundOpen: () => void
   setHistoryLog: (log: { uuid: string; source: LogSources }) => void
+  setSelectedTab: ReactStateDispatch<TabValue>
   userMessage?: string
 }) {
   const onPromptRan = useCallback(
@@ -353,7 +385,8 @@ export function usePlaygroundLogic({
   const onBack = useCallback(() => {
     togglePlaygroundOpen()
     resetChat()
-  }, [togglePlaygroundOpen, resetChat])
+    setSelectedTab(DocumentRoutes.editor)
+  }, [togglePlaygroundOpen, resetChat, setSelectedTab])
 
   const stopStreaming = useCallback(() => {
     abortCurrentStream()
@@ -384,89 +417,29 @@ function useEditorCallbacks({
   playground,
   isPlaygroundOpen,
   togglePlaygroundOpen,
-  resetChat,
-  parameters,
-  source,
+  setSelectedTab,
 }: {
   playground: ReturnType<typeof usePlaygroundChat>
   isPlaygroundOpen: boolean
   togglePlaygroundOpen: () => void
   resetChat: () => void
-  parameters: Record<string, any> | undefined
   source: (typeof INPUT_SOURCE)[keyof typeof INPUT_SOURCE]
+  setSelectedTab: ReactStateDispatch<TabValue>
 }) {
-  const focusFirstParameterInput = useCallback(
-    (parameters: Record<string, unknown> = {}) => {
-      const inputElement = window.document.querySelector(
-        `[name="${Object.keys(parameters ?? {})[0]}"]`,
-      )
-      // @ts-expect-error - TS is wrong? the inputElement has a focus method
-      if (inputElement) inputElement.focus()
-    },
-    [],
-  )
-  const runPromptButtonLabel = useMemo(() => {
-    return isPlaygroundOpen ? 'Run' : 'Preview'
-  }, [isPlaygroundOpen])
   const runPromptButtonHandler = useCallback(() => {
     if (!isPlaygroundOpen) {
+      setSelectedTab('preview')
       togglePlaygroundOpen()
-      if (Object.keys(parameters ?? {}).length > 0) {
-        focusFirstParameterInput(parameters)
-      }
     } else {
       playground.start()
     }
-  }, [
-    playground,
-    togglePlaygroundOpen,
-    parameters,
-    focusFirstParameterInput,
-    isPlaygroundOpen,
-  ])
-  const toggleDocumentParamsHandler = useCallback(() => {
-    togglePlaygroundOpen()
-    resetChat()
-    focusFirstParameterInput(parameters)
-  }, [togglePlaygroundOpen, parameters, focusFirstParameterInput, resetChat])
-  const calcExpandedHeight = useCallback(
-    (parameters: Record<string, unknown> | undefined) => {
-      const keys = Object.keys(parameters ?? {})
-      if (!keys.length) return 90
-
-      const baseHeight =
-        source === INPUT_SOURCE.manual
-          ? MANUAL_BASE_HEIGHT
-          : source === INPUT_SOURCE.dataset
-            ? DATASET_BASE_HEIGHT
-            : HISTORY_BASE_HEIGHT
-      const elmHeight =
-        source === INPUT_SOURCE.manual
-          ? MANUAL_ELM_HEIGHT
-          : source === INPUT_SOURCE.dataset
-            ? DATASET_ELM_HEIGHT
-            : HISTORY_ELM_HEIGHT
-
-      return baseHeight + keys.length * elmHeight
-    },
-    [source],
-  )
+  }, [playground, togglePlaygroundOpen, isPlaygroundOpen, setSelectedTab])
 
   return useMemo(
     () => ({
-      focusFirstParameterInput,
-      calcExpandedHeight,
-      runPromptButtonLabel,
       runPromptButtonHandler,
-      toggleDocumentParamsHandler,
     }),
-    [
-      focusFirstParameterInput,
-      runPromptButtonLabel,
-      runPromptButtonHandler,
-      toggleDocumentParamsHandler,
-      calcExpandedHeight,
-    ],
+    [runPromptButtonHandler],
   )
 }
 
@@ -474,9 +447,9 @@ function useEditorCallbacks({
  * Hook that manages toggle states for playground and experiment modal
  * @returns Object containing playground and modal state management functions
  */
-function useToggleStates() {
+function useToggleStates({ showPreview = false }) {
   const { open: isPlaygroundOpen, onOpenChange: _togglePlaygroundOpen } =
-    useToggleModal()
+    useToggleModal({ initialState: showPreview })
   const {
     open: isPlaygroundTransitioning,
     onOpenChange: togglePLaygroundTransitioning,
