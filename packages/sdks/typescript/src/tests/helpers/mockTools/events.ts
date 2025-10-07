@@ -2453,6 +2453,8 @@ export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
           reasoningTokens: 0,
           cachedInputTokens: 0,
         },
+        response: undefined,
+        toolCalls: [],
         finishReason: 'stop',
         messages: [
           {

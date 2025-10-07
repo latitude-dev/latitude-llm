@@ -1,16 +1,16 @@
 'use client'
 
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useActiveRuns, useActiveRunsCount } from '$/stores/runs/activeRuns'
 import {
   useCompletedRuns,
   useCompletedRunsCount,
 } from '$/stores/runs/completedRuns'
-import { ProjectLimitedView } from '@latitude-data/core/schema/types'
-import { ActiveRun, CompletedRun } from '@latitude-data/constants'
+import { ActiveRun, CompletedRun, Run } from '@latitude-data/constants'
 import { Pagination } from '@latitude-data/core/helpers'
+import { ProjectLimitedView } from '@latitude-data/core/schema/types'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useEffect, useMemo, useState } from 'react'
 import { useDebounce } from 'use-debounce'
 import { RunPanel } from './RunPanel'
@@ -76,7 +76,7 @@ export function RunsPage({
 
   const isActiveLoading = isActiveCountLoading
 
-  const { data: completedRuns } = useCompletedRuns(
+  const { data: completedRuns, mutate: mutateCompletedRuns } = useCompletedRuns(
     { project, search: debouncedCompletedSearch, realtime },
     { fallbackData: serverCompleted.runs, keepPreviousData: true },
   )
@@ -101,7 +101,7 @@ export function RunsPage({
     return (
       activeRuns.find((run) => run.uuid === selectedRunUuid) ||
       completedRuns.find((run) => run.uuid === selectedRunUuid)
-    )
+    ) as Run | undefined // prettier-ignore
   }, [activeRuns, completedRuns, selectedRunUuid])
 
   return (
@@ -145,6 +145,7 @@ export function RunsPage({
               isAttachingRun={isAttachingRun}
               stopRun={stopRun}
               isStoppingRun={isStoppingRun}
+              mutateCompletedRuns={mutateCompletedRuns}
             />
           ) : (
             <div className='w-full h-full flex flex-col gap-6 p-6 overflow-hidden relative'>

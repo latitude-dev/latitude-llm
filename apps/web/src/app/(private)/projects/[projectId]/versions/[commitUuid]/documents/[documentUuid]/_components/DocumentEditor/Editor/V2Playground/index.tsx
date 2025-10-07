@@ -6,10 +6,11 @@ import {
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import Chat from './Chat'
 import PreviewPrompt from './PreviewPrompt'
+import { memo } from 'react'
 
-export function V2Playground({
-  metadata,
+export const V2Playground = memo(function V2Playground({
   mode,
+  metadata,
   parameters,
   playground,
 }: {
@@ -41,4 +42,4 @@ export function V2Playground({
       setExpandParameters={setExpandParameters}
     />
   )
-}
+})

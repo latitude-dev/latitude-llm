@@ -315,8 +315,6 @@ async def on_error(error: ApiError):
 result = await latitude.runs.attach('conversation-uuid', AttachRunOptions(
     # Optional: Enable streaming for real-time updates
     stream=True,
-    # Optional: Make the run interactive (abort when client disconnects)
-    interactive=False,
     # Optional: Provide callbacks for events
     on_event=on_event,
     on_finished=on_finished,
@@ -580,7 +578,6 @@ class AttachRunOptions:
     on_error: Optional[OnError]
     tools: Optional[dict[str, OnToolCall]]
     stream: Optional[bool]
-    interactive: Optional[bool]
 
 class AttachRunResult:
     uuid: str

@@ -1,20 +1,24 @@
 import {
+  ACTIVE_RUN_STREAM_CAP,
+  ACTIVE_RUN_STREAM_KEY,
   ChainEvent,
   ChainEventTypes,
+  humanizeTool,
   LogSources,
   RUN_CAPTION_SIZE,
   StreamEventTypes,
 } from '@latitude-data/constants'
+import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 import { publisher } from '../../../events/publisher'
-import { LatitudeError } from '../../../lib/errors'
+import { RedisStream } from '../../../lib/redisStream'
 import { OkType } from '../../../lib/Result'
-import {
-  awaitClientToolResult,
-  type ToolHandler,
-} from '../../../lib/streamManager/clientTools/handlers'
+import { buildClientToolHandlersMap } from '../../../lib/streamManager/clientTools/handlers'
 import { RunsRepository } from '../../../repositories'
 import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtCommit'
+import { startRun } from '../../../services/runs/start'
+import { endRun } from '../../../services/runs/end'
+import { updateRun } from '../../../services/runs/update'
 import { BACKGROUND } from '../../../telemetry'
 import { getDataForInitialRequest } from '../documents/runDocumentAtCommitWithAutoToolResponses/getDataForInitialRequest'
 
@@ -51,14 +55,16 @@ export const backgroundRunJob = async (
     userMessage,
     source = LogSources.API,
   } = job.data
-
+  const repository = new RunsRepository(workspaceId, projectId)
+  const writeStream = new RedisStream({
+    key: ACTIVE_RUN_STREAM_KEY(runUuid),
+    cap: ACTIVE_RUN_STREAM_CAP,
+  })
   const abortController = new AbortController()
-  const onAborted = ({ jobId }: { jobId: string }) => {
+  const cancelJob = ({ jobId }: { jobId: string }) => {
     if (jobId !== job.id) return
     abortController.abort()
   }
-
-  const repository = new RunsRepository(workspaceId, projectId)
 
   try {
     const { workspace, document, commit } = await getDataForInitialRequest({
@@ -68,15 +74,9 @@ export const backgroundRunJob = async (
       commitUuid,
     }).then((r) => r.unwrap())
 
-    await repository
-      .update({ runUuid, startedAt: new Date() })
-      .then((r) => r.unwrap())
-    await publisher.publishLater({
-      type: 'runStarted',
-      data: { runUuid, projectId, workspaceId },
-    })
+    await startRun({ workspaceId, projectId, runUuid }).then((r) => r.unwrap())
 
-    publisher.subscribe('cancelJob', onAborted)
+    publisher.subscribe('cancelJob', cancelJob)
 
     const result = await runDocumentAtCommit({
       workspace,
@@ -92,65 +92,51 @@ export const backgroundRunJob = async (
       userMessage,
     }).then((r) => r.unwrap())
 
-    forwardStreamEvents(
-      { workspaceId, projectId, runUuid, stream: result.stream, job, repository }, // prettier-ignore
-    )
-
-    // Note: wait for the stream to finish
-    const error = await result.error
-    if (error) throw error
-
-    return JSON.stringify({
-      lastResponse: await result.lastResponse,
-      toolCalls: await result.toolCalls,
+    await forwardStreamEvents({
+      workspaceId,
+      projectId,
+      runUuid,
+      writeStream,
+      readStream: result.stream,
+      repository,
     })
-  } catch (error) {
-    if (error instanceof LatitudeError) {
-      throw new Error(JSON.stringify(error.serialize()))
-    }
-
-    throw error
   } finally {
-    publisher.unsubscribe('cancelJob', onAborted)
+    await writeStream.cleanup()
+    await publisher.unsubscribe('cancelJob', cancelJob)
 
-    await repository.delete({ runUuid }).then((r) => r.unwrap())
-    await publisher.publishLater({
-      type: 'runEnded',
-      data: { runUuid, projectId, workspaceId },
-    })
+    // TODO: capture exception if we fail to end the run (but do not throw)
+    await endRun({ workspaceId, projectId, runUuid })
   }
 }
 
-function buildClientToolHandlersMap(tools: string[]) {
-  return tools.reduce((acc: Record<string, ToolHandler>, toolName: string) => {
-    acc[toolName] = awaitClientToolResult
-    return acc
-  }, {})
-}
-
 async function forwardStreamEvents({
-  stream,
-  job,
+  runUuid,
+  readStream,
+  writeStream,
   ...rest
 }: {
   workspaceId: number
   projectId: number
   runUuid: string
-  stream: ReadableStream<ChainEvent>
-  job: Job<BackgroundRunJobData, BackgroundRunJobResult>
+  readStream: ReadableStream<ChainEvent>
+  writeStream: RedisStream
   repository: RunsRepository
 }) {
-  const reader = stream.getReader()
+  const reader = readStream.getReader()
+  const GRACE_PERIOD_MS = env.KEEP_ALIVE_TIMEOUT // 10 minutes
+
   try {
     while (true) {
-      const { done, value: event } = await reader.read()
+      const timeoutPromise = new Promise<{ done: true; value?: undefined }>(
+        (resolve) => setTimeout(() => resolve({ done: true }), GRACE_PERIOD_MS),
+      )
+      const readPromise = reader.read()
+      const result = await Promise.race([readPromise, timeoutPromise])
+      const { done, value: event } = result
       if (done) break
 
-      // TODO(runs): check whether this scales well
-      const progress = (job.progress || []) as ChainEvent[]
-      job.updateProgress([...progress, event])
-
-      await forwardRunCaption({ ...rest, event })
+      await writeStream.write(event)
+      await forwardRunCaption({ ...rest, runUuid, event })
     }
   } finally {
     reader.releaseLock()
@@ -161,20 +147,18 @@ async function forwardRunCaption({
   workspaceId,
   projectId,
   runUuid,
-  repository,
   event: { event, data },
 }: {
   workspaceId: number
   projectId: number
   runUuid: string
-  repository: RunsRepository
   event: ChainEvent
 }) {
   let caption = ''
   if (event === StreamEventTypes.Provider) {
     switch (data.type) {
       case 'tool-call':
-        caption = `Running ${data.toolName} tool...`
+        caption = `Running ${humanizeTool(data.toolName)}...`
         break
       default:
         return
@@ -185,7 +169,7 @@ async function forwardRunCaption({
         caption = data.response.text
         break
       case ChainEventTypes.ToolsStarted:
-        caption = `Running ${data.tools.map((tool) => tool.name).join(', ')} ${data.tools.length > 1 ? 'tools' : 'tool'}...`
+        caption = `Running ${data.tools.map((tool) => humanizeTool(tool.name)).join(', ')}...`
         break
       case ChainEventTypes.IntegrationWakingUp:
         caption = `Waking up ${data.integrationName} integration...`
@@ -196,9 +180,6 @@ async function forwardRunCaption({
   caption = caption.trim().slice(0, RUN_CAPTION_SIZE)
   if (!caption) return
 
-  await repository.update({ runUuid, caption }).then((r) => r.unwrap())
-  await publisher.publishLater({
-    type: 'runStarted',
-    data: { runUuid, projectId, workspaceId },
-  })
+  // TODO: capture exception if we fail to update the run (but do not throw)
+  await updateRun({ workspaceId, projectId, runUuid, caption })
 }

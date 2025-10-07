@@ -11,7 +11,7 @@ import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { TabSelector } from '@latitude-data/web-ui/molecules/TabSelector'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Config } from 'promptl-ai'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   UseLatitudeAgentsConfig,
   useLatitudeAgentsConfig,
@@ -242,7 +242,7 @@ function AgentToolbarSkeleton() {
   return <Skeleton className='h-[3.125rem] w-full rounded-xl' />
 }
 
-export function AgentToolbar({
+export const AgentToolbar = memo(function AgentToolbar({
   isAgent,
   config,
   onChangePrompt,
@@ -340,4 +340,4 @@ export function AgentToolbar({
       )}
     </ClientOnly>
   )
-}
+})

@@ -4,26 +4,29 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 export function useStreamHandler() {
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  const abortCurrentStream = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+      return true
+    }
+    return false
+  }, [])
+
   // Clean up any active streams when component unmounts
   useEffect(() => {
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-        abortControllerRef.current = null
-      }
+      abortCurrentStream()
     }
-  }, [])
+  }, [abortCurrentStream])
 
   const createAbortController = useCallback(() => {
     // Abort any existing stream before creating a new one
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-
+    abortCurrentStream()
     // Create a new AbortController for this request
     abortControllerRef.current = new AbortController()
     return abortControllerRef.current.signal
-  }, [])
+  }, [abortCurrentStream])
 
   const createStreamHandler = useCallback(
     async (response: Response, signal?: AbortSignal) => {
@@ -81,15 +84,6 @@ export function useStreamHandler() {
     },
     [createAbortController],
   )
-
-  const abortCurrentStream = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      abortControllerRef.current = null
-      return true
-    }
-    return false
-  }, [])
 
   const hasActiveStream = useCallback(() => !!abortControllerRef.current, [])
 

@@ -16,6 +16,18 @@ services:
     ports:
       - '6379:6379'
 
+  redisinsight:
+    image: redis/redisinsight:latest
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - '5540:5540'
+    volumes:
+      - redisinsight-data:/db
+    depends_on:
+      - redis
+
   mailpit:
     image: axllent/mailpit:latest
     restart: always
@@ -90,3 +102,4 @@ services:
 volumes:
   db-data:
   shared-storage:
+  redisinsight-data:

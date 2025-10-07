@@ -77,6 +77,8 @@ export interface LatitudeStepCompletedEventData
 export interface LatitudeChainCompletedEventData
   extends GenericLatitudeEventData {
   type: ChainEventTypes.ChainCompleted
+  response: ChainStepResponse<StreamType> | undefined
+  toolCalls: ToolCall[]
   tokenUsage: LegacyVercelSDKVersion4Usage
   finishReason: FinishReason
 }

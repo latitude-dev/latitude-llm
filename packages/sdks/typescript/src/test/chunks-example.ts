@@ -353,6 +353,8 @@ const CHUNK_EVENTS: ChainEvent[] = [
           toolCalls: [],
         },
       ],
+      response: undefined,
+      toolCalls: [],
       tokenUsage: {
         inputTokens: 114,
         outputTokens: 352,

@@ -27,6 +27,7 @@ import {
   INPUT_SOURCE,
   InputSource,
 } from '@latitude-data/core/lib/documentPersistedInputs'
+import { memo } from 'react'
 
 export const TABS: TabSelectorOption<InputSource>[] = [
   { label: 'Manual', value: INPUT_SOURCE.manual },
@@ -91,7 +92,7 @@ type DocumentParamsProps = Props & {
   source: UseDocumentParameters['source']
   setSource: UseDocumentParameters['setSource']
 }
-export default function DocumentParams({
+export default memo(function DocumentParams({
   setSource,
   source,
   ...props
@@ -136,4 +137,4 @@ export default function DocumentParams({
       </div>
     </div>
   )
-}
+})

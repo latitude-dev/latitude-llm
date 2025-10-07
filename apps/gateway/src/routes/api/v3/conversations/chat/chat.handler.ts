@@ -4,10 +4,7 @@ import { runPresenter } from '$/presenters/runPresenter'
 import { ChatRoute } from '$/routes/api/v3/conversations/chat/chat.route'
 import { Message as LegacyMessage } from '@latitude-data/constants/legacyCompiler'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
-import {
-  awaitClientToolResult,
-  ToolHandler,
-} from '@latitude-data/core/lib/streamManager/clientTools/handlers'
+import { buildClientToolHandlersMap } from '@latitude-data/core/lib/streamManager/clientTools/handlers'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { addMessages } from '@latitude-data/core/services/documentLogs/addMessages/index'
 import { BACKGROUND, telemetry } from '@latitude-data/core/telemetry'
@@ -81,11 +78,4 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   }).unwrap()
 
   return c.json(body, 200)
-}
-
-function buildClientToolHandlersMap(tools: string[]) {
-  return tools.reduce((acc: Record<string, ToolHandler>, toolName: string) => {
-    acc[toolName] = awaitClientToolResult
-    return acc
-  }, {})
 }

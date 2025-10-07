@@ -1,19 +1,26 @@
 'use client'
 
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { ROUTES } from '$/services/routes'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
+import useFeature from '$/stores/useFeature'
+import {
+  DocumentTrigger,
+  DocumentVersion,
+  IntegrationDto,
+  Project,
+} from '@latitude-data/core/schema/types'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useCallback, useRef, useState } from 'react'
 import { ChatInputBox } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/ChatInputBox'
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useRunDocument } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/hooks/useRunDocument'
 import Chat from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
 import { ChatTriggerTextarea } from './ChatTriggerTextarea'
@@ -22,12 +29,6 @@ import { TriggersCard } from './TriggersCard'
 import { UnconfiguredIntegrations } from './UnconfiguredIntegrations'
 import { useActiveChatTrigger } from './useActiveTrigger'
 import { useTriggerSockets } from './useTriggerSockets'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-  IntegrationDto,
-  Project,
-} from '@latitude-data/core/schema/types'
 
 const ADD_BUTTON_LABEL = 'Add trigger'
 
@@ -165,6 +166,8 @@ export function TriggersList({
       commit,
     })
 
+  const { isEnabled: isRunStream } = useFeature('runs')
+
   const runPromptFn = useCallback(
     ({
       document,
@@ -265,8 +268,9 @@ export function TriggersList({
             <ChatInputBox
               resetChat={playground.reset}
               hasActiveStream={hasActiveStream}
+              abortCurrentStream={abortCurrentStream}
+              isRunStream={isRunStream}
               playground={playground}
-              stopStreaming={abortCurrentStream}
               placeholder='Ask anything'
               onBack={playground.reset}
               onBackLabel='Back to triggers'

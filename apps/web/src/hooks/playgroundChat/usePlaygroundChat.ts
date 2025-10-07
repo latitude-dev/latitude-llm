@@ -1,18 +1,20 @@
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { tokenizeMessages, tokenizeText } from '$/lib/tokenize'
 import useProviderApiKeys from '$/stores/providerApiKeys'
+import { useActiveRuns } from '$/stores/runs/activeRuns'
 import {
   ChainEvent,
   ChainEventTypes,
   EMPTY_USAGE,
   LegacyVercelSDKVersion4Usage as LanguageModelUsage,
 } from '@latitude-data/constants'
-import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
 import {
   Message,
   MessageRole,
   ToolCall,
   ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
+import { estimateCost } from '@latitude-data/core/services/ai/estimateCost/index'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProviderEventHandler } from './useProviderEventHandler'
@@ -439,6 +441,16 @@ export function usePlaygroundChat({
     [setMode, handleStream, runPromptFn, onPromptRan],
   )
 
+  const { project } = useCurrentProject()
+  const { stopRun, isStoppingRun } = useActiveRuns({ project, realtime: false })
+  const stop = useCallback(async () => {
+    if (!isLoading) return
+    if (!documentLogUuid) return
+    if (isStoppingRun) return
+
+    await stopRun({ runUuid: documentLogUuid })
+  }, [isLoading, documentLogUuid, stopRun, isStoppingRun])
+
   const reset = useCallback(() => {
     setMode('preview')
     setMessages([])
@@ -473,9 +485,12 @@ export function usePlaygroundChat({
       addMessages: addMessagesFn ? addMessages : undefined,
       error,
       isLoading,
+      isStopping: isStoppingRun,
       messages,
       runningLatitudeTools,
       start,
+      stop,
+      canStop: isLoading && !!documentLogUuid && !isStoppingRun,
       submitUserMessage,
       unrespondedToolCalls,
       usage,
@@ -492,9 +507,12 @@ export function usePlaygroundChat({
       addMessagesFn,
       error,
       isLoading,
+      isStoppingRun,
+      documentLogUuid,
       messages,
       runningLatitudeTools,
       start,
+      stop,
       submitUserMessage,
       unrespondedToolCalls,
       usage,

@@ -1,13 +1,13 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { formatCount } from '$/lib/formatCount'
+import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
-import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
 
 type StatusIndicatorProps = {
   playground: ReturnType<typeof usePlaygroundChat>
@@ -56,6 +56,7 @@ function InnerIndicator({
     wakingUpIntegration,
     runningLatitudeTools,
     isLoading: isStreaming,
+    isStopping,
     error: streamError,
   },
   canChat,
@@ -84,6 +85,17 @@ function InnerIndicator({
           Running <Text.H6B color='primary'>{runningLatitudeTools}</Text.H6B>{' '}
           {runningLatitudeTools === 1 ? 'tool' : 'tools'}
         </Text.H6>
+      </>
+    )
+  }
+
+  if (isStreaming && isStopping) {
+    return (
+      <>
+        <Separator orientation='vertical' className='self-stretch h-auto' />
+        <Text.H6M color='destructive' textOpacity={50}>
+          Stopping run...
+        </Text.H6M>
       </>
     )
   }

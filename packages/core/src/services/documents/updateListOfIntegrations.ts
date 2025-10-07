@@ -1,11 +1,11 @@
+import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
+import { and, eq } from 'drizzle-orm'
+import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { IntegrationsRepository } from '../../repositories'
 import { documentIntegrationReferences } from '../../schema/models/documentIntegrationReferences'
-import { and, eq } from 'drizzle-orm'
-import { getDocumentMetadata } from './scan'
 import { DocumentVersion, Workspace } from '../../schema/types'
-import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { Result } from '../../lib/Result'
+import { getDocumentMetadata } from './scan'
 
 function getToolIds(tools: LatitudePromptConfig['tools']): string[] {
   if (!tools) return []

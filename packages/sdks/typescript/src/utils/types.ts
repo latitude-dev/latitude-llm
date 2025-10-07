@@ -350,7 +350,6 @@ export type AttachRunOptions<
   S extends AssertedStreamType = 'text',
 > = StreamResponseCallbacks<S> & {
   stream?: boolean
-  interactive?: boolean
   tools?: ToolCalledFn<Tools>
   signal?: AbortSignal
 }
@@ -415,5 +414,4 @@ type ChatBodyParams = {
 
 type AttachRunBodyParams = {
   stream?: boolean
-  interactive?: boolean
 }

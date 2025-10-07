@@ -118,7 +118,10 @@ export async function getToolDefinitionFromDocument({
           source: streamManager.source,
         }).then((r) => r.unwrap())
 
-        forwardToolEvents({ source: stream, target: streamManager.controller })
+        await forwardToolEvents({
+          source: stream,
+          target: streamManager.controller,
+        })
 
         const usage = await runUsage
         streamManager.incrementRunUsage(usage)

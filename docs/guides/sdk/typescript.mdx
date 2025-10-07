@@ -278,8 +278,6 @@ Attach to an active conversation to receive its ongoing output:
 const result = await latitude.runs.attach('conversation-uuid', {
   // Optional: Enable streaming for real-time updates
   stream: true,
-  // Optional: Make the run interactive (abort when client disconnects)
-  interactive: false,
   // Optional: Provide callbacks for events
   onEvent: ({ event, data }) => {
     if (event === StreamEventTypes.Provider && data.type === 'text-delta') {
@@ -561,7 +559,6 @@ latitude.runs.attach<S extends AssertedStreamType = 'text', Tools extends ToolSp
   uuid: string,
   options?: {
     stream?: boolean,
-    interactive?: boolean,
     tools?: ToolCalledFn<Tools>,
     signal?: AbortSignal,
     onEvent?: ({ event, data }: { event: StreamEventTypes, data: ChainEventDto }) => void,

@@ -2,9 +2,9 @@ import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { captureException } from '$/helpers/captureException'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { ChainEventTypes } from '@latitude-data/constants'
-import { Workspace } from '@latitude-data/core/schema/types'
 import { LogSources } from '@latitude-data/constants'
+import { createSSEStream } from '@latitude-data/core/lib/createSSEStream'
+import { Workspace } from '@latitude-data/core/schema/types'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const POST = errorHandler(
@@ -24,100 +24,31 @@ export const POST = errorHandler(
     ) => {
       try {
         const { projectId, runUuid } = params
-
         const sdk = await createSdk({
           workspace: workspace,
           projectId: projectId,
           __internal: { source: LogSources.Playground },
         }).then((r) => r.unwrap())
-
-        const { readable, writable } = new TransformStream()
-        const writer = writable.getWriter()
-        const encoder = new TextEncoder()
-
-        let isWriterClosed = false
-        const safeCloseWriter = async () => {
-          if (!isWriterClosed) {
-            isWriterClosed = true
-            try {
-              await writer.close()
-            } catch (error) {
-              // No-op, writer might be closed already
-            }
-          }
-        }
-
-        const writeErrorToStream = async (error: Error | unknown) => {
-          try {
-            await writer.write(
-              encoder.encode(
-                `event: error\ndata: ${JSON.stringify({
-                  name: error instanceof Error ? error.name : 'UnknownError',
-                  message:
-                    error instanceof Error
-                      ? error.message
-                      : 'An unexpected error occurred',
-                  stack: error instanceof Error ? error.stack : undefined,
-                })}\n\n`,
-              ),
-            )
-          } catch (writeError) {
-            captureException(writeError as Error)
-          } finally {
-            await safeCloseWriter()
-          }
-        }
-
-        const abortHandler = () => writer.abort()
-        req.signal.addEventListener('abort', abortHandler)
+        const { readable, write, writeError, closeWriter } = createSSEStream()
 
         try {
-          // Note: attaching through the web is always detached
           sdk.runs.attach(runUuid, {
             stream: true,
-            interactive: false,
-            signal: undefined,
-            onEvent: async (event) => {
-              try {
-                if (event.data.type === ChainEventTypes.ChainError) {
-                  captureException(event.data.error)
-                }
-
-                await writer.write(
-                  encoder.encode(
-                    `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
-                  ),
-                )
-              } catch (error) {
-                captureException(error as Error)
-                // Try to send error to client before closing
-                await writeErrorToStream(new Error('Failed to write to stream'))
-              }
-            },
+            signal: req.signal,
+            onEvent: (event) => write(`event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`), // prettier-ignore
             onError: async (error) => {
-              captureException(error)
-
-              await writeErrorToStream(error)
+              await writeError(error)
+              await closeWriter()
             },
             onFinished: async () => {
-              try {
-                await writer.write(
-                  encoder.encode(
-                    `event: finished\ndata: ${JSON.stringify({ success: true })}\n\n`,
-                  ),
-                )
-              } catch (error) {
-                captureException(error as Error)
-              } finally {
-                await safeCloseWriter()
-              }
+              await write(`event: finished\ndata: ${JSON.stringify({ success: true })}\n\n`) // prettier-ignore
+              await closeWriter()
             },
           })
         } catch (error) {
           captureException(error as Error)
-          await writeErrorToStream(new Error('Failed to attach run'))
-        } finally {
-          req.signal.removeEventListener('abort', abortHandler)
+          await writeError(new Error('Failed to attach run'))
+          await closeWriter()
         }
 
         return new NextResponse(readable, {

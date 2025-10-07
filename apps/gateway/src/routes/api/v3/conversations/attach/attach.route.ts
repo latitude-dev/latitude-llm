@@ -21,7 +21,6 @@ export const attachRoute = createRoute({
         [http.MediaTypes.JSON]: {
           schema: z.object({
             stream: z.boolean().default(false),
-            interactive: z.boolean().default(false),
           }),
         },
       },

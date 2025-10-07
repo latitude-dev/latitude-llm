@@ -6,7 +6,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import Actions, { ActionsState } from './Actions'
 
 export default function Chat({
@@ -43,7 +43,8 @@ export default function Chat({
       )}
 
       <Messages
-        playground={playground}
+        messages={playground.messages}
+        error={playground.error}
         parameterKeys={parameterKeys}
         expandParameters={expandParameters ?? true} // by default, we show the parameters
         agentToolsMap={agentToolsMap}
@@ -65,14 +66,16 @@ function Header({ expandParameters, setExpandParameters }: ActionsState) {
   )
 }
 
-function Messages({
-  playground,
+const Messages = memo(function Messages({
+  messages,
+  error,
   parameterKeys,
   expandParameters,
   agentToolsMap,
   toolContentMap,
 }: {
-  playground: ReturnType<typeof usePlaygroundChat>
+  messages: ReturnType<typeof usePlaygroundChat>['messages']
+  error: ReturnType<typeof usePlaygroundChat>['error']
   parameterKeys: string[]
   expandParameters: boolean
   agentToolsMap: AgentToolsMap
@@ -81,14 +84,14 @@ function Messages({
   return (
     <div className='flex flex-col gap-3 flex-grow flex-shrink min-h-0'>
       <MessageList
-        messages={playground.messages}
+        messages={messages}
         parameters={parameterKeys}
         collapseParameters={!expandParameters}
         agentToolsMap={agentToolsMap}
         toolContentMap={toolContentMap}
       />
 
-      {playground.error && <ErrorMessage error={playground.error} />}
+      {error && <ErrorMessage error={error} />}
     </div>
   )
-}
+})

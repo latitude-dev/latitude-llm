@@ -15,7 +15,7 @@ import { AttachRoute } from './attach.route'
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 export const attachHandler: AppRouteHandler<AttachRoute> = async (ctx) => {
   const { conversationUuid } = ctx.req.valid('param')
-  const { stream, interactive } = ctx.req.valid('json')
+  const { stream } = ctx.req.valid('json')
   const workspace = ctx.get('workspace')
 
   const run = await unsafelyFindActiveRun(conversationUuid).then((r) => r.unwrap()) // prettier-ignore
@@ -31,33 +31,27 @@ export const attachHandler: AppRouteHandler<AttachRoute> = async (ctx) => {
     .then((r) => r.unwrap())
 
   const args = { run, project, workspace }
-  if (stream) return handleStreamingMode(ctx, args, interactive)
-  return await handleNonStreamingMode(ctx, args, interactive)
+  if (stream) return handleStreamingMode(ctx, args)
+  return await handleNonStreamingMode(ctx, args)
 }
 
 async function handleStreamingMode(
   ctx: Parameters<AppRouteHandler<AttachRoute>>[0],
   args: Parameters<typeof attachRun>[0],
-  interactive: boolean,
 ) {
   return streamSSE(
     ctx,
     async (stream) => {
-      let abortSignal: AbortSignal | undefined
-      if (interactive) {
-        const abortController = new AbortController()
-        stream.onAbort(() => {
-          abortController.abort()
-          stream.close()
-        })
-        abortSignal = abortController.signal
-      } else {
-        stream.onAbort(() => stream.close())
-      }
+      const abortController = new AbortController()
+      stream.onAbort(() => {
+        abortController.abort()
+        stream.close()
+      })
+      const abortSignal = abortController.signal
 
       try {
         let id = 0
-        const result = await attachRun({
+        await attachRun({
           ...args,
           abortSignal: abortSignal,
           onEvent: ({ event, data }) => {
@@ -68,26 +62,17 @@ async function handleStreamingMode(
             })
           },
         }).then((r) => r.unwrap())
-
-        // Wait for stream to finish
-        const error = await result.error
-        if (error) throw error
       } catch (error) {
         // Handle abort errors gracefully - don't log them as actual errors
-        if (isAbortError(error)) {
-          // Client disconnected, close stream quietly
-          return
-        }
+        if (isAbortError(error)) return
 
         // Re-throw other errors to be handled by the error callback
         throw error
       }
     },
     (error: Error) => {
-      // Don't log abort errors as they are expected when clients disconnect
-      if (isAbortError(error)) {
-        return Promise.resolve()
-      }
+      // Handle abort errors gracefully - don't log them as actual errors
+      if (isAbortError(error)) return Promise.resolve()
 
       const unknownError = getUnknownError(error)
       if (unknownError) captureException(error)
@@ -100,21 +85,15 @@ async function handleStreamingMode(
 async function handleNonStreamingMode(
   ctx: Parameters<AppRouteHandler<AttachRoute>>[0],
   args: Parameters<typeof attachRun>[0],
-  interactive: boolean,
 ) {
-  let abortSignal: AbortSignal | undefined
-  if (interactive) {
-    abortSignal = ctx.req.raw.signal // FIXME: this is not working
-  }
-
+  const abortSignal = ctx.req.raw.signal // FIXME: this is not working
   const result = await attachRun({ ...args, abortSignal }).then((r) => r.unwrap()) // prettier-ignore
 
   // Wait for stream to finish
-  const error = await result.error
+  const error = result.error
   if (error) throw error
 
-  const response = (await result.lastResponse)!
-  const body = runPresenter({ response }).unwrap()
+  const body = runPresenter({ response: result.lastResponse! }).unwrap()
 
   return ctx.json(body)
 }
