@@ -13,20 +13,28 @@ import { useCurrentProject } from '@latitude-data/web-ui/providers'
 import { redirect } from 'next/navigation'
 
 export default function NocodersNavbar({
+  onboardingSteps,
   currentStep,
   isLoadingOnboarding,
   executeCompleteOnboarding,
 }: {
+  onboardingSteps: OnboardingStepKey[]
   executeCompleteOnboarding: () => void
   currentStep: OnboardingStepKey | undefined | null // TODO(onboarding): remove null when data migration is done
   isLoadingOnboarding: boolean
 }) {
-  const project = useCurrentProject()
+  const { project } = useCurrentProject()
 
   const skipOnboarding = useCallback(() => {
     executeCompleteOnboarding()
     redirect(ROUTES.dashboard.root)
   }, [executeCompleteOnboarding])
+
+  const ONBOARDING_STEPS = Object.entries(ONBOARDING_STEP_CONTENT)
+  const isLast = ONBOARDING_STEPS.length - 1
+  const filteredNavbarSteps = ONBOARDING_STEPS.filter(([key]) =>
+    onboardingSteps.includes(key as OnboardingStepKey),
+  )
 
   return (
     <div className='flex flex-col p-6 items-start gap-8 h-full'>
@@ -34,33 +42,25 @@ export default function NocodersNavbar({
         <div className='flex flex-col gap-6 items-start'>
           <div className='flex flex-col gap-1'>
             <Text.H5 color='foregroundMuted'>Create your first agent</Text.H5>
-            <Text.H3M color='foreground'>{project.project.name}</Text.H3M>
+            <Text.H3M color='foreground'>{project.name}</Text.H3M>
           </div>
           <div className='flex flex-col gap-4'>
-            {Object.entries(ONBOARDING_STEP_CONTENT).map(
-              ([key, item], index) => (
-                <Fragment key={index}>
-                  <div className={cn(currentStep === key ? '' : 'opacity-70')}>
-                    <NavbarItem
-                      title={item.title}
-                      description={item.description}
-                      state={
-                        isLoadingOnboarding
-                          ? StatusFlagState.pending
-                          : calculateState(
-                              key as OnboardingStepKey,
-                              currentStep,
-                            )
-                      }
-                    />
-                  </div>
-                  {index ===
-                  Object.entries(ONBOARDING_STEP_CONTENT).length - 1 ? null : (
-                    <Separator variant='dashed' />
-                  )}
-                </Fragment>
-              ),
-            )}
+            {filteredNavbarSteps.map(([key, item], index) => (
+              <Fragment key={index}>
+                <div className={cn(currentStep === key ? '' : 'opacity-70')}>
+                  <NavbarItem
+                    title={item.title}
+                    description={item.description}
+                    state={
+                      isLoadingOnboarding
+                        ? StatusFlagState.pending
+                        : calculateState(key as OnboardingStepKey, currentStep)
+                    }
+                  />
+                </div>
+                {index === isLast ? null : <Separator variant='dashed' />}
+              </Fragment>
+            ))}
           </div>
         </div>
         <div className='flex flex-col gap-3'>

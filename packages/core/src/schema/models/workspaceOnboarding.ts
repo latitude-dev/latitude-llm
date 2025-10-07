@@ -16,9 +16,7 @@ export const workspaceOnboarding = latitudeSchema.table(
     completedAt: timestamp('completed_at'),
     currentStep: varchar('current_step', {
       length: 128,
-    })
-      .$type<OnboardingStepKey>()
-      .$default(() => OnboardingStepKey.SetupIntegrations),
+    }).$type<OnboardingStepKey>(),
     ...timestamps(),
   },
 )

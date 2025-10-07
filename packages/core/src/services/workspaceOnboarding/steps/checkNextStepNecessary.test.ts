@@ -120,6 +120,41 @@ describe('checkNextStepNecessary', () => {
       const resultValue = result.unwrap()
       expect(resultValue).toBe(true)
     })
+
+    it('returns true when integration document trigger was configured', async () => {
+      const { project, commit } = await factories.createProject({
+        workspace,
+        documents: {
+          'test.promptl': 'test content',
+        },
+      })
+
+      const integration = await factories.createIntegration({
+        workspace,
+        type: IntegrationType.Pipedream,
+        configuration: {
+          appName: 'slack',
+          authType: 'oauth',
+        },
+      })
+
+      await factories.createIntegrationDocumentTrigger({
+        workspaceId: workspace.id,
+        projectId: project.id,
+        commitId: commit.id,
+        integrationId: integration.id,
+        triggerStatus: DocumentTriggerStatus.Deployed,
+      })
+
+      const result = await checkNextStepNecessary({
+        currentStep: OnboardingStepKey.ConfigureTriggers,
+        workspace,
+      })
+
+      expect(result.ok).toBe(true)
+      const resultValue = result.unwrap()
+      expect(resultValue).toBe(true)
+    })
   })
 
   describe('TriggerAgent step', () => {

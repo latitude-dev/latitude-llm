@@ -7,6 +7,7 @@ import {
 import { checkNextStepNecessary } from './checkNextStepNecessary'
 import { Workspace } from '../../../schema/types'
 import { database } from '../../../client'
+import { OnboardingCompleteError } from './onboardingCompleteError'
 
 export async function getNextAvailableStep(
   {
@@ -21,7 +22,7 @@ export async function getNextAvailableStep(
   while (true) {
     const nextStep = getNextStep(currentStep)
     if (!nextStep) {
-      return Result.error(new Error('Onboarding is complete'))
+      return Result.error(new OnboardingCompleteError())
     }
     const checkNextStepNecessaryResult = await checkNextStepNecessary(
       {

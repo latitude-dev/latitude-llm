@@ -4,30 +4,28 @@ import { workspaceOnboarding } from '../../../schema/models/workspaceOnboarding'
 import { Result } from '../../../lib/Result'
 import { getNextAvailableStep } from './getNextAvailableStep'
 import { Workspace, WorkspaceOnboarding } from '../../../schema/types'
+import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 
 export async function moveNextOnboardingStep(
   {
     onboarding,
     workspace,
+    currentStep,
   }: {
     onboarding: WorkspaceOnboarding
     workspace: Workspace
+    currentStep: OnboardingStepKey
   },
   transaction = new Transaction(),
 ) {
   return transaction.call(async (tx) => {
-    if (!onboarding.currentStep) {
-      return Result.error(new Error('Onboarding current step is not set'))
-    }
-
     const getNextAvailableStepResult = await getNextAvailableStep(
       {
-        currentStep: onboarding.currentStep,
+        currentStep,
         workspace,
       },
       tx,
     )
-
     if (!Result.isOk(getNextAvailableStepResult)) {
       return getNextAvailableStepResult
     }

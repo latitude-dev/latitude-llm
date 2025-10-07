@@ -3,11 +3,7 @@ import { Workspace } from '../../../schema/types'
 import { Result } from '../../../lib/Result'
 import { DocumentTriggersRepository } from '../../../repositories/documentTriggersRepository'
 import { IntegrationsRepository } from '../../../repositories/integrationsRepository'
-import {
-  DocumentTriggerStatus,
-  DocumentTriggerType,
-  IntegrationType,
-} from '@latitude-data/constants'
+import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
 import { database } from '../../../client'
 
 export async function checkNextStepNecessary(
@@ -51,9 +47,7 @@ export async function checkNextStepNecessary(
     const documentTriggers = documentTriggersResult.unwrap()
     // For now, only pipedream integrations have triggers
     const pendingIntegrationTriggers = documentTriggers.filter(
-      (trigger) =>
-        trigger.triggerType === DocumentTriggerType.Integration &&
-        trigger.triggerStatus === DocumentTriggerStatus.Pending,
+      (trigger) => trigger.triggerType === DocumentTriggerType.Integration,
     )
     if (pendingIntegrationTriggers.length === 0) {
       return Result.ok(false)

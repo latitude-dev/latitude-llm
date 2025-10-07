@@ -16,19 +16,22 @@ type StatusIndicatorProps = {
   canStopStreaming?: boolean
   streamAborted?: boolean
   canChat?: boolean
+  position?: 'top' | 'bottom'
 }
 
 export function StatusIndicator({
   playground,
   canChat = true,
+  position = 'top',
   ...rest
 }: StatusIndicatorProps) {
   return (
     <div
       className={cn(
         'absolute bg-background rounded-xl flex items-center justify-center flex-row',
-        'gap-2 border border-border px-3 py-2 shadow-sm -top-14 !select-none',
-        { '-top-[5.5rem]': !canChat },
+        'gap-2 border border-border px-3 py-2 shadow-sm !select-none',
+        position === 'bottom' ? '' : '-top-14',
+        { '-top-[5.5rem]': !canChat && position === 'top' },
       )}
     >
       {playground.isLoading && (
@@ -41,7 +44,6 @@ export function StatusIndicator({
             cost={playground.cost}
             duration={playground.duration}
           />
-          <Separator orientation='vertical' className='self-stretch h-auto' />
         </>
       )}
       <InnerIndicator playground={playground} {...rest} />
@@ -60,10 +62,12 @@ function InnerIndicator({
   stopStreaming,
   canStopStreaming = false,
   streamAborted = false,
+  canChat = true,
 }: StatusIndicatorProps) {
   if (wakingUpIntegration) {
     return (
       <>
+        <Separator orientation='vertical' className='self-stretch h-auto' />
         <Text.H6 color='foregroundMuted'>
           Waking up <Text.H6B color='primary'>{wakingUpIntegration}</Text.H6B>{' '}
           integration
@@ -75,6 +79,7 @@ function InnerIndicator({
   if (runningLatitudeTools > 0) {
     return (
       <>
+        <Separator orientation='vertical' className='self-stretch h-auto' />
         <Text.H6 color='foregroundMuted'>
           Running <Text.H6B color='primary'>{runningLatitudeTools}</Text.H6B>{' '}
           {runningLatitudeTools === 1 ? 'tool' : 'tools'}
@@ -86,6 +91,7 @@ function InnerIndicator({
   if (isStreaming && canStopStreaming && stopStreaming) {
     return (
       <>
+        <Separator orientation='vertical' className='self-stretch h-auto' />
         <Button variant='ghost' size='none' onClick={stopStreaming}>
           <Text.H6M color='destructive'>Stop run</Text.H6M>
         </Button>
@@ -93,9 +99,10 @@ function InnerIndicator({
     )
   }
 
-  if (!isStreaming) {
+  if (!isStreaming && !canChat) {
     return (
       <>
+        <Separator orientation='vertical' className='self-stretch h-auto' />
         {streamAborted || streamError ? (
           <Tooltip
             asChild

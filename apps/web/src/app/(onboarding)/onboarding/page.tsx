@@ -1,4 +1,7 @@
-import { isOnboardingCompleted } from '$/data-access'
+import {
+  isOnboardingCompleted,
+  getNecessaryOnboardingSteps,
+} from '$/data-access'
 import { ROUTES } from '$/services/routes'
 import { OnboardingClient } from './_components/OnboardingClient'
 import { redirect } from 'next/navigation'
@@ -8,5 +11,7 @@ export default async function NocodersPage() {
   if (isCompleted) {
     redirect(ROUTES.dashboard.root)
   }
-  return <OnboardingClient />
+  const onboardingSteps = await getNecessaryOnboardingSteps()
+
+  return <OnboardingClient onboardingSteps={onboardingSteps} />
 }
