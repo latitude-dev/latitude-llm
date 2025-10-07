@@ -1,8 +1,6 @@
+import { TodoList } from '@latitude-data/constants'
+
 export type TodoToolArgs = {
   merge: boolean
-  todos: {
-    content: string
-    id: string
-    status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
-  }[]
+  todos: TodoList
 }

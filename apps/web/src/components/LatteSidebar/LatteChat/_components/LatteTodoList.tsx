@@ -1,11 +1,10 @@
-import type { TodoToolArgs } from '@latitude-data/core/services/latitudeTools/todo/types'
-import { ContentCard, ContentCardContainer } from '../ContentCard'
-import { ToolContent } from '@latitude-data/constants/legacyCompiler'
+'use client'
+
+import { TodoList, TodoListItem } from '@latitude-data/constants'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { useMemo } from 'react'
 import { TextColor } from '@latitude-data/web-ui/tokens'
-import { TodoListItem } from '@latitude-data/constants'
 
 function TodoItem({ item }: { item: TodoListItem }) {
   const [icon, color] = useMemo<[IconName, TextColor]>(() => {
@@ -26,29 +25,21 @@ function TodoItem({ item }: { item: TodoListItem }) {
   )
 }
 
-export function TodoLatitudeToolCallContent({
-  toolCallId,
-  args,
-}: {
-  toolCallId: string
-  args: TodoToolArgs
-  toolResponse?: ToolContent
-}) {
+export function LatteTodoList({ todoList }: { todoList: TodoList }) {
+  if (!todoList.length) return null
+
   return (
-    <ContentCard
-      label='TODO'
-      icon='listTodo'
-      bgColor='bg-success'
-      fgColor='successForeground'
-      info={toolCallId}
-    >
-      <ContentCardContainer>
-        <div className='w-full flex-col gap-4'>
-          {args.todos.map((item) => (
-            <TodoItem key={item.id} item={item} />
-          ))}
-        </div>
-      </ContentCardContainer>
-    </ContentCard>
+    <div className='w-full flex flex-col gap-2 border-b border-latte-widget py-2 px-3'>
+      <div className='w-full flex items-center justify-between'>
+        <Text.H4M color='latteInputForeground' userSelect={false}>
+          Todo List
+        </Text.H4M>
+      </div>
+      <div className='w-full max-h-96 overflow-y-auto custom-scrollbar flex flex-col gap-1'>
+        {todoList.map((item) => (
+          <TodoItem key={item.id} item={item} />
+        ))}
+      </div>
+    </div>
   )
 }

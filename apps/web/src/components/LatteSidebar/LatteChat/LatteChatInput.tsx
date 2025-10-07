@@ -25,6 +25,7 @@ import React, {
 } from 'react'
 import { ChangeList } from './_components/ChangesList'
 import { LatteDebugVersionSelector } from './_components/DebugVersionSelector'
+import { LatteTodoList } from './_components/LatteTodoList'
 
 const INPUT_PLACEHOLDERS = [
   'How can I see the logs of my agent?',
@@ -66,7 +67,8 @@ export function LatteChatInput({
   const navigate = useNavigate()
   const { acceptChanges, undoChanges, addFeedbackToLatteChange } =
     useLatteChangeActions()
-  const { threadUuid, isBrewing, latteActionsFeedbackUuid } = useLatteStore()
+  const { threadUuid, isBrewing, latteActionsFeedbackUuid, todoList } =
+    useLatteStore()
   const { data: checkpoints } = useLatteThreadCheckpoints({
     threadUuid,
     commitId: commit.id,
@@ -132,16 +134,15 @@ export function LatteChatInput({
 
   return (
     <div
-      className={cn('pt-0 w-full relative flex flex-col gap-0', {
-        'max-w-[600px]': !inConversation,
-      })}
+      className={cn(
+        'pt-0 w-full relative flex flex-col gap-0 rounded-2xl overflow-hidden border border-latte-widget',
+        {
+          'max-w-[600px]': !inConversation,
+        },
+      )}
     >
-      {!checkpoints.length && feedbackRequested ? (
-        <LatteChangesFeedback
-          onSubmit={addFeedbackToLatteChange!}
-          action={action}
-        />
-      ) : checkpoints.length > 0 ? (
+      {todoList.length > 0 && <LatteTodoList todoList={todoList} />}
+      {checkpoints.length > 0 && (
         <ChangeList
           checkpoints={checkpoints}
           undoChanges={handleUndoChanges}
@@ -151,18 +152,20 @@ export function LatteChatInput({
           }}
           disabled={isBrewing}
         />
-      ) : null}
+      )}
+      {checkpoints.length == 0 && feedbackRequested && (
+        <LatteChangesFeedback
+          onSubmit={addFeedbackToLatteChange!}
+          action={action}
+        />
+      )}
       <TextArea
         ref={inputRef}
         className={cn(
-          'bg-background w-full px-3 pt-3 pb-14 resize-none text-sm',
-          'rounded-2xl border-latte-widget border shadow-sm text-muted-foreground',
+          'bg-background w-full px-3 pt-3 pb-14 resize-none text-sm border-none',
+          'shadow-sm text-muted-foreground',
           'ring-0 focus-visible:ring-0 outline-none focus-visible:outline-none',
           'focus-visible:animate-glow focus-visible:glow-latte custom-scrollbar scrollable-indicator',
-          {
-            'rounded-t-none border-t-0':
-              checkpoints.length > 0 || feedbackRequested,
-          },
         )}
         placeholder={
           inConversation
@@ -181,7 +184,7 @@ export function LatteChatInput({
       <div
         className={cn(
           'absolute bottom-[2px] left-3 w-[calc(100%-0.75rem-2px)] pt-2 pb-3 pr-3',
-          'flex flex-row-reverse items-end justify-between bg-background rounded-br-2xl',
+          'flex flex-row-reverse items-end justify-between bg-background',
           'gap-4',
         )}
       >
@@ -304,7 +307,7 @@ function LatteChangesFeedback({
   }, [value, handleSubmit, hasAutoSubmitted])
 
   return (
-    <div className='flex flex-col gap-2 border border-latte-widget pt-3 pb-2 px-3 rounded-t-2xl relative overflow-hidden'>
+    <div className='flex flex-col gap-2 pt-3 pb-2 px-3 relative overflow-hidden border-b border-latte-widget'>
       {isTimerActive && (
         <div
           className='absolute bottom-0 left-0 h-0.5 bg-latte-widget transition-all duration-100 ease-out'
@@ -333,7 +336,7 @@ function LatteChangesFeedback({
           onKeyDown={handleKeyDown}
           placeholder='Your feedback...'
           className={cn(
-            'w-full text-sm text-muted-foreground border border-latte-widget',
+            'w-full text-sm text-muted-foreground ',
             'focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none',
           )}
         />

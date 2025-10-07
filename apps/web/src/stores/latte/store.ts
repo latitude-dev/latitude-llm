@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { LatteInteraction } from '$/hooks/latte/types'
 import { LatteUsage } from '@latitude-data/constants/latte'
+import { TodoList } from '@latitude-data/constants'
+import { TodoToolArgs } from '@latitude-data/core/services/latitudeTools/todo/types'
 
 type ProjectLatteState = {
   threadUuid: string | undefined
@@ -8,6 +10,7 @@ type ProjectLatteState = {
   usage: LatteUsage | undefined
   latteActionsFeedbackUuid: string | undefined
   interactions: LatteInteraction[]
+  todoList: TodoList
   newIntegrationIds: number[]
   isBrewing: boolean
   error: Error | undefined
@@ -19,6 +22,7 @@ const EMPTY_PROJECT_STATE = {
   usage: undefined,
   latteActionsFeedbackUuid: undefined,
   interactions: [],
+  todoList: [],
   newIntegrationIds: [], // TODO: refactor latte interactions to be stored in backend and have better step management
   isBrewing: false,
   error: undefined,
@@ -47,6 +51,7 @@ type LatteState = {
       | LatteInteraction[]
       | ((prev: LatteInteraction[]) => LatteInteraction[]),
   ) => void
+  updateTodo: (args: TodoToolArgs) => void
   addInteraction: (interaction: LatteInteraction) => void
   updateLastInteraction: (
     updater: (interaction: LatteInteraction) => LatteInteraction,
@@ -156,6 +161,37 @@ export const useLatteZustandStore = create<LatteState>((set, get) => ({
         },
       }
     }),
+
+  updateTodo: (args: TodoToolArgs) => {
+    set((state) => {
+      if (!state.currentProjectId) return state
+
+      const currentState =
+        state.projectStates[state.currentProjectId] ?? EMPTY_PROJECT_STATE
+      let newTodo = currentState.todoList
+      if (args.merge) {
+        // merge
+        for (const item of args.todos) {
+          const itemIndex = newTodo.findIndex((i) => i.id === item.id)
+          if (itemIndex === -1) newTodo.push(item)
+          else newTodo[itemIndex] = item
+        }
+      } else {
+        // replace
+        newTodo = args.todos
+      }
+
+      return {
+        projectStates: {
+          ...state.projectStates,
+          [state.currentProjectId]: {
+            ...currentState,
+            todoList: newTodo,
+          },
+        },
+      }
+    })
+  },
 
   addInteraction: (interaction: LatteInteraction) =>
     set((state) => {

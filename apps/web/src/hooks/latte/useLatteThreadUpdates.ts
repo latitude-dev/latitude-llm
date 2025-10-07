@@ -11,6 +11,8 @@ import {
 } from './types'
 import { useLatteUsage } from './usage'
 import { LatteThreadUpdateArgs } from '@latitude-data/core/websockets/constants'
+import { LatitudeToolInternalName } from '@latitude-data/constants'
+import { TodoToolArgs } from '@latitude-data/core/services/latitudeTools/todo/types'
 
 /**
  * Creates a tool step from the tool started update
@@ -89,6 +91,7 @@ function processToolStartedUpdate(
 export function useLatteThreadUpdates() {
   const {
     threadUuid,
+    updateTodo,
     setInteractions,
     setIsBrewing,
     setError,
@@ -153,6 +156,13 @@ export function useLatteThreadUpdates() {
         }
       }
 
+      if (
+        update.type === 'toolStarted' &&
+        update.toolName === LatitudeToolInternalName.TODO
+      ) {
+        updateTodo(update.args as TodoToolArgs)
+      }
+
       setInteractions((prev) => {
         if (fuckReactStrictMode) return prev
 
@@ -212,6 +222,7 @@ export function useLatteThreadUpdates() {
       setError,
       mutateUsage,
       addIntegrationId,
+      updateTodo,
     ],
   )
 
