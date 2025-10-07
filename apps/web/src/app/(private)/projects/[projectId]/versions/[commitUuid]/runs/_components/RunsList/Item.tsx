@@ -71,12 +71,12 @@ export const RunsListItem = memo(
           >
             {run.endedAt
               ? run.log?.error.code
-                ? (run.log?.error.message ??
-                  'An unknown error occurred while running the prompt')
-                : (run.caption ??
-                  'Run finished successfully without any response')
+                ? run.log?.error.message ||
+                  'An unknown error occurred while running the prompt'
+                : run.caption ||
+                  'Run finished successfully without any response'
               : run.startedAt
-                ? (run.caption ?? 'Waiting for a response...')
+                ? run.caption || 'Waiting for a response...'
                 : 'Waiting to get started...'}
           </Text.H5>
         </div>

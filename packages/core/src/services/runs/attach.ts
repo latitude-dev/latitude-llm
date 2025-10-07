@@ -1,10 +1,16 @@
-import { ChainEvent, Run } from '@latitude-data/constants'
+import {
+  ACTIVE_RUN_STREAM_KEY,
+  ChainEvent,
+  Run,
+} from '@latitude-data/constants'
 import {
   ChainError,
   LatitudeError,
   LatitudeErrorDto,
 } from '@latitude-data/constants/errors'
-import { Job, QueueEventsListener } from 'bullmq'
+import { env } from '@latitude-data/env'
+import { QueueEventsListener } from 'bullmq'
+import { withCacheIsolated } from '../../cache'
 import { BackgroundRunJobResult } from '../../jobs/job-definitions/runs/backgroundRunJob'
 import { queues } from '../../jobs/queues'
 import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
@@ -41,22 +47,6 @@ export async function attachRun({
     return Result.error(
       new NotFoundError(`Active run job with uuid ${run.uuid} not found`),
     )
-  }
-
-  let idx = 0
-  if (job.progress && onEvent) {
-    idx = forwardEvents(job.progress, idx, onEvent)
-  }
-
-  const onProgress = ({
-    jobId,
-    data,
-  }: Parameters<QueueEventsListener['progress']>[0]) => {
-    if (jobId !== job.id) return
-
-    if (data && onEvent) {
-      idx = forwardEvents(data, idx, onEvent)
-    }
   }
 
   const onCompleted = ({
@@ -110,21 +100,24 @@ export async function attachRun({
       onFailed({ jobId: job.id, failedReason: job.failedReason })
     }
   } else {
-    const onAborted = () => stopRun({ run, project, workspace })
+    const stream = new AbortController()
+    const onAborted = () => {
+      stopRun({ run, project, workspace })
+      stream.abort()
+    }
     if (abortSignal?.aborted) onAborted()
     else abortSignal?.addEventListener('abort', onAborted, { once: true })
 
     const subscription = await subscribeQueue()
-    subscription.on('progress', onProgress)
     subscription.on('completed', onCompleted)
     subscription.on('failed', onFailed)
-    promisedError.then(() => {
-      subscription
-        .off('progress', onProgress)
-        .off('completed', onCompleted)
-        .off('failed', onFailed)
 
+    if (onEvent) forwardStream({ run, onEvent, signal: stream.signal })
+
+    promisedError.finally(() => {
+      subscription.off('completed', onCompleted).off('failed', onFailed)
       abortSignal?.removeEventListener('abort', onAborted)
+      stream.abort()
     })
   }
 
@@ -135,19 +128,34 @@ export async function attachRun({
   })
 }
 
-// TODO(runs): defend to possible data race?
-function forwardEvents(
-  progress: Job['progress'],
-  index: number,
-  onEvent: (event: ChainEvent) => void,
-) {
-  if (!progress) return index
-  if (typeof progress !== 'object') return index
-  if (!Array.isArray(progress)) return index
+async function forwardStream({
+  run,
+  onEvent,
+  signal,
+}: {
+  run: Run
+  onEvent: (event: ChainEvent) => void
+  signal: AbortSignal
+}) {
+  let lastId = '0-0'
+  await withCacheIsolated(async (cache) => {
+    while (!signal.aborted) {
+      const result = await cache.xread(
+        'BLOCK',
+        env.KEEP_ALIVE_TIMEOUT,
+        'STREAMS',
+        ACTIVE_RUN_STREAM_KEY(run.uuid),
+        lastId,
+      )
 
-  for (let i = index; i < progress.length; i++) {
-    onEvent?.(progress[i] as ChainEvent)
-  }
+      if (signal.aborted) break
+      if (!result || result.length === 0) continue
 
-  return progress.length
+      for (const [eventId, fields] of result[0][1]) {
+        if (signal.aborted) break
+        onEvent(JSON.parse(fields[1]) as ChainEvent)
+        lastId = eventId
+      }
+    }
+  })
 }

@@ -1,11 +1,17 @@
 import {
+  ACTIVE_RUN_STREAM_CAP,
+  ACTIVE_RUN_STREAM_KEY,
+  ACTIVE_RUN_STREAM_TTL,
   ChainEvent,
   ChainEventTypes,
+  humanizeTool,
   LogSources,
   RUN_CAPTION_SIZE,
   StreamEventTypes,
 } from '@latitude-data/constants'
+import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
+import Redis from 'ioredis'
 import { publisher } from '../../../events/publisher'
 import { LatitudeError } from '../../../lib/errors'
 import { OkType } from '../../../lib/Result'
@@ -13,10 +19,28 @@ import {
   awaitClientToolResult,
   type ToolHandler,
 } from '../../../lib/streamManager/clientTools/handlers'
+import { buildRedisConnection, REDIS_KEY_PREFIX } from '../../../redis'
 import { RunsRepository } from '../../../repositories'
 import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtCommit'
 import { BACKGROUND } from '../../../telemetry'
 import { getDataForInitialRequest } from '../documents/runDocumentAtCommitWithAutoToolResponses/getDataForInitialRequest'
+
+// Note: use a separate connection for streams
+// to avoid starving the main connection
+let _cache: Redis | undefined
+async function cache() {
+  if (_cache) return _cache
+
+  _cache = await buildRedisConnection({
+    host: env.CACHE_HOST,
+    port: env.CACHE_PORT,
+    password: env.CACHE_PASSWORD,
+    maxRetriesPerRequest: 0,
+    keyPrefix: REDIS_KEY_PREFIX,
+  })
+
+  return _cache
+}
 
 export type BackgroundRunJobData = {
   workspaceId: number
@@ -93,7 +117,7 @@ export const backgroundRunJob = async (
     }).then((r) => r.unwrap())
 
     forwardStreamEvents(
-      { workspaceId, projectId, runUuid, stream: result.stream, job, repository }, // prettier-ignore
+      { workspaceId, projectId, runUuid, stream: result.stream, repository }, // prettier-ignore
     )
 
     // Note: wait for the stream to finish
@@ -118,6 +142,8 @@ export const backgroundRunJob = async (
       type: 'runEnded',
       data: { runUuid, projectId, workspaceId },
     })
+
+    await cache().then((c) => c.del(ACTIVE_RUN_STREAM_KEY(runUuid)))
   }
 }
 
@@ -129,28 +155,40 @@ function buildClientToolHandlersMap(tools: string[]) {
 }
 
 async function forwardStreamEvents({
+  runUuid,
   stream,
-  job,
   ...rest
 }: {
   workspaceId: number
   projectId: number
   runUuid: string
   stream: ReadableStream<ChainEvent>
-  job: Job<BackgroundRunJobData, BackgroundRunJobResult>
   repository: RunsRepository
 }) {
+  const key = ACTIVE_RUN_STREAM_KEY(runUuid)
   const reader = stream.getReader()
   try {
     while (true) {
       const { done, value: event } = await reader.read()
       if (done) break
 
-      // TODO(runs): check whether this scales well
-      const progress = (job.progress || []) as ChainEvent[]
-      job.updateProgress([...progress, event])
+      await cache().then((c) =>
+        c
+          .multi()
+          .xadd(
+            key,
+            'MAXLEN',
+            '~',
+            ACTIVE_RUN_STREAM_CAP,
+            '*',
+            'event',
+            JSON.stringify(event),
+          )
+          .expire(key, ACTIVE_RUN_STREAM_TTL)
+          .exec(),
+      )
 
-      await forwardRunCaption({ ...rest, event })
+      await forwardRunCaption({ ...rest, runUuid, event })
     }
   } finally {
     reader.releaseLock()
@@ -174,7 +212,7 @@ async function forwardRunCaption({
   if (event === StreamEventTypes.Provider) {
     switch (data.type) {
       case 'tool-call':
-        caption = `Running ${data.toolName} tool...`
+        caption = `Running ${humanizeTool(data.toolName)}...`
         break
       default:
         return
@@ -185,7 +223,7 @@ async function forwardRunCaption({
         caption = data.response.text
         break
       case ChainEventTypes.ToolsStarted:
-        caption = `Running ${data.tools.map((tool) => tool.name).join(', ')} ${data.tools.length > 1 ? 'tools' : 'tool'}...`
+        caption = `Running ${data.tools.map((tool) => humanizeTool(tool.name)).join(', ')}...`
         break
       case ChainEventTypes.IntegrationWakingUp:
         caption = `Waking up ${data.integrationName} integration...`

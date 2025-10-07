@@ -53,9 +53,7 @@ if (cluster.isPrimary) {
       hostname: HOSTNAME,
       port: Number(PORT),
       serverOptions: {
-        keepAliveTimeout: process.env.KEEP_ALIVE_TIMEOUT
-          ? Number(process.env.KEEP_ALIVE_TIMEOUT)
-          : 601000,
+        keepAliveTimeout: env.KEEP_ALIVE_TIMEOUT,
       },
     },
     () => {

@@ -160,6 +160,8 @@ export const env = createEnv({
       .optional()
       .default(true),
 
+    KEEP_ALIVE_TIMEOUT: z.coerce.number().optional().default(601000),
+
     LATITUDE_CLOUD: z.boolean().optional().default(false),
     LATITUDE_CLOUD_PAYMENT_URL: z.url().optional(),
 

@@ -26,3 +26,30 @@ export enum LatitudeToolInternalName {
 export const MAX_STEPS_CONFIG_NAME = 'maxSteps'
 export const DEFAULT_MAX_STEPS = 20
 export const ABSOLUTE_MAX_STEPS = 150
+
+const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
+
+export const humanizeTool = (tool: string, suffix: boolean = true) => {
+  if (tool.startsWith(AGENT_TOOL_PREFIX)) {
+    const name = tool
+      .replace(AGENT_TOOL_PREFIX, '')
+      .trim()
+      .split('_')
+      .map(capitalize)
+      .join(' ')
+    return suffix ? `${name} agent` : name
+  }
+
+  if (tool.startsWith(LATITUDE_TOOL_PREFIX)) {
+    const name = tool
+      .replace(LATITUDE_TOOL_PREFIX, '')
+      .trim()
+      .split('_')
+      .map(capitalize)
+      .join(' ')
+    return suffix ? `${name} tool` : name
+  }
+
+  const name = tool.trim().split('_').map(capitalize).join(' ')
+  return suffix ? `${name} tool` : name
+}

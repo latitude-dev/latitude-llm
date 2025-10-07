@@ -107,3 +107,14 @@ end
     `Failed to acquire lock for key "${lockKey}" within ${timeout}ms`,
   )
 }
+
+export const withCacheIsolated = async <T>(
+  callback: (cache: Redis) => Promise<T>,
+): Promise<T> => {
+  const conn = await cache().then((c) => c.duplicate())
+  try {
+    return await callback(conn)
+  } finally {
+    await conn.quit().catch(() => {})
+  }
+}
