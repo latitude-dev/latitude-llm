@@ -4,16 +4,16 @@ import NocodersNavbar from '../Navbar/NocodersNavbar'
 import {
   SetupIntegrationsHeader,
   SetupIntegrationsBody,
-} from './setupIntegrations'
+} from './SetupIntegrations'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import {
   ConfigureTriggersHeader,
   ConfigureTriggersBody,
-} from './configureTriggers'
-import { TriggerAgentHeader, TriggerAgentBody } from './triggerAgent'
+} from './ConfigureTriggers'
+import { TriggerAgentHeader, TriggerAgentBody } from './TriggerAgent'
 import { useState } from 'react'
-import { RunAgentHeader, RunAgentBody } from './runAgent'
+import { RunAgentHeader, RunAgentBody } from './RunAgent'
 import {
   ActiveTrigger,
   FAKE_DOCUMENT,
