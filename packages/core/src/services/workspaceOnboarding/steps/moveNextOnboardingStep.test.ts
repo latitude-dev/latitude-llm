@@ -10,6 +10,7 @@ import {
   DocumentTriggerStatus,
   IntegrationType,
 } from '@latitude-data/constants'
+import { OnboardingCompleteError } from './onboardingCompleteError'
 
 describe('moveNextOnboardingStep', () => {
   let workspaceOnboarding: WorkspaceOnboarding
@@ -131,6 +132,6 @@ describe('moveNextOnboardingStep', () => {
     })
 
     expect(result.ok).toBe(false)
-    expect(() => result.unwrap()).toThrow(new Error('Onboarding is complete'))
+    expect(() => result.unwrap()).toThrow(OnboardingCompleteError)
   })
 })

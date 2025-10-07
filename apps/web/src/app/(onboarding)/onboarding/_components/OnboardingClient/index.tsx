@@ -2,27 +2,24 @@
 
 import NocodersNavbar from '../Navbar/NocodersNavbar'
 import {
-  SetupIntegrationsIconAndTitle,
-  SetupIntegrationsContent,
-} from './setupIntegrations'
+  SetupIntegrationsHeader,
+  SetupIntegrationsBody,
+} from './SetupIntegrations'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import {
-  ConfigureTriggersIconAndTitle,
-  ConfigureTriggersContent,
-} from './configureTriggers'
-import { TriggerAgentIconAndTitle, TriggerAgentContent } from './triggerAgent'
-import { useCallback, useState } from 'react'
-import { RunAgentIconAndTitle, RunAgentContent } from './runAgent'
+  ConfigureTriggersHeader,
+  ConfigureTriggersBody,
+} from './ConfigureTriggers'
+import { TriggerAgentHeader, TriggerAgentBody } from './TriggerAgent'
+import { useState } from 'react'
+import { RunAgentHeader, RunAgentBody } from './RunAgent'
 import {
   ActiveTrigger,
   FAKE_DOCUMENT,
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersList'
-import { useRunDocument } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/hooks/useRunDocument'
-import { useCurrentCommit } from '@latitude-data/web-ui/providers'
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding/lib/OnboardingStep'
+import { PlaygroundProvider } from '../../lib/PlaygroundProvider'
 
 export function OnboardingClient({
   onboardingSteps,
@@ -55,24 +52,20 @@ export function OnboardingClient({
       />
       <div className='flex-row flex-1 h-full'>
         {currentStep === OnboardingStepKey.SetupIntegrations && (
-          <OnboardingStep
-            iconAndTitle={<SetupIntegrationsIconAndTitle />}
-            content={
-              <SetupIntegrationsContent
-                moveNextOnboardingStep={moveNextOnboardingStep}
-              />
-            }
-          />
+          <OnboardingStep.Root>
+            <SetupIntegrationsHeader />
+            <SetupIntegrationsBody
+              moveNextOnboardingStep={moveNextOnboardingStep}
+            />
+          </OnboardingStep.Root>
         )}
         {currentStep === OnboardingStepKey.ConfigureTriggers && (
-          <OnboardingStep
-            iconAndTitle={<ConfigureTriggersIconAndTitle />}
-            content={
-              <ConfigureTriggersContent
-                moveNextOnboardingStep={moveNextOnboardingStep}
-              />
-            }
-          />
+          <OnboardingStep.Root>
+            <ConfigureTriggersHeader />
+            <ConfigureTriggersBody
+              moveNextOnboardingStep={moveNextOnboardingStep}
+            />
+          </OnboardingStep.Root>
         )}
         {(currentStep === OnboardingStepKey.TriggerAgent ||
           currentStep === OnboardingStepKey.RunAgent) && (
@@ -106,73 +99,26 @@ function PlaygroundSteps({
   executeCompleteOnboarding: () => void
   activeTrigger: ActiveTrigger
 }) {
-  const commit = useCurrentCommit()
-
-  const { runDocument, addMessages, hasActiveStream } = useRunDocument({
-    commit: commit.commit,
-  })
-
-  const runPromptFn = useCallback(
-    ({
-      document,
-      userMessage,
-      parameters = {},
-      aiParameters = true,
-    }: {
-      document: DocumentVersion
-      parameters: Record<string, unknown>
-      userMessage: string | undefined
-      aiParameters: boolean
-    }) =>
-      runDocument({
-        document,
-        parameters,
-        userMessage,
-        aiParameters,
-      }),
-    [runDocument],
-  )
-
-  const playground = usePlaygroundChat({
-    runPromptFn,
-    addMessagesFn: addMessages,
-    onPromptRan: (documentLogUuid, error) => {
-      if (!documentLogUuid || error) return
-    },
-  })
-
   return (
-    <>
+    <PlaygroundProvider>
       {currentStep === OnboardingStepKey.TriggerAgent && (
-        <OnboardingStep
-          iconAndTitle={<TriggerAgentIconAndTitle />}
-          content={
-            <TriggerAgentContent
-              moveNextOnboardingStep={moveNextOnboardingStep}
-              setActiveTrigger={setActiveTrigger}
-              playground={playground}
-            />
-          }
-        />
+        <OnboardingStep.Root>
+          <TriggerAgentHeader />
+          <TriggerAgentBody
+            moveNextOnboardingStep={moveNextOnboardingStep}
+            setActiveTrigger={setActiveTrigger}
+          />
+        </OnboardingStep.Root>
       )}
       {currentStep === OnboardingStepKey.RunAgent && (
-        <OnboardingStep
-          iconAndTitle={
-            <RunAgentIconAndTitle
-              playground={playground}
-              hasActiveStream={hasActiveStream}
-            />
-          }
-          content={
-            <RunAgentContent
-              executeCompleteOnboarding={executeCompleteOnboarding}
-              activeTrigger={activeTrigger}
-              playground={playground}
-              hasActiveStream={hasActiveStream}
-            />
-          }
-        />
+        <OnboardingStep.Root>
+          <RunAgentHeader />
+          <RunAgentBody
+            executeCompleteOnboarding={executeCompleteOnboarding}
+            activeTrigger={activeTrigger}
+          />
+        </OnboardingStep.Root>
       )}
-    </>
+    </PlaygroundProvider>
   )
 }

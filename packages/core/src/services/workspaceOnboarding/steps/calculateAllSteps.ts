@@ -5,6 +5,7 @@ import { Result } from '../../../lib/Result'
 import { database } from '../../../client'
 import { PromisedResult } from '../../../lib/Transaction'
 import { getFirstStep } from './getFirstStep'
+import { OnboardingCompleteError } from './onboardingCompleteError'
 
 export async function calculateAllSteps(
   {
@@ -33,7 +34,7 @@ export async function calculateAllSteps(
       db,
     )
     if (!Result.isOk(nextStepResult)) {
-      if (nextStepResult.error.message === 'Onboarding is complete') {
+      if (nextStepResult.error instanceof OnboardingCompleteError) {
         return Result.ok(steps)
       }
       return nextStepResult

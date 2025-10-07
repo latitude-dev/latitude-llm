@@ -30,8 +30,10 @@ export default function NocodersNavbar({
     redirect(ROUTES.dashboard.root)
   }, [executeCompleteOnboarding])
 
-  const filteredNavbarSteps = Object.entries(ONBOARDING_STEP_CONTENT).filter(
-    ([key]) => onboardingSteps.includes(key as OnboardingStepKey),
+  const ONBOARDING_STEPS = Object.entries(ONBOARDING_STEP_CONTENT)
+  const isLast = ONBOARDING_STEPS.length - 1
+  const filteredNavbarSteps = ONBOARDING_STEPS.filter(([key]) =>
+    onboardingSteps.includes(key as OnboardingStepKey),
   )
 
   return (
@@ -56,10 +58,7 @@ export default function NocodersNavbar({
                     }
                   />
                 </div>
-                {index ===
-                Object.entries(ONBOARDING_STEP_CONTENT).length - 1 ? null : (
-                  <Separator variant='dashed' />
-                )}
+                {index === isLast ? null : <Separator variant='dashed' />}
               </Fragment>
             ))}
           </div>
