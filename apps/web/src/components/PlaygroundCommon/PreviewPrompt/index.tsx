@@ -74,7 +74,7 @@ export default function PreviewPrompt({
     promptlVersion: document.promptlVersion,
   })
   return (
-    <div className='flex flex-col flex-1 gap-2 overflow-hidden'>
+    <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
       {preview.warningRule ? <Warnings warnings={preview.warningRule} /> : null}
       {showHeader ? (
         <div className='flex flex-row items-center justify-between w-full'>

@@ -2,15 +2,16 @@ import {
   findCommitCached,
   getDocumentByUuidCached,
   getDocumentsAtCommitCached,
-  getProviderApiKeysCached,
 } from '$/app/(private)/_data-access'
-import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
 import { env } from '@latitude-data/env'
 import { redirect } from 'next/navigation'
+import { MetadataProvider } from '$/components/MetadataProvider'
+import { DevModeProvider } from '$/hooks/useDevMode'
+import { DocumentValueProvider } from '$/hooks/useDocumentValueContext'
 import DocumentEditor from './_components/DocumentEditor/Editor'
 
 export default async function DocumentPage({
@@ -47,18 +48,19 @@ export default async function DocumentPage({
     commitUuid,
   })
   const documents = await getDocumentsAtCommitCached({ commit })
-  const providerApiKeys = await getProviderApiKeysCached()
   const freeRunsCount = await getFreeRuns(workspace.id)
 
   return (
-    <DocumentEditor
-      showPreview={showPreview}
-      documents={documents}
-      document={document}
-      providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
-      freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
-      copilotEnabled={env.LATITUDE_CLOUD}
-      refinementEnabled={env.LATITUDE_CLOUD}
-    />
+    <MetadataProvider>
+      <DevModeProvider>
+        <DocumentValueProvider document={document} documents={documents}>
+          <DocumentEditor
+            freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
+            showPreview={showPreview}
+            refinementEnabled={env.LATITUDE_CLOUD}
+          />
+        </DocumentValueProvider>
+      </DevModeProvider>
+    </MetadataProvider>
   )
 }

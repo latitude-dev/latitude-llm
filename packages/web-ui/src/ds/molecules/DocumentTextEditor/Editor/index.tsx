@@ -84,7 +84,7 @@ export function DocumentTextEditor({
 
     setIsApplyingDiff(true)
 
-    await diff.onAccept(newValue)
+    diff.onAccept(newValue)
 
     setIsApplyingDiff(false)
   }, [diff])
@@ -95,7 +95,7 @@ export function DocumentTextEditor({
 
     setIsDiscardingDiff(true)
 
-    await diff.onReject()
+    diff.onReject()
 
     setIsDiscardingDiff(false)
   }, [diff])

@@ -11,7 +11,9 @@ export function ToolBarWrapper({
   return useMemo(
     () => (
       <FloatingPanel visible>
-        <div className='flex flex-row gap-2 items-center'>{children}</div>
+        <div className='flex flex-row gap-2 items-center pointer-events-auto'>
+          {children}
+        </div>
       </FloatingPanel>
     ),
     [children],
