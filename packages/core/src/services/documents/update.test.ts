@@ -87,21 +87,20 @@ describe('updateDocument', () => {
   })
 
   it('modifying a document to contain an empty list of tools succeeds', async (ctx) => {
-    const { project, user, documents } =
-      await ctx.factories.createProject({
-        providers: [
-          {
-            type: Providers.OpenAI,
-            name: 'openai',
-          },
-        ],
-        documents: {
-          unmodified: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: `miau`
-          }),
+    const { project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
         },
-      })
+      ],
+      documents: {
+        unmodified: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: `miau`,
+        }),
+      },
+    })
 
     const doc = documents[0]
     const { commit: draft } = await ctx.factories.createDraft({ project, user })

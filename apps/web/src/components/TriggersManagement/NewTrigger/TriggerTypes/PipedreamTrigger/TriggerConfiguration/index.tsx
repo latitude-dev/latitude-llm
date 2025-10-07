@@ -6,17 +6,17 @@ import { ConnectAccount } from './ConnectAccount'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useCreateDocumentTrigger } from './useCreateDocumentTrigger'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
-import { SelectPayloadParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/TriggerForms/IntegrationTriggerForm/SelectPayloadParameters'
-import { useParsedPipedreamTriggerDescription } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/TriggerForms/IntegrationTriggerForm/usePipedreamTriggerDescription'
-import {
-  useDocumentSelection,
-  SelectDocument,
-} from '../../../../../_components/SelectDocument'
 import { type AppDto } from '@latitude-data/core/constants'
 import {
   type DocumentTrigger,
   type IntegrationDto,
 } from '@latitude-data/core/schema/types'
+import { SelectPayloadParameters } from '../../../../components/TriggerForms/IntegrationTriggerForm/SelectPayloadParameters'
+import { useParsedPipedreamTriggerDescription } from '../../../../components/TriggerForms/IntegrationTriggerForm/usePipedreamTriggerDescription'
+import {
+  useDocumentSelection,
+  SelectDocument,
+} from '../../../../components/SelectDocument'
 
 export function TriggerConfiguration({
   trigger,

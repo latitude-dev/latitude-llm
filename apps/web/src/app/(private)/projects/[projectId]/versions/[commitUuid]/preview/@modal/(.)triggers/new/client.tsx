@@ -1,73 +1,18 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
-import { Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { IntegrationsList } from './_components/IntegrationsList'
-import { PipedreamTrigger } from './_components/TriggerTypes/PipedreamTrigger'
-import { ChatTrigger } from './_components/TriggerTypes/ChatTrigger'
-import { ScheduleTrigger } from './_components/TriggerTypes/ScheduleTrigger'
-import { EmailTrigger } from './_components/TriggerTypes/EmailTrigger'
-import { DocumentTriggerType } from '@latitude-data/constants'
-import { type DocumentTrigger } from '@latitude-data/core/schema/types'
+import { ROUTES } from '$/services/routes'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { NewTrigger } from '$/components/TriggersManagement/NewTrigger'
+import { type OnTriggerCreated } from '$/components/TriggersManagement/types'
 
-export type OnTriggerCreated = (dt?: DocumentTrigger) => void
-
-// TODO: Migrate chat (old share document to be a document trigger)
-// This requires a data migration although not sure how much people are using it
-export type TriggerIntegrationType = DocumentTriggerType | 'Chat'
-
-export type SelectedIntegration = {
-  slug: string
-  type: TriggerIntegrationType
-}
-
-function IntegrationDetail({
-  selectedIntegration,
-  onTriggerCreated,
-}: {
-  selectedIntegration?: SelectedIntegration | null
-  onTriggerCreated: OnTriggerCreated
-}) {
-  if (!selectedIntegration) {
-    return (
-      <div className='flex items-center justify-center h-full'>
-        <Text.H5>Select an integration</Text.H5>
-      </div>
-    )
-  }
-  const slug = selectedIntegration.slug
-
-  if (selectedIntegration.type === 'Chat') {
-    return <ChatTrigger onTriggerCreated={onTriggerCreated} />
-  }
-
-  if (selectedIntegration.type === DocumentTriggerType.Email) {
-    return <EmailTrigger onTriggerCreated={onTriggerCreated} />
-  }
-
-  if (selectedIntegration.type === DocumentTriggerType.Scheduled) {
-    return <ScheduleTrigger onTriggerCreated={onTriggerCreated} />
-  }
-
-  return (
-    <PipedreamTrigger
-      key={slug}
-      pipedreamSlug={slug}
-      onTriggerCreated={onTriggerCreated}
-    />
-  )
-}
-
-export function NewTrigger() {
+export function NewTriggerModal() {
   const navigate = useNavigate()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const [selected, setSelected] = useState<SelectedIntegration | null>(null)
   const onCloseModal = useCallback(() => {
     navigate.push(
       ROUTES.projects
@@ -90,15 +35,7 @@ export function NewTrigger() {
       description='Add a new trigger to run this project automatically'
       onOpenChange={onCloseModal}
     >
-      <div className='grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-6 w-full h-full min-h-0 pb-6'>
-        <IntegrationsList onSelectIntegration={setSelected} />
-        <div className='border border-border rounded-lg min-h-0 bg-secondary overflow-auto custom-scrollbar'>
-          <IntegrationDetail
-            selectedIntegration={selected}
-            onTriggerCreated={onTriggerCreated}
-          />
-        </div>
-      </div>
+      <NewTrigger onTriggerCreated={onTriggerCreated} />
     </Modal>
   )
 }

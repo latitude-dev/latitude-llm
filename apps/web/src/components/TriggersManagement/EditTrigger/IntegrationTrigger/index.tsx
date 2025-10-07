@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { PipedreamComponentPropsForm } from '$/components/Pipedream/PipedreamPropsForm'
 import { useIntegrationData } from './useIntegrationData'
-import { useParsedPipedreamTriggerDescription } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/TriggerForms/IntegrationTriggerForm/usePipedreamTriggerDescription'
-import type { EditTriggerProps } from '../../EditTriggerModal'
-import { SelectPayloadParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/_components/TriggerForms/IntegrationTriggerForm/SelectPayloadParameters'
-import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
+import { useParsedPipedreamTriggerDescription } from '$/components/TriggersManagement/components/TriggerForms/IntegrationTriggerForm/usePipedreamTriggerDescription'
+import { SelectPayloadParameters } from '$/components/TriggersManagement/components/TriggerForms/IntegrationTriggerForm/SelectPayloadParameters'
+import type { EditTriggerProps } from '../../types'
 
 export function EditIntegrationTrigger({
   trigger,

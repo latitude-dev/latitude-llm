@@ -1,5 +1,5 @@
-import { NewTrigger } from './client'
+import { NewTriggerModal } from './client'
 
 export default function NewTriggersPage() {
-  return <NewTrigger />
+  return <NewTriggerModal />
 }

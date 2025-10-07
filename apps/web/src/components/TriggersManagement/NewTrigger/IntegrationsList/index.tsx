@@ -11,7 +11,7 @@ import useConnectedIntegrationsByPipedreamApp from '$/stores/integrationsConnect
 import { useDebouncedCallback } from 'use-debounce'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { SelectedIntegration, TriggerIntegrationType } from '../../client'
+import { SelectedIntegration, TriggerIntegrationType } from '../../types'
 import { buildIntegrationOption } from './utils'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 

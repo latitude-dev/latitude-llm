@@ -75,7 +75,9 @@ export function applyAllRules({ providerType, messages, config }: Props) {
     messages: vercelMessages,
     config: {
       ...rules.config,
-      [getProviderMetadataKey(providerType)]: providerOptions,
+      providerOptions: {
+        [getProviderMetadataKey(providerType)]: providerOptions,
+      },
     } as VercelConfigWithProviderRules,
   }
 }

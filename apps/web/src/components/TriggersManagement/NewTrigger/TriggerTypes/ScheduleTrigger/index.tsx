@@ -4,11 +4,11 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { OnTriggerCreated } from '../../../client'
+import { OnTriggerCreated } from '../../../types'
 import {
   SelectDocument,
   useDocumentSelection,
-} from '../../../../_components/SelectDocument'
+} from '../../../components/SelectDocument'
 import { TriggerWrapper } from '../TriggerWrapper'
 import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { CronFormField } from '@latitude-data/web-ui/organisms/CronInput'

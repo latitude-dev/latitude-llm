@@ -4,11 +4,11 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import useDocumentTriggers from '$/stores/documentTriggers'
-import { type OnTriggerCreated } from '../../../client'
+import { type OnTriggerCreated } from '../../../types'
 import {
   SelectDocument,
   useDocumentSelection,
-} from '../../../../_components/SelectDocument'
+} from '../../../components/SelectDocument'
 import { TriggerWrapper } from '../TriggerWrapper'
 
 export function ChatTrigger({
