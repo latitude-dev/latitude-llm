@@ -53,6 +53,7 @@ export const useLatteStore = () => {
       setDebugVersionUuid: store.setDebugVersionUuid,
       setUsage: store.setUsage,
       setIsLoadingUsage: store.setIsLoadingUsage,
+      updateTodo: store.updateTodo,
       resetAll,
     }
   }, [store, setThreadUuid, setJobId, resetAll])

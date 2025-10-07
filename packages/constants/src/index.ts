@@ -84,3 +84,11 @@ export const OPENAI_PROVIDER_ENDPOINTS = [
   'responses',
   'chat_completions', // (DEPRECATED)
 ] as const
+
+export type TodoListItem = {
+  content: string
+  id: string
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+}
+
+export type TodoList = TodoListItem[]

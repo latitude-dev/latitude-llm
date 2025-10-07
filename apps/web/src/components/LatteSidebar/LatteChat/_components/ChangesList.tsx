@@ -85,7 +85,7 @@ export function ChangeList({
   if (!checkpoints.length) return null
 
   return (
-    <div className='w-full flex flex-col gap-2 border-latte-widget border py-2 px-3 rounded-t-2xl'>
+    <div className='w-full flex flex-col gap-2 py-2 px-3 border-b border-latte-widget'>
       <div className='w-full flex items-center justify-between'>
         <Text.H4M color='latteInputForeground' userSelect={false}>
           Changes
