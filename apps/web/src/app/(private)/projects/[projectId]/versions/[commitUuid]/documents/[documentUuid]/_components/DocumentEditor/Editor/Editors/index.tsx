@@ -1,16 +1,16 @@
 import { useDevMode } from '$/hooks/useDevMode'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
-import { useExperimentDiff } from '$/hooks/useExperimentDiffContext'
 import { useMetadata } from '$/hooks/useMetadata'
 import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui/providers'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PlaygroundBlocksEditor } from '../BlocksEditor'
 import { PlaygroundTextEditor } from '../TextEditor'
 import { useLatteDiff } from '$/hooks/useLatteDiff'
 import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 
 export function Editors({
   document,
@@ -25,7 +25,7 @@ export function Editors({
   const { metadata } = useMetadata()
   const { value, updateDocumentContent, isSaved } = useDocumentValue()
   const { diff: latteDiff } = useLatteDiff()
-  const { diff: experimentDiff, setDiff: setEditorDiff } = useExperimentDiff()
+  const [experimentDiff, setEditorDiff] = useState<DiffOptions | undefined>()
   const readOnlyMessage = useMemo(() => {
     if (commit.mergedAt !== null) {
       return 'Version published. Create a draft to edit prompts.'
