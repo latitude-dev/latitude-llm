@@ -11,8 +11,9 @@ export async function runCodeWithoutDependencies({
   return withSafeSandbox(async (sandbox) => {
     const client = await sandbox.connect()
     const interpreter = (() => {
-      if (language === 'python') return client.interpreters.python
-      if (language === 'javascript') return client.interpreters.javascript
+      const instance = client.interpreters
+      if (language === 'python') return instance.python.bind(instance)
+      if (language === 'javascript') return instance.javascript.bind(instance)
 
       throw new BadRequestError(`Language ${language} is not supported`)
     })()
