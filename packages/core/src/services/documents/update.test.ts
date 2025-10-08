@@ -8,7 +8,6 @@ import {
 import { recomputeChanges } from './recomputeChanges'
 import { updateDocument } from './update'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { Result } from '../../lib/Result'
 
 describe('updateDocument', () => {
   it('modifies a document that was created in a previous commit', async (ctx) => {
