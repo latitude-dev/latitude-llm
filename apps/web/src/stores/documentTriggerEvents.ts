@@ -3,6 +3,7 @@ import useSWR, { mutate as globalMutate, SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import { Commit, DocumentTriggerEvent } from '@latitude-data/core/schema/types'
+import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 
 function buildkey({
   projectId,
@@ -39,11 +40,26 @@ export default function useDocumentTriggerEvents(
       : undefined,
   )
 
-  const { data = EMPTY_ARRAY, isLoading } = useSWR<DocumentTriggerEvent[]>(
+  const {
+    data = EMPTY_ARRAY,
+    isLoading,
+    mutate,
+  } = useSWR<DocumentTriggerEvent[]>(
     buildkey({ projectId, commitUuid, triggerUuid }),
     fetcher,
     opts,
   )
+
+  useSockets({
+    event: 'triggerEventCreated',
+    onMessage: ({ triggerEvent }) => {
+      if (triggerEvent.triggerUuid !== triggerUuid) return
+      onRealtimeTriggerEventCreated?.(triggerEvent)
+      mutate((prev) => [triggerEvent, ...(prev ?? [])], {
+        revalidate: false,
+      })
+    },
+  })
 
   const onDocumentTriggerEventCreated = useCallback(
     (event: { triggerEvent: DocumentTriggerEvent; commit: Commit }) => {
