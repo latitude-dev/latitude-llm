@@ -3,10 +3,10 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 import {
   configureEmailAllowList,
   getEmailTriggerAddress,
-} from '../../../../_components/TriggerForms/EmailTriggerForm/utils'
-import { useEmailTriggerConfiguration } from '../../../../_components/TriggerForms/EmailTriggerForm/useConfiguration'
-import { EmailTriggerForm } from '../../../../_components/TriggerForms/EmailTriggerForm'
-import type { EditTriggerProps } from '../../EditTriggerModal'
+} from '$/components/TriggersManagement/components/TriggerForms/EmailTriggerForm/utils'
+import { useEmailTriggerConfiguration } from '$/components/TriggersManagement/components/TriggerForms/EmailTriggerForm/useConfiguration'
+import { EmailTriggerForm } from '$/components/TriggersManagement/components/TriggerForms/EmailTriggerForm'
+import type { EditTriggerProps } from '../../types'
 
 export function EditEmailTrigger({
   trigger,

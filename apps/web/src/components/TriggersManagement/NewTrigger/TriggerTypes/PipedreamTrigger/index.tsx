@@ -7,7 +7,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
-import { type OnTriggerCreated } from '../../../client'
+import { type OnTriggerCreated } from '../../../types'
 import { TriggerConfiguration } from './TriggerConfiguration'
 import {
   type PipedreamComponent,

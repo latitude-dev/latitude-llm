@@ -9,8 +9,10 @@ const NewProviderLink = () => (
     href={ROUTES.settings.providerApiKeys.new.root}
     className='flex-noWrap inline-block text-accent-foreground'
   >
-    Set up new provider{' '}
-    <Icon name='arrowRight' color='accentForeground' className='inline' />
+    <Text.H5M color='primary'>
+      Set up new provider{' '}
+      <Icon name='arrowRight' color='accentForeground' className='inline' />
+    </Text.H5M>
   </Link>
 )
 
@@ -29,20 +31,22 @@ export function FreeRunsBanner({
       : 'This provider has a limit of'
 
   return (
-    <Text.H6 color='foregroundMuted'>
-      {sentence}{' '}
-      <Tooltip
-        asChild
-        trigger={
-          <Text.H6M color='accentForeground'>
-            {freeRunsCount} of 100 daily free runs.
-          </Text.H6M>
-        }
-      >
-        We include the Latitude provider by default with 100 free runs to allow
-        you to test the product.
-      </Tooltip>{' '}
-      We highly recommend switching to your own provider. {<NewProviderLink />}
-    </Text.H6>
+    <div className='flex flex-col gap-y-2'>
+      <Text.H5 color='foregroundMuted'>
+        {sentence}{' '}
+        <Tooltip
+          trigger={
+            <Text.H5M color='accentForeground'>
+              {freeRunsCount} of 100 daily free runs.
+            </Text.H5M>
+          }
+        >
+          We include the Latitude provider by default with 100 free runs to
+          allow you to test the product.
+        </Tooltip>{' '}
+        We highly recommend switching to your own provider.
+      </Text.H5>
+      <NewProviderLink />
+    </div>
   )
 }

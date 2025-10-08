@@ -116,8 +116,8 @@ export default function DocumentParams({
   }
 
   return (
-    <div className='w-full border rounded-xl relative overflow-hidden custom-scrollbar'>
-      <div className='flex flex-col cursor-pointer sticky top-0 z-10 bg-background'>
+    <div className='w-full border rounded-xl relative bg-background'>
+      <div className='flex flex-col cursor-pointer sticky top-0 z-10'>
         <div className='flex flex-shrink-0 justify-between items-center py-3.5 gap-x-4 px-4'>
           <div className='flex flex-row items-center gap-x-2'>
             <Text.H5M userSelect={false}>Preview</Text.H5M>

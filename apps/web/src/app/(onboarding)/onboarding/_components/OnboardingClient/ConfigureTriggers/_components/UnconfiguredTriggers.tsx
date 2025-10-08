@@ -9,8 +9,13 @@ import { cn } from '@latitude-data/web-ui/utils'
 import { useTriggerInfo } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersCard'
 import useDocumentVersions from '$/stores/documentVersions'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { EditTriggerModal } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/@modal/(.)triggers/[triggerUuid]/edit/EditTriggerModal'
+import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useUpdateDocumentTrigger } from '$/components/TriggersManagement/EditTrigger/useUpdateDocumentTrigger'
+import {
+  EditTriggerModalContent,
+  EditTriggerModalFooter,
+} from '$/components/TriggersManagement/EditTrigger'
 
 export function UnconfiguredTriggers({
   trigger,
@@ -97,12 +102,51 @@ function ConfigureTriggerWrapper({
         </div>
       </div>
       {isEditModalOpen && (
-        <EditTriggerModal
-          triggerUuid={trigger.uuid}
-          onClose={onCloseModal}
-          withDeleteButton={false}
-        />
+        <EditTriggerModal triggerUuid={trigger.uuid} onClose={onCloseModal} />
       )}
     </div>
+  )
+}
+
+function EditTriggerModal({
+  triggerUuid,
+  onClose,
+}: {
+  triggerUuid: string
+  onClose: () => void
+}) {
+  const updater = useUpdateDocumentTrigger({
+    triggerUuid,
+    onClose,
+  })
+  return (
+    <Modal
+      open
+      dismissible
+      title={updater.title}
+      description='Edit the trigger configuration'
+      onOpenChange={onClose}
+      footerAlign='right'
+      footer={
+        <EditTriggerModalFooter
+          isMerged={updater.isMerged}
+          withDeleteButton={false}
+          isDeleting={updater.isDeleting}
+          isUpdating={updater.isUpdating}
+          onDeleteTrigger={updater.onDeleteTrigger}
+          onUpdate={updater.onUpdate}
+        />
+      }
+    >
+      <EditTriggerModalContent
+        isLoading={updater.isLoading}
+        trigger={updater.trigger}
+        document={updater.document}
+        isMerged={updater.isMerged}
+        docSelection={updater.docSelection}
+        setTriggerConfiguration={updater.setTriggerConfiguration}
+        isUpdating={updater.isUpdating}
+      />
+    </Modal>
   )
 }

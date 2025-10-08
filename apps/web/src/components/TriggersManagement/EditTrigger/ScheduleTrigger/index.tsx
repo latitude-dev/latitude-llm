@@ -1,9 +1,9 @@
 import { useCallback } from 'react'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import type { EditTriggerProps } from '../../EditTriggerModal'
 import { CronFormField } from '@latitude-data/web-ui/organisms/CronInput'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { CLIENT_TIMEZONE, DEFAULT_TIMEZONE } from '$/lib/constants'
+import type { EditTriggerProps } from '../../types'
 
 export function EditScheduleTrigger({
   trigger,

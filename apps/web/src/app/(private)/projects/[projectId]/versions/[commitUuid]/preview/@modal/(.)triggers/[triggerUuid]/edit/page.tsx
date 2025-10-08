@@ -1,23 +1,17 @@
-import { EditTriggerModal } from './EditTriggerModal'
-import { ROUTES } from '$/services/routes'
-import { HEAD_COMMIT } from '@latitude-data/constants'
+import { EditTriggerRouteParams, EditTriggerModal } from './EditTriggerModal'
 
 export default async function EditTriggerPageModal({
   params,
 }: {
-  params: Promise<{
-    triggerUuid: string
-    projectId: string
-    commitUuid: string
-  }>
+  params: Promise<EditTriggerRouteParams>
 }) {
   const { triggerUuid, projectId, commitUuid } = await params
-  const isHead = commitUuid === HEAD_COMMIT ? HEAD_COMMIT : null
-  const previewPath = ROUTES.projects
-    .detail({ id: Number(projectId) })
-    .commits.detail({ uuid: isHead ? HEAD_COMMIT : commitUuid }).preview.root
 
   return (
-    <EditTriggerModal triggerUuid={triggerUuid} redirectPath={previewPath} />
+    <EditTriggerModal
+      triggerUuid={triggerUuid}
+      projectId={projectId}
+      commitUuid={commitUuid}
+    />
   )
 }

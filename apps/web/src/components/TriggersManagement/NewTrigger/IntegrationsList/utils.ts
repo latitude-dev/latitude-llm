@@ -1,6 +1,6 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { OptionItem as SearchableOptionItem } from '@latitude-data/web-ui/molecules/SearchableList'
-import { type TriggerIntegrationType } from '../../client'
+import { type TriggerIntegrationType } from '../../types'
 import { type PipedreamIntegrationWithCounts } from '@latitude-data/core/schema/types'
 
 function pluralize(count: number, singular: string, plural: string): string {

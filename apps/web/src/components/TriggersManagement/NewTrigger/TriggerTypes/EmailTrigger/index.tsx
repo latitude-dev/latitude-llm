@@ -4,11 +4,11 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { type OnTriggerCreated } from '../../../client'
+import { type OnTriggerCreated } from '../../../types'
 import {
   SelectDocument,
   useDocumentSelection,
-} from '../../../../_components/SelectDocument'
+} from '../../../components/SelectDocument'
 import { TriggerWrapper } from '../TriggerWrapper'
 import { EmailTriggerConfig } from './Configuration'
 

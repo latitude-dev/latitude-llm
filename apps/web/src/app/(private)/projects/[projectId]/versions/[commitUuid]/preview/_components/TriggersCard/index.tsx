@@ -13,7 +13,6 @@ import {
   IntegrationTriggerConfiguration,
   ScheduledTriggerConfiguration,
 } from '@latitude-data/constants/documentTriggers'
-import { ICONS_BY_TRIGGER } from '../../@modal/(.)triggers/new/_components/IntegrationsList'
 import { TriggerWrapper } from '../TriggerWrapper'
 import { OnRunTriggerFn } from '../TriggersList'
 import { OnRunChatTrigger } from '../useActiveTrigger'
@@ -25,6 +24,7 @@ import {
   IntegrationDto,
   PipedreamIntegration,
 } from '@latitude-data/core/schema/types'
+import { ICONS_BY_TRIGGER } from '$/components/TriggersManagement/NewTrigger/IntegrationsList'
 
 export function useTriggerInfo({
   trigger,
