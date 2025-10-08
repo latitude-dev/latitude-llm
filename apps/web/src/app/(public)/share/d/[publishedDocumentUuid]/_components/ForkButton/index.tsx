@@ -2,7 +2,7 @@ import { forkDocumentAction } from '$/actions/documents/sharing/forkDocumentActi
 import LoginFooter from '$/app/(public)/login/_components/LoginFooter'
 import LoginForm from '$/app/(public)/login/LoginForm'
 import SignupFooter from '$/app/(public)/setup/_components/SignupFooter'
-import SetupForm from '$/app/(public)/setup/SetupForm'
+import SetupForm from '$/app/(public)/setup/_components/SetupForm'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useToggleModal } from '$/hooks/useToogleModal'

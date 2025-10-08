@@ -13,7 +13,7 @@ async function execute({
   router,
 }: ActionExecuteArgs<ActionType.CloneAgent>) {
   if (!hasCompletedOnboarding) {
-    return router.push(ROUTES.onboarding.root)
+    return router.push(ROUTES.onboarding.agents)
   }
 
   return router.push(
