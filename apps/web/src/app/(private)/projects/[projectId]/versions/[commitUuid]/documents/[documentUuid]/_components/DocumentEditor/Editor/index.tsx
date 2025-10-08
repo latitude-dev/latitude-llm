@@ -44,7 +44,7 @@ export default function DocumentEditor(props: {
     [isPlaygroundOpen, togglePlaygroundOpen, setSelectedTab],
   )
   return (
-    <div className='pt-6 px-6 gap-y-6 flex flex-col h-full w-full overflow-hidden'>
+    <div className='pt-6 px-6 gap-y-6 flex flex-col h-full w-full'>
       <div className='w-full flex flex-row items-center justify-between gap-4'>
         <DocumentTabSelector
           selectedTab={selectedTab}
@@ -65,7 +65,7 @@ export default function DocumentEditor(props: {
         </Button>
       </div>
       <div className='flex flex-1 gap-x-8 min-h-0'>
-        <div className='flex flex-1 h-full overflow-hidden'>
+        <div className='flex flex-1 h-full'>
           <DocumentEditorContentArea
             freeRunsCount={props.freeRunsCount}
             refinementEnabled={props.refinementEnabled}

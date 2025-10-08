@@ -109,9 +109,15 @@ export const PlaygroundBlocksEditor = memo(
       return <BlocksEditorPlaceholder />
     }
 
+    // Empty paragraph on the first children is considered empty
+    const isEmpty =
+      initialValue.children.length <= 1 &&
+      initialValue.children[0]?.children.length <= 1
+
     return (
       <Suspense fallback={<BlocksEditorPlaceholder />}>
         <BlocksEditor
+          autoFocus={isEmpty}
           initialValue={initialValue}
           currentDocument={document}
           project={project}
@@ -124,7 +130,6 @@ export const PlaygroundBlocksEditor = memo(
           onChange={onChangePrompt}
           readOnlyMessage={readOnlyMessage}
           placeholder='Type your instructions here, use / for commands'
-          autoFocus
         />
       </Suspense>
     )

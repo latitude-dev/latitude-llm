@@ -23,6 +23,7 @@ import {
 } from './hooks/usePlaygroundLogic'
 import { DocumentEditorHeader } from './Header'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { useDevMode } from '$/hooks/useDevMode'
 
 export function DocumentEditorContentArea({
   refinementEnabled,
@@ -60,6 +61,7 @@ export function DocumentEditorContentArea({
     commitVersionUuid: commit.uuid,
     document,
   })
+  const { devMode } = useDevMode()
   const { playground, hasActiveStream, resetChat, onBack, stopStreaming } =
     usePlaygroundLogic({
       commit,
@@ -84,7 +86,7 @@ export function DocumentEditorContentArea({
     (isPlaygroundTransitioning && !isPlaygroundOpen)
   return (
     <>
-      <div className='relative flex-1 flex flex-col h-full min-h-0'>
+      <div className='relative flex-1 flex flex-col h-full min-h-0 overflow-hidden'>
         <DocumentEditorHeader
           isMerged={isMerged}
           isPlaygroundOpen={isPlaygroundOpen}
@@ -104,14 +106,14 @@ export function DocumentEditorContentArea({
           {/* === EDITOR SCREEN === */}
           <div
             className={cn(
-              'relative h-full w-full transition-opacity duration-300',
+              'relative min-h-0 h-full w-full transition-opacity duration-300',
               {
                 'opacity-0': showPlayground,
                 'opacity-100': !showPlayground,
               },
             )}
           >
-            <div className='relative z-0 flex flex-col gap-4 h-full'>
+            <div className='min-h-0 relative z-0 flex flex-col gap-4 h-full'>
               <AgentToolbar
                 isMerged={isMerged}
                 isAgent={metadata?.config?.type === 'agent'}
@@ -123,14 +125,27 @@ export function DocumentEditorContentArea({
                 isLatitudeProvider={isLatitudeProvider}
                 freeRunsCount={freeRunsCount}
               />
-              <div className='flex-1 min-h-0 pb-4'>
+              <div
+                className={cn('flex-1 min-h-0 pb-4', {
+                  'overflow-y-auto custom-scrollbar scrollable-indicator':
+                    !devMode,
+                })}
+              >
                 <Editors
                   document={document}
                   refinementEnabled={refinementEnabled}
                 />
               </div>
             </div>
-            <div className='z-10 absolute left-0 right-0 bottom-2 flex justify-center pointer-events-none'>
+            <div
+              className={cn(
+                'z-10 left-0 right-0 bottom-2 flex justify-center pointer-events-none',
+                {
+                  absolute: devMode,
+                  sticky: !devMode,
+                },
+              )}
+            >
               <RunButton
                 metadata={metadata}
                 showPlayground={showPlayground}

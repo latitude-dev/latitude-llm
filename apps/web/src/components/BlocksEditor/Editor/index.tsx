@@ -136,10 +136,9 @@ export function BlocksEditor({
       <LexicalComposer initialConfig={initialConfig}>
         <div
           className={cn(
-            // Note: min-h-6 necessary to avoid showing the scrollbar when there is no content
-            'h-full min-h-6 relative overflow-y-auto custom-scrollbar scrollable-indicator',
+            'relative',
             {
-              'border border-border bg-backgroundCode rounded-md px-3 pb-3':
+              'border border-border bg-backgroundCode rounded-xl p-3':
                 readOnly,
             },
           )}
