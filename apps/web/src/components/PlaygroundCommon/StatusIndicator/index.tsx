@@ -99,7 +99,7 @@ function InnerIndicator({
     )
   }
 
-  if (canChat || (!isStreaming && canChat)) {
+  if (!isStreaming && canChat) {
     return (
       <>
         <Separator orientation='vertical' className='self-stretch h-auto' />
