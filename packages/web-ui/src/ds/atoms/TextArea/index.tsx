@@ -67,13 +67,13 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           placeholder={placeholder}
           className={cn(
             inputVariants({ variant, size }),
-            className,
             'custom-scrollbar',
             {
               'border-red-500 focus-visible:ring-red-500': errors,
               // Account for inner textarea padding
               '!min-h-[calc(100%-theme(spacing.6))]': autoGrow,
             },
+            className,
           )}
           {...props}
         />

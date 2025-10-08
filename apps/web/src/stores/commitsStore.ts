@@ -132,12 +132,16 @@ export function useCommitsFromProject(
       documentUuid: string | undefined
     }) => {
       // Optimistically update the commit main document
-      mutate((data) =>
-        data?.map((item) =>
-          item.id === commitId
-            ? { ...item, mainDocumentUuid: documentUuid ?? null }
-            : item,
-        ),
+      mutate(
+        (data) =>
+          data?.map((item) =>
+            item.id === commitId
+              ? { ...item, mainDocumentUuid: documentUuid ?? null }
+              : item,
+          ),
+        {
+          revalidate: false,
+        },
       )
 
       executeSetCommitMainDocument({

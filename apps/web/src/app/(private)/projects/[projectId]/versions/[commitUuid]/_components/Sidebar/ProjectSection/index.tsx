@@ -83,6 +83,7 @@ export default function ProjectSection({
   limitedView?: boolean
 }) {
   const runs = useFeature('runs')
+  const agentFeature = useFeature('newAgentPage')
 
   const disableRunsNotifications = limitedView || !runs.isEnabled
   const { data: active } = useActiveRunsCount({
@@ -90,51 +91,54 @@ export default function ProjectSection({
     realtime: !disableRunsNotifications,
   })
 
-  const PROJECT_ROUTES = useMemo(() => {
-    const runsRoute = []
-
-    if (runs.isEnabled) {
-      runsRoute.push({
-        label: 'Runs',
-        route: ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid }).runs.root,
-        iconName: 'logs',
-        notifications: {
-          count: disableRunsNotifications ? 0 : active,
-          label: (count: number) =>
-            count <= 1
-              ? 'There is a run in progress'
-              : `There are ${count} runs in progress`,
+  const PROJECT_ROUTES = useMemo(
+    () =>
+      [
+        agentFeature.isEnabled && {
+          label: 'Agent',
+          route: ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid }).agent.root,
+          iconName: 'bot',
         },
-      })
-    }
-
-    return [
-      {
-        label: 'Preview',
-        route: ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid }).preview.root,
-        iconName: 'eye',
-      },
-      ...runsRoute,
-      {
-        label: 'Analytics',
-        route: ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid }).analytics.root,
-        iconName: 'barChart4',
-      },
-      {
-        label: 'History',
-        route: ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid }).history.root,
-        iconName: 'history',
-      },
-    ] as ProjectRoute[]
-  }, [project, commit, runs, active, disableRunsNotifications])
+        {
+          label: 'Preview',
+          route: ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid }).preview.root,
+          iconName: 'eye',
+        },
+        runs.isEnabled && {
+          label: 'Runs',
+          route: ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid }).runs.root,
+          iconName: 'logs',
+          notifications: {
+            count: disableRunsNotifications ? 0 : active,
+            label: (count: number) =>
+              count <= 1
+                ? 'There is a run in progress'
+                : `There are ${count} runs in progress`,
+          },
+        },
+        {
+          label: 'Analytics',
+          route: ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid }).analytics.root,
+          iconName: 'barChart4',
+        },
+        {
+          label: 'History',
+          route: ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid }).history.root,
+          iconName: 'history',
+        },
+      ].filter(Boolean) as ProjectRoute[],
+    [project, commit, agentFeature, runs, active, disableRunsNotifications],
+  )
 
   return (
     <div className='flex flex-col gap-2'>

@@ -13,19 +13,16 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "$/*": [
-        "./src/*"
-      ]
+      "$/*": ["./src/*"]
     }
   },
   "include": [
     "./src/**/*.ts",
     "./src/**/*.tsx",
+    "./src/types/images.d.ts",
     "next-env.d.ts",
     "next.config.mjs",
     ".next/types/**/*.ts"
