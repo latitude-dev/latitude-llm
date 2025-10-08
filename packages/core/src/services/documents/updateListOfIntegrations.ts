@@ -17,6 +17,7 @@ function getToolIds(tools: LatitudePromptConfig['tools']): string[] {
   if (Array.isArray(tools)) {
     return tools
       .map((tool) => {
+        if (!tool) return []
         if (typeof tool === 'string') return [tool]
 
         return Object.keys(tool)

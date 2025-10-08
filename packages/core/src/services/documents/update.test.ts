@@ -8,6 +8,7 @@ import {
 import { recomputeChanges } from './recomputeChanges'
 import { updateDocument } from './update'
 import { NotFoundError } from '@latitude-data/constants/errors'
+import { Result } from '../../lib/Result'
 
 describe('updateDocument', () => {
   it('modifies a document that was created in a previous commit', async (ctx) => {
@@ -84,6 +85,44 @@ describe('updateDocument', () => {
     expect(changedDocuments.length).toBe(1)
     expect(changedDocuments[0]!.path).toBe('doc1')
     expect(changedDocuments[0]!.content).toContain('Doc 1 v2')
+  })
+
+  it('modifying a document to contain an empty list of tools succeeds', async (ctx) => {
+    const { project, user, documents } =
+      await ctx.factories.createProject({
+        providers: [
+          {
+            type: Providers.OpenAI,
+            name: 'openai',
+          },
+        ],
+        documents: {
+          unmodified: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: `miau`
+          }),
+        },
+      })
+
+    const doc = documents[0]
+    const { commit: draft } = await ctx.factories.createDraft({ project, user })
+
+    await updateDocument({
+      commit: draft,
+      document: doc,
+      content: `---
+provider: openai
+model: gpt-4o
+tools:
+  -
+---
+
+This prompt contains empty tools
+`,
+    }).then((r) => r.unwrap())
+
+    // If we get to this point the test has passed
+    expect(true).toBe(true)
   })
 
   it('modifying a document creates a change to all other documents that reference it', async (ctx) => {
