@@ -46,7 +46,7 @@ export function StatusIndicator({
           />
         </>
       )}
-      <InnerIndicator playground={playground} {...rest} />
+      <InnerIndicator playground={playground} canChat={canChat} {...rest} />
     </div>
   )
 }
@@ -58,11 +58,11 @@ function InnerIndicator({
     isLoading: isStreaming,
     error: streamError,
   },
+  canChat,
   resetChat,
   stopStreaming,
   canStopStreaming = false,
   streamAborted = false,
-  canChat = true,
 }: StatusIndicatorProps) {
   if (wakingUpIntegration) {
     return (
@@ -99,7 +99,7 @@ function InnerIndicator({
     )
   }
 
-  if (!isStreaming && !canChat) {
+  if (canChat || (!isStreaming && canChat)) {
     return (
       <>
         <Separator orientation='vertical' className='self-stretch h-auto' />
