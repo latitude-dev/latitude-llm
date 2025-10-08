@@ -11,20 +11,26 @@ import {
 } from '../../../components/SelectDocument'
 import { TriggerWrapper } from '../TriggerWrapper'
 import { EmailTriggerConfig } from './Configuration'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function EmailTrigger({
   onTriggerCreated,
+  document: initialDocument,
 }: {
   onTriggerCreated: OnTriggerCreated
+  document?: DocumentVersion
 }) {
   const { project } = useCurrentProject()
-  const documentSelection = useDocumentSelection()
+  const documentSelection = useDocumentSelection({
+    initialDocumentUuid: initialDocument?.documentUuid,
+  })
   const { commit } = useCurrentCommit()
   const document = documentSelection.document
   const { create, isCreating } = useDocumentTriggers(
     {
       projectId: project.id,
       commitUuid: commit.uuid,
+      documentUuid: initialDocument?.documentUuid,
     },
     {
       onCreated: (trigger) => {
@@ -56,6 +62,7 @@ export function EmailTrigger({
         options={documentSelection.options}
         document={document}
         onSelectDocument={documentSelection.onSelectDocument}
+        disabled={!!initialDocument}
       />
       {document ? (
         <EmailTriggerConfig

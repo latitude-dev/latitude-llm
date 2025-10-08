@@ -6,13 +6,13 @@ import {
 } from '@latitude-data/core/schema/types'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useTriggerInfo } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersCard'
 import useDocumentVersions from '$/stores/documentVersions'
 import {
   StatusFlag,
   StatusFlagState,
 } from '@latitude-data/web-ui/molecules/StatusFlag'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useTriggerInfo } from '$/components/TriggersManagement/hooks/useTriggerInfo'
 
 export function ConfiguredTriggers({
   trigger,

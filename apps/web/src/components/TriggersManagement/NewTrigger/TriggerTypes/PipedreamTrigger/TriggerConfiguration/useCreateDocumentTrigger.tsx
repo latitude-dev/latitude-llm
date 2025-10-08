@@ -20,6 +20,7 @@ export function useCreateDocumentTrigger({
   triggerComponent,
   onTriggerCreated,
   document,
+  initialDocument,
   payloadParameters,
 }: {
   triggerComponent: PipedreamComponent<PipedreamComponentType.Trigger>
@@ -27,6 +28,7 @@ export function useCreateDocumentTrigger({
   payloadParameters: string[]
   account?: IntegrationDto
   document?: DocumentVersion
+  initialDocument?: DocumentVersion
 }) {
   const { toast } = useToast()
   const [configuredProps, setConfiguredProps] = useState<
@@ -38,6 +40,7 @@ export function useCreateDocumentTrigger({
   const { create: createTrigger, isCreating } = useDocumentTriggers({
     projectId: project.id,
     commitUuid: commit.uuid,
+    documentUuid: initialDocument?.documentUuid,
   })
   const onCreateTrigger = useCallback(async () => {
     if (!account || !document) return

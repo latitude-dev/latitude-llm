@@ -13,6 +13,7 @@ import { TriggerWrapper } from '../TriggerWrapper'
 import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { CronFormField } from '@latitude-data/web-ui/organisms/CronInput'
 import { CLIENT_TIMEZONE } from '$/lib/constants'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 const DEFAULT_CONFIG: ScheduledTriggerConfiguration = {
   cronExpression: '* * * * *',
@@ -21,18 +22,22 @@ const DEFAULT_CONFIG: ScheduledTriggerConfiguration = {
 
 export function ScheduleTrigger({
   onTriggerCreated,
+  document: initialDocument,
 }: {
   onTriggerCreated: OnTriggerCreated
+  document?: DocumentVersion
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-
-  const documentSelection = useDocumentSelection()
+  const documentSelection = useDocumentSelection({
+    initialDocumentUuid: initialDocument?.documentUuid,
+  })
   const document = documentSelection.document
   const { create, isCreating } = useDocumentTriggers(
     {
       projectId: project.id,
       commitUuid: commit.uuid,
+      documentUuid: initialDocument?.documentUuid,
     },
     {
       onCreated: (trigger) => {
@@ -63,6 +68,7 @@ export function ScheduleTrigger({
         options={documentSelection.options}
         document={document}
         onSelectDocument={documentSelection.onSelectDocument}
+        disabled={!!initialDocument}
       />
       {document ? (
         <>

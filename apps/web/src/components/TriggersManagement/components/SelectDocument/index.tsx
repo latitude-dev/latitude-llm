@@ -43,10 +43,12 @@ export function SelectDocument({
   document,
   onSelectDocument,
   options,
+  disabled = false,
 }: {
   document?: DocumentVersion
   options: SelectOption<string>[]
   onSelectDocument: ReactStateDispatch<string>
+  disabled?: boolean
 }) {
   const { updateMetadata } = useMetadata()
   useEffect(() => {
@@ -68,6 +70,7 @@ export function SelectDocument({
       value={document?.documentUuid || ''}
       options={options}
       onChange={onSelectDocument}
+      disabled={disabled}
       placeholder='Select a prompt'
       description='Select the prompt that should be executed with this trigger'
     />
