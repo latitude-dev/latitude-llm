@@ -1,24 +1,27 @@
-import { CommitsRepository } from '@latitude-data/core/repositories/index'
+'use server'
+
 import {
+  getDocumentLogsApproximatedCountByProjectCached,
   getDocumentsAtCommitCached,
   getHeadCommitCached,
 } from '$/app/(private)/_data-access'
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-
-import ClientFilesTree from './ClientFilesTree'
-import CommitSelector from './CommitSelector'
-import ProjectSection from './ProjectSection'
 import DocumentSidebar from '$/components/Sidebar'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import {
+  CommitStatus,
+  LIMITED_VIEW_THRESHOLD,
+  ULTRA_LARGE_PAGE_SIZE,
+} from '@latitude-data/core/constants'
 import { paginateQuery } from '@latitude-data/core/lib/pagination/paginate'
+import { CommitsRepository } from '@latitude-data/core/repositories/index'
 import {
   Commit,
   DocumentVersion,
   Project,
 } from '@latitude-data/core/schema/types'
-import {
-  CommitStatus,
-  ULTRA_LARGE_PAGE_SIZE,
-} from '@latitude-data/core/constants'
+import ClientFilesTree from './ClientFilesTree'
+import CommitSelector from './CommitSelector'
+import ProjectSection from './ProjectSection'
 
 export default async function Sidebar({
   project,
@@ -52,6 +55,10 @@ export default async function Sidebar({
     },
   })
 
+  const approximatedCount =
+    await getDocumentLogsApproximatedCountByProjectCached(project.id)
+  const limitedView = approximatedCount > LIMITED_VIEW_THRESHOLD
+
   return (
     <DocumentSidebar
       header={
@@ -64,7 +71,11 @@ export default async function Sidebar({
       }
       tree={
         <div className='flex flex-col gap-4'>
-          <ProjectSection project={project} commit={commit} />
+          <ProjectSection
+            project={project}
+            commit={commit}
+            limitedView={limitedView}
+          />
           <ClientFilesTree
             currentDocument={currentDocument}
             documents={documents}

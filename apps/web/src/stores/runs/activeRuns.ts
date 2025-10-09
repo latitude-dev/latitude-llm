@@ -1,8 +1,5 @@
 'use client'
 
-import { compact } from 'lodash-es'
-import { useCallback, useMemo } from 'react'
-import useSWR, { SWRConfiguration } from 'swr'
 import { stopRunAction } from '$/actions/runs/stop'
 import {
   EventArgs,
@@ -12,8 +9,11 @@ import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import type { Project } from '@latitude-data/core/schema/types'
 import { ActiveRun } from '@latitude-data/constants'
+import type { Project } from '@latitude-data/core/schema/types'
+import { compact } from 'lodash-es'
+import { useCallback, useMemo } from 'react'
+import useSWR, { SWRConfiguration } from 'swr'
 
 export function useActiveRuns(
   {
@@ -151,9 +151,12 @@ export function useActiveRunsCount(
       if (!args) return
 
       if (args.projectId !== project.id) return
-      if (args.run.startedAt) return
 
-      mutate((prev) => (prev ?? 0) + 1, { revalidate: false })
+      if (args.event === 'runQueued') {
+        mutate((prev) => Math.max(0, (prev ?? 0) + 1), { revalidate: false })
+      } else if (args.event === 'runEnded') {
+        mutate((prev) => Math.max(0, (prev ?? 0) - 1), { revalidate: false })
+      }
     },
     [project, mutate, realtime],
   )
