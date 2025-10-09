@@ -9,6 +9,8 @@ import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access/users'
 
 import { errorHandlingProcedure } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
+import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
+import { Result } from '@latitude-data/core/lib/Result'
 
 export const setupAction = errorHandlingProcedure
   .inputSchema(
@@ -52,6 +54,18 @@ export const setupAction = errorHandlingProcedure
     })
 
     if (!parsedInput.returnTo || !isLatitudeUrl(parsedInput.returnTo)) {
+      const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
+        workspace.id,
+        'nocoderOnboarding',
+      )
+
+      if (!Result.isOk(isNewOnboardingEnabledResult)) {
+        return isNewOnboardingEnabledResult
+      }
+      const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
+      if (isNewOnboardingEnabled) {
+        return frontendRedirect(ROUTES.auth.setup.questionnaire)
+      }
       return frontendRedirect(ROUTES.dashboard.root)
     }
 

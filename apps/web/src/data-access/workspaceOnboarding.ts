@@ -54,7 +54,7 @@ export async function getOnboardingResources() {
 
   const documentResult = await findOnboardingDocument(workspace.id)
   if (!Result.isOk(documentResult)) {
-    return notFound()
+    return { project: null, commit: null }
   }
   const { project, commit } = documentResult.unwrap()
 

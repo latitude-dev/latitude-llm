@@ -18,7 +18,7 @@ import {
   ActiveTrigger,
   FAKE_DOCUMENT,
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersList'
-import { OnboardingStep } from '$/app/(onboarding)/onboarding/lib/OnboardingStep'
+import { OnboardingStep } from '$/app/(onboarding)/onboarding-agents/start/lib/OnboardingStep'
 import { PlaygroundProvider } from '../../lib/PlaygroundProvider'
 
 export function OnboardingClient({

@@ -13,11 +13,22 @@ export const colors = {
     accentForeground: 'bg-accent-foreground',
     warningMuted: 'bg-warning-muted',
     warningMutedForeground: 'bg-warning-muted-foreground',
+    destructive: 'bg-destructive',
     destructiveMuted: 'bg-destructive-muted',
     destructiveMutedForeground: 'bg-destructive-muted-foreground',
     successMuted: 'bg-success-muted',
     successMutedForeground: 'bg-success-muted-foreground',
     latte: 'bg-latte',
+  },
+  backgroundHoverColors: {
+    accentForeground: 'hover:bg-accent-foreground',
+    latte: 'hover:bg-latte',
+    destructive: 'hover:bg-destructive',
+  },
+  borderHoverColors: {
+    accentForeground: 'hover:border-accent-foreground',
+    latte: 'hover:border-latte',
+    destructive: 'hover:border-destructive',
   },
   textColors: {
     white: 'text-white',
@@ -94,3 +105,5 @@ export type TextColor = keyof typeof colors.textColors
 export type DarkTextColor = keyof typeof colors.darkTextColors
 export type BorderColor = keyof typeof colors.borderColors
 export type BackgroundColor = keyof typeof colors.backgrounds
+export type BackgroundHoverColor = keyof typeof colors.backgroundHoverColors
+export type BorderHoverColor = keyof typeof colors.borderHoverColors

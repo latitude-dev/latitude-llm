@@ -5,7 +5,7 @@ import { Card, CardContent } from '@latitude-data/web-ui/atoms/Card'
 import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
 
 import SignupFooter from '$/app/(public)/setup/_components/SignupFooter'
-import SetupForm from './SetupForm'
+import SetupForm from './_components/SetupForm'
 
 export const dynamic = 'force-dynamic'
 

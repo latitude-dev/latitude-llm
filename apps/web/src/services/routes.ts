@@ -32,8 +32,11 @@ export const ROUTES = {
   root: '/',
   api: API_ROUTES,
   onboarding: {
-    root: '/onboarding',
-    devs: '/onboarding-devs',
+    agents: {
+      selectAgent: '/onboarding-agents/select-agent',
+      start: '/onboarding-agents/start',
+    },
+    promptEngineering: '/onboarding-prompt-engineering',
   },
   backoffice: {
     root: BACKOFFICE_ROOT,
@@ -252,7 +255,10 @@ export const ROUTES = {
     },
   },
   auth: {
-    setup: PUBLIC_ROOT_PATHS.setup,
+    setup: {
+      root: PUBLIC_ROOT_PATHS.setup,
+      questionnaire: `${PUBLIC_ROOT_PATHS.setup}/questionnaire`,
+    },
     login: PUBLIC_ROOT_PATHS.login,
     magicLinkSent: (email: string) =>
       `${PUBLIC_ROOT_PATHS.magicLinks}/sent?email=${email}`,

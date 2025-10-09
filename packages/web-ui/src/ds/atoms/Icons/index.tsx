@@ -146,6 +146,7 @@ import {
   Headset,
   ListTodo,
   CircleArrowRight,
+  SquareChartGantt,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -204,9 +205,9 @@ import Wordpress from './custom-icons/logos/Wordpress'
 import YepCode from './custom-icons/logos/YepCode'
 
 const Icons = {
-  // hubspot: Hubspot,
   addCircle: CirclePlus,
   addSquare: SquarePlus,
+  squareChart: SquareChartGantt,
   airbnb: Airbnb,
   airtable: Airtable,
   alert: CircleAlert,

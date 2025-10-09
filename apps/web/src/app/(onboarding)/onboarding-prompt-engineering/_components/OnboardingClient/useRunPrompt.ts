@@ -1,4 +1,4 @@
-import { OnboardingStep } from '$/app/(onboarding)/onboarding-devs/_components/OnboardingClient'
+import { OnboardingStep } from '$/app/(onboarding)/onboarding-prompt-engineering/_components/OnboardingClient'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useStreamHandler } from '$/hooks/playgrounds/useStreamHandler'
 import { ROUTES } from '$/services/routes'

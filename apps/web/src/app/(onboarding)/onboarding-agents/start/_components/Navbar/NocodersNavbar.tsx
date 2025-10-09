@@ -26,6 +26,7 @@ export default function NocodersNavbar({
   const { project } = useCurrentProject()
 
   const skipOnboarding = useCallback(() => {
+    //TODO(onboarding): review this logic and see if we can stop the playground stream here
     executeCompleteOnboarding()
     redirect(ROUTES.dashboard.root)
   }, [executeCompleteOnboarding])

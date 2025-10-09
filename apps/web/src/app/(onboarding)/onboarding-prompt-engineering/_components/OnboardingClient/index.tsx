@@ -5,9 +5,9 @@ import { useCallback, useState } from 'react'
 import { ROUTES } from '$/services/routes'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { useRunOnboardingPrompt } from '$/app/(onboarding)/onboarding-devs/_components/OnboardingClient/useRunPrompt'
-import { OnboardingPromptStep } from '$/app/(onboarding)/onboarding-devs/_components/OnboardingClient/PromptStep'
-import { ExperimentStep } from '$/app/(onboarding)/onboarding-devs/_components/OnboardingClient/ExperimentStep'
+import { useRunOnboardingPrompt } from '$/app/(onboarding)/onboarding-prompt-engineering/_components/OnboardingClient/useRunPrompt'
+import { OnboardingPromptStep } from '$/app/(onboarding)/onboarding-prompt-engineering/_components/OnboardingClient/PromptStep'
+import { ExperimentStep } from '$/app/(onboarding)/onboarding-prompt-engineering/_components/OnboardingClient/ExperimentStep'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 import {
   DocumentVersion,
