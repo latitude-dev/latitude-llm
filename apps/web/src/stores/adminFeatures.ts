@@ -1,5 +1,6 @@
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { toggleFeatureForWorkspacesAction } from '$/actions/admin/workspaceFeatures/toggleForWorkspaces'
+import { toggleFeatureGloballyAction } from '$/actions/admin/features/toggleGlobally'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { API_ROUTES } from '$/services/routes/api'
@@ -10,6 +11,7 @@ type FeatureWithWorkspaceCounts = {
   id: number
   name: string
   description: string | null
+  enabled: boolean
   createdAt: Date
   updatedAt: Date
   workspaceCount: number
@@ -44,14 +46,36 @@ export default function useAdminFeatures(opts?: SWRConfiguration) {
       },
     })
 
+  const { execute: toggleGlobally, isPending: isTogglingGlobally } =
+    useLatitudeAction(toggleFeatureGloballyAction, {
+      onSuccess: async () => {
+        toast({
+          title: 'Success',
+          description: 'Global feature toggle updated',
+        })
+        // Refetch the data to get updated feature status
+        mutate()
+      },
+    })
+
   return useMemo(
     () => ({
       data,
       toggleForWorkspaces,
       isToggling,
+      toggleGlobally,
+      isTogglingGlobally,
       mutate,
       ...rest,
     }),
-    [data, toggleForWorkspaces, isToggling, mutate, rest],
+    [
+      data,
+      toggleForWorkspaces,
+      isToggling,
+      toggleGlobally,
+      isTogglingGlobally,
+      mutate,
+      rest,
+    ],
   )
 }

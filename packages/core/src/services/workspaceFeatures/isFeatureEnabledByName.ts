@@ -15,6 +15,13 @@ export async function isFeatureEnabledByName(
   }
 
   const feature = featureResult.value
+
+  // First check if the feature is globally enabled
+  if (feature.enabled) {
+    return Result.ok(true)
+  }
+
+  // If not globally enabled, check workspace-specific setting
   const enabled = await isFeatureEnabled(workspaceId, feature.id, db)
   return Result.ok(enabled)
 }

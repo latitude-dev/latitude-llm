@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."features" ADD COLUMN "enabled" boolean DEFAULT false NOT NULL;

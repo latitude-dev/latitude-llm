@@ -46,6 +46,8 @@ export function FeaturesManager() {
     data: adminFeatures,
     toggleForWorkspaces,
     isToggling,
+    toggleGlobally,
+    isTogglingGlobally,
     mutate,
   } = useAdminFeatures()
 
@@ -104,6 +106,10 @@ export function FeaturesManager() {
         enabled,
       })
     }
+  }
+
+  const handleGlobalToggle = async (featureId: number, enabled: boolean) => {
+    await toggleGlobally({ featureId, enabled })
   }
 
   return (
@@ -170,6 +176,7 @@ export function FeaturesManager() {
             <TableRow>
               <TableHead>Feature</TableHead>
               <TableHead>Description</TableHead>
+              <TableHead>Global Status</TableHead>
               <TableHead>Workspace IDs Enabled</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -179,6 +186,21 @@ export function FeaturesManager() {
               <TableRow key={feature.id}>
                 <TableCell>{feature.name}</TableCell>
                 <TableCell>{feature.description || '-'}</TableCell>
+                <TableCell>
+                  <div className='flex items-center gap-2'>
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${
+                        feature.enabled
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      {feature.enabled
+                        ? 'Globally Enabled'
+                        : 'Globally Disabled'}
+                    </span>
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Tooltip
                     trigger={
@@ -201,15 +223,27 @@ export function FeaturesManager() {
                   </Tooltip>
                 </TableCell>
                 <TableCell className='py-1'>
-                  <Button
-                    fancy
-                    variant='outline'
-                    size='small'
-                    onClick={() => handleManageWorkspaces(feature)}
-                    disabled={isToggling}
-                  >
-                    Manage Workspace IDs
-                  </Button>
+                  <div className='flex gap-2'>
+                    <Button
+                      variant='ghost'
+                      size='small'
+                      onClick={() =>
+                        handleGlobalToggle(feature.id, !feature.enabled)
+                      }
+                      disabled={isTogglingGlobally}
+                    >
+                      {feature.enabled ? 'Disable Globally' : 'Enable Globally'}
+                    </Button>
+                    <Button
+                      fancy
+                      variant='outline'
+                      size='small'
+                      onClick={() => handleManageWorkspaces(feature)}
+                      disabled={isToggling}
+                    >
+                      Manage Workspaces
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
