@@ -1,24 +1,20 @@
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { BackgroundColor, colors } from '@latitude-data/web-ui/tokens'
+import { colors } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
+import Image from 'next/image'
+import { AgentCardProps } from '../SelectAgents'
 
 export default function AgentCard({
-  mainIcon,
-  title,
-  description,
-  color,
+  agent,
   onClick,
-  usedThirdPartyIcons,
 }: {
-  mainIcon: IconName
-  title: string
-  description: string
-  color: BackgroundColor
+  agent: AgentCardProps
   onClick: () => void
-  usedThirdPartyIcons: IconName[]
 }) {
+  const { mainIcon, title, description, color, usedThirdPartyIconsSrc } = agent
+
   return (
     <div className='flex flex-col gap-y-14 justify-between h-full w-full'>
       <div className='flex flex-col gap-y-3'>
@@ -41,11 +37,27 @@ export default function AgentCard({
         </div>
       </div>
       <div className='flex flex-row mt-auto justify-between'>
-        {usedThirdPartyIcons.map((icon) => (
-          <div className='flex flex-row gap-x-2 bg-muted rounded-full p-1 border border-background'>
-            <Icon name={icon} size='medium' key={icon} />
-          </div>
-        ))}
+        <div className='flex flex-row items-center'>
+          {usedThirdPartyIconsSrc.map((icon, index) => (
+            <div
+              key={icon}
+              className={cn(
+                'flex flex-row bg-muted rounded-full p-1 w-9 h-9 border-2 border-white justify-center items-center',
+                index > 0 && '-ml-3',
+              )}
+            >
+              <Image
+                src={icon}
+                width={16}
+                height={16}
+                className='w-5 h-5'
+                key={icon}
+                alt={icon}
+                unoptimized
+              />
+            </div>
+          ))}
+        </div>
         <Button
           fancy
           variant='outline'

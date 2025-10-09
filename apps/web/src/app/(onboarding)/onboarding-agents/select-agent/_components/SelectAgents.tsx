@@ -10,14 +10,15 @@ import { redirect } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
 import { useCallback } from 'react'
 
-const agents: {
+export type AgentCardProps = {
   mainIcon: IconName
   title: string
   description: string
   color: BackgroundHoverColor
   documentUuid: string
-  usedThirdPartyIcons: IconName[]
-}[] = [
+  usedThirdPartyIconsSrc: string[]
+}
+const agents: AgentCardProps[] = [
   {
     mainIcon: 'mail',
     title: 'Cold email outreach',
@@ -25,7 +26,11 @@ const agents: {
       'Finds new AI-tool leads, writes and sends tailored cold emails, follows up, and updates deal status.',
     color: 'accentForeground',
     documentUuid: 'ddada8e6-ae2c-4fa6-8969-724a8a938cd6',
-    usedThirdPartyIcons: ['hubspot', 'linkedin'],
+    usedThirdPartyIconsSrc: [
+      'https://assets.pipedream.net/s.v0/app_OkrhlP/logo/orig',
+      'https://assets.pipedream.net/s.v0/app_1dBhRX/logo/orig',
+      'https://assets.pipedream.net/s.v0/app_OQYhq7/logo/orig',
+    ],
   },
   {
     mainIcon: 'squareChart',
@@ -34,7 +39,11 @@ const agents: {
       'Turns each new blog post into a LinkedIn thread, Reddit post, and newsletter — then posts them on schedule and tracks performance.',
     color: 'latte',
     documentUuid: 'ddada8e6-ae2c-4fa6-8969-724a8a938cd6',
-    usedThirdPartyIcons: ['notion'],
+    usedThirdPartyIconsSrc: [
+      'https://assets.pipedream.net/s.v0/app_X7Lhxr/logo/orig',
+      'https://assets.pipedream.net/s.v0/app_1dBhRX/logo/orig',
+      'https://assets.pipedream.net/s.v0/app_mo7hbd/logo/orig',
+    ],
   },
 
   {
@@ -44,7 +53,11 @@ const agents: {
       'Fetches the latest articles on any topic or company, summarizes the top 3 in plain language, and emails you the highlights.',
     color: 'destructive',
     documentUuid: '1152b1ab-1bd7-4091-94bc-fe00cdd03f30',
-    usedThirdPartyIcons: ['hubspot', 'linkedin'],
+    usedThirdPartyIconsSrc: [
+      'https://assets.pipedream.net/s.v0/app_X7Lhxr/logo/orig',
+      'https://assets.pipedream.net/s.v0/app_1dBhRX/logo/orig',
+      'https://assets.pipedream.net/s.v0/app_mo7hbd/logo/orig',
+    ],
   },
 ]
 
@@ -78,11 +91,7 @@ export function SelectAgents() {
           {agents.map((agent, index) => (
             <HoverCard backgroundHoverColor={agent.color} key={index}>
               <AgentCard
-                usedThirdPartyIcons={agent.usedThirdPartyIcons}
-                mainIcon={agent.mainIcon}
-                title={agent.title}
-                description={agent.description}
-                color={agent.color}
+                agent={agent}
                 key={index}
                 onClick={() => handleSelectAgent(agent.documentUuid)}
               />

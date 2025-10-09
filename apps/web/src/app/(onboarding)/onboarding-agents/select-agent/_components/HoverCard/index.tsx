@@ -12,7 +12,7 @@ export default function HoverCard({
   return (
     <div
       className={cn(
-        `border-2 border-dashed bg-muted rounded-xl max-w-sm p-1 hover:bg-opacity-40 transition-all duration-200`,
+        `border-2 border-dashed bg-muted rounded-xl max-w-sm p-1 hover:bg-opacity-40 hover:border-opacity-60 transition-all duration-200`,
         colors.backgroundHoverColors[backgroundHoverColor],
         colors.borderHoverColors[backgroundHoverColor],
       )}

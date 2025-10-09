@@ -203,12 +203,8 @@ import Tinybird from './custom-icons/logos/Tinybird'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Wordpress from './custom-icons/logos/Wordpress'
 import YepCode from './custom-icons/logos/YepCode'
-import Linkedin from './custom-icons/logos/Linkedin'
-import Hubspot from './custom-icons/logos/Hubspot'
 
 const Icons = {
-  hubspot: Hubspot,
-  linkedin: Linkedin,
   addCircle: CirclePlus,
   addSquare: SquarePlus,
   squareChart: SquareChartGantt,
