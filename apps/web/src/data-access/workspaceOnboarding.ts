@@ -52,7 +52,6 @@ export async function getOnboardingResources() {
     return notFound()
   }
 
-  // TODO(onboarding): Change this so instead of throwing an error if not found, return smth to redirect to pick an agent page
   const documentResult = await findOnboardingDocument(workspace.id)
   if (!Result.isOk(documentResult)) {
     return { project: null, commit: null }

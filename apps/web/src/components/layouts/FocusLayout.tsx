@@ -11,7 +11,7 @@ export default function FocusLayout({
 }) {
   return (
     <div className='flex flex-col items-center justify-center h-screen'>
-      <div className='flex flex-col gap-y-8 max-w-[22rem]'>
+      <div className='flex flex-col gap-y-6 max-w-[22rem]'>
         <div>{header}</div>
         {children}
         {footer && (
