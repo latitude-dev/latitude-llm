@@ -12,6 +12,7 @@ export async function findAllFeaturesWithWorkspaceCounts(db = database) {
       id: features.id,
       name: features.name,
       description: features.description,
+      enabled: features.enabled,
       createdAt: features.createdAt,
       updatedAt: features.updatedAt,
     })

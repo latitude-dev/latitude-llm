@@ -393,6 +393,7 @@ export const API_ROUTES = {
       root: '/api/admin/features',
       workspaces: (featureId: number) =>
         `/api/admin/features/${featureId}/workspaces`,
+      toggle: (featureId: number) => `/api/admin/features/${featureId}/toggle`,
     },
     promocodes: {
       root: '/api/admin/promocodes',
