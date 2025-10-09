@@ -31,7 +31,7 @@ export default async function PrivateLayout({
   const { workspace, user, subscriptionPlan } = await getCurrentUserOrRedirect()
 
   const completed = await isOnboardingCompleted()
-  if (!completed) redirect(ROUTES.onboarding.root)
+  if (!completed) redirect(ROUTES.onboarding.agents.selectAgent)
 
   const supportIdentity = createSupportUserIdentity(user)
   const cloudInfo = env.LATITUDE_CLOUD_PAYMENT_URL
