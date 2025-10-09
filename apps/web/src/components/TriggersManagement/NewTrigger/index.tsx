@@ -7,14 +7,19 @@ import { ChatTrigger } from './TriggerTypes/ChatTrigger'
 import { ScheduleTrigger } from './TriggerTypes/ScheduleTrigger'
 import { EmailTrigger } from './TriggerTypes/EmailTrigger'
 import { OnTriggerCreated, SelectedIntegration } from '../types'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 function IntegrationDetail({
   selectedIntegration,
   onTriggerCreated,
+  document,
 }: {
-  selectedIntegration?: SelectedIntegration | null
   onTriggerCreated: OnTriggerCreated
+  selectedIntegration?: SelectedIntegration | null
+  document?: DocumentVersion
 }) {
+  // NOTE: If initial document is provided, we skip the "select document" step
+  // Also we create the trigger in the current document
   if (!selectedIntegration) {
     return (
       <div className='flex items-center justify-center h-full'>
@@ -25,15 +30,24 @@ function IntegrationDetail({
   const slug = selectedIntegration.slug
 
   if (selectedIntegration.type === 'Chat') {
-    return <ChatTrigger onTriggerCreated={onTriggerCreated} />
+    return (
+      <ChatTrigger onTriggerCreated={onTriggerCreated} document={document} />
+    )
   }
 
   if (selectedIntegration.type === DocumentTriggerType.Email) {
-    return <EmailTrigger onTriggerCreated={onTriggerCreated} />
+    return (
+      <EmailTrigger onTriggerCreated={onTriggerCreated} document={document} />
+    )
   }
 
   if (selectedIntegration.type === DocumentTriggerType.Scheduled) {
-    return <ScheduleTrigger onTriggerCreated={onTriggerCreated} />
+    return (
+      <ScheduleTrigger
+        onTriggerCreated={onTriggerCreated}
+        document={document}
+      />
+    )
   }
 
   return (
@@ -41,13 +55,16 @@ function IntegrationDetail({
       key={slug}
       pipedreamSlug={slug}
       onTriggerCreated={onTriggerCreated}
+      document={document}
     />
   )
 }
 export function NewTrigger({
   onTriggerCreated,
+  document,
 }: {
   onTriggerCreated: OnTriggerCreated
+  document?: DocumentVersion
 }) {
   const [selected, setSelected] = useState<SelectedIntegration | null>(null)
   return (
@@ -57,6 +74,7 @@ export function NewTrigger({
         <IntegrationDetail
           selectedIntegration={selected}
           onTriggerCreated={onTriggerCreated}
+          document={document}
         />
       </div>
     </div>

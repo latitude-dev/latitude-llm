@@ -10,13 +10,18 @@ import {
   useDocumentSelection,
 } from '../../../components/SelectDocument'
 import { TriggerWrapper } from '../TriggerWrapper'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function ChatTrigger({
   onTriggerCreated,
+  document: initialDocument,
 }: {
   onTriggerCreated: OnTriggerCreated
+  document?: DocumentVersion
 }) {
-  const documentSelection = useDocumentSelection()
+  const documentSelection = useDocumentSelection({
+    initialDocumentUuid: initialDocument?.documentUuid,
+  })
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const document = documentSelection.document
@@ -28,6 +33,7 @@ export function ChatTrigger({
     {
       projectId: project.id,
       commitUuid: commit.uuid,
+      documentUuid: initialDocument?.documentUuid,
     },
     {
       onCreated: (trigger) => {
@@ -63,6 +69,7 @@ export function ChatTrigger({
         options={filteredOptions}
         document={document}
         onSelectDocument={documentSelection.onSelectDocument}
+        disabled={!!initialDocument}
       />
       {document ? (
         <Button variant='default' fancy onClick={onCreate} disabled={disabled}>

@@ -13,6 +13,7 @@ import {
   type PipedreamComponent,
   type PipedreamComponentType,
 } from '@latitude-data/core/constants'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export type Trigger = PipedreamComponent<PipedreamComponentType.Trigger>
 const EMPTY_LIST: Trigger[] = []
@@ -20,9 +21,11 @@ const EMPTY_LIST: Trigger[] = []
 export function PipedreamTrigger({
   pipedreamSlug,
   onTriggerCreated,
+  document: initialDocument,
 }: {
   pipedreamSlug: string
   onTriggerCreated: OnTriggerCreated
+  document?: DocumentVersion
 }) {
   const [selectedTrigger, setTrigger] = useState<Trigger | null>(null)
   const { data: selectedPipedreamApp, isLoading } =
@@ -78,6 +81,7 @@ export function PipedreamTrigger({
             trigger={selectedTrigger}
             pipedreamApp={selectedPipedreamApp}
             onTriggerCreated={onTriggerCreated}
+            document={initialDocument}
           />
         ) : (
           <div className='h-full flex items-center justify-center'>

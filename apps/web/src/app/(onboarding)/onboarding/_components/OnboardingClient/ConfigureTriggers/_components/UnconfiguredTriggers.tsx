@@ -6,7 +6,6 @@ import {
 } from '@latitude-data/core/schema/types'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useTriggerInfo } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersCard'
 import useDocumentVersions from '$/stores/documentVersions'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
@@ -16,6 +15,7 @@ import {
   EditTriggerModalContent,
   EditTriggerModalFooter,
 } from '$/components/TriggersManagement/EditTrigger'
+import { useTriggerInfo } from '$/components/TriggersManagement/hooks/useTriggerInfo'
 
 export function UnconfiguredTriggers({
   trigger,

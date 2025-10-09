@@ -500,8 +500,8 @@ export function SearchableList<T extends ItemType>({
               <div ref={sentinelRef} className='h-1' />
             )}
 
-          {/* Infinite loading items */}
-          {infiniteScroll?.isLoadingMore && (
+          {/* Infinite loading items once first page is loaded */}
+          {items.length > 0 && infiniteScroll?.isLoadingMore && (
             <div className='py-4 w-full flex justify-center'>
               <Icon name='loader' spin size='xlarge' color='foregroundMuted' />
             </div>

@@ -22,6 +22,7 @@ export const ICONS_BY_TRIGGER: Partial<
   [DocumentTriggerType.Scheduled]: 'clock',
   [DocumentTriggerType.Email]: 'mail',
 }
+
 export function IntegrationsList({
   onSelectIntegration,
 }: {
@@ -31,12 +32,15 @@ export function IntegrationsList({
   const [selectedValue, setSelectedValue] = useState<string | undefined>()
   const debouncedSetSearchQuery = useDebouncedCallback(setSearchQuery, 500)
 
-  const { data: connectedApps, isLoading: isLoadingConnectedIntegrations } =
-    useConnectedIntegrationsByPipedreamApp({
-      withTriggers: true,
-    })
   const {
-    data: pipedreamApps,
+    data: connectedApps = [],
+    isLoading: isLoadingConnectedIntegrations,
+  } = useConnectedIntegrationsByPipedreamApp({
+    withTriggers: true,
+  })
+
+  const {
+    data: pipedreamApps = [],
     isLoading: isLoadingPipedreamApps,
     loadMore,
     isLoadingMore,
@@ -44,26 +48,63 @@ export function IntegrationsList({
     totalCount,
   } = usePipedreamApps({ query: searchQuery, withTriggers: true })
 
-  const isLoading = isLoadingPipedreamApps || isLoadingConnectedIntegrations
+  const isLoading = connectedApps.length === 0 && isLoadingConnectedIntegrations
 
   const optionGroups = useMemo<
     SearchableOption<TriggerIntegrationType>[]
   >(() => {
-    if (isLoadingPipedreamApps && isLoadingConnectedIntegrations) return []
+    const baseGroup: SearchableOptionGroup<TriggerIntegrationType> = {
+      type: 'group',
+      label: 'Available triggers',
+      items: [
+        {
+          type: 'item',
+          value: 'latitude_chat',
+          title: 'Chat',
+          description: 'Chat with a prompt',
+          metadata: { type: 'Chat' },
+          imageIcon: { type: 'icon', name: ICONS_BY_TRIGGER.Chat! },
+        },
+        {
+          type: 'item',
+          value: 'latitude_email',
+          title: 'Email',
+          description: 'Run a prompt on new emails',
+          metadata: { type: DocumentTriggerType.Email },
+          imageIcon: {
+            type: 'icon',
+            name: ICONS_BY_TRIGGER[DocumentTriggerType.Email]!,
+          },
+        },
+        {
+          type: 'item',
+          value: 'latitude_schedule',
+          title: 'Scheduled',
+          description: 'Run a prompt on a schedule',
+          metadata: { type: DocumentTriggerType.Scheduled },
+          imageIcon: {
+            type: 'icon',
+            name: ICONS_BY_TRIGGER[DocumentTriggerType.Scheduled]!,
+          },
+        },
+      ],
+    }
 
-    const connectedSlugs = connectedApps.reduce(
-      (acc, integration) => {
-        const appName = integration.configuration.appName
+    if (connectedApps.length) {
+      baseGroup.items.push(...connectedApps.map(buildIntegrationOption))
+    }
 
-        acc[appName] = appName
-        return acc
-      },
-      {} as Record<string, string>,
-    )
+    const groups: SearchableOption<TriggerIntegrationType>[] = [baseGroup]
 
     const availableApps: SearchableOptionItem<TriggerIntegrationType>[] =
       pipedreamApps
-        .filter((app) => !connectedSlugs[app.nameSlug])
+        .filter(
+          (app) =>
+            !connectedApps.some(
+              (integration) =>
+                integration.configuration.appName === app.nameSlug,
+            ),
+        )
         .map(
           (app) =>
             ({
@@ -81,54 +122,6 @@ export function IntegrationsList({
             }) satisfies SearchableOptionItem<TriggerIntegrationType>,
         )
 
-    const groups: SearchableOption<TriggerIntegrationType>[] = [
-      {
-        type: 'group',
-        label: 'Available triggers',
-        items: [
-          {
-            type: 'item',
-            value: 'latitude_chat',
-            title: 'Chat',
-            description: 'Chat with a prompt',
-            metadata: { type: 'Chat' },
-            imageIcon: { type: 'icon', name: ICONS_BY_TRIGGER.Chat! },
-          },
-          {
-            type: 'item',
-            value: 'latitude_email',
-            title: 'Email',
-            description: 'Run a prompt on new emails',
-            metadata: { type: DocumentTriggerType.Email },
-            imageIcon: {
-              type: 'icon',
-              name: ICONS_BY_TRIGGER.email!,
-            },
-          },
-          {
-            type: 'item',
-            value: 'latitude_schedule',
-            title: 'Scheduled',
-            description: 'Run a prompt on a schedule',
-            metadata: { type: DocumentTriggerType.Scheduled },
-            imageIcon: {
-              type: 'icon',
-              name: ICONS_BY_TRIGGER.scheduled!,
-            },
-          },
-        ],
-      },
-    ]
-
-    if (connectedApps.length) {
-      const latitudeIntegrations =
-        groups[0]! as SearchableOptionGroup<TriggerIntegrationType>
-      latitudeIntegrations.items = [
-        ...latitudeIntegrations.items,
-        ...connectedApps.map(buildIntegrationOption),
-      ]
-    }
-
     groups.push({
       type: 'group',
       label: 'Add more integrations',
@@ -137,12 +130,8 @@ export function IntegrationsList({
     })
 
     return groups
-  }, [
-    pipedreamApps,
-    connectedApps,
-    isLoadingPipedreamApps,
-    isLoadingConnectedIntegrations,
-  ])
+  }, [connectedApps, pipedreamApps, isLoadingPipedreamApps])
+
   const infiniteScroll = useMemo(
     () => ({
       onReachBottom: loadMore,
@@ -156,11 +145,10 @@ export function IntegrationsList({
   const onSelectValue: OnSelectValue<TriggerIntegrationType> = useCallback(
     (slug, metadata) => {
       if (!slug || !metadata) return
-
       setSelectedValue(slug)
       onSelectIntegration({ slug, type: metadata.type })
     },
-    [onSelectIntegration, setSelectedValue],
+    [onSelectIntegration],
   )
 
   return (

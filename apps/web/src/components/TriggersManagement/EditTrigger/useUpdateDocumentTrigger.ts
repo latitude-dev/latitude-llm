@@ -6,13 +6,16 @@ import useDocumentVersions from '$/stores/documentVersions'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { useDocumentSelection } from '../components/SelectDocument'
 import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function useUpdateDocumentTrigger({
   triggerUuid,
   onClose,
+  document,
 }: {
   triggerUuid: string
   onClose: () => void
+  document?: DocumentVersion
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -32,6 +35,7 @@ export function useUpdateDocumentTrigger({
     {
       projectId: project.id,
       commitUuid: commit.uuid,
+      documentUuid: document?.documentUuid,
     },
     {
       onUpdated: onClose,

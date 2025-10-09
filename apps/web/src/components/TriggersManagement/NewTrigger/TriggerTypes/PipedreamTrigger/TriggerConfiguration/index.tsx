@@ -9,6 +9,7 @@ import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { type AppDto } from '@latitude-data/core/constants'
 import {
   type DocumentTrigger,
+  type DocumentVersion,
   type IntegrationDto,
 } from '@latitude-data/core/schema/types'
 import { SelectPayloadParameters } from '../../../../components/TriggerForms/IntegrationTriggerForm/SelectPayloadParameters'
@@ -22,13 +23,17 @@ export function TriggerConfiguration({
   trigger,
   pipedreamApp,
   onTriggerCreated,
+  document: initialDocument,
 }: {
   trigger: Trigger
   pipedreamApp: AppDto
   onTriggerCreated: (documentTrigger: DocumentTrigger) => void
+  document?: DocumentVersion
 }) {
   const [account, setAccount] = useState<IntegrationDto | undefined>(undefined)
-  const doc = useDocumentSelection()
+  const doc = useDocumentSelection({
+    initialDocumentUuid: initialDocument?.documentUuid,
+  })
   const triggerCreator = useCreateDocumentTrigger({
     account,
     document: doc.document,
@@ -68,6 +73,7 @@ export function TriggerConfiguration({
             document={doc.document}
             onSelectDocument={doc.onSelectDocument}
             options={doc.options}
+            disabled={!!initialDocument}
           />
         ) : null}
 
