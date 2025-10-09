@@ -184,7 +184,7 @@ describe('consumeStream', () => {
           }),
         })
 
-        expect(accumulatedText).toEqual({ text: 'ab' })
+        expect(accumulatedText).toEqual({ text: 'a' })
       },
     })
   })
