@@ -18,6 +18,7 @@ import {
   Commit,
   Dataset,
 } from '@latitude-data/core/schema/types'
+import { getEvaluationMetricSpecification } from '$/components/evaluations'
 
 const PARAMETERS_MAP: Record<OnboardingDocumentParameterKeys, number> = {
   product_name: 0,
@@ -73,12 +74,15 @@ export function ExperimentStep({
     document,
   })
   const evaluationUuids = useMemo(() => {
-    const evaluation = evaluations[0]
-    // We asume is the first one. The one created during onboarding.
-    // This should not happen
-    if (!evaluation) return []
+    // As we create always a new HITL eval, we need to search the onboarding one by supportsBatchEvaluation
+    const onboardingEvaluation = evaluations.filter(
+      (evaluation) =>
+        getEvaluationMetricSpecification(evaluation).supportsBatchEvaluation,
+    )[0]
+    // Should never happen
+    if (!onboardingEvaluation) return []
 
-    return [evaluation.uuid]
+    return [onboardingEvaluation.uuid]
   }, [evaluations])
 
   const [variants, setVariants] = useState<Variants>({

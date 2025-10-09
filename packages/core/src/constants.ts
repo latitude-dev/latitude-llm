@@ -590,3 +590,5 @@ export class RemoteOptions {
     return this.getFlattenedValues().includes(searchValue)
   }
 }
+
+export const ONBOARDING_DOCUMENT_PATH = 'onboarding'

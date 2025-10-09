@@ -12,8 +12,8 @@ export default async function NocodersPage() {
   if (isCompleted) {
     redirect(ROUTES.dashboard.root)
   }
-  const resources = await getOnboardingResources()
-  if (resources.project === null || resources.commit === null) {
+  const { project, commit } = await getOnboardingResources()
+  if (project === null || commit === null) {
     return redirect(ROUTES.onboarding.agents.selectAgent)
   }
 

@@ -5,6 +5,7 @@ import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { moveNextOnboardingStepAction } from '$/actions/workspaceOnboarding/moveNextStep'
 import { WorkspaceOnboarding } from '@latitude-data/core/schema/types'
+import { createPromptEngineeringResourcesAction } from '$/actions/workspaceOnboarding/createPromptEngineeringResources'
 
 export default function useWorkspaceOnboarding() {
   const fetcher = useFetcher<WorkspaceOnboarding>(
@@ -15,14 +16,17 @@ export default function useWorkspaceOnboarding() {
     'api/workspaces/onboarding',
     fetcher,
     {
-      revalidateOnFocus: true,
-      revalidateIfStale: true,
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
     },
   )
 
   const { execute: executeCompleteOnboarding } = useLatitudeAction(
     completeOnboardingAction,
   )
+
+  const { execute: executeCreatePromptEngineeringResources } =
+    useLatitudeAction(createPromptEngineeringResourcesAction)
 
   const {
     execute: moveNextOnboardingStep,
@@ -42,6 +46,7 @@ export default function useWorkspaceOnboarding() {
     error,
     isLoading,
     moveNextOnboardingStep,
+    executeCreatePromptEngineeringResources,
     isPendingNextOnboardingStep,
     executeCompleteOnboarding,
     refetch: () => mutate(),

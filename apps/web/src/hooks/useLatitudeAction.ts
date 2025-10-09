@@ -7,7 +7,7 @@ import {
   HookSafeActionFn,
   useAction,
 } from 'next-safe-action/hooks'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from '$/hooks/useNavigate'
 import { useCallback, useMemo } from 'react'
 
 export type InferInputOrDefault<MaybeSchema, Default> =
@@ -161,7 +161,7 @@ export default function useLatitudeAction<
     onError?: ErrorActionCallback
   } = {},
 ) {
-  const router = useRouter()
+  const router = useNavigate()
   const { toast } = useToast()
 
   const successCb = useCallback(
