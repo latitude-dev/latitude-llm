@@ -17,6 +17,7 @@ export const GET = errorHandler(
       const integrations = await listIntegrations(workspace).then((r) =>
         r.unwrap(),
       )
+      console.log('Integrations:', integrations)
       return NextResponse.json(integrations, { status: 200 })
     },
   ),

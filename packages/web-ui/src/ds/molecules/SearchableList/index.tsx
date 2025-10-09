@@ -5,6 +5,9 @@ import {
   useEffect,
   useMemo,
   useRef,
+  createContext,
+  useContext,
+  ComponentType,
 } from 'react'
 import { Command } from 'cmdk'
 import { cn } from '../../../lib/utils'
@@ -12,6 +15,26 @@ import { Icon, IconProps } from '../../atoms/Icons'
 import { Skeleton } from '../../atoms/Skeleton'
 import { Text } from '../../atoms/Text'
 import { font } from '../../tokens/font'
+
+export type ItemPresenterProps<T extends ItemType> = {
+  item: OptionItem<T>
+  textSize: ItemProps<T>['textSize']
+  isSelected?: boolean
+}
+
+type ItemPresenterComponent<T extends ItemType> = ComponentType<
+  ItemPresenterProps<T>
+>
+
+type RenderItemContextValue<T extends ItemType> = {
+  ItemPresenter?: ItemPresenterComponent<T>
+}
+
+const RenderItemContext = createContext<RenderItemContextValue<ItemType>>({})
+
+export function useRenderItemContext<T extends ItemType>() {
+  return useContext(RenderItemContext) as unknown as RenderItemContextValue<T>
+}
 
 function LoadingItem() {
   return (
@@ -90,7 +113,11 @@ function SearchInput(props: ComponentProps<typeof Command.Input>) {
   )
 }
 
-function ImageIcon({ imageIcon }: { imageIcon: OptionItem['imageIcon'] }) {
+export function ImageIcon({
+  imageIcon,
+}: {
+  imageIcon: OptionItem['imageIcon']
+}) {
   if (!imageIcon?.type) return null
 
   if (imageIcon.type === 'image') {
@@ -116,34 +143,14 @@ function ImageIcon({ imageIcon }: { imageIcon: OptionItem['imageIcon'] }) {
     </div>
   )
 }
-
-type ItemProps<T extends ItemType> = Omit<
-  ComponentProps<typeof Command.Item>,
-  'onSelect'
-> & {
-  item: OptionItem<T>
-  textSize: 'normal' | 'small'
-  onSelectValue?: OnSelectValue<T>
-  isSelected?: boolean
-}
-function Item<T extends ItemType = 'no_type'>({
+function DefaultItemPresenter<T extends ItemType = 'item'>({
   item,
   textSize,
-  onSelectValue,
   isSelected,
-  ...itemProps
-}: ItemProps<T>) {
-  const onSelect = useCallback(
-    (value: string) => {
-      onSelectValue?.(value, item.metadata)
-    },
-    [onSelectValue, item.metadata],
-  )
+}: ItemPresenterProps<T>) {
   const TextTitle = textSize === 'normal' ? Text.H4 : Text.H5M
   return (
-    <Command.Item
-      onSelect={onSelect}
-      onMouseLeave={(e) => e.currentTarget.removeAttribute('aria-selected')}
+    <div
       className={cn(
         'group p-4 cursor-pointer',
         'aria-selected:bg-accent aria-selected:text-accent-foreground',
@@ -154,7 +161,6 @@ function Item<T extends ItemType = 'no_type'>({
           'bg-accent text-accent-foreground': isSelected,
         },
       )}
-      {...itemProps}
     >
       {item.imageIcon ? (
         <div className='flex-none'>
@@ -174,9 +180,11 @@ function Item<T extends ItemType = 'no_type'>({
           <TextTitle ellipsis noWrap>
             {item.title}
           </TextTitle>
-          <Text.H5 ellipsis noWrap color='foregroundMuted'>
-            {item.description}
-          </Text.H5>
+          {item.description ? (
+            <Text.H5 ellipsis noWrap color='foregroundMuted'>
+              {item.description}
+            </Text.H5>
+          ) : null}
         </div>
         <Icon
           name='arrowRight'
@@ -190,6 +198,52 @@ function Item<T extends ItemType = 'no_type'>({
           )}
         />
       </div>
+    </div>
+  )
+}
+
+type ItemProps<T extends ItemType> = Omit<
+  ComponentProps<typeof Command.Item>,
+  'onSelect'
+> & {
+  item: OptionItem<T>
+  textSize: 'normal' | 'small'
+  onSelectValue?: OnSelectValue<T>
+  isSelected?: boolean
+}
+function Item<T extends ItemType = 'item'>({
+  item,
+  textSize,
+  onSelectValue,
+  isSelected,
+  ...itemProps
+}: ItemProps<T>) {
+  const onSelect = useCallback(
+    (value: string) => {
+      onSelectValue?.(value, item.metadata)
+    },
+    [onSelectValue, item.metadata],
+  )
+  const { ItemPresenter } = useRenderItemContext<T>()
+  return (
+    <Command.Item
+      onSelect={onSelect}
+      onMouseLeave={(e) => e.currentTarget.removeAttribute('aria-selected')}
+      {...itemProps}
+    >
+      {ItemPresenter ? (
+        <ItemPresenter
+          item={item}
+          textSize={textSize}
+          isSelected={isSelected}
+        />
+      ) : (
+        <DefaultItemPresenter
+          item={item}
+          textSize={textSize}
+          isSelected={isSelected}
+        />
+      )}
     </Command.Item>
   )
 }
@@ -202,16 +256,18 @@ type MetadataItem<ItemType> = {
 }
 type ItemType = unknown
 type ItemImage = { type: 'image'; src: string; alt: string }
+
 export type OptionItem<T extends ItemType = 'no_type'> = {
   type: 'item'
   value: string
-  keywords?: string[] // Search keywords for the item
-  metadata?: MetadataItem<T>
   title: string
   description: string
+  keywords?: string[] // Search keywords for the item
+  metadata?: MetadataItem<T>
   imageIcon?: ItemIcon | ItemImage
   disabled?: boolean
 }
+
 export type OptionGroup<T extends ItemType = 'no_type'> = {
   type: 'group'
   label: string
@@ -376,6 +432,7 @@ type Props<T extends ItemType> = {
   onSelectValue?: OnSelectValue<T>
   showSearch?: boolean
   onSearchChange?: (query: string) => void
+  ItemPresenter?: ItemPresenterComponent<T>
   items: Option<T>[]
   selectedValue?: string | undefined
   placeholder?: string
@@ -387,6 +444,7 @@ type Props<T extends ItemType> = {
     totalCount?: number
   }
   totalCount?: number
+  shouldFilter?: boolean
 }
 
 export function SearchableList<T extends ItemType>({
@@ -401,6 +459,12 @@ export function SearchableList<T extends ItemType>({
   emptyMessage = 'No results',
   listStyle,
   infiniteScroll,
+  ItemPresenter,
+  /**
+   * Normally we do the filtering outside of the component if
+   * we have a static list of items. In that case `shouldFilter` is false
+   */
+  shouldFilter = false,
 }: Props<T>) {
   const observerRef = useRef<IntersectionObserver | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
@@ -442,72 +506,86 @@ export function SearchableList<T extends ItemType>({
   const groupStyle = listStyle?.listWrapper ?? 'border'
   const textSize = listStyle?.size ?? 'normal'
 
+  // FIXME: Generic in context provider does not work, casting as any
   return (
-    <Command className='relative flex flex-col gap-y-4 h-full min-h-0'>
-      {showSearch ? (
-        <SearchInput placeholder={placeholder} onValueChange={onSearchChange} />
-      ) : null}
-      {loading ? (
-        <LoadingList
-          groupStyle={groupStyle}
-          size='loading'
-          multiGroup={multiGroup}
-        />
-      ) : (
-        <Command.List
-          asChild
-          className='overflow-y-auto custom-scrollbar space-y-4 scrollable-indicator'
-        >
-          {multiGroup ? (
-            <MultiGroupList
-              items={items}
-              groupStyle={groupStyle}
-              textSize={textSize}
-              onSelectValue={onSelectValue}
-              selectedValue={selectedValue}
-            />
-          ) : (
-            <GroupWrapper style={groupStyle}>
-              {(items as OptionItem<T>[]).map((item, idx) => (
-                <Item
-                  key={idx}
-                  value={item.value}
-                  textSize={textSize}
-                  item={item}
-                  onSelectValue={onSelectValue}
-                  isSelected={item.value === selectedValue}
-                />
-              ))}
-            </GroupWrapper>
-          )}
-          <Command.Empty className='py-6 flex items-center justify-center'>
-            <Text.H6>{emptyMessage}</Text.H6>
-          </Command.Empty>
+    <RenderItemContext.Provider value={{ ItemPresenter: ItemPresenter as any }}>
+      <Command
+        className='relative flex flex-col gap-y-4 h-full min-h-0'
+        shouldFilter={shouldFilter}
+      >
+        {showSearch ? (
+          <SearchInput
+            placeholder={placeholder}
+            onValueChange={onSearchChange}
+          />
+        ) : null}
+        {loading ? (
+          <LoadingList
+            groupStyle={groupStyle}
+            size='loading'
+            multiGroup={multiGroup}
+          />
+        ) : (
+          <Command.List
+            asChild
+            className='overflow-y-auto custom-scrollbar space-y-4 scrollable-indicator'
+          >
+            {multiGroup ? (
+              <MultiGroupList
+                items={items}
+                groupStyle={groupStyle}
+                textSize={textSize}
+                onSelectValue={onSelectValue}
+                selectedValue={selectedValue}
+              />
+            ) : (
+              <GroupWrapper style={groupStyle}>
+                {(items as OptionItem<T>[]).map((item, idx) => (
+                  <Item
+                    key={idx}
+                    value={item.value}
+                    textSize={textSize}
+                    item={item}
+                    onSelectValue={onSelectValue}
+                    isSelected={item.value === selectedValue}
+                  />
+                ))}
+              </GroupWrapper>
+            )}
+            <Command.Empty className='py-6 flex items-center justify-center'>
+              <Text.H6>{emptyMessage}</Text.H6>
+            </Command.Empty>
 
-          {/* End message when no more items to load */}
-          {infiniteScroll?.isReachingEnd &&
-            !infiniteScroll?.isLoadingMore &&
-            items.length > 0 && (
-              <div className='pt-2 pb-4 flex items-center justify-center'>
-                <Text.H6 color='foregroundMuted'>{endMessage}</Text.H6>
+            {/* End message when no more items to load */}
+            {infiniteScroll?.isReachingEnd &&
+              !infiniteScroll?.isLoadingMore &&
+              items.length > 0 && (
+                <div className='pt-2 pb-4 flex items-center justify-center'>
+                  <Text.H6 color='foregroundMuted'>{endMessage}</Text.H6>
+                </div>
+              )}
+
+            {/* Sentinel element for intersection observer */}
+            {infiniteScroll?.onReachBottom &&
+              !infiniteScroll?.isLoadingMore &&
+              !infiniteScroll?.isReachingEnd && (
+                <div ref={sentinelRef} className='h-1' />
+              )}
+
+            {/* Infinite loading items once first page is loaded */}
+            {items.length > 0 && infiniteScroll?.isLoadingMore && (
+              <div className='py-4 w-full flex justify-center'>
+                <Icon
+                  name='loader'
+                  spin
+                  size='xlarge'
+                  color='foregroundMuted'
+                />
               </div>
             )}
-
-          {/* Sentinel element for intersection observer */}
-          {infiniteScroll?.onReachBottom &&
-            !infiniteScroll?.isLoadingMore &&
-            !infiniteScroll?.isReachingEnd && (
-              <div ref={sentinelRef} className='h-1' />
-            )}
-
-          {/* Infinite loading items once first page is loaded */}
-          {items.length > 0 && infiniteScroll?.isLoadingMore && (
-            <div className='py-4 w-full flex justify-center'>
-              <Icon name='loader' spin size='xlarge' color='foregroundMuted' />
-            </div>
-          )}
-        </Command.List>
-      )}
-    </Command>
+          </Command.List>
+        )}
+      </Command>
+    </RenderItemContext.Provider>
   )
 }

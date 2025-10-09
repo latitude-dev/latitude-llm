@@ -4,7 +4,7 @@ import {
   type PipedreamComponentType,
 } from '@latitude-data/core/constants'
 
-function parseMarkdownLinks(text: string | undefined) {
+export function parseMarkdownLinks(text: string | undefined) {
   if (!text) return ''
   return text.replace(
     /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
