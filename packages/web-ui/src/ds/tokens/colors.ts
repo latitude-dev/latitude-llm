@@ -106,3 +106,4 @@ export type DarkTextColor = keyof typeof colors.darkTextColors
 export type BorderColor = keyof typeof colors.borderColors
 export type BackgroundColor = keyof typeof colors.backgrounds
 export type BackgroundHoverColor = keyof typeof colors.backgroundHoverColors
+export type BorderHoverColor = keyof typeof colors.borderHoverColors
