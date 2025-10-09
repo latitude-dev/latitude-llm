@@ -231,8 +231,6 @@ When implementing new features, follow this order:
 6. **Stores**: Create SWR hooks with optimistic updates
 7. **UI Components**: Build interface following design patterns
 8. **Routes**: Add navigation and routing
-9. **Testing**: Validate with linting and type checking
-10. **Code Formatting**: **ALWAYS run `pnpm prettier`** to standardize patterns
 
 ## Action Organization Patterns
 

@@ -232,22 +232,33 @@ export abstract class StreamManager {
   protected endStream() {
     this.endTime = Date.now()
 
+    const toolCalls = this.response?.providerLog?.toolCalls ?? []
+    const tokenUsage = this.logUsage ?? EMPTY_USAGE()
+    const duration = this.endTime! - this.startTime!
+    const finishReason = this.finishReason ?? 'stop'
+    const logUsage = this.logUsage ?? EMPTY_USAGE()
+    const runUsage = this.runUsage ?? EMPTY_USAGE()
+
+    // Send final stream event
+    this.sendEvent({
+      type: ChainEventTypes.ChainCompleted,
+      response: this.response,
+      toolCalls,
+      finishReason,
+      tokenUsage,
+    })
+
+    // Close the stream
+    this.controller?.close()
+
     // Resolve the promised values
     this.resolveMessages?.(this.messages)
     this.resolveResponse?.(this.response)
     this.resolveError?.(this.error)
-    this.resolveToolCalls?.(this.response?.providerLog?.toolCalls ?? [])
-    this.resolveDuration?.(this.endTime! - this.startTime!)
-    this.resolveLogUsage?.(this.logUsage ?? EMPTY_USAGE())
-    this.resolveRunUsage?.(this.runUsage ?? EMPTY_USAGE())
-
-    this.sendEvent({
-      type: ChainEventTypes.ChainCompleted,
-      finishReason: this.finishReason ?? 'stop',
-      tokenUsage: this.logUsage ?? EMPTY_USAGE(),
-    })
-
-    this.controller?.close()
+    this.resolveToolCalls?.(toolCalls)
+    this.resolveDuration?.(duration)
+    this.resolveLogUsage?.(logUsage)
+    this.resolveRunUsage?.(runUsage)
   }
 
   protected startProviderStep({

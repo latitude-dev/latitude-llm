@@ -65,7 +65,7 @@ export async function streamAIResponse({
   response: ChainStepResponse<StreamType>
   messages: LegacyMessage[]
   tokenUsage: Awaited<LanguageModelUsage>
-  finishReason: Awaited<AIReturn<StreamType>['finishReason']>
+  finishReason: Awaited<AIReturn<StreamType>['finishReason']> | undefined
 }> {
   const startTime = Date.now()
   const aiResult = await ai({
@@ -115,9 +115,16 @@ export async function streamAIResponse({
     documentLogUuid,
   })
 
+  let finishReason
+  try {
+    finishReason = await aiResult.finishReason
+  } catch (_) {
+    // do nothing
+  }
+
   const providerLog = await createProviderLog({
     workspace,
-    finishReason: await aiResult.finishReason,
+    finishReason,
     ...buildProviderLogDto({
       workspace,
       source,
@@ -140,6 +147,6 @@ export async function streamAIResponse({
     // FIXME: Make response.output non optional when we remove `__deprecated`
     messages: response.output ?? [],
     tokenUsage: response.usage,
-    finishReason: await aiResult.finishReason,
+    finishReason,
   }
 }

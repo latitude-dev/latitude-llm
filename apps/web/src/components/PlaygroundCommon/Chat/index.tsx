@@ -1,8 +1,9 @@
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import React, { useCallback, useEffect, useMemo, useRef } from 'react'
+import useFeature from '$/stores/useFeature'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
+import React, { useEffect, useMemo, useRef } from 'react'
 
 import {
   ChatTextArea,
@@ -27,6 +28,7 @@ export default function Chat({
   runPromptFn,
   abortCurrentStream,
   hasActiveStream,
+  isRunStream: isRunStreamProp = true,
   addMessagesFn,
   onPromptRan,
   expandParameters,
@@ -39,6 +41,7 @@ export default function Chat({
   runPromptFn: RunPromptFn
   abortCurrentStream: () => boolean
   hasActiveStream: () => boolean
+  isRunStream?: boolean
   showHeader: boolean
   onPromptRan?: (documentLogUuid?: string, error?: Error) => void
   addMessagesFn?: AddMessagesFn
@@ -58,15 +61,8 @@ export default function Chat({
     onPromptRan,
   })
 
-  // Function to stop the streaming response with confirmation
-  const stopStreaming = useCallback(() => {
-    // We only clear the stream if it's the first generation as otherwise the
-    // UI is in an non-obvious state for the user
-    if (abortCurrentStream() && playground.messages.length <= 1) {
-      // Only clear chat if stream was actually aborted
-      clearChat()
-    }
-  }, [abortCurrentStream, clearChat, playground.messages.length])
+  const { isEnabled: isRunsEnabled } = useFeature('runs')
+  const isRunStream = isRunsEnabled && isRunStreamProp
 
   const toolContentMap = useToolContentMap(playground.messages)
   const parameterKeys = useMemo(
@@ -103,9 +99,10 @@ export default function Chat({
         <ChatInputBox
           canChat={canChat}
           clearChat={clearChat}
+          abortCurrentStream={abortCurrentStream}
           hasActiveStream={hasActiveStream}
+          isRunStream={isRunStream}
           playground={playground}
-          stopStreaming={stopStreaming}
         />
       </div>
     </div>
@@ -160,23 +157,25 @@ function Messages({
 function ChatInputBox({
   canChat,
   clearChat,
+  abortCurrentStream,
   hasActiveStream,
+  isRunStream,
   playground,
-  stopStreaming,
 }: {
   canChat: boolean
   clearChat: () => void
+  abortCurrentStream: () => boolean
   hasActiveStream: () => boolean
+  isRunStream: boolean
   playground: ReturnType<typeof usePlaygroundChat>
-  stopStreaming: () => void
 }) {
   return (
     <div className='flex relative flex-row w-full items-center justify-center px-4'>
       <StatusIndicator
         playground={playground}
         resetChat={clearChat}
-        stopStreaming={stopStreaming}
-        canStopStreaming={hasActiveStream() && playground.isLoading}
+        stopStreaming={isRunStream ? playground.stop : abortCurrentStream}
+        canStopStreaming={hasActiveStream() && playground.canStop}
         streamAborted={!hasActiveStream() && !playground.isLoading}
         canChat={canChat}
       />
@@ -187,7 +186,10 @@ function ChatInputBox({
         onSubmit={playground.submitUserMessage}
         onClear={clearChat}
         disabledSubmit={
-          playground.isLoading || !!playground.error || !hasActiveStream()
+          playground.isLoading ||
+          playground.isStopping ||
+          !!playground.error ||
+          !hasActiveStream()
         }
         disabledClear={playground.isLoading}
       />

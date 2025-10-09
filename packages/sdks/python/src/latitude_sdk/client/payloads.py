@@ -69,7 +69,6 @@ class AttachRunRequestParams(ConversationRequestParams, Model):
 
 class AttachRunRequestBody(Model):
     stream: Optional[bool] = None
-    interactive: Optional[bool] = None
 
 
 class StopRunRequestParams(ConversationRequestParams, Model):

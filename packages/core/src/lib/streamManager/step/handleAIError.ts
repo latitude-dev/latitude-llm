@@ -36,5 +36,6 @@ export function handleAIError({ error: rawError }: OnErrorParameters) {
       message: 'An unknown error occurred during AI call',
     })
   }
+
   throw aiResultError
 }

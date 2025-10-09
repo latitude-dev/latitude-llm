@@ -82,6 +82,8 @@ export function useActiveRuns(
   const onMessage = useCallback(
     (args: EventArgs<'runStatus'>) => {
       if (!realtime) return
+      if (!args) return
+
       if (args.projectId !== project.id) return
       if (args.run.endedAt) {
         mutate(
@@ -146,6 +148,8 @@ export function useActiveRunsCount(
   const onMessage = useCallback(
     (args: EventArgs<'runStatus'>) => {
       if (!realtime) return
+      if (!args) return
+
       if (args.projectId !== project.id) return
       if (args.run.startedAt) return
 

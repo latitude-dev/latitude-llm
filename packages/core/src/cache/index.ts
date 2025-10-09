@@ -100,6 +100,7 @@ end
         )
       }
     }
+
     await new Promise((resolve) => setTimeout(resolve, lockDelay))
   }
 

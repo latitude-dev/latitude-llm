@@ -1,29 +1,30 @@
-import { useMemo, useRef } from 'react'
-import { cn } from '@latitude-data/web-ui/utils'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
+import { useDevMode } from '$/hooks/useDevMode'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useMetadata } from '$/hooks/useMetadata'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
-import DocumentParams from '../V2Playground/DocumentParams'
+import { useMetadata } from '$/hooks/useMetadata'
+import useFeature from '$/stores/useFeature'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
+import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
+import { cn } from '@latitude-data/web-ui/utils'
+import { useMemo, useRef } from 'react'
+import { TabValue } from '../../../DocumentTabs/tabs'
 import { ChatInputBox } from '../ChatInputBox'
 import { AgentToolbar } from '../EditorHeader/AgentToolbar'
 import { Editors } from '../Editors'
 import { RunButton } from '../RunButton'
 import { V2Playground } from '../V2Playground'
-import { TabValue } from '../../../DocumentTabs/tabs'
+import DocumentParams from '../V2Playground/DocumentParams'
+import { DocumentEditorHeader } from './Header'
 import {
   useEditorCallbacks,
   usePlaygroundLogic,
 } from './hooks/usePlaygroundLogic'
-import { DocumentEditorHeader } from './Header'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { useDevMode } from '$/hooks/useDevMode'
 
 export function DocumentEditorContentArea({
   refinementEnabled,
@@ -62,6 +63,7 @@ export function DocumentEditorContentArea({
     document,
   })
   const { devMode } = useDevMode()
+  const { isEnabled: isRunStream } = useFeature('runs')
   const { playground, hasActiveStream, resetChat, onBack, stopStreaming } =
     usePlaygroundLogic({
       commit,
@@ -216,8 +218,9 @@ export function DocumentEditorContentArea({
                   onBack={onBack}
                   resetChat={resetChat}
                   hasActiveStream={hasActiveStream}
+                  abortCurrentStream={stopStreaming}
+                  isRunStream={isRunStream}
                   playground={playground}
-                  stopStreaming={stopStreaming}
                 />
               )}
             </div>

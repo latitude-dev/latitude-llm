@@ -2,15 +2,16 @@ import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { captureException } from '$/helpers/captureException'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { ChainEventTypes, StreamEventTypes } from '@latitude-data/constants'
+import { StreamEventTypes } from '@latitude-data/constants'
 import { LogSources } from '@latitude-data/core/constants'
-import { User, Workspace } from '@latitude-data/core/schema/types'
 import { publisher } from '@latitude-data/core/events/publisher'
+import { createSSEStream } from '@latitude-data/core/lib/createSSEStream'
 import { Result } from '@latitude-data/core/lib/Result'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
+import { User, Workspace } from '@latitude-data/core/schema/types'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { env } from '@latitude-data/env'
@@ -53,12 +54,10 @@ export const POST = errorHandler(
           aiParameters,
         } = inputSchema.parse(body)
         const projectId = Number(body.projectId)
-
         const runsEnabled = await isFeatureEnabledByName(
           workspace.id,
           'runs',
         ).then((r) => r.unwrap())
-
         const commitsScope = new CommitsRepository(workspace.id)
         const headCommit = await commitsScope.getHeadCommit(projectId)
 
@@ -92,93 +91,20 @@ export const POST = errorHandler(
           __internal: { source: LogSources.Playground },
         }).then((r) => r.unwrap())
 
-        // Create a TransformStream to handle the streaming response
-        const { readable, writable } = new TransformStream()
-        const writer = writable.getWriter()
-        const encoder = new TextEncoder()
-
-        // Track if the writer has been closed to prevent multiple close attempts
-        let isWriterClosed = false
-
-        // Helper function to safely close the writer
-        const safeCloseWriter = async () => {
-          if (!isWriterClosed) {
-            isWriterClosed = true
-            try {
-              await writer.close()
-            } catch (error) {
-              // do nothion, writer might be closed already
-            }
-          }
-        }
-
-        // Helper function to write error to stream
-        const writeErrorToStream = async (error: Error | unknown) => {
-          try {
-            await writer.write(
-              encoder.encode(
-                `event: error\ndata: ${JSON.stringify({
-                  name: error instanceof Error ? error.name : 'UnknownError',
-                  message:
-                    error instanceof Error
-                      ? error.message
-                      : 'An unexpected error occurred',
-                  stack: error instanceof Error ? error.stack : undefined,
-                })}\n\n`,
-              ),
-            )
-          } catch (writeError) {
-            captureException(writeError as Error)
-          } finally {
-            await safeCloseWriter()
-          }
-        }
-
-        // Set up abort handler and store the handler function for later removal
-        const abortHandler = () => {
-          writer.abort()
-        }
-        req.signal.addEventListener('abort', abortHandler)
-
-        const onEvent = async (event: {
+        const { readable, write, writeError, closeWriter } = createSSEStream()
+        const onEvent = (event: {
           event: StreamEventTypes
           data: ChainEventDto
-        }) => {
-          try {
-            if (event.data.type === ChainEventTypes.ChainError) {
-              captureException(event.data.error)
-            }
-
-            await writer.write(
-              encoder.encode(
-                `event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`,
-              ),
-            )
-          } catch (error) {
-            captureException(error as Error)
-            // Try to send error to client before closing
-            await writeErrorToStream(new Error('Failed to write to stream'))
-          }
-        }
-
+        }) => write(`event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`) // prettier-ignore
         const onError = async (error: LatitudeApiError) => {
-          captureException(error)
-
-          await writeErrorToStream(error)
+          await writeError(error)
+          await closeWriter()
         }
-
         const onFinished = async (_data: GenerationResponse) => {
-          try {
-            await writer.write(
-              encoder.encode(
-                `event: finished\ndata: ${JSON.stringify({ success: true })}\n\n`,
-              ),
-            )
-          } catch (error) {
-            captureException(error as Error)
-          } finally {
-            await safeCloseWriter()
-          }
+          await write(
+            `event: finished\ndata: ${JSON.stringify({ success: true })}\n\n`,
+          )
+          await closeWriter()
         }
 
         try {
@@ -189,13 +115,10 @@ export const POST = errorHandler(
               parameters,
               userMessage,
             })
-            if (!result?.uuid) {
-              throw new Error('Failed to create run')
-            }
+            if (!result?.uuid) throw new Error('Failed to create run')
 
             sdk.runs.attach(result.uuid, {
               stream: true,
-              interactive: true,
               onEvent,
               onError,
               onFinished,
@@ -216,10 +139,8 @@ export const POST = errorHandler(
           }
         } catch (error) {
           captureException(error as Error)
-          await writeErrorToStream(new Error('Failed to execute prompt'))
-        } finally {
-          // Clean up the abort event listener
-          req.signal.removeEventListener('abort', abortHandler)
+          await writeError(new Error('Failed to execute prompt'))
+          await closeWriter()
         }
 
         return new NextResponse(readable, {
@@ -230,6 +151,9 @@ export const POST = errorHandler(
           },
         })
       } catch (error) {
+        // When client closes the connection, the SDK will throw an undefined
+        // error or AbortError which we can safely ignore
+        if (!error || (error as Error).name === 'AbortError') return
         if (error instanceof z.ZodError) {
           return NextResponse.json(
             {

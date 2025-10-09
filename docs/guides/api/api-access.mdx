@@ -308,13 +308,11 @@ Attach to an active conversation to receive its ongoing output.
 
 ```json
 {
-  "stream": false,
-  "interactive": false
+  "stream": false
 }
 ```
 
 - `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the final event is returned.
-- `interactive`: Optional boolean parameter (defaults to `false`). When set to true the attached conversation will be aborted when the client disconnects.
 
 **Response:**
 

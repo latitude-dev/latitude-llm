@@ -20,7 +20,6 @@ export async function syncAttach<
 >(
   uuid: string,
   {
-    interactive,
     onFinished,
     onError,
     options,
@@ -34,7 +33,7 @@ export async function syncAttach<
       handler: HandlerType.AttachRun,
       params: { conversationUuid: uuid },
       options: options,
-      body: { stream: false, interactive: !!options.signal || interactive },
+      body: { stream: false },
     })
 
     if (!response.ok) {

@@ -145,6 +145,7 @@ export const Playground = memo(
               clearChat={clearChat}
               abortCurrentStream={abortCurrentStream}
               hasActiveStream={hasActiveStream}
+              isRunStream={true}
               runPromptFn={runPromptFn}
               addMessagesFn={addMessagesFn}
               onPromptRan={onPromptRan}

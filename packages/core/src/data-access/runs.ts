@@ -20,5 +20,11 @@ export async function unsafelyFindActiveRun(runUuid: string) {
   if (getting.error) return Result.error(getting.error)
   const run = getting.value
 
+  if (run.endedAt) {
+    return Result.error(
+      new NotFoundError(`Active run with uuid ${runUuid} not found`),
+    )
+  }
+
   return Result.ok({ ...run, projectId, workspaceId })
 }

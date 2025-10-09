@@ -9,16 +9,14 @@ import { LogSources } from '@latitude-data/core/constants'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
-import {
-  awaitClientToolResult,
-  ToolHandler,
-} from '@latitude-data/core/lib/streamManager/clientTools/handlers'
+import { buildClientToolHandlersMap } from '@latitude-data/core/lib/streamManager/clientTools/handlers'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
 import { enqueueRun } from '@latitude-data/core/services/runs/enqueue'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
+import type { Context } from 'hono'
 import { RunRoute } from './run.route'
 
 // https://github.com/honojs/middleware/issues/735
@@ -59,34 +57,111 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   }
 
   if (background) {
-    if (!runsEnabled) {
-      throw new BadRequestError(
-        'Background runs are not enabled for this workspace',
-      )
-    }
-
-    const { run } = await enqueueRun({
-      document: document,
-      commit: commit,
-      project: project,
-      workspace: workspace,
-      parameters: parameters,
-      customIdentifier: customIdentifier,
-      tools: tools,
-      userMessage: userMessage,
-      source: source,
-    }).then((r) => r.unwrap())
-
-    return c.json({ uuid: run.uuid })
+    return await handleBackgroundRun({
+      c,
+      workspace,
+      document,
+      commit,
+      project,
+      parameters,
+      customIdentifier,
+      tools,
+      userMessage,
+      source,
+      runsEnabled,
+    })
   }
 
-  const result = await runDocumentAtCommit({
+  return await handleForegroundRun({
+    c,
     workspace,
     document,
     commit,
     parameters,
     customIdentifier,
     source: __internal?.source ?? LogSources.API,
+    useSSE,
+    tools,
+    userMessage,
+  })
+}
+
+async function handleBackgroundRun({
+  c,
+  workspace,
+  document,
+  commit,
+  project,
+  parameters,
+  customIdentifier,
+  tools,
+  userMessage,
+  source,
+  runsEnabled,
+}: {
+  c: Context
+  workspace: any
+  document: any
+  commit: any
+  project: any
+  parameters: any
+  customIdentifier: any
+  tools: any
+  userMessage: any
+  source: any
+  runsEnabled: boolean
+}) {
+  if (!runsEnabled) {
+    throw new BadRequestError(
+      'Background runs are not enabled for this workspace',
+    )
+  }
+
+  const { run } = await enqueueRun({
+    document: document,
+    commit: commit,
+    project: project,
+    workspace: workspace,
+    parameters: parameters,
+    customIdentifier: customIdentifier,
+    tools: tools,
+    userMessage: userMessage,
+    source: source,
+  }).then((r) => r.unwrap())
+
+  return c.json({ uuid: run.uuid })
+}
+
+async function handleForegroundRun({
+  c,
+  workspace,
+  document,
+  commit,
+  parameters,
+  customIdentifier,
+  source,
+  useSSE,
+  tools,
+  userMessage,
+}: {
+  c: Context
+  workspace: any
+  document: any
+  commit: any
+  parameters: any
+  customIdentifier: any
+  source: any
+  useSSE: boolean
+  tools: any
+  userMessage: any
+}) {
+  const result = await runDocumentAtCommit({
+    workspace,
+    document,
+    commit,
+    parameters,
+    customIdentifier,
+    source,
     abortSignal: c.req.raw.signal, // FIXME: This does not seem to work
     context: BACKGROUND({ workspaceId: workspace.id }),
     tools: useSSE ? buildClientToolHandlersMap(tools ?? []) : {},
@@ -151,11 +226,4 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   const body = runPresenter({ response: (await result.lastResponse)! }).unwrap()
 
   return c.json(body)
-}
-
-export function buildClientToolHandlersMap(tools: string[]) {
-  return tools.reduce((acc: Record<string, ToolHandler>, toolName: string) => {
-    acc[toolName] = awaitClientToolResult
-    return acc
-  }, {})
 }

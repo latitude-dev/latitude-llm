@@ -21,7 +21,6 @@ from latitude_sdk.util import Model
 class AttachRunOptions(StreamCallbacks, Model):
     tools: Optional[dict[str, OnToolCall]] = None
     stream: Optional[bool] = True  # Note: making stream the default
-    interactive: Optional[bool] = None
 
 
 class AttachRunResult(FinishedResult, Model):
@@ -49,7 +48,6 @@ class Runs:
                 ),
                 body=AttachRunRequestBody(
                     stream=options.stream,
-                    interactive=options.interactive,
                 ),
                 stream=options.stream,
             ) as response:

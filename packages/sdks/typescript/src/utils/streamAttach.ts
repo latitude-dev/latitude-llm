@@ -16,13 +16,20 @@ import {
 import { Readable } from 'stream'
 import { handleToolCallFactory } from './streamRun'
 
+function handleError(
+  error: LatitudeApiError,
+  onError?: (error: LatitudeApiError) => void,
+): Promise<undefined> | never {
+  onError?.(error)
+  return !onError ? Promise.reject(error) : Promise.resolve(undefined)
+}
+
 export async function streamAttach<
   Tools extends ToolSpec,
   S extends AssertedStreamType = 'text',
 >(
   uuid: string,
   {
-    interactive,
     onEvent,
     onFinished,
     onError,
@@ -38,7 +45,7 @@ export async function streamAttach<
       handler: HandlerType.AttachRun,
       params: { conversationUuid: uuid },
       options: options,
-      body: { stream: true, interactive: !!options.signal || interactive },
+      body: { stream: true },
     })
 
     if (!response.ok) {
@@ -51,8 +58,7 @@ export async function streamAttach<
         dbErrorRef: json?.dbErrorRef,
       })
 
-      onError?.(error)
-      return !onError ? Promise.reject(error) : Promise.resolve(undefined)
+      return handleError(error, onError)
     }
 
     const finalResponse = await handleStream<S>({
@@ -68,6 +74,10 @@ export async function streamAttach<
 
     return Promise.resolve(finalResponse)
   } catch (e) {
+    if (e instanceof LatitudeApiError) {
+      return handleError(e, onError)
+    }
+
     const err = e as Error
     const error = new LatitudeApiError({
       status: 500,
@@ -76,7 +86,6 @@ export async function streamAttach<
       errorCode: ApiErrorCodes.InternalServerError,
     })
 
-    onError?.(error)
-    return !onError ? Promise.reject(error) : Promise.resolve(undefined)
+    return handleError(error, onError)
   }
 }

@@ -3,14 +3,14 @@ import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { PlaygroundBlocksEditor } from '../BlocksEditor'
 import { PlaygroundTextEditor } from '../TextEditor'
 import { useLatteDiff } from '$/hooks/useLatteDiff'
 import { DocumentVersion } from '@latitude-data/core/schema/types'
 import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 
-export function Editors({
+export const Editors = memo(function Editors({
   document,
   refinementEnabled,
 }: {
@@ -74,4 +74,4 @@ export function Editors({
       defaultValue={metadata?.rootBlock}
     />
   )
-}
+})

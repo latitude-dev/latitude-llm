@@ -9,6 +9,7 @@ import {
   LOG_SOURCES,
   Run,
   RUN_CAPTION_SIZE,
+  RunAnnotation,
 } from '../constants'
 import { findLastProviderLogFromDocumentLogUuid } from '../data-access/providerLogs'
 import { buildConversation, formatMessage } from '../helpers'
@@ -19,9 +20,12 @@ import {
   computeDocumentLogsWithMetadataCount,
 } from '../services/documentLogs/computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithMetadata } from '../services/documentLogs/fetchDocumentLogWithMetadata'
+import { getEvaluationMetricSpecification } from '../services/evaluationsV2/specifications'
 import serializeProviderLog from '../services/providerLogs/serialize'
 import { CommitsRepository } from './commitsRepository'
+import { EvaluationResultsV2Repository } from './evaluationResultsV2Repository'
 
+// TODO: abstract into separate write services. Repostiries are for tenancy checks.
 export class RunsRepository {
   protected workspaceId: number
   protected projectId: number
@@ -47,7 +51,20 @@ export class RunsRepository {
     }
     caption = caption.trim().slice(0, RUN_CAPTION_SIZE)
 
-    return { uuid: log.uuid, queuedAt: startedAt, startedAt, endedAt, caption, log } // prettier-ignore
+    const repository = new EvaluationResultsV2Repository(this.workspaceId)
+    const results = await repository
+      .listByDocumentLogs({
+        projectId: this.projectId,
+        documentUuid: log.documentUuid,
+        documentLogUuids: [log.uuid],
+      })
+      .then((r) => (r.value ?? {})[log.uuid] ?? [])
+    const annotations = results.filter(
+      ({ evaluation }) =>
+        getEvaluationMetricSpecification(evaluation).supportsManualEvaluation,
+    ) as RunAnnotation[]
+
+    return { uuid: log.uuid, queuedAt: startedAt, startedAt, endedAt, caption, log, annotations } // prettier-ignore
   }
 
   private async listCached(cache?: Cache) {
@@ -155,7 +172,7 @@ export class RunsRepository {
     if (listing.error) return Result.error(listing.error)
     const logs = listing.value
 
-    const runs = await Promise.all(logs.map(this.logToRun))
+    const runs = await Promise.all(logs.map((log) => this.logToRun(log)))
 
     return Result.ok<CompletedRun[]>(runs)
   }

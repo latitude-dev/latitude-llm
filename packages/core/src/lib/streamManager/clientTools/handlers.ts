@@ -104,3 +104,10 @@ export function awaitClientToolResult({ toolCall }: ToolHandlerProps) {
     }, TIMEOUT_CLIENT_TOOL_CALL) // 5 minutes
   })
 }
+
+export function buildClientToolHandlersMap(tools: string[]) {
+  return tools.reduce((acc: Record<string, ToolHandler>, toolName: string) => {
+    acc[toolName] = awaitClientToolResult
+    return acc
+  }, {})
+}

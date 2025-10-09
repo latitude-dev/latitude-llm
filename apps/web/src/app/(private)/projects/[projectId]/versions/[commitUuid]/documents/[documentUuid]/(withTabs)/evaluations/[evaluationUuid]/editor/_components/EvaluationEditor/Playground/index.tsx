@@ -133,6 +133,7 @@ export const Playground = memo(
               runPromptFn={runPromptFn}
               abortCurrentStream={abortCurrentStream}
               hasActiveStream={hasActiveStream}
+              isRunStream={false}
             />
           )}
         </div>
