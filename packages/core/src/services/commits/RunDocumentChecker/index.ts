@@ -11,7 +11,7 @@ import {
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { DocumentVersion } from '../../../schema/types'
 import { ErrorableEntity } from '../../../constants'
-import { BadRequestError, LatitudeError } from '../../../lib/errors'
+import { LatitudeError } from '../../../lib/errors'
 import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { parsePrompt } from '../../documents/parse'
@@ -203,14 +203,8 @@ export class RunDocumentChecker {
         if (Array.isArray(value) && value.every(isPromptLFile)) {
           return Result.nil()
         }
+        if (typeof value !== 'string') return Result.nil()
 
-        if (typeof value !== 'string') {
-          return Result.error(
-            new BadRequestError(
-              `Invalid parameter value for '${paramName}'. Expected a the file URL.`,
-            ),
-          )
-        }
         const fileResult = await this.getFileMetadata(value)
         if (fileResult.error) return fileResult
         parameters[paramName] = fileResult.unwrap()
