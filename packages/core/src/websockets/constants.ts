@@ -11,6 +11,7 @@ import {
   LatteUsage,
   Run,
 } from '../constants'
+import { RunStatusEvent } from '../events/events'
 import type {
   Commit,
   Dataset,
@@ -176,6 +177,7 @@ export type LatteProjectChangesArgs = {
 }
 
 type RunStatusArgs = {
+  event: RunStatusEvent['type']
   workspaceId: number
   projectId: number
   run: Run

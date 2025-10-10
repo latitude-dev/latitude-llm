@@ -637,6 +637,12 @@ export type RunProgressEvent = LatitudeEventGeneric<
   }
 >
 
+export type RunStatusEvent =
+  | RunQueuedEvent
+  | RunStartedEvent
+  | RunProgressEvent
+  | RunEndedEvent
+
 export type RunEndedEvent = LatitudeEventGeneric<
   'runEnded',
   {

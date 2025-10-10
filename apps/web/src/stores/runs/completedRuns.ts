@@ -6,8 +6,8 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { Project } from '@latitude-data/core/schema/types'
 import { CompletedRun } from '@latitude-data/constants'
+import { Project } from '@latitude-data/core/schema/types'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
@@ -112,9 +112,10 @@ export function useCompletedRunsCount(
       if (!args) return
 
       if (args.projectId !== project.id) return
-      if (!args.run.endedAt) return
 
-      mutate((prev) => (prev ?? 0) + 1, { revalidate: false })
+      if (args.event === 'runEnded') {
+        mutate((prev) => Math.max(0, (prev ?? 0) + 1), { revalidate: false })
+      }
     },
     [project, mutate, realtime, disable],
   )
