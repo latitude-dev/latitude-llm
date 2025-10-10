@@ -34,6 +34,8 @@ import {
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),
   captureExceptionMock: vi.fn(),
+  enqueueRun: vi.fn(),
+  isFeatureEnabledByName: vi.fn(),
   queues: {
     defaultQueue: {
       jobs: {
@@ -68,6 +70,17 @@ vi.mock(
 vi.mock('$/jobs', () => ({
   queues: mocks.queues,
 }))
+
+vi.mock('@latitude-data/core/services/runs/enqueue', () => ({
+  enqueueRun: mocks.enqueueRun,
+}))
+
+vi.mock(
+  '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName',
+  () => ({
+    isFeatureEnabledByName: mocks.isFeatureEnabledByName,
+  }),
+)
 
 let route: string
 let body: string
@@ -135,6 +148,17 @@ describe('POST /run', () => {
         'Content-Type': 'application/json',
         'X-Latitude-SDK-Version': '5.0.0',
       }
+
+      // Set default mocks for feature flags
+      mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
+        if (featureName === 'runs') {
+          return Promise.resolve(Result.ok(true))
+        }
+        if (featureName === 'api-background-runs') {
+          return Promise.resolve(Result.ok(false))
+        }
+        return Promise.resolve(Result.ok(false))
+      })
     })
 
     it('uses source from __internal', async () => {
@@ -407,6 +431,17 @@ describe('POST /run', () => {
         'Content-Type': 'application/json',
         'X-Latitude-SDK-Version': '5.0.0',
       }
+
+      // Set default mocks for feature flags
+      mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
+        if (featureName === 'runs') {
+          return Promise.resolve(Result.ok(true))
+        }
+        if (featureName === 'api-background-runs') {
+          return Promise.resolve(Result.ok(false))
+        }
+        return Promise.resolve(Result.ok(false))
+      })
     })
 
     it('uses source from __internal', async () => {
@@ -714,6 +749,17 @@ describe('POST /run', () => {
 
       // Reset mocks
       mocks.runDocumentAtCommit.mockClear()
+
+      // Set default mocks for feature flags
+      mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
+        if (featureName === 'runs') {
+          return Promise.resolve(Result.ok(true))
+        }
+        if (featureName === 'api-background-runs') {
+          return Promise.resolve(Result.ok(false))
+        }
+        return Promise.resolve(Result.ok(false))
+      })
     })
 
     it('uses new method when SDK version >= 5.0.0', async () => {
@@ -795,6 +841,237 @@ describe('POST /run', () => {
         source: LogSources.API,
         abortSignal: expect.anything(),
       })
+    })
+  })
+
+  describe('background execution with feature flag', () => {
+    beforeEach(async () => {
+      const {
+        workspace: wsp,
+        user,
+        project: prj,
+        providers,
+      } = await createProject()
+      project = prj
+      workspace = wsp
+      const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
+        workspaceId: workspace.id,
+      }).then((r) => r.unwrap())
+      token = apikey?.token!
+      const path = 'path/to/document'
+      const { commit: cmt } = await createDraft({
+        project,
+        user,
+      })
+      const document = await createDocumentVersion({
+        workspace,
+        user,
+        commit: cmt,
+        path,
+        content: helpers.createPrompt({ provider: providers[0]! }),
+      })
+
+      commit = await mergeCommit(cmt).then((r) => r.unwrap())
+
+      route = `/api/v3/projects/${project!.id}/versions/${commit!.uuid}/documents/run`
+      body = JSON.stringify({
+        path: document.documentVersion.path,
+        parameters: {},
+      })
+      headers = {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-Latitude-SDK-Version': '5.0.0',
+      }
+
+      // Reset mocks
+      mocks.runDocumentAtCommit.mockClear()
+      mocks.enqueueRun.mockClear()
+      mocks.isFeatureEnabledByName.mockClear()
+    })
+
+    it('runs in background when background=true is explicitly set', async () => {
+      // Mock feature flags to return false for both
+      mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
+        if (featureName === 'runs') {
+          return Promise.resolve(Result.ok(true))
+        }
+        if (featureName === 'api-background-runs') {
+          return Promise.resolve(Result.ok(false))
+        }
+        return Promise.resolve(Result.ok(false))
+      })
+
+      mocks.enqueueRun.mockReturnValue(
+        Promise.resolve(
+          Result.ok({
+            run: { uuid: 'test-run-uuid' },
+          }),
+        ),
+      )
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body: JSON.stringify({
+          path: 'path/to/document',
+          parameters: {},
+          background: true,
+        }),
+        headers,
+      })
+
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({ uuid: 'test-run-uuid' })
+      expect(mocks.enqueueRun).toHaveBeenCalled()
+      expect(mocks.runDocumentAtCommit).not.toHaveBeenCalled()
+    })
+
+    it('runs in foreground when background=false is explicitly set, even with feature flag enabled', async () => {
+      // Mock feature flags: api-background-runs enabled but background explicitly false
+      mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
+        if (featureName === 'runs') {
+          return Promise.resolve(Result.ok(true))
+        }
+        if (featureName === 'api-background-runs') {
+          return Promise.resolve(Result.ok(true))
+        }
+        return Promise.resolve(Result.ok(false))
+      })
+
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.close()
+        },
+      })
+
+      const lastResponse = Promise.resolve({
+        streamType: 'text',
+        text: 'Hello',
+        usage: {},
+        documentLogUuid: 'fake-uuid',
+        providerLog: {
+          messages: [{ role: MessageRole.assistant, content: 'Hello', toolCalls: [] }],
+        },
+      })
+      const trace = createTelemetryTrace({})
+
+      mocks.runDocumentAtCommit.mockReturnValue(
+        Promise.resolve(
+          Result.ok({
+            stream,
+            lastResponse,
+            trace,
+          }),
+        ),
+      )
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body: JSON.stringify({
+          path: 'path/to/document',
+          parameters: {},
+          background: false,
+        }),
+        headers,
+      })
+
+      expect(res.status).toBe(200)
+      expect(mocks.runDocumentAtCommit).toHaveBeenCalled()
+      expect(mocks.enqueueRun).not.toHaveBeenCalled()
+    })
+
+    it('runs in background when feature flag is enabled and background param is undefined', async () => {
+      // Clear previous mocks and set up new ones
+      mocks.runDocumentAtCommit.mockClear()
+      mocks.enqueueRun.mockClear()
+
+      // Mock feature flags: api-background-runs enabled, background not specified
+      mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
+        if (featureName === 'runs') {
+          return Promise.resolve(Result.ok(true))
+        }
+        if (featureName === 'api-background-runs') {
+          return Promise.resolve(Result.ok(true))
+        }
+        return Promise.resolve(Result.ok(false))
+      })
+
+      mocks.enqueueRun.mockImplementation(() => {
+        return Promise.resolve(
+          Result.ok({
+            run: { uuid: 'test-run-uuid' },
+          }),
+        )
+      })
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body: JSON.stringify({
+          path: 'path/to/document',
+          parameters: {},
+          // background is undefined
+        }),
+        headers,
+      })
+
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({ uuid: 'test-run-uuid' })
+      expect(mocks.enqueueRun).toHaveBeenCalled()
+      expect(mocks.runDocumentAtCommit).not.toHaveBeenCalled()
+    })
+
+    it('runs in foreground when feature flag is disabled and background param is undefined', async () => {
+      // Mock feature flags: both disabled, background not specified
+      mocks.isFeatureEnabledByName.mockImplementation((_, featureName) => {
+        if (featureName === 'runs') {
+          return Promise.resolve(Result.ok(true))
+        }
+        if (featureName === 'api-background-runs') {
+          return Promise.resolve(Result.ok(false))
+        }
+        return Promise.resolve(Result.ok(false))
+      })
+
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.close()
+        },
+      })
+
+      const lastResponse = Promise.resolve({
+        streamType: 'text',
+        text: 'Hello',
+        usage: {},
+        documentLogUuid: 'fake-uuid',
+        providerLog: {
+          messages: [{ role: MessageRole.assistant, content: 'Hello', toolCalls: [] }],
+        },
+      })
+      const trace = createTelemetryTrace({})
+
+      mocks.runDocumentAtCommit.mockReturnValue(
+        Promise.resolve(
+          Result.ok({
+            stream,
+            lastResponse,
+            trace,
+          }),
+        ),
+      )
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body: JSON.stringify({
+          path: 'path/to/document',
+          parameters: {},
+          // background is undefined
+        }),
+        headers,
+      })
+
+      expect(res.status).toBe(200)
+      expect(mocks.runDocumentAtCommit).toHaveBeenCalled()
+      expect(mocks.enqueueRun).not.toHaveBeenCalled()
     })
   })
 })

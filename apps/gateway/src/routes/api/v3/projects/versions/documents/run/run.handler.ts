@@ -56,7 +56,19 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     })
   }
 
-  if (background) {
+  // Check if background execution should happen:
+  // 1. If background prop is explicitly set, use that value
+  // 2. Otherwise, check if the feature flag is enabled for the workspace
+  const backgroundRunsFeatureEnabled = await isFeatureEnabledByName(
+    workspace.id,
+    'api-background-runs',
+  ).then((r) => r.unwrap())
+
+  const shouldRunInBackground = background !== undefined
+    ? background
+    : backgroundRunsFeatureEnabled
+
+  if (shouldRunInBackground) {
     return await handleBackgroundRun({
       c,
       workspace,
