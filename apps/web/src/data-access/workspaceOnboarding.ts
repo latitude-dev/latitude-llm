@@ -4,6 +4,7 @@ import { findOnboardingDocument } from '@latitude-data/core/services/documents/f
 import { notFound } from 'next/navigation'
 import { Result } from '@latitude-data/core/lib/Result'
 import { calculateAllSteps } from '@latitude-data/core/services/workspaceOnboarding/steps/calculateAllSteps'
+import { findOnboardingDataset } from '@latitude-data/core/services/datasets/findOnboardingDataset'
 /**
  * Get the current workspace onboarding status
  * If the onboarding status doesn't exist, it creates a new one
@@ -44,7 +45,7 @@ export async function isOnboardingCompleted() {
 }
 
 /**
- * Get the onboarding resources (project, commit, documents)
+ * Get the onboarding resources (project, workspace, commit, documents)
  */
 export async function getOnboardingResources() {
   const { workspace } = await getCurrentUserOrRedirect()
@@ -54,11 +55,23 @@ export async function getOnboardingResources() {
 
   const documentResult = await findOnboardingDocument(workspace.id)
   if (!Result.isOk(documentResult)) {
-    return { project: null, commit: null }
+    return { workspace, documents: [], project: null, commit: null }
   }
-  const { project, commit } = documentResult.unwrap()
+  const { documents, project, commit } = documentResult.unwrap()
 
-  return { project, commit }
+  return { workspace, documents, project, commit }
+}
+
+export async function getOnboardingDataset() {
+  const { workspace } = await getCurrentUserOrRedirect()
+  if (!workspace?.id) {
+    return notFound()
+  }
+  const datasetResult = await findOnboardingDataset(workspace.id)
+  if (!Result.isOk(datasetResult)) {
+    return notFound()
+  }
+  return datasetResult.unwrap()
 }
 
 export async function getNecessaryOnboardingSteps() {

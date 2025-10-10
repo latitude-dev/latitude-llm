@@ -18,12 +18,10 @@ export default async function NocodersLayout({
   const { user } = await getCurrentUserOrRedirect()
   const isCloud = !!env.LATITUDE_CLOUD
 
-  const resources = await getOnboardingResources()
-  if (resources.project === null || resources.commit === null) {
+  const { project, commit } = await getOnboardingResources()
+  if (project === null || commit === null) {
     return redirect(ROUTES.onboarding.agents.selectAgent)
   }
-
-  const { project, commit } = resources // TODO(onboarding): if this is null, what happens?
 
   return (
     <ProjectProvider project={project}>

@@ -5,7 +5,7 @@ import {
   StatusFlagState,
 } from '@latitude-data/web-ui/molecules/StatusFlag'
 
-export default function QuestionnaireOptions({
+export default function SetupQuestionnaireOptions({
   title,
   description,
   isSelected,

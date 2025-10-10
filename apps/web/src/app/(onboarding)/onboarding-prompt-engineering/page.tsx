@@ -1,11 +1,14 @@
-import { redirect } from 'next/navigation'
-import { isOnboardingCompleted } from '$/data-access/workspaceOnboarding'
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+'use server'
+
+import { notFound, redirect } from 'next/navigation'
+import {
+  getOnboardingDataset,
+  getOnboardingResources,
+  isOnboardingCompleted,
+} from '$/data-access/workspaceOnboarding'
 import { OnboardingClient } from './_components/OnboardingClient'
-import { findOnboardingDocument } from '@latitude-data/core/services/documents/findOnboardingDocument'
-import { findOnboardingDataset } from '@latitude-data/core/services/datasets/findOnboardingDataset'
 import { ROUTES } from '$/services/routes'
-import { PageNotFoundError } from 'next/dist/shared/lib/utils'
+import { ONBOARDING_DOCUMENT_PATH } from '@latitude-data/core/constants'
 
 export default async function OnboardingRedirect() {
   const isCompleted = await isOnboardingCompleted()
@@ -13,27 +16,26 @@ export default async function OnboardingRedirect() {
     redirect(ROUTES.dashboard.root)
   }
 
-  const { workspace } = await getCurrentUserOrRedirect()
-  if (!workspace?.id) {
-    throw new PageNotFoundError('Workspace ID is required')
+  const { workspace, documents, project, commit } =
+    await getOnboardingResources()
+  if (project === null || commit === null) {
+    return notFound()
   }
 
-  const documentResult = await findOnboardingDocument(workspace.id)
-  if (documentResult.error) {
-    throw new PageNotFoundError('No document found')
+  const document = documents.find((d) => d.path === ONBOARDING_DOCUMENT_PATH)
+  if (!document) {
+    return notFound()
   }
-  const { documents, project, commit } = documentResult.value
 
-  const datasetResult = await findOnboardingDataset(workspace.id)
-  if (datasetResult.error) {
-    throw datasetResult.error
+  const dataset = await getOnboardingDataset()
+  if (!dataset) {
+    return notFound()
   }
-  const dataset = datasetResult.value
 
   return (
     <OnboardingClient
       workspaceName={workspace?.name}
-      document={documents[0]} // TODO(onboarding): change this later once we have a new onboarding
+      document={document}
       project={project}
       commit={commit}
       dataset={dataset}
