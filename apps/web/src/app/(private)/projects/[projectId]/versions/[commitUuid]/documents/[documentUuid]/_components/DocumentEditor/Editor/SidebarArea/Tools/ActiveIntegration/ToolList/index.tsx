@@ -94,7 +94,8 @@ export function ToolList({
     ],
   )
 
-  if (isLoading || isValidating) return <ToolListLoader numberOfItems={5} />
+  console.log({ isLoading, isValidating})
+  if (isLoading) return <ToolListLoader numberOfItems={5} />
 
   if (error) {
     return (

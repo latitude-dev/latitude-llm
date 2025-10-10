@@ -16,7 +16,13 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 export function useActiveIntegrations() {
   const { document } = useCurrentDocument()
   const prompt = document.content
-  const { data: integrations, isLoading } = useIntegrations()
+  const { data: integrations, isLoading } = useIntegrations({
+    includeLatitudeTools: true,
+    withTools: true,
+  })
+
+  console.log('Integrations loaded:', { isLoading })
+
   const { updateDocumentContent } = useDocumentValue()
   const [promptConfig, setPromptConfig] = useState<LatitudePromptConfig>(
     {} as LatitudePromptConfig,
@@ -24,6 +30,13 @@ export function useActiveIntegrations() {
   const [isInitialized, setInitialized] = useState(false)
   const [activeIntegrations, setActiveIntegrations] =
     useState<ActiveIntegrations>({})
+  const updatePromptMetadataWithOrigin = useCallback(
+    (updatedPrompt: string) => {
+      updateDocumentContent(updatedPrompt, { origin: 'editorSidebar' })
+    },
+    [updateDocumentContent],
+  )
+
   const addIntegrationTool = useCallback(
     ({
       integrationName,
@@ -49,9 +62,9 @@ export function useActiveIntegrations() {
           toolName,
         }),
       })
-      updateDocumentContent(updatedPrompt)
+      updatePromptMetadataWithOrigin(updatedPrompt)
     },
-    [promptConfig, prompt, updateDocumentContent],
+    [promptConfig, prompt, updatePromptMetadataWithOrigin],
   )
 
   const removeIntegrationTool = useCallback(
@@ -83,9 +96,9 @@ export function useActiveIntegrations() {
           integrationToolNames,
         }),
       })
-      updateDocumentContent(updatedPrompt)
+      updatePromptMetadataWithOrigin(updatedPrompt)
     },
-    [promptConfig, updateDocumentContent, prompt],
+    [promptConfig, prompt, updatePromptMetadataWithOrigin],
   )
 
   // Use the same event-driven pattern as ProviderModelSelector
@@ -97,6 +110,9 @@ export function useActiveIntegrations() {
       if (!isInitialized) {
         setInitialized(true)
       }
+
+      // Ignore updates coming from the sidebar itself to avoid loops
+      if (metadata.origin === 'editorSidebar') return
 
       const active = readActiveIntegrations({
         tools: metadata.config?.tools as LatitudePromptConfig['tools'],
@@ -125,7 +141,9 @@ export function useActiveIntegrations() {
   )
 }
 
-export type UseActiveIntegrationsReturn = ReturnType<typeof useActiveIntegrations>
+export type UseActiveIntegrationsReturn = ReturnType<
+  typeof useActiveIntegrations
+>
 
 function isValidIntegration(name: string, integrations: IntegrationDto[]) {
   return (

@@ -82,6 +82,8 @@ export function useActiveIntegrations({ prompt }: { prompt: string }) {
         setInitialized(true)
       }
 
+      if (metadata.origin === 'editorSidebar') return
+
       const active = readActiveIntegrations({
         tools: metadata.config?.tools as LatitudePromptConfig['tools'],
         integrations,

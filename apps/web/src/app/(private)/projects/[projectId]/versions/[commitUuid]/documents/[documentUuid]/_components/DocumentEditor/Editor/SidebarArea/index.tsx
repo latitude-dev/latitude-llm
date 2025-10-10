@@ -46,28 +46,30 @@ export function DocumentEditorSidebarArea({
   const data = useSidebarData({ metadata })
 
   return (
-    <div className='flex flex-col gap-y-6'>
+    <div className='w-full relative flex flex-col gap-y-6 min-h-0 '>
       <SidebarHeader metadata={metadata} />
       <FreeRunsBanner
         isLatitudeProvider={isLatitudeProvider}
         freeRunsCount={freeRunsCount}
       />
-      {data.isLoading ? (
-        <SidebarLoader />
-      ) : (
-        <>
-          <TriggersSidebarSection
-            triggers={data.triggersData.triggers}
-            integrations={data.triggersData.integrations}
-            document={data.triggersData.document}
-          />
-          <ToolsSidebarSection integrations={data.toolsData.integrations} />
-          <SidebarSection
-            title='Sub-agents'
-            actions={[{ onClick: () => {} }]}
-          />
-        </>
-      )}
+      <div className='flex flex-col gap-y-6 min-w-0 custom-scrollbar scrollable-indicator'>
+        {data.isLoading ? (
+          <SidebarLoader />
+        ) : (
+          <>
+            <TriggersSidebarSection
+              triggers={data.triggersData.triggers}
+              integrations={data.triggersData.integrations}
+              document={data.triggersData.document}
+            />
+            <ToolsSidebarSection integrations={data.toolsData.integrations} />
+            <SidebarSection
+              title='Sub-agents'
+              actions={[{ onClick: () => { } }]}
+            />
+          </>
+        )}
+      </div>
     </div>
   )
 }
