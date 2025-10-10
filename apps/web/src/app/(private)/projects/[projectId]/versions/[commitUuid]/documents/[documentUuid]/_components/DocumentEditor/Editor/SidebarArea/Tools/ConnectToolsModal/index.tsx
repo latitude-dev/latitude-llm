@@ -13,18 +13,17 @@ import { cn } from '@latitude-data/web-ui/utils'
 import usePipedreamApps from '$/stores/pipedreamApps'
 import { useDebouncedCallback } from 'use-debounce'
 import { IntegrationType } from '@latitude-data/constants'
-import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import {
   IntegrationDto,
   PipedreamIntegration,
 } from '@latitude-data/core/schema/types'
-import { INTEGRATION_TYPE_VALUES } from '$/lib/integrationTypeOptions'
 import { pluralize } from '$/components/TriggersManagement/NewTrigger/IntegrationsList/utils'
 import useIntegrations from '$/stores/integrations'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { mergeConnectedAppsBySlug } from '@latitude-data/core/lib/pipedream/mergeConnectedAppsBySlug'
 import { ConnectPipedreamModal } from './ConnectPipedreamModal'
 import { AppDto } from '@latitude-data/core/constants'
+import { integrationOptions } from '../hooks/utils'
 
 type ToolType = IntegrationType | 'UnConnectedPipedreamApp'
 
@@ -34,56 +33,22 @@ type IConnectToolContext = {
 }
 
 const ConnectToolContext = createContext<IConnectToolContext>({
-  onAdd: () => {},
-  onConnect: (_app: AppDto) => {},
+  onAdd: () => { },
+  onConnect: (_app: AppDto) => { },
 })
-
-function integrationOptions(integration: IntegrationDto) {
-  if (integration.type === IntegrationType.Pipedream) {
-    const imageUrl = integration.configuration.metadata?.imageUrl ?? 'unplug'
-    const label =
-      integration.configuration.metadata?.displayName ??
-      integration.configuration.appName
-    return {
-      label,
-      icon: {
-        type: 'image' as const,
-        src: imageUrl,
-        alt: label,
-      },
-    }
-  }
-
-  if (integration.type === IntegrationType.Latitude) {
-    const { label } = INTEGRATION_TYPE_VALUES[IntegrationType.Latitude]
-    return {
-      label,
-      icon: {
-        type: 'icon' as const,
-        name: 'logo' as IconName,
-      },
-    }
-  }
-  const { label, icon } = INTEGRATION_TYPE_VALUES[integration.type]
-  return { label, icon: { type: 'icon' as const, name: icon as IconName } }
-}
 
 function getToolsAndAccountsLabel({
   type,
   toolCount,
-  accountCount,
 }: {
   type: ToolType
   toolCount?: number
-  accountCount?: number
 }) {
   if (type === 'UnConnectedPipedreamApp') {
     const tools = pluralize(toolCount ?? 0, 'available tool', 'available tools')
     return tools
   }
-  if (type !== IntegrationType.Pipedream) return ''
-
-  return pluralize(accountCount ?? 1, 'account', 'accounts')
+  return ''
 }
 
 function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
@@ -177,16 +142,14 @@ export function ConnectToolsModal({
     totalCount,
   } = usePipedreamApps({ query: searchQuery, withTools: true })
 
-  const { data: integrations, isLoading: isLoadingConnectedIntegrations } =
+  const { data: connectedApps, isLoading: isLoadingConnectedIntegrations } =
     useIntegrations({
       withTools: true,
       includeLatitudeTools: true,
     })
 
-  const connectedApps = useMemo(() => {
-    if (!integrations) return []
-    return mergeAllConnectedApps(integrations)
-  }, [integrations])
+  console.log('Connected apps', connectedApps)
+
   const isLoading = connectedApps.length === 0 && isLoadingConnectedIntegrations
 
   // TODO: Filter active tool-sets. If Slack is used in this document, don't show it here
@@ -199,14 +162,8 @@ export function ConnectToolsModal({
         return {
           type: 'item' as const,
           value: String(integration.id),
-          title: labelIcon.label,
-          description: getToolsAndAccountsLabel({
-            type: integration.type,
-            accountCount:
-              integration.type === IntegrationType.Pipedream
-                ? integration.accountCount
-                : undefined,
-          }),
+          title: integration.name,
+          description: '',
           keywords: [labelIcon.label, integration.type],
           metadata: { type: integration.type },
           imageIcon: labelIcon.icon,

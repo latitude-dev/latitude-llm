@@ -7,6 +7,7 @@ import { SectionLoader, SidebarSection } from './Section'
 import { SidebarHeader } from './SidebarHeader'
 import { TriggersSidebarSection, useDocumentTriggersData } from './Triggers'
 import { ToolsSidebarSection } from './Tools'
+import { useToolsData } from './Tools/hooks/useToolsData'
 
 function SidebarLoader() {
   return (
@@ -24,13 +25,15 @@ function useSidebarData({
   metadata: ResolvedMetadata | undefined
 }) {
   const triggersData = useDocumentTriggersData()
+  const toolsData = useToolsData()
   return useMemo(() => {
-    const isLoading = triggersData.isLoading || !metadata
+    const isLoading = triggersData.isLoading || !metadata || toolsData.isLoading
     return {
       isLoading,
       triggersData,
+      toolsData,
     }
-  }, [triggersData, metadata])
+  }, [triggersData, toolsData, metadata])
 }
 
 export function DocumentEditorSidebarArea({
@@ -58,7 +61,7 @@ export function DocumentEditorSidebarArea({
             integrations={data.triggersData.integrations}
             document={data.triggersData.document}
           />
-          <ToolsSidebarSection />
+          <ToolsSidebarSection integrations={data.toolsData.integrations} />
           <SidebarSection
             title='Sub-agents'
             actions={[{ onClick: () => {} }]}

@@ -113,11 +113,24 @@ function SearchInput(props: ComponentProps<typeof Command.Input>) {
   )
 }
 
+type ImageSize = 'small' | 'normal'
+const IMAGE_SIZES: Record<ImageSize, number> = {
+  small: 16,
+  normal: 40,
+}
+const ICON_SIZES: Record<ImageSize, IconProps['size']> = {
+  small: 'normal' as const,
+  normal: 'large' as const,
+}
 export function ImageIcon({
   imageIcon,
+  size = 'normal',
 }: {
   imageIcon: OptionItem['imageIcon']
+  size?: ImageSize
 }) {
+  const imageDimension = IMAGE_SIZES[size]
+  const iconDimension = ICON_SIZES[size]
   if (!imageIcon?.type) return null
 
   if (imageIcon.type === 'image') {
@@ -125,8 +138,8 @@ export function ImageIcon({
       <img
         src={imageIcon.src}
         alt={imageIcon.alt}
-        width={40}
-        height={40}
+        width={imageDimension}
+        height={imageDimension}
         className='rounded'
       />
     )
@@ -139,7 +152,7 @@ export function ImageIcon({
         'group-aria-selected:bg-accent group-aria-selected:text-accent-foreground text-muted-foreground',
       )}
     >
-      <Icon name={imageIcon.name} size='large' />
+      <Icon name={imageIcon.name} size={iconDimension} />
     </div>
   )
 }
@@ -337,14 +350,16 @@ function renderItem<T extends ItemType = 'no_type'>({
 type GroupWrapperProps = {
   children: ReactNode
   style: 'border' | 'onlySeparators'
+  hidden?: boolean
 }
-function GroupWrapper({ children, style }: GroupWrapperProps) {
+function GroupWrapper({ children, style, hidden }: GroupWrapperProps) {
   return (
     <div
       className={cn('border-border', {
-        'rounded-2xl overflow-hidden border divide-border divide-y':
-          style === 'border',
-        ' divide-border divide-y border-b': style === 'onlySeparators',
+        'rounded-2xl overflow-hidden ': style === 'border',
+        ' divide-border divide-y border-b':
+          style === 'onlySeparators' && !hidden,
+        'divide-y divide-borde border': style === 'border' && !hidden,
       })}
     >
       {children}
@@ -367,22 +382,29 @@ function renderGroup<T extends ItemType = 'no_type'>({
   onSelectValue?: OnSelectValue<T>
   selectedValue?: string | undefined
 }) {
+  const hasItems = group.items && group.items.length > 0
   return (
     <Command.Group
       key={idx}
-      heading={<Heading loading={group.loading} label={group.label} />}
+      heading={
+        !group.loading && !hasItems ? (
+          <></>
+        ) : (
+          <Heading loading={group.loading} label={group.label} />
+        )
+      }
     >
-      <GroupWrapper style={groupStyle}>
+      <GroupWrapper style={groupStyle} hidden={!hasItems && !group.loading}>
         {!group.loading
           ? group.items.map((item, idx) =>
-              renderItem({
-                item,
-                idx,
-                textSize,
-                onSelectValue,
-                isSelected: item.value === selectedValue,
-              }),
-            )
+            renderItem({
+              item,
+              idx,
+              textSize,
+              onSelectValue,
+              isSelected: item.value === selectedValue,
+            }),
+          )
           : SMALL_LOADING.map((_, idx) => <LoadingItem key={idx} />)}
       </GroupWrapper>
     </Command.Group>
@@ -405,20 +427,20 @@ function MultiGroupList<T extends ItemType>({
   return items.map((option, idx) =>
     option.type === 'group'
       ? renderGroup({
-          group: option,
-          idx,
-          onSelectValue,
-          selectedValue,
-          groupStyle,
-          textSize,
-        })
+        group: option,
+        idx,
+        onSelectValue,
+        selectedValue,
+        groupStyle,
+        textSize,
+      })
       : renderItem({
-          item: option,
-          idx,
-          onSelectValue,
-          textSize,
-          isSelected: option.value === selectedValue,
-        }),
+        item: option,
+        idx,
+        onSelectValue,
+        textSize,
+        isSelected: option.value === selectedValue,
+      }),
   )
 }
 
@@ -539,7 +561,7 @@ export function SearchableList<T extends ItemType>({
                 selectedValue={selectedValue}
               />
             ) : (
-              <GroupWrapper style={groupStyle}>
+              <GroupWrapper style={groupStyle} hidden={items.length === 0}>
                 {(items as OptionItem<T>[]).map((item, idx) => (
                   <Item
                     key={idx}
