@@ -13,6 +13,7 @@ import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { BasicInfoList } from '$/app/(admin)/backoffice/search/_components/BasicInfoList'
 import { DashboardHeader } from '$/app/(admin)/backoffice/search/_components/DashboardHeader'
 import { DataTable } from '$/app/(admin)/backoffice/search/_components/DataTable'
+import { ClearCacheButton } from '../ClearCacheButton'
 
 type Props = {
   workspace: WorkspaceWithDetails
@@ -76,6 +77,10 @@ export function WorkspaceDashboard({ workspace }: Props) {
         />
 
         <BasicInfoList items={basicInfo} title='Workspace Information' />
+
+        <div className='flex justify-end'>
+          <ClearCacheButton workspaceId={workspace.id} />
+        </div>
 
         <DataTable
           title='Subscription History'
