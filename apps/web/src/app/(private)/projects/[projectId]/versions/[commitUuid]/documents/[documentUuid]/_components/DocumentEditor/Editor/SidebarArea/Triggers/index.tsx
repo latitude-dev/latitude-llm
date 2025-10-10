@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useToggleModal } from '$/hooks/useToogleModal'
-import { SidebarSection } from '../Section'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { NewTrigger } from '$/components/TriggersManagement/NewTrigger'
 import {
@@ -18,9 +17,10 @@ import {
 } from '@latitude-data/core/schema/types'
 import { useTriggerInfo } from '$/components/TriggersManagement/hooks/useTriggerInfo'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { SectionItem } from '../SectionItem'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useUpdateDocumentTrigger } from '$/components/TriggersManagement/EditTrigger/useUpdateDocumentTrigger'
+import { SidebarSection } from '../Section'
+import { SectionItem } from '../SectionItem'
 
 function NewTriggerModal({
   modalOpen,

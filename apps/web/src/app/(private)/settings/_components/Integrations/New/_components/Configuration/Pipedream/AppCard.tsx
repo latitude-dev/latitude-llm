@@ -7,18 +7,28 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import type { App } from '@pipedream/sdk/browser'
 import Image from 'next/image'
-import { ReactNode } from 'react'
+import { ReactNode, useMemo } from 'react'
 import {
   PipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/constants'
+import { parseMarkdownLinks } from '$/components/TriggersManagement/components/TriggerForms/IntegrationTriggerForm/usePipedreamTriggerDescription'
 
 function AppComponent({ component }: { component: PipedreamComponent }) {
+  const description = useMemo(
+    () => parseMarkdownLinks(component.description),
+    [component.description],
+  )
   return (
     <div className='flex flex-col gap-2'>
       <Text.H5>{component.name}</Text.H5>
       <Text.H6 color='foregroundMuted' wordBreak='breakWord'>
-        {component.description}
+        <div
+          className='[&>a]:underline [&>a]:text-foreground'
+          dangerouslySetInnerHTML={{
+            __html: description,
+          }}
+        />
       </Text.H6>
     </div>
   )

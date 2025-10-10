@@ -6,6 +6,7 @@ import { ResolvedMetadata } from '$/workers/readMetadata'
 import { SectionLoader, SidebarSection } from './Section'
 import { SidebarHeader } from './SidebarHeader'
 import { TriggersSidebarSection, useDocumentTriggersData } from './Triggers'
+import { ToolsSidebarSection } from './Tools'
 
 function SidebarLoader() {
   return (
@@ -57,7 +58,7 @@ export function DocumentEditorSidebarArea({
             integrations={data.triggersData.integrations}
             document={data.triggersData.document}
           />
-          <SidebarSection title='Tools' actions={[{ onClick: () => {} }]} />
+          <ToolsSidebarSection />
           <SidebarSection
             title='Sub-agents'
             actions={[{ onClick: () => {} }]}

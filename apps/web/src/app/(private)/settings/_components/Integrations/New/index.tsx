@@ -19,7 +19,7 @@ import { PipedreamIntegrationConfiguration } from './_components/Configuration/P
 import { ExternalIntegrationConfiguration } from './_components/Configuration/External'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 
-type ValidIntegration = Exclude<
+export type ValidIntegration = Exclude<
   IntegrationConfiguration,
   | { type: IntegrationType.Latitude }
   | {

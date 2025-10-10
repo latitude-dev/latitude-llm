@@ -3,7 +3,11 @@ import { OptionItem as SearchableOptionItem } from '@latitude-data/web-ui/molecu
 import { type TriggerIntegrationType } from '../../types'
 import { type PipedreamIntegrationWithCounts } from '@latitude-data/core/schema/types'
 
-function pluralize(count: number, singular: string, plural: string): string {
+export function pluralize(
+  count: number,
+  singular: string,
+  plural: string,
+): string {
   return `${count} ${count === 1 ? singular : plural}`
 }
 
