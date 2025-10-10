@@ -1,16 +1,26 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
+import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
 import { MetadataItem } from '$/components/MetadataItem'
+import ReadingToggle from '$/components/ReadingToggle'
 import useModelOptions from '$/hooks/useModelOptions'
 import { formatCount } from '$/lib/formatCount'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useProviders from '$/stores/providerApiKeys'
 import { useProviderLog } from '$/stores/providerLogs'
+import { Providers } from '@latitude-data/constants'
+import {
+  EvaluationResultV2,
+  EvaluationType,
+  LLM_EVALUATION_PROMPT_PARAMETERS,
+  LlmEvaluationMetric,
+  LlmEvaluationSpecification,
+} from '@latitude-data/core/constants'
+import { buildConversation } from '@latitude-data/core/helpers'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { TableCell, TableHead } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
@@ -32,16 +42,6 @@ import LlmEvaluationComparisonSpecification from './Comparison'
 import LlmEvaluationCustomSpecification from './Custom'
 import LlmEvaluationCustomLabeledSpecification from './CustomLabeled'
 import LlmEvaluationRatingSpecification from './Rating'
-import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
-import { buildConversation } from '@latitude-data/core/helpers'
-import {
-  EvaluationResultV2,
-  EvaluationType,
-  LLM_EVALUATION_PROMPT_PARAMETERS,
-  LlmEvaluationMetric,
-  LlmEvaluationSpecification,
-} from '@latitude-data/core/constants'
-import { Providers } from '@latitude-data/constants'
 
 // prettier-ignore
 const METRICS: {
@@ -415,10 +415,9 @@ function ResultPanelMessages<M extends LlmEvaluationMetric>({
         <Text.H6M>Messages</Text.H6M>
         {sourceMapAvailable && (
           <div className='flex flex-row gap-2 items-center'>
-            <Text.H6M>Expand parameters</Text.H6M>
-            <SwitchToggle
-              checked={expandParameters}
-              onCheckedChange={setExpandParameters}
+            <ReadingToggle
+              enabled={expandParameters}
+              setEnabled={setExpandParameters}
             />
           </div>
         )}

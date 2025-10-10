@@ -950,7 +950,9 @@ describe('POST /run', () => {
         usage: {},
         documentLogUuid: 'fake-uuid',
         providerLog: {
-          messages: [{ role: MessageRole.assistant, content: 'Hello', toolCalls: [] }],
+          messages: [
+            { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+          ],
         },
       })
       const trace = createTelemetryTrace({})
@@ -1044,7 +1046,9 @@ describe('POST /run', () => {
         usage: {},
         documentLogUuid: 'fake-uuid',
         providerLog: {
-          messages: [{ role: MessageRole.assistant, content: 'Hello', toolCalls: [] }],
+          messages: [
+            { role: MessageRole.assistant, content: 'Hello', toolCalls: [] },
+          ],
         },
       })
       const trace = createTelemetryTrace({})

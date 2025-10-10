@@ -126,6 +126,11 @@
     --from-glow-color: hsl(var(--latte-border) / 0.375);
     --to-glow-color: hsl(var(--latte-border) / 0.75);
   }
+
+  pre:has(.remove-prose-pre) {
+    padding: 0 !important;
+    background: none !important;
+  }
 }
 
 @layer base {
