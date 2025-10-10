@@ -1,6 +1,7 @@
 import { LogSources, Providers } from '@latitude-data/constants'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Chain } from 'promptl-ai'
+import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
   EvaluationType,
   EvaluationV2,
@@ -20,6 +21,10 @@ import { buildPrompt, promptSchema } from './binary'
 import { runPrompt } from './shared'
 
 describe('runPrompt', () => {
+  let mocks: {
+    runChain: MockInstance
+  }
+
   let workspace: Workspace
   let commit: Commit
   let provider: ProviderApiKey
@@ -99,26 +104,28 @@ describe('runPrompt', () => {
       workspace: workspace,
     })
 
-    vi.spyOn(chains, 'runChain').mockImplementation((args) => {
-      ;(args.chain as any)._completed = true
+    mocks = {
+      runChain: vi.spyOn(chains, 'runChain').mockImplementation((args) => {
+        ;(args.chain as any)._completed = true
 
-      return {
-        errorableUuid: resultUuid,
-        error: Promise.resolve(undefined),
-        response: Promise.resolve({
-          streamType: 'object',
-          object: { passed: true, reason: 'reason' },
-          text: 'text',
-          usage: {
-            promptTokens: 10,
-            completionTokens: 10,
-            totalTokens: 20,
-          },
-          documentLogUuid: providerLog.documentLogUuid,
-          providerLog: providerLog,
-        }),
-      } as any
-    })
+        return {
+          errorableUuid: resultUuid,
+          error: Promise.resolve(undefined),
+          response: Promise.resolve({
+            streamType: 'object',
+            object: { passed: true, reason: 'reason' },
+            text: 'text',
+            usage: {
+              promptTokens: 10,
+              completionTokens: 10,
+              totalTokens: 20,
+            },
+            documentLogUuid: providerLog.documentLogUuid,
+            providerLog: providerLog,
+          }),
+        } as any
+      }),
+    }
   })
 
   it('fails when compiling the prompt', async () => {
@@ -139,10 +146,12 @@ describe('runPrompt', () => {
         message: `Unexpected EOF. Expected '}}' but did not find it.`,
       }),
     )
+
+    expect(mocks.runChain).not.toHaveBeenCalled()
   })
 
   it('fails when running the prompt', async () => {
-    vi.spyOn(chains, 'runChain').mockImplementation((args) => {
+    mocks.runChain = vi.spyOn(chains, 'runChain').mockImplementation((args) => {
       ;(args.chain as any)._completed = true
 
       return {
@@ -174,10 +183,12 @@ describe('runPrompt', () => {
         message: 'Failed!',
       }),
     )
+
+    expect(mocks.runChain).toHaveBeenCalled()
   })
 
   it('fails when verdict cannot be parsed from a normal response', async () => {
-    vi.spyOn(chains, 'runChain').mockImplementation((args) => {
+    mocks.runChain = vi.spyOn(chains, 'runChain').mockImplementation((args) => {
       ;(args.chain as any)._completed = true
 
       return {
@@ -215,10 +226,12 @@ describe('runPrompt', () => {
         message: 'Evaluation conversation response is not an object',
       }),
     )
+
+    expect(mocks.runChain).toHaveBeenCalled()
   })
 
   it('fails when verdict does not match the schema', async () => {
-    vi.spyOn(chains, 'runChain').mockImplementation((args) => {
+    mocks.runChain = vi.spyOn(chains, 'runChain').mockImplementation((args) => {
       ;(args.chain as any)._completed = true
 
       return {
@@ -265,6 +278,8 @@ describe('runPrompt', () => {
 ]`,
       }),
     )
+
+    expect(mocks.runChain).toHaveBeenCalled()
   })
 
   it('succeeds when running a normal prompt', async () => {
@@ -278,6 +293,7 @@ describe('runPrompt', () => {
       commit: commit,
       workspace: workspace,
     })
+    const chain = mocks.runChain.mock.calls[0][0].chain as Chain
 
     expect(result).toEqual({
       response: {
@@ -296,5 +312,8 @@ describe('runPrompt', () => {
       },
       verdict: { passed: true, reason: 'reason' },
     })
+    expect(mocks.runChain).toHaveBeenCalledOnce()
+    expect(chain.rawText.includes('structuredOutputs: true')).toBe(true)
+    expect(chain.rawText.includes('strictJsonSchema: true')).toBe(true)
   })
 })

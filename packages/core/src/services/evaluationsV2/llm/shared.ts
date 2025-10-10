@@ -74,6 +74,8 @@ export async function buildLlmEvaluationRunFunction<
     if (schema) {
       prompt = updatePromptMetadata(prompt, {
         schema: z.toJSONSchema(schema, { target: 'openapi-3.0' }),
+        structuredOutputs: true,
+        strictJsonSchema: true,
       })
     }
 
