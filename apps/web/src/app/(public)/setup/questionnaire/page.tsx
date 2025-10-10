@@ -1,6 +1,6 @@
 import { FocusLayout } from '$/components/layouts'
 import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
-import Questionnaire from './_components/Questionnaire'
+import Questionnaire from './_components/SetupQuestionnaire'
 import { ROUTES } from '$/services/routes'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { Result } from '@latitude-data/core/lib/Result'
