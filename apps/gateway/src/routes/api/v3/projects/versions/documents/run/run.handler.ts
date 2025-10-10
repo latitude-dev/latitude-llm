@@ -64,9 +64,8 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     'api-background-runs',
   ).then((r) => r.unwrap())
 
-  const shouldRunInBackground = background !== undefined
-    ? background
-    : backgroundRunsFeatureEnabled
+  const shouldRunInBackground =
+    background !== undefined ? background : backgroundRunsFeatureEnabled
 
   if (shouldRunInBackground) {
     return await handleBackgroundRun({

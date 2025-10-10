@@ -1,4 +1,4 @@
-import { memo, ReactNode, useEffect, useMemo, useState } from 'react'
+import { memo, ReactNode, Ref, useEffect, useMemo, useState } from 'react'
 
 import {
   FileContent,
@@ -15,11 +15,13 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Image } from '@latitude-data/web-ui/atoms/Image'
+import { Markdown } from '@latitude-data/web-ui/atoms/Markdown'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { colors, font, TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
+import type { Components } from 'react-markdown'
 import { roleToString, roleVariant } from '..'
 import { ToolCallContent } from './ToolCall'
 
@@ -126,25 +128,23 @@ export function MessageItemContent({
   agentToolsMap?: AgentToolsMap
   toolContentMap?: Record<string, ToolContent>
 }) {
-  if (collapsedMessage)
-    return (
-      <Content
-        value='...'
-        color='foregroundMuted'
-        size={size}
-        agentToolsMap={agentToolsMap}
-      />
-    )
+  if (collapsedMessage) {
+    return <Content value='...' color='foregroundMuted' size={size} />
+  }
 
-  if (typeof content === 'string')
+  if (typeof content === 'string') {
     return (
       <Content
         value={content}
         color='foregroundMuted'
         size={size}
+        parameters={parameters}
+        collapseParameters={collapseParameters}
         agentToolsMap={agentToolsMap}
+        toolContentMap={toolContentMap}
       />
     )
+  }
 
   return content.map((c, idx) => (
     <Content
@@ -202,17 +202,12 @@ const Content = ({
 }) => {
   if (typeof value === 'string') {
     try {
-      const parsedValue = JSON.parse(value)
-      return (
-        <div key={`${index}`} className='py-2 max-w-full'>
-          <div className='overflow-hidden rounded-xl w-full'>
-            <CodeBlock language='json'>
-              {JSON.stringify(parsedValue, null, 2)}
-            </CodeBlock>
-          </div>
-        </div>
-      )
+      return <ContentJson json={JSON.parse(value)} />
     } catch (_) {
+      if (!collapseParameters && value) {
+        return <ContentMarkdown markdown={value} />
+      }
+
       return (
         <ContentText
           index={index}
@@ -229,17 +224,12 @@ const Content = ({
 
   if (value.type === 'text') {
     try {
-      const parsedValue = JSON.parse(value.text || '')
-      return (
-        <div key={`${index}`} className='py-2 max-w-full'>
-          <div className='overflow-hidden rounded-xl w-full'>
-            <CodeBlock language='json'>
-              {JSON.stringify(parsedValue, null, 2)}
-            </CodeBlock>
-          </div>
-        </div>
-      )
+      return <ContentJson json={JSON.parse(value.text || '')} />
     } catch (_) {
+      if (!collapseParameters && value.text) {
+        return <ContentMarkdown markdown={value.text} />
+      }
+
       return (
         <ContentText
           index={index}
@@ -296,6 +286,58 @@ const Content = ({
     )
   }
 }
+
+const ContentJson = memo(({ json }: { json: unknown }) => {
+  return (
+    <div className='py-2 max-w-full'>
+      <div className='overflow-hidden rounded-xl w-full'>
+        <CodeBlock language='json'>{JSON.stringify(json, null, 2)}</CodeBlock>
+      </div>
+    </div>
+  )
+})
+
+function isCodeBlockInline(children: string, className?: string) {
+  return className === undefined && !children.includes('\n')
+}
+
+function getLanguageFromCodeBlock(className?: string) {
+  if (!className) return 'plaintext'
+  return className.replace('language-', '')
+}
+
+const ContentMarkdownComponents: Components = {
+  // @ts-ignore: react-markdown passes an `inline` prop even though it’s not on HTMLElement attributes
+  code: ({ inline, className, children, ...props }) => {
+    const content = String(children)
+    if (inline || isCodeBlockInline(content, className)) {
+      const { ref, ...restProps } = props
+      return (
+        <div
+          {...restProps}
+          ref={ref as Ref<HTMLDivElement>}
+          className='bg-muted rounded-md px-1 py-0.5 inline-flex flex-wrap'
+        >
+          <Text.H6M color='foregroundMuted'>{content}</Text.H6M>
+        </div>
+      )
+    }
+
+    return (
+      <CodeBlock
+        {...props}
+        language={getLanguageFromCodeBlock(className)}
+        textWrap
+      >
+        {content}
+      </CodeBlock>
+    )
+  },
+}
+
+const ContentMarkdown = memo(({ markdown }: { markdown: string }) => {
+  return <Markdown components={ContentMarkdownComponents}>{markdown}</Markdown>
+})
 
 const ContentReasoning = memo(({ reasoning }: { reasoning?: string }) => {
   return (

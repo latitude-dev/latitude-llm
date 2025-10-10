@@ -1,14 +1,13 @@
-import { useMemo } from 'react'
-
+import { MessageList } from '$/components/ChatWrapper'
+import ReadingToggle from '$/components/ReadingToggle'
 import { Message } from '@latitude-data/constants/legacyCompiler'
-import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { MessageList } from '$/components/ChatWrapper'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
+import { useMemo } from 'react'
 
 export function DocumentLogMessages({
   documentLogParameters,
@@ -47,10 +46,9 @@ export function DocumentLogMessages({
         <Text.H6M>Messages</Text.H6M>
         {sourceMapAvailable && (
           <div className='flex flex-row gap-2 items-center'>
-            <Text.H6M>Expand parameters</Text.H6M>
-            <SwitchToggle
-              checked={expandParameters}
-              onCheckedChange={setExpandParameters}
+            <ReadingToggle
+              enabled={expandParameters}
+              setEnabled={setExpandParameters}
             />
           </div>
         )}

@@ -1,7 +1,7 @@
 'use client'
 
-import React, { memo, ReactNode } from 'react'
 import { useTheme } from 'next-themes'
+import { memo, ReactNode } from 'react'
 
 import { CurrentTheme } from '../../../constants'
 import { cn } from '../../../lib/utils'
@@ -39,7 +39,13 @@ const Content = memo(
     const { resolvedTheme } = useTheme()
     const bgColor = useCodeBlockBackgroundColor(overrideBgColor)
     return (
-      <div className={cn('w-full relative max-w-full', bgColor)}>
+      <div
+        className={cn(
+          'w-full relative max-w-full',
+          'rounded-2xl overflow-hidden remove-prose-pre',
+          bgColor,
+        )}
+      >
         {copy || action ? (
           <div className='absolute top-4 right-2'>
             {copy ? (

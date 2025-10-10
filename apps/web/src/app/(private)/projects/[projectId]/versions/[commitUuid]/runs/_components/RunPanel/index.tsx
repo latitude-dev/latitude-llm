@@ -3,8 +3,11 @@
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { DocumentLogAnnotation } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/logs/_components/DocumentLogs/DocumentLogInfo/Annotation'
 import Chat from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MessageList } from '$/components/ChatWrapper'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
+import ReadingToggle from '$/components/ReadingToggle'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useOnce } from '$/hooks/useMount'
 import { ROUTES } from '$/services/routes'
@@ -23,15 +26,12 @@ import {
 import { buildConversation } from '@latitude-data/core/helpers'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import Link from 'next/link'
 import { useCallback, useMemo } from 'react'
 import { RunPanelStats } from './Stats'
@@ -242,10 +242,9 @@ function CompletedRunPanel({
               <Text.H6M>Messages</Text.H6M>
               {sourceMapAvailable && (
                 <div className='flex flex-row gap-2 items-center'>
-                  <Text.H6M>Expand parameters</Text.H6M>
-                  <SwitchToggle
-                    checked={expandParameters}
-                    onCheckedChange={setExpandParameters}
+                  <ReadingToggle
+                    enabled={expandParameters}
+                    setEnabled={setExpandParameters}
                   />
                 </div>
               )}

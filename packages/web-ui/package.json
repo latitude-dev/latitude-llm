@@ -203,6 +203,7 @@
     "./molecules/PaginatedSelect": "./src/ds/molecules/PaginatedSelect/index.tsx",
     "./molecules/MultipleInput": "./src/ds/molecules/MultipleInput/index.tsx",
     "./molecules/SearchableList": "./src/ds/molecules/SearchableList/index.tsx",
+    "./molecules/IconToggle": "./src/ds/molecules/IconToggle/index.tsx",
     "./organisms/ClickToCopyUuid": {
       "import": "./src/ds/organisms/ClickToCopyUuid/index.tsx"
     },
@@ -307,6 +308,9 @@
     "react-textarea-autosize": "^8.5.9",
     "recharts": "2.13.0-alpha.5",
     "remark-gfm": "^4.0.1",
+    "remark-emoji": "^5.0.2",
+    "remark-math": "^6.0.0",
+    "rehype-katex": "^7.0.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "use-debounce": "^10.0.5",

@@ -74,6 +74,7 @@
     "rate-limiter-flexible": "5.0.3",
     "react": "catalog:",
     "react-data-grid": "7.0.0-beta.51",
+    "katex": "^0.16.23",
     "react-dom": "catalog:",
     "require-in-the-middle": "7.5.2",
     "stripe": "18.1.0",

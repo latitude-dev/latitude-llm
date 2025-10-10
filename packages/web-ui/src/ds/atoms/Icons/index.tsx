@@ -147,6 +147,7 @@ import {
   XIcon,
   Youtube,
   Zap,
+  BaselineIcon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -404,6 +405,7 @@ const Icons = {
   wrench: Wrench,
   mousePointerClick: MousePointerClick,
   filledBadgeCheck: FilledBadgeCheckIcon,
+  baseline: BaselineIcon,
 }
 
 export type IconName = keyof typeof Icons
