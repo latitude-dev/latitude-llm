@@ -27,7 +27,7 @@ export const runRoute = createRoute({
             parameters: z.record(z.string(), z.any()).optional().default({}),
             tools: z.array(z.string()).optional().default([]),
             userMessage: z.string().optional(),
-            background: z.boolean().default(false),
+            background: z.boolean().optional(),
           }),
         },
       },
