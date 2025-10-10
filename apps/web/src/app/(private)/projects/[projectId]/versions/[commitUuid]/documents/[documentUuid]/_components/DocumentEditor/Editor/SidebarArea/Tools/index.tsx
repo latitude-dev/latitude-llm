@@ -20,11 +20,8 @@ export function ToolsSidebarSection({
     () => [{ onClick: onOpen, disabled: isLive }],
     [onOpen, isLive],
   )
-  const {
-    activeIntegrations,
-    addIntegrationTool: _aI,
-    removeIntegrationTool: _rI,
-  } = useActiveIntegrations()
+  const { activeIntegrations, addIntegrationTool, removeIntegrationTool } =
+    useActiveIntegrations()
   const integrations = useMemo<ActiveIntegrationData[]>(
     () =>
       serverIntegrations
@@ -34,24 +31,27 @@ export function ToolsSidebarSection({
         .map((integration) => {
           const { icon } = integrationOptions(integration)
           const activeData = activeIntegrations[integration.name]
-          const tools = activeData ?? []
           return {
             id: integration.id,
             name: integration.name,
+            model: integration,
             icon,
-            tools,
+            activeTools: activeData ?? [],
           } satisfies ActiveIntegrationData
         }),
     [serverIntegrations, activeIntegrations],
   )
 
-  console.log('SERVER_INTEGRATIONS:', serverIntegrations)
-  console.log('Integrations:', integrations)
   return (
     <>
       <SidebarSection title='Tools' actions={actions}>
         {integrations.map((integration) => (
-          <ActiveIntegration key={integration.id} integration={integration} />
+          <ActiveIntegration
+            key={integration.id}
+            integration={integration}
+            addIntegrationTool={addIntegrationTool}
+            removeIntegrationTool={removeIntegrationTool}
+          />
         ))}
       </SidebarSection>
       {open ? <ConnectToolsModal onCloseModal={onClose} /> : null}

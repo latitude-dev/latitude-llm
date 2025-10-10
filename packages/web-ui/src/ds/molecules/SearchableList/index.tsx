@@ -113,24 +113,11 @@ function SearchInput(props: ComponentProps<typeof Command.Input>) {
   )
 }
 
-type ImageSize = 'small' | 'normal'
-const IMAGE_SIZES: Record<ImageSize, number> = {
-  small: 16,
-  normal: 40,
-}
-const ICON_SIZES: Record<ImageSize, IconProps['size']> = {
-  small: 'normal' as const,
-  normal: 'large' as const,
-}
 export function ImageIcon({
   imageIcon,
-  size = 'normal',
 }: {
   imageIcon: OptionItem['imageIcon']
-  size?: ImageSize
 }) {
-  const imageDimension = IMAGE_SIZES[size]
-  const iconDimension = ICON_SIZES[size]
   if (!imageIcon?.type) return null
 
   if (imageIcon.type === 'image') {
@@ -138,8 +125,8 @@ export function ImageIcon({
       <img
         src={imageIcon.src}
         alt={imageIcon.alt}
-        width={imageDimension}
-        height={imageDimension}
+        width={40}
+        height={40}
         className='rounded'
       />
     )
@@ -152,10 +139,11 @@ export function ImageIcon({
         'group-aria-selected:bg-accent group-aria-selected:text-accent-foreground text-muted-foreground',
       )}
     >
-      <Icon name={imageIcon.name} size={iconDimension} />
+      <Icon name={imageIcon.name} size='large' />
     </div>
   )
 }
+
 function DefaultItemPresenter<T extends ItemType = 'item'>({
   item,
   textSize,

@@ -25,7 +25,13 @@ export function useActiveIntegrations() {
   const [activeIntegrations, setActiveIntegrations] =
     useState<ActiveIntegrations>({})
   const addIntegrationTool = useCallback(
-    (integrationName: string, toolName: string) => {
+    ({
+      integrationName,
+      toolName,
+    }: {
+      integrationName: string
+      toolName: string
+    }) => {
       // Local state
       setActiveIntegrations((prev) => {
         return addIntegrationToActiveIntegrations({
@@ -49,11 +55,15 @@ export function useActiveIntegrations() {
   )
 
   const removeIntegrationTool = useCallback(
-    (
-      integrationName: string,
-      toolName: string,
-      integrationToolNames: string[],
-    ) => {
+    ({
+      integrationName,
+      toolName,
+      integrationToolNames,
+    }: {
+      integrationName: string
+      toolName: string
+      integrationToolNames: string[]
+    }) => {
       // Local state
       setActiveIntegrations((prev) => {
         return removeIntegrationFromActiveIntegrations({
@@ -114,6 +124,8 @@ export function useActiveIntegrations() {
     ],
   )
 }
+
+export type UseActiveIntegrationsReturn = ReturnType<typeof useActiveIntegrations>
 
 function isValidIntegration(name: string, integrations: IntegrationDto[]) {
   return (
