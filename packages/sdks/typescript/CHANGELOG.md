@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.2.0] - 2025-10-09
+
+Official release of v5.2.0.
+
+- Implements run background executions. Pass `background: true` to `prompts.run()` to run a prompt in the background.
+- Adds `runs.attach()` method to attach to running prompts.
+- Changes default stream option to true for prompts.run() and prompts.chat() methods.
+
+- Official pre-release of v5.2.0
+
 ## [5.2.0-beta.6] - 2025-10-09
 
 - Official pre-release of v5.2.0
