@@ -4,6 +4,7 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { env } from '@latitude-data/env'
 import BasicHeader from '../../_components/BasicHeader/BasicHeader'
 import { SelectAgents } from './_components/SelectAgents'
+import { PageTrackingWrapper } from '$/components/PageTrackingWrapper'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { Result } from '@latitude-data/core/lib/Result'
 import { ROUTES } from '$/services/routes'
@@ -28,9 +29,13 @@ export default async function SelectAgentPage() {
   }
 
   return (
-    <div className={'flex flex-col h-screen overflow-hidden relative gap-y-16'}>
-      <BasicHeader currentUser={user} isCloud={isCloud} />
-      <SelectAgents />
-    </div>
+    <PageTrackingWrapper namePageVisited='selectAgent'>
+      <div
+        className={'flex flex-col h-screen overflow-hidden relative gap-y-16'}
+      >
+        <BasicHeader currentUser={user} isCloud={isCloud} />
+        <SelectAgents />
+      </div>
+    </PageTrackingWrapper>
   )
 }

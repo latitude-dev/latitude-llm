@@ -31,6 +31,7 @@ import {
   DocumentVersion,
   Project,
 } from '@latitude-data/core/schema/types'
+import { useRefreshPromptMetadata } from '$/hooks/useDocumentValueContext'
 
 /**
  * Utility to convert localhost URLs to Cloudflare tunnel URLs for testing
@@ -170,6 +171,7 @@ function useDocumentParametersList({
   )
 }
 
+// TODO: Refactor this component into smaller pieces, it's too big and complex.
 export function ChatTriggerTextarea({
   commit,
   project,
@@ -189,6 +191,14 @@ export function ChatTriggerTextarea({
   options: SelectOption<string>[]
   onChange: (value: string) => void
 }) {
+  useRefreshPromptMetadata({
+    value: activeDocument.content,
+    document: activeDocument,
+    commit,
+    project,
+    devMode: false,
+  })
+
   const { data: triggers } = useDocumentTriggers({
     projectId: project.id,
     commitUuid: commit.uuid,
@@ -197,6 +207,7 @@ export function ChatTriggerTextarea({
     projectId: project.id,
     commitUuid: commit.uuid,
   })
+
   const document = useMemo(
     () =>
       documents?.find((d) => d.documentUuid === activeTrigger.documentUuid) ??
@@ -243,6 +254,8 @@ export function ChatTriggerTextarea({
     },
     [handleRunTrigger],
   )
+
+  console.log('parameters', parameters)
 
   return (
     <div className='bg-background flex flex-col gap-y-4'>

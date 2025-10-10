@@ -12,13 +12,10 @@ import { OnboardingDocumentParameterKeys } from '@latitude-data/constants/onboar
 import type { ExperimentVariant } from '@latitude-data/constants/experiments'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { envClient } from '$/envClient'
-import {
-  DocumentVersion,
-  Project,
-  Commit,
-  Dataset,
-} from '@latitude-data/core/schema/types'
+import { DocumentVersion, Dataset } from '@latitude-data/core/schema/types'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 
 const PARAMETERS_MAP: Record<OnboardingDocumentParameterKeys, number> = {
   product_name: 0,
@@ -35,8 +32,6 @@ export type Variants = {
   second: ExperimentVariant
 }
 export function ExperimentStep({
-  project,
-  commit,
   dataset,
   document,
   messages,
@@ -44,8 +39,6 @@ export function ExperimentStep({
   onCompleteOnboarding,
 }: {
   document: DocumentVersion
-  project: Project
-  commit: Commit
   dataset: Dataset
   messages: Message[]
   currentStep: OnboardingStep
@@ -55,6 +48,9 @@ export function ExperimentStep({
     experimentUuids: string[]
   }) => Promise<void>
 }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+
   const { create, isCreating } = useExperiments(
     {
       projectId: project.id,

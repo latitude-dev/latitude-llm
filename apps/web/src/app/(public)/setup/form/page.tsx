@@ -1,13 +1,14 @@
 import { FocusLayout } from '$/components/layouts'
 import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
-import Questionnaire from './_components/SetupQuestionnaire'
+import SetupForm from './_components/SetupForm'
 import { ROUTES } from '$/services/routes'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import { Result } from '@latitude-data/core/lib/Result'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+import { PageTrackingWrapper } from '$/components/PageTrackingWrapper'
 import { redirect } from 'next/navigation'
 
-export default async function QuestionnairePage() {
+export default async function SetupFormPage() {
   const { workspace } = await getCurrentUserOrRedirect()
   // TODO(onboarding): remove this once we activate the onboarding
   const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
@@ -24,15 +25,17 @@ export default async function QuestionnairePage() {
   }
 
   return (
-    <FocusLayout
-      header={
-        <FocusHeader
-          title='How do you plan to use Latitude?'
-          description='Your answer helps us personalize Latitude to your needs.'
-        />
-      }
-    >
-      <Questionnaire />
-    </FocusLayout>
+    <PageTrackingWrapper namePageVisited='setupForm'>
+      <FocusLayout
+        header={
+          <FocusHeader
+            title='How do you plan to use Latitude?'
+            description='Your answer helps us personalize Latitude to your needs.'
+          />
+        }
+      >
+        <SetupForm />
+      </FocusLayout>
+    </PageTrackingWrapper>
   )
 }
