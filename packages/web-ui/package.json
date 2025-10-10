@@ -63,6 +63,9 @@
     "./atoms/DropzoneInput": {
       "import": "./src/ds/atoms/DropzoneInput/index.tsx"
     },
+    "./atoms/EmojiPicker": {
+      "import": "./src/ds/atoms/EmojiPicker/index.tsx"
+    },
     "./atoms/FloatingPanel": "./src/ds/atoms/FloatingPanel/index.tsx",
     "./atoms/FormField": "./src/ds/atoms/FormField/index.tsx",
     "./atoms/FormFieldGroup": "./src/ds/atoms/FormFieldGroup/index.tsx",
@@ -221,6 +224,9 @@
     "./dateUtils": {
       "import": "./src/lib/dateUtils.ts"
     },
+    "./textUtils": {
+      "import": "./src/lib/textUtils.ts"
+    },
     "./getUserInfo": {
       "import": "./src/lib/getUserInfo.ts"
     },
@@ -285,6 +291,7 @@
     "cmdk": "^1.1.1",
     "cronstrue": "^3.0.0",
     "date-fns": "^3.6.0",
+    "frimousse": "^0.3.0",
     "hsl-to-hex": "^1.0.0",
     "lodash-es": "^4.17.21",
     "lucide-react": "^0.481.0",

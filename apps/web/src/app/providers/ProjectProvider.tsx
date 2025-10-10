@@ -1,7 +1,8 @@
 'use client'
 
+import useProjects from '$/stores/projects'
 import type { Project } from '@latitude-data/core/schema/types'
-import { createContext, ReactNode, useContext } from 'react'
+import { createContext, ReactNode, useContext, useMemo } from 'react'
 
 type IProjectContextType = {
   project: Project
@@ -13,10 +14,16 @@ const ProjectContext = createContext<IProjectContextType>(
 
 const ProjectProvider = ({
   children,
-  project,
+  project: serverProject,
 }: {
   children: ReactNode
 } & IProjectContextType) => {
+  const { data: projects } = useProjects()
+
+  const project = useMemo(() => {
+    return projects?.find((p) => p.id === serverProject.id) ?? serverProject
+  }, [projects, serverProject])
+
   return (
     <ProjectContext.Provider value={{ project }}>
       {children}

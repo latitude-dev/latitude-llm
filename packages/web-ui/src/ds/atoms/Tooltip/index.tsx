@@ -118,6 +118,7 @@ function Tooltip({
   triggerIcon,
   triggerBadge,
   hideWhenEmpty = false,
+  className,
 }: Props) {
   const textColor = useTooltipTextContentColor(variant)
   const isChildrenString = typeof children === 'string'
@@ -158,6 +159,7 @@ function Tooltip({
           sticky={sticky}
           hideWhenDetached={hideWhenDetached}
           updatePositionStrategy={updatePositionStrategy}
+          className={className}
         >
           {isChildrenString ? (
             <Text.H6B color={textColor}>{children}</Text.H6B>

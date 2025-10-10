@@ -169,6 +169,9 @@ export const ROUTES = {
             const rootDocuments = `${root}/documents`
             return {
               root,
+              agent: {
+                root: `${root}/agent`,
+              },
               overview: {
                 root: `${root}/overview`,
               },

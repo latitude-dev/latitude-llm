@@ -525,3 +525,5 @@ export function usePlaygroundChat({
     ],
   )
 }
+
+export type PlaygroundChat = ReturnType<typeof usePlaygroundChat>

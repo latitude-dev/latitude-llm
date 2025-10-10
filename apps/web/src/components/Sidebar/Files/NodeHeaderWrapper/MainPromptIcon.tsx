@@ -1,9 +1,8 @@
+import useFeature from '$/stores/useFeature'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
 import { MouseEvent, useCallback } from 'react'
-
-const IS_ENABLED = false
 
 export function MainPromptIcon({
   isFile,
@@ -16,6 +15,8 @@ export function MainPromptIcon({
   isMainDocument?: boolean
   setMainDocument?: (isMainDocument: boolean) => void
 }) {
+  const agentFeature = useFeature('newAgentPage')
+
   const onClick = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
       // This button is inside a Link. Avoid the link to be triggered:
@@ -28,9 +29,7 @@ export function MainPromptIcon({
     [setMainDocument, isMainDocument],
   )
 
-  // TODO(main-prompts): This feature is not enabled yet, so the UI is disabled for now.
-  if (!IS_ENABLED) return null
-
+  if (!agentFeature.isEnabled) return null
   if (!isFile) return null
 
   return (

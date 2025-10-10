@@ -15,12 +15,14 @@ import { useCallback } from 'react'
 import useSWR from 'swr'
 import { Project } from '@latitude-data/core/schema/types'
 
+const EMPTY_ARRAY: Project[] = []
+
 export default function useProjects() {
   const { toast } = useToast()
   const fetcher = useFetcher<Project[]>(ROUTES.api.projects.root)
 
   const {
-    data = [],
+    data = EMPTY_ARRAY,
     mutate,
     ...rest
   } = useSWR<Project[]>('api/projects', fetcher)
@@ -34,7 +36,7 @@ export default function useProjects() {
       mutate([...data, project])
     },
   })
-  const { execute: update } = useLatitudeAction(updateProjectAction, {
+  const { execute: executeUpdate } = useLatitudeAction(updateProjectAction, {
     onSuccess: ({ data: project }) => {
       toast({
         title: 'Project updated',
@@ -51,6 +53,21 @@ export default function useProjects() {
       })
     },
   })
+  const update = useCallback(
+    ({ id, name }: { id: number | string; name: string }) => {
+      const numericId = typeof id === 'string' ? parseInt(id, 10) : id
+
+      mutate(
+        (prev) => prev?.map((p) => (p.id === numericId ? { ...p, name } : p)),
+        {
+          revalidate: false,
+        },
+      )
+      return executeUpdate({ id, name })
+    },
+    [executeUpdate, mutate],
+  )
+
   const { execute: destroy } = useLatitudeAction(destroyProjectAction, {
     onSuccess: ({ data: project }) => {
       toast({
