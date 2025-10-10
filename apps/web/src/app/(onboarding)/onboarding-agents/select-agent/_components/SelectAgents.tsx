@@ -2,7 +2,7 @@
 
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import AgentCard from './AgentCard'
-import HoverCard from './HoverCard'
+import HoverCard from '../../../../../components/HoverCard'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { BackgroundHoverColor } from '@latitude-data/web-ui/tokens'
@@ -10,6 +10,7 @@ import { redirect } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
 import { useCallback } from 'react'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
+import { env } from '@latitude-data/env'
 
 export type AgentCardProps = {
   mainIcon: IconName
@@ -27,7 +28,9 @@ const agents: AgentCardProps[] = [
       'Finds new AI-tool leads, writes and sends tailored cold emails, follows up, and updates deal status.',
     color: 'accentForeground',
     // TODO(onboarding): change to production uuid when opening to production
-    documentUuid: 'ddada8e6-ae2c-4fa6-8969-724a8a938cd6',
+    documentUuid: env.COLD_EMAIL_OUTREACH_SELECT_AGENT_UUID
+      ? env.COLD_EMAIL_OUTREACH_SELECT_AGENT_UUID
+      : '',
     usedThirdPartyIconsSrc: [
       // These are the pipedream assets that end up being cached and saved in the database once the integration is created
       'https://assets.pipedream.net/s.v0/app_OkrhlP/logo/orig',
@@ -42,7 +45,9 @@ const agents: AgentCardProps[] = [
       'Turns each new blog post into a LinkedIn thread, Reddit post, and newsletter — then posts them on schedule and tracks performance.',
     color: 'latte',
     // TODO(onboarding): change to production uuid when opening to production
-    documentUuid: 'ddada8e6-ae2c-4fa6-8969-724a8a938cd6',
+    documentUuid: env.CONTENT_CREATOR_SELECT_AGENT_UUID
+      ? env.CONTENT_CREATOR_SELECT_AGENT_UUID
+      : '',
     usedThirdPartyIconsSrc: [
       'https://assets.pipedream.net/s.v0/app_X7Lhxr/logo/orig',
       'https://assets.pipedream.net/s.v0/app_1dBhRX/logo/orig',
@@ -57,7 +62,9 @@ const agents: AgentCardProps[] = [
       'Fetches the latest articles on any topic or company, summarizes the top 3 in plain language, and emails you the highlights.',
     color: 'destructive',
     // TODO(onboarding): change to production uuid when opening to production
-    documentUuid: '1152b1ab-1bd7-4091-94bc-fe00cdd03f30',
+    documentUuid: env.NEWS_CURATOR_SELECT_AGENT_UUID
+      ? env.NEWS_CURATOR_SELECT_AGENT_UUID
+      : '',
     usedThirdPartyIconsSrc: [
       'https://assets.pipedream.net/s.v0/app_X7Lhxr/logo/orig',
       'https://assets.pipedream.net/s.v0/app_1dBhRX/logo/orig',

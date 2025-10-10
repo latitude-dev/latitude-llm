@@ -266,6 +266,11 @@ export const env = createEnv({
       .optional()
       .default('709a3398-ed26-4e77-beef-90ed288cdd0a'),
 
+    // Onboarding
+    COLD_EMAIL_OUTREACH_SELECT_AGENT_UUID: z.string().optional(),
+    CONTENT_CREATOR_SELECT_AGENT_UUID: z.string().optional(),
+    NEWS_CURATOR_SELECT_AGENT_UUID: z.string().optional(),
+
     RELEASE_VERSION: z.string().optional(),
   },
   runtimeEnv: {

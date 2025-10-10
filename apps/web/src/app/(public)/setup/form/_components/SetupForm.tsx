@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import SetupQuestionnaireOptions from './SetupQuestionnaireOptions'
+import SetupQuestionnaireOptions from './SetupFormOptions'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -24,7 +24,7 @@ const options = [
   },
 ]
 
-export default function SetupQuestionnaire() {
+export default function SetupForm() {
   const [selectedOption, setSelectedOption] = useState<QuestionnaireOptionIds>(
     QuestionnaireOptionIds.buildAgents,
   )

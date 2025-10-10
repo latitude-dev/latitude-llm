@@ -64,7 +64,7 @@ export const setupAction = errorHandlingProcedure
       }
       const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
       if (isNewOnboardingEnabled) {
-        return frontendRedirect(ROUTES.auth.setup.questionnaire)
+        return frontendRedirect(ROUTES.auth.setup.form)
       }
       return frontendRedirect(ROUTES.dashboard.root)
     }

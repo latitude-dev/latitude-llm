@@ -7,7 +7,7 @@ import { Result } from '@latitude-data/core/lib/Result'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { redirect } from 'next/navigation'
 
-export default async function QuestionnairePage() {
+export default async function SetupFormPage() {
   const { workspace } = await getCurrentUserOrRedirect()
   // TODO(onboarding): remove this once we activate the onboarding
   const isNewOnboardingEnabledResult = await isFeatureEnabledByName(

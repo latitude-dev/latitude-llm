@@ -61,15 +61,28 @@
     "PAGER",
     "TEST_LATITUDE_API_KEY",
     "ECS_AGENT_URI",
-    "RELEASE_VERSION"
+    "RELEASE_VERSION",
+    "COLD_EMAIL_OUTREACH_SELECT_AGENT_UUID",
+    "CONTENT_CREATOR_SELECT_AGENT_UUID",
+    "NEWS_CURATOR_SELECT_AGENT_UUID"
   ],
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": [
+    "**/.env.*local"
+  ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**"
+      ],
       "env": [
         "SENTRY_DSN",
         "SENTRY_ORG",
@@ -83,14 +96,23 @@
       ]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": [
+        "^lint"
+      ]
     },
     "tc": {
-      "dependsOn": ["^tc"]
+      "dependsOn": [
+        "^tc"
+      ]
     },
     "types:build": {
-      "dependsOn": ["^types:build"],
-      "outputs": ["dist/**", "types/**"]
+      "dependsOn": [
+        "^types:build"
+      ],
+      "outputs": [
+        "dist/**",
+        "types/**"
+      ]
     },
     "test": {},
     "dev": {
