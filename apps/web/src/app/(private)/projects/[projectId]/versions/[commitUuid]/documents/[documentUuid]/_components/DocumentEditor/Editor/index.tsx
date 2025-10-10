@@ -78,7 +78,7 @@ export default function DocumentEditor(props: {
           />
         </div>
         {hasSidebar ? (
-          <div className='min-w-96 w-96'>
+          <div className='flex min-w-56 w-96 min-h-0'>
             <DocumentEditorSidebarArea freeRunsCount={props.freeRunsCount} />
           </div>
         ) : null}

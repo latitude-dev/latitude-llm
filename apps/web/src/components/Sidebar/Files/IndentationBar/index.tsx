@@ -18,23 +18,26 @@ export function IndentationLine({ showCurve }: { showCurve: boolean }) {
 export function IndentationBar({
   indentation,
   hasChildren,
+  startOnIndex = 1,
 }: {
   hasChildren: boolean
   indentation: IndentType[]
+  startOnIndex?: number
 }) {
   return indentation.map((indent, index) => {
-    const anyNextIndentIsNotLast = !!indentation
-      .slice(index)
-      .find((i) => !i.isLast)
-    const showBorder = anyNextIndentIsNotLast ? false : indent.isLast
-    const showCurve = !hasChildren && showBorder
+    const hasNextNonLast = indentation.slice(index + 1).some((i) => !i.isLast)
+
+    const showBorder = indent.isLast && !hasNextNonLast
+    const showCurve = showBorder && !hasChildren
+    const shouldRender = index >= startOnIndex
+
     return (
       <div key={index} className='h-6 min-w-4'>
-        {index > 0 ? (
+        {shouldRender && (
           <div className='relative w-4 h-full flex justify-center'>
             <IndentationLine showCurve={showCurve} />
           </div>
-        ) : null}
+        )}
       </div>
     )
   })

@@ -23,10 +23,6 @@ export function SectionLoader({ items = 3 }: { items: number }) {
   )
 }
 
-const SidebarTitle = ({ children }: { children: ReactNode }) => {
-  return <Text.H5M>{children}</Text.H5M>
-}
-
 type SectionAction = {
   iconProps?: IconProps
   onClick: () => void
@@ -37,18 +33,14 @@ const SidebarSection = ({
   title,
   actions,
 }: {
-  title: string | ReactNode
+  title: string
   children?: ReactNode
   actions?: SectionAction[]
 }) => {
   return (
     <div className='flex flex-col gap-y-2'>
       <div className='flex justify-between gap-x-3'>
-        {typeof title === 'string' ? (
-          <SidebarTitle>{title}</SidebarTitle>
-        ) : (
-          title
-        )}
+        <Text.H5M>{title}</Text.H5M>
 
         {actions ? (
           <div className='flex flex-row gap-x-2'>
@@ -69,7 +61,5 @@ const SidebarSection = ({
     </div>
   )
 }
-
-SidebarSection.Title = SidebarTitle
 
 export { SidebarSection }

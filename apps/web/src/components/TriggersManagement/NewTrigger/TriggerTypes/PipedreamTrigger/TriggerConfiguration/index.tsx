@@ -40,6 +40,7 @@ export function TriggerConfiguration({
     onTriggerCreated,
     triggerComponent: trigger,
     payloadParameters: doc.payloadParameters,
+    initialDocument,
   })
   const canCreateTrigger = account && doc.document
   const parsedText = useParsedPipedreamTriggerDescription({

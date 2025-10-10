@@ -10,6 +10,7 @@ export enum LatitudeErrorCodes {
   UnprocessableEntityError = 'UnprocessableEntityError',
   NotImplementedError = 'NotImplementedError',
   PaymentRequiredError = 'PaymentRequiredError',
+  AbortedError = 'AbortedError',
 }
 
 export type LatitudeErrorDetails = {

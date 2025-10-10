@@ -178,6 +178,7 @@ function LatteChatUI({
                         alt='Latte'
                         width={100}
                         height={100}
+                        style={{ width: 100, height: 100 }}
                         className={cn('select-none duration-500 h-auto', {
                           'animate-spin': animateLatte,
                         })}

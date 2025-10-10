@@ -4,7 +4,10 @@ import useSWR, { SWRConfiguration } from 'swr'
 import { IntegrationType, McpTool } from '@latitude-data/constants'
 import { useMemo } from 'react'
 import { AppDto } from '@latitude-data/core/constants'
-import { type IntegrationDto } from '@latitude-data/core/schema/types'
+import {
+  PipedreamIntegration,
+  type IntegrationDto,
+} from '@latitude-data/core/schema/types'
 
 const EMPTY_ARRAY: McpTool[] = []
 
@@ -21,7 +24,9 @@ type AppResponse =
   | { errorMessage: string; ok: false }
 
 export default function useIntegrationTools(
-  integration?: IntegrationDto,
+  integration?:
+    | IntegrationDto
+    | Pick<IntegrationDto, 'id' | 'name' | 'type' | 'configuration'>,
   opts?: SWRConfiguration,
 ) {
   const fetcher = useFetcher<McpTool[], ToolResponse>(
@@ -48,7 +53,7 @@ export default function useIntegrationTools(
   const displayNameFetcher = useFetcher<AppDto | undefined, AppResponse>(
     integration?.type === IntegrationType.Pipedream
       ? ROUTES.api.integrations.pipedream.detail(
-          integration.configuration.appName,
+          (integration as PipedreamIntegration).configuration.appName,
         ).root
       : undefined,
     {

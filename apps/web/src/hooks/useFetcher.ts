@@ -93,6 +93,9 @@ export async function executeFetch<
   Raw extends boolean = false,
 >({
   route,
+  method = 'GET',
+  abortSignal,
+  body,
   searchParams,
   toast,
   serializer,
@@ -102,6 +105,9 @@ export async function executeFetch<
   onFail,
 }: {
   route: string
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
+  body?: Record<string, unknown> | null
+  abortSignal?: AbortSignal
   searchParams?: ISearchParams
   toast?: ReturnType<typeof useToast>['toast']
   navigate?: ReturnType<typeof useNavigate>
@@ -110,9 +116,34 @@ export async function executeFetch<
   onSuccess?: (data: ConditionalResponse<R, Raw>) => void
   onFail?: (error: string) => void
 }) {
-  const response = await fetch(buildRoute(route, searchParams), {
-    credentials: 'include',
-  })
+  let response: Response
+  try {
+    response = await fetch(buildRoute(route, searchParams), {
+      credentials: 'include',
+      method,
+      signal: abortSignal,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : null,
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return
+    }
+
+    if (onFail) {
+      onFail((error as Error).message)
+    } else {
+      toast?.({
+        title: 'Error',
+        description: (error as Error).message,
+        variant: 'destructive',
+      })
+    }
+    return
+  }
+
   return handleResponse<R, I, Raw>({
     response,
     toast,

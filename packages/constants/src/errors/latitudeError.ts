@@ -56,6 +56,16 @@ export class OverloadedError extends LatitudeError {
   public name = LatitudeErrorCodes.OverloadedError
 }
 
+export class AbortedError extends LatitudeError {
+  public statusCode = 499
+  public reason = 'Client Closed Request'
+  public name = LatitudeErrorCodes.AbortedError
+  constructor(message: string) {
+    super(message)
+    this.reason = message
+  }
+}
+
 export class ConflictError extends LatitudeError {
   public statusCode = 409
   public name = LatitudeErrorCodes.ConflictError

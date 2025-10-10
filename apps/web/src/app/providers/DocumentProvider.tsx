@@ -6,6 +6,7 @@ import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 type DocumentVersionContext = {
   document: DocumentVersion
+  mutateDocumentUpdated: (document: DocumentVersion) => void
 }
 const DocumentContext = createContext<DocumentVersionContext>({
   document: {},
@@ -22,7 +23,7 @@ const DocumentVersionProvider = ({
   projectId: number
   commitUuid: string
 }) => {
-  const { data: documents } = useDocumentVersions({
+  const { data: documents, mutateDocumentUpdated } = useDocumentVersions({
     projectId: projectId,
     commitUuid: commitUuid,
   })
@@ -35,6 +36,7 @@ const DocumentVersionProvider = ({
   return (
     <DocumentContext.Provider
       value={{
+        mutateDocumentUpdated,
         document: document ?? fallbackDocument,
       }}
     >

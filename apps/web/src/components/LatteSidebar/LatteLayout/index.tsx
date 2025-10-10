@@ -202,6 +202,7 @@ export function LatteLayout({
               alt='Latte'
               width={50}
               height={50}
+              style={{ width: 50, height: 50 }}
               className='select-none duration-500 h-auto'
               unselectable='on'
               unoptimized
