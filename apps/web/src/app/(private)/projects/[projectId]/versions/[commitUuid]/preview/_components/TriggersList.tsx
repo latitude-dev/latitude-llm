@@ -215,6 +215,9 @@ export function TriggersList({
     return <TriggersBlankSlate />
   }
 
+  console.log('commit', commit)
+  console.log('project', project)
+
   return (
     <div
       ref={ref}

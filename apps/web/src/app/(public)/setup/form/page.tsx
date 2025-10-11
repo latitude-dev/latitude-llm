@@ -1,27 +1,27 @@
 import { FocusLayout } from '$/components/layouts'
 import { FocusHeader } from '@latitude-data/web-ui/molecules/FocusHeader'
-import Questionnaire from './_components/SetupQuestionnaire'
-import { ROUTES } from '$/services/routes'
-import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
-import { Result } from '@latitude-data/core/lib/Result'
-import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { redirect } from 'next/navigation'
+import Questionnaire from './_components/SetupForm'
+// import { ROUTES } from '$/services/routes'
+// import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
+// import { Result } from '@latitude-data/core/lib/Result'
+// import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
+// import { redirect } from 'next/navigation'
 
 export default async function SetupFormPage() {
-  const { workspace } = await getCurrentUserOrRedirect()
-  // TODO(onboarding): remove this once we activate the onboarding
-  const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
-    workspace.id,
-    'nocoderOnboarding',
-  )
+  // const { workspace } = await getCurrentUserOrRedirect()
+  // // TODO(onboarding): remove this once we activate the onboarding
+  // const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
+  //   workspace.id,
+  //   'nocoderOnboarding',
+  // )
 
-  if (!Result.isOk(isNewOnboardingEnabledResult)) {
-    return isNewOnboardingEnabledResult
-  }
-  const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
-  if (!isNewOnboardingEnabled) {
-    return redirect(ROUTES.dashboard.root)
-  }
+  // if (!Result.isOk(isNewOnboardingEnabledResult)) {
+  //   return isNewOnboardingEnabledResult
+  // }
+  // const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
+  // if (!isNewOnboardingEnabled) {
+  //   return redirect(ROUTES.dashboard.root)
+  // }
 
   return (
     <FocusLayout

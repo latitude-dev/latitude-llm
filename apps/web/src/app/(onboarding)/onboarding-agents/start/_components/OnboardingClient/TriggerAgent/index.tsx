@@ -61,6 +61,10 @@ export function TriggerAgentBody({
 
   useTriggerSockets({ commit: commit, project: project, mutate })
 
+  console.log('commit', commit)
+  console.log('project', project)
+  console.log('triggers', triggers)
+
   const activeChatTrigger = useActiveChatTrigger({
     commit: commit,
     project: project,

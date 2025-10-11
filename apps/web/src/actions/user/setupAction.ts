@@ -54,19 +54,19 @@ export const setupAction = errorHandlingProcedure
     })
 
     if (!parsedInput.returnTo || !isLatitudeUrl(parsedInput.returnTo)) {
-      const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
-        workspace.id,
-        'nocoderOnboarding',
-      )
+      // const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
+      //   workspace.id,
+      //   'nocoderOnboarding',
+      // )
 
-      if (!Result.isOk(isNewOnboardingEnabledResult)) {
-        return isNewOnboardingEnabledResult
-      }
-      const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
-      if (isNewOnboardingEnabled) {
-        return frontendRedirect(ROUTES.auth.setup.form)
-      }
-      return frontendRedirect(ROUTES.dashboard.root)
+      // if (!Result.isOk(isNewOnboardingEnabledResult)) {
+      //   return isNewOnboardingEnabledResult
+      // }
+      // const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
+      // if (isNewOnboardingEnabled) {
+      return frontendRedirect(ROUTES.auth.setup.form)
+      // }
+      // return frontendRedirect(ROUTES.dashboard.root)
     }
 
     return frontendRedirect(parsedInput.returnTo)

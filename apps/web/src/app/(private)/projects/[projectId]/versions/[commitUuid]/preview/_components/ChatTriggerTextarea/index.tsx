@@ -244,6 +244,8 @@ export function ChatTriggerTextarea({
     [handleRunTrigger],
   )
 
+  console.log('parameters', parameters)
+
   return (
     <div className='bg-background flex flex-col gap-y-4'>
       <div className='flex flex-row items-center justify-between gap-x-4'>

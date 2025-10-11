@@ -69,28 +69,28 @@ export default async function setupService(
     ).then((r) => r.unwrap())
     await createApiKey({ workspace }, transaction).then((r) => r.unwrap())
 
-    const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
-      workspace.id,
-      'nocoderOnboarding',
-      tx,
+    // const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
+    //   workspace.id,
+    //   'nocoderOnboarding',
+    //   tx,
+    // )
+
+    // if (!Result.isOk(isNewOnboardingEnabledResult)) {
+    //   return isNewOnboardingEnabledResult
+    // }
+
+    // const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
+    // if (isNewOnboardingEnabled) {
+    await createWorkspaceOnboarding({ workspace }, transaction).then((r) =>
+      r.unwrap(),
     )
-
-    if (!Result.isOk(isNewOnboardingEnabledResult)) {
-      return isNewOnboardingEnabledResult
-    }
-
-    const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
-    if (isNewOnboardingEnabled) {
-      await createWorkspaceOnboarding({ workspace }, transaction).then((r) =>
-        r.unwrap(),
-      )
-    } else {
-      // TODO(onboarding): creating completed onboarding for now so old users dont get onboarded (rm later)
-      await createCompletedWorkspaceOnboarding(
-        { workspaceId: workspace.id },
-        transaction,
-      ).then((r) => r.unwrap())
-    }
+    // } else {
+    //   // TODO(onboarding): creating completed onboarding for now so old users dont get onboarded (rm later)
+    //   await createCompletedWorkspaceOnboarding(
+    //     { workspaceId: workspace.id },
+    //     transaction,
+    //   ).then((r) => r.unwrap())
+    // }
 
     publisher.publishLater({
       type: 'userCreated',

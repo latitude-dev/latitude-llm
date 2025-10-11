@@ -1,6 +1,6 @@
 'use client'
 
-import NocodersNavbar from '../Navbar/NocodersNavbar'
+import AgentOnboardingNavbar from '../Navbar/AgentOnboardingNavbar'
 import {
   SetupIntegrationsHeader,
   SetupIntegrationsBody,
@@ -44,7 +44,7 @@ export function OnboardingClient({
 
   return (
     <div className='flex flex-row flex-1 items-start'>
-      <NocodersNavbar
+      <AgentOnboardingNavbar
         onboardingSteps={onboardingSteps}
         executeCompleteOnboarding={executeCompleteOnboarding}
         currentStep={currentStep}
@@ -96,7 +96,13 @@ function PlaygroundSteps({
   }) => void
   setActiveTrigger: (trigger: ActiveTrigger) => void
   currentStep: OnboardingStepKey
-  executeCompleteOnboarding: () => void
+  executeCompleteOnboarding: ({
+    projectId,
+    commitUuid,
+  }: {
+    projectId: number
+    commitUuid: string
+  }) => void
   activeTrigger: ActiveTrigger
 }) {
   return (

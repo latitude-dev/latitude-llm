@@ -660,6 +660,27 @@ export type CommitUpdatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type PromptEngineeringOnboardingCompletedEvent = LatitudeEventGeneric<
+  'promptEngineeringOnboardingCompleted',
+  {
+    workspaceId: number
+  }
+>
+
+export type AgentOnboardingCompletedEvent = LatitudeEventGeneric<
+  'agentOnboardingCompleted',
+  {
+    workspaceId: number
+  }
+>
+
+export type AgentOnboardingSkippedEvent = LatitudeEventGeneric<
+  'agentOnboardingSkipped',
+  {
+    workspaceId: number
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -720,7 +741,9 @@ export type LatitudeEvent =
   | RunProgressEvent
   | RunEndedEvent
   | CommitUpdatedEvent
-
+  | PromptEngineeringOnboardingCompletedEvent
+  | AgentOnboardingCompletedEvent
+  | AgentOnboardingSkippedEvent
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
   membershipCreated: EventHandler<MembershipCreatedEvent>[]
@@ -781,4 +804,7 @@ export interface IEventsHandlers {
   runProgress: EventHandler<RunProgressEvent>[]
   runEnded: EventHandler<RunEndedEvent>[]
   commitUpdated: EventHandler<CommitUpdatedEvent>[]
+  promptEngineeringOnboardingCompleted: EventHandler<PromptEngineeringOnboardingCompletedEvent>[]
+  agentOnboardingCompleted: EventHandler<AgentOnboardingCompletedEvent>[]
+  agentOnboardingSkipped: EventHandler<AgentOnboardingSkippedEvent>[]
 }

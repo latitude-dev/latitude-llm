@@ -59,22 +59,22 @@ async function execute(
   }
   const cloned = forking.unwrap()
 
-  const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
-    workspace.id,
-    'nocoderOnboarding',
-  )
+  // const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
+  //   workspace.id,
+  //   'nocoderOnboarding',
+  // )
 
-  if (!Result.isOk(isNewOnboardingEnabledResult)) {
-    return isNewOnboardingEnabledResult
-  }
-  const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
-  if (!isNewOnboardingEnabled) {
-    return Result.ok({
-      projectId: cloned.project.id,
-      commitUuid: cloned.commit.uuid,
-      hasCompletedOnboarding: true, // TODO(onboarding): remove this hardcoded value once we have a new onboarding
-    })
-  }
+  // if (!Result.isOk(isNewOnboardingEnabledResult)) {
+  //   return isNewOnboardingEnabledResult
+  // }
+  // const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
+  // if (!isNewOnboardingEnabled) {
+  //   return Result.ok({
+  //     projectId: cloned.project.id,
+  //     commitUuid: cloned.commit.uuid,
+  //     hasCompletedOnboarding: true, // TODO(onboarding): remove this hardcoded value once we have a new onboarding
+  //   })
+  // }
 
   const workspaceOnboarding = await getWorkspaceOnboarding({ workspace }, db)
   if (!Result.isOk(workspaceOnboarding)) {

@@ -92,4 +92,7 @@ export const EventHandlers: IEventsHandlers = {
   runProgress: [notifyClientOfRunStatus],
   runEnded: [notifyClientOfRunStatus],
   commitUpdated: [notifyClientOfCommitUpdated],
+  promptEngineeringOnboardingCompleted: [],
+  agentOnboardingCompleted: [],
+  agentOnboardingSkipped: [],
 }
