@@ -294,6 +294,29 @@ export const API_ROUTES = {
                     path: `${documentRoot}/logs/limited`,
                     params: { from, filterOptions: filters },
                   }),
+                keyset: ({
+                  after,
+                  before,
+                  limit,
+                  excludeErrors,
+                  filterOptions,
+                }: {
+                  after?: string
+                  before?: string
+                  limit?: number
+                  excludeErrors?: boolean
+                  filterOptions: DocumentLogFilterOptions
+                }) =>
+                  generateDocumentLogsApiRouteWithParams({
+                    path: `${documentRoot}/logs/keyset`,
+                    params: {
+                      after,
+                      before,
+                      limit,
+                      excludeErrors,
+                      filterOptions,
+                    },
+                  }),
                 detail: (documentLogUuid: string) => {
                   return {
                     position: ({
@@ -311,6 +334,24 @@ export const API_ROUTES = {
                         },
                       }),
                   }
+                },
+                cursor: {
+                  detail: (cursor: string) => ({
+                    root: ({
+                      excludeErrors,
+                      filterOptions,
+                    }: {
+                      excludeErrors?: boolean
+                      filterOptions: DocumentLogFilterOptions
+                    }) =>
+                      generateDocumentLogsApiRouteWithParams({
+                        path: `${documentRoot}/logs/cursor/${cursor}`,
+                        params: {
+                          excludeErrors,
+                          filterOptions,
+                        },
+                      }),
+                  }),
                 },
               },
             }
