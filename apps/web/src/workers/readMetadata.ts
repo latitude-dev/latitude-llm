@@ -20,7 +20,7 @@ export type ReadMetadataWorkerProps = Parameters<typeof scan>[0] & {
   integrationNames?: string[]
   agentToolsMap?: AgentToolsMap
   noOutputSchemaConfig?: { message: string }
-  origin?: 'blocksEditor' | 'latteCopilot' | string
+  origin?: 'blocksEditor' | 'latteCopilot' | 'editorSidebar' | string
 }
 
 function readDocument(document?: any, documents?: any[], prompt?: string) {
