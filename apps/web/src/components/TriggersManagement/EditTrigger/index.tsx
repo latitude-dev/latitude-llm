@@ -97,6 +97,7 @@ type Props = {
   docSelection: UseUpdateDocumentTrigger['docSelection']
   setTriggerConfiguration: UseUpdateDocumentTrigger['setTriggerConfiguration']
   isUpdating: UseUpdateDocumentTrigger['isUpdating']
+  canChangeDocument?: boolean
 }
 export function EditTriggerModalContent({
   isLoading,
@@ -106,6 +107,7 @@ export function EditTriggerModalContent({
   docSelection,
   setTriggerConfiguration,
   isUpdating,
+  canChangeDocument = true,
 }: Props) {
   return (
     <>
@@ -125,6 +127,7 @@ export function EditTriggerModalContent({
                 onSelectDocument={docSelection.onSelectDocument}
                 options={docSelection.options}
                 document={docSelection.document}
+                disabled={!canChangeDocument}
               />
               <EditTriggerByType
                 trigger={trigger}

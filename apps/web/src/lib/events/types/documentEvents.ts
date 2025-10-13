@@ -5,4 +5,7 @@ export interface DocumentEvents {
     promptLoaded: boolean
     metadata: ResolvedMetadata
   }
+  PromptChanged: {
+    prompt: string
+  }
 }

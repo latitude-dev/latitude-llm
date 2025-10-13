@@ -133,6 +133,9 @@ export const API_ROUTES = {
                   suggestions: {
                     root: `${documentRoot}/suggestions`,
                   },
+                  updateDocumentContent: {
+                    root: `${documentRoot}/updateDocumentContent`,
+                  },
                   evaluations: {
                     root: `${documentRoot}/evaluations`,
                     detail: (evaluationUuid: string) => {

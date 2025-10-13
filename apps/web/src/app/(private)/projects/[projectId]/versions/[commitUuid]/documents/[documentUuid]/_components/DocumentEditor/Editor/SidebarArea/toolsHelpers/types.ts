@@ -1,0 +1,21 @@
+import { IntegrationType } from '@latitude-data/constants'
+import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IconProps } from '@latitude-data/web-ui/atoms/Icons'
+
+type ItemIcon = { type: 'icon'; name: IconProps['name'] }
+type ItemImage = { type: 'image'; src: string; alt: string }
+
+export type ImageIcon = ItemIcon | ItemImage
+export type ActiveIntegration = {
+  id: number
+  name: string
+  icon: ImageIcon
+  type: IntegrationType
+  configuration: IntegrationDto['configuration']
+  tools: boolean | string[]
+  allToolNames: string[]
+  isOpen: boolean
+}
+export type ActiveIntegrations = {
+  [key: string]: ActiveIntegration
+}

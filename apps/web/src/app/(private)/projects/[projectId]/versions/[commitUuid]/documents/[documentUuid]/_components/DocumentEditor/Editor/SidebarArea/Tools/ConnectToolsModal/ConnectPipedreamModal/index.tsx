@@ -39,8 +39,8 @@ export function ConnectPipedreamModal({
     return errors.length ? errors : undefined
   }, [integrationName])
   const { create } = useIntegrations({
-    withTools: true,
     includeLatitudeTools: true,
+    withTools: true,
   })
   const { data: workspace } = useCurrentWorkspace()
   const { connect } = useConnectToPipedreamApp(app)

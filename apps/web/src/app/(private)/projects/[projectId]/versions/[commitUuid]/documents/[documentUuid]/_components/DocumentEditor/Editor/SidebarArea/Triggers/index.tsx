@@ -83,6 +83,7 @@ function EditTriggerModal({
       }
     >
       <EditTriggerModalContent
+        canChangeDocument={false}
         isLoading={updater.isLoading}
         trigger={updater.trigger}
         document={updater.document}

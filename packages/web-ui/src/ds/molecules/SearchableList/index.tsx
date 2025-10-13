@@ -143,6 +143,7 @@ export function ImageIcon({
     </div>
   )
 }
+
 function DefaultItemPresenter<T extends ItemType = 'item'>({
   item,
   textSize,
@@ -290,7 +291,7 @@ function Heading({
     <div className='flex items-center justify-between mb-2'>
       <Text.H5M display='block'>{label}</Text.H5M>
       {loading ? (
-        <div className='flex flex-row justify-center gap-x-2'>
+        <div className='flex flex-row items-center justify-center gap-x-2 overflow-hidden'>
           <Text.H6 color='foregroundMuted'>Loading...</Text.H6>
           <Icon
             name='loader'
@@ -337,14 +338,16 @@ function renderItem<T extends ItemType = 'no_type'>({
 type GroupWrapperProps = {
   children: ReactNode
   style: 'border' | 'onlySeparators'
+  hidden?: boolean
 }
-function GroupWrapper({ children, style }: GroupWrapperProps) {
+function GroupWrapper({ children, style, hidden }: GroupWrapperProps) {
   return (
     <div
       className={cn('border-border', {
-        'rounded-2xl overflow-hidden border divide-border divide-y':
-          style === 'border',
-        ' divide-border divide-y border-b': style === 'onlySeparators',
+        'rounded-2xl overflow-hidden ': style === 'border',
+        ' divide-border divide-y border-b':
+          style === 'onlySeparators' && !hidden,
+        'divide-y divide-borde border': style === 'border' && !hidden,
       })}
     >
       {children}
@@ -367,12 +370,19 @@ function renderGroup<T extends ItemType = 'no_type'>({
   onSelectValue?: OnSelectValue<T>
   selectedValue?: string | undefined
 }) {
+  const hasItems = group.items && group.items.length > 0
   return (
     <Command.Group
       key={idx}
-      heading={<Heading loading={group.loading} label={group.label} />}
+      heading={
+        !group.loading && !hasItems ? (
+          <></>
+        ) : (
+          <Heading loading={group.loading} label={group.label} />
+        )
+      }
     >
-      <GroupWrapper style={groupStyle}>
+      <GroupWrapper style={groupStyle} hidden={!hasItems && !group.loading}>
         {!group.loading
           ? group.items.map((item, idx) =>
               renderItem({
@@ -539,7 +549,7 @@ export function SearchableList<T extends ItemType>({
                 selectedValue={selectedValue}
               />
             ) : (
-              <GroupWrapper style={groupStyle}>
+              <GroupWrapper style={groupStyle} hidden={items.length === 0}>
                 {(items as OptionItem<T>[]).map((item, idx) => (
                   <Item
                     key={idx}

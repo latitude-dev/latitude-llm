@@ -292,20 +292,27 @@ export default function useDocumentVersions(
       ),
     })
 
+  const mutateDocumentUpdated = useCallback(
+    (newDoc: DocumentVersion) => {
+      const prevDocuments = data || []
+
+      mutate(
+        prevDocuments.map((d) =>
+          d.documentUuid === newDoc.documentUuid ? newDoc : d,
+        ),
+      )
+    },
+    [data, mutate],
+  )
+
   const { execute: assignDataset, isPending: isAssigningDataset } =
     useLatitudeAction(assignDatasetAction, {
       onSuccess: useCallback(
         ({ data: document }: { data: DocumentVersion }) => {
           if (!document) return
-
-          const prevDocuments = data || []
-          mutate(
-            prevDocuments.map((d) =>
-              d.documentUuid === document.documentUuid ? document : d,
-            ),
-          )
+          mutateDocumentUpdated(document)
         },
-        [data, mutate],
+        [mutateDocumentUpdated],
       ),
     })
 
@@ -338,6 +345,7 @@ export default function useDocumentVersions(
       destroyFile,
       destroyFolder,
       updateContent,
+      mutateDocumentUpdated,
       isUpdatingContent,
       assignDataset,
       saveLinkedDataset,
@@ -356,6 +364,7 @@ export default function useDocumentVersions(
       destroyFile,
       destroyFolder,
       updateContent,
+      mutateDocumentUpdated,
       isUpdatingContent,
       assignDataset,
       saveLinkedDataset,

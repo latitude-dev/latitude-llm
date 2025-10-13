@@ -25,6 +25,7 @@ import {
   DocumentVersion,
   Project,
 } from '@latitude-data/core/schema/types'
+import { useEvents } from '$/lib/events'
 
 export type updateContentFn = (
   content: string,
@@ -123,6 +124,12 @@ export function DocumentValueProvider({
     project: project,
     devMode: devMode,
     origin: origin,
+  })
+
+  useEvents({
+    onPromptChanged: ({ prompt }) => {
+      setValue(prompt)
+    },
   })
 
   return (

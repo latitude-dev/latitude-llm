@@ -205,20 +205,23 @@ export default function useLatitudeAction<
     [onError, toast],
   )
 
-  const options = useMemo(
-    () => ({
-      onSuccess: successCb,
-      onError: errorCb,
-    }),
-    [successCb, errorCb],
-  )
-
-  const action = useAction(serverAction, options)
+  // Note: We don't pass callbacks to useAction since we use executeAsync
+  // and manually trigger them. executeAsync bypasses useAction's callback system.
+  const action = useAction(serverAction)
   const executeFn: ExecuteFn<S, Data> = useCallback(
     async (input: InferInputOrDefault<S, void>) => {
       const result = await action.executeAsync(input)
 
       if (result.serverError || result.validationErrors) {
+        // Manually trigger error callback since executeAsync doesn't trigger it
+        if (errorCb && result.serverError) {
+          errorCb({
+            error: {
+              serverError: result.serverError,
+              validationErrors: result.validationErrors,
+            },
+          } as any)
+        }
         return [
           null,
           buildActionError({
@@ -228,9 +231,16 @@ export default function useLatitudeAction<
         ] as const
       }
 
+      // Manually trigger success callback since executeAsync doesn't trigger it
+      if (successCb && result.data !== undefined) {
+        successCb({
+          data: result.data,
+          input: input as InferInputOrDefault<S, undefined>,
+        })
+      }
       return [result.data!, null] as const
     },
-    [action],
+    [action, successCb, errorCb],
   )
 
   return useMemo(
