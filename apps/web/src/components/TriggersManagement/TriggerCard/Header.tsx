@@ -80,7 +80,9 @@ function LoadedTriggerHeader({
   })
 
   const documentName = useMemo(() => {
-    return document.path.split('/').pop() ?? document.path
+    return (
+      document?.path.split('/').pop() ?? document?.path ?? 'Unknown Document'
+    )
   }, [document])
 
   return (

@@ -90,8 +90,8 @@ describe('deleting documents...', () => {
         project,
         commit: draft,
         document,
-        triggerType: DocumentTriggerType.Chat,
-        configuration: {},
+        triggerType: DocumentTriggerType.Scheduled,
+        configuration: { cronExpression: '0 * * * *' },
       }).then((r) => r.unwrap())
 
       mocks.undeployDocumentTrigger
@@ -102,7 +102,7 @@ describe('deleting documents...', () => {
         )
         .mockResolvedValueOnce(
           Result.ok(
-            created2 as unknown as DocumentTrigger<DocumentTriggerType.Chat>,
+            created2 as unknown as DocumentTrigger<DocumentTriggerType.Scheduled>,
           ),
         )
       const result = await deleteDocumentTriggersFromDocuments({
@@ -172,13 +172,13 @@ describe('deleting documents...', () => {
         project,
         commit: newDraft,
         document,
-        triggerType: DocumentTriggerType.Chat,
-        configuration: {},
+        triggerType: DocumentTriggerType.Scheduled,
+        configuration: { cronExpression: '0 * * * *' },
       }).then((r) => r.unwrap())
 
       mocks.undeployDocumentTrigger.mockResolvedValueOnce(
         Result.ok(
-          createdNewDraft as unknown as DocumentTrigger<DocumentTriggerType.Chat>,
+          createdNewDraft as unknown as DocumentTrigger<DocumentTriggerType.Scheduled>,
         ),
       )
 
@@ -226,8 +226,8 @@ describe('deleting documents...', () => {
         project,
         commit: draft,
         document,
-        triggerType: DocumentTriggerType.Chat,
-        configuration: {},
+        triggerType: DocumentTriggerType.Scheduled,
+        configuration: { cronExpression: '0 * * * *' },
       }).then((r) => r.unwrap())
 
       const undeployError = new Error('Undeploy failed')

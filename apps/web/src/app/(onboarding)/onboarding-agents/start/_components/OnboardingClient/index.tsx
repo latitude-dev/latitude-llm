@@ -14,10 +14,6 @@ import {
 import { TriggerAgentHeader, TriggerAgentBody } from './TriggerAgent'
 import { useState } from 'react'
 import { RunAgentHeader, RunAgentBody } from './RunAgent'
-import {
-  ActiveTrigger,
-  FAKE_DOCUMENT,
-} from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersList'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding-agents/start/lib/OnboardingStep'
 import { PlaygroundProvider } from '../../lib/PlaygroundProvider'
 import { MetadataProvider } from '$/components/MetadataProvider'
@@ -37,11 +33,6 @@ export function OnboardingClient({
   const currentStep = onboarding?.currentStep
     ? onboarding?.currentStep
     : onboardingSteps[0]
-
-  const [activeTrigger, setActiveTrigger] = useState<ActiveTrigger>({
-    document: FAKE_DOCUMENT,
-    parameters: {},
-  })
 
   return (
     <MetadataProvider>
@@ -74,10 +65,8 @@ export function OnboardingClient({
               currentStep === OnboardingStepKey.RunAgent) && (
               <PlaygroundSteps
                 moveNextOnboardingStep={moveNextOnboardingStep}
-                setActiveTrigger={setActiveTrigger}
                 currentStep={currentStep}
                 executeCompleteOnboarding={executeCompleteOnboarding}
-                activeTrigger={activeTrigger}
               />
             )}
           </div>
@@ -89,17 +78,14 @@ export function OnboardingClient({
 
 function PlaygroundSteps({
   moveNextOnboardingStep,
-  setActiveTrigger,
   currentStep,
   executeCompleteOnboarding,
-  activeTrigger,
 }: {
   moveNextOnboardingStep: ({
     currentStep,
   }: {
     currentStep: OnboardingStepKey
   }) => void
-  setActiveTrigger: (trigger: ActiveTrigger) => void
   currentStep: OnboardingStepKey
   executeCompleteOnboarding: ({
     projectId,
@@ -108,8 +94,9 @@ function PlaygroundSteps({
     projectId: number
     commitUuid: string
   }) => void
-  activeTrigger: ActiveTrigger
 }) {
+  const [parameters, setParameters] = useState<Record<string, unknown>>({})
+
   return (
     <>
       {currentStep === OnboardingStepKey.TriggerAgent && (
@@ -117,7 +104,7 @@ function PlaygroundSteps({
           <TriggerAgentHeader />
           <TriggerAgentBody
             moveNextOnboardingStep={moveNextOnboardingStep}
-            setActiveTrigger={setActiveTrigger}
+            setParameters={setParameters}
           />
         </OnboardingStep.Root>
       )}
@@ -126,7 +113,7 @@ function PlaygroundSteps({
           <RunAgentHeader />
           <RunAgentBody
             executeCompleteOnboarding={executeCompleteOnboarding}
-            activeTrigger={activeTrigger}
+            parameters={parameters}
           />
         </OnboardingStep.Root>
       )}

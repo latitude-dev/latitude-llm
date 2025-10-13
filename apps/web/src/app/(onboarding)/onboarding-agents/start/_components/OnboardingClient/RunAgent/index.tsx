@@ -3,7 +3,6 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import Chat from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
-import { ActiveTrigger } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersList'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
@@ -57,7 +56,7 @@ export function RunAgentHeader() {
 
 export function RunAgentBody({
   executeCompleteOnboarding,
-  activeTrigger,
+  parameters,
 }: {
   executeCompleteOnboarding: ({
     projectId,
@@ -66,7 +65,7 @@ export function RunAgentBody({
     projectId: number
     commitUuid: string
   }) => void
-  activeTrigger: ActiveTrigger
+  parameters: Record<string, unknown>
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -118,7 +117,7 @@ export function RunAgentBody({
             <Chat
               showHeader={false}
               playground={playground}
-              parameters={activeTrigger.parameters}
+              parameters={parameters}
             />
             <div className='sticky bottom-0 w-full bg-background pb-6'>
               <div className='flex relative flex-row w-full items-center justify-center'>

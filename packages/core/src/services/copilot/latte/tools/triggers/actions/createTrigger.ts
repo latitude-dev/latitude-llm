@@ -8,7 +8,6 @@ import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../../lib/Result'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import {
-  chatTriggerConfigurationSchema,
   emailTriggerConfigurationSchema,
   integrationTriggerConfigurationSchema,
   scheduledTriggerConfigurationSchema,
@@ -85,11 +84,6 @@ const createTrigger = defineLatteTool(
       z.object({
         triggerType: z.literal(DocumentTriggerType.Integration),
         configuration: integrationTriggerConfigurationSchema,
-      }),
-      z.object({
-        triggerType: z.literal(DocumentTriggerType.Chat),
-        // For consistency, however, it will always default to an empty object
-        configuration: chatTriggerConfigurationSchema.optional().default({}),
       }),
     ]),
   }),

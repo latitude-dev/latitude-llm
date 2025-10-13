@@ -19,6 +19,6 @@ async function execute({
   return router.push(
     ROUTES.projects
       .detail({ id: projectId })
-      .commits.detail({ uuid: commitUuid }).preview.root,
+      .commits.detail({ uuid: commitUuid }).agent.root,
   )
 }

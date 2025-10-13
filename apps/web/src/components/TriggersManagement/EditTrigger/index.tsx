@@ -24,8 +24,6 @@ function EditTriggerByType<T extends DocumentTriggerType>(
 ) {
   const type = props.trigger.triggerType
 
-  if (type === DocumentTriggerType.Chat) return null
-
   if (type === DocumentTriggerType.Email) {
     return (
       <EditEmailTrigger

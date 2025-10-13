@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { MouseEvent, useCallback } from 'react'
 import { cn } from '../../../lib/utils'
 import { Icon, IconName } from '../../atoms/Icons'
 
@@ -15,9 +15,16 @@ export function IconToggle({
   enabledIcon: IconName
   disabledIcon: IconName
 }) {
-  const onClick = useCallback(() => {
-    setEnabled(!enabled)
-  }, [enabled, setEnabled])
+  const onClick = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      e.stopPropagation()
+      e.preventDefault()
+      e.nativeEvent.stopImmediatePropagation()
+
+      setEnabled(!enabled)
+    },
+    [enabled, setEnabled],
+  )
 
   return (
     <div

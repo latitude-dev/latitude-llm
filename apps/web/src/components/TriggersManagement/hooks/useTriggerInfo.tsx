@@ -93,13 +93,6 @@ export function useTriggerInfo({
       }
     }
 
-    if (trigger.triggerType === DocumentTriggerType.Chat) {
-      return {
-        title: 'Chat',
-        image,
-      }
-    }
-
     if (trigger.triggerType === DocumentTriggerType.Integration) {
       const config = trigger.configuration as IntegrationTriggerConfiguration
       const component = app?.triggers.find((c) => c.key === config.componentId)

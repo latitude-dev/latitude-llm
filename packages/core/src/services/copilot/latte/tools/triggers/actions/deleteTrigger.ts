@@ -73,9 +73,6 @@ const deleteTrigger = defineLatteTool(
         triggerType: z.literal(DocumentTriggerType.Integration),
         configuration: integrationTriggerConfigurationSchema,
       }),
-      z.object({
-        triggerType: z.literal(DocumentTriggerType.Chat),
-      }),
     ]),
   }),
 )

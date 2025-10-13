@@ -95,13 +95,6 @@ export async function deployDocumentTrigger<T extends DocumentTriggerType>(
         triggerStatus: DocumentTriggerStatus.Deployed,
       })
 
-    case DocumentTriggerType.Chat:
-      // Chat triggers do not require deployment, they are always ready to use.
-      return Result.ok({
-        deploymentSettings: {} as DocumentTriggerDeploymentSettings<T>,
-        triggerStatus: DocumentTriggerStatus.Deployed,
-      })
-
     default:
       return Result.error(
         new NotImplementedError(
@@ -146,7 +139,6 @@ export async function undeployDocumentTrigger<T extends DocumentTriggerType>(
       break
 
     case DocumentTriggerType.Scheduled:
-    case DocumentTriggerType.Chat:
     case DocumentTriggerType.Email:
       // No special undeploy logic for these triggers
       undeployResult = Result.ok(undefined)

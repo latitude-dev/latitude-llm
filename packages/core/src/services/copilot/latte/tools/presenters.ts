@@ -153,10 +153,6 @@ async function triggerDocumentPresenter({
         documentTriggerNames.push(DocumentTriggerType.Scheduled)
         break
 
-      case DocumentTriggerType.Chat:
-        documentTriggerNames.push(DocumentTriggerType.Chat)
-        break
-
       case DocumentTriggerType.Integration: {
         const integration = await integrationScope.find(
           (trigger.configuration as IntegrationTriggerConfiguration)

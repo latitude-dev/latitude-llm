@@ -13,6 +13,6 @@ export default async function DocumentsPage({
   return redirect(
     ROUTES.projects
       .detail({ id: Number(projectId) })
-      .commits.detail({ uuid: commitUuid }).preview.root,
+      .commits.detail({ uuid: commitUuid }).agent.root,
   )
 }

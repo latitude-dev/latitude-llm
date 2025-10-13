@@ -1,4 +1,3 @@
-import useFeature from '$/stores/useFeature'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -15,8 +14,6 @@ export function MainPromptIcon({
   isMainDocument?: boolean
   setMainDocument?: (isMainDocument: boolean) => void
 }) {
-  const agentFeature = useFeature('newAgentPage')
-
   const onClick = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
       // This button is inside a Link. Avoid the link to be triggered:
@@ -29,7 +26,6 @@ export function MainPromptIcon({
     [setMainDocument, isMainDocument],
   )
 
-  if (!agentFeature.isEnabled) return null
   if (!isFile) return null
 
   return (

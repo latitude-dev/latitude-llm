@@ -21,8 +21,6 @@ import {
   IntegrationTriggerDeploymentSettings,
   ScheduledTriggerConfiguration,
   ScheduledTriggerDeploymentSettings,
-  ChatTriggerConfiguration,
-  ChatTriggerDeploymentSettings,
   DocumentTriggerConfiguration,
   DocumentTriggerDeploymentSettings,
 } from '@latitude-data/constants/documentTriggers'
@@ -205,48 +203,6 @@ export async function createIntegrationDocumentTrigger({
     .returning()
 
   return trigger as DocumentTrigger
-}
-
-export async function createChatDocumentTrigger({
-  workspaceId,
-  projectId,
-  commitId,
-  documentUuid = uuidv4(),
-  enabled = true,
-}: {
-  workspaceId?: number
-  projectId?: number
-  commitId?: number
-  documentUuid?: string
-  enabled?: boolean
-} = {}): Promise<DocumentTrigger<DocumentTriggerType.Chat>> {
-  if (!commitId || !projectId || !workspaceId) {
-    const { project, commit } = await createProject({ skipMerge: true })
-    workspaceId = project.workspaceId
-    projectId = project.id
-    commitId = commit.id
-  }
-
-  const configuration: ChatTriggerConfiguration = {}
-  const deploymentSettings: ChatTriggerDeploymentSettings = {}
-
-  const [trigger] = await database
-    .insert(documentTriggers)
-    .values({
-      workspaceId,
-      projectId,
-      commitId,
-      documentUuid,
-      triggerType: DocumentTriggerType.Chat,
-      triggerStatus: 'deployed',
-      configuration,
-      triggerHash: createTriggerHash({ configuration }),
-      deploymentSettings,
-      enabled,
-    })
-    .returning()
-
-  return trigger as DocumentTrigger<DocumentTriggerType.Chat>
 }
 
 export async function createDocumentTrigger<T extends DocumentTriggerType>({

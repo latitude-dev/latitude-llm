@@ -12,7 +12,7 @@ export type TriggerIntegrationType = DocumentTriggerType | 'Chat'
 
 export type SelectedIntegration = {
   slug: string
-  type: TriggerIntegrationType
+  type: DocumentTriggerType
 }
 
 export type OnTriggerCreated = (dt?: DocumentTrigger) => void
@@ -30,3 +30,12 @@ export type RunTriggerProps = {
   userMessage?: string
   aiParameters?: boolean
 }
+
+export type RunDocumentProps = {
+  document: DocumentVersion
+  parameters: Record<string, unknown>
+  userMessage?: string
+  aiParameters?: boolean
+}
+
+export const RUNNABLE_TRIGGERS = [DocumentTriggerType.Scheduled]
