@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 
 export async function generateMetadata() {
   return buildMetatags({
-    title: 'Sign in to your account',
+    title: 'AI Engineering Studio',
   })
 }
 
