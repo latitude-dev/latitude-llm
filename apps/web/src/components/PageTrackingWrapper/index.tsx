@@ -1,8 +1,8 @@
 'use client'
 
 import { ReactNode, useEffect } from 'react'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { publishEventAction } from '$/actions/events/publishEventAction'
-import { LatitudeEvent } from '@latitude-data/core/events/events.d'
 
 type Props = {
   namePageVisited: string
@@ -15,6 +15,8 @@ export function PageTrackingWrapper({
   additionalData,
   children,
 }: Props) {
+  const { execute: publishEvent } = useLatitudeAction(publishEventAction)
+
   useEffect(() => {
     const event = trackPageVisit({
       namePageVisited,
@@ -22,9 +24,9 @@ export function PageTrackingWrapper({
     })
 
     if (event) {
-      publishEventAction({ eventType: event.type, payload: event.data })
+      publishEvent({ eventType: event.type, payload: event.data })
     }
-  }, [namePageVisited, additionalData])
+  }, [namePageVisited, additionalData, publishEvent])
   return children
 }
 
@@ -34,7 +36,7 @@ export function trackPageVisit({
 }: {
   namePageVisited: string
   additionalData?: Record<string, unknown>
-}): LatitudeEvent | null {
+}) {
   const sessionKey = `${namePageVisited}PageVisited`
   // Using sessionStorage to avoid tracking the same page twice in the same session
   const hasVisited = sessionStorage.getItem(sessionKey)
