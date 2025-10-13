@@ -45,6 +45,11 @@ export function DocumentEditorContentArea({
   togglePlaygroundOpen: () => void
   isPlaygroundTransitioning: boolean
 }) {
+  const {
+    isEnabled: isEditorSidebarEnabled,
+    isLoading: isEditorSidebarFlagLoading,
+  } = useFeature('editorSidebar')
+  const { isEnabled: isRunStream } = useFeature('runs')
   const containerRef = useRef<HTMLDivElement | null>(null)
   const { metadata } = useMetadata()
   const { commit } = useCurrentCommit()
@@ -63,7 +68,6 @@ export function DocumentEditorContentArea({
     document,
   })
   const { devMode } = useDevMode()
-  const { isEnabled: isRunStream } = useFeature('runs')
   const { playground, hasActiveStream, resetChat, onBack, stopStreaming } =
     usePlaygroundLogic({
       commit,
@@ -89,11 +93,13 @@ export function DocumentEditorContentArea({
   return (
     <>
       <div className='relative flex-1 flex flex-col h-full min-h-0 overflow-hidden'>
-        <DocumentEditorHeader
-          isMerged={isMerged}
-          isPlaygroundOpen={isPlaygroundOpen}
-          togglePlaygroundOpen={togglePlaygroundOpen}
-        />
+        {!isEditorSidebarFlagLoading && !isEditorSidebarEnabled && (
+          <DocumentEditorHeader
+            isMerged={isMerged}
+            isPlaygroundOpen={isPlaygroundOpen}
+            togglePlaygroundOpen={togglePlaygroundOpen}
+          />
+        )}
 
         {/* === SLIDING WRAPPER === */}
         <div
@@ -116,17 +122,21 @@ export function DocumentEditorContentArea({
             )}
           >
             <div className='min-h-0 relative z-0 flex flex-col gap-4 h-full'>
-              <AgentToolbar
-                isMerged={isMerged}
-                isAgent={metadata?.config?.type === 'agent'}
-                config={metadata?.config}
-                prompt={document.content}
-                onChangePrompt={updateDocumentContent}
-              />
-              <FreeRunsBanner
-                isLatitudeProvider={isLatitudeProvider}
-                freeRunsCount={freeRunsCount}
-              />
+              {!isEditorSidebarFlagLoading && !isEditorSidebarEnabled && (
+                <>
+                  <AgentToolbar
+                    isMerged={isMerged}
+                    isAgent={metadata?.config?.type === 'agent'}
+                    config={metadata?.config}
+                    prompt={document.content}
+                    onChangePrompt={updateDocumentContent}
+                  />
+                  <FreeRunsBanner
+                    isLatitudeProvider={isLatitudeProvider}
+                    freeRunsCount={freeRunsCount}
+                  />
+                </>
+              )}
               <div
                 className={cn('flex-1 min-h-0 pb-4', {
                   'overflow-y-auto custom-scrollbar scrollable-indicator':

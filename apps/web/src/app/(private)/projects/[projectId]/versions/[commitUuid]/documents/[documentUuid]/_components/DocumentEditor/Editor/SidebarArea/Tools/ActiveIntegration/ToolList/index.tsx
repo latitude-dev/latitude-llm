@@ -9,8 +9,9 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { ActiveIntegration } from '../../../toolsHelpers/types'
 import { ToolsContext } from '../../ToolsProvider'
-import { useActiveIntegrationsStore } from '../../hooks/useActiveIntegrationsStore'
+import { useSidebarStore } from '../../../hooks/useSidebarStore'
 import { useAnimatedItems } from './useAnimatedItems'
+import { CUSTOM_TOOLS_INTEGRATION_NAME } from '../../../toolsHelpers/collectTools'
 
 const MAX_VISIBLE_TOOLS = 10
 
@@ -51,13 +52,35 @@ function checkIsActive(
 
 const TOOL_EMPTY: [] = []
 export function ToolList({ integration }: { integration: ActiveIntegration }) {
+  const isCustomTools = integration.name === CUSTOM_TOOLS_INTEGRATION_NAME
+
   const {
-    data: tools = TOOL_EMPTY,
-    isLoading,
-    error,
-  } = useIntegrationTools(integration)
+    data: fetchedTools = TOOL_EMPTY,
+    isLoading: isFetchingTools,
+    error: fetchError,
+  } = useIntegrationTools(isCustomTools ? undefined : integration)
+
+  // For custom tools, create mock tool objects from allToolNames
+  const customToolsData = useMemo(() => {
+    if (!isCustomTools) return TOOL_EMPTY
+    return integration.allToolNames.map((toolName) => ({
+      name: toolName,
+      description: undefined,
+      displayName: undefined,
+      inputSchema: {
+        type: 'object' as const,
+        properties: {},
+        additionalProperties: false,
+      },
+    }))
+  }, [isCustomTools, integration.allToolNames])
+
+  const tools = isCustomTools ? customToolsData : fetchedTools
+  const isLoading = isCustomTools ? false : isFetchingTools
+  const error = isCustomTools ? null : fetchError
+
   const { addIntegrationTool, removeIntegrationTool } = use(ToolsContext)
-  const setIntegrationToolNames = useActiveIntegrationsStore(
+  const setIntegrationToolNames = useSidebarStore(
     (state) => state.setIntegrationToolNames,
   )
   const { commit } = useCurrentCommit()
@@ -70,6 +93,7 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
     (toolName: string) => () => {
       if (isLive) return
       if (!tools) return
+      if (isCustomTools) return // Don't allow toggling custom tools
 
       const isActive = checkIsActive(integration.tools, toolName)
 
@@ -86,7 +110,14 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
         })
       }
     },
-    [tools, isLive, addIntegrationTool, removeIntegrationTool, integration],
+    [
+      tools,
+      isLive,
+      isCustomTools,
+      addIntegrationTool,
+      removeIntegrationTool,
+      integration,
+    ],
   )
   // Sort tools to show active ones first (in document order), then inactive ones
   const sortedTools = useMemo(() => {
@@ -97,8 +128,8 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
       : []
 
     // Split into active and inactive
-    const activeTools: typeof tools = []
-    const inactiveTools: typeof tools = []
+    const activeTools: (typeof tools)[number][] = []
+    const inactiveTools: (typeof tools)[number][] = []
 
     tools.forEach((tool) => {
       if (integration.tools === true || activeToolNames.includes(tool.name)) {
@@ -133,13 +164,16 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
   }, [sortedTools, searchQuery])
 
   useEffect(() => {
+    // Skip setting tool names for custom tools - they're already in allToolNames
+    if (isCustomTools) return
+
     if (tools && tools.length > 0) {
       setIntegrationToolNames({
         integrationName: integration.name,
         toolNames: tools.map((t) => t.name),
       })
     }
-  }, [tools, integration.name, setIntegrationToolNames])
+  }, [tools, integration.name, setIntegrationToolNames, isCustomTools])
 
   const hasMoreTools = sortedTools.length > MAX_VISIBLE_TOOLS
   const shouldShowSearch = sortedTools.length > MAX_VISIBLE_TOOLS
@@ -209,10 +243,10 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
           <div
             role='button'
             tabIndex={0}
-            aria-disabled={isLive}
+            aria-disabled={isLive || isCustomTools}
             key={tool.name}
             data-tool-id={tool.name}
-            onClick={toggleTool(tool.name)}
+            onClick={isCustomTools ? undefined : toggleTool(tool.name)}
             className='w-full flex items-center justify-between'
           >
             <div className='w-full flex items-center gap-2 min-w-0'>
@@ -227,11 +261,13 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
                     {tool.displayName ?? tool.name}
                   </Text.H5>
                 </div>
-                <SwitchToggle
-                  checked={isActive}
-                  onClick={toggleTool(tool.name)}
-                  disabled={isLive}
-                />
+                {!isCustomTools && (
+                  <SwitchToggle
+                    checked={isActive}
+                    onClick={toggleTool(tool.name)}
+                    disabled={isLive}
+                  />
+                )}
               </div>
             </div>
           </div>

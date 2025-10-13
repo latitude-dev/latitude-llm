@@ -166,6 +166,7 @@
     "./molecules/LoadingText": "./src/ds/molecules/LoadingText/index.tsx",
     "./molecules/ListingHeader": "./src/ds/molecules/ListingHeader/index.tsx",
     "./molecules/MultiSelect": "./src/ds/molecules/MultiSelect/index.tsx",
+    "./molecules/MultiSelectInput": "./src/ds/molecules/MultiSelectInput/index.tsx",
     "./molecules/TwoColumnSelect": {
       "import": "./src/ds/molecules/TwoColumnSelect/index.tsx"
     },

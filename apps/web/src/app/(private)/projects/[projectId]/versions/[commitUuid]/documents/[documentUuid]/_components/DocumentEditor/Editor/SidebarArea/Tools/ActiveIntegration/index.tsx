@@ -11,7 +11,8 @@ import {
   ImageIcon,
 } from '../../toolsHelpers/types'
 import { ToolsContext } from '../ToolsProvider'
-import { useActiveIntegrationsStore } from '../hooks/useActiveIntegrationsStore'
+import { useSidebarStore } from '../../hooks/useSidebarStore'
+import { CUSTOM_TOOLS_INTEGRATION_NAME } from '../../toolsHelpers/collectTools'
 
 function ImageIconComponent({ imageIcon }: { imageIcon?: ImageIcon }) {
   if (!imageIcon) return null
@@ -41,11 +42,12 @@ export function ActiveIntegration({
   onRemove: (integrationName: string) => void
 }) {
   const { addIntegrationTool, removeIntegrationTool } = use(ToolsContext)
-  const toggleIntegration = useActiveIntegrationsStore(
-    (state) => state.toggleIntegration,
-  )
+  const toggleIntegration = useSidebarStore((state) => state.toggleIntegration)
   const { commit } = useCurrentCommit()
   const isLive = !!commit.mergedAt
+
+  const isCustomTools = integration.name === CUSTOM_TOOLS_INTEGRATION_NAME
+  const displayName = isCustomTools ? 'Custom tools' : integration.name
 
   const allEnabled = integration.tools === true
   const isOpen = integration.isOpen
@@ -106,41 +108,45 @@ export function ActiveIntegration({
           <Icon name={isOpen ? 'chevronDown' : 'chevronRight'} />
           <ImageIconComponent imageIcon={integration.icon} />
           <Text.H5M ellipsis noWrap>
-            {integration.name}
+            {displayName}
           </Text.H5M>
-          <div onClick={toggleAllEnabled}>
-            <SwitchToggle
-              checked={allEnabled}
-              onClick={toggleAllEnabled}
-              disabled={isLive}
-            />
-          </div>
+          {!isCustomTools && (
+            <div onClick={toggleAllEnabled}>
+              <SwitchToggle
+                checked={allEnabled}
+                onClick={toggleAllEnabled}
+                disabled={isLive}
+              />
+            </div>
+          )}
         </div>
 
         <div className='flex items-center gap-2'>
-          {hasToolsLoaded ? (
+          {hasToolsLoaded && !isCustomTools ? (
             <Text.H6 color='foregroundMuted' noWrap>
               {activeCount} / {totalCount} tools
             </Text.H6>
           ) : null}
 
-          <DropdownMenu
-            options={[
-              {
-                label: 'Remove',
-                type: 'destructive',
-                onClick: () => onRemove(integration.name),
-              },
-            ]}
-            side='bottom'
-            align='end'
-            triggerButtonProps={{
-              iconProps: { name: 'ellipsis' },
-              variant: 'ghost',
-              size: 'small',
-              disabled: isLive,
-            }}
-          />
+          {!isCustomTools && (
+            <DropdownMenu
+              options={[
+                {
+                  label: 'Remove',
+                  type: 'destructive',
+                  onClick: () => onRemove(integration.name),
+                },
+              ]}
+              side='bottom'
+              align='end'
+              triggerButtonProps={{
+                iconProps: { name: 'ellipsis' },
+                variant: 'ghost',
+                size: 'small',
+                disabled: isLive,
+              }}
+            />
+          )}
         </div>
       </div>
 

@@ -27,6 +27,7 @@ type SectionAction = {
   iconProps?: IconProps
   onClick: () => void
   disabled?: boolean
+  customComponent?: ReactNode
 }
 const SidebarSection = ({
   children,
@@ -44,16 +45,20 @@ const SidebarSection = ({
 
         {actions ? (
           <div className='flex flex-row gap-x-2'>
-            {actions?.map((action, index) => (
-              <Button
-                key={index}
-                variant='ghost'
-                size='icon'
-                onClick={action.onClick}
-                iconProps={action.iconProps ?? { name: 'plus' }}
-                disabled={action.disabled}
-              />
-            ))}
+            {actions?.map((action, index) =>
+              action.customComponent ? (
+                <div key={index}>{action.customComponent}</div>
+              ) : (
+                <Button
+                  key={index}
+                  variant='ghost'
+                  size='icon'
+                  onClick={action.onClick}
+                  iconProps={action.iconProps ?? { name: 'plus' }}
+                  disabled={action.disabled}
+                />
+              ),
+            )}
           </div>
         ) : null}
       </div>

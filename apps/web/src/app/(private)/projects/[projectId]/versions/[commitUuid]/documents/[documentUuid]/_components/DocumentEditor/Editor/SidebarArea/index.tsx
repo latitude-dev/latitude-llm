@@ -3,11 +3,12 @@ import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
 import { ResolvedMetadata } from '$/workers/readMetadata'
-import { SectionLoader, SidebarSection } from './Section'
+import { SectionLoader } from './Section'
 import { SidebarHeader } from './SidebarHeader'
 import { TriggersSidebarSection, useDocumentTriggersData } from './Triggers'
 import { ToolsSidebarSection } from './Tools'
-import { useToolsData } from './Tools/hooks/useToolsData'
+import { SubAgentsSidebarSection } from './SubAgents'
+import { usePromptConfigData } from './hooks/usePromptConfigData'
 
 function SidebarLoader() {
   return (
@@ -25,14 +26,15 @@ function useSidebarData({
   metadata: ResolvedMetadata | undefined
 }) {
   const triggersData = useDocumentTriggersData()
-  const isLoadingTools = useToolsData()
+  const isLoadingPromptConfig = usePromptConfigData()
   return useMemo(() => {
-    const isLoading = triggersData.isLoading || !metadata || isLoadingTools
+    const isLoading =
+      triggersData.isLoading || !metadata || isLoadingPromptConfig
     return {
       isLoading,
       triggersData,
     }
-  }, [triggersData, metadata, isLoadingTools])
+  }, [triggersData, metadata, isLoadingPromptConfig])
 }
 
 export function DocumentEditorSidebarArea({
@@ -62,10 +64,7 @@ export function DocumentEditorSidebarArea({
               document={data.triggersData.document}
             />
             <ToolsSidebarSection />
-            <SidebarSection
-              title='Sub-agents'
-              actions={[{ onClick: () => {} }]}
-            />
+            <SubAgentsSidebarSection />
           </>
         )}
       </div>

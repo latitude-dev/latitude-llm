@@ -3,10 +3,10 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { SidebarSection } from '../Section'
 import { ConnectToolsModal } from './ConnectToolsModal'
-import { useActiveIntegrations } from './hooks/useActiveIntegrations'
+import { usePromptConfigInSidebar } from '../hooks/usePromptConfigInSidebar'
 import { ActiveIntegration } from './ActiveIntegration'
 import { ToolsProvider } from './ToolsProvider'
-import { useActiveIntegrationsStore } from './hooks/useActiveIntegrationsStore'
+import { useSidebarStore } from '../hooks/useSidebarStore'
 
 export function ToolsSidebarSection() {
   const { commit } = useCurrentCommit()
@@ -21,8 +21,8 @@ export function ToolsSidebarSection() {
     addIntegrationTool,
     removeIntegrationTool,
     removeIntegration,
-  } = useActiveIntegrations()
-  const { integrations } = useActiveIntegrationsStore((state) => ({
+  } = usePromptConfigInSidebar()
+  const { integrations } = useSidebarStore((state) => ({
     integrations: state.integrations,
   }))
 
@@ -34,7 +34,7 @@ export function ToolsSidebarSection() {
       <SidebarSection title='Tools' actions={actions}>
         {integrations.map((integration) => (
           <ActiveIntegration
-            key={integration.id}
+            key={integration.name}
             integration={integration}
             onRemove={removeIntegration}
           />

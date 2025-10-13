@@ -3,7 +3,7 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
+import { MultiSelectInput } from '@latitude-data/web-ui/molecules/MultiSelectInput'
 
 export function EvaluationsSelector({
   project,
@@ -25,7 +25,7 @@ export function EvaluationsSelector({
 
   return (
     <div className='flex flex-col gap-3 w-1/2'>
-      <MultiSelect
+      <MultiSelectInput
         info='Leave empty to not run any evaluations'
         label='Evaluations'
         name='evaluations'

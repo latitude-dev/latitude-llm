@@ -1,11 +1,11 @@
 import { usePipedreamDynamicPropConfig } from '$/hooks/pipedreamProps/usePipedreamDynamicPropConfig'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
-import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
 import { cn } from '@latitude-data/web-ui/utils'
 import type { ConfigurableProp } from '@pipedream/sdk/browser'
 import { useMemo } from 'react'
 import { IntegrationDto } from '@latitude-data/core/schema/types'
 import { PipedreamComponent } from '@latitude-data/core/constants'
+import { MultiSelectInput } from '@latitude-data/web-ui/molecules/MultiSelectInput'
 
 export function isDynamicProp(prop: ConfigurableProp): boolean {
   if (prop.remoteOptions) return true
@@ -62,7 +62,7 @@ export default function DynamicPipedreamProp({
   if (prop.type.endsWith('[]')) {
     return (
       <div className={cn({ 'animate-pulse': isLoading })}>
-        <MultiSelect
+        <MultiSelectInput
           loading={!config}
           name={prop.name}
           required={!prop.optional}

@@ -1,9 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import {
-  SidebarEditorState,
-  useActiveIntegrationsStore,
-} from './useActiveIntegrationsStore'
+import { SidebarEditorState, useSidebarStore } from './useSidebarStore'
 import { useCurrentUrl } from '$/hooks/useCurrentUrl'
 import { useNavigate } from '$/hooks/useNavigate'
 import { executeFetch } from '$/hooks/useFetcher'
@@ -13,11 +10,15 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { UpdateDocumentContentResponse } from '@latitude-data/core/services/documents/updateDocumentContent/updateContent'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
-import { updateToolsFromActiveIntegrations } from '../../toolsHelpers/updateConfigWithActiveTools'
+import { updateToolsFromActiveIntegrations } from '../toolsHelpers/updateConfigWithActiveTools'
 import { trigger } from '$/lib/events'
 import { ResolvedMetadata } from '$/workers/readMetadata'
+import {
+  createRelativePath,
+  resolveRelativePath,
+} from '@latitude-data/constants'
 
-export function useActiveIntegrations() {
+export function usePromptConfigInSidebar() {
   const updateController = useRef<AbortController | null>(null)
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -30,27 +31,49 @@ export function useActiveIntegrations() {
     addTool,
     removeTool,
     removeIntegration: removeIntegrationFromStore,
-  } = useActiveIntegrationsStore((state) => ({
+    selectedAgents,
+    toggleAgent: toggleAgentInStore,
+  } = useSidebarStore((state) => ({
     addIntegration: state.addIntegration,
     addTool: state.addTool,
     removeTool: state.removeTool,
     removeIntegration: state.removeIntegration,
+    selectedAgents: state.selectedAgents,
+    toggleAgent: state.toggleAgent,
   }))
 
   const updateDocumentContent = useCallback(
-    async ({ state }: { state: SidebarEditorState }) => {
+    async ({
+      state,
+      agents,
+    }: {
+      state?: SidebarEditorState
+      agents?: string[]
+    }) => {
+      // Abort any pending update
       if (updateController.current) {
         updateController.current.abort()
       }
 
       updateController.current = new AbortController()
 
-      const updatedPrompt = updatePromptMetadata(document.content, {
-        tools: updateToolsFromActiveIntegrations({
+      const updates: Record<string, unknown> = {}
+
+      // Update tools if state is provided
+      if (state) {
+        updates.tools = updateToolsFromActiveIntegrations({
           currentTools: state.promptConfigTools,
           activeIntegrations: state.integrationsMap,
-        }),
-      })
+        })
+      }
+
+      // Update agents if provided
+      if (agents !== undefined) {
+        updates.agents = agents
+      }
+
+      const updatedPrompt = updatePromptMetadata(document.content, updates)
+
       await executeFetch<UpdateDocumentContentResponse>({
         method: 'POST',
         route: ROUTES.api.projects
@@ -85,6 +108,8 @@ export function useActiveIntegrations() {
       mutateDocumentUpdated,
     ],
   )
+
+  // Integration (Tools) methods
   const addNewIntegration = useCallback(
     ({
       integration,
@@ -141,60 +166,47 @@ export function useActiveIntegrations() {
     [removeIntegrationFromStore, updateDocumentContent],
   )
 
+  // Agent methods
+  const toggleAgent = useCallback(
+    (agentFullPath: string) => {
+      const selectedPath = selectedAgents.find((relativePath) => {
+        const absolutePath = resolveRelativePath(relativePath, document.path)
+        return absolutePath === agentFullPath
+      })
+
+      let newAgents: string[]
+      if (selectedPath) {
+        newAgents = selectedAgents.filter((path) => path !== selectedPath)
+        toggleAgentInStore(selectedPath)
+      } else {
+        const selectedRelativePath = createRelativePath(
+          agentFullPath,
+          document.path,
+        )
+        newAgents = [...selectedAgents, selectedRelativePath]
+        toggleAgentInStore(selectedRelativePath)
+      }
+
+      // Persist to document
+      updateDocumentContent({ agents: newAgents })
+    },
+    [selectedAgents, toggleAgentInStore, document.path, updateDocumentContent],
+  )
+
   return useMemo(
     () => ({
       addNewIntegration,
       addIntegrationTool,
       removeIntegrationTool,
       removeIntegration,
+      toggleAgent,
     }),
     [
       addNewIntegration,
       addIntegrationTool,
       removeIntegrationTool,
       removeIntegration,
+      toggleAgent,
     ],
   )
-}
-
-export function removeIntegrationFromActiveIntegrations({
-  activeIntegrations,
-  integrationName,
-  toolName,
-  integrationToolNames,
-}: {
-  activeIntegrations: any
-  integrationName: string
-  toolName: string
-  integrationToolNames: string[]
-}) {
-  if (!activeIntegrations[integrationName]) return activeIntegrations
-
-  if (toolName === '*') {
-    const { [integrationName]: _, ...rest } = activeIntegrations
-    return rest
-  }
-
-  if (activeIntegrations[integrationName] === true) {
-    // If it was '*', replace with all tools except the removed one
-    const remainingTools = integrationToolNames.filter((tn) => tn !== toolName)
-    if (remainingTools.length === 0) {
-      const { [integrationName]: _, ...rest } = activeIntegrations
-      return rest
-    }
-    return { ...activeIntegrations, [integrationName]: remainingTools }
-  }
-
-  if (!Array.isArray(activeIntegrations[integrationName]))
-    return activeIntegrations
-  const remaining = (activeIntegrations[integrationName] as string[]).filter(
-    (tn) => tn !== toolName,
-  )
-
-  if (remaining.length === 0) {
-    const { [integrationName]: _, ...rest } = activeIntegrations
-    return rest
-  }
-
-  return { ...activeIntegrations, [integrationName]: remaining }
 }

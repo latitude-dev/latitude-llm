@@ -1,7 +1,11 @@
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationType } from '@latitude-data/constants'
 import { ActiveIntegrations } from './types'
 import { getIntegrationData } from './utils'
+import { collectCustomTools } from './collectCustomTools'
+
+export const CUSTOM_TOOLS_INTEGRATION_NAME = 'custom-tools'
 
 /**
  * Collects tools from a prompt configuration and integrates them with existing active integrations.
@@ -38,6 +42,9 @@ export function collectTools({
   // For integrations in old map but not in new config, set tools to empty array
   Object.keys(preservedMap).forEach((integrationName) => {
     if (!newIntegrationsMap[integrationName]) {
+      // Skip custom tools integration - it's handled separately
+      if (integrationName === CUSTOM_TOOLS_INTEGRATION_NAME) return
+
       // Only keep if this integration still exists in workspace
       const stillExists = integrations.some((i) => i.name === integrationName)
       if (stillExists) {
@@ -52,6 +59,24 @@ export function collectTools({
       }
     }
   })
+
+  // Add custom tools as a special integration
+  const customToolNames = collectCustomTools(tools)
+  if (customToolNames.length > 0) {
+    preservedMap[CUSTOM_TOOLS_INTEGRATION_NAME] = {
+      id: -1, // Synthetic ID for custom tools
+      name: CUSTOM_TOOLS_INTEGRATION_NAME,
+      type: IntegrationType.Latitude, // Using Latitude type for inline custom tools
+      configuration: null,
+      icon: { type: 'icon', name: 'code' },
+      tools: customToolNames,
+      allToolNames: customToolNames,
+      isOpen: preservedMap[CUSTOM_TOOLS_INTEGRATION_NAME]?.isOpen ?? false,
+    }
+  } else {
+    // Remove custom tools integration if there are no custom tools
+    delete preservedMap[CUSTOM_TOOLS_INTEGRATION_NAME]
+  }
 
   return preservedMap
 }
