@@ -4,7 +4,6 @@ import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { useMemo } from 'react'
 import { type DocumentVersion } from '@latitude-data/core/schema/types'
-import { DocumentType } from '@latitude-data/core/constants'
 
 const docUrl = (projectId: number, commitUuid: string, uuid: string) =>
   ROUTES.projects
@@ -13,12 +12,7 @@ const docUrl = (projectId: number, commitUuid: string, uuid: string) =>
     .documents.detail({ uuid }).root
 
 /**
- * This hook generates the prompts in the sidebar that:
- * 1. Are not the current document
- * 2. Are of type `DocumentType.Prompt`
- *
- * This is used for the blocks editor and does not makes sense to include
- * documents of type `DocumentType.Agent`
+ * This hook generates the prompts in the sidebar
  */
 export function useIncludabledPrompts({
   project,
@@ -35,7 +29,7 @@ export function useIncludabledPrompts({
     return documents
       .filter(
         (doc) =>
-          doc.id !== document.id && doc.documentType === DocumentType.Prompt,
+          doc.id !== document.id,
       )
       .reduce(
         (acc, doc) => {

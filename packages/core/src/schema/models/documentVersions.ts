@@ -45,7 +45,7 @@ export const documentVersions = latitudeSchema.table(
     promptlVersion: integer('promptl_version').notNull().default(0),
     documentType: documentTypesEnum('document_type')
       .notNull()
-      .default(DocumentType.Prompt),
+      .default(DocumentType.Agent),
     datasetId: bigint('dataset_id', { mode: 'number' }).references(
       () => datasetsV1.id,
       { onDelete: 'set null' },

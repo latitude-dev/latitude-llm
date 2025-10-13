@@ -77,7 +77,7 @@ export function latitudePromptConfigSchema({
             : 'Invalid model value',
       }),
       temperature: z.number().min(0).max(2).optional(),
-      type: z.enum(['agent']).optional(),
+      type: z.enum(['agent', 'prompt']).optional(),
       name: z
         .string()
         .max(64, 'Name must be at most 64 characters')

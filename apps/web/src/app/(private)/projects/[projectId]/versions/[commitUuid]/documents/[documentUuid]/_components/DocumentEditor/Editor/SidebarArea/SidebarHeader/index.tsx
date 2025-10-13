@@ -11,10 +11,8 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { FancySwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { useDevMode } from '$/hooks/useDevMode'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
+import { PromptConfiguration } from '$/components/PromptConfiguration'
 import { useUpdateDocumentContent } from '../hooks/usePromptConfigInSidebar'
-
-// FIXME: Move inside here when editor sidebar is ready
-import { PromptConfiguration } from '../../PromptConfiguration'
 
 export function SidebarHeader({
   metadata,

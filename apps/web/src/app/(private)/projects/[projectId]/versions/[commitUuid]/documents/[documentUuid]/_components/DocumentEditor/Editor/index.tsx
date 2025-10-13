@@ -1,6 +1,5 @@
 'use client'
 
-import useFeature from '$/stores/useFeature'
 import { useCallback, useState } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -19,8 +18,6 @@ export default function DocumentEditor(props: {
   refinementEnabled: boolean
   showPreview?: boolean
 }) {
-  const { isEnabled, isLoading } = useFeature('editorSidebar')
-  const hasSidebar = isEnabled && !isLoading
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
@@ -70,7 +67,6 @@ export default function DocumentEditor(props: {
       <div className='flex flex-1 gap-x-8 min-h-0'>
         <div className='flex flex-1 h-full'>
           <DocumentEditorContentArea
-            freeRunsCount={props.freeRunsCount}
             refinementEnabled={props.refinementEnabled}
             setSelectedTab={setSelectedTab}
             isPlaygroundOpen={isPlaygroundOpen}
@@ -80,11 +76,9 @@ export default function DocumentEditor(props: {
             togglePlaygroundOpen={togglePlaygroundOpen}
           />
         </div>
-        {hasSidebar ? (
-          <div className='flex min-w-56 w-96 min-h-0 pr-2'>
-            <DocumentEditorSidebarArea freeRunsCount={props.freeRunsCount} />
-          </div>
-        ) : null}
+        <div className='flex min-w-56 w-96 min-h-0 pr-2'>
+          <DocumentEditorSidebarArea freeRunsCount={props.freeRunsCount} />
+        </div>
       </div>
     </div>
   )
