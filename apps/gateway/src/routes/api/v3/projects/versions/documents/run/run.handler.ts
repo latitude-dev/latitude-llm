@@ -18,7 +18,6 @@ import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 import type { Context } from 'hono'
 import { RunRoute } from './run.route'
-import { LatitudeApiError } from '@latitude-data/sdk'
 
 // https://github.com/honojs/middleware/issues/735
 // https://github.com/orgs/honojs/discussions/1803
