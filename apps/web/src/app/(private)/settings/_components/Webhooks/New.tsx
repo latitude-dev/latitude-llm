@@ -3,7 +3,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
+import { MultiSelectInput } from '@latitude-data/web-ui/molecules/MultiSelectInput'
 import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useRouter } from 'next/navigation'
@@ -71,7 +71,7 @@ export default function NewWebhook() {
           </div>
 
           <div className='py-2'>
-            <MultiSelect
+            <MultiSelectInput
               maxCount={2}
               description='You can filter webhook events by project to limit the scope of the notifications.'
               info='Leave empty to apply to all projects'

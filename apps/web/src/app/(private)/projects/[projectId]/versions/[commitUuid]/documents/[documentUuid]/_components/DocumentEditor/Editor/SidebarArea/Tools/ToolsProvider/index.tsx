@@ -1,5 +1,5 @@
 import { createContext, ReactNode } from 'react'
-import { SidebarEditorState } from '../hooks/useActiveIntegrationsStore'
+import { SidebarEditorState } from '../../hooks/useSidebarStore'
 
 type IToolsContext = {
   addIntegrationTool: (

@@ -3,10 +3,10 @@
  */
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useActiveIntegrationsStore } from './useActiveIntegrationsStore'
+import { useSidebarStore as useActiveIntegrationsStore } from './useSidebarStore'
 import { IntegrationType } from '@latitude-data/constants'
 import { IntegrationDto } from '@latitude-data/core/schema/types'
-import { ActiveIntegration } from '../../toolsHelpers/types'
+import { ActiveIntegration } from '../toolsHelpers/types'
 
 describe('useActiveIntegrationsStore', () => {
   // Helper to reset store state
@@ -149,6 +149,42 @@ describe('useActiveIntegrationsStore', () => {
 
       expect(result.current.integrations[0].name).toBe('google')
       expect(result.current.integrations[1].name).toBe('slack')
+    })
+
+    it('should collect custom tools as a special integration', () => {
+      const { result } = renderHook(() => useActiveIntegrationsStore())
+      const integrations = [mockIntegrationDto('google')]
+
+      act(() => {
+        result.current.buildIntegrations({
+          tools: [
+            'google/search',
+            {
+              get_weather: {
+                description: 'Get weather',
+              },
+            },
+            {
+              calculate_sum: {
+                description: 'Calculate sum',
+              },
+            },
+          ],
+          integrations,
+        })
+      })
+
+      expect(result.current.integrations).toHaveLength(2)
+      expect(result.current.integrations[0].name).toBe('google')
+      expect(result.current.integrations[1].name).toBe('custom-tools')
+      expect(result.current.integrations[1].tools).toEqual([
+        'get_weather',
+        'calculate_sum',
+      ])
+      expect(result.current.integrations[1].allToolNames).toEqual([
+        'get_weather',
+        'calculate_sum',
+      ])
     })
 
     it('should remove integrations not in new config', () => {

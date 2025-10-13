@@ -3,6 +3,7 @@
 import useFeature from '$/stores/useFeature'
 import { useCallback, useState } from 'react'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentTabSelector, TabValue } from '../../DocumentTabs/tabs'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
@@ -58,10 +59,12 @@ export default function DocumentEditor(props: {
           variant='ghost'
           onClick={toggleDocumentation}
           iconProps={{ name: 'code2', placement: 'right' }}
-          className='truncate hover:text-primary transition-colors'
+          className='truncate font-normal hover:text-primary transition-colors'
           userSelect={false}
         >
-          Deploy
+          <Text.H5 ellipsis noWrap>
+            Deploy this prompt
+          </Text.H5>
         </Button>
       </div>
       <div className='flex flex-1 gap-x-8 min-h-0'>

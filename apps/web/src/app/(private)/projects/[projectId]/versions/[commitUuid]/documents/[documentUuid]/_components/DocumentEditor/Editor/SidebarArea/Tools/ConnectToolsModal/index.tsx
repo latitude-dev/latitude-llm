@@ -23,9 +23,11 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { mergeConnectedAppsBySlug } from '@latitude-data/core/lib/pipedream/mergeConnectedAppsBySlug'
 import { ConnectPipedreamModal } from './ConnectPipedreamModal'
 import { AppDto } from '@latitude-data/core/constants'
-import { integrationOptions } from '../hooks/utils'
-import { getIntegrationData } from '../../toolsHelpers/utils'
-import { useActiveIntegrationsStore } from '../hooks/useActiveIntegrationsStore'
+import {
+  integrationOptions,
+  getIntegrationData,
+} from '../../toolsHelpers/utils'
+import { useSidebarStore } from '../../hooks/useSidebarStore'
 
 type ToolType = IntegrationType | 'UnConnectedPipedreamApp'
 
@@ -130,9 +132,7 @@ export function ConnectToolsModal({
   onCloseModal: () => void
   addNewIntegration: (args: { integration: any; toolName: string }) => void
 }) {
-  const activeIntegrations = useActiveIntegrationsStore(
-    (state) => state.integrations,
-  )
+  const activeIntegrations = useSidebarStore((state) => state.integrations)
   const [immediateQuery, setImmediateQuery] = useState('')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const debouncedSetSearchQuery = useDebouncedCallback(setSearchQuery, 500)

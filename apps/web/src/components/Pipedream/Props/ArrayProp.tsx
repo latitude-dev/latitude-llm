@@ -3,9 +3,9 @@ import type {
   ConfigurablePropStringArray,
 } from '@pipedream/sdk/browser'
 import { MultipleInput } from '@latitude-data/web-ui/molecules/MultipleInput'
-import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
 import { useMemo, useState } from 'react'
 import { getPropOptions } from '@latitude-data/core/helpers'
+import { MultiSelectInput } from '@latitude-data/web-ui/molecules/MultiSelectInput'
 
 export default function ArrayPipedreamProp<
   T extends 'text' | 'number' = 'text',
@@ -32,7 +32,7 @@ export default function ArrayPipedreamProp<
 
   if (options) {
     return (
-      <MultiSelect
+      <MultiSelectInput
         label={prop.label ?? prop.name}
         description={prop.description}
         onChange={(newValues: string[]) => {
