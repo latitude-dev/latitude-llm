@@ -59,7 +59,6 @@ export function runPresenter({
       : undefined
 
   const error = errorMessage ? new LatitudeError(errorMessage) : undefined
-
   if (error) {
     captureException(error)
     return Result.error(error)

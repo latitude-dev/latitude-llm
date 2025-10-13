@@ -6,7 +6,7 @@ import { captureException } from '$/common/tracer'
 import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
 import { LogSources } from '@latitude-data/core/constants'
-import { BadRequestError } from '@latitude-data/core/lib/errors'
+import { BadRequestError, LatitudeError } from '@latitude-data/core/lib/errors'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { isAbortError } from '@latitude-data/core/lib/isAbortError'
 import { buildClientToolHandlersMap } from '@latitude-data/core/lib/streamManager/clientTools/handlers'
@@ -18,6 +18,7 @@ import { BACKGROUND } from '@latitude-data/core/telemetry'
 import { streamSSE } from 'hono/streaming'
 import type { Context } from 'hono'
 import { RunRoute } from './run.route'
+import { LatitudeApiError } from '@latitude-data/sdk'
 
 // https://github.com/honojs/middleware/issues/735
 // https://github.com/orgs/honojs/discussions/1803
@@ -234,7 +235,11 @@ async function handleForegroundRun({
   const error = await result.error
   if (error) throw error
 
-  const body = runPresenter({ response: (await result.lastResponse)! }).unwrap()
+  const response = await result.lastResponse
+  if (!response)
+    throw new LatitudeError('Stream ended with no error and no content')
+
+  const body = runPresenter({ response }).unwrap()
 
   return c.json(body)
 }
