@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns } from 'drizzle-orm'
 import { DocumentTriggerEvent, DocumentTrigger } from '../schema/types'
 import { documentTriggerEvents } from '../schema/models/documentTriggerEvents'
 import Repository from './repositoryV2'
@@ -41,7 +41,7 @@ export class DocumentTriggerEventsRepository extends Repository<DocumentTriggerE
       query = query.limit(limit)
     }
 
-    const results = await query
+    const results = await query.orderBy(desc(documentTriggerEvents.id))
     return Result.ok(results as DocumentTriggerEvent[])
   }
 }

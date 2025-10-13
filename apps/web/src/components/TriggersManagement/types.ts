@@ -23,3 +23,10 @@ export type EditTriggerProps<T extends DocumentTriggerType> = {
   setConfiguration: ReactStateDispatch<DocumentTriggerConfiguration<T> | null>
   isUpdating: boolean
 }
+
+export type RunTriggerProps = {
+  trigger: DocumentTrigger
+  parameters: Record<string, unknown>
+  userMessage?: string
+  aiParameters?: boolean
+}

@@ -10,12 +10,12 @@ import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 export function useUpdateDocumentTrigger({
   triggerUuid,
-  onClose,
   document,
+  onClose,
 }: {
-  triggerUuid: string
-  onClose: () => void
+  triggerUuid: string | undefined
   document?: DocumentVersion
+  onClose: () => void
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()

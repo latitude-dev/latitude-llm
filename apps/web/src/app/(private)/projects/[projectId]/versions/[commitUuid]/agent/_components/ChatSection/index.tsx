@@ -1,17 +1,20 @@
 import { PlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import Chat from '../../../documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useRef, useState } from 'react'
 import { ChatInputBox } from '../../../documents/[documentUuid]/_components/DocumentEditor/Editor/ChatInputBox'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
+import { DocumentTrigger } from '@latitude-data/core/schema/types'
+import { ChatSectionHeader } from './Header'
 
 export function AgentChatSection({
+  activeTrigger,
   playground,
   parameters,
   hasActiveStream,
   abortCurrentStream,
   onClose,
 }: {
+  activeTrigger?: DocumentTrigger
   playground: PlaygroundChat
   parameters: Record<string, unknown>
   hasActiveStream: () => boolean
@@ -29,20 +32,9 @@ export function AgentChatSection({
       className='flex flex-col w-full h-full custom-scrollbar items-center'
       ref={ref}
     >
-      <div className='sticky top-0 flex flex-row w-full items-center justify-center'>
-        <Button
-          variant='ghost'
-          iconProps={{
-            name: 'chevronUp',
-          }}
-          fullWidth
-          onClick={onClose}
-        >
-          Back to agent
-        </Button>
-      </div>
-      <div className='flex-1 flex flex-col w-full max-w-[800px] flex-grow min-h-0 justify-between'>
-        <div className='flex-1 pb-20'>
+      <ChatSectionHeader activeTrigger={activeTrigger} onClose={onClose} />
+      <div className='flex-1 flex flex-col w-full flex-grow min-h-0 justify-between max-w-[800px]'>
+        <div className='flex-1 pt-8 pb-20'>
           <Chat
             showHeader
             playground={playground}

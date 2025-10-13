@@ -4,44 +4,25 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useRunDocument } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/hooks/useRunDocument'
 import { useCallback, useState } from 'react'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
 import { MainAgentSection } from './MainSection'
 import { AgentChatSection } from './ChatSection'
 import { cn } from '@latitude-data/web-ui/utils'
+import { RunProps } from './MainSection/types'
+import { DocumentTrigger } from '@latitude-data/core/schema/types'
 
 export function AgentPageWrapper() {
   const { commit } = useCurrentCommit()
 
   const [parameters, setParameters] = useState<Record<string, unknown>>({})
+  const [activeTrigger, setActiveTrigger] = useState<DocumentTrigger>()
 
   const { runDocument, addMessages, abortCurrentStream, hasActiveStream } =
     useRunDocument({
       commit,
     })
 
-  const runPromptFn = useCallback(
-    ({
-      document,
-      userMessage,
-      parameters = {},
-      aiParameters = false,
-    }: {
-      document: DocumentVersion
-      parameters: Record<string, unknown>
-      userMessage: string | undefined
-      aiParameters: boolean
-    }) =>
-      runDocument({
-        document,
-        parameters,
-        userMessage,
-        aiParameters,
-      }),
-    [runDocument],
-  )
-
   const playground = usePlaygroundChat({
-    runPromptFn,
+    runPromptFn: runDocument,
     addMessagesFn: addMessages,
     onPromptRan: (documentLogUuid, error) => {
       if (!documentLogUuid || error) return
@@ -50,16 +31,13 @@ export function AgentPageWrapper() {
 
   const onRunPrompt = useCallback(
     ({
+      trigger,
       document,
       parameters,
       userMessage,
       aiParameters,
-    }: {
-      document: DocumentVersion
-      parameters: Record<string, unknown>
-      userMessage: string
-      aiParameters: boolean
-    }) => {
+    }: RunProps) => {
+      setActiveTrigger(trigger)
       setParameters(parameters)
       playground.start({ document, parameters, userMessage, aiParameters })
     },
@@ -92,6 +70,7 @@ export function AgentPageWrapper() {
           })}
         >
           <AgentChatSection
+            activeTrigger={activeTrigger}
             playground={playground}
             parameters={parameters}
             onClose={() => playground.reset()}
