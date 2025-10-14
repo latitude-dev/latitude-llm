@@ -162,7 +162,7 @@ export default function useFetcher<
 >(
   route?: string,
   {
-    fallback = [],
+    fallback = [], // TODO: Fallback should not default to []. Some data fetching may expect an object instead of an array.
     serializer,
     searchParams,
     onSuccess,

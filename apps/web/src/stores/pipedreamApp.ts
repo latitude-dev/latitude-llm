@@ -23,6 +23,7 @@ export function usePipedreamApp(slugName: string | undefined) {
 
         return response.data
       },
+      fallback: null,
     },
   )
 

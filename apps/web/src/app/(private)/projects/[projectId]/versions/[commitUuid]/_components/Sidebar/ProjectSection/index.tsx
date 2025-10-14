@@ -94,10 +94,10 @@ export default function ProjectSection({
     () =>
       [
         {
-          label: 'Agent',
+          label: 'Home',
           route: ROUTES.projects
             .detail({ id: project.id })
-            .commits.detail({ uuid: commit.uuid }).agent.root,
+            .commits.detail({ uuid: commit.uuid }).home.root,
           iconName: 'bot',
         },
         runs.isEnabled && {

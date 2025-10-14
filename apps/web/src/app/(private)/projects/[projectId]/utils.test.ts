@@ -24,7 +24,7 @@ describe('getCommitUrl', () => {
       lastSeenCommitUuid: HEAD_COMMIT,
       PROJECT_ROUTE,
     })
-    expect(result).toBe('/projects/1/versions/live/agent')
+    expect(result).toBe('/projects/1/versions/live/home')
   })
 
   it('returns latest commit URL when lastSeenCommitUuid is not found and there is a head commit', () => {
@@ -34,7 +34,7 @@ describe('getCommitUrl', () => {
       lastSeenCommitUuid: 'non-existent',
       PROJECT_ROUTE,
     })
-    expect(result).toBe('/projects/1/versions/live/agent')
+    expect(result).toBe('/projects/1/versions/live/home')
   })
 
   it('returns specific commit URL when lastSeenCommitUuid is found', () => {
@@ -44,7 +44,7 @@ describe('getCommitUrl', () => {
       lastSeenCommitUuid: '2',
       PROJECT_ROUTE,
     })
-    expect(result).toBe('/projects/1/versions/2/agent')
+    expect(result).toBe('/projects/1/versions/2/home')
   })
 
   it('returns latest commit URL when there is a head commit and no lastSeenCommitUuid', () => {
@@ -54,7 +54,7 @@ describe('getCommitUrl', () => {
       lastSeenCommitUuid: undefined,
       PROJECT_ROUTE,
     })
-    expect(result).toBe('/projects/1/versions/live/agent')
+    expect(result).toBe('/projects/1/versions/live/home')
   })
 
   it('returns first commit URL when there is no head commit and no lastSeenCommitUuid', () => {
@@ -66,7 +66,7 @@ describe('getCommitUrl', () => {
       lastSeenCommitUuid: undefined,
       PROJECT_ROUTE,
     })
-    expect(result).toBe('/projects/1/versions/1/agent')
+    expect(result).toBe('/projects/1/versions/1/home')
   })
 
   it('throws NotFoundError when there are no commits', () => {

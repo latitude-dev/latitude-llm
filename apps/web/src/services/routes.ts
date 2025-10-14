@@ -169,24 +169,11 @@ export const ROUTES = {
             const rootDocuments = `${root}/documents`
             return {
               root,
-              agent: {
-                root: `${root}/agent`,
+              home: {
+                root: `${root}/home`,
               },
               overview: {
                 root: `${root}/overview`,
-              },
-              preview: {
-                root: `${root}/preview`,
-                triggers: {
-                  new: {
-                    root: `${root}/preview/triggers/new`,
-                  },
-                  edit: (triggerUuid: string) => {
-                    return {
-                      root: `${root}/preview/triggers/${triggerUuid}/edit`,
-                    }
-                  },
-                },
               },
               analytics: {
                 root: `${root}/analytics`,
