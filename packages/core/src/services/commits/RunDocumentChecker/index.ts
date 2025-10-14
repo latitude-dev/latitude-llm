@@ -204,6 +204,7 @@ export class RunDocumentChecker {
           return Result.nil()
         }
         if (typeof value !== 'string') return Result.nil()
+        if (!value) return Result.nil() // File type with empty string or undefined
 
         const fileResult = await this.getFileMetadata(value)
         if (fileResult.error) return fileResult

@@ -218,5 +218,41 @@ Hello, world!
       const stepResult = await chain.step()
       expect(stepResult.messages).toBeDefined()
     })
+
+    it('handles file parameters with empty string url', async () => {
+      const { document } = await buildData()
+
+      // Create a prompt with a file parameter that is not provided
+      const promptWithFileParam = `
+---
+provider: openai
+model: gpt-4o
+parameters:
+  myFile:
+    type: file
+    description: A file parameter
+---
+
+Hello, world!
+`
+
+      const checker = new RunDocumentChecker({
+        document,
+        errorableUuid: 'test-uuid',
+        prompt: promptWithFileParam,
+        parameters: { myFile: '' }, // No file parameter provided
+      })
+
+      const result = await checker.call()
+
+      expect(result.error).toBeUndefined()
+      expect(result.value).toBeDefined()
+
+      const chain = result.unwrap().chain
+      expect(chain).toBeDefined()
+
+      const stepResult = await chain.step()
+      expect(stepResult.messages).toBeDefined()
+    })
   })
 })
