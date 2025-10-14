@@ -44,42 +44,46 @@ export function OnboardingClient({
   })
 
   return (
-    <div className='flex flex-row flex-1 items-start'>
-      <AgentOnboardingNavbar
-        onboardingSteps={onboardingSteps}
-        executeCompleteOnboarding={executeCompleteOnboarding}
-        currentStep={currentStep}
-        isLoadingOnboarding={isLoadingOnboarding}
-      />
-      <div className='flex-row flex-1 h-full'>
-        {currentStep === OnboardingStepKey.SetupIntegrations && (
-          <OnboardingStep.Root>
-            <SetupIntegrationsHeader />
-            <SetupIntegrationsBody
-              moveNextOnboardingStep={moveNextOnboardingStep}
-            />
-          </OnboardingStep.Root>
-        )}
-        {currentStep === OnboardingStepKey.ConfigureTriggers && (
-          <OnboardingStep.Root>
-            <ConfigureTriggersHeader />
-            <ConfigureTriggersBody
-              moveNextOnboardingStep={moveNextOnboardingStep}
-            />
-          </OnboardingStep.Root>
-        )}
-        {(currentStep === OnboardingStepKey.TriggerAgent ||
-          currentStep === OnboardingStepKey.RunAgent) && (
-          <PlaygroundSteps
-            moveNextOnboardingStep={moveNextOnboardingStep}
-            setActiveTrigger={setActiveTrigger}
-            currentStep={currentStep}
+    <MetadataProvider>
+      <PlaygroundProvider>
+        <div className='flex flex-row flex-1 items-start'>
+          <AgentOnboardingNavbar
+            onboardingSteps={onboardingSteps}
             executeCompleteOnboarding={executeCompleteOnboarding}
-            activeTrigger={activeTrigger}
+            currentStep={currentStep}
+            isLoadingOnboarding={isLoadingOnboarding}
           />
-        )}
-      </div>
-    </div>
+          <div className='flex-row flex-1 h-full'>
+            {currentStep === OnboardingStepKey.SetupIntegrations && (
+              <OnboardingStep.Root>
+                <SetupIntegrationsHeader />
+                <SetupIntegrationsBody
+                  moveNextOnboardingStep={moveNextOnboardingStep}
+                />
+              </OnboardingStep.Root>
+            )}
+            {currentStep === OnboardingStepKey.ConfigureTriggers && (
+              <OnboardingStep.Root>
+                <ConfigureTriggersHeader />
+                <ConfigureTriggersBody
+                  moveNextOnboardingStep={moveNextOnboardingStep}
+                />
+              </OnboardingStep.Root>
+            )}
+            {(currentStep === OnboardingStepKey.TriggerAgent ||
+              currentStep === OnboardingStepKey.RunAgent) && (
+              <PlaygroundSteps
+                moveNextOnboardingStep={moveNextOnboardingStep}
+                setActiveTrigger={setActiveTrigger}
+                currentStep={currentStep}
+                executeCompleteOnboarding={executeCompleteOnboarding}
+                activeTrigger={activeTrigger}
+              />
+            )}
+          </div>
+        </div>
+      </PlaygroundProvider>
+    </MetadataProvider>
   )
 }
 
@@ -107,27 +111,25 @@ function PlaygroundSteps({
   activeTrigger: ActiveTrigger
 }) {
   return (
-    <MetadataProvider>
-      <PlaygroundProvider>
-        {currentStep === OnboardingStepKey.TriggerAgent && (
-          <OnboardingStep.Root>
-            <TriggerAgentHeader />
-            <TriggerAgentBody
-              moveNextOnboardingStep={moveNextOnboardingStep}
-              setActiveTrigger={setActiveTrigger}
-            />
-          </OnboardingStep.Root>
-        )}
-        {currentStep === OnboardingStepKey.RunAgent && (
-          <OnboardingStep.Root>
-            <RunAgentHeader />
-            <RunAgentBody
-              executeCompleteOnboarding={executeCompleteOnboarding}
-              activeTrigger={activeTrigger}
-            />
-          </OnboardingStep.Root>
-        )}
-      </PlaygroundProvider>
-    </MetadataProvider>
+    <>
+      {currentStep === OnboardingStepKey.TriggerAgent && (
+        <OnboardingStep.Root>
+          <TriggerAgentHeader />
+          <TriggerAgentBody
+            moveNextOnboardingStep={moveNextOnboardingStep}
+            setActiveTrigger={setActiveTrigger}
+          />
+        </OnboardingStep.Root>
+      )}
+      {currentStep === OnboardingStepKey.RunAgent && (
+        <OnboardingStep.Root>
+          <RunAgentHeader />
+          <RunAgentBody
+            executeCompleteOnboarding={executeCompleteOnboarding}
+            activeTrigger={activeTrigger}
+          />
+        </OnboardingStep.Root>
+      )}
+    </>
   )
 }

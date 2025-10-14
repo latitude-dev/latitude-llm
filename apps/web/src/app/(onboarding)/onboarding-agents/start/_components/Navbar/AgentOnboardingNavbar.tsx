@@ -13,7 +13,7 @@ import { useCurrentWorkspace } from '$/app/providers/WorkspaceProvider'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { publishEventAction } from '$/actions/events/publishEventAction'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
-
+import { usePlayground } from '../../lib/PlaygroundProvider'
 export default function AgentOnboardingNavbar({
   onboardingSteps,
   currentStep,
@@ -35,13 +35,14 @@ export default function AgentOnboardingNavbar({
   const { project } = useCurrentProject()
   const { workspace } = useCurrentWorkspace()
   const { commit } = useCurrentCommit()
+  const { abortCurrentStream } = usePlayground()
 
   const skipOnboarding = useCallback(() => {
-    //TODO(onboarding): review this logic and see if we can stop the playground stream here
     executeCompleteOnboarding({
       projectId: project.id,
       commitUuid: commit.uuid,
     })
+    abortCurrentStream()
     publishEvent({
       eventType: 'agentOnboardingSkipped',
       payload: {
@@ -54,6 +55,7 @@ export default function AgentOnboardingNavbar({
     workspace.id,
     project.id,
     commit.uuid,
+    abortCurrentStream,
   ])
 
   const ONBOARDING_STEPS = Object.entries(ONBOARDING_STEP_CONTENT)

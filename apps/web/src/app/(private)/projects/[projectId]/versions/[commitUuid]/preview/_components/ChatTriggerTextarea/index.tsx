@@ -191,6 +191,7 @@ export function ChatTriggerTextarea({
   options: SelectOption<string>[]
   onChange: (value: string) => void
 }) {
+  // TODO: This is a hack to refresh the prompt metadata when the document changes but we shouldnt have to do this. We have to review how the metadata is handled and refactor it.
   useRefreshPromptMetadata({
     value: activeDocument.content,
     document: activeDocument,
@@ -254,8 +255,6 @@ export function ChatTriggerTextarea({
     },
     [handleRunTrigger],
   )
-
-  console.log('parameters', parameters)
 
   return (
     <div className='bg-background flex flex-col gap-y-4'>
