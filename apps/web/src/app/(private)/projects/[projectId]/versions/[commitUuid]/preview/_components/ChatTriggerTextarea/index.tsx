@@ -138,10 +138,8 @@ function DocumentParameters({
 }
 
 function useDocumentParametersList({
-  chatTrigger,
   document,
 }: {
-  chatTrigger: DocumentTrigger<DocumentTriggerType.Chat>
   document: DocumentVersion
 }) {
   const { commit } = useCurrentCommit()
@@ -155,19 +153,15 @@ function useDocumentParametersList({
   const [parameters, setParameters] = useState<ParametersState>(
     buildParamatersFromInputs({ inputs }),
   )
-  useEffect(() => {
-    if (document.documentUuid !== chatTrigger.documentUuid) {
-      setParameters(buildParamatersFromInputs({ inputs }))
-    }
-  }, [document, chatTrigger, inputs])
 
-  return useMemo(
-    () => ({
-      parameters,
-      setParameters,
-    }),
-    [parameters, setParameters],
-  )
+  useEffect(() => {
+    setParameters(buildParamatersFromInputs({ inputs }))
+  }, [inputs])
+
+  return {
+    parameters,
+    setParameters,
+  }
 }
 
 export function ChatTriggerTextarea({
@@ -197,6 +191,7 @@ export function ChatTriggerTextarea({
     projectId: project.id,
     commitUuid: commit.uuid,
   })
+
   const document = useMemo(
     () =>
       documents?.find((d) => d.documentUuid === activeTrigger.documentUuid) ??
@@ -212,7 +207,6 @@ export function ChatTriggerTextarea({
   )
   const ref = useRef<HTMLTextAreaElement>(null)
   const { parameters, setParameters } = useDocumentParametersList({
-    chatTrigger,
     document,
   })
   const handleRunTrigger = useCallback(() => {

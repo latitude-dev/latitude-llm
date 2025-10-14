@@ -1,39 +1,39 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import SetupQuestionnaireOptions from './SetupQuestionnaireOptions'
+import SetupFormOptions from './SetupFormOptions'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 
-export enum QuestionnaireOptionIds {
+export enum OnboardingFormOptionIds {
   buildAgents = 'Build AI Agents',
   promptEngineering = 'Prompt Engineering',
 }
 const options = [
   {
-    title: QuestionnaireOptionIds.buildAgents,
+    title: OnboardingFormOptionIds.buildAgents,
     description:
       "I want to use Latitude's advance agent building tools to optimise routine tasks.",
   },
   {
-    title: QuestionnaireOptionIds.promptEngineering,
+    title: OnboardingFormOptionIds.promptEngineering,
     description:
       'I want to use Latitude to build, test & implement bulletproof prompts for LLMs',
   },
 ]
 
-export default function SetupQuestionnaire() {
-  const [selectedOption, setSelectedOption] = useState<QuestionnaireOptionIds>(
-    QuestionnaireOptionIds.buildAgents,
+export default function SetupForm() {
+  const [selectedOption, setSelectedOption] = useState<OnboardingFormOptionIds>(
+    OnboardingFormOptionIds.buildAgents,
   )
 
   const { executeCreatePromptEngineeringResources } = useWorkspaceOnboarding()
 
   const router = useNavigate()
   const startOnboardingBasedOnOption = useCallback(() => {
-    if (selectedOption === QuestionnaireOptionIds.buildAgents) {
+    if (selectedOption === OnboardingFormOptionIds.buildAgents) {
       return router.push(ROUTES.onboarding.agents.selectAgent)
     }
     executeCreatePromptEngineeringResources()
@@ -43,7 +43,7 @@ export default function SetupQuestionnaire() {
     <div className='flex flex-col gap-y-8'>
       <div className='flex flex-col gap-y-2'>
         {options.map((option, index) => (
-          <SetupQuestionnaireOptions
+          <SetupFormOptions
             key={index}
             title={option.title}
             description={option.description}

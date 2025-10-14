@@ -6,6 +6,7 @@ import {
 import { ROUTES } from '$/services/routes'
 import { OnboardingClient } from './_components/OnboardingClient'
 import { redirect } from 'next/navigation'
+import { PageTrackingWrapper } from '$/components/PageTrackingWrapper'
 
 export default async function NocodersPage() {
   const isCompleted = await isOnboardingCompleted()
@@ -19,5 +20,9 @@ export default async function NocodersPage() {
 
   const onboardingSteps = await getNecessaryOnboardingSteps()
 
-  return <OnboardingClient onboardingSteps={onboardingSteps} />
+  return (
+    <PageTrackingWrapper namePageVisited='agentOnboarding'>
+      <OnboardingClient onboardingSteps={onboardingSteps} />
+    </PageTrackingWrapper>
+  )
 }

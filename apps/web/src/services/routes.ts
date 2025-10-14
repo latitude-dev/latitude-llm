@@ -260,7 +260,7 @@ export const ROUTES = {
   auth: {
     setup: {
       root: PUBLIC_ROOT_PATHS.setup,
-      questionnaire: `${PUBLIC_ROOT_PATHS.setup}/questionnaire`,
+      form: `${PUBLIC_ROOT_PATHS.setup}/form`,
     },
     login: PUBLIC_ROOT_PATHS.login,
     magicLinkSent: (email: string) =>

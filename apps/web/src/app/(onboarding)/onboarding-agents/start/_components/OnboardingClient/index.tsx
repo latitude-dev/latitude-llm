@@ -1,6 +1,6 @@
 'use client'
 
-import NocodersNavbar from '../Navbar/NocodersNavbar'
+import AgentOnboardingNavbar from '../Navbar/AgentOnboardingNavbar'
 import {
   SetupIntegrationsHeader,
   SetupIntegrationsBody,
@@ -20,6 +20,7 @@ import {
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersList'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding-agents/start/lib/OnboardingStep'
 import { PlaygroundProvider } from '../../lib/PlaygroundProvider'
+import { MetadataProvider } from '$/components/MetadataProvider'
 
 export function OnboardingClient({
   onboardingSteps,
@@ -43,42 +44,46 @@ export function OnboardingClient({
   })
 
   return (
-    <div className='flex flex-row flex-1 items-start'>
-      <NocodersNavbar
-        onboardingSteps={onboardingSteps}
-        executeCompleteOnboarding={executeCompleteOnboarding}
-        currentStep={currentStep}
-        isLoadingOnboarding={isLoadingOnboarding}
-      />
-      <div className='flex-row flex-1 h-full'>
-        {currentStep === OnboardingStepKey.SetupIntegrations && (
-          <OnboardingStep.Root>
-            <SetupIntegrationsHeader />
-            <SetupIntegrationsBody
-              moveNextOnboardingStep={moveNextOnboardingStep}
-            />
-          </OnboardingStep.Root>
-        )}
-        {currentStep === OnboardingStepKey.ConfigureTriggers && (
-          <OnboardingStep.Root>
-            <ConfigureTriggersHeader />
-            <ConfigureTriggersBody
-              moveNextOnboardingStep={moveNextOnboardingStep}
-            />
-          </OnboardingStep.Root>
-        )}
-        {(currentStep === OnboardingStepKey.TriggerAgent ||
-          currentStep === OnboardingStepKey.RunAgent) && (
-          <PlaygroundSteps
-            moveNextOnboardingStep={moveNextOnboardingStep}
-            setActiveTrigger={setActiveTrigger}
-            currentStep={currentStep}
+    <MetadataProvider>
+      <PlaygroundProvider>
+        <div className='flex flex-row flex-1 items-start'>
+          <AgentOnboardingNavbar
+            onboardingSteps={onboardingSteps}
             executeCompleteOnboarding={executeCompleteOnboarding}
-            activeTrigger={activeTrigger}
+            currentStep={currentStep}
+            isLoadingOnboarding={isLoadingOnboarding}
           />
-        )}
-      </div>
-    </div>
+          <div className='flex-row flex-1 h-full'>
+            {currentStep === OnboardingStepKey.SetupIntegrations && (
+              <OnboardingStep.Root>
+                <SetupIntegrationsHeader />
+                <SetupIntegrationsBody
+                  moveNextOnboardingStep={moveNextOnboardingStep}
+                />
+              </OnboardingStep.Root>
+            )}
+            {currentStep === OnboardingStepKey.ConfigureTriggers && (
+              <OnboardingStep.Root>
+                <ConfigureTriggersHeader />
+                <ConfigureTriggersBody
+                  moveNextOnboardingStep={moveNextOnboardingStep}
+                />
+              </OnboardingStep.Root>
+            )}
+            {(currentStep === OnboardingStepKey.TriggerAgent ||
+              currentStep === OnboardingStepKey.RunAgent) && (
+              <PlaygroundSteps
+                moveNextOnboardingStep={moveNextOnboardingStep}
+                setActiveTrigger={setActiveTrigger}
+                currentStep={currentStep}
+                executeCompleteOnboarding={executeCompleteOnboarding}
+                activeTrigger={activeTrigger}
+              />
+            )}
+          </div>
+        </div>
+      </PlaygroundProvider>
+    </MetadataProvider>
   )
 }
 
@@ -96,11 +101,17 @@ function PlaygroundSteps({
   }) => void
   setActiveTrigger: (trigger: ActiveTrigger) => void
   currentStep: OnboardingStepKey
-  executeCompleteOnboarding: () => void
+  executeCompleteOnboarding: ({
+    projectId,
+    commitUuid,
+  }: {
+    projectId: number
+    commitUuid: string
+  }) => void
   activeTrigger: ActiveTrigger
 }) {
   return (
-    <PlaygroundProvider>
+    <>
       {currentStep === OnboardingStepKey.TriggerAgent && (
         <OnboardingStep.Root>
           <TriggerAgentHeader />
@@ -119,6 +130,6 @@ function PlaygroundSteps({
           />
         </OnboardingStep.Root>
       )}
-    </PlaygroundProvider>
+    </>
   )
 }

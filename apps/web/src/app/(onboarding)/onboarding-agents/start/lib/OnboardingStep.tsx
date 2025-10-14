@@ -2,14 +2,16 @@ import { ReactNode } from 'react'
 
 function OnboardingStepRoot({ children }: { children: ReactNode }) {
   return (
-    <div className='flex flex-col h-full items-center p-16 gap-10'>
+    <div className='flex flex-col h-full w-full items-center p-16 gap-10'>
       {children}
     </div>
   )
 }
 
 function OnboardingStepBody({ children }: { children: ReactNode }) {
-  return <div className='flex flex-col items-center gap-10'>{children}</div>
+  return (
+    <div className='flex flex-col items-center gap-10 w-full'>{children}</div>
+  )
 }
 
 function OnboardingStepHeader({ children }: { children: ReactNode }) {

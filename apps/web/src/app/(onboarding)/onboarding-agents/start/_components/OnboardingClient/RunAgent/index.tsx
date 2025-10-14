@@ -4,8 +4,6 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import Chat from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
 import { ActiveTrigger } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersList'
-import { redirect } from 'next/navigation'
-import { ROUTES } from '$/services/routes'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
@@ -13,6 +11,9 @@ import { StatusIndicator } from '$/components/PlaygroundCommon/StatusIndicator'
 import { OnboardingStep } from '../../../lib/OnboardingStep'
 import { usePlayground } from '../../../lib/PlaygroundProvider'
 import { IsLoadingOnboardingItem } from '../../../lib/IsLoadingOnboardingItem'
+import { useCurrentWorkspace } from '$/app/providers/WorkspaceProvider'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { publishEventAction } from '$/actions/events/publishEventAction'
 
 export function RunAgentHeader() {
   const { playground, hasActiveStream } = usePlayground()
@@ -58,22 +59,40 @@ export function RunAgentBody({
   executeCompleteOnboarding,
   activeTrigger,
 }: {
-  executeCompleteOnboarding: () => void
+  executeCompleteOnboarding: ({
+    projectId,
+    commitUuid,
+  }: {
+    projectId: number
+    commitUuid: string
+  }) => void
   activeTrigger: ActiveTrigger
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
+  const { workspace } = useCurrentWorkspace()
   const { playground, hasActiveStream, abortCurrentStream } = usePlayground()
-
+  const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const handleNext = useCallback(() => {
-    executeCompleteOnboarding()
+    executeCompleteOnboarding({
+      projectId: project.id,
+      commitUuid: commit.uuid,
+    })
     abortCurrentStream()
-    redirect(
-      ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({ uuid: commit.uuid }).preview.root,
-    )
-  }, [executeCompleteOnboarding, project, commit, abortCurrentStream])
+    publishEvent({
+      eventType: 'agentOnboardingCompleted',
+      payload: {
+        workspaceId: workspace.id,
+      },
+    })
+  }, [
+    executeCompleteOnboarding,
+    project,
+    commit,
+    abortCurrentStream,
+    workspace.id,
+    publishEvent,
+  ])
 
   const containerRef = useRef<HTMLDivElement | null>(null)
 

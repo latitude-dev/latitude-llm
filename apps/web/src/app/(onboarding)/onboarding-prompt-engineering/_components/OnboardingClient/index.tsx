@@ -9,18 +9,15 @@ import { useRunOnboardingPrompt } from '$/app/(onboarding)/onboarding-prompt-eng
 import { OnboardingPromptStep } from '$/app/(onboarding)/onboarding-prompt-engineering/_components/OnboardingClient/PromptStep'
 import { ExperimentStep } from '$/app/(onboarding)/onboarding-prompt-engineering/_components/OnboardingClient/ExperimentStep'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
-import {
-  DocumentVersion,
-  Project,
-  Commit,
-  Dataset,
-} from '@latitude-data/core/schema/types'
+import { DocumentVersion, Dataset } from '@latitude-data/core/schema/types'
+import { useCurrentWorkspace } from '$/app/providers/WorkspaceProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { publishEventAction } from '$/actions/events/publishEventAction'
 
 type OnboardingStep1ContentProps = {
-  workspaceName: string
   document: DocumentVersion
-  project: Project
-  commit: Commit
   dataset: Dataset
 }
 
@@ -30,12 +27,13 @@ export enum OnboardingStep {
 }
 
 export function OnboardingClient({
-  workspaceName,
   document,
-  project,
-  commit,
   dataset,
 }: OnboardingStep1ContentProps) {
+  const { workspace } = useCurrentWorkspace()
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(
     OnboardingStep.ShowPrompt,
   )
@@ -48,15 +46,25 @@ export function OnboardingClient({
     setCurrentStep,
   })
 
+  const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const { executeCompleteOnboarding } = useWorkspaceOnboarding()
 
   const onCompleteOnboarding = useCallback(
     async ({ experimentUuids }: { experimentUuids: string[] }) => {
-      await executeCompleteOnboarding()
+      await executeCompleteOnboarding({
+        projectId: project.id,
+        commitUuid: commit.uuid,
+      })
       toast({
         title: 'Experiment started!',
         description:
           "Welcome onboard! Let's check out the results of your experiment",
+      })
+      publishEvent({
+        eventType: 'promptEngineeringOnboardingCompleted',
+        payload: {
+          workspaceId: workspace.id,
+        },
       })
       setTimeout(async () => {
         navigate.push(
@@ -75,6 +83,8 @@ export function OnboardingClient({
       commit.uuid,
       document.documentUuid,
       toast,
+      workspace.id,
+      publishEvent,
     ],
   )
 
@@ -85,7 +95,7 @@ export function OnboardingClient({
           Welcome to Latitude!
         </Text.H2B>
         <Text.H5 centered display='block' color='foregroundMuted'>
-          Hello {workspaceName || 'there'}! Let's cover some Latitude basics.
+          Hello {workspace.name || 'there'}! Let's cover some Latitude basics.
         </Text.H5>
       </div>
 
@@ -101,8 +111,6 @@ export function OnboardingClient({
 
           <ExperimentStep
             document={document}
-            project={project}
-            commit={commit}
             dataset={dataset}
             currentStep={currentStep}
             messages={messages}

@@ -1,35 +1,62 @@
 import { Fragment, useCallback } from 'react'
-import { NavbarItem } from './NavbarItem'
+import { AgentNavbarItem } from './AgentNavbarItem'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { cn } from '@latitude-data/web-ui/utils'
 import { StatusFlagState } from '@latitude-data/web-ui/molecules/StatusFlag'
-import { ROUTES } from '$/services/routes'
 import { ONBOARDING_STEP_CONTENT } from '../../constants'
 import { calculateState } from './calculateState'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { redirect } from 'next/navigation'
-
-export default function NocodersNavbar({
+import { useCurrentWorkspace } from '$/app/providers/WorkspaceProvider'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { publishEventAction } from '$/actions/events/publishEventAction'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { usePlayground } from '../../lib/PlaygroundProvider'
+export default function AgentOnboardingNavbar({
   onboardingSteps,
   currentStep,
   isLoadingOnboarding,
   executeCompleteOnboarding,
 }: {
   onboardingSteps: OnboardingStepKey[]
-  executeCompleteOnboarding: () => void
+  executeCompleteOnboarding: ({
+    projectId,
+    commitUuid,
+  }: {
+    projectId: number
+    commitUuid: string
+  }) => void
   currentStep: OnboardingStepKey | undefined | null // TODO(onboarding): remove null when data migration is done
   isLoadingOnboarding: boolean
 }) {
+  const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const { project } = useCurrentProject()
+  const { workspace } = useCurrentWorkspace()
+  const { commit } = useCurrentCommit()
+  const { abortCurrentStream } = usePlayground()
 
   const skipOnboarding = useCallback(() => {
-    //TODO(onboarding): review this logic and see if we can stop the playground stream here
-    executeCompleteOnboarding()
-    redirect(ROUTES.dashboard.root)
-  }, [executeCompleteOnboarding])
+    executeCompleteOnboarding({
+      projectId: project.id,
+      commitUuid: commit.uuid,
+    })
+    abortCurrentStream()
+    publishEvent({
+      eventType: 'agentOnboardingSkipped',
+      payload: {
+        workspaceId: workspace.id,
+      },
+    })
+  }, [
+    executeCompleteOnboarding,
+    publishEvent,
+    workspace.id,
+    project.id,
+    commit.uuid,
+    abortCurrentStream,
+  ])
 
   const ONBOARDING_STEPS = Object.entries(ONBOARDING_STEP_CONTENT)
   const isLast = ONBOARDING_STEPS.length - 1
@@ -49,7 +76,7 @@ export default function NocodersNavbar({
             {filteredNavbarSteps.map(([key, item], index) => (
               <Fragment key={index}>
                 <div className={cn(currentStep === key ? '' : 'opacity-70')}>
-                  <NavbarItem
+                  <AgentNavbarItem
                     title={item.title}
                     description={item.description}
                     state={
