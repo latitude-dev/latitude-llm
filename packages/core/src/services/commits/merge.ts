@@ -56,7 +56,7 @@ export async function mergeCommit(
       transaction,
     )
     if (recomputedResults.error) return recomputedResults
-    const documentChanges = recomputedResults.unwrap().changedDocuments
+    const { changedDocuments, mainDocumentChanged } = recomputedResults.unwrap()
 
     if (Object.keys(recomputedResults.value.errors).length > 0) {
       return Result.error(
@@ -84,9 +84,9 @@ export async function mergeCommit(
     const triggerChanges = triggerChangesResult.unwrap()
 
     const totalChanges =
-      evaluationChanges.length + triggerChanges.length + documentChanges.length
+      evaluationChanges.length + triggerChanges.length + changedDocuments.length
 
-    if (totalChanges === 0) {
+    if (totalChanges === 0 && !mainDocumentChanged) {
       return Result.error(
         new UnprocessableEntityError(
           'Cannot publish a version with no changes.',

@@ -7,6 +7,7 @@ import { Commit } from '@latitude-data/core/schema/types'
 const NO_CHANGES = {
   anyChanges: false,
   hasIssues: false,
+  mainDocumentUuid: undefined,
   documents: {
     hasErrors: false,
     all: [],

@@ -16,6 +16,7 @@ import { ChangesList } from './ChangesList'
 import { ChangeDiff } from './ChangeDiff'
 import { TriggerChangesList } from './TriggerChangesList'
 import { CommitStatus } from '@latitude-data/core/constants'
+import { MainDocumentChange } from './MainDocumentChange'
 
 function BlankSlateSelection() {
   return (
@@ -142,6 +143,9 @@ export default function PublishDraftCommitModal({
               className='resize-none'
             />
           </FormWrapper>
+          {commit && changes.mainDocumentUuid !== undefined && (
+            <MainDocumentChange commit={commit!} />
+          )}
           <ChangesList
             anyChanges={anyChanges}
             selected={selectedChange}

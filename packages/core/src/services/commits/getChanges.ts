@@ -96,6 +96,13 @@ export async function getCommitChanges(
   transaction = new Transaction(),
 ): PromisedResult<CommitChanges> {
   return transaction.call(async (tx) => {
+    const commitsRepository = new CommitsRepository(workspace.id, tx)
+    const previousCommit = await commitsRepository.getPreviousCommit(commit)
+
+    // Check if mainDocumentUuid changed
+    const mainDocumentChanged =
+      previousCommit?.mainDocumentUuid !== commit.mainDocumentUuid
+
     // Get document changes
     let documentChanges: ChangedDocument[]
     if (!commit.mergedAt) {
@@ -106,8 +113,6 @@ export async function getCommitChanges(
       if (draftResult.error) return Result.error(draftResult.error)
       documentChanges = draftResult.value
     } else {
-      const commitsRepository = new CommitsRepository(workspace.id, tx)
-      const previousCommit = await commitsRepository.getPreviousCommit(commit)
       const documentsRepository = new DocumentVersionsRepository(
         workspace.id,
         tx,
@@ -158,9 +163,18 @@ export async function getCommitChanges(
 
     const hasErrors = documentsWithErrors.length > 0
     const hasPending = pendingTriggers.length > 0
+
+    const anyChanges =
+      allTriggers.length > 0 ||
+      documentChanges.length > 0 ||
+      mainDocumentChanged
+
     return Result.ok({
-      anyChanges: allTriggers.length > 0 || documentChanges.length > 0,
+      anyChanges,
       hasIssues: hasErrors || hasPending,
+      mainDocumentUuid: mainDocumentChanged
+        ? commit.mainDocumentUuid // new main document uuid (or null if it was removed)
+        : undefined, // no change
       documents: {
         hasErrors,
         all: documentChanges,

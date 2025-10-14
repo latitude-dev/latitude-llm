@@ -16,6 +16,7 @@ import { assertCommitIsDraft } from '../../../lib/assertCommitIsDraft'
 import { Result, TypedResult } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import {
+  CommitsRepository,
   IntegrationsRepository,
   ProviderApiKeysRepository,
 } from '../../../repositories'
@@ -203,6 +204,7 @@ async function replaceCommitChanges(
 export type RecomputedChanges = {
   changedDocuments: DocumentVersion[]
   headDocuments: DocumentVersion[]
+  mainDocumentChanged: boolean
   errors: { [documentUuid: string]: Error[] }
 }
 
@@ -218,6 +220,13 @@ export async function recomputeChanges(
 ): Promise<TypedResult<RecomputedChanges, Error>> {
   return transaction.call(async (tx) => {
     assertCommitIsDraft(draft).unwrap()
+
+    const commitsRepository = new CommitsRepository(workspace.id, tx)
+    const previousCommit = await commitsRepository.getPreviousCommit(draft)
+
+    // Check if mainDocumentUuid changed
+    const mainDocumentChanged =
+      previousCommit?.mainDocumentUuid !== draft.mainDocumentUuid
 
     const result = await getHeadDocumentsAndDraftDocumentsForCommit(
       { commit: draft, workspaceId: workspace.id },
@@ -272,6 +281,7 @@ export async function recomputeChanges(
     return Result.ok({
       headDocuments: mergedDocuments,
       changedDocuments: newDraftDocuments,
+      mainDocumentChanged,
       errors,
     })
   })
