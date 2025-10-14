@@ -17,8 +17,6 @@ import { redirect } from 'next/navigation'
 
 import { CSPostHogProvider, IdentifyUser } from '../providers'
 import { PaywallModalProvider } from './providers/PaywallModalProvider'
-import { Result } from '@latitude-data/core/lib/Result'
-import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 
 export const metadata = buildMetatags({
   title: 'Home',
@@ -33,16 +31,7 @@ export default async function PrivateLayout({
   const { workspace, user, subscriptionPlan } = await getCurrentUserOrRedirect()
 
   const completed = await isOnboardingCompleted()
-  const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
-    workspace.id,
-    'nocoderOnboarding',
-  )
-
-  if (!Result.isOk(isNewOnboardingEnabledResult)) {
-    return isNewOnboardingEnabledResult
-  }
-  const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
-  if (isNewOnboardingEnabled && !completed) {
+  if (!completed) {
     redirect(ROUTES.onboarding.agents.selectAgent)
   }
 

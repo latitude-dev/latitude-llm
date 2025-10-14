@@ -9,8 +9,6 @@ import { createMembership } from '../memberships/create'
 import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
 import { createUser } from './createUser'
-import { isFeatureEnabledByName } from '../workspaceFeatures/isFeatureEnabledByName'
-import { createCompletedWorkspaceOnboarding } from '../workspaceOnboarding/createCompleted'
 
 const DEFAULT_MODEL = 'gpt-4o-mini'
 
@@ -34,7 +32,7 @@ export default async function setupService(
   },
   transaction = new Transaction(),
 ): PromisedResult<{ user: User; workspace: Workspace }> {
-  return transaction.call(async (tx) => {
+  return transaction.call(async () => {
     const user = await createUser(
       { email, name, confirmedAt: new Date() },
       transaction,
@@ -69,28 +67,9 @@ export default async function setupService(
     ).then((r) => r.unwrap())
     await createApiKey({ workspace }, transaction).then((r) => r.unwrap())
 
-    const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
-      workspace.id,
-      'nocoderOnboarding',
-      tx,
+    await createWorkspaceOnboarding({ workspace }, transaction).then((r) =>
+      r.unwrap(),
     )
-
-    if (!Result.isOk(isNewOnboardingEnabledResult)) {
-      return isNewOnboardingEnabledResult
-    }
-
-    const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
-    if (isNewOnboardingEnabled) {
-      await createWorkspaceOnboarding({ workspace }, transaction).then((r) =>
-        r.unwrap(),
-      )
-    } else {
-      // TODO(onboarding): creating completed onboarding for now so old users dont get onboarded (rm later)
-      await createCompletedWorkspaceOnboarding(
-        { workspaceId: workspace.id },
-        transaction,
-      ).then((r) => r.unwrap())
-    }
 
     publisher.publishLater({
       type: 'userCreated',
