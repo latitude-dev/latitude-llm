@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
-import { isLatitudeUrl } from '@latitude-data/constants'
+import { isCloneActionUrl, isLatitudeUrl } from '@latitude-data/constants'
 import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access/users'
 
 import { errorHandlingProcedure } from '../procedures'
@@ -51,7 +51,7 @@ export const setupAction = errorHandlingProcedure
       },
     })
 
-    if (!parsedInput.returnTo || !isLatitudeUrl(parsedInput.returnTo)) {
+    if (!parsedInput.returnTo || !isCloneActionUrl(parsedInput.returnTo)) {
       return frontendRedirect(ROUTES.auth.setup.form)
     }
 
