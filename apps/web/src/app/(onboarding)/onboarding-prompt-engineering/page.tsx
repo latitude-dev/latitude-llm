@@ -12,8 +12,10 @@ import { ONBOARDING_DOCUMENT_PATH } from '@latitude-data/core/constants'
 import { ProjectProvider } from '$/app/providers/ProjectProvider'
 import { CommitProvider } from '$/app/providers/CommitProvider'
 import { PageTrackingWrapper } from '$/components/PageTrackingWrapper'
+import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 
 export default async function OnboardingRedirect() {
+  const { user, workspace } = await getCurrentUserOrRedirect()
   const isCompleted = await isOnboardingCompleted()
   if (isCompleted) {
     redirect(ROUTES.dashboard.root)
@@ -35,7 +37,10 @@ export default async function OnboardingRedirect() {
   }
 
   return (
-    <PageTrackingWrapper namePageVisited='promptEngineeringOnboarding'>
+    <PageTrackingWrapper
+      namePageVisited='promptEngineeringOnboarding'
+      additionalData={{ workspaceId: workspace.id, userEmail: user.email }}
+    >
       <ProjectProvider project={project}>
         <CommitProvider project={project} commit={commit} isHead={false}>
           <OnboardingClient document={document} dataset={dataset} />
