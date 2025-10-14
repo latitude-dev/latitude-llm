@@ -91,8 +91,8 @@ export function SubAgentsSidebarSection() {
             trigger={
               <Button
                 variant='ghost'
-                size='small'
-                iconProps={{ name: 'plus', color: 'foregroundMuted' }}
+                size='none'
+                iconProps={{ name: 'plus' }}
                 disabled={isLive}
               />
             }

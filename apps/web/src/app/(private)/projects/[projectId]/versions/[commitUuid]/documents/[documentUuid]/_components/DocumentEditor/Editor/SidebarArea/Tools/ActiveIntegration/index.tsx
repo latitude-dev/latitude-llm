@@ -12,7 +12,7 @@ import {
 } from '../../toolsHelpers/types'
 import { ToolsContext } from '../ToolsProvider'
 import { useSidebarStore } from '../../hooks/useSidebarStore'
-import { CUSTOM_TOOLS_INTEGRATION_NAME } from '../../toolsHelpers/collectTools'
+import { CLIENT_TOOLS_INTEGRATION_NAME } from '../../toolsHelpers/collectTools'
 
 function ImageIconComponent({ imageIcon }: { imageIcon?: ImageIcon }) {
   if (!imageIcon) return null
@@ -46,8 +46,8 @@ export function ActiveIntegration({
   const { commit } = useCurrentCommit()
   const isLive = !!commit.mergedAt
 
-  const isCustomTools = integration.name === CUSTOM_TOOLS_INTEGRATION_NAME
-  const displayName = isCustomTools ? 'Custom tools' : integration.name
+  const isClientTools = integration.name === CLIENT_TOOLS_INTEGRATION_NAME
+  const displayName = isClientTools ? 'Client tools' : integration.name
 
   const allEnabled = integration.tools === true
   const isOpen = integration.isOpen
@@ -110,7 +110,7 @@ export function ActiveIntegration({
           <Text.H5M ellipsis noWrap>
             {displayName}
           </Text.H5M>
-          {!isCustomTools && (
+          {!isClientTools && (
             <div onClick={toggleAllEnabled}>
               <SwitchToggle
                 checked={allEnabled}
@@ -122,13 +122,13 @@ export function ActiveIntegration({
         </div>
 
         <div className='flex items-center gap-2'>
-          {hasToolsLoaded && !isCustomTools ? (
+          {hasToolsLoaded && !isClientTools ? (
             <Text.H6 color='foregroundMuted' noWrap>
               {activeCount} / {totalCount} tools
             </Text.H6>
           ) : null}
 
-          {!isCustomTools && (
+          {!isClientTools && (
             <DropdownMenu
               options={[
                 {

@@ -1,6 +1,6 @@
-import { ReactNode, useMemo } from 'react'
+import { Fragment, ReactNode, useMemo } from 'react'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Icon, IconProps } from '@latitude-data/web-ui/atoms/Icons'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { SectionItemLoader } from '../SectionItem'
@@ -24,7 +24,6 @@ export function SectionLoader({ items = 3 }: { items: number }) {
 }
 
 type SectionAction = {
-  iconProps?: IconProps
   onClick: () => void
   disabled?: boolean
   customComponent?: ReactNode
@@ -47,14 +46,14 @@ const SidebarSection = ({
           <div className='flex flex-row gap-x-2'>
             {actions?.map((action, index) =>
               action.customComponent ? (
-                <div key={index}>{action.customComponent}</div>
+                <Fragment key={index}>{action.customComponent}</Fragment>
               ) : (
                 <Button
                   key={index}
                   variant='ghost'
-                  size='icon'
+                  size='none'
                   onClick={action.onClick}
-                  iconProps={action.iconProps ?? { name: 'plus' }}
+                  iconProps={{ name: 'plus' }}
                   disabled={action.disabled}
                 />
               ),
