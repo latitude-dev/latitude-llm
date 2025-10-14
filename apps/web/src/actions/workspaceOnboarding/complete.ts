@@ -34,6 +34,6 @@ export const completeOnboardingAction = authProcedure
     return frontendRedirect(
       ROUTES.projects
         .detail({ id: projectId })
-        .commits.detail({ uuid: commitUuid }).preview.root,
+        .commits.detail({ uuid: commitUuid }).home.root,
     )
   })

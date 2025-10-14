@@ -58,7 +58,7 @@ export function usePlaygroundAction<
     .commits.detail({ uuid: commit.uuid })
   const route = document
     ? base.documents.detail({ uuid: document.documentUuid }).root
-    : base.preview.root
+    : base.home.root
 
   const { value: playgroundActions, setValue: setPlaygroundActions } =
     useLocalStorage<PlaygroundActions>({
@@ -166,7 +166,7 @@ export function useDeferredPlaygroundAction() {
         .commits.detail({ uuid: commit.uuid })
       const route = document
         ? base.documents.detail({ uuid: document.documentUuid }).root
-        : base.preview.root
+        : base.home.root
       const query = new URLSearchParams({ actionId })
       navigate.push(`${route}?${query.toString()}`)
     },

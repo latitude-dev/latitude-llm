@@ -57,7 +57,7 @@ function IntegrationReferences({
         commit
           ? ROUTES.projects
               .detail({ id: referenceGroup.projectId })
-              .commits.detail({ uuid: commit.uuid }).agent.root
+              .commits.detail({ uuid: commit.uuid }).home.root
           : '#'
       }
       className='flex flex-row items-center justify-between gap-2 p-4 bg-secondary rounded-md hover:bg-accent'

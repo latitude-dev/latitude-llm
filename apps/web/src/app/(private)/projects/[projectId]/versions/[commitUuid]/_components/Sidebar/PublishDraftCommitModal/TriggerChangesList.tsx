@@ -68,7 +68,7 @@ function useTriggersFromChanges({ changes }: { changes: ChangedTrigger[] }) {
           url: !isDeleted
             ? ROUTES.projects
                 .detail({ id: projectId })
-                .commits.detail({ uuid: commitUuid }).agent.root
+                .commits.detail({ uuid: commitUuid }).home.root
             : undefined,
         }
       })

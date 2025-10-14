@@ -29,7 +29,7 @@ export default async function RunsLayout({
     return redirect(
       ROUTES.projects
         .detail({ id: Number(projectId) })
-        .commits.detail({ uuid: commitUuid }).agent.root,
+        .commits.detail({ uuid: commitUuid }).home.root,
     )
   }
 

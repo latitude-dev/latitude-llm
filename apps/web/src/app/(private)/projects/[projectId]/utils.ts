@@ -27,7 +27,7 @@ export function getRedirectUrl({
   })
 
   if (!lastSeenDocumentUuid) {
-    return url.agent.root
+    return url.home.root
   } else {
     return url.documents.detail({ uuid: lastSeenDocumentUuid }).root
   }
