@@ -29,7 +29,10 @@ export default async function SelectAgentPage() {
   }
 
   return (
-    <PageTrackingWrapper namePageVisited='selectAgent'>
+    <PageTrackingWrapper
+      namePageVisited='selectAgent'
+      additionalData={{ workspaceId: workspace.id, userEmail: user.email }}
+    >
       <div
         className={'flex flex-col h-screen overflow-hidden relative gap-y-16'}
       >

@@ -9,7 +9,7 @@ import { PageTrackingWrapper } from '$/components/PageTrackingWrapper'
 import { redirect } from 'next/navigation'
 
 export default async function SetupFormPage() {
-  const { workspace } = await getCurrentUserOrRedirect()
+  const { workspace, user } = await getCurrentUserOrRedirect()
   // TODO(onboarding): remove this once we activate the onboarding
   const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
     workspace.id,
@@ -25,7 +25,10 @@ export default async function SetupFormPage() {
   }
 
   return (
-    <PageTrackingWrapper namePageVisited='setupForm'>
+    <PageTrackingWrapper
+      namePageVisited='setupForm'
+      additionalData={{ workspaceId: workspace.id, userEmail: user.email }}
+    >
       <FocusLayout
         header={
           <FocusHeader

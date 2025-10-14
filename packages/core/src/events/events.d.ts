@@ -664,6 +664,7 @@ export type PromptEngineeringOnboardingCompletedEvent = LatitudeEventGeneric<
   'promptEngineeringOnboardingCompleted',
   {
     workspaceId: number
+    userEmail: string
   }
 >
 
@@ -671,6 +672,7 @@ export type AgentOnboardingCompletedEvent = LatitudeEventGeneric<
   'agentOnboardingCompleted',
   {
     workspaceId: number
+    userEmail: string
   }
 >
 
@@ -678,6 +680,7 @@ export type AgentOnboardingSkippedEvent = LatitudeEventGeneric<
   'agentOnboardingSkipped',
   {
     workspaceId: number
+    userEmail: string
   }
 >
 
