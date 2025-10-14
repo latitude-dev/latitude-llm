@@ -5,6 +5,7 @@ DROP TYPE "latitude"."document_trigger_types";--> statement-breakpoint
 
 -- Delete all chat triggers
 DELETE FROM "latitude"."document_trigger_events" WHERE "trigger_type" = 'chat';--> statement-breakpoint
+DELETE FROM "latitude"."document_triggers" WHERE "trigger_type" = 'chat';--> statement-breakpoint
 
 -- Create new trigger types
 CREATE TYPE "latitude"."document_trigger_types" AS ENUM('email', 'scheduled', 'integration');--> statement-breakpoint
