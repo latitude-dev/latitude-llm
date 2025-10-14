@@ -54,6 +54,7 @@ const SidebarSection = ({
                   size='none'
                   onClick={action.onClick}
                   iconProps={{ name: 'plus' }}
+                  className='min-w-7'
                   disabled={action.disabled}
                 />
               ),

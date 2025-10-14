@@ -43,6 +43,9 @@ export type SidebarEditorState = {
   toggleAgent: (agentRelativePath: string) => void
   pathToUuidMap: Record<string, string> // Map from document path to UUID
   setPathToUuidMap: (map: Record<string, string>) => void
+
+  // Reset all state
+  reset: () => void
 }
 
 export const useSidebarStore = create<SidebarEditorState>((set, get) => ({
@@ -143,7 +146,7 @@ export const useSidebarStore = create<SidebarEditorState>((set, get) => ({
     // Create the integration with the specified tools
     const newIntegration: ActiveIntegration = {
       ...integration,
-      tools: toolName === '*' ? true : [toolName],
+      tools: toolName === '*' ? true : toolName === '' ? [] : [toolName],
       allToolNames: integration.allToolNames || [],
       isOpen: true, // Open newly added integrations by default
     }
@@ -272,4 +275,15 @@ export const useSidebarStore = create<SidebarEditorState>((set, get) => ({
   },
   pathToUuidMap: {},
   setPathToUuidMap: (map) => set({ pathToUuidMap: map }),
+
+  // Reset all state
+  reset: () =>
+    set({
+      initialized: false,
+      integrationsMap: {},
+      promptConfigTools: [],
+      integrations: [],
+      selectedAgents: [],
+      pathToUuidMap: {},
+    }),
 }))

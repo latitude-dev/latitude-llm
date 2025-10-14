@@ -6,7 +6,6 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { ActiveIntegration } from '../../../toolsHelpers/types'
 import { ToolsContext } from '../../ToolsProvider'
 import { useSidebarStore } from '../../../hooks/useSidebarStore'
@@ -181,6 +180,7 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
     ? filteredTools
     : filteredTools.slice(0, MAX_VISIBLE_TOOLS)
   const shouldShowMoreButton = hasMoreTools && !showAll && !searchQuery.trim()
+  const shouldShowLessButton = hasMoreTools && showAll && !searchQuery.trim()
   useAnimatedItems({
     containerRef,
     isLoading,
@@ -225,14 +225,18 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
       style={{ position: 'relative' }}
     >
       {shouldShowSearch && (
-        <div className='mb-2 mx-2'>
-          <Input
+        <div className='w-full flex items-center gap-2 min-w-0'>
+          <IndentationBar
+            startOnIndex={0}
+            hasChildren={false}
+            indentation={[{ isLast: false }]}
+          />
+          <input
             type='text'
-            size='small'
             placeholder='Search tools...'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className='w-full'
+            className='mt-1 w-full bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground'
           />
         </div>
       )}
@@ -253,7 +257,14 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
               <IndentationBar
                 startOnIndex={0}
                 hasChildren={false}
-                indentation={[{ isLast: isLastTool && !shouldShowMoreButton }]}
+                indentation={[
+                  {
+                    isLast:
+                      isLastTool &&
+                      !shouldShowMoreButton &&
+                      !shouldShowLessButton,
+                  },
+                ]}
               />
               <div className='w-full flex justify-between items-center min-w-0 gap-x-2'>
                 <div className='flex-1 flex items-center gap-2 min-w-0'>
@@ -282,6 +293,19 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
           <Text.H5 color='accentForeground'>
             + Show {filteredTools.length - MAX_VISIBLE_TOOLS} more
           </Text.H5>
+        </button>
+      )}
+      {shouldShowLessButton && (
+        <button
+          onClick={() => setShowAll(false)}
+          className='w-full flex items-center gap-2 min-w-0 cursor-pointer hover:opacity-70'
+        >
+          <IndentationBar
+            startOnIndex={0}
+            hasChildren={false}
+            indentation={[{ isLast: true }]}
+          />
+          <Text.H5 color='accentForeground'>- Show less</Text.H5>
         </button>
       )}
     </div>

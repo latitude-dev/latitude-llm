@@ -5,7 +5,7 @@ import { AppSelector } from './Pipedream/AppSelector'
 import type { App } from '@pipedream/sdk/browser'
 import { IntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
 import { IntegrationType } from '@latitude-data/constants'
-import { PipedreamAppCard } from './Pipedream/AppCard'
+import { PipedreamAppCard } from '$/components/Pipedream/PipedreamCard'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 
 export const PipedreamIntegrationConfiguration = forwardRef<{

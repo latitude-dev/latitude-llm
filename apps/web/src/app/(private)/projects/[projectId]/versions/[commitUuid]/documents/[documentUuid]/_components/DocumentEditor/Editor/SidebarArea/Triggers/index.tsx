@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
+import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { NewTrigger } from '$/components/TriggersManagement/NewTrigger'
 import {
   EditTriggerModalContent,
@@ -20,7 +22,7 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useUpdateDocumentTrigger } from '$/components/TriggersManagement/EditTrigger/useUpdateDocumentTrigger'
 import { SidebarSection } from '../Section'
-import { SectionItem } from '../SectionItem'
+import { SelectionSubItem } from '../SelectionSubItem'
 
 function NewTriggerModal({
   modalOpen,
@@ -95,17 +97,20 @@ function EditTriggerModal({
     </Modal>
   )
 }
+
 function TriggerItem({
   trigger,
   integrations,
   document,
   onClick,
+  onDelete,
   disabled,
 }: {
   trigger: DocumentTrigger
   integrations: IntegrationDto[]
   document: DocumentVersion
   onClick: (trigger: DocumentTrigger) => () => void
+  onDelete: (trigger: DocumentTrigger) => void
   disabled?: boolean
 }) {
   const {
@@ -129,13 +134,48 @@ function TriggerItem({
       : descriptionInfo
 
   return (
-    <button
+    <SelectionSubItem
+      icon={<div>{image}</div>}
+      content={
+        <div className='flex items-center min-w-0 gap-x-2'>
+          <div className='flex shrink-0 max-w-40 min-w-0'>
+            <Text.H5 ellipsis noWrap>
+              {title}
+            </Text.H5>
+          </div>
+          {description && (
+            <div className='flex flex-1 min-w-0'>
+              <Text.H5 ellipsis noWrap color='foregroundMuted'>
+                {description}
+              </Text.H5>
+            </div>
+          )}
+        </div>
+      }
       onClick={onClick(trigger)}
-      className='flex w-full'
       disabled={disabled}
-    >
-      <SectionItem title={title} description={description} image={image} />
-    </button>
+      actions={
+        <DropdownMenu
+          options={[
+            {
+              label: 'Delete',
+              type: 'destructive',
+              onClick: () => {
+                onDelete(trigger)
+              },
+            },
+          ]}
+          side='bottom'
+          align='end'
+          triggerButtonProps={{
+            iconProps: { name: 'ellipsis' },
+            variant: 'ghost',
+            size: 'none',
+            disabled,
+          }}
+        />
+      }
+    />
   )
 }
 
@@ -177,11 +217,20 @@ export function TriggersSidebarSection({
   document: DocumentVersion
 }) {
   const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
   const isLive = !!commit.mergedAt
   const { open, onOpen, onClose } = useToggleModal()
   const [editingTrigger, setEditingTrigger] = useState<DocumentTrigger | null>(
     null,
   )
+
+  // Get delete function from useDocumentTriggers
+  const { delete: deleteTrigger } = useDocumentTriggers({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+  })
+
   const actions = useMemo(
     () => [{ onClick: onOpen, disabled: isLive }],
     [onOpen, isLive],
@@ -192,24 +241,29 @@ export function TriggersSidebarSection({
     },
     [],
   )
+  const onDeleteTrigger = useCallback(
+    (trigger: DocumentTrigger) => {
+      deleteTrigger(trigger)
+    },
+    [deleteTrigger],
+  )
   const onCloseEdit = useCallback(() => {
     setEditingTrigger(null)
   }, [])
   return (
     <>
       <SidebarSection title='Triggers' actions={actions}>
-        <div>
-          {triggers.map((trigger) => (
-            <TriggerItem
-              key={trigger.uuid}
-              trigger={trigger}
-              integrations={integrations}
-              document={document}
-              onClick={onClickEdit}
-              disabled={isLive}
-            />
-          ))}
-        </div>
+        {triggers.map((trigger) => (
+          <TriggerItem
+            key={trigger.uuid}
+            trigger={trigger}
+            integrations={integrations}
+            document={document}
+            onClick={onClickEdit}
+            onDelete={onDeleteTrigger}
+            disabled={isLive}
+          />
+        ))}
       </SidebarSection>
       <NewTriggerModal
         modalOpen={open}

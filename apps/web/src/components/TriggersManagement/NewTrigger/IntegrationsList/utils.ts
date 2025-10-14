@@ -1,6 +1,6 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { OptionItem as SearchableOptionItem } from '@latitude-data/web-ui/molecules/SearchableList'
-import { type PipedreamIntegrationWithCounts } from '@latitude-data/core/schema/types'
+import { type PipedreamIntegration } from '@latitude-data/core/schema/types'
 
 export function pluralize(
   count: number,
@@ -10,16 +10,18 @@ export function pluralize(
   return `${count} ${count === 1 ? singular : plural}`
 }
 
-function connectedPipedreamAppDescription(
-  integration: PipedreamIntegrationWithCounts,
-): string {
-  const accounts = pluralize(integration.accountCount, 'account', 'accounts')
-  const triggers = pluralize(integration.triggerCount, 'trigger', 'triggers')
-  return `${accounts} · ${triggers}`
+export type GroupedIntegration = {
+  integration: PipedreamIntegration
+  accountCount: number
+  allIntegrations: PipedreamIntegration[]
+}
+
+function connectedPipedreamAppDescription(grouped: GroupedIntegration): string {
+  return pluralize(grouped.accountCount, 'account', 'accounts')
 }
 
 function integrationLogo(
-  integration: PipedreamIntegrationWithCounts,
+  integration: PipedreamIntegration,
 ): { type: 'image'; src: string; alt: string } | undefined {
   const imageUrl = integration.configuration?.metadata?.imageUrl
   if (!imageUrl) return undefined
@@ -34,19 +36,19 @@ function integrationLogo(
 }
 
 export function buildIntegrationOption(
-  integration: PipedreamIntegrationWithCounts,
+  grouped: GroupedIntegration,
 ): SearchableOptionItem<DocumentTriggerType> {
   const title =
-    integration.configuration.metadata?.displayName ??
-    integration.configuration.appName
+    grouped.integration.configuration.metadata?.displayName ??
+    grouped.integration.configuration.appName
 
   return {
     type: 'item',
-    value: integration.configuration.appName, // Slug
+    value: grouped.integration.configuration.appName, // Slug
     title,
     keywords: [title],
     metadata: { type: DocumentTriggerType.Integration },
-    description: connectedPipedreamAppDescription(integration),
-    imageIcon: integrationLogo(integration),
+    description: connectedPipedreamAppDescription(grouped),
+    imageIcon: integrationLogo(grouped.integration),
   } satisfies SearchableOptionItem<DocumentTriggerType>
 }

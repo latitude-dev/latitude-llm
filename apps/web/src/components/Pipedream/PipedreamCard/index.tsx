@@ -5,31 +5,45 @@ import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { cn } from '@latitude-data/web-ui/utils'
 import type { App } from '@pipedream/sdk/browser'
 import Image from 'next/image'
-import { ReactNode, useMemo } from 'react'
+import { ReactNode, useMemo, useState } from 'react'
 import {
   PipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/constants'
-import { parseMarkdownLinks } from '$/components/TriggersManagement/components/TriggerForms/IntegrationTriggerForm/usePipedreamTriggerDescription'
+import { parseMarkdownLinks } from '../utils'
 
 function AppComponent({ component }: { component: PipedreamComponent }) {
+  const [isExpanded, setIsExpanded] = useState(false)
   const description = useMemo(
     () => parseMarkdownLinks(component.description),
     [component.description],
   )
   return (
     <div className='flex flex-col gap-2'>
-      <Text.H5>{component.name}</Text.H5>
-      <Text.H6 color='foregroundMuted' wordBreak='breakWord'>
-        <div
-          className='[&>a]:underline [&>a]:text-foreground'
-          dangerouslySetInnerHTML={{
-            __html: description,
-          }}
-        />
-      </Text.H6>
+      <div className='flex items-center justify-between gap-2'>
+        <div className='flex-1 min-w-0'>
+          <Text.H5>{component.name}</Text.H5>
+        </div>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className='text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0'
+        >
+          {isExpanded ? '− info' : '+ info'}
+        </button>
+      </div>
+      {isExpanded && (
+        <Text.H6 color='foregroundMuted' wordBreak='breakWord'>
+          <div
+            className='[&>a]:underline [&>a]:text-foreground'
+            dangerouslySetInnerHTML={{
+              __html: description,
+            }}
+          />
+        </Text.H6>
+      )}
     </div>
   )
 }
@@ -152,29 +166,44 @@ function AppComponents({ app }: { app: App }) {
   )
 }
 
-export function PipedreamAppCard({ app }: { app: App | undefined }) {
+export function PipedreamAppCard({
+  app,
+  onlyApps = false,
+}: {
+  app: App | undefined
+  onlyApps?: boolean
+}) {
   if (!app) return <Text.H5 color='foregroundMuted'>Select an app.</Text.H5>
 
   return (
-    <div className='w-full flex flex-col gap-4 border border-border p-4 rounded-lg'>
-      <div className='flex gap-2 items-center'>
-        <Image
-          src={app.imgSrc}
-          alt={app.name}
-          width={24}
-          height={24}
-          unoptimized
-        />
-        <Text.H4>{app.name}</Text.H4>
-      </div>
-      <Text.H5 color='foregroundMuted'>{app.description}</Text.H5>
-      <div className='flex gap-2'>
-        {app.categories.map((category) => (
-          <Badge key={category} variant='outline'>
-            {category}
-          </Badge>
-        ))}
-      </div>
+    <div
+      className={cn(
+        'w-full flex flex-col gap-4',
+        !onlyApps && 'border border-border p-4 rounded-lg',
+      )}
+    >
+      {!onlyApps && (
+        <>
+          <div className='flex gap-2 items-center'>
+            <Image
+              src={app.imgSrc}
+              alt={app.name}
+              width={24}
+              height={24}
+              unoptimized
+            />
+            <Text.H4>{app.name}</Text.H4>
+          </div>
+          <Text.H5 color='foregroundMuted'>{app.description}</Text.H5>
+          <div className='flex gap-2'>
+            {app.categories.map((category) => (
+              <Badge key={category} variant='outline'>
+                {category}
+              </Badge>
+            ))}
+          </div>
+        </>
+      )}
       <AppComponents app={app} />
     </div>
   )

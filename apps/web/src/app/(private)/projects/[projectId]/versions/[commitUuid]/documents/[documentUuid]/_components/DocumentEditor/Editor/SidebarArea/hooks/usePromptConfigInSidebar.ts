@@ -18,14 +18,62 @@ import {
   resolveRelativePath,
 } from '@latitude-data/constants'
 
-export function usePromptConfigInSidebar() {
-  const updateController = useRef<AbortController | null>(null)
+export function useUpdateDocumentContent() {
   const { toast } = useToast()
-  const navigate = useNavigate()
-  const currentUrl = useCurrentUrl()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
+  const navigate = useNavigate()
+  const currentUrl = useCurrentUrl()
   const { document, mutateDocumentUpdated } = useCurrentDocument()
+  return useCallback(
+    async ({
+      prompt,
+      updates,
+      abortSignal,
+    }: {
+      prompt: string
+      updates: Record<string, unknown>
+      abortSignal?: AbortSignal
+    }) => {
+      return await executeFetch<UpdateDocumentContentResponse>({
+        method: 'POST',
+        route: ROUTES.api.projects
+          .detail(project.id)
+          .commits.detail(commit.uuid)
+          .documents.detail(document.documentUuid).updateDocumentContent.root,
+        toast,
+        abortSignal,
+        navigate,
+        currentUrl,
+        body: { prompt: updatePromptMetadata(prompt, updates) },
+        serializer: (data) => data as UpdateDocumentContentResponse,
+        onSuccess: (data) => {
+          if (!data) return
+
+          mutateDocumentUpdated(data.document)
+          trigger('PromptChanged', { prompt: data.document.content })
+          trigger('PromptMetadataChanged', {
+            promptLoaded: true,
+            metadata: data.metadata as ResolvedMetadata,
+          })
+        },
+      })
+    },
+    [
+      toast,
+      navigate,
+      currentUrl,
+      project,
+      commit,
+      document,
+      mutateDocumentUpdated,
+    ],
+  )
+}
+
+export function usePromptConfigInSidebar() {
+  const updateController = useRef<AbortController | null>(null)
+  const { document } = useCurrentDocument()
   const {
     addIntegration,
     addTool,
@@ -41,6 +89,7 @@ export function usePromptConfigInSidebar() {
     selectedAgents: state.selectedAgents,
     toggleAgent: state.toggleAgent,
   }))
+  const updateContent = useUpdateDocumentContent()
 
   const updateDocumentContent = useCallback(
     async ({
@@ -72,41 +121,13 @@ export function usePromptConfigInSidebar() {
         updates.agents = agents
       }
 
-      const updatedPrompt = updatePromptMetadata(document.content, updates)
-
-      await executeFetch<UpdateDocumentContentResponse>({
-        method: 'POST',
-        route: ROUTES.api.projects
-          .detail(project.id)
-          .commits.detail(commit.uuid)
-          .documents.detail(document.documentUuid).updateDocumentContent.root,
-        toast,
+      await updateContent({
+        prompt: document.content,
+        updates,
         abortSignal: updateController.current.signal,
-        navigate,
-        currentUrl,
-        body: { prompt: updatedPrompt },
-        serializer: (data) => data as UpdateDocumentContentResponse,
-        onSuccess: (data) => {
-          if (!data) return
-
-          mutateDocumentUpdated(data.document)
-          trigger('PromptChanged', { prompt: data.document.content })
-          trigger('PromptMetadataChanged', {
-            promptLoaded: true,
-            metadata: data.metadata as ResolvedMetadata,
-          })
-        },
       })
     },
-    [
-      toast,
-      navigate,
-      currentUrl,
-      project,
-      commit,
-      document,
-      mutateDocumentUpdated,
-    ],
+    [updateContent, document.content],
   )
 
   // Integration (Tools) methods
@@ -193,6 +214,19 @@ export function usePromptConfigInSidebar() {
     [selectedAgents, toggleAgentInStore, document.path, updateDocumentContent],
   )
 
+  const setAgents = useCallback(
+    (agentFullPaths: string[]) => {
+      // Convert full paths to relative paths
+      const newAgents = agentFullPaths.map((fullPath) =>
+        createRelativePath(fullPath, document.path),
+      )
+
+      // Only persist to document - the response will update the store via the effect
+      updateDocumentContent({ agents: newAgents })
+    },
+    [document.path, updateDocumentContent],
+  )
+
   return useMemo(
     () => ({
       addNewIntegration,
@@ -200,6 +234,7 @@ export function usePromptConfigInSidebar() {
       removeIntegrationTool,
       removeIntegration,
       toggleAgent,
+      setAgents,
     }),
     [
       addNewIntegration,
@@ -207,6 +242,7 @@ export function usePromptConfigInSidebar() {
       removeIntegrationTool,
       removeIntegration,
       toggleAgent,
+      setAgents,
     ],
   )
 }

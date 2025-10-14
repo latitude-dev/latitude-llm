@@ -38,7 +38,6 @@ export const API_ROUTES = {
         root: `/api/integrations/pipedream/${slugName}`,
       }),
       apps: '/api/integrations/pipedream/apps',
-      connectedByApp: '/api/integrations/pipedream/connectedByApp',
     },
   },
   webhooks: {

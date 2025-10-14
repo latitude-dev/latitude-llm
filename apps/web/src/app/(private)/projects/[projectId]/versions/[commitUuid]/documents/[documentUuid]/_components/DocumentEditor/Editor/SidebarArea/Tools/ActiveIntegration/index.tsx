@@ -13,6 +13,7 @@ import {
 import { ToolsContext } from '../ToolsProvider'
 import { useSidebarStore } from '../../hooks/useSidebarStore'
 import { CLIENT_TOOLS_INTEGRATION_NAME } from '../../toolsHelpers/collectTools'
+import { useLazyToolCount } from './useLazyToolCount'
 
 function ImageIconComponent({ imageIcon }: { imageIcon?: ImageIcon }) {
   if (!imageIcon) return null
@@ -51,6 +52,9 @@ export function ActiveIntegration({
 
   const allEnabled = integration.tools === true
   const isOpen = integration.isOpen
+
+  // Lazily fetch tool count in the background if not already loaded
+  const { isLoadingCount } = useLazyToolCount(integration)
 
   // Calculate tool counts from store data
   const { totalCount, activeCount, hasToolsLoaded } = useMemo(() => {
@@ -122,9 +126,13 @@ export function ActiveIntegration({
         </div>
 
         <div className='flex items-center gap-2'>
-          {hasToolsLoaded && !isClientTools ? (
+          {!isClientTools && (hasToolsLoaded || isLoadingCount) ? (
             <Text.H6 color='foregroundMuted' noWrap>
-              {activeCount} / {totalCount} tools
+              {!isLoadingCount ? (
+                <>
+                  {activeCount} / {totalCount} tools
+                </>
+              ) : null}
             </Text.H6>
           ) : null}
 

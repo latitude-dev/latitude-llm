@@ -30,7 +30,7 @@ export function PageTrackingWrapper({
   return children
 }
 
-export function trackPageVisit({
+function trackPageVisit({
   namePageVisited,
   additionalData,
 }: {
