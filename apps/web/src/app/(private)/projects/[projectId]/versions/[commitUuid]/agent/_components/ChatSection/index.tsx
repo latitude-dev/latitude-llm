@@ -32,11 +32,16 @@ export function AgentChatSection({
       className='flex flex-col w-full h-full custom-scrollbar items-center'
       ref={ref}
     >
-      <ChatSectionHeader activeTrigger={activeTrigger} onClose={onClose} />
+      <ChatSectionHeader
+        activeTrigger={activeTrigger}
+        onClose={onClose}
+        expandParameters={expandedParameters}
+        setExpandParameters={setExpandedParameters}
+      />
       <div className='flex-1 flex flex-col w-full flex-grow min-h-0 justify-between max-w-[800px]'>
         <div className='flex-1 pt-8 pb-20'>
           <Chat
-            showHeader
+            showHeader={false}
             playground={playground}
             parameters={parameters}
             expandParameters={expandedParameters}

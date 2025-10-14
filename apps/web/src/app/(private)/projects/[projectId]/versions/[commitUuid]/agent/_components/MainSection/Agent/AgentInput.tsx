@@ -157,9 +157,10 @@ export function AgentInput({
       >
         <Button
           variant='default'
-          className='rounded-full w-10 h-10'
+          className='rounded-full w-10 h-10 flex items-center justify-center p-0'
           iconProps={{
             name: 'arrowUp',
+            size: 'large',
           }}
           onClick={onSubmit}
         />

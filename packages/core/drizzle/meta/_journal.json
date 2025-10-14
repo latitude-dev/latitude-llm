@@ -1520,6 +1520,13 @@
       "when": 1760015234816,
       "tag": "0217_chief_the_enforcers",
       "breakpoints": true
+    },
+    {
+      "idx": 218,
+      "version": "7",
+      "when": 1760363977109,
+      "tag": "0218_remove_chat_trigger",
+      "breakpoints": true
     }
   ]
 }

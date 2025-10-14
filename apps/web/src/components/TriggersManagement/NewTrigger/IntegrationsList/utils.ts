@@ -1,6 +1,5 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { OptionItem as SearchableOptionItem } from '@latitude-data/web-ui/molecules/SearchableList'
-import { type TriggerIntegrationType } from '../../types'
 import { type PipedreamIntegrationWithCounts } from '@latitude-data/core/schema/types'
 
 export function pluralize(
@@ -36,7 +35,7 @@ function integrationLogo(
 
 export function buildIntegrationOption(
   integration: PipedreamIntegrationWithCounts,
-): SearchableOptionItem<TriggerIntegrationType> {
+): SearchableOptionItem<DocumentTriggerType> {
   const title =
     integration.configuration.metadata?.displayName ??
     integration.configuration.appName
@@ -49,5 +48,5 @@ export function buildIntegrationOption(
     metadata: { type: DocumentTriggerType.Integration },
     description: connectedPipedreamAppDescription(integration),
     imageIcon: integrationLogo(integration),
-  } satisfies SearchableOptionItem<TriggerIntegrationType>
+  } satisfies SearchableOptionItem<DocumentTriggerType>
 }

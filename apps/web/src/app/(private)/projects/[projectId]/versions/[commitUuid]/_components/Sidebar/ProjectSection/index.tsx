@@ -83,7 +83,6 @@ export default function ProjectSection({
   limitedView?: boolean
 }) {
   const runs = useFeature('runs')
-  const agentFeature = useFeature('newAgentPage')
 
   const disableRunsNotifications = limitedView || !runs.isEnabled
   const { data: active } = useActiveRunsCount({
@@ -94,19 +93,12 @@ export default function ProjectSection({
   const PROJECT_ROUTES = useMemo(
     () =>
       [
-        agentFeature.isEnabled && {
+        {
           label: 'Agent',
           route: ROUTES.projects
             .detail({ id: project.id })
             .commits.detail({ uuid: commit.uuid }).agent.root,
           iconName: 'bot',
-        },
-        {
-          label: 'Preview',
-          route: ROUTES.projects
-            .detail({ id: project.id })
-            .commits.detail({ uuid: commit.uuid }).preview.root,
-          iconName: 'eye',
         },
         runs.isEnabled && {
           label: 'Runs',
@@ -137,7 +129,7 @@ export default function ProjectSection({
           iconName: 'history',
         },
       ].filter(Boolean) as ProjectRoute[],
-    [project, commit, agentFeature, runs, active, disableRunsNotifications],
+    [project, commit, runs, active, disableRunsNotifications],
   )
 
   return (

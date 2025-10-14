@@ -36,7 +36,7 @@ export default function DraftCommitModal({
       const targetRoute = currentDocument
         ? baseRoute.documents.detail({ uuid: currentDocument.documentUuid })
             .root
-        : baseRoute.preview.root
+        : baseRoute.agent.root
 
       router.push(targetRoute)
       setOpen(false)

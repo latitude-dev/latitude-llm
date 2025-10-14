@@ -91,26 +91,6 @@ export type IntegrationTriggerDeploymentSettings = z.infer<typeof integrationTri
 export type IntegrationTriggerEventPayload = z.infer<typeof integrationTriggerEventPayloadSchema> // prettier-ignore
 
 // ────────────────────────────────────────────────────────────────────────────────
-// CHAT TRIGGER
-// ────────────────────────────────────────────────────────────────────────────────
-
-export const chatTriggerConfigurationSchema = z.object({
-  // No configuration for chat triggers
-})
-
-export const chatTriggerDeploymentSettingsSchema = z.object({
-  // No deployment settings for chat triggers
-})
-
-export const chatTriggerEventPayloadSchema = z.object({
-  // No event payload
-})
-
-export type ChatTriggerConfiguration = z.infer<typeof chatTriggerConfigurationSchema> // prettier-ignore
-export type ChatTriggerDeploymentSettings = z.infer<typeof chatTriggerDeploymentSettingsSchema> // prettier-ignore
-export type ChatTriggerEventPayload = z.infer<typeof chatTriggerEventPayloadSchema> // prettier-ignore
-
-// ────────────────────────────────────────────────────────────────────────────────
 // COMMON
 // ────────────────────────────────────────────────────────────────────────────────
 
@@ -118,7 +98,6 @@ export const documentTriggerConfigurationSchema = z.union([
   emailTriggerConfigurationSchema,
   scheduledTriggerConfigurationSchema,
   integrationTriggerConfigurationSchema,
-  chatTriggerConfigurationSchema,
 ])
 
 // prettier-ignore
@@ -126,7 +105,6 @@ export type DocumentTriggerConfiguration<T extends DocumentTriggerType> =
   T extends DocumentTriggerType.Email ? EmailTriggerConfiguration :
   T extends DocumentTriggerType.Scheduled ? ScheduledTriggerConfiguration :
   T extends DocumentTriggerType.Integration ? IntegrationTriggerConfiguration :
-  T extends DocumentTriggerType.Chat ? ChatTriggerConfiguration :
   never
 
 // prettier-ignore
@@ -134,7 +112,6 @@ export type DocumentTriggerDeploymentSettings<T extends DocumentTriggerType> =
   T extends DocumentTriggerType.Email ? EmailTriggerDeploymentSettings :
   T extends DocumentTriggerType.Scheduled ? ScheduledTriggerDeploymentSettings :
   T extends DocumentTriggerType.Integration ? IntegrationTriggerDeploymentSettings :
-  T extends DocumentTriggerType.Chat ? ChatTriggerDeploymentSettings :
   never
 
 // prettier-ignore
@@ -142,5 +119,4 @@ export type DocumentTriggerEventPayload<T extends DocumentTriggerType> =
   T extends DocumentTriggerType.Email ? EmailTriggerEventPayload :
   T extends DocumentTriggerType.Scheduled ? ScheduledTriggerEventPayload :
   T extends DocumentTriggerType.Integration ? IntegrationTriggerEventPayload :
-  T extends DocumentTriggerType.Chat ? ChatTriggerEventPayload :
   never

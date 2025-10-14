@@ -1,5 +1,6 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
 import {
+  Commit,
   DocumentTrigger,
   DocumentVersion,
   IntegrationDto,
@@ -8,33 +9,25 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useCallback, useMemo } from 'react'
-import { TriggerEventsList } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggerEventsList'
-import { OnRunTriggerFn } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggersList'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import useDocumentVersions from '$/stores/documentVersions'
-import {
-  isChatTrigger,
-  RUNNABLE_TRIGGERS,
-} from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggerWrapper'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { useTriggerInfo } from '$/components/TriggersManagement/hooks/useTriggerInfo'
-
-function isIntegrationTrigger(
-  trigger: DocumentTrigger,
-): trigger is DocumentTrigger<DocumentTriggerType.Integration> {
-  return trigger.triggerType === DocumentTriggerType.Integration
-}
+import {
+  RunDocumentProps,
+  RUNNABLE_TRIGGERS,
+  RunTriggerProps,
+} from '$/components/TriggersManagement/types'
+import { TriggerEventsList } from '$/components/TriggersManagement/TriggerCard/TriggerEventsList'
+import useDocumentTriggerEvents from '$/stores/documentTriggerEvents'
 
 export function RunTrigger({
   trigger,
   integrations,
   onRunTrigger,
-  onRunChatTrigger,
 }: {
   trigger: DocumentTrigger
   integrations: IntegrationDto[]
-  onRunTrigger: OnRunTriggerFn
-  onRunChatTrigger: () => void
+  onRunTrigger: (props: RunDocumentProps) => void
 }) {
   const { commit } = useCurrentCommit()
   const { data: documents } = useDocumentVersions({
@@ -52,27 +45,27 @@ export function RunTrigger({
 
   return (
     <RunTriggerWrapper
+      commit={commit}
       trigger={trigger}
-      integrations={integrations}
       document={document}
+      integrations={integrations}
       onRunTrigger={onRunTrigger}
-      onRunChatTrigger={onRunChatTrigger}
     />
   )
 }
 
-export function RunTriggerWrapper({
+function RunTriggerWrapper({
+  commit,
+  document,
   trigger,
   integrations,
-  document,
   onRunTrigger,
-  onRunChatTrigger,
 }: {
+  commit: Commit
+  document: DocumentVersion
   trigger: DocumentTrigger
   integrations: IntegrationDto[]
-  document: DocumentVersion
-  onRunTrigger: OnRunTriggerFn
-  onRunChatTrigger: () => void
+  onRunTrigger: (props: RunDocumentProps) => void
 }) {
   const { image, title, description } = useTriggerInfo({
     trigger,
@@ -81,20 +74,27 @@ export function RunTriggerWrapper({
   })
   const canRunTrigger = RUNNABLE_TRIGGERS.includes(trigger.triggerType)
 
-  const handleRunTrigger = useCallback(() => {
-    if (isIntegrationTrigger(trigger)) {
-      onRunTrigger({ document, parameters: {}, aiParameters: true })
-      return
-    }
+  const { data: triggerEvents, isLoading: isLoadingTriggerEvents } =
+    useDocumentTriggerEvents({
+      projectId: trigger.projectId,
+      commitUuid: commit.uuid,
+      triggerUuid: trigger.uuid,
+    })
 
-    if (isChatTrigger(trigger)) {
-      onRunChatTrigger()
-      return
-    }
-
-    // Schedule triggers don't have parameters
+  const handleRunScheduled = useCallback(() => {
     onRunTrigger({ document, parameters: {} })
-  }, [onRunTrigger, onRunChatTrigger, trigger, document])
+  }, [onRunTrigger, document])
+
+  const handleRunWithAI = useCallback(() => {
+    onRunTrigger({ document, parameters: {}, aiParameters: true })
+  }, [onRunTrigger, document])
+
+  const handleRunFromEvent = useCallback(
+    (props: RunTriggerProps) => {
+      onRunTrigger({ document, ...props })
+    },
+    [onRunTrigger, document],
+  )
 
   return (
     <div className='flex flex-col relative border rounded-lg w-full'>
@@ -131,7 +131,7 @@ export function RunTriggerWrapper({
             fancy
             variant='outline'
             iconProps={{ name: 'circlePlay' }}
-            onClick={handleRunTrigger}
+            onClick={handleRunScheduled}
           >
             Run
           </Button>
@@ -141,7 +141,7 @@ export function RunTriggerWrapper({
             fancy
             variant='outline'
             iconProps={{ name: 'bot' }}
-            onClick={handleRunTrigger}
+            onClick={handleRunWithAI}
           >
             Simulate with AI
           </Button>
@@ -149,27 +149,13 @@ export function RunTriggerWrapper({
       </div>
       {!RUNNABLE_TRIGGERS.includes(trigger.triggerType) ? (
         <TriggerEventsList
-          document={document}
           trigger={trigger}
-          onRunTrigger={onRunTrigger}
-          emptyState={<TriggerEventsEmptyState title={title} />}
+          triggerEvents={triggerEvents}
+          isLoading={isLoadingTriggerEvents}
+          isOpen
+          handleRun={handleRunFromEvent}
         />
       ) : null}
-    </div>
-  )
-}
-
-function TriggerEventsEmptyState({ title }: { title: string }) {
-  return (
-    <div className='flex items-center justify-center '>
-      <div className='flex flex-col items-center justify-center py-4 px-5 gap-y-3'>
-        <Icon name='clockFading' size='large' color='foregroundMuted' />
-        <Text.H5M>Waiting for events...</Text.H5M>
-        <Text.H5 centered color='foregroundMuted'>
-          To use this trigger to preview your agent, perform the action that
-          triggers <Text.H5M color='foregroundMuted'>{title}</Text.H5M>.
-        </Text.H5>
-      </div>
     </div>
   )
 }

@@ -1,4 +1,3 @@
-import { RUNNABLE_TRIGGERS } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/TriggerWrapper'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerStatus } from '@latitude-data/constants'
 import { Commit, DocumentTrigger } from '@latitude-data/core/schema/types'
@@ -7,7 +6,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useCallback } from 'react'
-import { RunTriggerProps } from '../types'
+import { RUNNABLE_TRIGGERS, RunTriggerProps } from '../types'
 
 function ToggleEnabled({
   projectId,

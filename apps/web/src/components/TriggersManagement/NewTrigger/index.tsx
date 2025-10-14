@@ -3,7 +3,6 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { IntegrationsList } from './IntegrationsList'
 import { PipedreamTrigger } from './TriggerTypes/PipedreamTrigger'
-import { ChatTrigger } from './TriggerTypes/ChatTrigger'
 import { ScheduleTrigger } from './TriggerTypes/ScheduleTrigger'
 import { EmailTrigger } from './TriggerTypes/EmailTrigger'
 import { OnTriggerCreated, SelectedIntegration } from '../types'
@@ -28,12 +27,6 @@ function IntegrationDetail({
     )
   }
   const slug = selectedIntegration.slug
-
-  if (selectedIntegration.type === 'Chat') {
-    return (
-      <ChatTrigger onTriggerCreated={onTriggerCreated} document={document} />
-    )
-  }
 
   if (selectedIntegration.type === DocumentTriggerType.Email) {
     return (

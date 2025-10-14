@@ -27,7 +27,6 @@ const TRIGGER_TYPE: Record<DocumentTriggerType, string> = {
   [DocumentTriggerType.Integration]: 'Integration',
   [DocumentTriggerType.Scheduled]: 'Scheduled',
   [DocumentTriggerType.Email]: 'Email',
-  [DocumentTriggerType.Chat]: 'Chat',
 }
 
 function useTriggersFromChanges({ changes }: { changes: ChangedTrigger[] }) {
@@ -69,8 +68,7 @@ function useTriggersFromChanges({ changes }: { changes: ChangedTrigger[] }) {
           url: !isDeleted
             ? ROUTES.projects
                 .detail({ id: projectId })
-                .commits.detail({ uuid: commitUuid })
-                .preview.triggers.edit(change.triggerUuid).root
+                .commits.detail({ uuid: commitUuid }).agent.root
             : undefined,
         }
       })

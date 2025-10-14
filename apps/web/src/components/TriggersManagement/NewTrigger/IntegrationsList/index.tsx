@@ -11,17 +11,15 @@ import useConnectedIntegrationsByPipedreamApp from '$/stores/integrationsConnect
 import { useDebouncedCallback } from 'use-debounce'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { SelectedIntegration, TriggerIntegrationType } from '../../types'
+import { SelectedIntegration } from '../../types'
 import { buildIntegrationOption } from './utils'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 
-export const ICONS_BY_TRIGGER: Partial<
-  Record<TriggerIntegrationType, IconName>
-> = {
-  Chat: 'chat',
-  [DocumentTriggerType.Scheduled]: 'clock',
-  [DocumentTriggerType.Email]: 'mail',
-}
+export const ICONS_BY_TRIGGER: Partial<Record<DocumentTriggerType, IconName>> =
+  {
+    [DocumentTriggerType.Scheduled]: 'clock',
+    [DocumentTriggerType.Email]: 'mail',
+  }
 
 export function IntegrationsList({
   onSelectIntegration,
@@ -56,18 +54,8 @@ export function IntegrationsList({
 
   const isLoading = connectedApps.length === 0 && isLoadingConnectedIntegrations
 
-  const optionGroups = useMemo<
-    SearchableOption<TriggerIntegrationType>[]
-  >(() => {
-    const items: SearchableOptionItem<TriggerIntegrationType>[] = [
-      {
-        type: 'item',
-        value: 'latitude_chat',
-        title: 'Chat',
-        description: 'Chat with a prompt',
-        metadata: { type: 'Chat' },
-        imageIcon: { type: 'icon', name: ICONS_BY_TRIGGER.Chat! },
-      },
+  const optionGroups = useMemo<SearchableOption<DocumentTriggerType>[]>(() => {
+    const items: SearchableOptionItem<DocumentTriggerType>[] = [
       {
         type: 'item',
         value: 'latitude_email',
@@ -99,16 +87,16 @@ export function IntegrationsList({
       item.title.toLowerCase().includes(immediateQuery.toLowerCase()),
     )
 
-    const baseGroup: SearchableOptionGroup<TriggerIntegrationType> = {
+    const baseGroup: SearchableOptionGroup<DocumentTriggerType> = {
       type: 'group',
       label: 'Available triggers',
       items: filteredItems,
       loading: isLoadingConnectedIntegrations,
     }
 
-    const groups: SearchableOption<TriggerIntegrationType>[] = [baseGroup]
+    const groups: SearchableOption<DocumentTriggerType>[] = [baseGroup]
 
-    const availableApps: SearchableOptionItem<TriggerIntegrationType>[] =
+    const availableApps: SearchableOptionItem<DocumentTriggerType>[] =
       pipedreamApps
         .filter(
           (app) =>
@@ -131,7 +119,7 @@ export function IntegrationsList({
                 src: app.imgSrc,
                 alt: app.name,
               },
-            }) satisfies SearchableOptionItem<TriggerIntegrationType>,
+            }) satisfies SearchableOptionItem<DocumentTriggerType>,
         )
 
     groups.push({
@@ -160,7 +148,7 @@ export function IntegrationsList({
     [loadMore, isLoadingMore, isReachingEnd, totalCount],
   )
 
-  const onSelectValue: OnSelectValue<TriggerIntegrationType> = useCallback(
+  const onSelectValue: OnSelectValue<DocumentTriggerType> = useCallback(
     (slug, metadata) => {
       if (!slug || !metadata) return
       setSelectedValue(slug)
@@ -170,7 +158,7 @@ export function IntegrationsList({
   )
 
   return (
-    <SearchableList<TriggerIntegrationType>
+    <SearchableList<DocumentTriggerType>
       multiGroup
       items={optionGroups}
       onSearchChange={onSearchChange}

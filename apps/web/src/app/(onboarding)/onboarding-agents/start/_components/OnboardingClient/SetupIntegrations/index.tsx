@@ -6,8 +6,8 @@ import useIntegrations from '$/stores/integrations'
 import {
   getPipedreamUnconfiguredIntegrations,
   UnconfiguredIntegrations,
-} from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/UnconfiguredIntegrations'
-import { ConfiguredIntegrations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/ConfiguredIntegrations'
+} from '$/components/Integrations/UnconfiguredIntegrations'
+import { ConfiguredIntegrations } from '$/components/Integrations/ConfiguredIntegrations'
 import { IsLoadingOnboardingItem } from '../../../lib/IsLoadingOnboardingItem'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import { OnboardingStep } from '../../../lib/OnboardingStep'

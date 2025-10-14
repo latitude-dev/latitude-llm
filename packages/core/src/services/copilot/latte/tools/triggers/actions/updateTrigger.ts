@@ -4,10 +4,7 @@ import { defineLatteTool } from '../../types'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../../lib/Result'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  chatTriggerConfigurationSchema,
-  integrationTriggerConfigurationSchema,
-} from '@latitude-data/constants/documentTriggers'
+import { integrationTriggerConfigurationSchema } from '@latitude-data/constants/documentTriggers'
 import { getTriggerDocument } from './getTriggerDocument'
 import {
   emailTriggerConfigurationSchema,
@@ -81,11 +78,6 @@ const updateTrigger = defineLatteTool(
       z.object({
         triggerType: z.literal(DocumentTriggerType.Integration),
         configuration: integrationTriggerConfigurationSchema,
-      }),
-      z.object({
-        triggerType: z.literal(DocumentTriggerType.Chat),
-        // For consistency, however, it will always default to an empty object
-        configuration: chatTriggerConfigurationSchema.optional().default({}),
       }),
     ]),
   }),

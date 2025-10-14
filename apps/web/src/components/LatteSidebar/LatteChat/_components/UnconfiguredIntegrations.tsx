@@ -1,4 +1,4 @@
-import { UnconfiguredIntegration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/preview/_components/UnconfiguredIntegrations'
+import { UnconfiguredIntegration } from '$/components/Integrations/UnconfiguredIntegrations'
 import useIntegrations from '$/stores/integrations'
 import { useLatteStore } from '$/stores/latte'
 import { IntegrationType } from '@latitude-data/constants'

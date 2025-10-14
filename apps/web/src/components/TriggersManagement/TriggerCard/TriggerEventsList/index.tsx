@@ -56,17 +56,19 @@ export function LoadingTriggerEvents() {
   )
 }
 
+const EMPTY_ARRAY = [] as number[]
+
 export function TriggerEventsList({
   trigger,
   triggerEvents,
-  newTriggerEventIds,
+  newTriggerEventIds = EMPTY_ARRAY,
   isLoading,
   isOpen,
   handleRun,
 }: {
   trigger: DocumentTrigger
   triggerEvents: DocumentTriggerEvent[]
-  newTriggerEventIds: number[]
+  newTriggerEventIds?: number[]
   isLoading: boolean
   isOpen: boolean
   handleRun: (props: RunTriggerProps) => void
