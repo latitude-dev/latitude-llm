@@ -31,7 +31,6 @@ import {
   DocumentVersion,
   Project,
 } from '@latitude-data/core/schema/types'
-import { useRefreshPromptMetadata } from '$/hooks/useDocumentValueContext'
 
 /**
  * Utility to convert localhost URLs to Cloudflare tunnel URLs for testing
@@ -139,10 +138,8 @@ function DocumentParameters({
 }
 
 function useDocumentParametersList({
-  chatTrigger,
   document,
 }: {
-  chatTrigger: DocumentTrigger<DocumentTriggerType.Chat>
   document: DocumentVersion
 }) {
   const { commit } = useCurrentCommit()
@@ -156,22 +153,17 @@ function useDocumentParametersList({
   const [parameters, setParameters] = useState<ParametersState>(
     buildParamatersFromInputs({ inputs }),
   )
-  useEffect(() => {
-    if (document.documentUuid !== chatTrigger.documentUuid) {
-      setParameters(buildParamatersFromInputs({ inputs }))
-    }
-  }, [document, chatTrigger, inputs])
 
-  return useMemo(
-    () => ({
-      parameters,
-      setParameters,
-    }),
-    [parameters, setParameters],
-  )
+  useEffect(() => {
+    setParameters(buildParamatersFromInputs({ inputs }))
+  }, [inputs])
+
+  return {
+    parameters,
+    setParameters,
+  }
 }
 
-// TODO: Refactor this component into smaller pieces, it's too big and complex.
 export function ChatTriggerTextarea({
   commit,
   project,
@@ -191,15 +183,6 @@ export function ChatTriggerTextarea({
   options: SelectOption<string>[]
   onChange: (value: string) => void
 }) {
-  // TODO: This is a hack to refresh the prompt metadata when the document changes but we shouldnt have to do this. We have to review how the metadata is handled and refactor it.
-  useRefreshPromptMetadata({
-    value: activeDocument.content,
-    document: activeDocument,
-    commit,
-    project,
-    devMode: false,
-  })
-
   const { data: triggers } = useDocumentTriggers({
     projectId: project.id,
     commitUuid: commit.uuid,
@@ -224,7 +207,6 @@ export function ChatTriggerTextarea({
   )
   const ref = useRef<HTMLTextAreaElement>(null)
   const { parameters, setParameters } = useDocumentParametersList({
-    chatTrigger,
     document,
   })
   const handleRunTrigger = useCallback(() => {
