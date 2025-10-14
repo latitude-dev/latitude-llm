@@ -57,11 +57,9 @@ describe('fillOnboardingsAsCompletedJob', () => {
     // Run the job
     const result = await fillOnboardingsAsCompletedJob(mockJob)
 
-    // Verify success
+    // Verify success - job returns Result.nil()
     expect(result.ok).toBe(true)
-    const data = result.unwrap()
-    expect(data.success).toBe(true)
-    expect(data.completedOnboardings).toBeGreaterThan(0)
+    expect(result.unwrap()).toBeUndefined()
 
     // Verify onboarding records were created for our test workspaces
     const workspace1Onboarding = await database
@@ -105,11 +103,9 @@ describe('fillOnboardingsAsCompletedJob', () => {
     // Run the job
     const result = await fillOnboardingsAsCompletedJob(mockJob)
 
-    // Verify success
+    // Verify success - job returns Result.nil()
     expect(result.ok).toBe(true)
-    const data = result.unwrap()
-    expect(data.success).toBe(true)
-    expect(data.completedOnboardings).toBeGreaterThan(0) // Some workspaces got onboarding records
+    expect(result.unwrap()).toBeUndefined()
 
     // Verify workspace1 still has only one onboarding record (the original one)
     const workspace1Onboarding = await database
@@ -153,11 +149,9 @@ describe('fillOnboardingsAsCompletedJob', () => {
     // Run the job
     const result = await fillOnboardingsAsCompletedJob(mockJob)
 
-    // Verify success
+    // Verify success - job returns Result.nil()
     expect(result.ok).toBe(true)
-    const data = result.unwrap()
-    expect(data.success).toBe(true)
-    expect(data.completedOnboardings).toBeGreaterThan(0) // Some workspaces got onboarding records
+    expect(result.unwrap()).toBeUndefined()
 
     // Verify workspace1 still has its incomplete onboarding record unchanged
     const workspace1Onboarding = await database
@@ -188,9 +182,7 @@ describe('fillOnboardingsAsCompletedJob', () => {
 
     // Verify success with onboardings created for existing workspaces
     expect(result.ok).toBe(true)
-    const data = result.unwrap()
-    expect(data.success).toBe(true)
-    expect(data.completedOnboardings).toBeGreaterThan(0)
+    expect(result.unwrap()).toBeUndefined()
   })
 
   it('should handle database where all workspaces already have onboarding records', async () => {
@@ -219,9 +211,7 @@ describe('fillOnboardingsAsCompletedJob', () => {
 
     // Verify success with no new onboardings created
     expect(result.ok).toBe(true)
-    const data = result.unwrap()
-    expect(data.success).toBe(true)
-    expect(data.completedOnboardings).toBeGreaterThanOrEqual(0) // May be 0 or more depending on other workspaces
+    expect(result.unwrap()).toBeUndefined()
 
     // Verify no duplicate records were created for our test workspaces
     const workspace1Onboarding = await database
@@ -286,9 +276,7 @@ describe('fillOnboardingsAsCompletedJob', () => {
     const result = await fillOnboardingsAsCompletedJob(mockJob)
 
     expect(result.ok).toBe(true)
-    const data = result.unwrap()
-    expect(data.success).toBe(true)
-    expect(data.completedOnboardings).toBeGreaterThan(0) // Should create onboarding records
+    expect(result.unwrap()).toBeUndefined()
   })
 
   it('should handle mixed scenario with some workspaces having onboarding and others not', async () => {
@@ -305,11 +293,9 @@ describe('fillOnboardingsAsCompletedJob', () => {
     // Run the job
     const result = await fillOnboardingsAsCompletedJob(mockJob)
 
-    // Verify success
+    // Verify success - job returns Result.nil()
     expect(result.ok).toBe(true)
-    const data = result.unwrap()
-    expect(data.success).toBe(true)
-    expect(data.completedOnboardings).toBeGreaterThan(0) // Some workspaces got onboarding records
+    expect(result.unwrap()).toBeUndefined()
 
     // Verify total onboarding records
     const allOnboardings = await database.select().from(workspaceOnboarding)
@@ -346,11 +332,9 @@ describe('fillOnboardingsAsCompletedJob', () => {
     // Run the job
     const result = await fillOnboardingsAsCompletedJob(mockJob)
 
-    // Verify success
+    // Verify success - job returns Result.nil()
     expect(result.ok).toBe(true)
-    const data = result.unwrap()
-    expect(data.success).toBe(true)
-    expect(data.completedOnboardings).toBeGreaterThan(0) // Should create onboarding records
+    expect(result.unwrap()).toBeUndefined()
 
     // Verify all workspaces have onboarding records
     const allOnboardings = await database.select().from(workspaceOnboarding)

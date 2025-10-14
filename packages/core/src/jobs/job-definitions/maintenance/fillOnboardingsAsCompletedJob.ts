@@ -24,7 +24,7 @@ export const fillOnboardingsAsCompletedJob = async (
       ),
     )
 
-  const completedOnboardingsCreated = await database
+  await database
     .insert(workspaceOnboarding)
     .values(
       onboardingsToInsert.map(({ workspaceId }) => ({
@@ -36,8 +36,5 @@ export const fillOnboardingsAsCompletedJob = async (
       workspaceId: workspaceOnboarding.workspaceId,
     })
 
-  return Result.ok({
-    success: completedOnboardingsCreated.length === onboardingsToInsert.length,
-    completedOnboardings: completedOnboardingsCreated.length,
-  })
+  return Result.nil()
 }
