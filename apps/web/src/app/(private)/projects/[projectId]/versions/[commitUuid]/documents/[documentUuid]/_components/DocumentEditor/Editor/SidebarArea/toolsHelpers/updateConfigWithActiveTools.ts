@@ -1,6 +1,7 @@
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { ActiveIntegrations } from './types'
 import { normalizeIntegrations } from './utils'
+import { CLIENT_TOOLS_INTEGRATION_NAME } from './collectTools'
 
 /**
  * Updates the tools config from active integrations.
@@ -17,8 +18,12 @@ export function updateToolsFromActiveIntegrations({
   const normalized = normalizeIntegrations(currentTools)
 
   // Build replacements for each integration based on ActiveIntegrations
+  // Skip client tools - they're read-only and defined inline in the config
   const replacements = new Map<string, string[]>()
   for (const { name, tools } of Object.values(activeIntegrations)) {
+    // Skip client tools integration - they're already in the config as objects
+    if (name === CLIENT_TOOLS_INTEGRATION_NAME) continue
+
     if (tools === true) {
       replacements.set(name, [`${name}/*`])
     } else if (Array.isArray(tools)) {

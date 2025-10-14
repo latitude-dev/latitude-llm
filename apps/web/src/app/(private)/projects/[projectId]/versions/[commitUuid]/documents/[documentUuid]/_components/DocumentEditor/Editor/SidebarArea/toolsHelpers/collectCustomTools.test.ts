@@ -108,4 +108,67 @@ describe('collectCustomTools', () => {
     const result = collectCustomTools(tools)
     expect(result).toEqual(['custom_tool', 'another_custom'])
   })
+
+  it('with provider tools: extracts provider name (e.g., openai with web_search_preview)', () => {
+    const tools = [
+      'latitude/search',
+      {
+        openai: [
+          {
+            type: 'web_search_preview',
+            search_context_size: 'low',
+          },
+        ],
+      },
+    ]
+    const result = collectCustomTools(tools)
+    expect(result).toEqual(['openai'])
+  })
+
+  it('with provider tools: extracts multiple provider names', () => {
+    const tools = [
+      'latitude/search',
+      {
+        openai: [
+          {
+            type: 'web_search_preview',
+            search_context_size: 'low',
+          },
+        ],
+      },
+      {
+        anthropic: [
+          {
+            type: 'computer_use_20241022',
+            display_height_px: 768,
+            display_width_px: 1024,
+          },
+        ],
+      },
+    ]
+    const result = collectCustomTools(tools)
+    expect(result).toEqual(['openai', 'anthropic'])
+  })
+
+  it('with provider tools: handles mix of custom tools and provider tools', () => {
+    const tools = [
+      'latitude/search',
+      {
+        get_weather: {
+          description: 'Get the current weather',
+        },
+      },
+      {
+        openai: [
+          {
+            type: 'web_search_preview',
+            search_context_size: 'low',
+          },
+        ],
+      },
+      'myintegration/tool',
+    ]
+    const result = collectCustomTools(tools)
+    expect(result).toEqual(['get_weather', 'openai'])
+  })
 })

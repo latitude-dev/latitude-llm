@@ -181,4 +181,154 @@ describe('updateConfig (updateToolsFromActiveIntegrations)', () => {
 
     expect(result).toEqual(['google/calendar'])
   })
+
+  it('does not write back client-tools as strings (read-only bug fix)', () => {
+    const currentTools: LatitudePromptConfig['tools'] = [
+      'latitude/todo',
+      {
+        get_weather: {
+          description: 'Get the current weather for a specified location.',
+          parameters: {
+            type: 'object' as const,
+            properties: {
+              location: {
+                type: 'string',
+                description: 'The city and state, e.g., San Francisco, CA',
+              },
+            },
+            required: ['location'],
+          },
+        },
+      },
+    ]
+
+    // Simulate the client-tools integration being in the store
+    const activeIntegrations: ActiveIntegrations = {
+      latitude: mockIntegration('latitude', ['todo']),
+      'client-tools': mockIntegration('client-tools', ['get_weather']),
+    }
+
+    const result = updateConfig({
+      currentTools,
+      activeIntegrations,
+    })
+
+    // Client tools should remain as objects, NOT converted to "client-tools/get_weather"
+    expect(result).toEqual([
+      'latitude/todo',
+      {
+        get_weather: {
+          description: 'Get the current weather for a specified location.',
+          parameters: {
+            type: 'object' as const,
+            properties: {
+              location: {
+                type: 'string',
+                description: 'The city and state, e.g., San Francisco, CA',
+              },
+            },
+            required: ['location'],
+          },
+        },
+      },
+    ])
+  })
+
+  it('with provider tools: does not write back provider tools as strings', () => {
+    const currentTools: LatitudePromptConfig['tools'] = [
+      'latitude/todo',
+      {
+        openai: [
+          {
+            type: 'web_search_preview',
+            search_context_size: 'low',
+          },
+        ],
+      },
+    ]
+
+    // Simulate the client-tools integration being in the store with openai provider
+    const activeIntegrations: ActiveIntegrations = {
+      latitude: mockIntegration('latitude', ['todo']),
+      'client-tools': mockIntegration('client-tools', ['openai']),
+    }
+
+    const result = updateConfig({
+      currentTools,
+      activeIntegrations,
+    })
+
+    // Provider tools should remain as objects, NOT converted to "client-tools/openai"
+    expect(result).toEqual([
+      'latitude/todo',
+      {
+        openai: [
+          {
+            type: 'web_search_preview',
+            search_context_size: 'low',
+          },
+        ],
+      },
+    ])
+  })
+
+  it('with provider tools: preserves multiple provider tools with integration tools', () => {
+    const currentTools: LatitudePromptConfig['tools'] = [
+      'latitude/search',
+      {
+        openai: [
+          {
+            type: 'web_search_preview',
+            search_context_size: 'low',
+          },
+        ],
+      },
+      'google/calendar',
+      {
+        anthropic: [
+          {
+            type: 'computer_use_20241022',
+            display_height_px: 768,
+            display_width_px: 1024,
+          },
+        ],
+      },
+    ]
+
+    const activeIntegrations: ActiveIntegrations = {
+      latitude: mockIntegration('latitude', ['search', 'extract']),
+      google: mockIntegration('google', ['calendar', 'drive']),
+      'client-tools': mockIntegration('client-tools', ['openai', 'anthropic']),
+    }
+
+    const result = updateConfig({
+      currentTools,
+      activeIntegrations,
+    })
+
+    // Provider tools should be preserved, integration tools updated
+    expect(result).toEqual([
+      'latitude/search',
+      'latitude/extract',
+      {
+        openai: [
+          {
+            type: 'web_search_preview',
+            search_context_size: 'low',
+          },
+        ],
+      },
+      'google/calendar',
+      'google/drive',
+      {
+        anthropic: [
+          {
+            type: 'computer_use_20241022',
+            display_height_px: 768,
+            display_width_px: 1024,
+          },
+        ],
+      },
+    ])
+  })
 })

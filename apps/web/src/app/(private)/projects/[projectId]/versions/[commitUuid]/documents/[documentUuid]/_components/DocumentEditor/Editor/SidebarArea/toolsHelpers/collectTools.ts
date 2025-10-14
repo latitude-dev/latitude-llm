@@ -5,7 +5,7 @@ import { ActiveIntegrations } from './types'
 import { getIntegrationData } from './utils'
 import { collectCustomTools } from './collectCustomTools'
 
-export const CUSTOM_TOOLS_INTEGRATION_NAME = 'custom-tools'
+export const CLIENT_TOOLS_INTEGRATION_NAME = 'client-tools'
 
 /**
  * Collects tools from a prompt configuration and integrates them with existing active integrations.
@@ -42,8 +42,8 @@ export function collectTools({
   // For integrations in old map but not in new config, set tools to empty array
   Object.keys(preservedMap).forEach((integrationName) => {
     if (!newIntegrationsMap[integrationName]) {
-      // Skip custom tools integration - it's handled separately
-      if (integrationName === CUSTOM_TOOLS_INTEGRATION_NAME) return
+      // Skip client tools integration - it's handled separately
+      if (integrationName === CLIENT_TOOLS_INTEGRATION_NAME) return
 
       // Only keep if this integration still exists in workspace
       const stillExists = integrations.some((i) => i.name === integrationName)
@@ -60,22 +60,22 @@ export function collectTools({
     }
   })
 
-  // Add custom tools as a special integration
+  // Add client tools as a special integration (read-only, defined inline in config)
   const customToolNames = collectCustomTools(tools)
   if (customToolNames.length > 0) {
-    preservedMap[CUSTOM_TOOLS_INTEGRATION_NAME] = {
-      id: -1, // Synthetic ID for custom tools
-      name: CUSTOM_TOOLS_INTEGRATION_NAME,
-      type: IntegrationType.Latitude, // Using Latitude type for inline custom tools
+    preservedMap[CLIENT_TOOLS_INTEGRATION_NAME] = {
+      id: -1, // Synthetic ID for client tools
+      name: CLIENT_TOOLS_INTEGRATION_NAME,
+      type: IntegrationType.Latitude, // Using Latitude type for inline client tools
       configuration: null,
       icon: { type: 'icon', name: 'code' },
       tools: customToolNames,
       allToolNames: customToolNames,
-      isOpen: preservedMap[CUSTOM_TOOLS_INTEGRATION_NAME]?.isOpen ?? false,
+      isOpen: preservedMap[CLIENT_TOOLS_INTEGRATION_NAME]?.isOpen ?? false,
     }
   } else {
-    // Remove custom tools integration if there are no custom tools
-    delete preservedMap[CUSTOM_TOOLS_INTEGRATION_NAME]
+    // Remove client tools integration if there are no client tools
+    delete preservedMap[CLIENT_TOOLS_INTEGRATION_NAME]
   }
 
   return preservedMap

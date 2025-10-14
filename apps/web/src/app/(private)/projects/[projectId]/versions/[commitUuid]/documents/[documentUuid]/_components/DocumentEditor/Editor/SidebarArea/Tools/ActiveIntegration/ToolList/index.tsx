@@ -11,7 +11,7 @@ import { ActiveIntegration } from '../../../toolsHelpers/types'
 import { ToolsContext } from '../../ToolsProvider'
 import { useSidebarStore } from '../../../hooks/useSidebarStore'
 import { useAnimatedItems } from './useAnimatedItems'
-import { CUSTOM_TOOLS_INTEGRATION_NAME } from '../../../toolsHelpers/collectTools'
+import { CLIENT_TOOLS_INTEGRATION_NAME } from '../../../toolsHelpers/collectTools'
 
 const MAX_VISIBLE_TOOLS = 10
 
@@ -52,17 +52,17 @@ function checkIsActive(
 
 const TOOL_EMPTY: [] = []
 export function ToolList({ integration }: { integration: ActiveIntegration }) {
-  const isCustomTools = integration.name === CUSTOM_TOOLS_INTEGRATION_NAME
+  const isClientTools = integration.name === CLIENT_TOOLS_INTEGRATION_NAME
 
   const {
     data: fetchedTools = TOOL_EMPTY,
     isLoading: isFetchingTools,
     error: fetchError,
-  } = useIntegrationTools(isCustomTools ? undefined : integration)
+  } = useIntegrationTools(isClientTools ? undefined : integration)
 
   // For custom tools, create mock tool objects from allToolNames
   const customToolsData = useMemo(() => {
-    if (!isCustomTools) return TOOL_EMPTY
+    if (!isClientTools) return TOOL_EMPTY
     return integration.allToolNames.map((toolName) => ({
       name: toolName,
       description: undefined,
@@ -73,11 +73,11 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
         additionalProperties: false,
       },
     }))
-  }, [isCustomTools, integration.allToolNames])
+  }, [isClientTools, integration.allToolNames])
 
-  const tools = isCustomTools ? customToolsData : fetchedTools
-  const isLoading = isCustomTools ? false : isFetchingTools
-  const error = isCustomTools ? null : fetchError
+  const tools = isClientTools ? customToolsData : fetchedTools
+  const isLoading = isClientTools ? false : isFetchingTools
+  const error = isClientTools ? null : fetchError
 
   const { addIntegrationTool, removeIntegrationTool } = use(ToolsContext)
   const setIntegrationToolNames = useSidebarStore(
@@ -93,7 +93,7 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
     (toolName: string) => () => {
       if (isLive) return
       if (!tools) return
-      if (isCustomTools) return // Don't allow toggling custom tools
+      if (isClientTools) return // Don't allow toggling custom tools
 
       const isActive = checkIsActive(integration.tools, toolName)
 
@@ -113,7 +113,7 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
     [
       tools,
       isLive,
-      isCustomTools,
+      isClientTools,
       addIntegrationTool,
       removeIntegrationTool,
       integration,
@@ -165,7 +165,7 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
 
   useEffect(() => {
     // Skip setting tool names for custom tools - they're already in allToolNames
-    if (isCustomTools) return
+    if (isClientTools) return
 
     if (tools && tools.length > 0) {
       setIntegrationToolNames({
@@ -173,7 +173,7 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
         toolNames: tools.map((t) => t.name),
       })
     }
-  }, [tools, integration.name, setIntegrationToolNames, isCustomTools])
+  }, [tools, integration.name, setIntegrationToolNames, isClientTools])
 
   const hasMoreTools = sortedTools.length > MAX_VISIBLE_TOOLS
   const shouldShowSearch = sortedTools.length > MAX_VISIBLE_TOOLS
@@ -243,10 +243,10 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
           <div
             role='button'
             tabIndex={0}
-            aria-disabled={isLive || isCustomTools}
+            aria-disabled={isLive || isClientTools}
             key={tool.name}
             data-tool-id={tool.name}
-            onClick={isCustomTools ? undefined : toggleTool(tool.name)}
+            onClick={isClientTools ? undefined : toggleTool(tool.name)}
             className='w-full flex items-center justify-between'
           >
             <div className='w-full flex items-center gap-2 min-w-0'>
@@ -261,12 +261,8 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
                     {tool.displayName ?? tool.name}
                   </Text.H5>
                 </div>
-                {!isCustomTools && (
-                  <SwitchToggle
-                    checked={isActive}
-                    onClick={toggleTool(tool.name)}
-                    disabled={isLive}
-                  />
+                {!isClientTools && (
+                  <SwitchToggle checked={isActive} disabled={isLive} />
                 )}
               </div>
             </div>

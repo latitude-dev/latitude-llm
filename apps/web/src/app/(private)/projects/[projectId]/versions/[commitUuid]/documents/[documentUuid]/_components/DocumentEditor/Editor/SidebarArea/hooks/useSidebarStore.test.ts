@@ -151,7 +151,7 @@ describe('useActiveIntegrationsStore', () => {
       expect(result.current.integrations[1].name).toBe('slack')
     })
 
-    it('should collect custom tools as a special integration', () => {
+    it('should collect client tools as a special integration', () => {
       const { result } = renderHook(() => useActiveIntegrationsStore())
       const integrations = [mockIntegrationDto('google')]
 
@@ -176,7 +176,7 @@ describe('useActiveIntegrationsStore', () => {
 
       expect(result.current.integrations).toHaveLength(2)
       expect(result.current.integrations[0].name).toBe('google')
-      expect(result.current.integrations[1].name).toBe('custom-tools')
+      expect(result.current.integrations[1].name).toBe('client-tools')
       expect(result.current.integrations[1].tools).toEqual([
         'get_weather',
         'calculate_sum',
