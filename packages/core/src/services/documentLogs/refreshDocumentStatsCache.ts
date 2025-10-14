@@ -29,7 +29,7 @@ async function countByDocument(documentUuid: string, db = database) {
 
 export async function refreshDocumentStatsCache(
   documentUuid: string,
-  db = database,
+  db = lro(),
 ) {
   try {
     const project = await db
@@ -73,8 +73,6 @@ export async function refreshDocumentStatsCache(
           logs: logs,
         })
       }
-    } else {
-      db = lro()
     }
 
     const [aggregations, dailyCount] = await Promise.all([

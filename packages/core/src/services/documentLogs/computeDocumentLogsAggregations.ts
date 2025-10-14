@@ -8,6 +8,7 @@ import { documentLogs } from '../../schema/models/documentLogs'
 import { providerLogs } from '../../schema/models/providerLogs'
 import { runErrors } from '../../schema/models/runErrors'
 import { buildLogsFilterSQLConditions } from './logsFilterUtils'
+import { DatabaseError } from 'pg'
 
 export async function computeDocumentLogsAggregations(
   {
@@ -121,30 +122,38 @@ export async function computeDocumentLogsAggregations(
         },
     )
 
-  const [
-    { averageDuration, medianDuration },
-    {
+  try {
+    const [
+      { averageDuration, medianDuration },
+      {
+        totalTokens,
+        totalCostInMillicents,
+        averageTokens,
+        averageCostInMillicents,
+        medianCostInMillicents,
+      },
+      { totalCount },
+    ] = await Promise.all([
+      documentLogAggregations,
+      providerLogAggregations,
+      totalCountPromise,
+    ])
+
+    return Result.ok<DocumentLogsAggregations>({
+      totalCount,
       totalTokens,
       totalCostInMillicents,
       averageTokens,
       averageCostInMillicents,
       medianCostInMillicents,
-    },
-    { totalCount },
-  ] = await Promise.all([
-    documentLogAggregations,
-    providerLogAggregations,
-    totalCountPromise,
-  ])
-
-  return Result.ok<DocumentLogsAggregations>({
-    totalCount,
-    totalTokens,
-    totalCostInMillicents,
-    averageTokens,
-    averageCostInMillicents,
-    medianCostInMillicents,
-    averageDuration,
-    medianDuration,
-  })
+      averageDuration,
+      medianDuration,
+    })
+  } catch (e) {
+    if (e && 'cause' in (e as DatabaseError) && (e as DatabaseError).cause) {
+      return Result.error((e as DatabaseError).cause as Error)
+    } else {
+      return Result.error(e as Error)
+    }
+  }
 }
