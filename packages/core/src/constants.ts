@@ -498,7 +498,7 @@ export type ProviderApiKeyUsage = {
   evaluationName?: string
 }[]
 
-export const LIMITED_VIEW_THRESHOLD = 1_000_000 // Approximated logs
+export const LIMITED_VIEW_THRESHOLD = 150_000 // Approximated logs
 export const STATS_CACHING_THRESHOLD = 5_000 // Actual logs
 export const DOCUMENT_STATS_CACHE_KEY = (
   workspaceId: number,
