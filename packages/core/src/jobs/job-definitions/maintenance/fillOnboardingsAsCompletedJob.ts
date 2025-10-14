@@ -24,6 +24,10 @@ export const fillOnboardingsAsCompletedJob = async (
       ),
     )
 
+  if (onboardingsToInsert.length === 0) {
+    return Result.nil()
+  }
+
   await database
     .insert(workspaceOnboarding)
     .values(
