@@ -51,6 +51,7 @@ export const setupAction = errorHandlingProcedure
       },
     })
 
+    // If there is no returnTo or its NOT a clone action url, redirect to the setup form
     if (!parsedInput.returnTo || !isCloneActionUrl(parsedInput.returnTo)) {
       return frontendRedirect(ROUTES.auth.setup.form)
     }
