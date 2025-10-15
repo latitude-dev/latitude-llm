@@ -961,7 +961,7 @@ class Latitude {
   }
 }
 
-export { Latitude, LatitudeApiError, LogSources }
+export { Latitude, LatitudeApiError, LogSources, MessageRole }
 
 export { Adapters } from 'promptl-ai'
 
@@ -971,7 +971,6 @@ export type {
   GenerationJob,
   GenerationResponse,
   Message,
-  MessageRole,
   Options,
   Project,
   Prompt,
