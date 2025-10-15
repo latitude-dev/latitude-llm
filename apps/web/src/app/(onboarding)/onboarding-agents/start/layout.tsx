@@ -9,6 +9,13 @@ import { redirect } from 'next/navigation'
 import { CommitProvider } from '$/app/providers/CommitProvider'
 import { ProjectProvider } from '$/app/providers/ProjectProvider'
 import { ROUTES } from '$/services/routes'
+import buildMetatags from '$/app/_lib/buildMetatags'
+
+export async function generateMetadata() {
+  return buildMetatags({
+    title: 'Onboarding AI Agents',
+  })
+}
 
 export default async function NocodersLayout({
   children,

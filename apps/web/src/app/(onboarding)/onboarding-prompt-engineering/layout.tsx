@@ -4,10 +4,9 @@ import buildMetatags from '$/app/_lib/buildMetatags'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { ReactNode } from 'react'
 
-// TODO(onboarding): think better how to do it now with the new onboardings (there are two now)
 export async function generateMetadata() {
   return buildMetatags({
-    title: 'Onboarding',
+    title: 'Prompt Engineering Onboarding',
   })
 }
 
