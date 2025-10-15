@@ -684,6 +684,15 @@ export type AgentOnboardingSkippedEvent = LatitudeEventGeneric<
   }
 >
 
+export type AgentOnboardingSkippedFromSelectAgentPageEvent =
+  LatitudeEventGeneric<
+    'agentOnboardingSkippedFromSelectAgentPage',
+    {
+      workspaceId: number
+      userEmail: string
+    }
+  >
+
 export type SetupFormVisitedEvent = LatitudeEventGeneric<
   'setupFormPageVisited',
   {
@@ -779,6 +788,7 @@ export type LatitudeEvent =
   | PromptEngineeringOnboardingCompletedEvent
   | AgentOnboardingCompletedEvent
   | AgentOnboardingSkippedEvent
+  | AgentOnboardingSkippedFromSelectAgentPageEvent
   | SetupFormVisitedEvent
   | SelectAgentVisitedEvent
   | AgentOnboardingVisitedEvent
@@ -846,6 +856,7 @@ export interface IEventsHandlers {
   promptEngineeringOnboardingCompleted: EventHandler<PromptEngineeringOnboardingCompletedEvent>[]
   agentOnboardingCompleted: EventHandler<AgentOnboardingCompletedEvent>[]
   agentOnboardingSkipped: EventHandler<AgentOnboardingSkippedEvent>[]
+  agentOnboardingSkippedFromSelectAgentPage: EventHandler<AgentOnboardingSkippedFromSelectAgentPageEvent>[]
   setupFormPageVisited: EventHandler<SetupFormVisitedEvent>[]
   selectAgentPageVisited: EventHandler<SelectAgentVisitedEvent>[]
   agentOnboardingPageVisited: EventHandler<AgentOnboardingVisitedEvent>[]

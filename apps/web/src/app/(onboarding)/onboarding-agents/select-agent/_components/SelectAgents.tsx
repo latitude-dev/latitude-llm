@@ -80,7 +80,7 @@ export function SelectAgents({ user }: { user: User }) {
   const handleSkipOnboarding = useCallback(() => {
     executeCompleteOnboarding({})
     publishEvent({
-      eventType: 'agentOnboardingSkipped',
+      eventType: 'agentOnboardingSkippedFromSelectAgentPage',
       payload: {
         userEmail: user.email,
         workspaceId: workspace.id,

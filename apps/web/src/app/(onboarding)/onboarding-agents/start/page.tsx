@@ -12,7 +12,7 @@ export default async function NocodersPage() {
       namePageVisited='agentOnboarding'
       additionalData={{ workspaceId: workspace.id, userEmail: user.email }}
     >
-      <OnboardingClient onboardingSteps={onboardingSteps} />
+      <OnboardingClient onboardingSteps={onboardingSteps} user={user} />
     </PageTrackingWrapper>
   )
 }

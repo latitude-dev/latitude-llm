@@ -46,6 +46,7 @@ export function OnboardingClient({
             executeCompleteOnboarding={executeCompleteOnboarding}
             currentStep={currentStep}
             isLoadingOnboarding={isLoadingOnboarding}
+            user={user}
           />
           <div className='flex-row flex-1 h-full'>
             {currentStep === OnboardingStepKey.SetupIntegrations && (
