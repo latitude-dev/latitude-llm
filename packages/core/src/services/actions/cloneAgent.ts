@@ -14,7 +14,6 @@ import {
   DocumentVersionsRepository,
 } from '../../repositories'
 import { forkDocument } from '../documents/fork'
-import { isFeatureEnabledByName } from '../workspaceFeatures/isFeatureEnabledByName'
 import { getWorkspaceOnboarding } from '../workspaceOnboarding'
 import { ActionExecuteArgs } from './shared'
 
@@ -58,23 +57,6 @@ async function execute(
     return Result.error(forking.error)
   }
   const cloned = forking.unwrap()
-
-  const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
-    workspace.id,
-    'nocoderOnboarding',
-  )
-
-  if (!Result.isOk(isNewOnboardingEnabledResult)) {
-    return isNewOnboardingEnabledResult
-  }
-  const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
-  if (!isNewOnboardingEnabled) {
-    return Result.ok({
-      projectId: cloned.project.id,
-      commitUuid: cloned.commit.uuid,
-      hasCompletedOnboarding: true, // TODO(onboarding): remove this hardcoded value once we have a new onboarding
-    })
-  }
 
   const workspaceOnboarding = await getWorkspaceOnboarding({ workspace }, db)
   if (!Result.isOk(workspaceOnboarding)) {

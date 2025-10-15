@@ -1,13 +1,11 @@
 'use server'
 
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import {
   getOnboardingDataset,
   getOnboardingResources,
-  isOnboardingCompleted,
 } from '$/data-access/workspaceOnboarding'
 import { OnboardingClient } from './_components/OnboardingClient'
-import { ROUTES } from '$/services/routes'
 import { ONBOARDING_DOCUMENT_PATH } from '@latitude-data/core/constants'
 import { ProjectProvider } from '$/app/providers/ProjectProvider'
 import { CommitProvider } from '$/app/providers/CommitProvider'
@@ -16,10 +14,6 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 
 export default async function OnboardingRedirect() {
   const { user, workspace } = await getCurrentUserOrRedirect()
-  const isCompleted = await isOnboardingCompleted()
-  if (isCompleted) {
-    redirect(ROUTES.dashboard.root)
-  }
 
   const { documents, project, commit } = await getOnboardingResources()
   if (project === null || commit === null) {

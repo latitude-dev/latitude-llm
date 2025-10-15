@@ -89,3 +89,7 @@ export function isLatitudeUrl(url: unknown): url is string | URL {
 
   return false
 }
+
+export function isCloneActionUrl(url: unknown): url is string | URL {
+  return isLatitudeUrl(url) && url.toString().includes('/actions/clone-agent')
+}

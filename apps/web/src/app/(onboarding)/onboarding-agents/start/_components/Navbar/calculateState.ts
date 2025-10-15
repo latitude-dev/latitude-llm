@@ -6,7 +6,7 @@ import { StatusFlagState } from '@latitude-data/web-ui/molecules/StatusFlag'
 
 export function calculateState(
   key: OnboardingStepKey,
-  currentStep?: OnboardingStepKey | null, // TODO(onboarding): remove null when data migration is done
+  currentStep: OnboardingStepKey,
 ): StatusFlagState {
   if (!currentStep) {
     return StatusFlagState.pending

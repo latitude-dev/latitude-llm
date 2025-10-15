@@ -4,13 +4,11 @@ import { z } from 'zod'
 import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
-import { isLatitudeUrl } from '@latitude-data/constants'
+import { isCloneActionUrl } from '@latitude-data/constants'
 import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access/users'
 
 import { errorHandlingProcedure } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
-import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
-import { Result } from '@latitude-data/core/lib/Result'
 
 export const setupAction = errorHandlingProcedure
   .inputSchema(
@@ -53,20 +51,9 @@ export const setupAction = errorHandlingProcedure
       },
     })
 
-    if (!parsedInput.returnTo || !isLatitudeUrl(parsedInput.returnTo)) {
-      const isNewOnboardingEnabledResult = await isFeatureEnabledByName(
-        workspace.id,
-        'nocoderOnboarding',
-      )
-
-      if (!Result.isOk(isNewOnboardingEnabledResult)) {
-        return isNewOnboardingEnabledResult
-      }
-      const isNewOnboardingEnabled = isNewOnboardingEnabledResult.unwrap()
-      if (isNewOnboardingEnabled) {
-        return frontendRedirect(ROUTES.auth.setup.form)
-      }
-      return frontendRedirect(ROUTES.dashboard.root)
+    // If there is no returnTo or its NOT a clone action url, redirect to the setup form
+    if (!parsedInput.returnTo || !isCloneActionUrl(parsedInput.returnTo)) {
+      return frontendRedirect(ROUTES.auth.setup.form)
     }
 
     return frontendRedirect(parsedInput.returnTo)
