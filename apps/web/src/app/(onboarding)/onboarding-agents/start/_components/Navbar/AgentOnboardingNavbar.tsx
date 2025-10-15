@@ -14,6 +14,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { publishEventAction } from '$/actions/events/publishEventAction'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { usePlayground } from '../../lib/PlaygroundProvider'
+
 export default function AgentOnboardingNavbar({
   onboardingSteps,
   currentStep,
@@ -28,7 +29,7 @@ export default function AgentOnboardingNavbar({
     projectId: number
     commitUuid: string
   }) => void
-  currentStep: OnboardingStepKey | undefined | null // TODO(onboarding): remove null when data migration is done
+  currentStep: OnboardingStepKey
   isLoadingOnboarding: boolean
 }) {
   const { execute: publishEvent } = useLatitudeAction(publishEventAction)

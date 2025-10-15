@@ -97,8 +97,6 @@ describe('setupService', () => {
       .where(utils.eq(workspaceOnboarding.workspaceId, workspace.id))
       .then((r) => r[0])
     expect(createdOnboarding).toBeDefined()
-    // TODO(onboarding): change this once we have a new onboarding and we remove feature flag
-    expect(createdOnboarding?.completedAt).toBeDefined()
   })
 
   it('publishes userCreated event', async () => {
