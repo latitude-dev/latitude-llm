@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
-import { isCloneActionUrl, isLatitudeUrl } from '@latitude-data/constants'
+import { isCloneActionUrl } from '@latitude-data/constants'
 import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access/users'
 
 import { errorHandlingProcedure } from '../procedures'

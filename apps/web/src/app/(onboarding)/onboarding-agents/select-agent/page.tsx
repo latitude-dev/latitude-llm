@@ -10,7 +10,7 @@ import { redirect } from 'next/navigation'
 import { isOnboardingCompleted } from '$/data-access'
 
 export default async function SelectAgentPage() {
-  const { user } = await getCurrentUserOrRedirect()
+  const { user, workspace } = await getCurrentUserOrRedirect()
   const isCloud = !!env.LATITUDE_CLOUD
   const isCompleted = await isOnboardingCompleted()
   if (isCompleted) {
