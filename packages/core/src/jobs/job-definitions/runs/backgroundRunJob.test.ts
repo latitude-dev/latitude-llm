@@ -498,7 +498,7 @@ describe('backgroundRunJob', () => {
       // Mock stream reader to never complete (timeout scenario)
       const reader = mockReadStream.getReader()
       vi.mocked(reader.read).mockImplementation(() => {
-        return new Promise((resolve) => {
+        return new Promise(() => {
           // Never resolves to simulate timeout
         })
       })
