@@ -9,7 +9,7 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { cn } from '@latitude-data/web-ui/utils'
 import { KeyboardEvent, useCallback, useMemo, useState } from 'react'
-import { RunProps } from '../types'
+import { RunProps } from '../../../app/(private)/projects/[projectId]/versions/[commitUuid]/home/_components/MainSection/types'
 
 function InputField({
   placeholder,

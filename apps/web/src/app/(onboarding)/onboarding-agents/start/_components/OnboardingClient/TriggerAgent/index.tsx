@@ -13,7 +13,7 @@ import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import { OnboardingStep } from '../../../lib/OnboardingStep'
 import { usePlayground } from '../../../lib/PlaygroundProvider'
 import { RunDocumentProps } from '$/components/TriggersManagement/types'
-import { AgentInput } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/home/_components/MainSection/Agent/AgentInput'
+import { AgentInput } from '$/components/Agent/AgentInput/AgentInput'
 import useDocumentVersions from '$/stores/documentVersions'
 
 export function TriggerAgentHeader() {
