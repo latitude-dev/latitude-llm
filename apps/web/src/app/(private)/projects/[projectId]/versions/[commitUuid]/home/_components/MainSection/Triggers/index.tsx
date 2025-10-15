@@ -50,7 +50,7 @@ export function TriggersSection({
       <Text.H5 color='foregroundMuted'>
         {triggers.length > 0
           ? 'or run a preview from a trigger'
-          : 'or add a trigger to run this agent automatically'}
+          : 'or add a trigger to run this project automatically'}
       </Text.H5>
       <TriggersList
         triggers={triggers}
