@@ -10,6 +10,8 @@ import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { cn } from '@latitude-data/web-ui/utils'
 import { KeyboardEvent, useCallback, useMemo, useState } from 'react'
 import { RunProps } from '../types'
+import { useRefreshPromptMetadata } from '$/hooks/useDocumentValueContext'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 
 function InputField({
   placeholder,
@@ -63,6 +65,16 @@ export function AgentInput({
   runPromptFn: (props: RunProps) => void
 }) {
   const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+
+  // TODO: At times, the metadata is not set, and parameters never show up. We must review the metadata workflow and remove this, but for now we need it.
+  useRefreshPromptMetadata({
+    value: document.content,
+    document,
+    commit,
+    project,
+    devMode: false,
+  })
 
   const {
     manual: { inputs: parametersObject },
