@@ -213,7 +213,10 @@ async function generateAIParameters({
       },
     )
 
-    return Result.ok(result?.response?.object)
+    // we return the response wrapped within a parameter_record key
+    const response = result?.response?.object.parameter_record
+
+    return Result.ok(response ?? {})
   } catch (error) {
     return Result.error(error as Error)
   }
