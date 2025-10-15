@@ -4,6 +4,7 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { DropdownMenu } from '@latitude-data/web-ui/atoms/DropdownMenu'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { ToolList } from './ToolList'
 import {
@@ -14,6 +15,10 @@ import { ToolsContext } from '../ToolsProvider'
 import { useSidebarStore } from '../../hooks/useSidebarStore'
 import { CLIENT_TOOLS_INTEGRATION_NAME } from '../../toolsHelpers/collectTools'
 import { useLazyToolCount } from './useLazyToolCount'
+import { IntegrationType } from '@latitude-data/constants'
+import { INTEGRATION_TYPE_VALUES } from '$/lib/integrationTypeOptions'
+import { usePipedreamApp } from '$/stores/pipedreamApp'
+import { parseMarkdownLinks } from '$/components/Pipedream/utils'
 
 function ImageIconComponent({ imageIcon }: { imageIcon?: ImageIcon }) {
   if (!imageIcon) return null
@@ -48,10 +53,34 @@ export function ActiveIntegration({
   const isLive = !!commit.mergedAt
 
   const isClientTools = integration.name === CLIENT_TOOLS_INTEGRATION_NAME
-  const displayName = isClientTools ? 'Client tools' : integration.name
+  const isLatitude = integration.type === IntegrationType.Latitude
+
+  const displayName = isClientTools
+    ? 'Client tools'
+    : isLatitude
+      ? INTEGRATION_TYPE_VALUES[IntegrationType.Latitude].label
+      : integration.name
 
   const allEnabled = integration.tools === true
   const isOpen = integration.isOpen
+
+  // Get app description for Pipedream integrations
+  const isPipedream = integration.type === IntegrationType.Pipedream
+  const config = integration.configuration
+  const appNameSlug =
+    isPipedream && config !== null && 'appName' in config
+      ? config.appName
+      : undefined
+  const { data: pipedreamApp } = usePipedreamApp(appNameSlug)
+
+  // Get description for tooltip (only Pipedream)
+  const description = useMemo(() => {
+    if (isClientTools) return null
+    if (isPipedream && pipedreamApp?.description) {
+      return parseMarkdownLinks(pipedreamApp.description)
+    }
+    return null
+  }, [isClientTools, isPipedream, pipedreamApp])
 
   // Lazily fetch tool count in the background if not already loaded
   const { isLoadingCount } = useLazyToolCount(integration)
@@ -98,6 +127,30 @@ export function ActiveIntegration({
     ],
   )
 
+  const integrationContent = (
+    <>
+      <div
+        onClick={() => toggleIntegration(integration.name)}
+        className='flex items-center gap-2 min-w-0 cursor-pointer'
+      >
+        <Icon name={isOpen ? 'chevronDown' : 'chevronRight'} />
+        <ImageIconComponent imageIcon={integration.icon} />
+        <Text.H5M ellipsis noWrap>
+          {displayName}
+        </Text.H5M>
+      </div>
+      {!isClientTools && isOpen && (
+        <div onClick={toggleAllEnabled}>
+          <SwitchToggle
+            checked={allEnabled}
+            onClick={toggleAllEnabled}
+            disabled={isLive}
+          />
+        </div>
+      )}
+    </>
+  )
+
   return (
     <div className='flex flex-col'>
       <div className='flex items-center justify-between gap-x-2 min-w-0 min-h-7'>
@@ -106,22 +159,45 @@ export function ActiveIntegration({
           tabIndex={0}
           aria-expanded={isOpen}
           aria-controls={`integration-tools-${integration.name}`}
-          onClick={() => toggleIntegration(integration.name)}
           className='flex items-center gap-2 min-w-0'
         >
-          <Icon name={isOpen ? 'chevronDown' : 'chevronRight'} />
-          <ImageIconComponent imageIcon={integration.icon} />
-          <Text.H5M ellipsis noWrap>
-            {displayName}
-          </Text.H5M>
-          {!isClientTools && (
-            <div onClick={toggleAllEnabled}>
-              <SwitchToggle
-                checked={allEnabled}
-                onClick={toggleAllEnabled}
-                disabled={isLive}
-              />
-            </div>
+          {description ? (
+            <>
+              <Tooltip
+                side='top'
+                align='start'
+                trigger={
+                  <div
+                    onClick={() => toggleIntegration(integration.name)}
+                    className='flex items-center gap-2 min-w-0 cursor-pointer'
+                  >
+                    <Icon name={isOpen ? 'chevronDown' : 'chevronRight'} />
+                    <ImageIconComponent imageIcon={integration.icon} />
+                    <Text.H5M ellipsis noWrap>
+                      {displayName}
+                    </Text.H5M>
+                  </div>
+                }
+              >
+                <div
+                  className='text-background [&>a]:underline [&>a]:text-background'
+                  dangerouslySetInnerHTML={{
+                    __html: description,
+                  }}
+                />
+              </Tooltip>
+              {!isClientTools && isOpen && (
+                <div onClick={toggleAllEnabled}>
+                  <SwitchToggle
+                    checked={allEnabled}
+                    onClick={toggleAllEnabled}
+                    disabled={isLive}
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            integrationContent
           )}
         </div>
 

@@ -135,12 +135,17 @@ export function ConnectToolsModal({
       })
       .map((integration) => {
         const labelIcon = integrationOptions(integration)!
+        // Use label for Latitude integrations, name for others
+        const title =
+          integration.type === IntegrationType.Latitude
+            ? labelIcon.label
+            : integration.name
         return {
           type: 'item' as const,
           value: String(integration.id),
-          title: integration.name,
+          title,
           description: '',
-          keywords: [labelIcon.label, integration.type],
+          keywords: [labelIcon.label, integration.type, integration.name],
           metadata: {
             type: integration.type,
             integration,
