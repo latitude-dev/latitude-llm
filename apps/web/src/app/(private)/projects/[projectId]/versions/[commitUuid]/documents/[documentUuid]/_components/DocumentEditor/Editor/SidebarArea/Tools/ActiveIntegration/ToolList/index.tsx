@@ -61,20 +61,25 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
     error: fetchError,
   } = useIntegrationTools(isClientTools ? undefined : integration)
 
-  // For custom tools, create mock tool objects from allToolNames
+  // For custom tools, create tool objects from allToolNames with metadata
   const customToolsData = useMemo(() => {
     if (!isClientTools) return TOOL_EMPTY
-    return integration.allToolNames.map((toolName) => ({
-      name: toolName,
-      description: undefined,
-      displayName: undefined,
-      inputSchema: {
-        type: 'object' as const,
-        properties: {},
-        additionalProperties: false,
-      },
-    }))
-  }, [isClientTools, integration.allToolNames])
+    return integration.allToolNames.map((toolName) => {
+      const metadata = integration.clientToolsMetadata?.[toolName]
+      const parameters = metadata?.parameters as any
+
+      return {
+        name: toolName,
+        description: metadata?.description,
+        displayName: undefined,
+        inputSchema: parameters ?? {
+          type: 'object' as const,
+          properties: {},
+          additionalProperties: false,
+        },
+      }
+    })
+  }, [isClientTools, integration.allToolNames, integration.clientToolsMetadata])
 
   const tools = isClientTools ? customToolsData : fetchedTools
   const isLoading = isClientTools ? false : isFetchingTools
@@ -248,56 +253,152 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
         const parsedDescription = tool.description
           ? parseMarkdownLinks(tool.description)
           : null
+
+        // Get parameters for client tools
+        const inputSchema = tool.inputSchema as any
+        const hasParameters =
+          isClientTools &&
+          inputSchema?.properties &&
+          typeof inputSchema.properties === 'object'
+        const parameters = hasParameters
+          ? Object.entries(inputSchema.properties)
+          : []
+        const requiredParams =
+          isClientTools &&
+          inputSchema?.required &&
+          Array.isArray(inputSchema.required)
+            ? inputSchema.required
+            : []
+
         return (
-          <div
-            role='button'
-            tabIndex={0}
-            aria-disabled={isLive || isClientTools}
-            key={tool.name}
-            data-tool-id={tool.name}
-            onClick={isClientTools ? undefined : toggleTool(tool.name)}
-            className='w-full flex items-center justify-between'
-          >
-            <div className='w-full flex items-center gap-2 min-w-0'>
-              <IndentationBar
-                startOnIndex={0}
-                hasChildren={false}
-                indentation={[
-                  {
-                    isLast:
-                      isLastTool &&
-                      !shouldShowMoreButton &&
-                      !shouldShowLessButton,
-                  },
-                ]}
-              />
-              <div className='w-full flex justify-between items-center min-w-0 gap-x-2'>
-                <div className='flex-1 flex items-center gap-2 min-w-0'>
-                  <Tooltip
-                    delayDuration={800}
-                    trigger={
+          <div key={tool.name} className='flex flex-col'>
+            <div
+              role='button'
+              tabIndex={0}
+              aria-disabled={isLive || isClientTools}
+              data-tool-id={tool.name}
+              onClick={isClientTools ? undefined : toggleTool(tool.name)}
+              className='w-full flex items-center justify-between'
+            >
+              <div className='w-full flex items-center gap-2 min-w-0'>
+                <IndentationBar
+                  startOnIndex={0}
+                  hasChildren={false}
+                  indentation={[
+                    {
+                      isLast:
+                        isLastTool &&
+                        !shouldShowMoreButton &&
+                        !shouldShowLessButton,
+                    },
+                  ]}
+                />
+                <div className='w-full flex justify-between items-center min-w-0 gap-x-2'>
+                  <div className='flex-1 flex items-center gap-2 min-w-0'>
+                    {parsedDescription ? (
+                      <Tooltip
+                        delayDuration={800}
+                        trigger={
+                          <Text.H5
+                            ellipsis
+                            noWrap
+                            color='foreground'
+                            showNativeTitle={false}
+                          >
+                            {tool.displayName ?? tool.name}
+                          </Text.H5>
+                        }
+                        side='top'
+                        align='start'
+                      >
+                        <div
+                          className='text-background [&>a]:underline [&>a]:text-background'
+                          dangerouslySetInnerHTML={{
+                            __html: `
+                            <strong>${tool.displayName ?? tool.name}</strong><br/>
+                            ${parsedDescription}
+                            `,
+                          }}
+                        />
+                      </Tooltip>
+                    ) : (
                       <Text.H5 ellipsis noWrap color='foreground'>
                         {tool.displayName ?? tool.name}
                       </Text.H5>
-                    }
-                    side='top'
-                    align='start'
-                  >
-                    {parsedDescription ? (
-                      <div
-                        className='text-background [&>a]:underline [&>a]:text-background'
-                        dangerouslySetInnerHTML={{
-                          __html: parsedDescription,
-                        }}
-                      />
-                    ) : null}
-                  </Tooltip>
+                    )}
+                  </div>
+                  {!isClientTools && (
+                    <SwitchToggle checked={isActive} disabled={isLive} />
+                  )}
                 </div>
-                {!isClientTools && (
-                  <SwitchToggle checked={isActive} disabled={isLive} />
-                )}
               </div>
             </div>
+
+            {/* Display parameters for client tools */}
+            {hasParameters &&
+              parameters.map(([paramName, paramSchema]) => {
+                const isRequired = requiredParams.includes(paramName)
+                const paramDescription =
+                  typeof paramSchema === 'object' &&
+                  paramSchema !== null &&
+                  'description' in paramSchema
+                    ? String(paramSchema.description)
+                    : undefined
+                const isLastToolOverall =
+                  isLastTool && !shouldShowMoreButton && !shouldShowLessButton
+
+                return (
+                  <div
+                    key={paramName}
+                    className='w-full flex items-center gap-2 min-w-0'
+                  >
+                    <IndentationBar
+                      startOnIndex={0}
+                      hasChildren={false}
+                      indentation={[
+                        {
+                          isLast: isLastToolOverall,
+                          invisible: isLastToolOverall,
+                        },
+                        { isLast: false, invisible: true },
+                      ]}
+                    />
+                    {paramDescription ? (
+                      <Tooltip
+                        delayDuration={800}
+                        trigger={
+                          <Text.H6
+                            ellipsis
+                            noWrap
+                            color='foregroundMuted'
+                            showNativeTitle={false}
+                          >
+                            {paramName}
+                            {isRequired && (
+                              <span className='text-destructive'>*</span>
+                            )}
+                          </Text.H6>
+                        }
+                        side='top'
+                        align='start'
+                      >
+                        <div className='text-background'>
+                          <strong>{paramName}</strong>
+                          <br />
+                          {paramDescription}
+                        </div>
+                      </Tooltip>
+                    ) : (
+                      <Text.H6 ellipsis noWrap color='foregroundMuted'>
+                        {paramName}
+                        {isRequired && (
+                          <span className='text-destructive'>*</span>
+                        )}
+                      </Text.H6>
+                    )}
+                  </div>
+                )
+              })}
           </div>
         )
       })}

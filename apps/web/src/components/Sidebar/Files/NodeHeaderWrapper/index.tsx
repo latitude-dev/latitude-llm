@@ -18,7 +18,7 @@ import { ReactNode, RefObject, useEffect, useRef, useState } from 'react'
 import { useNodeValidator } from './useNodeValidator'
 import { MainPromptIcon } from './MainPromptIcon'
 
-export type IndentType = { isLast: boolean }
+export type IndentType = { isLast: boolean; invisible?: boolean }
 
 const MODIFICATION_LABELS: Record<ModifiedDocumentType, string> = {
   [ModifiedDocumentType.Created]: 'Created',

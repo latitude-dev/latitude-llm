@@ -42,6 +42,7 @@ export type Common = {
   wordBreak?: WordBreak
   whiteSpace?: WhiteSpace
   ellipsis?: boolean
+  showNativeTitle?: boolean
   lineClamp?: number
   display?: Display
   userSelect?: boolean
@@ -86,6 +87,7 @@ const TextAtom = memo(
       whiteSpace = 'normal',
       wordBreak = 'normal',
       ellipsis = false,
+      showNativeTitle = true,
       lineClamp = undefined,
       userSelect = true,
       noWrap = false,
@@ -109,10 +111,17 @@ const TextAtom = memo(
     const wordBreakClass = wordBreakOptions[wordBreak]
     const whiteSpaceClass = whiteSpaceOptions[whiteSpace]
     const Comp = asChild ? Slot : 'span'
+    if (showNativeTitle === false) {
+      console.log("CHILDREN", children)
+    }
     return (
       <Comp
         ref={ref}
-        title={ellipsis && typeof children === 'string' ? children : ''}
+        title={
+          ellipsis && typeof children === 'string' && showNativeTitle
+            ? children
+            : ''
+        }
         className={cn(
           sizeClass,
           weightClass,

@@ -1,6 +1,13 @@
+import { cn } from '@latitude-data/web-ui/utils'
 import { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
 
-export function IndentationLine({ showCurve }: { showCurve: boolean }) {
+export function IndentationLine({
+  showCurve,
+  invisible,
+}: {
+  showCurve: boolean
+  invisible?: boolean
+}) {
   return (
     <div className='relative w-4 h-full flex justify-center'>
       {showCurve ? (
@@ -9,7 +16,7 @@ export function IndentationLine({ showCurve }: { showCurve: boolean }) {
           <div className='absolute top-2.5 border-l border-b h-2 w-2 rounded-bl-sm' />
         </div>
       ) : (
-        <div className='bg-border w-px h-8 -mt-1' />
+        <div className={cn('w-px h-8 -mt-1', { 'bg-border': !invisible })} />
       )}
     </div>
   )
@@ -23,6 +30,7 @@ export function IndentationBar({
   hasChildren: boolean
   indentation: IndentType[]
   startOnIndex?: number
+  invisible?: boolean
 }) {
   return indentation.map((indent, index) => {
     const hasNextNonLast = indentation.slice(index + 1).some((i) => !i.isLast)
@@ -35,7 +43,10 @@ export function IndentationBar({
       <div key={index} className='h-6 min-w-4'>
         {shouldRender && (
           <div className='relative w-4 h-full flex justify-center'>
-            <IndentationLine showCurve={showCurve} />
+            <IndentationLine
+              invisible={indent.invisible}
+              showCurve={showCurve}
+            />
           </div>
         )}
       </div>

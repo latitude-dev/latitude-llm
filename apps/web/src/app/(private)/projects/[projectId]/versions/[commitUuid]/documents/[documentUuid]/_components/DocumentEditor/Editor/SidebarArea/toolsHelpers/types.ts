@@ -6,6 +6,12 @@ type ItemIcon = { type: 'icon'; name: IconProps['name'] }
 type ItemImage = { type: 'image'; src: string; alt: string }
 
 export type ImageIcon = ItemIcon | ItemImage
+
+export type ClientToolMetadata = {
+  description?: string
+  parameters?: Record<string, unknown> // Store raw parameter schema
+}
+
 export type ActiveIntegration = {
   id: number
   name: string
@@ -15,6 +21,8 @@ export type ActiveIntegration = {
   tools: boolean | string[]
   allToolNames: string[]
   isOpen: boolean
+  // Metadata for client tools - maps tool name to its metadata
+  clientToolsMetadata?: Record<string, ClientToolMetadata>
 }
 export type ActiveIntegrations = {
   [key: string]: ActiveIntegration

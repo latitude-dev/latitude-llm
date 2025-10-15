@@ -173,7 +173,7 @@ export function ActiveIntegration({
                   >
                     <Icon name={isOpen ? 'chevronDown' : 'chevronRight'} />
                     <ImageIconComponent imageIcon={integration.icon} />
-                    <Text.H5M ellipsis noWrap>
+                    <Text.H5M ellipsis noWrap showNativeTitle={false}>
                       {displayName}
                     </Text.H5M>
                   </div>
@@ -182,7 +182,10 @@ export function ActiveIntegration({
                 <div
                   className='text-background [&>a]:underline [&>a]:text-background'
                   dangerouslySetInnerHTML={{
-                    __html: description,
+                    __html: `
+                      <strong>${displayName}</strong><br/>
+                      ${description}
+                    `
                   }}
                 />
               </Tooltip>
