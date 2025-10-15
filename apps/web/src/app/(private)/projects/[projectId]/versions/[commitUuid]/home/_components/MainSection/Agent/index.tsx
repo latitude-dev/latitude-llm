@@ -10,10 +10,7 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import Image from 'next/image'
 import { AgentSelector } from './AgentSelector'
 import useDocumentVersions from '$/stores/documentVersions'
-import {
-  AgentInput,
-  AgentInputSkeleton,
-} from '$/components/Agent/AgentInput/AgentInput'
+import { AgentInput, AgentInputSkeleton } from '$/components/Agent/AgentInput'
 import mainPromptImage from './mainPrompt.png'
 import { RunProps } from '../types'
 
