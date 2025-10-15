@@ -51,11 +51,4 @@ export async function setupSchedules() {
     { pattern: '0 0 1 * * *' },
     { opts: { attempts: 1 } },
   )
-
-  // Every day at 13h to add smth - This will be deleted after its run once
-  await maintenanceQueue.upsertJobScheduler(
-    'fillOnboardingsAsCompletedJob',
-    { pattern: '0 0 13 * * *' },
-    { opts: { attempts: 1 } },
-  )
 }
