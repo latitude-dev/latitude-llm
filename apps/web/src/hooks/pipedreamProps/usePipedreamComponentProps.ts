@@ -9,6 +9,7 @@ import { useCallback, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { IntegrationDto } from '@latitude-data/core/schema/types'
 import { PipedreamComponent } from '@latitude-data/core/constants'
+import { ConfigurablePropTimer } from '@pipedream/sdk'
 
 const IGNORED_PROP_TYPES: ConfigurableProp['type'][] = [
   'app',
@@ -16,6 +17,19 @@ const IGNORED_PROP_TYPES: ConfigurableProp['type'][] = [
   '$.interface.apphook',
   '$.interface.http',
 ]
+
+const isTimer = (prop: ConfigurableProp): prop is ConfigurablePropTimer => {
+  return prop.type === '$.interface.timer'
+}
+
+function propFilter(prop: ConfigurableProp): boolean {
+  if (IGNORED_PROP_TYPES.includes(prop.type)) return false // some props are configured in the backend, or not configured at all
+
+  if (isTimer(prop)) {
+    if (prop.optional || prop.default) return false // if a timer prop is optional or has a default value, it is best to leave it unconfigured
+  }
+  return true
+}
 
 export function usePipedreamComponentProps({
   integration,
@@ -29,22 +43,14 @@ export function usePipedreamComponentProps({
   onChange?: (values: ConfiguredProps<ConfigurableProps>) => void
 }) {
   const [props, setProps] = useState<ConfigurableProps>(
-    // some props are configured in the backend, or not configured at all
-    component.configurableProps.filter(
-      (p) => !IGNORED_PROP_TYPES.includes(p.type),
-    ),
+    component.configurableProps.filter(propFilter),
   )
 
   const { execute, isPending } = useLatitudeAction(
     reloadPipedreamComponentPropsAction,
     {
       onSuccess: ({ data }) => {
-        setProps(
-          // some props are configured in the backend, or not configured at all
-          data.dynamicProps?.configurableProps?.filter(
-            (p) => !IGNORED_PROP_TYPES.includes(p.type),
-          ) ?? [],
-        )
+        setProps(data.dynamicProps?.configurableProps?.filter(propFilter) ?? [])
       },
     },
   )
