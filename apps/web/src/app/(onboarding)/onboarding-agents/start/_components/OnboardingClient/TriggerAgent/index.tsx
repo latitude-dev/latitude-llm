@@ -78,12 +78,6 @@ export function TriggerAgentBody({
       userMessage,
       aiParameters = false,
     }: RunDocumentProps) => {
-      console.log('onRunTrigger', {
-        document,
-        parameters,
-        userMessage,
-        aiParameters,
-      })
       setParameters(parameters)
       playground.start({ document, parameters, userMessage, aiParameters })
       moveNextOnboardingStep({ currentStep: OnboardingStepKey.TriggerAgent })
