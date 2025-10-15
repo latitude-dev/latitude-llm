@@ -25,6 +25,7 @@ export type ChangedTrigger = {
 export type CommitChanges = {
   anyChanges: boolean
   hasIssues: boolean
+  mainDocumentUuid: string | null | undefined // null if the main document was deleted, undefined if it did not change
   documents: {
     hasErrors: boolean
     all: ChangedDocument[]
