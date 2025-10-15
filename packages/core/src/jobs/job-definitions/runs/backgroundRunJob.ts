@@ -100,6 +100,8 @@ export const backgroundRunJob = async (
       readStream: result.stream,
       repository,
     })
+  } catch (error) {
+    writeStream.write({ type: ChainEventTypes.ChainError, data: error })
   } finally {
     await writeStream.cleanup()
     await publisher.unsubscribe('cancelJob', cancelJob)
