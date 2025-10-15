@@ -6,7 +6,7 @@ import { NewTriggerButton } from './NewTriggerButton'
 import { useCallback } from 'react'
 import useDocumentVersions from '$/stores/documentVersions'
 import { RunTriggerProps } from '$/components/TriggersManagement/types'
-import { RunProps } from '../types'
+import { RunProps } from '../../../../../../../../../../components/Agent/types'
 import { TriggersList } from '$/components/TriggersManagement/TriggerCard/TriggerList'
 
 export function TriggersSection({

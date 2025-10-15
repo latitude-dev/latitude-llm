@@ -12,7 +12,7 @@ import { AgentSelector } from './AgentSelector'
 import useDocumentVersions from '$/stores/documentVersions'
 import { AgentInput, AgentInputSkeleton } from '$/components/Agent/AgentInput'
 import mainPromptImage from './mainPrompt.png'
-import { RunProps } from '../types'
+import { RunProps } from '../../../../../../../../../../components/Agent/types'
 
 export function MainAgent({
   runPromptFn,
