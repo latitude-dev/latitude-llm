@@ -17,10 +17,13 @@ import { RunAgentHeader, RunAgentBody } from './RunAgent'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding-agents/start/lib/OnboardingStep'
 import { PlaygroundProvider } from '../../lib/PlaygroundProvider'
 import { MetadataProvider } from '$/components/MetadataProvider'
+import { User } from '@latitude-data/core/schema/types'
 
 export function OnboardingClient({
   onboardingSteps,
+  user,
 }: {
+  user: User
   onboardingSteps: OnboardingStepKey[]
 }) {
   const {

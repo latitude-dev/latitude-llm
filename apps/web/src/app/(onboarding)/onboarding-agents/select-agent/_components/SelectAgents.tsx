@@ -11,6 +11,10 @@ import { useCallback } from 'react'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 import { envClient } from '$/envClient'
 import { useNavigate } from '$/hooks/useNavigate'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { useCurrentWorkspace } from '$/app/providers/WorkspaceProvider'
+import { publishEventAction } from '$/actions/events/publishEventAction'
+import { User } from '@latitude-data/core/schema/types'
 
 export type AgentCardProps = {
   mainIcon: IconName
@@ -67,14 +71,29 @@ const agents: AgentCardProps[] = [
   },
 ]
 
-export function SelectAgents() {
+export function SelectAgents({ user }: { user: User }) {
   const { executeCompleteOnboarding } = useWorkspaceOnboarding()
+  const { execute: publishEvent } = useLatitudeAction(publishEventAction)
+  const { workspace } = useCurrentWorkspace()
 
   const router = useNavigate()
   const handleSkipOnboarding = useCallback(() => {
     executeCompleteOnboarding({})
+    publishEvent({
+      eventType: 'agentOnboardingSkipped',
+      payload: {
+        userEmail: user.email,
+        workspaceId: workspace.id,
+      },
+    })
     router.push(ROUTES.dashboard.root)
-  }, [executeCompleteOnboarding, router])
+  }, [
+    executeCompleteOnboarding,
+    router,
+    publishEvent,
+    workspace.id,
+    user.email,
+  ])
 
   const handleSelectAgent = useCallback(
     (documentUuid: string) => {

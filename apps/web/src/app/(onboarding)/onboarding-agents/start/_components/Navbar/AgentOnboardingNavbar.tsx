@@ -14,12 +14,14 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { publishEventAction } from '$/actions/events/publishEventAction'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { usePlayground } from '../../lib/PlaygroundProvider'
+import { User } from '@latitude-data/core/schema/types'
 
 export default function AgentOnboardingNavbar({
   onboardingSteps,
   currentStep,
   isLoadingOnboarding,
   executeCompleteOnboarding,
+  user,
 }: {
   onboardingSteps: OnboardingStepKey[]
   executeCompleteOnboarding: ({
@@ -31,6 +33,7 @@ export default function AgentOnboardingNavbar({
   }) => void
   currentStep: OnboardingStepKey
   isLoadingOnboarding: boolean
+  user: User
 }) {
   const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const { project } = useCurrentProject()
@@ -47,6 +50,7 @@ export default function AgentOnboardingNavbar({
     publishEvent({
       eventType: 'agentOnboardingSkipped',
       payload: {
+        userEmail: user.email,
         workspaceId: workspace.id,
       },
     })
@@ -57,6 +61,7 @@ export default function AgentOnboardingNavbar({
     project.id,
     commit.uuid,
     abortCurrentStream,
+    user.email,
   ])
 
   const ONBOARDING_STEPS = Object.entries(ONBOARDING_STEP_CONTENT)
