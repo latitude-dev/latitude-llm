@@ -1,4 +1,4 @@
-import { ProviderApiKey } from '../../../../schema/types'
+import { type ProviderApiKey } from '../../../../schema/models/types/ProviderApiKey'
 import { Providers } from '@latitude-data/constants'
 import { GROQ_MODELS } from '../../estimateCost/groq'
 import { ANTHROPIC_MODELS } from '../../estimateCost/anthropic'

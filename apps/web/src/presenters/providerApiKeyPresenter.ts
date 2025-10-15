@@ -1,4 +1,4 @@
-import { type ProviderApiKey } from '@latitude-data/core/schema/types'
+import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 
 export default function providerApiKeyPresenter(
   providerApiKey: ProviderApiKey,

@@ -19,9 +19,10 @@ import DocumentParams from './DocumentParams'
 import DocumentParamsLoading from './DocumentParams/DocumentParamsLoading'
 import { useRunPlaygroundPrompt } from './hooks/useRunPlaygroundPrompt'
 import Preview from './Preview'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+
 import { LogSources } from '@latitude-data/core/constants'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 export const Playground = memo(
   ({
     document,

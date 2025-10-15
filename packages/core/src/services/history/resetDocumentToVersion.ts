@@ -1,4 +1,7 @@
-import { Commit, Project, User, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Project } from '../../schema/models/types/Project'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { DraftChange } from '../../constants'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '../../lib/Result'
@@ -41,8 +44,8 @@ async function fetchDocumentVersionDetails({
 
     const targetCommit = targetDraftUuid
       ? await commitScope
-          .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
-          .then((r) => r.unwrap())
+        .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
+        .then((r) => r.unwrap())
       : headCommit
 
     const targetDocument = await docsScope
@@ -168,13 +171,13 @@ export async function resetDocumentToVersion({
   const targetDraftResult = targetDraftUuid
     ? Result.ok(targetCommit)
     : await createCommit({
-        project: project,
-        user: user,
-        data: {
-          title: `Reset "${oldDocumentPath}"`,
-          description: `Reset document "${oldDocumentPath}" to version "${targetCommit.title}"`,
-        },
-      })
+      project: project,
+      user: user,
+      data: {
+        title: `Reset "${oldDocumentPath}"`,
+        description: `Reset document "${oldDocumentPath}" to version "${targetCommit.title}"`,
+      },
+    })
 
   const targetDraft = targetDraftResult.unwrap()
 

@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { ProjectSidebarLayout } from '@latitude-data/web-ui/sections/ProjectSidebarLayout'
 import {
   getResizablePanelGroupData,
@@ -16,7 +17,6 @@ import { redirect } from 'next/navigation'
 
 import { LastSeenCommitCookie } from '../LastSeenCommitCookie'
 import Sidebar from '../Sidebar'
-import { type DocumentVersion } from '@latitude-data/core/schema/types'
 
 export default async function ProjectLayout({
   children,

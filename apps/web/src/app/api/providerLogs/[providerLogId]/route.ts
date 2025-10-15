@@ -4,8 +4,8 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { hydrateProviderLog } from '@latitude-data/core/services/providerLogs/hydrate'
-import { Workspace } from '@latitude-data/core/schema/types'
 
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 export const GET = errorHandler(
   authHandler(
     async (

@@ -21,12 +21,10 @@ import {
   buildConversation,
   formatConversation,
 } from '@latitude-data/core/helpers'
-import {
-  ProviderLog,
-  ProviderLogDto,
-  Workspace,
-} from '@latitude-data/core/schema/types'
+import { ProviderLogDto } from '@latitude-data/core/schema/types'
 
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { ProviderLog } from '@latitude-data/core/schema/models/types/ProviderLog'
 export const GET = errorHandler(
   authHandler(
     async (

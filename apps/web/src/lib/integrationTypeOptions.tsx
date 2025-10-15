@@ -5,7 +5,7 @@ import {
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import Image from 'next/image'
 import React from 'react'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 
 export type IntegrationTypeOption = {
   label: string

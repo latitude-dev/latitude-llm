@@ -6,7 +6,8 @@ import {
   LogSources,
   StreamType,
 } from '@latitude-data/constants'
-import { ProviderApiKey, Workspace } from '../../../schema/types'
+import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import { PartialConfig } from '../../ai'
 import { createProviderLog } from '../../providerLogs/create'

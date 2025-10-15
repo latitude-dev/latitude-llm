@@ -9,7 +9,8 @@ import {
   SpanType,
 } from '../../../constants'
 import { TypedResult } from '../../../lib/Result'
-import { ApiKey, Workspace } from '../../../schema/types'
+import { type ApiKey } from '../../../schema/models/types/ApiKey'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 
 export type SpanProcessArgs<T extends SpanType = SpanType> = {
   attributes: Record<string, SpanAttribute>

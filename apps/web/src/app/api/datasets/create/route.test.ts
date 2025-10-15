@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as factories from '@latitude-data/core/factories'
 
 import { Result } from '@latitude-data/core/lib/Result'
-import { Workspace, User } from '@latitude-data/core/schema/types'
 
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 const mocks = vi.hoisted(() => {
   return {
     getSession: vi.fn(),

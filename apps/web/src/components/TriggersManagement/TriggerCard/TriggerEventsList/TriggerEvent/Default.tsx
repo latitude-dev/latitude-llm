@@ -1,7 +1,8 @@
 import { relativeTimeForDate } from '$/lib/relativeTime'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { DocumentTriggerEvent } from '@latitude-data/core/schema/types'
+import { DocumentTriggerEvent } from '@latitude-data/core/schema/models/types/DocumentTriggerEvent'
+
 import { cn } from '@latitude-data/web-ui/utils'
 
 export function DefaultTriggerEvent({

@@ -1,9 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-  IntegrationDto,
-} from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import useDocumentVersions from '$/stores/documentVersions'

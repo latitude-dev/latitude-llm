@@ -1,5 +1,6 @@
 import pg from 'pg'
-import { User, Workspace } from '../../schema/types'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { BadRequestError, databaseErrorCodes } from '../../lib/errors'
 import { syncReadCsv } from '../../lib/readCsv'
 import { Result } from '../../lib/Result'

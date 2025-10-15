@@ -2,7 +2,7 @@ import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { CommitChanges } from '@latitude-data/constants'
-import { Commit } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 const NO_CHANGES = {
   anyChanges: false,

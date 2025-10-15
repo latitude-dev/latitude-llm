@@ -7,7 +7,10 @@ import { ProgressTracker } from '../../jobs/utils/progressTracker'
 import { eq } from 'drizzle-orm'
 import { createExperiment, createProject, helpers } from '../../tests/factories'
 import { Providers } from '@latitude-data/constants'
-import { Commit, Workspace, User, DocumentVersion } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { type User } from '../../schema/models/types/User'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 
 // Mock external dependencies
 vi.mock('../../websockets/workers')

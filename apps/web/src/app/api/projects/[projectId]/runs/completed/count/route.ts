@@ -1,7 +1,8 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { Workspace } from '@latitude-data/core/schema/types'
+
 import { RunsRepository } from '@latitude-data/core/repositories'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(

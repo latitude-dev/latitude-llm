@@ -11,7 +11,7 @@ import {
 } from '../../../components/SelectDocument'
 import { TriggerWrapper } from '../TriggerWrapper'
 import { EmailTriggerConfig } from './Configuration'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export function EmailTrigger({
   onTriggerCreated,

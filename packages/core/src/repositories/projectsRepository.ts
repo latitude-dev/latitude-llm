@@ -1,6 +1,6 @@
 import { and, desc, eq, getTableColumns, isNull } from 'drizzle-orm'
 
-import { Project } from '../schema/types'
+import { type Project } from '../schema/models/types/Project'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { commits } from '../schema/models/commits'

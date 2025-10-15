@@ -3,7 +3,7 @@ import useFetcher from '$/hooks/useFetcher'
 import useSWR from 'swr'
 import { ROUTES } from '$/services/routes'
 import { useMemo } from 'react'
-import { LatteThreadCheckpoint } from '@latitude-data/core/schema/types'
+import { LatteThreadCheckpoint } from '@latitude-data/core/schema/models/types/LatteThreadCheckpoint'
 
 export default function useLatteThreadCheckpoints({
   threadUuid,

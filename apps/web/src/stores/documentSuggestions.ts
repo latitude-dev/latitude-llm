@@ -9,13 +9,11 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact } from 'lodash-es'
 import { useCallback } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import {
-  Commit,
-  DocumentSuggestionWithDetails,
-  DocumentVersion,
-  Project,
-} from '@latitude-data/core/schema/types'
+import { DocumentSuggestionWithDetails } from '@latitude-data/core/schema/models/types/DocumentSuggestion'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 export default function useDocumentSuggestions(
   {
     project,

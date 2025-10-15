@@ -10,6 +10,7 @@ import {
 } from '@latitude-data/web-ui/molecules/TabSelector'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { OnToggleFn } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 import { DatasetParams } from './DatasetParams'
 import {
@@ -25,7 +26,7 @@ import { ManualParams } from './ManualParams'
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+
 import {
   INPUT_SOURCE,
   InputSource,

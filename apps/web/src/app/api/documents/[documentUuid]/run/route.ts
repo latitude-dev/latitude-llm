@@ -12,9 +12,11 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
-import { User, Workspace } from '@latitude-data/core/schema/types'
+
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
 import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { env } from '@latitude-data/env'
 import {
   ChainEventDto,

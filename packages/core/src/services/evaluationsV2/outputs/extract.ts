@@ -5,7 +5,9 @@ import {
   ExpectedOutputConfiguration,
 } from '../../../constants'
 import { buildConversation, formatMessage } from '../../../helpers'
-import { Dataset, DatasetRow, ProviderLogDto } from '../../../schema/types'
+import { type Dataset } from '../../../schema/models/types/Dataset'
+import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
+import { ProviderLogDto } from '../../../schema/types'
 import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { getColumnData } from '../../datasets/utils'

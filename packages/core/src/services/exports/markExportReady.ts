@@ -1,6 +1,6 @@
 import { updateExport } from './update'
 import { publisher } from '../../events/publisher'
-import { Export } from '../../schema/types'
+import { Export } from '../../schema/models/types/Export'
 
 export async function markExportReady({
   export: exportRecord,

@@ -1,10 +1,8 @@
 import { DocumentTriggerType, LogSources } from '@latitude-data/constants'
-import {
-  Commit,
-  DocumentTrigger,
-  DocumentTriggerEvent,
-  Workspace,
-} from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type DocumentTrigger } from '../../../schema/models/types/DocumentTrigger'
+import { type DocumentTriggerEvent } from '../../../schema/models/types/DocumentTriggerEvent'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { Result, TypedResult } from '../../../lib/Result'
 import { NotImplementedError } from '@latitude-data/constants/errors'
 import {

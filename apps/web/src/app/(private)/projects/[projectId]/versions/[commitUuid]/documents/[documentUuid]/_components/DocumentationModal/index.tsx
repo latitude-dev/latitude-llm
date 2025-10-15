@@ -1,4 +1,5 @@
 'use client'
+import { ApiKey } from '@latitude-data/core/schema/models/types/ApiKey'
 
 import {
   createContext,
@@ -15,7 +16,6 @@ import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { scan, type ConversationMetadata } from 'promptl-ai'
 
 import { SettingsTabs } from './_components/SettingsTabs'
-import { ApiKey } from '@latitude-data/core/schema/types'
 
 type DocumentationContextProps = {
   open: boolean

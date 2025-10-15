@@ -19,11 +19,9 @@ import { EvaluationEditorHeader } from './EditorHeader'
 import { useEvaluationParameters } from './hooks/useEvaluationParamaters'
 import { Playground } from './Playground'
 import { TextEditor } from './TextEditor'
-import {
-  Commit,
-  DocumentVersion,
-  ProviderApiKey,
-} from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import {
   EvaluationType,
   LLM_EVALUATION_PROMPT_PARAMETERS,

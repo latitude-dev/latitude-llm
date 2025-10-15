@@ -1,10 +1,10 @@
 import { createProject, helpers } from '@latitude-data/core/factories'
+import { User } from '@latitude-data/core/schema/models/types/User'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
 import { Providers } from '@latitude-data/constants'
-import { User } from '@latitude-data/core/schema/types'
 
 const mocks = vi.hoisted(() => {
   return {

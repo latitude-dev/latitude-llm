@@ -13,7 +13,7 @@ import {
   type PipedreamComponent,
   type PipedreamComponentType,
 } from '@latitude-data/core/constants'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export type Trigger = PipedreamComponent<PipedreamComponentType.Trigger>
 const EMPTY_LIST: Trigger[] = []

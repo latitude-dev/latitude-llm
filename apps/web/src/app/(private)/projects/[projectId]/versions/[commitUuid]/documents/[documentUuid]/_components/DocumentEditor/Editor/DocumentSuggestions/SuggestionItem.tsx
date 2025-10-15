@@ -9,11 +9,9 @@ import DiffMatchPatch from 'diff-match-patch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
-import {
-  DocumentSuggestionWithDetails,
-  DocumentVersion,
-} from '@latitude-data/core/schema/types'
+import { DocumentSuggestionWithDetails } from '@latitude-data/core/schema/models/types/DocumentSuggestion'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 const dmp = new DiffMatchPatch()
 
 export function SuggestionItem({

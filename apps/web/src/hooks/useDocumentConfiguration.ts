@@ -1,5 +1,5 @@
 import { scan } from 'promptl-ai'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { resolveRelativePath } from '@latitude-data/constants'
 import { useState, useEffect, useMemo } from 'react'
 

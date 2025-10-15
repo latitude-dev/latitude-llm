@@ -6,7 +6,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useCallback, useState } from 'react'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { stopExperimentAction } from '$/actions/experiments'
-import { ExperimentDto } from '@latitude-data/core/schema/types'
+import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
 
 export function ExperimentStatus({
   projectId,

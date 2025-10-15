@@ -6,7 +6,7 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import { WorkspaceDto } from '@latitude-data/core/schema/types'
+import { WorkspaceDto } from '@latitude-data/core/schema/models/types/Workspace'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 export default function useCurrentWorkspace(opts?: SWRConfiguration) {

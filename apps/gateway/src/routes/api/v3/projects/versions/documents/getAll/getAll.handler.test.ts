@@ -9,7 +9,7 @@ import {
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { Commit } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 vi.mock('$/jobs', () => ({
   queues: { jobs: { enqueueUpdateApiKeyProviderJob: vi.fn() } },

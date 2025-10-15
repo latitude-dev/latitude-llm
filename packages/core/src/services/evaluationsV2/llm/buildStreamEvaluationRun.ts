@@ -7,7 +7,7 @@ import {
 } from '../../../constants'
 import { Result, TypedResult } from '../../../lib/Result'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
-import { Workspace } from '../../../schema/types'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { BACKGROUND, telemetry } from '../../../telemetry'
 import { runChain } from '../../chains/run'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
@@ -18,51 +18,51 @@ const buildStreamHandler =
     stream: ReadableStream<ChainEvent>,
     $span: ReturnType<typeof telemetry.prompt>,
   ) =>
-  async ({
-    signal,
-    onEvent,
-    onError,
-    onFinished,
-  }: {
-    signal: AbortSignal
-    onEvent: (event: ChainEvent) => void
-    onError: (error: Error) => void
-    onFinished: () => void
-  }) => {
-    try {
-      const reader = stream.getReader()
-      let isAborted = false
-
-      const abortHandler = () => {
-        isAborted = true
-        reader.cancel().catch(() => {})
-      }
-
-      signal?.addEventListener('abort', abortHandler)
-
+    async ({
+      signal,
+      onEvent,
+      onError,
+      onFinished,
+    }: {
+      signal: AbortSignal
+      onEvent: (event: ChainEvent) => void
+      onError: (error: Error) => void
+      onFinished: () => void
+    }) => {
       try {
-        while (true) {
-          const { value, done } = await reader.read()
+        const reader = stream.getReader()
+        let isAborted = false
 
-          if (done || isAborted) break
-
-          if (onEvent) {
-            onEvent(value)
-          }
+        const abortHandler = () => {
+          isAborted = true
+          reader.cancel().catch(() => { })
         }
 
-        $span.end()
-        onFinished?.()
+        signal?.addEventListener('abort', abortHandler)
+
+        try {
+          while (true) {
+            const { value, done } = await reader.read()
+
+            if (done || isAborted) break
+
+            if (onEvent) {
+              onEvent(value)
+            }
+          }
+
+          $span.end()
+          onFinished?.()
+        } catch (err) {
+          $span.fail(err as Error)
+          onError(err as Error)
+        } finally {
+          signal?.removeEventListener('abort', abortHandler)
+        }
       } catch (err) {
-        $span.fail(err as Error)
         onError(err as Error)
-      } finally {
-        signal?.removeEventListener('abort', abortHandler)
       }
-    } catch (err) {
-      onError(err as Error)
     }
-  }
 
 type StreamHandler = ReturnType<typeof buildStreamHandler>
 

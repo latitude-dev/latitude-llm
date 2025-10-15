@@ -1,10 +1,8 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { DocumentTriggerEventPayload } from '@latitude-data/constants/documentTriggers'
-import {
-  Commit,
-  DocumentTrigger,
-  DocumentTriggerEvent,
-} from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type DocumentTrigger } from '../../../schema/models/types/DocumentTrigger'
+import { type DocumentTriggerEvent } from '../../../schema/models/types/DocumentTriggerEvent'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'

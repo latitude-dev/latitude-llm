@@ -8,7 +8,7 @@ import {
 } from '$/stores/runs/completedRuns'
 import { ActiveRun, CompletedRun, Run } from '@latitude-data/constants'
 import { Pagination } from '@latitude-data/core/helpers'
-import { ProjectLimitedView } from '@latitude-data/core/schema/types'
+import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useEffect, useMemo, useState } from 'react'

@@ -1,7 +1,7 @@
 import { env } from '@latitude-data/env'
 
 import { Providers } from '@latitude-data/constants'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { ProviderApiKeysRepository } from '../../repositories'

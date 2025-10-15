@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { collectTools } from './collectTools'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import { IntegrationType } from '@latitude-data/constants'
 import { ImageIcon } from './types'
 

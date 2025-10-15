@@ -4,8 +4,9 @@ import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { workspaceOnboarding } from '../../schema/models/workspaceOnboarding'
 import { database } from '../../client'
-import { WorkspaceOnboarding, Workspace } from '../../schema/types'
 import { PromisedResult } from '../../lib/Transaction'
+import { Workspace } from '../../schema/models/types/Workspace'
+import { WorkspaceOnboarding } from '../../schema/models/types/WorkspaceOnboarding'
 
 export async function getWorkspaceOnboarding(
   {

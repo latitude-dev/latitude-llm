@@ -4,7 +4,7 @@ import { Grant, GrantSource, Quota, QuotaType } from '../../constants'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { grants } from '../../schema/models/grants'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { findWorkspaceSubscription } from '../subscriptions/data-access/find'
 
 export async function revokeGrant(

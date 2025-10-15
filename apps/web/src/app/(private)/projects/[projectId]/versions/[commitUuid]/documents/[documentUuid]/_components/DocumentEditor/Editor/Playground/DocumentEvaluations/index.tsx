@@ -11,7 +11,8 @@ import {
   EvaluationResultV2,
   EvaluationV2,
 } from '@latitude-data/core/constants'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import {
   CollapsibleBox,

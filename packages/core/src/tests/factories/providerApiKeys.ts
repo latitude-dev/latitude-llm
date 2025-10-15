@@ -1,6 +1,8 @@
 import { faker } from '@faker-js/faker'
 
-import { ProviderApiKey, User, Workspace } from '../../schema/types'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { Providers } from '@latitude-data/constants'
 import { ProviderConfiguration } from '../../schema/models/providerApiKeys'
 import {

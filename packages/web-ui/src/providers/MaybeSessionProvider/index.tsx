@@ -1,6 +1,6 @@
 'use client'
 
-import type { User } from '@latitude-data/core/schema/types'
+import type { User } from '@latitude-data/core/schema/models/types/User'
 import { createContext, type ReactNode, useContext } from 'react'
 
 interface ISessionContext {

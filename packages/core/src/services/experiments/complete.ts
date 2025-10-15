@@ -1,4 +1,4 @@
-import { Experiment } from '../../schema/types'
+import { type Experiment } from '../../schema/models/types/Experiment'
 import { LatitudeError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'

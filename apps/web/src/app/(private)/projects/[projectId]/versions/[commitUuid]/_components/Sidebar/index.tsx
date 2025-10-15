@@ -14,11 +14,9 @@ import {
 } from '@latitude-data/core/constants'
 import { paginateQuery } from '@latitude-data/core/lib/pagination/paginate'
 import { CommitsRepository } from '@latitude-data/core/repositories/index'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-} from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 import ClientFilesTree from './ClientFilesTree'
 import CommitSelector from './CommitSelector'
 import ProjectSection from './ProjectSection'

@@ -1,9 +1,9 @@
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { generateCsvFromLogs } from '@latitude-data/core/services/datasets/generateCsvFromLogs'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { Workspace } from '@latitude-data/core/schema/types'
 
 export const POST = errorHandler(
   authHandler(

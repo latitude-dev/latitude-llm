@@ -1,5 +1,6 @@
 import { and, desc, eq, getTableColumns } from 'drizzle-orm'
-import { DocumentTriggerEvent, DocumentTrigger } from '../schema/types'
+import { type DocumentTriggerEvent } from '../schema/models/types/DocumentTriggerEvent'
+import { type DocumentTrigger } from '../schema/models/types/DocumentTrigger'
 import { documentTriggerEvents } from '../schema/models/documentTriggerEvents'
 import Repository from './repositoryV2'
 import { Result } from '../lib/Result'

@@ -7,14 +7,12 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
-import {
-  Project,
-  Commit,
-  DocumentVersion,
-  ExperimentWithScores,
-} from '@latitude-data/core/schema/types'
+import { ExperimentWithScores } from '@latitude-data/core/schema/models/types/Experiment'
 import { EvaluationV2 } from '@latitude-data/core/constants'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 const EMPTY_ARRAY: [] = []
 
 export type BestLogsMetadata = {

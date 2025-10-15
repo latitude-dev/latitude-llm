@@ -6,7 +6,7 @@ import {
 } from '@latitude-data/constants'
 import { checkNextStepNecessary } from './checkNextStepNecessary'
 import * as factories from '../../../../src/tests/factories'
-import { Workspace } from '../../../schema/types'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 
 describe('checkNextStepNecessary', () => {
   let workspace: Workspace

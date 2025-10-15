@@ -4,7 +4,8 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { IntegrationsRepository } from '../../repositories'
 import { documentIntegrationReferences } from '../../schema/models/documentIntegrationReferences'
-import { DocumentVersion, Workspace } from '../../schema/types'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { getDocumentMetadata } from './scan'
 
 function getToolIds(tools: LatitudePromptConfig['tools']): string[] {

@@ -7,7 +7,7 @@ import {
   getEmailTriggerAddress,
 } from '$/components/TriggersManagement/components/TriggerForms/EmailTriggerForm/utils'
 import { EmailTriggerForm } from '$/components/TriggersManagement/components/TriggerForms/EmailTriggerForm'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export function EmailTriggerConfig({
   document,

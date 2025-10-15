@@ -3,7 +3,7 @@ import { commits } from '../../schema/models/commits'
 import { documentLogs } from '../../schema/models/documentLogs'
 import { documentVersions } from '../../schema/models/documentVersions'
 import { database } from '../../client'
-import { DocumentVersion } from '../../schema/types'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 
 export async function countDocumentLogs(
   document: DocumentVersion,

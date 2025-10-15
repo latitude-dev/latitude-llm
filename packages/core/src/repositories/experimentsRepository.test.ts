@@ -5,13 +5,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { Providers } from '@latitude-data/constants'
 import { EvaluationV2 } from '../constants'
 import { NotFoundError } from '../lib/errors'
-import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  ProviderApiKey,
-  Workspace,
-} from '../schema/types'
+import { type Commit } from '../schema/models/types/Commit'
+import { type Dataset } from '../schema/models/types/Dataset'
+import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
+import { type ProviderApiKey } from '../schema/models/types/ProviderApiKey'
+import { type Workspace } from '../schema/models/types/Workspace'
 import { createExperiment } from '../services/experiments'
 import * as factories from '../tests/factories'
 import { ExperimentsRepository } from './experimentsRepository'

@@ -1,5 +1,7 @@
 import { LATTE_MINIMUM_CREDITS_PER_REQUEST } from '../../constants'
-import { User, Workspace, Project } from '../../schema/types'
+import { type Project } from '../../schema/models/types/Project'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { database } from '../../client'
 import { latteRequests } from '../../schema/models/latteRequests'
 import { latteThreads } from '../../schema/models/latteThreads'

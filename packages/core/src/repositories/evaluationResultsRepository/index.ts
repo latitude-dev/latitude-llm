@@ -14,7 +14,8 @@ import {
   ne,
   sql,
 } from 'drizzle-orm'
-import { Commit, EvaluationDto, EvaluationResultDto } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { EvaluationDto, EvaluationResultDto } from '../../schema/types'
 import {
   ErrorableEntity,
   EVALUATION_RESULT_RECENCY_DAYS,

@@ -26,13 +26,11 @@ import {
   PROJECT_STATS_CACHE_KEY,
   LAST_LATTE_THREAD_CACHE_KEY,
 } from '@latitude-data/core/constants'
-import {
-  DocumentLogsLimitedView,
-  ProjectLimitedView,
-  Workspace,
-  type Commit,
-} from '@latitude-data/core/schema/types'
+import { DocumentLogsLimitedView } from '@latitude-data/core/schema/models/types/DocumentLog'
+import { ProjectLimitedView } from '@latitude-data/core/schema/models/types/Project'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 export const getFirstProjectCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
     const projectsScope = new ProjectsRepository(workspaceId)

@@ -12,8 +12,8 @@ import NodeHeaderWrapper, {
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
 import { DocumentType } from '@latitude-data/core/constants'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 export default function DocumentHeader({
   open,
   selected,

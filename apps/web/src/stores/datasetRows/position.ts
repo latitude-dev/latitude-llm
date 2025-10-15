@@ -3,8 +3,10 @@ import { ROUTES } from '$/services/routes'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { compact } from 'lodash-es'
 import useSWR, { SWRConfiguration } from 'swr'
-import { type DatasetRow, type Dataset } from '@latitude-data/core/schema/types'
 
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+
+import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
 type Position = {
   position: number
   page: number

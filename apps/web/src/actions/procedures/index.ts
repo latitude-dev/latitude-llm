@@ -10,7 +10,7 @@ import { headers } from 'next/headers'
 
 import { getUnsafeIp } from '$/helpers/ip'
 import { captureException } from '$/helpers/captureException'
-import { Dataset } from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { cache } from '@latitude-data/core/cache'
 import {

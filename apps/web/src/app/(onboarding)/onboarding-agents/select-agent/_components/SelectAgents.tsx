@@ -13,7 +13,7 @@ import { useNavigate } from '$/hooks/useNavigate'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useCurrentWorkspace } from '$/app/providers/WorkspaceProvider'
 import { publishEventAction } from '$/actions/events/publishEventAction'
-import { User } from '@latitude-data/core/schema/types'
+import { User } from '@latitude-data/core/schema/models/types/User'
 import { ROUTES } from '$/services/routes'
 
 export type AgentCardProps = {

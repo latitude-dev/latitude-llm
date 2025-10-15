@@ -1,8 +1,8 @@
 'use client'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 import { createContext, ReactNode, useContext, useMemo } from 'react'
 import useDocumentVersions from '$/stores/documentVersions'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 type DocumentVersionContext = {
   document: DocumentVersion

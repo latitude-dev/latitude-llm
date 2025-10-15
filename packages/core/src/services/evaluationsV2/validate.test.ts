@@ -8,7 +8,9 @@ import {
   RuleEvaluationMetric,
 } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
-import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { RuleEvaluationExactMatchSpecification } from './rule/exactMatch'
 import { validateEvaluationV2 } from './validate'

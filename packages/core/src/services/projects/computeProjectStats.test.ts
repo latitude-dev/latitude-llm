@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  ProviderApiKey,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Project } from '../../schema/models/types/Project'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as cacheModule from '../../cache'
 import {
   EvaluationType,

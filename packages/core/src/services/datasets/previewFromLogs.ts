@@ -1,5 +1,6 @@
 import { Result } from '../../lib/Result'
-import { Dataset, Workspace } from '../../schema/types'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
 import { DatasetRowsRepository, DatasetsRepository } from '../../repositories'
 import { HashAlgorithmFn, nanoidHashAlgorithm } from './utils'

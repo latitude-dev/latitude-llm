@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { IntegrationDto, Workspace } from '../../schema/types'
+import { IntegrationDto } from '../../schema/models/types/Integration'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { IntegrationType } from '@latitude-data/constants'
 import { BadRequestError, NotFoundError } from '../../lib/errors'
 import * as factories from '../../tests/factories'

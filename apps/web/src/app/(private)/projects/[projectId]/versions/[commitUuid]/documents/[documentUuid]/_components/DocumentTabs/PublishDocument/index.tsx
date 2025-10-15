@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import { NotEditableBanner } from '../_components/NotEditableBanner'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 function UnpublishedDocumentSettings({
   document,

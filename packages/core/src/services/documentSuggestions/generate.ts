@@ -19,7 +19,9 @@ import {
 } from '../../repositories'
 import { documentSuggestions } from '../../schema/models/documentSuggestions'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
-import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { getCopilot, runCopilot } from '../copilot'
 import {
   serializeEvaluationResult as serializeEvaluationResultV2,

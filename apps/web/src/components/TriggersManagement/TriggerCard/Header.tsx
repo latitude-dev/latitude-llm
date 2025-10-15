@@ -1,9 +1,7 @@
-import {
-  Commit,
-  DocumentTrigger,
-  DocumentVersion,
-  IntegrationDto,
-} from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import { useTriggerInfo } from '../hooks/useTriggerInfo'
 import { ReactNode, useMemo } from 'react'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'

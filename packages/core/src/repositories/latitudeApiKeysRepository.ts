@@ -1,6 +1,6 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
-import { ApiKey } from '../schema/types'
+import { type ApiKey } from '../schema/models/types/ApiKey'
 import { apiKeys } from '../schema/models/apiKeys'
 import RepositoryLegacy from './repository'
 

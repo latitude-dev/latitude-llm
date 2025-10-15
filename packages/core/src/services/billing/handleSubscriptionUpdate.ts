@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import Stripe from 'stripe'
-import { Subscription, Workspace } from '../../schema/types'
+import { type Subscription } from '../../schema/models/types/Subscription'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { Database } from '../../client'
 import { unsafelyFindUserByEmail } from '../../data-access/users'
 import { unsafelyFindWorkspacesFromUser } from '../../data-access/workspaces'

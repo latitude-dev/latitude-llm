@@ -1,4 +1,4 @@
-import { ExperimentDto } from '@latitude-data/core/schema/types'
+import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
 
 export type ExperimentStatus = {
   isPending: boolean

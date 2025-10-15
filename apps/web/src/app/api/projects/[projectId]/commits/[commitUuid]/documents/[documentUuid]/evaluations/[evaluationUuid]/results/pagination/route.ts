@@ -3,8 +3,9 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { ROUTES } from '$/services/routes'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { EvaluationResultsV2Repository } from '@latitude-data/core/repositories'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
-import { Workspace } from '@latitude-data/core/schema/types'
+
 import {
   evaluationResultsV2SearchFromQueryParams,
   evaluationResultsV2SearchToQueryParams,

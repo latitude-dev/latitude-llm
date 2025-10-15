@@ -1,7 +1,7 @@
 import slugify from '@sindresorhus/slugify'
 import path from 'path'
 import { PromptLFile, toPromptLFile } from 'promptl-ai'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { MAX_UPLOAD_SIZE_IN_MB } from '../../constants'
 import { diskFactory, DiskWrapper } from '../../lib/disk'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { defineLatteTool } from '../types'
-import { PipedreamIntegration } from '../../../../../schema/types'
+import { PipedreamIntegration } from '../../../../../schema/models/types/Integration'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk'
 import { Result } from '../../../../../lib/Result'
 import { getPipedreamClient } from '../../../../integrations/pipedream/apps'

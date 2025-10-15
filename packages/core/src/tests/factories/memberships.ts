@@ -1,4 +1,5 @@
-import { Workspace, User } from '../../schema/types'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { createMembership as createMembershipFn } from '../../services/memberships/create'
 export async function createMembership({
   user,

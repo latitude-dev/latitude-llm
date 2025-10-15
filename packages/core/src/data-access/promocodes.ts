@@ -5,7 +5,7 @@ import { desc, eq } from 'drizzle-orm'
 import { database } from '../client'
 import { Result } from '../lib/Result'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { Promocode } from '../schema/types'
+import { type Promocode } from '../schema/models/types/Promocode'
 
 export async function findAll(tx = database) {
   const result = await tx

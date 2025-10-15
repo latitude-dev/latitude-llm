@@ -1,7 +1,7 @@
 import {
   PipedreamIntegration,
   PipedreamIntegrationWithAcountCount,
-} from '../../schema/types'
+} from '../../schema/models/types/Integration'
 
 export function mergeConnectedAppsBySlug(
   connectedApps: PipedreamIntegration[],

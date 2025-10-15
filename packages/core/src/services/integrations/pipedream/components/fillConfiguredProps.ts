@@ -5,7 +5,7 @@ import {
   ConfiguredProps,
 } from '@pipedream/sdk/server'
 import { Result } from '../../../../lib/Result'
-import { PipedreamIntegration } from '../../../../schema/types'
+import { PipedreamIntegration } from '../../../../schema/models/types/Integration'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { env } from '@latitude-data/env'

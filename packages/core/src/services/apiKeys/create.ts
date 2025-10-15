@@ -1,4 +1,4 @@
-import type { Workspace } from '../../schema/types'
+import type { Workspace } from '../../schema/models/types/Workspace'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

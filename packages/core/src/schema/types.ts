@@ -1,19 +1,7 @@
-import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
+import { type InferSelectModel } from 'drizzle-orm'
 
+import { EvaluationResultDto } from '@latitude-data/constants'
 import {
-  DocumentTriggerType,
-  EvaluationResultDto,
-  ExperimentScores,
-  IntegrationType,
-} from '@latitude-data/constants'
-import {
-  DocumentTriggerConfiguration,
-  DocumentTriggerDeploymentSettings,
-  DocumentTriggerEventPayload,
-} from '@latitude-data/constants/documentTriggers'
-import {
-  ActiveRun,
-  CompletedRun,
   EvaluationMetadataType,
   EvaluationMetric,
   EvaluationResultableType,
@@ -21,7 +9,6 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '../constants'
-import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
 import { connectedEvaluations } from './legacyModels/connectedEvaluations'
 import { evaluationAdvancedTemplates } from './legacyModels/evaluationAdvancedTemplates'
 import { evaluationConfigurationBoolean } from './legacyModels/evaluationConfigurationBoolean'
@@ -32,39 +19,13 @@ import { evaluationMetadataLlmAsJudgeAdvanced } from './legacyModels/evaluationM
 import { evaluationMetadataLlmAsJudgeSimple } from './legacyModels/evaluationMetadataLlmAsJudgeSimple'
 import { evaluations } from './legacyModels/evaluations'
 import { evaluationTemplateCategories } from './legacyModels/evaluationTemplateCategories'
-import { apiKeys } from './models/apiKeys'
-import { claimedPromocodes } from './models/claimedPromocodes'
-import { claimedRewards } from './models/claimedRewards'
-import { commits } from './models/commits'
-import { datasetRows } from './models/datasetRows'
-import { datasets } from './models/datasets'
-import { documentIntegrationReferences } from './models/documentIntegrationReferences'
-import { documentSuggestions } from './models/documentSuggestions'
-import { documentTriggerEvents } from './models/documentTriggerEvents'
-import { documentTriggers } from './models/documentTriggers'
-import { documentVersions } from './models/documentVersions'
-import { experiments } from './models/experiments'
-import { latitudeExports } from './models/exports'
-import { features } from './models/features'
-import { integrations } from './models/integrations'
-import { latteRequests } from './models/latteRequests'
-import { latteThreadCheckpoints } from './models/latteThreadCheckpoints'
-import { latteThreads } from './models/latteThreads'
-import { magicLinkTokens } from './models/magicLinkTokens'
-import { mcpServers } from './models/mcpServers'
-import { memberships } from './models/memberships'
-import { projects } from './models/projects'
-import { promocodes } from './models/promocodes'
-import { providerApiKeys } from './models/providerApiKeys'
-import { providerLogs } from './models/providerLogs'
-import { publishedDocuments } from './models/publishedDocuments'
-import { runErrors } from './models/runErrors'
-import { sessions } from './models/sessions'
-import { subscriptions } from './models/subscriptions'
-import { users } from './models/users'
-import { workspaceFeatures } from './models/workspaceFeatures'
-import { workspaceOnboarding } from './models/workspaceOnboarding'
-import { workspaces } from './models/workspaces'
+
+import { type User } from './models/types/User'
+import { type Session as BaseSession } from './models/types/Session'
+import { Commit } from './models/types/Commit'
+import { ProviderLog } from './models/types/ProviderLog'
+import { Dataset } from './models/types/Dataset'
+import { DatasetRow } from './models/types/DatasetRow'
 
 // TODO(evalsv2): deprecated, remove
 export type {
@@ -72,37 +33,18 @@ export type {
   EvaluationResultDto,
 } from '@latitude-data/constants'
 
-export type Workspace = InferSelectModel<typeof workspaces>
-export type User = InferSelectModel<typeof users>
-export type Session = InferSelectModel<typeof sessions> & {
+export type Session = BaseSession & {
   user: User
 }
-export type Membership = InferSelectModel<typeof memberships>
-export type ProviderApiKey = InferSelectModel<typeof providerApiKeys>
-export type ApiKey = InferSelectModel<typeof apiKeys>
-export type Commit = InferSelectModel<typeof commits>
-export type DocumentVersion = InferSelectModel<typeof documentVersions>
-export type DocumentSuggestion = InferSelectModel<typeof documentSuggestions>
-export type Project = InferSelectModel<typeof projects>
-export type ProviderLog = InferSelectModel<typeof providerLogs>
-export type RunError = InferSelectModel<typeof runErrors>
-export type RunErrorInsert = InferInsertModel<typeof runErrors>
+
 export type Evaluation = InferSelectModel<typeof evaluations>
 export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
 export type EvaluationTemplate = InferSelectModel<
   typeof evaluationAdvancedTemplates
 >
-export type MagicLinkToken = InferSelectModel<typeof magicLinkTokens>
-export type ClaimedReward = InferSelectModel<typeof claimedRewards>
 export type EvaluationTemplateCategory = InferSelectModel<
   typeof evaluationTemplateCategories
 >
-export type Subscription = InferSelectModel<typeof subscriptions>
-export type Export = typeof latitudeExports.$inferSelect
-export type NewExport = typeof latitudeExports.$inferInsert
-
-export type McpServer = InferSelectModel<typeof mcpServers>
-
 export type EvaluationMetadataLlmAsJudgeAdvanced = Omit<
   InferSelectModel<typeof evaluationMetadataLlmAsJudgeAdvanced>,
   'createdAt' | 'updatedAt'
@@ -132,15 +74,6 @@ export type EvaluationConfigurationText = Omit<
   InferSelectModel<typeof evaluationConfigurationText>,
   'createdAt' | 'updatedAt'
 >
-export type LatteThread = InferSelectModel<typeof latteThreads>
-export type LatteThreadCheckpoint = InferSelectModel<
-  typeof latteThreadCheckpoints
->
-export type LatteRequest = InferSelectModel<typeof latteRequests>
-
-export type Feature = InferSelectModel<typeof features>
-export type WorkspaceFeature = InferSelectModel<typeof workspaceFeatures>
-
 export type Cursor<V = string, I = string> = { value: V; id: I }
 
 export type IEvaluationConfiguration =
@@ -156,68 +89,60 @@ export type IEvaluationConfiguration =
 export type EvaluationDto = Evaluation &
   (
     | {
-        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
-        metadata: EvaluationMetadataLlmAsJudgeAdvanced
-        resultType: EvaluationResultableType.Boolean
-        resultConfiguration: EvaluationConfigurationBoolean
-      }
+      metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
+      metadata: EvaluationMetadataLlmAsJudgeAdvanced
+      resultType: EvaluationResultableType.Boolean
+      resultConfiguration: EvaluationConfigurationBoolean
+    }
     | {
-        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
-        metadata: EvaluationMetadataLlmAsJudgeAdvanced
-        resultType: EvaluationResultableType.Number
-        resultConfiguration: EvaluationConfigurationNumerical
-      }
+      metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
+      metadata: EvaluationMetadataLlmAsJudgeAdvanced
+      resultType: EvaluationResultableType.Number
+      resultConfiguration: EvaluationConfigurationNumerical
+    }
     | {
-        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
-        metadata: EvaluationMetadataLlmAsJudgeAdvanced
-        resultType: EvaluationResultableType.Text
-        resultConfiguration: EvaluationConfigurationText
-      }
+      metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
+      metadata: EvaluationMetadataLlmAsJudgeAdvanced
+      resultType: EvaluationResultableType.Text
+      resultConfiguration: EvaluationConfigurationText
+    }
     | {
-        metadataType: EvaluationMetadataType.LlmAsJudgeSimple
-        metadata: EvaluationMetadataLlmAsJudgeSimple
-        resultType: EvaluationResultableType.Boolean
-        resultConfiguration: EvaluationConfigurationBoolean
-      }
+      metadataType: EvaluationMetadataType.LlmAsJudgeSimple
+      metadata: EvaluationMetadataLlmAsJudgeSimple
+      resultType: EvaluationResultableType.Boolean
+      resultConfiguration: EvaluationConfigurationBoolean
+    }
     | {
-        metadataType: EvaluationMetadataType.LlmAsJudgeSimple
-        metadata: EvaluationMetadataLlmAsJudgeSimple
-        resultType: EvaluationResultableType.Number
-        resultConfiguration: EvaluationConfigurationNumerical
-      }
+      metadataType: EvaluationMetadataType.LlmAsJudgeSimple
+      metadata: EvaluationMetadataLlmAsJudgeSimple
+      resultType: EvaluationResultableType.Number
+      resultConfiguration: EvaluationConfigurationNumerical
+    }
     | {
-        metadataType: EvaluationMetadataType.LlmAsJudgeSimple
-        metadata: EvaluationMetadataLlmAsJudgeSimple
-        resultType: EvaluationResultableType.Text
-        resultConfiguration: EvaluationConfigurationText
-      }
+      metadataType: EvaluationMetadataType.LlmAsJudgeSimple
+      metadata: EvaluationMetadataLlmAsJudgeSimple
+      resultType: EvaluationResultableType.Text
+      resultConfiguration: EvaluationConfigurationText
+    }
     | {
-        metadataType: EvaluationMetadataType.Manual
-        metadata: EvaluationMetadataManual
-        resultType: EvaluationResultableType.Boolean
-        resultConfiguration: EvaluationConfigurationBoolean
-      }
+      metadataType: EvaluationMetadataType.Manual
+      metadata: EvaluationMetadataManual
+      resultType: EvaluationResultableType.Boolean
+      resultConfiguration: EvaluationConfigurationBoolean
+    }
     | {
-        metadataType: EvaluationMetadataType.Manual
-        metadata: EvaluationMetadataManual
-        resultType: EvaluationResultableType.Number
-        resultConfiguration: EvaluationConfigurationNumerical
-      }
+      metadataType: EvaluationMetadataType.Manual
+      metadata: EvaluationMetadataManual
+      resultType: EvaluationResultableType.Number
+      resultConfiguration: EvaluationConfigurationNumerical
+    }
     | {
-        metadataType: EvaluationMetadataType.Manual
-        metadata: EvaluationMetadataManual
-        resultType: EvaluationResultableType.Text
-        resultConfiguration: EvaluationConfigurationText
-      }
+      metadataType: EvaluationMetadataType.Manual
+      metadata: EvaluationMetadataManual
+      resultType: EvaluationResultableType.Text
+      resultConfiguration: EvaluationConfigurationText
+    }
   )
-
-export type Dataset = InferSelectModel<typeof datasets> & {
-  author: Pick<User, 'id' | 'name'> | undefined
-}
-
-export type DatasetRow = InferSelectModel<typeof datasetRows>
-
-export type PublishedDocument = InferInsertModel<typeof publishedDocuments>
 
 type EvaluationResultNumberConfiguration = {
   range: { from: number; to: number }
@@ -232,42 +157,10 @@ export type EvaluationTemplateWithCategory = EvaluationTemplate & {
   category: string
 }
 
-export type ProviderLogFileData = {
-  config: ProviderLog['config'] | null
-  messages: ProviderLog['messages'] | null
-  output: ProviderLog['output'] | null
-  responseObject: ProviderLog['responseObject'] | null
-  responseText: ProviderLog['responseText'] | null
-  responseReasoning: ProviderLog['responseReasoning'] | null
-  toolCalls: ProviderLog['toolCalls'] | null
-}
-
-export type HydratedProviderLog = Omit<
-  ProviderLog,
-  | 'config'
-  | 'messages'
-  | 'output'
-  | 'responseObject'
-  | 'responseText'
-  | 'responseReasoning'
-  | 'toolCalls'
-> &
-  ProviderLogFileData
-
 export type ProviderLogDto = Omit<
   ProviderLog,
   'responseText' | 'responseObject'
 > & { response: string }
-
-export type ClaimedRewardWithUserInfo = ClaimedReward & {
-  workspaceName: string | null
-  userName: string | null
-  userEmail: string | null
-}
-
-export type WorkspaceDto = Workspace & {
-  currentSubscription: Subscription
-}
 
 export interface AverageResultAndCostOverCommit extends Commit {
   results: number
@@ -279,48 +172,6 @@ export interface AverageResultOverTime {
   date: Date
   averageResult: number
   count: number
-}
-
-export type DocumentSuggestionWithDetails = DocumentSuggestion & {
-  evaluation: EvaluationV2
-}
-
-export type Integration = InferSelectModel<typeof integrations>
-export type IntegrationDto = Omit<Integration, 'configuration' | 'type'> &
-  IntegrationConfiguration
-export type PipedreamIntegration = Extract<
-  IntegrationDto,
-  { type: IntegrationType.Pipedream }
->
-export type DocumentIntegrationReference = InferSelectModel<
-  typeof documentIntegrationReferences
->
-
-export type PipedreamIntegrationWithAcountCount = PipedreamIntegration & {
-  accountCount: number
-}
-export type PipedreamIntegrationWithCounts =
-  PipedreamIntegrationWithAcountCount & {
-    triggerCount: number
-  }
-
-type _DocumentTrigger = InferSelectModel<typeof documentTriggers>
-export type DocumentTrigger<
-  T extends DocumentTriggerType = DocumentTriggerType,
-> = Omit<
-  _DocumentTrigger,
-  'triggerType' | 'configuration' | 'deploymentSettings'
-> & {
-  triggerType: T
-  configuration: DocumentTriggerConfiguration<T>
-  deploymentSettings: DocumentTriggerDeploymentSettings<T> | null
-}
-
-export type DocumentTriggerEvent<
-  T extends DocumentTriggerType = DocumentTriggerType,
-> = InferSelectModel<typeof documentTriggerEvents> & {
-  triggerType: T
-  payload: DocumentTriggerEventPayload<T>
 }
 
 export type ResultWithEvaluation = {
@@ -360,71 +211,4 @@ export type EvaluationV2Stats = EvaluationV2BaseStats & {
   versionOverview: (EvaluationV2BaseStats & {
     version: Commit
   })[]
-}
-
-export type Experiment = InferSelectModel<typeof experiments>
-export type ExperimentAggregatedResults = {
-  passed: number
-  failed: number
-  errors: number
-  totalScore: number
-}
-export type ExperimentDto = Experiment & {
-  results: ExperimentAggregatedResults
-}
-export type ExperimentLogsMetadata = {
-  totalCost: number
-  totalTokens: number
-  totalDuration: number
-  count: number
-}
-export type ExperimentWithScores = ExperimentDto & {
-  scores: ExperimentScores
-  logsMetadata: ExperimentLogsMetadata
-}
-
-export type DocumentLogsAggregations = {
-  totalCount: number
-  totalTokens: number
-  totalCostInMillicents: number
-  averageTokens: number
-  averageCostInMillicents: number
-  medianCostInMillicents: number
-  averageDuration: number
-  medianDuration: number
-}
-
-export type DocumentLogsLimitedView = DocumentLogsAggregations & {
-  dailyCount: { date: string; count: number }[]
-}
-
-export interface ProjectStats {
-  totalTokens: number
-  totalRuns: number
-  totalDocuments: number
-  runsPerModel: Record<string, number>
-  costPerModel: Record<string, number>
-  rollingDocumentLogs: Array<{ date: string; count: number }>
-  totalEvaluations: number
-  totalEvaluationResults: number
-  costPerEvaluation: Record<string, number>
-}
-
-export type ProjectLimitedView = ProjectStats
-
-export type WorkspaceLimits = {
-  seats: number
-  runs: number
-  credits: number
-  resetsAt: Date
-}
-
-export type Promocode = InferSelectModel<typeof promocodes>
-export type ClaimedPromocode = InferSelectModel<typeof claimedPromocodes>
-
-export type WorkspaceOnboarding = InferSelectModel<typeof workspaceOnboarding>
-
-export type ProjectRuns = {
-  active: ActiveRun[]
-  completed: CompletedRun[]
 }

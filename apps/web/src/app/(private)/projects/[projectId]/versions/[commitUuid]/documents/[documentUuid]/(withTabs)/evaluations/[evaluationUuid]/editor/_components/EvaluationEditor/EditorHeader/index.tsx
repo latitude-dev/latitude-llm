@@ -1,5 +1,4 @@
 import { memo, ReactNode } from 'react'
-
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { ProviderModelSelector } from '$/components/ProviderModelSelector'
 import { ResolvedMetadata } from '$/workers/readMetadata'
@@ -9,12 +8,10 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { cn } from '@latitude-data/web-ui/utils'
-import {
-  DocumentVersion,
-  ProviderApiKey,
-} from '@latitude-data/core/schema/types'
 import { PromptConfiguration } from '$/components/PromptConfiguration'
 import { PromptIntegrations } from './PromptIntegrations'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 
 export type IProviderByName = Record<string, ProviderApiKey>
 

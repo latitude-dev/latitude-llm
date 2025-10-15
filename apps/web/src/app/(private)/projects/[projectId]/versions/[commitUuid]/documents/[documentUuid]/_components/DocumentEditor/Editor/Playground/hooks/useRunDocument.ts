@@ -5,7 +5,8 @@ import {
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
 import { TraceContext } from '@latitude-data/constants'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { useCallback, useMemo } from 'react'
 

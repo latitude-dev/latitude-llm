@@ -23,12 +23,10 @@ import { DocumentVersion } from '@latitude-data/constants'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { stopExperimentAction } from '$/actions/experiments'
 import { useCallback } from 'react'
-import {
-  Commit,
-  ExperimentWithScores,
-  Project,
-} from '@latitude-data/core/schema/types'
+import { ExperimentWithScores } from '@latitude-data/core/schema/models/types/Experiment'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 export function ExperimentItemPlaceholder({
   isLast,
   evaluationCount,

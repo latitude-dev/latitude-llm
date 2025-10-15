@@ -1,5 +1,6 @@
 import { noop } from 'lodash-es'
 import { useCallback } from 'react'
+import { ClaimedReward } from '@latitude-data/core/schema/models/types/ClaimedReward'
 
 import { claimRewardAction } from '$/actions/rewards/claimRewardAction'
 import useFetcher from '$/hooks/useFetcher'
@@ -7,7 +8,6 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useSWR, { SWRConfiguration } from 'swr'
-import { ClaimedReward } from '@latitude-data/core/schema/types'
 
 const EMPTY_ARRAY: ClaimedReward[] = []
 

@@ -12,7 +12,7 @@ import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { ButtonProps } from '@latitude-data/web-ui/atoms/Button'
 import { useMaybeSession } from '@latitude-data/web-ui/providers'
 import { MouseEvent, useCallback, useState } from 'react'
-import { PublishedDocument } from '@latitude-data/core/schema/types'
+import { PublishedDocument } from '@latitude-data/core/schema/models/types/PublishedDocument'
 
 export function ForkButton({
   shared,

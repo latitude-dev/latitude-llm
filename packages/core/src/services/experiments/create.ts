@@ -5,13 +5,11 @@ import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { BadRequestError, LatitudeError } from '../../lib/errors'
 import { DatasetRowsRepository } from '../../repositories'
 import { experiments } from '../../schema/models/experiments'
-import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  Experiment,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Experiment } from '../../schema/models/types/Experiment'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { scanDocumentContent } from '../documents'
 import { assertEvaluationRequirements } from './assertRequirements'
 

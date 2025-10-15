@@ -7,7 +7,7 @@ import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export function SelectPayloadParameters({
   document,

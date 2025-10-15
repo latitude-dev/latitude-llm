@@ -2,7 +2,7 @@ import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { ErrorableEntity, LogSources, PromptSource } from '../../constants'
 import { Providers } from '@latitude-data/constants'
 import { Result } from '../../lib/Result'

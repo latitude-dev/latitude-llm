@@ -15,7 +15,7 @@ import { Config, scan } from 'promptl-ai'
 import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { stringify as stringifyObjectToYaml } from 'yaml'
 import { useIncludabledPrompts } from './useIncludabledPrompts'
-import { type DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export const PlaygroundBlocksEditor = memo(
   ({

@@ -8,7 +8,7 @@ import type {
 } from '@pipedream/sdk/browser'
 import { useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import { PipedreamComponent } from '@latitude-data/core/constants'
 
 export function usePipedreamDynamicPropConfig({

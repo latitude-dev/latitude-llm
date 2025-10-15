@@ -7,7 +7,7 @@ import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { useMemo } from 'react'
 import { DATASET_COLUMN_ROLES } from '@latitude-data/core/constants'
-import { Dataset } from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
 export function UpdateColumnModal({
   dataset,

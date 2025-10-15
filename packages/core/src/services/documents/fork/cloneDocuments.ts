@@ -1,12 +1,10 @@
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import {
-  Project,
-  Workspace,
-  Commit,
-  User,
-  DocumentVersion,
-  ProviderApiKey,
-} from '../../../schema/types'
+import { type Project } from '../../../schema/models/types/Project'
+import { type Workspace } from '../../../schema/models/types/Workspace'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type User } from '../../../schema/models/types/User'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import { Providers } from '@latitude-data/constants'
 import { findFirstModelForProvider } from '../../ai/providers/models'
 import { Result } from '../../../lib/Result'

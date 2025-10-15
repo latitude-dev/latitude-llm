@@ -17,8 +17,10 @@ import { useCallback, useMemo } from 'react'
 import { useDatasetRowsSocket } from './useDatasetRowsSocket'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { format } from 'date-fns'
-import { DatasetRow, Dataset } from '@latitude-data/core/schema/types'
 
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+
+import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
 export const DeletedDatasetAlert = ({ deletedAt }: { deletedAt: Date }) => {
   return (
     <Alert

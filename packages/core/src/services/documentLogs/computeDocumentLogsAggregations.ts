@@ -1,6 +1,6 @@
 import { and, count, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm'
 import { DocumentLogFilterOptions, ErrorableEntity } from '../../constants'
-import { DocumentLogsAggregations } from '../../schema/types'
+import { DocumentLogsAggregations } from '../../schema/models/types/DocumentLog'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { commits } from '../../schema/models/commits'

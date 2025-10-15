@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 
-import { Dataset, DocumentVersion } from '../../schema/types'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import {
   LinkedDataset,
   LinkedDatasetRow,

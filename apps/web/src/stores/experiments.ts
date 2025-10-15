@@ -5,8 +5,9 @@ import { ROUTES } from '$/services/routes'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import { Experiment, ExperimentDto } from '@latitude-data/core/schema/types'
+import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
 
+import { Experiment } from '@latitude-data/core/schema/models/types/Experiment'
 const EMPTY_ARRAY: [] = []
 
 export function useExperiments(

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Workspace } from '../../../../schema/types'
+import { type Workspace } from '../../../../schema/models/types/Workspace'
 import * as factories from '../../../../tests/factories'
 import { computeLatteCredits } from './compute'
 

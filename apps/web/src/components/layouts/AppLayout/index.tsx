@@ -1,8 +1,9 @@
 import { ReactNode } from 'react'
 import { cn } from '@latitude-data/web-ui/utils'
+import { User } from '@latitude-data/core/schema/models/types/User'
 
 import AppHeader, { AppHeaderProps } from './Header'
-import { User } from '@latitude-data/core/schema/types'
+
 import DocumentationSidebarLayout from './DocumentationSidebarLayout'
 import { DocumentationProvider } from '$/components/Documentation/Provider'
 

@@ -1,4 +1,6 @@
-import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { DocumentTriggersRepository } from '../../repositories'

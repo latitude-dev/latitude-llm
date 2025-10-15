@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 
-import type { Workspace, WorkspaceDto } from '../../schema/types'
+import type { WorkspaceDto } from '../../schema/models/types/Workspace'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'

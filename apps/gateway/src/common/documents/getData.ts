@@ -23,12 +23,10 @@ import {
 } from '@latitude-data/constants'
 import { getDocumentMetadata } from '@latitude-data/core/services/documents/scan'
 import { documentPresenterWithProviderAndMetadata } from '$/presenters/documentPresenter'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  type Workspace,
-} from '@latitude-data/core/schema/types'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 async function getProjectByVersionData({
   workspace,

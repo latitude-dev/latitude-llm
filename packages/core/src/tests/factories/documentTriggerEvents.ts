@@ -1,4 +1,5 @@
-import { DocumentTrigger, DocumentTriggerEvent } from '../../schema/types'
+import { type DocumentTrigger } from '../../schema/models/types/DocumentTrigger'
+import { type DocumentTriggerEvent } from '../../schema/models/types/DocumentTriggerEvent'
 import { database } from '../../client'
 import { documentTriggerEvents } from '../../schema/models/documentTriggerEvents'
 import { createProject } from './createProject'

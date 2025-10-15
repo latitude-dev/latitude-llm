@@ -1,9 +1,10 @@
-import type { Commit, Workspace } from '../../schema/types'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { NotFoundError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories/documentVersionsRepository'
+import { Commit } from '../../schema/models/types/Commit'
+import { Workspace } from '../../schema/models/types/Workspace'
 import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
 
 export async function destroyFolder(

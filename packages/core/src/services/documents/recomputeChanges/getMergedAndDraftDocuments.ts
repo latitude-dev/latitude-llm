@@ -1,4 +1,4 @@
-import { DocumentVersion } from '../../../schema/types'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 
 export function getMergedAndDraftDocuments({
   headDocuments,

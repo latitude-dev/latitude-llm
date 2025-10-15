@@ -5,12 +5,10 @@ import { refinePromptAction } from '$/actions/copilot/refinePrompt'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { RefObject, useCallback } from 'react'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-} from '@latitude-data/core/schema/types'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 export type Refinement = {
   prompt: string
   summary: string

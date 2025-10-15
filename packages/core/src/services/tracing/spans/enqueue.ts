@@ -9,7 +9,8 @@ import { queues } from '../../../jobs/queues'
 import { diskFactory, DiskWrapper } from '../../../lib/disk'
 import { hashContent as hash } from '../../../lib/hashContent'
 import { Result, TypedResult } from '../../../lib/Result'
-import { ApiKey, Workspace } from '../../../schema/types'
+import { type ApiKey } from '../../../schema/models/types/ApiKey'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 
 export async function enqueueSpans(
   {

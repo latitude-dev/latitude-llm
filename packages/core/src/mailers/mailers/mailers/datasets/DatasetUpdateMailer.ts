@@ -4,7 +4,8 @@ import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
 import { TypedResult } from '../../../../lib/Result'
 import Mailer from '../../Mailer'
-import { Dataset, User } from '../../../../schema/types'
+import { type Dataset } from '../../../../schema/models/types/Dataset'
+import { type User } from '../../../../schema/models/types/User'
 import DatasetUpdateMail from '../../../emails/datasets/DatasetUpdateMail'
 
 export class DatasetUpdateMailer extends Mailer {

@@ -9,7 +9,7 @@ import useUsers from '$/stores/users'
 import { relativeTime } from '$/lib/relativeTime'
 import { ReactNode, useMemo } from 'react'
 import { useCommitActions } from './commitActions'
-import { Commit } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 function CommitItem({
   commit,

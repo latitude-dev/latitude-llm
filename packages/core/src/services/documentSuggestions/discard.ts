@@ -1,5 +1,7 @@
 import { and, eq } from 'drizzle-orm'
-import { DocumentSuggestion, User, Workspace } from '../../schema/types'
+import { type DocumentSuggestion } from '../../schema/models/types/DocumentSuggestion'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

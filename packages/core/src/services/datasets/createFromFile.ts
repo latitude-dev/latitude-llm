@@ -1,7 +1,8 @@
 import path from 'path'
 import slugify from '@sindresorhus/slugify'
 
-import { User, Workspace } from '../../schema/types'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import { diskFactory, DiskWrapper } from '../../lib/disk'

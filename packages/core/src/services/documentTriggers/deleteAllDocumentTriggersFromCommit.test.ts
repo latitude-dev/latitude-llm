@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentTriggerType, Providers } from '@latitude-data/constants'
-import {
-  Commit,
-  Project,
-  Workspace,
-  DocumentTrigger,
-  DocumentVersion,
-  User,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Project } from '../../schema/models/types/Project'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { type DocumentTrigger } from '../../schema/models/types/DocumentTrigger'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type User } from '../../schema/models/types/User'
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'

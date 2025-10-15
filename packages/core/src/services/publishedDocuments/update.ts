@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { PublishedDocument } from '../../schema/types'
+import { type PublishedDocument } from '../../schema/models/types/PublishedDocument'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { publishedDocuments } from '../../schema/models/publishedDocuments'

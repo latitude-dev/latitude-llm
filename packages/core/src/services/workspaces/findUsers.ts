@@ -1,4 +1,6 @@
-import { User, Workspace, WorkspaceDto } from '../../schema/types'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { database } from '../../client'
 import { PromisedResult } from '../../lib/Transaction'
 import { UsersRepository } from '../../repositories'

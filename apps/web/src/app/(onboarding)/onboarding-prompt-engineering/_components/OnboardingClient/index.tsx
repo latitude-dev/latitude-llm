@@ -9,7 +9,9 @@ import { useRunOnboardingPrompt } from '$/app/(onboarding)/onboarding-prompt-eng
 import { OnboardingPromptStep } from '$/app/(onboarding)/onboarding-prompt-engineering/_components/OnboardingClient/PromptStep'
 import { ExperimentStep } from '$/app/(onboarding)/onboarding-prompt-engineering/_components/OnboardingClient/ExperimentStep'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
-import { DocumentVersion, Dataset } from '@latitude-data/core/schema/types'
+
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { useCurrentWorkspace } from '$/app/providers/WorkspaceProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'

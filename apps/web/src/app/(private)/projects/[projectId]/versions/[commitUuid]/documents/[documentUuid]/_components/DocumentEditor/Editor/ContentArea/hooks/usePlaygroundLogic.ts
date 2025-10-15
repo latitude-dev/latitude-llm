@@ -1,12 +1,10 @@
 import { useCallback, useMemo } from 'react'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-} from '@latitude-data/core/schema/types'
 import { LogSources } from '@latitude-data/core/constants'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { INPUT_SOURCE } from '@latitude-data/core/lib/documentPersistedInputs'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { DocumentRoutes } from '$/services/routes'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useToggleModal } from '$/hooks/useToogleModal'

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { processWebhookJob } from './processWebhookJob'
 import * as factories from '../../../tests/factories'
-import { Commit } from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
 import { Providers } from '@latitude-data/constants'
 import {
   CommitPublishedEvent,

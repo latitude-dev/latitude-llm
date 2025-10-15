@@ -12,7 +12,7 @@ import {
 import { ForkButton } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/ForkButton'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
-import { PublishedDocument } from '@latitude-data/core/schema/types'
+import { PublishedDocument } from '@latitude-data/core/schema/models/types/PublishedDocument'
 
 export function ForkDocument({ shared }: { shared: PublishedDocument }) {
   const back = ROUTES.share.document(shared.uuid!).root

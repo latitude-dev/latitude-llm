@@ -10,7 +10,7 @@ import {
   EvaluationType,
   EvaluationV2,
 } from '@latitude-data/core/constants'
-import { ExperimentWithScores } from '@latitude-data/core/schema/types'
+import { ExperimentWithScores } from '@latitude-data/core/schema/models/types/Experiment'
 
 function EvaluationScore<
   T extends EvaluationType,

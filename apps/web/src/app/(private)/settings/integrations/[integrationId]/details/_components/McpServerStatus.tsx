@@ -5,7 +5,7 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { capitalize } from 'lodash-es'
 import { useMcpServer } from '$/stores/mcpServer'
 import { UpgradeLink } from '$/components/UpgradeLink'
-import { McpServer } from '@latitude-data/core/schema/types'
+import { McpServer } from '@latitude-data/core/schema/models/types/McpServer'
 
 interface McpServerStatusProps {
   mcpServerId?: number

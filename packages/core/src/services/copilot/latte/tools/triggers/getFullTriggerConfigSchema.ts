@@ -4,7 +4,7 @@ import { Result } from '../../../../../lib/Result'
 import { getPipedreamClient } from '../../../../integrations/pipedream/apps'
 import { IntegrationsRepository } from '../../../../../repositories'
 import { ConfigurablePropWithRemoteOptions } from '../../../../../constants'
-import { PipedreamIntegration } from '../../../../../schema/types'
+import { PipedreamIntegration } from '../../../../../schema/models/types/Integration'
 import { fetchFullConfigSchema } from './fetchFullConfigSchema'
 import { PromisedResult } from '../../../../../lib/Transaction'
 

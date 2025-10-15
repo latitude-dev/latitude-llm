@@ -3,7 +3,8 @@ import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { useEvaluationParameters } from '../../../../hooks/useEvaluationParamaters'
 import { PlainTextParameterInput } from '../PlainTextParameterInput'
 import { EditableJsonInput } from '../EditableJsonInput'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+
 import {
   EvaluationType,
   EvaluationV2,

@@ -8,7 +8,7 @@ import { getChangesToRevertCommitAction } from '$/actions/history/revertCommitVe
 import { revertCommitChangesAction } from '$/actions/history/revertCommitVersion/revertCommitAction'
 import { getChangesToResetCommitAction } from '$/actions/history/resetCommitVersion/getChangesToResetCommitAction'
 import { resetCommitVersionAction } from '$/actions/history/resetCommitVersion/resetCommitVersionAction'
-import { Commit } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 export function useCommitActions({ commit }: { commit: Commit }) {
   const router = useRouter()

@@ -6,7 +6,8 @@ import {
   DocumentVersionsRepository,
   EvaluationsV2Repository,
 } from '../../repositories'
-import { Commit, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { createEvaluationV2 } from './create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
 

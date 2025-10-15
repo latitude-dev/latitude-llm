@@ -1,12 +1,10 @@
 import { eq } from 'drizzle-orm'
 import { v4 as uuid } from 'uuid'
 
-import {
-  Commit,
-  DocumentVersion,
-  ProviderLog,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type ProviderLog } from '../../schema/models/types/ProviderLog'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { LogSources } from '../../constants'
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'

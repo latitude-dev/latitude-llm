@@ -4,12 +4,12 @@ import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import Link from 'next/link'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { InputMapper } from './InputsMapper'
 import { type OnSelectRowCellFn } from './InputsMapper/InputsMapperItem'
 import { type UseSelectDataset } from './useSelectDataset'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 function BlankSlate() {
   return (

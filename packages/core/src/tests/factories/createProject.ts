@@ -1,6 +1,8 @@
 import { faker } from '@faker-js/faker'
 
-import type { DocumentVersion, User, Workspace } from '../../schema/types'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { unsafelyGetUser } from '../../data-access/users'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'

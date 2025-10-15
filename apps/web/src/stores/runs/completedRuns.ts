@@ -1,4 +1,5 @@
 'use client'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 
 import {
   EventArgs,
@@ -7,7 +8,7 @@ import {
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import { CompletedRun } from '@latitude-data/constants'
-import { Project } from '@latitude-data/core/schema/types'
+
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'

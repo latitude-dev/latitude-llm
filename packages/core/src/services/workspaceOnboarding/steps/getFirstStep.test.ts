@@ -9,7 +9,7 @@ import {
 } from '@latitude-data/constants'
 import { getFirstStep } from './getFirstStep'
 import * as factories from '../../../../src/tests/factories'
-import { Workspace } from '../../../schema/types'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 
 describe('getFirstStep', () => {
   let workspace: Workspace

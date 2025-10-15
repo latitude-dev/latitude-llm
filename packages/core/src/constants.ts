@@ -26,13 +26,11 @@ import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-da
 import { z } from 'zod'
 import { PromisedResult } from './lib/Transaction'
 import { LatitudeError } from './lib/errors'
-import {
-  ApiKey,
-  Commit,
-  DocumentVersion,
-  ProviderLog,
-  Workspace,
-} from './schema/types'
+import { type ApiKey } from './schema/models/types/ApiKey'
+import { type Commit } from './schema/models/types/Commit'
+import { type DocumentVersion } from './schema/models/types/DocumentVersion'
+import { type ProviderLog } from './schema/models/types/ProviderLog'
+import { type Workspace } from './schema/models/types/Workspace'
 
 export {
   DocumentType,
@@ -102,10 +100,10 @@ export type ChainStepObjectResponse = BaseResponse & {
 
 export type ChainStepResponse<T extends StreamType = StreamType> =
   T extends 'text'
-    ? ChainStepTextResponse
-    : T extends 'object'
-      ? ChainStepObjectResponse
-      : never
+  ? ChainStepTextResponse
+  : T extends 'object'
+  ? ChainStepObjectResponse
+  : never
 
 export const LOG_SOURCES = Object.values(LogSources)
 

@@ -13,9 +13,9 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useNavigate } from '$/hooks/useNavigate'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 
 import RenameProjectModal from './RenameProjectModal'
-import { Project } from '@latitude-data/core/schema/types'
 import { extractLeadingEmoji } from '@latitude-data/web-ui/textUtils'
 
 function ProjectTitle({ name }: { name: string }) {

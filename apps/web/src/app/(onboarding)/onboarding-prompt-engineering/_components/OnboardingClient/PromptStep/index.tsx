@@ -6,9 +6,10 @@ import { DocumentTextEditor } from '@latitude-data/web-ui/molecules/DocumentText
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { OnboardingStep } from '../index'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+
 import { LATITUDE_DOCS_URL } from '@latitude-data/core/constants'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 export function OnboardingPromptStep({
   document,
   start,

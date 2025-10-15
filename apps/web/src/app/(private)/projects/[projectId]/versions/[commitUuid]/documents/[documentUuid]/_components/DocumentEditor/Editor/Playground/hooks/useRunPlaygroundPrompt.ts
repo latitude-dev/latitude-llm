@@ -4,7 +4,8 @@ import {
   Message as ConversationMessage,
   ToolCall,
 } from '@latitude-data/constants/legacyCompiler'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+
 import { TraceContext } from '@latitude-data/constants'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { useCallback, useMemo } from 'react'

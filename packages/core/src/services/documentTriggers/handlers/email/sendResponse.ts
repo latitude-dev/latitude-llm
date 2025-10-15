@@ -2,11 +2,9 @@ import {
   DocumentTriggerType,
   EMAIL_TRIGGER_DOMAIN,
 } from '@latitude-data/constants'
-import {
-  Commit,
-  DocumentTrigger,
-  DocumentTriggerEvent,
-} from '../../../../schema/types'
+import { type Commit } from '../../../../schema/models/types/Commit'
+import { type DocumentTrigger } from '../../../../schema/models/types/DocumentTrigger'
+import { type DocumentTriggerEvent } from '../../../../schema/models/types/DocumentTriggerEvent'
 import { DocumentTriggerMailer } from '../../../../mailers'
 import type { AssistantMessage } from '@latitude-data/constants/legacyCompiler'
 import { Result, TypedResult } from '../../../../lib/Result'

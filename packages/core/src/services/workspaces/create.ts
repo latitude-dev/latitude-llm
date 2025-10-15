@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
-import { User, WorkspaceDto } from '../../schema/types'
+import { WorkspaceDto } from '../../schema/models/types/Workspace'
+import { type User } from '../../schema/models/types/User'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

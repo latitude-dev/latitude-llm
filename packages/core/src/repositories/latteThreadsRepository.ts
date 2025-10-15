@@ -1,6 +1,7 @@
 import { and, eq, getTableColumns, inArray } from 'drizzle-orm'
 
-import { LatteThread, LatteThreadCheckpoint } from '../schema/types'
+import { type LatteThread } from '../schema/models/types/LatteThread'
+import { type LatteThreadCheckpoint } from '../schema/models/types/LatteThreadCheckpoint'
 import { Result } from '../lib/Result'
 import { PromisedResult } from '../lib/Transaction'
 import { latteThreadCheckpoints } from '../schema/models/latteThreadCheckpoints'

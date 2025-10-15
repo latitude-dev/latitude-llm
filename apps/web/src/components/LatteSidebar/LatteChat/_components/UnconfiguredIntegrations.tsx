@@ -3,7 +3,7 @@ import useIntegrations from '$/stores/integrations'
 import { useLatteStore } from '$/stores/latte'
 import { IntegrationType } from '@latitude-data/constants'
 import { useEffect, useMemo } from 'react'
-import { PipedreamIntegration } from '@latitude-data/core/schema/types'
+import { PipedreamIntegration } from '@latitude-data/core/schema/models/types/Integration'
 
 export function LatteUnconfiguredIntegrations() {
   const { data: integrations, mutate } = useIntegrations()

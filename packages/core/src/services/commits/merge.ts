@@ -1,6 +1,7 @@
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 
-import { Commit, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

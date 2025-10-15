@@ -4,8 +4,9 @@ import { useExperimentComparison } from '$/stores/experimentComparison'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { Commit, Project } from '@latitude-data/core/schema/types'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 export function ExperimentComparison({
   selectedExperimentUuids,
   onUnselectExperiment,

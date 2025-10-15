@@ -1,7 +1,7 @@
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { promocodes } from '../../schema/models/promocodes'
-import { Promocode } from '../../schema/types'
+import { type Promocode } from '../../schema/models/types/Promocode'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { eq } from '../../client/utils'
 import { findByCode } from '../../data-access/promocodes'

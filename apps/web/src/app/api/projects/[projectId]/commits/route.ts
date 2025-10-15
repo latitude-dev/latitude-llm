@@ -7,11 +7,11 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { BadRequestError, NotFoundError } from '@latitude-data/core/lib/errors'
 import { paginateQuery } from '@latitude-data/core/lib/pagination/paginate'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import {
   CommitStatus,
   ULTRA_LARGE_PAGE_SIZE,
 } from '@latitude-data/core/constants'
-import { Workspace } from '@latitude-data/core/schema/types'
 
 export const GET = errorHandler(
   authHandler(

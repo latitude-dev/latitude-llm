@@ -1,7 +1,7 @@
 'use client'
 
 import useProjects from '$/stores/projects'
-import type { Project } from '@latitude-data/core/schema/types'
+import type { Project } from '@latitude-data/core/schema/models/types/Project'
 import { createContext, ReactNode, useContext, useMemo } from 'react'
 
 type IProjectContextType = {

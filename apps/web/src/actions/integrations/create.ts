@@ -11,7 +11,7 @@ import {
   pipedreamIntegrationConfigurationSchema,
 } from '@latitude-data/core/services/integrations/helpers/schema'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
-import { Workspace } from '@latitude-data/core/schema/types'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { authProcedure } from '../procedures'
 
 const nameSchema = z

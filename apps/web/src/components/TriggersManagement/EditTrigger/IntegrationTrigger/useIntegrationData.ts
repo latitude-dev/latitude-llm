@@ -3,7 +3,8 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import useIntegrations from '$/stores/integrations'
 import { PipedreamIntegrationConfiguration } from '@latitude-data/core/services/integrations/helpers/schema'
-import { DocumentTrigger } from '@latitude-data/core/schema/types'
+
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import {
   type PipedreamComponent,
   type PipedreamComponentType,

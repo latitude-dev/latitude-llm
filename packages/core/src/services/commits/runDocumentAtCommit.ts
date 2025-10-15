@@ -1,9 +1,7 @@
-import {
-  Commit,
-  Experiment,
-  type DocumentVersion,
-  type Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Experiment } from '../../schema/models/types/Experiment'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { ErrorableEntity, LogSources } from '../../constants'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'

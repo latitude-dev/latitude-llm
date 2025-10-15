@@ -20,16 +20,14 @@ import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChainEventTypes } from '@latitude-data/constants'
 import {
-  Commit,
-  Project,
-  ProviderLog,
-  Workspace,
-} from '@latitude-data/core/schema/types'
-import {
   LegacyChainEventTypes,
   LogSources,
   StreamEventTypes,
 } from '@latitude-data/core/constants'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { ProviderLog } from '@latitude-data/core/schema/models/types/ProviderLog'
 
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),

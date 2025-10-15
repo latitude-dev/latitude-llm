@@ -10,7 +10,9 @@ import { compactObject } from '../../lib/compactObject'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
-import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { validateEvaluationV2 } from './validate'
 
 export async function createEvaluationV2<

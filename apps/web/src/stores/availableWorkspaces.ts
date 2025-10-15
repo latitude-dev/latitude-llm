@@ -6,7 +6,8 @@ import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { ROUTES } from '$/services/routes'
 import useSWR from 'swr'
 import { useNavigate } from '$/hooks/useNavigate'
-import { Workspace } from '@latitude-data/core/schema/types'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 export default function useAvailableWorkspaces() {

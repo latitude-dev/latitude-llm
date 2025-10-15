@@ -1,10 +1,10 @@
 import * as factories from '@latitude-data/core/factories'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { User } from 'lucia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createProviderApiKeyAction } from './create'
 import { Providers } from '@latitude-data/constants'
-import { Workspace } from '@latitude-data/core/schema/types'
 
 const mocks = vi.hoisted(() => {
   return {

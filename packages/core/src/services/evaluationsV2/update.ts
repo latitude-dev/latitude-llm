@@ -13,7 +13,8 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
-import { Commit, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { validateEvaluationV2 } from './validate'
 
 export async function updateEvaluationV2<

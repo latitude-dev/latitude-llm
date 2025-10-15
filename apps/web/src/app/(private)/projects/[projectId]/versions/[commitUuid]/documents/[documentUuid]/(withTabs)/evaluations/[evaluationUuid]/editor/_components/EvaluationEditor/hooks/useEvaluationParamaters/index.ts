@@ -4,11 +4,12 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 import { EVALUATION_EMPTY_INPUTS, EvaluationInputsByDocument } from './types'
 import { getDocState } from './utils'
 import { useEvaluatedLogInputs } from './logInputParamaters'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+
 import {
   EvaluationType,
   EvaluationV2,

@@ -3,10 +3,10 @@ import { createProject } from '@latitude-data/core/factories'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { confirmMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/confirm'
 import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
+import { User } from '@latitude-data/core/schema/models/types/User'
 import { frontendRedirect } from '$/lib/frontendRedirect'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { confirmMagicLinkTokenAction } from './confirm'
-import { User } from '@latitude-data/core/schema/types'
 
 vi.mock('$/lib/frontendRedirect', () => ({
   frontendRedirect: vi.fn(),

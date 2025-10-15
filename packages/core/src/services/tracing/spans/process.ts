@@ -35,7 +35,8 @@ import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import { ApiKeysRepository } from '../../../repositories'
-import { ApiKey, Workspace } from '../../../schema/types'
+import { type ApiKey } from '../../../schema/models/types/ApiKey'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { internalBaggageSchema } from '../../../telemetry'
 
 export function convertSpanAttribute(

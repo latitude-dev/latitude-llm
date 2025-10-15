@@ -1,4 +1,7 @@
-import { Commit, Project, User, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Project } from '../../schema/models/types/Project'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { DraftChange } from '../../constants'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { database } from '../../client'
@@ -32,8 +35,8 @@ async function fetchCommitDetails({
 
     const targetCommit = targetDraftUuid
       ? await commitScope
-          .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
-          .then((r) => r.unwrap())
+        .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
+        .then((r) => r.unwrap())
       : headCommit
 
     const originalCommit = await commitScope
@@ -152,13 +155,13 @@ export async function resetProjectToCommit(
   const targetDraft = targetDraftUuid
     ? Result.ok(targetCommit)
     : await createCommit({
-        project: project,
-        user: user,
-        data: {
-          title: `Reset project to v${originalCommit.version} "${originalCommit.title}"`,
-          description: `Resetted the project to the state of commit v${originalCommit.version} "${originalCommit.title}"`,
-        },
-      })
+      project: project,
+      user: user,
+      data: {
+        title: `Reset project to v${originalCommit.version} "${originalCommit.title}"`,
+        description: `Resetted the project to the state of commit v${originalCommit.version} "${originalCommit.title}"`,
+      },
+    })
 
   if (targetDraft.error) {
     return Result.error(targetDraft.error)

@@ -2,7 +2,9 @@ import { omit } from 'lodash-es'
 
 import { and, eq, inArray, ne } from 'drizzle-orm'
 
-import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { database } from '../../client'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

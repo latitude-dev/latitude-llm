@@ -4,7 +4,8 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { LogSources } from '@latitude-data/constants'
 import { createSSEStream } from '@latitude-data/core/lib/createSSEStream'
-import { Workspace } from '@latitude-data/core/schema/types'
+
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const POST = errorHandler(

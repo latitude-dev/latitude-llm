@@ -1,4 +1,4 @@
-import { ProviderApiKey } from '../../schema/types'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { database } from '../../client'
 import { getOrSet } from '../../cache'
 import { ProviderApiKeysRepository } from '../../repositories'

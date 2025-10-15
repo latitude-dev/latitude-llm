@@ -3,7 +3,7 @@ import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-ac
 import { createProject } from '@latitude-data/core/factories'
 import { ProjectsRepository } from '@latitude-data/core/repositories'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { Project } from '@latitude-data/core/schema/types'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 
 vi.mock('$/jobs', () => ({
   queues: { jobs: { enqueueUpdateApiKeyProviderJob: vi.fn() } },

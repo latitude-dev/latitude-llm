@@ -5,12 +5,10 @@ import useDocumentVersions from '$/stores/documentVersions'
 import useProjects from '$/stores/projects'
 import { useParams, usePathname } from 'next/navigation'
 import { useMemo } from 'react'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-} from '@latitude-data/core/schema/types'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 export function useLatteContext() {
   const pathname = usePathname()
 

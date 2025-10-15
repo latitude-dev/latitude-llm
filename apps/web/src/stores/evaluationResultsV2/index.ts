@@ -6,12 +6,10 @@ import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import {
-  Commit,
-  DocumentVersion,
-  EvaluationResultV2WithDetails,
-  Project,
-} from '@latitude-data/core/schema/types'
+import { EvaluationResultV2WithDetails } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 import {
   EvaluationMetric,
   EvaluationType,

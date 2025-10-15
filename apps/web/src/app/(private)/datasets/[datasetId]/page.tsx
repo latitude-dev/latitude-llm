@@ -8,12 +8,10 @@ import {
 import { notFound, redirect } from 'next/navigation'
 import Layout from '../_components/Layout'
 import { DatasetDetailTable } from './DatasetDetailTable'
-import {
-  DatasetRow,
-  Dataset,
-  Workspace,
-} from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
 type GetDataResult = {
   redirectUrl?: string
   dataset: Dataset

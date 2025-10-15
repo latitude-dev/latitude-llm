@@ -3,7 +3,7 @@ import { GrantSource, Quota, QuotaType } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { GrantsRepository } from '../../repositories'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 
 export async function validateGrant(
   {

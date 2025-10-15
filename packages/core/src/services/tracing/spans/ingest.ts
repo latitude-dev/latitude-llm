@@ -12,7 +12,8 @@ import {
   SpanType,
 } from '../../../constants'
 import { Result } from '../../../lib/Result'
-import { ApiKey, Workspace } from '../../../schema/types'
+import { type ApiKey } from '../../../schema/models/types/ApiKey'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { captureException } from '../../../utils/workers/sentry'
 import {
   convertSpanAttributes,

@@ -4,8 +4,8 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { parsePage } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 import { DEFAULT_PAGINATION_SIZE } from '@latitude-data/core/constants'
-import { Workspace } from '@latitude-data/core/schema/types'
 
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 export const GET = errorHandler(
   authHandler(
     async (

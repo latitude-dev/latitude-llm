@@ -7,7 +7,7 @@ import {
   ConfigurablePropWithRemoteOptions,
   RemoteOptions,
 } from '../../../../../constants'
-import { PipedreamIntegration } from '../../../../../schema/types'
+import { PipedreamIntegration } from '../../../../../schema/models/types/Integration'
 import { Result } from '../../../../../lib/Result'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import {

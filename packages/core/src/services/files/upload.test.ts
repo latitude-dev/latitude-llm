@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'fs/promises'
 import { join } from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as constants from '../../constants'
 import * as lib from '../../lib/generateUUID'
 import { diskFactory } from '../../lib/disk'

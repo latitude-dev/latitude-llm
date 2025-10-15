@@ -3,7 +3,9 @@ import {
   DocumentTriggerType,
   DocumentTriggerStatus,
 } from '@latitude-data/constants'
-import { Commit, Workspace, DocumentTrigger } from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type Workspace } from '../../../schema/models/types/Workspace'
+import { type DocumentTrigger } from '../../../schema/models/types/DocumentTrigger'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../lib/Result'

@@ -1,6 +1,6 @@
 import { and, eq, getTableColumns, isNull, not, or } from 'drizzle-orm'
 
-import { ClaimedReward } from '../schema/types'
+import { type ClaimedReward } from '../schema/models/types/ClaimedReward'
 import { RewardType } from '../constants'
 import { Result } from '../lib/Result'
 import { claimedRewards } from '../schema/models/claimedRewards'

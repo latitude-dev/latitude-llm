@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { ProviderApiKey } from '../../schema/types'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

@@ -11,14 +11,12 @@ import {
 import { publisher } from '../../events/publisher'
 import * as helpers from '../../helpers'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  ProviderLogDto,
-  User,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Project } from '../../schema/models/types/Project'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { ProviderLogDto } from '../../schema/types'
 import * as factories from '../../tests/factories'
 import serializeProviderLog from '../providerLogs/serialize'
 import { annotateEvaluationV2 } from './annotate'

@@ -73,7 +73,7 @@ import {
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result, TypedResult } from '../../../lib/Result'
 import { ProviderApiKeysRepository } from '../../../repositories'
-import { Workspace } from '../../../schema/types'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { estimateCost } from '../../ai/estimateCost'
 import {
   setField,

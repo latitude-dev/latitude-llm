@@ -3,9 +3,10 @@ import { ROUTES } from '$/services/routes'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 
 import { getRedirectUrl } from './utils'
-import { Commit } from '@latitude-data/core/schema/types'
+
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 export const PROJECT_ROUTE = ROUTES.projects.detail
 describe('getCommitUrl', () => {
   const mockCommits: Commit[] = [

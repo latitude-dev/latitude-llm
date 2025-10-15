@@ -26,7 +26,7 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Suspense, useCallback, useMemo, useState } from 'react'
-import { Dataset } from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
 function rowKeyGetter(row: ClientDatasetRow) {
   return row.id

@@ -3,7 +3,9 @@ import {
   DocumentTriggerStatus,
   ModifiedDocumentType,
 } from '@latitude-data/constants'
-import { Commit, DocumentTrigger, Workspace } from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type DocumentTrigger } from '../../../schema/models/types/DocumentTrigger'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { Result } from '../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import {
@@ -106,9 +108,9 @@ export async function getCommitTriggerChanges(
 
     const previousCommitTriggers = previousCommit
       ? await triggersRepository.getTriggersInProject({
-          projectId: previousCommit.projectId,
-          commit: previousCommit,
-        })
+        projectId: previousCommit.projectId,
+        commit: previousCommit,
+      })
       : Result.ok([])
 
     if (previousCommitTriggers.error) {

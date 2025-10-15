@@ -9,11 +9,11 @@ import { IntegrationTriggerConfig } from './IntegrationTriggerConfig'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 import {
-  DocumentTrigger,
-  DocumentVersion,
   IntegrationDto,
   PipedreamIntegration,
-} from '@latitude-data/core/schema/types'
+} from '@latitude-data/core/schema/models/types/Integration'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import {
   PipedreamComponent,
   PipedreamComponentType,

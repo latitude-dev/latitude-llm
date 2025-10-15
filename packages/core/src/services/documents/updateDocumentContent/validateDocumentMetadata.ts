@@ -5,7 +5,9 @@ import {
 } from 'promptl-ai'
 import type { AstError } from '@latitude-data/constants/promptl'
 import { AgentToolsMap, resolveRelativePath } from '@latitude-data/constants'
-import { Commit, DocumentVersion, Workspace } from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { latitudePromptConfigSchema } from '@latitude-data/constants/latitudePromptSchema'
 import {
   DocumentVersionsRepository,

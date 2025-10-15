@@ -1,4 +1,5 @@
 'use client'
+import { LatteThreadCheckpoint } from '@latitude-data/core/schema/models/types/LatteThreadCheckpoint'
 
 import { DocumentRoutes, ROUTES } from '$/services/routes'
 import useDocumentVersion from '$/stores/useDocumentVersion'
@@ -9,7 +10,6 @@ import { DocumentChange } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import Link from 'next/link'
-import { LatteThreadCheckpoint } from '@latitude-data/core/schema/types'
 
 function ChangeListItem({ checkpoint }: { checkpoint: LatteThreadCheckpoint }) {
   const { project } = useCurrentProject()

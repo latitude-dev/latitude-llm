@@ -11,7 +11,8 @@ import {
   or,
 } from 'drizzle-orm'
 
-import { Commit, Project } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Project } from '../../schema/models/types/Project'
 import { CommitStatus, HEAD_COMMIT } from '../../constants'
 import { InferedReturnType } from '../../lib/commonTypes'
 import { NotFoundError } from '../../lib/errors'

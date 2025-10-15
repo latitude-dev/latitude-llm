@@ -1,7 +1,9 @@
 import { database } from '../../client'
 import { EvaluationV2 } from '../../constants'
 import { documentSuggestions } from '../../schema/models/documentSuggestions'
-import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../schema/models/types/Workspace'
 
 export async function createDocumentSuggestion({
   document,

@@ -17,7 +17,8 @@ import {
 } from '$/app/providers/ProjectProvider'
 import { useCallback, useState } from 'react'
 import { EvaluationsGenerator } from './EvaluationsGenerator'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+
 import {
   EvaluationOptions,
   EvaluationSettings,

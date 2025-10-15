@@ -7,7 +7,7 @@ import {
   LATTE_MINIMUM_CREDITS_PER_REQUEST,
 } from '../../../../constants'
 import { Providers } from '@latitude-data/constants'
-import { Workspace } from '../../../../schema/types'
+import { type Workspace } from '../../../../schema/models/types/Workspace'
 import { Result } from '../../../../lib/Result'
 import Transaction from '../../../../lib/Transaction'
 import { estimateCost } from '../../../ai/estimateCost'

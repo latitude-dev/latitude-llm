@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-import { User, Workspace } from '../../../schema/types'
+import { type User } from '../../../schema/models/types/User'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { ProductEdition } from '../collectors/DataCollector'
 
 describe('PosthogProvider', () => {

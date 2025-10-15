@@ -1,6 +1,6 @@
-import { DatasetRow } from '@latitude-data/core/schema/types'
 import { parseRowCell } from '@latitude-data/core/services/datasetRows/utils'
 
+import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
 export type ClientDatasetRow = DatasetRow & {
   processedRowData: { [key: string]: string }
 }

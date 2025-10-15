@@ -5,9 +5,10 @@ import {
 } from '$/hooks/useDocumentParameters/utils'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useLocalStorage } from '@latitude-data/web-ui/hooks/useLocalStorage'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+
 import { LinkedDatasetRow } from '@latitude-data/core/lib/documentPersistedInputs'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 export function useDatasetUtils({
   key,
   projectId,

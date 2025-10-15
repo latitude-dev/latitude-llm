@@ -1,11 +1,9 @@
 import { subDays } from 'date-fns'
 import { and, count, desc, eq, getTableColumns, gte } from 'drizzle-orm'
-import {
-  Commit,
-  DocumentSuggestion,
-  DocumentSuggestionWithDetails,
-  DocumentVersion,
-} from '../schema/types'
+import { type Commit } from '../schema/models/types/Commit'
+import { type DocumentSuggestion } from '../schema/models/types/DocumentSuggestion'
+import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
+import { DocumentSuggestionWithDetails } from '../schema/models/types/DocumentSuggestion'
 import { DOCUMENT_SUGGESTION_EXPIRATION_DAYS } from '../constants'
 import { Result } from '../lib/Result'
 import { documentSuggestions } from '../schema/models/documentSuggestions'

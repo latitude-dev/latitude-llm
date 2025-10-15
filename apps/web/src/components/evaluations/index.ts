@@ -16,14 +16,12 @@ import React from 'react'
 import HumanEvaluationSpecification from './human'
 import LlmEvaluationSpecification from './llm'
 import RuleEvaluationSpecification from './rule'
-import {
-  Commit,
-  Dataset,
-  DatasetRow,
-  ProviderLogDto,
-} from '@latitude-data/core/schema/types'
+import { ProviderLogDto } from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 import { DocumentLog } from '@latitude-data/core/constants'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
 export type ConfigurationFormProps<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,

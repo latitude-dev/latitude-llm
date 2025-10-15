@@ -6,7 +6,7 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { useFormAction } from '$/hooks/useFormAction'
 import useProjects from '$/stores/projects'
-import { Project } from '@latitude-data/core/schema/types'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 
 type Props = {
   project: Project

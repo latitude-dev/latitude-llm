@@ -1,6 +1,6 @@
 import { createContext } from 'react'
 import { AppDto } from '@latitude-data/core/constants'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 
 type IConnectToolContext = {
   onAdd: (integration: IntegrationDto) => void
@@ -8,6 +8,6 @@ type IConnectToolContext = {
 }
 
 export const ConnectToolContext = createContext<IConnectToolContext>({
-  onAdd: (_integration: IntegrationDto) => {},
-  onConnect: (_app: AppDto) => {},
+  onAdd: (_integration: IntegrationDto) => { },
+  onConnect: (_app: AppDto) => { },
 })

@@ -1,8 +1,9 @@
 import { useCallback } from 'react'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 import { useEvaluationParameters } from '../../../hooks/useEvaluationParamaters/index'
 import { useSerializedLogs, type OnHistoryFetchedFn } from './useSerializedLogs'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+
 import {
   EvaluationType,
   EvaluationV2,

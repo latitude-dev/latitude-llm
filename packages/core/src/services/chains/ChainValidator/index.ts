@@ -13,7 +13,8 @@ import {
 } from '@latitude-data/constants/latitudePromptSchema'
 import { CompileError as PromptlCompileError } from 'promptl-ai'
 import { applyProviderRules } from '../../ai/providers/rules'
-import { ProviderApiKey, Workspace } from '../../../schema/types'
+import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { Result, TypedResult } from '../../../lib/Result'
 import { Output } from '../../../lib/streamManager/step/streamAIResponse'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
@@ -182,9 +183,9 @@ async function getChainNextStep({
           message: error.message,
           ...(isCompileError
             ? {
-                compileCode: error.code,
-                frame: error.frame,
-              }
+              compileCode: error.code,
+              frame: error.frame,
+            }
             : {}),
         },
       }),

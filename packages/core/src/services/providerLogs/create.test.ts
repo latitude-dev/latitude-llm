@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as factories from '../../tests/factories'
 
-import { ProviderApiKey, Workspace } from '../../schema/types'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { Providers, LogSources } from '@latitude-data/constants'
 import { MessageRole } from '@latitude-data/constants/legacyCompiler'
 import { generateUUIDIdentifier } from './../../lib/generateUUID'

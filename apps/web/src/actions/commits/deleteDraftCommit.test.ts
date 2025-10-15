@@ -2,14 +2,12 @@ import * as factories from '@latitude-data/core/factories'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  type Commit,
-  type Project,
-  type ProviderApiKey,
-  type User,
-  type Workspace,
-} from '@latitude-data/core/schema/types'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 const mocks = vi.hoisted(() => {
   return {
     getSession: vi.fn(),

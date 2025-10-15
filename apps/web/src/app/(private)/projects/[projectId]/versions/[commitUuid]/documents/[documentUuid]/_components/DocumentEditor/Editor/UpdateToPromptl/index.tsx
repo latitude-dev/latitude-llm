@@ -12,7 +12,7 @@ import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export function UpgradeToPromptlModal({
   open,
