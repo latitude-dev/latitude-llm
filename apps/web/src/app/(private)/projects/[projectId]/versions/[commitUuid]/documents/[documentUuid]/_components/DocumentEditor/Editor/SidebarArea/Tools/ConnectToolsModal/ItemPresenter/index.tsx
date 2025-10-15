@@ -13,6 +13,45 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ToolType } from '../index'
 import { ConnectToolContext } from '../ConnectToolContext'
+import useIntegrationTools from '$/stores/integrationTools'
+import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
+import { parseMarkdownLinks } from '$/components/Pipedream/utils'
+import { IntegrationType } from '@latitude-data/constants'
+
+function ToolItem({ tool }: { tool: { name: string; description?: string } }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const description = useMemo(
+    () => parseMarkdownLinks(tool.description),
+    [tool.description],
+  )
+  return (
+    <div className='flex flex-col gap-2'>
+      <div className='flex items-center justify-between gap-2'>
+        <div className='flex-1 min-w-0'>
+          <Text.H5>{tool.name}</Text.H5>
+        </div>
+        {tool.description && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className='text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0'
+          >
+            {isExpanded ? '− info' : '+ info'}
+          </button>
+        )}
+      </div>
+      {isExpanded && tool.description && (
+        <Text.H6 color='foregroundMuted' wordBreak='breakWord'>
+          <div
+            className='[&>a]:underline [&>a]:text-foreground'
+            dangerouslySetInnerHTML={{
+              __html: description,
+            }}
+          />
+        </Text.H6>
+      )}
+    </div>
+  )
+}
 
 export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
   const type = item.metadata?.type
@@ -41,6 +80,18 @@ export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
   const isSingleAccount = integrationIds && integrationIds.length === 1
   const accountsCount = integrationIds?.length ?? 0
   const isPipedream = isGrouped || type === 'UnConnectedPipedreamApp'
+  const isUnconnected = type === 'UnConnectedPipedreamApp'
+
+  // For MCP and Latitude integrations
+  const isMCP =
+    type === IntegrationType.ExternalMCP || type === IntegrationType.HostedMCP
+  const isLatitude = type === IntegrationType.Latitude
+  const canExpand = (isPipedream && !isUnconnected) || isMCP || isLatitude
+
+  // Fetch tools for MCP and Latitude integrations
+  const { data: tools = [], isLoading: isLoadingTools } = useIntegrationTools(
+    (isMCP || isLatitude) && integration ? integration : undefined,
+  )
 
   const buttonLabel = type === 'UnConnectedPipedreamApp' ? 'Connect' : 'Add'
   const buttonVariant =
@@ -105,10 +156,10 @@ export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
   }, [type, app, appNameSlug, title, appImgSrc])
 
   const handleHeaderClick = useCallback(() => {
-    if (isPipedream) {
+    if (canExpand) {
       setIsExpanded(!isExpanded)
     }
-  }, [isPipedream, isExpanded])
+  }, [canExpand, isExpanded])
 
   const handleButtonClick = useCallback(
     (e: MouseEvent<HTMLButtonElement>) => {
@@ -131,7 +182,7 @@ export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
     <div
       className={cn(
         'group cursor-pointer flex flex-col',
-        isPipedream && isExpanded ? 'gap-4 p-4 border-b border-border' : 'p-4',
+        isExpanded ? 'gap-4 p-4 border-b border-border' : 'p-4',
       )}
     >
       {/* Header - Always present */}
@@ -164,44 +215,27 @@ export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
           </div>
         </div>
         <div className='flex-none flex items-center gap-2'>
-          {/* Action button - Show for single account, unconnected, or non-Pipedream */}
-          {isPipedream ? (
-            <>
-              {accountsCount <= 1 && (
-                <Button
-                  fancy
-                  variant={buttonVariant}
-                  size='small'
-                  onClick={handleButtonClick}
-                >
-                  {buttonLabel}
-                </Button>
-              )}
-              <Button
-                variant='nope'
-                size='small'
-                iconProps={{ name: isExpanded ? 'chevronUp' : 'chevronDown' }}
-                onClick={handleToggleExpand}
-              />
-            </>
-          ) : (
+          {/* Chevron for expandable items, Connect button for unconnected apps */}
+          {canExpand ? (
             <Button
-              fancy
-              variant={buttonVariant}
+              variant='nope'
               size='small'
-              onClick={handleButtonClick}
-            >
+              iconProps={{ name: isExpanded ? 'chevronUp' : 'chevronDown' }}
+              onClick={handleToggleExpand}
+            />
+          ) : (
+            <Button fancy variant={buttonVariant} onClick={handleButtonClick}>
               {buttonLabel}
             </Button>
           )}
         </div>
       </div>
 
-      {/* Expanded content - Only for Pipedream integrations */}
-      {isPipedream && isExpanded && (
+      {/* Expanded content */}
+      {isExpanded && (
         <>
-          {/* Selector for multiple accounts */}
-          {isGrouped && accountsCount > 1 && (
+          {/* Pipedream: Selector for multiple accounts */}
+          {isPipedream && isGrouped && accountsCount > 1 && (
             <div className='flex flex-col gap-2'>
               <Select
                 name='integration-select'
@@ -229,8 +263,85 @@ export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
             </div>
           )}
 
-          {/* Always show PipedreamAppCard when expanded */}
-          {pipedreamApp && <PipedreamAppCard app={pipedreamApp} onlyApps />}
+          {/* Pipedream: Add button for single account */}
+          {isPipedream && (!isGrouped || accountsCount <= 1) && (
+            <Button
+              fancy
+              variant='default'
+              size='small'
+              onClick={onClick}
+              className='w-full'
+            >
+              Add
+            </Button>
+          )}
+
+          {isPipedream && pipedreamApp && (
+            <PipedreamAppCard app={pipedreamApp} onlyApps />
+          )}
+
+          {(isMCP || isLatitude) && (
+            <>
+              <Button
+                fancy
+                variant='default'
+                size='small'
+                onClick={onClick}
+                className='w-full'
+              >
+                Add
+              </Button>
+              <CollapsibleBox
+                title='Tools'
+                icon='blocks'
+                collapsedContentHeader={
+                  <div className='flex w-full items-center justify-end'>
+                    {isLoadingTools ? (
+                      <Text.H5 color='foregroundMuted'>Loading...</Text.H5>
+                    ) : tools.length > 0 ? (
+                      <Text.H5 color='foregroundMuted'>
+                        {tools.length} {tools.length === 1 ? 'tool' : 'tools'}
+                      </Text.H5>
+                    ) : (
+                      <Text.H5 color='foregroundMuted'>
+                        No tools available
+                      </Text.H5>
+                    )}
+                  </div>
+                }
+                expandedContentHeader={
+                  <div className='flex w-full items-center justify-end'>
+                    {isLoadingTools ? (
+                      <Text.H5 color='foregroundMuted'>Loading...</Text.H5>
+                    ) : tools.length > 0 ? (
+                      <Text.H5 color='foregroundMuted'>
+                        {tools.length} {tools.length === 1 ? 'tool' : 'tools'}
+                      </Text.H5>
+                    ) : (
+                      <Text.H5 color='foregroundMuted'>
+                        No tools available
+                      </Text.H5>
+                    )}
+                  </div>
+                }
+                expandedContent={
+                  <div className='flex flex-col gap-4'>
+                    {isLoadingTools ? (
+                      <>
+                        <Text.H5 color='foregroundMuted'>
+                          Loading tools...
+                        </Text.H5>
+                      </>
+                    ) : (
+                      tools.map((tool) => (
+                        <ToolItem key={tool.name} tool={tool} />
+                      ))
+                    )}
+                  </div>
+                }
+              />
+            </>
+          )}
         </>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ROUTES } from '$/services/routes'
 import { SelectionSubItem, getPathHint } from '../../SelectionSubItem'
 
@@ -11,6 +12,7 @@ export function SubAgentItem({
   commitUuid,
   onRemove,
   disabled,
+  description,
 }: {
   agentPath: string
   documentUuid: string
@@ -18,6 +20,7 @@ export function SubAgentItem({
   commitUuid: string
   onRemove: () => void
   disabled: boolean
+  description?: string
 }) {
   const name = agentPath.split('/').pop() || ''
   const pathHint = getPathHint(agentPath)
@@ -25,22 +28,36 @@ export function SubAgentItem({
     .detail({ id: projectId })
     .commits.detail({ uuid: commitUuid })
     .documents.detail({ uuid: documentUuid }).root
+  const tooltipProps = !description ? { open: false } : {}
 
   return (
     <SelectionSubItem
       icon={<Icon name='bot' color='foregroundMuted' />}
       content={
-        <div className='flex flex-1 min-w-0'>
-          <Text.H5 ellipsis noWrap>
-            {pathHint && (
-              <>
-                <span className='text-foreground opacity-50'>{pathHint}</span>
-                {name}
-              </>
-            )}
-            {!pathHint && name}
-          </Text.H5>
-        </div>
+        <Tooltip
+          {...tooltipProps}
+          trigger={
+            <div className='flex flex-1 min-w-0'>
+              <Text.H5 ellipsis noWrap>
+                {pathHint && (
+                  <>
+                    <span className='text-foreground opacity-50'>
+                      {pathHint}
+                    </span>
+                    {name}
+                  </>
+                )}
+                {!pathHint && name}
+              </Text.H5>
+            </div>
+          }
+          side='top'
+          align='start'
+        >
+          <div className='text-background'>
+            {description}
+          </div>
+        </Tooltip>
       }
       href={href}
       actions={

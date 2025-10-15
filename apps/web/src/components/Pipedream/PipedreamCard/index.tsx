@@ -173,7 +173,13 @@ export function PipedreamAppCard({
   app: App | undefined
   onlyApps?: boolean
 }) {
+  const { data, isLoading: isLoadingPipedreamApp } = usePipedreamApp(
+    app?.nameSlug,
+  )
+
   if (!app) return <Text.H5 color='foregroundMuted'>Select an app.</Text.H5>
+
+  const isLoading = onlyApps ? isLoadingPipedreamApp : false
 
   return (
     <div
@@ -204,7 +210,27 @@ export function PipedreamAppCard({
           </div>
         </>
       )}
-      <AppComponents app={app} />
+      {onlyApps ? (
+        <AppComponentsCard
+          title='Tools'
+          icon='blocks'
+          isLoading={isLoading}
+          components={data?.tools}
+          header={
+            isLoading || data?.tools?.length ? (
+              <AppComponentsHeader
+                label='tools'
+                isLoading={isLoading}
+                count={data?.tools?.length}
+              />
+            ) : (
+              <Text.H5 color='foregroundMuted'>No tools available</Text.H5>
+            )
+          }
+        />
+      ) : (
+        <AppComponents app={app} />
+      )}
     </div>
   )
 }

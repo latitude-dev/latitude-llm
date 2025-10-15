@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useState, useEffect } from 'react'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
@@ -9,6 +9,8 @@ import { SubAgentItem } from './SubAgentItem'
 import { resolveRelativePath } from '@latitude-data/constants'
 import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import useDocumentVersions from '$/stores/documentVersions'
+import { scan } from 'promptl-ai'
 
 /**
  * Formats a file path to show location context.
@@ -55,6 +57,54 @@ export function SubAgentsSidebarSection() {
     selectedAgents: state.selectedAgents,
     pathToUuidMap: state.pathToUuidMap,
   }))
+
+  const { data: documentVersions } = useDocumentVersions({
+    commitUuid: commit?.uuid,
+    projectId: project.id,
+  })
+
+  // Store agent descriptions
+  const [agentDescriptions, setAgentDescriptions] = useState<
+    Record<string, string>
+  >({})
+
+  // Fetch and parse metadata for selected agents to get descriptions
+  useEffect(() => {
+    if (!documentVersions) return
+    if (!selectedAgents || selectedAgents.length === 0) return
+
+    const fetchDescriptions = async () => {
+      const descriptions: Record<string, string> = {}
+
+      for (const relativePath of selectedAgents) {
+        const fullPath = resolveRelativePath(relativePath, document.path)
+        const doc = documentVersions.find((d) => d.path === fullPath)
+
+        if (doc?.content) {
+          try {
+            const metadata = await scan({
+              prompt: doc.content,
+              fullPath: doc.path,
+            })
+
+            if (
+              metadata.config?.description &&
+              typeof metadata.config.description === 'string'
+            ) {
+              descriptions[fullPath] = metadata.config.description
+            }
+          } catch (error) {
+            // Ignore errors in metadata parsing
+            console.error('Error parsing metadata for', fullPath, error)
+          }
+        }
+      }
+
+      setAgentDescriptions(descriptions)
+    }
+
+    fetchDescriptions()
+  }, [documentVersions, selectedAgents, document.path])
 
   const availableAgents = useMemo(() => {
     if (!pathToUuidMap || Object.keys(pathToUuidMap).length === 0) return []
@@ -145,6 +195,7 @@ export function SubAgentsSidebarSection() {
       <div className='flex flex-col'>
         {sortedSelectedAgents.map((agentPath) => {
           const documentUuid = pathToUuidMap[agentPath]
+          const description = agentDescriptions[agentPath]
           return (
             <SubAgentItem
               key={agentPath}
@@ -154,6 +205,7 @@ export function SubAgentsSidebarSection() {
               commitUuid={commit.uuid}
               onRemove={() => toggleAgent(agentPath)}
               disabled={isLive}
+              description={description}
             />
           )
         })}

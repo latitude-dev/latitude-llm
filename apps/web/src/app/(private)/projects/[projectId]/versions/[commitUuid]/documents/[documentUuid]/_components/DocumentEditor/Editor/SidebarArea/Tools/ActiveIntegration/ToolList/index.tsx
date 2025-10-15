@@ -4,6 +4,7 @@ import useIntegrationTools from '$/stores/integrationTools'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { ActiveIntegration } from '../../../toolsHelpers/types'
@@ -11,6 +12,7 @@ import { ToolsContext } from '../../ToolsProvider'
 import { useSidebarStore } from '../../../hooks/useSidebarStore'
 import { useAnimatedItems } from './useAnimatedItems'
 import { CLIENT_TOOLS_INTEGRATION_NAME } from '../../../toolsHelpers/collectTools'
+import { parseMarkdownLinks } from '$/components/Pipedream/utils'
 
 const MAX_VISIBLE_TOOLS = 10
 
@@ -243,6 +245,9 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
       {visibleTools.map((tool, index) => {
         const isActive = checkIsActive(integration.tools, tool.name)
         const isLastTool = index === visibleTools.length - 1
+        const parsedDescription = tool.description
+          ? parseMarkdownLinks(tool.description)
+          : null
         return (
           <div
             role='button'
@@ -268,9 +273,25 @@ export function ToolList({ integration }: { integration: ActiveIntegration }) {
               />
               <div className='w-full flex justify-between items-center min-w-0 gap-x-2'>
                 <div className='flex-1 flex items-center gap-2 min-w-0'>
-                  <Text.H5 ellipsis noWrap color='foreground'>
-                    {tool.displayName ?? tool.name}
-                  </Text.H5>
+                  <Tooltip
+                    delayDuration={800}
+                    trigger={
+                      <Text.H5 ellipsis noWrap color='foreground'>
+                        {tool.displayName ?? tool.name}
+                      </Text.H5>
+                    }
+                    side='top'
+                    align='start'
+                  >
+                    {parsedDescription ? (
+                      <div
+                        className='text-background [&>a]:underline [&>a]:text-background'
+                        dangerouslySetInnerHTML={{
+                          __html: parsedDescription,
+                        }}
+                      />
+                    ) : null}
+                  </Tooltip>
                 </div>
                 {!isClientTools && (
                   <SwitchToggle checked={isActive} disabled={isLive} />
