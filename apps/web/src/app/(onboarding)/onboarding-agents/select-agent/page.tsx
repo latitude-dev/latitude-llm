@@ -5,17 +5,10 @@ import { env } from '@latitude-data/env'
 import BasicHeader from '../../_components/BasicHeader/BasicHeader'
 import { SelectAgents } from './_components/SelectAgents'
 import { PageTrackingWrapper } from '$/components/PageTrackingWrapper'
-import { ROUTES } from '$/services/routes'
-import { redirect } from 'next/navigation'
-import { isOnboardingCompleted } from '$/data-access'
 
 export default async function SelectAgentPage() {
   const { user, workspace } = await getCurrentUserOrRedirect()
   const isCloud = !!env.LATITUDE_CLOUD
-  const isCompleted = await isOnboardingCompleted()
-  if (isCompleted) {
-    redirect(ROUTES.dashboard.root)
-  }
 
   return (
     <PageTrackingWrapper

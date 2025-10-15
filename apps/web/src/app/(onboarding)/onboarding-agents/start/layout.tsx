@@ -17,7 +17,6 @@ export default async function NocodersLayout({
 }) {
   const { user } = await getCurrentUserOrRedirect()
   const isCloud = !!env.LATITUDE_CLOUD
-
   const { project, commit } = await getOnboardingResources()
   if (project === null || commit === null) {
     return redirect(ROUTES.onboarding.agents.selectAgent)
