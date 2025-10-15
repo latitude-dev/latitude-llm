@@ -1,5 +1,5 @@
 import { database } from '../../../client'
-import { workspaces } from '../../../schema'
+import { workspaces } from '../../../schema/models/workspaces'
 import { queues } from '../../queues'
 
 export const migrateSpansJobs = async () => {
