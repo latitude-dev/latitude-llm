@@ -7,7 +7,7 @@ import { useCallback, useState } from 'react'
 import { MainAgentSection } from './MainSection'
 import { AgentChatSection } from './ChatSection'
 import { cn } from '@latitude-data/web-ui/utils'
-import { RunProps } from '../../../../../../../../components/Agent/types'
+import { RunProps } from '$/components/Agent/types'
 import { DocumentTrigger } from '@latitude-data/core/schema/types'
 
 export function AgentPageWrapper() {
