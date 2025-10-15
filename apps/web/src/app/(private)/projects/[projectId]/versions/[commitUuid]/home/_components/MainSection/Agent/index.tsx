@@ -49,8 +49,8 @@ export function MainAgent({
         <Text.H3M>{title}</Text.H3M>
         <Text.H5 color='foregroundMuted'>
           {mainDocument
-            ? "Start chatting with your agent's"
-            : "Select a prompt as your agent's"}{' '}
+            ? "Start chatting with your project's"
+            : "Select a prompt as your project's"}{' '}
           <Tooltip
             className='rounded-xl'
             trigger={
@@ -66,7 +66,7 @@ export function MainAgent({
                 className='rounded-lg'
               />
               <Text.H5 color='white'>
-                The main prompt is the entry point to your agent. You can
+                The main prompt is the entry point to your project. You can
                 identify the main prompt through the arrow icon next to it.
               </Text.H5>
             </div>
