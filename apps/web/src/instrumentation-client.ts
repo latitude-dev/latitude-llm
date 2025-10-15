@@ -14,7 +14,7 @@ if (
     site: (envClient.NEXT_PUBLIC_DATADOG_SITE as Site) || 'datadoghq.com',
     service: 'latitude-llm-web',
     env: envClient.NEXT_PUBLIC_NODE_ENV || 'development',
-    version: '1.0.0',
+    version: envClient.NEXT_PUBLIC_RELEASE_VERSION || '1.0.0',
     sessionSampleRate: 100,
     sessionReplaySampleRate: 10,
     trackUserInteractions: true,

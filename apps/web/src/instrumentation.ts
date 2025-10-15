@@ -6,7 +6,7 @@ export async function register() {
     tracer.init({
       service: 'latitude-llm-web',
       env: envClient.NEXT_PUBLIC_NODE_ENV || 'development',
-      version: process.env.npm_package_version || '1.0.0',
+      version: envClient.NEXT_PUBLIC_RELEASE_VERSION || '1.0.0',
       logInjection: true,
       runtimeMetrics: true,
     })
