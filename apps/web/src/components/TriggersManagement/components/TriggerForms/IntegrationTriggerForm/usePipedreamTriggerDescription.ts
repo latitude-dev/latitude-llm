@@ -3,14 +3,7 @@ import {
   type PipedreamComponent,
   type PipedreamComponentType,
 } from '@latitude-data/core/constants'
-
-export function parseMarkdownLinks(text: string | undefined) {
-  if (!text) return ''
-  return text.replace(
-    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-    `<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>`,
-  )
-}
+import { parseMarkdownLinks } from '$/components/Pipedream/utils'
 
 export function useParsedPipedreamTriggerDescription({
   pipedreamTrigger,

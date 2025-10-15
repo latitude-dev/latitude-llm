@@ -1,17 +1,17 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { type ResolvedMetadata } from '$/workers/readMetadata'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ProviderModelSelector } from '$/components/ProviderModelSelector'
-import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { FancySwitchToggle } from '@latitude-data/web-ui/atoms/Switch'
 import { useDevMode } from '$/hooks/useDevMode'
+import { useDocumentValue } from '$/hooks/useDocumentValueContext'
+import { useUpdateDocumentContent } from '../hooks/usePromptConfigInSidebar'
 
 // FIXME: Move inside here when editor sidebar is ready
 import { PromptConfiguration } from '../../PromptConfiguration'
@@ -21,10 +21,12 @@ export function SidebarHeader({
 }: {
   metadata?: ResolvedMetadata | undefined
 }) {
+  const updateController = useRef<AbortController | null>(null)
   const { document } = useCurrentDocument()
   const { commit } = useCurrentCommit()
   const isMerged = commit.mergedAt !== null
   const { updateDocumentContent } = useDocumentValue()
+  const updateContent = useUpdateDocumentContent()
   const { data: providers } = useProviderApiKeys()
   const { devMode, setDevMode, isLoading: isLoadingDevMode } = useDevMode()
   const name = useMemo(
@@ -32,23 +34,25 @@ export function SidebarHeader({
     [document.path],
   )
   const prompt = document.content
-  const isAgent = metadata?.config?.type === 'agent'
   const setConfig = useCallback(
     (config: Record<string, unknown>) => {
-      updateDocumentContent(prompt, config)
+      if (updateController.current) {
+        updateController.current.abort()
+      }
+      updateController.current = new AbortController()
+      updateContent({
+        prompt,
+        updates: config,
+        abortSignal: updateController.current.signal,
+      })
     },
-    [prompt, updateDocumentContent],
+    [prompt, updateContent],
   )
 
   return (
     <div className='flex flex-col gap-y-4'>
       <div className='w-full flex flex-row items-center justify-between gap-x-4 pt-px'>
         <div className='flex flex-row items-center gap-2 min-w-0'>
-          {isAgent ? (
-            <Tooltip trigger={<Icon name='bot' color='foregroundMuted' />}>
-              This prompt is an agent
-            </Tooltip>
-          ) : null}
           <Text.H4M ellipsis noWrap>
             {name}
           </Text.H4M>

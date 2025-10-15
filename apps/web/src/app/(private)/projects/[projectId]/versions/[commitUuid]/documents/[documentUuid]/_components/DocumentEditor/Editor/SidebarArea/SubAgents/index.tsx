@@ -6,19 +6,50 @@ import { useSidebarStore } from '../hooks/useSidebarStore'
 import { usePromptConfigInSidebar } from '../hooks/usePromptConfigInSidebar'
 import { SidebarSection } from '../Section'
 import { SubAgentItem } from './SubAgentItem'
-import {
-  resolveRelativePath,
-  createRelativePath,
-} from '@latitude-data/constants'
+import { resolveRelativePath } from '@latitude-data/constants'
 import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+
+/**
+ * Formats a file path to show location context.
+ * Examples:
+ * - "folder/file.txt" -> "folder/file.txt"
+ * - "a/b/c/file.txt" -> "a/.../c/file.txt"
+ * - "a/b/c/d/e/file.txt" -> "a/.../e/file.txt"
+ */
+function formatPathWithContext(path: string): string {
+  const parts = path.split('/')
+  if (parts.length <= 2) return path
+  if (parts.length === 3) return path
+
+  // For longer paths, show: first-folder/.../parent-folder/file
+  const firstFolder = parts[0]
+  const parentFolder = parts[parts.length - 2]
+  const fileName = parts[parts.length - 1]
+
+  return `${firstFolder}/.../${parentFolder}/${fileName}`
+}
+
+// Sort paths like the files sidebar: nested paths (folders) first, then root-level files
+// Both groups sorted alphabetically
+function sortAgentPaths(a: string, b: string): number {
+  const aHasFolder = a.includes('/')
+  const bHasFolder = b.includes('/')
+
+  // Nested paths (with folders) come first
+  if (aHasFolder && !bHasFolder) return -1
+  if (!aHasFolder && bHasFolder) return 1
+
+  // Within same type, sort alphabetically
+  return a.localeCompare(b)
+}
 
 export function SubAgentsSidebarSection() {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
   const isLive = !!commit.mergedAt
-  const { toggleAgent } = usePromptConfigInSidebar()
+  const { toggleAgent, setAgents } = usePromptConfigInSidebar()
 
   const { selectedAgents, pathToUuidMap } = useSidebarStore((state) => ({
     selectedAgents: state.selectedAgents,
@@ -40,40 +71,39 @@ export function SubAgentsSidebarSection() {
   }, [selectedAgents, document.path])
 
   const agentOptions = useMemo(() => {
-    return availableAgents.map((agentPath) => ({
-      label: agentPath.split('/').pop() || agentPath,
-      value: agentPath,
-      icon: 'bot' as const,
-    }))
-  }, [availableAgents])
+    const options = availableAgents.map((agentPath) => {
+      const fileName = agentPath.split('/').pop() || agentPath
+      const pathParts = agentPath.split('/')
+
+      return {
+        label: formatPathWithContext(agentPath),
+        value: agentPath,
+        icon: 'bot' as const,
+        // Include full path, filename, and all folder names as searchable keywords
+        keywords: [agentPath, fileName, ...pathParts],
+      }
+    })
+
+    // Sort: selected items first, then by folder/file structure (folders first), then alphabetically
+    return options.sort((a, b) => {
+      const aSelected = selectedAgentsFullPaths.includes(a.value)
+      const bSelected = selectedAgentsFullPaths.includes(b.value)
+
+      // Selected items always come first
+      if (aSelected && !bSelected) return -1
+      if (!aSelected && bSelected) return 1
+
+      // Within same selection state, use files sidebar sorting
+      return sortAgentPaths(a.value, b.value)
+    })
+  }, [availableAgents, selectedAgentsFullPaths])
 
   const handleAgentsChange = useCallback(
     (selectedPaths: string[]) => {
-      // Convert full paths to relative paths
-      const relativePaths = selectedPaths.map((fullPath) =>
-        createRelativePath(fullPath, document.path),
-      )
-
-      // Find which agents were added or removed
-      const currentRelativePaths = selectedAgents
-      const addedPaths = relativePaths.filter(
-        (path) => !currentRelativePaths.includes(path),
-      )
-      const removedPaths = currentRelativePaths.filter(
-        (path) => !relativePaths.includes(path),
-      )
-
-      // Toggle each added/removed agent
-      addedPaths.forEach((path) => {
-        const fullPath = resolveRelativePath(path, document.path)
-        toggleAgent(fullPath)
-      })
-      removedPaths.forEach((path) => {
-        const fullPath = resolveRelativePath(path, document.path)
-        toggleAgent(fullPath)
-      })
+      // MultiSelect with deferChangesUntilClose will only call this when popover closes
+      setAgents(selectedPaths)
     },
-    [selectedAgents, document.path, toggleAgent],
+    [setAgents],
   )
 
   const actions = useMemo(
@@ -86,6 +116,7 @@ export function SubAgentsSidebarSection() {
             options={agentOptions}
             value={selectedAgentsFullPaths}
             onChange={handleAgentsChange}
+            deferChangesUntilClose={true}
             disabled={isLive}
             modalPopover
             trigger={
@@ -93,6 +124,7 @@ export function SubAgentsSidebarSection() {
                 variant='ghost'
                 size='none'
                 iconProps={{ name: 'plus' }}
+                className='min-w-7'
                 disabled={isLive}
               />
             }
@@ -103,10 +135,15 @@ export function SubAgentsSidebarSection() {
     [agentOptions, selectedAgentsFullPaths, handleAgentsChange, isLive],
   )
 
+  // Sort selected agents using the same logic as the files sidebar
+  const sortedSelectedAgents = useMemo(() => {
+    return [...selectedAgentsFullPaths].sort(sortAgentPaths)
+  }, [selectedAgentsFullPaths])
+
   return (
     <SidebarSection title='Sub-agents' actions={actions}>
       <div className='flex flex-col'>
-        {selectedAgentsFullPaths.map((agentPath) => {
+        {sortedSelectedAgents.map((agentPath) => {
           const documentUuid = pathToUuidMap[agentPath]
           return (
             <SubAgentItem

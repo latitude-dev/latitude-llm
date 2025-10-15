@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
@@ -9,6 +10,7 @@ import { TriggersSidebarSection, useDocumentTriggersData } from './Triggers'
 import { ToolsSidebarSection } from './Tools'
 import { SubAgentsSidebarSection } from './SubAgents'
 import { usePromptConfigData } from './hooks/usePromptConfigData'
+import { useSidebarStore } from './hooks/useSidebarStore'
 
 function SidebarLoader() {
   return (
@@ -42,9 +44,18 @@ export function DocumentEditorSidebarArea({
 }: {
   freeRunsCount?: number
 }) {
+  const { documentUuid } = useParams() as { documentUuid: string }
+  const reset = useSidebarStore((state) => state.reset)
   const { metadata } = useMetadata()
   const isLatitudeProvider = useIsLatitudeProvider({ metadata })
   const data = useSidebarData({ metadata })
+
+  // Reset store when document changes or component unmounts
+  useEffect(() => {
+    return () => {
+      reset()
+    }
+  }, [documentUuid, reset])
 
   return (
     <div className='w-full relative flex flex-col gap-y-6 min-h-0 '>

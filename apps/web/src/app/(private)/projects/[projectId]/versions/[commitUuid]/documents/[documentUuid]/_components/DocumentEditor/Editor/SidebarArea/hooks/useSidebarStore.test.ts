@@ -259,6 +259,21 @@ describe('useActiveIntegrationsStore', () => {
 
       expect(result.current.integrations[0].tools).toEqual(['search'])
     })
+
+    it('should add integration with no tools enabled when toolName is empty', () => {
+      const { result } = renderHook(() => useActiveIntegrationsStore())
+
+      act(() => {
+        result.current.addIntegration({
+          integration: mockActiveIntegration('google'),
+          toolName: '',
+        })
+      })
+
+      expect(result.current.integrations[0].tools).toEqual([])
+      expect(result.current.integrations[0].isOpen).toBe(true)
+      expect(result.current.integrations[0].name).toBe('google')
+    })
   })
 
   describe('addTool', () => {
@@ -545,6 +560,125 @@ describe('useActiveIntegrationsStore', () => {
         'notion',
         'google',
       ])
+    })
+  })
+
+  describe('reset', () => {
+    it('should reset all integrations state to initial values', () => {
+      const { result } = renderHook(() => useActiveIntegrationsStore())
+      const integrations = [
+        mockIntegrationDto('google'),
+        mockIntegrationDto('slack', 2),
+      ]
+
+      // Build with some integrations
+      act(() => {
+        result.current.buildIntegrations({
+          tools: ['google/search', 'slack/message'],
+          integrations,
+        })
+      })
+
+      // Verify state is not initial
+      expect(result.current.initialized).toBe(true)
+      expect(result.current.integrations).toHaveLength(2)
+      expect(result.current.integrationsMap).not.toEqual({})
+      expect(result.current.promptConfigTools).toEqual([
+        'google/search',
+        'slack/message',
+      ])
+
+      // Reset
+      act(() => {
+        result.current.reset()
+      })
+
+      // Verify all state is reset to initial values
+      expect(result.current.initialized).toBe(false)
+      expect(result.current.integrations).toEqual([])
+      expect(result.current.integrationsMap).toEqual({})
+      expect(result.current.promptConfigTools).toEqual([])
+    })
+
+    it('should reset all sub-agents state to initial values', () => {
+      const { result } = renderHook(() => useActiveIntegrationsStore())
+
+      // Set some sub-agents state
+      act(() => {
+        result.current.setSelectedAgents(['agent1.prompt', 'agent2.prompt'])
+        result.current.setPathToUuidMap({
+          'agent1.prompt': 'uuid1',
+          'agent2.prompt': 'uuid2',
+        })
+      })
+
+      // Verify state is not initial
+      expect(result.current.selectedAgents).toEqual([
+        'agent1.prompt',
+        'agent2.prompt',
+      ])
+      expect(result.current.pathToUuidMap).toEqual({
+        'agent1.prompt': 'uuid1',
+        'agent2.prompt': 'uuid2',
+      })
+
+      // Reset
+      act(() => {
+        result.current.reset()
+      })
+
+      // Verify all state is reset to initial values
+      expect(result.current.selectedAgents).toEqual([])
+      expect(result.current.pathToUuidMap).toEqual({})
+    })
+
+    it('should reset all state after complex operations', () => {
+      const { result } = renderHook(() => useActiveIntegrationsStore())
+      const integrations = [
+        mockIntegrationDto('google'),
+        mockIntegrationDto('slack', 2),
+      ]
+
+      // Perform multiple operations
+      act(() => {
+        result.current.buildIntegrations({
+          tools: ['google/search'],
+          integrations: [integrations[0]],
+        })
+      })
+
+      act(() => {
+        result.current.addIntegration({
+          integration: mockActiveIntegration('slack', [], 2),
+          toolName: '*',
+        })
+      })
+
+      act(() => {
+        result.current.toggleIntegration('google')
+      })
+
+      act(() => {
+        result.current.setSelectedAgents(['agent1.prompt'])
+      })
+
+      // Verify state is not initial
+      expect(result.current.integrations).toHaveLength(2)
+      expect(result.current.initialized).toBe(true)
+      expect(result.current.selectedAgents).toHaveLength(1)
+
+      // Reset
+      act(() => {
+        result.current.reset()
+      })
+
+      // Verify everything is back to initial state
+      expect(result.current.initialized).toBe(false)
+      expect(result.current.integrations).toEqual([])
+      expect(result.current.integrationsMap).toEqual({})
+      expect(result.current.promptConfigTools).toEqual([])
+      expect(result.current.selectedAgents).toEqual([])
+      expect(result.current.pathToUuidMap).toEqual({})
     })
   })
 })

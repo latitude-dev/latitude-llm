@@ -1,15 +1,11 @@
-import { use, useMemo, useState, useCallback, createContext } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   SearchableList,
   Option as SearchableOption,
   OptionItem as SearchableOptionItem,
   OptionGroup as SearchableOptionGroup,
-  ItemPresenterProps,
-  ImageIcon,
 } from '@latitude-data/web-ui/molecules/SearchableList'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { cn } from '@latitude-data/web-ui/utils'
 import usePipedreamApps from '$/stores/pipedreamApps'
 import { useDebouncedCallback } from 'use-debounce'
 import { IntegrationType } from '@latitude-data/constants'
@@ -19,7 +15,6 @@ import {
 } from '@latitude-data/core/schema/types'
 import { pluralize } from '$/components/TriggersManagement/NewTrigger/IntegrationsList/utils'
 import useIntegrations from '$/stores/integrations'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { mergeConnectedAppsBySlug } from '@latitude-data/core/lib/pipedream/mergeConnectedAppsBySlug'
 import { ConnectPipedreamModal } from './ConnectPipedreamModal'
 import { AppDto } from '@latitude-data/core/constants'
@@ -28,18 +23,13 @@ import {
   getIntegrationData,
 } from '../../toolsHelpers/utils'
 import { useSidebarStore } from '../../hooks/useSidebarStore'
+import { ConnectToolContext } from './ConnectToolContext'
+import { ItemPresenter } from './ItemPresenter'
 
-type ToolType = IntegrationType | 'UnConnectedPipedreamApp'
-
-type IConnectToolContext = {
-  onAdd: (integration: IntegrationDto) => void
-  onConnect: (app: AppDto) => void
-}
-
-const ConnectToolContext = createContext<IConnectToolContext>({
-  onAdd: (_integration: IntegrationDto) => {},
-  onConnect: (_app: AppDto) => {},
-})
+export type ToolType =
+  | IntegrationType
+  | 'UnConnectedPipedreamApp'
+  | 'GroupedPipedream'
 
 function getToolsAndAccountsLabel({
   type,
@@ -53,64 +43,6 @@ function getToolsAndAccountsLabel({
     return tools
   }
   return ''
-}
-
-function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
-  const type = item.metadata?.type
-  const imageIcon = item.imageIcon
-  const title = item.title
-  const app = item.metadata?.app as AppDto | undefined
-  const integration = item.metadata?.integration as IntegrationDto | undefined
-  const { onAdd, onConnect } = use(ConnectToolContext)
-  const buttonLabel = type === 'UnConnectedPipedreamApp' ? 'Connect' : 'Add'
-  const buttonVariant =
-    type === 'UnConnectedPipedreamApp' ? 'outline' : 'default'
-  const onClick = useCallback(() => {
-    if (type === 'UnConnectedPipedreamApp' && app) {
-      onConnect(app)
-      return
-    }
-
-    if (integration) {
-      onAdd(integration)
-    }
-  }, [onAdd, onConnect, app, integration, type])
-  return (
-    <div
-      className={cn(
-        'group p-4 cursor-pointer',
-        'flex flex-row min-w-0 gap-x-4',
-      )}
-    >
-      <div className='flex flex-row gap-x-4 min-w-0 flex-1'>
-        {imageIcon ? (
-          <div className='flex-none'>
-            <ImageIcon imageIcon={imageIcon} />
-          </div>
-        ) : null}
-        <div className='flex-1 flex flex-row items-center gap-x-2 min-w-0'>
-          <div
-            className={cn(
-              'flex flex-col',
-              'group-aria-selected:[&>span]:!text-accent-foreground min-w-0',
-            )}
-          >
-            <Text.H4 ellipsis noWrap>
-              {title}
-            </Text.H4>
-            <Text.H5 ellipsis noWrap color='foregroundMuted'>
-              {item.description}
-            </Text.H5>
-          </div>
-        </div>
-        <div className='flex-none flex items-center'>
-          <Button fancy variant={buttonVariant} size='small' onClick={onClick}>
-            {buttonLabel}
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 export function mergeAllConnectedApps(connectedApps: IntegrationDto[]) {
@@ -173,32 +105,97 @@ export function ConnectToolsModal({
     availableConnectedApps.length === 0 && isLoadingConnectedIntegrations
 
   const optionGroups = useMemo<SearchableOption<ToolType>[]>(() => {
-    const items: SearchableOptionItem<ToolType>[] | null[] =
-      availableConnectedApps
-        .map((integration) => {
-          const labelIcon = integrationOptions(integration)
-          if (!labelIcon) return null
-          return {
-            type: 'item' as const,
-            value: String(integration.id),
-            title: integration.name,
-            description: '',
-            keywords: [labelIcon.label, integration.type],
-            metadata: { type: integration.type, integration },
-            imageIcon: labelIcon.icon,
-          }
-        })
-        .filter((item) => item !== null)
-        .filter((item) =>
-          item.title
-            .toLowerCase()
-            .includes(immediateQuery.trim().toLowerCase()),
-        )
+    // Group Pipedream integrations by appName
+    const pipedreamIntegrations = availableConnectedApps.filter(
+      (integration) => integration.type === IntegrationType.Pipedream,
+    )
+    const otherIntegrations = availableConnectedApps.filter(
+      (integration) => integration.type !== IntegrationType.Pipedream,
+    )
+
+    // Group Pipedream by appName
+    const pipedreamGroups = pipedreamIntegrations.reduce(
+      (acc, integration) => {
+        const config = integration.configuration as any
+        const appName = config.appName
+        if (!acc[appName]) {
+          acc[appName] = []
+        }
+        acc[appName].push(integration)
+        return acc
+      },
+      {} as Record<string, IntegrationDto[]>,
+    )
+
+    // Create items for non-Pipedream integrations
+    const otherItems = otherIntegrations
+      .filter((integration) => {
+        const labelIcon = integrationOptions(integration)
+        return labelIcon !== null
+      })
+      .map((integration) => {
+        const labelIcon = integrationOptions(integration)!
+        return {
+          type: 'item' as const,
+          value: String(integration.id),
+          title: integration.name,
+          description: '',
+          keywords: [labelIcon.label, integration.type],
+          metadata: {
+            type: integration.type,
+            integration,
+          },
+          imageIcon: labelIcon.icon,
+        } satisfies SearchableOptionItem<ToolType>
+      })
+      .filter((item) =>
+        item.title.toLowerCase().includes(immediateQuery.trim().toLowerCase()),
+      )
+
+    // Create items for grouped Pipedream integrations
+    const pipedreamItems = Object.entries(pipedreamGroups)
+      .map(([appName, integrations]) => {
+        const firstIntegration = integrations[0]
+        const config = firstIntegration.configuration as any
+        const displayName =
+          config.metadata?.displayName || firstIntegration.name
+        return {
+          type: 'item' as const,
+          value: appName,
+          title: displayName,
+          description: '',
+          keywords: [config.appName, displayName, 'pipedream'],
+          metadata: {
+            type: 'GroupedPipedream' as ToolType,
+            integrations,
+            integrationIds: integrations.map((i) => i.id),
+            integrationNames: integrations.map((i) => ({
+              id: i.id,
+              name: i.name,
+            })),
+            appNameSlug: config.appName,
+            appImgSrc: config.metadata?.imageUrl || config.imgSrc || '',
+          },
+          imageIcon: {
+            type: 'image' as const,
+            src: config.metadata?.imageUrl || config.imgSrc || '',
+            alt: displayName,
+          },
+        } satisfies SearchableOptionItem<ToolType>
+      })
+      .filter((item) =>
+        item.title.toLowerCase().includes(immediateQuery.trim().toLowerCase()),
+      )
+
+    const allConnectedItems: SearchableOptionItem<ToolType>[] = [
+      ...otherItems,
+      ...pipedreamItems,
+    ]
 
     const baseGroup: SearchableOptionGroup<ToolType> = {
       type: 'group',
       label: 'Available integrations',
-      items,
+      items: allConnectedItems,
       loading: isLoadingConnectedIntegrations,
     }
 
@@ -272,14 +269,17 @@ export function ConnectToolsModal({
       })
       if (!integrationData) return
 
-      // Add all tools from this integration to the sidebar
+      // Add integration to the sidebar without enabling any tools by default
+      // allToolNames will be populated by the ToolList component after fetching tools
+      // User can manually enable the tools they want
       addNewIntegration({
         integration: {
           ...integrationData,
           tools: [],
           allToolNames: [],
+          isOpen: true,
         },
-        toolName: '*',
+        toolName: '', // Empty toolName means no tools are enabled by default
       })
       onCloseModal()
     },

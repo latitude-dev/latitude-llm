@@ -1,4 +1,10 @@
-import { forwardRef, KeyboardEvent, ReactNode, useState } from 'react'
+import {
+  forwardRef,
+  KeyboardEvent,
+  ReactNode,
+  useState,
+  useCallback,
+} from 'react'
 import { cn } from '../../../lib/utils'
 import { Badge } from '../../atoms/Badge'
 import { Checkbox } from '../../atoms/Checkbox'
@@ -14,13 +20,18 @@ import { Popover } from '../../atoms/Popover'
 import { Text } from '../../atoms/Text'
 import { Icon, IconName } from '../../atoms/Icons'
 
+type MultiSelectOption = {
+  label: string
+  value: string
+  icon?: IconName
+  keywords?: string[] // Additional search terms for filtering
+}
+
 export interface MultiSelectProps {
-  options: {
-    label: string
-    value: string
-    icon?: IconName
-  }[]
+  options: MultiSelectOption[]
   onChange?: (value: string[]) => void
+  onOpenChange?: (open: boolean) => void
+  deferChangesUntilClose?: boolean // If true, onChange is only called when popover closes
   value?: string[] // Controlled mode
   defaultValue?: string[] // Uncontrolled mode
   placeholder?: string
@@ -90,10 +101,7 @@ const DefaultMultiSelectTrigger = forwardRef<
           <div className='flex flex-1 justify-between items-center w-full'>
             <div className='flex flex-wrap items-center gap-1'>
               {selectedValues.slice(0, maxCount).map((value) => {
-                const option = options.find(
-                  (o: { label: string; value: string; icon?: IconName }) =>
-                    o.value === value,
-                )
+                const option = options.find((o) => o.value === value)
                 return (
                   <Badge
                     variant='muted'
@@ -175,6 +183,8 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
     {
       options,
       onChange: onValueChange,
+      onOpenChange,
+      deferChangesUntilClose = false,
       value: controlledValue,
       defaultValue = [],
       placeholder = 'Select options',
@@ -193,10 +203,33 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
       useState<string[]>(defaultValue)
     const [isPopoverOpen, setIsPopoverOpen] = useState(false)
     const [isAnimating, setIsAnimating] = useState(false)
+    const [pendingValues, setPendingValues] = useState<string[] | null>(null)
 
     // Use controlled value if provided, otherwise use internal state
+    // When deferring changes, show pending values in the UI even in controlled mode
     const selectedValues =
-      controlledValue !== undefined ? controlledValue : internalSelectedValues
+      deferChangesUntilClose && pendingValues !== null
+        ? pendingValues
+        : controlledValue !== undefined
+          ? controlledValue
+          : internalSelectedValues
+
+    const handleOpenChange = useCallback(
+      (open: boolean) => {
+        if (deferChangesUntilClose && !open) {
+          if (pendingValues !== null) {
+            // Popover is closing and we have pending changes - apply them now
+            setInternalSelectedValues(pendingValues)
+            onValueChange?.(pendingValues)
+          }
+          // Always reset pending values when closing
+          setPendingValues(null)
+        }
+        setIsPopoverOpen(open)
+        onOpenChange?.(open)
+      },
+      [onOpenChange, deferChangesUntilClose, pendingValues, onValueChange],
+    )
 
     const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
       if (disabled) return
@@ -215,14 +248,23 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
       const newSelectedValues = selectedValues.includes(option)
         ? selectedValues.filter((value) => value !== option)
         : [...selectedValues, option]
-      setInternalSelectedValues(newSelectedValues)
-      onValueChange?.(newSelectedValues)
+
+      if (deferChangesUntilClose) {
+        setPendingValues(newSelectedValues)
+      } else {
+        setInternalSelectedValues(newSelectedValues)
+        onValueChange?.(newSelectedValues)
+      }
     }
 
     const handleClear = () => {
       if (disabled) return
-      setInternalSelectedValues([])
-      onValueChange?.([])
+      if (deferChangesUntilClose) {
+        setPendingValues([])
+      } else {
+        setInternalSelectedValues([])
+        onValueChange?.([])
+      }
     }
 
     const handleTogglePopover = () => {
@@ -232,8 +274,12 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
     const clearExtraOptions = () => {
       if (disabled) return
       const newSelectedValues = selectedValues.slice(0, maxCount)
-      setInternalSelectedValues(newSelectedValues)
-      onValueChange?.(newSelectedValues)
+      if (deferChangesUntilClose) {
+        setPendingValues(newSelectedValues)
+      } else {
+        setInternalSelectedValues(newSelectedValues)
+        onValueChange?.(newSelectedValues)
+      }
     }
 
     const toggleAll = () => {
@@ -242,15 +288,19 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
         handleClear()
       } else {
         const allValues = options.map((option) => option.value)
-        setInternalSelectedValues(allValues)
-        onValueChange?.(allValues)
+        if (deferChangesUntilClose) {
+          setPendingValues(allValues)
+        } else {
+          setInternalSelectedValues(allValues)
+          onValueChange?.(allValues)
+        }
       }
     }
 
     return (
       <Popover.Root
         open={isPopoverOpen}
-        onOpenChange={setIsPopoverOpen}
+        onOpenChange={handleOpenChange}
         modal={modalPopover}
       >
         <Popover.Trigger asChild>
@@ -296,8 +346,10 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
               <CommandGroup>
                 <CommandItem
                   key='all'
+                  value='select-all'
                   onSelect={toggleAll}
                   className='cursor-pointer'
+                  keywords={['select', 'all', 'select all']}
                 >
                   <div>
                     <Checkbox
@@ -313,8 +365,10 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
                   return (
                     <CommandItem
                       key={option.value}
+                      value={option.value}
                       onSelect={() => toggleOption(option.value)}
                       className='cursor-pointer'
+                      keywords={option.keywords}
                     >
                       <div>
                         <Checkbox
@@ -331,7 +385,11 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
                           className='w-4'
                         />
                       )}
-                      <Text.H6>{option.label}</Text.H6>
+                      <div className='flex flex-1 min-w-0'>
+                        <Text.H6 ellipsis noWrap>
+                          {option.label}
+                        </Text.H6>
+                      </div>
                     </CommandItem>
                   )
                 })}

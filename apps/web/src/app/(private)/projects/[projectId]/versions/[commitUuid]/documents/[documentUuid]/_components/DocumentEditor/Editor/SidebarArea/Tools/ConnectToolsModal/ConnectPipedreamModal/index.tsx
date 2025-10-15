@@ -1,7 +1,7 @@
 import { useCallback, useState, FormEvent, useMemo } from 'react'
 import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { PipedreamAppCard } from '$/app/(private)/settings/_components/Integrations/New/_components/Configuration/Pipedream/AppCard'
+import { PipedreamAppCard } from '$/components/Pipedream/PipedreamCard'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import useIntegrations from '$/stores/integrations'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
@@ -13,10 +13,6 @@ import { IntegrationType } from '@latitude-data/constants'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { PipedreamIntegration } from '@latitude-data/core/schema/types'
 
-/**
- * FIXME: DRY this with Settings -> NewIntegration
- * Some parts are common and could be extracted to a shared component
- */
 export function ConnectPipedreamModal({
   onOpenChange,
   onConnect,

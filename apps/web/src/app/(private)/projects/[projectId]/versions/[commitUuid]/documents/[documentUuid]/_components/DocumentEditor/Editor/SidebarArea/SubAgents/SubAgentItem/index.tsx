@@ -1,8 +1,8 @@
-import Link from 'next/link'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ROUTES } from '$/services/routes'
+import { SelectionSubItem, getPathHint } from '../../SelectionSubItem'
 
 export function SubAgentItem({
   agentPath,
@@ -20,31 +20,41 @@ export function SubAgentItem({
   disabled: boolean
 }) {
   const name = agentPath.split('/').pop() || ''
+  const pathHint = getPathHint(agentPath)
   const href = ROUTES.projects
     .detail({ id: projectId })
     .commits.detail({ uuid: commitUuid })
     .documents.detail({ uuid: documentUuid }).root
 
   return (
-    <div className='flex flex-row items-center gap-3 rounded-lg min-w-0 p-2 hover:bg-backgroundCode'>
-      <Link href={href} className='flex items-center gap-x-2 flex-1 min-w-0'>
-        <Icon name='bot' color='foregroundMuted' />
+    <SelectionSubItem
+      icon={<Icon name='bot' color='foregroundMuted' />}
+      content={
         <div className='flex flex-1 min-w-0'>
           <Text.H5 ellipsis noWrap>
-            {name}
+            {pathHint && (
+              <>
+                <span className='text-foreground opacity-50'>{pathHint}</span>
+                {name}
+              </>
+            )}
+            {!pathHint && name}
           </Text.H5>
         </div>
-      </Link>
-      <Button
-        disabled={disabled}
-        variant='ghost'
-        size='none'
-        iconProps={{ name: 'trash', color: 'foregroundMuted' }}
-        onClick={(e) => {
-          e.stopPropagation()
-          onRemove()
-        }}
-      />
-    </div>
+      }
+      href={href}
+      actions={
+        <Button
+          disabled={disabled}
+          variant='ghost'
+          size='none'
+          iconProps={{ name: 'trash', color: 'foregroundMuted' }}
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemove()
+          }}
+        />
+      }
+    />
   )
 }
