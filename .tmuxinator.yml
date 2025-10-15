@@ -4,11 +4,6 @@ windows:
   - apps:
       layout: main-horizontal
       panes:
-        - pnpm dev --filter='./apps/*'
-  - packages:
-      layout: main-horizontal
-      panes:
-        - pnpm build --filter='./packages/**'
-        - cd apps/web && pnpm workers:build
+        - pnpm catchup && pnpm dev --filter='./apps/*'
   - docker: docker compose up db redis redisinsight mailpit --menu=false
   - studio: cd packages/core && pnpm db:studio
