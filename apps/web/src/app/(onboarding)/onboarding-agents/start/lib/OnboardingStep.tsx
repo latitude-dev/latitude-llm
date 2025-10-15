@@ -10,7 +10,9 @@ function OnboardingStepRoot({ children }: { children: ReactNode }) {
 
 function OnboardingStepBody({ children }: { children: ReactNode }) {
   return (
-    <div className='flex flex-col items-center gap-10 w-full'>{children}</div>
+    <div className='flex flex-col items-center gap-10 h-full w-full'>
+      {children}
+    </div>
   )
 }
 

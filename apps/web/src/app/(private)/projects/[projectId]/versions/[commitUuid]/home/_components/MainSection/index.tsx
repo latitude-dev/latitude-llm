@@ -2,7 +2,7 @@
 
 import { TriggersSection } from './Triggers'
 import { MainAgent } from './Agent'
-import { RunProps } from './types'
+import { RunProps } from '$/components/Agent/types'
 
 function Spring() {
   // Using 'justify-center' does center the content, but fails to overflow correctly.

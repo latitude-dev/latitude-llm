@@ -70,7 +70,7 @@ export function RunAgentBody({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { workspace } = useCurrentWorkspace()
-  const { playground, hasActiveStream, abortCurrentStream } = usePlayground()
+  const { playground, abortCurrentStream } = usePlayground()
   const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const handleNext = useCallback(() => {
     executeCompleteOnboarding({
@@ -97,9 +97,9 @@ export function RunAgentBody({
 
   useAutoScroll(containerRef, { startAtBottom: true })
 
-  const promptIsRunning = useMemo(() => {
-    return playground.isLoading || !playground.error || !hasActiveStream()
-  }, [playground.isLoading, playground.error, hasActiveStream])
+  const promptIsNotRunning = useMemo(() => {
+    return playground.isLoading || playground.error !== undefined
+  }, [playground.isLoading, playground.error])
 
   return (
     <OnboardingStep.Body>
@@ -107,7 +107,7 @@ export function RunAgentBody({
         ref={containerRef}
         className='flex flex-col items-center gap-8 border-dashed border-2 rounded-xl p-2 w-full max-w-[600px] overflow-y-auto custom-scrollbar scrollable-indicator max-h-[400px] 2xl:max-h-[600px]'
       >
-        {playground.messages.length === 0 && !playground.error ? (
+        {playground.messages.length === 0 && playground.error === undefined ? (
           <IsLoadingOnboardingItem
             highlightedText='Your agent'
             nonHighlightedText='will start running in a moment...'
@@ -141,7 +141,7 @@ export function RunAgentBody({
         fancy
         onClick={handleNext}
         iconProps={{ name: 'chevronRight', placement: 'right' }}
-        disabled={promptIsRunning}
+        disabled={promptIsNotRunning}
       >
         Continue building
       </Button>

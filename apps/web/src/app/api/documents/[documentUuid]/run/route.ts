@@ -7,6 +7,7 @@ import { LogSources } from '@latitude-data/core/constants'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { createSSEStream } from '@latitude-data/core/lib/createSSEStream'
 import { Result } from '@latitude-data/core/lib/Result'
+import { PromisedResult } from '@latitude-data/core/lib/Transaction'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -180,7 +181,7 @@ async function generateAIParameters({
   commitUuid: string
   projectId: number
   path: string
-}) {
+}): PromisedResult<Record<string, unknown>> {
   try {
     const commit = await new CommitsRepository(workspace.id)
       .getCommitByUuid({ uuid: commitUuid, projectId })
@@ -213,7 +214,13 @@ async function generateAIParameters({
       },
     )
 
-    return Result.ok(result?.response?.object)
+    // we return the response wrapped within a parameter_record key
+    const response = result?.response?.object.parameter_record as Record<
+      string,
+      unknown
+    >
+
+    return Result.ok(response ?? {})
   } catch (error) {
     return Result.error(error as Error)
   }

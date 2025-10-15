@@ -5,6 +5,7 @@ import useDocumentTriggers from '$/stores/documentTriggers'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { DocumentTriggerType } from '@latitude-data/constants'
+import { DocumentVersion } from '@latitude-data/core/schema/types'
 import { RunTrigger } from './_components/RunTrigger'
 import useIntegrations from '$/stores/integrations'
 import { IsLoadingOnboardingItem } from '../../../lib/IsLoadingOnboardingItem'
@@ -12,6 +13,8 @@ import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import { OnboardingStep } from '../../../lib/OnboardingStep'
 import { usePlayground } from '../../../lib/PlaygroundProvider'
 import { RunDocumentProps } from '$/components/TriggersManagement/types'
+import { AgentInput } from '$/components/Agent/AgentInput'
+import useDocumentVersions from '$/stores/documentVersions'
 
 export function TriggerAgentHeader() {
   return (
@@ -52,6 +55,16 @@ export function TriggerAgentBody({
   const { data: integrations, isLoading: isLoadingIntegrations } =
     useIntegrations()
 
+  const { data: documents } = useDocumentVersions({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+  })
+
+  const mainDocument = useMemo<DocumentVersion | undefined>(
+    () => documents?.find((d) => d.documentUuid === commit.mainDocumentUuid),
+    [documents, commit.mainDocumentUuid],
+  )
+
   const sortedTriggersByIntegrationFirst = useMemo(() => {
     return triggers.sort((a) => {
       return a.triggerType === DocumentTriggerType.Integration ? -1 : 1
@@ -71,6 +84,8 @@ export function TriggerAgentBody({
     },
     [setParameters, moveNextOnboardingStep, playground],
   )
+
+  if (!mainDocument) return null
 
   return (
     <OnboardingStep.Body>
@@ -92,6 +107,7 @@ export function TriggerAgentBody({
         )}
       </div>
       <div className='flex flex-col gap-6 w-full max-w-[500px]'>
+        <AgentInput document={mainDocument} runPromptFn={onRunTrigger} />
         <div className='flex flex-col gap-2 w-full max-w-[600px]'>
           <Text.H5 centered color='foregroundMuted'>
             Agent will start running automatically
