@@ -17,6 +17,14 @@ import { AgentInput } from '$/components/Agent/AgentInput'
 import useDocumentVersions from '$/stores/documentVersions'
 
 export function TriggerAgentHeader() {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+
+  const { data: triggers } = useDocumentTriggers({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+  })
+
   return (
     <OnboardingStep.Header>
       <div className='p-2 border-2 rounded-lg'>
@@ -25,9 +33,15 @@ export function TriggerAgentHeader() {
       <Text.H2M color='foreground' noWrap>
         Trigger the agent
       </Text.H2M>
-      <Text.H5 color='foregroundMuted'>
-        Perform one of the below actions to trigger and run the agent
-      </Text.H5>
+      {triggers.length > 0 ? (
+        <Text.H5 color='foregroundMuted'>
+          Perform one of the below actions to trigger and run the agent
+        </Text.H5>
+      ) : (
+        <Text.H5 color='foregroundMuted'>
+          Send a message to your agent to run it!
+        </Text.H5>
+      )}
     </OnboardingStep.Header>
   )
 }
@@ -89,23 +103,25 @@ export function TriggerAgentBody({
 
   return (
     <OnboardingStep.Body>
-      <div className='flex flex-col items-center gap-2 border-dashed border-2 rounded-xl p-2 w-full max-w-[500px]'>
-        {isLoadingTriggers || isLoadingIntegrations ? (
-          <IsLoadingOnboardingItem
-            highlightedText='Triggers'
-            nonHighlightedText='will appear in a moment...'
-          />
-        ) : (
-          sortedTriggersByIntegrationFirst.map((trigger) => (
-            <RunTrigger
-              key={trigger.uuid}
-              trigger={trigger}
-              onRunTrigger={onRunTrigger}
-              integrations={integrations}
+      {sortedTriggersByIntegrationFirst.length > 0 ? (
+        <div className='flex flex-col items-center gap-2 border-dashed border-2 rounded-xl p-2 w-full max-w-[500px]'>
+          {isLoadingTriggers || isLoadingIntegrations ? (
+            <IsLoadingOnboardingItem
+              highlightedText='Triggers'
+              nonHighlightedText='will appear in a moment...'
             />
-          ))
-        )}
-      </div>
+          ) : (
+            sortedTriggersByIntegrationFirst.map((trigger) => (
+              <RunTrigger
+                key={trigger.uuid}
+                trigger={trigger}
+                onRunTrigger={onRunTrigger}
+                integrations={integrations}
+              />
+            ))
+          )}
+        </div>
+      ) : null}
       <div className='flex flex-col gap-6 w-full max-w-[500px]'>
         <AgentInput document={mainDocument} runPromptFn={onRunTrigger} />
         <div className='flex flex-col gap-2 w-full max-w-[600px]'>
