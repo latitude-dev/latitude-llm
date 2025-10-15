@@ -97,6 +97,7 @@ describe('setupService', () => {
       .where(utils.eq(workspaceOnboarding.workspaceId, workspace.id))
       .then((r) => r[0])
     expect(createdOnboarding).toBeDefined()
+    expect(createdOnboarding?.completedAt).toBeNull()
   })
 
   it('publishes userCreated event', async () => {
