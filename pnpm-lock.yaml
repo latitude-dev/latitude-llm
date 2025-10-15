@@ -58,8 +58,8 @@ catalogs:
       specifier: 8.16.0
       version: 8.16.0
     promptl-ai:
-      specifier: ^0.9.3
-      version: 0.9.3
+      specifier: ^0.9.4
+      version: 0.9.4
     react:
       specifier: 19.1.1
       version: 19.1.1
@@ -184,7 +184,7 @@ importers:
         version: 4.17.21
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.9.3(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.9.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
@@ -383,7 +383,7 @@ importers:
         version: 1.252.1
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.9.3(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.9.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
@@ -700,7 +700,7 @@ importers:
         version: 0.4.0
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.9.3(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.9.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       zod:
         specifier: 'catalog:'
         version: 4.1.8
@@ -920,7 +920,7 @@ importers:
         version: 4.2.0
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.9.3(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.9.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
@@ -1060,7 +1060,7 @@ importers:
         version: 2.7.0
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.9.3(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.9.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
@@ -1233,7 +1233,7 @@ importers:
         version: 5.22.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@4.1.8)
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.9.3(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.9.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       rollup:
         specifier: ^4.41.0
         version: 4.52.3
@@ -1459,7 +1459,7 @@ importers:
         version: 16.1.1(postcss@8.5.6)
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.9.3(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.9.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       recast:
         specifier: ^0.23.4
         version: 0.23.11
@@ -11560,8 +11560,8 @@ packages:
   promptl-ai@0.7.5:
     resolution: {integrity: sha512-qDJggAR34qqxc5/X6xqagMCVNVQK8U3ycohtKJNG1/1Ap5VJ/UzF4ERphWAmLrspl4KYcT2ITKQhq28TAcw3Qg==}
 
-  promptl-ai@0.9.3:
-    resolution: {integrity: sha512-mVoN2MBNkTM7LTQGjgPeEfrTxP+0WARS3+ysKy7Ca+tdE0tt9f4mv5Ba5JZIt9v8NdEqBInzzCepi6C2UjMQgA==}
+  promptl-ai@0.9.4:
+    resolution: {integrity: sha512-KX0UB+spPiV1he4MeMa3CI665mcBguS4GdNp9VlNH15MvOEDGUIaOGfc2WojfvVxj13GHfpSZgexoVdy6qqkuQ==}
 
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
@@ -20631,7 +20631,7 @@ snapshots:
       '@typescript-eslint/eslint-plugin': 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)
       '@typescript-eslint/parser': 6.21.0(eslint@8.57.1)(typescript@5.9.3)
       eslint-config-prettier: 9.1.2(eslint@8.57.1)
-      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))
+      eslint-import-resolver-alias: 1.1.2(eslint-plugin-import@2.32.0)
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@8.57.1)
       eslint-plugin-eslint-comments: 3.2.0(eslint@8.57.1)
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)
@@ -22579,7 +22579,7 @@ snapshots:
       eslint-plugin-turbo: 2.5.8(eslint@8.57.1)(turbo@2.5.8)
       turbo: 2.5.8
 
-  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)):
+  eslint-import-resolver-alias@1.1.2(eslint-plugin-import@2.32.0):
     dependencies:
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)
 
@@ -26501,7 +26501,7 @@ snapshots:
       - encoding
       - ws
 
-  promptl-ai@0.9.3(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5)):
+  promptl-ai@0.9.4(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5)):
     dependencies:
       acorn: 8.15.0
       code-red: 1.0.4
