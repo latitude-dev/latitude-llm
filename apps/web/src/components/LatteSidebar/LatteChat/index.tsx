@@ -193,7 +193,7 @@ function LatteChatUI({
                       What do you want to automate today?
                     </Text.H3M>
                     <Text.H5 color='foregroundMuted' centered>
-                      Chat with Latte to build and improve your agent
+                      Chat with Latte to build and improve your project
                     </Text.H5>
                   </div>
                 </div>
