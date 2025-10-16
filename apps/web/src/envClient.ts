@@ -19,6 +19,7 @@ export const envClient = createEnv({
     NEXT_PUBLIC_COLD_EMAIL_OUTREACH_SELECT_AGENT_UUID: z.string().optional(),
     NEXT_PUBLIC_CONTENT_CREATOR_SELECT_AGENT_UUID: z.string().optional(),
     NEXT_PUBLIC_NEWS_CURATOR_SELECT_AGENT_UUID: z.string().optional(),
+    NEXT_PUBLIC_DEFAULT_AGENT_ONBOARDING_UUID: z.string().optional(),
   },
   runtimeEnv: {
     NEXT_PUBLIC_LATITUDE_CLOUD_PAYMENT_URL:
@@ -43,5 +44,7 @@ export const envClient = createEnv({
       process.env.NEXT_PUBLIC_CONTENT_CREATOR_SELECT_AGENT_UUID ?? '',
     NEXT_PUBLIC_NEWS_CURATOR_SELECT_AGENT_UUID:
       process.env.NEXT_PUBLIC_NEWS_CURATOR_SELECT_AGENT_UUID ?? '',
+    NEXT_PUBLIC_DEFAULT_AGENT_ONBOARDING_UUID:
+      process.env.NEXT_PUBLIC_DEFAULT_AGENT_ONBOARDING_UUID ?? '',
   },
 })
