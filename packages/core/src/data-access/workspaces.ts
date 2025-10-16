@@ -20,6 +20,16 @@ import {
   Workspace,
 } from '../schema/types'
 
+export async function unsafelyFindWorkspaceByName(name: string, db = database) {
+  const result = await db
+    .select(workspacesDtoColumns)
+    .from(workspaces)
+    .where(eq(workspaces.name, name))
+    .limit(1)
+
+  return result[0]
+}
+
 export async function unsafelyFindWorkspace(id: number, db = database) {
   const result = await db
     .select(workspacesDtoColumns)
