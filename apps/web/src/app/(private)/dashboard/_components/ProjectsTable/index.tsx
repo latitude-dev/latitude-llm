@@ -16,6 +16,22 @@ import { ROUTES } from '$/services/routes'
 
 import RenameProjectModal from './RenameProjectModal'
 import { Project } from '@latitude-data/core/schema/types'
+import { extractLeadingEmoji } from '@latitude-data/web-ui/textUtils'
+
+function ProjectTitle({ name }: { name: string }) {
+  const [emoji, title] = extractLeadingEmoji(name)
+
+  return (
+    <div className='flex items-center gap-2'>
+      {emoji && (
+        <div className='min-w-8 h-8 rounded-lg bg-muted flex items-center justify-center'>
+          <Text.H3>{emoji}</Text.H3>
+        </div>
+      )}
+      <Text.H5>{title}</Text.H5>
+    </div>
+  )
+}
 
 type ProjectWithAgreggatedData = Project & {
   lastEditedAt: Date | null
@@ -50,7 +66,7 @@ export function ProjectsTable({
               }
             >
               <TableCell>
-                <Text.H5>{project.name}</Text.H5>
+                <ProjectTitle name={project.name} />
               </TableCell>
               <TableCell>
                 <Text.H5 color='foregroundMuted'>

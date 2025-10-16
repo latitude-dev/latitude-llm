@@ -8,9 +8,16 @@ import { MainAgentSection } from './MainSection'
 import { AgentChatSection } from './ChatSection'
 import { cn } from '@latitude-data/web-ui/utils'
 import { RunProps } from '$/components/Agent/types'
-import { DocumentTrigger } from '@latitude-data/core/schema/types'
+import {
+  DocumentTrigger,
+  DocumentVersion,
+} from '@latitude-data/core/schema/types'
 
-export function AgentPageWrapper() {
+export function AgentPageWrapper({
+  documents: serverDocuments,
+}: {
+  documents: DocumentVersion[]
+}) {
   const { commit } = useCurrentCommit()
 
   const [parameters, setParameters] = useState<Record<string, unknown>>({})
@@ -61,7 +68,10 @@ export function AgentPageWrapper() {
             'opacity-0': playground.mode === 'chat',
           })}
         >
-          <MainAgentSection runPromptFn={onRunPrompt} />
+          <MainAgentSection
+            runPromptFn={onRunPrompt}
+            serverDocuments={serverDocuments}
+          />
         </div>
         <div
           className={cn('h-full transition-opacity duration-500', {

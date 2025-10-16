@@ -46,7 +46,7 @@ export function TriggersSection({
   )
 
   return (
-    <div className='w-full flex flex-col gap-6 items-center max-w-[500px]'>
+    <div className='w-full flex flex-col gap-6 items-center'>
       <Text.H5 color='foregroundMuted'>
         {triggers.length > 0
           ? 'or run a preview from a trigger'
