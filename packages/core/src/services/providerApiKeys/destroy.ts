@@ -15,7 +15,7 @@ export async function destroyProviderApiKey(
 ) {
   if (providerApiKey.token === env.DEFAULT_PROVIDER_API_KEY) {
     return Result.error(
-      new BadRequestError('Cannot delete the default provider API key'),
+      new BadRequestError('Cannot delete the Latitude provider API key'),
     )
   }
 
