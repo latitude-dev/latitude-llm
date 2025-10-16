@@ -138,7 +138,9 @@ Now, write a short analysis comparing these trends.
 
 ## Limiting Agent Iterations
 
-To prevent agents from running indefinitely (e.g., getting stuck in loops), you can limit the maximum number of steps (tool calls + LLM responses) using the `maxSteps` configuration option (default: 20, max: 150).
+To prevent agents from running indefinitely (e.g., getting stuck in loops), Latitude automatically applies a `maxSteps` limit of 20 to all prompts with configuration. This controls the maximum number of steps (tool calls + LLM responses) an agent can execute.
+
+You can customize this limit by explicitly setting the `maxSteps` configuration option (max: 150):
 
 ```yaml
 ---
@@ -148,6 +150,8 @@ maxSteps: 10 # Limit the agent to 10 steps
 ```
 
 If the limit is reached before the goal is completed, the agent run will terminate with an error.
+
+[Learn more about maxSteps configuration](/guides/prompt-manager/configuration#maxsteps).
 
 ## Running Agents
 

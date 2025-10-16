@@ -156,7 +156,9 @@ In this example, the final step does not need to conside the full texts used in 
 
 <Note>This feature is only available on the Latitude platform.</Note>
 
-You can limit the number of steps executed in a chain by setting a `maxSteps` attribute on the main configuration section. This can help prevent infinite loops or excessive processing in long chains when creating complex workflows with steps within loops.
+Latitude automatically applies a `maxSteps` limit of 20 to all prompts with configuration. This helps prevent infinite loops or excessive processing in long chains when creating complex workflows with steps within loops.
+
+You can customize this limit by explicitly setting the `maxSteps` attribute on the main configuration section:
 
 ```xml
 ---

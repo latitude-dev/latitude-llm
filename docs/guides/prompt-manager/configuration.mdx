@@ -115,7 +115,32 @@ Lists the tools (functions) available for the AI model to call.
 
 ### `maxSteps`
 
-For [Chains](/promptl/advanced/chains) and [Agents](/guides/prompt-manager/agents), sets the maximum number of execution steps allowed (default: 20, max: 150).
+Sets the maximum number of execution steps allowed for your prompt (default: 20, max: 150). This prevents infinite loops and controls resource usage in [Chains](/promptl/advanced/chains) and [Agents](/guides/prompt-manager/agents).
+
+**Automatic Application**: By default, Latitude automatically applies `maxSteps: 20` to all documents with configuration. This ensures safe execution limits for tool usage, chains, and multi-step operations.
+
+**Opt-out Behavior**: A document is treated as a simple prompt (without `maxSteps` applied) in two cases:
+
+1. **No configuration section** - Documents without frontmatter (no `---` delimiters)
+2. **Explicit type declaration** - Setting `type: prompt` in the configuration
+
+```yaml
+---
+provider: OpenAI
+model: gpt-4o-mini
+type: prompt # Explicitly opt out of maxSteps behavior
+---
+```
+
+You can also override the default by explicitly setting your own `maxSteps` value:
+
+```yaml
+---
+provider: OpenAI
+model: gpt-4o-mini
+maxSteps: 50 # Custom limit
+---
+```
 
 ### `maxRetries`
 
