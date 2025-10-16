@@ -14,7 +14,8 @@
     "prettier:check": "prettier --check \"**/*.{ts,tsx,md}\" --ignore-path .prettierrcignore",
     "test": "turbo test",
     "catchup": "pnpm i --ignore-scripts && pnpm build --filter=\"./packages/**/*\" && pnpm --filter \"@latitude-data/web\" workers:build && pnpm --filter \"@latitude-data/core\" db:migrate",
-    "console": "clear && ./bin/console.ts"
+    "console": "clear && ./bin/console.ts",
+    "backgroundRun:stressTest": "pnpm --filter @latitude-data/core backgroundRun:stressTest"
   },
   "devDependencies": {
     "@babel/parser": "^7.28.4",

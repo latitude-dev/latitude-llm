@@ -103,7 +103,8 @@
     "lint": "eslint src",
     "tc": "tsc --noEmit",
     "test": "pnpm run db:migrate:test && vitest run --pool=forks",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "backgroundRun:stressTest": "tsx scripts/background-run/stress-test.ts"
   },
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "3.0.21",
