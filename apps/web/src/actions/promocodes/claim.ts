@@ -14,7 +14,6 @@ export const claimPromocodeAction = authProcedure
   .action(async ({ ctx, parsedInput }) => {
     const { workspace } = ctx
     const { code } = parsedInput
-    console.log('workspace', workspace)
     const result = await claimPromocode({ code, workspace: workspace! })
     return result.unwrap()
   })
