@@ -42,7 +42,7 @@ function confirmDescription({
   if (!title.trim()) return 'Please provide a version name.'
 
   if (changes.documents.hasErrors) {
-    return 'Some documents has errors, please click on those documents to see the errors.'
+    return 'Some documents have errors, please click on those documents to see the errors.'
   }
 
   if (changes.triggers.hasPending) {
