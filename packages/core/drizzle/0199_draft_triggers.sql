@@ -21,7 +21,7 @@ WITH "latest_commit" AS (
     "id",
     "project_id",
     ROW_NUMBER() OVER (PARTITION BY "project_id" ORDER BY "merged_at" DESC) AS rn
-  FROM "commits"
+  FROM "latitude"."commits"
   WHERE "merged_at" IS NOT NULL
 )
 UPDATE "latitude"."document_triggers" dt

@@ -5,12 +5,12 @@ WITH latest_provider_logs AS (
     pl.id as provider_log_id,
     pl.document_log_uuid,
     ROW_NUMBER() OVER (PARTITION BY pl.document_log_uuid ORDER BY pl.generated_at DESC) as rn
-  FROM provider_logs pl
+  FROM "latitude"."provider_logs" pl
   WHERE pl.document_log_uuid IS NOT NULL
 )
-UPDATE evaluation_results er
+UPDATE "latitude"."evaluation_results" er
 SET evaluated_provider_log_id = lpl.provider_log_id
-FROM document_logs dl
+FROM "latitude"."document_logs" dl
 JOIN latest_provider_logs lpl ON dl.uuid = lpl.document_log_uuid
 WHERE er.document_log_id = dl.id
 AND lpl.rn = 1
