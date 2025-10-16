@@ -37,7 +37,7 @@ describe('destroyProviderApiKey', () => {
     await expect(
       destroyProviderApiKey(provider).then((r) => r.unwrap()),
     ).rejects.toThrowError(
-      new BadRequestError('Cannot delete the default provider API key'),
+      new BadRequestError('Cannot delete the Latitude provider API key'),
     )
 
     const providersScope = new ProviderApiKeysRepository(workspace.id)
