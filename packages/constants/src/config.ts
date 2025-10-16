@@ -35,8 +35,7 @@ export const humanizeTool = (tool: string, suffix: boolean = true) => {
       .replace(AGENT_TOOL_PREFIX, '')
       .trim()
       .split('_')
-      .map(capitalize)
-      .join(' ')
+      .join("'s ")
     return suffix ? `${name} agent` : name
   }
 
@@ -45,8 +44,7 @@ export const humanizeTool = (tool: string, suffix: boolean = true) => {
       .replace(LATITUDE_TOOL_PREFIX, '')
       .trim()
       .split('_')
-      .map(capitalize)
-      .join(' ')
+      .join("'s ")
     return suffix ? `${name} tool` : name
   }
 
