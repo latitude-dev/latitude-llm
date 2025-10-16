@@ -371,10 +371,10 @@ describe('computeWorkspaceUsage', () => {
     expect(result.usage).toBe(documentLogs.length + evaluationResultsV2.length)
   })
 
-  // FIXME: Probably this test can be removed. cc @geclos
-  it.skip('only takes into account the runs since the last renewal', async (ctx) => {
+  it('only takes into account the runs since the last renewal', async (ctx) => {
     const today = new Date(2024, 9, 12)
-    const createdAt = new Date(2023, 6, 3)
+    const lastRenewalDate = new Date(2024, 8, 12)
+    const dateBeforeRenewal = new Date(2024, 7, 1)
     vi.spyOn(Date, 'now').mockImplementation(() => today.getTime())
 
     const {
@@ -387,101 +387,23 @@ describe('computeWorkspaceUsage', () => {
         foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
       },
       workspace: {
-        createdAt,
+        createdAt: lastRenewalDate,
       },
     })
     const workspace = wsp as WorkspaceDto
-
-    expect(workspace.createdAt).toEqual(createdAt)
     const document = documents[0]!
-    const evaluationV2 = await ctx.factories.createEvaluationV2({
-      document: document,
-      commit: commit,
-      workspace: workspace,
+
+    await ctx.factories.createDocumentLog({
+      document,
+      commit,
+      createdAt: dateBeforeRenewal,
     })
 
-    const NUM_NOT_INCLUDED_DOC_LOGS = 5
-    const NUM_INCLUDED_DOC_LOGS = 5
-
-    // Workspace was created on 2023-06-03
-    // Today is 2024-09-12, which means the last monthly renewal should be on 2024-09-12
-    const expectedLastRenewalDate = new Date(2024, 9, 12)
-
-    const notIncludedDocumentLogs = await Promise.all(
-      Array(NUM_NOT_INCLUDED_DOC_LOGS)
-        .fill(null)
-        .map((idx) => {
-          const dateBeforeLastRenewal = new Date(
-            createdAt.getTime() +
-              (expectedLastRenewalDate.getTime() - createdAt.getTime()) *
-                (idx / (NUM_NOT_INCLUDED_DOC_LOGS - 1)),
-          )
-          return ctx.factories.createDocumentLog({
-            document,
-            commit,
-            createdAt: dateBeforeLastRenewal,
-          })
-        }),
-    )
-
-    await Promise.all(
-      Array(NUM_NOT_INCLUDED_DOC_LOGS)
-        .fill(null)
-        .map((_, idx) => {
-          const dateBeforeLastRenewal = new Date(
-            createdAt.getTime() +
-              (expectedLastRenewalDate.getTime() - createdAt.getTime()) *
-                (idx / (NUM_NOT_INCLUDED_DOC_LOGS - 1)),
-          )
-          ctx.factories.createEvaluationResultV2({
-            evaluation: evaluationV2,
-            providerLog:
-              notIncludedDocumentLogs[idx % notIncludedDocumentLogs.length]!
-                .providerLogs[0]!,
-            commit: commit,
-            workspace: workspace,
-            createdAt: dateBeforeLastRenewal,
-          })
-        }),
-    )
-
-    const includedDocumentLogs = await Promise.all(
-      Array(NUM_INCLUDED_DOC_LOGS)
-        .fill(null)
-        .map((idx) => {
-          const dateAfterLastRenewal = new Date(
-            expectedLastRenewalDate.getTime() +
-              (today.getTime() - expectedLastRenewalDate.getTime()) *
-                (idx / (NUM_INCLUDED_DOC_LOGS - 1)),
-          )
-          return ctx.factories.createDocumentLog({
-            document,
-            commit,
-            createdAt: dateAfterLastRenewal,
-          })
-        }),
-    )
-
-    const includedEvaluationResultsV2 = await Promise.all(
-      Array(NUM_INCLUDED_DOC_LOGS)
-        .fill(null)
-        .map((_, idx) => {
-          const dateAfterLastRenewal = new Date(
-            expectedLastRenewalDate.getTime() +
-              (today.getTime() - expectedLastRenewalDate.getTime()) *
-                (idx / (NUM_INCLUDED_DOC_LOGS - 1)),
-          )
-          ctx.factories.createEvaluationResultV2({
-            evaluation: evaluationV2,
-            providerLog:
-              includedDocumentLogs[idx % includedDocumentLogs.length]!
-                .providerLogs[0]!,
-            commit: commit,
-            workspace: workspace,
-            createdAt: dateAfterLastRenewal,
-          })
-        }),
-    )
+    const currentPeriodLog = await ctx.factories.createDocumentLog({
+      document,
+      commit,
+      createdAt: today,
+    })
 
     const result = await computeWorkspaceUsage({
       id: workspace.id,
@@ -489,8 +411,7 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(
-      includedDocumentLogs.length + includedEvaluationResultsV2.length,
-    )
+    expect(result.usage).toBe(1)
+    expect(currentPeriodLog).toBeDefined()
   })
 })

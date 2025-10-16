@@ -1,4 +1,4 @@
-import { count, eq, inArray } from 'drizzle-orm'
+import { and, count, eq, gte, inArray } from 'drizzle-orm'
 import Redis from 'ioredis'
 import { QuotaType, WorkspaceUsage } from '../../constants'
 import { Subscription, Workspace } from '../../schema/types'
@@ -71,7 +71,12 @@ async function computeUsageFromDatabase(
   const documentLogsCount = await db
     .select({ count: count() })
     .from(documentLogs)
-    .where(inArray(documentLogs.commitId, commitIds))
+    .where(
+      and(
+        inArray(documentLogs.commitId, commitIds),
+        gte(documentLogs.createdAt, latestRenewalDate),
+      ),
+    )
     .then((r) => r[0]!.count)
 
   const evaluationResultsV2Count = await evaluationResultsV2Scope
@@ -94,7 +99,6 @@ export async function computeWorkspaceUsage(
   const cacheClient = await cache()
   const cacheKey = `workspace-usage-${workspace.id}`
   let usage = await getUsageFromCache(cacheClient, cacheKey)
-
   if (usage === null) {
     usage = await computeUsageFromDatabase(workspace as any, db)
     await cacheClient.set(cacheKey, usage.toString(), 'EX', 86400) // cache for 24 hours
