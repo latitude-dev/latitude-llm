@@ -61,17 +61,18 @@ export function collectTools({
   })
 
   // Add client tools as a special integration (read-only, defined inline in config)
-  const customToolNames = collectCustomTools(tools)
-  if (customToolNames.length > 0) {
+  const customTools = collectCustomTools(tools)
+  if (customTools.toolNames.length > 0) {
     preservedMap[CLIENT_TOOLS_INTEGRATION_NAME] = {
       id: -1, // Synthetic ID for client tools
       name: CLIENT_TOOLS_INTEGRATION_NAME,
       type: IntegrationType.Latitude, // Using Latitude type for inline client tools
       configuration: null,
       icon: { type: 'icon', name: 'code' },
-      tools: customToolNames,
-      allToolNames: customToolNames,
-      isOpen: preservedMap[CLIENT_TOOLS_INTEGRATION_NAME]?.isOpen ?? false,
+      tools: customTools.toolNames,
+      allToolNames: customTools.toolNames,
+      isOpen: preservedMap[CLIENT_TOOLS_INTEGRATION_NAME]?.isOpen ?? true, // Open by default
+      clientToolsMetadata: customTools.metadata,
     }
   } else {
     // Remove client tools integration if there are no client tools

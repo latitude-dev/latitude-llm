@@ -54,9 +54,7 @@ export function SubAgentItem({
           side='top'
           align='start'
         >
-          <div className='text-background'>
-            {description}
-          </div>
+          <div className='text-background'>{description}</div>
         </Tooltip>
       }
       href={href}
