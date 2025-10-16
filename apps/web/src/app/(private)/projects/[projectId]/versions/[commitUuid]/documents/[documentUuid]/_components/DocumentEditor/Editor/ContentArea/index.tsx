@@ -1,26 +1,22 @@
+import { useRef } from 'react'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { useDevMode } from '$/hooks/useDevMode'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
-import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
 import useFeature from '$/stores/useFeature'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { cn } from '@latitude-data/web-ui/utils'
-import { useMemo, useRef } from 'react'
 import { TabValue } from '../../../DocumentTabs/tabs'
 import { ChatInputBox } from '../ChatInputBox'
-import { AgentToolbar } from '../EditorHeader/AgentToolbar'
 import { Editors } from '../Editors'
 import { RunButton } from '../RunButton'
 import { V2Playground } from '../V2Playground'
 import DocumentParams from '../V2Playground/DocumentParams'
-import { DocumentEditorHeader } from './Header'
 import {
   useEditorCallbacks,
   usePlaygroundLogic,
@@ -28,7 +24,6 @@ import {
 
 export function DocumentEditorContentArea({
   refinementEnabled,
-  freeRunsCount,
   setSelectedTab,
   isExperimentModalOpen,
   toggleExperimentModal,
@@ -37,7 +32,6 @@ export function DocumentEditorContentArea({
   isPlaygroundTransitioning,
 }: {
   refinementEnabled: boolean
-  freeRunsCount?: number
   setSelectedTab: ReactStateDispatch<TabValue>
   isExperimentModalOpen: boolean
   toggleExperimentModal: () => void
@@ -45,10 +39,6 @@ export function DocumentEditorContentArea({
   togglePlaygroundOpen: () => void
   isPlaygroundTransitioning: boolean
 }) {
-  const {
-    isEnabled: isEditorSidebarEnabled,
-    isLoading: isEditorSidebarFlagLoading,
-  } = useFeature('editorSidebar')
   const { isEnabled: isRunStream } = useFeature('runs')
   const containerRef = useRef<HTMLDivElement | null>(null)
   const { metadata } = useMetadata()
@@ -56,8 +46,6 @@ export function DocumentEditorContentArea({
   const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
   const { updateDocumentContent } = useDocumentValue()
-  const isMerged = useMemo(() => commit.mergedAt !== null, [commit.mergedAt])
-  const isLatitudeProvider = useIsLatitudeProvider({ metadata })
   const {
     parameters,
     source,
@@ -93,14 +81,6 @@ export function DocumentEditorContentArea({
   return (
     <>
       <div className='relative flex-1 flex flex-col h-full min-h-0 overflow-hidden'>
-        {!isEditorSidebarFlagLoading && !isEditorSidebarEnabled && (
-          <DocumentEditorHeader
-            isMerged={isMerged}
-            isPlaygroundOpen={isPlaygroundOpen}
-            togglePlaygroundOpen={togglePlaygroundOpen}
-          />
-        )}
-
         {/* === SLIDING WRAPPER === */}
         <div
           className={cn(
@@ -122,21 +102,6 @@ export function DocumentEditorContentArea({
             )}
           >
             <div className='min-h-0 relative z-0 flex flex-col gap-4 h-full'>
-              {!isEditorSidebarFlagLoading && !isEditorSidebarEnabled && (
-                <>
-                  <AgentToolbar
-                    isMerged={isMerged}
-                    isAgent={metadata?.config?.type === 'agent'}
-                    config={metadata?.config}
-                    prompt={document.content}
-                    onChangePrompt={updateDocumentContent}
-                  />
-                  <FreeRunsBanner
-                    isLatitudeProvider={isLatitudeProvider}
-                    freeRunsCount={freeRunsCount}
-                  />
-                </>
-              )}
               <div
                 className={cn('flex-1 min-h-0 pb-4', {
                   'overflow-y-auto custom-scrollbar scrollable-indicator':

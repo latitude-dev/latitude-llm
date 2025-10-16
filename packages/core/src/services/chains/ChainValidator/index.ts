@@ -18,6 +18,7 @@ import { Result, TypedResult } from '../../../lib/Result'
 import { Output } from '../../../lib/streamManager/step/streamAIResponse'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
+import { DocumentType } from '@latitude-data/constants'
 
 const DEFAULT_AGENT_MAX_STEPS = 20
 
@@ -141,7 +142,11 @@ export const validateChain = async ({
 }
 
 export function applyAgentRule(config: LatitudePromptConfig) {
-  if (config.type !== 'agent' || 'maxSteps' in config) return config
+  // Don't apply maxSteps if user explicitly set type: prompt
+  if (config.type === DocumentType.Prompt) return config
+
+  // Don't apply maxSteps if already set
+  if ('maxSteps' in config) return config
 
   return {
     ...config,

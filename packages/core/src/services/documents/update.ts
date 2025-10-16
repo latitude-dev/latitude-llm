@@ -23,20 +23,16 @@ export async function getDocumentType({
 }): Promise<DocumentType> {
   if (!content || !content.trim().length) return DocumentType.Prompt
 
-  try {
-    const metadata = await scan({ prompt: content })
-    const documentTypeConfig = metadata.config['type'] as
-      | DocumentType
-      | undefined
-    if (!documentTypeConfig) return DocumentType.Prompt
-    if (Object.values(DocumentType).includes(documentTypeConfig)) {
-      return documentTypeConfig
-    }
+  const metadata = await scan({ prompt: content })
+  const hasFrontmatter =
+    metadata.config && Object.keys(metadata.config).length > 0
 
-    return DocumentType.Prompt
-  } catch (_) {
-    return DocumentType.Prompt
-  }
+  if (!hasFrontmatter) return DocumentType.Prompt
+
+  // Allow users to explicitly set type: prompt to override agent classification
+  if (metadata.config.type === DocumentType.Prompt) return DocumentType.Prompt
+
+  return DocumentType.Agent
 }
 
 // TODO: refactor, can be simplified

@@ -157,7 +157,7 @@ model: gpt-4o
               ],
             },
           ],
-          config: { model: 'gpt-4o', provider: 'openai' },
+          config: { model: 'gpt-4o', provider: 'openai', maxSteps: 20 },
           provider,
         }),
       )

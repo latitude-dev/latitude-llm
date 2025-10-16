@@ -1,7 +1,5 @@
 import { memo, ReactNode } from 'react'
 
-import { PromptConfiguration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptConfiguration'
-import { PromptIntegrations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptIntegrations'
 import { FreeRunsBanner } from '$/components/FreeRunsBanner'
 import { ProviderModelSelector } from '$/components/ProviderModelSelector'
 import { ResolvedMetadata } from '$/workers/readMetadata'
@@ -15,6 +13,8 @@ import {
   DocumentVersion,
   ProviderApiKey,
 } from '@latitude-data/core/schema/types'
+import { PromptConfiguration } from '$/components/PromptConfiguration'
+import { PromptIntegrations } from './PromptIntegrations'
 
 export type IProviderByName = Record<string, ProviderApiKey>
 

@@ -1527,6 +1527,13 @@
       "when": 1760363977109,
       "tag": "0218_remove_chat_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 219,
+      "version": "7",
+      "when": 1760524642952,
+      "tag": "0219_change_all_document_to_agents",
+      "breakpoints": true
     }
   ]
 }

@@ -7,7 +7,7 @@ import {
   User,
   Workspace,
 } from '../../schema/types'
-import { Providers } from '@latitude-data/constants'
+import { DocumentType, Providers } from '@latitude-data/constants'
 import {
   DocumentVersionsRepository,
   WorkspacesRepository,
@@ -57,6 +57,22 @@ describe('createNewDocument', () => {
     expect(commitChanges.value.length).toBe(1)
     expect(commitChanges.value[0]!.documentUuid).toBe(document.documentUuid)
     expect(commitChanges.value[0]!.path).toBe(document.path)
+  })
+
+  it('creates a plain text document without frontmatter', async () => {
+    const documentResult = await createNewDocument({
+      workspace,
+      user,
+      commit,
+      path: 'plain-text',
+      content: 'Just plain text without any frontmatter',
+      includeDefaultContent: false,
+    })
+
+    const document = documentResult.unwrap()
+    expect(document.path).toBe('plain-text')
+    expect(document.content).toBe('Just plain text without any frontmatter')
+    expect(document.documentType).toBe(DocumentType.Prompt) // No frontmatter
   })
 
   it('fails if document path is invalid', async () => {
@@ -154,6 +170,7 @@ describe('createNewDocument', () => {
 
     const document = documentResult.unwrap()
     expect(document.path).toBe('newdoc')
+    expect(document.documentType).toBe(DocumentType.Agent) // Has frontmatter
 
     const scope = new DocumentVersionsRepository(project.workspaceId)
     const commitChanges = await scope.listCommitChanges(commit)
@@ -162,6 +179,7 @@ describe('createNewDocument', () => {
     const createdDocument = commitChanges.value[0]!
     expect(createdDocument.documentUuid).toBe(document.documentUuid)
     expect(createdDocument.path).toBe(document.path)
+    expect(createdDocument.documentType).toBe(DocumentType.Agent)
     expect(createdDocument.content).toBe(
       `
 ---
@@ -238,12 +256,14 @@ This is my prompt`.trimStart(),
     })
 
     expect(result.ok).toBe(true)
-    expect(result.unwrap().content).toBe(`---
+    const document = result.unwrap()
+    expect(document.content).toBe(`---
 
 temperature: 1
 ---
 
 `)
+    expect(document.documentType).toBe(DocumentType.Agent) // Has frontmatter with temperature
   })
 
   describe('with provider', () => {
@@ -306,6 +326,7 @@ temperature: 1
 
       const document = documentResult.unwrap()
       expect(document.path).toBe('my_new_agent')
+      expect(document.documentType).toBe(DocumentType.Agent) // Has frontmatter
 
       const scope = new DocumentVersionsRepository(project.workspaceId)
       const commitChanges = await scope.listCommitChanges(commit)
@@ -314,6 +335,7 @@ temperature: 1
       const createdDocument = commitChanges.value[0]!
       expect(createdDocument.documentUuid).toBe(document.documentUuid)
       expect(createdDocument.path).toBe(document.path)
+      expect(createdDocument.documentType).toBe(DocumentType.Agent)
       expect(createdDocument.content).toBe(
         `
 ---
