@@ -31,11 +31,7 @@ const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
 
 export const humanizeTool = (tool: string, suffix: boolean = true) => {
   if (tool.startsWith(AGENT_TOOL_PREFIX)) {
-    const name = tool
-      .replace(AGENT_TOOL_PREFIX, '')
-      .trim()
-      .split('_')
-      .join("'s ")
+    const name = tool.replace(AGENT_TOOL_PREFIX, '').trim().split('_').join(' ')
     return suffix ? `${name} agent` : name
   }
 
@@ -44,7 +40,7 @@ export const humanizeTool = (tool: string, suffix: boolean = true) => {
       .replace(LATITUDE_TOOL_PREFIX, '')
       .trim()
       .split('_')
-      .join("'s ")
+      .join(' ')
     return suffix ? `${name} tool` : name
   }
 

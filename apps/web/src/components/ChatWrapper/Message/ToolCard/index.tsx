@@ -23,9 +23,9 @@ export function ToolCard({
   const [_isOpen, setIsOpen] = useState(false)
 
   const isOpen = useMemo(() => {
-    if (customToolCallId) return true
+    if (customToolCallId && !toolResponse) return true
     return _isOpen
-  }, [customToolCallId, _isOpen])
+  }, [customToolCallId, toolResponse, _isOpen])
 
   const status = useMemo(() => {
     if (!toolResponse) return 'pending'
