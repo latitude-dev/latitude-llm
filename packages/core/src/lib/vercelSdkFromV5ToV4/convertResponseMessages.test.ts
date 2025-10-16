@@ -13,10 +13,10 @@ import {
   AssistantMessage,
   ToolContent,
   ToolRequestContent,
+  MessageContent,
 } from '@latitude-data/constants/legacyCompiler'
 import { convertResponseMessages } from './convertResponseMessages'
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
-import { MessageContent } from '@latitude-data/compiler'
 
 // Local stub since SDK doesn’t export ReasoningPart
 type ReasoningPart = {
