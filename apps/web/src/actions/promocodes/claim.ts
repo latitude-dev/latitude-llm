@@ -1,10 +1,10 @@
 'use server'
 
 import { z } from 'zod'
-import { errorHandlingProcedure, withRateLimit } from '$/actions/procedures'
+import { authProcedure, withRateLimit } from '$/actions/procedures'
 import { claimPromocode } from '@latitude-data/core/services/promocodes/claimPromocode'
 
-export const claimPromocodeAction = errorHandlingProcedure
+export const claimPromocodeAction = authProcedure
   .use(withRateLimit({ limit: 10, period: 60 }))
   .inputSchema(
     z.object({
@@ -14,6 +14,7 @@ export const claimPromocodeAction = errorHandlingProcedure
   .action(async ({ ctx, parsedInput }) => {
     const { workspace } = ctx
     const { code } = parsedInput
+    console.log('workspace', workspace)
     const result = await claimPromocode({ code, workspace: workspace! })
     return result.unwrap()
   })
