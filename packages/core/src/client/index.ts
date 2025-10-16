@@ -8,8 +8,12 @@ import type { Pool as IPool, PoolConfig } from 'pg'
 const { Pool } = pg
 
 type Connection = NodePgDatabase & { $client: IPool }
+
 export type Database = Connection | PgWithReplicas<Connection>
 
+export * as utils from './utils'
+
+// Transaction DB configuration
 // TODO: Send pool vitals to datadog when they change
 const POOL_CONFIG: PoolConfig = {
   max: 10, // Maximum number of connections in the pool (default)
@@ -24,33 +28,11 @@ const pool = new Pool({
   connectionString: env.DATABASE_URL,
 })
 
-const readReplicas: Connection[] = []
-
-if (env.READ_DATABASE_URL) {
-  const read1Pool = new Pool({
-    ...POOL_CONFIG,
-    connectionString: env.READ_DATABASE_URL,
-  })
-  readReplicas.push(drizzle(read1Pool))
-}
-
-if (env.READ_2_DATABASE_URL) {
-  const read2Pool = new Pool({
-    ...POOL_CONFIG,
-    connectionString: env.READ_2_DATABASE_URL,
-  })
-  readReplicas.push(drizzle(read2Pool))
-}
-
-export * as utils from './utils'
-
 const primary = drizzle(pool)
 
-export const database =
-  readReplicas.length > 0
-    ? withReplicas(primary, readReplicas as [Connection, ...Connection[]])
-    : primary
+export const database = primary
 
+// LRO configuration
 const LRO_POOL_CONFIG: PoolConfig = {
   ...POOL_CONFIG,
   max: 3, // Don't saturate connections
