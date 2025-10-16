@@ -267,6 +267,12 @@ export const env = createEnv({
       .default('709a3398-ed26-4e77-beef-90ed288cdd0a'),
 
     RELEASE_VERSION: z.string().optional(),
+
+    // Controls whether message contents of type file should be cached in
+    // Latitude's object storage for later retrieval. Allows customers to share
+    // long-lived URIs with LLM providers at the expense of duplicating data in
+    // Latitude's object storage.
+    FILE_CACHE: z.coerce.boolean().optional().default(false),
   },
   runtimeEnv: {
     ...process.env,

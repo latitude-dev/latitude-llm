@@ -26,6 +26,7 @@ import { handleAICallAPIError } from './handleError'
 import { createProvider } from './helpers'
 import { Providers } from '@latitude-data/constants'
 import { applyAllRules } from './providers/rules'
+import { downloadWithCache } from '../../lib/downloadWithCache'
 
 const DEFAULT_AI_SDK_PROVIDER = {
   streamText: originalStreamText,
@@ -171,6 +172,17 @@ export async function ai({
       experimental_output: useSchema
         ? Output.object({ schema: jsonSchema(schema) })
         : undefined,
+      experimental_download: async (
+        options: { url: URL; isUrlSupportedByModel: boolean }[],
+      ) => {
+        try {
+          return Promise.all(options.map(({ url }) => downloadWithCache(url)))
+        } catch (error) {
+          throw new Error(
+            `Failed to download: ${error instanceof Error ? error.message : String(error)}`,
+          )
+        }
+      },
     })
 
     return Result.ok({

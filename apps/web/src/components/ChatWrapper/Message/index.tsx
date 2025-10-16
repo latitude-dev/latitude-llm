@@ -24,6 +24,7 @@ import { cn } from '@latitude-data/web-ui/utils'
 import type { Components } from 'react-markdown'
 import { roleToString, roleVariant } from '..'
 import { ToolCallContent } from './ToolCall'
+import { ROUTES } from '$/services/routes'
 
 export { roleToString, roleVariant } from './helpers'
 
@@ -539,7 +540,7 @@ function FileComponent({ src }: { src: string }) {
 
   return (
     <a
-      href={src}
+      href={ROUTES.api.files.file(src)}
       target='_blank'
       rel='noopener noreferrer'
       className={cn(

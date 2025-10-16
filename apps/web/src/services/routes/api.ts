@@ -4,6 +4,9 @@ import { type DocumentLogFilterOptions } from '@latitude-data/core/constants'
 type PaginationParameters = { page: number; pageSize: number }
 
 export const API_ROUTES = {
+  files: {
+    file: (url: string) => `/api/files/file?url=${url}`,
+  },
   workspaces: {
     current: '/api/workspaces/current',
     available: '/api/workspaces/available',
