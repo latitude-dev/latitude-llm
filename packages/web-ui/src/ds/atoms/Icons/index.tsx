@@ -421,6 +421,7 @@ export type IconProps = {
   heightClass?: string
   className?: string
   onClick?: (event: MouseEvent<SVGSVGElement>) => void
+  strokeWidth?: number
 }
 
 type Size =
@@ -440,6 +441,7 @@ export function Icon({
   spin,
   spinSpeed = 'normal',
   size = 'normal',
+  strokeWidth = 2,
   className,
   onClick,
 }: IconProps) {
@@ -464,6 +466,7 @@ export function Icon({
         className,
       )}
       onClick={onClick}
+      strokeWidth={strokeWidth}
     />
   )
 }

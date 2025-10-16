@@ -1,63 +1,13 @@
+import { Providers, VercelProviderTool } from '@latitude-data/constants'
 import {
-  LatitudeTool,
-  Providers,
-  VercelProviderTool,
-} from '@latitude-data/constants'
+  ToolSource,
+  ToolSourceData,
+} from '@latitude-data/constants/toolSources'
 import { Tool } from 'ai'
 
-export enum ToolSource {
-  Client = 'client',
-  Latitude = 'latitude',
-  AgentReturn = 'agentReturn',
-  AgentAsTool = 'agentAsTool',
-  Integration = 'integration',
-  ProviderTool = 'providerTool',
-}
-
-interface BaseToolSourceData {
-  source: ToolSource
-}
-
-interface ClientToolSourceData extends BaseToolSourceData {
-  source: ToolSource.Client
-}
-
-interface LatitudeToolSourceData extends BaseToolSourceData {
-  source: ToolSource.Latitude
-  latitudeTool: LatitudeTool
-}
-
-interface AgentReturnToolSourceData extends BaseToolSourceData {
-  source: ToolSource.AgentReturn
-}
-
-interface AgentAsToolSourceData extends BaseToolSourceData {
-  source: ToolSource.AgentAsTool
-  agentPath: string
-}
-
-interface IntegrationToolSourceData extends BaseToolSourceData {
-  source: ToolSource.Integration
-  integrationName: string
-  toolName: string
-}
-
-interface ProviderToolSourceData extends BaseToolSourceData {
-  source: ToolSource.ProviderTool
-  provider: Providers
-}
-
-export type ToolSourceData =
-  | ClientToolSourceData
-  | LatitudeToolSourceData
-  | AgentReturnToolSourceData
-  | AgentAsToolSourceData
-  | IntegrationToolSourceData
-  | ProviderToolSourceData
-
-type ResolvedTool = {
+type ResolvedTool<T extends ToolSource = ToolSource> = {
   definition: Tool
-  sourceData: ToolSourceData
+  sourceData: ToolSourceData<T>
 }
 
 export type ResolvedProviderTool = {
@@ -68,4 +18,7 @@ export type ResolvedProviderTool = {
   }
 }
 
-export type ResolvedTools = Record<string, ResolvedTool | ResolvedProviderTool>
+export type ResolvedTools<T extends ToolSource = ToolSource> = Record<
+  string,
+  T extends ToolSource.ProviderTool ? ResolvedProviderTool : ResolvedTool<T>
+>

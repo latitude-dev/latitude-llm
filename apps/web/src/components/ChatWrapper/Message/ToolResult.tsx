@@ -1,7 +1,7 @@
 import { ToolContent } from '@latitude-data/constants/legacyCompiler'
 import { CardTextContent, ContentCard } from './ContentCard'
 import { ReactNode, useMemo } from 'react'
-import { CollapsibleContent } from './LatitudeTools/CollapsibleContent'
+import { CollapsibleContent } from './ToolCall/LatitudeTools/CollapsibleContent'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextColor } from '@latitude-data/web-ui/tokens'

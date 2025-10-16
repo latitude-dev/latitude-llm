@@ -1,5 +1,5 @@
 import type { ThinkToolArgs } from '@latitude-data/core/services/latitudeTools/think/types'
-import { ContentCard, ContentCardContainer } from '../ContentCard'
+import { ContentCard, ContentCardContainer } from '../../ContentCard'
 import { ToolContent } from '@latitude-data/constants/legacyCompiler'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 

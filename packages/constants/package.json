@@ -27,7 +27,8 @@
     "./latte": "./src/latte/index.ts",
     "./promptl": "./src/promptl.ts",
     "./trigger": "./src/trigger.ts",
-    "./documentTriggers": "./src/documentTriggers/schema.ts"
+    "./documentTriggers": "./src/documentTriggers/schema.ts",
+    "./toolSources": "./src/toolSources.ts"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",

@@ -2,9 +2,9 @@ import type {
   SearchToolArgs,
   SearchToolResult,
 } from '@latitude-data/core/services/latitudeTools/webSearch/types'
-import { ContentCard, ContentCardContainer } from '../ContentCard'
+import { ContentCard, ContentCardContainer } from '../../ContentCard'
 import { ToolContent } from '@latitude-data/constants/legacyCompiler'
-import { ToolResultContent, ToolResultFooter } from '../ToolResult'
+import { ToolResultContent, ToolResultFooter } from '../../ToolResult'
 import { CollapsibleContent } from './CollapsibleContent'
 import { memo, useMemo } from 'react'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'

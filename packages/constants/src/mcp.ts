@@ -2,6 +2,7 @@ import { JSONSchema7 } from 'json-schema'
 
 export type McpTool = {
   name: string
+  displayName?: string
   description?: string
   inputSchema: {
     type: 'object'

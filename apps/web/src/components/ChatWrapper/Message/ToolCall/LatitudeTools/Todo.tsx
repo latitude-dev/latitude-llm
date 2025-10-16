@@ -1,5 +1,5 @@
 import type { TodoToolArgs } from '@latitude-data/core/services/latitudeTools/todo/types'
-import { ContentCard, ContentCardContainer } from '../ContentCard'
+import { ContentCard, ContentCardContainer } from '../../ContentCard'
 import { ToolContent } from '@latitude-data/constants/legacyCompiler'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'

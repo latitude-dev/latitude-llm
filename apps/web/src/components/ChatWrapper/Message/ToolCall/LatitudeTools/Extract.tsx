@@ -1,12 +1,12 @@
 'use client'
-import { ContentCard, ContentCardContainer } from '../ContentCard'
+import { ContentCard, ContentCardContainer } from '../../ContentCard'
 import type {
   ExtractToolArgs,
   ExtractToolResult,
 } from '@latitude-data/core/services/latitudeTools/webExtract/types'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ToolContent } from '@latitude-data/constants/legacyCompiler'
-import { ToolResultContent, ToolResultFooter } from '../ToolResult'
+import { ToolResultContent, ToolResultFooter } from '../../ToolResult'
 import { CollapsibleContent } from './CollapsibleContent'
 import { Markdown } from '@latitude-data/web-ui/atoms/Markdown'
 import { Text } from '@latitude-data/web-ui/atoms/Text'

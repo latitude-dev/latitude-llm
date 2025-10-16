@@ -11,11 +11,13 @@ import {
 } from '../../../constants'
 import { Providers } from '@latitude-data/constants'
 import { AIReturn } from '../../../services/ai'
+import { ResolvedTools } from '../resolveTools/types'
 
 type ConsumeStreamParams = {
   result: AIReturn<StreamType>
   controller: ReadableStreamDefaultController
   accumulatedText: { text: string }
+  resolvedTools?: ResolvedTools
 }
 
 type NoRunError = object
@@ -29,6 +31,7 @@ export async function consumeStream({
   controller,
   result,
   accumulatedText: _accumulatedText,
+  resolvedTools,
 }: ConsumeStreamParams): Promise<ConsumeStreamResult> {
   let error: ChainError<PosibleErrorCode, NoRunError> | undefined
 
@@ -53,11 +56,13 @@ export async function consumeStream({
 
       _accumulatedText.text += vercelChunk.text
     } else if (vercelChunk.type === 'tool-call') {
+      const resolvedTool = resolvedTools?.[vercelChunk.toolName]
       chunk = {
         type: 'tool-call',
         toolCallId: vercelChunk.toolCallId,
         toolName: vercelChunk.toolName,
         args: vercelChunk.input,
+        ...(resolvedTool ? { _sourceData: resolvedTool.sourceData } : {}),
       } as ProviderData
     } else if (vercelChunk.type === 'tool-result') {
       chunk = {

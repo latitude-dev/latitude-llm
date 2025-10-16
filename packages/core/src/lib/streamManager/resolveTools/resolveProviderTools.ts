@@ -4,7 +4,7 @@ import {
   openAIToolsList,
 } from '@latitude-data/constants/latitudePromptSchema'
 import { Result, TypedResult } from '../../Result'
-import { ResolvedProviderTool, ResolvedTools, ToolSource } from './types'
+import { ResolvedProviderTool, ResolvedTools } from './types'
 import {
   LatitudeError,
   NotFoundError,
@@ -12,6 +12,7 @@ import {
 } from '../../errors'
 import { openai } from '@ai-sdk/openai'
 import { Providers, VercelProviderTool } from '@latitude-data/constants'
+import { ToolSource } from '@latitude-data/constants/toolSources'
 
 function resolveOpenAITools(openAITools: OpenAIToolList) {
   const result = openAIToolsList.safeParse(openAITools)

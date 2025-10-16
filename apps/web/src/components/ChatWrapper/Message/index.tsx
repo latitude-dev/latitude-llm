@@ -9,7 +9,7 @@ import {
   ToolContent,
 } from '@latitude-data/constants/legacyCompiler'
 
-import { AgentToolsMap, isSafeUrl } from '@latitude-data/constants'
+import { isSafeUrl } from '@latitude-data/constants'
 import { Badge, BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
@@ -35,7 +35,6 @@ export type MessageProps = {
   animatePulse?: boolean
   parameters?: string[]
   collapseParameters?: boolean
-  agentToolsMap?: AgentToolsMap
   toolContentMap?: Record<string, ToolContent>
 }
 
@@ -86,7 +85,6 @@ export const Message = memo(
     size = 'default',
     parameters = [],
     collapseParameters = false,
-    agentToolsMap,
     toolContentMap,
   }: MessageProps) => {
     return (
@@ -102,7 +100,6 @@ export const Message = memo(
             parameters={parameters}
             collapseParameters={collapseParameters}
             collapsedMessage={collapsedMessage}
-            agentToolsMap={agentToolsMap}
             toolContentMap={toolContentMap}
           />
         )}
@@ -117,7 +114,6 @@ export function MessageItemContent({
   parameters = [],
   collapseParameters = false,
   collapsedMessage,
-  agentToolsMap,
   toolContentMap,
 }: {
   content: MessageProps['content']
@@ -125,7 +121,6 @@ export function MessageItemContent({
   parameters?: MessageProps['parameters']
   collapseParameters?: MessageProps['collapseParameters']
   collapsedMessage: boolean
-  agentToolsMap?: AgentToolsMap
   toolContentMap?: Record<string, ToolContent>
 }) {
   if (collapsedMessage) {
@@ -140,7 +135,6 @@ export function MessageItemContent({
         size={size}
         parameters={parameters}
         collapseParameters={collapseParameters}
-        agentToolsMap={agentToolsMap}
         toolContentMap={toolContentMap}
       />
     )
@@ -156,7 +150,6 @@ export function MessageItemContent({
       parameters={parameters}
       collapseParameters={collapseParameters}
       sourceMap={(c as any)?._promptlSourceMap}
-      agentToolsMap={agentToolsMap}
       toolContentMap={toolContentMap}
     />
   ))
@@ -187,7 +180,6 @@ const Content = ({
   parameters = [],
   collapseParameters = false,
   sourceMap = [],
-  agentToolsMap,
   toolContentMap,
 }: {
   index?: number
@@ -197,7 +189,6 @@ const Content = ({
   parameters?: string[]
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
-  agentToolsMap?: AgentToolsMap
   toolContentMap?: Record<string, ToolContent>
 }) => {
   if (typeof value === 'string') {
@@ -278,11 +269,7 @@ const Content = ({
 
   if (value.type === 'tool-call') {
     return (
-      <ToolCallContent
-        value={value}
-        agentToolsMap={agentToolsMap}
-        toolContentMap={toolContentMap}
-      />
+      <ToolCallContent toolRequest={value} toolContentMap={toolContentMap} />
     )
   }
 }

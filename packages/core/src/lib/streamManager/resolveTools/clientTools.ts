@@ -5,7 +5,8 @@ import {
 } from '@latitude-data/constants'
 import { LatitudeError } from '../../errors'
 import { Result, TypedResult } from '../../Result'
-import { ResolvedTools, ToolSource } from './types'
+import { ResolvedTools } from './types'
+import { ToolSource } from '@latitude-data/constants/toolSources'
 import {
   AI_PROVIDERS_WITH_BUILTIN_TOOLS,
   LatitudePromptConfig,

@@ -10,6 +10,7 @@ export function pipedreamComponentToToolDefinition(
 ): McpTool {
   return {
     name: component.key,
+    displayName: component.name,
     description: component.description,
     inputSchema: propsToJSONSchema(component.configurableProps),
   }

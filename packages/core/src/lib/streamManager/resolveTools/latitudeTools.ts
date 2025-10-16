@@ -8,9 +8,10 @@ import {
 import { TelemetryContext } from '../../../telemetry'
 import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
 import { Result, TypedResult } from '../../Result'
-import { ResolvedTools, ToolSource } from './types'
+import { ResolvedTools } from './types'
 import { publisher } from '../../../events/publisher'
 import { Tool } from 'ai'
+import { ToolSource } from '@latitude-data/constants/toolSources'
 
 export function resolveLatitudeTools({
   config,
