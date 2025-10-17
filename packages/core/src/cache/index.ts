@@ -74,7 +74,7 @@ export const getOrSet = async <T>(
 export const withCacheLock = async <T>({
   lockKey,
   callbackFn,
-  timeout = 5000,
+  timeout = 1000,
   maxRetries = 5,
 }: {
   lockKey: string
