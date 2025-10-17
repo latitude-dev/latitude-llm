@@ -52,33 +52,31 @@ export function MainAgent({
           <Text.H5 centered color='foregroundMuted'>
             {mainDocument
               ? isLoading
-                ? 'Finding the description of your agent...'
+                ? 'Finding the description of your '
                 : agentDescriptions[mainDocument.path]?.description
               : "Select a prompt as your project's "}
-            {!mainDocument ||
-              (isLoading && (
-                <Tooltip
-                  className='rounded-xl'
-                  trigger={
-                    <div className='border-border border-b-2 border-dotted cursor-text'>
-                      <Text.H5 color='foregroundMuted'>main prompt</Text.H5>
-                    </div>
-                  }
-                >
-                  <div className='flex flex-col gap-2 py-1.5'>
-                    <Image
-                      src={mainPromptImage}
-                      alt='Main prompt'
-                      className='rounded-lg'
-                    />
-                    <Text.H5 color='white'>
-                      The main prompt is the entry point to your project. You
-                      can identify the main prompt through the arrow icon next
-                      to it.
-                    </Text.H5>
+            {(!mainDocument || isLoading) && (
+              <Tooltip
+                className='rounded-xl'
+                trigger={
+                  <div className='border-border border-b-2 border-dotted cursor-text'>
+                    <Text.H5 color='foregroundMuted'>main prompt</Text.H5>
                   </div>
-                </Tooltip>
-              ))}
+                }
+              >
+                <div className='flex flex-col gap-2 py-1.5'>
+                  <Image
+                    src={mainPromptImage}
+                    alt='Main prompt'
+                    className='rounded-lg'
+                  />
+                  <Text.H5 color='white'>
+                    The main prompt is the entry point to your project. You can
+                    identify the main prompt through the arrow icon next to it.
+                  </Text.H5>
+                </div>
+              </Tooltip>
+            )}
           </Text.H5>
         }
       />
