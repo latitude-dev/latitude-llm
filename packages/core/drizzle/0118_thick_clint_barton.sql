@@ -1,4 +1,4 @@
 -- Custom SQL migration file, put you code below! --
 BEGIN;
-CREATE EXTENSION pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 COMMIT;
