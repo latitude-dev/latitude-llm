@@ -15,10 +15,12 @@ export const completeOnboardingAction = authProcedure
     z.object({
       projectId: z.number().optional(),
       commitUuid: z.string().optional(),
+      documentUuid: z.string().optional(),
+      experimentUuids: z.array(z.string()).optional(),
     }),
   )
   .action(async ({ parsedInput, ctx }) => {
-    const { projectId, commitUuid } = parsedInput
+    const { projectId, commitUuid, documentUuid, experimentUuids } = parsedInput
     const onboarding = await getWorkspaceOnboarding({
       workspace: ctx.workspace,
     }).then((r) => r.unwrap())
@@ -31,6 +33,18 @@ export const completeOnboardingAction = authProcedure
       return frontendRedirect(ROUTES.dashboard.root)
     }
 
+    const isExperimentsOnboarding = documentUuid && experimentUuids
+    if (isExperimentsOnboarding) {
+      return frontendRedirect(
+        ROUTES.projects
+          .detail({ id: projectId })
+          .commits.detail({ uuid: commitUuid })
+          .documents.detail({ uuid: documentUuid })
+          .experiments.withSelected(experimentUuids),
+      )
+    }
+
+    // Default redirect to the project's home page
     return frontendRedirect(
       ROUTES.projects
         .detail({ id: projectId })

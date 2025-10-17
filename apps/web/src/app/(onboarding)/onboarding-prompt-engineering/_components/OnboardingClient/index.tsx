@@ -2,8 +2,6 @@
 
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useState } from 'react'
-import { ROUTES } from '$/services/routes'
-import { useNavigate } from '$/hooks/useNavigate'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useRunOnboardingPrompt } from '$/app/(onboarding)/onboarding-prompt-engineering/_components/OnboardingClient/useRunPrompt'
 import { OnboardingPromptStep } from '$/app/(onboarding)/onboarding-prompt-engineering/_components/OnboardingClient/PromptStep'
@@ -21,6 +19,7 @@ import { publishEventAction } from '$/actions/events/publishEventAction'
 type OnboardingStep1ContentProps = {
   document: DocumentVersion
   dataset: Dataset
+  user: User
 }
 
 export enum OnboardingStep {
@@ -31,6 +30,7 @@ export enum OnboardingStep {
 export function OnboardingClient({
   document,
   dataset,
+  user,
 }: OnboardingStep1ContentProps) {
   const { workspace } = useCurrentWorkspace()
   const { project } = useCurrentProject()
@@ -39,7 +39,6 @@ export function OnboardingClient({
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(
     OnboardingStep.ShowPrompt,
   )
-  const navigate = useNavigate()
   const { toast } = useToast()
   const { start, messages, activeStream } = useRunOnboardingPrompt({
     project,
@@ -53,40 +52,34 @@ export function OnboardingClient({
 
   const onCompleteOnboarding = useCallback(
     async ({ experimentUuids }: { experimentUuids: string[] }) => {
+      publishEvent({
+        eventType: 'promptEngineeringOnboardingCompleted',
+        payload: {
+          workspaceId: workspace.id,
+          userEmail: user.email,
+        },
+      })
       await executeCompleteOnboarding({
         projectId: project.id,
         commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+        experimentUuids: experimentUuids,
       })
       toast({
         title: 'Experiment started!',
         description:
           "Welcome onboard! Let's check out the results of your experiment",
       })
-      publishEvent({
-        eventType: 'promptEngineeringOnboardingCompleted',
-        payload: {
-          workspaceId: workspace.id,
-        },
-      })
-      setTimeout(async () => {
-        navigate.push(
-          ROUTES.projects
-            .detail({ id: project.id })
-            .commits.detail({ uuid: commit.uuid })
-            .documents.detail({ uuid: document.documentUuid })
-            .experiments.withSelected(experimentUuids),
-        )
-      }, 1000)
     },
     [
       executeCompleteOnboarding,
-      navigate,
       project.id,
       commit.uuid,
       document.documentUuid,
       toast,
       workspace.id,
       publishEvent,
+      user.email,
     ],
   )
 
