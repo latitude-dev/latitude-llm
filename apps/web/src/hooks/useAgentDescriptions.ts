@@ -3,7 +3,11 @@ import { DocumentVersion } from '@latitude-data/core/schema/types'
 import { resolveRelativePath } from '@latitude-data/constants'
 import { useState, useEffect, useMemo } from 'react'
 
-export function useDocumentDescriptions({
+type DocMeta = {
+  description: string
+}
+
+export function useDocumentConfiguration({
   documentVersions,
   selectedDocuments,
   currentDocument,
@@ -12,8 +16,8 @@ export function useDocumentDescriptions({
   selectedDocuments: string[]
   currentDocument?: DocumentVersion
 }) {
-  const [documentDescriptions, setDocumentDescriptions] = useState<
-    Record<string, string>
+  const [documentConfigurations, setDocumentConfigurations] = useState<
+    Record<string, DocMeta>
   >({})
   const [isLoading, setIsLoading] = useState(true)
 
@@ -24,7 +28,7 @@ export function useDocumentDescriptions({
 
     const fetchDescriptions = async () => {
       setIsLoading(true)
-      const descriptions: Record<string, string> = {}
+      const configurations: Record<string, DocMeta> = {}
 
       for (const relativePath of selectedDocuments) {
         const fullPath = resolveRelativePath(relativePath, currentDocument.path)
@@ -40,7 +44,9 @@ export function useDocumentDescriptions({
               metadata.config?.description &&
               typeof metadata.config.description === 'string'
             ) {
-              descriptions[fullPath] = metadata.config.description
+              configurations[fullPath] = {
+                description: metadata.config.description,
+              }
             }
           } catch (error) {
             // Ignore errors in metadata parsing
@@ -49,14 +55,14 @@ export function useDocumentDescriptions({
         }
       }
       setIsLoading(false)
-      setDocumentDescriptions(descriptions)
+      setDocumentConfigurations(configurations)
     }
 
     fetchDescriptions()
   }, [documentVersions, selectedDocuments, currentDocument])
 
   return useMemo(
-    () => ({ documentDescriptions, isLoading }),
-    [documentDescriptions, isLoading],
+    () => ({ documentConfigurations, isLoading }),
+    [documentConfigurations, isLoading],
   )
 }

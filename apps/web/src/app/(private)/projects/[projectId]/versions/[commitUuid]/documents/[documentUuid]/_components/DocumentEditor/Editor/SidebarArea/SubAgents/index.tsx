@@ -10,7 +10,7 @@ import { resolveRelativePath } from '@latitude-data/constants'
 import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import useDocumentVersions from '$/stores/documentVersions'
-import { useDocumentDescriptions } from '$/hooks/useAgentDescriptions'
+import { useDocumentConfiguration } from '$/hooks/useAgentDescriptions'
 
 /**
  * Formats a file path to show location context.
@@ -63,11 +63,12 @@ export function SubAgentsSidebarSection() {
     projectId: project.id,
   })
 
-  const { documentDescriptions: agentDescriptions } = useDocumentDescriptions({
-    documentVersions,
-    selectedDocuments: selectedAgents,
-    currentDocument: document,
-  })
+  const { documentConfigurations: agentDescriptions } =
+    useDocumentConfiguration({
+      documentVersions,
+      selectedDocuments: selectedAgents,
+      currentDocument: document,
+    })
 
   const availableAgents = useMemo(() => {
     if (!pathToUuidMap || Object.keys(pathToUuidMap).length === 0) return []
@@ -158,7 +159,7 @@ export function SubAgentsSidebarSection() {
       <div className='flex flex-col'>
         {sortedSelectedAgents.map((agentPath) => {
           const documentUuid = pathToUuidMap[agentPath]
-          const description = agentDescriptions[agentPath]
+          const description = agentDescriptions[agentPath]?.description
           return (
             <SubAgentItem
               key={agentPath}

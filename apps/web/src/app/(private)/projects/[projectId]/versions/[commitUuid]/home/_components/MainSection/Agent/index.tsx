@@ -11,7 +11,7 @@ import { AgentInput, AgentInputSkeleton } from '$/components/Agent/AgentInput'
 import mainPromptImage from './mainPrompt.png'
 import { RunProps } from '$/components/Agent/types'
 import { ProjectHeader } from '../_components/ProjectHeader'
-import { useDocumentDescriptions } from '$/hooks/useAgentDescriptions'
+import { useDocumentConfiguration } from '$/hooks/useAgentDescriptions'
 
 export function MainAgent({
   runPromptFn,
@@ -38,8 +38,8 @@ export function MainAgent({
     return mainDocument ? [mainDocument.path.split('/').pop() || ''] : []
   }, [mainDocument])
 
-  const { documentDescriptions: agentDescriptions, isLoading } =
-    useDocumentDescriptions({
+  const { documentConfigurations: agentDescriptions, isLoading } =
+    useDocumentConfiguration({
       documentVersions: documents,
       selectedDocuments: selectedAgents,
       currentDocument: mainDocument,
@@ -53,7 +53,7 @@ export function MainAgent({
             {mainDocument
               ? isLoading
                 ? 'Finding the description of your agent...'
-                : agentDescriptions[mainDocument.path]
+                : agentDescriptions[mainDocument.path]?.description
               : "Select a prompt as your project's "}
             {!mainDocument ||
               (isLoading && (
