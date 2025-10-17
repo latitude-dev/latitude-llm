@@ -13,12 +13,14 @@ import { z } from 'zod'
 export const completeOnboardingAction = authProcedure
   .inputSchema(
     z.object({
-      projectId: z.number().optional(),
-      commitUuid: z.string().optional(),
+      projectId: z.number(),
+      commitUuid: z.string(),
+      documentUuid: z.string().optional(),
+      experimentUuids: z.array(z.string()).optional(),
     }),
   )
   .action(async ({ parsedInput, ctx }) => {
-    const { projectId, commitUuid } = parsedInput
+    const { projectId, commitUuid, documentUuid, experimentUuids } = parsedInput
     const onboarding = await getWorkspaceOnboarding({
       workspace: ctx.workspace,
     }).then((r) => r.unwrap())
@@ -27,10 +29,18 @@ export const completeOnboardingAction = authProcedure
       onboarding,
     }).then((r) => r.unwrap())
 
-    if (!projectId || !commitUuid) {
-      return frontendRedirect(ROUTES.dashboard.root)
+    const isExperimentsOnboarding = documentUuid && experimentUuids
+    if (isExperimentsOnboarding) {
+      return frontendRedirect(
+        ROUTES.projects
+          .detail({ id: projectId })
+          .commits.detail({ uuid: commitUuid })
+          .documents.detail({ uuid: documentUuid })
+          .experiments.withSelected(experimentUuids),
+      )
     }
 
+    // Default redirect to the project's home page
     return frontendRedirect(
       ROUTES.projects
         .detail({ id: projectId })

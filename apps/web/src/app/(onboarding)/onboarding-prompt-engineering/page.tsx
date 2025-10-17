@@ -37,7 +37,7 @@ export default async function OnboardingRedirect() {
     >
       <ProjectProvider project={project}>
         <CommitProvider project={project} commit={commit} isHead={false}>
-          <OnboardingClient document={document} dataset={dataset} />
+          <OnboardingClient document={document} dataset={dataset} user={user} />
         </CommitProvider>
       </ProjectProvider>
     </PageTrackingWrapper>
