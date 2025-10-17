@@ -52,13 +52,6 @@ export function OnboardingClient({
 
   const onCompleteOnboarding = useCallback(
     async ({ experimentUuids }: { experimentUuids: string[] }) => {
-      publishEvent({
-        eventType: 'promptEngineeringOnboardingCompleted',
-        payload: {
-          workspaceId: workspace.id,
-          userEmail: user.email,
-        },
-      })
       await executeCompleteOnboarding({
         projectId: project.id,
         commitUuid: commit.uuid,
@@ -69,6 +62,13 @@ export function OnboardingClient({
         title: 'Experiment started!',
         description:
           "Welcome onboard! Let's check out the results of your experiment",
+      })
+      publishEvent({
+        eventType: 'promptEngineeringOnboardingCompleted',
+        payload: {
+          workspaceId: workspace.id,
+          userEmail: user.email,
+        },
       })
     },
     [

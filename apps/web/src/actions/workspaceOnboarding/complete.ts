@@ -13,8 +13,8 @@ import { z } from 'zod'
 export const completeOnboardingAction = authProcedure
   .inputSchema(
     z.object({
-      projectId: z.number().optional(),
-      commitUuid: z.string().optional(),
+      projectId: z.number(),
+      commitUuid: z.string(),
       documentUuid: z.string().optional(),
       experimentUuids: z.array(z.string()).optional(),
     }),
@@ -28,10 +28,6 @@ export const completeOnboardingAction = authProcedure
     await markWorkspaceOnboardingComplete({
       onboarding,
     }).then((r) => r.unwrap())
-
-    if (!projectId || !commitUuid) {
-      return frontendRedirect(ROUTES.dashboard.root)
-    }
 
     const isExperimentsOnboarding = documentUuid && experimentUuids
     if (isExperimentsOnboarding) {
