@@ -1,7 +1,7 @@
 import { INTEGRATION_TYPE_VALUES } from '$/lib/integrationTypeOptions'
 import { IntegrationType } from '@latitude-data/constants'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 
 export function getIntegrationData({

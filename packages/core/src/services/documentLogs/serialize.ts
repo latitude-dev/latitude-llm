@@ -1,5 +1,6 @@
 import { DocumentLog } from '../../constants'
-import { ProviderLog, Workspace } from '../../schema/types'
+import { type ProviderLog } from '../../schema/models/types/ProviderLog'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { SerializedDocumentLog } from '../../constants'
 import { database } from '../../client'
 import { NotFoundError } from '../../lib/errors'

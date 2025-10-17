@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
 import { getNextAvailableStep } from './getNextAvailableStep'
-import { Workspace } from '../../../schema/types'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import * as factories from '../../../../src/tests/factories'
 import {
   DocumentTriggerStatus,

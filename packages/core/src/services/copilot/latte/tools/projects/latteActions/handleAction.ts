@@ -1,11 +1,9 @@
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../../../lib/Result'
 import { LatteChange, LatteEditAction } from '@latitude-data/constants/latte'
-import {
-  Commit,
-  DocumentVersion,
-  Workspace,
-} from '../../../../../../schema/types'
+import { type Commit } from '../../../../../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../../../../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../../../../../schema/models/types/Workspace'
 import { createNewDocument, updateDocument } from '../../../../../documents'
 import Transaction, { PromisedResult } from '../../../../../../lib/Transaction'
 

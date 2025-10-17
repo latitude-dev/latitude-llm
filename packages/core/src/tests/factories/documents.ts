@@ -1,11 +1,9 @@
 import { and, eq } from 'drizzle-orm'
 
-import {
-  DocumentVersion,
-  User,
-  Workspace,
-  type Commit,
-} from '../../schema/types'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { type Commit } from '../../schema/models/types/Commit'
 import { LinkedDataset } from '../../lib/documentPersistedInputs'
 import { database } from '../../client'
 import { documentVersions } from '../../schema/models/documentVersions'

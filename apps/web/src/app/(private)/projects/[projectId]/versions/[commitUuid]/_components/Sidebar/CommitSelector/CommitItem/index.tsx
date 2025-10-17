@@ -11,13 +11,11 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useSelectedLayoutSegment } from 'next/navigation'
-import {
-  DocumentVersion,
-  User,
-  type Commit,
-} from '@latitude-data/core/schema/types'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 export type SimpleUser = Omit<User, 'encryptedPassword'>
 
 export enum BadgeType {

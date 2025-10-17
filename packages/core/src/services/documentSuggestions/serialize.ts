@@ -10,7 +10,7 @@ import {
   DocumentLogsRepository,
   ProviderLogsRepository,
 } from '../../repositories'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { serialize as serializeDocumentLog } from '../documentLogs/serialize'
 import { EVALUATION_SPECIFICATIONS } from '../evaluationsV2/specifications'
 

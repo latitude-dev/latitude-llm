@@ -4,7 +4,7 @@ import {
   DocumentLogWithMetadataAndError,
 } from '../../../constants'
 import { Column } from '../../../schema/models/datasets'
-import { Dataset } from '../../../schema/types'
+import { type Dataset } from '../../../schema/models/types/Dataset'
 import {
   buildColumns as buildColumnsFn,
   HashAlgorithmFn,

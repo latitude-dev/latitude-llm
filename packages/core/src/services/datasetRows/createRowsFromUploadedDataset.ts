@@ -1,4 +1,5 @@
-import { Dataset, DatasetRow } from '../../schema/types'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 import { DatasetV2CreatedEvent } from '../../events/events'
 import { diskFactory, DiskWrapper } from '../../lib/disk'
 import { csvBatchGenerator, CSVRow, type CsvBatch } from '../../lib/readCsv'

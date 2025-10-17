@@ -3,7 +3,7 @@ import { BestLogsMetadata } from '$/stores/experimentComparison'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import { ExperimentWithScores } from '@latitude-data/core/schema/types'
+import { ExperimentWithScores } from '@latitude-data/core/schema/models/types/Experiment'
 
 function ExperimentLogMetadataItem({
   label,

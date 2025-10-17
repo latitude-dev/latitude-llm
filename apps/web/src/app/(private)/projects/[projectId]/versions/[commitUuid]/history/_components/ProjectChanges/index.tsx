@@ -14,7 +14,7 @@ import { CommitsList } from '../CommitsList'
 import { CommitChangesList } from '../CommitChangesList'
 import { ChangeDiffViewer } from '../ChangeDiffViewer'
 import { HistoryActionModal, HistoryActionModalProvider } from '../ActionModal'
-import { Commit } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 function DocumentFilterBanner({
   documentUuid,

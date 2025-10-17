@@ -1,4 +1,4 @@
-import { Commit } from '../schema/types'
+import { type Commit } from '../schema/models/types/Commit'
 import { BadRequestError } from './errors'
 import { Result } from './Result'
 

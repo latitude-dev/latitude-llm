@@ -1,6 +1,6 @@
 import * as k8s from '@kubernetes/client-node'
 import { Writable } from 'stream'
-import { McpServer } from '../../schema/types'
+import { type McpServer } from '../../schema/models/types/McpServer'
 import { Result, TypedResult } from '../../lib/Result'
 import { getK8sClient } from '../k8s/k8sClient'
 

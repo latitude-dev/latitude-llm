@@ -3,12 +3,10 @@ import { DocumentVersion } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import Link from 'next/link'
-import {
-  Commit,
-  ExperimentWithScores,
-  Project,
-} from '@latitude-data/core/schema/types'
+import { ExperimentWithScores } from '@latitude-data/core/schema/models/types/Experiment'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 function InnerApplyButton({ disabled }: { disabled?: boolean }) {
   return (
     <Button variant='outline' fullWidth disabled={disabled} fancy>

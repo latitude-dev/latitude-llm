@@ -1,7 +1,7 @@
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
-import { ExperimentDto } from '@latitude-data/core/schema/types'
+import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
 
 export function ExperimentPrompt({
   experiment,

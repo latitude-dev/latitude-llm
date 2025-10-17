@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker'
 
-import { User, Workspace } from '../../schema/types'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { DatasetV2CreatedEvent } from '../../events/events'
 import { DiskWrapper } from '../../lib/disk'
 import { createRowsFromUploadedDataset } from '../../services/datasetRows/createRowsFromUploadedDataset'

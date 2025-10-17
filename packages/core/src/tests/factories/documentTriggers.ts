@@ -7,13 +7,11 @@ import { v4 as uuidv4 } from 'uuid'
 import { database } from '../../client'
 import { documentTriggers } from '../../schema/models/documentTriggers'
 import { createProject } from './createProject'
-import {
-  DocumentTrigger,
-  Workspace,
-  Project,
-  Commit,
-  DocumentVersion,
-} from '../../schema/types'
+import { type DocumentTrigger } from '../../schema/models/types/DocumentTrigger'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { type Project } from '../../schema/models/types/Project'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import {
   EmailTriggerConfiguration,
   EmailTriggerDeploymentSettings,

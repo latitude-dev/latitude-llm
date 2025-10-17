@@ -3,10 +3,8 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useTriggerInfo } from '$/components/TriggersManagement/hooks/useTriggerInfo'
 import useDocumentVersions from '$/stores/documentVersions'
 import useIntegrations from '$/stores/integrations'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-} from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'

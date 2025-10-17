@@ -3,7 +3,7 @@ import { ROUTES } from '$/services/routes'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { compact } from 'lodash-es'
 import useSWR, { SWRConfiguration } from 'swr'
-import { type Dataset } from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
 export default function useDatasetRowCount(
   {

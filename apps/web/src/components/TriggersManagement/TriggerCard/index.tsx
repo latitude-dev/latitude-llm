@@ -1,4 +1,5 @@
-import { Commit, DocumentTrigger } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import { TriggerHeader } from './Header'
 import { TriggerCardActions } from './Actions'
 import useDocumentTriggerEvents from '$/stores/documentTriggerEvents'

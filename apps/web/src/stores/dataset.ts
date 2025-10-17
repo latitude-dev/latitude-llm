@@ -2,7 +2,7 @@ import useFetcher from '$/hooks/useFetcher'
 import useSWR, { SWRConfiguration } from 'swr'
 import { ROUTES } from '$/services/routes'
 import { deserializeDataset } from './datasets'
-import { Dataset } from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
 export function useDataset(id: number, opts?: SWRConfiguration) {
   const fetcher = useFetcher<Dataset, Dataset>(

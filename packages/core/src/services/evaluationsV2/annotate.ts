@@ -18,7 +18,9 @@ import {
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
 } from '../../repositories'
-import { Commit, ProviderLogDto, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { ProviderLogDto } from '../../schema/types'
 import { extractActualOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { updateEvaluationResultV2 } from './results/update'

@@ -6,7 +6,7 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import {
   PipedreamComponent,
   PipedreamComponentType,

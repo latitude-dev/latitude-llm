@@ -9,7 +9,9 @@ import {
   ActionFrontendParameters,
   ActionType,
 } from '@latitude-data/constants/actions'
-import { User, Workspace } from '@latitude-data/core/schema/types'
+
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'

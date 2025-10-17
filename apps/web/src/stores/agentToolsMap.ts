@@ -4,9 +4,10 @@ import { SWRConfiguration } from 'swr'
 import useDocumentVersions from './documentVersions'
 import { getAgentToolName } from '@latitude-data/core/services/agents/helpers'
 import { AgentToolsMap } from '@latitude-data/constants'
-import { type DocumentVersion } from '@latitude-data/core/schema/types'
+
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 function buildAgentsToolMap(data: DocumentVersion[] = []) {
   if (!data) return {}
   return data.reduce((acc: AgentToolsMap, document) => {

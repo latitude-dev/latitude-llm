@@ -19,7 +19,7 @@ import {
   EvaluationV2,
   ModifiedDocumentType,
 } from '@latitude-data/core/constants'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 const INDENTATION_UNIT_PX = 24
 function IndentationBar({

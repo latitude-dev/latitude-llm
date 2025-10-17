@@ -19,9 +19,11 @@ import {
   IPagination,
 } from '@latitude-data/core/lib/pagination/buildPagination'
 import {
-  DocumentLogsLimitedView,
   ResultWithEvaluationV2,
 } from '@latitude-data/core/schema/types'
+import {
+  DocumentLogsLimitedView,
+} from '@latitude-data/core/schema/models/types/DocumentLog'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'

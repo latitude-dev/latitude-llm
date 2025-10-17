@@ -20,11 +20,9 @@ import {
 } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import type { ReadMetadataWorkerProps } from '../workers/readMetadata'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-} from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { useEvents } from '$/lib/events'
 
 export type updateContentFn = (

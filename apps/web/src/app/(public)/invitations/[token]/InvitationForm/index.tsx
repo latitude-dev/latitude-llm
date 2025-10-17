@@ -7,8 +7,9 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { acceptInvitationAction } from '$/actions/invitations/accept'
 import { useFormAction } from '$/hooks/useFormAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { Membership, User } from '@latitude-data/core/schema/types'
 
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { Membership } from '@latitude-data/core/schema/models/types/Membership'
 export default function InvitationForm({
   user,
   membership,

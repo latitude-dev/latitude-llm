@@ -6,7 +6,7 @@ import {
 } from '@latitude-data/core/repositories'
 import { notFound } from 'next/navigation'
 import { NextRequest, NextResponse } from 'next/server'
-import { Workspace } from '@latitude-data/core/schema/types'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
 export const GET = errorHandler(
   authHandler(

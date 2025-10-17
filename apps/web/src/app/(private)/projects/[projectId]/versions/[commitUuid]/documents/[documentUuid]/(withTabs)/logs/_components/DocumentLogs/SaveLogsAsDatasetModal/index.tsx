@@ -8,7 +8,7 @@ import { CloseTrigger } from '@latitude-data/web-ui/atoms/Modal'
 import { type PreviewLogsState as Props } from './useSelectedLogs'
 import { PreviewTable } from './PreviewTable'
 import useDatasets from '$/stores/datasets'
-import { Dataset } from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
 function ExistingDatasetSelector({
   selectedDataset,

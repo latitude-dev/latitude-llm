@@ -1,4 +1,5 @@
-import { User, Workspace } from '../../schema/types'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { Column } from '../../schema/models/datasets'

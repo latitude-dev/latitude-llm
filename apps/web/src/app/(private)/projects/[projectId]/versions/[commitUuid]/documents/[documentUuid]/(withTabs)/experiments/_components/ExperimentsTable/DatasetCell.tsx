@@ -2,7 +2,7 @@
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { useMemo } from 'react'
-import { Dataset } from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
 export function DatasetCell({
   isLoading,

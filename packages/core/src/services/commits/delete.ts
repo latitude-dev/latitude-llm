@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import pg from 'pg'
 const { DatabaseError } = pg
 
-import { Commit } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
 import { unsafelyFindCommitsByProjectId } from '../../data-access/commits'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError, databaseErrorCodes } from '../../lib/errors'

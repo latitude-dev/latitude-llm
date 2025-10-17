@@ -6,8 +6,10 @@ import { serializeRows } from '$/stores/datasetRows/rowSerializationHelpers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useRef, useState } from 'react'
 import { useSWRConfig } from 'swr'
-import { DatasetRow, Dataset } from '@latitude-data/core/schema/types'
 
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+
+import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
 function useCachedRows({
   dataset,
   currentPage: startingPage,

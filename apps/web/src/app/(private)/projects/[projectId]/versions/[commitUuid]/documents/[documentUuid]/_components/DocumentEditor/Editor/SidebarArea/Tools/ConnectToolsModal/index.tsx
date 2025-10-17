@@ -12,7 +12,7 @@ import { IntegrationType } from '@latitude-data/constants'
 import {
   IntegrationDto,
   PipedreamIntegration,
-} from '@latitude-data/core/schema/types'
+} from '@latitude-data/core/schema/models/types/Integration'
 import { pluralize } from '$/components/TriggersManagement/NewTrigger/IntegrationsList/utils'
 import useIntegrations from '$/stores/integrations'
 import { mergeConnectedAppsBySlug } from '@latitude-data/core/lib/pipedream/mergeConnectedAppsBySlug'

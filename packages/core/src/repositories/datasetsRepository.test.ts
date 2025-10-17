@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { User, Workspace } from '../schema/types'
+import { type User } from '../schema/models/types/User'
+import { type Workspace } from '../schema/models/types/Workspace'
 import * as factories from '../tests/factories'
 import { DatasetsRepository } from './datasetsRepository'
 import { database } from '../client'

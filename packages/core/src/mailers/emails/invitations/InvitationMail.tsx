@@ -4,7 +4,7 @@ import React from 'react'
 import { Link, Text } from '@react-email/components'
 
 import ContainerLayout from '../_components/ContainerLayout'
-import { User } from '../../../schema/types'
+import { type User } from '../../../schema/models/types/User'
 
 type Props = {
   invited: User

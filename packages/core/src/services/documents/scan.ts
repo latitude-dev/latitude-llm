@@ -2,7 +2,8 @@ import path from 'path'
 
 import { type ConversationMetadata, scan } from 'promptl-ai'
 
-import { Commit, DocumentVersion } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { database } from '../../client'
 import { LatitudeError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'

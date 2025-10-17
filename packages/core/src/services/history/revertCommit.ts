@@ -1,4 +1,7 @@
-import { Commit, Project, User, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Project } from '../../schema/models/types/Project'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { DraftChange } from '../../constants'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '../../lib/Result'
@@ -30,8 +33,8 @@ async function fetchCommitReversionDetails({
 
     const targetDraft = targetDraftUuid
       ? await commitScope
-          .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
-          .then((r) => r.unwrap())
+        .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
+        .then((r) => r.unwrap())
       : headCommit
 
     const changedCommit = await commitScope
@@ -50,8 +53,8 @@ async function fetchCommitReversionDetails({
       .then((r) => r.unwrap())
     const originalDocuments = originalCommit
       ? await docsScope
-          .getDocumentsAtCommit(originalCommit)
-          .then((r) => r.unwrap())
+        .getDocumentsAtCommit(originalCommit)
+        .then((r) => r.unwrap())
       : []
 
     return Result.ok({
@@ -206,16 +209,16 @@ export async function revertCommit(
     const finalDraft = targetDraftUuid
       ? Result.ok(targetDraft)
       : await createCommit(
-          {
-            project: project,
-            user: user,
-            data: {
-              title: `Revert changes for v${changedCommit.version} "${changedCommit.title}"`,
-              description: `Reverted changes of version v${changedCommit.version} "${changedCommit.title}"`,
-            },
+        {
+          project: project,
+          user: user,
+          data: {
+            title: `Revert changes for v${changedCommit.version} "${changedCommit.title}"`,
+            description: `Reverted changes of version v${changedCommit.version} "${changedCommit.title}"`,
           },
-          transaction,
-        )
+        },
+        transaction,
+      )
 
     if (finalDraft.error) return Result.error(finalDraft.error)
 

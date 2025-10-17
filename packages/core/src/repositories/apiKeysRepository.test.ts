@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto'
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { Workspace } from '../schema/types'
+import { type Workspace } from '../schema/models/types/Workspace'
 import { NotFoundError } from '../lib/errors'
 import * as factories from '../tests/factories'
 import { ApiKeysRepository } from './apiKeysRepository'

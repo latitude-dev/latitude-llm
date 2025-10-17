@@ -3,7 +3,8 @@ import {
   EvaluationResultV2,
   EvaluationV2,
 } from '@latitude-data/core/constants'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 

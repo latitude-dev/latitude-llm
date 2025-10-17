@@ -1,5 +1,7 @@
 import { IntegrationType } from '@latitude-data/constants'
-import { IntegrationDto, User, Workspace } from '../../../schema/types'
+import { type User } from '../../../schema/models/types/User'
+import { type Workspace } from '../../../schema/models/types/Workspace'
+import { IntegrationDto } from '../../../schema/models/types/Integration'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { IntegrationsRepository } from '../../../repositories'

@@ -3,12 +3,10 @@ import { ParameterType } from '@latitude-data/constants'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
 import { ConversationMetadata } from 'promptl-ai'
-import {
-  Commit,
-  DocumentVersion,
-  Workspace,
-} from '@latitude-data/core/schema/types'
 import { Providers } from '@latitude-data/constants'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export const documentPresenterSchema = z.object({
   versionUuid: z.string(),
@@ -40,14 +38,14 @@ export function documentPresenterWithProviderAndMetadata({
   const parameters =
     rawParams.length > 0
       ? rawParams.reduce(
-          (acc, rawParam) => {
-            if (acc[rawParam]) return acc
-            acc[rawParam] = { type: ParameterType.Text }
+        (acc, rawParam) => {
+          if (acc[rawParam]) return acc
+          acc[rawParam] = { type: ParameterType.Text }
 
-            return acc
-          },
-          { ...configParams },
-        )
+          return acc
+        },
+        { ...configParams },
+      )
       : configParams
 
   return {

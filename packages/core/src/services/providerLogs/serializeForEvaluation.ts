@@ -6,7 +6,8 @@ import {
   SerializedConversation,
   SerializedProviderLog,
 } from '../../constants'
-import { ProviderLog, ProviderLogDto } from '../../schema/types'
+import { type ProviderLog } from '../../schema/models/types/ProviderLog'
+import { ProviderLogDto } from '../../schema/types'
 import { buildProviderLogResponse } from './buildResponse'
 
 export function formatConversation(

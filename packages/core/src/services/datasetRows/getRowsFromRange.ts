@@ -1,4 +1,5 @@
-import { DatasetRow, Dataset } from '../../schema/types'
+import { type DatasetRow } from '../../schema/models/types/DatasetRow'
+import { type Dataset } from '../../schema/models/types/Dataset'
 import { database } from '../../client'
 import { DatasetRowsRepository } from '../../repositories'
 import { DatasetRowDataContent } from '../../schema/models/datasetRows'

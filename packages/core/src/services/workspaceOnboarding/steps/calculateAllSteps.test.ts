@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
-import { Workspace } from '../../../../src/schema/types'
+import { type Workspace } from '../../../../src/schema/models/types/Workspace'
 import * as factories from '../../../../src/tests/factories'
 import { calculateAllSteps } from './calculateAllSteps'
 import {

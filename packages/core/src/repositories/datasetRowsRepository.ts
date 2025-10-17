@@ -8,7 +8,8 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import { DatasetRow, Dataset } from '../schema/types'
+import { type DatasetRow } from '../schema/models/types/DatasetRow'
+import { type Dataset } from '../schema/models/types/Dataset'
 import { DEFAULT_PAGINATION_SIZE } from '../constants'
 import { calculateOffset } from '../lib/pagination/calculateOffset'
 import { datasetRows } from '../schema/models/datasetRows'

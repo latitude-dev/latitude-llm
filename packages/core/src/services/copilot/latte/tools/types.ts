@@ -1,5 +1,7 @@
 import { z } from 'zod'
-import { User, Workspace, Project } from '../../../../schema/types'
+import { type User } from '../../../../schema/models/types/User'
+import { type Workspace } from '../../../../schema/models/types/Workspace'
+import { type Project } from '../../../../schema/models/types/Project'
 import { PromisedResult } from '../../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../../lib/Result'
@@ -23,10 +25,10 @@ export type LatteToolFn<
 export const defineLatteTool = <
   S extends z.ZodType | undefined = undefined,
   P extends Record<string, unknown> = S extends z.ZodType
-    ? z.infer<S> extends Record<string, unknown>
-      ? z.infer<S>
-      : Record<string, never>
-    : Record<string, never>,
+  ? z.infer<S> extends Record<string, unknown>
+  ? z.infer<S>
+  : Record<string, never>
+  : Record<string, never>,
 >(
   cb: LatteToolFn<P>,
   schema?: S,

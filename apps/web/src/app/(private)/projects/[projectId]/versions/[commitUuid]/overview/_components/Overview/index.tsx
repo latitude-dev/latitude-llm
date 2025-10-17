@@ -3,8 +3,10 @@
 import useProjectStats from '$/stores/projectStats'
 import { useMemo } from 'react'
 import { StatsPanels } from './StatsPanels'
-import { Project, ProjectLimitedView } from '@latitude-data/core/schema/types'
-
+import {
+  ProjectLimitedView,
+  Project,
+} from '@latitude-data/core/schema/models/types/Project'
 export default function Overview({
   project,
   limitedView,

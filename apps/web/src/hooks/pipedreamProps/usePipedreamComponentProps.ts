@@ -7,7 +7,7 @@ import type {
 } from '@pipedream/sdk/browser'
 import { useCallback, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import { PipedreamComponent } from '@latitude-data/core/constants'
 import { ConfigurablePropTimer } from '@pipedream/sdk'
 

@@ -1,5 +1,5 @@
 import { LATTE_MINIMUM_CREDITS_PER_REQUEST } from '../../../../constants'
-import { Workspace } from '../../../../schema/types'
+import { type Workspace } from '../../../../schema/models/types/Workspace'
 import { database } from '../../../../client'
 import { PaymentRequiredError } from '../../../../lib/errors'
 import { Result } from '../../../../lib/Result'

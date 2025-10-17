@@ -2,12 +2,10 @@ import {
   DocumentTriggerType,
   resolveRelativePath,
 } from '@latitude-data/constants'
-import {
-  Commit,
-  DocumentVersion,
-  IntegrationDto,
-  Workspace,
-} from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../../schema/models/types/Workspace'
+import { IntegrationDto } from '../../../schema/models/types/Integration'
 import { Result } from '../../../lib/Result'
 import {
   DocumentTriggersRepository,

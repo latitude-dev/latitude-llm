@@ -11,7 +11,7 @@ import {
   ActualOutputConfiguration,
   EvaluatedDocumentLog,
 } from '@latitude-data/core/constants'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 const ONLY_ONE_PAGE = '1'
 

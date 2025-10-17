@@ -23,7 +23,7 @@ import DeleteDatasetModal from '../DeleteDatasetModal'
 import { NewDatasetModal } from '../RootHeader/NewDatasetModal'
 import { useNavigate } from '$/hooks/useNavigate'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Dataset } from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
 export const DATASET_TABLE_PAGE_SIZE = '25'
 export function DatasetsTable({
@@ -116,7 +116,7 @@ export function DatasetsTable({
                 <Text.H5>{dataset.columns.length}</Text.H5>
               </TableCell>
               <TableCell>
-                <Text.H5>{dataset.author?.name}</Text.H5>
+                <Text.H5>{dataset.authorId || 'N/A'}</Text.H5>
               </TableCell>
               <TableCell>
                 <Text.H5 color='foregroundMuted'>

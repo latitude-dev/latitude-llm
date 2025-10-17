@@ -2,7 +2,9 @@ import { DocumentLog, Providers } from '@latitude-data/constants'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as cacheModule from '../../cache'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
-import { ApiKey, ProviderApiKey, Workspace } from '../../schema/types'
+import { type ApiKey } from '../../schema/models/types/ApiKey'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as apiKeyService from '../../services/apiKeys/touch'
 import {
   createDocumentLog,

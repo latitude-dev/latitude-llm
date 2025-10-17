@@ -21,7 +21,8 @@ import {
   LogSources,
   StreamEventTypes,
 } from '@latitude-data/core/constants'
-import { ProviderLog, Workspace } from '@latitude-data/core/schema/types'
+import { ProviderLog } from '@latitude-data/core/schema/models/types/ProviderLog'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
 const mocks = vi.hoisted(() => ({
   addMessages: vi.fn(),

@@ -1,4 +1,5 @@
 'use client'
+import { Promocode } from '@latitude-data/core/schema/models/types/Promocode'
 
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
@@ -6,7 +7,6 @@ import { ROUTES } from '$/services/routes'
 import { claimPromocodeAction } from '$/actions/promocodes/claim'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import useSWR from 'swr'
-import { Promocode } from '@latitude-data/core/schema/types'
 
 const EMPTY_ARRAY: Promocode[] = []
 

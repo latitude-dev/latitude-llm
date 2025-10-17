@@ -5,9 +5,9 @@ import {
 } from '@latitude-data/core/repositories'
 import { createCommit } from '@latitude-data/core/services/commits/create'
 import { updateDocument } from '@latitude-data/core/services/documents/update'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { z } from 'zod'
 
-import { Commit } from '@latitude-data/core/schema/types'
 import { withProject, withProjectSchema } from '../procedures'
 
 export const createDraftWithPromptlUpgradeAction = withProject

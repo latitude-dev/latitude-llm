@@ -1,5 +1,7 @@
 import { Fragment } from 'react'
-import { Commit, DocumentTrigger } from '@latitude-data/core/schema/types'
+
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import { useState } from 'react'
 import { TriggerCard } from './index'
 import { RunTriggerProps } from '../types'

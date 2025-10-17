@@ -1,5 +1,6 @@
 import { and, eq, inArray } from 'drizzle-orm'
-import { Dataset, DatasetRow } from '../../schema/types'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { datasetRows } from '../../schema/models/datasetRows'

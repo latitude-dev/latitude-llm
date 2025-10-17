@@ -1,11 +1,9 @@
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-} from '@latitude-data/core/schema/types'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 // TODO: Migrate chat (old share document to be a document trigger)
 // This requires a data migration although not sure how much people are using it
 export type TriggerIntegrationType = DocumentTriggerType | 'Chat'

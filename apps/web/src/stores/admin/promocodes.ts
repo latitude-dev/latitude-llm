@@ -8,7 +8,7 @@ import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { deletePromocodeAction } from '$/actions/admin/promocodes/deletePromocode'
 import { createPromocodeAction } from '$/actions/admin/promocodes/createPromocode'
 import { expirePromocodeAction } from '$/actions/admin/promocodes/expirePromocode'
-import { Promocode } from '@latitude-data/core/schema/types'
+import { Promocode } from '@latitude-data/core/schema/models/types/Promocode'
 
 export function usePromocodes(
   setIsCreatePromocodeModalOpen: (open: boolean) => void,

@@ -3,7 +3,7 @@ import { AssembledSpan, AssembledTrace, Span } from '../../../constants'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { SpansRepository } from '../../../repositories'
-import { Workspace } from '../../../schema/types'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 
 export async function assembleTrace(
   {

@@ -7,7 +7,8 @@ import { memo, useEffect, useMemo, useState } from 'react'
 import { PlaygroundBlocksEditor } from '../BlocksEditor'
 import { PlaygroundTextEditor } from '../TextEditor'
 import { useLatteDiff } from '$/hooks/useLatteDiff'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+
 import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
 
 export const Editors = memo(function Editors({

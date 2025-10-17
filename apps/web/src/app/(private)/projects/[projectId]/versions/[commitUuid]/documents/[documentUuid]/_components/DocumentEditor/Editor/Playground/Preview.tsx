@@ -8,8 +8,9 @@ import PreviewPrompt from '$/components/PlaygroundCommon/PreviewPrompt'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { Commit, Project } from '@latitude-data/core/schema/types'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 export default function Preview({
   metadata,
   parameters,

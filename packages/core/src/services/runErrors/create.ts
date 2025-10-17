@@ -1,4 +1,5 @@
-import { RunError, RunErrorInsert } from '../../schema/types'
+import { type RunError } from '../../schema/models/types/RunError'
+import { RunErrorInsert } from '../../schema/models/types/RunError'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { runErrors } from '../../schema/models/runErrors'

@@ -13,11 +13,9 @@ import {
   EvaluationResultV2,
   EvaluationType,
 } from '@latitude-data/core/constants'
-import {
-  Commit,
-  DocumentVersion,
-  ResultWithEvaluationV2,
-} from '@latitude-data/core/schema/types'
+import { ResultWithEvaluationV2 } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'

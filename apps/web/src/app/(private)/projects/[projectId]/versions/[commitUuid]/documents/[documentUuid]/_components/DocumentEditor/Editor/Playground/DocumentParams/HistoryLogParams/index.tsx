@@ -23,9 +23,10 @@ import { ParametersWrapper } from '../ParametersWrapper'
 import { usePaginatedDocumentLogUrl } from '$/hooks/playgrounds/usePaginatedDocumentLogUrl'
 import { ParametersPaginationNav } from '$/components/ParametersPaginationNav'
 import { useLimitedHistoryLogs } from '../../../V2Playground/hooks/useLimitedHistoryLogs'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+
 import { PlaygroundInput } from '@latitude-data/core/lib/documentPersistedInputs'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 function DebouncedTextArea({
   input,
   setInput,

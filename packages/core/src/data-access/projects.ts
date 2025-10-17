@@ -4,7 +4,7 @@ import { projects } from '../schema/models/projects'
 import { and, eq, getTableColumns } from 'drizzle-orm'
 
 import { database } from '../client'
-import { DocumentVersion } from '../schema/types'
+import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
 
 export function unsafelyFindProject(projectId: number, db = database) {
   return db

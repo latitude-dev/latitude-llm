@@ -5,7 +5,7 @@ import {
   OnboardingStepKey,
 } from '@latitude-data/constants/onboardingSteps'
 import { checkNextStepNecessary } from './checkNextStepNecessary'
-import { Workspace } from '../../../schema/types'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { database } from '../../../client'
 import { OnboardingCompleteError } from './onboardingCompleteError'
 

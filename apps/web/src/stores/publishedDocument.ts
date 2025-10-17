@@ -11,8 +11,8 @@ import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { publishDocumentAction } from '$/actions/documents/sharing/publishDocumentAction'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
-import { type PublishedDocument } from '@latitude-data/core/schema/types'
 
+import { PublishedDocument } from '@latitude-data/core/schema/models/types/PublishedDocument'
 const EMPTY_ARRAY = [] as const
 export default function usePublishedDocument(
   { projectId, documentUuid }: { projectId: number; documentUuid: string },

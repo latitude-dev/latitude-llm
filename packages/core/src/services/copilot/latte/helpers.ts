@@ -5,12 +5,10 @@ import {
   NotFoundError,
   NotImplementedError,
 } from '../../../lib/errors'
-import {
-  Project,
-  Workspace,
-  DocumentVersion,
-  Commit,
-} from '../../../schema/types'
+import { type Project } from '../../../schema/models/types/Project'
+import { type Workspace } from '../../../schema/models/types/Workspace'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type Commit } from '../../../schema/models/types/Commit'
 import { LatteThreadUpdateArgs } from '../../../websockets/constants'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { unsafelyFindProject } from '../../../data-access/projects'

@@ -1,12 +1,10 @@
 import { useEvents } from '$/lib/events'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
 import { fromBlocksToLexical } from '../state/fromBlocksToLexical'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-} from '@latitude-data/core/schema/types'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 export function SyncChangesPlugin({
   commit,
   document,

@@ -10,7 +10,7 @@ import { IntegrationToolsList } from './IntegrationTools'
 import { integrationOptions } from '$/lib/integrationTypeOptions'
 import { BlankSlate } from '@latitude-data/web-ui/molecules/BlankSlate'
 import { useNavigate } from '$/hooks/useNavigate'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 
 export function IntegrationsList({
   disabled,

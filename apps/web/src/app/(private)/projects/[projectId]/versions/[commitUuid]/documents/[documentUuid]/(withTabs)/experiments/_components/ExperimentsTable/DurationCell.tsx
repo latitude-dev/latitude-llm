@@ -2,7 +2,7 @@
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { useEffect, useState } from 'react'
-import { ExperimentDto } from '@latitude-data/core/schema/types'
+import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
 
 const getDuration = (start: Date | null, end: Date | null) => {
   if (!start) return undefined

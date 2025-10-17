@@ -7,7 +7,7 @@ import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 /**
  * DEPRECATED: This will be not needed once new editor header

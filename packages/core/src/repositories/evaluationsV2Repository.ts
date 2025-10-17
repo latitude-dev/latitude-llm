@@ -16,7 +16,7 @@ import { Result } from '../lib/Result'
 import { commits } from '../schema/models/commits'
 import { evaluationVersions } from '../schema/models/evaluationVersions'
 import { projects } from '../schema/models/projects'
-import { Commit } from '../schema/types'
+import { type Commit } from '../schema/models/types/Commit'
 import { CommitsRepository } from './commitsRepository'
 import Repository from './repositoryV2'
 

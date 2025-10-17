@@ -5,8 +5,8 @@ import { LatitudeApiKeysRepository } from '@latitude-data/core/repositories'
 import { env } from '@latitude-data/env'
 import { Latitude } from '@latitude-data/sdk'
 import { LogSources } from '@latitude-data/core/constants'
-import { Workspace } from '@latitude-data/core/schema/types'
 
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 // NOTE: this would be a great candidate for a cache function with redis
 async function getLatitudeApiKey(workspace: Workspace) {
   const repo = new LatitudeApiKeysRepository(workspace.id)

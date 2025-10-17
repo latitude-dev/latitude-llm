@@ -11,7 +11,8 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import { Commit, DocumentVersion } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { database } from '../../client'
 import {
   databaseErrorCodes,

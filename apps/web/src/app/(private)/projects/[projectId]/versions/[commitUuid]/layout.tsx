@@ -17,9 +17,11 @@ import { ROUTES } from '$/services/routes'
 import { notFound, redirect } from 'next/navigation'
 import { LatteRealtimeUpdatesProvider } from './providers/LatteRealtimeUpdatesProvider'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
-import { type Commit, type Project } from '@latitude-data/core/schema/types'
+
 import { LatteLayout } from '$/components/LatteSidebar/LatteLayout'
 import { findLatteThreadProviderLog } from '@latitude-data/core/services/providerLogs/findLatteThreadProviderLog'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { ProjectProvider } from '$/app/providers/ProjectProvider'
 import { CommitProvider } from '$/app/providers/CommitProvider'
 

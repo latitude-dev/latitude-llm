@@ -6,17 +6,16 @@ import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useMetadataParameters } from '$/hooks/useDocumentParameters/metadataParametersStore'
 import { ClientDatasetRow } from '$/stores/datasetRows/rowSerializationHelpers'
-import {
-  DatasetRow,
-  Dataset,
-  DocumentVersion,
-} from '@latitude-data/core/schema/types'
+
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 import {
   Inputs,
   LinkedDatasetRow,
 } from '@latitude-data/core/lib/documentPersistedInputs'
 import { parseRowCell } from '@latitude-data/core/services/datasetRows/utils'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
 function mapDatasetColumnsToParameters({
   parameters,
   dataset,

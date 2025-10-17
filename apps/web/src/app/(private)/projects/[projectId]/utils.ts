@@ -1,8 +1,9 @@
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ROUTES } from '$/services/routes'
-import { Commit } from '@latitude-data/core/schema/types'
+
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 type GetCommitUrlParams = {
   commits: Commit[]
   projectId: number

@@ -6,14 +6,12 @@ import { useExperimentFormPayload } from './ExperimentForm/useExperimentFormPayl
 import ExperimentModalForm from './ExperimentForm'
 import { useNavigate } from '$/hooks/useNavigate'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
-import {
-  Commit,
-  DocumentVersion,
-  ExperimentDto,
-  Project,
-} from '@latitude-data/core/schema/types'
+import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
 import { EvaluationV2 } from '@latitude-data/core/constants'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 export function RunExperimentModal({
   project,
   commit,

@@ -1,7 +1,10 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { Commit, DocumentVersion, Project, User } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Project } from '../../schema/models/types/Project'
+import { type User } from '../../schema/models/types/User'
 import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogsDailyCount } from './computeDocumentLogsDailyCount'

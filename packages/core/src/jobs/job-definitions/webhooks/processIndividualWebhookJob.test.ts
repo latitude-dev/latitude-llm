@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Job } from 'bullmq'
 import { processIndividualWebhookJob } from './processIndividualWebhookJob'
 import * as factories from '../../../tests/factories'
-import { Commit } from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
 import { CommitPublishedEvent } from '../../../events/events'
 import {
   createWebhookDelivery,

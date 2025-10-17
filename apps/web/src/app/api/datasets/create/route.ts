@@ -10,9 +10,11 @@ import {
   MAX_SIZE,
   MAX_UPLOAD_SIZE_IN_MB,
 } from '@latitude-data/core/constants'
-import { User, Workspace } from '@latitude-data/core/schema/types'
+
 import { flattenErrors } from '@latitude-data/core/lib/zodUtils'
 
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 const MAX_SIZE_MESSAGE = `Your dataset must be less than ${MAX_SIZE}MB in size.`
 
 const createDatasetSchema = (workspaceId: number) =>

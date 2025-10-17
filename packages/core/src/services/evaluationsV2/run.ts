@@ -21,14 +21,12 @@ import {
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
 } from '../../repositories'
-import {
-  Commit,
-  Dataset,
-  DatasetRow,
-  Experiment,
-  ProviderLogDto,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DatasetRow } from '../../schema/models/types/DatasetRow'
+import { type Experiment } from '../../schema/models/types/Experiment'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { ProviderLogDto } from '../../schema/types'
 import { extractActualOutput, extractExpectedOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'

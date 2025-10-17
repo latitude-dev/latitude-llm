@@ -5,13 +5,11 @@ import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Providers } from '@latitude-data/constants'
-import {
-  type DocumentVersion,
-  type Project,
-  type User,
-  type Workspace,
-} from '@latitude-data/core/schema/types'
 
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 const mocks = vi.hoisted(() => {
   return {
     getSession: vi.fn(),

@@ -6,7 +6,7 @@ import { GrantSource, QuotaType } from '../../constants'
 import * as plans from '../../plans'
 import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
 import { grants } from '../../schema/models/grants'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { computeQuota } from './quota'
 

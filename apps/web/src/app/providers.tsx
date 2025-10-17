@@ -4,8 +4,9 @@ import { ReactNode, useEffect } from 'react'
 import { envClient } from '$/envClient'
 import posthog from 'posthog-js'
 import { PostHogProvider, usePostHog } from 'posthog-js/react'
-import { User, Workspace } from '@latitude-data/core/schema/types'
 
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 if (
   typeof window !== 'undefined' &&
   envClient.NEXT_PUBLIC_POSTHOG_KEY &&

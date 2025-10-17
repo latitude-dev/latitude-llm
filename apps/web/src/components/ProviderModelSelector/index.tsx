@@ -26,8 +26,8 @@ import { ModelOption, ModelSelector } from './ModelSelector'
 import { sortProviders } from './sortProviders'
 import { Providers } from '@latitude-data/constants'
 import { findFirstModelForProvider } from '@latitude-data/core/services/ai/providers/models/index'
-import { ProviderApiKey } from '@latitude-data/core/schema/types'
 
+import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 function getProviderIcon({
   provider,
   model,

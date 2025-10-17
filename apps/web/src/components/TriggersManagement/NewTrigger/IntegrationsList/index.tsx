@@ -17,13 +17,13 @@ import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import {
   IntegrationDto,
   PipedreamIntegration,
-} from '@latitude-data/core/schema/types'
+} from '@latitude-data/core/schema/models/types/Integration'
 
 export const ICONS_BY_TRIGGER: Partial<Record<DocumentTriggerType, IconName>> =
-  {
-    [DocumentTriggerType.Scheduled]: 'clock',
-    [DocumentTriggerType.Email]: 'mail',
-  }
+{
+  [DocumentTriggerType.Scheduled]: 'clock',
+  [DocumentTriggerType.Email]: 'mail',
+}
 
 function groupPipedreamIntegrations(
   integrations: IntegrationDto[],

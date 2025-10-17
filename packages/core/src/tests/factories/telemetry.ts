@@ -1,6 +1,6 @@
 import { BACKGROUND } from '../../telemetry'
 import { TraceContext } from '../../constants'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 
 const TRACEPARENT = (traceId: string, spanId: string) => {
   return `00-${traceId}-${spanId}-01`

@@ -3,7 +3,7 @@ import {
   type UseEmailTriggerConfiguration,
   EmailAvailabilityOptions,
 } from './useConfiguration'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export function getEmailTriggerAddress(document: DocumentVersion) {
   return `${document.documentUuid}@${EMAIL_TRIGGER_DOMAIN}`

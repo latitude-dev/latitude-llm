@@ -15,12 +15,12 @@ import {
 import { ICONS_BY_TRIGGER } from '$/components/TriggersManagement/NewTrigger/IntegrationsList'
 import { CLIENT_TIMEZONE, DEFAULT_TIMEZONE } from '$/lib/constants'
 import {
-  DocumentTrigger,
-  DocumentVersion,
   IntegrationDto,
   PipedreamIntegration,
-} from '@latitude-data/core/schema/types'
+} from '@latitude-data/core/schema/models/types/Integration'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 type ImageSize = 'small' | 'normal'
 const IMAGE_SIZES: Record<ImageSize, number> = {
   small: 16,

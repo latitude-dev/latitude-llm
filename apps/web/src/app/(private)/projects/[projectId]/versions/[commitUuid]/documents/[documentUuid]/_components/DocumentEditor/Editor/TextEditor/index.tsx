@@ -13,7 +13,7 @@ import { DocumentRefinement } from '../DocumentRefinement'
 import { DocumentSuggestions } from '../DocumentSuggestions'
 import { EditorSettings } from '../EditorSettings'
 import { LatteDiffManager } from './LatteDiffManager'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export const PlaygroundTextEditor = memo(
   ({

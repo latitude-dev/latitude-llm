@@ -1,9 +1,7 @@
-import {
-  DocumentVersion,
-  Project,
-  PublishedDocument,
-  Workspace,
-} from '../../schema/types'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Project } from '../../schema/models/types/Project'
+import { type PublishedDocument } from '../../schema/models/types/PublishedDocument'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { HEAD_COMMIT } from '../../constants'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'

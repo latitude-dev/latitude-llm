@@ -1,8 +1,6 @@
-import {
-  Commit,
-  Workspace,
-  DocumentVersion,
-} from '../../../../../../schema/types'
+import { type Commit } from '../../../../../../schema/models/types/Commit'
+import { type Workspace } from '../../../../../../schema/models/types/Workspace'
+import { type DocumentVersion } from '../../../../../../schema/models/types/DocumentVersion'
 import { LatteChange, LatteEditAction } from '@latitude-data/constants/latte'
 import Transaction, { PromisedResult } from '../../../../../../lib/Transaction'
 import { executeEditAction } from './handleAction'

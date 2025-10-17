@@ -3,11 +3,9 @@ import { DocumentTriggerType } from '@latitude-data/constants'
 import { useMemo } from 'react'
 import { TriggersBlankSlate } from './BlankSlate'
 import { IntegrationTriggerList } from './TriggerList'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-} from '@latitude-data/core/schema/types'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 export function IntegrationTriggerSettings({
   document,
   projectId,

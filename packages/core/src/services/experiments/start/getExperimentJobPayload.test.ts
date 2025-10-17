@@ -1,12 +1,10 @@
 import { Providers } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { EvaluationV2 } from '../../../constants'
-import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  Workspace,
-} from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type Dataset } from '../../../schema/models/types/Dataset'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import * as factories from '../../../tests/factories'
 import { createExperiment } from '../create'
 import { getExperimentJobPayload } from './getExperimentJobPayload'

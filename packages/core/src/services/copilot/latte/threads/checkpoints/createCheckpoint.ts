@@ -1,7 +1,5 @@
-import {
-  DocumentVersion,
-  LatteThreadCheckpoint,
-} from '../../../../../schema/types'
+import { type DocumentVersion } from '../../../../../schema/models/types/DocumentVersion'
+import { type LatteThreadCheckpoint } from '../../../../../schema/models/types/LatteThreadCheckpoint'
 import { Result } from '../../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
 import { latteThreadCheckpoints } from '../../../../../schema/models/latteThreadCheckpoints'

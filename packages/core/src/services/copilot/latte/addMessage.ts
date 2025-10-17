@@ -5,13 +5,11 @@ import {
   MessageRole,
   UserMessage,
 } from '@latitude-data/constants/legacyCompiler'
-import {
-  Commit,
-  DocumentVersion,
-  User,
-  Workspace,
-  Project,
-} from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type User } from '../../../schema/models/types/User'
+import { type Workspace } from '../../../schema/models/types/Workspace'
+import { type Project } from '../../../schema/models/types/Project'
 
 import { ErrorResult, Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
@@ -207,26 +205,26 @@ async function innerGenerateLatteResponse({
 
   const runResult = initialParameters
     ? await runDocumentAtCommit({
-        context: context,
-        workspace: copilotWorkspace,
-        commit: copilotCommit,
-        document: copilotDocument,
-        customIdentifier: String(clientWorkspace.id),
-        parameters: initialParameters,
-        source: LogSources.API,
-        errorableUuid: threadUuid,
-        tools,
-        abortSignal,
-      })
+      context: context,
+      workspace: copilotWorkspace,
+      commit: copilotCommit,
+      document: copilotDocument,
+      customIdentifier: String(clientWorkspace.id),
+      parameters: initialParameters,
+      source: LogSources.API,
+      errorableUuid: threadUuid,
+      tools,
+      abortSignal,
+    })
     : await addMessages({
-        context: context,
-        workspace: copilotWorkspace,
-        documentLogUuid: threadUuid,
-        messages: messages!,
-        source: LogSources.API,
-        tools,
-        abortSignal,
-      })
+      context: context,
+      workspace: copilotWorkspace,
+      documentLogUuid: threadUuid,
+      messages: messages!,
+      source: LogSources.API,
+      tools,
+      abortSignal,
+    })
   if (!runResult.ok) return runResult as ErrorResult<LatitudeError>
   const run = runResult.unwrap()
 

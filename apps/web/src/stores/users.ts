@@ -5,7 +5,7 @@ import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
-import { type User } from '@latitude-data/core/schema/types'
+import { User } from '@latitude-data/core/schema/models/types/User'
 
 type SerializedUser = Omit<User, 'createdAt' | 'updatedAt' | 'confirmedAt'> & {
   createdAt: Date

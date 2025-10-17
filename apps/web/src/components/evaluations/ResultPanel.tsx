@@ -39,13 +39,11 @@ import {
   EvaluationType,
   baseEvaluationConfiguration,
 } from '@latitude-data/core/constants'
-import {
-  Commit,
-  Dataset,
-  DatasetRow,
-  DocumentVersion,
-} from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
 const PARSING_FORMAT_LABELS = baseEvaluationConfiguration.shape.actualOutput
   .unwrap()
   .shape.parsingFormat.options.reduce(

@@ -9,7 +9,7 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import { ProviderApiKey } from '../schema/types'
+import { type ProviderApiKey } from '../schema/models/types/ProviderApiKey'
 import { EvaluationType, ProviderApiKeyUsage } from '../constants'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'

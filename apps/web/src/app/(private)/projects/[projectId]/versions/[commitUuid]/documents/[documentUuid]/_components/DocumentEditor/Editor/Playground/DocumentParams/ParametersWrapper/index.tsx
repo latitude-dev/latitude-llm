@@ -3,7 +3,7 @@ import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export function ParametersWrapper({
   document,

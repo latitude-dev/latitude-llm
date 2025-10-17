@@ -1,5 +1,5 @@
 import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
-import { IntegrationDto } from '../../../schema/types'
+import { IntegrationDto } from '../../../schema/models/types/Integration'
 import {
   McpConnectionError,
   McpClientConnection,

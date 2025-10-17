@@ -5,8 +5,9 @@ import { UsedToolsDoc } from '../index'
 import { APIUsage } from './APIUsage'
 import { JavascriptUsage } from './JavascriptUsage'
 import { PythonUsage } from './PythonUsage'
-import { ApiKey, DocumentVersion } from '@latitude-data/core/schema/types'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { ApiKey } from '@latitude-data/core/schema/models/types/ApiKey'
 const tabs: TabItem[] = [
   { id: 'javascript', label: 'Javascript' },
   { id: 'python', label: 'Python' },

@@ -9,13 +9,13 @@ import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 import { EmailsWhitelist } from './EmailsWhitelist'
 import {
   EmailAvailabilityOptions,
   UseEmailTriggerConfiguration,
 } from './useConfiguration'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 const PARAMETER_OPTIONS: Record<DocumentTriggerParameters, string> = {
   [DocumentTriggerParameters.SenderName]: 'Sender Name',

@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker'
 
-import { IntegrationDto, Workspace } from '../../schema/types'
+import { IntegrationDto } from '../../schema/models/types/Integration'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { database } from '../../client'
 import { IntegrationConfiguration } from '../../services/integrations/helpers/schema'
 import { integrations } from '../../schema/models/integrations'

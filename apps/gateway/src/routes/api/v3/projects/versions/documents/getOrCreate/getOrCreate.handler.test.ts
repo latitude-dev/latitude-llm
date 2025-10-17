@@ -13,13 +13,11 @@ import {
 } from '@latitude-data/core/repositories'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  Commit,
-  Project,
-  ProviderApiKey,
-  User,
-  Workspace,
-} from '@latitude-data/core/schema/types'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 
 const mocks = vi.hoisted(() => ({
   queues: {

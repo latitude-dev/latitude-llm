@@ -4,7 +4,8 @@ import { ROUTES } from '$/services/routes'
 import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { moveNextOnboardingStepAction } from '$/actions/workspaceOnboarding/moveNextStep'
-import { WorkspaceOnboarding } from '@latitude-data/core/schema/types'
+import { WorkspaceOnboarding } from '@latitude-data/core/schema/models/types/WorkspaceOnboarding'
+
 import { createPromptEngineeringResourcesAction } from '$/actions/workspaceOnboarding/createPromptEngineeringResources'
 import { createDefaultAgentOnboardingProjectAction } from '$/actions/workspaceOnboarding/createDefaultAgentOnboardingProject'
 

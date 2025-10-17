@@ -3,8 +3,9 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { computeQuota } from '@latitude-data/core/services/grants/quota'
 import { NextRequest, NextResponse } from 'next/server'
 import { QuotaType } from '@latitude-data/core/constants'
-import { Workspace, WorkspaceLimits } from '@latitude-data/core/schema/types'
+import { WorkspaceLimits } from '@latitude-data/core/schema/models/types/Workspace'
 
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 export const GET = errorHandler(
   authHandler(
     async (

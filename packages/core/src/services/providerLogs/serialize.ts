@@ -1,6 +1,7 @@
 import { omit } from 'lodash-es'
 
-import { ProviderLog, ProviderLogDto } from '../../schema/types'
+import { type ProviderLog } from '../../schema/models/types/ProviderLog'
+import { ProviderLogDto } from '../../schema/types'
 import { buildProviderLogResponse } from './buildResponse'
 
 export default function serializeProviderLog(

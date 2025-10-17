@@ -12,7 +12,9 @@ import { OnboardingDocumentParameterKeys } from '@latitude-data/constants/onboar
 import type { ExperimentVariant } from '@latitude-data/constants/experiments'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { envClient } from '$/envClient'
-import { DocumentVersion, Dataset } from '@latitude-data/core/schema/types'
+
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'

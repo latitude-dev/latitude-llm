@@ -5,12 +5,10 @@ import {
 } from '@latitude-data/constants'
 import { addDays, format } from 'date-fns'
 import { orderBy } from 'lodash-es'
-import {
-  Commit,
-  DocumentVersion,
-  ProviderLog,
-  Workspace,
-} from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type ProviderLog } from '../../../schema/models/types/ProviderLog'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import * as factories from '../../../tests/factories'
 import { createMembership } from '../../memberships/create'
 import { generateWorkspaceFixtures, type WorkspaceInfo } from './fixtures'

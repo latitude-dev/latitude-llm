@@ -12,11 +12,9 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
-import {
-  DocumentVersion,
-  DocumentTrigger,
-  IntegrationDto,
-} from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import { useTriggerInfo } from '$/components/TriggersManagement/hooks/useTriggerInfo'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'

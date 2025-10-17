@@ -1,7 +1,7 @@
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 
-import { ProviderApiKey } from '../../schema/types'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'

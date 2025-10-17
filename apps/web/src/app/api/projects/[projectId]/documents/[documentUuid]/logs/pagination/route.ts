@@ -8,8 +8,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { UnprocessableEntityError } from '@latitude-data/core/lib/errors'
-import { Workspace } from '@latitude-data/core/schema/types'
 
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 function pageUrl(params: {
   projectId: string
   commitUuid: string

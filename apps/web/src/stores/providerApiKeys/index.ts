@@ -7,7 +7,7 @@ import { ROUTES } from '$/services/routes'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import { type ProviderApiKey } from '@latitude-data/core/schema/types'
+import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 
 export type SerializedProviderApiKey = Omit<
   ProviderApiKey,

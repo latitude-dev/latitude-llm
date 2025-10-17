@@ -7,11 +7,9 @@ import { EmailTriggerConfiguration } from '@latitude-data/constants/documentTrig
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useMemo } from 'react'
 import { EmailTriggerConfig } from './Config'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-} from '@latitude-data/core/schema/types'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 export function EmailTriggerSettings({
   document,
   projectId,

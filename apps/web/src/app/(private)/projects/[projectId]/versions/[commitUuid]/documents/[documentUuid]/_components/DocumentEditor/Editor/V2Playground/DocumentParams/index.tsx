@@ -8,6 +8,7 @@ import {
   TabSelectorOption,
 } from '@latitude-data/web-ui/molecules/TabSelector'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
@@ -22,7 +23,7 @@ import {
   useLogHistoryParams,
 } from '../../Playground/DocumentParams/HistoryLogParams/useLogHistoryParams'
 import { ManualParams } from '../../Playground/DocumentParams/ManualParams'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+
 import {
   INPUT_SOURCE,
   InputSource,

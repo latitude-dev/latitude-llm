@@ -5,7 +5,7 @@ import { ChartBlankSlate } from '@latitude-data/web-ui/atoms/ChartBlankSlate'
 
 import { useMemo } from 'react'
 import Panel from '$/components/Panel'
-import { ProjectStats } from '@latitude-data/core/schema/types'
+import { ProjectStats } from '@latitude-data/core/schema/models/types/Project'
 
 export function EvaluationStats({
   stats,

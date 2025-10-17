@@ -6,8 +6,9 @@ import {
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
 import { NextRequest, NextResponse } from 'next/server'
-import { Workspace } from '@latitude-data/core/schema/types'
+
 import { updateDocumentContent } from '@latitude-data/core/services/documents/updateDocumentContent/updateContent'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import {
   AbortedError,
   LatitudeErrorDetails,

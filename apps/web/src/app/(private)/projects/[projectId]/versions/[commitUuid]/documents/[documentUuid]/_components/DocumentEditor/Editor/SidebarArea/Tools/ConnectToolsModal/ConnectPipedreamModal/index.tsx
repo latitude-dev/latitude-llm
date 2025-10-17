@@ -11,7 +11,7 @@ import { AppDto } from '@latitude-data/core/constants'
 import { useConnectToPipedreamApp } from '$/hooks/useConnectToPipedreamApp'
 import { IntegrationType } from '@latitude-data/constants'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
-import { PipedreamIntegration } from '@latitude-data/core/schema/types'
+import { PipedreamIntegration } from '@latitude-data/core/schema/models/types/Integration'
 
 export function ConnectPipedreamModal({
   onOpenChange,

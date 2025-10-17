@@ -9,7 +9,8 @@ import { publisher } from '../../../events/publisher'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
-import { Commit, Workspace } from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 
 export async function updateEvaluationResultV2<
   T extends EvaluationType,

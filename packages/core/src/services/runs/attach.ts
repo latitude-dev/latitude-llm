@@ -18,7 +18,8 @@ import {
   UnprocessableEntityError,
 } from '../../lib/errors'
 import { Result } from '../../lib/Result'
-import { Project, Workspace } from '../../schema/types'
+import { type Project } from '../../schema/models/types/Project'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { RedisStream } from '../../lib/redisStream'
 import { ToolCall } from '@latitude-data/constants/legacyCompiler'
 

@@ -1,9 +1,10 @@
-import type { Commit, DocumentVersion } from '../../schema/types'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { DocumentVersionsRepository } from '../../repositories'
+import { Commit } from '../../schema/models/types/Commit'
+import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { updateDocument } from './update'
 
 export async function renameDocumentPaths(

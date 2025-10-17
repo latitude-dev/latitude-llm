@@ -1,14 +1,12 @@
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  Commit,
-  Dataset,
-  DatasetRow,
-  Experiment,
-  ProviderLog,
-  Workspace,
-} from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type Dataset } from '../../../schema/models/types/Dataset'
+import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
+import { type Experiment } from '../../../schema/models/types/Experiment'
+import { type ProviderLog } from '../../../schema/models/types/ProviderLog'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { EvaluationV2, Providers } from '@latitude-data/constants'
 import { Result } from '../../../lib/Result'
 import { UnprocessableEntityError } from '../../../lib/errors'

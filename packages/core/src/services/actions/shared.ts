@@ -7,7 +7,8 @@ import {
 } from '../../constants'
 import { TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { User, Workspace } from '../../schema/types'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 
 // prettier-ignore
 type ZodSchema<_T = any> = z.ZodObject

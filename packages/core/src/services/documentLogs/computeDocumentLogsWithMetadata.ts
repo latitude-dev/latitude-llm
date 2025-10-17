@@ -12,7 +12,10 @@ import {
   sum,
 } from 'drizzle-orm'
 
-import { Commit, Cursor, DocumentVersion, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { Cursor } from '../../schema/types'
 import {
   DEFAULT_PAGINATION_SIZE,
   DocumentLogFilterOptions,
@@ -62,8 +65,8 @@ export async function computeDocumentLogsWithMetadata(
   const ordering = [
     filterOptions?.customIdentifier
       ? desc(
-          sql`similarity(${documentLogs.customIdentifier}, ${filterOptions.customIdentifier})`,
-        )
+        sql`similarity(${documentLogs.customIdentifier}, ${filterOptions.customIdentifier})`,
+      )
       : undefined,
     desc(documentLogs.createdAt),
   ].filter(Boolean) as SQL<unknown>[]

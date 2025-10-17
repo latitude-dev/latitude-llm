@@ -1,4 +1,6 @@
-import { Project, User, Workspace } from '../../../schema/types'
+import { type Project } from '../../../schema/models/types/Project'
+import { type User } from '../../../schema/models/types/User'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { ProjectsRepository } from '../../../repositories'
 import { createProject } from '../../projects'
 

@@ -4,7 +4,7 @@ import { GrantSource, QuotaType } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
 import * as plans from '../../plans'
 import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { validateGrant } from './validate'
 

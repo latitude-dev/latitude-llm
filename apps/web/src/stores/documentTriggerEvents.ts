@@ -2,7 +2,9 @@ import { useCallback, useMemo } from 'react'
 import useSWR, { mutate as globalMutate, SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { Commit, DocumentTriggerEvent } from '@latitude-data/core/schema/types'
+
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentTriggerEvent } from '@latitude-data/core/schema/models/types/DocumentTriggerEvent'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
 
 function buildkey({

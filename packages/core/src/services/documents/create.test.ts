@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import {
-  Commit,
-  Project,
-  ProviderApiKey,
-  User,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Project } from '../../schema/models/types/Project'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { DocumentType, Providers } from '@latitude-data/constants'
 import {
   DocumentVersionsRepository,

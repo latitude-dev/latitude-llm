@@ -1,5 +1,7 @@
 import { LatteTool } from '@latitude-data/constants/latte'
-import { User, Workspace, Project } from '../../../../schema/types'
+import { type User } from '../../../../schema/models/types/User'
+import { type Workspace } from '../../../../schema/models/types/Workspace'
+import { type Project } from '../../../../schema/models/types/Project'
 import { Result, TypedResult } from '../../../../lib/Result'
 import type { LatteToolFn } from './types'
 

@@ -4,7 +4,8 @@ import React from 'react'
 import { Link, Text } from '@react-email/components'
 
 import ContainerLayout from '../_components/ContainerLayout'
-import { Dataset, User } from '../../../schema/types'
+import { Dataset } from '../../../schema/models/types/Dataset'
+import { User } from '../../../schema/models/types/User'
 
 type Props = {
   user: User

@@ -9,7 +9,7 @@ import { useCallback } from 'react'
 import { getChangesToResetDocumentAction } from '$/actions/history/resetDocumentVersion/getChangesToResetDocumentAction'
 import { resetDocumentVersionAction } from '$/actions/history/resetDocumentVersion/resetDocumentVersionAction'
 import { ChangedDocument } from '@latitude-data/constants'
-import { Commit } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 export function useDocumentActions({
   commit,

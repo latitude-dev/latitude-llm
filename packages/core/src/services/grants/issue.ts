@@ -10,7 +10,7 @@ import {
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { grants } from '../../schema/models/grants'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { captureException } from '../../utils/workers/sentry'
 import { findWorkspaceSubscription } from '../subscriptions/data-access/find'
 import { validateGrant } from './validate'

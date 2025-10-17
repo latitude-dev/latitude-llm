@@ -7,9 +7,10 @@ import Link from 'next/link'
 import { ZodType } from 'zod'
 
 import { Step } from './Step'
-import { ClaimedReward } from '@latitude-data/core/schema/types'
+
 import { RewardType } from '@latitude-data/core/constants'
 
+import { ClaimedReward } from '@latitude-data/core/schema/models/types/ClaimedReward'
 export type RewardConfig = {
   type: RewardType
   title: string

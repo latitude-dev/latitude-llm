@@ -3,7 +3,7 @@ import { ROUTES } from '$/services/routes'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { useMemo } from 'react'
-import { type DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 const docUrl = (projectId: number, commitUuid: string, uuid: string) =>
   ROUTES.projects

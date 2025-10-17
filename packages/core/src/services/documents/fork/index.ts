@@ -1,4 +1,7 @@
-import { Commit, DocumentVersion, User, Workspace } from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type User } from '../../../schema/models/types/User'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { publisher } from '../../../events/publisher'
 import { Result } from '../../../lib/Result'
 import { cloneDocuments } from './cloneDocuments'

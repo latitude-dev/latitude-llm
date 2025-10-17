@@ -7,7 +7,7 @@ import { AppDto } from '@latitude-data/core/constants'
 import {
   PipedreamIntegration,
   type IntegrationDto,
-} from '@latitude-data/core/schema/types'
+} from "@latitude-data/core/schema/models/types/Integration"
 
 const EMPTY_ARRAY: McpTool[] = []
 

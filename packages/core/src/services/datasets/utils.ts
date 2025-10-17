@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid'
 
-import { Dataset, DatasetRow } from '../../schema/types'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DatasetRow } from '../../schema/models/types/DatasetRow'
 import { DATASET_COLUMN_ROLES, DatasetColumnRole } from '../../constants'
 import { type Column } from '../../schema/models/datasets'
 

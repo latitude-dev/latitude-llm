@@ -11,13 +11,11 @@ import {
 } from '@latitude-data/web-ui/atoms/Card'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  PublishedDocument,
-} from '@latitude-data/core/schema/types'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { PublishedDocument } from '@latitude-data/core/schema/models/types/PublishedDocument'
 export function ForkedDocument({
   shared,
   project,

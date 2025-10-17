@@ -13,7 +13,7 @@ import { TriggerWrapper } from '../TriggerWrapper'
 import { ScheduledTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { CronFormField } from '@latitude-data/web-ui/organisms/CronInput'
 import { CLIENT_TIMEZONE } from '$/lib/constants'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 const DEFAULT_CONFIG: ScheduledTriggerConfiguration = {
   cronExpression: '* * * * *',

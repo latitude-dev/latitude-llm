@@ -2,9 +2,9 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { ProjectsRepository } from '@latitude-data/core/repositories'
 import { computeProjectStats } from '@latitude-data/core/services/projects/computeProjectStats'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { Workspace } from '@latitude-data/core/schema/types'
 
 const paramsSchema = z.object({
   projectId: z.coerce.number(),

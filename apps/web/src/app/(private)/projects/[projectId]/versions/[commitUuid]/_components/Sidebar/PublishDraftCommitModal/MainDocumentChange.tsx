@@ -5,7 +5,7 @@ import { DocumentChangeSkeleton } from '@latitude-data/web-ui/molecules/Document
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { ModifiedDocumentType } from '@latitude-data/constants'
-import { Commit } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useMemo } from 'react'
 

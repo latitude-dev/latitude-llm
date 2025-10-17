@@ -1,5 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { Workspace, Dataset, User } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type User } from '../../schema/models/types/User'
 import * as factories from '../../tests/factories'
 import { insertRowsInBatch } from './insertRowsInBatch'
 import { DatasetRowsRepository } from '../../repositories'

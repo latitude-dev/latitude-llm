@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, vi, it } from 'vitest'
-import { IntegrationDto } from '../../../../schema/types'
+import { IntegrationDto } from '../../../../schema/models/types/Integration'
 import { IntegrationType } from '@latitude-data/constants'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/server'
 import * as appsModule from '../apps'

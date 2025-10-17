@@ -6,7 +6,10 @@ import { UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import { RunsRepository } from '../../repositories'
-import { Commit, DocumentVersion, Project, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Project } from '../../schema/models/types/Project'
+import { type Workspace } from '../../schema/models/types/Workspace'
 
 export async function enqueueRun({
   runUuid,

@@ -1,4 +1,4 @@
-import type { User } from '@latitude-data/core/schema/types'
+import type { User } from '@latitude-data/core/schema/models/types/User'
 
 const BG_COLORS = {
   yellow: 'bg-yellow-500 text-yellow-100',

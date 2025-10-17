@@ -1,5 +1,6 @@
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { Commit, DocumentTrigger } from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type DocumentTrigger } from '../../../schema/models/types/DocumentTrigger'
 import { Result } from '../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { CommitsRepository } from '../../../repositories'

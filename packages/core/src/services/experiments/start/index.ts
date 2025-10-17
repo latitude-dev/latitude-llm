@@ -1,6 +1,6 @@
-import { Experiment } from '../../../schema/types'
+import { type Experiment } from '../../../schema/models/types/Experiment'
 import { LatitudeError } from '../../../lib/errors'
-import { Workspace } from '../../../schema/types'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { experiments } from '../../../schema/models/experiments'
 import { queues } from '../../../jobs/queues'
 import { eq } from 'drizzle-orm'

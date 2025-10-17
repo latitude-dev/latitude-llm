@@ -1,5 +1,5 @@
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import { IntegrationType } from '@latitude-data/constants'
 import { ActiveIntegrations } from './types'
 import { getIntegrationData } from './utils'

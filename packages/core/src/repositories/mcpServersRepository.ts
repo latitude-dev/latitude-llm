@@ -2,7 +2,7 @@ import { eq, not } from 'drizzle-orm'
 
 import { mcpServers } from '../schema/models/mcpServers'
 import Repository from './repositoryV2'
-import { McpServer } from '../schema/types'
+import { type McpServer } from '../schema/models/types/McpServer'
 
 export class McpServerRepository extends Repository<McpServer> {
   get scopeFilter() {

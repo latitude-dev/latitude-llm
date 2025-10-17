@@ -1,6 +1,6 @@
 import { env } from '@latitude-data/env'
 import { and, eq } from 'drizzle-orm'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

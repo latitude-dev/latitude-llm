@@ -1,4 +1,4 @@
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { IntegrationsRepository } from '@latitude-data/core/repositories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { buildLatitudeIntegration } from './buildLatitudeIntegration'

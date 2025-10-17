@@ -3,12 +3,10 @@ import {
   EMAIL_TRIGGER_DOMAIN,
 } from '@latitude-data/constants'
 import { PromptLFile } from 'promptl-ai'
-import {
-  Commit,
-  DocumentTrigger,
-  DocumentTriggerEvent,
-  Workspace,
-} from '../../../../schema/types'
+import { type Commit } from '../../../../schema/models/types/Commit'
+import { type DocumentTrigger } from '../../../../schema/models/types/DocumentTrigger'
+import { type DocumentTriggerEvent } from '../../../../schema/models/types/DocumentTriggerEvent'
+import { type Workspace } from '../../../../schema/models/types/Workspace'
 import { database } from '../../../../client'
 import { unsafelyFindWorkspaceAndProjectFromDocumentUuid } from '../../../../data-access/workspaces'
 import { BadRequestError, LatitudeError } from '../../../../lib/errors'

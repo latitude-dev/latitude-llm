@@ -5,13 +5,11 @@ import { ROUTES } from '$/services/routes'
 import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  ResultWithEvaluationV2,
-} from '@latitude-data/core/schema/types'
+import { ResultWithEvaluationV2 } from '@latitude-data/core/schema/types'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 export default function useEvaluationResultsV2ByDocumentLogs(
   {
     project,

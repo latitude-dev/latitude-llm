@@ -7,7 +7,9 @@ import {
   createProject,
   helpers,
 } from '../../tests/factories'
-import { Commit, DocumentVersion, User } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type User } from '../../schema/models/types/User'
 import { deleteCommitDraft } from '../commits'
 
 describe('countDocumentLogs', () => {

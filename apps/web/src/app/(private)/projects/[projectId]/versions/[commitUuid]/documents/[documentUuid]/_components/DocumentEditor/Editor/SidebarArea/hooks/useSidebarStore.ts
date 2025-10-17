@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import { ActiveIntegration, ActiveIntegrations } from '../toolsHelpers/types'
 import { collectTools } from '../toolsHelpers/collectTools'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'

@@ -6,7 +6,7 @@ import { PipedreamTrigger } from './TriggerTypes/PipedreamTrigger'
 import { ScheduleTrigger } from './TriggerTypes/ScheduleTrigger'
 import { EmailTrigger } from './TriggerTypes/EmailTrigger'
 import { OnTriggerCreated, SelectedIntegration } from '../types'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 function IntegrationDetail({
   selectedIntegration,

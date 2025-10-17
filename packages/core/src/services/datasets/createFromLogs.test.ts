@@ -1,7 +1,7 @@
 import { DocumentLog, Providers } from '@latitude-data/constants'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { DatasetRowsRepository } from '../../repositories'
-import { Dataset } from '../../schema/types'
+import { type Dataset } from '../../schema/models/types/Dataset'
 import * as factories from '../../tests/factories'
 import { type FactoryCreateProjectReturn } from '../../tests/factories'
 import getTestDisk from '../../tests/testDrive'

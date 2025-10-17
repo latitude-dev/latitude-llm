@@ -6,14 +6,12 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { NotFoundError } from '../../lib/errors'
 import { ProviderApiKeysRepository } from '../../repositories'
-import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  Experiment,
-  User,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Experiment } from '../../schema/models/types/Experiment'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { createExperiment } from './create'
 
 export async function createExperimentVariants(

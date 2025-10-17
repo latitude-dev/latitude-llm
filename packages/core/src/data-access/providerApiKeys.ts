@@ -1,7 +1,7 @@
 import { providerApiKeys } from '../schema/models/providerApiKeys'
 import { eq } from 'drizzle-orm'
 
-import { ProviderApiKey } from '../schema/types'
+import { type ProviderApiKey } from '../schema/models/types/ProviderApiKey'
 import { database } from '../client'
 
 export function unsafelyFindProviderApiKey(

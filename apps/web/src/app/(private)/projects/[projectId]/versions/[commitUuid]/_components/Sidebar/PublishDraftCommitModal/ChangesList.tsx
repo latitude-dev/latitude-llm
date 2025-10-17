@@ -14,7 +14,7 @@ import {
   type CommitChanges,
   ModifiedDocumentType,
 } from '@latitude-data/constants'
-import { Commit } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 function ChangeWithErrors({
   change,

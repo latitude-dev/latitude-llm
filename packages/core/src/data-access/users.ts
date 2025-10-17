@@ -2,7 +2,9 @@ import { memberships } from '../schema/models/memberships'
 import { users } from '../schema/models/users'
 import { asc, eq, getTableColumns } from 'drizzle-orm'
 
-import { User, Workspace, WorkspaceDto } from '../schema/types'
+import { type User } from '../schema/models/types/User'
+import { type Workspace } from '../schema/models/types/Workspace'
+import { WorkspaceDto } from '../schema/models/types/Workspace'
 import { database } from '../client'
 
 export async function findFirstUserInWorkspace(

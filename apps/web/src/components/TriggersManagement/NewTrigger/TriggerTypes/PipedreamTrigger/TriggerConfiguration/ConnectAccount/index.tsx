@@ -10,7 +10,7 @@ import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import useIntegrations from '$/stores/integrations'
 import { PipedreamConnect } from './PipedreamConnect'
 import { AppDto } from '@latitude-data/core/constants'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 
 function useConnectedPipedreamAccounts({
   pipedreamSlug,

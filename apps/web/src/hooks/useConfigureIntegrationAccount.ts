@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react'
 import useLatitudeAction from './useLatitudeAction'
 import { updateIntegrationConfigurationAction } from '$/actions/integrations/updateConfiguration'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { PipedreamIntegration } from '@latitude-data/core/schema/types'
+import { PipedreamIntegration } from '@latitude-data/core/schema/models/types/Integration'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 
 export function useConfigureIntegrationAccount({
