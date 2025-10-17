@@ -111,9 +111,6 @@ const TextAtom = memo(
     const wordBreakClass = wordBreakOptions[wordBreak]
     const whiteSpaceClass = whiteSpaceOptions[whiteSpace]
     const Comp = asChild ? Slot : 'span'
-    if (showNativeTitle === false) {
-      console.log("CHILDREN", children)
-    }
     return (
       <Comp
         ref={ref}

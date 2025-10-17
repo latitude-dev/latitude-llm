@@ -27,10 +27,7 @@ export function useIncludabledPrompts({
 }) {
   return useMemo(() => {
     return documents
-      .filter(
-        (doc) =>
-          doc.id !== document.id,
-      )
+      .filter((doc) => doc.id !== document.id)
       .reduce(
         (acc, doc) => {
           acc[doc.path] = {
