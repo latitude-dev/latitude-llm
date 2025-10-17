@@ -38,23 +38,28 @@ export function MainAgent({
     return mainDocument ? [mainDocument.path.split('/').pop() || ''] : []
   }, [mainDocument])
 
-  const { documentConfigurations: agentDescriptions, isLoading } =
-    useDocumentConfiguration({
-      documentVersions: documents,
-      selectedDocuments: selectedAgents,
-      currentDocument: mainDocument,
-    })
+  const { documentConfigurations, isLoading } = useDocumentConfiguration({
+    documentVersions: documents,
+    selectedDocuments: selectedAgents,
+    currentDocument: mainDocument,
+  })
+
+  const agentDescription = useMemo(() => {
+    return mainDocument
+      ? isLoading
+        ? 'Finding the description of your '
+        : documentConfigurations[mainDocument.path]?.description || ''
+      : "Select a prompt as your project's "
+  }, [mainDocument, isLoading, documentConfigurations])
 
   return (
     <div className='flex flex-col gap-6 items-center'>
       <ProjectHeader
         description={
-          <Text.H5 centered color='foregroundMuted'>
-            {mainDocument
-              ? isLoading
-                ? 'Finding the description of your '
-                : agentDescriptions[mainDocument.path]?.description
-              : "Select a prompt as your project's "}
+          <div className='flex flex-col items-center gap-2'>
+            <Text.H5 lineClamp={3} ellipsis centered color='foregroundMuted'>
+              {agentDescription}
+            </Text.H5>
             {(!mainDocument || isLoading) && (
               <Tooltip
                 className='rounded-xl'
@@ -77,7 +82,7 @@ export function MainAgent({
                 </div>
               </Tooltip>
             )}
-          </Text.H5>
+          </div>
         }
       />
 
