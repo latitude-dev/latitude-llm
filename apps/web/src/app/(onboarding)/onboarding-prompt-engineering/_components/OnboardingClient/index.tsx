@@ -10,6 +10,7 @@ import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 
 import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { User } from '@latitude-data/core/schema/models/types/User'
 import { useCurrentWorkspace } from '$/app/providers/WorkspaceProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
