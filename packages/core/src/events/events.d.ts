@@ -1,26 +1,26 @@
 import { ExperimentVariant } from '@latitude-data/constants/experiments'
+import { type Commit } from '../schema/models/types/Commit'
+import { type Dataset } from '../schema/models/types/Dataset'
+import { type DatasetRow } from '../schema/models/types/DatasetRow'
+import { type DocumentSuggestion } from '../schema/models/types/DocumentSuggestion'
+import { type DocumentTrigger } from '../schema/types'
+import { type DocumentTriggerEvent } from '../schema/types'
+import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
+import { type Experiment } from '../schema/models/types/Experiment'
+import { type MagicLinkToken } from '../schema/models/types/MagicLinkTokens'
+import { type Membership } from '../schema/models/types/Membership'
+import { type Project } from '../schema/models/types/Project'
+import { type ProviderApiKey } from '../schema/models/types/ProviderApiKey'
+import { type ProviderLog } from '../schema/models/types/ProviderLog'
+import { type User } from '../schema/models/types/User'
+import { type Workspace } from '../schema/models/types/Workspace'
 import {
-  Commit,
-  Dataset,
-  DatasetRow,
   DatasetV2,
   DocumentLog,
-  DocumentSuggestion,
-  DocumentTrigger,
-  DocumentTriggerEvent,
-  DocumentVersion,
   EvaluationResultV2,
   EvaluationV2,
-  Experiment,
-  MagicLinkToken,
-  Membership,
   Message,
-  Project,
-  ProviderApiKey,
-  ProviderLog,
   ProviderLogDto,
-  User,
-  Workspace,
 } from '../schema/types'
 
 export type Events =

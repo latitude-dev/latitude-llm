@@ -1,8 +1,8 @@
 'use server'
 import { updateRewardClaim } from '@latitude-data/core/services/claimedRewards/update'
+import { ClaimedReward } from '@latitude-data/core/schema/models/types/ClaimedReward'
 import { z } from 'zod'
 import { withAdmin } from '../procedures'
-import { ClaimedReward } from '@latitude-data/core/schema/types'
 
 export const updateRewardClaimValidityAction = withAdmin
   .inputSchema(

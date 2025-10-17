@@ -28,7 +28,7 @@ import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 const PAGE_SIZE = 7
 

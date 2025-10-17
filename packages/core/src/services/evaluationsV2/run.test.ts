@@ -10,17 +10,15 @@ import {
 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
-import {
-  Commit,
-  Dataset,
-  DatasetRow,
-  DocumentVersion,
-  Experiment,
-  Project,
-  ProviderLogDto,
-  User,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DatasetRow } from '../../schema/models/types/DatasetRow'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Experiment } from '../../schema/models/types/Experiment'
+import { type Project } from '../../schema/models/types/Project'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { ProviderLogDto } from '../../schema/types'
 import * as factories from '../../tests/factories'
 import serializeProviderLog from '../providerLogs/serialize'
 import * as outputs from './outputs/extract'

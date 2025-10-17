@@ -1,4 +1,5 @@
 'use client'
+import { User } from '@latitude-data/core/schema/models/types/User'
 
 import { updateUserAction } from '$/actions/user/update'
 import useFetcher from '$/hooks/useFetcher'
@@ -8,7 +9,6 @@ import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { compact } from 'lodash-es'
 import { useCallback, useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import { User } from '@latitude-data/core/schema/types'
 
 export function useCurrentUser(opts?: SWRConfiguration) {
   const { toast } = useToast()

@@ -1,4 +1,4 @@
-import { ClaimedRewardWithUserInfo } from '@latitude-data/core/schema/types'
+import { ClaimedRewardWithUserInfo } from '@latitude-data/core/schema/models/types/ClaimedReward'
 import { updateRewardClaimValidityAction } from '$/actions/rewards/updateRewardClaimValidityAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import useSWR, { SWRConfiguration } from 'swr'

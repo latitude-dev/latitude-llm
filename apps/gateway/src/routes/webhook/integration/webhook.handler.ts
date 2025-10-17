@@ -10,7 +10,8 @@ import { unsafelyFindWorkspace } from '@latitude-data/core/data-access/workspace
 import { PromisedResult } from '@latitude-data/core/lib/Transaction'
 import { NotFoundError } from '@latitude-data/constants/errors'
 import { Result } from '@latitude-data/core/lib/Result'
-import { Commit, Workspace } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
 async function resolveWorkspaceAndCommit(
   triggerUuid: string,

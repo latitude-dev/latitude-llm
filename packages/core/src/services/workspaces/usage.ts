@@ -1,7 +1,8 @@
 import { and, count, eq, gte, inArray } from 'drizzle-orm'
 import Redis from 'ioredis'
 import { QuotaType, WorkspaceUsage } from '../../constants'
-import { Subscription, Workspace } from '../../schema/types'
+import { type Subscription } from '../../schema/models/types/Subscription'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { SubscriptionPlan } from '../../plans'
 import { cache } from '../../cache'
 import { database } from '../../client'
@@ -89,10 +90,10 @@ async function computeUsageFromDatabase(
 export async function computeWorkspaceUsage(
   workspace:
     | {
-        id: Workspace['id']
-        currentSubscriptionCreatedAt: Subscription['createdAt']
-        plan: SubscriptionPlan
-      }
+      id: Workspace['id']
+      currentSubscriptionCreatedAt: Subscription['createdAt']
+      plan: SubscriptionPlan
+    }
     | Workspace,
   db = database,
 ): PromisedResult<WorkspaceUsage, Error> {

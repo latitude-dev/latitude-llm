@@ -1,6 +1,6 @@
 import { eq, and, sql, getTableColumns, desc, isNull } from 'drizzle-orm'
 
-import { Dataset } from '../schema/types'
+import { type Dataset } from '../schema/models/types/Dataset'
 import { DEFAULT_PAGINATION_SIZE } from '../constants'
 import { datasets } from '../schema/models/datasets'
 import { users } from '../schema/models/users'

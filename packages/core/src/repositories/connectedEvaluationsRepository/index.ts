@@ -10,11 +10,8 @@ import {
   sum,
 } from 'drizzle-orm'
 
-import {
-  ConnectedEvaluation,
-  DocumentVersion,
-  EvaluationDto,
-} from '../../schema/types'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { ConnectedEvaluation, EvaluationDto } from '../../schema/types'
 import { LatitudeError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import { connectedEvaluations } from '../../schema/legacyModels/connectedEvaluations'

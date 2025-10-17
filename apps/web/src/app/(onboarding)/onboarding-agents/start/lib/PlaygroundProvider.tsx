@@ -2,7 +2,7 @@ import { createContext, useContext, useCallback, ReactNode } from 'react'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useRunDocument } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/hooks/useRunDocument'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 interface IPlaygroundContextType {
   playground: ReturnType<typeof usePlaygroundChat>

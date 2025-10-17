@@ -1,0 +1,117 @@
+import {
+  ToolContent,
+  ToolRequestContent,
+} from '@latitude-data/constants/legacyCompiler'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { ReactNode, useEffect, useRef, useState } from 'react'
+import { CustomToolEditor } from './CustomToolEditor'
+
+const MAX_HEIGHT = 400
+
+function MaxHeightWindow({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [isOpen, setIsOpen] = useState(false)
+
+  const [isOverflowing, setIsOverflowing] = useState(false)
+
+  useEffect(() => {
+    if (!ref.current) return
+
+    console.log('recalculating overflow', ref.current.scrollHeight, MAX_HEIGHT)
+    setIsOverflowing(ref.current.scrollHeight > MAX_HEIGHT)
+  }, [children])
+
+  return (
+    <div
+      className='flex flex-col overflow-hidden relative'
+      style={{ maxHeight: isOpen ? 'unset' : MAX_HEIGHT }}
+    >
+      <div ref={ref} className='w-full h-fit'>
+        {children}
+      </div>
+
+      {isOverflowing && !isOpen ? (
+        <div className='absolute bottom-0 left-0 right-0 h-[80px] bg-gradient-to-t from-backgroundCode from-30% via-backgroundCode/70 via-60% to-transparent flex flex-col items-center justify-end p-0'>
+          <Button
+            variant='ghost'
+            size='small'
+            onClick={() => setIsOpen(true)}
+            iconProps={{
+              name: 'chevronDown',
+              color: 'primary',
+              placement: 'right',
+            }}
+          >
+            <Text.H6 color='primary'>View more</Text.H6>
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+export function ToolCardInput({
+  toolRequest,
+}: {
+  toolRequest: ToolRequestContent
+}) {
+  return (
+    <div className='flex flex-col w-full p-3 border-t border-border bg-backgroundCode'>
+      <div className='flex flex-row'>
+        <Badge variant='outline'>Input</Badge>
+      </div>
+      <MaxHeightWindow>
+        <CodeBlock language='json'>
+          {JSON.stringify(toolRequest.args, null, 2)}
+        </CodeBlock>
+      </MaxHeightWindow>
+    </div>
+  )
+}
+
+export function ToolCardOutput({
+  toolResponse,
+  customToolCallId,
+}: {
+  toolResponse: ToolContent | undefined
+  customToolCallId?: string
+}) {
+  return (
+    <div className='flex flex-col w-full p-3 border-t border-border gap-3'>
+      <div className='flex flex-row gap-3 items-center'>
+        <Badge variant='outline'>Output</Badge>
+      </div>
+      {toolResponse ? (
+        toolResponse.isError ? (
+          <MaxHeightWindow>
+            <div className='w-full pt-3 items-center'>
+              <Alert
+                variant='destructive'
+                title='Error'
+                description={JSON.stringify(toolResponse.result, null, 2)}
+              />
+            </div>
+          </MaxHeightWindow>
+        ) : (
+          <MaxHeightWindow>
+            <CodeBlock language='json'>
+              {JSON.stringify(toolResponse.result, null, 2)}
+            </CodeBlock>
+          </MaxHeightWindow>
+        )
+      ) : customToolCallId ? (
+        <CustomToolEditor toolCallId={customToolCallId} />
+      ) : (
+        <div className='flex flex-row gap-2 items-center justify-center pb-3'>
+          <Icon name='loader' color='foregroundMuted' spin />
+          <Text.H6 color='foregroundMuted'>Running...</Text.H6>
+        </div>
+      )}
+    </div>
+  )
+}

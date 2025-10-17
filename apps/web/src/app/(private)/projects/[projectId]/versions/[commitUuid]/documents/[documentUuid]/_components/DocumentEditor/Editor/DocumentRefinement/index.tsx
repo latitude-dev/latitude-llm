@@ -16,9 +16,10 @@ import { Step1 } from './Step1'
 import { Step2 } from './Step2'
 import { Step3 } from './Step3'
 import { useLatteDiff } from '$/hooks/useLatteDiff'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+
 import { EvaluationV2 } from '@latitude-data/core/constants'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 export function DocumentRefinement({
   project,
   commit,

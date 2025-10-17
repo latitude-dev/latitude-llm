@@ -13,7 +13,7 @@ import * as addMessageLatte from '../../../services/copilot/latte/addMessage'
 import * as chatHelpers from '../../../services/copilot/latte/helpers'
 import { WebsocketClient } from '../../../websockets/workers'
 import { runLatteJob } from './chat'
-import { Project } from '../../../schema/types'
+import { type Project } from '../../../schema/models/types/Project'
 
 describe('runLatteJob', () => {
   let mockJob: Job<any>

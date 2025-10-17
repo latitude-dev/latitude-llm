@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import LabelIndicator from './LabelIndicator'
-import { Dataset } from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
 export function useLabels() {
   const [labels, setLabels] = useState<SelectOption<number>[]>([])

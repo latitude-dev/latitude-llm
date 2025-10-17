@@ -1,10 +1,7 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  Commit,
-  DocumentTrigger,
-  DocumentVersion,
-  IntegrationDto,
-} from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -19,6 +16,7 @@ import {
 } from '$/components/TriggersManagement/types'
 import { TriggerEventsList } from '$/components/TriggersManagement/TriggerCard/TriggerEventsList'
 import useDocumentTriggerEvents from '$/stores/documentTriggerEvents'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 export function RunTrigger({
   trigger,

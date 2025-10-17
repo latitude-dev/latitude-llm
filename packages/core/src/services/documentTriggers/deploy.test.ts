@@ -9,13 +9,11 @@ import {
   NotFoundError,
   NotImplementedError,
 } from '@latitude-data/constants/errors'
-import {
-  Commit,
-  Project,
-  Workspace,
-  DocumentTrigger,
-  DocumentVersion,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Project } from '../../schema/models/types/Project'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { type DocumentTrigger } from '../../schema/models/types/DocumentTrigger'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { deployDocumentTrigger, undeployDocumentTrigger } from './deploy'
 import { Result } from '../../lib/Result'
 import * as factories from '../../tests/factories'

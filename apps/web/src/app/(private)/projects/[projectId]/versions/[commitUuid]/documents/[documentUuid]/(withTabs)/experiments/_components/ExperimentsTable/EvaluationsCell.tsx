@@ -7,7 +7,7 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useMemo } from 'react'
 import { EvaluationV2 } from '@latitude-data/core/constants'
-import { ExperimentDto } from '@latitude-data/core/schema/types'
+import { ExperimentDto } from '@latitude-data/core/schema/models/types/Experiment'
 
 function EvaluationsList({
   evaluations,

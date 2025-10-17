@@ -1,6 +1,6 @@
 import { stringify } from 'csv-stringify/sync'
 import { Result } from '../../lib/Result'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { buildDocumentLogDatasetRows } from '../documentLogs/buildDocumentLogDatasetRows'
 import { nanoidHashAlgorithm } from './utils'
 import { Column } from '../../schema/models/datasets'

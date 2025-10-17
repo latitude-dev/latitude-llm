@@ -1,4 +1,4 @@
-import { LatteThreadCheckpoint } from '@latitude-data/core/schema/types'
+import { LatteThreadCheckpoint } from '@latitude-data/core/schema/models/types/LatteThreadCheckpoint'
 
 export interface LatteEvents {
   LatteChangesAccepted: {

@@ -3,9 +3,10 @@ import { claimReward } from '@latitude-data/core/services/claimedRewards/claim'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
-import { ClaimedReward } from '@latitude-data/core/schema/types'
+
 import { RewardType } from '@latitude-data/core/constants'
 
+import { ClaimedReward } from '@latitude-data/core/schema/models/types/ClaimedReward'
 export const claimRewardAction = authProcedure
   .inputSchema(
     z.object({

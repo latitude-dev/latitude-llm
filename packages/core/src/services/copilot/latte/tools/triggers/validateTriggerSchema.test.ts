@@ -1,14 +1,12 @@
 import * as factories from '@latitude-data/core/factories'
 import { Providers, IntegrationType } from '@latitude-data/constants'
 import { describe, expect, beforeEach, it, vi } from 'vitest'
-import {
-  Workspace,
-  Commit,
-  DocumentVersion,
-  PipedreamIntegration,
-  User,
-  Project,
-} from '../../../../../schema/types'
+import { type Workspace } from '../../../../../schema/models/types/Workspace'
+import { type Commit } from '../../../../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../../../../schema/models/types/DocumentVersion'
+import { type User } from '../../../../../schema/models/types/User'
+import { type Project } from '../../../../../schema/models/types/Project'
+import { PipedreamIntegration } from '../../../../../schema/models/types/Integration'
 import { Result } from '../../../../../lib/Result'
 import { validateTriggerSchema } from './validateTriggerSchema'
 import { LatteToolContext } from '../types'

@@ -1,4 +1,4 @@
-import { IntegrationDto } from '../../schema/types'
+import { IntegrationDto } from '../../schema/models/types/Integration'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { PipedreamIntegrationConfiguration } from './helpers/schema'
 import { IntegrationType } from '@latitude-data/constants'

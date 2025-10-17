@@ -6,10 +6,8 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
-import {
-  DocumentVersion,
-  IntegrationDto,
-} from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import {
   PipedreamComponent,
   PipedreamComponentType,

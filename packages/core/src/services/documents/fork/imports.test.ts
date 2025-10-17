@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { IntegrationType, Providers } from '@latitude-data/constants'
-import { Commit, DocumentVersion, Workspace } from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import * as factories from '../../../tests/factories'
 import { getImports } from './imports'
 

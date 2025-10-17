@@ -3,7 +3,8 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
-import { DocumentTriggerEvent } from '@latitude-data/core/schema/types'
+import { DocumentTriggerEvent } from '@latitude-data/core/schema/models/types/DocumentTriggerEvent'
+
 import { cn } from '@latitude-data/web-ui/utils'
 
 export function IntegrationTriggerEvent({

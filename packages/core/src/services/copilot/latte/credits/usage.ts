@@ -8,7 +8,7 @@ import {
 } from '../../../../constants'
 import { Result } from '../../../../lib/Result'
 import { LatteRequestsRepository } from '../../../../repositories'
-import { Workspace } from '../../../../schema/types'
+import { type Workspace } from '../../../../schema/models/types/Workspace'
 import { captureException } from '../../../../utils/workers/sentry'
 import { computeQuota } from '../../../grants/quota'
 import { findWorkspaceSubscription } from '../../../subscriptions/data-access/find'

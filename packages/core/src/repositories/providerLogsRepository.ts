@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, getTableColumns, inArray, sum } from 'drizzle-orm'
 
-import { ProviderLog } from '../schema/types'
+import { type ProviderLog } from '../schema/models/types/ProviderLog'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { documentLogs } from '../schema/models/documentLogs'

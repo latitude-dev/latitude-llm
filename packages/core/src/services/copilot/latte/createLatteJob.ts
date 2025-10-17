@@ -1,5 +1,7 @@
 import { LatitudeError } from '@latitude-data/constants/errors'
-import { User, Workspace, Project } from '../../../schema/types'
+import { type User } from '../../../schema/models/types/User'
+import { type Workspace } from '../../../schema/models/types/Workspace'
+import { type Project } from '../../../schema/models/types/Project'
 import { RunLatteJobData } from '../../../jobs/job-definitions/copilot/chat'
 import { queues } from '../../../jobs/queues'
 import { ErrorResult, Result } from '../../../lib/Result'

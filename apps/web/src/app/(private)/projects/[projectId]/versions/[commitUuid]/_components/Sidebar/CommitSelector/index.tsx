@@ -27,9 +27,11 @@ import { CurrentCommitsList } from './CurrentCommitsList'
 import DeleteDraftCommitModal from './DeleteDraftCommitModal'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
-import { DocumentVersion, type Commit } from '@latitude-data/core/schema/types'
+
 import { HELP_CENTER } from '@latitude-data/core/constants'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 const MIN_WIDTH_SELECTOR_PX = 380
 const TRIGGER_X_PADDING_PX = 26
 

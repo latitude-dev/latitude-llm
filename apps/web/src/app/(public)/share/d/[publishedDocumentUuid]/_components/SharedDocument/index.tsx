@@ -3,7 +3,7 @@ import { PromptHeader } from '../Header'
 import { ServerClientMetadata } from '$/app/(public)/share/d/[publishedDocumentUuid]/_components/SharedDocument/types'
 import { RunPrompt } from './RunPrompt'
 import { DisplayPrompt } from './DisplayPrompt'
-import { PublishedDocument } from '@latitude-data/core/schema/types'
+import { PublishedDocument } from '@latitude-data/core/schema/models/types/PublishedDocument'
 
 export function SharedDocument({
   metadata,

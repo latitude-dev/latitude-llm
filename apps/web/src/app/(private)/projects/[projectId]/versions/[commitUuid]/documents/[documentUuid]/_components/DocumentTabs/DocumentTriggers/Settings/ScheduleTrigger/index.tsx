@@ -3,11 +3,9 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useMemo } from 'react'
 import { ScheduleTriggerConfig } from './Config'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-} from '@latitude-data/core/schema/types'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 export function ScheduleTriggerSettings({
   document,
   projectId,

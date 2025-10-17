@@ -1,5 +1,5 @@
 import { ConfigurablePropWithRemoteOptions } from '../../../../../constants'
-import { PipedreamIntegration } from '../../../../../schema/types'
+import { PipedreamIntegration } from '../../../../../schema/models/types/Integration'
 import { PromisedResult } from '../../../../../lib/Transaction'
 import {
   PipedreamClient,
@@ -161,8 +161,8 @@ export async function isValidConfiguration({
   }
   return latteErrors.length > 0
     ? Result.error(
-        new LatteInvalidChoiceError(latteErrors, fullTriggerConfigSchema),
-      )
+      new LatteInvalidChoiceError(latteErrors, fullTriggerConfigSchema),
+    )
     : Result.ok(true)
 }
 

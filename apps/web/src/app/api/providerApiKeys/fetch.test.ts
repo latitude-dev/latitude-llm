@@ -5,8 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
 import { Providers } from '@latitude-data/constants'
-import { User, Workspace } from '@latitude-data/core/schema/types'
 
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 const mocks = vi.hoisted(() => {
   return {
     getSession: vi.fn(),

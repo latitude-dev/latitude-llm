@@ -17,7 +17,7 @@ import {
   DocumentLogFilterOptions,
   DocumentLogWithMetadataAndError,
 } from '@latitude-data/core/constants'
-import { DocumentLogsLimitedView } from '@latitude-data/core/schema/types'
+import { DocumentLogsLimitedView } from '@latitude-data/core/schema/models/types/DocumentLog'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'

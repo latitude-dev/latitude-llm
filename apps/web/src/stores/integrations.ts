@@ -10,7 +10,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { IntegrationType } from '@latitude-data/constants'
-import { type IntegrationDto } from '@latitude-data/core/schema/types'
+import { type IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 
 const EMPTY_ARRAY: IntegrationDto[] = []
 

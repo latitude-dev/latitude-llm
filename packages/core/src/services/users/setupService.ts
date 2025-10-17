@@ -1,4 +1,5 @@
-import { User, Workspace } from '../../schema/types'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { Providers } from '@latitude-data/constants'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib/Result'

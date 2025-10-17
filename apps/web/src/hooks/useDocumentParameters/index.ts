@@ -20,7 +20,8 @@ import {
 import { type ResolvedMetadata } from '$/workers/readMetadata'
 import { useEvents } from '$/lib/events'
 import { DocumentLog, LogSources } from '@latitude-data/core/constants'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import {
   INPUT_SOURCE,
   Inputs,

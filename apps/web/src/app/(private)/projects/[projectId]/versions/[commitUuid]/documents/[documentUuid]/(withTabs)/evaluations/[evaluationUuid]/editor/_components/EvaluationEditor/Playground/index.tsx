@@ -24,7 +24,9 @@ import { useEvaluationParameters } from '../hooks/useEvaluationParamaters'
 import EvaluationParams from './EvaluationParams'
 import { useLogHistoryParams } from './EvaluationParams/HistoryLogParams/useLogHistoryParams'
 import { useRunEvaluationPlaygroundPrompt } from './useRunEvaluationPlaygroundPrompt'
-import { Commit, DocumentVersion } from '@latitude-data/core/schema/types'
+
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import {
   EvaluationType,
   EvaluationV2,

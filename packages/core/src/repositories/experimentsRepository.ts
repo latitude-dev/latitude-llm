@@ -11,11 +11,8 @@ import {
 } from 'drizzle-orm'
 
 import { ErrorableEntity } from '../constants'
-import {
-  Experiment,
-  ExperimentDto,
-  ExperimentLogsMetadata,
-} from '../schema/types'
+import { type Experiment } from '../schema/models/types/Experiment'
+import { ExperimentDto, ExperimentLogsMetadata } from '../schema/models/types/Experiment'
 import { commits } from '../schema/models/commits'
 import { documentLogs } from '../schema/models/documentLogs'
 import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'

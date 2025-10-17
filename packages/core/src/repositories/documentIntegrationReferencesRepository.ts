@@ -9,7 +9,8 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import { Commit, DocumentIntegrationReference } from '../schema/types'
+import { type Commit } from '../schema/models/types/Commit'
+import { type DocumentIntegrationReference } from '../schema/models/types/DocumentIntegrationReference'
 import { documentIntegrationReferences } from '../schema/models/documentIntegrationReferences'
 import { documentVersions } from '../schema/models/documentVersions'
 import { commits } from '../schema/models/commits'

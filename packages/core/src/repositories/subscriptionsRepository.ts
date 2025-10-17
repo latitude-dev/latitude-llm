@@ -1,5 +1,5 @@
 import { desc, eq, getTableColumns } from 'drizzle-orm'
-import { Subscription } from '../schema/types'
+import { type Subscription } from '../schema/models/types/Subscription'
 import { subscriptions } from '../schema/models/subscriptions'
 import Repository from './repositoryV2'
 

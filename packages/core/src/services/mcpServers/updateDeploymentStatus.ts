@@ -1,6 +1,6 @@
 import * as k8s from '@kubernetes/client-node'
 import { eq } from 'drizzle-orm'
-import { McpServer } from '../../schema/types'
+import { type McpServer } from '../../schema/models/types/McpServer'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { mcpServers } from '../../schema/models/mcpServers'

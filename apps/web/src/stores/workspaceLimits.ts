@@ -5,7 +5,7 @@ import { ROUTES } from '$/services/routes'
 import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import { WorkspaceLimits } from '@latitude-data/core/schema/types'
+import { WorkspaceLimits } from '@latitude-data/core/schema/models/types/Workspace'
 
 export function useWorkspaceLimits(opts?: SWRConfiguration) {
   const route = ROUTES.api.workspaces.limits

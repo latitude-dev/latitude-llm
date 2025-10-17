@@ -6,12 +6,10 @@ import {
   LlmEvaluationMetric,
 } from '../../constants'
 import { BadRequestError } from '../../lib/errors'
-import {
-  Commit,
-  DocumentVersion,
-  ProviderApiKey,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { cloneEvaluationV2 } from './clone'
 import { LlmEvaluationRatingSpecification, buildPrompt } from './llm/rating'

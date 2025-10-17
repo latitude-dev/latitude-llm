@@ -10,7 +10,8 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { EditableParameters } from './EditableParameters'
 import { type UseLogHistoryParams } from './useLogHistoryParams'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+
 import {
   EvaluationType,
   EvaluationV2,

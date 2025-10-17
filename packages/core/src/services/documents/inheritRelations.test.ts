@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  DocumentSuggestion,
-  DocumentVersion,
-  Workspace,
-} from '../../schema/types'
+import { type DocumentSuggestion } from '../../schema/models/types/DocumentSuggestion'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { database } from '../../client'
 import { DocumentSuggestionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema/models/documentVersions'

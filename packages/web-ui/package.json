@@ -254,9 +254,6 @@
     "./versionedMessagesHelpers": {
       "import": "./src/lib/versionedMessagesHelpers.ts"
     },
-    "./getUserInfoFromSession": {
-      "import": "./src/lib/getUserInfo.ts"
-    },
     "./browser": {
       "import": "./src/browser.ts"
     },

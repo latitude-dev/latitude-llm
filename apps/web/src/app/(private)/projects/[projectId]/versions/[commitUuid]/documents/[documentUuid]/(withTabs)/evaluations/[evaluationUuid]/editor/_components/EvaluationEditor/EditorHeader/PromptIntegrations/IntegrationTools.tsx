@@ -13,7 +13,7 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 
 export function ItemWrapper({
   children,

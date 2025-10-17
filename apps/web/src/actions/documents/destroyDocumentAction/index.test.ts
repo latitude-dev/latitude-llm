@@ -9,12 +9,10 @@ import { and, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { destroyDocumentAction } from './index'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  User,
-} from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { Providers } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => {

@@ -17,7 +17,7 @@ import { RunAgentHeader, RunAgentBody } from './RunAgent'
 import { OnboardingStep } from '$/app/(onboarding)/onboarding-agents/start/lib/OnboardingStep'
 import { PlaygroundProvider } from '../../lib/PlaygroundProvider'
 import { MetadataProvider } from '$/components/MetadataProvider'
-import { User } from '@latitude-data/core/schema/types'
+import { User } from '@latitude-data/core/schema/models/types/User'
 
 export function OnboardingClient({
   onboardingSteps,
@@ -67,12 +67,12 @@ export function OnboardingClient({
             )}
             {(currentStep === OnboardingStepKey.TriggerAgent ||
               currentStep === OnboardingStepKey.RunAgent) && (
-              <PlaygroundSteps
-                moveNextOnboardingStep={moveNextOnboardingStep}
-                currentStep={currentStep}
-                executeCompleteOnboarding={executeCompleteOnboarding}
-              />
-            )}
+                <PlaygroundSteps
+                  moveNextOnboardingStep={moveNextOnboardingStep}
+                  currentStep={currentStep}
+                  executeCompleteOnboarding={executeCompleteOnboarding}
+                />
+              )}
           </div>
         </div>
       </PlaygroundProvider>

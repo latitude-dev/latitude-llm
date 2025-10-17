@@ -8,7 +8,7 @@ import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { useCallback, useState } from 'react'
-import { type Dataset } from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
 const EMPTY_ARRAY: Dataset[] = []
 

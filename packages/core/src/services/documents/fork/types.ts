@@ -1,8 +1,6 @@
-import {
-  DocumentTrigger,
-  DocumentVersion,
-  IntegrationDto,
-} from '../../../schema/types'
+import { type DocumentTrigger } from '../../../schema/models/types/DocumentTrigger'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { IntegrationDto } from '../../../schema/models/types/Integration'
 
 export type ImportProps = {
   document: DocumentVersion

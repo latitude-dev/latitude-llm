@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Project, IntegrationDto, Workspace, Commit } from '../../schema/types'
+import { type Project } from '../../schema/models/types/Project'
+import { type Commit } from '../../schema/models/types/Commit'
+import { IntegrationDto } from '../../schema/models/types/Integration'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { listIntegrationReferences } from './references'
 import {
   DocumentVersion,

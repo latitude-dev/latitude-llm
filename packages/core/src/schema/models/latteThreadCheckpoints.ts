@@ -2,8 +2,8 @@ import { bigint, bigserial, index, jsonb, uuid } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { latteThreads } from './latteThreads'
-import { DocumentVersion } from '../types'
 import { commits } from './commits'
+import { DocumentVersion } from './types/DocumentVersion'
 
 export const latteThreadCheckpoints = latitudeSchema.table(
   'latte_thread_checkpoints',

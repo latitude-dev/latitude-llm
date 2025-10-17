@@ -23,7 +23,7 @@ import {
 } from '../../constants'
 import * as consumeStreamModule from '../../lib/streamManager/ChainStreamConsumer/consumeStream'
 import * as createFakeProviderLogModule from '../../lib/streamManager/utils/createFakeProviderLog'
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import * as aiModule from '../ai'

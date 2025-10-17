@@ -6,7 +6,7 @@ import useDocumentVersions from '$/stores/documentVersions'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { useDocumentSelection } from '../components/SelectDocument'
 import { DocumentTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export function useUpdateDocumentTrigger({
   triggerUuid,

@@ -2,7 +2,7 @@ import { IntegrationType } from '@latitude-data/constants'
 import {
   IntegrationDto,
   PipedreamIntegration,
-} from '@latitude-data/core/schema/types'
+} from '@latitude-data/core/schema/models/types/Integration'
 import { isIntegrationConfigured } from '@latitude-data/core/services/integrations/pipedream/components/fillConfiguredProps'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {

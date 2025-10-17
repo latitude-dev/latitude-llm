@@ -1,4 +1,4 @@
-import { Dataset } from '../../schema/types'
+import { type Dataset } from '../../schema/models/types/Dataset'
 import { DatasetColumnRole } from '../../constants'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

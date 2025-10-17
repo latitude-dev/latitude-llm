@@ -12,7 +12,7 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback, useMemo, useState } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
-import { Dataset } from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 import { DocumentLogFilterOptions } from '@latitude-data/core/constants'
 import { parseRowCell } from '@latitude-data/core/services/datasetRows/utils'
 

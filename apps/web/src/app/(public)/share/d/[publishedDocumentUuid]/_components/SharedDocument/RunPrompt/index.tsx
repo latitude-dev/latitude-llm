@@ -14,7 +14,7 @@ import { Messages } from '../../Messages'
 import { ServerClientMetadata } from '../types'
 import { useChat } from './useChat'
 import { usePrompt } from './usePrompt'
-import { PublishedDocument } from '@latitude-data/core/schema/types'
+import { PublishedDocument } from '@latitude-data/core/schema/models/types/PublishedDocument'
 
 const ParameterTypes = Object.values(ParameterType) as string[]
 

@@ -2,7 +2,7 @@ import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { DocumentLogFilterOptions } from '@latitude-data/core/constants'
-import { DocumentLogsAggregations } from '@latitude-data/core/schema/types'
+import { DocumentLogsAggregations } from '@latitude-data/core/schema/models/types/DocumentLog'
 
 export default function useDocumentLogsAggregations(
   {
@@ -23,9 +23,9 @@ export default function useDocumentLogsAggregations(
       ? undefined
       : documentUuid
         ? ROUTES.api.projects
-            .detail(projectId)
-            .documents.detail(documentUuid)
-            .logs.aggregations(filterOptions)
+          .detail(projectId)
+          .documents.detail(documentUuid)
+          .logs.aggregations(filterOptions)
         : undefined,
   )
 

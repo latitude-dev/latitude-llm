@@ -1,5 +1,5 @@
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/server'
-import { PipedreamIntegration } from '../../../../schema/types'
+import { PipedreamIntegration } from '../../../../schema/models/types/Integration'
 import { PipedreamIntegrationConfiguration } from '../../helpers/schema'
 import { Result } from '../../../../lib/Result'
 import { NotFoundError } from '@latitude-data/constants/errors'

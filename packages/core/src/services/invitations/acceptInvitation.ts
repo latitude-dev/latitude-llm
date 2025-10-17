@@ -1,4 +1,5 @@
-import { Membership, User } from '../../schema/types'
+import { type Membership } from '../../schema/models/types/Membership'
+import { type User } from '../../schema/models/types/User'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { updateMembership } from '../memberships'

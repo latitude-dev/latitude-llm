@@ -1,6 +1,6 @@
 import { asc, eq, getTableColumns, isNull } from 'drizzle-orm'
 
-import { ApiKey } from '../schema/types'
+import { type ApiKey } from '../schema/models/types/ApiKey'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { apiKeys } from '../schema/models/apiKeys'

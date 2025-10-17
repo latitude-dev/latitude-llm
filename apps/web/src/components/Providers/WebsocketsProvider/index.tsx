@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
 } from 'react'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
 import { refreshWebesocketTokenAction } from '$/actions/user/refreshWebsocketTokenAction'
 import { IoProvider, useSocket } from '@latitude-data/socket.io-react-hook'
@@ -17,7 +18,6 @@ import {
   WebServerToClientEvents,
 } from '@latitude-data/core/websockets/constants'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { Workspace } from '@latitude-data/core/schema/types'
 
 export const SocketIOProvider = ({ children }: { children: ReactNode }) => {
   return <IoProvider>{children}</IoProvider>

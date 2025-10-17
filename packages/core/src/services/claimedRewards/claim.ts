@@ -4,7 +4,8 @@ import {
   REWARD_VALUES,
   RewardType,
 } from '../../constants'
-import { User, Workspace } from '../../schema/types'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { unsafelyFindUserByEmail } from '../../data-access/users'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'

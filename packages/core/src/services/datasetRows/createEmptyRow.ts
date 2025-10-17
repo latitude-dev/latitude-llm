@@ -1,4 +1,5 @@
-import { Dataset, Workspace } from '../../schema/types'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import Transaction from '../../lib/Transaction'
 import { DatasetRowData } from '../../schema/models/datasetRows'
 import { createDatasetRow } from './create'

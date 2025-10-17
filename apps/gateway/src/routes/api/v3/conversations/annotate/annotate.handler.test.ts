@@ -17,7 +17,7 @@ import {
   helpers,
 } from '@latitude-data/core/factories'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
-import { ApiKey } from '@latitude-data/core/schema/types'
+import { ApiKey } from '@latitude-data/core/schema/models/types/ApiKey'
 import { describe, expect, it } from 'vitest'
 
 describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/annotate', () => {

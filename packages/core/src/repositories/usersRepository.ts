@@ -1,6 +1,6 @@
 import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 
-import { User } from '../schema/types'
+import { type User } from '../schema/models/types/User'
 import { databaseErrorCodes, UnprocessableEntityError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { memberships } from '../schema/models/memberships'

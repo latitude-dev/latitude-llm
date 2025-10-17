@@ -11,10 +11,10 @@ import {
 } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { cookies } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { getRedirectUrl } from './utils'
-import { type Project } from '@latitude-data/core/schema/types'
 
 const PROJECT_ROUTE = ROUTES.projects.detail
 

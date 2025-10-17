@@ -3,8 +3,8 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { computeDocumentLogsDailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
 import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
-import { Workspace } from '@latitude-data/core/schema/types'
 
 export const GET = errorHandler(
   authHandler(

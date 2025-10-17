@@ -1,10 +1,8 @@
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk'
-import {
-  Commit,
-  DocumentTrigger,
-  PipedreamIntegration,
-  Workspace,
-} from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type DocumentTrigger } from '../../../schema/models/types/DocumentTrigger'
+import { type Workspace } from '../../../schema/models/types/Workspace'
+import { PipedreamIntegration } from '../../../schema/models/types/Integration'
 import { gatewayPath } from '../../../helpers'
 import { getPipedreamClient } from './apps'
 import { Result } from '../../../lib/Result'

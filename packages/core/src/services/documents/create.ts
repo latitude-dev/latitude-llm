@@ -3,12 +3,10 @@ import { eq } from 'drizzle-orm'
 import { scan } from 'promptl-ai'
 import { DOCUMENT_PATH_REGEXP } from '../../constants'
 import { findFirstModelForProvider } from '../ai/providers/models'
-import {
-  User,
-  Workspace,
-  type Commit,
-  type DocumentVersion,
-} from '../../schema/types'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'

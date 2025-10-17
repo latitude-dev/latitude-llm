@@ -5,7 +5,7 @@ import { useEvents } from '$/lib/events'
 import { updatePromptMetadata } from '@latitude-data/core/lib/updatePromptMetadata'
 import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 import useIntegrations from '$/stores/integrations'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 
 export type ActiveIntegrations = Record<string, true | string[]> // true means '*'
 

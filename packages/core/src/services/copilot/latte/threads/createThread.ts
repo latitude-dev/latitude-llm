@@ -1,4 +1,7 @@
-import { LatteThread, User, Workspace, Project } from '../../../../schema/types'
+import { type LatteThread } from '../../../../schema/models/types/LatteThread'
+import { type User } from '../../../../schema/models/types/User'
+import { type Workspace } from '../../../../schema/models/types/Workspace'
+import { type Project } from '../../../../schema/models/types/Project'
 import { Result } from '../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../lib/Transaction'
 import { latteThreads } from '../../../../schema/models/latteThreads'

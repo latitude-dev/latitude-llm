@@ -6,7 +6,7 @@ import { RunProps } from '$/components/Agent/types'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { EmptyProjectPage } from './EmptyProject'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 function Spring() {
   // Using 'justify-center' does center the content, but fails to overflow correctly.

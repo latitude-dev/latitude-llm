@@ -12,17 +12,15 @@ import {
   Run,
 } from '../constants'
 import { RunStatusEvent } from '../events/events'
-import type {
-  Commit,
-  Dataset,
-  DatasetRow,
-  DocumentSuggestion,
-  DocumentTrigger,
-  DocumentTriggerEvent,
-  ExperimentDto,
-  Project,
-  ProviderLogDto,
-} from '../schema/types'
+import type { ProviderLogDto } from '../schema/types'
+import type { DatasetRow } from '../schema/models/types/DatasetRow'
+import type { DocumentSuggestion } from '../schema/models/types/DocumentSuggestion'
+import type { DocumentTrigger } from '../schema/models/types/DocumentTrigger'
+import type { DocumentTriggerEvent } from '../schema/models/types/DocumentTriggerEvent'
+import type { ExperimentDto } from '../schema/models/types/Experiment'
+import type { Project } from '../schema/models/types/Project'
+import type { Dataset } from '../schema/models/types/Dataset'
+import { Commit } from '../schema/models/types/Commit'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
@@ -75,11 +73,11 @@ type DocumentSuggestionCreatedArgs = {
 
 type DatasetRowsCreatedArgs =
   | {
-      datasetId: number
-      error: null
-      rows: DatasetRow[]
-      finished: false
-    }
+    datasetId: number
+    error: null
+    rows: DatasetRow[]
+    finished: false
+  }
   | { datasetId: number; error: Error; rows: null; finished: false }
   | { datasetId: number; error: null; rows: null; finished: true }
 
@@ -163,13 +161,13 @@ type LatteThreadError = {
 export type LatteThreadUpdateArgs = {
   threadUuid: string
 } & (
-  | LatteThreadResponseDelta
-  | LatteThreadResponse
-  | LatteThreadToolStarted
-  | LatteThreadToolCompleted
-  | LatteThreadUsage
-  | LatteThreadError
-)
+    | LatteThreadResponseDelta
+    | LatteThreadResponse
+    | LatteThreadToolStarted
+    | LatteThreadToolCompleted
+    | LatteThreadUsage
+    | LatteThreadError
+  )
 
 export type LatteProjectChangesArgs = {
   threadUuid: string

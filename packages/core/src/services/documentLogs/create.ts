@@ -1,6 +1,6 @@
 import type { Message, ToolCall } from '@latitude-data/constants/legacyCompiler'
 
-import { Commit } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
 import { LogSources } from '../../constants'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'

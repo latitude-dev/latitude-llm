@@ -10,11 +10,9 @@ import { NotEditableBanner } from '../_components/NotEditableBanner'
 import { useCallback, useState } from 'react'
 import { TriggerConfigModal } from './Modal'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-} from '@latitude-data/core/schema/types'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 export function DocumentTriggersButton({
   document,
   projectId,

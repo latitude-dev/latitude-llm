@@ -1,7 +1,7 @@
 import { commits } from '../schema/models/commits'
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 
-import { Commit } from '../schema/types'
+import { type Commit } from '../schema/models/types/Commit'
 import { HEAD_COMMIT } from '../constants'
 import { database } from '../client'
 import { LatitudeError, NotFoundError } from '../lib/errors'

@@ -26,11 +26,9 @@ import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
 import { useState, useMemo } from 'react'
 import { Providers } from '@latitude-data/constants'
-import {
-  Workspace,
-  type ProviderApiKey,
-} from '@latitude-data/core/schema/types'
 
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 export default function ProviderApiKeys() {
   const { data: providerApiKeys, isLoading: isProviderApiKeysLoading } =
     useProviderApiKeys()

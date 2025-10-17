@@ -3,7 +3,7 @@ import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { cn } from '@latitude-data/web-ui/utils'
 import type { ConfigurableProp } from '@pipedream/sdk/browser'
 import { useMemo } from 'react'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import { PipedreamComponent } from '@latitude-data/core/constants'
 import { MultiSelectInput } from '@latitude-data/web-ui/molecules/MultiSelectInput'
 

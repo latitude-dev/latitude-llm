@@ -2,7 +2,7 @@ import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { IntegrationReference } from '@latitude-data/constants'
-import { type IntegrationDto } from '@latitude-data/core/schema/types'
+import { type IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 
 const EMPTY_ARRAY: IntegrationReference[] = []
 

@@ -3,7 +3,8 @@ import Chat from '../../../documents/[documentUuid]/_components/DocumentEditor/E
 import { useRef, useState } from 'react'
 import { ChatInputBox } from '../../../documents/[documentUuid]/_components/DocumentEditor/Editor/ChatInputBox'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
-import { DocumentTrigger } from '@latitude-data/core/schema/types'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
+
 import { ChatSectionHeader } from './Header'
 
 export function AgentChatSection({

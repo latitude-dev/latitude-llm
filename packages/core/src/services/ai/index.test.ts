@@ -5,7 +5,7 @@ import {
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError } from 'ai'
 import { describe, expect, it, vi } from 'vitest'
-import { ProviderApiKey } from '../../schema/types'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { ai } from './index'

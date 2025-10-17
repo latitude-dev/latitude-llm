@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { Providers } from '@latitude-data/constants'
-import { User, Workspace } from '../../schema/types'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { ProviderApiKeysRepository } from '../../repositories'
 import { createProject } from '../../tests/factories'
 import { createProviderApiKey } from './create'

@@ -4,14 +4,12 @@ import { PublishedDocumentRepository } from '@latitude-data/core/repositories/pu
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { publishDocumentAction } from './publishDocumentAction'
 import { Providers } from '@latitude-data/constants'
-import {
-  type Commit,
-  type DocumentVersion,
-  type Project,
-  type User,
-  type Workspace,
-} from '@latitude-data/core/schema/types'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 const mocks = vi.hoisted(() => {
   return {
     getSession: vi.fn(),

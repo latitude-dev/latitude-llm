@@ -3,7 +3,7 @@ import { users } from '../schema/models/users'
 import { workspaces } from '../schema/models/workspaces'
 import { and, desc, eq, getTableColumns, isNull, not } from 'drizzle-orm'
 
-import { ClaimedRewardWithUserInfo } from '../schema/types'
+import { ClaimedRewardWithUserInfo } from '../schema/models/types/ClaimedReward'
 import { RewardType } from '../constants'
 import { database } from '../client'
 import { Ok, Result } from '../lib/Result'

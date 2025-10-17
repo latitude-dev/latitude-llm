@@ -25,11 +25,9 @@ import {
   DocumentLogWithMetadataAndError,
   SpanWithDetails,
 } from '@latitude-data/core/constants'
-import {
-  ProviderApiKey,
-  ProviderLogDto,
-} from '@latitude-data/core/schema/types'
+import { ProviderLogDto } from '@latitude-data/core/schema/types'
 import { getCostPer1M } from '@latitude-data/core/services/ai/estimateCost/index'
+import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { LineSeparator } from '@latitude-data/web-ui/atoms/LineSeparator'

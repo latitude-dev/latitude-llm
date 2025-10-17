@@ -60,17 +60,28 @@ export const getOrSet = async <T>(
  * options to atomically acquire a lock with a TTL, and releases the lock using a Lua script
  * to ensure the lock is only released by the process that acquired it.
  *
+ * If lock acquisition fails due to timeout, it will automatically retry with exponential backoff
+ * to handle transient lock contention scenarios (e.g., multiple jobs updating the same cache key).
+ *
  * @param lockKey - The unique identifier for the lock. Will be prefixed with "lock:" internally
  * @param callback - The function to execute while holding the lock. Receives the Redis cache instance
- * @param timeout - Maximum time in milliseconds to wait for lock acquisition (default: 5000ms)
+ * @param timeout - Maximum time in milliseconds to wait for lock acquisition per attempt (default: 5000ms)
+ * @param maxRetries - Maximum number of retry attempts for lock acquisition (default: 5)
  *
  * @returns Promise that resolves to the return value of the callback function
+ * @throws Error if lock cannot be acquired after all retry attempts
  */
-export const withCacheLock = async <T>(
-  lockKey: string,
-  callback: (cache: Cache) => Promise<T>,
-  timeout = 5000,
-): Promise<T> => {
+export const withCacheLock = async <T>({
+  lockKey,
+  callbackFn,
+  timeout = 1000,
+  maxRetries = 5,
+}: {
+  lockKey: string
+  callbackFn: (cache: Cache) => Promise<T>
+  timeout?: number
+  maxRetries?: number
+}): Promise<T> => {
   const redis = await cache()
 
   lockKey = `lock:${lockKey}`
@@ -78,33 +89,50 @@ export const withCacheLock = async <T>(
   const lockTtl = 10000
   const lockDelay = 50
 
-  const startedAt = Date.now()
-  while (Date.now() - startedAt < timeout) {
-    const acquired = await redis.set(lockKey, lockValue, 'PX', lockTtl, 'NX')
-    if (acquired === 'OK') {
-      try {
-        return await callback(redis)
-      } finally {
-        // Note: Release lock only if we still own it
-        await redis.eval(
-          `
-if redis.call("get", KEYS[1]) == ARGV[1] then
-    return redis.call("del", KEYS[1])
-else
-    return 0
-end
-`.trim(),
-          1,
-          lockKey,
-          lockValue,
-        )
+  let lastError: Error | undefined
+
+  // Retry loop with exponential backoff
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const startedAt = Date.now()
+
+    // Try to acquire lock within timeout
+    while (Date.now() - startedAt < timeout) {
+      const acquired = await redis.set(lockKey, lockValue, 'PX', lockTtl, 'NX')
+      if (acquired === 'OK') {
+        try {
+          return await callbackFn(redis)
+        } finally {
+          // Release lock only if we still own it
+          await redis.eval(
+            `
+              if redis.call("get", KEYS[1]) == ARGV[1] then
+                return redis.call("del", KEYS[1])
+              else
+                return 0
+              end
+            `.trim(),
+            1,
+            lockKey,
+            lockValue,
+          )
+        }
       }
+
+      await new Promise((resolve) => setTimeout(resolve, lockDelay))
     }
 
-    await new Promise((resolve) => setTimeout(resolve, lockDelay))
+    // Lock acquisition timed out for this attempt
+    lastError = new Error(
+      `Failed to acquire lock for key "${lockKey}" within ${timeout}ms (attempt ${attempt}/${maxRetries})`,
+    )
+
+    // If not the last attempt, wait before retrying (exponential backoff)
+    if (attempt < maxRetries) {
+      const backoffDelay = Math.min(500 * attempt, 3000) // 500ms, 1s, 1.5s, 2s, 2.5s, 3s (max)
+      await new Promise((resolve) => setTimeout(resolve, backoffDelay))
+    }
   }
 
-  throw new Error(
-    `Failed to acquire lock for key "${lockKey}" within ${timeout}ms`,
-  )
+  // All retry attempts exhausted
+  throw lastError!
 }

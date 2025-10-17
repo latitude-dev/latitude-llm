@@ -3,10 +3,8 @@ import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { useCallback, useMemo } from 'react'
 import { getDocumentTriggerEventRunParameters } from '@latitude-data/core/services/documentTriggers/triggerEvents/getDocumentTriggerRunParameters'
 import { DocumentTriggerEventItem } from './TriggerEvent'
-import {
-  DocumentTrigger,
-  DocumentTriggerEvent,
-} from '@latitude-data/core/schema/types'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
+import { DocumentTriggerEvent } from '@latitude-data/core/schema/models/types/DocumentTriggerEvent'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { DocumentTriggerType } from '@latitude-data/constants'

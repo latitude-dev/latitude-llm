@@ -3,7 +3,7 @@ import { and, desc, eq, isNotNull } from 'drizzle-orm'
 import { database } from '../../../client'
 import { InferedReturnType } from '../../../lib/commonTypes'
 import { buildCommitsScope } from './buildCommitsScope'
-import { Commit } from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
 
 export async function getHeadCommitForProject(
   {

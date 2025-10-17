@@ -185,7 +185,7 @@ export function ActiveIntegration({
                     __html: `
                       <strong>${displayName}</strong><br/>
                       ${description}
-                    `
+                    `,
                   }}
                 />
               </Tooltip>

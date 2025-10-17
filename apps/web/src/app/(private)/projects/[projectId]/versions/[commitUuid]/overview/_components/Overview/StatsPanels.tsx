@@ -5,7 +5,7 @@ import { EvaluationStats } from './EvaluationStats'
 import { LogsOverTime } from './LogsOverTime'
 import { ModelCharts } from './ModelCharts'
 import Panel from '$/components/Panel'
-import { ProjectStats } from '@latitude-data/core/schema/types'
+import { ProjectStats } from '@latitude-data/core/schema/models/types/Project'
 
 export function StatsPanels({
   stats,

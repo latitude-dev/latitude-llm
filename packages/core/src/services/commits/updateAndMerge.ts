@@ -1,4 +1,5 @@
-import { Commit, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

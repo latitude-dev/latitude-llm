@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 import { useCommits } from '$/stores/commitsStore'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -7,7 +8,6 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 
 import { BadgeCommit } from '../../../../../../../_components/Sidebar/CommitSelector/CommitItem'
 import { FilterButton, useFilterButtonColor } from '../FilterButton'
-import { Commit } from '@latitude-data/core/schema/types'
 
 function CommitCheckbox({
   commit,

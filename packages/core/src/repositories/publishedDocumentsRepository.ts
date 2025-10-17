@@ -1,5 +1,5 @@
 import { and, eq, getTableColumns } from 'drizzle-orm'
-import { PublishedDocument } from '../schema/types'
+import { type PublishedDocument } from '../schema/models/types/PublishedDocument'
 import { NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { publishedDocuments } from '../schema/models/publishedDocuments'

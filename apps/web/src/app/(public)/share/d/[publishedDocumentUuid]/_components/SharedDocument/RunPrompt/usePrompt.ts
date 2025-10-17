@@ -7,9 +7,10 @@ import { runSharedPromptAction } from '$/actions/sdk/runSharedPromptAction'
 import { readStreamableValue } from '@ai-sdk/rsc'
 import { SetStateAction } from '@latitude-data/web-ui/commonTypes'
 import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
-import { PublishedDocument } from '@latitude-data/core/schema/types'
+
 import { StreamEventTypes } from '@latitude-data/core/constants'
 
+import { PublishedDocument } from '@latitude-data/core/schema/models/types/PublishedDocument'
 type AccoumulatedDeltaMessage = { deltas: string[] }
 export type LastMessage = {
   lastMessage: ConversationMessage | undefined

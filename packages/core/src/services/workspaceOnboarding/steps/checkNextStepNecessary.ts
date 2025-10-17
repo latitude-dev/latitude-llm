@@ -1,5 +1,5 @@
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
-import { Workspace } from '../../../schema/types'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { Result } from '../../../lib/Result'
 import { DocumentTriggersRepository } from '../../../repositories/documentTriggersRepository'
 import { IntegrationsRepository } from '../../../repositories/integrationsRepository'

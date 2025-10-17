@@ -1,5 +1,6 @@
 'use client'
 
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useRunDocument } from '../../documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/hooks/useRunDocument'
@@ -8,10 +9,7 @@ import { MainAgentSection } from './MainSection'
 import { AgentChatSection } from './ChatSection'
 import { cn } from '@latitude-data/web-ui/utils'
 import { RunProps } from '$/components/Agent/types'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-} from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export function AgentPageWrapper({
   documents: serverDocuments,

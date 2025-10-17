@@ -11,12 +11,10 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
-import {
-  DocumentTrigger,
-  PipedreamIntegration,
-} from '@latitude-data/core/schema/types'
+import { PipedreamIntegration } from '@latitude-data/core/schema/models/types/Integration'
 import { PipedreamComponent } from '@latitude-data/core/constants'
 
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 function DeleteTriggerButton({
   trigger,
   integration,

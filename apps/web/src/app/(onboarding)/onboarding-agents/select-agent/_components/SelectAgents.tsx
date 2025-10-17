@@ -6,7 +6,6 @@ import HoverCard from '../../../../../components/HoverCard'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { BackgroundHoverColor } from '@latitude-data/web-ui/tokens'
-import { ROUTES } from '$/services/routes'
 import { useCallback } from 'react'
 import useWorkspaceOnboarding from '$/stores/workspaceOnboarding'
 import { envClient } from '$/envClient'
@@ -14,7 +13,8 @@ import { useNavigate } from '$/hooks/useNavigate'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useCurrentWorkspace } from '$/app/providers/WorkspaceProvider'
 import { publishEventAction } from '$/actions/events/publishEventAction'
-import { User } from '@latitude-data/core/schema/types'
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { ROUTES } from '$/services/routes'
 
 export type AgentCardProps = {
   mainIcon: IconName
@@ -72,13 +72,12 @@ const agents: AgentCardProps[] = [
 ]
 
 export function SelectAgents({ user }: { user: User }) {
-  const { executeCompleteOnboarding } = useWorkspaceOnboarding()
+  const { createDefaultAgentOnboardingProject } = useWorkspaceOnboarding()
   const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const { workspace } = useCurrentWorkspace()
 
-  const router = useNavigate()
-  const handleSkipOnboarding = useCallback(() => {
-    executeCompleteOnboarding({})
+  const handleStartWithSampleAgent = useCallback(() => {
+    createDefaultAgentOnboardingProject()
     publishEvent({
       eventType: 'agentOnboardingSkippedFromSelectAgentPage',
       payload: {
@@ -86,18 +85,18 @@ export function SelectAgents({ user }: { user: User }) {
         workspaceId: workspace.id,
       },
     })
-    router.push(ROUTES.dashboard.root)
   }, [
-    executeCompleteOnboarding,
-    router,
+    createDefaultAgentOnboardingProject,
     publishEvent,
     workspace.id,
     user.email,
   ])
 
+  const router = useNavigate()
   const handleSelectAgent = useCallback(
     (documentUuid: string) => {
-      router.push(`/actions/clone-agent?uuid=${documentUuid}`)
+      if (!documentUuid) return
+      router.push(ROUTES.actions.cloneAgent.withUuid(documentUuid))
     },
     [router],
   )
@@ -135,9 +134,9 @@ export function SelectAgents({ user }: { user: User }) {
           fancy
           variant='outline'
           iconProps={{ name: 'plus' }}
-          onClick={handleSkipOnboarding}
+          onClick={handleStartWithSampleAgent}
         >
-          Skip onboarding
+          Start with a sample agent
         </Button>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { Membership } from '../../schema/types'
+import { type Membership } from '../../schema/models/types/Membership'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { memberships } from '../../schema/models/memberships'

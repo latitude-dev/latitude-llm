@@ -4,8 +4,8 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
 import { findByUuid } from '@latitude-data/core/data-access/exports/findByUuid'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { env } from '@latitude-data/env'
-import { Workspace } from '@latitude-data/core/schema/types'
 
 export const GET = errorHandler(
   authHandler(

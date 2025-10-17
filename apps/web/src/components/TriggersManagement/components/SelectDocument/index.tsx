@@ -6,7 +6,7 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { Select, type SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useMetadata } from '$/hooks/useMetadata'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export function useDocumentSelection({
   initialDocumentUuid = '',

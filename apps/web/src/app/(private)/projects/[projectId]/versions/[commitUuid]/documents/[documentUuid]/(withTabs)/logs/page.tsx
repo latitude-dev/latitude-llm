@@ -21,12 +21,10 @@ import { parseLogFiltersParams } from '@latitude-data/core/services/documentLogs
 import { DocumentLogsPage } from './_components'
 import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
 import buildMetatags from '$/app/_lib/buildMetatags'
-import {
-  Commit,
-  Cursor,
-  DocumentVersion,
-  Workspace,
-} from '@latitude-data/core/schema/types'
+import { Cursor } from '@latitude-data/core/schema/types'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import {
   DocumentLogFilterOptions,
   LIMITED_VIEW_THRESHOLD,

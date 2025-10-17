@@ -9,7 +9,7 @@ import {
 import { formatConversation } from '../../../helpers'
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
-import { ProviderApiKey } from '../../../schema/types'
+import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
 import { serialize as serializeDocumentLog } from '../../documentLogs/serialize'
 import {
   EvaluationMetricCloneArgs,

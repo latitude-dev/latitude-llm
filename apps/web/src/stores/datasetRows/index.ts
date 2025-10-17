@@ -13,8 +13,10 @@ import {
   serializeRow,
   serializeRows,
 } from './rowSerializationHelpers'
-import { type DatasetRow, type Dataset } from '@latitude-data/core/schema/types'
 
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+
+import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
 export const DATASET_ROWS_ROUTE = ROUTES.api.datasetsRows.root
 export function buildDatasetRowKey({
   datasetId,

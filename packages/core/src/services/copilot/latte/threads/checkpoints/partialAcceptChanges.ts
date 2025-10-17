@@ -3,7 +3,7 @@ import Transaction from '../../../../../lib/Transaction'
 import { inArray } from 'drizzle-orm'
 import { latteThreadCheckpoints } from '../../../../../schema/models/latteThreadCheckpoints'
 import { LatteThreadsRepository } from '../../../../../repositories'
-import { Workspace } from '../../../../../schema/types'
+import { type Workspace } from '../../../../../schema/models/types/Workspace'
 
 export async function partialAcceptLatteChanges(
   {

@@ -3,7 +3,9 @@ import useDatasetsV2 from '$/stores/datasets'
 import { useDatasetRowsForParameters } from './useDatasetRowsForParameters'
 import { useDatasetRowPosition } from './useRowPosition'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { DocumentVersion, Dataset } from '@latitude-data/core/schema/types'
+
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import {
   InputSource,
   LinkedDatasetRow,

@@ -1,4 +1,4 @@
-import { Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { Result } from '../../lib/Result'
 import {
   CommitsRepository,

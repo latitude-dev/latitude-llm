@@ -7,11 +7,9 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useCreateDocumentTrigger } from './useCreateDocumentTrigger'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { type AppDto } from '@latitude-data/core/constants'
-import {
-  type DocumentTrigger,
-  type DocumentVersion,
-  type IntegrationDto,
-} from '@latitude-data/core/schema/types'
+import { type IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import { SelectPayloadParameters } from '../../../../components/TriggerForms/IntegrationTriggerForm/SelectPayloadParameters'
 import { useParsedPipedreamTriggerDescription } from '../../../../components/TriggerForms/IntegrationTriggerForm/usePipedreamTriggerDescription'
 import {

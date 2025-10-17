@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { ProviderApiKey } from '../../../../schema/types'
+import { type ProviderApiKey } from '../../../../schema/models/types/ProviderApiKey'
 import { findFirstModelForProvider, PROVIDER_MODELS } from './index'
 import { Providers } from '@latitude-data/constants'
 

@@ -4,7 +4,7 @@ import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { useEffect } from 'react'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 export function Step3({
   refine,

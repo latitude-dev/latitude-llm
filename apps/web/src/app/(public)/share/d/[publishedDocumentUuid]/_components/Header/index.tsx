@@ -7,12 +7,12 @@ import { useMaybeSession } from '@latitude-data/web-ui/providers'
 import { AppHeaderWrapper } from '$/components/layouts/AppLayout/Header'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
+import { PublishedDocument } from '@latitude-data/core/schema/models/types/PublishedDocument'
 
 import { Container } from '../Container'
 import { ForkButton } from '../ForkButton'
 import { ReactNode } from 'react'
-import { getUserInfoFromSession } from '@latitude-data/web-ui/getUserInfo'
-import { PublishedDocument } from '@latitude-data/core/schema/types'
+import { getUserInfoFromSession } from '$/lib/getUserInfo'
 
 export function PromptHeader({
   shared,

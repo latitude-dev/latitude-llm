@@ -1,5 +1,6 @@
 import { DocumentTriggerType } from '@latitude-data/constants'
-import { Commit, DocumentTrigger } from '../../../../../../schema/types'
+import { type Commit } from '../../../../../../schema/models/types/Commit'
+import { type DocumentTrigger } from '../../../../../../schema/models/types/DocumentTrigger'
 import { IntegrationTriggerConfiguration } from '@latitude-data/constants/documentTriggers'
 import { Result } from '../../../../../../lib/Result'
 import { PromisedResult } from '../../../../../../lib/Transaction'

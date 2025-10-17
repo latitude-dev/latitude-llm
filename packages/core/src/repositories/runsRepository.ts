@@ -195,18 +195,21 @@ export class RunsRepository {
   }
 
   async create({ runUuid, queuedAt }: { runUuid: string; queuedAt: Date }) {
-    const key = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
+    const lockKey = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
 
-    return withCacheLock(key, async (cache) => {
-      const listing = await this.listCached(cache)
-      if (listing.error) return Result.error(listing.error)
-      const active = listing.value
+    return withCacheLock({
+      lockKey,
+      callbackFn: async (cache) => {
+        const listing = await this.listCached(cache)
+        if (listing.error) return Result.error(listing.error)
+        const active = listing.value
 
-      active[runUuid] = { uuid: runUuid, queuedAt, startedAt: undefined }
+        active[runUuid] = { uuid: runUuid, queuedAt, startedAt: undefined }
 
-      await cache.set(key, JSON.stringify(active))
+        await cache.set(lockKey, JSON.stringify(active))
 
-      return Result.ok<ActiveRun>(active[runUuid])
+        return Result.ok<ActiveRun>(active[runUuid])
+      },
     })
   }
 
@@ -219,44 +222,50 @@ export class RunsRepository {
     startedAt?: Date
     caption?: string
   }) {
-    const key = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
+    const lockKey = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
 
-    return withCacheLock(key, async (cache) => {
-      const listing = await this.listCached(cache)
-      if (listing.error) return Result.error(listing.error)
-      const active = listing.value
+    return withCacheLock({
+      lockKey,
+      callbackFn: async (cache) => {
+        const listing = await this.listCached(cache)
+        if (listing.error) return Result.error(listing.error)
+        const active = listing.value
 
-      if (!(runUuid in active)) {
-        return Result.error(
-          new NotFoundError(`Run not found with uuid ${runUuid}`),
-        )
-      }
+        if (!(runUuid in active)) {
+          return Result.error(
+            new NotFoundError(`Run not found with uuid ${runUuid}`),
+          )
+        }
 
-      active[runUuid] = {
-        ...active[runUuid],
-        startedAt: startedAt ?? active[runUuid].startedAt,
-        caption: caption ?? active[runUuid].caption,
-      }
+        active[runUuid] = {
+          ...active[runUuid],
+          startedAt: startedAt ?? active[runUuid].startedAt,
+          caption: caption ?? active[runUuid].caption,
+        }
 
-      await cache.set(key, JSON.stringify(active))
+        await cache.set(lockKey, JSON.stringify(active))
 
-      return Result.ok<ActiveRun>(active[runUuid])
+        return Result.ok<ActiveRun>(active[runUuid])
+      },
     })
   }
 
   async delete({ runUuid }: { runUuid: string }) {
-    const key = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
+    const lockKey = ACTIVE_RUNS_CACHE_KEY(this.workspaceId, this.projectId)
 
-    return withCacheLock(key, async (cache) => {
-      const listing = await this.listCached(cache)
-      if (listing.error) return Result.error(listing.error)
-      const active = listing.value
+    return withCacheLock({
+      lockKey,
+      callbackFn: async (cache) => {
+        const listing = await this.listCached(cache)
+        if (listing.error) return Result.error(listing.error)
+        const active = listing.value
 
-      if (runUuid in active) delete active[runUuid]
+        if (runUuid in active) delete active[runUuid]
 
-      await cache.set(key, JSON.stringify(active))
+        await cache.set(lockKey, JSON.stringify(active))
 
-      return Result.ok<ActiveRun>(active[runUuid])
+        return Result.ok<ActiveRun>(active[runUuid])
+      },
     })
   }
 }

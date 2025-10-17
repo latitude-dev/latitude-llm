@@ -1,8 +1,9 @@
 'use client'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'

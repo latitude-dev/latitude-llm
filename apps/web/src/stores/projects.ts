@@ -1,4 +1,5 @@
 'use client'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 
 import { createProjectAction } from '$/actions/projects/create'
 import { destroyProjectAction } from '$/actions/projects/destroy'
@@ -13,7 +14,6 @@ import { ROUTES } from '$/services/routes'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback } from 'react'
 import useSWR from 'swr'
-import { Project } from '@latitude-data/core/schema/types'
 
 const EMPTY_ARRAY: Project[] = []
 

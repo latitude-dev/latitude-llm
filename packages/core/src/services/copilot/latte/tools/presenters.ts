@@ -1,12 +1,10 @@
 import type { ConversationMetadata as PromptlMetadata } from 'promptl-ai'
-import {
-  Commit,
-  DocumentTrigger,
-  DocumentVersion,
-  IntegrationDto,
-  Project,
-  ProviderApiKey,
-} from '../../../../schema/types'
+import { type Commit } from '../../../../schema/models/types/Commit'
+import { type DocumentTrigger } from '../../../../schema/models/types/DocumentTrigger'
+import { type DocumentVersion } from '../../../../schema/models/types/DocumentVersion'
+import { type Project } from '../../../../schema/models/types/Project'
+import { type ProviderApiKey } from '../../../../schema/models/types/ProviderApiKey'
+import { IntegrationDto } from '../../../../schema/models/types/Integration'
 import { listModelsForProvider } from '../../../ai/providers/models'
 import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
 import { PromisedResult } from '../../../../lib/Transaction'

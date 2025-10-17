@@ -12,13 +12,21 @@ import { projects } from '../schema/models/projects'
 import { providerApiKeys } from '../schema/models/providerApiKeys'
 import { subscriptions } from '../schema/models/subscriptions'
 import { workspaces } from '../schema/models/workspaces'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  ProviderApiKey,
-  Workspace,
-} from '../schema/types'
+import { type Commit } from '../schema/models/types/Commit'
+import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
+import { type Project } from '../schema/models/types/Project'
+import { type ProviderApiKey } from '../schema/models/types/ProviderApiKey'
+import { type Workspace } from '../schema/models/types/Workspace'
+
+export async function unsafelyFindWorkspaceByName(name: string, db = database) {
+  const result = await db
+    .select(workspacesDtoColumns)
+    .from(workspaces)
+    .where(eq(workspaces.name, name))
+    .limit(1)
+
+  return result[0]
+}
 
 export async function unsafelyFindWorkspace(id: number, db = database) {
   const result = await db

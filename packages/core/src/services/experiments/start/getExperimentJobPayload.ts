@@ -8,7 +8,10 @@ import {
   DatasetsRepository,
   EvaluationsV2Repository,
 } from '../../../repositories'
-import { Commit, Dataset, Experiment, Workspace } from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type Dataset } from '../../../schema/models/types/Dataset'
+import { type Experiment } from '../../../schema/models/types/Experiment'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { getRowsFromRange } from '../../datasetRows/getRowsFromRange'
 import { assertEvaluationRequirements } from '../assertRequirements'
 

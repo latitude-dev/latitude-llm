@@ -5,11 +5,9 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { ConfigurableProps, ConfiguredProps } from '@pipedream/sdk/browser'
 import { DocumentTriggerType } from '@latitude-data/constants'
-import {
-  type DocumentTrigger,
-  type DocumentVersion,
-  type IntegrationDto,
-} from '@latitude-data/core/schema/types'
+import { type IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import {
   type PipedreamComponent,
   type PipedreamComponentType,

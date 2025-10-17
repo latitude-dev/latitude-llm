@@ -14,7 +14,7 @@ import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { useCallback, useEffect, useState } from 'react'
 import { SuggestionItem } from './SuggestionItem'
 import { useLatteDiff } from '$/hooks/useLatteDiff'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 const useDocumentSuggestionsSocket = ({
   document,

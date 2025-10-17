@@ -1,7 +1,7 @@
 import { Result } from '../../../../../lib/Result'
 import Transaction from '../../../../../lib/Transaction'
 import { restoreThreadCheckpoint } from './undoChanges'
-import { Workspace } from '../../../../../schema/types'
+import { type Workspace } from '../../../../../schema/models/types/Workspace'
 import { LatteThreadsRepository } from '../../../../../repositories'
 import { latteThreadCheckpoints } from '../../../../../schema/models/latteThreadCheckpoints'
 import { inArray } from 'drizzle-orm'

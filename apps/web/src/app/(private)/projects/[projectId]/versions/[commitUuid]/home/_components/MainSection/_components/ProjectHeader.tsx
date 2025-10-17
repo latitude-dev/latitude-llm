@@ -16,7 +16,7 @@ export function ProjectHeader({ description }: { description: ReactNode }) {
     <div className='flex flex-col gap-6 items-center max-w-[500px]'>
       <ProjectIcon />
 
-      <div className='flex flex-col items-center gap-2'>
+      <div className='flex flex-col items-center gap-2 max-w-[400px]'>
         <Text.H3M>{title}</Text.H3M>
         {description}
       </div>

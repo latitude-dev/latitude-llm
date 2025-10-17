@@ -1,7 +1,8 @@
 'use client'
 
 import { useCommitsFromProject } from '$/stores/commitsStore'
-import type { Commit, Project } from '@latitude-data/core/schema/types'
+import type { Project } from '@latitude-data/core/schema/models/types/Project'
+import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { createContext, ReactNode, useContext, useMemo } from 'react'
 
 interface ICommitContextType {

@@ -1,6 +1,6 @@
 import useSWR, { SWRConfiguration } from 'swr'
 import { useMemo } from 'react'
-import { DocumentIntegrationReference } from '@latitude-data/core/schema/types'
+import { DocumentIntegrationReference } from '@latitude-data/core/schema/models/types/DocumentIntegrationReference'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 

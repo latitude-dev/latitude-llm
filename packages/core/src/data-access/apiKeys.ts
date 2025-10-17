@@ -1,7 +1,7 @@
 import { apiKeys } from '../schema/models/apiKeys'
 import { eq } from 'drizzle-orm'
 
-import { ApiKey } from '../schema/types'
+import { type ApiKey } from '../schema/models/types/ApiKey'
 import { database } from '../client'
 import { NotFoundError } from '../lib/errors'
 import { Result, TypedResult } from '../lib/Result'

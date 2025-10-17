@@ -5,14 +5,12 @@ import { NextRequest } from 'next/server'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
-import {
-  Commit,
-  DocumentVersion,
-  Project,
-  User,
-  WorkspaceDto,
-} from '@latitude-data/core/schema/types'
+import { WorkspaceDto } from '@latitude-data/core/schema/models/types/Workspace'
 import { ErrorableEntity, LOG_SOURCES } from '@latitude-data/core/constants'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { Providers } from '@latitude-data/constants'
 
 const LOG_SOURCES_LIST = LOG_SOURCES.join(',')

@@ -7,8 +7,9 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 import { DiffValue } from '@latitude-data/core/constants'
-import { DocumentVersion, Workspace } from '@latitude-data/core/schema/types'
 
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 function documentContent(document?: DocumentVersion) {
   if (!document) return undefined
   if (document.deletedAt) return undefined

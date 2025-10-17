@@ -13,8 +13,9 @@ import { ExperimentComparison } from '../ExperimentsComparison'
 import { EmptyPage } from './EmptyPage'
 import { useSearchParams } from 'next/navigation'
 import { MetadataProvider } from '$/components/MetadataProvider'
-import { Commit, Project } from '@latitude-data/core/schema/types'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 export function ExperimentsPageContent({
   initialCount,
 }: {

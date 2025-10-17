@@ -5,7 +5,7 @@ import {
   STATS_CACHE_TTL,
   STATS_CACHING_THRESHOLD,
 } from '../../constants'
-import { ProjectStats } from '../../schema/types'
+import { ProjectStats } from '../../schema/models/types/Project'
 import { cache } from '../../cache'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'

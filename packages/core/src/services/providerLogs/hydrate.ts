@@ -1,8 +1,8 @@
+import { type ProviderLog } from '../../schema/models/types/ProviderLog'
 import {
   HydratedProviderLog,
-  ProviderLog,
   ProviderLogFileData,
-} from '../../schema/types'
+} from '../../schema/models/types/ProviderLog'
 import { diskFactory } from '../../lib/disk'
 import { Result } from '../../lib/Result'
 

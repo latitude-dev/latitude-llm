@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { Dataset } from '../../schema/types'
+import { type Dataset } from '../../schema/models/types/Dataset'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { Column, datasets } from '../../schema/models/datasets'

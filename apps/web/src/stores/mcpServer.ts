@@ -1,6 +1,6 @@
 import useSWR, { SWRConfiguration } from 'swr'
 import { useState } from 'react'
-import { McpServer } from '@latitude-data/core/schema/types'
+import { McpServer } from '@latitude-data/core/schema/models/types/McpServer'
 
 export function useMcpServer(
   mcpServerId: string | null | undefined,

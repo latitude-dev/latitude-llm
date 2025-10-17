@@ -1,4 +1,4 @@
-import { Commit } from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
 import { database } from '../../../client'
 import { Result } from '../../../lib/Result'
 import { ProjectsRepository } from '../../../repositories'

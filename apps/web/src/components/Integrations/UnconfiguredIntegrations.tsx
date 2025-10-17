@@ -3,13 +3,11 @@ import useDocumentIntegrationReferences from '$/stores/documentIntegrationRefere
 import useDocumentTriggers from '$/stores/documentTriggers'
 import useIntegrations from '$/stores/integrations'
 import { DocumentTriggerType, IntegrationType } from '@latitude-data/constants'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
-import {
-  Commit,
-  DocumentTrigger,
-  PipedreamIntegration,
-} from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
+import { PipedreamIntegration } from '@latitude-data/core/schema/models/types/Integration'
 import { isIntegrationConfigured } from '@latitude-data/core/services/integrations/pipedream/components/fillConfiguredProps'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'

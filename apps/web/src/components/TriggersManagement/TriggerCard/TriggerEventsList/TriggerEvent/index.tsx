@@ -3,7 +3,7 @@ import { DefaultTriggerEvent } from './Default'
 import { DocumentTriggerType } from '@latitude-data/constants'
 import { EmailTriggerEvent } from './Email'
 import { IntegrationTriggerEvent } from './Integration'
-import { DocumentTriggerEvent } from '@latitude-data/core/schema/types'
+import { DocumentTriggerEvent } from '@latitude-data/core/schema/models/types/DocumentTriggerEvent'
 
 export function DocumentTriggerEventItem<T extends DocumentTriggerType>({
   event,

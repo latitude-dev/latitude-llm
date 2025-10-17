@@ -1,5 +1,5 @@
 import { IntegrationType } from '@latitude-data/constants'
-import type { IntegrationDto, User, Workspace } from '../../schema/types'
+import type { IntegrationDto } from '../../schema/models/types/Integration'
 import { BadRequestError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
@@ -11,15 +11,17 @@ import {
   UnconfiguredPipedreamIntegrationConfiguration,
 } from './helpers/schema'
 import { getApp } from './pipedream/apps'
+import { Workspace } from '../../schema/models/types/Workspace'
+import { User } from '../../schema/models/types/User'
 
 type ConfigurationFormTypeMap = {
   [K in IntegrationType]: K extends IntegrationType.ExternalMCP
-    ? ExternalMcpIntegrationConfiguration
-    : K extends IntegrationType.Pipedream
-      ?
-          | PipedreamIntegrationConfiguration
-          | UnconfiguredPipedreamIntegrationConfiguration
-      : HostedMcpIntegrationConfigurationForm
+  ? ExternalMcpIntegrationConfiguration
+  : K extends IntegrationType.Pipedream
+  ?
+  | PipedreamIntegrationConfiguration
+  | UnconfiguredPipedreamIntegrationConfiguration
+  : HostedMcpIntegrationConfigurationForm
 }
 
 type ConfigurationFormType<T extends IntegrationType> =

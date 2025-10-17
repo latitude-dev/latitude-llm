@@ -3,7 +3,7 @@ import { ROUTES } from '$/services/routes'
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { useMemo } from 'react'
-import { type DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 const docUrl = (projectId: number, commitUuid: string, uuid: string) =>
   ROUTES.projects
@@ -27,10 +27,7 @@ export function useIncludabledPrompts({
 }) {
   return useMemo(() => {
     return documents
-      .filter(
-        (doc) =>
-          doc.id !== document.id,
-      )
+      .filter((doc) => doc.id !== document.id)
       .reduce(
         (acc, doc) => {
           acc[doc.path] = {

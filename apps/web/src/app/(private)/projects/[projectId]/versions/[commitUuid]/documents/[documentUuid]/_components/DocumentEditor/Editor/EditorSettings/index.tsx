@@ -4,7 +4,7 @@ import {
   useLocalStorage,
 } from '@latitude-data/web-ui/hooks/useLocalStorage'
 import { memo } from 'react'
-import { ProviderApiKey } from '@latitude-data/core/schema/types'
+import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
 
 export type IProviderByName = Record<string, ProviderApiKey>
 

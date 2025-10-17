@@ -1,4 +1,5 @@
 'use client'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 import { useCallback, useMemo } from 'react'
 
@@ -21,7 +22,6 @@ import {
   MAX_SIZE,
   MAX_UPLOAD_SIZE_IN_MB,
 } from '@latitude-data/core/constants'
-import { type DocumentVersion } from '@latitude-data/core/schema/types'
 
 const EMPTY_DATA = [] as DocumentVersion[]
 

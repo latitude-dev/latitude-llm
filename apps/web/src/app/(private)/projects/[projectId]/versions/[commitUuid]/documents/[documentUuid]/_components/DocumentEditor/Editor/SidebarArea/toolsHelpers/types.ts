@@ -1,5 +1,5 @@
 import { IntegrationType } from '@latitude-data/constants'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import { IconProps } from '@latitude-data/web-ui/atoms/Icons'
 
 type ItemIcon = { type: 'icon'; name: IconProps['name'] }

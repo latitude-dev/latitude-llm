@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
-import { WorkspaceDto } from '@latitude-data/core/schema/types'
+import { WorkspaceDto } from '@latitude-data/core/schema/models/types/Workspace'
 import { Result } from '@latitude-data/core/lib/Result'
 
 export const GET = errorHandler(

@@ -5,7 +5,9 @@ import {
   EvaluationV2,
   LlmEvaluationMetricAnyCustom,
 } from '@latitude-data/constants'
-import { Commit, DocumentVersion } from '@latitude-data/core/schema/types'
+
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { useCallback } from 'react'
 
 export function useRunEvaluationPlaygroundPrompt({

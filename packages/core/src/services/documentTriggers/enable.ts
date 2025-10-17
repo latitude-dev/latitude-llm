@@ -1,5 +1,7 @@
 import { BadRequestError, LatitudeError } from '@latitude-data/constants/errors'
-import { Commit, DocumentTrigger, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentTrigger } from '../../schema/models/types/DocumentTrigger'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { Result } from '../../lib/Result'
 import Transaction, { PromisedResult } from '../../lib/Transaction'
 import { documentTriggers } from '../../schema/models/documentTriggers'

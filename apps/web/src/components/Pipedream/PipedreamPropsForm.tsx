@@ -22,7 +22,7 @@ import type {
   ConfigurablePropAlertType,
   ConfigurablePropTimer,
 } from '@pipedream/sdk'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import {
   PipedreamComponent,
   PipedreamComponentType,

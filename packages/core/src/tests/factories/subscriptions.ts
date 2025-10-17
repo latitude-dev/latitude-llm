@@ -4,7 +4,8 @@ export type Create<T> = { [P in keyof T]?: T[P] }
 import { database } from '../../client'
 import { subscriptions } from '../../schema/models/subscriptions'
 import { SubscriptionPlan } from '../../plans'
-import { Subscription, Workspace } from '../../schema/types'
+import { type Subscription } from '../../schema/models/types/Subscription'
+import { type Workspace } from '../../schema/models/types/Workspace'
 
 export type CreateSubscriptionProps = Create<Subscription> & {
   workspaceId: Workspace['id']

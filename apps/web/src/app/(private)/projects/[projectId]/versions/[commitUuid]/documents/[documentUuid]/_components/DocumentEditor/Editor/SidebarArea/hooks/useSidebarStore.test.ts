@@ -5,7 +5,7 @@ import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useSidebarStore as useActiveIntegrationsStore } from './useSidebarStore'
 import { IntegrationType } from '@latitude-data/constants'
-import { IntegrationDto } from '@latitude-data/core/schema/types'
+import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import { ActiveIntegration } from '../toolsHelpers/types'
 
 describe('useActiveIntegrationsStore', () => {

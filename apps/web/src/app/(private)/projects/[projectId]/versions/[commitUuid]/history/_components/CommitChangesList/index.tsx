@@ -14,9 +14,10 @@ import useDocumentVersions from '$/stores/documentVersions'
 import { ReactNode, useMemo } from 'react'
 import { ChangedDocument, ModifiedDocumentType } from '@latitude-data/constants'
 import { CleanTriggers } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/Sidebar/PublishDraftCommitModal/TriggerChangesList'
-import { Commit } from '@latitude-data/core/schema/types'
+
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 function useCanRevert({
   commit,
   change,

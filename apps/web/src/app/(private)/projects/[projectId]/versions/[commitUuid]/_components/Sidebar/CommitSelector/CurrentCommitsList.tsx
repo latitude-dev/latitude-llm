@@ -7,8 +7,9 @@ import { useCommits } from '$/stores/commitsStore'
 import { CommitItem, CommitItemSkeleton, SimpleUser } from './CommitItem'
 import { CommitItemsWrapper } from './CommitItemsWrapper'
 import { CommitStatus } from '@latitude-data/core/constants'
-import { DocumentVersion, type Commit } from '@latitude-data/core/schema/types'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 export function CurrentCommitsList({
   currentDocument,
   headCommit,

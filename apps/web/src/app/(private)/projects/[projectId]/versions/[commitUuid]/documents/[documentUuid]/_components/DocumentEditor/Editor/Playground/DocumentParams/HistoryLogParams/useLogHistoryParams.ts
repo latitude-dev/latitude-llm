@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 
 import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
@@ -8,7 +9,6 @@ import useDocumentLogWithPaginationPosition, {
 } from '$/stores/documentLogWithPaginationPosition'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
 
 const ONLY_ONE_PAGE = '1'
 

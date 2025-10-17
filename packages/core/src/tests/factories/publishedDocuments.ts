@@ -1,4 +1,6 @@
-import { DocumentVersion, Project, Workspace } from '../../schema/types'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Project } from '../../schema/models/types/Project'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { createPublishedDocument as createFn } from '../../services/publishedDocuments/create'
 
 export async function createPublishedDocument({

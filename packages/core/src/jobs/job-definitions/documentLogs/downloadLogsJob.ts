@@ -4,7 +4,9 @@ import { stringify } from 'csv-stringify/sync'
 import { and, desc, eq, isNull, lt, notInArray } from 'drizzle-orm'
 import { Redis, RedisOptions } from 'ioredis'
 import { Readable } from 'stream'
-import { DocumentVersion, User, Workspace } from '../../../schema/types'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type User } from '../../../schema/models/types/User'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { database } from '../../../client'
 import { DocumentLogFilterOptions } from '../../../constants'
 import { findWorkspaceFromDocument } from '../../../data-access/workspaces'
@@ -148,13 +150,13 @@ export const downloadLogsJob = async (
               ...filters,
               createdAt: filters.createdAt
                 ? {
-                    from: filters.createdAt.from
-                      ? new Date(filters.createdAt.from)
-                      : undefined,
-                    to: filters.createdAt.to
-                      ? new Date(filters.createdAt.to)
-                      : undefined,
-                  }
+                  from: filters.createdAt.from
+                    ? new Date(filters.createdAt.from)
+                    : undefined,
+                  to: filters.createdAt.to
+                    ? new Date(filters.createdAt.to)
+                    : undefined,
+                }
                 : undefined,
             }),
             selectionMode === 'ALL_EXCEPT'

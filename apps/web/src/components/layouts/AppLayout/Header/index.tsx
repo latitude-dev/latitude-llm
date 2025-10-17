@@ -2,6 +2,7 @@
 import { ReactNode } from 'react'
 
 import { LATITUDE_SLACK_URL } from '@latitude-data/core/constants'
+import { User } from '@latitude-data/core/schema/models/types/User'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 
@@ -9,7 +10,7 @@ import AvatarDropdown from './AvatarDropdown'
 import { HeaderBreadcrumb } from './Breadcrumb'
 import { RewardsButton } from './Rewards'
 import { UsageIndicator } from './UsageIndicator'
-import { User } from '@latitude-data/core/schema/types'
+
 import Link from 'next/link'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { useDocs } from '$/components/Documentation/Provider'

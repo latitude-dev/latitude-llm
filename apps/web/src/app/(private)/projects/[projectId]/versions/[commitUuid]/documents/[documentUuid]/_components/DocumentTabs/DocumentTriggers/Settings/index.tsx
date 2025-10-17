@@ -7,11 +7,9 @@ import { useState } from 'react'
 import { EmailTriggerSettings } from './EmailTrigger'
 import { IntegrationTriggerSettings } from './IntegrationTriggers'
 import { ScheduleTriggerSettings } from './ScheduleTrigger'
-import {
-  DocumentTrigger,
-  DocumentVersion,
-} from '@latitude-data/core/schema/types'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 enum ShareSettingsTabs {
   Email = 'email',
   Schedule = 'schedule',

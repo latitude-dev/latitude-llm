@@ -6,7 +6,10 @@ import { UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import { RunsRepository } from '../../repositories'
-import { Commit, DocumentVersion, Project, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Project } from '../../schema/models/types/Project'
+import { type Workspace } from '../../schema/models/types/Workspace'
 
 export async function enqueueRun({
   runUuid,
@@ -33,6 +36,13 @@ export async function enqueueRun({
 }) {
   runUuid = runUuid ?? generateUUIDIdentifier()
 
+  // IMPORTANT: Create the run in cache BEFORE adding to queue
+  // to prevent race condition where job starts before cache entry exists
+  const repository = new RunsRepository(workspace.id, project.id)
+  const creating = await repository.create({ runUuid, queuedAt: new Date() })
+  if (creating.error) return Result.error(creating.error)
+  const run = creating.value
+
   const { runsQueue } = await queues()
   const job = await runsQueue.add(
     'backgroundRunJob',
@@ -58,15 +68,12 @@ export async function enqueueRun({
     },
   )
   if (!job?.id) {
+    // Job creation failed - clean up the cache entry we just created
+    await repository.delete({ runUuid })
     return Result.error(
       new UnprocessableEntityError('Failed to enqueue background run job'),
     )
   }
-
-  const repository = new RunsRepository(workspace.id, project.id)
-  const creating = await repository.create({ runUuid, queuedAt: new Date() })
-  if (creating.error) return Result.error(creating.error)
-  const run = creating.value
 
   await publisher.publishLater({
     type: 'runQueued',

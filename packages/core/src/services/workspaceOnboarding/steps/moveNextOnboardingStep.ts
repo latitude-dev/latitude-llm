@@ -3,8 +3,9 @@ import Transaction from '../../../lib/Transaction'
 import { workspaceOnboarding } from '../../../schema/models/workspaceOnboarding'
 import { Result } from '../../../lib/Result'
 import { getNextAvailableStep } from './getNextAvailableStep'
-import { Workspace, WorkspaceOnboarding } from '../../../schema/types'
+import { type WorkspaceOnboarding } from '../../../schema/models/types/WorkspaceOnboarding'
 import { OnboardingStepKey } from '@latitude-data/constants/onboardingSteps'
+import { Workspace } from '../../../schema/models/types/Workspace'
 
 export async function moveNextOnboardingStep(
   {

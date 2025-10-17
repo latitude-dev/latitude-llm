@@ -2,8 +2,8 @@ import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { DocumentLogFilterOptions } from '@latitude-data/core/constants'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
 
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 export type LogWithPosition = {
   position: number
   page: number

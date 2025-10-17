@@ -14,15 +14,13 @@ import {
   EvaluationV2,
 } from '../../constants'
 import { TypedResult } from '../../lib/Result'
-import {
-  Commit,
-  Dataset,
-  DatasetRow,
-  DocumentVersion,
-  ProviderApiKey,
-  ProviderLogDto,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DatasetRow } from '../../schema/models/types/DatasetRow'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { ProviderLogDto } from '../../schema/types'
 
 export type EvaluationMetricValidateArgs<
   T extends EvaluationType = EvaluationType,

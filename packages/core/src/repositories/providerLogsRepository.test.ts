@@ -2,12 +2,10 @@ import { randomUUID } from 'crypto'
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import {
-  Commit,
-  DocumentVersion,
-  ProviderApiKey,
-  Workspace,
-} from '../schema/types'
+import { type Commit } from '../schema/models/types/Commit'
+import { type DocumentVersion } from '../schema/models/types/DocumentVersion'
+import { type ProviderApiKey } from '../schema/models/types/ProviderApiKey'
+import { type Workspace } from '../schema/models/types/Workspace'
 import { LogSources, Providers } from '@latitude-data/constants'
 import { NotFoundError } from '../lib/errors'
 import * as factories from '../tests/factories'

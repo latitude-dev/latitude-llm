@@ -1,4 +1,5 @@
-import { Commit, DocumentVersion } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { DocumentVersionDto } from '../../constants'
 
 export function documentVersionPresenter({

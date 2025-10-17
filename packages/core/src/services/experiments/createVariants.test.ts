@@ -2,13 +2,11 @@ import { Providers } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EvaluationV2 } from '../../constants'
 import { publisher } from '../../events/publisher'
-import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  User,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { createExperimentVariants } from './createVariants'
 

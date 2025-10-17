@@ -14,7 +14,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { publishEventAction } from '$/actions/events/publishEventAction'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { usePlayground } from '../../lib/PlaygroundProvider'
-import { User } from '@latitude-data/core/schema/types'
+import { User } from '@latitude-data/core/schema/models/types/User'
 
 export default function AgentOnboardingNavbar({
   onboardingSteps,

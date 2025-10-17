@@ -4,8 +4,10 @@ import { ROUTES } from '$/services/routes'
 import { completeOnboardingAction } from '$/actions/workspaceOnboarding/complete'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { moveNextOnboardingStepAction } from '$/actions/workspaceOnboarding/moveNextStep'
-import { WorkspaceOnboarding } from '@latitude-data/core/schema/types'
+import { WorkspaceOnboarding } from '@latitude-data/core/schema/models/types/WorkspaceOnboarding'
+
 import { createPromptEngineeringResourcesAction } from '$/actions/workspaceOnboarding/createPromptEngineeringResources'
+import { createDefaultAgentOnboardingProjectAction } from '$/actions/workspaceOnboarding/createDefaultAgentOnboardingProject'
 
 export default function useWorkspaceOnboarding() {
   const fetcher = useFetcher<WorkspaceOnboarding>(
@@ -28,6 +30,10 @@ export default function useWorkspaceOnboarding() {
   const { execute: executeCreatePromptEngineeringResources } =
     useLatitudeAction(createPromptEngineeringResourcesAction)
 
+  const { execute: createDefaultAgentOnboardingProject } = useLatitudeAction(
+    createDefaultAgentOnboardingProjectAction,
+  )
+
   const {
     execute: moveNextOnboardingStep,
     isPending: isPendingNextOnboardingStep,
@@ -47,6 +53,7 @@ export default function useWorkspaceOnboarding() {
     isLoading,
     moveNextOnboardingStep,
     executeCreatePromptEngineeringResources,
+    createDefaultAgentOnboardingProject,
     isPendingNextOnboardingStep,
     executeCompleteOnboarding,
     refetch: () => mutate(),

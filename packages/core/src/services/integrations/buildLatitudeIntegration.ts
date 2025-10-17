@@ -1,4 +1,5 @@
-import { IntegrationDto, Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { IntegrationDto } from '../../schema/models/types/Integration'
 import { IntegrationType } from '@latitude-data/constants'
 
 /**

@@ -31,6 +31,13 @@ const BACKOFFICE_ROOT = '/backoffice'
 export const ROUTES = {
   root: '/',
   api: API_ROUTES,
+  actions: {
+    cloneAgent: {
+      root: '/actions/clone-agent',
+      withUuid: (uuid: string) =>
+        `${ROUTES.actions.cloneAgent.root}?uuid=${uuid}`,
+    },
+  },
   onboarding: {
     agents: {
       selectAgent: '/onboarding-agents/select-agent',

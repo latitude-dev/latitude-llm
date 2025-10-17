@@ -7,8 +7,9 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { LogSources } from '@latitude-data/core/constants'
-import { User, Workspace } from '@latitude-data/core/schema/types'
 
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 const inputSchema = z.object({
   messages: z.array(
     z.object({

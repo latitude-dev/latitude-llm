@@ -1,5 +1,5 @@
 import { addMonths } from 'date-fns'
-import { Workspace } from '../../../schema/types'
+import { type Workspace } from '../../../schema/models/types/Workspace'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { SubscriptionRepository } from '../../../repositories'

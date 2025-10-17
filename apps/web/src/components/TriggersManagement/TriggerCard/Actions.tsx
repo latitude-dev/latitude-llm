@@ -1,6 +1,8 @@
 import useDocumentTriggers from '$/stores/documentTriggers'
 import { DocumentTriggerStatus } from '@latitude-data/constants'
-import { Commit, DocumentTrigger } from '@latitude-data/core/schema/types'
+
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { SwitchToggle } from '@latitude-data/web-ui/atoms/Switch'

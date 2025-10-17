@@ -5,7 +5,9 @@ import type {
 import { FinishReason } from 'ai'
 
 import { LogSources, Providers } from '@latitude-data/constants'
-import { ProviderLog, ProviderLogFileData, Workspace } from '../../schema/types'
+import { type ProviderLog } from '../../schema/models/types/ProviderLog'
+import { ProviderLogFileData } from '../../schema/models/types/ProviderLog'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import {
   ChainStepResponse,
   LegacyVercelSDKVersion4Usage as LanguageModelUsage,
@@ -116,12 +118,12 @@ export async function createProviderLog(
             costInMillicents ??
             (providerType && model && usage
               ? Math.floor(
-                  estimateCost({
-                    provider: providerType!,
-                    model: model!,
-                    usage: usage!,
-                  }) * TO_MILLICENTS_FACTOR,
-                )
+                estimateCost({
+                  provider: providerType!,
+                  model: model!,
+                  usage: usage!,
+                }) * TO_MILLICENTS_FACTOR,
+              )
               : undefined)
 
           const inserts = await trx

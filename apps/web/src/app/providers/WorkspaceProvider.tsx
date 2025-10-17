@@ -1,6 +1,6 @@
 'use client'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
-import { Workspace } from '@latitude-data/core/schema/types'
 import { createContext, ReactNode, useContext } from 'react'
 
 interface IWorkspaceContextType {

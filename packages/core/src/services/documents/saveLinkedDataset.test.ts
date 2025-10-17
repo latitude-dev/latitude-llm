@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { DatasetRow, Dataset, DocumentVersion } from '../../schema/types'
+import { type DatasetRow } from '../../schema/models/types/DatasetRow'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { saveLinkedDataset } from './saveLinkedDataset'

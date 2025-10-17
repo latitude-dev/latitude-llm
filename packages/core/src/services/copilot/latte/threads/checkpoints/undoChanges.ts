@@ -1,8 +1,6 @@
-import {
-  DocumentVersion,
-  LatteThreadCheckpoint,
-  Workspace,
-} from '../../../../../schema/types'
+import { type DocumentVersion } from '../../../../../schema/models/types/DocumentVersion'
+import { type LatteThreadCheckpoint } from '../../../../../schema/models/types/LatteThreadCheckpoint'
+import { type Workspace } from '../../../../../schema/models/types/Workspace'
 import { Result } from '../../../../../lib/Result'
 import Transaction, { PromisedResult } from '../../../../../lib/Transaction'
 import { LatteThreadsRepository } from '../../../../../repositories'

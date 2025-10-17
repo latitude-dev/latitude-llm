@@ -1,7 +1,7 @@
 import { Providers } from '@latitude-data/constants'
 import { LanguageModel } from 'ai'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { ProviderApiKey } from '../../schema/types'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import * as factories from '../../tests/factories'
 import { getLanguageModel } from './getLanguageModel'
 import { LlmProvider } from './helpers'

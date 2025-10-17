@@ -16,11 +16,11 @@ import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import useUsers from '$/stores/users'
 import Link from 'next/link'
+import { User } from '@latitude-data/core/schema/models/types/User'
 
 import NewUser from './New'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
-import { type User } from '@latitude-data/core/schema/types'
 
 export default function Memberships() {
   const [open, setOpen] = useState(false)

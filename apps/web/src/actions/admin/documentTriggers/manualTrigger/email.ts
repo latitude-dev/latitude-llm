@@ -7,8 +7,8 @@ import { withAdmin } from '../../../procedures'
 import { registerEmailTriggerEvent } from '@latitude-data/core/services/documentTriggers/handlers/email/registerEvent'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { Result, TypedResult } from '@latitude-data/core/lib/Result'
-import { Commit } from '@latitude-data/core/schema/types'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 export const manualEmailTriggerAction = withAdmin
   .inputSchema(
     z.object({

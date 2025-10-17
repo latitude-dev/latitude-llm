@@ -5,13 +5,13 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Popover } from '@latitude-data/web-ui/atoms/Popover'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { getUserInfoFromSession } from '@latitude-data/web-ui/getUserInfoFromSession'
 import { TripleThemeToggle } from '@latitude-data/web-ui/molecules/TrippleThemeToggle'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
-import { User } from '@latitude-data/core/schema/types'
+import { User } from '@latitude-data/core/schema/models/types/User'
+import { getUserInfoFromSession } from '$/lib/getUserInfo'
 
 type DropdownItemProps = {
   label: string
@@ -62,11 +62,11 @@ export default function AvatarDropdown({
           label: currentUser.email,
         },
         currentUser?.admin &&
-          isCloud && {
-            label: 'Backoffice',
-            icon: 'terminal',
-            onClick: onClickBackoffice,
-          },
+        isCloud && {
+          label: 'Backoffice',
+          icon: 'terminal',
+          onClick: onClickBackoffice,
+        },
         {
           label: 'Logout',
           icon: 'logOut',

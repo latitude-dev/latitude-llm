@@ -13,11 +13,11 @@ import {
 } from '@latitude-data/constants'
 import { EvaluationsV2Repository } from '@latitude-data/core/repositories'
 import { buildStreamEvaluationRun } from '@latitude-data/core/services/evaluationsV2/llm/buildStreamEvaluationRun'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import {
   NotFoundError,
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
-import { Workspace } from '@latitude-data/core/schema/types'
 
 function isCustomLlmEvaluation(
   evaluation: EvaluationV2,

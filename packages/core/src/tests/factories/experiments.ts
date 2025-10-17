@@ -1,14 +1,12 @@
 import { faker } from '@faker-js/faker'
 import { EvaluationV2, LogSources } from '../../constants'
-import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  Experiment,
-  ProviderApiKey,
-  User,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Experiment } from '../../schema/models/types/Experiment'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { createExperiment as createExperimentFn } from '../../services/experiments/create'
 import { createDataset, ICreateDatasetV2 } from './datasets'
 import { createDocumentLog } from './documentLogs'

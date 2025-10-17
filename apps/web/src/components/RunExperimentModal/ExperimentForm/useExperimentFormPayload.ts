@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useMetadata } from '$/hooks/useMetadata'
-import {
-  Commit,
-  Dataset,
-  DocumentVersion,
-  Project,
-} from '@latitude-data/core/schema/types'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 import { EvaluationV2 } from '@latitude-data/core/constants'
 
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
 export type ExperimentFormPayload = {
   project: Project
   commit: Commit

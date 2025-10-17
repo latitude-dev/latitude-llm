@@ -3,7 +3,7 @@ import { Providers } from '@latitude-data/constants'
 import { LanguageModel } from 'ai'
 import { omit } from 'lodash-es'
 import { ProviderConfiguration } from '../../schema/models/providerApiKeys'
-import { ProviderApiKey } from '../../schema/types'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { LlmProvider } from './helpers'
 import { VercelConfigWithProviderRules } from './providers/rules'
 

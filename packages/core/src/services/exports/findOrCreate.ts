@@ -1,4 +1,5 @@
-import { NewExport, Workspace } from '../../schema/types'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { NewExport } from '../../schema/models/types/Export'
 import { latitudeExports } from '../../schema/models/exports'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'

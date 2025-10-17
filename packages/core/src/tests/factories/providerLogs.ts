@@ -2,7 +2,8 @@ import { faker } from '@faker-js/faker'
 import { v4 as uuid } from 'uuid'
 
 import { LogSources, Providers } from '@latitude-data/constants'
-import { ProviderLog, Workspace } from '../../schema/types'
+import { type ProviderLog } from '../../schema/models/types/ProviderLog'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { createProviderLog as createProviderLogService } from '../../services/providerLogs/create'
 import type { ToolCall, Message } from '@latitude-data/constants/legacyCompiler'
 

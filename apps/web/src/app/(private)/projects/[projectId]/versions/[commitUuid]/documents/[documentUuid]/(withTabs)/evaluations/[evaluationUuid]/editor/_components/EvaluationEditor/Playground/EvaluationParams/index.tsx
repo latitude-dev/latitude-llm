@@ -9,7 +9,8 @@ import {
 import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { HistoryLogParams } from './HistoryLogParams'
 import { UseLogHistoryParams } from './HistoryLogParams/useLogHistoryParams'
-import { DocumentVersion } from '@latitude-data/core/schema/types'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+
 import {
   EvaluationType,
   EvaluationV2,

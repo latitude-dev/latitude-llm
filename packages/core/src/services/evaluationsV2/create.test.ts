@@ -11,7 +11,9 @@ import {
 import { publisher } from '../../events/publisher'
 import { BadRequestError } from '../../lib/errors'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
-import { Commit, DocumentVersion, Workspace } from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { createEvaluationV2 } from './create'
 

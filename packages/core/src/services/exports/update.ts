@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { Export } from '../../schema/types'
+import { Export } from '../../schema/models/types/Export'
 import Transaction from '../../lib/Transaction'
 import { latitudeExports } from '../../schema/models/exports'
 import { Result } from '../../lib/Result'

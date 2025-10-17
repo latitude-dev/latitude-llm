@@ -22,7 +22,7 @@ import { Providers } from '@latitude-data/constants'
 import { Result, TypedResult } from '../../lib/Result'
 
 import { PartialPromptConfig } from '@latitude-data/constants'
-import { ProviderApiKey } from '../../schema/types'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import type { ModelCost } from './estimateCost'
 import { instrumentedFetch } from './fetch'
 import {

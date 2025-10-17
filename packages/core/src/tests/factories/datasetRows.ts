@@ -1,4 +1,5 @@
-import { Dataset, Workspace } from '../../schema/types'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { createDatasetRow as createDatasetRowFn } from '../../services/datasetRows/create'
 import { DatasetRowData } from '../../schema/models/datasetRows'
 import { faker } from '@faker-js/faker'

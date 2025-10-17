@@ -1,5 +1,5 @@
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { PipedreamIntegration } from '../../../../schema/types'
+import { PipedreamIntegration } from '../../../../schema/models/types/Integration'
 import { PromisedResult } from '../../../../lib/Transaction'
 import {
   fillConfiguredProps,

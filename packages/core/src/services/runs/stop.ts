@@ -4,7 +4,8 @@ import { queues } from '../../jobs/queues'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { RunsRepository } from '../../repositories'
-import { Project, Workspace } from '../../schema/types'
+import { type Project } from '../../schema/models/types/Project'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { JOB_FINISHED_STATES, subscribeQueue } from './shared'
 
 export async function stopRun({

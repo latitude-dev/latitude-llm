@@ -15,8 +15,10 @@ import {
   EvaluationV2,
 } from '@latitude-data/core/constants'
 import {
-  DocumentLogsAggregations,
   DocumentLogsLimitedView,
+  DocumentLogsAggregations,
+} from '@latitude-data/core/schema/models/types/DocumentLog'
+import {
   ResultWithEvaluationV2,
 } from '@latitude-data/core/schema/types'
 import { Button } from '@latitude-data/web-ui/atoms/Button'

@@ -11,12 +11,10 @@ import {
 import { publisher } from '../../../events/publisher'
 import { UnprocessableEntityError } from '../../../lib/errors'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
-import {
-  Commit,
-  DocumentVersion,
-  ProviderLogDto,
-  Workspace,
-} from '../../../schema/types'
+import { type Commit } from '../../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
+import { type Workspace } from '../../../schema/models/types/Workspace'
+import { ProviderLogDto } from '../../../schema/types'
 import * as factories from '../../../tests/factories'
 import serializeProviderLog from '../../providerLogs/serialize'
 import { createEvaluationResultV2 } from './create'

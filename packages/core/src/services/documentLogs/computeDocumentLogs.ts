@@ -5,7 +5,7 @@ import {
   DocumentLogFilterOptions,
   ErrorableEntity,
 } from '../../constants'
-import { DocumentVersion } from '../../schema/types'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
 import { commits } from '../../schema/models/commits'

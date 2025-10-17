@@ -10,15 +10,13 @@ import {
   RuleEvaluationMetric,
 } from '../../constants'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
-import {
-  Commit,
-  Dataset,
-  DatasetRow,
-  Experiment,
-  ProviderLog,
-  ProviderLogDto,
-  Workspace,
-} from '../../schema/types'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type Dataset } from '../../schema/models/types/Dataset'
+import { type DatasetRow } from '../../schema/models/types/DatasetRow'
+import { type Experiment } from '../../schema/models/types/Experiment'
+import { type ProviderLog } from '../../schema/models/types/ProviderLog'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { ProviderLogDto } from '../../schema/types'
 import { createEvaluationResultV2 as createEvaluationResultSvc } from '../../services/evaluationsV2/results/create'
 import serializeProviderLog from '../../services/providerLogs/serialize'
 
