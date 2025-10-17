@@ -19,6 +19,7 @@ export function useConfigureIntegrationAccount({
   const { data: workspace } = useCurrentWorkspace()
   const { data: app, isLoading: isLoadingApp } = usePipedreamApp(
     integration.configuration.appName,
+    { withConfig: false },
   )
   const { connect, isLoading: isLoadingConnect } = useConnectToPipedreamApp(app)
 

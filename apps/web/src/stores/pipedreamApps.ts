@@ -2,13 +2,13 @@ import { useCurrentUrl } from '$/hooks/useCurrentUrl'
 import { executeFetch } from '$/hooks/useFetcher'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
+import { type App } from '@latitude-data/core/constants'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCallback, useMemo } from 'react'
 import useSWRInfinite, { SWRInfiniteConfiguration } from 'swr/infinite'
-import { AppDto } from '@latitude-data/core/constants'
 
 type PipedreamAppsResponse = {
-  apps: AppDto[]
+  apps: App[]
   totalCount: number
   cursor: string
 }
@@ -43,25 +43,15 @@ function useInfiniteFetcher<T>(
 export default function usePipedreamApps(
   {
     query,
-    withTriggers,
-    withTools,
   }: {
     query?: string
-    withTriggers?: boolean
-    withTools?: boolean
   } = {},
   opts?: SWRInfiniteConfiguration<PipedreamAppsResponse, any>,
 ) {
   const getKey = useCallback(
     (pageIndex: number, previousPageData: PipedreamAppsResponse | null) => {
       if (pageIndex === 0) {
-        return [
-          'pipedream-apps',
-          withTriggers,
-          withTools,
-          query || '',
-          '',
-        ] as const
+        return ['pipedream-apps', query || '', ''] as const
       }
 
       // If previous page data is empty or doesn't have a cursor, we've reached the end
@@ -69,15 +59,9 @@ export default function usePipedreamApps(
         return null
       }
 
-      return [
-        'pipedream-apps',
-        withTriggers,
-        withTools,
-        query || '',
-        previousPageData.cursor,
-      ] as const
+      return ['pipedream-apps', query || '', previousPageData.cursor] as const
     },
-    [withTriggers, withTools, query],
+    [query],
   )
 
   // Use the reusable infinite fetcher hook
@@ -86,11 +70,9 @@ export default function usePipedreamApps(
     useCallback((key: string[]) => {
       const searchParams: Record<string, string> = {}
 
-      // Extract params from key: [cacheName, withTriggers, withTools, query, cursor]
-      if (key[1]) searchParams.withTriggers = key[1]
-      if (key[2]) searchParams.withTools = key[2]
-      if (key[3]) searchParams.query = key[3]
-      if (key[4]) searchParams.cursor = key[4]
+      // Extract params from key: [cacheName, query, cursor]
+      if (key[1]) searchParams.query = key[1]
+      if (key[2]) searchParams.cursor = key[2]
 
       return searchParams
     }, []),

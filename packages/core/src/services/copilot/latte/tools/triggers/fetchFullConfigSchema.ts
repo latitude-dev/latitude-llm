@@ -50,6 +50,7 @@ export async function fetchFullConfigSchema({
   integration: PipedreamIntegration
 }): PromisedResult<ConfigurablePropWithRemoteOptions[]> {
   try {
+    // TODO: Cache this on Redis to improve performance on tool retrieval
     const { data: component } = await pipedream.components.retrieve(componentId)
 
     const relevantLatteProps = component.configurableProps.filter(

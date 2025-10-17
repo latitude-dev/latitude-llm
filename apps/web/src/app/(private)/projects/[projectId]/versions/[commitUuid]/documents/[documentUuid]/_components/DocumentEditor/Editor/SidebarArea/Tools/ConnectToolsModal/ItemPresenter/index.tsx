@@ -6,8 +6,9 @@ import {
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { PipedreamAppCard } from '$/components/Pipedream/PipedreamCard'
 import { pluralize } from '$/components/TriggersManagement/NewTrigger/IntegrationsList/utils'
-import { AppDto } from '@latitude-data/core/constants'
+import { App } from '@latitude-data/core/constants'
 import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
+import { PipedreamIntegration } from '@latitude-data/core/schema/models/types/Integration'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -17,6 +18,7 @@ import useIntegrationTools from '$/stores/integrationTools'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { parseMarkdownLinks } from '$/components/Pipedream/utils'
 import { IntegrationType } from '@latitude-data/constants'
+import { ConnectPipedreamModal } from '../ConnectPipedreamModal'
 
 function ToolItem({ tool }: { tool: { name: string; description?: string } }) {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -57,7 +59,7 @@ export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
   const type = item.metadata?.type
   const imageIcon = item.imageIcon
   const title = item.title
-  const app = item.metadata?.app as AppDto | undefined
+  const app = item.metadata?.app as App | undefined
   const integration = item.metadata?.integration as IntegrationDto | undefined
   const integrations = item.metadata?.integrations as
     | IntegrationDto[]
@@ -74,6 +76,8 @@ export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<
     string | undefined
   >()
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false)
+  const [isSelectOpen, setIsSelectOpen] = useState(false)
 
   // For grouped Pipedream integrations
   const isGrouped = type === 'GroupedPipedream'
@@ -150,9 +154,7 @@ export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
       description: '',
       categories: [],
       featuredWeight: 0,
-      tools: [],
-      triggers: [],
-    } as AppDto
+    } as App
   }, [type, app, appNameSlug, title, appImgSrc])
 
   const handleHeaderClick = useCallback(() => {
@@ -175,6 +177,23 @@ export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
       setIsExpanded(!isExpanded)
     },
     [isExpanded],
+  )
+
+  const handleOpenConnectModal = useCallback(() => {
+    setIsSelectOpen(false) // Close the Select dropdown
+    setIsConnectModalOpen(true)
+  }, [])
+
+  const handleCloseConnectModal = useCallback((open: boolean) => {
+    setIsConnectModalOpen(open)
+  }, [])
+
+  const handleConnectSuccess = useCallback(
+    (newIntegration: PipedreamIntegration) => {
+      setIsConnectModalOpen(false)
+      onAdd(newIntegration)
+    },
+    [onAdd],
   )
 
   // Single return with ternaries for all cases
@@ -243,12 +262,19 @@ export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
                 onChange={setSelectedIntegrationId}
                 placeholder='Select an account'
                 searchable
+                open={isSelectOpen}
+                onOpenChange={setIsSelectOpen}
                 options={
                   integrationNames?.map(({ id, name }) => ({
                     label: name,
                     value: String(id),
                   })) || []
                 }
+                footerAction={{
+                  label: 'Connect new account',
+                  icon: 'plus',
+                  onClick: handleOpenConnectModal,
+                }}
               />
               <Button
                 fancy
@@ -343,6 +369,14 @@ export function ItemPresenter({ item }: ItemPresenterProps<ToolType>) {
             </>
           )}
         </>
+      )}
+      {/* ConnectPipedreamModal for connecting new accounts */}
+      {isConnectModalOpen && pipedreamApp && (
+        <ConnectPipedreamModal
+          onOpenChange={handleCloseConnectModal}
+          onConnect={handleConnectSuccess}
+          app={pipedreamApp}
+        />
       )}
     </div>
   )

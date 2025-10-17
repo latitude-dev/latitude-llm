@@ -53,6 +53,8 @@ export type SelectProps<V extends unknown = unknown> = Omit<
   size?: 'small' | 'default'
   removable?: boolean
   searchable?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   footerAction?: {
     label: string
     icon?: IconName
@@ -80,12 +82,18 @@ export function Select<V extends unknown = unknown>({
   required = false,
   removable = false,
   searchable = false,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
   footerAction,
 }: SelectProps<V>) {
   const [selectedValue, setSelected] = useState<V | undefined>(
     value ?? defaultValue,
   )
-  const [isOpen, setIsOpen] = useState(false)
+  const [internalIsOpen, setInternalIsOpen] = useState(false)
+
+  // Use controlled state if provided, otherwise use internal state
+  const isOpen = controlledOpen !== undefined ? controlledOpen : internalIsOpen
+  const setIsOpen = controlledOnOpenChange ?? setInternalIsOpen
 
   useEffect(() => {
     setSelected(value ?? defaultValue)

@@ -10,12 +10,16 @@ import type { App } from '@pipedream/sdk/browser'
 import Image from 'next/image'
 import { ReactNode, useMemo, useState } from 'react'
 import {
-  PipedreamComponent,
+  LightPipedreamComponent,
   PipedreamComponentType,
 } from '@latitude-data/core/constants'
 import { parseMarkdownLinks } from '../utils'
 
-function AppComponent({ component }: { component: PipedreamComponent }) {
+function AppComponent<T extends PipedreamComponentType>({
+  component,
+}: {
+  component: LightPipedreamComponent<T>
+}) {
   const [isExpanded, setIsExpanded] = useState(false)
   const description = useMemo(
     () => parseMarkdownLinks(component.description),
@@ -57,7 +61,7 @@ function AppComponentSkeleton() {
   )
 }
 
-function AppComponentsHeader({
+export function AppComponentsHeader({
   count,
   label,
   isLoading,
@@ -77,7 +81,7 @@ function AppComponentsHeader({
   )
 }
 
-function AppComponentsCard<C extends PipedreamComponentType>({
+export function AppComponentsCard<C extends PipedreamComponentType>({
   title,
   icon,
   isLoading,
@@ -87,7 +91,7 @@ function AppComponentsCard<C extends PipedreamComponentType>({
   title: string
   icon: IconName
   isLoading: boolean
-  components?: PipedreamComponent<C>[]
+  components?: LightPipedreamComponent<C>[]
   header: ReactNode
 }) {
   return (
@@ -123,6 +127,7 @@ function AppComponentsCard<C extends PipedreamComponentType>({
 function AppComponents({ app }: { app: App }) {
   const { data, isLoading: isLoadingPipedreamApp } = usePipedreamApp(
     app.nameSlug,
+    { withConfig: false },
   )
   const isLoading = isLoadingPipedreamApp
 
@@ -175,6 +180,7 @@ export function PipedreamAppCard({
 }) {
   const { data, isLoading: isLoadingPipedreamApp } = usePipedreamApp(
     app?.nameSlug,
+    { withConfig: false },
   )
 
   if (!app) return <Text.H5 color='foregroundMuted'>Select an app.</Text.H5>

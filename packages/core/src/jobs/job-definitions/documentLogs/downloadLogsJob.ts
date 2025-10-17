@@ -150,13 +150,13 @@ export const downloadLogsJob = async (
               ...filters,
               createdAt: filters.createdAt
                 ? {
-                  from: filters.createdAt.from
-                    ? new Date(filters.createdAt.from)
-                    : undefined,
-                  to: filters.createdAt.to
-                    ? new Date(filters.createdAt.to)
-                    : undefined,
-                }
+                    from: filters.createdAt.from
+                      ? new Date(filters.createdAt.from)
+                      : undefined,
+                    to: filters.createdAt.to
+                      ? new Date(filters.createdAt.to)
+                      : undefined,
+                  }
                 : undefined,
             }),
             selectionMode === 'ALL_EXCEPT'

@@ -73,11 +73,11 @@ type DocumentSuggestionCreatedArgs = {
 
 type DatasetRowsCreatedArgs =
   | {
-    datasetId: number
-    error: null
-    rows: DatasetRow[]
-    finished: false
-  }
+      datasetId: number
+      error: null
+      rows: DatasetRow[]
+      finished: false
+    }
   | { datasetId: number; error: Error; rows: null; finished: false }
   | { datasetId: number; error: null; rows: null; finished: true }
 
@@ -161,13 +161,13 @@ type LatteThreadError = {
 export type LatteThreadUpdateArgs = {
   threadUuid: string
 } & (
-    | LatteThreadResponseDelta
-    | LatteThreadResponse
-    | LatteThreadToolStarted
-    | LatteThreadToolCompleted
-    | LatteThreadUsage
-    | LatteThreadError
-  )
+  | LatteThreadResponseDelta
+  | LatteThreadResponse
+  | LatteThreadToolStarted
+  | LatteThreadToolCompleted
+  | LatteThreadUsage
+  | LatteThreadError
+)
 
 export type LatteProjectChangesArgs = {
   threadUuid: string

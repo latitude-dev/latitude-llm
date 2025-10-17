@@ -15,7 +15,7 @@ import type {
   UserMessage,
 } from '@latitude-data/constants/legacyCompiler'
 import { TelemetryContext } from '@latitude-data/telemetry'
-import type { App, Component } from '@pipedream/sdk'
+import type { App as PipedreamApp, Component } from '@pipedream/sdk'
 import {
   ConfigurableProp,
   ConfigurePropResponse,
@@ -100,10 +100,10 @@ export type ChainStepObjectResponse = BaseResponse & {
 
 export type ChainStepResponse<T extends StreamType = StreamType> =
   T extends 'text'
-  ? ChainStepTextResponse
-  : T extends 'object'
-  ? ChainStepObjectResponse
-  : never
+    ? ChainStepTextResponse
+    : T extends 'object'
+      ? ChainStepObjectResponse
+      : never
 
 export const LOG_SOURCES = Object.values(LogSources)
 
@@ -526,9 +526,27 @@ export type PipedreamComponent<T extends PipedreamComponentType = any> = Omit<
   componentType: T
 }
 
+// Pipedream's App type does not include the `connect` property
+// but is present at runtime
+export type ExtendedPipedreamApp = PipedreamApp & {
+  connect: unknown
+}
+export type App = Omit<ExtendedPipedreamApp, 'customFieldsJson' | 'connect'>
+
 export type AppDto = App & {
   tools: PipedreamComponent<PipedreamComponentType.Tool>[]
   triggers: PipedreamComponent<PipedreamComponentType.Trigger>[]
+}
+
+// Light version of AppDto without configurableProps for reduced payload
+export type LightPipedreamComponent<T extends PipedreamComponentType> = Omit<
+  PipedreamComponent<T>,
+  'configurableProps'
+>
+
+export type LightAppDto = App & {
+  tools: LightPipedreamComponent<PipedreamComponentType.Tool>[]
+  triggers: LightPipedreamComponent<PipedreamComponentType.Trigger>[]
 }
 
 export type SpanBulkProcessingData = {
