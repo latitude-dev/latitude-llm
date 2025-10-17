@@ -1,15 +1,18 @@
 import { tokenizeText } from '$/lib/tokenize'
 import { ChainEvent } from '@latitude-data/constants'
 import {
+  AssistantMessage,
+  FileContent,
+  ImageContent,
   Message,
   MessageContent,
   MessageRole,
   ToolCall,
   ToolRequestContent,
 } from '@latitude-data/constants/legacyCompiler'
+import { StreamEventTypes } from '@latitude-data/core/constants'
 import { ParsedEvent } from 'eventsource-parser/stream'
 import React, { useCallback } from 'react'
-import { StreamEventTypes } from '@latitude-data/core/constants'
 
 type SetMessagesFunction = React.Dispatch<React.SetStateAction<Message[]>>
 type SetUnrespondedToolCallsFunction = React.Dispatch<
@@ -183,17 +186,13 @@ export function useProviderEventHandler({
 
   // Helper function to handle tool-result events
   const handleToolResult = useCallback(
-    (
-      data: {
-        type: 'tool-result'
-      } & {
-        type: 'tool-result'
-        toolCallId: string
-        toolName: string
-        args: any
-        result: any
-      },
-    ) => {
+    (data: {
+      type: 'tool-result'
+      toolCallId: string
+      toolName: string
+      args: any
+      result: any
+    }) => {
       setMessages((messages) => {
         const lastMessage = messages.at(-1)!
         if (lastMessage.role === MessageRole.assistant) {
@@ -293,6 +292,54 @@ export function useProviderEventHandler({
     [setMessages, incrementUsageDelta],
   )
 
+  const handleFile = useCallback(
+    ({
+      file: { mediaType, base64Data, base64, uint8Array },
+    }: {
+      type: 'file'
+      file: {
+        mediaType: string
+        base64Data?: string
+        base64?: string
+        uint8Array?: Uint8Array
+      }
+    }) => {
+      const mediaData = base64Data ?? base64 ?? uint8Array?.toString() ?? ''
+
+      const content = mediaType?.startsWith('image/')
+        ? ({
+            type: 'image',
+            image: mediaData,
+          } as ImageContent)
+        : ({
+            type: 'file',
+            file: mediaData,
+            mimeType: mediaType,
+          } as FileContent)
+
+      setMessages((messages) => {
+        const lastMessage = messages.at(-1)!
+        if (lastMessage.role === MessageRole.assistant) {
+          return [
+            ...messages.slice(0, -1),
+            {
+              ...lastMessage,
+              content: [...(lastMessage.content ?? []), content],
+            } as AssistantMessage,
+          ]
+        } else {
+          // Should not be possible
+          throw new Error('Expected assistant message')
+        }
+      })
+
+      incrementUsageDelta({
+        completionTokens: tokenizeText(mediaData),
+      })
+    },
+    [setMessages, incrementUsageDelta],
+  )
+
   // Main handler that delegates to the appropriate helper based on event type
   const handleProviderEvent = useCallback(
     (parsedEvent: ParsedEvent, data: ChainEvent['data']) => {
@@ -314,6 +361,9 @@ export function useProviderEventHandler({
         case 'reasoning':
           handleReasoning(data)
           break
+        case 'file':
+          handleFile(data)
+          break
       }
     },
     [
@@ -322,6 +372,7 @@ export function useProviderEventHandler({
       handleToolCall,
       handleToolResult,
       handleReasoning,
+      handleFile,
     ],
   )
 
