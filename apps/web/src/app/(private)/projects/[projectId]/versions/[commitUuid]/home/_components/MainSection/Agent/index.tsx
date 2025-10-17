@@ -11,7 +11,7 @@ import { AgentInput, AgentInputSkeleton } from '$/components/Agent/AgentInput'
 import mainPromptImage from './mainPrompt.png'
 import { RunProps } from '$/components/Agent/types'
 import { ProjectHeader } from '../_components/ProjectHeader'
-import { useAgentDescriptions } from '$/hooks/useAgentDescriptions'
+import { useDocumentDescriptions } from '$/hooks/useAgentDescriptions'
 
 export function MainAgent({
   runPromptFn,
@@ -38,11 +38,12 @@ export function MainAgent({
     return mainDocument ? [mainDocument.path.split('/').pop() || ''] : []
   }, [mainDocument])
 
-  const { agentDescriptions, isLoading } = useAgentDescriptions({
-    documentVersions: documents,
-    selectedAgents,
-    currentDocument: mainDocument,
-  })
+  const { documentDescriptions: agentDescriptions, isLoading } =
+    useDocumentDescriptions({
+      documentVersions: documents,
+      selectedDocuments: selectedAgents,
+      currentDocument: mainDocument,
+    })
 
   return (
     <div className='flex flex-col gap-6 items-center'>

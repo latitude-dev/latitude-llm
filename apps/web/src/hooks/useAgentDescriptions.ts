@@ -1,18 +1,18 @@
 import { scan } from 'promptl-ai'
 import { DocumentVersion } from '@latitude-data/core/schema/types'
 import { resolveRelativePath } from '@latitude-data/constants'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
-export function useAgentDescriptions({
+export function useDocumentDescriptions({
   documentVersions,
-  selectedAgents,
+  selectedDocuments,
   currentDocument,
 }: {
   documentVersions?: DocumentVersion[]
-  selectedAgents: string[]
+  selectedDocuments: string[]
   currentDocument?: DocumentVersion
 }) {
-  const [agentDescriptions, setAgentDescriptions] = useState<
+  const [documentDescriptions, setDocumentDescriptions] = useState<
     Record<string, string>
   >({})
   const [isLoading, setIsLoading] = useState(true)
@@ -20,13 +20,13 @@ export function useAgentDescriptions({
   useEffect(() => {
     if (!documentVersions) return
     if (!currentDocument) return
-    if (!selectedAgents || selectedAgents.length === 0) return
+    if (!selectedDocuments || selectedDocuments.length === 0) return
 
     const fetchDescriptions = async () => {
       setIsLoading(true)
       const descriptions: Record<string, string> = {}
 
-      for (const relativePath of selectedAgents) {
+      for (const relativePath of selectedDocuments) {
         const fullPath = resolveRelativePath(relativePath, currentDocument.path)
         const doc = documentVersions.find((d) => d.path === fullPath)
 
@@ -49,11 +49,14 @@ export function useAgentDescriptions({
         }
       }
       setIsLoading(false)
-      setAgentDescriptions(descriptions)
+      setDocumentDescriptions(descriptions)
     }
 
     fetchDescriptions()
-  }, [documentVersions, selectedAgents, currentDocument])
+  }, [documentVersions, selectedDocuments, currentDocument])
 
-  return { agentDescriptions, setAgentDescriptions, isLoading }
+  return useMemo(
+    () => ({ documentDescriptions, isLoading }),
+    [documentDescriptions, isLoading],
+  )
 }
