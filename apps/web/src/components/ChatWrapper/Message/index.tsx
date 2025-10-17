@@ -9,7 +9,12 @@ import {
   ToolContent,
 } from '@latitude-data/constants/legacyCompiler'
 
-import { AgentToolsMap, isSafeUrl } from '@latitude-data/constants'
+import {
+  AgentToolsMap,
+  isEncodedImage,
+  isInlineImage,
+  isSafeUrl,
+} from '@latitude-data/constants'
 import { Badge, BadgeProps } from '@latitude-data/web-ui/atoms/Badge'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
@@ -648,13 +653,30 @@ const ContentImage = memo(
     collapseParameters?: boolean
     sourceMap?: PromptlSourceRef[]
   }) => {
+    const TextComponent = size === 'small' ? Text.H6 : Text.H5
     const segment = useMemo(
       () => computeSegments('image', image.toString(), sourceMap, parameters),
       [image, sourceMap, parameters],
     )[0]
 
     if (!isSafeUrl(image)) {
-      const TextComponent = size === 'small' ? Text.H6 : Text.H5
+      if (isInlineImage(image)) {
+        return (
+          <Image
+            src={image.toString()}
+            className='max-h-72 rounded-xl w-fit object-contain'
+          />
+        )
+      }
+
+      if (isEncodedImage(image)) {
+        return (
+          <Image
+            src={`data:image/png;base64,${image.toString()}`}
+            className='max-h-72 rounded-xl w-fit object-contain'
+          />
+        )
+      }
 
       return (
         <div className='flex flex-row p-4 gap-2 bg-muted rounded-xl w-fit items-center'>
@@ -669,8 +691,6 @@ const ContentImage = memo(
         </div>
       )
     }
-
-    const TextComponent = size === 'small' ? Text.H6 : Text.H5
 
     if (!segment || typeof segment === 'string') {
       return (
@@ -719,6 +739,7 @@ const ContentFile = memo(
     collapseParameters?: boolean
     sourceMap?: PromptlSourceRef[]
   }) => {
+    const TextComponent = size === 'small' ? Text.H6 : Text.H5
     const segment = useMemo(
       () => computeSegments('file', file.toString(), sourceMap, parameters),
       [file, sourceMap, parameters],
@@ -734,8 +755,6 @@ const ContentFile = memo(
         </div>
       )
     }
-
-    const TextComponent = size === 'small' ? Text.H6 : Text.H5
 
     if (!segment || typeof segment === 'string') {
       return <FileComponent src={file.toString()} />

@@ -66,6 +66,27 @@ export function simplifyDocument(
   }
 }
 
+const INLINE_IMAGE_REGEX = /^data:image\/[^;]+;base64,/i
+export function isInlineImage(src: unknown): boolean {
+  if (!src) return false
+
+  return INLINE_IMAGE_REGEX.test(src.toString().trim())
+}
+
+export function isEncodedImage(src: unknown): boolean {
+  if (!src) return false
+
+  const clean = src.toString().trim().replace(/\s+/g, '')
+  const pad = clean.length % 4
+  const decoded = pad ? clean + '==='.slice(pad) : clean
+
+  try {
+    return !!atob(decoded)
+  } catch {
+    return false
+  }
+}
+
 export function isSafeUrl(url: unknown): url is string | URL {
   const isUrl =
     url instanceof URL ||
