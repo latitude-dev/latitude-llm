@@ -16,7 +16,7 @@
 const CONFIG = {
   API_URL:
     'http://localhost:8787/api/v3/projects/50/versions/ecfda479-b6c4-460e-8340-e1dfba5a0fc9/documents/run',
-  API_KEY: 'd1a87bd5-0732-4e5d-ba95-a8a47eaa3055',
+  API_KEY: process.env.TEST_LATITUDE_API_KEY,
   DOCUMENT_PATH: 'is_happy',
   PARAMETERS: {
     phrase: 'They had a wonderful experience!',
