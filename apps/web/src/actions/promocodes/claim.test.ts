@@ -1,6 +1,6 @@
 import { createProject } from '@latitude-data/core/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Workspace, Promocode } from '@latitude-data/core/schema/types'
+import { Workspace, Promocode, User } from '@latitude-data/core/schema/types'
 import { createCreditsPromocode } from '../../../../../packages/core/src/tests/factories/promocodes'
 import { claimPromocodeAction } from './claim'
 
@@ -16,29 +16,45 @@ vi.mock('$/services/auth/getSession', () => ({
 describe('claimPromocodeAction', () => {
   let workspace: Workspace
   let promocode: Promocode
+  let user: User
 
   beforeEach(async () => {
     vi.clearAllMocks()
 
-    const { workspace: w, user } = await createProject()
+    const { workspace: w, user: u } = await createProject()
+    user = u
     workspace = w
 
     promocode = await createCreditsPromocode(100)
+  })
 
-    mocks.getSession.mockResolvedValue({
-      user,
-      session: { userId: user.id, currentWorkspaceId: workspace.id },
+  describe('unauthorized', () => {
+    it('errors when the user is not authenticated', async () => {
+      const { serverError } = await claimPromocodeAction({
+        code: promocode.code,
+      })
+
+      expect(serverError).toEqual('Unauthorized')
     })
   })
 
-  it('should successfully claim a promocode', async () => {
-    const promocodeClaimed = await claimPromocodeAction({
-      code: promocode.code,
+  describe('authorized', () => {
+    beforeEach(async () => {
+      mocks.getSession.mockResolvedValue({
+        user,
+        session: { userId: user.id, currentWorkspaceId: workspace.id },
+      })
     })
 
-    expect(promocodeClaimed).toBeDefined()
-    expect(promocodeClaimed.serverError).toBeUndefined()
-    expect(promocodeClaimed.data).toBeDefined()
-    expect(promocodeClaimed.data).toEqual(promocode)
+    it('should successfully claim a promocode', async () => {
+      const promocodeClaimed = await claimPromocodeAction({
+        code: promocode.code,
+      })
+
+      expect(promocodeClaimed).toBeDefined()
+      expect(promocodeClaimed.serverError).toBeUndefined()
+      expect(promocodeClaimed.data).toBeDefined()
+      expect(promocodeClaimed.data).toEqual(promocode)
+    })
   })
 })
