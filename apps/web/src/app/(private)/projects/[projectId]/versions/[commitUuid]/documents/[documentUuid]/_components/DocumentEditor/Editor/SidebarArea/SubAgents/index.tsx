@@ -10,7 +10,7 @@ import { resolveRelativePath } from '@latitude-data/constants'
 import { MultiSelect } from '@latitude-data/web-ui/molecules/MultiSelect'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import useDocumentVersions from '$/stores/documentVersions'
-import { useDocumentConfiguration } from '$/hooks/useAgentDescriptions'
+import { useDocumentConfiguration } from '$/hooks/useDocumentConfiguration'
 
 /**
  * Formats a file path to show location context.

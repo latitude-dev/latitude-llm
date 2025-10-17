@@ -11,7 +11,7 @@ import { AgentInput, AgentInputSkeleton } from '$/components/Agent/AgentInput'
 import mainPromptImage from './mainPrompt.png'
 import { RunProps } from '$/components/Agent/types'
 import { ProjectHeader } from '../_components/ProjectHeader'
-import { useDocumentConfiguration } from '$/hooks/useAgentDescriptions'
+import { useDocumentConfiguration } from '$/hooks/useDocumentConfiguration'
 
 export function MainAgent({
   runPromptFn,
