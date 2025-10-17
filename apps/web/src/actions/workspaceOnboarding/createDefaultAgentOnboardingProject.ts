@@ -5,6 +5,7 @@ import { markWorkspaceOnboardingComplete } from '@latitude-data/core/services/wo
 import { authProcedure } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
 import { envClient } from '$/envClient'
+import { ROUTES } from '$/services/routes'
 
 export const createDefaultAgentOnboardingProjectAction = authProcedure.action(
   async ({ ctx }) => {
@@ -19,7 +20,14 @@ export const createDefaultAgentOnboardingProjectAction = authProcedure.action(
       onboarding,
     }).then((r) => r.unwrap())
 
-    const defaultAgentOnboardingRoute = `/actions/clone-agent?uuid=${envClient.NEXT_PUBLIC_DEFAULT_AGENT_ONBOARDING_UUID}`
-    return frontendRedirect(defaultAgentOnboardingRoute)
+    if (!envClient.NEXT_PUBLIC_DEFAULT_AGENT_ONBOARDING_UUID) {
+      return frontendRedirect(ROUTES.dashboard.root)
+    }
+
+    return frontendRedirect(
+      ROUTES.actions.cloneAgent.withUuid(
+        envClient.NEXT_PUBLIC_DEFAULT_AGENT_ONBOARDING_UUID,
+      ),
+    )
   },
 )

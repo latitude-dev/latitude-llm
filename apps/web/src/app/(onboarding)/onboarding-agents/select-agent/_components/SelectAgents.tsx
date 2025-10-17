@@ -14,6 +14,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useCurrentWorkspace } from '$/app/providers/WorkspaceProvider'
 import { publishEventAction } from '$/actions/events/publishEventAction'
 import { User } from '@latitude-data/core/schema/types'
+import { ROUTES } from '$/services/routes'
 
 export type AgentCardProps = {
   mainIcon: IconName
@@ -94,7 +95,8 @@ export function SelectAgents({ user }: { user: User }) {
   const router = useNavigate()
   const handleSelectAgent = useCallback(
     (documentUuid: string) => {
-      router.push(`/actions/clone-agent?uuid=${documentUuid}`)
+      if (!documentUuid) return
+      router.push(ROUTES.actions.cloneAgent.withUuid(documentUuid))
     },
     [router],
   )
