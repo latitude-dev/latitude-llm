@@ -279,7 +279,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     let jsonArguments = ''
     try {
       jsonArguments = JSON.stringify(start.call.arguments)
-    } catch (error) {
+    } catch (_error) {
       jsonArguments = '{}'
     }
 
@@ -303,7 +303,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         if (typeof end.result.value !== 'string') {
           try {
             stringResult = JSON.stringify(end.result.value)
-          } catch (error) {
+          } catch (_error) {
             stringResult = '{}'
           }
         } else {
@@ -333,7 +333,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     for (let i = 0; i < toolCalls.length; i++) {
       for (const key in toolCalls[i]!) {
         const field = this.toCamelCase(key)
-        let value = toolCalls[i]![key]
+        const value = toolCalls[i]![key]
         if (value === null || value === undefined) continue
 
         switch (field) {
@@ -361,7 +361,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
               try {
                 attributes[otelMessageField.toolCalls(i).arguments] =
                   JSON.stringify(value)
-              } catch (error) {
+              } catch (_error) {
                 attributes[otelMessageField.toolCalls(i).arguments] = '{}'
               }
             }
@@ -394,13 +394,12 @@ export class ManualInstrumentation implements BaseInstrumentation {
     let attributes: otel.Attributes = {}
 
     if (typeof content === 'string') {
-      attributes[otelMessageField.content]
       return attributes
     }
 
     try {
       attributes[otelMessageField.content] = JSON.stringify(content)
-    } catch (error) {
+    } catch (_error) {
       attributes[otelMessageField.content] = '[]'
     }
 
@@ -440,7 +439,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     for (let i = 0; i < messages.length; i++) {
       for (const key in messages[i]!) {
         const field = this.toCamelCase(key)
-        let value = messages[i]![key]
+        const value = messages[i]![key]
         if (value === null || value === undefined) continue
 
         switch (field) {
@@ -516,7 +515,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
       if (typeof value === 'object' && !Array.isArray(value)) {
         try {
           value = JSON.stringify(value)
-        } catch (error) {
+        } catch (_error) {
           value = '{}'
         }
       }
@@ -537,7 +536,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     let jsonConfiguration = ''
     try {
       jsonConfiguration = JSON.stringify(configuration)
-    } catch (error) {
+    } catch (_error) {
       jsonConfiguration = '{}'
     }
     const attrConfiguration = this.attribifyConfiguration(
@@ -549,7 +548,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     let jsonInput = ''
     try {
       jsonInput = JSON.stringify(input)
-    } catch (error) {
+    } catch (_error) {
       jsonInput = '[]'
     }
     const attrInput = this.attribifyMessages('input', input)
@@ -581,7 +580,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         let jsonOutput = ''
         try {
           jsonOutput = JSON.stringify(output)
-        } catch (error) {
+        } catch (_error) {
           jsonOutput = '[]'
         }
         const attrOutput = this.attribifyMessages('output', output)
@@ -662,7 +661,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     } else {
       try {
         finalBody = JSON.stringify(start.request.body)
-      } catch (error) {
+      } catch (_error) {
         finalBody = '{}'
       }
     }
@@ -699,7 +698,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
         } else {
           try {
             finalBody = JSON.stringify(end.response.body)
-          } catch (error) {
+          } catch (_error) {
             finalBody = '{}'
           }
         }
@@ -738,7 +737,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     let jsonParameters = ''
     try {
       jsonParameters = JSON.stringify(parameters || {})
-    } catch (error) {
+    } catch (_error) {
       jsonParameters = '{}'
     }
 

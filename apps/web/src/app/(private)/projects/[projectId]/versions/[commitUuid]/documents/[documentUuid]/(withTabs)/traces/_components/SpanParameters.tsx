@@ -32,7 +32,7 @@ export function SpanParameters({
         } else if (typeof value === 'object' || Array.isArray(value)) {
           try {
             value = JSON.stringify(value)
-          } catch (error) {
+          } catch (_error) {
             value = String(value)
           }
         } else {

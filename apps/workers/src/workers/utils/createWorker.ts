@@ -4,7 +4,7 @@ import { captureException } from './captureException'
 
 import { Worker, WorkerOptions } from 'bullmq'
 import { WORKER_OPTIONS } from './connectionConfig'
-import { createJobHandler } from './createJobHandler'
+import { createJobHandler, JobHandlerFunction } from './createJobHandler'
 
 /**
  * Creates a fully configured BullMQ worker with job handling and error handling
@@ -12,7 +12,7 @@ import { createJobHandler } from './createJobHandler'
  * @param jobMappings Object mapping job names to their handler functions
  * @returns A configured BullMQ Worker instance
  */
-export function createWorker<T extends Record<string, Function>>(
+export function createWorker<T extends Record<string, JobHandlerFunction>>(
   queue: Queues,
   jobMappings: T,
   workerOptions: WorkerOptions = WORKER_OPTIONS,

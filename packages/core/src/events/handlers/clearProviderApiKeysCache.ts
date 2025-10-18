@@ -16,7 +16,7 @@ const clearProviderApiKeysCache: EventHandler<
     await cacheClient.del(
       `workspace:${event.data.workspaceId}:provider-api-keys-map`,
     )
-  } catch (error) {
+  } catch (_error) {
     // Ignore cache errors
   }
 }

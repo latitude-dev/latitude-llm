@@ -58,7 +58,7 @@ async function getResolvedData(
 
   // If prompt is found in the commit, return the document version and commit.
   const docsResult = await docsRepo.getDocumentsAtCommit(commit)
-  if (!Result.isOk(docsResult)) docsResult
+  if (!Result.isOk(docsResult)) return docsResult
   const docs = docsResult.unwrap()
   const doc = docs.find((d) => d.path === path)
   if (doc) return Result.ok({ documentVersion: doc, commit })

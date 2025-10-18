@@ -17,7 +17,7 @@ export default function rowsFromQueryPlan(
 
       return Math.max(max, count)
     }, 0)
-  } catch (error) {
+  } catch (_error) {
     return 0
   }
 }

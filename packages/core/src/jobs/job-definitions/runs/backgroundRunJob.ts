@@ -63,7 +63,7 @@ async function cleanupResources({
     if (!Result.isOk(endResult)) {
       captureException(new Error(`[BackgroundRunJob] Failed to end run`))
     }
-  } catch (error) {
+  } catch (_error) {
     captureException(new Error(`[BackgroundRunJob] Failed to end run`))
   }
 }

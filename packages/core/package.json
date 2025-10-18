@@ -240,7 +240,6 @@
     "chalk": "^5.4.1",
     "dd-trace": "catalog:",
     "drizzle-kit": "catalog:",
-    "eslint": "8",
     "eslint-plugin-drizzle": "^0.2.3",
     "inquirer": "^9.2.7",
     "pg-transactional-tests": "^1.0.9",

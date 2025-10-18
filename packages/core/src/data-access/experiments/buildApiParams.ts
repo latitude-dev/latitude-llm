@@ -5,7 +5,7 @@ import { paramsToString } from '../../lib/pagination/buildPaginatedUrl'
 
 const EXPERIMENTS_ENCODED_PARAMS = ['customIdentifier']
 
-const experimentsFiltersSchema = z.object({
+const _experimentsFiltersSchema = z.object({
   commitIds: z.array(z.number()),
   logSources: z.array(z.enum(LogSources)),
   createdAt: z
@@ -15,7 +15,7 @@ const experimentsFiltersSchema = z.object({
   experimentId: z.number().optional(),
 })
 
-type ExperimentsFilters = z.infer<typeof experimentsFiltersSchema>
+type ExperimentsFilters = z.infer<typeof _experimentsFiltersSchema>
 type CreatedAt = ExperimentsFilters['createdAt']
 
 function formatCreatedAtParam(value: CreatedAt) {

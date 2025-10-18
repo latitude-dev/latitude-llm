@@ -21,7 +21,7 @@ import {
   mockStreamResponse,
 } from './helpers/chat'
 
-let FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
+const FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
 let sdk: Latitude
 
 const server = setupServer()
@@ -181,7 +181,7 @@ describe('/chat', () => {
         )
 
         chunks.forEach((chunk, index) => {
-          // @ts-expect-error
+          // @ts-expect-error - TextEncoder is available in the environment
           const { event, data } = parseSSE(chunk)
           expect(onMessageMock).toHaveBeenNthCalledWith(index + 1, {
             event,

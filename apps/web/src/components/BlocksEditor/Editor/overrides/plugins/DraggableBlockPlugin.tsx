@@ -284,7 +284,7 @@ function setMenuPosition(
   const floatingElemRect = floatingElem.getBoundingClientRect()
   const anchorElementRect = anchorElem.getBoundingClientRect()
 
-  let topOffset = 0
+  const topOffset = 0
   let targetCalculateHeight: number = parseInt(targetStyle.lineHeight, 10)
 
   if (isNaN(targetCalculateHeight)) {

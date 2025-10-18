@@ -3,22 +3,28 @@
   "version": "0.0.0",
   "private": true,
   "files": [
-    "library.js"
+    "library.mjs",
+    "library.d.mts"
   ],
   "exports": {
     ".": {
-      "import": "./library.js",
-      "require": "./library.js"
+      "import": {
+        "types": "./library.d.mts",
+        "default": "./library.mjs"
+      }
     }
   },
   "devDependencies": {
-    "@ianvs/prettier-plugin-sort-imports": "^4.3.0",
-    "@typescript-eslint/eslint-plugin": "^7.16.0",
-    "@typescript-eslint/parser": "^7.16.0",
-    "@vercel/style-guide": "^5.2.0",
-    "eslint-config-prettier": "^10.1.5",
-    "eslint-config-turbo": "^2.5.3",
+    "eslint": "^9.39.2",
+    "@eslint/js": "^9.39.2",
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
+    "@typescript-eslint/eslint-plugin": "^8.54.0",
+    "@typescript-eslint/parser": "^8.54.0",
+    "@vercel/style-guide": "^6.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-config-turbo": "^2.8.1",
     "eslint-plugin-only-warn": "^1.1.0",
-    "eslint-plugin-react-hooks": "^5.2.0"
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "typescript-eslint": "^8.54.0"
   }
 }

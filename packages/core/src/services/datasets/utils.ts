@@ -127,7 +127,7 @@ export function getColumnData({
 
   try {
     return JSON.stringify(data)
-  } catch (error) {
+  } catch (_error) {
     return String(data)
   }
 }

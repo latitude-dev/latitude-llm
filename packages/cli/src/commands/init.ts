@@ -62,7 +62,7 @@ export class InitCommand extends BaseCommand {
     // Check if an API key already exists
     try {
       return await this.configManager.getApiKey()
-    } catch (error) {
+    } catch (_error) {
       // No API key found, prompt for one
       const { apiKey } = await inquirer.prompt([
         {
@@ -219,11 +219,11 @@ export class InitCommand extends BaseCommand {
           } else {
             isEmptyDirectory = true // Directory exists and is empty
           }
-        } catch (err) {
+        } catch (_err) {
           // Directory doesn't exist yet, which is fine
           isEmptyDirectory = true
         }
-      } catch (err) {
+      } catch (_err) {
         // Error checking directory, let's just proceed (directory will be created)
         isEmptyDirectory = true
       }

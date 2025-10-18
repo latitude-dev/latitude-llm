@@ -10,7 +10,6 @@ export async function sendMagicLinkJob({
 }) {
   const user = await unsafelyGetUser(event.data.userId)
   if (!user) throw new NotFoundError('User not found')
-  event.data.returnTo
 
   const mailer = new MagicLinkMailer(
     {

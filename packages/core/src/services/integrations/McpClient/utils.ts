@@ -85,7 +85,7 @@ export function createMcpTransport(
         requestInit,
       }),
     )
-  } catch (error) {
+  } catch (_error) {
     return Result.error(new McpUrlError(`Invalid MCP server URL: ${url}`))
   }
 }

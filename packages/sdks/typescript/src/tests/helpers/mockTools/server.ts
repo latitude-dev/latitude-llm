@@ -32,7 +32,7 @@ async function buildStream(events: string[]) {
     start(controller) {
       events.forEach((chunk, index) => {
         const parsed = parseSSE(chunk)
-        // @ts-expect-error
+        // @ts-expect-error - We know it's defined
         const { event, data } = parsed
         controller.enqueue(encoder.encode(`event: ${event}\ndata: ${data}\n\n`))
         if (index === events.length - 1) {
@@ -81,8 +81,8 @@ function getStep(body: ExpectedBody) {
 
 export function mockToolsServers() {
   function setupStreamToolServer(server: ReturnType<typeof setupServer>) {
-    let mockRunBody = vi.fn()
-    let mockChatBody = vi.fn()
+    const mockRunBody = vi.fn()
+    const mockChatBody = vi.fn()
     server.use(
       http.post(
         'http://localhost:8787/api/v3/projects/123/versions/live/documents/run',
@@ -120,8 +120,8 @@ export function mockToolsServers() {
   }
 
   function setupSyncToolsServer(server: ReturnType<typeof setupServer>) {
-    let mockRunBody = vi.fn()
-    let mockChatBody = vi.fn()
+    const mockRunBody = vi.fn()
+    const mockChatBody = vi.fn()
     server.use(
       http.post(
         'http://localhost:8787/api/v3/projects/123/versions/live/documents/run',

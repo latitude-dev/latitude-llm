@@ -49,7 +49,7 @@ export const getOrSet = async <T>(
     if (cached !== null && cached !== undefined) {
       return JSON.parse(cached)
     }
-  } catch (error) {
+  } catch (_error) {
     // Ignore cache read errors, proceed to compute
   }
 
@@ -58,7 +58,7 @@ export const getOrSet = async <T>(
   try {
     const serialized = JSON.stringify(result)
     await cacheClient.set(key, serialized, 'EX', ttl)
-  } catch (error) {
+  } catch (_error) {
     // Ignore cache write errors
   }
 

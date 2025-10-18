@@ -23,7 +23,7 @@ async function process(
     parameters = JSON.parse(
       attributes[ATTRIBUTES.LATITUDE.request.parameters] as string,
     )
-  } catch (error) {
+  } catch (_error) {
     parameters = {}
   }
 
