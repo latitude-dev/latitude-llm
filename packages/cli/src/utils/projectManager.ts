@@ -14,7 +14,7 @@ export class ProjectManager {
       const packageJsonPath = path.join(projectPath, 'package.json')
       await fs.access(packageJsonPath)
       return true
-    } catch (error) {
+    } catch (_error) {
       return false
     }
   }

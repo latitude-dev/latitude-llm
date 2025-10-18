@@ -28,6 +28,8 @@ function ChangeWithErrors({
   onClose: ReactStateDispatch<number | null>
 }) {
   const theme = useCurrentTheme()
+  if (!commit) return null
+
   return (
     <div className='w-full flex flex-row items-center justify-between gap-1 min-h-8 px-2'>
       <Icon
@@ -40,7 +42,7 @@ function ChangeWithErrors({
           href={
             ROUTES.projects
               .detail({ id: projectId })
-              .commits.detail({ uuid: commit?.uuid! })
+              .commits.detail({ uuid: commit.uuid })
               .documents.detail({
                 uuid: change.documentUuid,
               }).root

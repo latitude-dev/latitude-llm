@@ -28,7 +28,7 @@ async function hasMetadata(content: string) {
     if (!doc.config) return false
 
     return Object.keys(doc.config).length > 0
-  } catch (e) {
+  } catch (_e) {
     return false
   }
 }

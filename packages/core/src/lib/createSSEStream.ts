@@ -10,7 +10,7 @@ export function createSSEStream() {
   const closeWriter = async () => {
     try {
       await writer.close()
-    } catch (error) {
+    } catch (_error) {
       // do nothing, writer might be closed already
     }
   }

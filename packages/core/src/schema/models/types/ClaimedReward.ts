@@ -8,4 +8,3 @@ export type ClaimedRewardWithUserInfo = ClaimedReward & {
   userName: string | null
   userEmail: string | null
 }
-

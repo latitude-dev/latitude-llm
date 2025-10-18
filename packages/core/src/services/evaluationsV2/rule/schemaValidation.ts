@@ -109,7 +109,7 @@ async function run(
           }
 
           score = 1
-        } catch (error) {
+        } catch (_error) {
           score = 0
         }
       }

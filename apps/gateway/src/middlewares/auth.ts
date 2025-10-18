@@ -27,7 +27,7 @@ const authMiddleware = () =>
         c.set('apiKey', apiKeyResult.value)
 
         return true
-      } catch (error) {
+      } catch (_error) {
         return false
       }
     },

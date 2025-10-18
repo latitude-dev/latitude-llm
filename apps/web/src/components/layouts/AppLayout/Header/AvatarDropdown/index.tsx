@@ -62,11 +62,11 @@ export default function AvatarDropdown({
           label: currentUser.email,
         },
         currentUser?.admin &&
-        isCloud && {
-          label: 'Backoffice',
-          icon: 'terminal',
-          onClick: onClickBackoffice,
-        },
+          isCloud && {
+            label: 'Backoffice',
+            icon: 'terminal',
+            onClick: onClickBackoffice,
+          },
         {
           label: 'Logout',
           icon: 'logOut',
@@ -82,7 +82,7 @@ export default function AvatarDropdown({
 
   return (
     <Popover.Root>
-      <Popover.Trigger asChild>
+      <Popover.Trigger asChild suppressHydrationWarning>
         <Button variant='ghost'>
           <Avatar
             alt={info.name}

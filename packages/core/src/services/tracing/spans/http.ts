@@ -114,7 +114,7 @@ function extractRequestHeaders(
       return Result.ok(
         toCamelCase(JSON.parse(attribute) as Record<string, string>),
       )
-    } catch (error) {
+    } catch (_error) {
       return Result.error(
         new UnprocessableEntityError('Invalid request headers'),
       )
@@ -139,7 +139,7 @@ function extractRequestBody(
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))
-    } catch (error) {
+    } catch (_error) {
       return Result.ok(attribute || {})
     }
   }
@@ -167,7 +167,7 @@ function extractResponseHeaders(
       return Result.ok(
         toCamelCase(JSON.parse(attribute) as Record<string, string>),
       )
-    } catch (error) {
+    } catch (_error) {
       return Result.error(
         new UnprocessableEntityError('Invalid response headers'),
       )
@@ -192,7 +192,7 @@ function extractResponseBody(
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))
-    } catch (error) {
+    } catch (_error) {
       return Result.ok(attribute || {})
     }
   }

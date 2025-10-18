@@ -18,15 +18,12 @@ const nextConfig = {
     'pdfjs-dist',
     'promptl-ai',
   ],
-  eslint: {
-    // Fine because we do the linter pass in CI before building
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     // Fine because we do the TS pass in CI before building
     ignoreBuildErrors: true,
   },
   experimental: {
+    turbopackFileSystemCacheForDev: true,
     serverActions: {
       bodySizeLimit: '25mb',
     },

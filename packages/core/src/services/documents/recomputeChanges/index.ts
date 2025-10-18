@@ -147,36 +147,36 @@ async function replaceCommitChanges(
 
     const insertedDocs = docsToInsert.length
       ? await trx
-        .insert(documentVersions)
-        .values(
-          docsToInsert.map((d) => ({
-            ...omit(d, ['id', 'commitId', 'updatedAt']),
-            commitId,
-          })),
-        )
-        .returning()
+          .insert(documentVersions)
+          .values(
+            docsToInsert.map((d) => ({
+              ...omit(d, ['id', 'commitId', 'updatedAt']),
+              commitId,
+            })),
+          )
+          .returning()
       : []
 
     const updatedDocs = docsToUpdate.length
       ? await Promise.all(
-        docsToUpdate.map(async (doc) => {
-          const updatedDoc = await trx
-            .update(documentVersions)
-            .set({
-              ...omit(doc, ['id', 'commitId', 'updatedAt']),
-              updatedAt: new Date(),
-            })
-            .where(
-              and(
-                eq(documentVersions.documentUuid, doc.documentUuid),
-                eq(documentVersions.commitId, commitId),
-              ),
-            )
-            .returning()
+          docsToUpdate.map(async (doc) => {
+            const updatedDoc = await trx
+              .update(documentVersions)
+              .set({
+                ...omit(doc, ['id', 'commitId', 'updatedAt']),
+                updatedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(documentVersions.documentUuid, doc.documentUuid),
+                  eq(documentVersions.commitId, commitId),
+                ),
+              )
+              .returning()
 
-          return updatedDoc[0]!
-        }),
-      )
+            return updatedDoc[0]!
+          }),
+        )
       : []
 
     await Promise.all(

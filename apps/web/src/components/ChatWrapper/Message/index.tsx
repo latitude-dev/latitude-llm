@@ -312,7 +312,7 @@ function getLanguageFromCodeBlock(className?: string) {
 }
 
 const ContentMarkdownComponents: Components = {
-  // @ts-ignore: react-markdown passes an `inline` prop even though it’s not on HTMLElement attributes
+  // @ts-expect-error - react-markdown passes an `inline` prop even though it’s not on HTMLElement attributes
   code: ({ inline, className, children, ...props }) => {
     const content = String(children)
     if (inline || isCodeBlockInline(content, className)) {
@@ -576,7 +576,7 @@ function computeSegments(
   sourceMap: PromptlSourceRef[],
   parameters: string[],
 ): Segment[] {
-  let segments: Segment[] = []
+  const segments: Segment[] = []
   if (!source) return segments
 
   // Filter source map references without value
@@ -612,7 +612,7 @@ function computeSegments(
 }
 
 function groupSegments(segments: Segment[]) {
-  let groups: Segment[][] = []
+  const groups: Segment[][] = []
   let currentGroup: Segment[] = []
 
   for (const segment of segments) {

@@ -187,7 +187,9 @@ describe('POST /chat', () => {
         headers,
       })
 
-      let { done, value } = await testConsumeStream(res.body as ReadableStream)
+      const { done, value } = await testConsumeStream(
+        res.body as ReadableStream,
+      )
       const event = parseSSEvent(value!)
 
       expect(mocks.queues)
@@ -396,7 +398,9 @@ describe('POST /chat', () => {
         headers,
       })
 
-      let { done, value } = await testConsumeStream(res.body as ReadableStream)
+      const { done, value } = await testConsumeStream(
+        res.body as ReadableStream,
+      )
       const event = parseSSEvent(value!)
 
       expect(mocks.queues)

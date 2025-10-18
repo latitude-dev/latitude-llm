@@ -58,6 +58,7 @@ export function WorkspaceSwitcher() {
           trigger={() => (
             <DropdownMenuTrigger
               asChild
+              suppressHydrationWarning
               className='flex focus:outline-none cursor-pointer'
             >
               <Button variant='ghost' className='hover:bg-muted'>

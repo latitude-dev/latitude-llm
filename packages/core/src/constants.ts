@@ -100,10 +100,10 @@ export type ChainStepObjectResponse = BaseResponse & {
 
 export type ChainStepResponse<T extends StreamType = StreamType> =
   T extends 'text'
-  ? ChainStepTextResponse
-  : T extends 'object'
-  ? ChainStepObjectResponse
-  : never
+    ? ChainStepTextResponse
+    : T extends 'object'
+      ? ChainStepObjectResponse
+      : never
 
 export const LOG_SOURCES = Object.values(LogSources)
 

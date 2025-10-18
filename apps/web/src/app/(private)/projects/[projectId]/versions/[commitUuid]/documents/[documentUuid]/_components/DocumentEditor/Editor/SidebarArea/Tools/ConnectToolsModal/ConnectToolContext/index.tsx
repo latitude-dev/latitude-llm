@@ -8,6 +8,6 @@ type IConnectToolContext = {
 }
 
 export const ConnectToolContext = createContext<IConnectToolContext>({
-  onAdd: (_integration: IntegrationDto) => { },
-  onConnect: (_app: AppDto) => { },
+  onAdd: (_integration: IntegrationDto) => {},
+  onConnect: (_app: AppDto) => {},
 })

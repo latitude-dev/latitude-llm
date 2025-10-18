@@ -35,7 +35,7 @@ async function setToCache({
   try {
     const c = await cache()
     await c.set(key, JSON.stringify({ chain, previousResponse }))
-  } catch (e) {
+  } catch (_e) {
     // Silently fail cache writes
   }
 }
@@ -57,7 +57,7 @@ async function getFromCache(key: string): Promise<CachedChain | undefined> {
       chain,
       previousResponse: deserialized.previousResponse,
     }
-  } catch (e) {
+  } catch (_e) {
     return undefined
   }
 }
@@ -86,7 +86,7 @@ export async function deleteCachedChain({
   try {
     const c = await cache()
     await c.del(key)
-  } catch (e) {
+  } catch (_e) {
     // Silently fail cache writes
   }
 }

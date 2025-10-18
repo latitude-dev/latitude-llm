@@ -22,7 +22,7 @@ async function process(
     parameters = JSON.parse(
       attributes[ATTR_GEN_AI_REQUEST_PARAMETERS] as string,
     )
-  } catch (error) {
+  } catch (_error) {
     parameters = {}
   }
 

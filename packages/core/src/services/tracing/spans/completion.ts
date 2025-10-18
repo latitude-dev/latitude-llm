@@ -214,7 +214,7 @@ function extractConfiguration(
       return Result.ok(
         toCamelCase(JSON.parse(attribute) as Record<string, unknown>),
       )
-    } catch (error) {
+    } catch (_error) {
       return Result.error(
         new UnprocessableEntityError('Invalid completion configuration'),
       )

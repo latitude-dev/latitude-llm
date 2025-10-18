@@ -14,7 +14,7 @@ export const touchProviderApiKeyJob: EventHandler<
   let providerLog
   try {
     providerLog = await repo.find(id).then((r) => r.unwrap())
-  } catch (error) {
+  } catch (_error) {
     // do nothing, we don't wanna retry the job
     return
   }

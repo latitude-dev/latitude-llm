@@ -8,9 +8,9 @@ import {
   mockPushCommitError,
 } from './helpers/commits'
 
-let FAKE_API_KEY = 'fake-api-key'
-let projectId = 123
-let baseCommitUuid = 'base-commit-uuid'
+const FAKE_API_KEY = 'fake-api-key'
+const projectId = 123
+const baseCommitUuid = 'base-commit-uuid'
 let sdk: Latitude
 
 const server = setupServer()

@@ -13,7 +13,7 @@ const TextEditor = lazy(() => import('./TextEditor/index'))
 function parseJson(value: string) {
   try {
     return JSON.parse(value)
-  } catch (e) {
+  } catch (_e) {
     return { error: 'Invalid JSON', value }
   }
 }

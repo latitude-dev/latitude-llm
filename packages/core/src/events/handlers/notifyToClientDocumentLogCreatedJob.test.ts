@@ -49,7 +49,7 @@ describe('notifyToClientDocumentLogCreatedJob', () => {
       },
     }
 
-    // @ts-ignore
+    // @ts-expect-error - ignore type issue for test
     await notifyToClientDocumentLogCreatedJob({ data: event })
 
     expect(WebsocketClient.sendEvent).toHaveBeenCalledWith(
@@ -103,7 +103,7 @@ describe('notifyToClientDocumentLogCreatedJob', () => {
       },
     }
 
-    // @ts-ignore
+    // @ts-expect-error - ignore type issue for test
     await notifyToClientDocumentLogCreatedJob({ data: event })
 
     expect(WebsocketClient.sendEvent).toHaveBeenCalled()

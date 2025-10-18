@@ -65,8 +65,8 @@ export async function computeDocumentLogsWithMetadata(
   const ordering = [
     filterOptions?.customIdentifier
       ? desc(
-        sql`similarity(${documentLogs.customIdentifier}, ${filterOptions.customIdentifier})`,
-      )
+          sql`similarity(${documentLogs.customIdentifier}, ${filterOptions.customIdentifier})`,
+        )
       : undefined,
     desc(documentLogs.createdAt),
   ].filter(Boolean) as SQL<unknown>[]

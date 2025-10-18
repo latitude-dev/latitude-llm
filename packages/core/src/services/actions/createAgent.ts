@@ -59,7 +59,7 @@ ${parameters.prompt}
       projectId: project.id,
       prompt: prompt,
     })
-  } catch (error) {
+  } catch (_error) {
     // Note: doing nothing
   }
 

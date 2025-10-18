@@ -6,7 +6,7 @@ import { RewardsContent } from './Content'
 export function RewardsButton() {
   return (
     <Popover.Root>
-      <Popover.Trigger asChild>
+      <Popover.Trigger asChild suppressHydrationWarning>
         <Button
           variant='shinyLatte'
           size='tiny'

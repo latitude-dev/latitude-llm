@@ -90,10 +90,10 @@ async function computeUsageFromDatabase(
 export async function computeWorkspaceUsage(
   workspace:
     | {
-      id: Workspace['id']
-      currentSubscriptionCreatedAt: Subscription['createdAt']
-      plan: SubscriptionPlan
-    }
+        id: Workspace['id']
+        currentSubscriptionCreatedAt: Subscription['createdAt']
+        plan: SubscriptionPlan
+      }
     | Workspace,
   db = database,
 ): PromisedResult<WorkspaceUsage, Error> {

@@ -56,7 +56,7 @@ async function getRequest(...parameters: Parameters<FetchFunction>) {
       headers: await getHeaders(headers),
       body: await getBody(body),
     }
-  } catch (error) {
+  } catch (_error) {
     return {
       method: 'UNKNOWN',
       url: 'UNKNOWN',
@@ -73,7 +73,7 @@ async function getResponse(response: Response) {
       headers: await getHeaders(response.headers),
       body: await getBody(response.text()),
     }
-  } catch (error) {
+  } catch (_error) {
     return {
       status: 0,
       headers: {},

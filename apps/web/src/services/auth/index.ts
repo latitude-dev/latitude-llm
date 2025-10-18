@@ -7,7 +7,7 @@ import { Lucia } from 'lucia'
 import { env } from '@latitude-data/env'
 import { Google } from 'arctic'
 
-// @ts-ignore
+// @ts-expect-error lucia types are not aware of Drizzle adapter yet (nver will be LOL)
 const adapter = new DrizzlePostgreSQLAdapter(database, sessions, users)
 
 interface DatabaseUserAttributes {

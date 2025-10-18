@@ -124,7 +124,7 @@ export class RunDocumentChecker {
         if (typeof value === 'string') {
           try {
             acc[key] = JSON.parse(value as string)
-          } catch (e) {
+          } catch (_e) {
             acc[key] = value
           }
         } else {
@@ -175,7 +175,7 @@ export class RunDocumentChecker {
           } as File,
         }),
       )
-    } catch (e) {
+    } catch (_e) {
       return Result.error(new LatitudeError(`Error fetching file: ${url}`))
     }
   }

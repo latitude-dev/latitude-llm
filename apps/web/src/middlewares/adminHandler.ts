@@ -13,7 +13,7 @@ export function adminHandler(handler: any) {
         await getCurrentUserOrRedirect()
       user = uzer
       workspace = workzpace
-    } catch (error) {
+    } catch (_error) {
       return notFound()
     }
 

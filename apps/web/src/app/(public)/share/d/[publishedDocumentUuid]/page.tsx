@@ -1,6 +1,6 @@
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { findSharedDocumentCached } from '$/app/(public)/_data_access'
-import { ResolvingMetadata } from 'next'
+import { Metadata, ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 
 import { SharedDocument } from './_components/SharedDocument'
@@ -26,7 +26,7 @@ export async function generateMetadata(
     params: Promise<{ publishedDocumentUuid: string }>
   },
   parent: ResolvingMetadata,
-) {
+): Promise<Metadata> {
   // Wait for parent metadata to resolve to ensure auth middleware is executed
   const parentMetadata = await parent
 
@@ -42,7 +42,7 @@ export async function generateMetadata(
       description: data.shared.description ?? '',
       parent: parentMetadata,
     })
-  } catch (error) {
+  } catch (_error) {
     return buildMetatags({ title: 'Not Found', parent: parentMetadata })
   }
 }

@@ -18,51 +18,51 @@ const buildStreamHandler =
     stream: ReadableStream<ChainEvent>,
     $span: ReturnType<typeof telemetry.prompt>,
   ) =>
-    async ({
-      signal,
-      onEvent,
-      onError,
-      onFinished,
-    }: {
-      signal: AbortSignal
-      onEvent: (event: ChainEvent) => void
-      onError: (error: Error) => void
-      onFinished: () => void
-    }) => {
-      try {
-        const reader = stream.getReader()
-        let isAborted = false
+  async ({
+    signal,
+    onEvent,
+    onError,
+    onFinished,
+  }: {
+    signal: AbortSignal
+    onEvent: (event: ChainEvent) => void
+    onError: (error: Error) => void
+    onFinished: () => void
+  }) => {
+    try {
+      const reader = stream.getReader()
+      let isAborted = false
 
-        const abortHandler = () => {
-          isAborted = true
-          reader.cancel().catch(() => { })
-        }
-
-        signal?.addEventListener('abort', abortHandler)
-
-        try {
-          while (true) {
-            const { value, done } = await reader.read()
-
-            if (done || isAborted) break
-
-            if (onEvent) {
-              onEvent(value)
-            }
-          }
-
-          $span.end()
-          onFinished?.()
-        } catch (err) {
-          $span.fail(err as Error)
-          onError(err as Error)
-        } finally {
-          signal?.removeEventListener('abort', abortHandler)
-        }
-      } catch (err) {
-        onError(err as Error)
+      const abortHandler = () => {
+        isAborted = true
+        reader.cancel().catch(() => {})
       }
+
+      signal?.addEventListener('abort', abortHandler)
+
+      try {
+        while (true) {
+          const { value, done } = await reader.read()
+
+          if (done || isAborted) break
+
+          if (onEvent) {
+            onEvent(value)
+          }
+        }
+
+        $span.end()
+        onFinished?.()
+      } catch (err) {
+        $span.fail(err as Error)
+        onError(err as Error)
+      } finally {
+        signal?.removeEventListener('abort', abortHandler)
+      }
+    } catch (err) {
+      onError(err as Error)
     }
+  }
 
 type StreamHandler = ReturnType<typeof buildStreamHandler>
 

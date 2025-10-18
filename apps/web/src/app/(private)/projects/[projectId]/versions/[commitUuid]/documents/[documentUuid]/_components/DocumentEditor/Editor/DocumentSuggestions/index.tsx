@@ -113,7 +113,7 @@ export function DocumentSuggestions({
 
   return (
     <Popover.Root open={isOpen && !isDisabled} onOpenChange={setIsOpen}>
-      <Popover.Trigger disabled={isDisabled} asChild>
+      <Popover.Trigger disabled={isDisabled} asChild suppressHydrationWarning>
         <Button
           variant='shiny'
           size='small'

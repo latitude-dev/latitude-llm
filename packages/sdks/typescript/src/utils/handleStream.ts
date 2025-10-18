@@ -126,7 +126,7 @@ export async function handleStream<S extends AssertedStreamType = 'text'>({
 function parseJSON(line: string) {
   try {
     return JSON.parse(line) as ProviderData | LatitudeEventData
-  } catch (e) {
+  } catch (_e) {
     // do nothing
   }
 }

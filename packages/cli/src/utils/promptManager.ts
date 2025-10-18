@@ -24,7 +24,7 @@ export class PromptManager {
         // If src doesn't exist, default to prompts
         return defaultFolder
       }
-    } catch (error) {
+    } catch (_error) {
       // If any error occurs, default to prompts
       return defaultFolder
     }

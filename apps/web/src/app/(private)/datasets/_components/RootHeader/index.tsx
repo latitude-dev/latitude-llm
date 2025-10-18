@@ -32,9 +32,11 @@ export function RootDatasetHeader({
   })
   const onOpenChange = useCallback(
     (modal: 'new' | 'generate') => (newOpen: boolean) => {
-      modal === 'new'
-        ? newDataset.onOpenChange(newOpen)
-        : generateModal.onOpenChange(newOpen)
+      if (modal === 'new') {
+        newDataset.onOpenChange(newOpen)
+      } else {
+        generateModal.onOpenChange(newOpen)
+      }
       if (!newOpen) {
         navigate.replace(ROUTES.datasets.root())
       }
@@ -43,7 +45,11 @@ export function RootDatasetHeader({
   )
   const onOpen = useCallback(
     (modal: 'new' | 'generate') => () => {
-      modal === 'new' ? newDataset.onOpen() : generateModal.onOpen()
+      if (modal === 'new') {
+        newDataset.onOpen()
+      } else {
+        generateModal.onOpen()
+      }
       navigate.replace(ROUTES.datasets.root({ modal }))
     },
     [navigate, newDataset, generateModal],

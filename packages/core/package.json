@@ -204,7 +204,6 @@
     "@typescript/analyze-trace": "^0.10.1",
     "dd-trace": "^5.69.0",
     "drizzle-kit": "catalog:",
-    "eslint": "8",
     "eslint-plugin-drizzle": "^0.2.3",
     "pg-transactional-tests": "^1.0.9",
     "recast": "^0.23.11",

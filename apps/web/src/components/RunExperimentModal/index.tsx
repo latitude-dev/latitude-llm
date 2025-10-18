@@ -51,14 +51,14 @@ export function RunExperimentModal({
         onCreateCb?.(experiments)
 
         if (!navigateOnCreate) return
+        const route = ROUTES.projects
+          .detail({ id: project.id })
+          .commits.detail({ uuid: commit.uuid })
+          .documents.detail({ uuid: document.documentUuid })
         router.push(
-          ROUTES.projects
-            .detail({ id: project.id })
-            .commits.detail({ uuid: commit.uuid })
-            .documents.detail({ uuid: document.documentUuid })
-            [DocumentRoutes.experiments].withSelected(
-              experiments.map((exp) => exp.uuid),
-            ),
+          route[DocumentRoutes.experiments].withSelected(
+            experiments.map((exp) => exp.uuid),
+          ),
         )
       },
     },

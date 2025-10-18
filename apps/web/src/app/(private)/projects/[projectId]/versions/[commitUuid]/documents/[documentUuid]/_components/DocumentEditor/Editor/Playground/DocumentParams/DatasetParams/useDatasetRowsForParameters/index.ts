@@ -45,7 +45,7 @@ function resolveDatasetDataRow({
   dataset: Dataset
   emptyInputs: Inputs<'datasetV2'> | undefined
 }): LinkedDatasetRow {
-  let linkedDatasetRow: LinkedDatasetRow = {
+  const linkedDatasetRow: LinkedDatasetRow = {
     datasetRowId,
     inputs: {},
     mappedInputs: {},

@@ -10,7 +10,7 @@ export function parseSSEvent(data?: string) {
 
         try {
           acc[key!] = JSON.parse(value!)
-        } catch (e) {
+        } catch (_e) {
           acc[key!] = value || ''
         }
 
