@@ -34,7 +34,7 @@ function convertToParams(inputs: Inputs<InputSource>) {
     Object.entries(inputs).map(([key, input]) => {
       try {
         return [key, JSON.parse(input.value)]
-      } catch (e) {
+      } catch (_e) {
         return [key, input?.value?.toString?.()]
       }
     }),
@@ -63,7 +63,7 @@ export function useDocumentParameters({
   const inputs = allInputs[key] ?? EMPTY_INPUTS
   const source = inputs.source
   const dsId = document.datasetV2Id
-  let inputsBySource = getInputsBySource({
+  const inputsBySource = getInputsBySource({
     source,
     inputs,
     datasetId: dsId,

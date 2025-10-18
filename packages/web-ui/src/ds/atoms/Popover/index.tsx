@@ -86,7 +86,7 @@ export const ButtonTrigger = ({
   const iconName = iconProps?.name ?? 'chevronsUpDown'
   const iconColor = iconProps?.color ?? 'foregroundMuted'
   return (
-    <Popover.Trigger ref={ref} asChild>
+    <Popover.Trigger ref={ref} asChild suppressHydrationWarning>
       <Button variant={buttonVariant} ellipsis className={cn(className)}>
         <div className='flex flex-row justify-between items-center w-full gap-x-2'>
           {isString(children) ? (

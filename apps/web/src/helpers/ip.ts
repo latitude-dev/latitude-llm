@@ -2,7 +2,7 @@ import * as ip from 'ip'
 import { headers as nextHeaders } from 'next/headers'
 
 export function getUnsafeIp(headers: Awaited<ReturnType<typeof nextHeaders>>) {
-  let candidates = []
+  const candidates = []
   const forwardedFor = headers.get('x-forwarded-for') ?? ''
   candidates.push(...forwardedFor.split(',').map((a) => a.trim()))
   const realIP = headers.get('x-real-ip') ?? ''

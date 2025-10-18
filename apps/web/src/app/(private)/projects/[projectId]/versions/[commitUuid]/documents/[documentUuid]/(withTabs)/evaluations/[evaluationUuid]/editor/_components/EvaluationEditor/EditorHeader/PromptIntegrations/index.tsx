@@ -30,7 +30,7 @@ export function PromptIntegrations({
   const isDisabled = disabled || !isInitialized
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
-      <Popover.Trigger asChild>
+      <Popover.Trigger asChild suppressHydrationWarning>
         <ButtonWithBadge
           ellipsis
           disabled={isDisabled}

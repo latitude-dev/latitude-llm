@@ -91,7 +91,7 @@ export function updatePromptMetadata(
       /((?:\/\*[\s\S]*?\*\/\s*)?---\n)[\s\S]*?\n---/,
       `$1${newFrontMatter}---`,
     )
-  } catch (error) {
+  } catch (_error) {
     // If parsing fails, create new frontmatter
     const cleanUpdates = cleanUpdatesFromNullKeys(
       updates,

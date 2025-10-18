@@ -46,7 +46,7 @@ function accessField(output: any, path: string = '') {
 
   try {
     return JSON.stringify(value)
-  } catch (error) {
+  } catch (_error) {
     return value.toString()
   }
 }

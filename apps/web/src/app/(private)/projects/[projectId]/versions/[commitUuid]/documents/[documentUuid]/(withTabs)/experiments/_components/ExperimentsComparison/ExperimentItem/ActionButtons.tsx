@@ -75,6 +75,10 @@ export function ActionButtons({
   document: DocumentVersion
   experiment: ExperimentWithScores
 }) {
+  const route = ROUTES.projects
+    .detail({ id: project.id })
+    .commits.detail({ uuid: commit.uuid })
+    .documents.detail({ uuid: document.documentUuid })
   return (
     <div className='flex flex-row justify-center w-full gap-2'>
       <ApplyButton
@@ -84,13 +88,9 @@ export function ActionButtons({
         experiment={experiment}
       />
       <Link
-        href={ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid })
-          .documents.detail({ uuid: document.documentUuid })
-          [DocumentRoutes.logs].withFilters({
-            experimentId: experiment.id,
-          })}
+        href={route[DocumentRoutes.logs].withFilters({
+          experimentId: experiment.id,
+        })}
         className='w-full'
       >
         <Button

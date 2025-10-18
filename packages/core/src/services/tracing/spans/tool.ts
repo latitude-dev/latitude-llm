@@ -111,7 +111,7 @@ function extractToolCallArguments(
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))
-    } catch (error) {
+    } catch (_error) {
       return Result.error(
         new UnprocessableEntityError('Invalid tool call arguments'),
       )
@@ -132,7 +132,7 @@ function extractToolResultValue(
   if (attribute) {
     try {
       return Result.ok(JSON.parse(attribute))
-    } catch (error) {
+    } catch (_error) {
       return Result.ok(attribute ?? '')
     }
   }

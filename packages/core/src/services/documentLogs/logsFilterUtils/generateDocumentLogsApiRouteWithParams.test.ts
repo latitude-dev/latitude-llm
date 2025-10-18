@@ -164,7 +164,6 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
       params: {
         filterOptions: {
           createdAt: {
-            // @ts-ignore - from and to are required
             from: undefined,
             to: undefined,
           },

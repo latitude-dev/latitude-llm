@@ -62,7 +62,7 @@ export class StatusCommand extends BaseCommand {
 
         // Display diff summary
         this.showChangesSummary(diffResults)
-      } catch (error) {
+      } catch (_error) {
         console.log(
           `${chalk.yellow('Prompt Files:')}     ${chalk.red('Unable to determine')}`,
         )
@@ -142,7 +142,7 @@ export class StatusCommand extends BaseCommand {
     if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
       try {
         return await this.importPromptFromFile(filePath)
-      } catch (error) {
+      } catch (_error) {
         console.warn(
           chalk.yellow(`Failed to import prompt from ${filePath}, skipping...`),
         )

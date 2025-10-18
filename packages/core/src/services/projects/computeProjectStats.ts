@@ -45,7 +45,7 @@ export async function computeProjectStats(
       if (cachedStats) {
         return Result.ok(JSON.parse(cachedStats) as ProjectStats)
       }
-    } catch (error) {
+    } catch (_error) {
       // Continue with computation if cache read fails
     }
   }
@@ -240,7 +240,7 @@ export async function computeProjectStats(
   if (totalRuns >= STATS_CACHING_THRESHOLD) {
     try {
       await redis.set(cacheKey, JSON.stringify(stats), 'EX', STATS_CACHE_TTL)
-    } catch (error) {
+    } catch (_error) {
       // Continue even if caching fails
     }
   }

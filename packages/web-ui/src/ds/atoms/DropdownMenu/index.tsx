@@ -32,6 +32,7 @@ export const TriggerButton = ({
   return (
     <DropdownMenuTrigger
       asChild
+      suppressHydrationWarning
       className='flex focus:outline-none cursor-pointer'
     >
       <Button

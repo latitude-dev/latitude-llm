@@ -11,7 +11,7 @@ const url = port
   ? `${env.GATEWAY_SSL ? 'https' : 'http'}://${env.GATEWAY_HOSTNAME}:${env.GATEWAY_PORT}`
   : `${env.GATEWAY_SSL ? 'https' : 'http'}://${env.GATEWAY_HOSTNAME}`
 
-let servers = [
+const servers = [
   {
     url,
     description: 'Latitude',

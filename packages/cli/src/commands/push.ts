@@ -118,7 +118,7 @@ export class PushCommand extends BaseCommand {
     if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
       try {
         return await this.importPromptFromFile(filePath)
-      } catch (error) {
+      } catch (_error) {
         console.warn(
           chalk.yellow(`Failed to import prompt from ${filePath}, skipping...`),
         )

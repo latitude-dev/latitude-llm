@@ -43,7 +43,7 @@ async function getFromCache(
     const c = await cache()
     const cachedResponseStr = await c.get(key)
     return cachedResponseStr ? JSON.parse(cachedResponseStr) : undefined
-  } catch (e) {
+  } catch (_e) {
     return undefined
   }
 }
@@ -55,7 +55,7 @@ async function setToCache<T extends StreamType>(
   try {
     const c = await cache()
     await c.set(key, JSON.stringify(response))
-  } catch (e) {
+  } catch (_e) {
     // Silently fail cache writes
   }
 }

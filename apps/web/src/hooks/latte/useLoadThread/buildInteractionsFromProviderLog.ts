@@ -134,7 +134,7 @@ export function buildInteractionsFromProviderLog({
     return interactions
   }, [] as LatteInteraction[])
 
-  let lastInteraction = interactions.at(-1) ?? null
+  const lastInteraction = interactions.at(-1) ?? null
 
   if (lastInteraction && providerLog.response) {
     lastInteraction.steps.push({

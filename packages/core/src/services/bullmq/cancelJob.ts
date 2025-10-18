@@ -21,7 +21,7 @@ export async function cancelJob(job: Job) {
     if (REMOVABLE_STATES.includes(state)) await job.remove()
     else if (NON_REMOVABLE_STATES.includes(state))
       await setCancelJobFlag(job.id)
-  } catch (error) {
+  } catch (_error) {
     // to catch potential race condition between getting the state and removing
     state = await job.getState()
     if (REMOVABLE_STATES.includes(state)) await job.remove()

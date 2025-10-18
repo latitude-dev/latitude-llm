@@ -568,7 +568,7 @@ function processNodes({
         endIdx++
 
       const inlineNodes = nodes.slice(startIdx, endIdx)
-      let previousWasBlockWithChildren = isBlockWithChildren(previousNode)
+      const previousWasBlockWithChildren = isBlockWithChildren(previousNode)
       const processedInlineBlocks = proccesInlineNodes({
         prompt,
         nodes: inlineNodes,

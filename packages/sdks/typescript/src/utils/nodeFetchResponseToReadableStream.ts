@@ -40,7 +40,7 @@ export function nodeFetchResponseToReadableStream(
         if (!nodeStream.readableEnded && !nodeStream.errored) {
           try {
             controller.close()
-          } catch (e) {
+          } catch (_e) {
             // controller might be closed already
           }
         }
@@ -54,7 +54,7 @@ export function nodeFetchResponseToReadableStream(
       nodeStream.on('error', (err) => {
         try {
           controller.error(err)
-        } catch (e) {
+        } catch (_e) {
           // controller might be closed already
           if (onError) {
             const error = new LatitudeApiError({

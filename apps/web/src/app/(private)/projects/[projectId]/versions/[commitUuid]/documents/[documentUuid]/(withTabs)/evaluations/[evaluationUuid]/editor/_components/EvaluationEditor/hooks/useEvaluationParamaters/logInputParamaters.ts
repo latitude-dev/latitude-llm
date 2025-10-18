@@ -224,7 +224,6 @@ export const useEvaluatedLogInputs = create<EvaluatedLogInputsState>(
           ? updatedExpectedOutput
           : expectedOutput.value
 
-      deserializedParameters.expectedOutput
       const newParameters: Partial<EvaluatedLogParameters> = {
         ...parameters,
         ...deserializedParameters,

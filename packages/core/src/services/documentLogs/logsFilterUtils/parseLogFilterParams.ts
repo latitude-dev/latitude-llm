@@ -36,7 +36,7 @@ export function parseSafeCustomIdentifier(
 
   try {
     customIdentifier = decodeURIComponent(customIdentifier as string).trim()
-  } catch (error) {
+  } catch (_error) {
     return undefined
   }
 
@@ -60,7 +60,7 @@ export function parseSafeExperimentId(
     if (!isNaN(experimentIdNumber)) {
       return experimentIdNumber
     }
-  } catch (error) {
+  } catch (_error) {
     // do nothing
   }
 

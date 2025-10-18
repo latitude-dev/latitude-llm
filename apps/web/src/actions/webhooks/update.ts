@@ -25,7 +25,7 @@ export const updateWebhookAction = authProcedure
       projectIds = parsedInput.projectIds
         ? JSON.parse(parsedInput.projectIds)
         : undefined
-    } catch (error) {
+    } catch (_error) {
       throw new BadRequestError('Invalid project IDs')
     }
 

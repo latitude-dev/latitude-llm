@@ -4,8 +4,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 
 import { mock500Error, mockAuthHeader, mockGetBody } from './helpers/getAll'
 
-let FAKE_API_KEY = 'fake-api-key'
-let projectId = 123
+const FAKE_API_KEY = 'fake-api-key'
+const projectId = 123
 let sdk: Latitude
 
 const server = setupServer()

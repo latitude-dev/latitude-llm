@@ -56,7 +56,7 @@ describe('GET documents', () => {
           content: 'Hello {{name}}',
           extraConfig: {
             parameters: {
-              // @ts-ignore
+              // @ts-expect-error - type mismatch
               myFile: { type: 'file' },
             },
           },

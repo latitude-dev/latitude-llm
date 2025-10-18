@@ -19,7 +19,7 @@ export const GET = errorHandler(
       const { searchParams } = new URL(request.url)
       const withTools = searchParams.get('withTools') || undefined
       const withTriggers = searchParams.get('withTriggers') || undefined
-      let args: ListArguments = { workspace }
+      const args: ListArguments = { workspace }
 
       if (withTools !== undefined) {
         args.withTools = withTools === 'true'

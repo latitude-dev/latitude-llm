@@ -9,7 +9,7 @@ export const on: SubscriptionFn = (eventType, callback) => {
 }
 
 export const off: SubscriptionFn = (eventType, callback) => {
-  // @ts-ignore TODO: wdym
+  // @ts-expect-error TypeScript thinks CustomEvent is not assignable to Event
   document.removeEventListener(eventType, callback)
 }
 

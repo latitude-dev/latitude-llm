@@ -1,12 +1,14 @@
 import { Job } from 'bullmq'
 import tracer from './tracer'
 
+export type JobHandlerFunction = (job: Job) => any
+
 /**
  * Creates a job handler function for a BullMQ worker
  * @param jobMappings Object mapping job names to their handler functions
  * @returns A function that processes jobs based on the provided mappings
  */
-export function createJobHandler<T extends Record<string, Function>>(
+export function createJobHandler<T extends Record<string, JobHandlerFunction>>(
   jobMappings: T,
 ) {
   return async (job: Job) => {

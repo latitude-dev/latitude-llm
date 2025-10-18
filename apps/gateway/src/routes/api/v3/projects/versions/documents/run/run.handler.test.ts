@@ -118,7 +118,10 @@ describe('POST /run', () => {
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
       }).then((r) => r.unwrap())
-      token = apikey?.token!
+      if (!apikey) {
+        throw new Error('No API key found for workspace')
+      }
+      token = apikey.token
       const path = 'path/to/document'
       const { commit: cmt } = await createDraft({
         project,
@@ -264,7 +267,9 @@ describe('POST /run', () => {
         headers,
       })
 
-      let { done, value } = await testConsumeStream(res.body as ReadableStream)
+      const { done, value } = await testConsumeStream(
+        res.body as ReadableStream,
+      )
       const event = parseSSEvent(value)
       expect(mocks.queues)
       expect(res.status).toBe(200)
@@ -403,7 +408,10 @@ describe('POST /run', () => {
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
       }).then((r) => r.unwrap())
-      token = apikey?.token!
+      if (!apikey) {
+        throw new Error('No API key found for workspace')
+      }
+      token = apikey.token
       const path = 'path/to/document'
       const { commit: cmt } = await createDraft({
         project,
@@ -718,7 +726,10 @@ describe('POST /run', () => {
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
       }).then((r) => r.unwrap())
-      token = apikey?.token!
+      if (!apikey) {
+        throw new Error('No API key found for workspace')
+      }
+      token = apikey.token
       const path = 'path/to/document'
       const { commit: cmt } = await createDraft({
         project,
@@ -855,7 +866,10 @@ describe('POST /run', () => {
       const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
         workspaceId: workspace.id,
       }).then((r) => r.unwrap())
-      token = apikey?.token!
+      if (!apikey) {
+        throw new Error('No API key found for workspace')
+      }
+      token = apikey.token
       const path = 'path/to/document'
       const { commit: cmt } = await createDraft({
         project,

@@ -64,7 +64,7 @@ export function createMcpTransport(
     }
 
     return Result.ok(new StreamableHTTPClientTransport(urlObject))
-  } catch (error) {
+  } catch (_error) {
     return Result.error(new McpUrlError(`Invalid MCP server URL: ${url}`))
   }
 }

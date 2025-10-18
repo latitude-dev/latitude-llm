@@ -1,6 +1,9 @@
 import { and, eq, getTableColumns } from 'drizzle-orm'
 
-import { IntegrationDto, PipedreamIntegration } from '../schema/models/types/Integration'
+import {
+  IntegrationDto,
+  PipedreamIntegration,
+} from '../schema/models/types/Integration'
 import { LatitudeError, NotFoundError } from '../lib/errors'
 import { Result } from '../lib/Result'
 import { PromisedResult } from '../lib/Transaction'

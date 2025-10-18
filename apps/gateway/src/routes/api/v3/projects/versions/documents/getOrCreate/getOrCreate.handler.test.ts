@@ -86,7 +86,7 @@ describe('POST /get-or-create', () => {
     })
 
     it('succeeds when getting an existing document', async () => {
-      let { documentVersion: document } = await createDocumentVersion({
+      const { documentVersion: document } = await createDocumentVersion({
         workspace,
         user,
         commit,

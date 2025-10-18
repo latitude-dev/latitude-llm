@@ -23,9 +23,9 @@ export default function useDocumentLogsAggregations(
       ? undefined
       : documentUuid
         ? ROUTES.api.projects
-          .detail(projectId)
-          .documents.detail(documentUuid)
-          .logs.aggregations(filterOptions)
+            .detail(projectId)
+            .documents.detail(documentUuid)
+            .logs.aggregations(filterOptions)
         : undefined,
   )
 

@@ -107,15 +107,19 @@ describe('setupService', () => {
       companyName: 'Test Company',
     })
 
-    const user = result.value?.user!
+    const user = result.value?.user
 
-    expect(publisherSpy).toHaveBeenCalledWith({
-      type: 'userCreated',
-      data: {
-        ...user,
-        userEmail: user.email,
-        workspaceId: result.value?.workspace.id,
-      },
-    })
+    if (user) {
+      expect(publisherSpy).toHaveBeenCalledWith({
+        type: 'userCreated',
+        data: {
+          ...user,
+          userEmail: user.email,
+          workspaceId: result.value?.workspace.id,
+        },
+      })
+    } else {
+      throw new Error('User was not created')
+    }
   })
 })

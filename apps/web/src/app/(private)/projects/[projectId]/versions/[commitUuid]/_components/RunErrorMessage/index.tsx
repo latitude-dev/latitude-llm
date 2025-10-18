@@ -13,7 +13,7 @@ export function RunErrorMessage({ error }: { error: RunErrorField }) {
       (key) => key !== 'stack',
     )
     for (const key of keys) {
-      // @ts-ignore
+      // @ts-expect-error ts(7053)
       message += `\n${key}: ${resultError.details[key]}`
     }
   }

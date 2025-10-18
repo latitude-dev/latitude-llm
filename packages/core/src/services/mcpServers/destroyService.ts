@@ -26,7 +26,7 @@ export async function destroyMcpServer(
 
     // Delete manifest resources
     try {
-      const resources = yaml.loadAll(mcpServer.k8sManifest) as Object[]
+      const resources = yaml.loadAll(mcpServer.k8sManifest) as object[]
 
       for (const resource of resources) {
         try {

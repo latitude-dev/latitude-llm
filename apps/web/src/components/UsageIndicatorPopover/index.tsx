@@ -170,7 +170,7 @@ export function UsageIndicatorPopover({
 
   return (
     <Popover.Root>
-      <Popover.Trigger asChild>
+      <Popover.Trigger asChild suppressHydrationWarning>
         <Button
           size='small'
           variant={isOverlimits && isFree ? 'destructive' : 'ghost'}

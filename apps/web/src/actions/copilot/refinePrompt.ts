@@ -44,14 +44,8 @@ export const refinePromptAction = withDocument
     }
 
     const { evaluationUuid, resultUuids } = parsedInput
-
-    let evaluation
-    let serializedEvaluation
-    let results
-    let serializedResults
-
     const evaluationsRepository = new EvaluationsV2Repository(ctx.workspace.id)
-    evaluation = await evaluationsRepository
+    const evaluation = await evaluationsRepository
       .getAtCommitByDocument({
         projectId: ctx.project.id,
         commitUuid: ctx.commit.uuid,
@@ -60,18 +54,18 @@ export const refinePromptAction = withDocument
       })
       .then((r) => r.unwrap())
 
-    serializedEvaluation = await serializeEvaluationV2({ evaluation }).then(
-      (r) => r.unwrap(),
-    )
+    const serializedEvaluation = await serializeEvaluationV2({
+      evaluation,
+    }).then((r) => r.unwrap())
 
     const resultsRepository = new EvaluationResultsV2Repository(
       ctx.workspace.id,
     )
-    results = await resultsRepository
+    const results = await resultsRepository
       .findManyByUuid([...new Set(resultUuids)])
       .then((r) => r.unwrap())
 
-    serializedResults = await Promise.all(
+    const serializedResults = await Promise.all(
       results.map((result) =>
         serializeEvaluationResultV2({
           evaluation,

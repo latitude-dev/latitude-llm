@@ -17,7 +17,7 @@ export const notifyToClientDocumentLogCreatedJob = async ({
   let documentLog
   try {
     documentLog = await repo.find(id).then((r) => r.unwrap())
-  } catch (error) {
+  } catch (_error) {
     // do nothing, we don't wanna retry the job
     return
   }
@@ -29,7 +29,7 @@ export const notifyToClientDocumentLogCreatedJob = async ({
   try {
     commit = await findCommitById(documentLog.commitId)
     if (!commit) throw new NotFoundError('Commit not found')
-  } catch (error) {
+  } catch (_error) {
     // do nothing, we don't wanna retry the job
     return
   }
@@ -39,7 +39,7 @@ export const notifyToClientDocumentLogCreatedJob = async ({
     documentLogWithMetadata = await computeDocumentLogWithMetadata(
       documentLog,
     ).then((r) => r.unwrap())
-  } catch (error) {
+  } catch (_error) {
     // do nothing, we don't wanna retry the job
     return
   }
