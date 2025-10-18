@@ -41,7 +41,7 @@ export function GenerateEvaluationButton({
       const foundProvider = providers?.find((p) => p.name === providerName)
       setProvider(foundProvider)
       setModel(model)
-    } catch (error) {
+    } catch (_error) {
       setProvider(undefined)
       setModel(undefined)
     }
@@ -73,9 +73,11 @@ export function GenerateEvaluationButton({
         <EvaluationModal
           open={openGenerateModal}
           setOpen={setOpenGenerateModal}
-          generateEvaluationFromIssue={() =>
-            generateEvaluationFromIssue(provider?.name!, model!)
-          }
+          generateEvaluationFromIssue={() => {
+            if (provider?.name && model) {
+              generateEvaluationFromIssue(provider.name, model)
+            }
+          }}
           setProvider={setProvider}
           setModel={setModel}
           provider={provider}

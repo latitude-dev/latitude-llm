@@ -20,7 +20,7 @@ export default function useDatasetRowPosition(
   }: {
     dataset: Dataset
     datasetRow: DatasetRow
-    pageSize?: Number
+    pageSize?: number
   },
   opts?: SWRConfiguration,
 ) {

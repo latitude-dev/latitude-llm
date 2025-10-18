@@ -87,7 +87,7 @@ web.use(async (socket, next) => {
     }
 
     return next()
-  } catch (err) {
+  } catch (_err) {
     return next(new Error('AUTH_ERROR: Verification failed'))
   }
 })

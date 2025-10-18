@@ -139,7 +139,7 @@ export const POST = errorHandler(
         const { readable, writable } = new TransformStream()
         const writer = writable.getWriter()
         const encoder = new TextEncoder()
-        let isWriterClosed = false
+        const isWriterClosed = false
         const safeCloseWriter = buildSelfCloseWriter({ writer, isWriterClosed })
         const writeErrorToStream = buildWriteErrorToStream({
           encoder,

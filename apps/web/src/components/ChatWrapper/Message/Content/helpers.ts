@@ -13,7 +13,7 @@ export function computeSegments(
   sourceMap: PromptlSourceRef[],
   parameters: string[],
 ): Segment[] {
-  let segments: Segment[] = []
+  const segments: Segment[] = []
   if (!source) return segments
 
   // Filter source map references without value
@@ -49,7 +49,7 @@ export function computeSegments(
 }
 
 export function groupSegments(segments: Segment[]) {
-  let groups: Segment[][] = []
+  const groups: Segment[][] = []
   let currentGroup: Segment[] = []
 
   for (const segment of segments) {

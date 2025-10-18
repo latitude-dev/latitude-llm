@@ -21,7 +21,7 @@ export function PromptConfiguration({
 
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
-      <Popover.Trigger asChild>
+      <Popover.Trigger asChild suppressHydrationWarning>
         <Button
           fancy={fancyButton}
           variant='outline'

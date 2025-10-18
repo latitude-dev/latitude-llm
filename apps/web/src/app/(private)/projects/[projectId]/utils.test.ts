@@ -1,21 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { ROUTES } from '$/services/routes'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
+import { ROUTES } from '../../../../services/routes'
 import { getRedirectUrl } from './utils'
 
-import { HEAD_COMMIT } from '@latitude-data/core/constants'
-
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-export const PROJECT_ROUTE = ROUTES.projects.detail
+const PROJECT_ROUTE = ROUTES.projects.detail
 describe('getRedirectUrl', () => {
-  const mockCommits: Commit[] = [
-    // @ts-expect-error
+  const mockCommits = [
     { uuid: '1', mergedAt: new Date() },
-    // @ts-expect-error
     { uuid: '2', mergedAt: null },
-    // @ts-expect-error
     { uuid: '3', mergedAt: null },
-  ]
+  ] as Commit[]
 
   it('returns latest commit home URL when lastSeenCommitUuid is HEAD_COMMIT', () => {
     const result = getRedirectUrl({
@@ -68,9 +64,8 @@ describe('getRedirectUrl', () => {
   })
 
   it('returns first commit home URL when there is no head commit and no lastSeenCommitUuid', () => {
-    const noHeadCommits = [{ uuid: '1', mergedAt: null }]
+    const noHeadCommits = [{ uuid: '1', mergedAt: null }] as Commit[]
     const result = getRedirectUrl({
-      // @ts-expect-error
       commits: noHeadCommits,
       projectId: 1,
       lastSeenCommitUuid: undefined,

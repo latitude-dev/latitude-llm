@@ -98,7 +98,7 @@ export function TypeaheadMenuPlugin(): JSX.Element {
         })
         const { isInsideStepBlock, isInsideMessageBlock } = context
 
-        let baseOptions = allGroups.filter((option) => {
+        const baseOptions = allGroups.filter((option) => {
           if (option.key === 'steps') {
             const shouldShow = !isInsideStepBlock && !isInsideMessageBlock
             return shouldShow

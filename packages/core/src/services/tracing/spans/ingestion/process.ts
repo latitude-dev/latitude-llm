@@ -233,7 +233,7 @@ function extractInternal(attributes: Record<string, SpanAttribute>) {
     const baggage = internalBaggageSchema.parse(payload)
 
     return Result.ok(baggage)
-  } catch (error) {
+  } catch (_error) {
     return Result.error(
       new UnprocessableEntityError('Invalid internal baggage'),
     )

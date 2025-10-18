@@ -13,7 +13,9 @@ function createMockSocket() {
   }
 }
 
-function createMockContext(socket?: ReturnType<typeof createMockSocket>): Context {
+function createMockContext(
+  socket?: ReturnType<typeof createMockSocket>,
+): Context {
   const env = socket
     ? {
         incoming: { socket },

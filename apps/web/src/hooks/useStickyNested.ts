@@ -13,7 +13,7 @@ function useUpdateWidthOnTargetContainerChange({
     if (!ready) return
 
     const resizeObserver = new ResizeObserver((entries) => {
-      for (let entry of entries) {
+      for (const entry of entries) {
         if (entry.contentBoxSize) {
           const newWidth = entry.contentRect.width
 

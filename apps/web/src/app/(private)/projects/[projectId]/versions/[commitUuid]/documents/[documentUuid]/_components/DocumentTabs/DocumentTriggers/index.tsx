@@ -50,7 +50,7 @@ export function DocumentTriggersButton({
   return (
     <>
       <Popover.Root>
-        <Popover.Trigger asChild>
+        <Popover.Trigger asChild suppressHydrationWarning>
           <Button fancy variant='outline'>
             <div className='flex flex-row items-center gap-2'>
               <Text.H5>Triggers</Text.H5>

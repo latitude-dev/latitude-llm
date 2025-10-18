@@ -180,7 +180,7 @@ function extractConfiguration(
         return toCamelCase(
           JSON.parse(rawConfig as string) as Record<string, unknown>,
         )
-      } catch (error) {
+      } catch (_error) {
         return undefined
       }
     },

@@ -58,7 +58,7 @@ export async function uploadFile(
     const url = await disk.getUrl(key)
 
     return Result.ok(toPromptLFile({ file, url }))
-  } catch (error) {
+  } catch (_error) {
     return Result.error(
       new UnprocessableEntityError(`Failed to upload ${extension} file`),
     )

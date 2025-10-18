@@ -50,7 +50,6 @@ describe('POST /documents', () => {
         content: 'Hello {{name}}',
         extraConfig: {
           parameters: {
-            // @ts-ignore
             testParam: { type: 'string' },
           },
         },

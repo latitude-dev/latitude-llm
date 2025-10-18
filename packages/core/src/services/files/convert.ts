@@ -60,7 +60,7 @@ export async function convertFile(
         content = buffer.toString()
         break
     }
-  } catch (error) {
+  } catch (_error) {
     return Result.error(
       new UnprocessableEntityError(
         `Failed to convert ${extension} file to text`,

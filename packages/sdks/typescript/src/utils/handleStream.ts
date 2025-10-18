@@ -42,7 +42,7 @@ export async function handleStream<S extends AssertedStreamType = 'text'>({
     signal.addEventListener(
       'abort',
       () => {
-        reader.cancel('Stream aborted by user').catch(() => { })
+        reader.cancel('Stream aborted by user').catch(() => {})
       },
       { once: true },
     )
@@ -134,7 +134,7 @@ export async function handleStream<S extends AssertedStreamType = 'text'>({
 function parseJSON(line: string) {
   try {
     return JSON.parse(line) as ProviderData | LatitudeEventData
-  } catch (e) {
+  } catch (_e) {
     // do nothing
   }
 }

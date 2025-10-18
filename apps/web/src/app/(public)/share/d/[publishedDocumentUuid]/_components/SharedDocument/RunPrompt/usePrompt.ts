@@ -50,7 +50,7 @@ function getDeltas({
 
       return splitInWords(c.text! as string)
     })
-  } catch (error) {
+  } catch (_error) {
     return []
   }
 }
@@ -96,7 +96,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
       let response = ''
       let reasoning = ''
       let rollingIndex = 0
-      let accomulatedDeltas: AccoumulatedDeltaMessage[] = [{ deltas: [] }]
+      const accomulatedDeltas: AccoumulatedDeltaMessage[] = [{ deltas: [] }]
       let messagesCount = 0
       let lastMessage: ConversationMessage | undefined
 

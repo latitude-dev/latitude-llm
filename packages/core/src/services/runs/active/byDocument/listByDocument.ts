@@ -62,7 +62,7 @@ export async function listActiveRunsByDocument({
             startedAt: run.startedAt ? new Date(run.startedAt) : undefined,
           })
         }
-      } catch (parseError) {
+      } catch (_parseError) {
         // Skip invalid entries
         continue
       }

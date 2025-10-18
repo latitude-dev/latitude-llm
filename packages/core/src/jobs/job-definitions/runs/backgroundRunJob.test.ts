@@ -437,10 +437,10 @@ describe('backgroundRunJob', () => {
       )
       vi.mocked(endRunModule.endRun).mockResolvedValue(Result.ok({} as any))
 
-      let cancelCallback: Function
+      let cancelCallback: (args: { jobId: string }) => void
       vi.mocked(publisher.subscribe).mockImplementation((event, callback) => {
         if (event === 'cancelJob') {
-          cancelCallback = callback as Function
+          cancelCallback = callback as (args: { jobId: string }) => void
         }
         return Promise.resolve()
       })
