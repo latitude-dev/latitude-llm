@@ -44,8 +44,8 @@ async function fetchDocumentVersionDetails({
 
     const targetCommit = targetDraftUuid
       ? await commitScope
-        .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
-        .then((r) => r.unwrap())
+          .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
+          .then((r) => r.unwrap())
       : headCommit
 
     const targetDocument = await docsScope
@@ -171,13 +171,13 @@ export async function resetDocumentToVersion({
   const targetDraftResult = targetDraftUuid
     ? Result.ok(targetCommit)
     : await createCommit({
-      project: project,
-      user: user,
-      data: {
-        title: `Reset "${oldDocumentPath}"`,
-        description: `Reset document "${oldDocumentPath}" to version "${targetCommit.title}"`,
-      },
-    })
+        project: project,
+        user: user,
+        data: {
+          title: `Reset "${oldDocumentPath}"`,
+          description: `Reset document "${oldDocumentPath}" to version "${targetCommit.title}"`,
+        },
+      })
 
   const targetDraft = targetDraftResult.unwrap()
 

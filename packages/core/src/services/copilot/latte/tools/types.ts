@@ -25,10 +25,10 @@ export type LatteToolFn<
 export const defineLatteTool = <
   S extends z.ZodType | undefined = undefined,
   P extends Record<string, unknown> = S extends z.ZodType
-  ? z.infer<S> extends Record<string, unknown>
-  ? z.infer<S>
-  : Record<string, never>
-  : Record<string, never>,
+    ? z.infer<S> extends Record<string, unknown>
+      ? z.infer<S>
+      : Record<string, never>
+    : Record<string, never>,
 >(
   cb: LatteToolFn<P>,
   schema?: S,

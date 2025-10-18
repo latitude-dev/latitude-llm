@@ -1,9 +1,41 @@
-import { describe, it, expect, vi } from 'vitest'
-import { Result, TypedResult } from '../../../lib/Result'
-import { listApps } from './apps'
-import type { PipedreamClient } from '@pipedream/sdk/server'
-import type { PageInfo } from '@pipedream/sdk'
-import type { Page } from './helpers/page'
+import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest'
+import { Result } from '../../../lib/Result'
+import { listApps, getApp } from './apps'
+import { cache } from '../../../cache'
+import { REDIS_KEY_PREFIX } from '../../../redis'
+import type { Cache } from '../../../cache'
+import {
+  mockPipedreamClientBuilder,
+  createMockPipedreamClient,
+  emptyClientBuilder,
+  errorClientBuilder,
+  createErrorPipedreamClient,
+} from './testHelpers/pipedreamMockClient'
+import { ExtendedPipedreamApp } from '../../../constants'
+
+let redis: Cache
+
+beforeAll(async () => {
+  redis = await cache()
+})
+
+afterEach(async () => {
+  const pattern = `${REDIS_KEY_PREFIX}pipedream:apps:test*`
+  const keysWithPrefix = await redis.keys(pattern)
+
+  if (keysWithPrefix.length > 0) {
+    const keysWithoutPrefix = keysWithPrefix.map((key) =>
+      key.replace(REDIS_KEY_PREFIX, ''),
+    )
+    await redis.del(...keysWithoutPrefix)
+  }
+})
+
+afterAll(async () => {
+  if (redis) {
+    await redis.quit()
+  }
+})
 
 describe('listApps', () => {
   const mockApps = [
@@ -16,6 +48,7 @@ describe('listApps', () => {
       categories: ['productivity'],
       description: 'A test app for productivity',
       customFieldsJson: '{}',
+      connect: { some: 'connect-data' },
       featuredWeight: 100,
     },
     {
@@ -27,234 +60,70 @@ describe('listApps', () => {
       categories: ['communication'],
       description: 'A test app for communication',
       customFieldsJson: '{}',
+      connect: { some: 'connect-data' },
       featuredWeight: 90,
     },
-  ]
-
-  const mockComponents = [
     {
-      name: 'Test Component 1',
-      key: 'test-app-1-action',
-      version: '1.0.0',
-      componentType: 'action',
+      id: 'app3',
+      name: 'OpenAI',
+      nameSlug: 'openai',
+      authType: 'keys',
+      imgSrc: 'https://example.com/openai.png',
+      categories: ['ai'],
+      description: 'OpenAI API',
+      customFieldsJson: '{}',
+      connect: { some: 'connect-data' },
+      featuredWeight: 95,
     },
     {
-      name: 'Test Component 2',
-      key: 'test-app-2-trigger',
-      version: '1.0.0',
-      componentType: 'source',
+      id: 'app4',
+      name: 'Anthropic',
+      nameSlug: 'anthropic',
+      authType: 'keys',
+      imgSrc: 'https://example.com/anthropic.png',
+      categories: ['ai'],
+      description: 'Anthropic API',
+      customFieldsJson: '{}',
+      connect: { some: 'connect-data' },
+      featuredWeight: 93,
     },
-  ]
-
-  // Type for our mock client with spy methods attached
-  type MockClientWithSpies = PipedreamClient & {
-    __appsListSpy: ReturnType<typeof vi.fn>
-    __componentsListSpy: ReturnType<typeof vi.fn>
-  }
-
-  const createMockPage = <T>(
-    data: T[],
-    pageInfo?: PageInfo,
-  ): Page<T> & { response: { pageInfo: PageInfo } } => {
-    const info: PageInfo = pageInfo ?? {
-      totalCount: data.length,
-      endCursor: 'test-cursor',
-      count: data.length,
-      startCursor: 'start-cursor',
-    }
-
-    return {
-      data,
-      hasNextPage: () => false,
-      getNextPage: async () => {
-        const empty: T[] = []
-        return {
-          data: empty,
-          hasNextPage: () => false,
-          getNextPage: async () => {
-            throw new Error('No next page')
-          },
-          [Symbol.asyncIterator]: function (): AsyncIterator<T, void, unknown> {
-            let index = 0
-            return {
-              next: async (
-                _value?: unknown,
-              ): Promise<IteratorResult<T, void>> => {
-                if (index < empty.length)
-                  return { value: empty[index++] as T, done: false }
-                return { value: undefined as void, done: true }
-              },
-            }
-          },
-          response: { pageInfo: info },
-        }
-      },
-      [Symbol.asyncIterator]: function (): AsyncIterator<T, void, unknown> {
-        let index = 0
-        return {
-          next: async (_value?: unknown): Promise<IteratorResult<T, void>> => {
-            if (index < data.length)
-              return { value: data[index++] as T, done: false }
-            return { value: undefined as void, done: true }
-          },
-        }
-      },
-      response: { pageInfo: info },
-    }
-  }
-
-  const createMockPipedreamClient = (): MockClientWithSpies => {
-    const appsListSpy = vi.fn()
-    const componentsListSpy = vi.fn()
-
-    const mockClient: Partial<PipedreamClient> = {
-      apps: {
-        list: async (opts: {
-          q?: string
-          limit?: number
-          after?: string
-          sortKey?: string
-          sortDirection?: string
-        }) => {
-          appsListSpy(opts)
-          return createMockPage(mockApps)
-        },
-      } as unknown as PipedreamClient['apps'],
-      components: {
-        list: async (opts: { app: string; limit?: number }) => {
-          componentsListSpy(opts)
-          const data = mockComponents.filter((c) => c.key.includes(opts.app))
-          return createMockPage(data, {
-            totalCount: data.length,
-            endCursor: 'comp-cursor',
-            count: data.length,
-            startCursor: 'comp-start-cursor',
-          })
-        },
-      } as unknown as PipedreamClient['components'],
-    }
-
-    const clientWithSpies = mockClient as MockClientWithSpies
-    clientWithSpies.__appsListSpy = appsListSpy
-    clientWithSpies.__componentsListSpy = componentsListSpy
-
-    return clientWithSpies
-  }
-
-  const mockPipedreamClientBuilder = (): (() => TypedResult<
-    PipedreamClient,
-    Error
-  >) => {
-    return () => Result.ok(createMockPipedreamClient())
-  }
+  ] satisfies ExtendedPipedreamApp[]
 
   it('should return apps with default parameters', async () => {
     const result = await listApps({
-      pipedreamClientBuilder: mockPipedreamClientBuilder(),
+      pipedreamClientBuilder: mockPipedreamClientBuilder({ mockApps }),
     })
 
     expect(result.ok).toBe(true)
     if (Result.isOk(result)) {
+      // Should have 2 apps after filtering (openai and anthropic removed)
       expect(result.value.apps).toHaveLength(2)
-      expect(result.value.totalCount).toBe(2)
+      // totalCount is from the API before filtering, so it's 4
+      expect(result.value.totalCount).toBe(4)
       expect(result.value.cursor).toBe('test-cursor')
-      // tools/triggers are always included now
       const app1 = result.value.apps[0]
       const app2 = result.value.apps[1]
       expect(app1.nameSlug).toBe('test-app-1')
       expect(app2.nameSlug).toBe('test-app-2')
-      expect(app1.tools.length).toBeGreaterThanOrEqual(1)
-      expect(app1.triggers.length).toBe(0)
-      expect(app2.triggers.length).toBeGreaterThanOrEqual(1)
-      expect(app2.tools.length).toBe(0)
     }
   })
 
-  it('should return all apps when withTriggers is false', async () => {
+  it('should exclude customFieldsJson and connect from apps response', async () => {
     const result = await listApps({
-      withTriggers: false,
-      pipedreamClientBuilder: mockPipedreamClientBuilder(),
+      pipedreamClientBuilder: mockPipedreamClientBuilder({ mockApps }),
     })
 
     expect(result.ok).toBe(true)
     if (Result.isOk(result)) {
-      expect(result.value.apps).toHaveLength(2)
-      expect(result.value.apps.every((a) => 'triggers' in a)).toBe(true)
-    }
-  })
-
-  it('should filter apps by triggers when withTriggers is true', async () => {
-    const result = await listApps({
-      withTriggers: true,
-      pipedreamClientBuilder: mockPipedreamClientBuilder(),
-    })
-
-    expect(result.ok).toBe(true)
-    if (Result.isOk(result)) {
-      expect(result.value.apps.every((a) => a.triggers.length > 0)).toBe(true)
-      expect(result.value.apps).toHaveLength(1)
-      expect(result.value.apps[0].nameSlug).toBe('test-app-2')
-    }
-  })
-
-  it('should return all apps when withTools is false', async () => {
-    const result = await listApps({
-      withTools: false,
-      pipedreamClientBuilder: mockPipedreamClientBuilder(),
-    })
-
-    expect(result.ok).toBe(true)
-    if (Result.isOk(result)) {
-      expect(result.value.apps).toHaveLength(2)
-      expect(result.value.apps.every((a) => 'tools' in a)).toBe(true)
-    }
-  })
-
-  it('should filter apps by tools when withTools is true', async () => {
-    const result = await listApps({
-      withTools: true,
-      pipedreamClientBuilder: mockPipedreamClientBuilder(),
-    })
-
-    expect(result.ok).toBe(true)
-    if (Result.isOk(result)) {
-      expect(result.value.apps.every((a) => a.tools.length > 0)).toBe(true)
-      expect(result.value.apps).toHaveLength(1)
-      expect(result.value.apps[0].nameSlug).toBe('test-app-1')
-    }
-  })
-
-  it('should return apps with both triggers and tools when both flags are true', async () => {
-    const result = await listApps({
-      withTriggers: true,
-      withTools: true,
-      pipedreamClientBuilder: mockPipedreamClientBuilder(),
-    })
-
-    expect(result.ok).toBe(true)
-    if (Result.isOk(result)) {
-      // With our mock data, no app has both a tool and a trigger
-      expect(result.value.apps).toHaveLength(0)
+      // Ensure all apps do not have customFieldsJson or connect fields
+      result.value.apps.forEach((app) => {
+        expect(app).not.toHaveProperty('customFieldsJson')
+        expect(app).not.toHaveProperty('connect')
+      })
     }
   })
 
   it('should return empty array when no apps found', async () => {
-    const emptyClientBuilder = () =>
-      Result.ok({
-        apps: {
-          list: async () =>
-            createMockPage([], {
-              totalCount: 0,
-              endCursor: '',
-              count: 0,
-              startCursor: '',
-            }),
-        },
-        components: {
-          list: async () => createMockPage([]),
-        },
-      } as unknown as PipedreamClient)
-
     const result = await listApps({
       pipedreamClientBuilder: emptyClientBuilder,
     })
@@ -266,24 +135,52 @@ describe('listApps', () => {
   })
 
   it('should handle cursor parameter correctly', async () => {
+    const customCursorApps = [
+      {
+        id: 'cursor-app-1',
+        name: 'Cursor App 1',
+        nameSlug: 'cursor-app-1',
+        authType: 'oauth',
+        imgSrc: 'https://example.com/cursor1.png',
+        categories: ['cursor'],
+        description: 'App returned for custom cursor',
+        featuredWeight: 80,
+        connect: { some: 'connect-data' },
+        customFieldsJson: '{}',
+      },
+    ] satisfies ExtendedPipedreamApp[]
+
+    const mockClient = createMockPipedreamClient({
+      mockApps, // Default first page
+      mockAppsByCursor: {
+        'custom-cursor': customCursorApps,
+      },
+    })
+    const clientBuilder = () => Result.ok(mockClient)
+
     const result = await listApps({
       cursor: 'custom-cursor',
-      pipedreamClientBuilder: mockPipedreamClientBuilder(),
+      pipedreamClientBuilder: clientBuilder,
     })
+
+    // Verify the cursor was passed to the API
+    expect(mockClient.__appsListSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        after: 'custom-cursor',
+      }),
+    )
 
     expect(result.ok).toBe(true)
     if (Result.isOk(result)) {
-      expect(result.value.apps).toHaveLength(2)
+      expect(result.value.apps).toHaveLength(1)
+      expect(result.value.apps[0].nameSlug).toBe('cursor-app-1')
       expect(result.value.cursor).toBe('test-cursor')
     }
   })
 
   it('should return error when pipedream client builder fails', async () => {
-    const errorClientBuilder = () =>
-      Result.error(new Error('Failed to create client'))
-
     const result = await listApps({
-      pipedreamClientBuilder: errorClientBuilder,
+      pipedreamClientBuilder: errorClientBuilder('Failed to create client'),
     })
 
     expect(result.ok).toBe(false)
@@ -294,18 +191,10 @@ describe('listApps', () => {
   })
 
   it('should handle apps API error gracefully', async () => {
-    const errorClientBuilder = () =>
-      Result.ok({
-        apps: {
-          list: async () => Promise.reject(new Error('Apps API failed')),
-        },
-        components: {
-          list: async () => createMockPage(mockComponents as any),
-        },
-      } as unknown as PipedreamClient)
-
     const result = await listApps({
-      pipedreamClientBuilder: errorClientBuilder,
+      pipedreamClientBuilder: createErrorPipedreamClient({
+        appsListError: 'Apps API failed',
+      }),
     })
 
     expect(result.ok).toBe(false)
@@ -315,48 +204,8 @@ describe('listApps', () => {
     }
   })
 
-  it('should handle components API error', async () => {
-    const errorClientBuilder = () =>
-      Result.ok({
-        apps: {
-          list: async () => createMockPage(mockApps as any),
-        },
-        components: {
-          list: async () => Promise.reject(new Error('Components API failed')),
-        },
-      } as unknown as PipedreamClient)
-
-    const result = await listApps({
-      pipedreamClientBuilder: errorClientBuilder,
-    })
-
-    expect(result.ok).toBe(false)
-    if (!Result.isOk(result)) {
-      expect(result.error?.message).toBe('Components API failed')
-    }
-  })
-
-  it('should call components.list for each app', async () => {
-    const mockClient = createMockPipedreamClient()
-    const clientBuilder = () =>
-      Result.ok(mockClient as unknown as PipedreamClient)
-
-    const result = await listApps({
-      pipedreamClientBuilder: clientBuilder,
-    })
-
-    expect(result.ok).toBe(true)
-    expect(mockClient.__componentsListSpy).toHaveBeenCalledTimes(2)
-    const calls = mockClient.__componentsListSpy.mock.calls.map(
-      (args) => args[0],
-    )
-    const appsCalled = new Set(calls.map((c: any) => c.app))
-    expect(appsCalled).toEqual(new Set(['test-app-1', 'test-app-2']))
-    expect(calls.every((c: any) => c.limit === 64)).toBe(true)
-  })
-
   it('should call apps.list with correct parameters', async () => {
-    const mockClient = createMockPipedreamClient()
+    const mockClient = createMockPipedreamClient({ mockApps })
     const clientBuilder = () => Result.ok(mockClient)
 
     await listApps({
@@ -368,12 +217,294 @@ describe('listApps', () => {
     // Verify apps.list was called with the correct parameters
     expect(mockClient.__appsListSpy).toHaveBeenCalledWith({
       q: 'test-query',
-      limit: 64,
+      limit: 30,
       after: 'test-cursor',
       sortKey: expect.any(String),
       sortDirection: expect.any(String),
     })
   })
 
-  // Components API is always called now as part of listApps
+  it('should filter out disallowed apps (openai and anthropic)', async () => {
+    const result = await listApps({
+      pipedreamClientBuilder: mockPipedreamClientBuilder({ mockApps }),
+    })
+
+    expect(result.ok).toBe(true)
+    if (Result.isOk(result)) {
+      // Should only have 2 apps, not 4 (openai and anthropic filtered out)
+      expect(result.value.apps).toHaveLength(2)
+
+      // Verify disallowed apps are not in the results
+      const nameSlugs = result.value.apps.map((app) => app.nameSlug)
+      expect(nameSlugs).not.toContain('openai')
+      expect(nameSlugs).not.toContain('anthropic')
+
+      // Verify allowed apps are in the results
+      expect(nameSlugs).toContain('test-app-1')
+      expect(nameSlugs).toContain('test-app-2')
+    }
+  })
+
+  it('should bypass cache when query parameter is provided', async () => {
+    // First, cache the first page
+    const firstPageClient = createMockPipedreamClient({ mockApps })
+    const firstPageBuilder = () => Result.ok(firstPageClient)
+
+    const cachedResult = await listApps({
+      pipedreamClientBuilder: firstPageBuilder,
+    })
+
+    expect(firstPageClient.__appsListSpy).toHaveBeenCalledTimes(1)
+    expect(cachedResult.ok).toBe(true)
+
+    // Now call with query - should NOT return cached first page
+    const searchApps = [
+      {
+        id: 'search-result-1',
+        name: 'Search Result App',
+        nameSlug: 'search-result-app',
+        authType: 'oauth',
+        imgSrc: 'https://example.com/search.png',
+        categories: ['search'],
+        description: 'A search result',
+        featuredWeight: 50,
+        connect: { some: 'connect-data' },
+        customFieldsJson: '{}',
+      },
+    ] satisfies ExtendedPipedreamApp[]
+
+    const searchClient = createMockPipedreamClient({
+      mockApps, // Default first page
+      mockAppsByQuery: (query) => {
+        if (query === 'search-term') return searchApps
+        return []
+      },
+    })
+    const searchBuilder = () => Result.ok(searchClient)
+
+    const searchResult = await listApps({
+      query: 'search-term',
+      pipedreamClientBuilder: searchBuilder,
+    })
+
+    // Verify the API was called (cache was bypassed)
+    expect(searchClient.__appsListSpy).toHaveBeenCalledTimes(1)
+
+    // Verify the query was passed to the API
+    expect(searchClient.__appsListSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        q: 'search-term',
+      }),
+    )
+
+    // Verify we got search results, NOT the cached first page
+    expect(searchResult.ok).toBe(true)
+    if (Result.isOk(searchResult)) {
+      expect(searchResult.value.apps).toHaveLength(1)
+      expect(searchResult.value.apps[0].nameSlug).toBe('search-result-app')
+      // Verify it's NOT the cached first page apps
+      expect(searchResult.value.apps[0].nameSlug).not.toBe('test-app-1')
+      expect(searchResult.value.apps[0].nameSlug).not.toBe('test-app-2')
+    }
+  })
+
+  it('should bypass cache when cursor parameter is provided', async () => {
+    // First, cache the first page
+    const firstPageClient = createMockPipedreamClient({ mockApps })
+    const firstPageBuilder = () => Result.ok(firstPageClient)
+
+    const cachedResult = await listApps({
+      pipedreamClientBuilder: firstPageBuilder,
+    })
+
+    expect(firstPageClient.__appsListSpy).toHaveBeenCalledTimes(1)
+    expect(cachedResult.ok).toBe(true)
+
+    // Now call with cursor - should NOT return cached first page
+    const page2Apps = [
+      {
+        id: 'page-2-app-1',
+        name: 'Page 2 App',
+        nameSlug: 'page-2-app',
+        authType: 'keys',
+        imgSrc: 'https://example.com/page2.png',
+        categories: ['page2'],
+        description: 'An app from page 2',
+        featuredWeight: 30,
+        connect: { some: 'connect-data' },
+        customFieldsJson: '{}',
+      },
+    ] satisfies ExtendedPipedreamApp[]
+
+    const page2Client = createMockPipedreamClient({
+      mockApps, // Default first page
+      mockAppsByCursor: {
+        'page-2-cursor': page2Apps,
+      },
+    })
+    const page2Builder = () => Result.ok(page2Client)
+
+    const page2Result = await listApps({
+      cursor: 'page-2-cursor',
+      pipedreamClientBuilder: page2Builder,
+    })
+
+    // Verify the API was called (cache was bypassed)
+    expect(page2Client.__appsListSpy).toHaveBeenCalledTimes(1)
+
+    // Verify the cursor was passed to the API
+    expect(page2Client.__appsListSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        after: 'page-2-cursor',
+      }),
+    )
+
+    expect(page2Result.value?.apps[0].nameSlug).not.toBe('test-app-1')
+    expect(page2Result.value?.apps[0].nameSlug).not.toBe('test-app-2')
+    expect(page2Result.value?.apps).toHaveLength(1)
+    expect(page2Result.value?.apps[0].nameSlug).toBe('page-2-app')
+  })
+
+  it('should use cache for first page (no query, no cursor)', async () => {
+    const mockClient = createMockPipedreamClient({ mockApps })
+    const clientBuilder = () => Result.ok(mockClient)
+
+    // First call should hit the API and cache the result
+    const result1 = await listApps({
+      pipedreamClientBuilder: clientBuilder,
+    })
+
+    expect(mockClient.__appsListSpy).toHaveBeenCalledTimes(1)
+    expect(result1.ok).toBe(true)
+
+    // Second call should hit the cache
+    // (reuse same client to verify API isn't called again)
+    const result2 = await listApps({
+      pipedreamClientBuilder: clientBuilder,
+    })
+
+    // Still 1 - second call used cache
+    expect(mockClient.__appsListSpy).toHaveBeenCalledTimes(1)
+    expect(result2.ok).toBe(true)
+    expect(result2.value?.apps).toHaveLength(result1.value?.apps?.length ?? 0)
+  })
+})
+
+describe('getApp', () => {
+  const mockApp = {
+    id: 'slack',
+    name: 'Slack',
+    nameSlug: 'slack',
+    authType: 'oauth',
+    imgSrc: 'https://example.com/slack.png',
+    categories: ['communication'],
+    description: 'Team collaboration tool',
+    customFieldsJson: '{}',
+    connect: { some: 'connect-data' },
+    featuredWeight: 100,
+  } satisfies ExtendedPipedreamApp
+
+  const mockTool = {
+    key: 'slack_send_message',
+    name: 'Send Message',
+    description: 'Send a message to a channel',
+    componentType: 'action', // PipedreamComponentType.Tool
+    configurableProps: [
+      { name: 'channel', type: 'string' },
+      { name: 'text', type: 'string' },
+    ],
+  }
+
+  const mockTrigger = {
+    key: 'slack_new_message',
+    name: 'New Message',
+    description: 'Triggered when a new message is posted',
+    componentType: 'source', // PipedreamComponentType.Trigger
+    configurableProps: [{ name: 'channel', type: 'string' }],
+  }
+
+  it('should retrieve and cache a single app by nameSlug with config', async () => {
+    const mockBuilder = mockPipedreamClientBuilder({
+      mockApp,
+      mockComponents: [mockTool, mockTrigger],
+    })
+
+    const result = await getApp({
+      name: 'slack',
+      withConfig: true,
+      pipedreamClientBuilder: mockBuilder,
+    })
+
+    expect(result.ok).toBe(true)
+    if (Result.isOk(result)) {
+      expect(result.value.nameSlug).toBe('slack')
+      expect(result.value.name).toBe('Slack')
+      expect(result.value).toHaveProperty('tools')
+      expect(result.value).toHaveProperty('triggers')
+      // Check that tools have configurableProps
+      expect(result.value.tools[0]).toHaveProperty('configurableProps')
+      expect(result.value.tools[0].configurableProps).toEqual(
+        mockTool.configurableProps,
+      )
+    }
+  })
+
+  it('should retrieve and cache a single app by nameSlug without config (slim)', async () => {
+    const mockBuilder = mockPipedreamClientBuilder({
+      mockApp,
+      mockComponents: [mockTool, mockTrigger],
+    })
+
+    const result = await getApp({
+      name: 'slack',
+      withConfig: false,
+      pipedreamClientBuilder: mockBuilder,
+    })
+
+    expect(result.ok).toBe(true)
+    if (Result.isOk(result)) {
+      expect(result.value.nameSlug).toBe('slack')
+      expect(result.value.name).toBe('Slack')
+      expect(result.value).toHaveProperty('tools')
+      expect(result.value).toHaveProperty('triggers')
+      // Check that tools do NOT have configurableProps when withConfig is false
+      expect(result.value.tools[0]).not.toHaveProperty('configurableProps')
+      expect(result.value.triggers[0]).not.toHaveProperty('configurableProps')
+    }
+  })
+
+  it('should exclude customFieldsJson and connect from app response', async () => {
+    const mockBuilder = mockPipedreamClientBuilder({
+      mockApp,
+      mockComponents: [],
+    })
+
+    const result = await getApp({
+      name: 'slack',
+      pipedreamClientBuilder: mockBuilder,
+      withConfig: true,
+    })
+
+    expect(result.ok).toBe(true)
+    if (Result.isOk(result)) {
+      // Ensure app does not have customFieldsJson or connect fields
+      expect(result.value).not.toHaveProperty('customFieldsJson')
+      expect(result.value).not.toHaveProperty('connect')
+    }
+  })
+
+  it('should handle errors when retrieving nonexistent app', async () => {
+    const result = await getApp({
+      name: 'nonexistent',
+      pipedreamClientBuilder: createErrorPipedreamClient({
+        appsRetrieveError: 'App not found',
+      }),
+      withConfig: true,
+    })
+
+    expect(result.ok).toBe(false)
+    if (!Result.isOk(result)) {
+      expect(result.error.message).toContain('App not found')
+    }
+  })
 })

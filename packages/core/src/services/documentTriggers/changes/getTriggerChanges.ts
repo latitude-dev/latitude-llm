@@ -108,9 +108,9 @@ export async function getCommitTriggerChanges(
 
     const previousCommitTriggers = previousCommit
       ? await triggersRepository.getTriggersInProject({
-        projectId: previousCommit.projectId,
-        commit: previousCommit,
-      })
+          projectId: previousCommit.projectId,
+          commit: previousCommit,
+        })
       : Result.ok([])
 
     if (previousCommitTriggers.error) {

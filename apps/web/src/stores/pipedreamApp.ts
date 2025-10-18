@@ -4,31 +4,39 @@ import { ROUTES } from '$/services/routes'
 import useSWR from 'swr'
 import useFetcher from '../hooks/useFetcher'
 import { useMemo } from 'react'
-import { AppDto } from '@latitude-data/core/constants'
+import { AppDto, LightAppDto } from '@latitude-data/core/constants'
 
-type AppResponse =
-  | { data: AppDto; ok: true }
+type MaybeAppDto<C extends boolean> = C extends true
+  ? AppDto
+  : C extends false
+    ? LightAppDto
+    : never
+type AppResponse<C extends boolean> =
+  | { data: MaybeAppDto<C>; ok: true }
   | { errorMessage: string; ok: false }
 
-export function usePipedreamApp(slugName: string | undefined) {
-  const fetcher = useFetcher<AppDto, AppResponse>(
-    slugName
-      ? ROUTES.api.integrations.pipedream.detail(slugName).root
-      : undefined,
-    {
-      serializer: (response) => {
-        if (!response.ok) {
-          throw new Error(response.errorMessage)
-        }
+export function usePipedreamApp<C extends boolean>(
+  slugName: string | undefined,
+  options: { withConfig: C },
+) {
+  const { withConfig } = options
+  const url = slugName
+    ? `${ROUTES.api.integrations.pipedream.detail(slugName).root}?withConfig=${withConfig}`
+    : undefined
 
-        return response.data
-      },
-      fallback: null,
+  const fetcher = useFetcher<MaybeAppDto<C>, AppResponse<C>>(url, {
+    serializer: (response) => {
+      if (!response.ok) {
+        throw new Error(response.errorMessage)
+      }
+
+      return response.data
     },
-  )
+    fallback: null,
+  })
 
-  const { data = undefined, isLoading } = useSWR<AppDto>(
-    ['pipedreamApp', slugName],
+  const { data = undefined, isLoading } = useSWR<MaybeAppDto<C>>(
+    ['pipedreamApp', slugName, withConfig],
     fetcher,
   )
 

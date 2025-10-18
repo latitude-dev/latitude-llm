@@ -205,26 +205,26 @@ async function innerGenerateLatteResponse({
 
   const runResult = initialParameters
     ? await runDocumentAtCommit({
-      context: context,
-      workspace: copilotWorkspace,
-      commit: copilotCommit,
-      document: copilotDocument,
-      customIdentifier: String(clientWorkspace.id),
-      parameters: initialParameters,
-      source: LogSources.API,
-      errorableUuid: threadUuid,
-      tools,
-      abortSignal,
-    })
+        context: context,
+        workspace: copilotWorkspace,
+        commit: copilotCommit,
+        document: copilotDocument,
+        customIdentifier: String(clientWorkspace.id),
+        parameters: initialParameters,
+        source: LogSources.API,
+        errorableUuid: threadUuid,
+        tools,
+        abortSignal,
+      })
     : await addMessages({
-      context: context,
-      workspace: copilotWorkspace,
-      documentLogUuid: threadUuid,
-      messages: messages!,
-      source: LogSources.API,
-      tools,
-      abortSignal,
-    })
+        context: context,
+        workspace: copilotWorkspace,
+        documentLogUuid: threadUuid,
+        messages: messages!,
+        source: LogSources.API,
+        tools,
+        abortSignal,
+      })
   if (!runResult.ok) return runResult as ErrorResult<LatitudeError>
   const run = runResult.unwrap()
 

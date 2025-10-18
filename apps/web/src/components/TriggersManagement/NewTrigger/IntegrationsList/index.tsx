@@ -20,10 +20,10 @@ import {
 } from '@latitude-data/core/schema/models/types/Integration'
 
 export const ICONS_BY_TRIGGER: Partial<Record<DocumentTriggerType, IconName>> =
-{
-  [DocumentTriggerType.Scheduled]: 'clock',
-  [DocumentTriggerType.Email]: 'mail',
-}
+  {
+    [DocumentTriggerType.Scheduled]: 'clock',
+    [DocumentTriggerType.Email]: 'mail',
+  }
 
 function groupPipedreamIntegrations(
   integrations: IntegrationDto[],
@@ -85,7 +85,7 @@ export function IntegrationsList({
     isLoadingMore,
     isReachingEnd,
     totalCount,
-  } = usePipedreamApps({ query: searchQuery, withTriggers: true })
+  } = usePipedreamApps({ query: searchQuery })
 
   const groupedIntegrations = useMemo(
     () => groupPipedreamIntegrations(connectedIntegrations),
@@ -154,7 +154,7 @@ export function IntegrationsList({
               keywords: [app.name, app.nameSlug],
               metadata: { type: DocumentTriggerType.Integration },
               title: app.name,
-              description: `${app.triggers.length} triggers`,
+              description: '',
               imageIcon: {
                 type: 'image',
                 src: app.imgSrc,

@@ -32,7 +32,6 @@ export async function createAndConnectExternalMcpClient(
   })
 
   const connectResult = await retryWithBackoff(async () => {
-    console.log('connecting to MCP', transport)
     await client.connect(transport)
     return { client, transport }
   })

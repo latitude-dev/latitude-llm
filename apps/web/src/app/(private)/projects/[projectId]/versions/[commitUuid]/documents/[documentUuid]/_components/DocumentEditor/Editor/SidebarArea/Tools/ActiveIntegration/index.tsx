@@ -71,7 +71,9 @@ export function ActiveIntegration({
     isPipedream && config !== null && 'appName' in config
       ? config.appName
       : undefined
-  const { data: pipedreamApp } = usePipedreamApp(appNameSlug)
+  const { data: pipedreamApp } = usePipedreamApp(appNameSlug, {
+    withConfig: false,
+  })
 
   // Get description for tooltip (only Pipedream)
   const description = useMemo(() => {

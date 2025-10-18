@@ -183,9 +183,9 @@ async function getChainNextStep({
           message: error.message,
           ...(isCompileError
             ? {
-              compileCode: error.code,
-              frame: error.frame,
-            }
+                compileCode: error.code,
+                frame: error.frame,
+              }
             : {}),
         },
       }),

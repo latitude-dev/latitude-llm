@@ -14,22 +14,27 @@ import setupTestDatabase from './useTestDatabase'
 // This do rollback strategy for each test. Faster than truncate.
 setupTestDatabase()
 
+// Create a single telemetry instance for all tests to avoid MaxListeners warning
+const exporter = new MockSpanExporter()
+const processor = new MockSpanProcessor()
+const telemetryInstance = new LatitudeTelemetry('internal', {
+  instrumentations: {},
+  disableBatch: true,
+  exporter: exporter,
+  processors: [processor, DEFAULT_REDACT_SPAN_PROCESSOR()],
+})
+
 beforeEach((ctx) => {
-  const exporter = new MockSpanExporter()
-  const processor = new MockSpanProcessor()
-  const sdk = vi.spyOn(telemetry, 'telemetry', 'get').mockReturnValue(
-    new LatitudeTelemetry('internal', {
-      instrumentations: {},
-      disableBatch: true,
-      exporter: exporter,
-      processors: [processor, DEFAULT_REDACT_SPAN_PROCESSOR()],
-    }),
-  )
+  const sdk = vi
+    .spyOn(telemetry, 'telemetry', 'get')
+    .mockReturnValue(telemetryInstance)
 
   ctx.mocks = { telemetry: { sdk, exporter, processor } }
   ctx.factories = factories
 })
 
-afterAll(() => {
+afterAll(async () => {
+  // Clean up the shared telemetry instance
+  await telemetryInstance.shutdown()
   removeTestFolder()
 })

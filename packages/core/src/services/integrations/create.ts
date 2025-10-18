@@ -16,12 +16,12 @@ import { User } from '../../schema/models/types/User'
 
 type ConfigurationFormTypeMap = {
   [K in IntegrationType]: K extends IntegrationType.ExternalMCP
-  ? ExternalMcpIntegrationConfiguration
-  : K extends IntegrationType.Pipedream
-  ?
-  | PipedreamIntegrationConfiguration
-  | UnconfiguredPipedreamIntegrationConfiguration
-  : HostedMcpIntegrationConfigurationForm
+    ? ExternalMcpIntegrationConfiguration
+    : K extends IntegrationType.Pipedream
+      ?
+          | PipedreamIntegrationConfiguration
+          | UnconfiguredPipedreamIntegrationConfiguration
+      : HostedMcpIntegrationConfigurationForm
 }
 
 type ConfigurationFormType<T extends IntegrationType> =
@@ -42,7 +42,7 @@ async function obtainIntegrationComponents<T extends IntegrationType>({
   }
 
   const appName = (configuration as PipedreamIntegrationConfiguration).appName
-  const appResult = await getApp({ name: appName })
+  const appResult = await getApp({ name: appName, withConfig: false })
   if (!appResult.ok) {
     return Result.error(appResult.error!)
   }

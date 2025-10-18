@@ -118,12 +118,12 @@ export async function createProviderLog(
             costInMillicents ??
             (providerType && model && usage
               ? Math.floor(
-                estimateCost({
-                  provider: providerType!,
-                  model: model!,
-                  usage: usage!,
-                }) * TO_MILLICENTS_FACTOR,
-              )
+                  estimateCost({
+                    provider: providerType!,
+                    model: model!,
+                    usage: usage!,
+                  }) * TO_MILLICENTS_FACTOR,
+                )
               : undefined)
 
           const inserts = await trx

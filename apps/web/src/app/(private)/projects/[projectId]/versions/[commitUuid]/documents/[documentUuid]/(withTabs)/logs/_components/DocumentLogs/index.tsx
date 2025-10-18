@@ -18,9 +18,7 @@ import {
   DocumentLogsLimitedView,
   DocumentLogsAggregations,
 } from '@latitude-data/core/schema/models/types/DocumentLog'
-import {
-  ResultWithEvaluationV2,
-} from '@latitude-data/core/schema/types'
+import { ResultWithEvaluationV2 } from '@latitude-data/core/schema/types'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FloatingPanel } from '@latitude-data/web-ui/atoms/FloatingPanel'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'

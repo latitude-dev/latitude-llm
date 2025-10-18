@@ -24,6 +24,7 @@ export enum BackofficeRoutes {
   search = 'search',
   grants = 'grants',
   promocodes = 'promocodes',
+  integrations = 'integrations',
 }
 
 const BACKOFFICE_ROOT = '/backoffice'
@@ -74,6 +75,9 @@ export const ROUTES = {
     },
     [BackofficeRoutes.promocodes]: {
       root: `${BACKOFFICE_ROOT}/promocodes`,
+    },
+    [BackofficeRoutes.integrations]: {
+      root: `${BACKOFFICE_ROOT}/integrations`,
     },
   },
   noWorkspace: {

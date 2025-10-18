@@ -1,8 +1,8 @@
 import { PaginatedSelect } from '@latitude-data/web-ui/molecules/PaginatedSelect'
-import { App } from '@pipedream/sdk/browser'
 import { ROUTES } from '$/services/routes'
 import Image from 'next/image'
 import { useCallback } from 'react'
+import { type App } from '@latitude-data/core/constants'
 
 export function AppSelector({
   value,

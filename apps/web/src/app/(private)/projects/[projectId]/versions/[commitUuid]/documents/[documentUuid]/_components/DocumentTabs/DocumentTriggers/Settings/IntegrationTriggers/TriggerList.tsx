@@ -12,17 +12,20 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
 import { PipedreamIntegration } from '@latitude-data/core/schema/models/types/Integration'
-import { PipedreamComponent } from '@latitude-data/core/constants'
+import {
+  LightPipedreamComponent,
+  PipedreamComponentType,
+} from '@latitude-data/core/constants'
 
 import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
-function DeleteTriggerButton({
+function DeleteTriggerButton<T extends PipedreamComponentType>({
   trigger,
   integration,
   component,
 }: {
   trigger: DocumentTrigger<DocumentTriggerType.Integration>
   integration: PipedreamIntegration
-  component?: PipedreamComponent
+  component?: LightPipedreamComponent<T>
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -119,6 +122,7 @@ function IntegrationTriggerItem({
 
   const { data: app, isLoading: isLoadingApp } = usePipedreamApp(
     integration?.configuration.appName,
+    { withConfig: false },
   )
 
   const component = useMemo(() => {

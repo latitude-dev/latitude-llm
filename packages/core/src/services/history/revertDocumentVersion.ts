@@ -34,8 +34,8 @@ async function fetchDocumentReversionDetails({
 
     const targetDraft = targetDraftUuid
       ? await commitScope
-        .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
-        .then((r) => r.unwrap())
+          .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
+          .then((r) => r.unwrap())
       : headCommit
 
     const changedCommit = await commitScope
@@ -62,11 +62,11 @@ async function fetchDocumentReversionDetails({
 
     const originalDocument = originalCommit
       ? await docsScope
-        .getDocumentAtCommit({
-          commitUuid: originalCommit.uuid,
-          documentUuid: documentUuid,
-        })
-        .then((r) => r.value)
+          .getDocumentAtCommit({
+            commitUuid: originalCommit.uuid,
+            documentUuid: documentUuid,
+          })
+          .then((r) => r.value)
       : undefined
 
     return Result.ok({
@@ -204,13 +204,13 @@ export async function revertChangesToDocument({
   const finalDraft = targetDraftUuid
     ? Result.ok(targetDraft)
     : await createCommit({
-      project: project,
-      user: user,
-      data: {
-        title: `Revert changes for "${oldDocumentPath}"`,
-        description: `Reverted changes of "${oldDocumentPath}" made in version ${changedCommit.title}`,
-      },
-    })
+        project: project,
+        user: user,
+        data: {
+          title: `Revert changes for "${oldDocumentPath}"`,
+          description: `Reverted changes of "${oldDocumentPath}" made in version ${changedCommit.title}`,
+        },
+      })
 
   if (finalDraft.error) return Result.error(finalDraft.error)
 

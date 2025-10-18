@@ -1,5 +1,8 @@
 import { IntegrationType } from '@latitude-data/constants'
-import { IntegrationDto, PipedreamIntegration } from '../../../schema/models/types/Integration'
+import {
+  IntegrationDto,
+  PipedreamIntegration,
+} from '../../../schema/models/types/Integration'
 import { LatitudeError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { StreamManager } from '../../../lib/streamManager'

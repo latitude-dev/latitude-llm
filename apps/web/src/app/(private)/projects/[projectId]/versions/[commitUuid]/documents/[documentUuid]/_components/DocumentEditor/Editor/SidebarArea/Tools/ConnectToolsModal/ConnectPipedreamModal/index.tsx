@@ -1,17 +1,21 @@
 import { useCallback, useState, FormEvent, useMemo } from 'react'
 import { CloseTrigger, Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { PipedreamAppCard } from '$/components/Pipedream/PipedreamCard'
+import {
+  AppComponentsCard,
+  AppComponentsHeader,
+} from '$/components/Pipedream/PipedreamCard'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import useIntegrations from '$/stores/integrations'
 import { toast } from '@latitude-data/web-ui/atoms/Toast'
 import { ValidIntegration } from '$/app/(private)/settings/_components/Integrations/New'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
-import { AppDto } from '@latitude-data/core/constants'
+import { App } from '@latitude-data/core/constants'
 import { useConnectToPipedreamApp } from '$/hooks/useConnectToPipedreamApp'
 import { IntegrationType } from '@latitude-data/constants'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { PipedreamIntegration } from '@latitude-data/core/schema/models/types/Integration'
+import { usePipedreamApp } from '$/stores/pipedreamApp'
 
 export function ConnectPipedreamModal({
   onOpenChange,
@@ -20,7 +24,7 @@ export function ConnectPipedreamModal({
 }: {
   onOpenChange: (open: boolean) => void
   onConnect: (integration: PipedreamIntegration) => void
-  app: AppDto
+  app: App
 }) {
   const [integrationName, setIntegrationName] = useState<string>('')
   const [isCreating, setIsCreating] = useState<boolean>(false)
@@ -41,6 +45,11 @@ export function ConnectPipedreamModal({
   const { data: workspace } = useCurrentWorkspace()
   const { connect } = useConnectToPipedreamApp(app)
   const [error, setError] = useState<Error | undefined>(undefined)
+  const { data: appData, isLoading: isLoadingAppData } = usePipedreamApp(
+    app.nameSlug,
+    { withConfig: false },
+  )
+  const hasTools = appData?.tools && appData.tools.length > 0
   const validate: () => Promise<ValidIntegration> = useCallback(async () => {
     if (!workspace) {
       throw new Error(
@@ -115,6 +124,7 @@ export function ConnectPipedreamModal({
             form='createIntegrationForm'
             type='submit'
             isLoading={isCreating}
+            disabled={isLoadingAppData || !hasTools || isCreating}
             iconProps={{
               name: 'unplug',
             }}
@@ -142,7 +152,27 @@ export function ConnectPipedreamModal({
           errors={nameErrors}
         />
 
-        <PipedreamAppCard app={app} />
+        {!isLoadingAppData && !hasTools ? (
+          <Alert
+            variant='warning'
+            title='No tools available'
+            description='Sorry, this integration does not have any tools available for use.'
+          />
+        ) : (
+          <AppComponentsCard
+            title='Tools'
+            icon='blocks'
+            isLoading={isLoadingAppData}
+            components={appData?.tools as any}
+            header={
+              <AppComponentsHeader
+                label='tools'
+                isLoading={isLoadingAppData}
+                count={appData?.tools?.length}
+              />
+            }
+          />
+        )}
         {error && (
           <Alert
             variant='destructive'

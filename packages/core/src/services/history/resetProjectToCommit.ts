@@ -35,8 +35,8 @@ async function fetchCommitDetails({
 
     const targetCommit = targetDraftUuid
       ? await commitScope
-        .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
-        .then((r) => r.unwrap())
+          .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
+          .then((r) => r.unwrap())
       : headCommit
 
     const originalCommit = await commitScope
@@ -155,13 +155,13 @@ export async function resetProjectToCommit(
   const targetDraft = targetDraftUuid
     ? Result.ok(targetCommit)
     : await createCommit({
-      project: project,
-      user: user,
-      data: {
-        title: `Reset project to v${originalCommit.version} "${originalCommit.title}"`,
-        description: `Resetted the project to the state of commit v${originalCommit.version} "${originalCommit.title}"`,
-      },
-    })
+        project: project,
+        user: user,
+        data: {
+          title: `Reset project to v${originalCommit.version} "${originalCommit.title}"`,
+          description: `Resetted the project to the state of commit v${originalCommit.version} "${originalCommit.title}"`,
+        },
+      })
 
   if (targetDraft.error) {
     return Result.error(targetDraft.error)

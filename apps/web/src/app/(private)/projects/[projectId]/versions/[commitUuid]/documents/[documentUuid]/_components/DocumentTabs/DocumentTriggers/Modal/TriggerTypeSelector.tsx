@@ -91,7 +91,10 @@ function IntegrationTriggerGroup({
   ) => void
   disabled?: boolean
 }) {
-  const { data, isLoading } = usePipedreamApp(integration.configuration.appName)
+  const { data, isLoading } = usePipedreamApp(
+    integration.configuration.appName,
+    { withConfig: true },
+  )
 
   return (
     <TriggerOption

@@ -1,5 +1,4 @@
 import { FormEvent, useCallback } from 'react'
-import { App } from '@pipedream/sdk/browser'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { useConnectToPipedreamApp } from '$/hooks/useConnectToPipedreamApp'
@@ -9,6 +8,7 @@ import useIntegrations from '$/stores/integrations'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { IntegrationDto } from '@latitude-data/core/schema/models/types/Integration'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
+import { type App } from '@latitude-data/core/constants'
 
 const NO_TOKEN_MSG =
   'Authentication token not available. Please wait a few seconds and try again.'
