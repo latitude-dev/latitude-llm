@@ -42,7 +42,7 @@ export const captureException = (error: Error, tags?: Record<string, any>) => {
       error: error.name,
       stack: error.stack,
       timestamp: new Date().toISOString(),
-      service: 'latitude-web',
+      service: 'latitude-llm-web',
       ...tags,
     }),
   )
