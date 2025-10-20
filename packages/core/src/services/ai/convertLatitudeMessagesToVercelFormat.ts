@@ -244,22 +244,21 @@ export function convertLatitudeMessagesToVercelFormat({
 
         // TODO: If we see all providers are containing all tool calls within the content, we can go a step further and remove the toolCalls property as its not needed anymore
         if (assistant.toolCalls) {
-          const filteredAssistantToolCalls = assistant.toolCalls.filter(
+          const assistantToolCallsNotInContent = assistant.toolCalls.filter(
             (t) =>
               !parts.some(
                 (p) => p.type === 'tool-call' && p.toolCallId === t.id,
               ),
           )
-          if (filteredAssistantToolCalls.length > 0) {
-            const toolParts = filteredAssistantToolCalls.map<ToolCallPart>(
-              (t) => ({
+          if (assistantToolCallsNotInContent.length > 0) {
+            const additionalToolCallsToAdd =
+              assistantToolCallsNotInContent.map<ToolCallPart>((t) => ({
                 type: 'tool-call',
                 toolCallId: t.id,
                 toolName: t.name,
                 input: t.arguments,
-              }),
-            )
-            parts.push(...toolParts)
+              }))
+            parts.push(...additionalToolCallsToAdd)
             captureMessage(
               'Assistant message does not contain all tool calls',
               'warning',
