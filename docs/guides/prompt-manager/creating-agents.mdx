@@ -1,0 +1,295 @@
+---
+title: Creating an Agent
+---
+
+# Creating Agents in Latitude
+
+Welcome to the comprehensive guide on creating agents in Latitude. This documentation will walk you through the entire process of building powerful, autonomous AI agents using Latitude's PromptL framework. Whether you're a beginner or an advanced user, this guide covers everything from basic concepts to advanced features, complete with examples, best practices, and troubleshooting tips.
+
+---
+
+## What is an Agent?
+
+An **Agent** in Latitude is a special type of prompt designed to operate autonomously. Unlike simple prompts or chains that follow a fixed sequence, agents can:
+
+- Plan and decide their next actions dynamically.
+- Use external tools and integrations.
+- Call other specialized sub-agents.
+- Iterate until they achieve the user's goal.
+
+Agents enable complex workflows where the AI can think, act, and adapt without constant user input.
+
+---
+
+## Why Use Agents?
+
+Agents are ideal when your task:
+
+- Requires multiple steps or decisions.
+- Needs to interact with external APIs or tools.
+- Benefits from modular design with sub-agents.
+- Demands dynamic planning and iteration.
+
+If your workflow is simple and linear, a Chain might suffice. But for open-ended, branching tasks, agents provide greater flexibility and power.
+
+---
+
+## Getting Started: Basic Agent Setup
+
+### 1. Define the Agent Configuration
+
+To create an agent, start your PromptL file with a YAML configuration block including:
+
+- `type: agent` to enable agent mode.
+- `provider` and `model` to specify the AI backend.
+- Optional `tools` to list external tools the agent can call.
+- Optional `agents` to expose sub-agents.
+- Optional `maxSteps` to limit the number of reasoning or tool calls.
+
+```yaml
+provider: OpenAI
+model: gpt-4.1
+type: agent
+temperature: 0.2
+tools:
+  - latitude/search
+  - latitude/extract
+maxSteps: 40
+```
+
+### 2. Write the System Message
+
+The system message sets the agent's identity, capabilities, and rules. Be explicit about:
+
+- The agent's role and purpose.
+- How to use tools and sub-agents.
+- Behavior constraints and style.
+
+```promptl
+<system>
+You are an autonomous research agent. Your job is to answer user queries by searching the web, extracting content, and summarizing findings.
+Use the tools provided when needed, and only respond with a final answer when you are confident.
+</system>
+```
+
+### 3. Define the User Input
+
+Use a `<user>` message to accept dynamic input from the user/trigger/etc.
+
+```promptl
+<user>
+{{ query }}
+</user>
+```
+
+---
+
+## Tools and Integrations
+
+Agents can call external tools to extend their capabilities. Latitude supports:
+
+- **Integrations:** Pre-configured APIs like `latitude/search` for web search or `latitude/extract` for content extraction.
+- **Custom Tools:** User-defined functions with JSON schema parameters.
+
+### Declaring Tools
+
+List tools in the `tools:` section of your config. For example:
+
+```yaml
+tools:
+  - latitude/search
+  - latitude/extract
+  - my_integration/my_custom_tool
+```
+
+### Using Tools in the Agent
+
+In your system message, instruct the agent on when and how to use tools. For example:
+
+```promptl
+<system>
+You have access to the following tools:
+- `latitude/search`: Use this to find relevant web pages.
+- `latitude/extract`: Use this to extract content from URLs.
+Only call tools when necessary to answer the user's query.
+Never reveal tool internals to the user.
+</system>
+```
+
+---
+
+## Sub-Agents: Modularizing Complex Workflows
+
+For complex tasks, break down responsibilities into specialized sub-agents. Each sub-agent is itself an agent with a focused role.
+
+### Declaring Sub-Agents
+
+Add sub-agent paths in the `agents:` section of your config:
+
+```yaml
+agents:
+  - /agents/search_agent
+  - /agents/summarizer_agent
+```
+
+### Calling Sub-Agents
+
+The main agent can invoke sub-agents as if they were tools. The sub-agent runs its own loop and returns a final result.
+
+### Define Subagent
+
+You can define the functionalities of the subagent in its configuration to help the orchestrating agent call its subagent correctly.
+
+```yaml
+description: Description of what the subagent does.
+```
+
+### Pass information to Subagents
+
+Use a `<user>` message to pass parameters to the subagent.
+
+```promptl
+<user>
+{{ parameter_1 }}
+{{ parameter_2 }}
+{{ parameter_3 }}
+</user>
+```
+
+These parameters are exposed as the names you give them, you can provide descriptions to the agent calling the subagent with the following field in the subagent's configuration:
+
+```yaml
+parameters:
+  parameter_1:
+    type: string
+    description: Description of the first parameter.
+  parameter_2:
+    type: string
+    description: Description of the second parameter.
+  parameter_3:
+    type: string
+    description: Description of the third parameter.
+```
+
+### Best Practices for Sub-Agents
+
+- Keep sub-agents focused on a single responsibility.
+- Define clear input parameters and output schemas.
+- Use sub-agents to encapsulate complex or costly operations.
+
+---
+
+## Advanced Features
+
+### Output Schemas
+
+Define a JSON schema in your config to enforce structured outputs. This helps with validation and downstream processing.
+
+```yaml
+schema:
+  type: object
+  properties:
+    summary:
+      type: string
+    sources:
+      type: array
+      items:
+        type: string
+  required: [summary]
+```
+
+### Limiting Agent Steps
+
+Use `maxSteps` to prevent infinite loops or excessive tool calls. The default is 20; increase if needed but be mindful of cost.
+
+### Isolating Context
+
+You can isolate sub-agent calls or steps to reduce context size and improve performance.
+
+---
+
+## Best Practices
+
+- **Start simple:** Begin with a basic agent and add tools or sub-agents incrementally.
+- **Use schemas:** Always define output schemas for sub-agents.
+- **Be explicit:** Clearly instruct the agent on tool usage and behavior.
+- **Test thoroughly:** Monitor agent behavior and tool calls during development.
+- **Handle errors gracefully:** Plan for tool failures or unexpected outputs.
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+- **Agent not calling tools:** Ensure tools are declared in config and instructions are clear.
+- **Malformed outputs:** Use schemas to validate and retry if needed.
+- **Infinite loops:** Set `maxSteps` to a reasonable limit.
+- **Sub-agent communication errors:** Verify input/output formats and paths.
+
+### Debugging Tips
+
+- Use logs to trace tool calls and agent decisions.
+- Test sub-agents independently before integrating.
+- Simplify prompts to isolate issues.
+
+---
+
+## Example: Simple News Summarizer Agent
+
+```yaml
+provider: Latitude
+model: gpt-4.1
+type: agent
+tools:
+  - latitude/search
+  - latitude/extract
+maxSteps: 30
+```
+
+```promptl
+<system>
+You are a news summarizer agent. Your task is to find the latest news on a topic, extract content, and produce a concise summary.
+Use the search tool to find articles, extract their content, and then summarize.
+Ensure you have at least 5 articles before summarizing.
+</system>
+
+<user>
+{{ topic }}
+</user>
+```
+
+---
+
+## Summary
+
+This guide provides a complete overview of creating agents in Latitude, from basic setup to advanced modular designs. By following these instructions, you can build robust, autonomous AI agents tailored to your needs.
+
+---
+
+<callout type='info'>
+  Agents are powerful tools that enable dynamic, multi-step AI workflows. Start
+  simple and build complexity gradually.
+</callout>
+
+<callout type='tip'>
+  Use output schemas to ensure your agents produce consistent and
+  machine-readable results.
+</callout>
+
+<callout type='warning'>
+  Always monitor your agent's tool usage and step count to avoid unexpected
+  costs.
+</callout>
+
+---
+
+## Additional Resources
+
+- [Latitude PromptL Documentation](https://docs.latitude.io/promptl)
+- [Latitude Agents Guide](https://docs.latitude.io/agents)
+- [Latitude Tool Integrations](https://docs.latitude.io/integrations)
+
+---
+
+Thank you for using Latitude! If you have questions or feedback, please reach out to support@latitude.io.
