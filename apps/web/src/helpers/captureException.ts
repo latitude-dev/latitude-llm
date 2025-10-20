@@ -73,7 +73,7 @@ export const captureMessage = (
       level,
       message,
       timestamp: new Date().toISOString(),
-      service: 'latitude-web',
+      service: 'latitude-llm-web',
       ...tags,
     }),
   )
