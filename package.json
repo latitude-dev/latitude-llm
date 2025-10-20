@@ -13,6 +13,7 @@
     "prettier": "prettier --write \"{apps,packages}/**/*.{ts,tsx,md}\" --ignore-path .prettierrcignore",
     "prettier:check": "prettier --check \"**/*.{ts,tsx,md}\" --ignore-path .prettierrcignore",
     "test": "turbo test",
+    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name '.turbo' -type d -prune -exec rm -rf '{}' +",
     "catchup": "pnpm i --ignore-scripts && pnpm build --filter=\"./packages/**/*\" && pnpm --filter \"@latitude-data/web\" workers:build && pnpm --filter \"@latitude-data/core\" db:migrate",
     "console": "clear && ./bin/console.ts",
     "backgroundRun:stressTest": "pnpm --filter @latitude-data/core backgroundRun:stressTest"

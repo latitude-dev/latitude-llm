@@ -1,11 +1,11 @@
+import { Providers } from '@latitude-data/constants'
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_DATASET_LABEL } from '../../../constants'
+import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
 import { type Dataset } from '../../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
 import { ProviderLogDto } from '../../../schema/types'
-import { Providers } from '@latitude-data/constants'
-import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
 import * as factories from '../../../tests/factories'
 import serializeProviderLog from '../../providerLogs/serialize'
 import { extractActualOutput, extractExpectedOutput } from './extract'
@@ -147,13 +147,17 @@ describe('extractActualOutput', () => {
     )
   })
 
-  it('succeeds when configuration is not set', async () => {
-    const result = await extractActualOutput({
-      providerLog: providerLog,
-      configuration: undefined,
-    }).then((r) => r.unwrap())
-
-    expect(result).toEqual('Some assistant response 2')
+  it('fails when configuration is not set', async () => {
+    await expect(
+      extractActualOutput({
+        providerLog: providerLog,
+        configuration: undefined as any,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new TypeError(
+        "Cannot read properties of undefined (reading 'contentFilter')",
+      ),
+    )
   })
 
   it('succeeds when selecting the messages', async () => {
@@ -327,15 +331,19 @@ value1,value2,"Some expected output"
     )
   })
 
-  it('succeeds when configuration is not set', async () => {
-    const result = await extractExpectedOutput({
-      dataset: dataset,
-      row: datasetRow,
-      column: datasetLabel,
-      configuration: undefined,
-    }).then((r) => r.unwrap())
-
-    expect(result).toEqual('Some expected output')
+  it('fails when configuration is not set', async () => {
+    await expect(
+      extractExpectedOutput({
+        dataset: dataset,
+        row: datasetRow,
+        column: datasetLabel,
+        configuration: undefined as any,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new UnprocessableEntityError(
+        "Cannot read properties of undefined (reading 'parsingFormat')",
+      ),
+    )
   })
 
   it('succeeds when parsing the output', async () => {

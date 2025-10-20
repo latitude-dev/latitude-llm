@@ -278,7 +278,31 @@ value1,value2,value3
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new UnprocessableEntityError(
-        `Cannot evaluate a log without a dataset row when expected output is required`,
+        'Cannot evaluate a log without a dataset, label, row or configuration when expected output is required',
+      ),
+    )
+
+    expect(mocks.publisher).not.toHaveBeenCalled()
+  })
+
+  it('fails when expected output is required but configuration is not provided', async () => {
+    evaluation.configuration.expectedOutput = undefined
+    mocks.publisher.mockClear()
+
+    await expect(
+      runEvaluationV2({
+        evaluation: evaluation,
+        providerLog: providerLog,
+        experiment: experiment,
+        dataset: dataset,
+        datasetLabel: datasetLabel,
+        datasetRow: datasetRow,
+        commit: commit,
+        workspace: workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new UnprocessableEntityError(
+        'Cannot evaluate a log without a dataset, label, row or configuration when expected output is required',
       ),
     )
 
@@ -557,20 +581,8 @@ value1,value2,value3
     })
   })
 
-  it('succeeds when outputs configuration is not set', async () => {
-    evaluation.configuration.actualOutput = undefined
-    evaluation.configuration.expectedOutput = undefined
-    vi.spyOn(RuleEvaluationExactMatchSpecification, 'run').mockResolvedValue({
-      score: 0,
-      normalizedScore: 0,
-      metadata: {
-        configuration: evaluation.configuration,
-        actualOutput: 'actualOutput',
-        expectedOutput: 'expectedOutput',
-        datasetLabel: datasetLabel,
-      },
-      hasPassed: true,
-    })
+  it('succeeds when actual output configuration is not set', async () => {
+    evaluation.configuration.actualOutput = undefined as any
     mocks.publisher.mockClear()
 
     const { result } = await runEvaluationV2({
@@ -590,16 +602,14 @@ value1,value2,value3
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
         evaluatedLogId: providerLog.id,
-        score: 0,
-        normalizedScore: 0,
-        metadata: {
-          configuration: evaluation.configuration,
-          actualOutput: 'actualOutput',
-          expectedOutput: 'expectedOutput',
-          datasetLabel: datasetLabel,
+        score: null,
+        normalizedScore: null,
+        metadata: null,
+        hasPassed: null,
+        error: {
+          message:
+            "Cannot read properties of undefined (reading 'contentFilter')",
         },
-        hasPassed: true,
-        error: null,
       }),
     )
     expect(mocks.publisher).toHaveBeenCalledTimes(2)

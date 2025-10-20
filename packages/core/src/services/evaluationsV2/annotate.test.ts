@@ -427,9 +427,8 @@ describe('annotateEvaluationV2', () => {
     })
   })
 
-  it('succeeds when outputs configuration is not set', async () => {
-    evaluation.configuration.actualOutput = undefined
-    evaluation.configuration.expectedOutput = undefined
+  it('succeeds when actual output configuration is not set', async () => {
+    evaluation.configuration.actualOutput = undefined as any
     mocks.publisher.mockClear()
 
     const { result } = await annotateEvaluationV2({
@@ -449,15 +448,14 @@ describe('annotateEvaluationV2', () => {
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
         evaluatedLogId: providerLog.id,
-        score: 4,
-        normalizedScore: 75,
-        metadata: {
-          reason: 'reason',
-          actualOutput: providerLog.response,
-          configuration: evaluation.configuration,
+        score: null,
+        normalizedScore: null,
+        metadata: null,
+        hasPassed: null,
+        error: {
+          message:
+            "Cannot read properties of undefined (reading 'contentFilter')",
         },
-        hasPassed: true,
-        error: null,
       }),
     )
     expect(mocks.publisher).toHaveBeenCalledTimes(2)

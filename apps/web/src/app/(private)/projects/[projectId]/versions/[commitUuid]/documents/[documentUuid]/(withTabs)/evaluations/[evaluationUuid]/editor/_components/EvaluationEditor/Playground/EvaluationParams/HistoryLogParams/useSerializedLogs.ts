@@ -1,17 +1,17 @@
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
 import useDocumentLogWithPaginationPosition, {
   LogWithPosition,
 } from '$/stores/documentLogWithPaginationPosition'
 import useEvaluatedDocumentLogs from '$/stores/evaluatedDocumentLogs'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useCallback, useMemo, useState } from 'react'
 import {
   ActualOutputConfiguration,
   EvaluatedDocumentLog,
 } from '@latitude-data/core/constants'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { useCallback, useMemo, useState } from 'react'
 
 const ONLY_ONE_PAGE = '1'
 
@@ -23,7 +23,7 @@ export function useSerializedLogs({
   logUuid,
 }: {
   document: DocumentVersion
-  configuration?: ActualOutputConfiguration
+  configuration: ActualOutputConfiguration
   onHistoryFetched?: OnHistoryFetchedFn
   logUuid?: string
 }) {

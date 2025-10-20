@@ -5,11 +5,11 @@ import {
   ExpectedOutputConfiguration,
 } from '../../../constants'
 import { buildConversation, formatMessage } from '../../../helpers'
+import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
 import { type Dataset } from '../../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
 import { ProviderLogDto } from '../../../schema/types'
-import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
-import { Result } from '../../../lib/Result'
 import { getColumnData } from '../../datasets/utils'
 
 const CONTENT_FILTER_TYPE: Record<
@@ -67,15 +67,8 @@ export async function extractActualOutput({
   configuration,
 }: {
   providerLog: ProviderLogDto
-  configuration?: ActualOutputConfiguration
+  configuration: ActualOutputConfiguration
 }) {
-  if (!configuration) {
-    configuration = {
-      messageSelection: 'last',
-      parsingFormat: 'string',
-    }
-  }
-
   let actualOutput = ''
   let conversation = buildConversation(providerLog)
 
@@ -167,14 +160,8 @@ export async function extractExpectedOutput({
   dataset: Dataset
   row: DatasetRow
   column: string
-  configuration?: ExpectedOutputConfiguration
+  configuration: ExpectedOutputConfiguration
 }) {
-  if (!configuration) {
-    configuration = {
-      parsingFormat: 'string',
-    }
-  }
-
   let expectedOutput = ''
 
   if (!dataset.columns.find((c) => c.name === column)) {

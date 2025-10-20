@@ -114,7 +114,12 @@ export async function runEvaluationV2<
     return Result.error(new BadRequestError('Invalid evaluation metric'))
   }
 
-  if (dataset && datasetLabel && datasetRow) {
+  if (
+    dataset &&
+    datasetLabel &&
+    datasetRow &&
+    evaluation.configuration.expectedOutput
+  ) {
     if (datasetRow.datasetId !== dataset.id) {
       return Result.error(
         new UnprocessableEntityError(
@@ -125,7 +130,7 @@ export async function runEvaluationV2<
   } else if (metricSpecification.requiresExpectedOutput) {
     return Result.error(
       new UnprocessableEntityError(
-        'Cannot evaluate a log without a dataset row when expected output is required',
+        'Cannot evaluate a log without a dataset, label, row or configuration when expected output is required',
       ),
     )
   }
@@ -138,7 +143,12 @@ export async function runEvaluationV2<
     }).then((r) => r.unwrap())
 
     let expectedOutput = undefined
-    if (dataset && datasetLabel && datasetRow) {
+    if (
+      dataset &&
+      datasetLabel &&
+      datasetRow &&
+      evaluation.configuration.expectedOutput
+    ) {
       expectedOutput = await extractExpectedOutput({
         dataset: dataset,
         row: datasetRow,

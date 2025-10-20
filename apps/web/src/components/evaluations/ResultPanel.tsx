@@ -1,9 +1,13 @@
 'use client'
 
 import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
-import { MetadataInfoTabs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataInfoTabs'
 import { DocumentLogParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/logs/_components/DocumentLogs/DocumentLogInfo/Metadata'
+import { MetadataInfoTabs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/MetadataInfoTabs'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import {
+  useCurrentProject,
+  type IProjectContextType,
+} from '$/app/providers/ProjectProvider'
 import { MetadataItem } from '$/components/MetadataItem'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { useStickyNested } from '$/hooks/useStickyNested'
@@ -12,7 +16,18 @@ import useDatasetRows from '$/stores/datasetRows'
 import useDatasetRowCount from '$/stores/datasetRows/count'
 import useDatasetRowPosition from '$/stores/datasetRows/position'
 import useDocumentLog from '$/stores/documentLogWithMetadata'
+import {
+  ACCESSIBLE_OUTPUT_FORMATS,
+  DocumentLog,
+  EvaluationMetric,
+  EvaluationResultV2,
+  EvaluationType,
+} from '@latitude-data/core/constants'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
+import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
@@ -21,38 +36,12 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
-import {
-  useCurrentProject,
-  type IProjectContextType,
-} from '$/app/providers/ProjectProvider'
 import { format } from 'date-fns'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
-import {
-  ACCESSIBLE_OUTPUT_FORMATS,
-  DocumentLog,
-  EvaluationMetric,
-  EvaluationResultV2,
-  EvaluationType,
-  baseEvaluationConfiguration,
-} from '@latitude-data/core/constants'
-import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
-
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-import { DatasetRow } from '@latitude-data/core/schema/models/types/DatasetRow'
-const PARSING_FORMAT_LABELS = baseEvaluationConfiguration.shape.actualOutput
-  .unwrap()
-  .shape.parsingFormat.options.reduce(
-    (acc, option) => {
-      acc[option] = option.toUpperCase().split('_').join(' ')
-      return acc
-    },
-    {} as Record<string, string>,
-  )
 
 const DataGrid = dynamic(
   () =>
@@ -198,14 +187,13 @@ function ResultPanelMetadata<
               ) ? (
                 <Text.H6 color='foregroundMuted' noWrap ellipsis>
                   Parsed from{' '}
-                  {
-                    PARSING_FORMAT_LABELS[
-                      result.metadata!.configuration.actualOutput!.parsingFormat
-                    ]
-                  }
+                  {result
+                    .metadata!.configuration.actualOutput.parsingFormat.toUpperCase()
+                    .split('_')
+                    .join(' ')}
                   {!!result.metadata!.configuration.actualOutput
-                    ?.fieldAccessor &&
-                    ` using field '${result.metadata!.configuration.actualOutput!.fieldAccessor}'`}
+                    .fieldAccessor &&
+                    ` using field '${result.metadata!.configuration.actualOutput.fieldAccessor}'`}
                 </Text.H6>
               ) : (
                 <div />
