@@ -10,6 +10,7 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 import * as vercelSdkFromV5ToV4 from '../../../lib/vercelSdkFromV5ToV4'
 import { convertResponseMessages } from '../../../lib/vercelSdkFromV5ToV4/convertResponseMessages'
+import { ResolvedTools } from '../../../lib/streamManager/resolveTools/types'
 
 function parseObject(text: string) {
   const parsed = text
@@ -26,9 +27,11 @@ function parseObject(text: string) {
 export async function processResponse({
   aiResult,
   documentLogUuid,
+  resolvedTools,
 }: {
   aiResult: Awaited<AIReturn<StreamType>>
   documentLogUuid?: string
+  resolvedTools?: ResolvedTools
 }): Promise<ChainStepResponse<StreamType>> {
   const isObject = aiResult.type === 'object'
   let text, response, reasoning, output, usage, toolCalls
@@ -38,10 +41,25 @@ export async function processResponse({
     text = await aiResult.text
     toolCalls = await aiResult.toolCalls
     usage = await aiResult.usage
-    output = convertResponseMessages({ messages: response.messages })
+    output = convertResponseMessages({
+      messages: response.messages,
+      resolvedTools,
+    })
   } catch (_) {
     // do nothing
   }
+
+  const v4ToolCalls = await vercelSdkFromV5ToV4.convertToolCalls(toolCalls)
+
+  const toolCallsWithSourceData = v4ToolCalls?.map((toolCall) => {
+    const resolvedTool = resolvedTools?.[toolCall.name]
+    if (!resolvedTool) return toolCall
+
+    return {
+      ...toolCall,
+      _sourceData: resolvedTool.sourceData,
+    }
+  })
 
   return {
     output,
@@ -51,7 +69,7 @@ export async function processResponse({
     text: text ?? '',
     object: isObject ? parseObject(text ?? '') : undefined,
     usage: await vercelSdkFromV5ToV4.convertTokenUsage(usage),
-    toolCalls: await vercelSdkFromV5ToV4.convertToolCalls(toolCalls),
+    toolCalls: toolCallsWithSourceData,
   }
 }
 

@@ -86,6 +86,7 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
         schema: chain.schema,
         source: this.source,
         workspace: this.workspace,
+        resolvedTools: toolsBySource,
       })
 
       this.updateStateFromResponse({

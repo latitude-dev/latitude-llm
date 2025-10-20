@@ -1,4 +1,5 @@
 import { LegacyVercelSDKToolResultPart as ToolResultPart } from './ai'
+import { ToolSourceData } from './toolSources'
 
 export enum MessageRole {
   system = 'system',
@@ -50,6 +51,7 @@ export type ToolRequestContent = {
   toolCallId: string
   toolName: string
   args: Record<string, unknown>
+  _sourceData?: ToolSourceData
 }
 export type MessageContent =
   | FileContent
@@ -88,6 +90,7 @@ export type ToolCall = {
   id: string
   name: string
   arguments: Record<string, unknown>
+  _sourceData?: ToolSourceData
 }
 
 export type Message =
