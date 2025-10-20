@@ -8,8 +8,8 @@ type ErrorTree = {
 
 // Recursively map schema T into error strings
 type FlattenErrorTree<T> = T extends object
-  ? { [K in keyof T]?: FlattenErrorTree<T[K]> | string }
-  : string
+  ? { [K in keyof T]?: FlattenErrorTree<T[K]> | string[] }
+  : string[]
 
 export function flattenErrors<T>(
   error: ZodSafeParseError<T>,
@@ -23,7 +23,6 @@ export function flattenErrors<T>(
         Extract<keyof U, string>,
         ErrorTree | undefined,
       ][]
-
       for (const [key, child] of entries) {
         if (child) {
           ;(result as Record<string, unknown>)[key] = walk(child)
@@ -32,7 +31,7 @@ export function flattenErrors<T>(
       return result
     }
 
-    return (node.errors[0] ?? '') as FlattenErrorTree<U>
+    return (node.errors ?? []) as FlattenErrorTree<U>
   }
 
   return walk<T>(tree)
