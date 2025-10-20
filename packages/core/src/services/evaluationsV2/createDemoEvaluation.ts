@@ -2,11 +2,7 @@ import { env } from '@latitude-data/env'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import {
-  EvaluationType,
-  LlmEvaluationMetric,
-  HumanEvaluationMetric,
-} from '../../constants'
+import { EvaluationType, HumanEvaluationMetric } from '../../constants'
 import { findFirstModelForProvider } from '../ai/providers/models'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
@@ -38,49 +34,6 @@ export async function createDemoEvaluation(
     })
     if (!model) return Result.nil()
 
-    const creatinga = await createEvaluationV2(
-      {
-        document,
-        commit,
-        settings: {
-          name: 'Accuracy',
-          description: `Evaluates how well the given instructions are followed.`,
-          type: EvaluationType.Llm,
-          metric: LlmEvaluationMetric.Rating,
-          configuration: {
-            reverseScale: false,
-            actualOutput: {
-              messageSelection: 'last',
-              parsingFormat: 'string',
-            },
-            expectedOutput: {
-              parsingFormat: 'string',
-            },
-            provider: provider.name,
-            model: model,
-            criteria:
-              'Assess how well the response follows the given instructions.',
-            minRating: 1,
-            minRatingDescription:
-              "Not faithful, doesn't follow the instructions.",
-            maxRating: 5,
-            maxRatingDescription:
-              'Very faithful, does follow the instructions.',
-            minThreshold: 4,
-          },
-        },
-        options: {
-          evaluateLiveLogs: true,
-          enableSuggestions: true,
-          autoApplySuggestions: true,
-        },
-        workspace,
-      },
-      transaction,
-    )
-    if (creatinga.error) return Result.nil()
-    const accuracy = creatinga.value.evaluation
-
     const creatingf = await createEvaluationV2(
       {
         document,
@@ -89,7 +42,7 @@ export async function createDemoEvaluation(
           name: 'Feedback',
           description: `Evaluates how well the expected behavior is followed.`,
           type: EvaluationType.Human,
-          metric: HumanEvaluationMetric.Rating,
+          metric: HumanEvaluationMetric.Binary,
           configuration: {
             reverseScale: false,
             actualOutput: {
@@ -101,13 +54,8 @@ export async function createDemoEvaluation(
             },
             criteria:
               'Assess how well the response follows the expected behavior.',
-            minRating: 1,
-            minRatingDescription:
-              "Poor response, doesn't follow the instructions.",
-            maxRating: 5,
-            maxRatingDescription:
-              'Perfect response, does follow the instructions.',
-            minThreshold: 4,
+            passDescription: 'Perfect response, does follow the instructions.',
+            failDescription: "Poor response, doesn't follow the instructions.",
           },
         },
         options: {
@@ -119,9 +67,10 @@ export async function createDemoEvaluation(
       },
       transaction,
     )
+
     if (creatingf.error) return Result.nil()
     const feedback = creatingf.value.evaluation
 
-    return Result.ok({ accuracy, feedback })
+    return Result.ok({ feedback })
   })
 }
