@@ -36,7 +36,7 @@ export const spans = latitudeSchema.table(
     endedAt: timestamp('ended_at').notNull(),
     documentUuid: uuid('document_uuid'),
     commitUuid: uuid('commit_uuid'),
-    experimentId: bigint('experiment_id', { mode: 'number' }),
+    experimentUuid: uuid('experiment_uuid'),
     ...timestamps(),
   },
   (table) => [
@@ -56,6 +56,6 @@ export const spans = latitudeSchema.table(
       .with({ pages_per_range: 32, autosummarize: true }),
     index('spans_document_uuid_idx').on(table.documentUuid),
     index('spans_commit_uuid_idx').on(table.commitUuid),
-    index('spans_experiment_id_idx').on(table.experimentId),
+    index('spans_experiment_uuid_idx').on(table.experimentUuid),
   ],
 )

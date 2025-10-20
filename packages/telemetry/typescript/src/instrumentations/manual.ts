@@ -731,11 +731,11 @@ export class ManualInstrumentation implements BaseInstrumentation {
     const attributes = {
       [ATTR_GEN_AI_REQUEST_TEMPLATE]: template,
       [ATTR_GEN_AI_REQUEST_PARAMETERS]: jsonParameters,
-      commitUuid: versionUuid || HEAD_COMMIT,
-      documentUuid: promptUuid,
-      ...(documentLogUuid && { documentLogUuid }),
-      ...(experimentUuid && { experimentUuid }),
-      ...(externalId && { externalId }),
+      ['latitude.commitUuid']: versionUuid || HEAD_COMMIT,
+      ['latitude.documentUuid']: promptUuid,
+      ...(documentLogUuid && { ['latitude.documentLogUuid']: documentLogUuid }),
+      ...(experimentUuid && { ['latitude.experimentUuid']: experimentUuid }),
+      ...(externalId && { ['latitude.externalId']: externalId }),
       ...(rest.attributes || {}),
     }
 

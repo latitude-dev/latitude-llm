@@ -278,10 +278,22 @@ export async function processSpansBulk(
       endedAt: processed.endedAt,
 
       // References
-      documentLogUuid: processed.attributes.documentLogUuid as | string | undefined, // prettier-ignore
-      documentUuid: processed.attributes.documentUuid as string | undefined,
-      commitUuid: processed.attributes.versionUuid as string | undefined,
-      experimentUuid: processed.attributes.experimentUuid as string | undefined,
+      documentLogUuid:
+        'documentLogUuid' in processed.metadata
+          ? (processed.metadata.documentLogUuid as string)
+          : undefined,
+      documentUuid:
+        'promptUuid' in processed.metadata
+          ? (processed.metadata.promptUuid as string)
+          : undefined,
+      commitUuid:
+        'versionUuid' in processed.metadata
+          ? (processed.metadata.versionUuid as string)
+          : undefined,
+      experimentUuid:
+        'experimentUuid' in processed.metadata
+          ? (processed.metadata.experimentUuid as string)
+          : undefined,
     }))
 
     // Bulk insert spans
@@ -327,7 +339,9 @@ async function getExistingBatch(
   },
   db = database,
 ): Promise<Span[]> {
-  if (spanIds.length === 0) return []
+  if (spanIds.length === 0) {
+    return []
+  }
 
   const spansRepository = new SpansRepository(workspace.id, db)
 

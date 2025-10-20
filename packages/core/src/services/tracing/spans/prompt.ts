@@ -1,6 +1,7 @@
 import { database } from '../../../client'
 import {
   ATTR_GEN_AI_REQUEST_PARAMETERS,
+  ATTR_GEN_AI_REQUEST_TEMPLATE,
   SPAN_SPECIFICATIONS,
   SpanType,
 } from '../../../constants'
@@ -27,14 +28,14 @@ async function process(
   }
 
   return Result.ok({
-    externalId: attributes.externalId as string,
-    name: attributes.name as string,
     parameters,
-    template: attributes.template as string,
+    template: attributes[ATTR_GEN_AI_REQUEST_TEMPLATE] as string,
+    externalId: attributes['latitude.externalId'] as string,
 
     // References
-    experimentUuid: attributes.experimentUuid as string,
-    promptUuid: attributes.promptUuid as string,
-    versionUuid: attributes.versionUuid as string,
+    experimentUuid: attributes['latitude.experimentUuid'] as string,
+    promptUuid: attributes['latitude.documentUuid'] as string,
+    versionUuid: attributes['latitude.commitUuid'] as string,
+    documentLogUuid: attributes['latitude.documentLogUuid'] as string,
   })
 }

@@ -135,7 +135,6 @@ export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> & {
 export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> & {
   experimentUuid: string
   externalId: string
-  name: string
   parameters: Record<string, unknown>
   promptUuid: string
   template: string
@@ -210,6 +209,9 @@ export type Span<T extends SpanType = SpanType> = {
   endedAt: Date
   createdAt: Date
   updatedAt: Date
+  documentUuid?: string
+  commitUuid?: string
+  experimentUuid?: string
 }
 
 export type SpanWithDetails<T extends SpanType = SpanType> = Span<T> & {
