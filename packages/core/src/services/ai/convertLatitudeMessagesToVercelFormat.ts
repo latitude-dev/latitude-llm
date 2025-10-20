@@ -29,6 +29,7 @@ import {
   getProviderMetadataKey,
 } from './providers/rules/providerMetadata'
 import { Providers } from '@latitude-data/constants'
+import { captureMessage } from '../../utils/workers/sentry'
 
 type VercelAssistantContent = AssistantModelMessage['content']
 type ReasoningPart = Extract<
@@ -241,14 +242,29 @@ export function convertLatitudeMessagesToVercelFormat({
             .filter((c) => c !== null)
         }
 
+        // TODO: If we see all providers are containing all tool calls within the content, we can go a step further and remove the toolCalls property as its not needed anymore
         if (assistant.toolCalls) {
-          const toolParts = assistant.toolCalls.map<ToolCallPart>((t) => ({
-            type: 'tool-call',
-            toolCallId: t.id,
-            toolName: t.name,
-            input: t.arguments,
-          }))
-          parts.push(...toolParts)
+          const filteredAssistantToolCalls = assistant.toolCalls.filter(
+            (t) =>
+              !parts.some(
+                (p) => p.type === 'tool-call' && p.toolCallId === t.id,
+              ),
+          )
+          if (filteredAssistantToolCalls.length > 0) {
+            const toolParts = filteredAssistantToolCalls.map<ToolCallPart>(
+              (t) => ({
+                type: 'tool-call',
+                toolCallId: t.id,
+                toolName: t.name,
+                input: t.arguments,
+              }),
+            )
+            parts.push(...toolParts)
+            captureMessage(
+              'Assistant message does not contain all tool calls',
+              'warning',
+            )
+          }
         }
 
         const converted: AssistantModelMessage = {
