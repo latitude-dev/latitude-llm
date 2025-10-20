@@ -26,10 +26,6 @@ export enum RunErrorCodes {
   DefaultProviderInvalidModel = 'default_provider_invalid_model_error',
   DocumentConfigError = 'document_config_error',
   ErrorGeneratingMockToolResult = 'error_generating_mock_tool_result',
-  EvaluationRunMissingProviderLogError = 'ev_run_missing_provider_log_error', // TODO(evalsv2): Deprecated, remove when v1 evals are migrated
-  EvaluationRunMissingWorkspaceError = 'ev_run_missing_workspace_error', // TODO(evalsv2): Deprecated, remove when v1 evals are migrated
-  EvaluationRunResponseJsonFormatError = 'ev_run_response_json_format_error', // TODO(evalsv2): Deprecated, remove when v1 evals are migrated
-  EvaluationRunUnsupportedResultTypeError = 'ev_run_unsupported_result_type_error', // TODO(evalsv2): Deprecated, remove when v1 evals are migrated
   FailedToWakeUpIntegrationError = 'failed_to_wake_up_integration_error',
   InvalidResponseFormatError = 'invalid_response_format_error',
   MaxStepCountExceededError = 'max_step_count_exceeded_error',
@@ -39,6 +35,12 @@ export enum RunErrorCodes {
   UnsupportedProviderResponseTypeError = 'unsupported_provider_response_type_error',
   PaymentRequiredError = 'payment_required_error',
   AbortError = 'abort_error',
+
+  // DEPRECATED, but do not delete
+  EvaluationRunMissingProviderLogError = 'ev_run_missing_provider_log_error',
+  EvaluationRunMissingWorkspaceError = 'ev_run_missing_workspace_error',
+  EvaluationRunResponseJsonFormatError = 'ev_run_response_json_format_error',
+  EvaluationRunUnsupportedResultTypeError = 'ev_run_unsupported_result_type_error',
 }
 // NOTE: If you add a new error code, please add it to the pg enum in models/runErrors.ts
 

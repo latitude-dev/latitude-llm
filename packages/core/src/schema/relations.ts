@@ -2,18 +2,9 @@ import { relations } from 'drizzle-orm'
 
 import { apiKeys } from './models/apiKeys'
 import { commits } from './models/commits'
-import { connectedEvaluations } from './legacyModels/connectedEvaluations'
 import { datasets } from './models/datasets'
 import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
-import { evaluationAdvancedTemplates } from './legacyModels/evaluationAdvancedTemplates'
-import { evaluationConfigurationBoolean } from './legacyModels/evaluationConfigurationBoolean'
-import { evaluationConfigurationNumerical } from './legacyModels/evaluationConfigurationNumerical'
-import { evaluationConfigurationText } from './legacyModels/evaluationConfigurationText'
-import { evaluationMetadataLlmAsJudgeAdvanced } from './legacyModels/evaluationMetadataLlmAsJudgeAdvanced'
-import { evaluationMetadataLlmAsJudgeSimple } from './legacyModels/evaluationMetadataLlmAsJudgeSimple'
-import { evaluationResults } from './legacyModels/evaluationResults'
-import { evaluations } from './legacyModels/evaluations'
 import { events } from './models/events'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { memberships } from './models/memberships'
@@ -90,20 +81,6 @@ export const commitRelations = relations(commits, ({ one }) => ({
   }),
 }))
 
-export const connectedEvaluationRelations = relations(
-  connectedEvaluations,
-  ({ one }) => ({
-    document: one(documentVersions, {
-      fields: [connectedEvaluations.documentUuid],
-      references: [documentVersions.documentUuid],
-    }),
-    evaluation: one(evaluations, {
-      fields: [connectedEvaluations.evaluationId],
-      references: [evaluations.id],
-    }),
-  }),
-)
-
 export const documentLogsRelations = relations(documentLogs, ({ one }) => ({
   commit: one(commits, {
     fields: [documentLogs.commitId],
@@ -117,85 +94,6 @@ export const documentVersionRelations = relations(
     commit: one(commits, {
       fields: [documentVersions.commitId],
       references: [commits.id],
-    }),
-  }),
-)
-
-export const evaluationResultRelations = relations(
-  evaluationResults,
-  ({ one }) => ({
-    evaluation: one(evaluations, {
-      fields: [evaluationResults.evaluationId],
-      references: [evaluations.id],
-    }),
-    documentLog: one(documentLogs, {
-      fields: [evaluationResults.documentLogId],
-      references: [documentLogs.id],
-    }),
-    providerLog: one(providerLogs, {
-      fields: [evaluationResults.providerLogId],
-      references: [providerLogs.id],
-    }),
-  }),
-)
-
-export const evaluationRelations = relations(evaluations, ({ one }) => ({
-  workspace: one(workspaces, {
-    fields: [evaluations.workspaceId],
-    references: [workspaces.id],
-  }),
-}))
-
-export const EvaluationMetadatallmAsJudgeAdvancedRelations = relations(
-  evaluationMetadataLlmAsJudgeAdvanced,
-  ({ one }) => ({
-    template: one(evaluationAdvancedTemplates, {
-      fields: [evaluationMetadataLlmAsJudgeAdvanced.templateId],
-      references: [evaluationAdvancedTemplates.id],
-    }),
-    evaluation: one(evaluations, {
-      fields: [evaluationMetadataLlmAsJudgeAdvanced.id],
-      references: [evaluations.metadataId],
-    }),
-  }),
-)
-
-export const EvaluationMetadatallmAsJudgeSimpleRelations = relations(
-  evaluationMetadataLlmAsJudgeSimple,
-  ({ one }) => ({
-    evaluation: one(evaluations, {
-      fields: [evaluationMetadataLlmAsJudgeSimple.id],
-      references: [evaluations.metadataId],
-    }),
-  }),
-)
-
-export const EvaluationConfigurationBooleanRelations = relations(
-  evaluationConfigurationBoolean,
-  ({ one }) => ({
-    evaluation: one(evaluations, {
-      fields: [evaluationConfigurationBoolean.id],
-      references: [evaluations.resultConfigurationId],
-    }),
-  }),
-)
-
-export const EvaluationConfigurationNumericalRelations = relations(
-  evaluationConfigurationNumerical,
-  ({ one }) => ({
-    evaluation: one(evaluations, {
-      fields: [evaluationConfigurationNumerical.id],
-      references: [evaluations.resultConfigurationId],
-    }),
-  }),
-)
-
-export const EvaluationConfigurationTextRelations = relations(
-  evaluationConfigurationText,
-  ({ one }) => ({
-    evaluation: one(evaluations, {
-      fields: [evaluationConfigurationText.id],
-      references: [evaluations.resultConfigurationId],
     }),
   }),
 )

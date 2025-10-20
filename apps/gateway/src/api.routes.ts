@@ -1,27 +1,4 @@
 export const API_ROUTES = {
-  v1: {
-    documents: {
-      get: `/api/v1/projects/:projectId/versions/:versionUuid/documents/{documentPath:.+}`,
-      run: `/api/v1/projects/:projectId/versions/:versionUuid/documents/run`,
-      logs: `/api/v1/projects/:projectId/versions/:versionUuid/documents/logs`,
-    },
-    conversations: {
-      chat: `/api/v1/conversations/{conversationUuid}/chat`,
-    },
-  },
-  v2: {
-    documents: {
-      get: `/api/v2/projects/:projectId/versions/:versionUuid/documents/:documentPath{.+}`,
-      getOrCreate: `/api/v2/projects/:projectId/versions/:versionUuid/documents/get-or-create`,
-      run: `/api/v2/projects/:projectId/versions/:versionUuid/documents/run`,
-      logs: `/api/v2/projects/:projectId/versions/:versionUuid/documents/logs`,
-    },
-    conversations: {
-      chat: `/api/v2/conversations/:conversationUuid/chat`,
-      evaluate: `/api/v2/conversations/:conversationUuid/evaluate`,
-      createEvaluationResult: `/api/v2/conversations/:conversationUuid/evaluations/:evaluationUuid/evaluation-results`,
-    },
-  },
   v3: {
     tools: {
       results: `/api/v3/tools/results`,

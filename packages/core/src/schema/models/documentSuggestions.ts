@@ -10,7 +10,6 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { documentVersions } from './documentVersions'
-import { evaluations } from '../legacyModels/evaluations'
 import { workspaces } from './workspaces'
 
 export const documentSuggestions = latitudeSchema.table(
@@ -24,11 +23,7 @@ export const documentSuggestions = latitudeSchema.table(
       .notNull()
       .references(() => commits.id, { onDelete: 'restrict' }),
     documentUuid: uuid('document_uuid').notNull(),
-    evaluationUuid: uuid('evaluation_uuid'), // TODO(evalsv2): Add .notNull() when evaluations v1 are deprecated
-    evaluationId: bigint('evaluation_id', { mode: 'number' }).references(
-      () => evaluations.id,
-      { onDelete: 'cascade' },
-    ), // TODO(evalsv2): Remove this when evaluations v1 are deprecated
+    evaluationUuid: uuid('evaluation_uuid').notNull(),
     oldPrompt: text('old_prompt').notNull(),
     newPrompt: text('new_prompt').notNull(),
     summary: text('summary').notNull(),
@@ -50,11 +45,11 @@ export const documentSuggestions = latitudeSchema.table(
     documentUuidIdx: index('document_suggestions_document_uuid_idx').on(
       table.documentUuid,
     ),
-    evaluationIdIdx: index('document_suggestions_evaluation_id_idx').on(
-      table.evaluationId,
-    ),
     createdAtIdx: index('document_suggestions_created_at_idx').on(
       table.createdAt,
+    ),
+    evaluationUuidIdx: index('document_suggestions_evaluation_uuid_idx').on(
+      table.evaluationUuid,
     ),
   }),
 )

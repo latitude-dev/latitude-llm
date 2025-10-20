@@ -63,34 +63,6 @@ export type DocumentLogWithMetadataAndError = DocumentLogWithMetadata & {
   error: RunErrorField
 }
 
-// TODO(evalsv2): Remove
-export enum EvaluationResultableType {
-  Boolean = 'evaluation_resultable_booleans',
-  Text = 'evaluation_resultable_texts',
-  Number = 'evaluation_resultable_numbers',
-}
-
-// TODO(evalsv2): Remove
-export type EvaluationResult = {
-  id: number
-  uuid: string
-  evaluationId: number
-  documentLogId: number
-  evaluatedProviderLogId: number | null
-  evaluationProviderLogId: number | null
-  resultableType: EvaluationResultableType | null
-  resultableId: number | null
-  source: LogSources | null
-  reason: string | null
-  createdAt: Date
-  updatedAt: Date
-}
-
-// TODO(evalsv2): Remove
-export type EvaluationResultDto = EvaluationResult & {
-  result: string | number | boolean | undefined
-}
-
 export type ProviderLog = {
   id: number
   uuid: string

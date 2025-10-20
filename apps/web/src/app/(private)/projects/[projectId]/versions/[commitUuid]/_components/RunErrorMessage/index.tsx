@@ -1,5 +1,5 @@
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
-import { RunErrorField } from '@latitude-data/core/repositories'
+import { RunErrorField } from '@latitude-data/constants'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 
 export function RunErrorMessage({ error }: { error: RunErrorField }) {

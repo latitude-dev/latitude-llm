@@ -6,10 +6,8 @@ import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
 import {
   CommitsRepository,
-  ConnectedEvaluationsRepository,
   DocumentLogsRepository,
   DocumentVersionsRepository,
-  EvaluationsRepository,
   EvaluationsV2Repository,
   ProjectsRepository,
   ProviderApiKeysRepository,
@@ -202,26 +200,6 @@ export const getDocumentsFromMergedCommitsCache = cache(
   },
 )
 
-// TODO(evalsv2): Remove deprecated
-export const getEvaluationByUuidCached = cache(async (uuid: string) => {
-  const { workspace } = await getCurrentUserOrRedirect()
-  const evaluationScope = new EvaluationsRepository(workspace.id)
-  const result = await evaluationScope.findByUuid(uuid)
-  const evaluation = result.unwrap()
-
-  return evaluation
-})
-
-// TODO(evalsv2): Remove deprecated
-export const getEvaluationByIdCached = cache(async (id: number) => {
-  const { workspace } = await getCurrentUserOrRedirect()
-  const evaluationScope = new EvaluationsRepository(workspace.id)
-  const result = await evaluationScope.find(id)
-  const evaluation = result.unwrap()
-
-  return evaluation
-})
-
 export const getDocumentStatsCached = cache(async (documentUuid: string) => {
   const { workspace } = await getCurrentUserOrRedirect()
   const cache = await redis()
@@ -286,16 +264,6 @@ export const getProviderLogCached = cache(async (uuid: string) => {
   return await scope.findByUuid(uuid).then((r) => r.unwrap())
 })
 
-// TODO(evalsv2): Remove deprecated
-export const getEvaluationsByDocumentUuidCached = cache(
-  async (documentUuid: string) => {
-    const { workspace } = await getCurrentUserOrRedirect()
-    const scope = new EvaluationsRepository(workspace.id)
-    const result = await scope.findByDocumentUuid(documentUuid)
-    return result.unwrap()
-  },
-)
-
 export const getEvaluationV2AtCommitByDocumentCached = cache(
   async <
     T extends EvaluationType = EvaluationType,
@@ -349,20 +317,6 @@ export const listEvaluationsV2AtCommitByDocumentCached = cache(
       .then((r) => r.unwrap())
 
     return evaluations
-  },
-)
-
-export const getConnectedDocumentsWithMetadataCached = cache(
-  async (evaluationId: number) => {
-    const { workspace } = await getCurrentUserOrRedirect()
-    const connectedEvaluationsScope = new ConnectedEvaluationsRepository(
-      workspace.id,
-    )
-    const result =
-      await connectedEvaluationsScope.getConnectedDocumentsWithMetadata(
-        evaluationId,
-      )
-    return result.unwrap()
   },
 )
 
