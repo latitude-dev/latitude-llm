@@ -7,7 +7,6 @@ import {
   ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
 
-import type { AgentToolsMap } from '@latitude-data/constants'
 import { memo } from 'react'
 import { Message } from '..'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
@@ -34,13 +33,11 @@ export const MessageList = memo(
     messages,
     parameters,
     collapseParameters,
-    agentToolsMap,
     toolContentMap: _toolContentMap,
   }: {
     messages: ConversationMessage[]
     parameters?: string[]
     collapseParameters?: boolean
-    agentToolsMap?: AgentToolsMap
     toolContentMap?: Record<string, ToolContent>
   }) => {
     const toolContentMap = useToolContentMap(messages, _toolContentMap)
@@ -65,8 +62,11 @@ export const MessageList = memo(
               content={message.content}
               parameters={parameters}
               collapseParameters={collapseParameters}
-              agentToolsMap={agentToolsMap}
               toolContentMap={toolContentMap}
+              isGeneratingToolCall={
+                message.role === MessageRole.assistant &&
+                message._isGeneratingToolCall
+              }
             />
           )
         })}

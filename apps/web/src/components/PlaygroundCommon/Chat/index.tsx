@@ -1,5 +1,3 @@
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import useFeature from '$/stores/useFeature'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
@@ -16,8 +14,6 @@ import {
   RunPromptFn,
   usePlaygroundChat,
 } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { useAgentToolsMap } from '$/stores/agentToolsMap'
-import { AgentToolsMap } from '@latitude-data/constants'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import Actions, { ActionsState } from '../Actions'
 
@@ -47,13 +43,7 @@ export default function Chat({
   addMessagesFn?: AddMessagesFn
 } & ActionsState) {
   const runOnce = useRef(false)
-  const { commit } = useCurrentCommit()
-  const { project } = useCurrentProject()
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const { data: agentToolsMap } = useAgentToolsMap({
-    commitUuid: commit.uuid,
-    projectId: project.id,
-  })
   useAutoScroll(containerRef, { startAtBottom: true })
   const playground = usePlaygroundChat({
     runPromptFn,
@@ -92,7 +82,6 @@ export default function Chat({
         containerRef={containerRef}
         parameterKeys={parameterKeys}
         expandParameters={expandParameters}
-        agentToolsMap={agentToolsMap}
         toolContentMap={toolContentMap}
       />
       <div className='w-full pb-4 z-[11] flex items-center justify-center'>
@@ -126,14 +115,12 @@ function Messages({
   containerRef,
   parameterKeys,
   expandParameters,
-  agentToolsMap,
   toolContentMap,
 }: {
   playground: ReturnType<typeof usePlaygroundChat>
   containerRef: React.RefObject<HTMLDivElement | null>
   parameterKeys: string[]
   expandParameters: boolean
-  agentToolsMap: AgentToolsMap
   toolContentMap: ReturnType<typeof useToolContentMap>
 }) {
   return (
@@ -145,7 +132,6 @@ function Messages({
         messages={playground.messages}
         parameters={parameterKeys}
         collapseParameters={!expandParameters}
-        agentToolsMap={agentToolsMap}
         toolContentMap={toolContentMap}
       />
 

@@ -128,8 +128,8 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
               setResponseStream(response)
             }
 
-            if (data.type === 'reasoning') {
-              reasoning += data.textDelta
+            if (data.type === 'reasoning-delta') {
+              reasoning += data.text
 
               setReasoningStream(reasoning)
             }

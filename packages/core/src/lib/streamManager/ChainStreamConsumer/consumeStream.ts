@@ -72,11 +72,6 @@ export async function consumeStream({
         args: vercelChunk.input,
         result: vercelChunk.output,
       } as ProviderData
-    } else if (vercelChunk.type === 'reasoning-delta') {
-      chunk = {
-        type: 'reasoning',
-        textDelta: vercelChunk.text,
-      } as ProviderData
     } else if (chunk.type === 'error') {
       error = createAIError(
         getErrorMessage({

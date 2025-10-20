@@ -10,7 +10,6 @@ import {
 } from '@latitude-data/constants/legacyCompiler'
 
 import {
-  AgentToolsMap,
   isEncodedImage,
   isInlineImage,
   isSafeUrl,
@@ -29,6 +28,7 @@ import { cn } from '@latitude-data/web-ui/utils'
 import type { Components } from 'react-markdown'
 import { roleToString, roleVariant } from '..'
 import { ToolCallContent } from './ToolCall'
+import { ToolCardSkeleton } from './ToolCall/Skeleton'
 
 export { roleToString, roleVariant } from './helpers'
 
@@ -40,8 +40,8 @@ export type MessageProps = {
   animatePulse?: boolean
   parameters?: string[]
   collapseParameters?: boolean
-  agentToolsMap?: AgentToolsMap
   toolContentMap?: Record<string, ToolContent>
+  isGeneratingToolCall?: boolean
 }
 
 export function MessageItem({
@@ -91,8 +91,8 @@ export const Message = memo(
     size = 'default',
     parameters = [],
     collapseParameters = false,
-    agentToolsMap,
     toolContentMap,
+    isGeneratingToolCall = false,
   }: MessageProps) => {
     return (
       <MessageItem
@@ -107,8 +107,8 @@ export const Message = memo(
             parameters={parameters}
             collapseParameters={collapseParameters}
             collapsedMessage={collapsedMessage}
-            agentToolsMap={agentToolsMap}
             toolContentMap={toolContentMap}
+            isGeneratingToolCall={isGeneratingToolCall}
           />
         )}
       </MessageItem>
@@ -122,16 +122,16 @@ export function MessageItemContent({
   parameters = [],
   collapseParameters = false,
   collapsedMessage,
-  agentToolsMap,
   toolContentMap,
+  isGeneratingToolCall = false,
 }: {
   content: MessageProps['content']
   size?: MessageProps['size']
   parameters?: MessageProps['parameters']
   collapseParameters?: MessageProps['collapseParameters']
   collapsedMessage: boolean
-  agentToolsMap?: AgentToolsMap
   toolContentMap?: Record<string, ToolContent>
+  isGeneratingToolCall?: boolean
 }) {
   if (collapsedMessage) {
     return <Content value='...' color='foregroundMuted' size={size} />
@@ -145,26 +145,29 @@ export function MessageItemContent({
         size={size}
         parameters={parameters}
         collapseParameters={collapseParameters}
-        agentToolsMap={agentToolsMap}
         toolContentMap={toolContentMap}
       />
     )
   }
 
-  return content.map((c, idx) => (
-    <Content
-      key={idx}
-      index={idx}
-      color='foregroundMuted'
-      value={c}
-      size={size}
-      parameters={parameters}
-      collapseParameters={collapseParameters}
-      sourceMap={(c as any)?._promptlSourceMap}
-      agentToolsMap={agentToolsMap}
-      toolContentMap={toolContentMap}
-    />
-  ))
+  return (
+    <>
+      {content.map((c, idx) => (
+        <Content
+          key={idx}
+          index={idx}
+          color='foregroundMuted'
+          value={c}
+          size={size}
+          parameters={parameters}
+          collapseParameters={collapseParameters}
+          sourceMap={(c as any)?._promptlSourceMap}
+          toolContentMap={toolContentMap}
+        />
+      ))}
+      {isGeneratingToolCall && <ToolCardSkeleton />}
+    </>
+  )
 }
 
 export function MessageSkeleton({ role }: { role: string }) {
@@ -192,7 +195,6 @@ const Content = ({
   parameters = [],
   collapseParameters = false,
   sourceMap = [],
-  agentToolsMap,
   toolContentMap,
 }: {
   index?: number
@@ -202,7 +204,6 @@ const Content = ({
   parameters?: string[]
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
-  agentToolsMap?: AgentToolsMap
   toolContentMap?: Record<string, ToolContent>
 }) => {
   if (typeof value === 'string') {
@@ -283,11 +284,7 @@ const Content = ({
 
   if (value.type === 'tool-call') {
     return (
-      <ToolCallContent
-        value={value}
-        agentToolsMap={agentToolsMap}
-        toolContentMap={toolContentMap}
-      />
+      <ToolCallContent toolRequest={value} toolContentMap={toolContentMap} />
     )
   }
 }
