@@ -8,7 +8,7 @@ import {
 } from 'react'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
-import { refreshWebesocketTokenAction } from '$/actions/user/refreshWebsocketTokenAction'
+import { refreshWebsocketTokenAction as refreshWebsocketTokenAction } from '$/actions/user/refreshWebsocketTokenAction'
 import { IoProvider, useSocket } from '@latitude-data/socket.io-react-hook'
 import { useSession } from '@latitude-data/web-ui/providers'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
@@ -56,30 +56,39 @@ export function useSocketConnection({
   )
 
   const { execute: refreshToken } = useLatitudeAction(
-    refreshWebesocketTokenAction,
+    refreshWebsocketTokenAction,
   )
-  connection.socket.on('connect_error', async (error) => {
-    if (error.message.startsWith('AUTH_ERROR')) {
-      try {
-        const [data] = await refreshToken()
 
-        if (data && data.success) {
-          connection.socket.connect()
-        } else {
-          toast({
-            title: 'We have a problem reconnecting to the server',
-            description: 'Try logout and login again',
-            variant: 'destructive',
+  useEffect(() => {
+    const handleConnectError = async (error: Error) => {
+      if (error.message.startsWith('AUTH_ERROR')) {
+        try {
+          const [data] = await refreshToken()
+
+          if (data && data.success) {
+            connection.socket.connect()
+          } else {
+            toast({
+              title: 'We have a problem reconnecting to the server',
+              description: 'Try logout and login again',
+              variant: 'destructive',
+            })
+          }
+        } catch (e) {
+          captureClientError(e as Error, {
+            component: 'WebsocketsProvider',
+            context: 'connect_error',
           })
         }
-      } catch (e) {
-        captureClientError(e as Error, {
-          component: 'WebsocketsProvider',
-          context: 'connect_error',
-        })
       }
     }
-  })
+
+    connection.socket.on('connect_error', handleConnectError)
+
+    return () => {
+      connection.socket.off('connect_error', handleConnectError)
+    }
+  }, [connection.socket, refreshToken, toast])
 
   return connection
 }
