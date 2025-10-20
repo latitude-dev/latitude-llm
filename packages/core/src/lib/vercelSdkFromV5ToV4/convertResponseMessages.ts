@@ -18,6 +18,7 @@ import {
 import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { AIReturn } from '../../services/ai'
 import { StreamType } from '../../constants'
+import { ResolvedTools } from '../streamManager/resolveTools/types'
 
 type NormalizedToolResult = string | Record<string, unknown> | MessageContent[]
 
@@ -59,7 +60,10 @@ function convertToolMessage(msg: ToolModelMessage): ToolMessage {
   return { role: MessageRole.tool, content: contents }
 }
 
-function convertAssistantMessage(msg: AssistantModelMessage) {
+function convertAssistantMessage(
+  msg: AssistantModelMessage,
+  resolvedTools?: ResolvedTools,
+) {
   const parts = Array.isArray(msg.content)
     ? msg.content
     : [{ type: 'text', text: msg.content } satisfies TextPart]
@@ -93,11 +97,18 @@ function convertAssistantMessage(msg: AssistantModelMessage) {
           toolName: part.toolName,
           args: part.input as Record<string, unknown>,
         }
+
+        const resolvedTool = resolvedTools?.[part.toolName]
+        if (resolvedTool) {
+          toolReq._sourceData = resolvedTool.sourceData
+        }
+
         contents.push(toolReq)
         toolCalls.push({
           id: part.toolCallId,
           name: part.toolName,
           arguments: part.input as Record<string, unknown>,
+          _sourceData: resolvedTool?.sourceData,
         })
         break
       }
@@ -125,14 +136,16 @@ type AIMessages = Awaited<AIReturn<StreamType>['response']>['messages']
 export type LegacyMessage = AssistantMessage | ToolMessage
 export function convertResponseMessages({
   messages,
+  resolvedTools,
 }: {
   messages: AIMessages | undefined
+  resolvedTools?: ResolvedTools
 }): LegacyMessage[] {
   if (!messages || messages.length === 0) return []
 
   return messages.map((msg) => {
     if (msg.role === 'assistant') {
-      return convertAssistantMessage(msg)
+      return convertAssistantMessage(msg, resolvedTools)
     }
     if (msg.role === 'tool') {
       return convertToolMessage(msg)

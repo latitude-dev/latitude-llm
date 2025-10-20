@@ -2,7 +2,11 @@ import { resolveRelativePath } from '@latitude-data/constants'
 import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
 import { PromisedResult } from '../../Transaction'
 import { Result, TypedResult } from '../../Result'
-import { ResolvedTools, ToolSource, ToolSourceData } from './types'
+import { ResolvedTools } from './types'
+import {
+  ToolSource,
+  ToolSourceData,
+} from '@latitude-data/constants/toolSources'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { DocumentVersionsRepository } from '../../../repositories'
 import { getToolDefinitionFromDocument } from '../../../services/agents/agentsAsTools'
@@ -100,7 +104,7 @@ export async function resolveAgentsAsTools({
   const agentDocs = agentDocsResult.unwrap()
   const resolvedToolsEntries: [
     string,
-    { definition: Tool; sourceData: ToolSourceData },
+    { definition: Tool; sourceData: ToolSourceData<ToolSource.Agent> },
   ][] = await Promise.all(
     agentDocs.map(async (doc) => {
       const { name, toolDefinition } = await getToolDefinitionFromDocument({
@@ -117,8 +121,9 @@ export async function resolveAgentsAsTools({
         {
           definition: toolDefinition,
           sourceData: {
-            source: ToolSource.AgentAsTool,
+            source: ToolSource.Agent,
             agentPath: doc.path,
+            documentUuid: doc.documentUuid,
           },
         },
       ]

@@ -7,10 +7,11 @@ import { LegacyChainEvent, StreamType } from '../../../constants'
 import { AIReturn } from '../../../services/ai'
 import { consumeStream } from './consumeStream'
 import { StreamEventTypes, VercelChunk } from '@latitude-data/constants'
+import { ToolSource } from '@latitude-data/constants/toolSources'
+import { ResolvedTools } from '../resolveTools/types'
 
 export class AsyncStreamIteable<T> extends ReadableStream<T> {
   [Symbol.asyncIterator] = function () {
-    // @ts-expect-error - this is a custom async iterator
     return this
   }
 }
@@ -219,6 +220,265 @@ describe('consumeStream', () => {
         id: '123',
         textDelta: 'a',
         providerMetadata: undefined,
+      },
+    })
+  })
+
+  it('injects _sourceData when resolvedTools is provided for tool-call', async () => {
+    const mockEnqueue = vi.fn()
+    const fakeController = {
+      enqueue: mockEnqueue,
+    } as unknown as ReadableStreamDefaultController
+
+    const resolvedTools: ResolvedTools = {
+      myTool: {
+        definition: {
+          type: 'function',
+          function: {
+            name: 'myTool',
+            description: 'A test tool',
+            parameters: {},
+          },
+        } as unknown as Tool,
+        sourceData: {
+          source: ToolSource.Client,
+        },
+      },
+    }
+
+    const chunks = [
+      {
+        type: 'tool-call',
+        toolCallId: 'call-123',
+        toolName: 'myTool',
+        input: { arg: 'value' },
+      },
+    ] satisfies TextStreamPart<TOOLS>[]
+
+    const mockStream = createMockStream(chunks)
+
+    await consumeStream({
+      controller: fakeController,
+      result: buildFakeResult({ fullStream: mockStream }),
+      accumulatedText: { text: '' },
+      resolvedTools,
+    })
+
+    expect(mockEnqueue).toHaveBeenCalledWith({
+      event: StreamEventTypes.Provider,
+      data: {
+        type: 'tool-call',
+        toolCallId: 'call-123',
+        toolName: 'myTool',
+        args: { arg: 'value' },
+        _sourceData: {
+          source: ToolSource.Client,
+        },
+      },
+    })
+  })
+
+  it('does not inject _sourceData when resolvedTools is not provided', async () => {
+    const mockEnqueue = vi.fn()
+    const fakeController = {
+      enqueue: mockEnqueue,
+    } as unknown as ReadableStreamDefaultController
+
+    const chunks = [
+      {
+        type: 'tool-call',
+        toolCallId: 'call-456',
+        toolName: 'unknownTool',
+        input: { arg: 'value' },
+      },
+    ] satisfies TextStreamPart<TOOLS>[]
+
+    const mockStream = createMockStream(chunks)
+
+    await consumeStream({
+      controller: fakeController,
+      result: buildFakeResult({ fullStream: mockStream }),
+      accumulatedText: { text: '' },
+    })
+
+    expect(mockEnqueue).toHaveBeenCalledWith({
+      event: StreamEventTypes.Provider,
+      data: {
+        type: 'tool-call',
+        toolCallId: 'call-456',
+        toolName: 'unknownTool',
+        args: { arg: 'value' },
+      },
+    })
+  })
+
+  it('does not inject _sourceData when tool is not in resolvedTools', async () => {
+    const mockEnqueue = vi.fn()
+    const fakeController = {
+      enqueue: mockEnqueue,
+    } as unknown as ReadableStreamDefaultController
+
+    const resolvedTools: ResolvedTools = {
+      myTool: {
+        definition: {
+          type: 'function',
+          function: {
+            name: 'myTool',
+            description: 'A test tool',
+            parameters: {},
+          },
+        } as unknown as Tool,
+        sourceData: {
+          source: ToolSource.Client,
+        },
+      },
+    }
+
+    const chunks = [
+      {
+        type: 'tool-call',
+        toolCallId: 'call-789',
+        toolName: 'differentTool',
+        input: { arg: 'value' },
+      },
+    ] satisfies TextStreamPart<TOOLS>[]
+
+    const mockStream = createMockStream(chunks)
+
+    await consumeStream({
+      controller: fakeController,
+      result: buildFakeResult({ fullStream: mockStream }),
+      accumulatedText: { text: '' },
+      resolvedTools,
+    })
+
+    expect(mockEnqueue).toHaveBeenCalledWith({
+      event: StreamEventTypes.Provider,
+      data: {
+        type: 'tool-call',
+        toolCallId: 'call-789',
+        toolName: 'differentTool',
+        args: { arg: 'value' },
+      },
+    })
+  })
+
+  it('injects _sourceData with Agent source type', async () => {
+    const mockEnqueue = vi.fn()
+    const fakeController = {
+      enqueue: mockEnqueue,
+    } as unknown as ReadableStreamDefaultController
+
+    const resolvedTools: ResolvedTools = {
+      agentTool: {
+        definition: {
+          type: 'function',
+          function: {
+            name: 'agentTool',
+            description: 'An agent tool',
+            parameters: {},
+          },
+        } as unknown as Tool,
+        sourceData: {
+          source: ToolSource.Agent,
+          agentPath: '/path/to/agent',
+          documentUuid: 'doc-uuid-123',
+          documentLogUuid: 'log-uuid-456',
+        },
+      },
+    }
+
+    const chunks = [
+      {
+        type: 'tool-call',
+        toolCallId: 'call-agent',
+        toolName: 'agentTool',
+        input: { question: 'What is the answer?' },
+      },
+    ] satisfies TextStreamPart<TOOLS>[]
+
+    const mockStream = createMockStream(chunks)
+
+    await consumeStream({
+      controller: fakeController,
+      result: buildFakeResult({ fullStream: mockStream }),
+      accumulatedText: { text: '' },
+      resolvedTools,
+    })
+
+    expect(mockEnqueue).toHaveBeenCalledWith({
+      event: StreamEventTypes.Provider,
+      data: {
+        type: 'tool-call',
+        toolCallId: 'call-agent',
+        toolName: 'agentTool',
+        args: { question: 'What is the answer?' },
+        _sourceData: {
+          source: ToolSource.Agent,
+          agentPath: '/path/to/agent',
+          documentUuid: 'doc-uuid-123',
+          documentLogUuid: 'log-uuid-456',
+        },
+      },
+    })
+  })
+
+  it('injects _sourceData with Integration source type', async () => {
+    const mockEnqueue = vi.fn()
+    const fakeController = {
+      enqueue: mockEnqueue,
+    } as unknown as ReadableStreamDefaultController
+
+    const resolvedTools: ResolvedTools = {
+      integrationTool: {
+        definition: {
+          type: 'function',
+          function: {
+            name: 'integrationTool',
+            description: 'An integration tool',
+            parameters: {},
+          },
+        } as unknown as Tool,
+        sourceData: {
+          source: ToolSource.Integration,
+          integrationId: 42,
+          toolLabel: 'My Integration',
+          imageUrl: 'https://example.com/image.png',
+        },
+      },
+    }
+
+    const chunks = [
+      {
+        type: 'tool-call',
+        toolCallId: 'call-integration',
+        toolName: 'integrationTool',
+        input: { data: 'test' },
+      },
+    ] satisfies TextStreamPart<TOOLS>[]
+
+    const mockStream = createMockStream(chunks)
+
+    await consumeStream({
+      controller: fakeController,
+      result: buildFakeResult({ fullStream: mockStream }),
+      accumulatedText: { text: '' },
+      resolvedTools,
+    })
+
+    expect(mockEnqueue).toHaveBeenCalledWith({
+      event: StreamEventTypes.Provider,
+      data: {
+        type: 'tool-call',
+        toolCallId: 'call-integration',
+        toolName: 'integrationTool',
+        args: { data: 'test' },
+        _sourceData: {
+          source: ToolSource.Integration,
+          integrationId: 42,
+          toolLabel: 'My Integration',
+          imageUrl: 'https://example.com/image.png',
+        },
       },
     })
   })

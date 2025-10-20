@@ -3,15 +3,144 @@ import { jsonSchema } from '@ai-sdk/provider-utils'
 import { BadRequestError, LatitudeError, NotFoundError } from '../../errors'
 import { PromisedResult } from '../../Transaction'
 import { Result } from '../../Result'
-import { ResolvedTools, ToolSource } from './types'
+import { ResolvedTools } from './types'
 import { IntegrationsRepository } from '../../../repositories'
 import { listTools } from '../../../services/integrations'
 import { LatitudePromptConfig } from '@latitude-data/constants/latitudePromptSchema'
 import { callIntegrationTool } from '../../../services/integrations/McpClient/callTool'
 import { StreamManager } from '..'
-import { LATITUDE_TOOL_PREFIX } from '@latitude-data/constants'
+import { IntegrationType, McpTool } from '@latitude-data/constants'
 import { telemetry } from '../../../telemetry'
 import { publisher } from '../../../events/publisher'
+import { ToolSource } from '@latitude-data/constants/toolSources'
+import { getIntegrationToolsFromConfig } from '../../../services/documents/fork/helpers'
+import { PipedreamIntegrationConfiguration } from '../../../services/integrations/helpers/schema'
+import { IntegrationDto } from '../../../schema/models/types/Integration'
+
+type LoadedIntegration = {
+  integration: IntegrationDto
+  tools: {
+    [key: string]: {
+      definition: McpTool
+      handler: Tool
+    }
+  }
+}
+
+const buildToolHandler = ({
+  streamManager,
+  integration,
+  toolDefinition,
+}: {
+  streamManager: StreamManager
+  integration: IntegrationDto
+  toolDefinition: McpTool
+}): Tool =>
+  ({
+    description: toolDefinition?.description?.slice(0, 1023) ?? '',
+    inputSchema: jsonSchema(toolDefinition.inputSchema),
+    execute: async (args, toolCall) => {
+      const $tool = telemetry.tool(streamManager.$completion!.context, {
+        name: toolDefinition.name,
+        call: {
+          id: toolCall.toolCallId,
+          arguments: args,
+        },
+      })
+
+      publisher.publishLater({
+        type: 'toolExecuted',
+        data: {
+          workspaceId: streamManager.workspace.id,
+          type: 'integration',
+          toolName: toolDefinition.name,
+          integration: {
+            id: integration.id,
+            name: integration.name,
+            type: integration.type,
+          },
+        },
+      })
+
+      try {
+        const value = await callIntegrationTool({
+          integration,
+          toolName: toolDefinition.name,
+          args,
+          streamManager,
+        }).then((r) => r.unwrap())
+
+        $tool?.end({ result: { value, isError: false } })
+
+        return {
+          value,
+          isError: false,
+        }
+      } catch (err) {
+        const result = {
+          value: (err as Error).message,
+          isError: true,
+        }
+
+        $tool?.end({ result })
+
+        return result
+      }
+    },
+  }) satisfies Tool
+
+async function loadIntegrations({
+  toolIds,
+  streamManager,
+}: {
+  toolIds: string[]
+  streamManager: StreamManager
+}): PromisedResult<LoadedIntegration[], LatitudeError> {
+  const integrationsScope = new IntegrationsRepository(
+    streamManager.workspace.id,
+  )
+  const data: LoadedIntegration[] = []
+
+  for (const toolId of toolIds) {
+    const [integrationName, toolName] = toolId.split('/')
+    if (!integrationName?.length || !toolName?.length) {
+      return Result.error(new BadRequestError(`Invalid tool: '${toolId}'`))
+    }
+
+    if (data.find((d) => d.integration.name === integrationName)) {
+      // Integration already loaded
+      continue
+    }
+
+    const integrationResult =
+      await integrationsScope.findByName(integrationName)
+    if (integrationResult.error) return integrationResult
+    const integration = integrationResult.unwrap()
+
+    const toolsResult = await listTools(integration, streamManager)
+    if (toolsResult.error) return toolsResult
+    const toolDefinitions = toolsResult.unwrap()
+
+    data.push({
+      integration,
+      tools: Object.fromEntries(
+        toolDefinitions.map((toolDefinition) => [
+          toolDefinition.name,
+          {
+            definition: toolDefinition,
+            handler: buildToolHandler({
+              streamManager,
+              integration,
+              toolDefinition,
+            }),
+          },
+        ]),
+      ),
+    })
+  }
+
+  return Result.ok(data)
+}
 
 export async function resolveIntegrationTools({
   config,
@@ -32,52 +161,36 @@ export async function resolveIntegrationTools({
   }
 
   // New schema
-  const toolIds = tools.filter((t) => typeof t === 'string')
-  const integrationToolIds: [string, string][] = toolIds
-    .map((t) => t.split('/') as [string, string])
-    .filter(([toolSource]) => toolSource !== 'latitude') // Latitude tools are handled separately
-
-  const invalidToolId = integrationToolIds.find((t) => t.length !== 2)
-  if (invalidToolId) {
-    return Result.error(
-      new BadRequestError(`Invalid tool id: '${invalidToolId.join('/')}'`),
-    )
-  }
-
-  const resolvedTools: ResolvedTools = {}
-  const integrationsScope = new IntegrationsRepository(
-    streamManager.workspace.id,
+  const toolIds = getIntegrationToolsFromConfig(config).filter(
+    (key) => !key.startsWith('latitude/'),
   )
-  const integrationTools: Record<string, Record<string, Tool>> = {}
+  const integrationToolsResult = await loadIntegrations({
+    toolIds,
+    streamManager,
+  })
+  if (integrationToolsResult.error) return integrationToolsResult
+  const integrationTools = integrationToolsResult.unwrap()
 
-  for (const [integrationName, toolName] of integrationToolIds) {
-    const integrationAvailableTools = await addIntegrationTools({
-      integrationTools,
-      integrationName,
-      integrationsScope,
-      streamManager,
-    }).then((r) => r.unwrap())
-
-    if (toolName === '*') {
-      Object.entries(integrationAvailableTools).forEach(
-        ([toolName, definition]) => {
-          resolvedTools[
-            `${LATITUDE_TOOL_PREFIX}_${integrationName}_${toolName}`
-          ] = {
-            definition,
-            sourceData: {
-              source: ToolSource.Integration,
-              integrationName,
-              toolName,
-            },
-          }
-        },
-      )
-
-      continue
+  const resolvedTools: ResolvedTools<ToolSource.Integration> = {}
+  for (const toolId of toolIds) {
+    const [integrationName, toolName] = toolId.split('/')
+    if (!integrationName?.length || !toolName?.length) {
+      return Result.error(new BadRequestError(`Invalid tool: '${toolId}'`))
     }
 
-    if (!integrationAvailableTools[toolName]) {
+    const integrationData = integrationTools.find(
+      (i) => i.integration.name === integrationName,
+    )
+    if (!integrationData) {
+      return Result.error(
+        new NotFoundError(`Integration '${integrationName}' not found`),
+      )
+    }
+
+    const { tools, integration } = integrationData
+
+    const tool = tools[toolName]
+    if (!tool) {
       return Result.error(
         new NotFoundError(
           `Tool '${toolName}' not found in Integration '${integrationName}'`,
@@ -85,95 +198,22 @@ export async function resolveIntegrationTools({
       )
     }
 
-    resolvedTools[`${LATITUDE_TOOL_PREFIX}_${integrationName}_${toolName}`] = {
-      definition: integrationAvailableTools[toolName],
-      sourceData: { source: ToolSource.Integration, integrationName, toolName },
+    const imageUrl =
+      integration.type === IntegrationType.Pipedream
+        ? (integration.configuration as PipedreamIntegrationConfiguration)
+            ?.metadata?.imageUrl
+        : undefined
+
+    resolvedTools[toolName] = {
+      definition: tool.handler,
+      sourceData: {
+        source: ToolSource.Integration,
+        integrationId: integration.id,
+        toolLabel: tool.definition.displayName,
+        imageUrl,
+      },
     }
   }
 
   return Result.ok(resolvedTools)
-}
-
-async function addIntegrationTools({
-  integrationTools,
-  integrationName,
-  integrationsScope,
-  streamManager,
-}: {
-  integrationTools: Record<string, Record<string, Tool>>
-  integrationName: string
-  integrationsScope: IntegrationsRepository
-  streamManager: StreamManager
-}) {
-  if (integrationTools[integrationName]) {
-    return Result.ok(integrationTools[integrationName])
-  }
-
-  const integrationResult = await integrationsScope.findByName(integrationName)
-  if (integrationResult.error) return integrationResult
-  const integration = integrationResult.unwrap()
-
-  const toolsResult = await listTools(integration, streamManager)
-  if (toolsResult.error) return toolsResult
-  const mcpTools = toolsResult.unwrap()
-
-  integrationTools[integrationName] = Object.fromEntries(
-    mcpTools.map((mcpTool) => [
-      `${mcpTool.name}`,
-      {
-        description: mcpTool?.description?.slice(0, 1023) ?? '',
-        inputSchema: jsonSchema(mcpTool.inputSchema),
-        execute: async (args, toolCall) => {
-          const $tool = telemetry.tool(streamManager.$completion!.context, {
-            name: `${LATITUDE_TOOL_PREFIX}_${integrationName}_${mcpTool.name}`,
-            call: {
-              id: toolCall.toolCallId,
-              arguments: args,
-            },
-          })
-
-          publisher.publishLater({
-            type: 'toolExecuted',
-            data: {
-              workspaceId: streamManager.workspace.id,
-              type: 'integration',
-              toolName: mcpTool.name,
-              integration: {
-                id: integration.id,
-                name: integration.name,
-                type: integration.type,
-              },
-            },
-          })
-
-          try {
-            const value = await callIntegrationTool({
-              integration,
-              toolName: mcpTool.name,
-              args,
-              streamManager,
-            }).then((r) => r.unwrap())
-
-            $tool?.end({ result: { value, isError: false } })
-
-            return {
-              value,
-              isError: false,
-            }
-          } catch (err) {
-            const result = {
-              value: (err as Error).message,
-              isError: true,
-            }
-
-            $tool?.end({ result })
-
-            return result
-          }
-        },
-      } satisfies Tool,
-    ]),
-  )
-
-  return Result.ok(integrationTools[integrationName])
 }

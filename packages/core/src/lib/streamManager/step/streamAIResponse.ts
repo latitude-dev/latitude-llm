@@ -22,6 +22,7 @@ import { checkValidStream } from '../checkValidStream'
 import { isAbortError } from '../../isAbortError'
 import { createFakeProviderLog } from '../utils/createFakeProviderLog'
 import { handleAIError } from './handleAIError'
+import { ResolvedTools } from '../resolveTools/types'
 
 export type ExecuteStepArgs = {
   controller: ReadableStreamDefaultController
@@ -50,6 +51,7 @@ export async function streamAIResponse({
   schema,
   output,
   abortSignal,
+  resolvedTools,
 }: {
   context: TelemetryContext
   controller: ReadableStreamDefaultController
@@ -62,6 +64,7 @@ export async function streamAIResponse({
   schema?: JSONSchema7
   output?: Output
   abortSignal?: AbortSignal
+  resolvedTools?: ResolvedTools
 }): Promise<{
   response: ChainStepResponse<StreamType>
   messages: LegacyMessage[]
@@ -90,6 +93,7 @@ export async function streamAIResponse({
       controller,
       result: aiResult,
       accumulatedText,
+      resolvedTools,
     })
     chunkError = resultStream.error
   } catch (error) {
@@ -114,6 +118,7 @@ export async function streamAIResponse({
   const processedResponse = await processResponse({
     aiResult,
     documentLogUuid,
+    resolvedTools,
   })
 
   let finishReason

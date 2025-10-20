@@ -1,5 +1,6 @@
 import { ToolResultPart, ModelMessage as VercelV5Message } from 'ai'
 import { AssistantMessage, ToolMessage } from '../legacyCompiler'
+import { ToolSourceData } from '../toolSources'
 
 export type ReplaceTextDelta<T> = T extends {
   type: 'text-delta'
@@ -10,7 +11,10 @@ export type ReplaceTextDelta<T> = T extends {
   : T extends {
         type: 'tool-call'
       }
-    ? Omit<T, 'input'> & { args: Record<string, unknown> }
+    ? Omit<T, 'input'> & {
+        args: Record<string, unknown>
+        _sourceData?: ToolSourceData
+      }
     : T extends {
           type: 'tool-result'
         }

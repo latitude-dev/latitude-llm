@@ -77,6 +77,7 @@ export class DefaultStreamManager
           schema: this.schema,
           source: this.source,
           workspace: this.workspace,
+          resolvedTools: toolsBySource,
         })
 
       this.updateStateFromResponse({
