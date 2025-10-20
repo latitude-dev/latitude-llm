@@ -166,7 +166,7 @@ export async function validateEvaluationV2<
   })
 }
 
-const FIELD_ACCESSOR_DEPTH_LIMIT = 10
+const FIELD_ACCESSOR_DEPTH_LIMIT = 25
 
 async function validateActualOutput<
   T extends EvaluationType,

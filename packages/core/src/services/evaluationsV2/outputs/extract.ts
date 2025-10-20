@@ -22,14 +22,20 @@ const CONTENT_FILTER_TYPE: Record<
   tool_call: 'tool-call',
 }
 
-const ARRAY_INDEX_REGEX = /\[(\w+)\]/g
+const ARRAY_INDEX_REGEX = /\[(-?\d+)\]/g
 function accessField(output: any, path: string = '') {
   path = path.trim().replace(ARRAY_INDEX_REGEX, '.$1')
   const parts = path ? path.split('.') : []
 
   let value = output
   for (const part of parts) {
-    if (value !== undefined && typeof value === 'object' && part in value) {
+    if (value === undefined) return undefined
+    if (value === null) return undefined
+    if (typeof value !== 'object') return undefined
+
+    if (Array.isArray(value) && !isNaN(parseInt(part))) {
+      value = value.at(parseInt(part))
+    } else if (part in value) {
       value = value[part]
     } else {
       return undefined
@@ -47,7 +53,7 @@ function accessField(output: any, path: string = '') {
   try {
     return JSON.stringify(value)
   } catch (error) {
-    return value.toString()
+    return String(value)
   }
 }
 
@@ -69,7 +75,7 @@ export async function extractActualOutput({
   providerLog: ProviderLogDto
   configuration: ActualOutputConfiguration
 }) {
-  let actualOutput = ''
+  let actualOutput: string | undefined = ''
   let conversation = buildConversation(providerLog)
 
   conversation = conversation.filter((message) => message.role === 'assistant')
@@ -162,7 +168,7 @@ export async function extractExpectedOutput({
   column: string
   configuration: ExpectedOutputConfiguration
 }) {
-  let expectedOutput = ''
+  let expectedOutput: string | undefined = ''
 
   if (!dataset.columns.find((c) => c.name === column)) {
     return Result.error(
