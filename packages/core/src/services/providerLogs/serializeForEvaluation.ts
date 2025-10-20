@@ -15,7 +15,9 @@ export function formatConversation(
 ): SerializedConversation {
   const messages: Message[] = [...(providerLog.messages || [])]
 
-  if ((providerLog as ProviderLogDto).response) {
+  if (providerLog.output) {
+    messages.push(...(providerLog.output as Message[]))
+  } else if ((providerLog as ProviderLogDto).response) {
     messages.push({
       role: MessageRole.assistant,
       content: (providerLog as ProviderLogDto).response,
@@ -106,9 +108,10 @@ function formatMessages(messages: Message[]) {
 // TODO(evalsv2): This is v1 deprecated but is mantained
 // for backwards compatibility with v1 llm evaluations
 export function serializeForEvaluation(
-  providerLog: ProviderLog,
+  providerLog: ProviderLog | ProviderLogDto,
 ): SerializedProviderLog {
-  const response = buildProviderLogResponse(providerLog)
+  const response = buildProviderLogResponse(providerLog as ProviderLog)
+  providerLog = { ...providerLog, response } as ProviderLogDto
 
   return {
     messages: formatConversation(providerLog),

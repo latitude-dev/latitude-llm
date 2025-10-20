@@ -27,14 +27,5 @@
     "next.config.mjs",
     ".next/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "./src/workers",
-    ".next",
-    "dist",
-    "**/*.test.*",
-    "**/*.spec.*",
-    "**/__tests__/**",
-    "src/tests/**"
-  ]
+  "exclude": ["node_modules", "./src/workers", ".next", "dist", "**/*.spec.*"]
 }

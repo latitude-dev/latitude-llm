@@ -22,9 +22,20 @@ const CONTENT_FILTER_TYPE: Record<
   tool_call: 'tool-call',
 }
 
+type OutputType =
+  | string
+  | string[]
+  | Record<string, unknown>
+  | Record<string, unknown>[]
+  | undefined
+
 const ARRAY_INDEX_REGEX = /\[(-?\d+)\]/g
+const TRIM_SEPARATORS_REGEX = /^\.+|\.+$/g
 function accessField(output: any, path: string = '') {
-  path = path.trim().replace(ARRAY_INDEX_REGEX, '.$1')
+  path = path
+    .trim()
+    .replace(ARRAY_INDEX_REGEX, '.$1')
+    .replace(TRIM_SEPARATORS_REGEX, '')
   const parts = path ? path.split('.') : []
 
   let value = output
@@ -57,11 +68,19 @@ function accessField(output: any, path: string = '') {
   }
 }
 
-function parseOutput(output: string, format: string) {
+function parseOutput(output: string | string[], format: string) {
   switch (format) {
     case 'string':
+      if (Array.isArray(output)) {
+        return output.join('\n\n')
+      }
+
       return output
     case 'json':
+      if (Array.isArray(output)) {
+        return output.map((item) => JSON.parse(item))
+      }
+
       return JSON.parse(output)
     default:
       throw new BadRequestError('Invalid output parsing format')
@@ -75,7 +94,7 @@ export async function extractActualOutput({
   providerLog: ProviderLogDto
   configuration: ActualOutputConfiguration
 }) {
-  let actualOutput: string | undefined = ''
+  let actualOutput: OutputType = ''
   let conversation = buildConversation(providerLog)
 
   conversation = conversation.filter((message) => message.role === 'assistant')
@@ -109,7 +128,7 @@ export async function extractActualOutput({
   if (conversation.length < 1) {
     return Result.error(
       new UnprocessableEntityError(
-        'Log does not contain any assistant messages',
+        'Log does not contain any assistant messages with the specified filters',
       ),
     )
   }
@@ -122,7 +141,7 @@ export async function extractActualOutput({
       break
     case 'all':
       {
-        actualOutput = conversation.map(formatMessage).join('\n\n')
+        actualOutput = conversation.map(formatMessage)
       }
       break
     default:
@@ -154,6 +173,10 @@ export async function extractActualOutput({
     )
   }
 
+  if (typeof actualOutput !== 'string') {
+    actualOutput = String(actualOutput)
+  }
+
   return Result.ok(actualOutput)
 }
 
@@ -168,7 +191,7 @@ export async function extractExpectedOutput({
   column: string
   configuration: ExpectedOutputConfiguration
 }) {
-  let expectedOutput: string | undefined = ''
+  let expectedOutput: OutputType = ''
 
   if (!dataset.columns.find((c) => c.name === column)) {
     return Result.error(
@@ -199,6 +222,10 @@ export async function extractExpectedOutput({
     return Result.error(
       new UnprocessableEntityError('Expected output is required'),
     )
+  }
+
+  if (typeof expectedOutput !== 'string') {
+    expectedOutput = String(expectedOutput)
   }
 
   return Result.ok(expectedOutput)

@@ -98,7 +98,7 @@ describe('extractActualOutput', () => {
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new UnprocessableEntityError(
-        'Log does not contain any assistant messages',
+        'Log does not contain any assistant messages with the specified filters',
       ),
     )
   })
@@ -214,7 +214,7 @@ Some assistant response 2
     }).then((r) => r.unwrap())
 
     expect(result).toEqual(
-      '{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}',
+      '[{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}]',
     )
   })
 
@@ -225,7 +225,7 @@ Some assistant response 2
         messageSelection: 'all',
         contentFilter: 'tool_call',
         parsingFormat: 'json',
-        fieldAccessor: 'args.classes[1].variants[-1]',
+        fieldAccessor: '[-1].args.classes[1].variants[-1]',
       },
     }).then((r) => r.unwrap())
 
@@ -368,7 +368,9 @@ value1,value2,"Some expected output"
       },
     }).then((r) => r.unwrap())
 
-    expect(result).toEqual('{"answer":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}')
+    expect(result).toEqual(
+      '{"answer":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}',
+    )
   })
 
   it('succeeds when accessing the output by field', async () => {

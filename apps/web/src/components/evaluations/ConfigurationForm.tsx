@@ -104,7 +104,7 @@ export function ConfigurationAdvancedForm<
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formatIsAccessible])
 
-  const [testConfiguration] = useDebounce(configuration.actualOutput, 333)
+  const [testConfiguration] = useDebounce(configuration.actualOutput, 750)
   const [showTest, setShowTest] = useState(false)
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[type]

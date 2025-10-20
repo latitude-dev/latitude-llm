@@ -402,10 +402,7 @@ export function useProviderEventHandler({
           handleReasoningDelta(data)
           break
         case 'reasoning-start':
-          handleReasoningDelta({
-            type: 'reasoning-delta',
-            text: '',
-          })
+          handleReasoningDelta({ type: 'reasoning-delta', text: '' })
           break
         case 'file':
           handleFile(data)
