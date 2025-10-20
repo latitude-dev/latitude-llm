@@ -50,6 +50,10 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               label: 'Promocodes',
               value: BackofficeRoutes.promocodes,
             },
+            {
+              label: 'Integrations',
+              value: BackofficeRoutes.integrations,
+            },
           ]}
           selected={selected}
           onSelect={(value) => {

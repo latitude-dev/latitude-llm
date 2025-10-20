@@ -3,9 +3,6 @@ import {
   DocumentTriggerType,
   DocumentTriggerStatus,
 } from '@latitude-data/constants'
-import { type Commit } from '../../../schema/models/types/Commit'
-import { type Workspace } from '../../../schema/models/types/Workspace'
-import { type DocumentTrigger } from '../../../schema/models/types/DocumentTrigger'
 import Transaction, { PromisedResult } from '../../../lib/Transaction'
 import { BadRequestError } from '@latitude-data/constants/errors'
 import { Result } from '../../../lib/Result'
@@ -18,7 +15,10 @@ import {
   IntegrationTriggerDeploymentSettings,
 } from '@latitude-data/constants/documentTriggers'
 import { isIntegrationConfigured } from '../../integrations/pipedream/components/fillConfiguredProps'
-import { getAllAppComponents } from '../../integrations/pipedream/apps'
+import { getComponentsForApp } from '../../integrations/pipedream/components/getComponents'
+import { Workspace } from '../../../schema/models/types/Workspace'
+import { Commit } from '../../../schema/models/types/Commit'
+import { DocumentTrigger } from '../../../schema/models/types/DocumentTrigger'
 
 /**
  * Important Note:
@@ -59,7 +59,7 @@ export async function deployIntegrationTrigger(
 
   if (!isIntegrationConfigured(integration)) {
     // At least, check that the trigger is available for the integration's app
-    const componentsResult = await getAllAppComponents(
+    const componentsResult = await getComponentsForApp(
       integration.configuration.appName,
     )
     if (!Result.isOk(componentsResult)) return componentsResult

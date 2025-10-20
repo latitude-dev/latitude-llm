@@ -58,72 +58,59 @@ export function latitudePromptConfigSchema({
 
   const LATITUDE_DOC =
     'https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts'
-  return z
-    .object({
-      provider: z
-        .string({
-          error: (issue) =>
-            issue.input === undefined
-              ? ''
-              : `You must select a provider.\nFor example: 'provider: ${providerNames[0] ?? '<your-provider-name>'}'. Read more here: ${LATITUDE_DOC}`,
-        })
-        .refine((p) => providerNames.includes(p), {
-          message: `Provider not available. You must use one of the following:\n${providerNames.map((p) => `'${p}'`).join(', ')}`,
-        }),
-      model: z.string({
+  return z.object({
+    provider: z
+      .string({
         error: (issue) =>
           issue.input === undefined
-            ? `The model attribute is required. Read more here: ${LATITUDE_DOC}`
-            : 'Invalid model value',
+            ? ''
+            : `You must select a provider.\nFor example: 'provider: ${providerNames[0] ?? '<your-provider-name>'}'. Read more here: ${LATITUDE_DOC}`,
+      })
+      .refine((p) => providerNames.includes(p), {
+        message: `Provider not available. You must use one of the following:\n${providerNames.map((p) => `'${p}'`).join(', ')}`,
       }),
-      temperature: z.number().min(0).max(2).optional(),
-      type: z.enum(['agent', 'prompt']).optional(),
-      name: z
-        .string()
-        .max(64, 'Name must be at most 64 characters')
-        .min(1, 'Name cannot be empty')
-        .regex(
-          /^[A-Za-z_][A-Za-z0-9_]*$/,
-          'Name cannot contain spaces, special characters, or start with a number',
-        )
-        .optional(),
-      description: z.string().min(1, 'Description cannot be empty').optional(),
+    model: z.string({
+      error: (issue) =>
+        issue.input === undefined
+          ? `The model attribute is required. Read more here: ${LATITUDE_DOC}`
+          : 'Invalid model value',
+    }),
+    temperature: z.number().min(0).max(2).optional(),
+    type: z.enum(['agent', 'prompt']).optional(),
+    name: z
+      .string()
+      .max(64, 'Name must be at most 64 characters')
+      .min(1, 'Name cannot be empty')
+      .regex(
+        /^[A-Za-z_][A-Za-z0-9_]*$/,
+        'Name cannot contain spaces, special characters, or start with a number',
+      )
+      .optional(),
+    description: z.string().min(1, 'Description cannot be empty').optional(),
 
-      disableAgentOptimization: z.boolean().optional(),
-      parameters: z
-        .record(
-          z.string(),
-          z.object({
-            type: z.enum(PARAMETER_TYPES),
-            description: z.string().optional(),
-          }),
-        )
-        .optional(),
-      [MAX_STEPS_CONFIG_NAME]: z.number().min(1).max(150).optional(),
-      tools: tools.optional(),
-      agents: agentsConfigSchema.optional(),
-      subagents: z
-        .any()
-        .refine(() => false, {
-          message:
-            'Subagents attribute does not exist. Use agents attribute instead',
-        })
-        .optional(),
-      schema: outputSchema,
-      azure: azureConfigSchema.optional(),
-    })
-
-    .refine((d) => d.type === 'agent' || !d.name, {
-      // name is provided but type is not agent
-      path: ['name'],
-      message: 'The "name" field can only be used when type is set to "agent"',
-    })
-    .refine((d) => d.type === 'agent' || !d.description, {
-      // description is provided but type is not agent
-      path: ['description'],
-      message:
-        'The "description" field can only be used when type is set to "agent"',
-    })
+    disableAgentOptimization: z.boolean().optional(),
+    parameters: z
+      .record(
+        z.string(),
+        z.object({
+          type: z.enum(PARAMETER_TYPES),
+          description: z.string().optional(),
+        }),
+      )
+      .optional(),
+    [MAX_STEPS_CONFIG_NAME]: z.number().min(1).max(150).optional(),
+    tools: tools.optional(),
+    agents: agentsConfigSchema.optional(),
+    subagents: z
+      .any()
+      .refine(() => false, {
+        message:
+          'Subagents attribute does not exist. Use agents attribute instead',
+      })
+      .optional(),
+    schema: outputSchema,
+    azure: azureConfigSchema.optional(),
+  })
 }
 
 export const azureConfig = azureConfigSchema

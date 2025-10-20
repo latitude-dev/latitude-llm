@@ -1,4 +1,7 @@
-import { PipedreamComponent, PipedreamComponentType } from '../../../constants'
+import {
+  LightPipedreamComponent,
+  PipedreamComponentType,
+} from '../../../constants'
 import { Result } from '../../../lib/Result'
 import { PromisedResult } from '../../../lib/Transaction'
 import { getApp } from './apps'
@@ -8,13 +11,14 @@ export async function listPipedreamIntegrationTriggers(
 ): PromisedResult<{ name: string; description?: string }[]> {
   const appResult = await getApp({
     name: appNickname,
+    withConfig: false,
   })
 
   if (!Result.isOk(appResult)) return appResult
 
   const app = appResult.unwrap()
   const triggers = app.triggers.map(
-    (trigger: PipedreamComponent<PipedreamComponentType.Trigger>) => ({
+    (trigger: LightPipedreamComponent<PipedreamComponentType.Trigger>) => ({
       name: trigger.key,
       description: trigger.description,
     }),

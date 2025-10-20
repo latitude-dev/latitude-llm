@@ -37,7 +37,7 @@ export function useIntegrationData({
   }, [integration])
 
   const { data: pipedreamApp, isLoading: isLoadingPipedramApp } =
-    usePipedreamApp(pipedreamSlug)
+    usePipedreamApp(pipedreamSlug, { withConfig: true })
 
   const isLoading = isLoadingIntegration || isLoadingPipedramApp
   const pipedreamTriggerKey = trigger.configuration.componentId

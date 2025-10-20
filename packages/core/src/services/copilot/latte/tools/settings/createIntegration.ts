@@ -9,7 +9,7 @@ import { UnconfiguredPipedreamIntegrationConfiguration } from '../../../../integ
 
 const createIntegrationLatte = defineLatteTool(
   async ({ name, app: appName }, { workspace, user }) => {
-    const appResult = await getApp({ name: appName })
+    const appResult = await getApp({ name: appName, withConfig: true })
     if (!Result.isOk(appResult)) return appResult
     const app = appResult.unwrap()
 

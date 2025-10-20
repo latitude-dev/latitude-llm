@@ -5,20 +5,13 @@ import { listApps } from '@latitude-data/core/services/integrations/pipedream/ap
 
 export const GET = errorHandler(
   authHandler(async (request: NextRequest) => {
-    const { searchParams } = new URL(request.url)
-    const query = searchParams.get('query') || undefined
-    const cursor = searchParams.get('cursor') || undefined
-    const withTriggers = searchParams.get('withTriggers')
-      ? searchParams.get('withTriggers') === 'true'
-      : undefined
-    const withTools = searchParams.get('withTools')
-      ? searchParams.get('withTools') === 'true'
-      : undefined
+    const searchParams = request.nextUrl.searchParams
+    const query = searchParams.get('query') ?? undefined
+    const cursor = searchParams.get('cursor') ?? undefined
+
     const result = await listApps({
       query,
       cursor,
-      withTriggers,
-      withTools,
     })
 
     return NextResponse.json(result.unwrap(), { status: 200 })

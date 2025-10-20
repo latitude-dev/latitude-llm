@@ -161,8 +161,8 @@ export async function isValidConfiguration({
   }
   return latteErrors.length > 0
     ? Result.error(
-      new LatteInvalidChoiceError(latteErrors, fullTriggerConfigSchema),
-    )
+        new LatteInvalidChoiceError(latteErrors, fullTriggerConfigSchema),
+      )
     : Result.ok(true)
 }
 

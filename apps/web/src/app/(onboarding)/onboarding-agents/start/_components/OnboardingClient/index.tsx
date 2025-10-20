@@ -67,12 +67,12 @@ export function OnboardingClient({
             )}
             {(currentStep === OnboardingStepKey.TriggerAgent ||
               currentStep === OnboardingStepKey.RunAgent) && (
-                <PlaygroundSteps
-                  moveNextOnboardingStep={moveNextOnboardingStep}
-                  currentStep={currentStep}
-                  executeCompleteOnboarding={executeCompleteOnboarding}
-                />
-              )}
+              <PlaygroundSteps
+                moveNextOnboardingStep={moveNextOnboardingStep}
+                currentStep={currentStep}
+                executeCompleteOnboarding={executeCompleteOnboarding}
+              />
+            )}
           </div>
         </div>
       </PlaygroundProvider>

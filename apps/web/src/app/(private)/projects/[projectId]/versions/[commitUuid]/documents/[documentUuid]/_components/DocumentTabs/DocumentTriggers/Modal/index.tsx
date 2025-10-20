@@ -71,6 +71,7 @@ export function TriggerConfigModal({
   const { data: pipedreamData, isLoading: loadingComponents } = usePipedreamApp(
     (integrationForTrigger as PipedreamIntegration | undefined)?.configuration
       .appName,
+    { withConfig: true },
   )
 
   useEffect(() => {

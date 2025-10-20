@@ -62,11 +62,11 @@ export default function AvatarDropdown({
           label: currentUser.email,
         },
         currentUser?.admin &&
-        isCloud && {
-          label: 'Backoffice',
-          icon: 'terminal',
-          onClick: onClickBackoffice,
-        },
+          isCloud && {
+            label: 'Backoffice',
+            icon: 'terminal',
+            onClick: onClickBackoffice,
+          },
         {
           label: 'Logout',
           icon: 'logOut',

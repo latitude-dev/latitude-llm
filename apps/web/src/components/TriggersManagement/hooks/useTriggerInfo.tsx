@@ -55,7 +55,9 @@ export function useTriggerInfo({
       | undefined
   }, [integrations, trigger])
 
-  const { data: app } = usePipedreamApp(integration?.configuration.appName)
+  const { data: app } = usePipedreamApp(integration?.configuration.appName, {
+    withConfig: false,
+  })
 
   return useMemo<{
     title: string

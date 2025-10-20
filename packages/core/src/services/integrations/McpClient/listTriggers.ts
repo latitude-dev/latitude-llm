@@ -28,17 +28,13 @@ export async function listTriggers({
       description: 'Trigger that runs when an email is received',
     }
 
-    const chatTrigger = {
-      name: 'Chat Trigger',
-      description: 'Trigger that runs when a chat message is received',
-    }
-
-    return Result.ok([scheduledTrigger, emailTrigger, chatTrigger])
+    return Result.ok([scheduledTrigger, emailTrigger])
   }
 
   if (integrationType === IntegrationType.Pipedream) {
     const triggerResult = await listPipedreamIntegrationTriggers(appName)
     if (!Result.isOk(triggerResult)) return triggerResult
+
     const triggers = triggerResult.value
     return Result.ok(triggers)
   }

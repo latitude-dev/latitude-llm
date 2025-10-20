@@ -6,7 +6,7 @@ import { getApp } from '@latitude-data/core/services/integrations/pipedream/apps
 export const GET = errorHandler(
   authHandler(
     async (
-      _: NextRequest,
+      request: NextRequest,
       {
         params,
       }: {
@@ -15,7 +15,9 @@ export const GET = errorHandler(
         }
       },
     ) => {
-      const result = await getApp({ name: params.slugName })
+      const withConfig =
+        request.nextUrl.searchParams.get('withConfig') === 'true'
+      const result = await getApp({ name: params.slugName, withConfig })
 
       if (result.error) {
         return NextResponse.json(

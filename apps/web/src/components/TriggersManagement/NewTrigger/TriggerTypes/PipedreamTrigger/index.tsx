@@ -6,6 +6,7 @@ import {
 import { useCallback, useMemo, useState } from 'react'
 import { cn } from '@latitude-data/web-ui/utils'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { usePipedreamApp } from '$/stores/pipedreamApp'
 import { type OnTriggerCreated } from '../../../types'
 import { TriggerConfiguration } from './TriggerConfiguration'
@@ -28,10 +29,13 @@ export function PipedreamTrigger({
   document?: DocumentVersion
 }) {
   const [selectedTrigger, setTrigger] = useState<Trigger | null>(null)
-  const { data: selectedPipedreamApp, isLoading } =
-    usePipedreamApp(pipedreamSlug)
+  const { data: selectedPipedreamApp, isLoading } = usePipedreamApp(
+    pipedreamSlug,
+    { withConfig: true },
+  )
 
   const triggers = selectedPipedreamApp?.triggers ?? EMPTY_LIST
+  const hasTriggers = !isLoading && triggers.length > 0
   const options = useMemo<OptionItem[]>(
     () =>
       triggers.map(
@@ -61,15 +65,25 @@ export function PipedreamTrigger({
   return (
     <div className='h-full grid grid-cols-2'>
       <div className='bg-background border-r border-border overflow-y-auto custom-scrollbar pb-6'>
-        <SearchableList
-          loading={isLoading}
-          listStyle={{ listWrapper: 'onlySeparators', size: 'small' }}
-          multiGroup={false}
-          showSearch={false}
-          items={options}
-          selectedValue={selectedTrigger?.key}
-          onSelectValue={onTriggerChange}
-        />
+        {!isLoading && !hasTriggers ? (
+          <div className='p-4'>
+            <Alert
+              variant='warning'
+              title='No triggers available'
+              description='Sorry, this integration does not have any triggers available for use.'
+            />
+          </div>
+        ) : (
+          <SearchableList
+            loading={isLoading}
+            listStyle={{ listWrapper: 'onlySeparators', size: 'small' }}
+            multiGroup={false}
+            showSearch={false}
+            items={options}
+            selectedValue={selectedTrigger?.key}
+            onSelectValue={onTriggerChange}
+          />
+        )}
       </div>
       <div
         className={cn('p-4 overflow-y-auto custom-scrollbar', {

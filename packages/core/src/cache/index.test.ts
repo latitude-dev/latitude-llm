@@ -16,10 +16,6 @@ describe('withCacheLock', () => {
 
   beforeAll(async () => {
     redis = await cache()
-
-    // Increase max listeners to prevent warnings
-    // ioredis adds SIGTERM/SIGINT listeners for graceful shutdown
-    process.setMaxListeners(20)
   })
 
   beforeEach(async () => {

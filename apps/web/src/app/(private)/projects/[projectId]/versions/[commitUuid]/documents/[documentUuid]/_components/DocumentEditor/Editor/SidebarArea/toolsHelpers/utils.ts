@@ -56,6 +56,8 @@ export function getIntegrationData({
   }
 }
 
+export type IntegrationData = ReturnType<typeof getIntegrationData>
+
 export function normalizeIntegrations(
   tools: LatitudePromptConfig['tools'],
 ): (string | Record<string, unknown>)[] {

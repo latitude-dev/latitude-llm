@@ -59,7 +59,7 @@ export function usePanelDomRef({
 }
 
 function Pane({ children }: { children: ReactNode }) {
-  return <div className={'flex flex-col h-full relative'}>{children}</div>
+  return <div className='flex flex-col h-full relative'>{children}</div>
 }
 
 const SplitPane = ({

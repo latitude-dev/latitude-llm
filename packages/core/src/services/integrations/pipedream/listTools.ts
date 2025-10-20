@@ -11,6 +11,7 @@ export async function listPipedreamIntegrationTools(
 ): PromisedResult<McpTool[]> {
   const appResult = await getApp({
     name: appName,
+    withConfig: true,
   })
 
   if (!Result.isOk(appResult)) return appResult
