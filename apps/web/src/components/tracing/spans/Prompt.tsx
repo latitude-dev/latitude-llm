@@ -14,8 +14,6 @@ export default {
 }
 
 function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
-  console.log(span?.metadata?.parameters)
-
   return (
     <>
       {!!span.metadata && (
