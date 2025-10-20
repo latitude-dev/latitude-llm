@@ -1,8 +1,10 @@
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { z } from 'zod'
 import { database } from '../../../client'
 import {
   EvaluationType,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
+  LlmEvaluationComparisonResultMetadata,
   LlmEvaluationMetric,
   LlmEvaluationComparisonSpecification as specification,
 } from '../../../constants'
@@ -145,6 +147,25 @@ You must give your verdict as a single JSON object with the following properties
 `.trim()
 }
 
+function grade({
+  score,
+  metadata,
+}: {
+  score: number
+  metadata: LlmEvaluationComparisonResultMetadata
+}) {
+  let normalizedScore = normalizeScore(score, 0, 100)
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 100, 0)
+  }
+
+  const minThreshold = metadata.configuration.minThreshold ?? 0
+  const maxThreshold = metadata.configuration.maxThreshold ?? 100
+  const hasPassed = score >= minThreshold && score <= maxThreshold
+
+  return { score, normalizedScore, metadata, hasPassed }
+}
+
 async function run(
   {
     resultUuid,
@@ -165,8 +186,8 @@ async function run(
 ) {
   const metadata = {
     configuration: evaluation.configuration,
-    actualOutput: actualOutput,
-    expectedOutput: expectedOutput,
+    actualOutput: actualOutput.value ?? '',
+    expectedOutput: expectedOutput?.value,
     datasetLabel: datasetLabel,
     evaluationLogId: -1,
     reason: '',
@@ -175,7 +196,14 @@ async function run(
     duration: 0,
   }
 
-  if (!metadata.expectedOutput) {
+  if (actualOutput.error) {
+    metadata.reason = actualOutput.error.message
+    return grade({ score: 0, metadata })
+  }
+
+  if (expectedOutput?.error) {
+    throw expectedOutput.error
+  } else if (!metadata.expectedOutput) {
     throw new BadRequestError('Expected output is required')
   }
 
@@ -189,40 +217,47 @@ async function run(
     db,
   ).then((r) => r.unwrap())
 
-  const { response, stats, verdict } = await runPrompt({
-    prompt: buildPrompt({ ...metadata.configuration, provider }),
-    parameters: {
-      ...evaluatedLog,
-      actualOutput: actualOutput,
-      expectedOutput: expectedOutput,
-      conversation: formatConversation(conversation),
-    },
-    schema: promptSchema,
-    resultUuid: resultUuid,
-    evaluation: evaluation,
-    providers: providers!,
-    commit: commit,
-    workspace: workspace,
-  })
+  let result
+  try {
+    result = await runPrompt({
+      prompt: buildPrompt({ ...metadata.configuration, provider }),
+      parameters: {
+        ...evaluatedLog,
+        actualOutput: actualOutput,
+        expectedOutput: expectedOutput,
+        conversation: formatConversation(conversation),
+      },
+      schema: promptSchema,
+      resultUuid: resultUuid,
+      evaluation: evaluation,
+      providers: providers!,
+      commit: commit,
+      workspace: workspace,
+    })
+  } catch (error) {
+    if (
+      error instanceof ChainError &&
+      error.errorCode === RunErrorCodes.InvalidResponseFormatError
+    ) {
+      metadata.reason = error.message
+      return grade({ score: 0, metadata })
+    }
 
-  metadata.evaluationLogId = response.providerLog!.id
-  metadata.reason = verdict.reason
-  metadata.tokens = stats.tokens
-  metadata.cost = stats.costInMillicents
-  metadata.duration = stats.duration
-
-  const score = Math.min(Math.max(Number(verdict.score.toFixed(0)), 0), 100)
-
-  let normalizedScore = normalizeScore(score, 0, 100)
-  if (metadata.configuration.reverseScale) {
-    normalizedScore = normalizeScore(score, 100, 0)
+    throw error
   }
 
-  const minThreshold = metadata.configuration.minThreshold ?? 0
-  const maxThreshold = metadata.configuration.maxThreshold ?? 100
-  const hasPassed = score >= minThreshold && score <= maxThreshold
+  metadata.evaluationLogId = result.response.providerLog!.id
+  metadata.reason = result.verdict.reason
+  metadata.tokens = result.stats.tokens
+  metadata.cost = result.stats.costInMillicents
+  metadata.duration = result.stats.duration
 
-  return { score, normalizedScore, metadata, hasPassed }
+  const score = Math.min(
+    Math.max(Number(result.verdict.score.toFixed(0)), 0),
+    100,
+  )
+
+  return grade({ score, metadata })
 }
 
 async function clone(

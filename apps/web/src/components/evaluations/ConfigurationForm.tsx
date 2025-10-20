@@ -1,6 +1,16 @@
 import { useSerializedLogs } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/evaluations/[evaluationUuid]/editor/_components/EvaluationEditor/Playground/EvaluationParams/HistoryLogParams/useSerializedLogs'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
 import { ROUTES } from '$/services/routes'
+import {
+  ACCESSIBLE_OUTPUT_FORMATS,
+  ActualOutputConfiguration,
+  EvaluationMetric,
+  EvaluationType,
+  baseEvaluationConfiguration,
+} from '@latitude-data/core/constants'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
@@ -9,44 +19,36 @@ import { LineSeparator } from '@latitude-data/web-ui/atoms/LineSeparator'
 import { Select } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
 import { SelectableSwitch } from '@latitude-data/web-ui/molecules/SelectableSwitch'
 import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useDebounce } from 'use-debounce'
 import { ConfigurationFormProps, EVALUATION_SPECIFICATIONS } from './index'
-import {
-  ACCESSIBLE_OUTPUT_FORMATS,
-  ActualOutputConfiguration,
-  EvaluationMetric,
-  EvaluationType,
-  baseEvaluationConfiguration,
-} from '@latitude-data/core/constants'
 
-const MESSAGE_SELECTION_OPTIONS = baseEvaluationConfiguration.shape.actualOutput
-  .unwrap()
-  .shape.messageSelection.options.map((option) => ({
-    label: option.toUpperCase().split('_').join(' '),
-    value: option,
-  }))
+const MESSAGE_SELECTION_OPTIONS =
+  baseEvaluationConfiguration.shape.actualOutput.shape.messageSelection.options.map(
+    (option) => ({
+      label: option.toUpperCase().split('_').join(' '),
+      value: option,
+    }),
+  )
 
-const CONTENT_FILTER_OPTIONS = baseEvaluationConfiguration.shape.actualOutput
-  .unwrap()
-  .shape.contentFilter.unwrap()
-  .options.map((option) => ({
-    label: option.toUpperCase().split('_').join(' '),
-    value: option,
-  }))
+const CONTENT_FILTER_OPTIONS =
+  baseEvaluationConfiguration.shape.actualOutput.shape.contentFilter
+    .unwrap()
+    .options.map((option) => ({
+      label: option.toUpperCase().split('_').join(' '),
+      value: option,
+    }))
 
-const PARSING_FORMAT_OPTIONS = baseEvaluationConfiguration.shape.actualOutput
-  .unwrap()
-  .shape.parsingFormat.options.map((option) => ({
-    label: option.toUpperCase().split('_').join(' '),
-    value: option,
-  }))
+const PARSING_FORMAT_OPTIONS =
+  baseEvaluationConfiguration.shape.actualOutput.shape.parsingFormat.options.map(
+    (option) => ({
+      label: option.toUpperCase().split('_').join(' '),
+      value: option,
+    }),
+  )
 
 export function ConfigurationSimpleForm<
   T extends EvaluationType,
@@ -102,7 +104,7 @@ export function ConfigurationAdvancedForm<
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formatIsAccessible])
 
-  const [testConfiguration] = useDebounce(configuration.actualOutput, 333)
+  const [testConfiguration] = useDebounce(configuration.actualOutput, 750)
   const [showTest, setShowTest] = useState(false)
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[type]
@@ -150,7 +152,7 @@ export function ConfigurationAdvancedForm<
               }}
               onClick={(event) => {
                 event.preventDefault()
-                setShowTest(!showTest)
+                setShowTest(!showTest && !!configuration.actualOutput)
               }}
             >
               {showTest ? 'Close' : 'Test'}
@@ -209,6 +211,19 @@ export function ConfigurationAdvancedForm<
           label='Parsing format'
           description='How to parse the assistant messages'
           layout='horizontal'
+          tooltip={
+            formatIsAccessible ? (
+              <Text.H6 color='background'>
+                Use a field accessor to extract a specific field from the output
+                using dot notation.
+                <br />
+                <br />
+                - Access a field: arguments, arguments.options (nested)
+                <br />- Access a list: [0] (first), [-1] (last)
+                <br />- Combine both: [0].arguments.options[-1]
+              </Text.H6>
+            ) : undefined
+          }
         >
           <Select
             value={configuration.actualOutput?.parsingFormat ?? 'string'}
@@ -250,7 +265,7 @@ export function ConfigurationAdvancedForm<
           )}
         </FormFieldGroup>
       </FormFieldGroup>
-      {showTest && (
+      {showTest && !!configuration.actualOutput && (
         <div className='w-full flex flex-col gap-2 border-t-2 border-dashed border-border pt-4'>
           <ActualOutputTest configuration={testConfiguration} />
         </div>
@@ -262,7 +277,7 @@ export function ConfigurationAdvancedForm<
 function ActualOutputTest({
   configuration,
 }: {
-  configuration?: ActualOutputConfiguration
+  configuration: ActualOutputConfiguration
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()

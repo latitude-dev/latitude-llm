@@ -112,10 +112,17 @@ export async function annotateEvaluationV2<
 
   let value
   try {
+    // Note: some actual output errors are learnable and thus are treated as failures
     const actualOutput = await extractActualOutput({
       providerLog: providerLog,
       configuration: evaluation.configuration.actualOutput,
-    }).then((r) => r.unwrap())
+    })
+    if (
+      actualOutput.error &&
+      !(actualOutput.error instanceof UnprocessableEntityError)
+    ) {
+      throw actualOutput.error
+    }
 
     if (resultMetadata) {
       typeSpecification.resultMetadata.partial().parse(resultMetadata)

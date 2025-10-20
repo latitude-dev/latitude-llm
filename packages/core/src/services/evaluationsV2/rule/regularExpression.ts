@@ -3,6 +3,7 @@ import { database } from '../../../client'
 import {
   EvaluationType,
   RuleEvaluationMetric,
+  RuleEvaluationRegularExpressionResultMetadata,
   RuleEvaluationRegularExpressionSpecification as specification,
 } from '../../../constants'
 import { BadRequestError } from '../../../lib/errors'
@@ -55,6 +56,23 @@ async function validate(
   })
 }
 
+function grade({
+  score,
+  metadata,
+}: {
+  score: number
+  metadata: RuleEvaluationRegularExpressionResultMetadata
+}) {
+  let normalizedScore = normalizeScore(score, 0, 1)
+  let hasPassed = score === 1
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 1, 0)
+    hasPassed = score === 0
+  }
+
+  return { score, normalizedScore, metadata, hasPassed }
+}
+
 async function run(
   {
     evaluation,
@@ -67,7 +85,12 @@ async function run(
 ) {
   const metadata = {
     configuration: evaluation.configuration,
-    actualOutput: actualOutput,
+    actualOutput: actualOutput.value ?? '',
+  }
+
+  if (actualOutput.error) {
+    // TODO(ao): Save reason
+    return grade({ score: 0, metadata })
   }
 
   const regex = new RegExp(metadata.configuration.pattern, 'gm')
@@ -76,12 +99,5 @@ async function run(
 
   const score = (matches?.length ?? 0) > 0 ? 1 : 0
 
-  let normalizedScore = normalizeScore(score, 0, 1)
-  let hasPassed = score === 1
-  if (metadata.configuration.reverseScale) {
-    normalizedScore = normalizeScore(score, 1, 0)
-    hasPassed = score === 0
-  }
-
-  return { score, normalizedScore, metadata, hasPassed }
+  return grade({ score, metadata })
 }

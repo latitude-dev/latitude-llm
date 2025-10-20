@@ -39,8 +39,8 @@ export type EvaluationMetricRunArgs<
 > = {
   resultUuid: string
   evaluation: EvaluationV2<T, M>
-  actualOutput: string
-  expectedOutput?: string
+  actualOutput: TypedResult<string>
+  expectedOutput?: TypedResult<string>
   conversation: Message[]
   providerLog: ProviderLogDto
   documentLog: DocumentLog
@@ -61,7 +61,7 @@ export type EvaluationMetricAnnotateArgs<
   resultScore: number
   resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
   evaluation: EvaluationV2<T, M>
-  actualOutput: string
+  actualOutput: TypedResult<string>
   conversation: Message[]
   providerLog: ProviderLogDto
   documentLog: DocumentLog

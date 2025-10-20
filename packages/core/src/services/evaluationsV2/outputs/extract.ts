@@ -5,11 +5,11 @@ import {
   ExpectedOutputConfiguration,
 } from '../../../constants'
 import { buildConversation, formatMessage } from '../../../helpers'
+import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
+import { Result } from '../../../lib/Result'
 import { type Dataset } from '../../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
 import { ProviderLogDto } from '../../../schema/types'
-import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
-import { Result } from '../../../lib/Result'
 import { getColumnData } from '../../datasets/utils'
 
 const CONTENT_FILTER_TYPE: Record<
@@ -22,14 +22,31 @@ const CONTENT_FILTER_TYPE: Record<
   tool_call: 'tool-call',
 }
 
-const ARRAY_INDEX_REGEX = /\[(\w+)\]/g
+type OutputType =
+  | string
+  | string[]
+  | Record<string, unknown>
+  | Record<string, unknown>[]
+  | undefined
+
+const ARRAY_INDEX_REGEX = /\[(-?\d+)\]/g
+const TRIM_SEPARATORS_REGEX = /^\.+|\.+$/g
 function accessField(output: any, path: string = '') {
-  path = path.trim().replace(ARRAY_INDEX_REGEX, '.$1')
+  path = path
+    .trim()
+    .replace(ARRAY_INDEX_REGEX, '.$1')
+    .replace(TRIM_SEPARATORS_REGEX, '')
   const parts = path ? path.split('.') : []
 
   let value = output
   for (const part of parts) {
-    if (value !== undefined && typeof value === 'object' && part in value) {
+    if (value === undefined) return undefined
+    if (value === null) return undefined
+    if (typeof value !== 'object') return undefined
+
+    if (Array.isArray(value) && !isNaN(parseInt(part))) {
+      value = value.at(parseInt(part))
+    } else if (part in value) {
       value = value[part]
     } else {
       return undefined
@@ -47,15 +64,23 @@ function accessField(output: any, path: string = '') {
   try {
     return JSON.stringify(value)
   } catch (error) {
-    return value.toString()
+    return String(value)
   }
 }
 
-function parseOutput(output: string, format: string) {
+function parseOutput(output: string | string[], format: string) {
   switch (format) {
     case 'string':
+      if (Array.isArray(output)) {
+        return output.join('\n\n')
+      }
+
       return output
     case 'json':
+      if (Array.isArray(output)) {
+        return output.map((item) => JSON.parse(item))
+      }
+
       return JSON.parse(output)
     default:
       throw new BadRequestError('Invalid output parsing format')
@@ -67,16 +92,9 @@ export async function extractActualOutput({
   configuration,
 }: {
   providerLog: ProviderLogDto
-  configuration?: ActualOutputConfiguration
+  configuration: ActualOutputConfiguration
 }) {
-  if (!configuration) {
-    configuration = {
-      messageSelection: 'last',
-      parsingFormat: 'string',
-    }
-  }
-
-  let actualOutput = ''
+  let actualOutput: OutputType = ''
   let conversation = buildConversation(providerLog)
 
   conversation = conversation.filter((message) => message.role === 'assistant')
@@ -108,11 +126,12 @@ export async function extractActualOutput({
   }
 
   if (conversation.length < 1) {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Log does not contain any assistant messages',
-      ),
-    )
+    let error = 'Conversation does not contain any assistant messages'
+    if (configuration.contentFilter) {
+      error += ` with ${configuration.contentFilter} content`
+    }
+
+    return Result.error(new UnprocessableEntityError(error))
   }
 
   switch (configuration.messageSelection) {
@@ -123,7 +142,7 @@ export async function extractActualOutput({
       break
     case 'all':
       {
-        actualOutput = conversation.map(formatMessage).join('\n\n')
+        actualOutput = conversation.map(formatMessage)
       }
       break
     default:
@@ -155,6 +174,10 @@ export async function extractActualOutput({
     )
   }
 
+  if (typeof actualOutput !== 'string') {
+    actualOutput = String(actualOutput)
+  }
+
   return Result.ok(actualOutput)
 }
 
@@ -167,15 +190,9 @@ export async function extractExpectedOutput({
   dataset: Dataset
   row: DatasetRow
   column: string
-  configuration?: ExpectedOutputConfiguration
+  configuration: ExpectedOutputConfiguration
 }) {
-  if (!configuration) {
-    configuration = {
-      parsingFormat: 'string',
-    }
-  }
-
-  let expectedOutput = ''
+  let expectedOutput: OutputType = ''
 
   if (!dataset.columns.find((c) => c.name === column)) {
     return Result.error(
@@ -206,6 +223,10 @@ export async function extractExpectedOutput({
     return Result.error(
       new UnprocessableEntityError('Expected output is required'),
     )
+  }
+
+  if (typeof expectedOutput !== 'string') {
+    expectedOutput = String(expectedOutput)
   }
 
   return Result.ok(expectedOutput)

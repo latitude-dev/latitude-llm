@@ -1,5 +1,5 @@
-import { database } from '../../client'
 import { z } from 'zod'
+import { database } from '../../client'
 import {
   ACCESSIBLE_OUTPUT_FORMATS,
   ActualOutputConfiguration,
@@ -16,6 +16,7 @@ import { EvaluationsV2Repository } from '../../repositories'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../schema/models/types/Workspace'
+import { EvaluationMetricBackendSpecification } from './shared'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
 
 export async function validateEvaluationV2<
@@ -75,6 +76,7 @@ export async function validateEvaluationV2<
 
   const actualOutputValidation = await validateActualOutput({
     mode: mode,
+    specification: metricSpecification,
     configuration: settings.configuration.actualOutput,
   })
   if (actualOutputValidation.error) {
@@ -84,6 +86,7 @@ export async function validateEvaluationV2<
 
   const expectedOutputValidation = await validateExpectedOutput({
     mode: mode,
+    specification: metricSpecification,
     configuration: settings.configuration.expectedOutput,
   })
   if (expectedOutputValidation.error) {
@@ -163,19 +166,22 @@ export async function validateEvaluationV2<
   })
 }
 
-const FIELD_ACCESSOR_DEPTH_LIMIT = 10
+const FIELD_ACCESSOR_DEPTH_LIMIT = 25
 
-async function validateActualOutput({
+async function validateActualOutput<
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+>({
   configuration,
 }: {
   mode: 'create' | 'update'
-  configuration?: ActualOutputConfiguration
+  specification: EvaluationMetricBackendSpecification<T, M>
+  configuration: ActualOutputConfiguration
 }) {
   if (!configuration) {
-    configuration = {
-      messageSelection: 'last',
-      parsingFormat: 'string',
-    }
+    return Result.error(
+      new BadRequestError('Actual output configuration is required'),
+    )
   }
 
   configuration.fieldAccessor = configuration.fieldAccessor?.trim()
@@ -208,16 +214,27 @@ async function validateActualOutput({
   })
 }
 
-async function validateExpectedOutput({
+async function validateExpectedOutput<
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+>({
+  specification,
   configuration,
 }: {
   mode: 'create' | 'update'
+  specification: EvaluationMetricBackendSpecification<T, M>
   configuration?: ExpectedOutputConfiguration
 }) {
   if (!configuration) {
-    configuration = {
-      parsingFormat: 'string',
+    if (specification.requiresExpectedOutput) {
+      return Result.error(
+        new BadRequestError(
+          'Expected output configuration is required for this metric',
+        ),
+      )
     }
+
+    return Result.nil()
   }
 
   configuration.fieldAccessor = configuration.fieldAccessor?.trim()

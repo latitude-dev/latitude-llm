@@ -19,7 +19,7 @@ export function FormFieldGroup({
   label?: string | ReactNode
   description?: string
   descriptionPosition?: 'top' | 'bottom'
-  tooltip?: string
+  tooltip?: string | ReactNode
   layout?: 'horizontal' | 'vertical'
   group?: boolean
 }) {

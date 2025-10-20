@@ -11,6 +11,7 @@ import {
 import { publisher } from '../../events/publisher'
 import * as helpers from '../../helpers'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type Project } from '../../schema/models/types/Project'
@@ -196,11 +197,70 @@ describe('annotateEvaluationV2', () => {
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
-  it('succeeds when extract actual output fails', async () => {
-    vi.spyOn(outputs, 'extractActualOutput').mockRejectedValue(
-      new UnprocessableEntityError(
-        "Field 'arguments' is not present in the actual output",
+  it('succeeds when extract actual output fails learnable', async () => {
+    vi.spyOn(outputs, 'extractActualOutput').mockResolvedValue(
+      Result.error(
+        new UnprocessableEntityError(
+          "Field 'arguments' is not present in the actual output",
+        ),
       ),
+    )
+    mocks.publisher.mockClear()
+
+    const { result } = await annotateEvaluationV2({
+      resultScore: 4,
+      resultMetadata: {
+        reason: 'reason',
+      },
+      evaluation: evaluation,
+      providerLog: providerLog,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+        evaluatedLogId: providerLog.id,
+        score: 0,
+        normalizedScore: 0,
+        metadata: {
+          reason: "Field 'arguments' is not present in the actual output",
+          actualOutput: '',
+          configuration: evaluation.configuration,
+        },
+        hasPassed: false,
+        error: null,
+      }),
+    )
+    expect(mocks.publisher).toHaveBeenCalledTimes(2)
+    expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
+      type: 'evaluationResultV2Created',
+      data: {
+        result: result,
+        evaluation: evaluation,
+        commit: commit,
+        providerLog: providerLog,
+        workspaceId: workspace.id,
+      },
+    })
+    expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
+      type: 'evaluationV2Annotated',
+      data: {
+        workspaceId: workspace.id,
+        evaluation: evaluation,
+        result: result,
+        commit: commit,
+        providerLog: providerLog,
+      },
+    })
+  })
+
+  it('succeeds when extract actual output fails non-learnable', async () => {
+    vi.spyOn(outputs, 'extractActualOutput').mockResolvedValue(
+      Result.error(new BadRequestError('Invalid message content filter')),
     )
     mocks.publisher.mockClear()
 
@@ -226,7 +286,7 @@ describe('annotateEvaluationV2', () => {
         metadata: null,
         hasPassed: null,
         error: {
-          message: "Field 'arguments' is not present in the actual output",
+          message: 'Invalid message content filter',
         },
       }),
     )
@@ -427,9 +487,8 @@ describe('annotateEvaluationV2', () => {
     })
   })
 
-  it('succeeds when outputs configuration is not set', async () => {
-    evaluation.configuration.actualOutput = undefined
-    evaluation.configuration.expectedOutput = undefined
+  it('succeeds when actual output configuration is not set', async () => {
+    evaluation.configuration.actualOutput = undefined as any
     mocks.publisher.mockClear()
 
     const { result } = await annotateEvaluationV2({
@@ -449,15 +508,14 @@ describe('annotateEvaluationV2', () => {
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
         evaluatedLogId: providerLog.id,
-        score: 4,
-        normalizedScore: 75,
-        metadata: {
-          reason: 'reason',
-          actualOutput: providerLog.response,
-          configuration: evaluation.configuration,
+        score: null,
+        normalizedScore: null,
+        metadata: null,
+        hasPassed: null,
+        error: {
+          message:
+            "Cannot read properties of undefined (reading 'contentFilter')",
         },
-        hasPassed: true,
-        error: null,
       }),
     )
     expect(mocks.publisher).toHaveBeenCalledTimes(2)

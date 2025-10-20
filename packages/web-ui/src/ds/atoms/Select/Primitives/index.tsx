@@ -14,8 +14,8 @@ import {
 import { SelectOption, SelectOptionGroup } from '..'
 import { cn } from '../../../../lib/utils'
 import { Icon, IconName } from '../../Icons'
-import { type SelectProps } from '../index'
 import { Text } from '../../Text'
+import { type SelectProps } from '../index'
 
 const SelectRoot = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
@@ -148,14 +148,21 @@ const SelectTrigger = forwardRef<
             />
           </SelectPrimitive.Icon>
         ) : (
-          <Icon
-            name='close'
-            className='min-w-0 flex-none opacity-50 cursor-pointer'
-            onClick={(event) => {
+          <div
+            role='button'
+            tabIndex={-1}
+            className='min-w-0 flex-none'
+            onPointerDown={(event) => {
+              event.stopPropagation()
               event.preventDefault()
               onRemove?.()
             }}
-          />
+          >
+            <Icon
+              name='close'
+              className='opacity-50 cursor-pointer hover:opacity-100 transition-opacity'
+            />
+          </div>
         )}
       </SelectPrimitive.Trigger>
     )

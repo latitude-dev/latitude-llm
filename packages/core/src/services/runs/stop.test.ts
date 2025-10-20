@@ -1,11 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { publisher } from '../../events/publisher'
 import { queues } from '../../jobs/queues'
 import { UnprocessableEntityError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { RunsRepository } from '../../repositories'
-import { Project, Workspace } from '../../schema/types'
+import { type Project } from '../../schema/models/types/Project'
+import { type Workspace } from '../../schema/models/types/Workspace'
 
 import { stopRun } from './stop'
 

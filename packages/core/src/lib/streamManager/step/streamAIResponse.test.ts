@@ -35,7 +35,7 @@ describe('streamAIResponse', () => {
     // Mock the ai service to capture the onError callback and trigger it
     vi.spyOn(aiModule, 'ai').mockImplementation(async (options) => {
       if (options.onError) {
-        options.onError(streamError)
+        options.onError(streamError as any)
       }
 
       return Result.ok({

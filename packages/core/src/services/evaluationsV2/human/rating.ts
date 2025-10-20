@@ -2,6 +2,7 @@ import { database } from '../../../client'
 import {
   EvaluationType,
   HumanEvaluationMetric,
+  HumanEvaluationRatingResultMetadata,
   HumanEvaluationRatingSpecification as specification,
 } from '../../../constants'
 import { BadRequestError } from '../../../lib/errors'
@@ -91,29 +92,13 @@ async function validate(
   })
 }
 
-async function annotate(
-  {
-    resultScore,
-    resultMetadata,
-    evaluation,
-    actualOutput,
-  }: EvaluationMetricAnnotateArgs<
-    EvaluationType.Human,
-    HumanEvaluationMetric.Rating
-  >,
-  _ = database,
-) {
-  const metadata = {
-    configuration: evaluation.configuration,
-    actualOutput: actualOutput,
-    reason: resultMetadata?.reason,
-  }
-
-  const score = Math.min(
-    Math.max(Number(resultScore.toFixed(0)), metadata.configuration.minRating),
-    metadata.configuration.maxRating,
-  )
-
+function grade({
+  score,
+  metadata,
+}: {
+  score: number
+  metadata: HumanEvaluationRatingResultMetadata
+}) {
   let normalizedScore = normalizeScore(
     score,
     metadata.configuration.minRating,
@@ -134,4 +119,35 @@ async function annotate(
   const hasPassed = score >= minThreshold && score <= maxThreshold
 
   return { score, normalizedScore, metadata, hasPassed }
+}
+
+async function annotate(
+  {
+    resultScore,
+    resultMetadata,
+    evaluation,
+    actualOutput,
+  }: EvaluationMetricAnnotateArgs<
+    EvaluationType.Human,
+    HumanEvaluationMetric.Rating
+  >,
+  _ = database,
+) {
+  const metadata = {
+    configuration: evaluation.configuration,
+    actualOutput: actualOutput.value ?? '',
+    reason: resultMetadata?.reason,
+  }
+
+  if (actualOutput.error) {
+    metadata.reason = actualOutput.error.message
+    return grade({ score: 0, metadata })
+  }
+
+  const score = Math.min(
+    Math.max(Number(resultScore.toFixed(0)), metadata.configuration.minRating),
+    metadata.configuration.maxRating,
+  )
+
+  return grade({ score, metadata })
 }

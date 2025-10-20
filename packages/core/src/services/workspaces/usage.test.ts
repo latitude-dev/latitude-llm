@@ -1,10 +1,9 @@
-import { describe, expect, it, vi } from 'vitest'
-
-import { WorkspaceDto } from '../../schema/types'
 import { Providers } from '@latitude-data/constants'
+import { describe, expect, it, vi } from 'vitest'
+import { type WorkspaceDto } from '../../schema/models/types/Workspace'
 import { deleteCommitDraft } from '../commits'
-import { computeWorkspaceUsage } from './usage'
 import { deleteEvaluationV2 } from '../evaluationsV2/delete'
+import { computeWorkspaceUsage } from './usage'
 
 describe('computeWorkspaceUsage', () => {
   it('calculates usage correctly when there are evaluation results and document logs', async (ctx) => {

@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { QuotaType } from '../../../constants'
 import { SubscriptionPlan } from '../../../plans'
-import { type Subscription } from '../../../schema/models/types/Subscriptions'
+import { type Subscription } from '../../../schema/models/types/Subscription'
 import { type Workspace } from '../../../schema/models/types/Workspace'
-import { createSubscription } from '../../../tests/factories'
-import { createWorkspace } from '../../../tests/factories'
-import { applyUserPlanLimit } from './applyUserPlanLimit'
+import { createSubscription, createWorkspace } from '../../../tests/factories'
 import { computeQuota } from '../../grants/quota'
+import { applyUserPlanLimit } from './applyUserPlanLimit'
 
 // Mock computeQuota for edge case testing
 vi.mock('../../grants/quota')

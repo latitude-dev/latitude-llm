@@ -10,6 +10,7 @@ import {
 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
+import { Result } from '../../lib/Result'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Dataset } from '../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../schema/models/types/DatasetRow'
@@ -20,6 +21,7 @@ import { type User } from '../../schema/models/types/User'
 import { type Workspace } from '../../schema/models/types/Workspace'
 import { ProviderLogDto } from '../../schema/types'
 import * as factories from '../../tests/factories'
+import { getColumnData } from '../datasets/utils'
 import serializeProviderLog from '../providerLogs/serialize'
 import * as outputs from './outputs/extract'
 import { RuleEvaluationExactMatchSpecification } from './rule/exactMatch'
@@ -278,7 +280,31 @@ value1,value2,value3
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new UnprocessableEntityError(
-        `Cannot evaluate a log without a dataset row when expected output is required`,
+        'Cannot evaluate a log without a dataset, label, row or configuration when expected output is required',
+      ),
+    )
+
+    expect(mocks.publisher).not.toHaveBeenCalled()
+  })
+
+  it('fails when expected output is required but configuration is not provided', async () => {
+    evaluation.configuration.expectedOutput = undefined
+    mocks.publisher.mockClear()
+
+    await expect(
+      runEvaluationV2({
+        evaluation: evaluation,
+        providerLog: providerLog,
+        experiment: experiment,
+        dataset: dataset,
+        datasetLabel: datasetLabel,
+        datasetRow: datasetRow,
+        commit: commit,
+        workspace: workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new UnprocessableEntityError(
+        'Cannot evaluate a log without a dataset, label, row or configuration when expected output is required',
       ),
     )
 
@@ -315,11 +341,80 @@ value1,value2,value3
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
-  it('succeeds when extract actual output fails', async () => {
-    vi.spyOn(outputs, 'extractActualOutput').mockRejectedValue(
-      new UnprocessableEntityError(
-        "Field 'arguments' is not present in the actual output",
+  it('succeeds when extract actual output fails learnable', async () => {
+    vi.spyOn(outputs, 'extractActualOutput').mockResolvedValue(
+      Result.error(
+        new UnprocessableEntityError(
+          "Field 'arguments' is not present in the actual output",
+        ),
       ),
+    )
+    mocks.publisher.mockClear()
+
+    const { result } = await runEvaluationV2({
+      evaluation: evaluation,
+      providerLog: providerLog,
+      experiment: experiment,
+      dataset: dataset,
+      datasetLabel: datasetLabel,
+      datasetRow: datasetRow,
+      commit: commit,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
+    console.log(datasetRow.rowData)
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commitId: commit.id,
+        evaluationUuid: evaluation.uuid,
+        evaluatedLogId: providerLog.id,
+        score: 0,
+        normalizedScore: 0,
+        metadata: {
+          configuration: evaluation.configuration,
+          actualOutput: '',
+          expectedOutput: getColumnData({
+            dataset: dataset,
+            row: datasetRow,
+            column: datasetLabel,
+          }),
+          datasetLabel: datasetLabel,
+        },
+        hasPassed: false,
+        error: null,
+      }),
+    )
+    expect(mocks.publisher).toHaveBeenCalledTimes(2)
+    expect(mocks.publisher).toHaveBeenNthCalledWith(1, {
+      type: 'evaluationResultV2Created',
+      data: {
+        result: result,
+        evaluation: evaluation,
+        commit: commit,
+        providerLog: providerLog,
+        experiment: experiment,
+        dataset: dataset,
+        datasetRow: datasetRow,
+        workspaceId: workspace.id,
+      },
+    })
+    expect(mocks.publisher).toHaveBeenNthCalledWith(2, {
+      type: 'evaluationV2Ran',
+      data: {
+        workspaceId: workspace.id,
+        evaluation: evaluation,
+        result: result,
+        commit: commit,
+        providerLog: providerLog,
+      },
+    })
+  })
+
+  it('succeeds when extract actual output fails non-learnable', async () => {
+    vi.spyOn(outputs, 'extractActualOutput').mockResolvedValue(
+      Result.error(new BadRequestError('Invalid message content filter')),
     )
     mocks.publisher.mockClear()
 
@@ -345,7 +440,7 @@ value1,value2,value3
         metadata: null,
         hasPassed: null,
         error: {
-          message: "Field 'arguments' is not present in the actual output",
+          message: 'Invalid message content filter',
         },
       }),
     )
@@ -376,8 +471,8 @@ value1,value2,value3
   })
 
   it('succeeds when extract expected output fails', async () => {
-    vi.spyOn(outputs, 'extractExpectedOutput').mockRejectedValue(
-      new UnprocessableEntityError('Expected output is required'),
+    vi.spyOn(outputs, 'extractExpectedOutput').mockResolvedValue(
+      Result.error(new UnprocessableEntityError('Expected output is required')),
     )
     mocks.publisher.mockClear()
 
@@ -557,20 +652,8 @@ value1,value2,value3
     })
   })
 
-  it('succeeds when outputs configuration is not set', async () => {
-    evaluation.configuration.actualOutput = undefined
-    evaluation.configuration.expectedOutput = undefined
-    vi.spyOn(RuleEvaluationExactMatchSpecification, 'run').mockResolvedValue({
-      score: 0,
-      normalizedScore: 0,
-      metadata: {
-        configuration: evaluation.configuration,
-        actualOutput: 'actualOutput',
-        expectedOutput: 'expectedOutput',
-        datasetLabel: datasetLabel,
-      },
-      hasPassed: true,
-    })
+  it('succeeds when actual output configuration is not set', async () => {
+    evaluation.configuration.actualOutput = undefined as any
     mocks.publisher.mockClear()
 
     const { result } = await runEvaluationV2({
@@ -590,16 +673,14 @@ value1,value2,value3
         commitId: commit.id,
         evaluationUuid: evaluation.uuid,
         evaluatedLogId: providerLog.id,
-        score: 0,
-        normalizedScore: 0,
-        metadata: {
-          configuration: evaluation.configuration,
-          actualOutput: 'actualOutput',
-          expectedOutput: 'expectedOutput',
-          datasetLabel: datasetLabel,
+        score: null,
+        normalizedScore: null,
+        metadata: null,
+        hasPassed: null,
+        error: {
+          message:
+            "Cannot read properties of undefined (reading 'contentFilter')",
         },
-        hasPassed: true,
-        error: null,
       }),
     )
     expect(mocks.publisher).toHaveBeenCalledTimes(2)
@@ -718,7 +799,7 @@ value1,value2,value3
         expectedOutput: 'expectedOutput',
         datasetLabel: datasetLabel,
       },
-      hasPassed: true,
+      hasPassed: false,
     })
     mocks.publisher.mockClear()
 
@@ -747,7 +828,7 @@ value1,value2,value3
           expectedOutput: 'expectedOutput',
           datasetLabel: datasetLabel,
         },
-        hasPassed: true,
+        hasPassed: false,
         error: null,
       }),
     )

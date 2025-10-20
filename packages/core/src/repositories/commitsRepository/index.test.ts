@@ -1,12 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-
-import type {
-  Project,
-  ProviderApiKey,
-  User,
-  Workspace,
-} from '../../schema/types'
 import { CommitStatus } from '../../constants'
+import { type Project } from '../../schema/models/types/Project'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { type User } from '../../schema/models/types/User'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'

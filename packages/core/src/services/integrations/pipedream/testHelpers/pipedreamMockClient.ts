@@ -1,7 +1,6 @@
 // FIXME::
 // If we update Pipedream SDK and types changed will NOT notice and this
 // will not fail and error will arrive to production undetected.
-// @ts-expect-error - Sadly we don't care about types in tests
 import type { PipedreamClient } from '@pipedream/sdk/server'
 
 import type { PageInfo } from '@pipedream/sdk'

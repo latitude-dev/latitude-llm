@@ -3,6 +3,7 @@ import * as rouge from 'js-rouge'
 import { database } from '../../../client'
 import {
   EvaluationType,
+  RuleEvaluationLexicalOverlapResultMetadata,
   RuleEvaluationMetric,
   RuleEvaluationLexicalOverlapSpecification as specification,
 } from '../../../constants'
@@ -93,6 +94,25 @@ function longestCommonSubstring(actual: string, expected: string) {
   return longestMatch
 }
 
+function grade({
+  score,
+  metadata,
+}: {
+  score: number
+  metadata: RuleEvaluationLexicalOverlapResultMetadata
+}) {
+  let normalizedScore = normalizeScore(score, 0, 100)
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 100, 0)
+  }
+
+  const minOverlap = metadata.configuration.minOverlap ?? 0
+  const maxOverlap = metadata.configuration.maxOverlap ?? 100
+  const hasPassed = score >= minOverlap && score <= maxOverlap
+
+  return { score, normalizedScore, metadata, hasPassed }
+}
+
 async function run(
   {
     evaluation,
@@ -107,12 +127,19 @@ async function run(
 ) {
   const metadata = {
     configuration: evaluation.configuration,
-    actualOutput: actualOutput,
-    expectedOutput: expectedOutput,
+    actualOutput: actualOutput.value ?? '',
+    expectedOutput: expectedOutput?.value,
     datasetLabel: datasetLabel,
   }
 
-  if (!metadata.expectedOutput) {
+  if (actualOutput.error) {
+    // TODO(ao): Save reason
+    return grade({ score: 0, metadata })
+  }
+
+  if (expectedOutput?.error) {
+    throw expectedOutput.error
+  } else if (!metadata.expectedOutput) {
     throw new BadRequestError('Expected output is required')
   }
 
@@ -169,14 +196,5 @@ async function run(
 
   score = Math.min(Math.max(Number(score.toFixed(0)), 0), 100)
 
-  let normalizedScore = normalizeScore(score, 0, 100)
-  if (metadata.configuration.reverseScale) {
-    normalizedScore = normalizeScore(score, 100, 0)
-  }
-
-  const minOverlap = metadata.configuration.minOverlap ?? 0
-  const maxOverlap = metadata.configuration.maxOverlap ?? 100
-  const hasPassed = score >= minOverlap && score <= maxOverlap
-
-  return { score, normalizedScore, metadata, hasPassed }
+  return grade({ score, metadata })
 }
