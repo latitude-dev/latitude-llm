@@ -14,43 +14,33 @@ export default {
 }
 
 function DetailsPanel({ span }: DetailsPanelProps<SpanType.Prompt>) {
+  console.log(span?.metadata?.parameters)
+
   return (
     <>
       {!!span.metadata && (
         <>
           <MetadataItem label='Version UUID'>
-            <ClickToCopy
-              copyValue={span.metadata.attributes.commitUuid as string}
-            >
+            <ClickToCopy copyValue={span.metadata.versionUuid as string}>
               <Text.H5 align='right' color='foregroundMuted'>
-                {(span.metadata.attributes.commitUuid as string).slice(0, 8)}
+                {(span.metadata.versionUuid as string).slice(0, 8)}
               </Text.H5>
             </ClickToCopy>
           </MetadataItem>
-          {span.metadata.attributes.documentUuid && (
+          {span.metadata.promptUuid && (
             <MetadataItem label='Prompt UUID'>
-              <ClickToCopy
-                copyValue={span.metadata.attributes.documentUuid as string}
-              >
+              <ClickToCopy copyValue={span.metadata.promptUuid as string}>
                 <Text.H5 align='right' color='foregroundMuted'>
-                  {(span.metadata.attributes.documentUuid as string).slice(
-                    0,
-                    8,
-                  )}
+                  {(span.metadata.promptUuid as string).slice(0, 8)}
                 </Text.H5>
               </ClickToCopy>
             </MetadataItem>
           )}
-          {span.metadata.attributes.experimentUuid && (
+          {span.metadata.experimentUuid && (
             <MetadataItem label='Experiment UUID'>
-              <ClickToCopy
-                copyValue={span.metadata.attributes.experimentUuid as string}
-              >
+              <ClickToCopy copyValue={span.metadata.experimentUuid as string}>
                 <Text.H5 align='right' color='foregroundMuted'>
-                  {(span.metadata.attributes.experimentUuid as string).slice(
-                    0,
-                    8,
-                  )}
+                  {(span.metadata.experimentUuid as string).slice(0, 8)}
                 </Text.H5>
               </ClickToCopy>
             </MetadataItem>

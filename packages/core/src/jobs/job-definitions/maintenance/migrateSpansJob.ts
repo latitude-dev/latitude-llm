@@ -2,6 +2,7 @@ import { Job } from 'bullmq'
 import { and, asc, eq, gt, inArray, isNotNull, isNull, or } from 'drizzle-orm'
 import { commits } from '../../../schema/models/commits'
 import { documentLogs } from '../../../schema/models/documentLogs'
+import { experiments } from '../../../schema/models/experiments'
 import { spans } from '../../../schema/models/spans'
 import Transaction from '../../../lib/Transaction'
 import { Result } from '../../../lib/Result'
@@ -18,8 +19,9 @@ export const migrateSpansJob = async (job: Job<MigrateSpansJobData>) => {
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - 30)
 
-  // Cache for commits to avoid redundant queries
+  // Cache to avoid redundant lookups across batches
   const commitCache = new Map<number, string>()
+  const experimentCache = new Map<number, string>()
 
   return await new Transaction().call(async (tx) => {
     const batchSize = 1000
@@ -37,7 +39,7 @@ export const migrateSpansJob = async (job: Job<MigrateSpansJobData>) => {
         isNotNull(spans.documentLogUuid),
         isNull(spans.documentUuid),
         isNull(spans.commitUuid),
-        isNull(spans.experimentId),
+        isNull(spans.experimentUuid),
       )
 
       if (cursor) {
@@ -106,6 +108,24 @@ export const migrateSpansJob = async (job: Job<MigrateSpansJobData>) => {
         commitsData.forEach((c) => commitCache.set(c.id, c.uuid))
       }
 
+      // Collect unique experiment IDs that need UUID lookup
+      const experimentIds = documentLogsData
+        .map((dl) => dl.experimentId)
+        .filter((id): id is number => id !== null && !experimentCache.has(id))
+
+      // Fetch experiment UUIDs for uncached experiments
+      if (experimentIds.length > 0) {
+        const experimentsData = await tx
+          .select({
+            id: experiments.id,
+            uuid: experiments.uuid,
+          })
+          .from(experiments)
+          .where(inArray(experiments.id, experimentIds))
+
+        experimentsData.forEach((e) => experimentCache.set(e.id, e.uuid))
+      }
+
       // Prepare bulk update data
       const updateData = spansToMigrate
         .map((span) => {
@@ -115,13 +135,16 @@ export const migrateSpansJob = async (job: Job<MigrateSpansJobData>) => {
           const commitUuid = docLog.commitId
             ? commitCache.get(docLog.commitId) || null
             : null
+          const experimentUuid = docLog.experimentId
+            ? experimentCache.get(docLog.experimentId) || null
+            : null
 
           return {
             id: span.id,
             traceId: span.traceId,
             documentUuid: docLog.documentUuid,
             commitUuid,
-            experimentId: docLog.experimentId,
+            experimentUuid,
           }
         })
         .filter(
@@ -136,7 +159,7 @@ export const migrateSpansJob = async (job: Job<MigrateSpansJobData>) => {
             .set({
               documentUuid: update.documentUuid,
               commitUuid: update.commitUuid,
-              experimentId: update.experimentId,
+              experimentUuid: update.experimentUuid,
             })
             .where(
               and(eq(spans.traceId, update.traceId), eq(spans.id, update.id)),
