@@ -1,11 +1,7 @@
 import { ErrorMessage, MessageList } from '$/components/ChatWrapper'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { useAgentToolsMap } from '$/stores/agentToolsMap'
-import { AgentToolsMap } from '@latitude-data/constants'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { memo, useMemo } from 'react'
 import Actions, { ActionsState } from './Actions'
 
@@ -20,13 +16,6 @@ export default function Chat({
   playground: ReturnType<typeof usePlaygroundChat>
   showHeader: boolean
 } & ActionsState) {
-  const { commit } = useCurrentCommit()
-  const { project } = useCurrentProject()
-  const { data: agentToolsMap } = useAgentToolsMap({
-    commitUuid: commit.uuid,
-    projectId: project.id,
-  })
-
   const toolContentMap = useToolContentMap(playground.messages)
   const parameterKeys = useMemo(
     () => Object.keys(parameters ?? {}),
@@ -47,7 +36,6 @@ export default function Chat({
         error={playground.error}
         parameterKeys={parameterKeys}
         expandParameters={expandParameters ?? true} // by default, we show the parameters
-        agentToolsMap={agentToolsMap}
         toolContentMap={toolContentMap}
       />
     </div>
@@ -71,14 +59,12 @@ const Messages = memo(function Messages({
   error,
   parameterKeys,
   expandParameters,
-  agentToolsMap,
   toolContentMap,
 }: {
   messages: ReturnType<typeof usePlaygroundChat>['messages']
   error: ReturnType<typeof usePlaygroundChat>['error']
   parameterKeys: string[]
   expandParameters: boolean
-  agentToolsMap: AgentToolsMap
   toolContentMap: ReturnType<typeof useToolContentMap>
 }) {
   return (
@@ -87,7 +73,6 @@ const Messages = memo(function Messages({
         messages={messages}
         parameters={parameterKeys}
         collapseParameters={!expandParameters}
-        agentToolsMap={agentToolsMap}
         toolContentMap={toolContentMap}
       />
 

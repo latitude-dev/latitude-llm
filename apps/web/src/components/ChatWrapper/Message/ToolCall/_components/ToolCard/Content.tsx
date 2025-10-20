@@ -8,8 +8,8 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { cn } from '@latitude-data/web-ui/utils'
 import { ReactNode, useEffect, useRef, useState } from 'react'
-import { CustomToolEditor } from './CustomToolEditor'
 
 const MAX_HEIGHT = 400
 
@@ -22,8 +22,14 @@ function MaxHeightWindow({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ref.current) return
 
-    console.log('recalculating overflow', ref.current.scrollHeight, MAX_HEIGHT)
-    setIsOverflowing(ref.current.scrollHeight > MAX_HEIGHT)
+    const observer = new ResizeObserver(() => {
+      setIsOverflowing(ref.current!.scrollHeight > MAX_HEIGHT)
+    })
+    observer.observe(ref.current)
+
+    return () => {
+      observer.disconnect()
+    }
   }, [children])
 
   return (
@@ -55,63 +61,76 @@ function MaxHeightWindow({ children }: { children: ReactNode }) {
   )
 }
 
+export function ToolCardContentWrapper({
+  badge,
+  className,
+  children,
+}: {
+  badge?: string
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        'flex flex-col w-full p-3 border-t border-border bg-backgroundCode',
+        className,
+      )}
+    >
+      {badge && (
+        <div className='flex flex-row'>
+          <Badge variant='outline'>{badge}</Badge>
+        </div>
+      )}
+      <MaxHeightWindow>{children}</MaxHeightWindow>
+    </div>
+  )
+}
+
 export function ToolCardInput({
   toolRequest,
 }: {
   toolRequest: ToolRequestContent
 }) {
   return (
-    <div className='flex flex-col w-full p-3 border-t border-border bg-backgroundCode'>
-      <div className='flex flex-row'>
-        <Badge variant='outline'>Input</Badge>
-      </div>
-      <MaxHeightWindow>
-        <CodeBlock language='json'>
-          {JSON.stringify(toolRequest.args, null, 2)}
-        </CodeBlock>
-      </MaxHeightWindow>
-    </div>
+    <ToolCardContentWrapper badge='Input'>
+      <CodeBlock language='json'>
+        {JSON.stringify(toolRequest.args, null, 2)}
+      </CodeBlock>
+    </ToolCardContentWrapper>
   )
+}
+
+function toString(val: unknown): string {
+  if (typeof val === 'string') return val
+  return JSON.stringify(val, null, 2)
 }
 
 export function ToolCardOutput({
   toolResponse,
-  customToolCallId,
 }: {
   toolResponse: ToolContent | undefined
-  customToolCallId?: string
 }) {
   return (
-    <div className='flex flex-col w-full p-3 border-t border-border gap-3'>
-      <div className='flex flex-row gap-3 items-center'>
-        <Badge variant='outline'>Output</Badge>
-      </div>
+    <ToolCardContentWrapper badge='Output'>
       {toolResponse ? (
         toolResponse.isError ? (
-          <MaxHeightWindow>
-            <div className='w-full pt-3 items-center'>
-              <Alert
-                variant='destructive'
-                title='Error'
-                description={JSON.stringify(toolResponse.result, null, 2)}
-              />
-            </div>
-          </MaxHeightWindow>
+          <div className='w-full pt-3 items-center'>
+            <Alert
+              variant='destructive'
+              title='Error'
+              description={toString(toolResponse.result)}
+            />
+          </div>
         ) : (
-          <MaxHeightWindow>
-            <CodeBlock language='json'>
-              {JSON.stringify(toolResponse.result, null, 2)}
-            </CodeBlock>
-          </MaxHeightWindow>
+          <CodeBlock language='json'>{toString(toolResponse.result)}</CodeBlock>
         )
-      ) : customToolCallId ? (
-        <CustomToolEditor toolCallId={customToolCallId} />
       ) : (
         <div className='flex flex-row gap-2 items-center justify-center pb-3'>
           <Icon name='loader' color='foregroundMuted' spin />
           <Text.H6 color='foregroundMuted'>Running...</Text.H6>
         </div>
       )}
-    </div>
+    </ToolCardContentWrapper>
   )
 }

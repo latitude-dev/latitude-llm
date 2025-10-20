@@ -10,8 +10,13 @@ import {
   ToolCall,
   ToolRequestContent,
 } from '@latitude-data/constants/legacyCompiler'
+import {
+  ToolSource,
+  ToolSourceData,
+} from '@latitude-data/constants/toolSources'
 import { StreamEventTypes } from '@latitude-data/core/constants'
 import { ParsedEvent } from 'eventsource-parser/stream'
+import { omit } from 'lodash-es'
 import React, { useCallback } from 'react'
 
 type SetMessagesFunction = React.Dispatch<React.SetStateAction<Message[]>>
@@ -107,6 +112,37 @@ export function useProviderEventHandler({
     [setMessages, incrementUsageDelta],
   )
 
+  const handleToolDelta = useCallback(
+    (_data: { type: 'tool-input-delta' }) => {
+      setMessages((messages) => {
+        const lastMessage = messages.at(-1)
+
+        // If the last message is not of assistant role, add a new assistant message
+        if (!lastMessage || lastMessage.role !== MessageRole.assistant) {
+          return [
+            ...messages,
+            {
+              role: MessageRole.assistant,
+              content: [],
+              toolCalls: [],
+              _isGeneratingToolCall: true,
+            },
+          ]
+        }
+
+        // Last message is of assistant role, update the content array
+        return [
+          ...messages.slice(0, -1),
+          {
+            ...lastMessage,
+            _isGeneratingToolCall: true,
+          },
+        ]
+      })
+    },
+    [setMessages],
+  )
+
   // Helper function to handle tool-call events
   const handleToolCall = useCallback(
     (data: {
@@ -114,8 +150,9 @@ export function useProviderEventHandler({
       toolCallId: string
       toolName: string
       args: Record<string, unknown>
+      _sourceData?: ToolSourceData
     }) => {
-      if (!data.toolName.startsWith('lat_')) {
+      if (data._sourceData?.source === ToolSource.Client) {
         setUnrespondedToolCalls((prev) => [
           ...prev,
           {
@@ -153,7 +190,7 @@ export function useProviderEventHandler({
         return [
           ...messages.slice(0, -1),
           {
-            ...lastMessage,
+            ...omit(lastMessage, '_isGeneratingToolCall'),
             content: [
               ...((lastMessage.content as MessageContent[]) || []),
               data,
@@ -218,8 +255,8 @@ export function useProviderEventHandler({
     [setMessages, setRunningLatitudeTools],
   )
 
-  const handleReasoning = useCallback(
-    (data: { type: 'reasoning'; textDelta: string }) => {
+  const handleReasoningDelta = useCallback(
+    (data: { type: 'reasoning-delta'; text: string }) => {
       setMessages((messages) => {
         const lastMessage = messages.at(-1)!
 
@@ -235,7 +272,7 @@ export function useProviderEventHandler({
                   ...((lastMessage.content as MessageContent[]) || []),
                   {
                     type: 'reasoning',
-                    text: data.textDelta,
+                    text: data.text,
                   },
                 ],
               },
@@ -249,7 +286,7 @@ export function useProviderEventHandler({
                   ...((lastMessage.content as MessageContent[]) || []),
                   {
                     type: 'reasoning',
-                    text: data.textDelta,
+                    text: data.text,
                   },
                 ],
               },
@@ -263,7 +300,7 @@ export function useProviderEventHandler({
                   ...(lastMessage.content.slice(0, -1) as MessageContent[]),
                   {
                     ...lastContent,
-                    text: (lastContent.text ?? '') + data.textDelta,
+                    text: (lastContent.text ?? '') + data.text,
                   },
                 ],
               },
@@ -279,7 +316,7 @@ export function useProviderEventHandler({
                 ...((lastMessage.content as MessageContent[]) || []),
                 {
                   type: 'reasoning',
-                  text: data.textDelta,
+                  text: data.text,
                 },
               ],
             },
@@ -287,7 +324,7 @@ export function useProviderEventHandler({
         }
       })
 
-      incrementUsageDelta({ reasoningTokens: tokenizeText(data.textDelta) })
+      incrementUsageDelta({ reasoningTokens: tokenizeText(data.text) })
     },
     [setMessages, incrementUsageDelta],
   )
@@ -352,14 +389,23 @@ export function useProviderEventHandler({
         case 'text-delta':
           handleTextDelta(data)
           break
+        case 'tool-input-delta':
+          handleToolDelta(data)
+          break
         case 'tool-call':
           handleToolCall(data)
           break
         case 'tool-result':
           handleToolResult(data)
           break
-        case 'reasoning':
-          handleReasoning(data)
+        case 'reasoning-delta':
+          handleReasoningDelta(data)
+          break
+        case 'reasoning-start':
+          handleReasoningDelta({
+            type: 'reasoning-delta',
+            text: '',
+          })
           break
         case 'file':
           handleFile(data)
@@ -369,9 +415,10 @@ export function useProviderEventHandler({
     [
       handleStepStart,
       handleTextDelta,
+      handleToolDelta,
       handleToolCall,
       handleToolResult,
-      handleReasoning,
+      handleReasoningDelta,
       handleFile,
     ],
   )

@@ -77,8 +77,9 @@ export type UserMessage = IMessage & {
 }
 export type AssistantMessage = {
   role: MessageRole.assistant
-  toolCalls: ToolCall[] | null
   content: string | ToolRequestContent[] | MessageContent[]
+  toolCalls: ToolCall[] | null
+  _isGeneratingToolCall?: boolean
 }
 export type ToolMessage = {
   role: MessageRole.tool

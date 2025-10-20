@@ -22,11 +22,7 @@ export type ReplaceTextDelta<T> = T extends {
           args: Record<string, unknown>
           result: any
         }
-      : T extends {
-            type: 'reasoning-delta'
-          }
-        ? Omit<T, 'type' | 'text'> & { type: 'reasoning'; textDelta: string }
-        : T
+      : T
 
 /**
  * Legacy type from Vercel SDK v4.

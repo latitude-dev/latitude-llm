@@ -1,59 +1,91 @@
 'use client'
 
 import {
-  AGENT_TOOL_PREFIX,
-  AgentToolsMap,
-  humanizeTool,
-  LATITUDE_TOOL_PREFIX,
-} from '@latitude-data/constants'
-import {
   ToolContent,
   ToolRequestContent,
 } from '@latitude-data/constants/legacyCompiler'
+import { ToolSource } from '@latitude-data/constants/toolSources'
 import { useMemo } from 'react'
-import { ToolCard } from './ToolCard'
+import { IntegrationToolCard } from './ToolCall/Integration'
+import { GenericToolCard } from './ToolCall/Generic'
+import { AgentToolCard } from './ToolCall/Agent'
+import { ProviderToolCard } from './ToolCall/Provider'
+import { LatitudeToolCard } from './ToolCall/LatitudeTool'
+import { ClientToolCard } from './ToolCall/Client'
 
 export function ToolCallContent({
-  value,
-  agentToolsMap,
+  toolRequest,
   toolContentMap,
 }: {
-  value: ToolRequestContent
-  agentToolsMap?: AgentToolsMap
+  toolRequest: ToolRequestContent
   toolContentMap?: Record<string, ToolContent>
 }) {
-  const toolResponse = toolContentMap?.[value.toolCallId]
+  const toolResponse = useMemo(
+    () => toolContentMap?.[toolRequest.toolCallId],
+    [toolContentMap, toolRequest.toolCallId],
+  )
+  const sourceData = useMemo(() => toolRequest._sourceData, [toolRequest])
+  const status = useMemo(() => {
+    if (!toolResponse) return 'pending'
+    if (toolResponse.isError) return 'error'
+    return 'success'
+  }, [toolResponse])
 
-  const isClientTool = useMemo(() => {
-    if (value.toolName.startsWith(AGENT_TOOL_PREFIX)) return false
-    if (value.toolName.startsWith(LATITUDE_TOOL_PREFIX)) return false
-    return true
-  }, [value.toolName])
-
-  const customIcon = useMemo(() => {
-    if (value.toolName.startsWith(AGENT_TOOL_PREFIX)) return 'bot'
-
-    return undefined
-  }, [value.toolName])
-
-  const customLabel = useMemo(() => {
-    const { toolName } = value
-    if (value.toolName.startsWith(AGENT_TOOL_PREFIX)) {
-      // Find the agent name in the agentToolsMap
-      const agentPath = agentToolsMap?.[toolName]
-      if (agentPath) return agentPath
-    }
-
-    return humanizeTool(value.toolName)
-  }, [value, agentToolsMap])
+  if (sourceData?.source === ToolSource.Latitude) {
+    return (
+      <LatitudeToolCard
+        toolRequest={toolRequest}
+        toolResponse={toolResponse}
+        status={status}
+        sourceData={sourceData}
+      />
+    )
+  }
+  if (sourceData?.source === ToolSource.Integration) {
+    return (
+      <IntegrationToolCard
+        toolRequest={toolRequest}
+        toolResponse={toolResponse}
+        status={status}
+        sourceData={sourceData}
+      />
+    )
+  }
+  if (sourceData?.source === ToolSource.Agent) {
+    return (
+      <AgentToolCard
+        toolRequest={toolRequest}
+        toolResponse={toolResponse}
+        status={status}
+        sourceData={sourceData}
+      />
+    )
+  }
+  if (sourceData?.source === ToolSource.ProviderTool) {
+    return (
+      <ProviderToolCard
+        toolRequest={toolRequest}
+        toolResponse={toolResponse}
+        status={status}
+        sourceData={sourceData}
+      />
+    )
+  }
+  if (sourceData?.source === ToolSource.Client) {
+    return (
+      <ClientToolCard
+        toolRequest={toolRequest}
+        toolResponse={toolResponse}
+        status={status}
+      />
+    )
+  }
 
   return (
-    <ToolCard
-      toolRequest={value}
+    <GenericToolCard
+      toolRequest={toolRequest}
       toolResponse={toolResponse}
-      customIcon={customIcon}
-      customLabel={customLabel}
-      customToolCallId={isClientTool ? value.toolCallId : undefined}
+      status={status}
     />
   )
 }
