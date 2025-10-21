@@ -4,6 +4,7 @@ import rehypeKatex from 'rehype-katex'
 import remarkEmoji from 'remark-emoji'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
+import remarkBreaks from 'remark-breaks'
 import { cn } from '../../../lib/utils'
 
 export const Markdown = forwardRef<
@@ -13,7 +14,7 @@ export const Markdown = forwardRef<
   return (
     <div ref={ref} className='prose prose-sm max-w-none w-full'>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkEmoji, remarkMath]}
+        remarkPlugins={[remarkGfm, remarkEmoji, remarkMath, remarkBreaks]}
         rehypePlugins={[rehypeKatex]}
         components={components}
         className={cn(className, 'text-foreground')}

@@ -17,7 +17,7 @@ export enum AppLocalStorage {
   playgroundParameters = 'playgroundParameters',
   evaluationPlaygroundParameters = 'evaluationPlaygroundParameters',
   playgroundActions = 'playgroundActions',
-  expandParameters = 'expandParameters',
+  chatDebugMode = 'chatDebugMode',
   latteThread = 'latteThread',
   latteSidebarWidth = 'latteSidebarWidth',
 }

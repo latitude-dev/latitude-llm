@@ -36,7 +36,7 @@ export function ThinkLatitudeToolCard({
       />
       {isOpen && (
         <ToolCardContentWrapper>
-          <Text.H6 color='foregroundMuted'>{args.thought}</Text.H6>
+          <Text.H5 color='foregroundMuted'>{args.thought}</Text.H5>
         </ToolCardContentWrapper>
       )}
     </ToolCardWrapper>

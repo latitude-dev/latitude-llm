@@ -94,7 +94,7 @@ export function isSafeUrl(url: unknown): url is string | URL {
   if (!isUrl) return false
 
   if (url.toString().startsWith('/')) return true
-  if (url.toString().startsWith('https')) return true
+  if (url.toString().startsWith('https:')) return true
   if (url.toString().startsWith('http://localhost')) return true
 
   return false

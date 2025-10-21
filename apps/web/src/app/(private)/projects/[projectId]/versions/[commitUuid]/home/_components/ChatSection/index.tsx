@@ -1,11 +1,15 @@
 import { PlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import Chat from '../../../documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { ChatInputBox } from '../../../documents/[documentUuid]/_components/DocumentEditor/Editor/ChatInputBox'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { DocumentTrigger } from '@latitude-data/core/schema/models/types/DocumentTrigger'
 
 import { ChatSectionHeader } from './Header'
+import {
+  AppLocalStorage,
+  useLocalStorage,
+} from '@latitude-data/web-ui/hooks/useLocalStorage'
 
 export function AgentChatSection({
   activeTrigger,
@@ -22,7 +26,10 @@ export function AgentChatSection({
   abortCurrentStream: () => void
   onClose: () => void
 }) {
-  const [expandedParameters, setExpandedParameters] = useState(false)
+  const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
+    key: AppLocalStorage.chatDebugMode,
+    defaultValue: false,
+  })
 
   const ref = useRef<HTMLDivElement | null>(null)
 
@@ -36,8 +43,8 @@ export function AgentChatSection({
       <ChatSectionHeader
         activeTrigger={activeTrigger}
         onClose={onClose}
-        expandParameters={expandedParameters}
-        setExpandParameters={setExpandedParameters}
+        debugMode={debugMode}
+        setDebugMode={setDebugMode}
       />
       <div className='flex-1 flex flex-col w-full flex-grow min-h-0 justify-between max-w-[800px]'>
         <div className='flex-1 pt-8 pb-20'>
@@ -45,8 +52,8 @@ export function AgentChatSection({
             showHeader={false}
             playground={playground}
             parameters={parameters}
-            expandParameters={expandedParameters}
-            setExpandParameters={setExpandedParameters}
+            debugMode={debugMode}
+            setDebugMode={setDebugMode}
           />
         </div>
         <div className='sticky bottom-0 w-full bg-background pb-4'>

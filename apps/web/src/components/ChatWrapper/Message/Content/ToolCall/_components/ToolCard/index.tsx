@@ -5,10 +5,7 @@ import {
 import { ReactNode, useMemo, useState } from 'react'
 import { ToolCardHeader } from './Header'
 import { ToolCardInput, ToolCardOutput } from './Content'
-import {
-  Icon,
-  IconName,
-} from '../../../../../../../../../packages/web-ui/src/ds/atoms/Icons'
+import { Icon, IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { TextColor } from '@latitude-data/web-ui/tokens'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -62,7 +59,7 @@ export function ToolCardWrapper({
   return (
     <div
       className={cn(
-        'flex flex-col w-full rounded-xl border border-border overflow-hidden my-1',
+        'flex flex-col w-full rounded-xl border border-border overflow-hidden my-2 max-w-[800px]',
         className,
       )}
     >

@@ -15,8 +15,8 @@ export default function Preview({
   metadata,
   parameters,
   runPrompt,
-  expandParameters,
-  setExpandParameters,
+  debugMode,
+  setDebugMode,
 }: {
   metadata: ResolvedMetadata | undefined
   parameters: Record<string, unknown> | undefined
@@ -37,8 +37,8 @@ export default function Preview({
         metadata={metadata}
         parameters={parameters}
         runPrompt={runPrompt}
-        expandParameters={expandParameters}
-        setExpandParameters={setExpandParameters}
+        debugMode={debugMode}
+        setDebugMode={setDebugMode}
         actions={
           <Button
             variant='outline'

@@ -51,11 +51,10 @@ export const Playground = memo(
       document,
     })
 
-    const { value: expandParameters, setValue: setExpandParameters } =
-      useLocalStorage({
-        key: AppLocalStorage.expandParameters,
-        defaultValue: false,
-      })
+    const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
+      key: AppLocalStorage.chatDebugMode,
+      defaultValue: false,
+    })
 
     const [runCount, setRunCount] = useState(0)
     const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
@@ -92,10 +91,7 @@ export const Playground = memo(
       <div className='h-full px-4 relative min-h-0 flex flex-col gap-y-4 min-w-0'>
         <div className='min-h-8 flex flex-row items-center justify-between w-full'>
           <Text.H4M>Preview</Text.H4M>
-          <Actions
-            expandParameters={expandParameters}
-            setExpandParameters={setExpandParameters}
-          />
+          <Actions debugMode={debugMode} setDebugMode={setDebugMode} />
         </div>
         <div
           className={cn(
@@ -135,8 +131,8 @@ export const Playground = memo(
               metadata={metadata}
               parameters={parameters}
               runPrompt={runPrompt}
-              expandParameters={expandParameters}
-              setExpandParameters={setExpandParameters}
+              debugMode={debugMode}
+              setDebugMode={setDebugMode}
             />
           ) : (
             <Chat
@@ -150,8 +146,8 @@ export const Playground = memo(
               runPromptFn={runPromptFn}
               addMessagesFn={addMessagesFn}
               onPromptRan={onPromptRan}
-              expandParameters={expandParameters}
-              setExpandParameters={setExpandParameters}
+              debugMode={debugMode}
+              setDebugMode={setDebugMode}
             />
           )}
         </div>

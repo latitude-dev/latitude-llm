@@ -7,7 +7,7 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MessageList } from '$/components/ChatWrapper'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import ReadingToggle from '$/components/ReadingToggle'
+import DebugToggle from '$/components/DebugToggle'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useOnce } from '$/hooks/useMount'
 import { ROUTES } from '$/services/routes'
@@ -51,19 +51,18 @@ export function RunPanel({
   isStoppingRun: ReturnType<typeof useActiveRuns>['isStoppingRun']
   mutateCompletedRuns: ReturnType<typeof useCompletedRuns>['mutate']
 }) {
-  const { value: expandParameters, setValue: setExpandParameters } =
-    useLocalStorage({
-      key: AppLocalStorage.expandParameters,
-      defaultValue: false,
-    })
+  const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
+    key: AppLocalStorage.chatDebugMode,
+    defaultValue: false,
+  })
 
   if (run.endedAt) {
     return (
       <CompletedRunPanel
         run={run as CompletedRun}
         mutateCompletedRuns={mutateCompletedRuns}
-        expandParameters={expandParameters}
-        setExpandParameters={setExpandParameters}
+        debugMode={debugMode}
+        setDebugMode={setDebugMode}
       />
     )
   }
@@ -75,8 +74,8 @@ export function RunPanel({
       isAttachingRun={isAttachingRun}
       stopRun={stopRun}
       isStoppingRun={isStoppingRun}
-      expandParameters={expandParameters}
-      setExpandParameters={setExpandParameters}
+      debugMode={debugMode}
+      setDebugMode={setDebugMode}
     />
   )
 }
@@ -84,13 +83,13 @@ export function RunPanel({
 function CompletedRunPanel({
   run,
   mutateCompletedRuns,
-  expandParameters,
-  setExpandParameters,
+  debugMode,
+  setDebugMode,
 }: {
   run: CompletedRun
   mutateCompletedRuns: ReturnType<typeof useCompletedRuns>['mutate']
-  expandParameters: boolean
-  setExpandParameters: (value: boolean) => void
+  debugMode: boolean
+  setDebugMode: (debugMode: boolean) => void
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -242,17 +241,14 @@ function CompletedRunPanel({
               <Text.H6M>Messages</Text.H6M>
               {sourceMapAvailable && (
                 <div className='flex flex-row gap-2 items-center'>
-                  <ReadingToggle
-                    enabled={expandParameters}
-                    setEnabled={setExpandParameters}
-                  />
+                  <DebugToggle enabled={debugMode} setEnabled={setDebugMode} />
                 </div>
               )}
             </div>
             <MessageList
               messages={conversation}
               parameters={Object.keys(run.log.parameters)}
-              collapseParameters={!expandParameters}
+              debugMode={debugMode}
               toolContentMap={toolContentMap}
             />
           </div>
@@ -293,16 +289,16 @@ function ActiveRunPanel({
   isAttachingRun,
   stopRun,
   isStoppingRun,
-  expandParameters,
-  setExpandParameters,
+  debugMode,
+  setDebugMode,
 }: {
   run: ActiveRun
   attachRun: ReturnType<typeof useActiveRuns>['attachRun']
   isAttachingRun: ReturnType<typeof useActiveRuns>['isAttachingRun']
   stopRun: ReturnType<typeof useActiveRuns>['stopRun']
   isStoppingRun: ReturnType<typeof useActiveRuns>['isStoppingRun']
-  expandParameters: boolean
-  setExpandParameters: (value: boolean) => void
+  debugMode: boolean
+  setDebugMode: (debugMode: boolean) => void
 }) {
   const runPromptFn = useCallback(() => {
     return attachRun({ runUuid: run.uuid })
@@ -355,8 +351,8 @@ function ActiveRunPanel({
           showHeader={true}
           playground={playground}
           parameters={undefined} // Note: we don't know which version was used
-          expandParameters={expandParameters}
-          setExpandParameters={setExpandParameters}
+          debugMode={debugMode}
+          setDebugMode={setDebugMode}
         />
         {!playground.duration && (
           <div className='w-full h-full flex flex-1 justify-center items-center gap-2'>

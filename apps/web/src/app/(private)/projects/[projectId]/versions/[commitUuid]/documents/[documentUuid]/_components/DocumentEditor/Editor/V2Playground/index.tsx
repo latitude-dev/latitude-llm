@@ -19,27 +19,26 @@ export const V2Playground = memo(function V2Playground({
   parameters: Record<string, unknown> | undefined
   playground: ReturnType<typeof usePlaygroundChat>
 }) {
-  const { value: expandParameters, setValue: setExpandParameters } =
-    useLocalStorage({
-      key: AppLocalStorage.expandParameters,
-      defaultValue: false,
-    })
+  const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
+    key: AppLocalStorage.chatDebugMode,
+    defaultValue: false,
+  })
 
   return mode === 'preview' ? (
     <PreviewPrompt
       showHeader
       metadata={metadata}
       parameters={parameters}
-      expandParameters={expandParameters}
-      setExpandParameters={setExpandParameters}
+      debugMode={debugMode}
+      setDebugMode={setDebugMode}
     />
   ) : (
     <Chat
       showHeader
       playground={playground}
       parameters={parameters}
-      expandParameters={expandParameters}
-      setExpandParameters={setExpandParameters}
+      debugMode={debugMode}
+      setDebugMode={setDebugMode}
     />
   )
 })

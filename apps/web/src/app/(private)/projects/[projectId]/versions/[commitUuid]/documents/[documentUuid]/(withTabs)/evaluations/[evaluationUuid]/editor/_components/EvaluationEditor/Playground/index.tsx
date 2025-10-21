@@ -56,11 +56,10 @@ export const Playground = memo(
     const forcedSize = collapsed
       ? EVALUATION_PLAYGROUND_COLLAPSED_SIZE
       : undefined
-    const { value: expandParameters, setValue: setExpandParameters } =
-      useLocalStorage({
-        key: AppLocalStorage.expandParameters,
-        defaultValue: false,
-      })
+    const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
+      key: AppLocalStorage.chatDebugMode,
+      defaultValue: false,
+    })
     const clearChat = useCallback(() => setMode('preview'), [setMode])
     const runPrompt = useCallback(() => setMode('chat'), [setMode])
     const { parameters, parametersReady } = useEvaluationParameters({
@@ -121,8 +120,8 @@ export const Playground = memo(
               metadata={metadata}
               parameters={parameters}
               runPrompt={runPrompt}
-              expandParameters={expandParameters}
-              setExpandParameters={setExpandParameters}
+              debugMode={debugMode}
+              setDebugMode={setDebugMode}
             />
           ) : (
             <Chat
@@ -130,8 +129,8 @@ export const Playground = memo(
               canChat={false}
               parameters={parameters}
               clearChat={clearChat}
-              expandParameters={expandParameters}
-              setExpandParameters={setExpandParameters}
+              debugMode={debugMode}
+              setDebugMode={setDebugMode}
               runPromptFn={runPromptFn}
               abortCurrentStream={abortCurrentStream}
               hasActiveStream={hasActiveStream}
@@ -142,13 +141,13 @@ export const Playground = memo(
       )
     }, [
       clearChat,
-      expandParameters,
+      debugMode,
       metadata,
       mode,
       parameters,
       runPromptFn,
       runPrompt,
-      setExpandParameters,
+      setDebugMode,
       parametersReady,
       abortCurrentStream,
       hasActiveStream,

@@ -7,6 +7,7 @@ import {
   Message,
   MessageContent,
   MessageRole,
+  ReasoningContent,
   ToolCall,
   ToolRequestContent,
 } from '@latitude-data/constants/legacyCompiler'
@@ -33,6 +34,7 @@ type IncrementUsageDeltaFunction = (incr: {
   reasoningTokens?: number
 }) => void
 
+// TODO: Refactor this handler completely. Too long and complex. Each sub-handler should have its dedicated file and test.
 export function useProviderEventHandler({
   setMessages,
   setUnrespondedToolCalls,
@@ -255,76 +257,94 @@ export function useProviderEventHandler({
     [setMessages, setRunningLatitudeTools],
   )
 
-  const handleReasoningDelta = useCallback(
-    (data: { type: 'reasoning-delta'; text: string }) => {
-      setMessages((messages) => {
-        const lastMessage = messages.at(-1)!
+  const handleReasoning = useCallback(
+    ({
+      type,
+      id,
+      text,
+    }: {
+      type: 'reasoning-delta' | 'reasoning-start' | 'reasoning-end'
+      id: string
+      text?: string
+    }) => {
+      // Account for token usage only on deltas (unchanged behavior)
+      if (text && type === 'reasoning-delta') {
+        incrementUsageDelta({ reasoningTokens: tokenizeText(text) })
+      }
 
-        if (lastMessage.role === MessageRole.assistant) {
-          const lastContent = (lastMessage.content as MessageContent[])?.at(-1)
-
-          if (!lastContent) {
-            return [
-              ...messages.slice(0, -1),
-              {
-                ...lastMessage,
-                content: [
-                  ...((lastMessage.content as MessageContent[]) || []),
-                  {
-                    type: 'reasoning',
-                    text: data.text,
-                  },
-                ],
-              },
-            ]
-          } else if (lastContent.type !== 'reasoning') {
-            return [
-              ...messages.slice(0, -1),
-              {
-                ...lastMessage,
-                content: [
-                  ...((lastMessage.content as MessageContent[]) || []),
-                  {
-                    type: 'reasoning',
-                    text: data.text,
-                  },
-                ],
-              },
-            ]
-          } else {
-            return [
-              ...messages.slice(0, -1),
-              {
-                ...lastMessage,
-                content: [
-                  ...(lastMessage.content.slice(0, -1) as MessageContent[]),
-                  {
-                    ...lastContent,
-                    text: (lastContent.text ?? '') + data.text,
-                  },
-                ],
-              },
-            ]
-          }
-        } else {
-          return [
-            ...messages,
-            {
-              role: MessageRole.assistant,
-              toolCalls: [],
-              content: [
-                ...((lastMessage.content as MessageContent[]) || []),
-                {
-                  type: 'reasoning',
-                  text: data.text,
-                },
-              ],
-            },
-          ]
+      setMessages((prev) => {
+        if (!prev.length) {
+          // Nothing to attach to; safest is to no-op unless we want to create a new message.
+          return prev
         }
-      })
 
-      incrementUsageDelta({ reasoningTokens: tokenizeText(data.text) })
+        const isEnd = type === 'reasoning-end'
+        const deltaText = text ?? ''
+
+        // Find the message & content index containing the reasoning block with this id.
+        let msgIdx = -1
+        let contentIdx = -1
+        for (let i = prev.length - 1; i >= 0; i--) {
+          const c = prev[i].content
+          if (Array.isArray(c)) {
+            const idx = c.findIndex(
+              (item) => item.type === 'reasoning' && (item as any).id === id,
+            )
+            if (idx !== -1) {
+              msgIdx = i
+              contentIdx = idx
+              break
+            }
+          }
+        }
+
+        // If not found:
+        if (msgIdx === -1 || contentIdx === -1) {
+          // If this is an END without a known block, ignore gracefully.
+          if (isEnd) return prev
+
+          const last = prev[prev.length - 1]
+          if (!Array.isArray(last.content)) {
+            // Can't append a structured block to a string content; skip to avoid corruption.
+            return prev
+          }
+
+          const next = [...prev]
+          const nextLast = {
+            ...last,
+            content: [
+              ...last.content,
+              {
+                type: 'reasoning',
+                id,
+                text: deltaText || undefined,
+                isStreaming: !isEnd,
+              },
+            ],
+          } as Message
+          next[next.length - 1] = nextLast
+          return next
+        }
+
+        // Found an existing reasoning block: immutably update
+        const next = [...prev]
+        const msg = next[msgIdx]
+        if (!Array.isArray(msg.content)) {
+          // Defensive: shouldn't happen because we found contentIdx above
+          return prev
+        }
+        const contents = [...msg.content]
+        const existing = contents[contentIdx] as ReasoningContent
+
+        contents[contentIdx] = {
+          ...existing,
+          text: (existing.text ?? '') + deltaText,
+          isStreaming: !isEnd,
+        }
+
+        next[msgIdx] = { ...msg, content: contents } as Message
+        return next
+      })
     },
     [setMessages, incrementUsageDelta],
   )
@@ -398,11 +418,10 @@ export function useProviderEventHandler({
         case 'tool-result':
           handleToolResult(data)
           break
-        case 'reasoning-delta':
-          handleReasoningDelta(data)
-          break
         case 'reasoning-start':
-          handleReasoningDelta({ type: 'reasoning-delta', text: '' })
+        case 'reasoning-delta':
+        case 'reasoning-end':
+          handleReasoning(data)
           break
         case 'file':
           handleFile(data)
@@ -415,7 +434,7 @@ export function useProviderEventHandler({
       handleToolDelta,
       handleToolCall,
       handleToolResult,
-      handleReasoningDelta,
+      handleReasoning,
       handleFile,
     ],
   )

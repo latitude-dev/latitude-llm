@@ -73,7 +73,7 @@ export function RunCodeLatitudeToolCard({
             ) : (
               <div className='flex flex-row gap-2 items-center justify-center pb-3'>
                 <Icon name='loader' color='foregroundMuted' spin />
-                <Text.H6 color='foregroundMuted'>Running code...</Text.H6>
+                <Text.H5 color='foregroundMuted'>Running code...</Text.H5>
               </div>
             )}
           </ToolCardContentWrapper>

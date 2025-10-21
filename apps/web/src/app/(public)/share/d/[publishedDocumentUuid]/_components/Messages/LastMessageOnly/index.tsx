@@ -1,12 +1,14 @@
 import { LastMessage } from '../../SharedDocument/RunPrompt/usePrompt'
-import { Message as ConversationMessage } from '@latitude-data/constants/legacyCompiler'
+import {
+  Message as ConversationMessage,
+  MessageContent,
+  MessageRole,
+} from '@latitude-data/constants/legacyCompiler'
 import { ExpandMessages } from '../ExpandMessages'
 import { ErrorMessage, Message } from '$/components/ChatWrapper'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
-import { MessageItem } from '$/components/ChatWrapper'
-import { MessageItemContent } from '$/components/ChatWrapper'
 import { useEffect, useState } from 'react'
+import { DebugMessage } from '$/components/ChatWrapper/Message/DebugMessage'
 
 const streamBuilder = (chunks: string[]) => {
   return async function* () {
@@ -67,24 +69,27 @@ function ChainResponseMessage<L extends boolean>({
 
   if (isLoading) {
     return (
-      <MessageItem badgeLabel='Assistant' badgeVariant='yellow'>
-        {({ collapsedMessage }) =>
-          !responseStream ? (
-            <LoadingText alignX='left' />
-          ) : (
-            <MessageItemContent
-              content={[
+      <DebugMessage
+        role={MessageRole.assistant}
+        content={[
+          ...(reasoningStream
+            ? [
+                {
+                  type: 'reasoning',
+                  text: reasoningStream,
+                } as MessageContent,
+              ]
+            : []),
+          ...(responseStream
+            ? [
                 {
                   type: 'text',
                   text: responseStream ?? '',
-                  reasoning: reasoningStream,
-                },
-              ]}
-              collapsedMessage={collapsedMessage}
-            />
-          )
-        }
-      </MessageItem>
+                } as MessageContent,
+              ]
+            : []),
+        ]}
+      />
     )
   }
 

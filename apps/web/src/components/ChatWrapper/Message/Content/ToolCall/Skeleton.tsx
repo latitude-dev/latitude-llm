@@ -7,7 +7,7 @@ export function ToolCardSkeleton() {
     <ToolCardWrapper className='animate-pulse'>
       <ToolCardHeader
         icon={<Skeleton className='w-8 h-8' />}
-        label={<Skeleton height='h5' className='w-40' />}
+        label={<Skeleton height='h4' className='w-40' />}
         isOpen={false}
       />
     </ToolCardWrapper>

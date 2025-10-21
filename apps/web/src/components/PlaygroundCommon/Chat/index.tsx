@@ -27,8 +27,8 @@ export default function Chat({
   isRunStream: isRunStreamProp = true,
   addMessagesFn,
   onPromptRan,
-  expandParameters,
-  setExpandParameters,
+  debugMode,
+  setDebugMode,
   showHeader,
 }: {
   canChat: boolean
@@ -72,16 +72,13 @@ export default function Chat({
   return (
     <div className='flex flex-col flex-1 h-full overflow-y-auto'>
       {showHeader && (
-        <Header
-          expandParameters={expandParameters}
-          setExpandParameters={setExpandParameters}
-        />
+        <Header debugMode={debugMode} setDebugMode={setDebugMode} />
       )}
       <Messages
         playground={playground}
         containerRef={containerRef}
         parameterKeys={parameterKeys}
-        expandParameters={expandParameters}
+        debugMode={debugMode}
         toolContentMap={toolContentMap}
       />
       <div className='w-full pb-4 z-[11] flex items-center justify-center'>
@@ -98,14 +95,11 @@ export default function Chat({
   )
 }
 
-function Header({ expandParameters, setExpandParameters }: ActionsState) {
+function Header({ debugMode, setDebugMode }: ActionsState) {
   return (
     <div className='flex flex-row items-center justify-between w-full pb-3'>
       <Text.H6M>Prompt</Text.H6M>
-      <Actions
-        expandParameters={expandParameters}
-        setExpandParameters={setExpandParameters}
-      />
+      <Actions debugMode={debugMode} setDebugMode={setDebugMode} />
     </div>
   )
 }
@@ -114,13 +108,13 @@ function Messages({
   playground,
   containerRef,
   parameterKeys,
-  expandParameters,
+  debugMode,
   toolContentMap,
 }: {
   playground: ReturnType<typeof usePlaygroundChat>
   containerRef: React.RefObject<HTMLDivElement | null>
   parameterKeys: string[]
-  expandParameters: boolean
+  debugMode: boolean
   toolContentMap: ReturnType<typeof useToolContentMap>
 }) {
   return (
@@ -131,7 +125,7 @@ function Messages({
       <MessageList
         messages={playground.messages}
         parameters={parameterKeys}
-        collapseParameters={!expandParameters}
+        debugMode={debugMode}
         toolContentMap={toolContentMap}
       />
 

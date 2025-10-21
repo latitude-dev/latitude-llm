@@ -1,5 +1,5 @@
 import { MessageList } from '$/components/ChatWrapper'
-import ReadingToggle from '$/components/ReadingToggle'
+import DebugToggle from '$/components/DebugToggle'
 import { Message } from '@latitude-data/constants/legacyCompiler'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
@@ -24,11 +24,10 @@ export function DocumentLogMessages({
     })
   }, [messages])
 
-  const { value: expandParameters, setValue: setExpandParameters } =
-    useLocalStorage({
-      key: AppLocalStorage.expandParameters,
-      defaultValue: false,
-    })
+  const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
+    key: AppLocalStorage.chatDebugMode,
+    defaultValue: false,
+  })
 
   if (!messages.length) {
     return (
@@ -46,17 +45,14 @@ export function DocumentLogMessages({
         <Text.H6M>Messages</Text.H6M>
         {sourceMapAvailable && (
           <div className='flex flex-row gap-2 items-center'>
-            <ReadingToggle
-              enabled={expandParameters}
-              setEnabled={setExpandParameters}
-            />
+            <DebugToggle enabled={debugMode} setEnabled={setDebugMode} />
           </div>
         )}
       </div>
       <MessageList
         messages={messages}
         parameters={Object.keys(documentLogParameters)}
-        collapseParameters={!expandParameters}
+        debugMode={debugMode}
         toolContentMap={toolContentMap}
       />
     </>

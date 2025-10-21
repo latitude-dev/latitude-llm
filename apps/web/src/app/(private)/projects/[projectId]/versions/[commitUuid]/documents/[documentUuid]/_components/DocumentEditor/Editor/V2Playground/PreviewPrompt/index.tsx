@@ -46,8 +46,8 @@ function Warnings({ warnings }: { warnings: AppliedRules }) {
 export default function PreviewPrompt({
   metadata,
   parameters,
-  expandParameters,
-  setExpandParameters,
+  debugMode,
+  setDebugMode,
   showHeader,
 }: {
   metadata: ResolvedMetadata | undefined
@@ -66,10 +66,7 @@ export default function PreviewPrompt({
       {showHeader ? (
         <div className='flex flex-row items-center justify-between w-full'>
           <Text.H6M>Preview</Text.H6M>
-          <Actions
-            expandParameters={expandParameters}
-            setExpandParameters={setExpandParameters}
-          />
+          <Actions debugMode={debugMode} setDebugMode={setDebugMode} />
         </div>
       ) : null}
       <div className='flex flex-col gap-3 flex-grow flex-shrink min-h-0'>
@@ -80,7 +77,7 @@ export default function PreviewPrompt({
               role={message.role}
               content={message.content}
               parameters={Object.keys(parameters ?? {})}
-              collapseParameters={!expandParameters}
+              debugMode={debugMode}
             />
           ))}
         </div>

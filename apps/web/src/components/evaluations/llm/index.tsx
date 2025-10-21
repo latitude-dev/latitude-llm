@@ -1,7 +1,7 @@
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { MessageList, MessageListSkeleton } from '$/components/ChatWrapper'
 import { MetadataItem } from '$/components/MetadataItem'
-import ReadingToggle from '$/components/ReadingToggle'
+import DebugToggle from '$/components/DebugToggle'
 import useModelOptions from '$/hooks/useModelOptions'
 import { formatCount } from '$/lib/formatCount'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
@@ -371,11 +371,10 @@ function ResultPanelMessages<M extends LlmEvaluationMetric>({
     [conversation],
   )
 
-  const { value: expandParameters, setValue: setExpandParameters } =
-    useLocalStorage({
-      key: AppLocalStorage.expandParameters,
-      defaultValue: false,
-    })
+  const { value: debugMode, setValue: setDebugMode } = useLocalStorage({
+    key: AppLocalStorage.chatDebugMode,
+    defaultValue: false,
+  })
 
   if (result.error) {
     return (
@@ -415,17 +414,14 @@ function ResultPanelMessages<M extends LlmEvaluationMetric>({
         <Text.H6M>Messages</Text.H6M>
         {sourceMapAvailable && (
           <div className='flex flex-row gap-2 items-center'>
-            <ReadingToggle
-              enabled={expandParameters}
-              setEnabled={setExpandParameters}
-            />
+            <DebugToggle enabled={debugMode} setEnabled={setDebugMode} />
           </div>
         )}
       </div>
       <MessageList
         messages={conversation}
         parameters={LLM_EVALUATION_PROMPT_PARAMETERS as unknown as string[]}
-        collapseParameters={!expandParameters}
+        debugMode={debugMode}
       />
     </>
   )

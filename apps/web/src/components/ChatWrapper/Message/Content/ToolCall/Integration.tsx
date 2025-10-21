@@ -57,7 +57,7 @@ export function IntegrationToolCard({
           </ToolCardText>
 
           {isLoading ? (
-            <Skeleton height='h5' className='w-10' />
+            <Skeleton height='h4' className='w-10' />
           ) : (
             <Badge variant={integration ? 'accent' : 'muted'}>
               {integration?.name ?? 'Removed integration'}
