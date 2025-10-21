@@ -11,7 +11,7 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { grants } from '../../schema/models/grants'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { captureException } from '../../utils/workers/datadog'
+import { captureException } from '../../utils/datadogCapture'
 import { findWorkspaceSubscription } from '../subscriptions/data-access/find'
 import { validateGrant } from './validate'
 

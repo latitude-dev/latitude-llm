@@ -12,7 +12,7 @@ import {
 import { Resource } from '@opentelemetry/resources'
 import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-node'
 import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
-import { captureException } from '../utils/workers/datadog'
+import { captureException } from '../utils/datadogCapture'
 import { z } from 'zod'
 import { ATTR_LATITUDE_INTERNAL, Otlp } from '../constants'
 import { enqueueSpans } from '../services/tracing/spans/enqueue'

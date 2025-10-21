@@ -15,7 +15,7 @@ import {
 import { reloadComponentProps } from '../../../../integrations/pipedream/components/reloadComponentProps'
 import { LatitudeError } from '@latitude-data/constants/errors'
 import { PipedreamIntegrationConfiguration } from '../../../../integrations/helpers/schema'
-import { captureMessage } from '../../../../../utils/workers/sentry'
+import { captureMessage } from '../../../../../utils/datadogCapture'
 
 export async function validateLattesChoices({
   pipedream,

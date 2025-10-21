@@ -29,7 +29,7 @@ import {
   getProviderMetadataKey,
 } from './providers/rules/providerMetadata'
 import { Providers } from '@latitude-data/constants'
-import { captureMessage } from '../../utils/workers/datadog'
+import { captureMessage } from '../../utils/datadogCapture'
 
 type VercelAssistantContent = AssistantModelMessage['content']
 type ReasoningPart = Extract<

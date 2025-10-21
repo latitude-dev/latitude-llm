@@ -14,7 +14,7 @@ import {
 import { Result } from '../../../lib/Result'
 import { type ApiKey } from '../../../schema/models/types/ApiKey'
 import { type Workspace } from '../../../schema/models/types/Workspace'
-import { captureException } from '../../../utils/workers/datadog'
+import { captureException } from '../../../utils/datadogCapture'
 import {
   convertSpanAttributes,
   convertSpanStatus,

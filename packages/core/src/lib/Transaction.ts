@@ -4,7 +4,7 @@ import { type DatabaseError } from 'pg'
 import { database, Database } from '../client'
 import { ConflictError, UnprocessableEntityError } from './errors'
 import { ErrorResult, Result, TypedResult } from './Result'
-import { captureException } from '../utils/workers/datadog'
+import { captureException } from '../utils/datadogCapture'
 
 export type PromisedResult<F, E extends Error = Error> = Promise<
   TypedResult<F, E>
@@ -52,7 +52,7 @@ export default class Transaction {
             // @ts-expect-error - we've bound the first argument of callback but TS can't see that
             callback()
           } catch (error) {
-            captureException(error)
+            captureException(error as Error)
           }
         })
 
