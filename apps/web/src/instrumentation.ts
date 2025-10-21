@@ -12,11 +12,11 @@ export async function register() {
     })
 
     tracer.use('http', {
-      service: 'latitude-web-http',
+      service: 'latitude-llm-web',
     })
 
     tracer.use('next', {
-      service: 'latitude-web-next',
+      service: 'latitude-llm-web',
     })
   }
 }
