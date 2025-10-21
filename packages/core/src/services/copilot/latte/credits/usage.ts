@@ -9,7 +9,7 @@ import {
 import { Result } from '../../../../lib/Result'
 import { LatteRequestsRepository } from '../../../../repositories'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
-import { captureException } from '../../../../utils/workers/sentry'
+import { captureException } from '../../../../utils/datadogCapture'
 import { computeQuota } from '../../../grants/quota'
 import { findWorkspaceSubscription } from '../../../subscriptions/data-access/find'
 

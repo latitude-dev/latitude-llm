@@ -1,7 +1,7 @@
 import { getPipedreamClient } from '../../services/integrations/pipedream/apps'
 import { EventHandler } from '../events'
 import { DocumentTriggerUndeployRequestedEvent } from '../events'
-import { captureException } from '../../utils/workers/sentry'
+import { captureException } from '../../utils/datadogCapture'
 
 export const undeployDocumentTriggerJob: EventHandler<
   DocumentTriggerUndeployRequestedEvent

@@ -15,7 +15,7 @@ import {
   runEvaluationV2,
 } from '../../../services/evaluationsV2/run'
 import serializeProviderLog from '../../../services/providerLogs/serialize'
-import { captureException } from '../../../utils/workers/sentry'
+import { captureException } from '../../../utils/datadogCapture'
 import { updateExperimentStatus } from '../experiments/shared'
 
 export type RunEvaluationV2JobData = {
