@@ -428,4 +428,126 @@ describe('convertLatitudeMessagesToVercelFormat', () => {
       },
     ])
   })
+
+  it('only adds tool calls from toolCalls that are not already in content', () => {
+    const messages: Message[] = [
+      {
+        role: MessageRole.assistant,
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: '1',
+            toolName: 'search',
+            args: { query: 'test' },
+          },
+        ],
+        toolCalls: [
+          { id: '1', name: 'search', arguments: { query: 'test' } },
+          { id: '2', name: 'calculator', arguments: { operation: 'add' } },
+        ],
+      } as AssistantMessage,
+    ]
+    const result = convertLatitudeMessagesToVercelFormat({
+      messages,
+      provider: Providers.Anthropic,
+    })
+    expect(result[0].content).toEqual([
+      {
+        type: 'tool-call',
+        toolCallId: '1',
+        toolName: 'search',
+        input: { query: 'test' },
+      },
+      {
+        type: 'tool-call',
+        toolCallId: '2',
+        toolName: 'calculator',
+        input: { operation: 'add' },
+      },
+    ])
+  })
+
+  it('handles mixed content with text and tool calls, preventing duplicates', () => {
+    const messages: Message[] = [
+      {
+        role: MessageRole.assistant,
+        content: [
+          { type: 'text', text: 'I will help you with that' },
+          {
+            type: 'tool-call',
+            toolCallId: '1',
+            toolName: 'search',
+            args: { query: 'test' },
+          },
+        ],
+        toolCalls: [
+          { id: '1', name: 'search', arguments: { query: 'test' } },
+          { id: '2', name: 'calculator', arguments: { operation: 'add' } },
+        ],
+      } as AssistantMessage,
+    ]
+    const result = convertLatitudeMessagesToVercelFormat({
+      messages,
+      provider: Providers.Anthropic,
+    })
+    expect(result[0].content).toEqual([
+      { type: 'text', text: 'I will help you with that' },
+      {
+        type: 'tool-call',
+        toolCallId: '1',
+        toolName: 'search',
+        input: { query: 'test' },
+      },
+      {
+        type: 'tool-call',
+        toolCallId: '2',
+        toolName: 'calculator',
+        input: { operation: 'add' },
+      },
+    ])
+  })
+
+  it('does not add any tool calls when all are already in content', () => {
+    const messages: Message[] = [
+      {
+        role: MessageRole.assistant,
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: '1',
+            toolName: 'search',
+            args: { query: 'test' },
+          },
+          {
+            type: 'tool-call',
+            toolCallId: '2',
+            toolName: 'calculator',
+            args: { operation: 'add' },
+          },
+        ],
+        toolCalls: [
+          { id: '1', name: 'search', arguments: { query: 'test' } },
+          { id: '2', name: 'calculator', arguments: { operation: 'add' } },
+        ],
+      } as AssistantMessage,
+    ]
+    const result = convertLatitudeMessagesToVercelFormat({
+      messages,
+      provider: Providers.Anthropic,
+    })
+    expect(result[0].content).toEqual([
+      {
+        type: 'tool-call',
+        toolCallId: '1',
+        toolName: 'search',
+        input: { query: 'test' },
+      },
+      {
+        type: 'tool-call',
+        toolCallId: '2',
+        toolName: 'calculator',
+        input: { operation: 'add' },
+      },
+    ])
+  })
 })
