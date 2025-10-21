@@ -45,6 +45,9 @@ catalogs:
     ai:
       specifier: 5.0.44
       version: 5.0.44
+    dd-trace:
+      specifier: 5.69.0
+      version: 5.69.0
     drizzle-kit:
       specifier: 0.31.1
       version: 0.31.1
@@ -165,7 +168,7 @@ importers:
         specifier: 0.13.8
         version: 0.13.8(typescript@5.9.3)(zod@4.1.8)
       dd-trace:
-        specifier: ^5.69.0
+        specifier: 'catalog:'
         version: 5.69.0
       drizzle-orm:
         specifier: 'catalog:'
@@ -310,7 +313,7 @@ importers:
         specifier: 3.6.0
         version: 3.6.0
       dd-trace:
-        specifier: ^5.69.0
+        specifier: 'catalog:'
         version: 5.69.0
       diff-match-patch:
         specifier: 1.0.5
@@ -585,7 +588,7 @@ importers:
         specifier: 5.44.4
         version: 5.44.4
       dd-trace:
-        specifier: ^5.69.0
+        specifier: 'catalog:'
         version: 5.69.0
       express:
         specifier: 4.21.2
@@ -986,7 +989,7 @@ importers:
         specifier: ^0.10.1
         version: 0.10.1
       dd-trace:
-        specifier: ^5.69.0
+        specifier: 'catalog:'
         version: 5.69.0
       drizzle-kit:
         specifier: 'catalog:'
