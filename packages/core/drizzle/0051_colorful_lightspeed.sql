@@ -1,5 +1,5 @@
 DO $$ BEGIN
- CREATE TYPE "public"."evaluation_result_types" AS ENUM('evaluation_resultable_booleans', 'evaluation_resultable_texts', 'evaluation_resultable_numbers');
+ CREATE TYPE "latitude"."evaluation_result_types" AS ENUM('evaluation_resultable_booleans', 'evaluation_resultable_texts', 'evaluation_resultable_numbers');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
