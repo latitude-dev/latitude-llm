@@ -150,6 +150,7 @@ export type EvaluationV2<
   workspaceId: number
   commitId: number
   documentUuid: string
+  issueId?: number | null
   name: string
   description: string
   type: T
@@ -195,6 +196,7 @@ export type EvaluationResultV2<
   datasetId?: number | null
   evaluatedRowId?: number | null
   evaluatedLogId: number
+  issueId?: number | null
   usedForSuggestion?: boolean | null
   createdAt: Date
   updatedAt: Date

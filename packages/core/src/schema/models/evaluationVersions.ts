@@ -1,4 +1,5 @@
 import {
+  AnyPgColumn,
   bigint,
   bigserial,
   boolean,
@@ -19,6 +20,7 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { workspaces } from './workspaces'
+import { issues } from './issues'
 
 export const evaluationVersions = latitudeSchema.table(
   'evaluation_versions',
@@ -32,6 +34,10 @@ export const evaluationVersions = latitudeSchema.table(
       .references(() => commits.id, { onDelete: 'restrict' }),
     evaluationUuid: uuid('evaluation_uuid').notNull().defaultRandom(),
     documentUuid: uuid('document_uuid').notNull(),
+    issueId: bigint('issue_id', { mode: 'number' }).references(
+      (): AnyPgColumn => issues.id,
+      { onDelete: 'set null' },
+    ),
     name: varchar('name', { length: 256 }).notNull(),
     description: text('description').notNull(),
     type: varchar('type', { length: 128 }).notNull().$type<EvaluationType>(),
@@ -65,5 +71,6 @@ export const evaluationVersions = latitudeSchema.table(
     documentUuidIdx: index('evaluation_versions_document_uuid_idx').on(
       table.documentUuid,
     ),
+    issueIdIdx: index('evaluation_v2_issue_id_idx').on(table.issueId),
   }),
 )

@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
+  AnyPgColumn,
   bigint,
   bigserial,
   boolean,
@@ -20,6 +21,7 @@ import { datasets } from './datasets'
 import { experiments } from './experiments'
 import { providerLogs } from './providerLogs'
 import { workspaces } from './workspaces'
+import { issues } from './issues'
 
 export const evaluationResultsV2 = latitudeSchema.table(
   'evaluation_results_v2',
@@ -48,6 +50,10 @@ export const evaluationResultsV2 = latitudeSchema.table(
     evaluatedLogId: bigint('evaluated_log_id', { mode: 'number' })
       .notNull()
       .references(() => providerLogs.id, { onDelete: 'cascade' }),
+    issueId: bigint('issue_id', { mode: 'number' }).references(
+      (): AnyPgColumn => issues.id,
+      { onDelete: 'set null' },
+    ),
     score: bigint('score', { mode: 'number' }),
     normalizedScore: bigint('normalized_score', { mode: 'number' }),
     metadata: jsonb('metadata').$type<EvaluationResultMetadata>(),
@@ -88,6 +94,7 @@ export const evaluationResultsV2 = latitudeSchema.table(
     uniqueEvaluatedLogIdEvaluationUuidIdx: uniqueIndex(
       'evaluation_results_v2_unique_evaluated_log_id_evaluation_uuid_idx',
     ).on(table.evaluatedLogId, table.evaluationUuid),
+    issueIdIdx: index('evaluation_results_v2_issue_id_idx').on(table.issueId),
     createdAtBrinIdx: index('evaluation_results_v2_created_at_brin_idx')
       .using('brin', sql`${table.createdAt}`)
       .with({ pages_per_range: 32, autosummarize: true })
