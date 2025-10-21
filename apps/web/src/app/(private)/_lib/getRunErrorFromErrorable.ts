@@ -1,4 +1,4 @@
-import { RunErrorField } from '@latitude-data/core/repositories'
+import { RunErrorField } from '@latitude-data/constants'
 
 export function getRunErrorFromErrorable(error: RunErrorField) {
   if (!error.code || !error.message) return null

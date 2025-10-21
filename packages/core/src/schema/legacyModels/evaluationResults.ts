@@ -1,26 +1,13 @@
-import {
-  bigint,
-  bigserial,
-  index,
-  pgEnum,
-  text,
-  uuid,
-} from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, text, uuid } from 'drizzle-orm/pg-core'
 
-import { EvaluationResultableType, LogSources } from '../../constants'
+import { LogSources } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { documentLogs } from '../models/documentLogs'
 import { logSourcesEnum, providerLogs } from '../models/providerLogs'
 import { timestamps } from '../schemaHelpers'
 import { evaluations } from './evaluations'
 
-export const evaluationResultTypes = pgEnum('evaluation_result_types', [
-  EvaluationResultableType.Boolean,
-  EvaluationResultableType.Text,
-  EvaluationResultableType.Number,
-])
-
-// NOTE: Deprecated
+// NOTE: Deprecated but do not delete
 export const evaluationResults = latitudeSchema.table(
   'evaluation_results',
   {
@@ -43,7 +30,7 @@ export const evaluationResults = latitudeSchema.table(
     evaluationProviderLogId: bigint('evaluation_provider_log_id', {
       mode: 'number',
     }).references(() => providerLogs.id),
-    resultableType: evaluationResultTypes('resultable_type'),
+    resultableType: text('resultable_type'),
     resultableId: bigint('resultable_id', { mode: 'number' }),
     source: logSourcesEnum('source').$type<LogSources>(),
     reason: text('reason'),

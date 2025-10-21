@@ -16,6 +16,7 @@ export const errorCodeEnum = latitudeSchema.enum('run_error_code_enum', [
   RunErrorCodes.RateLimit,
   RunErrorCodes.UnsupportedProviderResponseTypeError,
   RunErrorCodes.AIProviderConfigError,
+  // DEPRECATED, not do not delete them
   RunErrorCodes.EvaluationRunMissingProviderLogError, // TODO(evalsv2): Deprecated, remove when v1 evals are migrated
   RunErrorCodes.EvaluationRunMissingWorkspaceError, // TODO(evalsv2): Deprecated, remove when v1 evals are migrated
   RunErrorCodes.EvaluationRunUnsupportedResultTypeError, // TODO(evalsv2): Deprecated, remove when v1 evals are migrated
