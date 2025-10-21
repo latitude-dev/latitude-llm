@@ -135,7 +135,6 @@ ${
             setConfiguration({ ...configuration, minScore: value })
           }}
           errors={errors?.['minScore']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required
@@ -150,7 +149,6 @@ ${
             setConfiguration({ ...configuration, maxScore: value })
           }}
           errors={errors?.['maxScore']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required
@@ -183,7 +181,6 @@ function ConfigurationAdvancedForm({
             setConfiguration({ ...configuration, minThreshold: value })
           }
           errors={errors?.['minThreshold']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required
@@ -199,7 +196,6 @@ function ConfigurationAdvancedForm({
             setConfiguration({ ...configuration, maxThreshold: value })
           }
           errors={errors?.['maxThreshold']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required

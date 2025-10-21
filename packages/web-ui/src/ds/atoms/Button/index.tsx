@@ -34,6 +34,7 @@ const buttonContainerVariants = cva(
         latte: 'bg-[#E5B217] hover:bg-[#E5B217]/90 border-latte-border',
         primaryMuted: 'bg-primary-muted hover:bg-primary-muted-hover',
         destructiveMuted: 'bg-destructive-muted',
+        successMuted: 'bg-success-muted',
       },
       fanciness: {
         default: 'bg-transparent hover:bg-transparent',
@@ -87,7 +88,8 @@ const buttonVariants = cva(
           'border border-destructive text-destructive-foreground dark:text-foreground',
         secondary:
           'bg-secondary text-secondary-foreground group-hover:bg-secondary/80',
-        ghost: 'shadow-none bg-transparent text-muted-foreground',
+        ghost:
+          'border border-transparent shadow-none bg-transparent text-muted-foreground',
         link: 'shadow-none underline-offset-4 group-hover:underline text-accent-foreground',
         linkOutline: 'shadow-none underline-offset-4 group-hover:underline',
         linkDestructive:
@@ -104,6 +106,8 @@ const buttonVariants = cva(
           'border border-transparent bg-primary-muted text-primary group-hover:bg-primary-muted-hover',
         destructiveMuted:
           'border border-destructive-muted-foreground/10 bg-destructive-muted text-destructive-muted-foreground',
+        successMuted:
+          'border border-success-muted-foreground/10 bg-success-muted text-success-muted-foreground',
       },
       size: {
         default: 'py-buttonDefaultVertical px-3 min-h-8',
@@ -182,6 +186,7 @@ const textColorVariants = ({
   if (variant === 'primaryMuted') return 'primary'
   if (variant === 'outlineDestructive') return 'destructive'
   if (variant === 'destructiveMuted') return 'destructiveMutedForeground'
+  if (variant === 'successMuted') return 'successMutedForeground'
   return 'foreground'
 }
 

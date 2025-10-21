@@ -30,7 +30,7 @@ import { useMemo, useRef, useState } from 'react'
 import { LogsOverTime } from '../../../../../../overview/_components/Overview/LogsOverTime'
 import { AggregationPanels } from './AggregationPanels'
 import { DocumentLogInfo } from './DocumentLogInfo'
-import { DocumentLogAnnotation } from './DocumentLogInfo/Annotation'
+import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
 import { DocumentLogsTable } from './DocumentLogsTable'
 import { DownloadLogsButton } from './DownloadLogsButton'
 import { ResizableLayout } from './ResizableLayout'
@@ -260,7 +260,7 @@ export function DocumentLogs({
                 {manualEvaluations.length > 0 && !!responseLog && (
                   <div className='w-full border-t flex flex-col gap-y-4 mt-4 pt-4'>
                     {manualEvaluations.map((evaluation) => (
-                      <DocumentLogAnnotation
+                      <AnnotationForm
                         key={evaluation.uuid}
                         evaluation={evaluation}
                         result={

@@ -1,6 +1,8 @@
+import { useMemo } from 'react'
 import { formatCount } from '$/lib/formatCount'
 import {
   EvaluationType,
+  EvaluationV2,
   HumanEvaluationMetric,
   HumanEvaluationRatingSpecification,
 } from '@latitude-data/constants'
@@ -8,24 +10,78 @@ import { FormFieldGroup } from '@latitude-data/web-ui/atoms/FormFieldGroup'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { NumberInput } from '@latitude-data/web-ui/atoms/NumberInput'
-import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
-import { useMemo } from 'react'
+import { StepperNumberInput } from '@latitude-data/web-ui/atoms/StepperNumberInput'
 import {
   AnnotationFormProps,
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
 } from '../index'
+import { AnnotationFormWrapper as AForm } from '../Annotation/FormWrapper'
+import { useAnnotationFormState } from './useAnnotationForm'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { CriteriaDescription as CriteriaWrapper } from '../Annotation/CriteriaDescription'
+
+function getCriteria(
+  evaluation: EvaluationV2<EvaluationType.Human, HumanEvaluationMetric.Rating>,
+) {
+  const config = evaluation.configuration
+  const criteria = config.criteria
+  const minRatingDescription = config.minRatingDescription
+  const maxRatingDescription = config.maxRatingDescription
+  const reverseScale = config.reverseScale
+  const isEmpty =
+    !minRatingDescription && !maxRatingDescription && !criteria && !reverseScale
+
+  if (isEmpty) return null
+
+  return {
+    criteria,
+    minRatingDescription,
+    maxRatingDescription,
+    reverseScale,
+  }
+}
+
+type ICriteria = ReturnType<typeof getCriteria>
+
+function CriteriaDescription({
+  minRatingDescription,
+  maxRatingDescription,
+  reverseScale,
+  criteria,
+}: NonNullable<ICriteria>) {
+  return (
+    <CriteriaWrapper reverseScale={reverseScale} criteria={criteria}>
+      {minRatingDescription ? (
+        <div>
+          <Text.H5M color='background' display='block'>
+            Low score criteria
+          </Text.H5M>
+          <Text.H6 color='primaryForeground'>{minRatingDescription}</Text.H6>
+        </div>
+      ) : null}
+      {maxRatingDescription ? (
+        <div>
+          <Text.H5M color='background' display='block'>
+            High score criteria
+          </Text.H5M>
+          <Text.H6 color='primaryForeground'>{maxRatingDescription}</Text.H6>
+        </div>
+      ) : null}
+    </CriteriaWrapper>
+  )
+}
 
 const specification = HumanEvaluationRatingSpecification
 export default {
   ...specification,
   icon: 'star' as IconName,
-  ConfigurationSimpleForm: ConfigurationSimpleForm,
-  ConfigurationAdvancedForm: ConfigurationAdvancedForm,
-  ResultBadge: ResultBadge,
-  AnnotationForm: AnnotationForm,
-  chartConfiguration: chartConfiguration,
+  ConfigurationSimpleForm,
+  ConfigurationAdvancedForm,
+  ResultBadge,
+  AnnotationForm,
+  chartConfiguration,
 }
 
 function ConfigurationSimpleForm({
@@ -50,7 +106,6 @@ function ConfigurationSimpleForm({
             setConfiguration({ ...configuration, minRating: value })
           }}
           errors={errors?.['minRating']}
-          defaultAppearance
           className='w-full'
           fieldClassName='w-1/6'
           disabled={disabled}
@@ -86,7 +141,6 @@ function ConfigurationSimpleForm({
             setConfiguration({ ...configuration, maxRating: value })
           }}
           errors={errors?.['maxRating']}
-          defaultAppearance
           className='w-full'
           fieldClassName='w-1/6'
           disabled={disabled}
@@ -135,7 +189,6 @@ function ConfigurationAdvancedForm({
             setConfiguration({ ...configuration, minThreshold: value })
           }
           errors={errors?.['minThreshold']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required
@@ -151,7 +204,6 @@ function ConfigurationAdvancedForm({
             setConfiguration({ ...configuration, maxThreshold: value })
           }
           errors={errors?.['maxThreshold']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required
@@ -169,81 +221,39 @@ function ResultBadge({
 
 function AnnotationForm({
   evaluation,
-  resultScore,
-  setResultScore,
-  disabled,
+  result,
 }: AnnotationFormProps<EvaluationType.Human, HumanEvaluationMetric.Rating>) {
-  const range = Math.abs(
-    evaluation.configuration.maxRating - evaluation.configuration.minRating,
-  )
-
-  const options = useMemo(() => {
-    if (range > 6) return []
-
-    const options = []
-    for (
-      let i = evaluation.configuration.minRating;
-      i <= evaluation.configuration.maxRating;
-      i++
-    ) {
-      options.push({
-        label: i.toString(),
-        value: i,
-      })
-    }
-
-    return options
-  }, [range, evaluation])
-
-  const description = useMemo(() => {
-    const description = []
-
-    if (evaluation.configuration.minRatingDescription) {
-      description.push(
-        `The response should be rated low when: ${evaluation.configuration.minRatingDescription}`,
-      )
-    }
-
-    if (evaluation.configuration.maxRatingDescription) {
-      description.push(
-        `The response should be rated high when: ${evaluation.configuration.maxRatingDescription}`,
-      )
-    }
-
-    return description.join('. ')
-  }, [evaluation.configuration])
-
+  const criteria = useMemo(() => getCriteria(evaluation), [evaluation])
+  const { onScoreChange, onSubmit } = useAnnotationFormState({
+    initialScore: result?.score ?? undefined,
+  })
   return (
-    <>
-      {range > 6 ? (
-        <NumberInput
-          value={resultScore ?? undefined}
-          name='resultScore'
-          description={description || 'The rating of the response'}
-          placeholder='No rating'
-          min={evaluation.configuration.minRating}
-          max={evaluation.configuration.maxRating}
-          onChange={(value) => {
-            if (value === undefined) return
-            setResultScore(value)
-          }}
-          defaultAppearance
-          className='w-full'
-          disabled={disabled}
-          required
+    <AForm onSubmit={onSubmit}>
+      <AForm.Body>
+        <AForm.TextArea
+          name='reason'
+          defaultValue={result?.metadata?.reason ?? ''}
         />
-      ) : (
-        <TabSelect
-          value={resultScore ?? undefined}
-          name='resultScore'
-          description={description || 'The rating of the response'}
-          options={options}
-          onChange={(value) => setResultScore(value)}
-          disabled={disabled}
-          required
+      </AForm.Body>
+      <AForm.Footer>
+        <div className='flex items-center gap-x-2'>
+          <StepperNumberInput
+            name='score'
+            value={result?.score ?? undefined}
+            min={evaluation.configuration.minRating}
+            max={evaluation.configuration.maxRating}
+            onChange={onScoreChange}
+          />
+          <Text.H6M color='foregroundMuted'>
+            of {evaluation.configuration.maxRating}
+          </Text.H6M>
+        </div>
+
+        <AForm.SubmitButtonWithTooltip
+          tooltip={criteria ? <CriteriaDescription {...criteria} /> : undefined}
         />
-      )}
-    </>
+      </AForm.Footer>
+    </AForm>
   )
 }
 
