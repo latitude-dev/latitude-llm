@@ -16,6 +16,7 @@ import { workspaces } from '../models/workspaces'
 
 type FileMetadata = FileSnapshot & { headers: string[]; rowCount: number }
 
+// NOTE: Deprecated but do not delete
 export const datasetsV1 = latitudeSchema.table(
   'datasets',
   {

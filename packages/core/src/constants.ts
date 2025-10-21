@@ -1,5 +1,4 @@
 import {
-  EvaluationResultableType,
   EvaluationV2,
   LatitudeTool,
   LatitudeToolInternalName,
@@ -35,7 +34,6 @@ import { type Workspace } from './schema/models/types/Workspace'
 export {
   DocumentType,
   EMAIL_REGEX,
-  EvaluationResultableType,
   FINISH_REASON_DETAILS,
   HEAD_COMMIT,
   isLatitudeUrl,
@@ -110,12 +108,6 @@ export const LOG_SOURCES = Object.values(LogSources)
 export enum ErrorableEntity {
   DocumentLog = 'document_log',
   EvaluationResult = 'evaluation_result',
-}
-
-export enum EvaluationMetadataType {
-  LlmAsJudgeAdvanced = 'llm_as_judge',
-  LlmAsJudgeSimple = 'llm_as_judge_simple',
-  Manual = 'manual',
 }
 
 export enum RewardType {
@@ -225,17 +217,6 @@ export const SERIALIZED_DOCUMENT_LOG_FIELDS = [
   'toolCalls',
 ]
 
-export type SerializedEvaluationManualResult = {
-  resultableType: EvaluationResultableType
-  result: string | number | boolean | undefined
-  reason: string | null
-  evaluatedLog: SerializedDocumentLog
-}
-type EvaluatedProviderLog = Omit<SerializedProviderLog, 'response'>
-
-export type SerializedEvaluationResult = SerializedEvaluationManualResult &
-  EvaluatedProviderLog
-
 export const ULTRA_LARGE_PAGE_SIZE = 1000
 export const DELIMITER_VALUES = {
   comma: ',',
@@ -344,25 +325,6 @@ export const messageSchema = z
   )
 
 export const messagesSchema = z.array(messageSchema)
-
-export const resultConfigurationSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal(EvaluationResultableType.Boolean),
-    falseValueDescription: z.string().optional(),
-    trueValueDescription: z.string().optional(),
-  }),
-  z.object({
-    type: z.literal(EvaluationResultableType.Number),
-    minValue: z.number(),
-    maxValue: z.number(),
-    minValueDescription: z.string().optional(),
-    maxValueDescription: z.string().optional(),
-  }),
-  z.object({
-    type: z.literal(EvaluationResultableType.Text),
-    valueDescription: z.string().optional(),
-  }),
-])
 
 export const DEFAULT_PAGINATION_SIZE = 25
 

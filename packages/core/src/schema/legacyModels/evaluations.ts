@@ -8,11 +8,16 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
-import { EvaluationMetadataType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { workspaces } from '../models/workspaces'
 import { timestamps } from '../schemaHelpers'
-import { evaluationResultTypes } from './evaluationResults'
+
+// NOTE: Deprecated but do not delete
+export enum EvaluationMetadataType {
+  LlmAsJudgeAdvanced = 'llm_as_judge',
+  LlmAsJudgeSimple = 'llm_as_judge_simple',
+  Manual = 'manual',
+}
 
 export const metadataTypesEnum = latitudeSchema.enum('metadata_type', [
   EvaluationMetadataType.LlmAsJudgeAdvanced,
@@ -20,7 +25,7 @@ export const metadataTypesEnum = latitudeSchema.enum('metadata_type', [
   EvaluationMetadataType.Manual,
 ])
 
-// NOTE: Deprecated
+// NOTE: Deprecated but do not delete
 export const evaluations = latitudeSchema.table(
   'evaluations',
   {
@@ -30,7 +35,7 @@ export const evaluations = latitudeSchema.table(
     description: text('description').notNull(),
     metadataType: metadataTypesEnum('metadata_type').notNull(),
     metadataId: bigint('metadata_id', { mode: 'number' }).notNull(),
-    resultType: evaluationResultTypes('result_type'),
+    resultType: text('result_type'),
     resultConfigurationId: bigint('result_configuration_id', {
       mode: 'number',
     }),
