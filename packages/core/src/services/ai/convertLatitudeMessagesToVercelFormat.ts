@@ -29,7 +29,6 @@ import {
   getProviderMetadataKey,
 } from './providers/rules/providerMetadata'
 import { Providers } from '@latitude-data/constants'
-import { captureMessage } from '../../utils/workers/sentry'
 
 type VercelAssistantContent = AssistantModelMessage['content']
 type ReasoningPart = Extract<
@@ -259,10 +258,6 @@ export function convertLatitudeMessagesToVercelFormat({
                 input: t.arguments,
               }))
             parts.push(...additionalToolCallsToAdd)
-            captureMessage(
-              'Assistant message does not contain all tool calls',
-              'warning',
-            )
           }
         }
 
