@@ -49,9 +49,11 @@ export function CommitBreadcrumbItems({
           <BreadcrumbItemSkeleton className='pl-3' />
         ) : (
           <div className='flex flex-row w-full justify-between overflow-hidden pl-3'>
-            <Text.H5 color='foregroundMuted' noWrap ellipsis>
-              {currentCommit?.title ?? commitUuid}
-            </Text.H5>
+            <div className='flex flex-row overflow-hidden max-w-[200px] sm:max-w-[300px] md:max-w-[400px] lg:max-w-[500px] xl:max-w-[600px]'>
+              <Text.H5 color='foregroundMuted' noWrap ellipsis>
+                {currentCommit?.title ?? commitUuid}
+              </Text.H5>
+            </div>
             <ClickToCopy
               copyValue={currentCommit?.uuid ?? commitUuid}
               tooltipContent='Click to copy the version UUID'
