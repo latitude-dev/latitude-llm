@@ -6,23 +6,21 @@ import {
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
-  Span,
+  SpanType,
+  SpanWithDetails,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
-import { buildConversation } from '../../helpers'
 import { BadRequestError, UnprocessableEntityError } from '../../lib/errors'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import {
-  DocumentLogsRepository,
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
   SpansRepository,
 } from '../../repositories'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
-import { ProviderLogDto } from '../../schema/types'
 import { extractActualOutput } from './outputs/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { updateEvaluationResultV2 } from './results/update'
@@ -43,7 +41,7 @@ export async function annotateEvaluationV2<
     resultScore: number
     resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
     evaluation: EvaluationV2<T, M>
-    span: Span
+    span: SpanWithDetails<SpanType.Completion>
     commit: Commit
     workspace: Workspace
   },
@@ -68,25 +66,6 @@ export async function annotateEvaluationV2<
       documentUuid: evaluation.documentUuid,
     })
     .then((r) => r.unwrap())
-
-  if (!providerLog.documentLogUuid) {
-    return Result.error(
-      new BadRequestError('Provider log is not attached to a document log'),
-    )
-  }
-
-  const documentLogsRepository = new DocumentLogsRepository(workspace.id, db)
-  const documentLog = await documentLogsRepository
-    .findByUuid(providerLog.documentLogUuid)
-    .then((r) => r.unwrap())
-
-  if (documentLog.documentUuid !== document.documentUuid) {
-    return Result.error(
-      new UnprocessableEntityError(
-        'Cannot evaluate a log that is from a different document',
-      ),
-    )
-  }
 
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) {
@@ -127,17 +106,16 @@ export async function annotateEvaluationV2<
     value = (await typeSpecification.annotate(
       {
         metric: evaluation.metric,
-        resultUuid: resultUuid,
-        resultScore: resultScore,
-        resultMetadata: resultMetadata,
-        evaluation: evaluation,
-        actualOutput: actualOutput,
-        conversation: conversation,
-        providerLog: providerLog,
-        documentLog: documentLog,
-        document: document,
-        commit: commit,
-        workspace: workspace,
+        resultUuid,
+        resultScore,
+        resultMetadata,
+        evaluation,
+        actualOutput,
+        conversation,
+        span,
+        document,
+        commit,
+        workspace,
       },
       db,
     )) as EvaluationResultValue // Note: Typescript cannot resolve conditional types including unbound type arguments: https://github.com/microsoft/TypeScript/issues/53455
