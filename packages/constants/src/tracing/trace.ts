@@ -11,7 +11,7 @@ export const traceContextSchema = z.object({
 export type TraceContext = z.infer<typeof traceContextSchema>
 
 export type AssembledSpan<T extends SpanType = SpanType> = Span<T> & {
-  conversationId: string
+  conversationId?: string
   children: AssembledSpan[]
   depth: number
   startOffset: number
@@ -21,7 +21,7 @@ export type AssembledSpan<T extends SpanType = SpanType> = Span<T> & {
 // Note: full trace structure ready to be drawn, parts are ordered by timestamp
 export type AssembledTrace = {
   id: string
-  conversationId: string
+  conversationId?: string
   children: AssembledSpan[]
   spans: number
   duration: number

@@ -2,34 +2,28 @@
 
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { compact } from 'lodash-es'
 import { useMemo } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 import { AssembledTrace } from '@latitude-data/core/constants'
 
 export function useTrace(
   {
-    conversationId,
     traceId,
   }: {
-    conversationId: string
     traceId: string
   },
   opts?: SWRConfiguration,
 ) {
-  const route = ROUTES.api.conversations
-    .detail(conversationId)
-    .traces.detail(traceId).root
   const fetcher = useFetcher<AssembledTrace>(
-    conversationId && traceId ? route : undefined,
+    ROUTES.api.traces.detail(traceId).root,
     { fallback: null },
   )
 
   const {
     data = undefined,
+    isLoading,
     mutate,
-    ...rest
-  } = useSWR<AssembledTrace>(compact(route), fetcher, opts)
+  } = useSWR<AssembledTrace>(traceId, fetcher, opts)
 
-  return useMemo(() => ({ data, mutate, ...rest }), [data, mutate, rest])
+  return useMemo(() => ({ data, isLoading, mutate }), [data, isLoading, mutate])
 }

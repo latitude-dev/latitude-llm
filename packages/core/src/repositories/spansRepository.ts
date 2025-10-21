@@ -65,6 +65,31 @@ export class SpansRepository extends Repository<Span> {
 
     return result as string[]
   }
+
+  async findByDocumentAndCommit({
+    documentUuid,
+    commitUuid,
+    type = SpanType.Prompt,
+  }: {
+    documentUuid: string
+    commitUuid: string
+    type?: SpanType
+  }) {
+    const result = await this.db
+      .select(tt)
+      .from(spans)
+      .where(
+        and(
+          this.scopeFilter,
+          eq(spans.documentUuid, documentUuid),
+          eq(spans.commitUuid, commitUuid),
+          type ? eq(spans.type, type) : sql`1 = 1`,
+        ),
+      )
+      .orderBy(asc(spans.startedAt))
+
+    return Result.ok<Span[]>(result as Span[])
+  }
 }
 
 export class SpanMetadatasRepository {

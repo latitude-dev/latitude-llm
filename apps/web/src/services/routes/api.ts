@@ -4,6 +4,16 @@ import { type DocumentLogFilterOptions } from '@latitude-data/core/constants'
 type PaginationParameters = { page: number; pageSize: number }
 
 export const API_ROUTES = {
+  traces: {
+    detail: (traceId: string) => ({
+      root: `/api/traces/${traceId}`,
+      spans: {
+        detail: (spanId: string) => ({
+          root: `/api/traces/${traceId}/spans/${spanId}`,
+        }),
+      },
+    }),
+  },
   workspaces: {
     current: '/api/workspaces/current',
     available: '/api/workspaces/available',
@@ -412,24 +422,6 @@ export const API_ROUTES = {
       const conversationRoot = `/api/conversations/${conversationId}`
       return {
         root: conversationRoot,
-        traces: {
-          root: `${conversationRoot}/traces`,
-          detail: (traceId: string) => {
-            const traceRoot = `${conversationRoot}/traces/${traceId}`
-            return {
-              root: traceRoot,
-              spans: {
-                root: `${traceRoot}/spans`,
-                detail: (spanId: string) => {
-                  const spanRoot = `${traceRoot}/spans/${spanId}`
-                  return {
-                    root: spanRoot,
-                  }
-                },
-              },
-            }
-          },
-        },
       }
     },
   },

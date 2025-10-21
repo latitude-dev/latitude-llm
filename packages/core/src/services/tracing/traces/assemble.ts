@@ -8,11 +8,9 @@ import { type Workspace } from '../../../schema/models/types/Workspace'
 export async function assembleTrace(
   {
     traceId,
-    conversationId,
     workspace,
   }: {
     traceId: string
-    conversationId: string
     workspace: Workspace
   },
   db = database,
@@ -48,12 +46,11 @@ export async function assembleTrace(
     .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
 
   const assembledSpans = roots.map((span) =>
-    assembleSpan(span, 0, conversationId, startedAt, childrens),
+    assembleSpan(span, 0, startedAt, childrens),
   )
 
   const trace: AssembledTrace = {
     id: traceId,
-    conversationId: conversationId,
     children: assembledSpans,
     spans: spans.length,
     duration: duration,
@@ -67,7 +64,6 @@ export async function assembleTrace(
 function assembleSpan(
   span: Span,
   depth: number,
-  conversationId: string,
   startedAt: Date,
   childrens: Map<string, Span[]>,
 ): AssembledSpan {
@@ -77,12 +73,11 @@ function assembleSpan(
   const endOffset = span.endedAt.getTime() - startedAt.getTime()
 
   const assembledSpans = children.map((child) =>
-    assembleSpan(child, depth + 1, conversationId, startedAt, childrens),
+    assembleSpan(child, depth + 1, startedAt, childrens),
   )
 
   return {
     ...span,
-    conversationId: conversationId,
     children: assembledSpans,
     depth: depth,
     startOffset: startOffset,
