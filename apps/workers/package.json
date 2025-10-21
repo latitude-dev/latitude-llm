@@ -19,8 +19,6 @@
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "@latitude-data/telemetry": "workspace:*",
-    "@sentry/cli": "2.37.0",
-    "@sentry/node": "9.9.0",
     "@t3-oss/env-core": "*",
     "bullmq": "5.44.4",
     "dd-trace": "catalog:",

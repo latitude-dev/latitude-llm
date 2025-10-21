@@ -1,14 +1,14 @@
 import './workers/utils/tracer' // Has to be the first import
 
 import express from 'express'
+import {
+  captureException,
+  captureMessage,
+} from './workers/utils/captureException'
 import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js'
 import { ExpressAdapter } from '@bull-board/express'
 
-import {
-  captureException,
-  captureMessage,
-} from '@latitude-data/core/utils/workers/sentry'
 import { startWorkers } from './workers'
 import { setupSchedules } from './workers/schedule'
 import { env } from '@latitude-data/env'
@@ -99,5 +99,5 @@ process.on('uncaughtException', function (err) {
 })
 
 process.on('unhandledRejection', (reason: string) => {
-  captureMessage(reason)
+  captureMessage(reason, 'error')
 })
