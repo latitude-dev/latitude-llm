@@ -21,7 +21,7 @@
     "@latitude-data/telemetry": "workspace:*",
     "@t3-oss/env-core": "*",
     "bullmq": "5.44.4",
-    "dd-trace": "^5.69.0",
+    "dd-trace": "catalog:",
     "express": "4.21.2"
   },
   "devDependencies": {

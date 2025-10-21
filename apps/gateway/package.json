@@ -31,7 +31,7 @@
     "promptl-ai": "catalog:",
     "rate-limiter-flexible": "5.0.3",
     "zod": "catalog:",
-    "dd-trace": "^5.69.0"
+    "dd-trace": "catalog:"
   },
   "devDependencies": {
     "@datadog/datadog-ci": "catalog:",

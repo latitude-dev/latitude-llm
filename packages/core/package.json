@@ -201,7 +201,7 @@
     "@types/safe-regex": "^1.1.6",
     "@types/uuid": "^10.0.0",
     "@typescript/analyze-trace": "^0.10.1",
-    "dd-trace": "^5.69.0",
+    "dd-trace": "catalog:",
     "drizzle-kit": "catalog:",
     "eslint": "8",
     "eslint-plugin-drizzle": "^0.2.3",
@@ -214,6 +214,6 @@
     "yaml": "^2.4.5"
   },
   "peerDependencies": {
-    "dd-trace": "^5.69.0"
+    "dd-trace": "catalog:"
   }
 }
