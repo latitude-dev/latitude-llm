@@ -6,7 +6,7 @@ import { NotFoundError } from '../../../lib/errors'
 import { ExperimentsRepository } from '../../../repositories'
 import { isErrorRetryable } from '../../../services/evaluationsV2/run'
 import { BACKGROUND } from '../../../telemetry'
-import { captureException } from '../../../utils/workers/sentry'
+import { captureException } from '../../../utils/workers/datadog'
 import { queues } from '../../queues'
 import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
 import {

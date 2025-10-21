@@ -4,7 +4,7 @@ import { type DatabaseError } from 'pg'
 import { database, Database } from '../client'
 import { ConflictError, UnprocessableEntityError } from './errors'
 import { ErrorResult, Result, TypedResult } from './Result'
-import { captureException } from '@sentry/node'
+import { captureException } from '../utils/workers/datadog'
 
 export type PromisedResult<F, E extends Error = Error> = Promise<
   TypedResult<F, E>

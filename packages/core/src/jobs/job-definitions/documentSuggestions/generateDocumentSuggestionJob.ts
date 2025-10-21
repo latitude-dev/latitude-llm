@@ -8,7 +8,7 @@ import {
   EvaluationsV2Repository,
 } from '../../../repositories'
 import { generateDocumentSuggestion } from '../../../services/documentSuggestions'
-import { captureException } from '../../../utils/workers/sentry'
+import { captureException } from '../../../utils/workers/datadog'
 
 export type GenerateDocumentSuggestionJobData = {
   workspaceId: number
