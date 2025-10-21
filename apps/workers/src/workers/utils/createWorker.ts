@@ -1,6 +1,7 @@
 import { Queues } from '@latitude-data/core/queues/types'
 import { REDIS_KEY_PREFIX } from '@latitude-data/core/redis'
-import { captureException } from '@latitude-data/core/utils/workers/sentry'
+import { captureException } from './captureException'
+
 import { Worker, WorkerOptions } from 'bullmq'
 import { WORKER_OPTIONS } from './connectionConfig'
 import { createJobHandler } from './createJobHandler'
