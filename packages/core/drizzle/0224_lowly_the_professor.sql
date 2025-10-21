@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."evaluation_results_v2" ALTER COLUMN "evaluated_log_id" DROP NOT NULL;

@@ -8,6 +8,7 @@ import {
   jsonb,
   uniqueIndex,
   uuid,
+  varchar,
 } from 'drizzle-orm/pg-core'
 import {
   EvaluationResultError,
@@ -48,8 +49,9 @@ export const evaluationResultsV2 = latitudeSchema.table(
       { onDelete: 'set null' },
     ),
     evaluatedLogId: bigint('evaluated_log_id', { mode: 'number' })
-      .notNull()
       .references(() => providerLogs.id, { onDelete: 'cascade' }),
+    evaluatedSpanId: varchar('evaluated_span_id', { length: 16 }),
+    evaluatedTraceId: varchar('evaluated_trace_id', { length: 32 }),
     issueId: bigint('issue_id', { mode: 'number' }).references(
       (): AnyPgColumn => issues.id,
       { onDelete: 'set null' },
@@ -63,41 +65,34 @@ export const evaluationResultsV2 = latitudeSchema.table(
     usedForSuggestion: boolean('used_for_suggestion'),
     ...timestamps(),
   },
-  (table) => ({
-    workspaceIdIdx: index('evaluation_results_v2_workspace_id_idx').on(
-      table.workspaceId,
-    ),
-    commitIdIdx: index('evaluation_results_v2_commit_id_idx').on(
-      table.commitId,
-    ),
-    evaluationUuidIdx: index('evaluation_results_v2_evaluation_uuid_idx').on(
-      table.evaluationUuid,
-    ),
-    experimentIdIdx: index('evaluation_results_v2_experiment_id_idx').on(
-      table.experimentId,
-    ),
-    datasetIdIdx: index('evaluation_results_v2_dataset_id_idx').on(
-      table.datasetId,
-    ),
-    evaluatedRowIdIdx: index('evaluation_results_v2_evaluated_row_id_idx').on(
+  (table) => [
+    index('evaluation_results_v2_workspace_id_idx').on(table.workspaceId),
+    index('evaluation_results_v2_commit_id_idx').on(table.commitId),
+    index('evaluation_results_v2_evaluation_uuid_idx').on(table.evaluationUuid),
+    index('evaluation_results_v2_experiment_id_idx').on(table.experimentId),
+    index('evaluation_results_v2_dataset_id_idx').on(table.datasetId),
+    index('evaluation_results_v2_evaluated_row_id_idx').on(
       table.evaluatedRowId,
     ),
-    evaluatedLogIdIdx: index('evaluation_results_v2_evaluated_log_id_idx').on(
+    index('evaluation_results_v2_evaluated_log_id_idx').on(
       table.evaluatedLogId,
     ),
-    createdAtIdx: index('evaluation_results_v2_created_at_idx').on(
-      table.createdAt,
+    index('evaluation_results_v2_created_at_idx').on(table.createdAt),
+    index('evaluation_results_v2_commit_evaluation_idx').on(
+      table.commitId,
+      table.evaluationUuid,
     ),
-    commitEvaluationIdx: index(
-      'evaluation_results_v2_commit_evaluation_idx',
-    ).on(table.commitId, table.evaluationUuid),
-    uniqueEvaluatedLogIdEvaluationUuidIdx: uniqueIndex(
+    uniqueIndex(
       'evaluation_results_v2_unique_evaluated_log_id_evaluation_uuid_idx',
     ).on(table.evaluatedLogId, table.evaluationUuid),
-    issueIdIdx: index('evaluation_results_v2_issue_id_idx').on(table.issueId),
-    createdAtBrinIdx: index('evaluation_results_v2_created_at_brin_idx')
+    index('evaluation_results_v2_issue_id_idx').on(table.issueId),
+    index('evaluation_results_v2_span_trace_idx').on(
+      table.evaluatedSpanId,
+      table.evaluatedTraceId,
+    ),
+    index('evaluation_results_v2_created_at_brin_idx')
       .using('brin', sql`${table.createdAt}`)
       .with({ pages_per_range: 32, autosummarize: true })
       .concurrently(),
-  }),
+  ],
 )
