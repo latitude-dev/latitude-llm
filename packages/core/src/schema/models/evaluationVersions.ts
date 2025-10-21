@@ -54,23 +54,18 @@ export const evaluationVersions = latitudeSchema.table(
     ...timestamps(),
     deletedAt: timestamp('deleted_at'),
   },
-  (table) => ({
-    workspaceIdIdx: index('evaluation_versions_workspace_id_idx').on(
-      table.workspaceId,
-    ),
-    uniqueCommitIdEvaluationUuid: uniqueIndex(
-      'evaluation_versions_unique_commit_id_evaluation_uuid',
-    ).on(table.commitId, table.evaluationUuid),
-    uniqueNameCommitIdDocumentUuidDeletedAt: uniqueIndex(
-      'evaluation_versions_unique_name_commit_id_document_uuid_deleted_at',
-    ).on(table.name, table.commitId, table.documentUuid, table.deletedAt),
-    commitIdIdx: index('evaluation_versions_commit_id_idx').on(table.commitId),
-    evaluationUuidIdx: index('evaluation_versions_evaluation_uuid_idx').on(
+  (table) => [
+    index('evaluation_versions_workspace_id_idx').on(table.workspaceId),
+    uniqueIndex('evaluation_versions_unique_commit_id_evaluation_uuid').on(
+      table.commitId,
       table.evaluationUuid,
     ),
-    documentUuidIdx: index('evaluation_versions_document_uuid_idx').on(
-      table.documentUuid,
-    ),
-    issueIdIdx: index('evaluation_v2_issue_id_idx').on(table.issueId),
-  }),
+    uniqueIndex(
+      'evaluation_versions_unique_name_commit_id_document_uuid_deleted_at',
+    ).on(table.name, table.commitId, table.documentUuid, table.deletedAt),
+    index('evaluation_versions_commit_id_idx').on(table.commitId),
+    index('evaluation_versions_evaluation_uuid_idx').on(table.evaluationUuid),
+    index('evaluation_versions_document_uuid_idx').on(table.documentUuid),
+    index('evaluation_v2_issue_id_idx').on(table.issueId),
+  ],
 )

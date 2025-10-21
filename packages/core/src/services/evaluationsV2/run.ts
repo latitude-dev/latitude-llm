@@ -20,6 +20,7 @@ import {
   DocumentLogsRepository,
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
+  SpansRepository,
 } from '../../repositories'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Dataset } from '../../schema/models/types/Dataset'
@@ -181,6 +182,21 @@ export async function runEvaluationV2<
 
   return transaction.call(
     async () => {
+      // Look up the span for this providerLog
+      let evaluatedSpanId: string | undefined
+      let evaluatedTraceId: string | undefined
+      if (providerLog.documentLogUuid) {
+        const spansRepository = new SpansRepository(workspace.id)
+        const spanResult = await spansRepository.findByDocumentLogUuid(
+          providerLog.documentLogUuid,
+        )
+        if (spanResult.ok) {
+          const span = spanResult.value!
+          evaluatedSpanId = span.id
+          evaluatedTraceId = span.traceId
+        }
+      }
+
       const { result } = await createEvaluationResultV2(
         {
           uuid: resultUuid,
@@ -192,6 +208,8 @@ export async function runEvaluationV2<
           datasetRow: datasetRow,
           value: value as EvaluationResultValue<T, M>,
           workspace: workspace,
+          evaluatedSpanId: evaluatedSpanId,
+          evaluatedTraceId: evaluatedTraceId,
         },
         transaction,
       ).then((r) => r.unwrap())

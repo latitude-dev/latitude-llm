@@ -6,6 +6,7 @@ import {
   EvaluationResultValue,
   EvaluationType,
   EvaluationV2,
+  Span,
 } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { buildConversation } from '../../helpers'
@@ -17,6 +18,7 @@ import {
   DocumentLogsRepository,
   DocumentVersionsRepository,
   EvaluationResultsV2Repository,
+  SpansRepository,
 } from '../../repositories'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type Workspace } from '../../schema/models/types/Workspace'
@@ -34,14 +36,14 @@ export async function annotateEvaluationV2<
     resultScore,
     resultMetadata,
     evaluation,
-    providerLog,
+    span,
     commit,
     workspace,
   }: {
     resultScore: number
     resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
     evaluation: EvaluationV2<T, M>
-    providerLog: ProviderLogDto
+    span: Span
     commit: Commit
     workspace: Workspace
   },
@@ -49,8 +51,9 @@ export async function annotateEvaluationV2<
 ) {
   const resultsRepository = new EvaluationResultsV2Repository(workspace.id, db)
   const existingResult =
-    await resultsRepository.findByEvaluatedLogAndEvaluation({
-      evaluatedLogId: providerLog.id,
+    await resultsRepository.findByEvaluatedSpanAndEvaluation({
+      evaluatedSpanId: span.id,
+      evaluatedTraceId: span.traceId,
       evaluationUuid: evaluation.uuid,
     })
 
@@ -169,6 +172,21 @@ export async function annotateEvaluationV2<
         ).then((r) => r.unwrap())
         result = updatedResult
       } else {
+        // Look up the span for this providerLog
+        let evaluatedSpanId: string | undefined
+        let evaluatedTraceId: string | undefined
+        if (providerLog.documentLogUuid) {
+          const spansRepository = new SpansRepository(workspace.id)
+          const spanResult = await spansRepository.findByDocumentLogUuid(
+            providerLog.documentLogUuid,
+          )
+          if (spanResult.ok) {
+            const span = spanResult.value!
+            evaluatedSpanId = span.id
+            evaluatedTraceId = span.traceId
+          }
+        }
+
         const { result: createdResult } = await createEvaluationResultV2(
           {
             uuid: resultUuid,
@@ -177,6 +195,8 @@ export async function annotateEvaluationV2<
             commit: commit,
             value: value as EvaluationResultValue<T, M>,
             workspace: workspace,
+            evaluatedSpanId: evaluatedSpanId,
+            evaluatedTraceId: evaluatedTraceId,
           },
           transaction,
         ).then((r) => r.unwrap())

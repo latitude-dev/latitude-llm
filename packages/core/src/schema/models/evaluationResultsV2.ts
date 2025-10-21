@@ -48,8 +48,10 @@ export const evaluationResultsV2 = latitudeSchema.table(
       () => datasetRows.id,
       { onDelete: 'set null' },
     ),
-    evaluatedLogId: bigint('evaluated_log_id', { mode: 'number' })
-      .references(() => providerLogs.id, { onDelete: 'cascade' }),
+    evaluatedLogId: bigint('evaluated_log_id', { mode: 'number' }).references(
+      () => providerLogs.id,
+      { onDelete: 'cascade' },
+    ),
     evaluatedSpanId: varchar('evaluated_span_id', { length: 16 }),
     evaluatedTraceId: varchar('evaluated_trace_id', { length: 32 }),
     issueId: bigint('issue_id', { mode: 'number' }).references(

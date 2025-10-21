@@ -65,6 +65,19 @@ export class SpansRepository extends Repository<Span> {
 
     return result as string[]
   }
+
+  async findByDocumentLogUuid(documentLogUuid: string) {
+    const result = await this.db
+      .select(tt)
+      .from(spans)
+      .where(and(this.scopeFilter, eq(spans.documentLogUuid, documentLogUuid)))
+      .orderBy(desc(spans.startedAt))
+      .limit(1)
+      .then((r) => r[0])
+
+    if (!result) return Result.nil()
+    return Result.ok<Span>(result as Span)
+  }
 }
 
 export class SpanMetadatasRepository {

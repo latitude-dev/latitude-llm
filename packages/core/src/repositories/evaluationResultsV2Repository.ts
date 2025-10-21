@@ -35,6 +35,7 @@ import { datasetRows } from '../schema/models/datasetRows'
 import { datasets } from '../schema/models/datasets'
 import { evaluationResultsV2 } from '../schema/models/evaluationResultsV2'
 import { providerLogs } from '../schema/models/providerLogs'
+import { spans } from '../schema/models/spans'
 import {
   EvaluationResultV2WithDetails,
   EvaluationV2Stats,
@@ -117,6 +118,38 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok<EvaluationResultV2>(result as EvaluationResultV2)
   }
 
+  async findByEvaluatedSpanAndEvaluation({
+    evaluatedSpanId,
+    evaluatedTraceId,
+    evaluationUuid,
+  }: {
+    evaluatedSpanId: string
+    evaluatedTraceId: string
+    evaluationUuid: string
+  }) {
+    const result = await this.scope
+      .where(
+        and(
+          this.scopeFilter,
+          eq(evaluationResultsV2.evaluatedSpanId, evaluatedSpanId),
+          eq(evaluationResultsV2.evaluatedTraceId, evaluatedTraceId),
+          eq(evaluationResultsV2.evaluationUuid, evaluationUuid),
+        ),
+      )
+      .limit(1)
+      .then((r) => r[0])
+
+    if (!result) {
+      return Result.error(
+        new NotFoundError(
+          `Record with evaluatedSpanId ${evaluatedSpanId}, evaluatedTraceId ${evaluatedTraceId} and evaluationUuid ${evaluationUuid} not found in ${this.scope._.tableName}`,
+        ),
+      )
+    }
+
+    return Result.ok<EvaluationResultV2>(result as EvaluationResultV2)
+  }
+
   listByEvaluationFilter({
     evaluationUuid,
     params: { filters },
@@ -176,6 +209,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         dataset: datasets,
         evaluatedRow: datasetRows,
         evaluatedLog: providerLogs,
+        evaluatedSpan: spans,
       })
       .from(evaluationResultsV2)
       .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
@@ -184,9 +218,16 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         datasetRows,
         eq(datasetRows.id, evaluationResultsV2.evaluatedRowId),
       )
-      .innerJoin(
+      .leftJoin(
         providerLogs,
         eq(providerLogs.id, evaluationResultsV2.evaluatedLogId),
+      )
+      .leftJoin(
+        spans,
+        and(
+          eq(spans.id, evaluationResultsV2.evaluatedSpanId),
+          eq(spans.traceId, evaluationResultsV2.evaluatedTraceId),
+        ),
       )
       .where(filter)
       .$dynamic()

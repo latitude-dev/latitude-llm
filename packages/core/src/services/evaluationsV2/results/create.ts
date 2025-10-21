@@ -31,6 +31,8 @@ export async function createEvaluationResultV2<
     value,
     usedForSuggestion,
     workspace,
+    evaluatedSpanId,
+    evaluatedTraceId,
   }: {
     uuid?: string
     evaluation: EvaluationV2<T, M>
@@ -42,6 +44,8 @@ export async function createEvaluationResultV2<
     value: EvaluationResultValue<T, M>
     usedForSuggestion?: boolean
     workspace: Workspace
+    evaluatedSpanId?: string
+    evaluatedTraceId?: string
   },
   transaction = new Transaction(),
 ) {
@@ -57,6 +61,8 @@ export async function createEvaluationResultV2<
         datasetId: dataset?.id,
         evaluatedRowId: datasetRow?.id,
         evaluatedLogId: providerLog.id,
+        evaluatedSpanId: evaluatedSpanId,
+        evaluatedTraceId: evaluatedTraceId,
         ...value,
         usedForSuggestion: usedForSuggestion,
       })
