@@ -1,5 +1,6 @@
 import { useCurrentDocumentMaybe } from '$/app/providers/DocumentProvider'
 import { useLatteChangeActions } from '$/hooks/latte/useLatteChangeActions'
+import { useLatteDebugMode } from '$/hooks/latte/useLatteDebugMode'
 import { useDocumentValueMaybe } from '$/hooks/useDocumentValueContext'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
@@ -71,6 +72,7 @@ export function LatteChatInput({
     threadUuid,
     commitId: commit.id,
   })
+  const { enabled: debugModeEnabled, data: debugData } = useLatteDebugMode()
   const checkpoint = useMemo(() => {
     return checkpoints?.find((cp) => cp.documentUuid === document.documentUuid)
   }, [checkpoints, document])
@@ -80,6 +82,9 @@ export function LatteChatInput({
   const [value, setValue] = useState('')
   const [action, setAction] = useState<'accept' | 'undo'>('accept')
   const feedbackRequested = !!latteActionsFeedbackUuid
+
+  const isDebugSelectorVisible =
+    !inConversation && debugModeEnabled && debugData.length > 0
   const handleValueChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value
@@ -160,10 +165,11 @@ export function LatteChatInput({
       <TextArea
         ref={inputRef}
         className={cn(
-          'bg-background w-full px-3 pt-3 pb-14 resize-none text-sm border-none',
+          'bg-background w-full px-3 pt-3 resize-none text-sm border-none',
           'shadow-sm text-muted-foreground',
           'ring-0 focus-visible:ring-0 outline-none focus-visible:outline-none',
           'focus-visible:animate-glow focus-visible:glow-latte custom-scrollbar scrollable-indicator',
+          isDebugSelectorVisible ? 'pb-18' : 'pb-14',
         )}
         placeholder={
           inConversation

@@ -19,6 +19,9 @@ export default {
       mono: ['var(--font-mono)'],
     },
     extend: {
+      spacing: {
+        18: '72px',
+      },
       colors: {
         border: 'hsl(var(--border) / <alpha-value>)',
         input: 'hsl(var(--input) / <alpha-value>)',
