@@ -54,7 +54,7 @@ function ComponentPickerMenuItem({
       key={option.key}
       tabIndex={-1}
       className={cn(
-        'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors',
+        'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-base outline-none transition-colors',
         'gap-x-2 cursor-pointer',
         {
           'bg-accent': isSelected,
