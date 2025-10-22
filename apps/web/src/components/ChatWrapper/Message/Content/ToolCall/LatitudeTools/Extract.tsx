@@ -63,14 +63,14 @@ export function WebExtractLatitudeToolCard({
                 {markdownContent ? (
                   <Markdown>{markdownContent}</Markdown>
                 ) : (
-                  <Text.H6 color='foregroundMuted'>No content</Text.H6>
+                  <Text.H5 color='foregroundMuted'>No content</Text.H5>
                 )}
               </div>
             )
           ) : (
             <div className='flex flex-row gap-2 items-center justify-center pb-3'>
               <Icon name='loader' color='foregroundMuted' spin />
-              <Text.H6 color='foregroundMuted'>Loading page...</Text.H6>
+              <Text.H5 color='foregroundMuted'>Loading page...</Text.H5>
             </div>
           )}
         </ToolCardContentWrapper>

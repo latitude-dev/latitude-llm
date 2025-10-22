@@ -44,7 +44,7 @@ export function ToolCardHeader({
 }) {
   return (
     <div
-      className='sticky top-0 flex flex-row w-full bg-secondary hover:bg-secondary/80 cursor-pointer items-center p-3 gap-3 pr-4'
+      className='sticky top-0 flex flex-row w-full bg-secondary hover:bg-secondary/80 cursor-pointer items-center p-2 gap-3 pr-3'
       onClick={onToggle}
     >
       <div className='flex min-w-8 h-8 rounded-xl bg-background items-center justify-center border border-border relative'>

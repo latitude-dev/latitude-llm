@@ -24,7 +24,7 @@ function TodoItem({ item }: { item: TodoListItem }) {
 
   return (
     <div className='flex gap-2 items-start'>
-      <Icon name={icon} color={color} />
+      <Icon name={icon} color={color} className='min-w-4' />
       <Text.H5 lineThrough={item.status === 'cancelled'} color={color}>
         {item.content}
       </Text.H5>

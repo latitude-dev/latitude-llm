@@ -21,6 +21,8 @@ interface IMessageContent {
 export type ReasoningContent = IMessageContent & {
   type: 'reasoning'
   text: string
+  id?: string
+  isStreaming?: boolean
 }
 export type RedactedReasoningContent = IMessageContent & {
   type: 'redacted-reasoning'

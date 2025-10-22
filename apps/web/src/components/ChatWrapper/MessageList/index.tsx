@@ -7,7 +7,7 @@ import {
   ToolMessage,
 } from '@latitude-data/constants/legacyCompiler'
 
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { Message } from '..'
 import { useToolContentMap } from '@latitude-data/web-ui/hooks/useToolContentMap'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -32,19 +32,18 @@ export const MessageList = memo(
   ({
     messages,
     parameters,
-    collapseParameters,
+    debugMode,
     toolContentMap: _toolContentMap,
   }: {
     messages: ConversationMessage[]
     parameters?: string[]
-    collapseParameters?: boolean
+    debugMode?: boolean
     toolContentMap?: Record<string, ToolContent>
   }) => {
     const toolContentMap = useToolContentMap(messages, _toolContentMap)
-
-    return (
-      <div className='flex flex-col gap-4'>
-        {messages.map((message, index) => {
+    const displayableMessages = useMemo(
+      () =>
+        messages.filter((message) => {
           if (
             toolContentMap &&
             message.role === MessageRole.tool &&
@@ -52,20 +51,33 @@ export const MessageList = memo(
           ) {
             // If a tool message comes from an existing tool request, we won't render the tool
             // message here, since the response will be rendered in the tool request itself.
-            return null
+            return false
           }
+          return true
+        }),
+      [messages, toolContentMap],
+    )
 
+    return (
+      <div className='flex flex-col'>
+        {displayableMessages.map((message, index) => {
           return (
             <Message
               key={index}
               role={message.role}
               content={message.content}
               parameters={parameters}
-              collapseParameters={collapseParameters}
+              debugMode={debugMode}
               toolContentMap={toolContentMap}
               isGeneratingToolCall={
                 message.role === MessageRole.assistant &&
                 message._isGeneratingToolCall
+              }
+              additionalAssistantMessage={
+                // If this is an additional assistant message, added to a previous assistant message
+                index > 0 &&
+                message.role === MessageRole.assistant &&
+                messages[index - 1].role === MessageRole.assistant
               }
             />
           )

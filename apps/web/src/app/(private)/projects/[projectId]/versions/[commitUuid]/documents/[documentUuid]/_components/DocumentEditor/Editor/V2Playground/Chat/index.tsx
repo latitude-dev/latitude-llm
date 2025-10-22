@@ -6,10 +6,10 @@ import { memo, useMemo } from 'react'
 import Actions, { ActionsState } from './Actions'
 
 export default function Chat({
-  expandParameters,
+  debugMode,
   parameters,
   playground,
-  setExpandParameters,
+  setDebugMode,
   showHeader,
 }: {
   parameters: Record<string, unknown> | undefined
@@ -25,31 +25,25 @@ export default function Chat({
   return (
     <div className='w-full flex flex-col flex-1'>
       {showHeader && (
-        <Header
-          expandParameters={expandParameters}
-          setExpandParameters={setExpandParameters}
-        />
+        <Header debugMode={debugMode} setDebugMode={setDebugMode} />
       )}
 
       <Messages
         messages={playground.messages}
         error={playground.error}
         parameterKeys={parameterKeys}
-        expandParameters={expandParameters ?? true} // by default, we show the parameters
+        debugMode={debugMode ?? false}
         toolContentMap={toolContentMap}
       />
     </div>
   )
 }
 
-function Header({ expandParameters, setExpandParameters }: ActionsState) {
+function Header({ debugMode, setDebugMode }: ActionsState) {
   return (
     <div className='flex flex-row items-center justify-between w-full pb-3'>
       <Text.H6M>Prompt</Text.H6M>
-      <Actions
-        expandParameters={expandParameters}
-        setExpandParameters={setExpandParameters}
-      />
+      <Actions debugMode={debugMode} setDebugMode={setDebugMode} />
     </div>
   )
 }
@@ -58,13 +52,13 @@ const Messages = memo(function Messages({
   messages,
   error,
   parameterKeys,
-  expandParameters,
+  debugMode,
   toolContentMap,
 }: {
   messages: ReturnType<typeof usePlaygroundChat>['messages']
   error: ReturnType<typeof usePlaygroundChat>['error']
   parameterKeys: string[]
-  expandParameters: boolean
+  debugMode: boolean
   toolContentMap: ReturnType<typeof useToolContentMap>
 }) {
   return (
@@ -72,7 +66,7 @@ const Messages = memo(function Messages({
       <MessageList
         messages={messages}
         parameters={parameterKeys}
-        collapseParameters={!expandParameters}
+        debugMode={debugMode}
         toolContentMap={toolContentMap}
       />
 

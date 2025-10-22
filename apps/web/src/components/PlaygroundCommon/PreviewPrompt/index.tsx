@@ -54,8 +54,8 @@ export default function PreviewPrompt({
   metadata,
   parameters,
   runPrompt,
-  expandParameters,
-  setExpandParameters,
+  debugMode,
+  setDebugMode,
   actions,
   showHeader,
 }: {
@@ -79,10 +79,7 @@ export default function PreviewPrompt({
       {showHeader ? (
         <div className='flex flex-row items-center justify-between w-full'>
           <Text.H6M>Preview</Text.H6M>
-          <Actions
-            expandParameters={expandParameters}
-            setExpandParameters={setExpandParameters}
-          />
+          <Actions debugMode={debugMode} setDebugMode={setDebugMode} />
         </div>
       ) : null}
       <div
@@ -99,7 +96,7 @@ export default function PreviewPrompt({
               role={message.role}
               content={message.content}
               parameters={Object.keys(parameters ?? {})}
-              collapseParameters={!expandParameters}
+              debugMode={debugMode}
             />
           ))}
         </div>

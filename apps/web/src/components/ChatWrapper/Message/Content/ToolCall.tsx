@@ -13,7 +13,7 @@ import { ProviderToolCard } from './ToolCall/Provider'
 import { LatitudeToolCard } from './ToolCall/LatitudeTool'
 import { ClientToolCard } from './ToolCall/Client'
 
-export function ToolCallContent({
+export function ToolCallMessageContent({
   toolRequest,
   toolContentMap,
 }: {

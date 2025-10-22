@@ -143,14 +143,14 @@ export function WebSearchLatitudeToolCard({
                     <WebSearchResult key={index} result={result} />
                   ))
                 ) : (
-                  <Text.H6 color='foregroundMuted'>No results found</Text.H6>
+                  <Text.H5 color='foregroundMuted'>No results found</Text.H5>
                 )}
               </div>
             )
           ) : (
             <div className='flex flex-row gap-2 items-center justify-center pb-3'>
               <Icon name='loader' color='foregroundMuted' spin />
-              <Text.H6 color='foregroundMuted'>Searching...</Text.H6>
+              <Text.H5 color='foregroundMuted'>Searching...</Text.H5>
             </div>
           )}
         </ToolCardContentWrapper>

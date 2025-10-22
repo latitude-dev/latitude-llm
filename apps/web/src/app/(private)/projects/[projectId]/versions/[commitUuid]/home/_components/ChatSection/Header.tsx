@@ -17,14 +17,14 @@ function ChatSectionHeaderWrapper({
   icon,
   onClose,
   children,
-  expandParameters,
-  setExpandParameters,
+  debugMode,
+  setDebugMode,
 }: {
   icon: ReactNode
   onClose: () => void
   children: ReactNode
-  expandParameters: boolean
-  setExpandParameters: (expand: boolean) => void
+  debugMode: boolean
+  setDebugMode: (debugMode: boolean) => void
 }) {
   return (
     <div className='sticky top-0 w-full max-w-[800px] flex flex-col bg-background z-10'>
@@ -42,10 +42,7 @@ function ChatSectionHeaderWrapper({
             <Icon name='chevronUp' color='foregroundMuted' />
           </div>
 
-          <ChatActions
-            expandParameters={expandParameters}
-            setExpandParameters={setExpandParameters}
-          />
+          <ChatActions debugMode={debugMode} setDebugMode={setDebugMode} />
         </div>
       </Button>
       <Separator variant='dashed' />
@@ -55,13 +52,13 @@ function ChatSectionHeaderWrapper({
 
 function TriggerChatHeader({
   activeTrigger,
-  expandParameters,
-  setExpandParameters,
+  debugMode,
+  setDebugMode,
   onClose,
 }: {
   activeTrigger: DocumentTrigger
-  expandParameters: boolean
-  setExpandParameters: (expand: boolean) => void
+  debugMode: boolean
+  setDebugMode: (debugMode: boolean) => void
   onClose: () => void
 }) {
   const { project } = useCurrentProject()
@@ -88,8 +85,8 @@ function TriggerChatHeader({
     <ChatSectionHeaderWrapper
       icon={image}
       onClose={onClose}
-      expandParameters={expandParameters}
-      setExpandParameters={setExpandParameters}
+      debugMode={debugMode}
+      setDebugMode={setDebugMode}
     >
       <div className='flex flex-col gap-0'>
         <Text.H5M>{title}</Text.H5M>
@@ -101,13 +98,13 @@ function TriggerChatHeader({
 
 export function ChatSectionHeader({
   activeTrigger,
-  expandParameters,
-  setExpandParameters,
+  debugMode,
+  setDebugMode,
   onClose,
 }: {
   activeTrigger?: DocumentTrigger
-  expandParameters: boolean
-  setExpandParameters: (expand: boolean) => void
+  debugMode: boolean
+  setDebugMode: (debugMode: boolean) => void
   onClose: () => void
 }) {
   const { project } = useCurrentProject()
@@ -121,8 +118,8 @@ export function ChatSectionHeader({
       <TriggerChatHeader
         activeTrigger={activeTrigger}
         onClose={onClose}
-        expandParameters={expandParameters}
-        setExpandParameters={setExpandParameters}
+        debugMode={debugMode}
+        setDebugMode={setDebugMode}
       />
     )
   }
@@ -131,8 +128,8 @@ export function ChatSectionHeader({
     <ChatSectionHeaderWrapper
       icon={<Text.H3>{emoji ?? '🤖'}</Text.H3>}
       onClose={onClose}
-      expandParameters={expandParameters}
-      setExpandParameters={setExpandParameters}
+      debugMode={debugMode}
+      setDebugMode={setDebugMode}
     >
       <Text.H4M>{title}</Text.H4M>
     </ChatSectionHeaderWrapper>

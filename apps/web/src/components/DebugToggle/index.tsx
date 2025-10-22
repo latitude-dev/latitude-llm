@@ -1,7 +1,7 @@
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { IconToggle } from '@latitude-data/web-ui/molecules/IconToggle'
 
-export default function ReadingToggle({
+export default function DebugToggle({
   enabled,
   setEnabled,
 }: {
@@ -18,13 +18,13 @@ export default function ReadingToggle({
           <IconToggle
             enabled={enabled ?? false}
             setEnabled={setEnabled ?? (() => {})}
-            enabledIcon='baseline'
-            disabledIcon='braces'
+            enabledIcon='braces'
+            disabledIcon='baseline'
           />
         </div>
       }
     >
-      {enabled ? 'Switch to debug mode' : 'Switch to reading mode'}
+      {enabled ? 'Switch to reading mode' : 'Switch to debug mode'}
     </Tooltip>
   )
 }
