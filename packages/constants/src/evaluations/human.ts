@@ -6,6 +6,7 @@ import {
 } from './shared'
 
 const humanEvaluationConfiguration = baseEvaluationConfiguration.extend({
+  enableControls: z.boolean().optional(),
   criteria: z.string().optional(),
 })
 const humanEvaluationResultMetadata = baseEvaluationResultMetadata.extend({

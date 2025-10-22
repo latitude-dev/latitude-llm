@@ -82,6 +82,7 @@ async function validate(
     reverseScale: configuration.reverseScale,
     actualOutput: configuration.actualOutput,
     expectedOutput: configuration.expectedOutput,
+    enableControls: configuration.enableControls,
     criteria: configuration.criteria,
     minRating: configuration.minRating,
     minRatingDescription: configuration.minRatingDescription,

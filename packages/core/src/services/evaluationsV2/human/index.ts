@@ -1,6 +1,8 @@
+import { z } from 'zod'
 import { database } from '../../../client'
 import {
   EvaluationType,
+  EvaluationV2,
   HumanEvaluationMetric,
   HumanEvaluationSpecification as specification,
 } from '../../../constants'
@@ -33,6 +35,7 @@ async function validate<M extends HumanEvaluationMetric>(
   {
     metric,
     configuration,
+    evaluations,
     ...rest
   }: EvaluationMetricValidateArgs<EvaluationType.Human, M> & {
     metric: M
@@ -49,10 +52,30 @@ async function validate<M extends HumanEvaluationMetric>(
     return Result.error(parsing.error)
   }
 
+  if (configuration.enableControls) {
+    const existing = evaluations.find(
+      (e) =>
+        e.type === EvaluationType.Human &&
+        (e as EvaluationV2<EvaluationType.Human>).configuration.enableControls,
+    )
+
+    if (existing) {
+      return Result.error(
+        new z.ZodError([
+          {
+            code: 'custom',
+            path: ['enableControls'],
+            message: `${existing.name} evaluation already has annotation controls enabled`,
+          },
+        ]),
+      )
+    }
+  }
+
   configuration.criteria = configuration.criteria?.trim()
 
   const validation = await metricSpecification.validate(
-    { configuration, ...rest },
+    { configuration, evaluations, ...rest },
     db,
   )
   if (validation.error) {

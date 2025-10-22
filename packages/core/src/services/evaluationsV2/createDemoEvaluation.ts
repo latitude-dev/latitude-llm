@@ -52,6 +52,7 @@ export async function createDemoEvaluation(
             expectedOutput: {
               parsingFormat: 'string',
             },
+            enableControls: true,
             criteria:
               'Assess how well the response follows the expected behavior.',
             passDescription: 'Perfect response, does follow the instructions.',

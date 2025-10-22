@@ -29,6 +29,7 @@ export type EvaluationMetricValidateArgs<
   mode: 'create' | 'update'
   configuration: EvaluationConfiguration<T, M>
   document: DocumentVersion
+  evaluations: EvaluationV2[]
   commit: Commit
   workspace: Workspace
 }

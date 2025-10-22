@@ -42,6 +42,16 @@ export async function validateEvaluationV2<
   },
   db = database,
 ) {
+  const repository = new EvaluationsV2Repository(workspace.id, db)
+  const listing = await repository.listAtCommitByDocument({
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+  })
+  if (listing.error) {
+    return Result.error(listing.error)
+  }
+  const evaluations = listing.value.filter((e) => e.uuid !== evaluation?.uuid)
+
   if (mode === 'update' && !evaluation) {
     return Result.error(
       new BadRequestError('Evaluation is required to update from'),
@@ -99,6 +109,7 @@ export async function validateEvaluationV2<
       mode: mode,
       metric: settings.metric,
       configuration: settings.configuration,
+      evaluations: evaluations,
       document: document,
       commit: commit,
       workspace: workspace,
@@ -115,21 +126,7 @@ export async function validateEvaluationV2<
     expectedOutput: settings.configuration.expectedOutput,
   }
 
-  const repository = new EvaluationsV2Repository(workspace.id, db)
-  const listing = await repository.listAtCommitByDocument({
-    commitUuid: commit.uuid,
-    documentUuid: document.documentUuid,
-  })
-  if (listing.error) {
-    return Result.error(listing.error)
-  }
-  const evaluations = listing.value
-
-  if (
-    evaluations.find(
-      (e) => e.name === settings.name && e.uuid !== evaluation?.uuid,
-    )
-  ) {
+  if (evaluations.find((e) => e.name === settings.name)) {
     return Result.error(
       new z.ZodError([
         {
