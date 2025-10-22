@@ -49,7 +49,7 @@ function confirmDescription({
     return `There are triggers that needs to be configured before publishing.`
   }
 
-  return 'Publishing a new version will update all your prompts in production.'
+  return 'Publishing a new version is reversible and doesnt remove previous versions! You can always go back to use previous version if needed.'
 }
 
 export default function PublishDraftCommitModal({
@@ -103,7 +103,7 @@ export default function PublishDraftCommitModal({
       type={hasErrors ? 'destructive' : 'default'}
       open={!!commit}
       title='Publish new version'
-      description='Publishing the version will lock the contents of all prompts. Review the changes carefully before publishing.'
+      description='Publish a new version of the project to create a checkpoint of the current state of the project, including all prompts and triggers.'
       onOpenChange={() => onClose(null)}
       onConfirm={() =>
         publishDraft({
@@ -114,7 +114,7 @@ export default function PublishDraftCommitModal({
         })
       }
       confirm={{
-        label: isLoading ? 'Validating...' : 'Publish to production',
+        label: isLoading ? 'Validating...' : 'Publish new version',
         description: confirmDescription({ isLoading, changes, title }),
         disabled:
           isLoading ||

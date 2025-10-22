@@ -222,7 +222,7 @@ export default function CommitSelector({
           fullWidth
           onClick={() => setPublishCommit(currentCommit.id)}
         >
-          Publish
+          Publish new version
         </Button>
       ) : null}
       {currentCommit.mergedAt ? (

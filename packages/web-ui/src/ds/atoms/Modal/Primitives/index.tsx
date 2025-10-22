@@ -191,6 +191,15 @@ const DialogDescription = forwardRef<
 
 DialogDescription.displayName = DialogPrimitive.Description.displayName
 
+const DialogWarningDescription = forwardRef<
+  ElementRef<typeof DialogPrimitive.Description>,
+  DialogDescriptionProps
+>(({ children, ...props }, ref) => (
+  <DialogPrimitive.Description ref={ref} className='text-sm' {...props}>
+    <Text.H5 color='warningMutedForeground'>{children}</Text.H5>
+  </DialogPrimitive.Description>
+))
+
 export {
   Dialog,
   DialogPortal,
@@ -202,4 +211,5 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
+  DialogWarningDescription,
 }

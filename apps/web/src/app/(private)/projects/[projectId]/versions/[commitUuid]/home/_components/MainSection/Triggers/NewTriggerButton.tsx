@@ -21,7 +21,7 @@ export function NewTriggerButton() {
         size='xl'
         height='screen'
         title='Add new trigger'
-        description='Add a new trigger to run this project automatically'
+        warningDescription='Triggers run automatically only after the project version is published'
         onOpenChange={onCloseModal}
       >
         <NewTrigger onTriggerCreated={onTriggerCreated} />
