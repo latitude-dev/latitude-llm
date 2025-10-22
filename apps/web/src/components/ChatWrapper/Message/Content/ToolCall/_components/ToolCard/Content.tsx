@@ -8,6 +8,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { stringifyUnknown } from '@latitude-data/web-ui/textUtils'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ReactNode, useEffect, useRef, useState } from 'react'
 
@@ -95,15 +96,10 @@ export function ToolCardInput({
   return (
     <ToolCardContentWrapper badge='Input'>
       <CodeBlock language='json'>
-        {JSON.stringify(toolRequest.args, null, 2)}
+        {stringifyUnknown(toolRequest.args)}
       </CodeBlock>
     </ToolCardContentWrapper>
   )
-}
-
-function toString(val: unknown): string {
-  if (typeof val === 'string') return val
-  return JSON.stringify(val, null, 2)
 }
 
 export function ToolCardOutput({
@@ -119,11 +115,13 @@ export function ToolCardOutput({
             <Alert
               variant='destructive'
               title='Error'
-              description={toString(toolResponse.result)}
+              description={stringifyUnknown(toolResponse.result)}
             />
           </div>
         ) : (
-          <CodeBlock language='json'>{toString(toolResponse.result)}</CodeBlock>
+          <CodeBlock language='json'>
+            {stringifyUnknown(toolResponse.result)}
+          </CodeBlock>
         )
       ) : (
         <div className='flex flex-row gap-2 items-center justify-center pb-3'>

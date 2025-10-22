@@ -16,9 +16,11 @@ import { ClientToolCard } from './ToolCall/Client'
 export function ToolCallMessageContent({
   toolRequest,
   toolContentMap,
+  debugMode,
 }: {
   toolRequest: ToolRequestContent
   toolContentMap?: Record<string, ToolContent>
+  debugMode?: boolean
 }) {
   const toolResponse = useMemo(
     () => toolContentMap?.[toolRequest.toolCallId],
@@ -38,6 +40,7 @@ export function ToolCallMessageContent({
         toolResponse={toolResponse}
         status={status}
         sourceData={sourceData}
+        debugMode={debugMode}
       />
     )
   }

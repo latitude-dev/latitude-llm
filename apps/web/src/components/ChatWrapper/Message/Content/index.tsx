@@ -4,7 +4,6 @@ import {
   MessageContent,
   ToolContent,
 } from '@latitude-data/constants/legacyCompiler'
-import { TextColor } from '@latitude-data/web-ui/tokens'
 import { ToolCallMessageContent } from './ToolCall'
 import { TextMessageContent } from './Text'
 import { ImageMessageContent } from './Image'
@@ -19,12 +18,13 @@ export function Content({
   ...rest
 }: {
   index?: number
-  color: TextColor
+  color: 'foreground' | 'primary' | 'foregroundMuted'
   content: MessageContent[] | MessageContent | string
   size?: 'default' | 'small'
   parameters?: string[]
   debugMode?: boolean
   toolContentMap?: Record<string, ToolContent>
+  markdownSize: 'none' | 'sm' | 'md' | 'lg'
   limitVerticalPadding?: boolean
 }) {
   const contentArr = useMemo<MessageContent[]>(() => {
@@ -57,6 +57,7 @@ export function Content({
 
     return (
       <div
+        key={idx}
         className={cn('flex flex-col w-full', {
           'pt-4': topPadding,
           'pb-4': bottomPadding,
@@ -82,14 +83,16 @@ function ContentItem({
   size,
   parameters = [],
   toolContentMap,
+  markdownSize,
 }: {
   index?: number
-  color: TextColor
+  color: 'foreground' | 'primary' | 'foregroundMuted'
   value: MessageContent
   size?: 'default' | 'small'
   parameters?: string[]
   debugMode?: boolean
   toolContentMap?: Record<string, ToolContent>
+  markdownSize: 'none' | 'sm' | 'md' | 'lg'
 }) {
   if (value.type === 'text') {
     return (
@@ -97,6 +100,7 @@ function ContentItem({
         index={index}
         color={color}
         size={size}
+        markdownSize={markdownSize}
         text={value.text}
         parameters={parameters}
         sourceMap={value._promptlSourceMap}
@@ -145,6 +149,7 @@ function ContentItem({
       <ToolCallMessageContent
         toolRequest={value}
         toolContentMap={toolContentMap}
+        debugMode={debugMode}
       />
     )
   }

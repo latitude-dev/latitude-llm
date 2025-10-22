@@ -17,7 +17,7 @@ export function InteractionStep({
 }) {
   if (!step) {
     return (
-      <Text.H5
+      <Text.H4
         color='latteOutputForegroundMuted'
         noWrap
         ellipsis
@@ -25,13 +25,13 @@ export function InteractionStep({
         animate
       >
         {isStreaming ? 'Brewing...' : 'Stopped'}
-      </Text.H5>
+      </Text.H4>
     )
   }
 
   if (step.type === 'thought') {
     return (
-      <Text.H5
+      <Text.H4
         color='latteOutputForeground'
         noWrap={singleLine}
         ellipsis={singleLine}
@@ -40,7 +40,7 @@ export function InteractionStep({
         animate={isLoading && isStreaming}
       >
         {step.content}
-      </Text.H5>
+      </Text.H4>
     )
   }
 
@@ -104,7 +104,7 @@ function ToolStep({
         color='latteOutputForegroundMuted'
         className='min-w-4 mt-0.5'
       />
-      <Text.H5
+      <Text.H4
         noWrap={singleLine}
         ellipsis={singleLine}
         color='latteOutputForegroundMuted'
@@ -114,7 +114,7 @@ function ToolStep({
         {step.finished
           ? (step.finishedDescription ?? step.activeDescription)
           : step.activeDescription}
-      </Text.H5>
+      </Text.H4>
     </div>
   )
 }
@@ -169,7 +169,7 @@ function EditActionStep({
         color='latteOutputForegroundMuted'
         className='min-w-4 mt-0.5'
       />
-      <Text.H5
+      <Text.H4
         noWrap={singleLine}
         ellipsis={singleLine}
         color='latteOutputForegroundMuted'
@@ -177,7 +177,7 @@ function EditActionStep({
         userSelect={false}
       >
         {operationDescription}
-      </Text.H5>
+      </Text.H4>
     </div>
   )
 }

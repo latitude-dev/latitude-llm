@@ -61,7 +61,9 @@ export function WebExtractLatitudeToolCard({
             ) : (
               <div className='flex flex-col gap-4'>
                 {markdownContent ? (
-                  <Markdown>{markdownContent}</Markdown>
+                  <Markdown size='sm' color='primary'>
+                    {markdownContent}
+                  </Markdown>
                 ) : (
                   <Text.H5 color='foregroundMuted'>No content</Text.H5>
                 )}

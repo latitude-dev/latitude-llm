@@ -18,7 +18,7 @@ export function UserMessage({
       <div
         className={cn(
           'flex flex-col gap-1 items-start',
-          'p-4 bg-primary-muted rounded-2xl',
+          'px-4 py-3 bg-primary-muted rounded-2xl',
           {
             'animate-pulse': animatePulse,
           },
@@ -32,6 +32,7 @@ export function UserMessage({
           parameters={parameters}
           toolContentMap={toolContentMap}
           debugMode={false}
+          markdownSize='none'
           limitVerticalPadding={true}
         />
         {isGeneratingToolCall && <ToolCardSkeleton />}

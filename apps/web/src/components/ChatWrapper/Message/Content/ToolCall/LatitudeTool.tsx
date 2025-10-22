@@ -28,12 +28,31 @@ export function LatitudeToolCard({
   toolResponse,
   status,
   sourceData,
+  debugMode,
 }: {
   toolRequest: ToolRequestContent
   toolResponse: ToolContent | undefined
   status: 'pending' | 'success' | 'error'
   sourceData: ToolSourceData<ToolSource.Latitude>
+  debugMode?: boolean
 }) {
+  if (debugMode) {
+    // No custom UI
+    return (
+      <ToolCard
+        toolRequest={toolRequest}
+        toolResponse={toolResponse}
+        headerIcon={
+          <ToolCardIcon
+            status={status}
+            name={ICON_BY_LATITUDE_TOOL[sourceData.latitudeTool]}
+          />
+        }
+        headerLabel={<ToolCardText>{toolRequest.toolName}</ToolCardText>}
+      />
+    )
+  }
+
   if (sourceData.latitudeTool === LatitudeTool.RunCode) {
     return (
       <RunCodeLatitudeToolCard
