@@ -362,8 +362,6 @@ value1,value2,value3
       workspace: workspace,
     }).then((r) => r.unwrap())
 
-    console.log(datasetRow.rowData)
-
     expect(result).toEqual(
       expect.objectContaining({
         workspaceId: workspace.id,
