@@ -53,6 +53,7 @@ class CloudWatchMetricsService {
             Value: this.inflightRequests,
             Unit: 'Count',
             Timestamp: new Date(),
+            StorageResolution: 10,
           },
         ],
       })
