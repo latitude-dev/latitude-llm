@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { EvaluationResultSuccessValue, EvaluationType } from './index'
 import {
   baseEvaluationConfiguration,
   baseEvaluationResultError,
@@ -38,6 +39,14 @@ export const LlmEvaluationBinarySpecification = {
   configuration: llmEvaluationBinaryConfiguration,
   resultMetadata: llmEvaluationBinaryResultMetadata,
   resultError: llmEvaluationBinaryResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Llm,
+      LlmEvaluationMetric.Binary
+    >,
+  ) => {
+    return result.metadata.reason
+  },
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
@@ -75,6 +84,14 @@ export const LlmEvaluationRatingSpecification = {
   configuration: llmEvaluationRatingConfiguration,
   resultMetadata: llmEvaluationRatingResultMetadata,
   resultError: llmEvaluationRatingResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Llm,
+      LlmEvaluationMetric.Rating
+    >,
+  ) => {
+    return result.metadata.reason
+  },
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
@@ -111,6 +128,14 @@ export const LlmEvaluationComparisonSpecification = {
   configuration: llmEvaluationComparisonConfiguration,
   resultMetadata: llmEvaluationComparisonResultMetadata,
   resultError: llmEvaluationComparisonResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Llm,
+      LlmEvaluationMetric.Comparison
+    >,
+  ) => {
+    return result.metadata.reason
+  },
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
@@ -146,6 +171,14 @@ export const LlmEvaluationCustomSpecification = {
   configuration: llmEvaluationCustomConfiguration,
   resultMetadata: llmEvaluationCustomResultMetadata,
   resultError: llmEvaluationCustomResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Llm,
+      LlmEvaluationMetric.Custom
+    >,
+  ) => {
+    return result.metadata.reason
+  },
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
@@ -191,6 +224,14 @@ export const LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION = `
 export const LlmEvaluationCustomLabeledSpecification = {
   ...LlmEvaluationCustomSpecification,
   name: 'Custom (Labeled)',
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Llm,
+      LlmEvaluationMetric.CustomLabeled
+    >,
+  ) => {
+    return result.metadata.reason
+  },
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,

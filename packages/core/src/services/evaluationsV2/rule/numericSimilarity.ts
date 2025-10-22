@@ -110,10 +110,10 @@ async function run(
     actualOutput: actualOutput.value ?? '',
     expectedOutput: expectedOutput?.value,
     datasetLabel: datasetLabel,
-  }
+  } as RuleEvaluationNumericSimilarityResultMetadata
 
   if (actualOutput.error) {
-    // TODO(ao): Save reason
+    metadata.reason = actualOutput.error.message
     return grade({ score: 0, metadata })
   }
 
@@ -125,7 +125,7 @@ async function run(
 
   const actualNumber = Number(metadata.actualOutput)
   if (isNaN(actualNumber)) {
-    // TODO(ao): Save reason
+    metadata.reason = 'Invalid numeric actual output'
     return grade({ score: 0, metadata })
   }
 

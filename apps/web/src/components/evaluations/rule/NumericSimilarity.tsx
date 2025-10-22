@@ -24,13 +24,6 @@ export default {
   chartConfiguration: chartConfiguration,
 }
 
-// TODO: Uncomment when more algorithms are implemented
-// const ALGORITHM_OPTIONS =
-//   specification.configuration.shape.algorithm.options.map((option) => ({
-//     label: option.toUpperCase().split('_').join(' '),
-//     value: option,
-//   }))
-
 function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
@@ -48,21 +41,6 @@ function ConfigurationSimpleForm({
 
   return (
     <>
-      {/* TODO: Uncomment when more algorithms are implemented */}
-      {/* <Select
-        value={configuration.algorithm ?? ''}
-        name='algorithm'
-        label='Algorithm'
-        description='How to measure similarity'
-        placeholder='Select an algorithm'
-        options={ALGORITHM_OPTIONS}
-        onChange={(value) =>
-          setConfiguration({ ...configuration, algorithm: value })
-        }
-        errors={errors?.['algorithm']}
-        disabled={disabled}
-        required
-      /> */}
       <FormFieldGroup
         layout='horizontal'
         description='The minimum and maximum percentage of similarity of the response'

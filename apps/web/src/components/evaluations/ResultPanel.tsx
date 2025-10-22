@@ -20,7 +20,7 @@ import {
   ACCESSIBLE_OUTPUT_FORMATS,
   DocumentLog,
   EvaluationMetric,
-  EvaluationResultV2,
+  EvaluationResultSuccessValue,
   EvaluationType,
 } from '@latitude-data/core/constants'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
@@ -146,6 +146,9 @@ function ResultPanelMetadata<
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) return null
 
+  const metricSpecification = typeSpecification.metrics[evaluation.metric]
+  if (!metricSpecification) return null
+
   return (
     <div className='flex flex-col gap-4'>
       <MetadataItem label='Result uuid'>
@@ -242,20 +245,16 @@ function ResultPanelMetadata<
           <MetadataItem label='Result'>
             <ResultBadge evaluation={evaluation} result={result} />
           </MetadataItem>
-          {(evaluation.type === EvaluationType.Llm ||
-            evaluation.type === EvaluationType.Human) && (
-            <MetadataItem
-              label='Reasoning'
-              value={
-                (
-                  result as EvaluationResultV2<
-                    EvaluationType.Llm | EvaluationType.Human
-                  >
-                ).metadata!.reason || 'No reason reported'
-              }
-              stacked
-            />
-          )}
+          <MetadataItem
+            label='Reasoning'
+            value={
+              metricSpecification.resultReason(
+                result as EvaluationResultSuccessValue<T, M>,
+              ) || 'No reason reported'
+            }
+            stacked
+            collapsible
+          />
         </>
       )}
       {!!typeSpecification.ResultPanelMetadata && (
@@ -315,6 +314,7 @@ function ResultPanelLoading() {
       <MetadataItem label='Actual output' loading />
       <MetadataItem label='Expected output' loading />
       <MetadataItem label='Result' loading />
+      <MetadataItem label='Reasoning' loading />
       <MetadataItem label='Parameters' loading />
     </div>
   )

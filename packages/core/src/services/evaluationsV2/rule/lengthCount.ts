@@ -95,10 +95,10 @@ async function run(
   const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput.value ?? '',
-  }
+  } as RuleEvaluationLengthCountResultMetadata
 
   if (actualOutput.error) {
-    // TODO(ao): Save reason
+    metadata.reason = actualOutput.error.message
     return grade({ score: 0, metadata })
   }
 

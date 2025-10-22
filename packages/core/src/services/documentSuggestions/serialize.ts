@@ -1,6 +1,7 @@
 import { database } from '../../client'
 import {
   EvaluationMetric,
+  EvaluationResultSuccessValue,
   EvaluationResultV2,
   EvaluationType,
   EvaluationV2,
@@ -74,16 +75,14 @@ export async function serializeEvaluationResult<
     return Result.error(new Error('Invalid evaluation metric'))
   }
 
-  let reason = `${typeSpecification.name} evaluations do not report a reason`
-  if (
-    evaluation.type === EvaluationType.Llm ||
-    evaluation.type === EvaluationType.Human
-  ) {
-    // Seems TypeScript is not able to infer the type of the result
-    reason =
-      (result as EvaluationResultV2<EvaluationType.Llm | EvaluationType.Human>)
-        .metadata!.reason || 'No reason reported'
+  if (result.error) {
+    return Result.error(new Error('Invalid evaluation result'))
   }
+
+  const reason =
+    metricSpecification.resultReason(
+      result as EvaluationResultSuccessValue<T, M>,
+    ) || 'No reason reported'
 
   const providerLogsRepository = new ProviderLogsRepository(workspace.id, db)
   const providerLog = await providerLogsRepository
@@ -100,9 +99,6 @@ export async function serializeEvaluationResult<
     db,
   ).then((r) => r.unwrap())
 
-  return Result.ok({
-    result: result.score, // Compatibility with refine v1 prompt
-    reason: reason,
-    evaluatedLog: evaluatedLog,
-  })
+  // Compatibility with refine v1 prompt
+  return Result.ok({ result: result.score, reason, evaluatedLog })
 }

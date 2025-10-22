@@ -1,3 +1,4 @@
+import { MaxHeightWindow } from '$/components/MaxHeightWindow'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -15,6 +16,7 @@ type MetadataItemProps = {
   loading?: boolean
   children?: ReactNode
   contentClassName?: string
+  collapsible?: boolean
 }
 export function MetadataItem({
   label,
@@ -22,6 +24,7 @@ export function MetadataItem({
   action,
   stacked = false,
   value,
+  collapsible,
   color = 'foregroundMuted',
   loading,
   children,
@@ -58,6 +61,22 @@ export function MetadataItem({
       <div className={contentClassName}>
         {loading ? (
           <Skeleton height='h4' className='w-12' />
+        ) : collapsible ? (
+          <MaxHeightWindow>
+            <>
+              {value && (
+                <Text.H5
+                  align='right'
+                  color={color}
+                  whiteSpace='preWrap'
+                  wordBreak='breakWord'
+                >
+                  {value}
+                </Text.H5>
+              )}
+              {children}
+            </>
+          </MaxHeightWindow>
         ) : (
           <>
             {value && (

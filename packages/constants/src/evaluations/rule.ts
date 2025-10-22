@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { EvaluationResultSuccessValue, EvaluationType } from './index'
 import {
   baseEvaluationConfiguration,
   baseEvaluationResultError,
@@ -6,7 +7,9 @@ import {
 } from './shared'
 
 const ruleEvaluationConfiguration = baseEvaluationConfiguration.extend({})
-const ruleEvaluationResultMetadata = baseEvaluationResultMetadata.extend({})
+const ruleEvaluationResultMetadata = baseEvaluationResultMetadata.extend({
+  reason: z.string().optional(),
+})
 const ruleEvaluationResultError = baseEvaluationResultError.extend({})
 
 // EXACT MATCH
@@ -27,6 +30,32 @@ export const RuleEvaluationExactMatchSpecification = {
   configuration: ruleEvaluationExactMatchConfiguration,
   resultMetadata: ruleEvaluationExactMatchResultMetadata,
   resultError: ruleEvaluationExactMatchResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Rule,
+      RuleEvaluationMetric.ExactMatch
+    >,
+  ) => {
+    let reason = ''
+
+    if (result.score === 1) {
+      reason = `Response is`
+    } else {
+      reason = `Response is not`
+    }
+
+    reason += ` exactly the same as '${result.metadata.expectedOutput}'`
+
+    if (result.metadata.configuration.caseInsensitive) {
+      reason += ' (comparison is case-insensitive)'
+    }
+
+    if (result.metadata.reason) {
+      reason += `, because: ${result.metadata.reason}`
+    }
+
+    return reason + '.'
+  },
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
@@ -61,6 +90,28 @@ export const RuleEvaluationRegularExpressionSpecification = {
   configuration: ruleEvaluationRegularExpressionConfiguration,
   resultMetadata: ruleEvaluationRegularExpressionResultMetadata,
   resultError: ruleEvaluationRegularExpressionResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Rule,
+      RuleEvaluationMetric.RegularExpression
+    >,
+  ) => {
+    let reason = ''
+
+    if (result.score === 1) {
+      reason = `Response matches`
+    } else {
+      reason = `Response does not match`
+    }
+
+    reason += ` the regular expression \`/${result.metadata.configuration.pattern}/gm\``
+
+    if (result.metadata.reason) {
+      reason += `, because: ${result.metadata.reason}`
+    }
+
+    return reason + '.'
+  },
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
@@ -96,6 +147,28 @@ export const RuleEvaluationSchemaValidationSpecification = {
   configuration: ruleEvaluationSchemaValidationConfiguration,
   resultMetadata: ruleEvaluationSchemaValidationResultMetadata,
   resultError: ruleEvaluationSchemaValidationResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Rule,
+      RuleEvaluationMetric.SchemaValidation
+    >,
+  ) => {
+    let reason = ''
+
+    if (result.score === 1) {
+      reason = `Response follows`
+    } else {
+      reason = `Response does not follow`
+    }
+
+    reason += ` the ${result.metadata.configuration.format.toUpperCase()} schema:\n\`\`\`\n${result.metadata.configuration.schema}\n\`\`\``
+
+    if (result.metadata.reason) {
+      reason += `\nbecause: ${result.metadata.reason}`
+    }
+
+    return reason + '.'
+  },
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
@@ -133,6 +206,34 @@ export const RuleEvaluationLengthCountSpecification = {
   configuration: ruleEvaluationLengthCountConfiguration,
   resultMetadata: ruleEvaluationLengthCountResultMetadata,
   resultError: ruleEvaluationLengthCountResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Rule,
+      RuleEvaluationMetric.LengthCount
+    >,
+  ) => {
+    let reason = `Response length is ${result.score} ${result.metadata.configuration.algorithm}s`
+
+    if (result.hasPassed) {
+      reason += ', which is'
+    } else {
+      reason += ', which is not'
+    }
+
+    reason += ` between ${result.metadata.configuration.minLength ?? 0} and ${result.metadata.configuration.maxLength ?? Infinity} ${result.metadata.configuration.algorithm}s`
+
+    if (result.metadata.configuration.reverseScale) {
+      reason += ' (shorter is better)'
+    } else {
+      reason += ' (longer is better)'
+    }
+
+    if (result.metadata.reason) {
+      reason += `, because: ${result.metadata.reason}`
+    }
+
+    return reason + '.'
+  },
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
@@ -169,6 +270,34 @@ export const RuleEvaluationLexicalOverlapSpecification = {
   configuration: ruleEvaluationLexicalOverlapConfiguration,
   resultMetadata: ruleEvaluationLexicalOverlapResultMetadata,
   resultError: ruleEvaluationLexicalOverlapResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Rule,
+      RuleEvaluationMetric.LexicalOverlap
+    >,
+  ) => {
+    let reason = `Response lexical overlap with '${result.metadata.expectedOutput}' is ${result.score.toFixed(0)}%`
+
+    if (result.hasPassed) {
+      reason += ', which is'
+    } else {
+      reason += ', which is not'
+    }
+
+    reason += ` between ${(result.metadata.configuration.minOverlap ?? 0).toFixed(0)}% and ${(result.metadata.configuration.maxOverlap ?? 100).toFixed(0)}%`
+
+    if (result.metadata.configuration.reverseScale) {
+      reason += ' (lower is better)'
+    } else {
+      reason += ' (higher is better)'
+    }
+
+    if (result.metadata.reason) {
+      reason += `, because: ${result.metadata.reason}`
+    }
+
+    return reason + '.'
+  },
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
@@ -205,6 +334,34 @@ export const RuleEvaluationSemanticSimilaritySpecification = {
   configuration: ruleEvaluationSemanticSimilarityConfiguration,
   resultMetadata: ruleEvaluationSemanticSimilarityResultMetadata,
   resultError: ruleEvaluationSemanticSimilarityResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Rule,
+      RuleEvaluationMetric.SemanticSimilarity
+    >,
+  ) => {
+    let reason = `Response semantic similarity with '${result.metadata.expectedOutput}' is ${result.score.toFixed(0)}%`
+
+    if (result.hasPassed) {
+      reason += ', which is'
+    } else {
+      reason += ', which is not'
+    }
+
+    reason += ` between ${(result.metadata.configuration.minSimilarity ?? 0).toFixed(0)}% and ${(result.metadata.configuration.maxSimilarity ?? 100).toFixed(0)}%`
+
+    if (result.metadata.configuration.reverseScale) {
+      reason += ' (lower is better)'
+    } else {
+      reason += ' (higher is better)'
+    }
+
+    if (result.metadata.reason) {
+      reason += `, because: ${result.metadata.reason}`
+    }
+
+    return reason + '.'
+  },
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
@@ -241,6 +398,34 @@ export const RuleEvaluationNumericSimilaritySpecification = {
   configuration: ruleEvaluationNumericSimilarityConfiguration,
   resultMetadata: ruleEvaluationNumericSimilarityResultMetadata,
   resultError: ruleEvaluationNumericSimilarityResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Rule,
+      RuleEvaluationMetric.NumericSimilarity
+    >,
+  ) => {
+    let reason = `Response numeric similarity with '${result.metadata.expectedOutput}' is ${result.score.toFixed(0)}%`
+
+    if (result.hasPassed) {
+      reason += ', which is'
+    } else {
+      reason += ', which is not'
+    }
+
+    reason += ` between ${(result.metadata.configuration.minSimilarity ?? 0).toFixed(0)}% and ${(result.metadata.configuration.maxSimilarity ?? 100).toFixed(0)}%`
+
+    if (result.metadata.configuration.reverseScale) {
+      reason += ' (lower is better)'
+    } else {
+      reason += ' (higher is better)'
+    }
+
+    if (result.metadata.reason) {
+      reason += `, because: ${result.metadata.reason}`
+    }
+
+    return reason + '.'
+  },
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,

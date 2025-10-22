@@ -23,14 +23,6 @@ export default {
   chartConfiguration: chartConfiguration,
 }
 
-// TODO: Uncomment when more formats are implemented
-// const FORMAT_OPTIONS = specification.configuration.shape.format.options.map(
-//   (option) => ({
-//     label: option.toUpperCase().split('_').join(' '),
-//     value: option,
-//   }),
-// )
-
 function ConfigurationSimpleForm({
   configuration,
   setConfiguration,
@@ -48,21 +40,6 @@ function ConfigurationSimpleForm({
 
   return (
     <>
-      {/* TODO: Uncomment when more formats are implemented */}
-      {/* <Select
-        value={configuration.format ?? ''}
-        name='format'
-        label='Schema format'
-        description='The format of the schema'
-        placeholder='Select a schema format'
-        options={FORMAT_OPTIONS}
-        onChange={(value) =>
-          setConfiguration({ ...configuration, format: value })
-        }
-        errors={errors?.['format']}
-        disabled={disabled}
-        required
-      /> */}
       <TextArea
         value={configuration.schema ?? ''}
         name='schema'

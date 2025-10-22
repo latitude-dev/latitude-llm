@@ -236,7 +236,7 @@ export default function EvaluationV2Form<
           <Alert
             variant='default'
             title='This evaluation supports manual annotation'
-            description='You will be able to manually evaluate responses in the runs/logs dashboard or via API/SDK'
+            description='You will be able to manually evaluate responses in the runs/logs dashboard or via the API/SDK'
           />
         )}
         <CollapsibleBox

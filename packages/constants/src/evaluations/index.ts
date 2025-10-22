@@ -96,6 +96,7 @@ export type EvaluationMetricSpecification<
   configuration: ZodSchema<EvaluationConfiguration<T, M>>
   resultMetadata: ZodSchema<EvaluationResultMetadata<T, M>>
   resultError: ZodSchema<EvaluationResultError<T, M>>
+  resultReason: (result: EvaluationResultSuccessValue<T, M>) => string | undefined // prettier-ignore
   requiresExpectedOutput: boolean
   supportsLiveEvaluation: boolean
   supportsBatchEvaluation: boolean
@@ -164,24 +165,32 @@ export type EvaluationV2<
   deletedAt?: Date | null
 }
 
+export type EvaluationResultSuccessValue<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> = {
+  score: number
+  normalizedScore: number
+  metadata: EvaluationResultMetadata<T, M>
+  hasPassed: boolean
+  error?: null
+}
+
+export type EvaluationResultErrorValue<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+> = {
+  score?: null
+  normalizedScore?: null
+  metadata?: null
+  hasPassed?: null
+  error: EvaluationResultError<T, M>
+}
+
 export type EvaluationResultValue<
   T extends EvaluationType = EvaluationType,
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
-> =
-  | {
-      score: number
-      normalizedScore: number
-      metadata: EvaluationResultMetadata<T, M>
-      hasPassed: boolean
-      error?: null
-    }
-  | {
-      score?: null
-      normalizedScore?: null
-      metadata?: null
-      hasPassed?: null
-      error: EvaluationResultError<T, M>
-    }
+> = EvaluationResultSuccessValue<T, M> | EvaluationResultErrorValue<T, M>
 
 export type EvaluationResultV2<
   T extends EvaluationType = EvaluationType,

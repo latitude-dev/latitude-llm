@@ -90,6 +90,7 @@ async function validate<M extends HumanEvaluationMetric>(
     reverseScale: configuration.reverseScale,
     actualOutput: configuration.actualOutput,
     expectedOutput: configuration.expectedOutput,
+    enableControls: configuration.enableControls,
     criteria: configuration.criteria,
   })
 }
