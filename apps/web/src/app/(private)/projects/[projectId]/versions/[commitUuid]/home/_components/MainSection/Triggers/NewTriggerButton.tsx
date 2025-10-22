@@ -1,4 +1,5 @@
 import { NewTrigger } from '$/components/TriggersManagement/NewTrigger'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { useCallback, useState } from 'react'
@@ -23,6 +24,13 @@ export function NewTriggerButton() {
         title='Add new trigger'
         description='Add a new trigger to run this project automatically'
         onOpenChange={onCloseModal}
+        footer={
+          <Alert
+            variant='warning'
+            description='Triggers run only on published project versions'
+            spacing='medium'
+          />
+        }
       >
         <NewTrigger onTriggerCreated={onTriggerCreated} />
       </Modal>

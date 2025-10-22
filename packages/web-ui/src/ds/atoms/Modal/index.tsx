@@ -45,6 +45,7 @@ export type ModalProps = {
   onOpenChange?: (open: boolean) => void
   open?: boolean
   description?: string
+  warningDescription?: string
   children?: ReactNode
   footer?: ReactNode
   size?: 'small' | 'regular' | 'medium' | 'large' | 'xl' | 'full'
@@ -67,6 +68,7 @@ export function Modal({
   footer,
   title,
   description,
+  warningDescription,
   size = 'regular',
   height = 'content',
   steps,
@@ -104,6 +106,13 @@ export function Modal({
                     {title && <DialogTitle>{title}</DialogTitle>}
                     {description && (
                       <DialogDescription>{description}</DialogDescription>
+                    )}
+                    {warningDescription && (
+                      <Alert
+                        variant='warning'
+                        description={warningDescription}
+                        spacing='medium'
+                      />
                     )}
                   </DialogHeader>
                 </div>
