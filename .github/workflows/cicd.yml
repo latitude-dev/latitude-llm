@@ -1,0 +1,31 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_call:
+    inputs:
+      workflow_call:
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  node-lint:
+    uses: ./.github/workflows/node-lint.yml
+
+  python-lint:
+    uses: ./.github/workflows/python-lint.yml
+
+  call-build-and-push:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/build-and-push.yml
+    secrets: inherit

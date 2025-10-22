@@ -1,18 +1,13 @@
-name: Linter
+name: Node Lint
 
 on:
+  workflow_call:
   push:
     branches:
       - main
   pull_request:
     branches:
       - main
-  workflow_call:
-    inputs:
-      workflow_call:
-        type: boolean
-        required: false
-        default: false
 
 jobs:
   node-lint:
@@ -56,43 +51,3 @@ jobs:
 
       - name: Node.js Lint
         run: pnpm lint
-
-  python-lint:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 2
-
-      - name: Setup python
-        uses: actions/setup-python@v6
-        with:
-          python-version: 3.13.x
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          version: '0.8.17'
-          enable-cache: true
-
-      - name: Install dependencies
-        run: |
-          cd packages/sdks/python
-          uv venv
-          uv sync --all-extras --all-groups
-
-      - name: Lint code
-        run: |
-          cd packages/sdks/python
-          uv run scripts/lint.py
-
-  call-build-and-push:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-    uses: ./.github/workflows/build-and-push.yml
-    secrets: inherit
