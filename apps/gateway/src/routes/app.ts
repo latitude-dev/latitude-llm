@@ -4,6 +4,7 @@ import authMiddleware from '$/middlewares/auth'
 import { rateLimitMiddleware } from '$/middlewares/rateLimit'
 import errorHandlerMiddleware from '$/middlewares/errorHandler'
 import { inflightRequestsMiddleware } from '$/middlewares/inflightRequests'
+import { overCapacityMiddleware } from '$/middlewares/overCapacity'
 
 import createApp from '$/openApi/createApp'
 import configureOpenAPI from '$/openApi/configureOpenAPI'
@@ -33,6 +34,7 @@ app.use(rateLimitMiddleware())
 app.use(authMiddleware())
 
 if (env.AWS_ACCESS_KEY && env.AWS_ACCESS_SECRET) {
+  app.use(overCapacityMiddleware())
   app.use(inflightRequestsMiddleware())
 }
 
