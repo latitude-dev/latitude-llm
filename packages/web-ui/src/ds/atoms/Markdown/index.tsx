@@ -12,7 +12,10 @@ export const Markdown = forwardRef<
   { children: string; className?: string; components?: Components }
 >(({ children, className, components }, ref) => {
   return (
-    <div ref={ref} className='prose prose-sm max-w-none w-full'>
+    <div
+      ref={ref}
+      className='prose prose-sm max-w-none w-full flex flex-col gap-2'
+    >
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkEmoji, remarkMath, remarkBreaks]}
         rehypePlugins={[rehypeKatex]}

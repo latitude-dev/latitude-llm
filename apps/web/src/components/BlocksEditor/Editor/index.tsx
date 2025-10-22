@@ -43,10 +43,10 @@ import { fromLexicalToText } from './state/fromLexicalToText'
 const theme = {
   ltr: 'ltr',
   rtl: 'rtl',
-  paragraph: cn('block-paragraph align-middle', font.size.h5),
+  paragraph: cn('block-paragraph align-middle', font.size.h4),
   code: cn(
     'block whitespace-pre-wrap ',
-    'text-sm text-muted-foreground',
+    'text-base text-muted-foreground',
     'px-4 py-2',
     'rounded-xl',
     'bg-backgroundCode',
@@ -149,7 +149,7 @@ export function BlocksEditor({
             contentEditable={
               <ContentEditable
                 className={cn(
-                  'outline-none resize-none text-sm leading-relaxed',
+                  'outline-none resize-none text-base leading-relaxed',
                   'focus:outline-none',
                   'whitespace-pre-wrap break-words',
                   VERTICAL_SPACE_CLASS,
