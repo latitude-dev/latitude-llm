@@ -1,7 +1,7 @@
 'use client'
 
 import { useTheme } from 'next-themes'
-import { memo, ReactNode } from 'react'
+import { useMemo, memo, ReactNode } from 'react'
 
 import { CurrentTheme } from '../../../constants'
 import { cn } from '../../../lib/utils'
@@ -19,8 +19,10 @@ interface CodeBlockProps {
   bgColor?: string
 }
 
-export function useCodeBlockBackgroundColor(override?: string) {
-  const { resolvedTheme } = useTheme()
+function getCodeBlockBackgroundColor(
+  override?: string,
+  resolvedTheme?: string,
+) {
   if (override) return override
   if (resolvedTheme === CurrentTheme.Light) return 'bg-backgroundCode'
   return 'bg-[#282c34]'
@@ -37,7 +39,12 @@ const Content = memo(
     bgColor: overrideBgColor,
   }: CodeBlockProps) => {
     const { resolvedTheme } = useTheme()
-    const bgColor = useCodeBlockBackgroundColor(overrideBgColor)
+
+    const bgColor = useMemo(
+      () => getCodeBlockBackgroundColor(overrideBgColor, resolvedTheme),
+      [overrideBgColor, resolvedTheme],
+    )
+
     return (
       <div
         className={cn(
