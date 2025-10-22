@@ -2,12 +2,6 @@ name: Node Lint
 
 on:
   workflow_call:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   node-lint:
