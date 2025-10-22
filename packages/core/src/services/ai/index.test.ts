@@ -1,12 +1,12 @@
+import { Providers } from '@latitude-data/constants'
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   type Message,
   MessageRole,
 } from '@latitude-data/constants/legacyCompiler'
-import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError } from 'ai'
 import { describe, expect, it, vi } from 'vitest'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
-import { Providers } from '@latitude-data/constants'
 import * as factories from '../../tests/factories'
 import { ai } from './index'
 
@@ -56,8 +56,12 @@ describe('ai function', () => {
       },
     ]
 
+    const onError = vi.fn()
+
     await expect(
-      ai({ context, provider, config, messages }).then((r) => r.unwrap()),
+      ai({ context, provider, config, messages, onError }).then((r) =>
+        r.unwrap(),
+      ),
     ).rejects.toThrowError(
       new ChainError({
         code: RunErrorCodes.AIRunError,
@@ -84,6 +88,8 @@ There are rule violations:
       })
     })
 
+    const onError = vi.fn()
+
     await expect(
       ai({
         context: context,
@@ -93,6 +99,7 @@ There are rule violations:
         aiSdkProvider: {
           streamText: streamTextModk, // Inject the mocked function
         },
+        onError,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new ChainError({
@@ -111,6 +118,8 @@ There are rule violations:
       throw new Error('Some error')
     })
 
+    const onError = vi.fn()
+
     await expect(
       ai({
         context: context,
@@ -120,6 +129,7 @@ There are rule violations:
         aiSdkProvider: {
           streamText: streamTextModk,
         },
+        onError,
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new ChainError({

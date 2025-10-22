@@ -54,9 +54,16 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
 
   // Default evaluation configuration
   const DEFAULT_EVALUATION_CONFIG = {
+    reverseScale: false,
+    actualOutput: {
+      messageSelection: 'last' as const,
+      parsingFormat: 'string' as const,
+    },
+    expectedOutput: {
+      parsingFormat: 'string' as const,
+    },
     minRating: 1,
     maxRating: 5,
-    reverseScale: false,
   }
 
   type TestSetupOptions = {

@@ -1,9 +1,11 @@
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { z } from 'zod'
 import { database } from '../../../client'
 import {
   EvaluationType,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
   LlmEvaluationMetric,
+  LlmEvaluationRatingResultMetadata,
   LlmEvaluationRatingSpecification as specification,
 } from '../../../constants'
 import { formatConversation } from '../../../helpers'
@@ -153,76 +155,13 @@ You must give your verdict as a single JSON object with the following properties
 `.trim()
 }
 
-async function run(
-  {
-    resultUuid,
-    evaluation,
-    actualOutput,
-    conversation,
-    documentLog,
-    providers,
-    commit,
-    workspace,
-  }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Rating>,
-  db = database,
-) {
-  const metadata = {
-    configuration: evaluation.configuration,
-    actualOutput: actualOutput,
-    evaluationLogId: -1,
-    reason: '',
-    tokens: 0,
-    cost: 0,
-    duration: 0,
-  }
-
-  const provider = providers?.get(metadata.configuration.provider)
-  if (!provider) {
-    throw new BadRequestError('Provider is required')
-  }
-
-  const evaluatedLog = await serializeDocumentLog(
-    { documentLog, workspace },
-    db,
-  ).then((r) => r.unwrap())
-
-  const promptSchema = z.object({
-    rating: z
-      .int()
-      .min(metadata.configuration.minRating)
-      .max(metadata.configuration.maxRating),
-    reason: z.string(),
-  })
-
-  const { response, stats, verdict } = await runPrompt({
-    prompt: buildPrompt({ ...metadata.configuration, provider: provider }),
-    parameters: {
-      ...evaluatedLog,
-      actualOutput: actualOutput,
-      conversation: formatConversation(conversation),
-    },
-    schema: promptSchema,
-    resultUuid: resultUuid,
-    evaluation: evaluation,
-    providers: providers!,
-    commit: commit,
-    workspace: workspace,
-  })
-
-  metadata.evaluationLogId = response.providerLog!.id
-  metadata.reason = verdict.reason
-  metadata.tokens = stats.tokens
-  metadata.cost = stats.costInMillicents
-  metadata.duration = stats.duration
-
-  const score = Math.min(
-    Math.max(
-      Number(verdict.rating.toFixed(0)),
-      metadata.configuration.minRating,
-    ),
-    metadata.configuration.maxRating,
-  )
-
+function grade({
+  score,
+  metadata,
+}: {
+  score: number
+  metadata: LlmEvaluationRatingResultMetadata
+}) {
   let normalizedScore = normalizeScore(
     score,
     metadata.configuration.minRating,
@@ -243,6 +182,97 @@ async function run(
   const hasPassed = score >= minThreshold && score <= maxThreshold
 
   return { score, normalizedScore, metadata, hasPassed }
+}
+
+async function run(
+  {
+    resultUuid,
+    evaluation,
+    actualOutput,
+    conversation,
+    documentLog,
+    providers,
+    commit,
+    workspace,
+  }: EvaluationMetricRunArgs<EvaluationType.Llm, LlmEvaluationMetric.Rating>,
+  db = database,
+) {
+  const metadata = {
+    configuration: evaluation.configuration,
+    actualOutput: actualOutput.value ?? '',
+    evaluationLogId: -1,
+    reason: '',
+    tokens: 0,
+    cost: 0,
+    duration: 0,
+  }
+
+  if (actualOutput.error) {
+    metadata.reason = actualOutput.error.message
+    return grade({ score: 0, metadata })
+  }
+
+  const provider = providers?.get(metadata.configuration.provider)
+  if (!provider) {
+    throw new BadRequestError('Provider is required')
+  }
+
+  const evaluatedLog = await serializeDocumentLog(
+    { documentLog, workspace },
+    db,
+  ).then((r) => r.unwrap())
+
+  const promptSchema = z.object({
+    rating: z
+      .int()
+      .min(metadata.configuration.minRating)
+      .max(metadata.configuration.maxRating),
+    reason: z.string(),
+  })
+
+  let result
+  try {
+    result = await runPrompt({
+      prompt: buildPrompt({ ...metadata.configuration, provider: provider }),
+      parameters: {
+        ...evaluatedLog,
+        actualOutput: actualOutput,
+        conversation: formatConversation(conversation),
+      },
+      schema: promptSchema,
+      resultUuid: resultUuid,
+      evaluation: evaluation,
+      providers: providers!,
+      commit: commit,
+      workspace: workspace,
+    })
+  } catch (error) {
+    if (
+      error instanceof ChainError &&
+      error.errorCode === RunErrorCodes.InvalidResponseFormatError
+    ) {
+      metadata.reason = error.message
+      return grade({ score: 0, metadata })
+    }
+
+    throw error
+  }
+
+  metadata.evaluationLogId = result.response.providerLog!.id
+  metadata.reason = result.verdict.reason
+  metadata.tokens = result.stats.tokens
+  metadata.cost = result.stats.costInMillicents
+  metadata.duration = result.stats.duration
+
+  const score = Math.min(
+    Math.max(
+      Number(result.verdict.rating.toFixed(0)),
+      metadata.configuration.minRating,
+    ),
+    metadata.configuration.maxRating,
+  )
+
+  return grade({ score, metadata })
 }
 
 async function clone(

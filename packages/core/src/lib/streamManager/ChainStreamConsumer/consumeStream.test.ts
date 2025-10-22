@@ -10,14 +10,15 @@ import { StreamEventTypes, VercelChunk } from '@latitude-data/constants'
 import { ToolSource } from '@latitude-data/constants/toolSources'
 import { ResolvedTools } from '../resolveTools/types'
 
-export class AsyncStreamIteable<T> extends ReadableStream<T> {
+export class AsyncStreamIterable<T> extends ReadableStream<T> {
   [Symbol.asyncIterator] = function () {
+    // @ts-expect-error - this is a ReadableStream
     return this
   }
 }
 
 function createMockStream(chunks: VercelChunk[]) {
-  return new AsyncStreamIteable<TextStreamPart<TOOLS>>({
+  return new AsyncStreamIterable<TextStreamPart<TOOLS>>({
     start(controller) {
       chunks.forEach((chunk) => controller.enqueue(chunk))
       controller.close()
@@ -52,7 +53,7 @@ type BuildChainCallback = (
 function buildFakeResult({
   fullStream,
 }: {
-  fullStream: AsyncStreamIteable<TextStreamPart<TOOLS>>
+  fullStream: AsyncStreamIterable<TextStreamPart<TOOLS>>
 }) {
   return {
     type: 'text' as const,
@@ -77,7 +78,7 @@ function buildFakeChain({
   callback: BuildChainCallback
   chunks: TextStreamPart<TOOLS>[]
 }) {
-  const fullStream = new AsyncStreamIteable<TextStreamPart<TOOLS>>({
+  const fullStream = new AsyncStreamIterable<TextStreamPart<TOOLS>>({
     start(controller) {
       chunks.forEach((chunk) => controller.enqueue(chunk))
       controller.close()

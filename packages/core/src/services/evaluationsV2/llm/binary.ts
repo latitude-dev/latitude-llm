@@ -1,8 +1,10 @@
+import { ChainError, RunErrorCodes } from '@latitude-data/constants/errors'
 import { z } from 'zod'
 import { database } from '../../../client'
 import {
   EvaluationType,
   LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION,
+  LlmEvaluationBinaryResultMetadata,
   LlmEvaluationMetric,
   LlmEvaluationBinarySpecification as specification,
 } from '../../../constants'
@@ -104,6 +106,23 @@ You must give your verdict as a single JSON object with the following properties
 `.trim()
 }
 
+function grade({
+  score,
+  metadata,
+}: {
+  score: number
+  metadata: LlmEvaluationBinaryResultMetadata
+}) {
+  let normalizedScore = normalizeScore(score, 0, 1)
+  let hasPassed = score === 1
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 1, 0)
+    hasPassed = score === 0
+  }
+
+  return { score, normalizedScore, metadata, hasPassed }
+}
+
 async function run(
   {
     resultUuid,
@@ -119,12 +138,17 @@ async function run(
 ) {
   const metadata = {
     configuration: evaluation.configuration,
-    actualOutput: actualOutput,
+    actualOutput: actualOutput.value ?? '',
     evaluationLogId: -1,
     reason: '',
     tokens: 0,
     cost: 0,
     duration: 0,
+  }
+
+  if (actualOutput.error) {
+    metadata.reason = actualOutput.error.message
+    return grade({ score: 0, metadata })
   }
 
   const provider = providers?.get(metadata.configuration.provider)
@@ -137,37 +161,43 @@ async function run(
     db,
   ).then((r) => r.unwrap())
 
-  const { response, stats, verdict } = await runPrompt({
-    prompt: buildPrompt({ ...metadata.configuration, provider }),
-    parameters: {
-      ...evaluatedLog,
-      actualOutput: actualOutput,
-      conversation: formatConversation(conversation),
-    },
-    schema: promptSchema,
-    resultUuid: resultUuid,
-    evaluation: evaluation,
-    providers: providers!,
-    commit: commit,
-    workspace: workspace,
-  })
+  let result
+  try {
+    result = await runPrompt({
+      prompt: buildPrompt({ ...metadata.configuration, provider }),
+      parameters: {
+        ...evaluatedLog,
+        actualOutput: actualOutput,
+        conversation: formatConversation(conversation),
+      },
+      schema: promptSchema,
+      resultUuid: resultUuid,
+      evaluation: evaluation,
+      providers: providers!,
+      commit: commit,
+      workspace: workspace,
+    })
+  } catch (error) {
+    if (
+      error instanceof ChainError &&
+      error.errorCode === RunErrorCodes.InvalidResponseFormatError
+    ) {
+      metadata.reason = error.message
+      return grade({ score: 0, metadata })
+    }
 
-  metadata.evaluationLogId = response.providerLog!.id
-  metadata.reason = verdict.reason
-  metadata.tokens = stats.tokens
-  metadata.cost = stats.costInMillicents
-  metadata.duration = stats.duration
-
-  const score = verdict.passed ? 1 : 0
-
-  let normalizedScore = normalizeScore(score, 0, 1)
-  let hasPassed = score === 1
-  if (metadata.configuration.reverseScale) {
-    normalizedScore = normalizeScore(score, 1, 0)
-    hasPassed = score === 0
+    throw error
   }
 
-  return { score, normalizedScore, metadata, hasPassed }
+  metadata.evaluationLogId = result.response.providerLog!.id
+  metadata.reason = result.verdict.reason
+  metadata.tokens = result.stats.tokens
+  metadata.cost = result.stats.costInMillicents
+  metadata.duration = result.stats.duration
+
+  const score = result.verdict.passed ? 1 : 0
+
+  return grade({ score, metadata })
 }
 
 async function clone(

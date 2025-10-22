@@ -1,6 +1,7 @@
 import { database } from '../../../client'
 import {
   EvaluationType,
+  RuleEvaluationLengthCountResultMetadata,
   RuleEvaluationMetric,
   RuleEvaluationLengthCountSpecification as specification,
 } from '../../../constants'
@@ -61,6 +62,26 @@ async function validate(
   })
 }
 
+function grade({
+  score,
+  metadata,
+}: {
+  score: number
+  metadata: RuleEvaluationLengthCountResultMetadata
+}) {
+  const minLength = metadata.configuration.minLength ?? 0
+  const maxLength = metadata.configuration.maxLength ?? Infinity
+
+  let normalizedScore = normalizeScore(score, minLength, maxLength)
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, maxLength, minLength)
+  }
+
+  const hasPassed = score >= minLength && score <= maxLength
+
+  return { score, normalizedScore, metadata, hasPassed }
+}
+
 async function run(
   {
     evaluation,
@@ -73,7 +94,12 @@ async function run(
 ) {
   const metadata = {
     configuration: evaluation.configuration,
-    actualOutput: actualOutput,
+    actualOutput: actualOutput.value ?? '',
+  }
+
+  if (actualOutput.error) {
+    // TODO(ao): Save reason
+    return grade({ score: 0, metadata })
   }
 
   let score = 0
@@ -92,15 +118,5 @@ async function run(
       throw new Error('Invalid count algorithm')
   }
 
-  const minLength = metadata.configuration.minLength ?? 0
-  const maxLength = metadata.configuration.maxLength ?? Infinity
-
-  let normalizedScore = normalizeScore(score, minLength, maxLength)
-  if (metadata.configuration.reverseScale) {
-    normalizedScore = normalizeScore(score, maxLength, minLength)
-  }
-
-  const hasPassed = score >= minLength && score <= maxLength
-
-  return { score, normalizedScore, metadata, hasPassed }
+  return grade({ score, metadata })
 }

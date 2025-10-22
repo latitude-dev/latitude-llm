@@ -114,7 +114,12 @@ export async function runEvaluationV2<
     return Result.error(new BadRequestError('Invalid evaluation metric'))
   }
 
-  if (dataset && datasetLabel && datasetRow) {
+  if (
+    dataset &&
+    datasetLabel &&
+    datasetRow &&
+    evaluation.configuration.expectedOutput
+  ) {
     if (datasetRow.datasetId !== dataset.id) {
       return Result.error(
         new UnprocessableEntityError(
@@ -125,26 +130,42 @@ export async function runEvaluationV2<
   } else if (metricSpecification.requiresExpectedOutput) {
     return Result.error(
       new UnprocessableEntityError(
-        'Cannot evaluate a log without a dataset row when expected output is required',
+        'Cannot evaluate a log without a dataset, label, row or configuration when expected output is required',
       ),
     )
   }
 
   let value
   try {
+    // Note: some actual output errors are learnable and thus are treated as failures
     const actualOutput = await extractActualOutput({
       providerLog: providerLog,
       configuration: evaluation.configuration.actualOutput,
-    }).then((r) => r.unwrap())
+    })
+    if (
+      actualOutput.error &&
+      !(actualOutput.error instanceof UnprocessableEntityError)
+    ) {
+      throw actualOutput.error
+    }
 
+    // Note: all expected output errors are treated as non-learnable errors
     let expectedOutput = undefined
-    if (dataset && datasetLabel && datasetRow) {
+    if (
+      dataset &&
+      datasetLabel &&
+      datasetRow &&
+      evaluation.configuration.expectedOutput
+    ) {
       expectedOutput = await extractExpectedOutput({
         dataset: dataset,
         row: datasetRow,
         column: datasetLabel,
         configuration: evaluation.configuration.expectedOutput,
-      }).then((r) => r.unwrap())
+      })
+      if (expectedOutput.error) {
+        throw expectedOutput.error
+      }
     }
 
     value = (await typeSpecification.run({

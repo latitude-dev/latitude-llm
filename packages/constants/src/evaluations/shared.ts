@@ -22,11 +22,11 @@ export const ACCESSIBLE_OUTPUT_FORMATS = ['json']
 
 export const baseEvaluationConfiguration = z.object({
   reverseScale: z.boolean(), // If true, lower is better, otherwise, higher is better
-  actualOutput: actualOutputConfiguration.optional(), // Optional for backwards compatibility
-  expectedOutput: expectedOutputConfiguration.optional(), // Optional for backwards compatibility
+  actualOutput: actualOutputConfiguration,
+  expectedOutput: expectedOutputConfiguration.optional(),
 })
 export const baseEvaluationResultMetadata = z.object({
-  // Configuration snapshot is defined in every metric specification
+  // configuration: Configuration snapshot is defined in every metric specification
   actualOutput: z.string(),
   expectedOutput: z.string().optional(),
   datasetLabel: z.string().optional(),

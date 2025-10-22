@@ -1,25 +1,23 @@
+import { LogSources } from '@latitude-data/constants'
 import {
+  afterAll,
+  beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
-  beforeEach,
   vi,
-  beforeAll,
-  afterAll,
 } from 'vitest'
-import { LogSources } from '@latitude-data/constants'
-import { enqueueRun } from './enqueue'
-import { RunsRepository } from '../../repositories'
-import { queues } from '../../jobs/queues'
-import { publisher } from '../../events/publisher'
-import type {
-  Commit,
-  DocumentVersion,
-  Project,
-  Workspace,
-} from '../../schema/types'
-import { cache } from '../../cache'
 import type { Cache } from '../../cache'
+import { cache } from '../../cache'
+import { publisher } from '../../events/publisher'
+import { queues } from '../../jobs/queues'
+import { RunsRepository } from '../../repositories'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Project } from '../../schema/models/types/Project'
+import { type Workspace } from '../../schema/models/types/Workspace'
+import { enqueueRun } from './enqueue'
 
 vi.mock('../../jobs/queues')
 vi.mock('../../events/publisher')

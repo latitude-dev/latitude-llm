@@ -1,6 +1,7 @@
 import { database } from '../../../client'
 import {
   EvaluationType,
+  HumanEvaluationBinaryResultMetadata,
   HumanEvaluationMetric,
   HumanEvaluationBinarySpecification as specification,
 } from '../../../constants'
@@ -42,6 +43,23 @@ async function validate(
   })
 }
 
+function grade({
+  score,
+  metadata,
+}: {
+  score: number
+  metadata: HumanEvaluationBinaryResultMetadata
+}) {
+  let normalizedScore = normalizeScore(score, 0, 1)
+  let hasPassed = score === 1
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 1, 0)
+    hasPassed = score === 0
+  }
+
+  return { score, normalizedScore, metadata, hasPassed }
+}
+
 async function annotate(
   {
     resultScore,
@@ -56,18 +74,16 @@ async function annotate(
 ) {
   const metadata = {
     configuration: evaluation.configuration,
-    actualOutput: actualOutput,
+    actualOutput: actualOutput.value ?? '',
     reason: resultMetadata?.reason,
+  }
+
+  if (actualOutput.error) {
+    metadata.reason = actualOutput.error.message
+    return grade({ score: 0, metadata })
   }
 
   const score = Math.min(Math.max(Number(resultScore.toFixed(0)), 0), 1)
 
-  let normalizedScore = normalizeScore(score, 0, 1)
-  let hasPassed = score === 1
-  if (metadata.configuration.reverseScale) {
-    normalizedScore = normalizeScore(score, 1, 0)
-    hasPassed = score === 0
-  }
-
-  return { score, normalizedScore, metadata, hasPassed }
+  return grade({ score, metadata })
 }

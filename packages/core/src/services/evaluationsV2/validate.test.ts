@@ -175,6 +175,29 @@ describe('validateEvaluationV2', () => {
     )
   })
 
+  it('fails when expected output configuration is required but not set', async () => {
+    await expect(
+      validateEvaluationV2({
+        mode: 'create',
+        settings: {
+          ...settings,
+          configuration: {
+            ...settings.configuration,
+            expectedOutput: undefined,
+          },
+        },
+        options: options,
+        document: document,
+        commit: commit,
+        workspace: workspace,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new BadRequestError(
+        'Expected output configuration is required for this metric',
+      ),
+    )
+  })
+
   it('fails when expected output validation fails', async () => {
     await expect(
       validateEvaluationV2({

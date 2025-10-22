@@ -1,12 +1,14 @@
-import { beforeEach, describe, expect, it } from 'vitest'
 import { PaymentRequiredError } from '@latitude-data/constants/errors'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { FREE_PLANS, PRO_PLANS, SubscriptionPlan } from '../../../plans'
-import { type Subscription } from '../../../schema/models/types/Subscriptions'
+import { type Subscription } from '../../../schema/models/types/Subscription'
 import { type Workspace } from '../../../schema/models/types/Workspace'
-import { createSubscription } from '../../../tests/factories'
-import { createUser } from '../../../tests/factories'
-import { createWorkspace } from '../../../tests/factories'
-import { createMembership } from '../../../tests/factories'
+import {
+  createMembership,
+  createSubscription,
+  createUser,
+  createWorkspace,
+} from '../../../tests/factories'
 import { applyUserPlanLimit } from './applyUserPlanLimit'
 
 describe('applyUserPlanLimit', () => {

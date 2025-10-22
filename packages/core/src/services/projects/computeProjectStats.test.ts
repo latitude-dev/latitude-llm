@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { type Commit } from '../../schema/models/types/Commit'
-import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { type Project } from '../../schema/models/types/Project'
-import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
-import { type Workspace } from '../../schema/models/types/Workspace'
-import * as cacheModule from '../../cache'
 import {
   EvaluationType,
   LlmEvaluationMetric,
   Providers,
 } from '@latitude-data/constants'
+import * as cacheModule from '../../cache'
+import { type Commit } from '../../schema/models/types/Commit'
+import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { type Project } from '../../schema/models/types/Project'
+import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { computeProjectStats } from './computeProjectStats'
 
@@ -149,6 +149,13 @@ describe('computeProjectStats', () => {
       metric: LlmEvaluationMetric.Binary,
       configuration: {
         reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
         provider: 'openai',
         model: 'gpt-4',
         criteria: 'Evaluate the response',

@@ -1,30 +1,30 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core/data-access/providerLogs'
-import { UnprocessableEntityError } from '@latitude-data/core/lib/errors'
-import {
-  DocumentVersionsRepository,
-  ProviderLogsRepository,
-} from '@latitude-data/core/repositories'
-import { computeDocumentLogs } from '@latitude-data/core/services/documentLogs/computeDocumentLogs'
-import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
-import { serializeAggregatedProviderLog } from '@latitude-data/core/services/documentLogs/serialize'
-import { buildProviderLogResponse } from '@latitude-data/core/services/providerLogs/buildResponse'
-import { extractActualOutput } from '@latitude-data/core/services/evaluationsV2/outputs/extract'
-import { NextRequest, NextResponse } from 'next/server'
 import {
   ActualOutputConfiguration,
   DocumentLog,
   EvaluatedDocumentLog,
 } from '@latitude-data/core/constants'
+import { findLastProviderLogFromDocumentLogUuid } from '@latitude-data/core/data-access/providerLogs'
 import {
   buildConversation,
   formatConversation,
 } from '@latitude-data/core/helpers'
-import { ProviderLogDto } from '@latitude-data/core/schema/types'
-
-import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { UnprocessableEntityError } from '@latitude-data/core/lib/errors'
+import {
+  DocumentVersionsRepository,
+  ProviderLogsRepository,
+} from '@latitude-data/core/repositories'
 import { ProviderLog } from '@latitude-data/core/schema/models/types/ProviderLog'
+import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { ProviderLogDto } from '@latitude-data/core/schema/types'
+import { computeDocumentLogs } from '@latitude-data/core/services/documentLogs/computeDocumentLogs'
+import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/parseApiLogFilterParams'
+import { serializeAggregatedProviderLog } from '@latitude-data/core/services/documentLogs/serialize'
+import { extractActualOutput } from '@latitude-data/core/services/evaluationsV2/outputs/extract'
+import { buildProviderLogResponse } from '@latitude-data/core/services/providerLogs/buildResponse'
+import { NextRequest, NextResponse } from 'next/server'
+
 export const GET = errorHandler(
   authHandler(
     async (
@@ -112,7 +112,7 @@ async function serializeEvaluatedDocumentLog({
 }: {
   documentLog: DocumentLog
   providerLogs: ProviderLog[]
-  configuration?: ActualOutputConfiguration
+  configuration: ActualOutputConfiguration
 }): Promise<EvaluatedDocumentLog> {
   const providerLog = (await findLastProviderLogFromDocumentLogUuid(
     documentLog.uuid,

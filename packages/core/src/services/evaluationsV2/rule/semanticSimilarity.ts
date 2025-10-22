@@ -6,6 +6,7 @@ import { database } from '../../../client'
 import {
   EvaluationType,
   RuleEvaluationMetric,
+  RuleEvaluationSemanticSimilarityResultMetadata,
   RuleEvaluationSemanticSimilaritySpecification as specification,
 } from '../../../constants'
 import { BadRequestError } from '../../../lib/errors'
@@ -77,6 +78,25 @@ async function validate(
   })
 }
 
+function grade({
+  score,
+  metadata,
+}: {
+  score: number
+  metadata: RuleEvaluationSemanticSimilarityResultMetadata
+}) {
+  let normalizedScore = normalizeScore(score, 0, 100)
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 100, 0)
+  }
+
+  const minSimilarity = metadata.configuration.minSimilarity ?? 0
+  const maxSimilarity = metadata.configuration.maxSimilarity ?? 100
+  const hasPassed = score >= minSimilarity && score <= maxSimilarity
+
+  return { score, normalizedScore, metadata, hasPassed }
+}
+
 async function run(
   {
     evaluation,
@@ -91,12 +111,19 @@ async function run(
 ) {
   const metadata = {
     configuration: evaluation.configuration,
-    actualOutput: actualOutput,
-    expectedOutput: expectedOutput,
+    actualOutput: actualOutput.value ?? '',
+    expectedOutput: expectedOutput?.value,
     datasetLabel: datasetLabel,
   }
 
-  if (!metadata.expectedOutput) {
+  if (actualOutput.error) {
+    // TODO(ao): Save reason
+    return grade({ score: 0, metadata })
+  }
+
+  if (expectedOutput?.error) {
+    throw expectedOutput.error
+  } else if (!metadata.expectedOutput) {
     throw new BadRequestError('Expected output is required')
   }
 
@@ -127,14 +154,5 @@ async function run(
 
   score = Math.min(Math.max(Number(score.toFixed(0)), 0), 100)
 
-  let normalizedScore = normalizeScore(score, 0, 100)
-  if (metadata.configuration.reverseScale) {
-    normalizedScore = normalizeScore(score, 100, 0)
-  }
-
-  const minSimilarity = metadata.configuration.minSimilarity ?? 0
-  const maxSimilarity = metadata.configuration.maxSimilarity ?? 100
-  const hasPassed = score >= minSimilarity && score <= maxSimilarity
-
-  return { score, normalizedScore, metadata, hasPassed }
+  return grade({ score, metadata })
 }

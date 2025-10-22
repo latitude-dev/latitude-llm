@@ -18,13 +18,11 @@ Evaluations are crucial for understanding and improving the quality of your AI p
 Latitude supports three main approaches to evaluation, each suited for different needs:
 
 1.  [**LLM-as-Judge**](/guides/evaluations/llm-as-judges):
-
     - **How it works**: Uses another language model (the "judge") to score or critique the output of your target prompt based on specific criteria (e.g., helpfulness, clarity, adherence to instructions).
     - **Best for**: Subjective criteria, complex assessments, evaluating nuanced qualities like creativity or tone.
     - **Requires**: Defining evaluation criteria (often via templates or custom instructions for the judge LLM).
 
 2.  [**Programmatic Rules**](/guides/evaluations/programmatic_rules):
-
     - **How it works**: Applies code-based rules and metrics to check outputs against objective criteria.
     - **Best for**: Objective checks, ground truth comparisons (using datasets), format validation (JSON, regex), safety checks (keyword detection), length constraints.
     - **Requires**: Defining specific rules (e.g., exact match, contains keyword, JSON schema validation) and potentially providing a [Dataset](/guides/datasets/overview) with expected outputs.
@@ -54,9 +52,9 @@ By default the actual output is the last assistant message in the conversation, 
 2. Click on **Advanced configuration**.
 3. Configure:
    - Message selection: The last message or all messages in the conversation.
-   - Content filter: Filter the messages by content type (e.g., text, images, tool calls...).
+   - Content filter: Optionally filter the messages by content type (e.g., text, images, tool calls...).
    - Parsing format: The format to parse the actual output into (e.g., string, JSON, YAML...).
-   - Field accessor: The field to access in the actual output (e.g., 'answer', 'arguments.recommendations[2]'...).
+   - Field accessor: The optional field to access in the actual output (e.g., `answer`, `arguments.recommendations[2]`, `[-1].tool_name`, ...).
      ![Evaluation actual output configuration](/assets/evaluation-settings-outputs.png)
 4. Test the configuration by clicking on the "Test" button:
    ![Evaluation actual output test](/assets/evaluation-settings-outputs-test.png)

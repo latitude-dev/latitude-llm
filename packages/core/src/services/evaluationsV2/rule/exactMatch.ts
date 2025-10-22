@@ -1,6 +1,7 @@
 import { database } from '../../../client'
 import {
   EvaluationType,
+  RuleEvaluationExactMatchResultMetadata,
   RuleEvaluationMetric,
   RuleEvaluationExactMatchSpecification as specification,
 } from '../../../constants'
@@ -37,6 +38,23 @@ async function validate(
   })
 }
 
+function grade({
+  score,
+  metadata,
+}: {
+  score: number
+  metadata: RuleEvaluationExactMatchResultMetadata
+}) {
+  let normalizedScore = normalizeScore(score, 0, 1)
+  let hasPassed = score === 1
+  if (metadata.configuration.reverseScale) {
+    normalizedScore = normalizeScore(score, 1, 0)
+    hasPassed = score === 0
+  }
+
+  return { score, normalizedScore, metadata, hasPassed }
+}
+
 async function run(
   {
     evaluation,
@@ -51,12 +69,19 @@ async function run(
 ) {
   const metadata = {
     configuration: evaluation.configuration,
-    actualOutput: actualOutput,
-    expectedOutput: expectedOutput,
+    actualOutput: actualOutput.value ?? '',
+    expectedOutput: expectedOutput?.value,
     datasetLabel: datasetLabel,
   }
 
-  if (!metadata.expectedOutput) {
+  if (actualOutput.error) {
+    // TODO(ao): Save reason
+    return grade({ score: 0, metadata })
+  }
+
+  if (expectedOutput?.error) {
+    throw expectedOutput.error
+  } else if (!metadata.expectedOutput) {
     throw new BadRequestError('Expected output is required')
   }
 
@@ -69,12 +94,5 @@ async function run(
 
   const score = actualString === expectedString ? 1 : 0
 
-  let normalizedScore = normalizeScore(score, 0, 1)
-  let hasPassed = score === 1
-  if (metadata.configuration.reverseScale) {
-    normalizedScore = normalizeScore(score, 1, 0)
-    hasPassed = score === 0
-  }
-
-  return { score, normalizedScore, metadata, hasPassed }
+  return grade({ score, metadata })
 }

@@ -2,7 +2,6 @@ import { database } from '../../../client'
 import {
   EvaluationResultValue,
   EvaluationType,
-  EvaluationV2,
   LlmEvaluationMetric,
   LlmEvaluationCustomLabeledSpecification as specification,
 } from '../../../constants'
@@ -34,8 +33,6 @@ async function validate(
 
 async function run(
   {
-    resultUuid,
-    evaluation,
     expectedOutput,
     ...rest
   }: EvaluationMetricRunArgs<
@@ -44,20 +41,17 @@ async function run(
   >,
   db = database,
 ) {
-  if (!expectedOutput) {
+  if (expectedOutput?.error) {
+    throw expectedOutput.error
+  } else if (!expectedOutput?.value) {
     throw new BadRequestError('Expected output is required')
   }
 
   const result = (await LlmEvaluationCustomSpecification.run(
-    {
-      resultUuid: resultUuid,
-      evaluation: evaluation as unknown as EvaluationV2<
-        EvaluationType.Llm,
-        LlmEvaluationMetric.Custom
-      >,
-      expectedOutput: expectedOutput,
-      ...rest,
-    },
+    { expectedOutput, ...rest } as unknown as EvaluationMetricRunArgs<
+      EvaluationType.Llm,
+      LlmEvaluationMetric.Custom
+    >,
     db,
   )) as EvaluationResultValue<EvaluationType.Llm, LlmEvaluationMetric.Custom>
 
@@ -66,7 +60,7 @@ async function run(
         ...result,
         metadata: {
           ...result.metadata,
-          expectedOutput: expectedOutput,
+          expectedOutput: expectedOutput?.value,
         },
       }
     : result

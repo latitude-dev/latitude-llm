@@ -1,11 +1,11 @@
+import { Providers } from '@latitude-data/constants'
 import type { Message } from '@latitude-data/constants/legacyCompiler'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_DATASET_LABEL } from '../../../constants'
+import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
 import { type Dataset } from '../../../schema/models/types/Dataset'
 import { type DatasetRow } from '../../../schema/models/types/DatasetRow'
 import { ProviderLogDto } from '../../../schema/types'
-import { Providers } from '@latitude-data/constants'
-import { BadRequestError, UnprocessableEntityError } from '../../../lib/errors'
 import * as factories from '../../../tests/factories'
 import serializeProviderLog from '../../providerLogs/serialize'
 import { extractActualOutput, extractExpectedOutput } from './extract'
@@ -67,7 +67,16 @@ describe('extractActualOutput', () => {
             toolCallId: 'tool-call-1',
             toolName: 'tool-1',
             args: {
-              classes: ['class-1', 'class-2'],
+              classes: [
+                {
+                  id: 'class-1',
+                  variants: ['class-1-variant-1', 'class-1-variant-2'],
+                },
+                {
+                  id: 'class-2',
+                  variants: ['class-2-variant-1', 'class-2-variant-2'],
+                },
+              ],
             },
           },
         ],
@@ -77,7 +86,7 @@ describe('extractActualOutput', () => {
     providerLog.toolCalls = []
   })
 
-  it('fails when log does not contain any assistant messages', async () => {
+  it('fails when conversation does not contain any assistant messages', async () => {
     await expect(
       extractActualOutput({
         providerLog: providerLog,
@@ -89,7 +98,7 @@ describe('extractActualOutput', () => {
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new UnprocessableEntityError(
-        'Log does not contain any assistant messages',
+        'Conversation does not contain any assistant messages with file content',
       ),
     )
   })
@@ -147,13 +156,17 @@ describe('extractActualOutput', () => {
     )
   })
 
-  it('succeeds when configuration is not set', async () => {
-    const result = await extractActualOutput({
-      providerLog: providerLog,
-      configuration: undefined,
-    }).then((r) => r.unwrap())
-
-    expect(result).toEqual('Some assistant response 2')
+  it('fails when configuration is not set', async () => {
+    await expect(
+      extractActualOutput({
+        providerLog: providerLog,
+        configuration: undefined as any,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new TypeError(
+        "Cannot read properties of undefined (reading 'contentFilter')",
+      ),
+    )
   })
 
   it('succeeds when selecting the messages', async () => {
@@ -168,7 +181,7 @@ describe('extractActualOutput', () => {
     expect(result).toEqual(
       `
 Some assistant response 1
-{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":["class-1","class-2"]}}
+{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}
 
 Some assistant response 2
 `.trim(),
@@ -186,7 +199,7 @@ Some assistant response 2
     }).then((r) => r.unwrap())
 
     expect(result).toEqual(
-      '{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":["class-1","class-2"]}}',
+      '{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}',
     )
   })
 
@@ -201,7 +214,7 @@ Some assistant response 2
     }).then((r) => r.unwrap())
 
     expect(result).toEqual(
-      '{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":["class-1","class-2"]}}',
+      '[{"type":"tool-call","toolCallId":"tool-call-1","toolName":"tool-1","args":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}]',
     )
   })
 
@@ -212,11 +225,11 @@ Some assistant response 2
         messageSelection: 'all',
         contentFilter: 'tool_call',
         parsingFormat: 'json',
-        fieldAccessor: 'args.classes[1]',
+        fieldAccessor: '[-1].args.classes[1].variants[-1]',
       },
     }).then((r) => r.unwrap())
 
-    expect(result).toEqual('class-2')
+    expect(result).toEqual('class-2-variant-2')
   })
 })
 
@@ -327,20 +340,24 @@ value1,value2,"Some expected output"
     )
   })
 
-  it('succeeds when configuration is not set', async () => {
-    const result = await extractExpectedOutput({
-      dataset: dataset,
-      row: datasetRow,
-      column: datasetLabel,
-      configuration: undefined,
-    }).then((r) => r.unwrap())
-
-    expect(result).toEqual('Some expected output')
+  it('fails when configuration is not set', async () => {
+    await expect(
+      extractExpectedOutput({
+        dataset: dataset,
+        row: datasetRow,
+        column: datasetLabel,
+        configuration: undefined as any,
+      }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new UnprocessableEntityError(
+        "Cannot read properties of undefined (reading 'parsingFormat')",
+      ),
+    )
   })
 
   it('succeeds when parsing the output', async () => {
     datasetRow.rowData[datasetColumn] =
-      '{"answer": {"classes": ["class-1", "class-2"]}}'
+      '{"answer": {"classes": [{"id": "class-1", "variants": ["class-1-variant-1", "class-1-variant-2"]}, {"id": "class-2", "variants": ["class-2-variant-1", "class-2-variant-2"]}]}}'
 
     const result = await extractExpectedOutput({
       dataset: dataset,
@@ -351,12 +368,14 @@ value1,value2,"Some expected output"
       },
     }).then((r) => r.unwrap())
 
-    expect(result).toEqual('{"answer":{"classes":["class-1","class-2"]}}')
+    expect(result).toEqual(
+      '{"answer":{"classes":[{"id":"class-1","variants":["class-1-variant-1","class-1-variant-2"]},{"id":"class-2","variants":["class-2-variant-1","class-2-variant-2"]}]}}',
+    )
   })
 
   it('succeeds when accessing the output by field', async () => {
     datasetRow.rowData[datasetColumn] =
-      '{"answer": {"classes": ["class-1", "class-2"]}}'
+      '{"answer": {"classes": [{"id": "class-1", "variants": ["class-1-variant-1", "class-1-variant-2"]}, {"id": "class-2", "variants": ["class-2-variant-1", "class-2-variant-2"]}]}}'
 
     const result = await extractExpectedOutput({
       dataset: dataset,
@@ -364,10 +383,10 @@ value1,value2,"Some expected output"
       column: datasetLabel,
       configuration: {
         parsingFormat: 'json',
-        fieldAccessor: 'answer.classes[1]',
+        fieldAccessor: 'answer.classes[1].variants[-1]',
       },
     }).then((r) => r.unwrap())
 
-    expect(result).toEqual('class-2')
+    expect(result).toEqual('class-2-variant-2')
   })
 })

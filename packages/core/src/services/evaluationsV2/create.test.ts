@@ -61,6 +61,13 @@ describe('createEvaluationV2', () => {
       metric: RuleEvaluationMetric.ExactMatch,
       configuration: {
         reverseScale: false,
+        actualOutput: {
+          messageSelection: 'last',
+          parsingFormat: 'string',
+        },
+        expectedOutput: {
+          parsingFormat: 'string',
+        },
         caseInsensitive: false,
       },
     }

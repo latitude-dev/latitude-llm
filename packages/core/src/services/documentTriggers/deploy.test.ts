@@ -1,31 +1,31 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  DocumentTriggerType,
   DocumentTriggerStatus,
+  DocumentTriggerType,
   Providers,
 } from '@latitude-data/constants'
+import {
+  EmailTriggerConfiguration,
+  IntegrationTriggerConfiguration,
+  ScheduledTriggerConfiguration,
+} from '@latitude-data/constants/documentTriggers'
 import {
   BadRequestError,
   NotFoundError,
   NotImplementedError,
 } from '@latitude-data/constants/errors'
+import { eq } from 'drizzle-orm'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { database } from '../../client'
+import { Result } from '../../lib/Result'
+import { documentTriggers } from '../../schema/models/documentTriggers'
 import { type Commit } from '../../schema/models/types/Commit'
-import { type Project } from '../../schema/models/types/Project'
-import { type Workspace } from '../../schema/models/types/Workspace'
 import { type DocumentTrigger } from '../../schema/models/types/DocumentTrigger'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import { deployDocumentTrigger, undeployDocumentTrigger } from './deploy'
-import { Result } from '../../lib/Result'
+import { type Project } from '../../schema/models/types/Project'
+import { type Workspace } from '../../schema/models/types/Workspace'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'
-import {
-  EmailTriggerConfiguration,
-  ScheduledTriggerConfiguration,
-  IntegrationTriggerConfiguration,
-} from '@latitude-data/constants/documentTriggers'
-import { eq } from 'drizzle-orm'
-import { documentTriggers } from '../../schema/models/documentTriggers'
-import { database } from '../../client'
+import { deployDocumentTrigger, undeployDocumentTrigger } from './deploy'
 
 const mocks = vi.hoisted(() => ({
   deployIntegrationTrigger: vi.fn(),
@@ -202,12 +202,19 @@ describe('deployDocumentTrigger', () => {
 
   describe('Unsupported trigger type', () => {
     it('returns NotImplementedError for unsupported trigger type', async () => {
+      const configuration: EmailTriggerConfiguration = {
+        emailWhitelist: ['test@example.com'],
+        domainWhitelist: ['example.com'],
+        replyWithResponse: true,
+        parameters: {},
+      }
+
       const result = await deployDocumentTrigger({
         workspace,
         commit,
         triggerUuid: 'test-uuid',
         triggerType: 'UnsupportedType' as DocumentTriggerType,
-        configuration: {},
+        configuration,
       })
 
       expect(result.ok).toBe(false)
