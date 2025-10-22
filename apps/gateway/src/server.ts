@@ -6,6 +6,7 @@ import cluster from 'cluster'
 import os from 'os'
 
 import { env } from '@latitude-data/env'
+import { cloudWatchMetrics } from './services/cloudwatchMetrics'
 
 const HOSTNAME = env.GATEWAY_BIND_ADDRESS
 const PORT = env.GATEWAY_BIND_PORT
@@ -60,11 +61,26 @@ if (cluster.isPrimary) {
       console.log(
         `Worker ${process.pid} listening on http://${HOSTNAME}:${PORT}`,
       )
+
+      if (env.AWS_ACCESS_KEY && env.AWS_ACCESS_SECRET) {
+        cloudWatchMetrics.startPeriodicEmission()
+        console.log('Started CloudWatch metrics emission for inflight requests')
+      }
     },
   )
 
-  process.on('SIGTERM', () => gracefulShutdown(server))
-  process.on('SIGINT', () => gracefulShutdown(server))
+  process.on('SIGTERM', () => {
+    if (env.AWS_ACCESS_KEY && env.AWS_ACCESS_SECRET) {
+      cloudWatchMetrics.stopPeriodicEmission()
+    }
+    gracefulShutdown(server)
+  })
+  process.on('SIGINT', () => {
+    if (env.AWS_ACCESS_KEY && env.AWS_ACCESS_SECRET) {
+      cloudWatchMetrics.stopPeriodicEmission()
+    }
+    gracefulShutdown(server)
+  })
 
   process.on('uncaughtException', function (err) {
     captureException(err)
