@@ -2,7 +2,7 @@ import { createMiddleware } from 'hono/factory'
 import { RateLimitError } from '@latitude-data/constants/errors'
 import { cloudWatchMetrics } from '../services/cloudwatchMetrics'
 
-const MAX_INFLIGHT_REQUESTS = 1000
+const MAX_INFLIGHT_REQUESTS = 200
 
 /**
  * Middleware that checks if the server has reached its maximum concurrent request capacity.
