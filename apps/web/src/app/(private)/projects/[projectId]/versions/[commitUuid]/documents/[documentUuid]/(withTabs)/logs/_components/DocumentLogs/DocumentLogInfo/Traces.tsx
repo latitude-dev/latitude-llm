@@ -17,7 +17,6 @@ import { useState } from 'react'
 // TODO(tracing): lazy load traces if not expanded when the trace model is persisted
 
 function DocumentLogTrace({
-  conversationId,
   traceId,
   onSelectedSpan,
   expanded,
@@ -25,7 +24,6 @@ function DocumentLogTrace({
   isFirst,
   isLast,
 }: {
-  conversationId: string
   traceId: string
   onSelectedSpan?: OnSelectedSpanFn
   expanded: boolean
@@ -33,7 +31,7 @@ function DocumentLogTrace({
   isFirst: boolean
   isLast: boolean
 }) {
-  const { data: trace, isLoading } = useTrace({ conversationId, traceId })
+  const { data: trace, isLoading } = useTrace({ traceId })
 
   if (isLoading) {
     if (!isFirst) return null
@@ -126,7 +124,6 @@ export function DocumentLogTraces({
       {traceIds.map((traceId, index) => (
         <DocumentLogTrace
           key={`${documentLog.uuid}-${traceId}`}
-          conversationId={documentLog.uuid}
           traceId={traceId}
           onSelectedSpan={onSelectedSpan}
           expanded={expanded === index}

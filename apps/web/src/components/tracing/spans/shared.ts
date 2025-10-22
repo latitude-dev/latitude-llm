@@ -16,7 +16,7 @@ import {
 
 export type DetailsPanelProps<T extends SpanType = SpanType> = {
   span: SpanWithDetails<T> & {
-    conversationId: string
+    conversationId?: string
   }
 }
 

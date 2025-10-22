@@ -114,13 +114,15 @@ export function DetailsPanel<T extends SpanType>({
             </Text.H5>
           </ClickToCopy>
         </MetadataItem>
-        <MetadataItem label='Conversation id'>
-          <ClickToCopy copyValue={span.conversationId}>
-            <Text.H5 align='right' color='foregroundMuted'>
-              {span.conversationId.slice(0, 8)}
-            </Text.H5>
-          </ClickToCopy>
-        </MetadataItem>
+        {span.conversationId && (
+          <MetadataItem label='Conversation id'>
+            <ClickToCopy copyValue={span.conversationId}>
+              <Text.H5 align='right' color='foregroundMuted'>
+                {span.conversationId.slice(0, 8)}
+              </Text.H5>
+            </ClickToCopy>
+          </MetadataItem>
+        )}
         <MetadataItem label='Duration' value={formatDuration(span.duration)} />
         <MetadataItem
           label='Timestamp'

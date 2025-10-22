@@ -8,6 +8,7 @@ import {
 } from '@latitude-data/web-ui/molecules/TabSelector'
 import { useSelectedLayoutSegment } from 'next/navigation'
 import { memo, useCallback, useMemo, useState } from 'react'
+import useFeature from '$/stores/useFeature'
 
 export type TabValue = DocumentRoutes | 'preview'
 
@@ -29,6 +30,7 @@ export const DocumentTabSelector = memo(
   }) => {
     const router = useNavigate()
     const selectedSegment = useSelectedLayoutSegment() as DocumentRoutes | null
+    const { isEnabled: isTracesEnabled } = useFeature('traces')
 
     // --- Internal fallback state (uncontrolled mode) ---
     const [internalTab, setInternalTab] = useState<TabValue>(
@@ -72,6 +74,11 @@ export const DocumentTabSelector = memo(
           value: DocumentRoutes.logs,
           route: baseRoute.logs.root,
         },
+        [DocumentRoutes.traces]: {
+          label: 'Traces',
+          value: DocumentRoutes.traces,
+          route: baseRoute.traces.root,
+        },
       } satisfies Record<TabValue, TabSelectorOption<TabValue>>
 
       return {
@@ -81,9 +88,10 @@ export const DocumentTabSelector = memo(
           tabs[DocumentRoutes.evaluations],
           tabs[DocumentRoutes.experiments],
           tabs[DocumentRoutes.logs],
+          ...(isTracesEnabled ? [tabs[DocumentRoutes.traces]] : []),
         ],
       }
-    }, [projectId, commitUuid, documentUuid])
+    }, [projectId, commitUuid, documentUuid, isTracesEnabled])
 
     // --- Click handler ---
     const onClickTab = useCallback(

@@ -9,6 +9,7 @@ export enum DocumentRoutes {
   logs = 'logs',
   evaluations = 'evaluations',
   experiments = 'experiments',
+  traces = 'traces',
 }
 
 export enum EvaluationRoutes {
@@ -232,6 +233,9 @@ export const ROUTES = {
                         }
                         return base
                       },
+                    },
+                    [DocumentRoutes.traces]: {
+                      root: `${root}/${DocumentRoutes.traces}`,
                     },
                     [DocumentRoutes.experiments]: {
                       root: experimentsRoot,

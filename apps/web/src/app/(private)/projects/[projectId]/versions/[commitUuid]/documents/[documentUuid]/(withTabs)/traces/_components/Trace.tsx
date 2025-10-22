@@ -1,27 +1,72 @@
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { TimelineGraph } from './Graph'
-import { TimelineScale } from './Scale'
-import { TimelineTree } from './Tree'
+import { TimelineGraph } from '$/components/tracing/traces/Timeline/Graph'
+import { TimelineScale } from '$/components/tracing/traces/Timeline/Scale'
+import { TimelineTree } from '$/components/tracing/traces/Timeline/Tree'
+import { useTrace } from '$/stores/traces'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { useSelectedSpan } from './SelectedSpansContext'
 import { AssembledSpan, AssembledTrace } from '@latitude-data/core/constants'
+
+export function Trace({ traceId }: { traceId: string }) {
+  const { data: trace, isLoading } = useTrace({ traceId })
+
+  if (isLoading) {
+    return (
+      <div className='w-full h-full flex items-center justify-center gap-2 p-4 bg-secondary'>
+        <Icon name='loader' color='foregroundMuted' className='animate-spin' />
+        <Text.H5 color='foregroundMuted'>Assembling trace</Text.H5>
+      </div>
+    )
+  }
+
+  if (!trace || trace.children.length < 1) {
+    return (
+      <div className='w-full h-full flex items-center justify-center gap-2 p-4 bg-secondary'>
+        <Text.H5 color='foregroundMuted'>No events found so far</Text.H5>
+      </div>
+    )
+  }
+
+  return (
+    <div className='w-full h-full max-h-96 overflow-y-auto custom-scrollbar'>
+      <Timeline trace={trace} />
+    </div>
+  )
+}
 
 const TREE_MIN_WIDTH = 125 // 125px
 const GRAPH_MIN_WIDTH = 450 // 450px
 
-export type OnSelectedSpanFn = (args?: {
-  conversationId?: string
-  traceId: string
-  spanId: string
-}) => void
+function findSpanByIdBFS(
+  trace: AssembledTrace,
+  spanId?: string | null,
+): AssembledSpan | null {
+  const queue: AssembledSpan[] = [...trace.children]
+  if (!spanId) return null
 
-export function Timeline({
-  trace,
-  onSelectedSpan,
-}: {
-  trace: AssembledTrace
-  onSelectedSpan?: OnSelectedSpanFn
-}) {
+  while (queue.length > 0) {
+    const currentSpan = queue.shift()!
+
+    if (currentSpan.id === spanId) {
+      return currentSpan
+    }
+
+    if (currentSpan.children && currentSpan.children.length > 0) {
+      queue.push(...currentSpan.children)
+    }
+  }
+
+  return null
+}
+
+function Timeline({ trace }: { trace: AssembledTrace }) {
+  const { selectedSpanId, setSelectedSpanId } = useSelectedSpan()
+  const setSelectedSpan = (span?: AssembledSpan) =>
+    span && setSelectedSpanId(span.id)
+
+  const selectedSpan = findSpanByIdBFS(trace, selectedSpanId)
   const treeRef = useRef<HTMLDivElement>(null)
   const [treeWidth, setTreeWidth] = useState(0)
   const graphRef = useRef<HTMLDivElement>(null)
@@ -40,22 +85,6 @@ export function Timeline({
     resizeObserver.observe(graphRef.current)
     return () => resizeObserver.disconnect()
   }, [updateWidth])
-
-  const [selectedSpan, setSelectedSpan] = useState<AssembledSpan>()
-  const selectSpan = useCallback(
-    (span?: AssembledSpan) => setSelectedSpan(span),
-    [setSelectedSpan],
-  )
-  useEffect(() => {
-    if (!selectedSpan) onSelectedSpan?.(undefined)
-    else {
-      onSelectedSpan?.({
-        conversationId: trace.conversationId,
-        traceId: trace.id,
-        spanId: selectedSpan.id,
-      })
-    }
-  }, [trace, selectedSpan, onSelectedSpan])
 
   const [collapsedSpans, setCollapsedSpans] = useState<Set<string>>(new Set())
   const toggleCollapsed = useCallback(
@@ -76,6 +105,7 @@ export function Timeline({
       </div>
     )
   }
+  if (!selectedSpan) return null
 
   return (
     <div className='w-full h-full flex flex-col items-center justify-center relative'>
@@ -90,7 +120,7 @@ export function Timeline({
               width={treeWidth}
               minWidth={TREE_MIN_WIDTH}
               selectedSpan={selectedSpan}
-              selectSpan={selectSpan}
+              selectSpan={setSelectedSpan}
               collapsedSpans={collapsedSpans}
               toggleCollapsed={toggleCollapsed}
             />
@@ -103,7 +133,7 @@ export function Timeline({
               width={graphWidth}
               minWidth={GRAPH_MIN_WIDTH}
               selectedSpan={selectedSpan}
-              selectSpan={selectSpan}
+              selectSpan={setSelectedSpan}
               collapsedSpans={collapsedSpans}
             />
           </div>

@@ -17,7 +17,6 @@ export const GET = errorHandler(
         workspace,
       }: {
         params: {
-          conversationId: string
           traceId: string
           spanId: string
         }

@@ -71,11 +71,18 @@ function MessagesDetails({
             content={input.at(0)!.content}
           />
         )}
-        <div className='w-full flex items-center justify-center py-1 px-4 bg-secondary rounded-lg'>
-          <Text.H6 color='foregroundMuted'>
-            ...Preview, expand to see more...
-          </Text.H6>
-        </div>
+        {(input.length > 1 || output.length > 1) && (
+          <Button
+            onClick={() => setExpanded(true)}
+            variant='ghost'
+            size='none'
+            className='w-full flex items-center justify-center py-1 px-4 bg-secondary rounded-lg hover:bg-secondary/80'
+          >
+            <Text.H6 color='foregroundMuted'>
+              ...Preview, expand to see more...
+            </Text.H6>
+          </Button>
+        )}
         {output.length > 0 && (
           <MessageComponent
             role={output.at(-1)!.role}

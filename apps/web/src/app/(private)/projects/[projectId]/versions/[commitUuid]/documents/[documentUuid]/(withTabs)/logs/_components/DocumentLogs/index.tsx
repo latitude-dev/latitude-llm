@@ -154,7 +154,6 @@ export function DocumentLogs({
   const [selectedSpan, setSelectedSpan] =
     useState<Parameters<OnSelectedSpanFn>[0]>()
   const { data: span, isLoading: isSpanLoading } = useSpan({
-    conversationId: selectedSpan?.conversationId ?? '',
     traceId: selectedSpan?.traceId ?? '',
     spanId: selectedSpan?.spanId ?? '',
   })

@@ -13,16 +13,13 @@ export const GET = errorHandler(
         workspace,
       }: {
         params: {
-          conversationId: string
           traceId: string
         }
         workspace: Workspace
       },
     ) => {
-      const { conversationId, traceId } = params
-
+      const { traceId } = params
       const { trace } = await assembleTrace({
-        conversationId: conversationId,
         traceId: traceId,
         workspace: workspace,
       }).then((r) => r.unwrap())
