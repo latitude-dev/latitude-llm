@@ -2,7 +2,7 @@
 
 import { ComponentProps, Suspense, lazy } from 'react'
 import { Prism as PrismHighlighter } from 'react-syntax-highlighter'
-import { Text } from '../../Text'
+import { Skeleton } from '../../Skeleton'
 
 type Props = Omit<ComponentProps<typeof PrismHighlighter>, 'style'> & {
   currentTheme?: string
@@ -17,7 +17,7 @@ export function SyntaxHighlighter({
   currentTheme,
 }: Props) {
   return (
-    <Suspense fallback={<Text.H5 animate>Loading code...</Text.H5>}>
+    <Suspense fallback={<Skeleton height='h5' />}>
       <LazyPrism
         className={className}
         language={language}

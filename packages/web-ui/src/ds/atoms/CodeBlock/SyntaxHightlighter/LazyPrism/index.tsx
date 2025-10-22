@@ -2,6 +2,7 @@
 import { Prism as PrismHighlighter } from 'react-syntax-highlighter'
 import { CurrentTheme } from '../../../../../constants'
 import { ComponentProps, use } from 'react'
+import { cn } from '../../../../../lib/utils'
 
 type Props = Omit<ComponentProps<typeof PrismHighlighter>, 'style'> & {
   currentTheme?: string
@@ -26,7 +27,17 @@ export default function LazyPrism({
   )
 
   return (
-    <PrismHighlighter className={className} language={language} style={style}>
+    <PrismHighlighter
+      language={language}
+      style={style}
+      className={cn('text-xs', className)}
+      customStyle={{
+        borderRadius: '0.375rem',
+        padding: '1rem',
+        lineHeight: '1.25rem',
+        margin: '0',
+      }}
+    >
       {children}
     </PrismHighlighter>
   )
