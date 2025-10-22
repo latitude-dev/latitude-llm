@@ -37,6 +37,7 @@ export function SystemMessage({
               parameters={parameters}
               toolContentMap={toolContentMap}
               debugMode={false}
+              markdownSize='sm'
             />
           )}
         </div>

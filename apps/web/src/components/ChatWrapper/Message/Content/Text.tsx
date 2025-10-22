@@ -80,14 +80,16 @@ export function TextMessageContent({
   size,
   parameters = [],
   sourceMap = [],
+  markdownSize,
 }: {
   index?: number
   text: string | undefined
-  color: TextColor
+  color: 'foreground' | 'primary' | 'foregroundMuted'
   size?: 'default' | 'small'
   parameters?: string[]
   debugMode?: boolean
   sourceMap?: PromptlSourceRef[]
+  markdownSize: 'none' | 'sm' | 'md' | 'lg'
 }) {
   const stringifiedJson = useMemo(() => {
     if (!text) return undefined
@@ -103,8 +105,8 @@ export function TextMessageContent({
     return <ContentJson json={stringifiedJson} />
   }
 
-  if (!debugMode && text) {
-    return <MarkdownContent text={text} color={color} className='text-start' />
+  if (!debugMode && text && markdownSize !== 'none') {
+    return <MarkdownContent text={text} size={markdownSize} color={color} />
   }
 
   return (

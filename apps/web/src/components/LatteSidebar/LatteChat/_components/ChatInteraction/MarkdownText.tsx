@@ -52,29 +52,6 @@ export const MarkdownResponse = memo(
   function MarkdownResponse({ text }: { text: string }) {
     const components = useMemo<Components>(
       () => ({
-        h1: ({ children }) => (
-          <div className='block'>
-            <Text.H3 color='latteOutputForeground'>{children}</Text.H3>
-          </div>
-        ),
-        h2: ({ children }) => (
-          <div className='block'>
-            <Text.H4B color='latteOutputForeground'>{children}</Text.H4B>
-          </div>
-        ),
-        h3: ({ children }) => (
-          <div className='block'>
-            <Text.H4 color='latteOutputForeground'>{children}</Text.H4>
-          </div>
-        ),
-
-        p: ({ children }) => (
-          <Text.H5 color='latteOutputForeground'>{children}</Text.H5>
-        ),
-        strong: ({ children }) => (
-          <Text.H5B color='latteOutputForeground'>{children}</Text.H5B>
-        ),
-
         a: ({ children, href }) => (
           <LatteLink href={href ?? '#'}>{children}</LatteLink>
         ),
@@ -106,19 +83,14 @@ export const MarkdownResponse = memo(
             </CodeBlock>
           )
         },
-
-        li: ({ children }) => (
-          <li>
-            <Text.H5 color='latteOutputForeground'>{children}</Text.H5>
-          </li>
-        ),
-        hr: () => <div className='w-full h-px bg-muted my-4' />,
       }),
       [],
     )
 
     return (
       <Markdown
+        color='latte'
+        size='md'
         className='text-latte-output-foreground'
         components={components}
       >
