@@ -21,6 +21,7 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useUpdateDocumentTrigger } from '$/components/TriggersManagement/EditTrigger/useUpdateDocumentTrigger'
 import { SidebarSection } from '../Section'
 import { SelectionSubItem } from '../SelectionSubItem'
+import { Alert } from '@latitude-data/web-ui/atoms/Alert'
 
 function NewTriggerModal({
   modalOpen,
@@ -43,6 +44,13 @@ function NewTriggerModal({
       title='Add new trigger'
       description='Add a new trigger to run this project automatically'
       onOpenChange={onCloseModal}
+      footer={
+        <Alert
+          variant='warning'
+          description='Triggers run only on published project versions'
+          spacing='medium'
+        />
+      }
     >
       <NewTrigger onTriggerCreated={onTriggerCreated} document={document} />
     </Modal>
