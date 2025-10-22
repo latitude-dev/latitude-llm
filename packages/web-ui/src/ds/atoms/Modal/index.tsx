@@ -17,7 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogWarningDescription,
   type FooterProps,
 } from './Primitives'
 
@@ -109,9 +108,11 @@ export function Modal({
                       <DialogDescription>{description}</DialogDescription>
                     )}
                     {warningDescription && (
-                      <DialogWarningDescription>
-                        ⚠️ {warningDescription}
-                      </DialogWarningDescription>
+                      <Alert
+                        variant='warning'
+                        description={warningDescription}
+                        spacing='medium'
+                      />
                     )}
                   </DialogHeader>
                 </div>
