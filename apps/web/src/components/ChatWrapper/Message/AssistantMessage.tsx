@@ -24,11 +24,12 @@ export function AssistantMessage({
     >
       <Content
         content={content}
+        toolContentMap={toolContentMap}
         color='foreground'
         size={size}
         parameters={parameters}
-        toolContentMap={toolContentMap}
         debugMode={false}
+        markdownSize='md'
       />
       {isGeneratingToolCall && <ToolCardSkeleton />}
     </div>

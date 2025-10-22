@@ -77,6 +77,7 @@ export const DebugMessage = memo(
                 parameters={parameters}
                 toolContentMap={toolContentMap}
                 debugMode={true}
+                markdownSize='sm'
               />
             )}
             {isGeneratingToolCall && <ToolCardSkeleton />}

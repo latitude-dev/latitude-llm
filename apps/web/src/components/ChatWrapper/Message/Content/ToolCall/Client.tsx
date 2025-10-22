@@ -26,6 +26,7 @@ import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Label } from '@latitude-data/web-ui/atoms/Label'
 import { Alert } from '@latitude-data/web-ui/atoms/Alert'
+import { stringifyUnknown } from '@latitude-data/web-ui/textUtils'
 
 function UnansweredClientToolContent({ toolCallId }: { toolCallId: string }) {
   const [value, setValue] = useState<string>('')
@@ -92,7 +93,9 @@ function AnsweredClientToolContent({
           />
         </div>
       ) : (
-        <CodeBlock language='json'>{toolResponse.result as string}</CodeBlock>
+        <CodeBlock language='json'>
+          {stringifyUnknown(toolResponse.result)}
+        </CodeBlock>
       )}
     </ToolCardContentWrapper>
   )
@@ -131,10 +134,10 @@ export function ClientToolCard({
         </ToolCardContentWrapper>
       )}
       {isOpen &&
-        (status === 'pending' ? (
+        (status === 'pending' || !toolResponse ? (
           <UnansweredClientToolContent toolCallId={toolRequest.toolCallId} />
         ) : (
-          <AnsweredClientToolContent toolResponse={toolResponse!} />
+          <AnsweredClientToolContent toolResponse={toolResponse} />
         ))}
     </ToolCardWrapper>
   )

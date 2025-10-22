@@ -33,7 +33,7 @@ function StepGroup({
         spin={showLoaderIcon}
         name={showLoaderIcon ? 'loader' : 'chevronRight'}
         color='latteOutputForegroundMuted'
-        className={cn('transition-all min-w-4 mt-0.5', {
+        className={cn('transition-all min-w-4 mt-1', {
           'rotate-90': isOpen,
         })}
       />
@@ -97,14 +97,14 @@ export function ChatInteraction({
     interaction.steps.length === 1 && interaction.steps[0]?.type === 'text'
   return (
     <div className='flex flex-col justify-center gap-4 w-full relative'>
-      <div className='flex flex-col justify-center p-4 gap-2 bg-latte-input rounded-2xl ml-auto max-w-[75%]'>
-        <Text.H5
+      <div className='flex flex-col justify-center px-4 py-3 gap-2 bg-latte-input rounded-2xl ml-auto max-w-[75%]'>
+        <Text.H4
           color='latteInputForeground'
           whiteSpace='preWrap'
           wordBreak='breakWord'
         >
           {interaction.input}
-        </Text.H5>
+        </Text.H4>
       </div>
 
       <ul className='flex flex-col gap-4'>
