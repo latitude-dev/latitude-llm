@@ -1,3 +1,4 @@
+import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import { ActionErrors } from '$/hooks/useLatitudeAction'
 import {
   EvaluationMetric,
@@ -17,14 +18,13 @@ import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
-import type { ICommitContextType } from '$/app/providers/CommitProvider'
+import { StandardSchemaV1 } from '@standard-schema/spec'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ConfigurationAdvancedForm,
   ConfigurationSimpleForm,
 } from './ConfigurationForm'
 import { EVALUATION_SPECIFICATIONS } from './index'
-import { StandardSchemaV1 } from '@standard-schema/spec'
 
 const EVALUATION_TYPE_OPTIONS = Object.values(EvaluationType).map((type) => {
   const specification = EVALUATION_SPECIFICATIONS[type]
@@ -236,7 +236,7 @@ export default function EvaluationV2Form<
           <Alert
             variant='default'
             title='This evaluation supports manual annotation'
-            description='You will be able to manually evaluate responses in the document logs table'
+            description='You will be able to manually evaluate responses in the runs/logs dashboard or via API/SDK'
           />
         )}
         <CollapsibleBox

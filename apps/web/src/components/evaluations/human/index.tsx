@@ -5,6 +5,7 @@ import {
   HumanEvaluationSpecification,
 } from '@latitude-data/constants'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { SwitchInput } from '@latitude-data/web-ui/atoms/Switch'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import {
@@ -81,6 +82,10 @@ function ConfigurationSimpleForm<M extends HumanEvaluationMetric>({
 
 function ConfigurationAdvancedForm<M extends HumanEvaluationMetric>({
   metric,
+  configuration,
+  setConfiguration,
+  errors,
+  disabled,
   ...rest
 }: ConfigurationFormProps<EvaluationType.Human, M> & {
   metric: M
@@ -90,8 +95,26 @@ function ConfigurationAdvancedForm<M extends HumanEvaluationMetric>({
 
   return (
     <>
+      <SwitchInput
+        checked={configuration.enableControls ?? false}
+        name='enableControls'
+        label='Annotation controls'
+        description='Enable controls to annotate responses directly in the runs/logs dashboard'
+        onCheckedChange={(value) =>
+          setConfiguration({ ...configuration, enableControls: value })
+        }
+        errors={errors?.['enableControls']}
+        disabled={disabled}
+        required
+      />
       {!!metricSpecification.ConfigurationAdvancedForm && (
-        <metricSpecification.ConfigurationAdvancedForm {...rest} />
+        <metricSpecification.ConfigurationAdvancedForm
+          configuration={configuration}
+          setConfiguration={setConfiguration}
+          errors={errors}
+          disabled={disabled}
+          {...rest}
+        />
       )}
     </>
   )
