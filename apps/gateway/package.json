@@ -15,23 +15,24 @@
     "datadog:sourcemaps": "datadog-ci sourcemaps upload dist --service=latitude-llm-gateway --minified-path-prefix=/app/apps/gateway/dist --release-version=${RELEASE_VERSION:-unknown}"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.914.0",
     "@hono/node-server": "1.13.2",
     "@hono/swagger-ui": "0.4.1",
     "@hono/zod-openapi": "1.1.1",
     "@latitude-data/constants": "workspace:^",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
-    "@latitude-data/telemetry": "workspace:*",
     "@latitude-data/sdk": "workspace:^",
+    "@latitude-data/telemetry": "workspace:*",
     "@t3-oss/env-core": "0.13.8",
+    "dd-trace": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "4.9.7",
     "ioredis": "5.6.0",
     "lodash-es": "4.17.21",
     "promptl-ai": "catalog:",
     "rate-limiter-flexible": "5.0.3",
-    "zod": "catalog:",
-    "dd-trace": "catalog:"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@datadog/datadog-ci": "catalog:",
