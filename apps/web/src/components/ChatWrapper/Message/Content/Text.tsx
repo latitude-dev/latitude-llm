@@ -116,7 +116,7 @@ export function TextMessageContent({
       size={size}
       text={text}
       parameters={parameters}
-      sourceMap={sourceMap}
+      sourceMap={debugMode ? sourceMap : undefined}
     />
   )
 }

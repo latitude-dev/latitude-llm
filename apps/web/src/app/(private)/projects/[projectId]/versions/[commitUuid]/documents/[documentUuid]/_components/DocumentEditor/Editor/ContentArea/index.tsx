@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
@@ -21,6 +21,7 @@ import {
   useEditorCallbacks,
   usePlaygroundLogic,
 } from './hooks/usePlaygroundLogic'
+import { ChatTextArea } from '../ChatInputBox/ChatTextArea'
 
 export function DocumentEditorContentArea({
   refinementEnabled,
@@ -55,6 +56,18 @@ export function DocumentEditorContentArea({
     commitVersionUuid: commit.uuid,
     document,
   })
+  const hasParameters = useMemo(
+    () => parameters && Object.keys(parameters).length > 0,
+    [parameters],
+  )
+
+  const [_userMessage, setUserMessage] = useState<string>('')
+  const userMessage = useMemo(() => {
+    if (hasParameters) return undefined
+    if (!_userMessage.length) return undefined
+    return _userMessage
+  }, [_userMessage, hasParameters])
+
   const { devMode } = useDevMode()
   const { playground, hasActiveStream, resetChat, onBack, stopStreaming } =
     usePlaygroundLogic({
@@ -62,6 +75,7 @@ export function DocumentEditorContentArea({
       project,
       document,
       parameters,
+      userMessage,
       togglePlaygroundOpen,
       setHistoryLog,
       setSelectedTab,
@@ -73,11 +87,13 @@ export function DocumentEditorContentArea({
     source,
     playground,
     setSelectedTab,
+    setUserMessage,
   })
   useAutoScroll(containerRef, { startAtBottom: playground.mode === 'chat' })
   const showPlayground =
     (!isPlaygroundTransitioning && isPlaygroundOpen) ||
     (isPlaygroundTransitioning && !isPlaygroundOpen)
+
   return (
     <>
       <div className='relative flex-1 flex flex-col h-full min-h-0 overflow-hidden'>
@@ -155,14 +171,16 @@ export function DocumentEditorContentArea({
                 'pb-20': playground.mode === 'chat',
               })}
             >
-              <DocumentParams
-                commit={commit}
-                document={document}
-                prompt={document.content}
-                source={source}
-                setSource={setSource}
-                setPrompt={updateDocumentContent}
-              />
+              {hasParameters && (
+                <DocumentParams
+                  commit={commit}
+                  document={document}
+                  prompt={document.content}
+                  source={source}
+                  setSource={setSource}
+                  setPrompt={updateDocumentContent}
+                />
+              )}
               <V2Playground
                 metadata={metadata}
                 mode={playground.mode}
@@ -175,19 +193,33 @@ export function DocumentEditorContentArea({
                 'sticky bottom-2 flex flex-row items-center justify-center',
               )}
             >
-              {playground.mode === 'preview' && (
-                <RunButton
-                  metadata={metadata}
-                  showPlayground={showPlayground}
-                  runPromptButtonProps={{
-                    label: 'Run',
-                    iconProps: { name: 'circlePlay' },
-                  }}
-                  runPromptButtonHandler={runPromptButtonHandler}
-                  onBack={onBack}
-                  toggleExperimentModal={toggleExperimentModal}
-                />
-              )}
+              {playground.mode === 'preview' &&
+                (hasParameters ? (
+                  <RunButton
+                    metadata={metadata}
+                    showPlayground={showPlayground}
+                    runPromptButtonProps={{
+                      label: 'Run',
+                      iconProps: { name: 'circlePlay' },
+                    }}
+                    runPromptButtonHandler={runPromptButtonHandler}
+                    onBack={onBack}
+                    toggleExperimentModal={toggleExperimentModal}
+                  />
+                ) : (
+                  <ChatTextArea
+                    minRows={5}
+                    placeholder='Add a user message or run the prompt without any user input'
+                    onSubmit={runPromptButtonHandler}
+                    onChange={setUserMessage}
+                    onBack={onBack}
+                    onBackLabel='Edit'
+                    onSubmitLabel={
+                      userMessage?.length ? 'Send Message' : 'Run without input'
+                    }
+                    canSubmitWithEmptyValue
+                  />
+                ))}
               {playground.mode === 'chat' && (
                 <ChatInputBox
                   onBack={onBack}

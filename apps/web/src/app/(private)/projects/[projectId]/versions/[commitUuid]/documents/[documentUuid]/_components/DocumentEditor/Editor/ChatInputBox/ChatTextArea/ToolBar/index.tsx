@@ -24,12 +24,14 @@ export function ToolBar({
   disabledSubmit = false,
   disabledBack = false,
   onBackLabel = 'Edit',
+  onSubmitLabel = 'Send',
 }: {
   onSubmit?: () => void
   onBack?: () => void
   onBackLabel?: string
   disabledSubmit?: boolean
   disabledBack?: boolean
+  onSubmitLabel?: string
 }) {
   return (
     <ToolBarWrapper>
@@ -59,7 +61,7 @@ export function ToolBar({
           roundy={true}
           userSelect={false}
         >
-          Send
+          {onSubmitLabel}
         </Button>
       )}
     </ToolBarWrapper>
