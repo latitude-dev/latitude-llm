@@ -48,7 +48,7 @@
     "argon2": "0.44.0",
     "bullmq": "5.44.4",
     "date-fns": "3.6.0",
-    "dd-trace": "^5.67.0",
+    "dd-trace": "catalog:",
     "diff-match-patch": "1.0.5",
     "drizzle-orm": "catalog:",
     "eventsource-parser": "2.0.1",
