@@ -159,6 +159,10 @@ export async function annotateEvaluationV2<
     value = { error: { message: (error as Error).message } }
   }
 
+  // TODO: Validate the result is not passed and not errored before assigning issue
+  // TODO: Check issue belongs to document
+  // TODO: upsert histogram add or remove a count
+
   // TODO: We are stepping out of the db instance. This service should accept an instance of Transaction instead.
   const transaction = new Transaction()
   return await transaction.call(

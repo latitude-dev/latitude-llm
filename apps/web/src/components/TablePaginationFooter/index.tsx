@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
@@ -9,7 +10,12 @@ type Props = {
   pagination?: IPagination
   countLabel?: (count: number) => string
   isLoading?: boolean
+  onNext?: () => void
+  nextPageDisabled?: boolean
+  onPrev?: () => void
+  prevPageDisabled?: boolean
 }
+
 function CountLabel({
   count,
   isLoading = false,
@@ -32,29 +38,51 @@ function CountLabel({
 function NavLink({
   url,
   direction,
+  onClick,
+  disabled = false,
 }: {
   url?: string
   direction: 'prev' | 'next'
+  disabled?: boolean
+  onClick?: () => void
 }) {
-  const button = (
-    <Button
-      size='default'
-      variant='ghost'
-      disabled={!url}
-      iconProps={{
-        name: direction === 'prev' ? 'chevronLeft' : 'chevronRight',
-      }}
-    />
+  const buttonProps = useMemo(
+    () => ({
+      size: 'default' as const,
+      variant: 'ghost' as const,
+      iconProps: {
+        name:
+          direction === 'prev'
+            ? ('chevronLeft' as const)
+            : ('chevronRight' as const),
+      },
+    }),
+    [direction],
   )
-  if (!url) return button
 
-  return <Link href={url}>{button}</Link>
+  if (onClick) {
+    return <Button disabled={disabled} {...buttonProps} onClick={onClick} />
+  }
+
+  if (!url || disabled) {
+    return <Button disabled {...buttonProps} />
+  }
+
+  return (
+    <Link href={url}>
+      <Button {...buttonProps} />
+    </Link>
+  )
 }
 
 export function LinkableTablePaginationFooter({
   pagination,
   countLabel,
   isLoading = false,
+  prevPageDisabled = false,
+  onPrev,
+  nextPageDisabled = false,
+  onNext,
 }: Props) {
   if (!isLoading && !pagination) return null
 
@@ -70,7 +98,12 @@ export function LinkableTablePaginationFooter({
         <Skeleton className='w-12 my-2' height='h4' />
       ) : pagination ? (
         <div className='flex items-center'>
-          <NavLink url={pagination.prevPage?.url} direction='prev' />
+          <NavLink
+            onClick={onPrev}
+            url={pagination.prevPage?.url}
+            direction='prev'
+            disabled={prevPageDisabled}
+          />
           <div className='flex flex-row items-center gap-x-1'>
             <Text.H5M color='foregroundMuted'>Page</Text.H5M>
             <div className='max-w-14'>
@@ -88,7 +121,12 @@ export function LinkableTablePaginationFooter({
               </Text.H5M>
             ) : null}
           </div>
-          <NavLink url={pagination.nextPage?.url} direction='next' />
+          <NavLink
+            onClick={onNext}
+            url={pagination.nextPage?.url}
+            direction='next'
+            disabled={nextPageDisabled}
+          />
         </div>
       ) : null}
     </div>

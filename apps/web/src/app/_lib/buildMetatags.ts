@@ -6,7 +6,7 @@ const DEFAULT_DESCRIPTION =
 
 // This function is necessary to define default metadata correctly, because
 // Nextjs metadata merging would overwrite the nested objects totally.
-export default function buildMetatags({
+export default async function buildMetatags({
   title,
   description,
   locationDescription,
@@ -16,7 +16,7 @@ export default function buildMetatags({
   description?: string
   locationDescription?: string
   parent?: ResolvedMetadata
-}): Metadata {
+}): Promise<Metadata> {
   let parentTitle = parent?.title?.absolute || ''
   let metaTitle =
     title && parentTitle

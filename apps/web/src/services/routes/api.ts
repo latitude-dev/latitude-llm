@@ -133,6 +133,9 @@ export const API_ROUTES = {
                 }
               },
             },
+            issues: {
+              root: `${projectRoot}/commits/${commitUuid}/issues`,
+            },
             documents: {
               root: `${projectRoot}/commits/${commitUuid}/documents`,
               detail: (documentUuid: string) => {
