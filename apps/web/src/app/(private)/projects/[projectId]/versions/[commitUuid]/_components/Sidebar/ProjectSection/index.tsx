@@ -85,6 +85,7 @@ export default function ProjectSection({
   limitedView?: boolean
 }) {
   const runs = useFeature('runs')
+  const issuesFeature = useFeature('issues')
 
   const disableRunsNotifications = limitedView || !runs.isEnabled
   const { data: active } = useActiveRunsCount({
@@ -116,6 +117,13 @@ export default function ProjectSection({
                 : `There are ${count} runs in progress`,
           },
         },
+        issuesFeature.isEnabled && {
+          label: 'Issues',
+          iconName: 'shieldAlert',
+          route: ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid }).issues.root,
+        },
         {
           label: 'Analytics',
           route: ROUTES.projects
@@ -131,7 +139,14 @@ export default function ProjectSection({
           iconName: 'history',
         },
       ].filter(Boolean) as ProjectRoute[],
-    [project, commit, runs, active, disableRunsNotifications],
+    [
+      project,
+      commit,
+      runs,
+      issuesFeature.isEnabled,
+      active,
+      disableRunsNotifications,
+    ],
   )
 
   return (
