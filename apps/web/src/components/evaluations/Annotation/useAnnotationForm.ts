@@ -57,6 +57,7 @@ export function useAnnotationForm<
           resultScore: score,
           resultMetadata,
         })
+
         if (errors) return
 
         const { result } = annotationResult

@@ -177,16 +177,13 @@ export function DocumentLogsPage({
     return aggregationsNormal
   }, [limitedView, aggregationsNormal])
 
-  const {
-    data: evaluationResults,
-    isLoading: isEvaluationResultsV2Loading,
-    mutate: mutateEvaluationResultsV2,
-  } = useEvaluationResultsV2ByDocumentLogs({
-    project: project,
-    commit: commit,
-    document: document,
-    documentLogUuids: documentLogs.map((l) => l.uuid),
-  })
+  const { data: evaluationResults, isLoading: isEvaluationResultsV2Loading } =
+    useEvaluationResultsV2ByDocumentLogs({
+      project: project,
+      commit: commit,
+      document: document,
+      documentLogUuids: documentLogs.map((l) => l.uuid),
+    })
 
   const {
     data: evaluations,
@@ -266,7 +263,6 @@ export function DocumentLogsPage({
             aggregations={aggregations}
             isAggregationsLoading={isAggregationsLoading}
             evaluationResults={evaluationResults}
-            mutateEvaluationResults={mutateEvaluationResultsV2}
             isEvaluationsLoading={isEvaluationsLoading}
             evaluations={evaluations}
             annotateEvaluation={annotateEvaluation}

@@ -2,21 +2,27 @@ import {
   ChangeEvent,
   createContext,
   FormEventHandler,
-  KeyboardEvent,
   ReactNode,
   use,
   useCallback,
   useState,
 } from 'react'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea as TextAreaAtom } from '@latitude-data/web-ui/atoms/TextArea'
 import { font } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
-import { EvaluationType, EvaluationMetric } from '@latitude-data/constants'
+import {
+  EvaluationType,
+  EvaluationMetric,
+  EvaluationResultV2,
+  DocumentLog,
+  EvaluationV2,
+} from '@latitude-data/constants'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { OnSubmitProps } from '../useAnnotationForm'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 
 type IAnnotationForm<
   T extends EvaluationType,
@@ -25,7 +31,14 @@ type IAnnotationForm<
   onSubmit: (_props: OnSubmitProps<T, M>) => void
   isSubmitting: boolean
   disabled: boolean
+  documentUuid: string
+  commit: Commit
+  result: EvaluationResultV2<T, M> | undefined
+  evaluation: EvaluationV2<T, M>
+  documentLog: DocumentLog
   setDisabled: ReactStateDispatch<boolean>
+  isExpanded: boolean
+  setIsExpanded: ReactStateDispatch<boolean>
 }
 
 export function createAnnotationContext<
@@ -40,22 +53,48 @@ export const AnnotationContext = createAnnotationContext<
   EvaluationMetric<EvaluationType>
 >()
 
-export const AnnotationProvider = ({
+export const AnnotationProvider = <
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+>({
   children,
   isSubmitting,
   onSubmit,
+  commit,
+  documentUuid,
+  documentLog,
+  evaluation,
+  result,
+  isExpanded,
+  setIsExpanded,
 }: {
   children: ReactNode
   isSubmitting: boolean
-  onSubmit: IAnnotationForm<
-    EvaluationType,
-    EvaluationMetric<EvaluationType>
-  >['onSubmit']
+  onSubmit: IAnnotationForm<T, M>['onSubmit']
+  commit: Commit
+  documentLog: DocumentLog
+  evaluation: EvaluationV2<T, M>
+  result: EvaluationResultV2<T, M> | undefined
+  documentUuid: string
+  isExpanded: boolean
+  setIsExpanded: ReactStateDispatch<boolean>
 }) => {
-  const [disabled, setDisabled] = useState(true)
+  const [disabled, setDisabled] = useState(false)
   return (
     <AnnotationContext.Provider
-      value={{ onSubmit, disabled, setDisabled, isSubmitting }}
+      value={{
+        commit,
+        documentUuid,
+        evaluation,
+        result,
+        onSubmit,
+        documentLog,
+        disabled,
+        setDisabled,
+        isSubmitting,
+        isExpanded,
+        setIsExpanded,
+      }}
     >
       {children}
     </AnnotationContext.Provider>
@@ -69,56 +108,57 @@ export const AnnotationFormWrapper = ({
   children: ReactNode
   onSubmit: FormEventHandler<HTMLFormElement>
 }) => {
-  return (
-    <form
-      onSubmit={onSubmit}
-      className={cn(
-        'w-full flex flex-col border border-border rounded-xl',
-        'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
-      )}
-    >
-      {children}
-    </form>
-  )
+  return <form onSubmit={onSubmit}>{children}</form>
 }
 
 AnnotationFormWrapper.displayName = 'AnnotationFormWrapper'
 
 AnnotationFormWrapper.Body = ({ children }: { children: ReactNode }) => {
-  return <div className='px-3 pt-3 text-sm text-secondary'>{children}</div>
+  return <div className='px-3 pt-3 flex'>{children}</div>
 }
 
-AnnotationFormWrapper.Footer = ({ children }: { children: ReactNode }) => {
+AnnotationFormWrapper.Footer = function Footer({
+  children,
+}: {
+  children: ReactNode
+}) {
+  const { isExpanded } = use(AnnotationContext)
   return (
-    <div className='w-full flex flex-row p-2 items-center justify-between gap-x-4 border-t border-border'>
+    <div
+      className={cn(
+        'w-full flex flex-row items-center justify-between gap-x-4 ',
+        {
+          'p-2 border-t border-border': isExpanded,
+        },
+      )}
+    >
       {children}
     </div>
   )
 }
 
-AnnotationFormWrapper.SubmitButton = function SubmitButton() {
-  const { disabled, isSubmitting } = use(AnnotationContext)
+AnnotationFormWrapper.SavingSpinner = function SavingSpinner() {
+  const { isSubmitting } = use(AnnotationContext)
+  if (!isSubmitting) return null
+
   return (
-    <Button
-      variant='primaryMuted'
-      type='submit'
-      size='small'
-      disabled={isSubmitting || disabled}
-    >
-      {isSubmitting ? 'Saving...' : 'Save'}
-    </Button>
+    <div className='flex items-center gap-x-2'>
+      <Text.H6 color='foregroundMuted'>Saving...</Text.H6>
+      <Icon name='loader' spin color='foregroundMuted' />
+    </div>
   )
 }
 
-AnnotationFormWrapper.SubmitButtonWithTooltip = function SubmitButton({
+AnnotationFormWrapper.AnnotationTooltipInfo = function AnnotationTooltipInfo({
   tooltip,
 }: {
   tooltip?: string | ReactNode
 }) {
-  if (!tooltip) return <AnnotationFormWrapper.SubmitButton />
+  if (!tooltip) return <AnnotationFormWrapper.SavingSpinner />
 
   return (
     <div className='flex items-center gap-x-2'>
+      <AnnotationFormWrapper.SavingSpinner />
       <Tooltip
         asChild
         align='center'
@@ -131,38 +171,30 @@ AnnotationFormWrapper.SubmitButtonWithTooltip = function SubmitButton({
       >
         {tooltip}
       </Tooltip>
-      <AnnotationFormWrapper.SubmitButton />
     </div>
   )
 }
 
 AnnotationFormWrapper.TextArea = function TextArea({
   name,
-  defaultValue,
-  placeholder = 'Explain the reason behind your decision...',
+  value,
+  onChange,
+  placeholder = 'Write your feedback here...',
+  disabled = false,
 }: {
   name: string
+  value: string | null
+  onChange: (value: string) => void
   defaultValue?: string | null
   placeholder?: string
+  disabled?: boolean
 }) {
-  const { setDisabled } = use(AnnotationContext)
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-      event.preventDefault()
-      const form = event.currentTarget.closest('form')
-      if (form) {
-        form.requestSubmit()
-      }
-    }
-  }
-  const onChange = useCallback(
+  const onChangeValue = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
       const value = event.target.value
-
-      const hasChanged = value !== (defaultValue ?? '')
-      setDisabled(!hasChanged)
+      onChange(value)
     },
-    [defaultValue, setDisabled],
+    [onChange],
   )
 
   return (
@@ -170,16 +202,17 @@ AnnotationFormWrapper.TextArea = function TextArea({
       name={name}
       variant='unstyled'
       size='none'
-      onChange={onChange}
+      value={value ?? ''}
+      onChange={onChangeValue}
+      disabled={disabled}
       className={cn(
+        'bg-background dark:bg-backgroundCode',
         'w-full focus:ring-0 focus-visible:ring-0 focus-visible:outline-none',
         'appearance-none text-foreground placeholder:text-muted-foreground/50',
         font.size.h5,
       )}
-      defaultValue={defaultValue ?? ''}
       placeholder={placeholder}
       minRows={2}
-      onKeyDown={handleKeyDown}
     />
   )
 }

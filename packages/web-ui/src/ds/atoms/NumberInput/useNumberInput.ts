@@ -18,6 +18,7 @@ function buildValue(value: number | undefined, min: number, max: number) {
 
 export type NumberInputProps = {
   value?: number
+  defaultValue?: number
   onChange?: (value: number | undefined) => void
   min?: number
   max?: number
@@ -25,17 +26,20 @@ export type NumberInputProps = {
   InputProps,
   'defaultValue' | 'value' | 'onChange' | 'min' | 'max' | 'type'
 >
+
 export function useNumberInput({
   ref,
-  value: defaultValue,
+  value: controlledValue,
+  defaultValue,
   onChange,
   min = -Infinity,
   max = Infinity,
 }: NumberInputProps & { ref?: Ref<HTMLInputElement> }) {
-  const [value, setValue] = useState(defaultValue)
+  const isControlled = controlledValue !== undefined
+  const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue)
+  const currentValue = isControlled ? controlledValue : uncontrolledValue
+
   const onChangeRef = useRef(onChange)
-  // Keep the ref up to date with the latest onChange function
-  // TODO: Replace with useEffectEvent when we upgrade to React 19.2.2
   useEffect(() => {
     onChangeRef.current = onChange
   }, [onChange])
@@ -43,43 +47,48 @@ export function useNumberInput({
   const internalRef = useRef<HTMLInputElement>(null)
   const [focused, setFocused] = useState(false)
 
-  useEffect(() => {
-    const newValue = buildValue(value, min, max)
-    onChangeRef.current?.(newValue)
-  }, [value, min, max])
+  const updateValue = useCallback(
+    (next: number | undefined) => {
+      const bounded = buildValue(next, min, max)
+      if (!isControlled) {
+        setUncontrolledValue(bounded)
+      }
+      onChangeRef.current?.(bounded)
+    },
+    [isControlled, min, max],
+  )
+
   const increment = useCallback(() => {
-    setValue((prev) => Math.min((prev ?? 0) + 1, max))
-  }, [max])
+    const next = Math.min((currentValue ?? 0) + 1, max)
+    updateValue(next)
+  }, [currentValue, max, updateValue])
 
   const decrement = useCallback(() => {
-    setValue((prev) => Math.max((prev ?? 0) - 1, min))
-  }, [min])
+    const next = Math.max((currentValue ?? 0) - 1, min)
+    updateValue(next)
+  }, [currentValue, min, updateValue])
 
-  const onFocus = useCallback(() => {
-    setFocused(true)
-  }, [])
+  const onFocus = useCallback(() => setFocused(true), [])
   const onBlur = useCallback(() => {
     setFocused(false)
-    if (value === undefined) return
+    if (currentValue !== undefined) {
+      updateValue(currentValue)
+    }
+  }, [currentValue, updateValue])
 
-    // Ensure the value is within bounds when losing focus
-    setValue((prev) => buildValue(prev, min, max))
-  }, [min, max, value])
-  const onChangeInput = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseInt(event.target.value, 10)
-    if (isNaN(parsed)) setValue(undefined)
-    else setValue(parsed)
-  }, [])
+  const onChangeInput = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const parsed = parseInt(event.target.value, 10)
+      updateValue(isNaN(parsed) ? undefined : parsed)
+    },
+    [updateValue],
+  )
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent | SyntheticKeyboardEvent<HTMLInputElement>) => {
-      if (!internalRef?.current) return
       if (document.activeElement !== internalRef.current) return
       switch (event.key) {
         case 'Enter':
-          event.preventDefault()
-          increment()
-          break
         case 'ArrowUp':
           event.preventDefault()
           increment()
@@ -90,54 +99,45 @@ export function useNumberInput({
           break
       }
     },
-    [internalRef, increment, decrement],
+    [increment, decrement],
   )
 
   const onFocusControl = useCallback(() => {
     internalRef.current?.focus()
   }, [])
-  useImperativeHandle(ref, () => internalRef.current!)
 
-  // Sync internal value with external defaultValue
-  useEffect(() => {
-    setValue(defaultValue)
-  }, [defaultValue])
+  useImperativeHandle(ref, () => internalRef.current!)
 
   useEffect(() => {
     const controller = new AbortController()
     const { signal } = controller
-
     window.addEventListener('keydown', handleKeyDown, { signal })
-
     return () => controller.abort()
   }, [handleKeyDown])
 
   return useMemo(
     () => ({
+      value: currentValue,
+      setValue: updateValue,
       focused,
-      setFocused,
-      value,
-      setValue,
       increment,
       decrement,
-      internalRef,
       onFocus,
-      onFocusControl,
       onBlur,
       onChange: onChangeInput,
+      onFocusControl,
+      internalRef,
     }),
     [
+      currentValue,
+      updateValue,
       focused,
-      setFocused,
-      onFocusControl,
-      value,
-      setValue,
       increment,
       decrement,
-      internalRef,
       onFocus,
       onBlur,
       onChangeInput,
+      onFocusControl,
     ],
   )
 }

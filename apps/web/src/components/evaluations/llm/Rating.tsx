@@ -55,7 +55,7 @@ function ConfigurationSimpleForm({
         description='Additional guidelines describing when the response should be rated low'
       >
         <NumberInput
-          value={configuration.minRating ?? undefined}
+          defaultValue={configuration.minRating ?? undefined}
           name='minRating'
           placeholder='0'
           onChange={(value) => {
@@ -90,7 +90,7 @@ function ConfigurationSimpleForm({
         description='Additional guidelines describing when the response should be rated high'
       >
         <NumberInput
-          value={configuration.maxRating ?? undefined}
+          defaultValue={configuration.maxRating ?? undefined}
           name='maxRating'
           placeholder='5'
           onChange={(value) => {
@@ -136,7 +136,7 @@ function ConfigurationAdvancedForm({
         description='The minimum and maximum rating threshold of the response'
       >
         <NumberInput
-          value={configuration.minThreshold ?? undefined}
+          defaultValue={configuration.minThreshold ?? undefined}
           name='minThreshold'
           label='Minimum threshold'
           placeholder='No minimum'
@@ -151,7 +151,7 @@ function ConfigurationAdvancedForm({
           required
         />
         <NumberInput
-          value={configuration.maxThreshold ?? undefined}
+          defaultValue={configuration.maxThreshold ?? undefined}
           name='maxThreshold'
           label='Maximum threshold'
           placeholder='No maximum'

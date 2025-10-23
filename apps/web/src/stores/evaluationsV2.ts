@@ -262,11 +262,8 @@ export function useEvaluationsV2(
     execute: executeAnnotateEvaluationV2,
     isPending: isAnnotatingEvaluation,
   } = useLatitudeAction(annotateEvaluationV2Action, {
-    onSuccess: async ({ data: { result } }) => {
-      toast({
-        title: 'Evaluation annotated successfully',
-        description: `Evaluation annotated successfully with a ${result.hasPassed ? 'passed' : 'failed'} result`,
-      })
+    onSuccess: async () => {
+      // no-op
     },
     onError: async (error) => {
       if (error.code === 'ERROR') {

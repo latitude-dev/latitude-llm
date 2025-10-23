@@ -75,9 +75,11 @@ const SelectValue = ({
   selected,
   options,
   placeholder,
+  placeholderIcon,
 }: {
   options: SelectOption[] | SelectOptionGroup[]
   placeholder?: string
+  placeholderIcon?: IconName
   selected: unknown
 }) => {
   const flatOptions = useMemo(() => flattenOption(options), [options])
@@ -86,12 +88,20 @@ const SelectValue = ({
     setOption(findSelected(flatOptions, selected))
   }, [selected, flatOptions])
 
-  if (!option)
+  if (!option) {
+    if (placeholderIcon) {
+      return (
+        <SelectValueWithIcon icon={placeholderIcon}>
+          {placeholder}
+        </SelectValueWithIcon>
+      )
+    }
     return (
       <SelectValuePrimitive placeholder={placeholder} className='opacity-50'>
         {placeholder}
       </SelectValuePrimitive>
     )
+  }
 
   return (
     <SelectValueWithIcon icon={option.icon}>{option.label}</SelectValueWithIcon>
@@ -231,7 +241,7 @@ const SelectContent = forwardRef<
         ref={ref}
         position={position}
         className={cn(
-          'min-w-52 relative z-50 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-md',
+          'min-w-64 relative z-50 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-md',
           'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
           'data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
           className,

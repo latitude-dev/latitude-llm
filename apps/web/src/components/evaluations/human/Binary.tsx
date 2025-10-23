@@ -7,9 +7,12 @@ import {
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { useCallback, useMemo, useState } from 'react'
+import { use, useCallback, useMemo, useState } from 'react'
 import { CriteriaDescription as CriteriaWrapper } from '../Annotation/CriteriaDescription'
-import { AnnotationFormWrapper as AForm } from '../Annotation/FormWrapper'
+import {
+  AnnotationFormWrapper as AForm,
+  AnnotationContext,
+} from '../Annotation/FormWrapper'
 import { ThumbsUpDownInput } from '../Annotation/ThumbsUpDownInput'
 import {
   AnnotationFormProps,
@@ -131,48 +134,84 @@ function CriteriaDescription({
   )
 }
 
+function getThumbsUpFromScore(score: number | undefined | null) {
+  if (score === null || score === undefined) return null
+  return score === 1
+}
+
 function AnnotationForm({
   evaluation,
   result,
 }: AnnotationFormProps<EvaluationType.Human, HumanEvaluationMetric.Binary>) {
   const criteria = useMemo(() => getCriteria(evaluation), [evaluation])
-  const { onScoreChange, onSubmit } = useAnnotationFormState({
-    initialScore: result?.score ?? undefined,
-  })
-  const [thumbsUp, setThumbsUp] = useState<boolean | null>(
-    typeof result?.score === 'number'
-      ? result?.score === 1
-        ? true
-        : false
-      : null,
+  const { onSubmit, isExpanded, setIsExpanded } = use(AnnotationContext)
+  const [score, setScore] = useState<number | undefined>(
+    result?.score ?? undefined,
   )
+  const { reason, onChangeReason } = useAnnotationFormState({ score })
+
+  const [thumbsUp, setThumbsUp] = useState<boolean | null>(() =>
+    getThumbsUpFromScore(result?.score),
+  )
+
+  // Calculate hasPassed optimistically based on current score
+  const hasPassed = useMemo(() => {
+    if (score === undefined) return result?.hasPassed
+    const reverseScale = evaluation.configuration.reverseScale
+    return reverseScale ? score === 0 : score === 1
+  }, [score, evaluation.configuration.reverseScale, result?.hasPassed])
   const onThumbsUpClick = useCallback(
-    (thumbs: boolean) => {
-      setThumbsUp(thumbs)
-      onScoreChange(thumbs ? 1 : 0)
+    (newThumbsUp: boolean) => {
+      if (newThumbsUp === thumbsUp) return
+
+      setThumbsUp(newThumbsUp)
+      const newScore = newThumbsUp ? 1 : 0
+      setScore(newScore)
+
+      // Expand the form when user interacts
+      if (!isExpanded) {
+        setIsExpanded(true)
+      }
+
+      onSubmit({
+        score: newScore,
+        resultMetadata: result?.metadata ?? {},
+      })
     },
-    [onScoreChange],
+    [onSubmit, result?.metadata, thumbsUp, isExpanded, setIsExpanded],
   )
 
   return (
-    <AForm onSubmit={onSubmit}>
-      <AForm.Body>
-        <AForm.TextArea
-          name='reason'
-          defaultValue={result?.metadata?.reason ?? ''}
-        />
-      </AForm.Body>
+    <>
+      {isExpanded && (
+        <div className='animate-in fade-in slide-in-from-top-2 duration-300'>
+          <AForm.Body>
+            <AForm.TextArea
+              name='reason'
+              value={reason}
+              onChange={onChangeReason}
+            />
+          </AForm.Body>
+        </div>
+      )}
       <AForm.Footer>
         <input type='hidden' name='score' value={thumbsUp ? '1' : '0'} />
         <ThumbsUpDownInput
           onThumbsClick={onThumbsUpClick}
           thumbsUp={thumbsUp}
+          hasPassed={hasPassed ?? undefined}
         />
-        <AForm.SubmitButtonWithTooltip
-          tooltip={criteria ? <CriteriaDescription {...criteria} /> : undefined}
-        />
+        {isExpanded && (
+          <div className='animate-in fade-in duration-300'>
+            <AForm.AnnotationTooltipInfo
+              tooltip={
+                criteria ? <CriteriaDescription {...criteria} /> : undefined
+              }
+            />
+          </div>
+        )}
       </AForm.Footer>
-    </AForm>
+    </>
   )
 }
 

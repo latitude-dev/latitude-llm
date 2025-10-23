@@ -1,7 +1,7 @@
 import { and, eq, getTableColumns, inArray, SQL, sql } from 'drizzle-orm'
-import { endOfDay, startOfDay } from 'date-fns'
+import { endOfDay, format, startOfDay } from 'date-fns'
 import { type Issue } from '../schema/models/types/Issue'
-import RepositoryLegacy from './repository'
+import Repository from './repositoryV2'
 import { issueHistograms } from '../schema/models/issueHistograms'
 import {
   ESCALATING_DAYS,
@@ -9,20 +9,48 @@ import {
   HISTOGRAM_SUBQUERY_ALIAS,
   SafeIssuesParams,
 } from '@latitude-data/constants/issues'
+import { Commit } from '../schema/models/types/Commit'
+import { IssueHistogram } from '../schema/models/types/IssueHistogram'
 
 const tt = getTableColumns(issueHistograms)
 type IssueFilters = SafeIssuesParams['filters']
 
-export class IssueHistogramsRepository extends RepositoryLegacy<
-  typeof tt,
-  Issue
-> {
+export class IssueHistogramsRepository extends Repository<IssueHistogram> {
+  get scopeFilter() {
+    return eq(issueHistograms.workspaceId, this.workspaceId)
+  }
+
   get scope() {
     return this.db
       .select(tt)
       .from(issueHistograms)
-      .where(eq(issueHistograms.workspaceId, this.workspaceId))
-      .as('issuesHistogramsScope')
+      .where(this.scopeFilter)
+      .$dynamic()
+  }
+
+  async findHistogram({
+    commit,
+    issue,
+    date,
+  }: {
+    issue: Issue
+    commit: Commit
+    date: Date
+  }) {
+    const histogram = await this.db
+      .select()
+      .from(issueHistograms)
+      .where(
+        and(
+          eq(issueHistograms.workspaceId, this.workspaceId),
+          eq(issueHistograms.commitId, commit.id),
+          eq(issueHistograms.issueId, issue.id),
+          eq(issueHistograms.date, format(date, 'yyyy-MM-dd')),
+        ),
+      )
+      .limit(1)
+
+    return histogram[0] || null
   }
 
   /**

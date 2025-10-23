@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   Command,
   CommandEmpty,
@@ -14,29 +14,49 @@ import { Icon, IconName } from '../../Icons'
 export function SearchableSelectList<V extends unknown = unknown>({
   options,
   onChange,
+  onSearchChange,
+  searchableEmptyMessage = 'No results found.',
+  searchPlaceholder = 'Search...',
+  selectedValue,
 }: {
   options: SelectOption<V>[]
+  onSearchChange?: (query: string) => void
   onChange?: (value: string) => void
+  searchableEmptyMessage?: string
+  searchPlaceholder?: string
+  selectedValue?: V
 }) {
   const [searchQuery, setSearchQuery] = useState('')
+  const onValueChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value)
+      onSearchChange?.(value)
+    },
+    [onSearchChange],
+  )
   return (
     <>
       <Command>
         <CommandInput
           autoFocus
-          placeholder='Search...'
+          placeholder={searchPlaceholder}
           value={searchQuery}
-          onValueChange={setSearchQuery}
+          onValueChange={onValueChange}
         />
         <CommandList>
           <CommandEmpty>
-            <Text.H6>No results found.</Text.H6>
+            <Text.H6>{searchableEmptyMessage}</Text.H6>
           </CommandEmpty>
           <CommandGroup>
             {options
-              .filter((option) =>
-                option.label.toLowerCase().includes(searchQuery.toLowerCase()),
-              )
+              .filter((option) => {
+                const matchesSearch = option.label
+                  .toLowerCase()
+                  .includes(searchQuery.toLowerCase())
+                const isSelected =
+                  selectedValue !== undefined && option.value === selectedValue
+                return matchesSearch || isSelected
+              })
               .map((option) => (
                 <CommandItem
                   key={option.label}
