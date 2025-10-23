@@ -49,10 +49,34 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
     cursor,
     limit = 20,
   }: IssuesQueryOptions) {
+    const commitsResult = await this.getCommits({
+      projectId,
+      commitUuid,
+    })
+    if (commitsResult.error) return commitsResult
+
+    const commitIds = commitsResult.value.map((c) => c.id)
+
+    if (commitIds.length === 0) {
+      // Early return if no commits
+      return Result.ok({
+        issues: [],
+        hasMore: false,
+        nextCursor: null,
+      })
+    }
+
     const whereConditions = [
       eq(issues.workspaceId, this.workspaceId),
       projectId ? eq(issues.projectId, projectId) : undefined,
     ].filter(Boolean)
+
+    if (cursor) {
+      const cursorId = this.parseCursor(cursor)
+      if (cursorId) {
+        whereConditions.push(sql`${issues.id} < ${cursorId}`)
+      }
+    }
 
     const havingConditions = []
 
@@ -102,13 +126,6 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
       havingConditions.push(or(...statusConditions)!)
     }
 
-    // Apply cursor pagination
-    if (cursor) {
-      const cursorId = this.parseCursor(cursor)
-      if (cursorId) {
-        whereConditions.push(sql`${issues.id} < ${cursorId}`)
-      }
-    }
 
     // Build order by clause
     let orderByClause
@@ -130,22 +147,6 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
     }
 
     // Get relevant commits first
-    const commitsResult = await this.getCommits({
-      projectId,
-      commitUuid,
-    })
-    if (commitsResult.error) return commitsResult
-
-    const commitIds = commitsResult.value.map((c) => c.id)
-
-    if (commitIds.length === 0) {
-      return Result.ok({
-        issues: [],
-        hasMore: false,
-        nextCursor: null,
-      })
-    }
-
     // Get histogram stats subquery
     const histogramRepo = new IssueHistogramsRepository(
       this.workspaceId,
