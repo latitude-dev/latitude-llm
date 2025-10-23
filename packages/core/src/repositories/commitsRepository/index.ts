@@ -139,25 +139,22 @@ export class CommitsRepository extends RepositoryLegacy<
    * Get all the commits that are merget before our commit
    * and also include our commit even it's not merged yet
    */
-  async getCommitsHistory ({ commit }: { commit: Commit }) {
+  async getCommitsHistory({ commit }: { commit: Commit }) {
     const condition = commit.mergedAt
       ? and(
-        isNotNull(this.scope.mergedAt),
-        lte(this.scope.mergedAt, commit.mergedAt),
-      )
+          isNotNull(this.scope.mergedAt),
+          lte(this.scope.mergedAt, commit.mergedAt),
+        )
       : or(isNotNull(this.scope.mergedAt), eq(this.scope.id, commit.id))
 
-    return this.db
-      .select()
-      .from(this.scope)
-      .where(
-        and(
-          eq(this.scope.projectId, commit.projectId),
-          condition,
-        ),
-      )
-      // TODO: Make that Draft is on the top
-      .orderBy(desc(this.scope.mergedAt))
+    return (
+      this.db
+        .select()
+        .from(this.scope)
+        .where(and(eq(this.scope.projectId, commit.projectId), condition))
+        // TODO: Make that Draft is on the top
+        .orderBy(desc(this.scope.mergedAt))
+    )
   }
 
   getCommitsWithDocumentChanges({
