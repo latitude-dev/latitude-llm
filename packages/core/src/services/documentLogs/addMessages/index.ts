@@ -15,7 +15,7 @@ import {
   DocumentVersionsRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
-import { BACKGROUND, TelemetryContext } from '../../../telemetry'
+import { BACKGROUND, telemetry, TelemetryContext } from '../../../telemetry'
 import { getInputSchema, getOutputType } from '../../chains/ChainValidator'
 import { scanDocumentContent } from '../../documents'
 import serializeProviderLog from '../../providerLogs/serialize'
@@ -50,21 +50,29 @@ export async function addMessages({
   if (dataResult.error) return dataResult
   const { document, commit, providerLog, globalConfig } = dataResult.unwrap()
 
+  const $prompt = telemetry.prompt(context, {
+    documentLogUuid,
+    name: document.path.split('/').at(-1),
+    promptUuid: document.documentUuid,
+    template: document.content,
+    versionUuid: commit.uuid,
+  })
+
   if (!providerLog.providerId) {
-    return Result.error(
-      new NotFoundError(
-        `Cannot add messages to a conversation that has no associated provider`,
-      ),
+    const error = new NotFoundError(
+      'Cannot add messages to a conversation that has no associated provider',
     )
+    $prompt.fail(error)
+    return Result.error(error)
   }
 
   const provider = await unsafelyFindProviderApiKey(providerLog.providerId)
   if (!provider) {
-    return Result.error(
-      new NotFoundError(
-        `Could not find provider API key with id ${providerLog.providerId}`,
-      ),
+    const error = new NotFoundError(
+      `Could not find provider API key with id ${providerLog.providerId}`,
     )
+    $prompt.fail(error)
+    return Result.error(error)
   }
 
   // TODO: store messages in provider log and forget about manually handling
@@ -96,6 +104,10 @@ export async function addMessages({
   const { start, ...streamResult } = streamManager.prepare()
 
   start()
+
+  streamResult.error.then((error) =>
+    error ? $prompt.fail(error) : $prompt.end(),
+  )
 
   return Result.ok(streamResult)
 }
