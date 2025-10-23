@@ -1,5 +1,5 @@
 {
-  "id": "ce97e609-a155-4f27-9183-d57675615b1a",
+  "id": "64e0a86f-2e84-465f-a81f-90e6f4f7edb4",
   "prevId": "8dbed814-f66a-42cd-a184-30ed5d26b0fd",
   "version": "7",
   "dialect": "postgresql",
@@ -3839,7 +3839,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
@@ -3876,12 +3876,6 @@
         },
         "project_id": {
           "name": "project_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "commit_id": {
-          "name": "commit_id",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
@@ -3964,21 +3958,6 @@
           "columns": [
             {
               "expression": "project_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "issues_commit_id_idx": {
-          "name": "issues_commit_id_idx",
-          "columns": [
-            {
-              "expression": "commit_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4102,20 +4081,6 @@
           "schemaTo": "latitude",
           "columnsFrom": [
             "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "issues_commit_id_commits_id_fk": {
-          "name": "issues_commit_id_commits_id_fk",
-          "tableFrom": "issues",
-          "tableTo": "commits",
-          "schemaTo": "latitude",
-          "columnsFrom": [
-            "commit_id"
           ],
           "columnsTo": [
             "id"

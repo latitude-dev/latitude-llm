@@ -13,7 +13,6 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { workspaces } from './workspaces'
 import { projects } from './projects'
-import { commits } from './commits'
 import { evaluationResultsV2 } from './evaluationResultsV2'
 
 export const issues = latitudeSchema.table(
@@ -26,9 +25,6 @@ export const issues = latitudeSchema.table(
     projectId: bigint('project_id', { mode: 'number' })
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
-    commitId: bigint('commit_id', { mode: 'number' })
-      .notNull()
-      .references(() => commits.id, { onDelete: 'cascade' }),
     documentUuid: uuid('document_uuid').notNull(),
     title: varchar('title', { length: 256 }).notNull(),
     description: text('description').notNull(),
@@ -45,7 +41,6 @@ export const issues = latitudeSchema.table(
   (table) => [
     index('issues_workspace_id_idx').on(table.workspaceId),
     index('issues_project_id_idx').on(table.projectId),
-    index('issues_commit_id_idx').on(table.commitId),
     index('issues_document_uuid_idx').on(table.documentUuid),
     index('issues_title_trgm_idx').using(
       'gin',

@@ -6,7 +6,6 @@ import {
   index,
   integer,
   unique,
-  timestamp,
 } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
@@ -27,7 +26,7 @@ export const issueHistograms = latitudeSchema.table(
       .references(() => issues.id, { onDelete: 'cascade' }),
     commitId: bigint('commit_id', { mode: 'number' })
       .notNull()
-      .references(() => commits.id, { onDelete: 'cascade' }),
+      .references(() => commits.id, { onDelete: 'restrict' }),
     date: date('date').notNull(),
     count: integer('count').notNull(),
     ...timestamps(),
