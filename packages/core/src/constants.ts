@@ -122,13 +122,13 @@ export enum RewardType {
 }
 
 export const REWARD_VALUES: Record<RewardType, number> = {
-  [RewardType.XFollow]: 3,
-  [RewardType.LinkedInFollow]: 3,
-  [RewardType.GithubStar]: 3,
-  [RewardType.XPost]: 5,
-  [RewardType.LinkedInPost]: 5,
-  [RewardType.AgentShare]: 10,
-  [RewardType.Referral]: 10,
+  [RewardType.XFollow]: 2_000,
+  [RewardType.LinkedInFollow]: 2_000,
+  [RewardType.GithubStar]: 1_000,
+  [RewardType.XPost]: 5_000,
+  [RewardType.LinkedInPost]: 5_000,
+  [RewardType.AgentShare]: 10_000,
+  [RewardType.Referral]: 10_000,
   // Deprecated
   [RewardType.ProductHuntUpvote]: 0,
 }

@@ -62,7 +62,7 @@ export function RewardItem({
             size='large'
             className='flex-shrink-0'
           >
-            +{REWARD_VALUES[type]} credits
+            +{REWARD_VALUES[type]} runs
           </Badge>
         </div>
       </Button>
