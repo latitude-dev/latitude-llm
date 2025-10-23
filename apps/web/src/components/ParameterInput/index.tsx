@@ -21,7 +21,6 @@ export function ParameterInput({
   onChange,
   disabled = false,
   withBorder = true,
-  inputSize = 'large',
 }: {
   name: string
   type: ParameterType
@@ -29,7 +28,6 @@ export function ParameterInput({
   onChange: (value: string) => void
   disabled?: boolean
   withBorder?: boolean
-  inputSize?: 'small' | 'medium' | 'large'
 }) {
   if (type === ParameterType.File || type === ParameterType.Image) {
     return (
@@ -39,7 +37,6 @@ export function ParameterInput({
         value={value}
         onChange={onChange}
         disabled={disabled}
-        inputSize={inputSize}
       />
     )
   }
@@ -115,7 +112,7 @@ export function FileParameterInput({
   onChange,
   disabled = false,
   withBorder = true,
-  inputSize = 'large',
+  inputSize = 'small',
 }: {
   type: ParameterType.File | ParameterType.Image
   value?: string
