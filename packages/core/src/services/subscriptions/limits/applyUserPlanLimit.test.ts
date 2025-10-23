@@ -71,8 +71,10 @@ describe('applyUserPlanLimit', () => {
   })
 
   it('returns PaymentRequiredError when users reach limit', async () => {
-    // Arrange - for HobbyV2, limit is 1 user, and creator already counts as 1
-    // So having exactly 1 user (just the creator) should trigger the error
+    // Arrange - for HobbyV2, limit is 2 users, and creator already counts as 1
+    // So having exactly 2 users (the creator and a new user) should trigger the error
+    const user = await createUser()
+    await createMembership({ user, workspace, author: creatorUser })
 
     // Act
     const result = await applyUserPlanLimit({ workspace })
@@ -86,9 +88,11 @@ describe('applyUserPlanLimit', () => {
   })
 
   it('returns PaymentRequiredError when users exceed limit', async () => {
-    // Arrange - create 1 additional user (creator + 1 = 2 users > limit of 1 for HobbyV2)
+    // Arrange - create 2 additional users (creator + 2 = 3 users > limit of 2 for HobbyV2)
     const user = await createUser()
     await createMembership({ user, workspace, author: creatorUser })
+    const user2 = await createUser()
+    await createMembership({ user: user2, workspace, author: creatorUser })
 
     // Act
     const result = await applyUserPlanLimit({ workspace })
@@ -123,8 +127,7 @@ describe('applyUserPlanLimit', () => {
       })
 
       // Assert
-      expect(result2.ok).toBe(false)
-      expect(result2.error).toBeInstanceOf(PaymentRequiredError)
+      expect(result2.ok).toBe(true)
     })
 
     it.each(PRO_PLANS)('works with pro plan: %s', async (plan) => {
