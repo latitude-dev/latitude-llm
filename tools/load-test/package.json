@@ -1,0 +1,17 @@
+{
+  "name": "latitude-load-test",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Load testing script for Latitude SDK",
+  "main": "load-test.js",
+  "scripts": {
+    "start": "node load-test.js",
+    "test": "node load-test.js"
+  },
+  "dependencies": {
+    "@latitude-data/sdk": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
