@@ -174,6 +174,7 @@
       "import": "./src/ds/molecules/TwoColumnSelect/index.tsx"
     },
     "./molecules/NumeredList": "./src/ds/molecules/NumeredList/index.tsx",
+    "./molecules/RadioToggleInput": "./src/ds/molecules/RadioToggleInput/index.tsx",
     "./molecules/RangeBadge": "./src/ds/molecules/RangeBadge/index.tsx",
     "./molecules/SelectableCard": "./src/ds/molecules/SelectableCard/index.tsx",
     "./molecules/SelectableSwitch": "./src/ds/molecules/SelectableSwitch/index.tsx",

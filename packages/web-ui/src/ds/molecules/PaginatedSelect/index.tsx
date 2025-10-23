@@ -34,7 +34,7 @@ import {
 } from '../../atoms/Select'
 import { useDebouncedCallback } from 'use-debounce'
 
-export type PaginatedSelectProps<V extends unknown = unknown> = Omit<
+type PaginatedSelectProps<V extends unknown = unknown> = Omit<
   FormFieldProps,
   'children'
 > & {

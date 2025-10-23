@@ -4,31 +4,36 @@ import { format } from 'date-fns'
 import { useCallback, useMemo, useState } from 'react'
 
 import type { RelativeDate } from '@latitude-data/core/constants'
-import { DateRange } from 'react-day-picker'
+import { DateRange as ReactDatePickerRange } from 'react-day-picker'
 import { cn } from '../../../../lib/utils'
 import { Button } from '../../Button'
-import { Popover } from '../../Popover'
+import { Popover, PopoverContentProps } from '../../Popover'
 import { Select } from '../../Select'
 import { Calendar } from '../Primitives'
 import { usePresets } from './usePresets'
 
 export type DatePickerMode = 'single' | 'range'
+export type DateRange = ReactDatePickerRange
 
 function renderLabel({
   range,
   selectedPreset,
   placeholder,
+  singleDatePrefix,
 }: {
   range: DateRange | undefined
   placeholder: string
   selectedPreset?: { label: string; value: RelativeDate }
+  singleDatePrefix?: string
 }) {
   if (selectedPreset) return { label: selectedPreset.label, selected: true }
 
   if (range?.from) {
     const rangeSelection = range.to
       ? `${format(range.from, 'LLL dd, y')} - ${format(range.to, 'LLL dd, y')}`
-      : format(range.from, 'LLL dd, y')
+      : singleDatePrefix
+        ? `${singleDatePrefix} ${format(range.from, 'LLL dd, y')}`
+        : format(range.from, 'LLL dd, y')
     return { label: rangeSelection, selected: true }
   }
 
@@ -43,6 +48,8 @@ export function DatePickerRange({
   placeholder = 'Pick a date',
   closeOnPresetSelect = true,
   disabled = false,
+  align = 'start',
+  singleDatePrefix,
 }: {
   showPresets?: boolean
   initialRange?: DateRange
@@ -51,6 +58,8 @@ export function DatePickerRange({
   closeOnPresetSelect?: boolean
   placeholder?: string
   disabled?: boolean
+  align?: PopoverContentProps['align']
+  singleDatePrefix?: string
 }) {
   const [open, setOpen] = useState(false)
   const [range, setRange] = useState<DateRange | undefined>(initialRange)
@@ -59,8 +68,8 @@ export function DatePickerRange({
     showPresets,
   })
   const selection = useMemo(
-    () => renderLabel({ range, selectedPreset, placeholder }),
-    [range, selectedPreset, placeholder],
+    () => renderLabel({ range, selectedPreset, placeholder, singleDatePrefix }),
+    [range, selectedPreset, placeholder, singleDatePrefix],
   )
 
   const onPresetSelect = useCallback(
@@ -100,7 +109,7 @@ export function DatePickerRange({
           ellipsis
           variant='outline'
           className={cn(
-            'w-72 justify-start text-left font-normal',
+            'justify-start text-left font-normal',
             !range && 'text-muted-foreground',
           )}
           iconProps={{
@@ -119,7 +128,7 @@ export function DatePickerRange({
         </Button>
       </Popover.Trigger>
       <Popover.Content
-        align='start'
+        align={align}
         className='flex w-auto flex-col'
         maxHeight='none'
       >

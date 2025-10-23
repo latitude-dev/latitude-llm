@@ -1,5 +1,3 @@
-'use client'
-
 import { FormEvent, useCallback } from 'react'
 
 import { buildPaginatedUrl } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
@@ -52,6 +50,7 @@ export function GoToPageInput({
         hideNativeAppearance
         type='number'
         name='page'
+        size='small'
         min={1}
         max={totalPages}
         defaultValue={page}
