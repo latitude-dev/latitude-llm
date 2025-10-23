@@ -1,4 +1,4 @@
-import { and, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, or, sql } from 'drizzle-orm'
 import { type Issue } from '../schema/models/types/Issue'
 import { issues } from '../schema/models/issues'
 import { Result } from '../lib/Result'
@@ -16,12 +16,16 @@ export type IssueFilter = {
   new?: boolean
 }
 
+export type IssueStatus = 'new' | 'escalating' | 'resolved' | 'ignored'
+
+
 export type IssueSort = 'relevance' | 'lastSeen' | 'firstSeen' | 'title'
 
 export type IssuesQueryOptions = {
   projectId?: number
   commitUuid?: string
   filters?: IssueFilter
+  statuses?: IssueStatus[]
   sort?: IssueSort
   cursor?: string
   limit?: number
@@ -40,6 +44,7 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
     projectId,
     commitUuid,
     filters = {},
+    statuses = [],
     sort = 'relevance',
     cursor,
     limit = 20,
@@ -51,7 +56,7 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
 
     const havingConditions = []
 
-    // Apply filters
+    // Apply legacy filters (for backward compatibility)
     if (filters.ignored !== undefined) {
       havingConditions.push(
         filters.ignored
@@ -74,6 +79,27 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
 
     if (filters.new) {
       havingConditions.push(sql`is_new = true`)
+    }
+
+    // Apply new status filters (supports multiple statuses)
+    if (statuses && statuses.length > 0) {
+      const statusConditions = statuses.map(status => {
+        switch (status) {
+          case 'new':
+            return sql`is_new = true`
+          case 'escalating':
+            return sql`escalating_count > 0`
+          case 'resolved':
+            return sql`${issues.resolvedAt} IS NOT NULL`
+          case 'ignored':
+            return sql`${issues.ignoredAt} IS NOT NULL`
+          default:
+            return sql`1 = 0` // Never matches
+        }
+      })
+
+      // Use OR logic for multiple statuses (issue matches ANY of the statuses)
+      havingConditions.push(or(...statusConditions)!)
     }
 
     // Apply cursor pagination
