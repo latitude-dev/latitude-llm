@@ -35,11 +35,9 @@ export const issues = latitudeSchema.table(
     firstSeenResultId: bigint('first_seen_result_id', {
       mode: 'number',
     }).references(() => evaluationResultsV2.id, { onDelete: 'set null' }),
-    firstSeenAt: timestamp('first_seen_at').notNull(),
     lastSeenResultId: bigint('last_seen_result_id', {
       mode: 'number',
     }).references(() => evaluationResultsV2.id, { onDelete: 'set null' }),
-    lastSeenAt: timestamp('last_seen_at').notNull(),
     resolvedAt: timestamp('resolved_at'),
     ignoredAt: timestamp('ignored_at'),
     ...timestamps(),
@@ -54,9 +52,7 @@ export const issues = latitudeSchema.table(
       sql`${table.title} gin_trgm_ops`,
     ),
     index('issues_first_seen_result_id_idx').on(table.firstSeenResultId),
-    index('issues_first_seen_at_idx').on(table.firstSeenAt),
     index('issues_last_seen_result_id_idx').on(table.lastSeenResultId),
-    index('issues_last_seen_at_idx').on(table.lastSeenAt),
     index('issues_resolved_at_idx').on(table.resolvedAt),
     index('issues_ignored_at_idx').on(table.ignoredAt),
   ],
