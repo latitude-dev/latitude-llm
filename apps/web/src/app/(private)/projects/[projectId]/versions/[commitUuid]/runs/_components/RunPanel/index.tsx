@@ -1,7 +1,5 @@
-'use client'
-
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
-import { DocumentLogAnnotation } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/logs/_components/DocumentLogs/DocumentLogInfo/Annotation'
+import { AnnotationForm } from '$/components/evaluations/Annotation/Form'
 import Chat from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/V2Playground/Chat'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
@@ -264,7 +262,7 @@ function CompletedRunPanel({
             manualEvaluations.length > 0 &&
             !!responseLog &&
             manualEvaluations.map((evaluation) => (
-              <DocumentLogAnnotation
+              <AnnotationForm
                 key={evaluation.uuid}
                 evaluation={evaluation}
                 result={manualResults[evaluation.uuid]}

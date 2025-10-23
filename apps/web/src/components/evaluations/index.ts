@@ -2,7 +2,6 @@ import {
   EvaluationConfiguration,
   EvaluationMetric,
   EvaluationMetricSpecification,
-  EvaluationResultMetadata,
   EvaluationResultV2,
   EvaluationSettings,
   EvaluationSpecification,
@@ -81,16 +80,7 @@ export type AnnotationFormProps<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   evaluation: EvaluationV2<T, M>
-  resultScore?: number
-  setResultScore: (resultScore: number) => void
-  resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
-  setResultMetadata: (
-    resultMetadata: Partial<EvaluationResultMetadata<T, M>>,
-  ) => void
-  providerLog: ProviderLogDto
-  documentLog: DocumentLog
-  commit: Commit
-  disabled?: boolean
+  result?: EvaluationResultV2<T, M>
 }
 
 export type ChartConfigurationArgs<
@@ -169,7 +159,7 @@ export type EvaluationFrontendSpecification<
     props: ResultPanelProps<T, M> & { metric: M },
   ) => React.ReactNode
   AnnotationForm?: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
-    props: AnnotationFormProps<T, M> & { metric: M },
+    props: AnnotationFormProps<T, M>,
   ) => React.ReactNode
   chartConfiguration: <M extends EvaluationMetric<T> = EvaluationMetric<T>>(
     args: ChartConfigurationArgs<T, M> & { metric: M },

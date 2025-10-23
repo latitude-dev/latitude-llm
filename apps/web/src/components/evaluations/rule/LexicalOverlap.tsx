@@ -68,7 +68,6 @@ function ConfigurationSimpleForm({
             setConfiguration({ ...configuration, minOverlap: value })
           }
           errors={errors?.['minOverlap']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required
@@ -84,7 +83,6 @@ function ConfigurationSimpleForm({
             setConfiguration({ ...configuration, maxOverlap: value })
           }
           errors={errors?.['maxOverlap']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required

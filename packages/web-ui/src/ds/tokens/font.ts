@@ -2,7 +2,7 @@ export const font = {
   size: {
     h8: 'text-[8px] leading-[10px]', // 8px/10px
     h7: 'text-[10px] leading-4', // 10px/16px
-    h6: 'text-sm leading-4', // 14px/16px
+    h6: 'text-xs leading-4', // 14px/16px
     h5: 'text-sm leading-5', // 14px/20px
     h4: 'text-base leading-6', // 16px/24px
     h3: 'text-xl leading-8', // 20px/32px

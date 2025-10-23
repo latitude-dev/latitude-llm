@@ -56,7 +56,6 @@ function ConfigurationSimpleForm({
             setConfiguration({ ...configuration, minSimilarity: value })
           }
           errors={errors?.['minSimilarity']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required
@@ -72,7 +71,6 @@ function ConfigurationSimpleForm({
             setConfiguration({ ...configuration, maxSimilarity: value })
           }
           errors={errors?.['maxSimilarity']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required

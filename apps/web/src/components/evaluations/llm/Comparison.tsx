@@ -109,7 +109,6 @@ function ConfigurationAdvancedForm({
             setConfiguration({ ...configuration, minThreshold: value })
           }
           errors={errors?.['minThreshold']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required
@@ -125,7 +124,6 @@ function ConfigurationAdvancedForm({
             setConfiguration({ ...configuration, maxThreshold: value })
           }
           errors={errors?.['maxThreshold']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required

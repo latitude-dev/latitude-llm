@@ -93,6 +93,9 @@
     "./atoms/NumberInput": {
       "import": "./src/ds/atoms/NumberInput/index.tsx"
     },
+    "./atoms/StepperNumberInput": {
+      "import": "./src/ds/atoms/StepperNumberInput/index.tsx"
+    },
     "./atoms/Popover": {
       "import": "./src/ds/atoms/Popover/index.tsx"
     },

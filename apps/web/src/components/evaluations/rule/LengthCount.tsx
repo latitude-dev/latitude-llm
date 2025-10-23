@@ -68,7 +68,6 @@ function ConfigurationSimpleForm({
             setConfiguration({ ...configuration, minLength: value })
           }
           errors={errors?.['minLength']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required
@@ -83,7 +82,6 @@ function ConfigurationSimpleForm({
             setConfiguration({ ...configuration, maxLength: value })
           }
           errors={errors?.['maxLength']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required

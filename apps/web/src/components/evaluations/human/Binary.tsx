@@ -1,26 +1,82 @@
+import { useCallback, useMemo, useState } from 'react'
 import {
   EvaluationType,
+  EvaluationV2,
   HumanEvaluationBinarySpecification,
   HumanEvaluationMetric,
 } from '@latitude-data/constants'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { Input } from '@latitude-data/web-ui/atoms/Input'
-import { TabSelect } from '@latitude-data/web-ui/molecules/TabSelect'
-import { useMemo } from 'react'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
 import {
   AnnotationFormProps,
   ChartConfigurationArgs,
   ConfigurationFormProps,
   ResultBadgeProps,
 } from '../index'
+import { useAnnotationFormState } from './useAnnotationForm'
+import { AnnotationFormWrapper as AForm } from '../Annotation/FormWrapper'
+import { ThumbsUpDownInput } from '../Annotation/ThumbsUpDownInput'
+import { CriteriaDescription as CriteriaWrapper } from '../Annotation/CriteriaDescription'
 
 const specification = HumanEvaluationBinarySpecification
+
+function getCriteria(
+  evaluation: EvaluationV2<EvaluationType.Human, HumanEvaluationMetric.Binary>,
+) {
+  const config = evaluation.configuration
+  const criteria = config.criteria
+  const reverseScale = config.reverseScale
+  const passDescription = config.passDescription
+  const failDescription = config.failDescription
+  const isEmpty =
+    !passDescription && !failDescription && !criteria && !reverseScale
+
+  if (isEmpty) return null
+
+  return {
+    criteria,
+    passDescription,
+    failDescription,
+    reverseScale,
+  }
+}
+
+type ICriteria = ReturnType<typeof getCriteria>
+function CriteriaDescription({
+  criteria,
+  passDescription,
+  failDescription,
+  reverseScale,
+}: NonNullable<ICriteria>) {
+  return (
+    <CriteriaWrapper reverseScale={reverseScale} criteria={criteria}>
+      {failDescription ? (
+        <div>
+          <Text.H5M color='background' display='block'>
+            Fail criteria
+          </Text.H5M>
+          <Text.H6 color='primaryForeground'>{failDescription}</Text.H6>
+        </div>
+      ) : null}
+      {passDescription ? (
+        <div>
+          <Text.H5M color='background' display='block'>
+            Pass criteria
+          </Text.H5M>
+          <Text.H6 color='primaryForeground'>{passDescription}</Text.H6>
+        </div>
+      ) : null}
+    </CriteriaWrapper>
+  )
+}
+
 export default {
   ...specification,
   icon: 'thumbsUp' as IconName,
   ConfigurationSimpleForm: ConfigurationSimpleForm,
   ResultBadge: ResultBadge,
-  AnnotationForm: AnnotationForm,
+  AnnotationForm,
   chartConfiguration: chartConfiguration,
 }
 
@@ -78,56 +134,46 @@ function ResultBadge({
 
 function AnnotationForm({
   evaluation,
-  resultScore,
-  setResultScore,
-  disabled,
+  result,
 }: AnnotationFormProps<EvaluationType.Human, HumanEvaluationMetric.Binary>) {
-  const options = useMemo(
-    () => [
-      {
-        label: 'Passed',
-        value: 1,
-        icon: 'thumbsUp',
-      },
-      {
-        label: 'Failed',
-        value: 0,
-        icon: 'thumbsDown',
-      },
-    ],
-    [],
+  const criteria = useMemo(() => getCriteria(evaluation), [evaluation])
+  const { onScoreChange, onSubmit } = useAnnotationFormState({
+    initialScore: result?.score ?? undefined,
+  })
+  const [thumbsUp, setThumbsUp] = useState<boolean | null>(
+    typeof result?.score === 'number'
+      ? result?.score === 1
+        ? true
+        : false
+      : null,
+  )
+  const onThumbsUpClick = useCallback(
+    (thumbs: boolean) => {
+      setThumbsUp(thumbs)
+      onScoreChange(thumbs ? 1 : 0)
+    },
+    [onScoreChange],
   )
 
-  const description = useMemo(() => {
-    const description = []
-
-    if (evaluation.configuration.passDescription) {
-      description.push(
-        `The response should pass when: ${evaluation.configuration.passDescription}`,
-      )
-    }
-
-    if (evaluation.configuration.failDescription) {
-      description.push(
-        `The response should fail when: ${evaluation.configuration.failDescription}`,
-      )
-    }
-
-    return description.join('. ')
-  }, [evaluation.configuration])
-
   return (
-    <>
-      <TabSelect
-        value={resultScore ?? undefined}
-        name='resultScore'
-        description={description || 'Whether the response passes or fails'}
-        options={options}
-        onChange={(value) => setResultScore(value)}
-        disabled={disabled}
-        required
-      />
-    </>
+    <AForm onSubmit={onSubmit}>
+      <AForm.Body>
+        <AForm.TextArea
+          name='reason'
+          defaultValue={result?.metadata?.reason ?? ''}
+        />
+      </AForm.Body>
+      <AForm.Footer>
+        <input type='hidden' name='score' value={thumbsUp ? '1' : '0'} />
+        <ThumbsUpDownInput
+          onThumbsClick={onThumbsUpClick}
+          thumbsUp={thumbsUp}
+        />
+        <AForm.SubmitButtonWithTooltip
+          tooltip={criteria ? <CriteriaDescription {...criteria} /> : undefined}
+        />
+      </AForm.Footer>
+    </AForm>
   )
 }
 

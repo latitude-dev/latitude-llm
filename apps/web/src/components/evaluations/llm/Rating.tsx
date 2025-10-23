@@ -63,7 +63,6 @@ function ConfigurationSimpleForm({
             setConfiguration({ ...configuration, minRating: value })
           }}
           errors={errors?.['minRating']}
-          defaultAppearance
           className='w-full'
           fieldClassName='w-1/6'
           disabled={disabled}
@@ -99,7 +98,6 @@ function ConfigurationSimpleForm({
             setConfiguration({ ...configuration, maxRating: value })
           }}
           errors={errors?.['maxRating']}
-          defaultAppearance
           className='w-full'
           fieldClassName='w-1/6'
           disabled={disabled}
@@ -148,7 +146,6 @@ function ConfigurationAdvancedForm({
             setConfiguration({ ...configuration, minThreshold: value })
           }
           errors={errors?.['minThreshold']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required
@@ -164,7 +161,6 @@ function ConfigurationAdvancedForm({
             setConfiguration({ ...configuration, maxThreshold: value })
           }
           errors={errors?.['maxThreshold']}
-          defaultAppearance
           className='w-full'
           disabled={disabled}
           required
