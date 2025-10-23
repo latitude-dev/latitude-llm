@@ -8,6 +8,7 @@ import {
 } from '../../services/chains/ChainValidator'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { JSONSchema7 } from 'json-schema'
+import { isAbortError } from '@ai-sdk/provider-utils'
 
 /**
  * DefaultStreamManager implements a simple single-step streaming strategy.
@@ -50,6 +51,7 @@ export class DefaultStreamManager
   }
 
   async step(): Promise<void> {
+    this.setMessages(this.messages)
     this.startStep()
     this.startProviderStep({
       config: this.config,
@@ -67,7 +69,7 @@ export class DefaultStreamManager
       const { response, messages, tokenUsage, finishReason } =
         await streamAIResponse({
           config,
-          context: this.$context,
+          context: this.$completion!.context,
           abortSignal: this.abortSignal,
           controller: this.controller!,
           documentLogUuid: this.uuid,
@@ -97,6 +99,9 @@ export class DefaultStreamManager
 
       return
     } catch (e) {
+      // Handle abort errors gracefully - just end without treating as error (stream ended in listener)
+      if (isAbortError(e)) return
+
       this.endWithError(e as Error)
       return
     }

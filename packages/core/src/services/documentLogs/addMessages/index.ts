@@ -76,7 +76,7 @@ export async function addMessages({
   }
 
   const streamManager = new DefaultStreamManager({
-    context,
+    context: $prompt.context,
     uuid: providerLog.documentLogUuid!,
     config: conversation.config,
     provider,
