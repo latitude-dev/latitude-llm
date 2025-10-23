@@ -189,29 +189,45 @@ export async function resolveIntegrationTools({
 
     const { tools, integration } = integrationData
 
-    const tool = tools[toolName]
-    if (!tool) {
-      return Result.error(
-        new NotFoundError(
-          `Tool '${toolName}' not found in Integration '${integrationName}'`,
-        ),
-      )
-    }
-
     const imageUrl =
       integration.type === IntegrationType.Pipedream
         ? (integration.configuration as PipedreamIntegrationConfiguration)
             ?.metadata?.imageUrl
         : undefined
 
-    resolvedTools[toolName] = {
-      definition: tool.handler,
-      sourceData: {
-        source: ToolSource.Integration,
-        integrationId: integration.id,
-        toolLabel: tool.definition.displayName,
-        imageUrl,
-      },
+    if (toolName === '*') {
+      // All tools from integration
+      Object.entries(tools).forEach(([toolName, tool]) => {
+        resolvedTools[toolName] = {
+          definition: tool.handler,
+          sourceData: {
+            source: ToolSource.Integration,
+            integrationId: integration.id,
+            toolLabel: tool.definition.displayName,
+            imageUrl,
+          },
+        }
+      })
+    } else {
+      // Single tool from integration
+      const tool = tools[toolName]
+      if (!tool) {
+        return Result.error(
+          new NotFoundError(
+            `Tool '${toolName}' not found in Integration '${integrationName}'`,
+          ),
+        )
+      }
+
+      resolvedTools[toolName] = {
+        definition: tool.handler,
+        sourceData: {
+          source: ToolSource.Integration,
+          integrationId: integration.id,
+          toolLabel: tool.definition.displayName,
+          imageUrl,
+        },
+      }
     }
   }
 
