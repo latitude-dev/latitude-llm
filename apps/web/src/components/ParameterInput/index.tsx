@@ -20,20 +20,17 @@ export function ParameterInput({
   value,
   onChange,
   disabled = false,
-  withBorder = true,
 }: {
   name: string
   type: ParameterType
   value?: string
   onChange: (value: string) => void
   disabled?: boolean
-  withBorder?: boolean
 }) {
   if (type === ParameterType.File || type === ParameterType.Image) {
     return (
       <FileParameterInput
         type={type}
-        withBorder={withBorder}
         value={value}
         onChange={onChange}
         disabled={disabled}
