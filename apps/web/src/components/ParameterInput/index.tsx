@@ -109,7 +109,7 @@ function TextParameterInput({
   )
 }
 
-function FileParameterInput({
+export function FileParameterInput({
   type,
   value,
   onChange,
