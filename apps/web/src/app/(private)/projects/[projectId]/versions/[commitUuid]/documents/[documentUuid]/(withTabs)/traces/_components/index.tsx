@@ -3,7 +3,7 @@ import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
 import { SelectedSpansProvider } from './SelectedSpansContext'
 import { DocumentTraces } from './DocumentTraces'
-import { Span } from '@latitude-data/constants'
+import { Span, SpanType } from '@latitude-data/constants'
 import {
   SelectedTraceIdProvider,
   useSelectedTraceId,
@@ -75,7 +75,7 @@ function DocumenTracesPageContent({
               showRightPane={!!selectedTraceId}
               leftPane={
                 <div className='flex flex-col h-full'>
-                  <DocumentTraces spans={spans} />
+                  <DocumentTraces spans={spans as Span<SpanType.Prompt>[]} />
                   {hasMore && (
                     <div className='flex justify-center p-4 border-t'>
                       <Button

@@ -68,7 +68,7 @@ function StatusBadge({
     <Tooltip
       asChild
       trigger={
-        <Badge variant={details.color.badge.outline}>{details.name}</Badge>
+        <Badge variant={details.color.badge.filled}>{details.name}</Badge>
       }
     >
       {details.description}

@@ -8,7 +8,6 @@ import { Message } from '@latitude-data/constants/legacyCompiler'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { CodeBlock } from '@latitude-data/web-ui/atoms/CodeBlock'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { LineSeparator } from '@latitude-data/web-ui/atoms/LineSeparator'
 import { Modal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
@@ -19,6 +18,7 @@ import {
   SPAN_SPECIFICATIONS,
   SpanType,
 } from '@latitude-data/core/constants'
+import { cn } from '@latitude-data/web-ui/utils'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Completion]
 export default {
@@ -38,35 +38,42 @@ function MessagesDetails({
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <div className='flex flex-col gap-y-2'>
+    <div className='flex flex-col gap-y-1'>
       <div className='flex flex-row items-center justify-between'>
         <Text.H5M color='foreground'>Messages</Text.H5M>
-        <Tooltip
-          asChild
-          trigger={
-            <Button
-              onClick={() => setExpanded(true)}
-              iconProps={{
-                name: 'expand',
-                widthClass: 'w-4',
-                heightClass: 'h-4',
-                placement: 'right',
-              }}
-              variant='link'
-              size='none'
-              containerClassName='rounded-xl pointer-events-auto'
-              className='rounded-xl'
-            >
-              See
-            </Button>
-          }
-        >
-          Showing preview, expand to see more.
-        </Tooltip>
+        {(input.length > 1 || output.length > 1) && (
+          <Tooltip
+            asChild
+            trigger={
+              <Button
+                onClick={() => setExpanded(true)}
+                iconProps={{
+                  name: 'expand',
+                  widthClass: 'w-4',
+                  heightClass: 'h-4',
+                  placement: 'right',
+                }}
+                variant='link'
+                size='none'
+                containerClassName='rounded-xl pointer-events-auto'
+                className='rounded-xl'
+              >
+                See
+              </Button>
+            }
+          >
+            Showing preview, expand to see more.
+          </Tooltip>
+        )}
       </div>
-      <div className='w-full flex flex-col gap-y-2.5'>
+      <div
+        className={cn('w-full flex flex-col', {
+          ' gap-y-2.5': input.length > 1 || output.length > 1,
+        })}
+      >
         {input.length > 0 && (
           <MessageComponent
+            debugMode
             role={input.at(0)!.role}
             content={input.at(0)!.content}
           />
@@ -85,6 +92,7 @@ function MessagesDetails({
         )}
         {output.length > 0 && (
           <MessageComponent
+            debugMode
             role={output.at(-1)!.role}
             content={output.at(-1)!.content}
           />
@@ -99,9 +107,7 @@ function MessagesDetails({
         dismissible
       >
         <div className='flex flex-col gap-y-2.5'>
-          <MessageList messages={input} />
-          <LineSeparator text='Output' />
-          <MessageList messages={output} />
+          <MessageList debugMode messages={[...input, ...output]} />
         </div>
       </Modal>
     </div>
@@ -170,7 +176,7 @@ function DetailsPanel({ span }: DetailsPanelProps<SpanType.Completion>) {
               }
             />
           )}
-          <MetadataItem label='Configuration' contentClassName='pt-2' stacked>
+          <MetadataItem label='Configuration' contentClassName='pt-1' stacked>
             <div className='w-full max-h-32 overflow-y-auto custom-scrollbar scrollable-indicator rounded-xl bg-backgroundCode'>
               <CodeBlock language='json'>
                 {JSON.stringify(span.metadata.configuration, null, 2)}
