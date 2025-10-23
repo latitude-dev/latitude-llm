@@ -1,12 +1,17 @@
 import { DetailsPanel } from '$/components/tracing/spans/DetailsPanel'
 import { useTrace } from '$/stores/traces'
-import { CompletionSpanMetadata, SpanType } from '@latitude-data/constants'
+import {
+  CompletionSpanMetadata,
+  PromptSpanMetadata,
+  SpanType,
+} from '@latitude-data/constants'
 import { MetadataInfoTabs } from '../../../_components/MetadataInfoTabs'
 import { useSelectedSpan } from './SelectedSpansContext'
 import { useSelectedTraceId } from './SelectedTraceIdContext'
 import { useSpan } from '$/stores/spans'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
-import { PromptlMessageList } from './TracePromptlMessages'
+import { MessageList } from '$/components/ChatWrapper'
+import { adaptPromptlMessageToLegacy } from '@latitude-data/core/utils/promptlAdapter'
 
 export const DEFAULT_TABS = [
   { label: 'Metadata', value: 'metadata' },
@@ -42,7 +47,10 @@ function TraceMetadata() {
   return <DetailsPanel span={span} />
 }
 
-function findFirstCompletionSpan(children: any[]): any | undefined {
+function findFirstSpanOfType(
+  children: any[],
+  spanType: SpanType,
+): any | undefined {
   if (!children || children.length === 0) return undefined
 
   const queue = [...children]
@@ -50,7 +58,7 @@ function findFirstCompletionSpan(children: any[]): any | undefined {
   while (queue.length > 0) {
     const current = queue.shift()
 
-    if (current.type === SpanType.Completion) {
+    if (current.type === spanType) {
       return current
     }
 
@@ -66,27 +74,39 @@ function TraceMessages() {
   const { selectedTraceId } = useSelectedTraceId()
   const { data: trace } = useTrace({ traceId: selectedTraceId! })
   const spanId = trace?.children
-    ? findFirstCompletionSpan(trace.children)?.id
+    ? findFirstSpanOfType(trace.children, SpanType.Completion)?.id
     : undefined
-  const { data: span, isLoading } = useSpan({
+  const { data: completionSpan, isLoading } = useSpan({
     spanId: spanId,
     traceId: selectedTraceId!,
   })
-  if (isLoading) return <LoadingText alignX='center' />
-  if (!span) return null
-
-  // Only CompletionSpanMetadata has input/output properties
-  if (!span.metadata || span.metadata.type !== SpanType.Completion) {
+  const spanIdd = trace?.children
+    ? findFirstSpanOfType(trace.children, SpanType.Prompt)?.id
+    : undefined
+  const { data: promptSpan, isLoading: isLoadingg } = useSpan({
+    spanId: spanIdd,
+    traceId: selectedTraceId!,
+  })
+  if (isLoading || isLoadingg) return <LoadingText alignX='center' />
+  if (!completionSpan || !promptSpan) return null
+  if (
+    !completionSpan.metadata ||
+    completionSpan.metadata.type !== SpanType.Completion
+  ) {
     return null
   }
 
-  const completionMetadata = span.metadata as CompletionSpanMetadata
+  const completionMetadata = completionSpan.metadata as CompletionSpanMetadata
+  const promptMetadata = promptSpan.metadata as PromptSpanMetadata
+  const legacyMessages = [
+    ...(completionMetadata.input || []).map(adaptPromptlMessageToLegacy),
+    ...(completionMetadata.output || []).map(adaptPromptlMessageToLegacy),
+  ]
+
   return (
-    <PromptlMessageList
-      messages={[
-        ...(completionMetadata.input || []),
-        ...(completionMetadata.output || []),
-      ]}
+    <MessageList
+      messages={legacyMessages}
+      parameters={Object.keys(promptMetadata.parameters)}
     />
   )
 }

@@ -40,13 +40,22 @@ export default async function TracesPage({
   }
 
   const spansRepository = new SpansRepository(workspace.id)
-  const spans = await spansRepository
+  const result = await spansRepository
     .findByDocumentAndCommit({
       documentUuid,
       commitUuid,
       type: SpanType.Prompt,
+      limit: 50, // Initial load limit
     })
     .then((r) => r.unwrap())
 
-  return <DocumentTracesPage spans={spans} />
+  return (
+    <DocumentTracesPage
+      initialSpans={result.spans}
+      hasMore={result.hasMore}
+      projectId={projectId}
+      commitUuid={commitUuid}
+      documentUuid={documentUuid}
+    />
+  )
 }

@@ -1,5 +1,5 @@
 import { parseJSON } from 'date-fns'
-import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns, sql, gt, or } from 'drizzle-orm'
 import { cache as redis } from '../cache'
 import {
   Span,
@@ -70,25 +70,54 @@ export class SpansRepository extends Repository<Span> {
     documentUuid,
     commitUuid,
     type = SpanType.Prompt,
+    cursor,
+    limit = 50,
   }: {
     documentUuid: string
     commitUuid: string
     type?: SpanType
+    cursor?: { startedAt: Date; id: string }
+    limit?: number
   }) {
+    let whereClause = and(
+      this.scopeFilter,
+      eq(spans.documentUuid, documentUuid),
+      eq(spans.commitUuid, commitUuid),
+      type ? eq(spans.type, type) : sql`1 = 1`,
+    )
+
+    if (cursor) {
+      whereClause = and(
+        whereClause,
+        or(
+          gt(spans.startedAt, cursor.startedAt),
+          and(eq(spans.startedAt, cursor.startedAt), gt(spans.id, cursor.id)),
+        ),
+      )
+    }
+
     const result = await this.db
       .select(tt)
       .from(spans)
-      .where(
-        and(
-          this.scopeFilter,
-          eq(spans.documentUuid, documentUuid),
-          eq(spans.commitUuid, commitUuid),
-          type ? eq(spans.type, type) : sql`1 = 1`,
-        ),
-      )
-      .orderBy(asc(spans.startedAt))
+      .where(whereClause)
+      .orderBy(desc(spans.startedAt), desc(spans.id))
+      .limit(limit + 1) // Get one extra to check if there's a next page
 
-    return Result.ok<Span[]>(result as Span[])
+    const hasMore = result.length > limit
+    const spansResult = hasMore ? result.slice(0, limit) : result
+    const nextCursor = hasMore
+      ? { startedAt: result[limit - 1].startedAt, id: result[limit - 1].id }
+      : null
+
+    return Result.ok<{
+      spans: Span[]
+      hasMore: boolean
+      nextCursor: { startedAt: Date; id: string } | null
+    }>({
+      spans: spansResult as Span[],
+      hasMore,
+      nextCursor,
+    })
   }
 }
 

@@ -55,12 +55,8 @@ export async function runDocumentAtCommit({
     commit,
     customPrompt,
   })
-
-  // NOTE: We don't log these errors. If something happen
-  // in getResolvedContent it will not appear in Latitude
   if (result.error) return result
 
-  // Note: run document retries always produce new traces)
   const $prompt = telemetry.prompt(context, {
     documentLogUuid: errorableUuid,
     experimentUuid: experiment?.uuid,
