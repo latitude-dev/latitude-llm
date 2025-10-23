@@ -2,10 +2,6 @@ import { and, eq, getTableColumns, inArray, sql } from 'drizzle-orm'
 import { type Issue } from '../schema/models/types/Issue'
 import RepositoryLegacy from './repository'
 import { issueHistograms } from '../schema/models/issueHistograms'
-import { Commit } from '../schema/models/types/Commit'
-import { projects } from '../schema/models/projects'
-import { CommitsRepository } from './commitsRepository'
-import { Result } from '../lib/Result'
 
 const tt = getTableColumns(issueHistograms)
 
@@ -21,24 +17,11 @@ export class IssueHistogramsRepository extends RepositoryLegacy<
       .as('issuesHistogramsScope')
   }
 
-  async getHistogramStatsForCommitsSubquery({
-    commitUuid,
-    projectId,
-  }: {
-    commitUuid: string
-    projectId?: number
-  }) {
-    const commitResult = await this.getCommit({ commitUuid, projectId })
-    if (commitResult.error) return commitResult
-
-    const commit = commitResult.value
-    const commitsResult = await this.getCommits({ commit })
-    if (commitsResult.error) return commitsResult
-
-    const commits = commitsResult.value
-    const commitIds = commits.map((c) => c.id)
-
-    const results = this.db
+  /**
+   * NOTE: Developer is responsible of passing the right commit IDs
+   */
+  getHistogramStatsSubquery({ commitIds }: { commitIds: number[] }) {
+    return this.db
       .select({
         issueId: issueHistograms.issueId,
         last7DaysCount: sql<number>`
@@ -72,30 +55,5 @@ export class IssueHistogramsRepository extends RepositoryLegacy<
       )
       .groupBy(issueHistograms.issueId)
       .as('histogramStats')
-
-    return Result.ok(results)
-  }
-
-  private async getCommits({ commit }: { commit: Commit }) {
-    const repo = new CommitsRepository(this.workspaceId, this.db)
-    const commits = await repo.getCommitsHistory({ commit })
-    return Result.ok(commits)
-  }
-
-  private async getCommit({
-    commitUuid,
-    projectId,
-  }: {
-    commitUuid: string
-    projectId?: number
-  }) {
-    const commitsScope = new CommitsRepository(this.workspaceId, this.db)
-    const commitResult = await commitsScope.getCommitByUuid({
-      projectId,
-      uuid: commitUuid,
-    })
-    if (commitResult.error) return commitResult
-
-    return Result.ok(commitResult.unwrap())
   }
 }

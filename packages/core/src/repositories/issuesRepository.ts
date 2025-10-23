@@ -1,9 +1,13 @@
 import { and, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import { issueHistograms } from '../schema/models/issueHistograms'
 import { type Issue } from '../schema/models/types/Issue'
 import { issues } from '../schema/models/issues'
 import { Result } from '../lib/Result'
 import RepositoryLegacy from './repository'
 import { IssueHistogramsRepository } from './issueHistogramsRepository'
+import { Commit } from '../schema/models/types/Commit'
+import { CommitsRepository } from './commitsRepository'
+import { HEAD_COMMIT } from '@latitude-data/constants'
 
 const tt = getTableColumns(issues)
 
@@ -101,25 +105,38 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
         orderByClause = [desc(sql`last7DaysCount`), desc(sql`lastSeenDate`)]
     }
 
+    // Get relevant commits first
+    const commitsResult = await this.getCommits({
+      projectId,
+      commitUuid,
+    })
+    if (commitsResult.error) return commitsResult
+
+    const commitIds = commitsResult.value.map(c => c.id)
+
+    if (commitIds.length === 0) {
+      return Result.ok({
+        issues: [],
+        hasMore: false,
+        nextCursor: null,
+      })
+    }
+
+    // Get histogram stats subquery
     const histogramRepo = new IssueHistogramsRepository(
       this.workspaceId,
       this.db,
     )
-    const histogramStatsResult =
-      await histogramRepo.getHistogramStatsForCommitsSubquery({
-        commitUuid: commitUuid || '',
-        projectId,
-      })
-    if (histogramStatsResult.error) return histogramStatsResult
-    const histograms = histogramStatsResult.value
+    const histogramStats =
+      histogramRepo.getHistogramStatsSubquery(relevantCommitIds)
 
     // Execute the main query with histogram stats
     const results = await this.db
       .select({
         ...tt,
-        last7DaysCount: sql<number>`COALESCE(${histograms.last7DaysCount}, 0)`,
-        lastSeenDate: histograms.lastSeenDate,
-        escalatingCount: sql<number>`COALESCE(${histograms.escalatingCount}, 0)`,
+        last7DaysCount: sql<number>`COALESCE(${histogramStats.last7DaysCount}, 0)`,
+        lastSeenDate: histogramStats.lastSeenDate,
+        escalatingCount: sql<number>`COALESCE(${histogramStats.escalatingCount}, 0)`,
         isNew: sql<boolean>`
           CASE
             WHEN ${issues.createdAt} >= CURRENT_DATE - INTERVAL '7 days'
@@ -143,7 +160,7 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
         `.as('isIgnored'),
       })
       .from(issues)
-      .leftJoin(histograms, eq(histograms.issueId, issues.id))
+      .leftJoin(histogramStats, eq(histogramStats.issueId, issues.id))
       .where(and(...whereConditions))
       .having(
         havingConditions.length > 0 ? and(...havingConditions) : undefined,
@@ -167,6 +184,46 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
     })
   }
 
+  private async getRelevantCommits({
+    projectId,
+    commitUuid,
+  }: {
+    projectId?: number
+    commitUuid?: string
+  }) {
+    const histogramsRepo = new IssueHistogramsRepository(
+      this.workspaceId,
+      this.db,
+    )
+
+    if (commitUuid) {
+      // Get commit and all its ancestors
+      const commitsResult = await histogramsRepo.getCommitsByUuid({
+        commitUuid,
+        projectId,
+      })
+      if (commitsResult.error) return commitsResult
+
+      return Result.ok(commitsResult.value)
+    } else if (projectId) {
+      // Get all commit IDs from histograms for the project
+      const result = await this.db
+        .selectDistinct({ commitId: issueHistograms.commitId })
+        .from(issueHistograms)
+        .innerJoin(issues, eq(issues.id, issueHistograms.issueId))
+        .where(
+          and(
+            eq(issueHistograms.workspaceId, this.workspaceId),
+            eq(issues.projectId, projectId),
+          ),
+        )
+
+      return Result.ok(result.map((r: { commitId: number }) => r.commitId))
+    }
+
+    return Result.ok([])
+  }
+
   private parseCursor(cursor: string): number | null {
     try {
       return parseInt(cursor, 10)
@@ -177,5 +234,41 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
 
   private generateCursor(issue: Issue): string {
     return issue.id.toString()
+  }
+
+  async getCommits({
+    commitUuid,
+    projectId,
+  }: {
+    commitUuid?: string
+    projectId?: number
+  }) {
+    const repo = new CommitsRepository(this.workspaceId, this.db)
+    const commitResult = await this.getCommit({
+      commitUuid: commitUuid ?? HEAD_COMMIT,
+      projectId,
+    })
+    if (commitResult.error) return commitResult
+
+    return Result.ok(
+      await repo.getCommitsHistory({ commit: commitResult.value }),
+    )
+  }
+
+  private async getCommit({
+    commitUuid,
+    projectId,
+  }: {
+    commitUuid: string
+    projectId?: number
+  }) {
+    const commitsScope = new CommitsRepository(this.workspaceId, this.db)
+    const commitResult = await commitsScope.getCommitByUuid({
+      projectId,
+      uuid: commitUuid,
+    })
+    if (commitResult.error) return commitResult
+
+    return Result.ok(commitResult.unwrap())
   }
 }
