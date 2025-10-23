@@ -25,9 +25,9 @@ export function RewardsContent() {
     <div className='flex flex-col gap-2 p-2 pb-0'>
       <RewardsProgress />
       <div className='flex flex-col gap-0.5'>
-        <Text.H3M>Earn Latte credits!</Text.H3M>
+        <Text.H3M>Earn Additional Runs!</Text.H3M>
         <Text.H5 color='foregroundMuted'>
-          Complete these simple tasks and get additional Latte credits
+          Complete these simple tasks and get additional runs
         </Text.H5>
       </div>
       <div className='flex flex-col gap-0.5 pt-2 divide-y divide-dashed divide-border'>

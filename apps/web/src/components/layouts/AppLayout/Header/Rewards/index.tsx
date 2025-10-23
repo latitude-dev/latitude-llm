@@ -21,7 +21,7 @@ export function RewardsButton() {
           containerClassName='flex-shrink-0'
         >
           <Text.H6M color='latteInputForeground' userSelect={false}>
-            Get Latte credits
+            Get Rewards!
           </Text.H6M>
         </Button>
       </Popover.Trigger>
