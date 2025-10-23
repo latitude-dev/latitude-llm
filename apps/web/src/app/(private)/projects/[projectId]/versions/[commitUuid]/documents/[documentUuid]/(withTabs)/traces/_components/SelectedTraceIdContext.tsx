@@ -1,32 +1,11 @@
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createUrlParamContext } from './useUrlParam'
 
-interface SelectedTraceIdContextType {
-  selectedTraceId: string | null
-  setSelectedTraceId: (traceId: string | null) => void
-}
+const { Provider: SelectedTraceIdProvider, useValue } =
+  createUrlParamContext('traceId')
 
-const SelectedTraceIdContext = createContext<
-  SelectedTraceIdContextType | undefined
->(undefined)
-
-export function SelectedTraceIdProvider({ children }: { children: ReactNode }) {
-  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null)
-
-  return (
-    <SelectedTraceIdContext.Provider
-      value={{ selectedTraceId, setSelectedTraceId }}
-    >
-      {children}
-    </SelectedTraceIdContext.Provider>
-  )
-}
+export { SelectedTraceIdProvider }
 
 export function useSelectedTraceId() {
-  const context = useContext(SelectedTraceIdContext)
-  if (context === undefined) {
-    throw new Error(
-      'useSelectedTraceId must be used within a SelectedTraceIdProvider',
-    )
-  }
-  return context
+  const { value, setValue } = useValue()
+  return { selectedTraceId: value, setSelectedTraceId: setValue }
 }

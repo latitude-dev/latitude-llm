@@ -14,8 +14,6 @@ import { ClickToCopyUuid } from '@latitude-data/web-ui/organisms/ClickToCopyUuid
 import { cn } from '@latitude-data/web-ui/utils'
 import { useState } from 'react'
 
-// TODO(tracing): lazy load traces if not expanded when the trace model is persisted
-
 function DocumentLogTrace({
   traceId,
   onSelectedSpan,

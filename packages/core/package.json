@@ -49,6 +49,9 @@
     "./mailers": {
       "import": "./src/mailers/index.ts"
     },
+    "./utils/promptlAdapter": {
+      "import": "./src/utils/promptlAdapter.ts"
+    },
     "./queues": {
       "import": "./src/jobs/queues/index.ts"
     },

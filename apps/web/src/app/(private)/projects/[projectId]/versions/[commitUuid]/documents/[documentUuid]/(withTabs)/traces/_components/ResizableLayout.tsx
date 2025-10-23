@@ -12,13 +12,17 @@ export function ResizableLayout({
   rightPane,
   showRightPane,
   floatingPanel,
+  initialRightPaneWidth,
 }: {
   leftPane: ReactNode
   rightPane: ReactNode
   showRightPane: boolean
   floatingPanel?: ReactNode
+  initialRightPaneWidth?: number
 }) {
-  const [rightPaneWidth, setRightPaneWidth] = useState<number | null>(null) // Start with null
+  const [rightPaneWidth, setRightPaneWidth] = useState<number | null>(
+    initialRightPaneWidth ?? window.innerWidth / 3,
+  )
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
 
