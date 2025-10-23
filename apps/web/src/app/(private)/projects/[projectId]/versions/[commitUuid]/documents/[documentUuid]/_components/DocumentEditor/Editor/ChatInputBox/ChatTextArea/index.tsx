@@ -1,7 +1,7 @@
 import { ToolMessage } from '@latitude-data/constants/legacyCompiler'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { cn } from '@latitude-data/web-ui/utils'
-import { KeyboardEvent, useCallback, useState } from 'react'
+import { ChangeEvent, KeyboardEvent, useCallback, useState } from 'react'
 import { ToolBar } from './ToolBar'
 
 type OnSubmitWithTools = (value: string | ToolMessage[]) => void
@@ -11,28 +11,34 @@ function SimpleTextArea({
   placeholder,
   onSubmit,
   onBack,
+  onChange,
   onBackLabel,
+  onSubmitLabel,
   minRows = 1,
   maxRows = 10,
   disabledSubmit = false,
   disabledBack = false,
+  canSubmitWithEmptyValue = false,
 }: {
   placeholder: string
   minRows?: number
   maxRows?: number
   onSubmit?: (value: string) => void
   onBack?: () => void
+  onChange?: (value: string) => void
   onBackLabel?: string
+  onSubmitLabel?: string
   disabledSubmit?: boolean
   disabledBack?: boolean
+  canSubmitWithEmptyValue?: boolean
 }) {
   const [value, setValue] = useState('')
   const onSubmitHandler = useCallback(() => {
     if (disabledSubmit) return
-    if (value === '') return
+    if (value === '' && !canSubmitWithEmptyValue) return
     setValue('')
     onSubmit?.(value)
-  }, [value, onSubmit, disabledSubmit])
+  }, [value, onSubmit, disabledSubmit, canSubmitWithEmptyValue])
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -41,6 +47,13 @@ function SimpleTextArea({
       }
     },
     [onSubmitHandler],
+  )
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLTextAreaElement>) => {
+      setValue(e.target.value)
+      onChange?.(e.target.value)
+    },
+    [onChange],
   )
   return (
     <div className='flex flex-col w-full'>
@@ -54,7 +67,7 @@ function SimpleTextArea({
         )}
         placeholder={placeholder}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={handleChange}
         onKeyDown={handleKeyDown}
         minRows={minRows}
         maxRows={maxRows}
@@ -65,6 +78,7 @@ function SimpleTextArea({
           onSubmit={onSubmitHandler}
           onBack={onBack}
           onBackLabel={onBackLabel}
+          onSubmitLabel={onSubmitLabel}
           disabledSubmit={disabledSubmit}
           disabledBack={disabledBack}
         />
@@ -78,10 +92,13 @@ export function ChatTextArea({
   onSubmit,
   onBack,
   onBackLabel,
+  onSubmitLabel,
   disabledSubmit = false,
   disabledBack = false,
   minRows = 1,
   maxRows = 10,
+  onChange,
+  canSubmitWithEmptyValue,
 }: {
   placeholder: string
   minRows?: number
@@ -89,8 +106,11 @@ export function ChatTextArea({
   onSubmit?: OnSubmit | OnSubmitWithTools
   onBack?: () => void
   onBackLabel?: string
+  onSubmitLabel?: string
   disabledSubmit?: boolean
   disabledBack?: boolean
+  onChange?: (value: string) => void
+  canSubmitWithEmptyValue?: boolean
 }) {
   return (
     <div className='flex relative w-full'>
@@ -100,9 +120,12 @@ export function ChatTextArea({
         placeholder={placeholder}
         onSubmit={onSubmit}
         onBack={onBack}
+        onSubmitLabel={onSubmitLabel}
+        onChange={onChange}
         onBackLabel={onBackLabel}
         disabledSubmit={disabledSubmit}
         disabledBack={disabledBack}
+        canSubmitWithEmptyValue={canSubmitWithEmptyValue}
       />
     </div>
   )
