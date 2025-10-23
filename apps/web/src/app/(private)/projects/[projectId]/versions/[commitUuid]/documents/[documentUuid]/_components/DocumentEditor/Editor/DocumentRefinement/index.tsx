@@ -15,11 +15,11 @@ import { useCallback, useRef, useState } from 'react'
 import { Step1 } from './Step1'
 import { Step2 } from './Step2'
 import { Step3 } from './Step3'
-import { useLatteDiff } from '$/hooks/useLatteDiff'
 
 import { EvaluationV2 } from '@latitude-data/core/constants'
 
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 export function DocumentRefinement({
   project,
   commit,
@@ -38,7 +38,7 @@ export function DocumentRefinement({
   refinementEnabled: boolean
 }) {
   const router = useRouter()
-  const { diff: latteDiff } = useLatteDiff()
+  const { diffOptions } = useDocumentValue()
 
   const { playgroundAction, resetPlaygroundAction } = usePlaygroundAction({
     action: PlaygroundAction.RefinePrompt,
@@ -97,6 +97,7 @@ export function DocumentRefinement({
       setDiff({
         newValue: refinement.prompt,
         description: refinement.summary,
+        source: 'refine',
         onAccept: async (prompt) => {
           const [result, error] = await refineApply({ prompt })
           if (error) return
@@ -223,7 +224,7 @@ export function DocumentRefinement({
 
   const isDisabled = !refinementEnabled || !!diff
 
-  if (latteDiff) return null
+  if (diffOptions) return null
   if (!refinementEnabled) return null
   if (document.promptlVersion === 0) return null
 

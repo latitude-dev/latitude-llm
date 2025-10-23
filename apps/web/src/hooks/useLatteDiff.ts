@@ -3,6 +3,7 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useLatteStore } from '$/stores/latte/index'
 import useLatteThreadCheckpoints from '$/stores/latteThreadCheckpoints'
+import { useDocumentValue } from './useDocumentValueContext'
 
 /**
  * Computes the diff between the previous and current content for Latte changes.
@@ -16,6 +17,7 @@ export function useLatteDiff() {
     threadUuid,
     commitId: commit.id,
   })
+  const { setDiffOptions } = useDocumentValue()
 
   const checkpoint = useMemo(() => {
     const cp = checkpoints.find(
@@ -30,13 +32,31 @@ export function useLatteDiff() {
   }, [document, checkpoints])
 
   const diff = useMemo(() => {
-    if (!checkpoint) return undefined
+    const newDiff = checkpoint
+      ? {
+          oldValue: checkpoint.data?.content ?? '',
+          newValue: document.content ?? '',
+        }
+      : undefined
 
-    return {
-      oldValue: checkpoint.data?.content ?? '',
-      newValue: document.content ?? '',
-    }
-  }, [document.content, checkpoint])
+    setDiffOptions((prev) => {
+      if (newDiff) {
+        // Update the diff with the latest latte changes
+        return {
+          ...newDiff,
+          source: 'latte',
+        }
+      }
+
+      // If the previous diff was from latte, remove it
+      if (prev?.source === 'latte') return undefined
+
+      // Otherwise, keep the previous diff
+      return prev
+    })
+
+    return newDiff
+  }, [document.content, checkpoint, setDiffOptions])
 
   return { diff }
 }

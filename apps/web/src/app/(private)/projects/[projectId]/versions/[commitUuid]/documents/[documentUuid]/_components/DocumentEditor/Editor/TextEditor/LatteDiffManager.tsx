@@ -73,9 +73,9 @@ export function LatteDiffManager() {
           .detail({ id: project.id })
           .commits.detail({ uuid: commit.uuid }).documents.root,
       )
-    } else if (updateDocumentContent) {
+    } else {
       // Optimistically update the document value to the previous value
-      updateDocumentContent(diff?.oldValue, { origin: 'latteCopilot' })
+      updateDocumentContent?.(diff?.oldValue, { origin: 'latteCopilot' })
     }
   }, [
     discardPartialChanges,
@@ -91,7 +91,16 @@ export function LatteDiffManager() {
     acceptPartialChanges({
       documentUuids: [document.documentUuid],
     })
-  }, [acceptPartialChanges, document.documentUuid])
+
+    if (diff?.newValue) {
+      updateDocumentContent?.(diff?.newValue, { origin: 'latteCopilot' })
+    }
+  }, [
+    acceptPartialChanges,
+    document.documentUuid,
+    diff?.newValue,
+    updateDocumentContent,
+  ])
 
   const handleReviewNextFile = useCallback(() => {
     handleNavigateToCheckpoint('next')

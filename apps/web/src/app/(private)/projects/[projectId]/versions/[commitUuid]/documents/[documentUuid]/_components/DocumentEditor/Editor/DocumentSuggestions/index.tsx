@@ -13,8 +13,8 @@ import type { ICommitContextType } from '$/app/providers/CommitProvider'
 import type { IProjectContextType } from '$/app/providers/ProjectProvider'
 import { useCallback, useEffect, useState } from 'react'
 import { SuggestionItem } from './SuggestionItem'
-import { useLatteDiff } from '$/hooks/useLatteDiff'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { useDocumentValue } from '$/hooks/useDocumentValueContext'
 
 const useDocumentSuggestionsSocket = ({
   document,
@@ -75,7 +75,7 @@ export function DocumentSuggestions({
   setDiff: (value?: DiffOptions) => void
   setPrompt: (prompt: string) => void
 }) {
-  const { diff: latteDiff } = useLatteDiff()
+  const { diffOptions } = useDocumentValue()
   const [isOpen, setIsOpen] = useState(false)
   const close = useCallback(() => setIsOpen(false), [setIsOpen])
   const [notifier, setNotifier] = useState<Notifier>({ isOpen: false })
@@ -108,7 +108,7 @@ export function DocumentSuggestions({
 
   const isDisabled = isLoading || !!diff
 
-  if (latteDiff) return null
+  if (diffOptions) return null
   if (!suggestions.length) return null
 
   return (

@@ -58,6 +58,7 @@ export function SuggestionItem({
     setDiff({
       newValue: patchedPrompt,
       description: suggestion.summary,
+      source: 'suggestion',
       onAccept: async (prompt) => {
         const [result, error] = await apply({ suggestionId: suggestion.id, prompt }) // prettier-ignore
         if (error) return
