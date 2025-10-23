@@ -1,11 +1,9 @@
 import { and, desc, eq, getTableColumns, sql } from 'drizzle-orm'
-import { issueHistograms } from '../schema/models/issueHistograms'
 import { type Issue } from '../schema/models/types/Issue'
 import { issues } from '../schema/models/issues'
 import { Result } from '../lib/Result'
 import RepositoryLegacy from './repository'
 import { IssueHistogramsRepository } from './issueHistogramsRepository'
-import { Commit } from '../schema/models/types/Commit'
 import { CommitsRepository } from './commitsRepository'
 import { HEAD_COMMIT } from '@latitude-data/constants'
 
@@ -112,7 +110,7 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
     })
     if (commitsResult.error) return commitsResult
 
-    const commitIds = commitsResult.value.map(c => c.id)
+    const commitIds = commitsResult.value.map((c) => c.id)
 
     if (commitIds.length === 0) {
       return Result.ok({
@@ -127,16 +125,17 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
       this.workspaceId,
       this.db,
     )
-    const histogramStats =
-      histogramRepo.getHistogramStatsSubquery(relevantCommitIds)
+    const histogramStatsSubquery = histogramRepo.getHistogramStatsSubquery({
+      commitIds,
+    })
 
     // Execute the main query with histogram stats
     const results = await this.db
       .select({
         ...tt,
-        last7DaysCount: sql<number>`COALESCE(${histogramStats.last7DaysCount}, 0)`,
-        lastSeenDate: histogramStats.lastSeenDate,
-        escalatingCount: sql<number>`COALESCE(${histogramStats.escalatingCount}, 0)`,
+        last7DaysCount: sql<number>`COALESCE(${histogramStatsSubquery.last7DaysCount}, 0)`,
+        lastSeenDate: histogramStatsSubquery.lastSeenDate,
+        escalatingCount: sql<number>`COALESCE(${histogramStatsSubquery.escalatingCount}, 0)`,
         isNew: sql<boolean>`
           CASE
             WHEN ${issues.createdAt} >= CURRENT_DATE - INTERVAL '7 days'
@@ -160,7 +159,10 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
         `.as('isIgnored'),
       })
       .from(issues)
-      .leftJoin(histogramStats, eq(histogramStats.issueId, issues.id))
+      .leftJoin(
+        histogramStatsSubquery,
+        eq(histogramStatsSubquery.issueId, issues.id),
+      )
       .where(and(...whereConditions))
       .having(
         havingConditions.length > 0 ? and(...havingConditions) : undefined,
@@ -182,46 +184,6 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
       hasMore,
       nextCursor,
     })
-  }
-
-  private async getRelevantCommits({
-    projectId,
-    commitUuid,
-  }: {
-    projectId?: number
-    commitUuid?: string
-  }) {
-    const histogramsRepo = new IssueHistogramsRepository(
-      this.workspaceId,
-      this.db,
-    )
-
-    if (commitUuid) {
-      // Get commit and all its ancestors
-      const commitsResult = await histogramsRepo.getCommitsByUuid({
-        commitUuid,
-        projectId,
-      })
-      if (commitsResult.error) return commitsResult
-
-      return Result.ok(commitsResult.value)
-    } else if (projectId) {
-      // Get all commit IDs from histograms for the project
-      const result = await this.db
-        .selectDistinct({ commitId: issueHistograms.commitId })
-        .from(issueHistograms)
-        .innerJoin(issues, eq(issues.id, issueHistograms.issueId))
-        .where(
-          and(
-            eq(issueHistograms.workspaceId, this.workspaceId),
-            eq(issues.projectId, projectId),
-          ),
-        )
-
-      return Result.ok(result.map((r: { commitId: number }) => r.commitId))
-    }
-
-    return Result.ok([])
   }
 
   private parseCursor(cursor: string): number | null {
