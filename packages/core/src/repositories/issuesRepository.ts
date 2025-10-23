@@ -6,30 +6,12 @@ import RepositoryLegacy from './repository'
 import { IssueHistogramsRepository } from './issueHistogramsRepository'
 import { CommitsRepository } from './commitsRepository'
 import { HEAD_COMMIT } from '@latitude-data/constants'
+import { IssueStatus } from '@latitude-data/constants/issues'
 
 const tt = getTableColumns(issues)
 
-export type IssueFilter = {
-  ignored?: boolean
-  resolved?: boolean
-  escalating?: boolean
-  new?: boolean
-}
-
-export type IssueStatus = 'new' | 'escalating' | 'resolved' | 'ignored'
-
-
 export type IssueSort = 'relevance' | 'lastSeen' | 'firstSeen' | 'title'
-
-export type IssuesQueryOptions = {
-  projectId?: number
-  commitUuid?: string
-  filters?: IssueFilter
-  statuses?: IssueStatus[]
-  sort?: IssueSort
-  cursor?: string
-  limit?: number
-}
+const EMPTY_STATUSES: IssueStatus[] = []
 
 export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
   get scope() {
@@ -43,16 +25,19 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
   async filterIssues({
     projectId,
     commitUuid,
-    filters = {},
-    statuses = [],
+    statuses = EMPTY_STATUSES,
     sort = 'relevance',
     cursor,
     limit = 20,
-  }: IssuesQueryOptions) {
-    const commitsResult = await this.getCommits({
-      projectId,
-      commitUuid,
-    })
+  }: {
+    projectId?: number
+    commitUuid?: string
+    statuses?: IssueStatus[]
+    sort?: IssueSort
+    cursor?: string
+    limit?: number
+  }) {
+    const commitsResult = await this.getCommits({ projectId, commitUuid })
     if (commitsResult.error) return commitsResult
 
     const commitIds = commitsResult.value.map((c) => c.id)
@@ -66,88 +51,10 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
       })
     }
 
-    const whereConditions = [
-      eq(issues.workspaceId, this.workspaceId),
-      projectId ? eq(issues.projectId, projectId) : undefined,
-    ].filter(Boolean)
+    const whereConditions = this.buildWhereConditions({ projectId, cursor })
+    const havingConditions = this.buildHavingConditions({ statuses })
+    const orderByClause = this.buildOrderByClause(sort)
 
-    if (cursor) {
-      const cursorId = this.parseCursor(cursor)
-      if (cursorId) {
-        whereConditions.push(sql`${issues.id} < ${cursorId}`)
-      }
-    }
-
-    const havingConditions = []
-
-    // Apply legacy filters (for backward compatibility)
-    if (filters.ignored !== undefined) {
-      havingConditions.push(
-        filters.ignored
-          ? sql`${issues.ignoredAt} IS NOT NULL`
-          : sql`${issues.ignoredAt} IS NULL`,
-      )
-    }
-
-    if (filters.resolved !== undefined) {
-      havingConditions.push(
-        filters.resolved
-          ? sql`${issues.resolvedAt} IS NOT NULL`
-          : sql`${issues.resolvedAt} IS NULL`,
-      )
-    }
-
-    if (filters.escalating) {
-      havingConditions.push(sql`escalating_count > 0`)
-    }
-
-    if (filters.new) {
-      havingConditions.push(sql`is_new = true`)
-    }
-
-    // Apply new status filters (supports multiple statuses)
-    if (statuses && statuses.length > 0) {
-      const statusConditions = statuses.map(status => {
-        switch (status) {
-          case 'new':
-            return sql`is_new = true`
-          case 'escalating':
-            return sql`escalating_count > 0`
-          case 'resolved':
-            return sql`${issues.resolvedAt} IS NOT NULL`
-          case 'ignored':
-            return sql`${issues.ignoredAt} IS NOT NULL`
-          default:
-            return sql`1 = 0` // Never matches
-        }
-      })
-
-      // Use OR logic for multiple statuses (issue matches ANY of the statuses)
-      havingConditions.push(or(...statusConditions)!)
-    }
-
-
-    // Build order by clause
-    let orderByClause
-    switch (sort) {
-      case 'relevance':
-        orderByClause = [desc(sql`last7DaysCount`), desc(sql`lastSeenDate`)]
-        break
-      case 'lastSeen':
-        orderByClause = [desc(sql`lastSeenDate`)]
-        break
-      case 'firstSeen':
-        orderByClause = [desc(issues.createdAt)]
-        break
-      case 'title':
-        orderByClause = [issues.title]
-        break
-      default:
-        orderByClause = [desc(sql`last7DaysCount`), desc(sql`lastSeenDate`)]
-    }
-
-    // Get relevant commits first
-    // Get histogram stats subquery
     const histogramRepo = new IssueHistogramsRepository(
       this.workspaceId,
       this.db,
@@ -213,19 +120,72 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
     })
   }
 
-  private parseCursor(cursor: string): number | null {
-    try {
-      return parseInt(cursor, 10)
-    } catch {
-      return null
+  private buildWhereConditions({
+    projectId,
+    cursor,
+  }: {
+    projectId?: number
+    cursor?: string
+  }) {
+    const conditions = [
+      eq(issues.workspaceId, this.workspaceId),
+      projectId ? eq(issues.projectId, projectId) : undefined,
+    ].filter(Boolean)
+
+    if (cursor) {
+      const cursorId = this.parseCursor(cursor)
+      if (cursorId) {
+        conditions.push(sql`${issues.id} < ${cursorId}`)
+      }
+    }
+
+    return conditions
+  }
+
+  private buildHavingConditions({ statuses }: { statuses?: IssueStatus[] }) {
+    const conditions = []
+
+    if (statuses && statuses.length > 0) {
+      const statusConditions = statuses.map((status) => {
+        switch (status) {
+          case 'new':
+            return sql`is_new = true`
+          case 'escalating':
+            return sql`escalating_count > 0`
+          case 'resolved':
+            return sql`${issues.resolvedAt} IS NOT NULL`
+          case 'ignored':
+            return sql`${issues.ignoredAt} IS NOT NULL`
+          default:
+            return sql`1 = 0` // Never matches
+        }
+      })
+
+      conditions.push(or(...statusConditions)!)
+    }
+
+    return conditions
+  }
+
+  private buildOrderByClause(sort: IssueSort) {
+    switch (sort) {
+      case 'relevance':
+        return [desc(sql`last7DaysCount`), desc(sql`lastSeenDate`)]
+      case 'lastSeen':
+        return [desc(sql`lastSeenDate`)]
+      case 'firstSeen':
+        return [desc(issues.createdAt)]
+      case 'title':
+        return [issues.title]
+      default:
+        return [desc(sql`last7DaysCount`), desc(sql`lastSeenDate`)]
     }
   }
 
-  private generateCursor(issue: Issue): string {
-    return issue.id.toString()
-  }
-
-  async getCommits({
+  /**
+   * Read `getCommitsHistory` docs for more info
+   */
+  private async getCommits({
     commitUuid,
     projectId,
   }: {
@@ -259,5 +219,17 @@ export class IssuesRepository extends RepositoryLegacy<typeof tt, Issue> {
     if (commitResult.error) return commitResult
 
     return Result.ok(commitResult.unwrap())
+  }
+
+  private parseCursor(cursor: string): number | null {
+    try {
+      return parseInt(cursor, 10)
+    } catch {
+      return null
+    }
+  }
+
+  private generateCursor(issue: Issue): string {
+    return issue.id.toString()
   }
 }

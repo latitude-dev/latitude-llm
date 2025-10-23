@@ -136,7 +136,7 @@ export class CommitsRepository extends RepositoryLegacy<
   }
 
   /**
-   * Get all the commits that are merget before our commit
+   * Get all the commits that are merged before our commit
    * and also include our commit even it's not merged yet
    */
   async getCommitsHistory({ commit }: { commit: Commit }) {
