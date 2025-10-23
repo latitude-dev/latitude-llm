@@ -205,7 +205,7 @@ async function run(
     tokens: 0,
     cost: 0,
     duration: 0,
-  }
+  } as LlmEvaluationRatingResultMetadata
 
   if (actualOutput.error) {
     metadata.reason = actualOutput.error.message
@@ -236,7 +236,7 @@ async function run(
       prompt: buildPrompt({ ...metadata.configuration, provider: provider }),
       parameters: {
         ...evaluatedLog,
-        actualOutput: actualOutput,
+        actualOutput: metadata.actualOutput,
         conversation: formatConversation(conversation),
       },
       schema: promptSchema,

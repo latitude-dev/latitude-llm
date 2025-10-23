@@ -379,6 +379,7 @@ value1,value2,value3
             column: datasetLabel,
           }),
           datasetLabel: datasetLabel,
+          reason: "Field 'arguments' is not present in the actual output",
         },
         hasPassed: false,
         error: null,

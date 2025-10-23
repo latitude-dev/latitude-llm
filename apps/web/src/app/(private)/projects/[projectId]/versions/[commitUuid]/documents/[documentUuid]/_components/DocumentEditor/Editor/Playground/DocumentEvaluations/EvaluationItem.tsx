@@ -2,6 +2,13 @@ import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
 import EvaluateLiveLogsSwitch from '$/components/evaluations/EvaluateLiveLogsSwitch'
 import ResultBadge from '$/components/evaluations/ResultBadge'
 import { useEvaluationEditorLink } from '$/lib/useEvaluationEditorLink'
+import {
+  EvaluationMetric,
+  EvaluationResultSuccessValue,
+  EvaluationResultV2,
+  EvaluationType,
+  EvaluationV2,
+} from '@latitude-data/core/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -9,23 +16,27 @@ import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
 import { useMemo } from 'react'
 import { Props } from './shared'
-import {
-  EvaluationResultV2,
-  EvaluationType,
-  EvaluationV2,
-} from '@latitude-data/core/constants'
 
-function EvaluationItemContent({
+function EvaluationItemContent<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+>({
   result,
   evaluation,
   runCount,
   isWaiting,
 }: {
-  result?: EvaluationResultV2
-  evaluation: EvaluationV2
+  result?: EvaluationResultV2<T, M>
+  evaluation: EvaluationV2<T, M>
   runCount: number
   isWaiting: boolean
 }) {
+  const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
+  if (!typeSpecification) return null
+
+  const metricSpecification = typeSpecification.metrics[evaluation.metric]
+  if (!metricSpecification) return null
+
   if (!runCount || !evaluation.evaluateLiveLogs || (!isWaiting && !result)) {
     return (
       <Text.H6
@@ -58,25 +69,11 @@ function EvaluationItemContent({
     )
   }
 
-  if (
-    evaluation.type === EvaluationType.Llm ||
-    evaluation.type === EvaluationType.Human
-  ) {
-    return (
-      <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
-        {(
-          result as EvaluationResultV2<
-            EvaluationType.Llm | EvaluationType.Human
-          >
-        ).metadata!.reason || 'No reason reported'}
-      </Text.H6>
-    )
-  }
-
   return (
     <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
-      {EVALUATION_SPECIFICATIONS[evaluation.type].name} evaluations do not
-      report a reason
+      {metricSpecification.resultReason(
+        result as EvaluationResultSuccessValue<T, M>,
+      ) || 'No reason reported'}
     </Text.H6>
   )
 }

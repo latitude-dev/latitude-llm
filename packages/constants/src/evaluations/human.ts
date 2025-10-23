@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { EvaluationResultSuccessValue, EvaluationType } from './index'
 import {
   baseEvaluationConfiguration,
   baseEvaluationResultError,
@@ -32,6 +33,14 @@ export const HumanEvaluationBinarySpecification = {
   configuration: humanEvaluationBinaryConfiguration,
   resultMetadata: humanEvaluationBinaryResultMetadata,
   resultError: humanEvaluationBinaryResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Human,
+      HumanEvaluationMetric.Binary
+    >,
+  ) => {
+    return result.metadata.reason
+  },
   requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,
@@ -69,6 +78,14 @@ export const HumanEvaluationRatingSpecification = {
   configuration: humanEvaluationRatingConfiguration,
   resultMetadata: humanEvaluationRatingResultMetadata,
   resultError: humanEvaluationRatingResultError,
+  resultReason: (
+    result: EvaluationResultSuccessValue<
+      EvaluationType.Human,
+      HumanEvaluationMetric.Rating
+    >,
+  ) => {
+    return result.metadata.reason
+  },
   requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,

@@ -1,5 +1,9 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
+  type IProjectContextType,
+  useCurrentProject,
+} from '$/app/providers/ProjectProvider'
+import {
   EVALUATION_SPECIFICATIONS,
   getEvaluationMetricSpecification,
 } from '$/components/evaluations'
@@ -10,19 +14,15 @@ import { ROUTES } from '$/services/routes'
 import {
   DocumentLogWithMetadataAndError,
   EvaluationMetric,
-  EvaluationResultV2,
+  EvaluationResultSuccessValue,
   EvaluationType,
 } from '@latitude-data/core/constants'
-import { ResultWithEvaluationV2 } from '@latitude-data/core/schema/types'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import { ResultWithEvaluationV2 } from '@latitude-data/core/schema/types'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import {
-  type IProjectContextType,
-  useCurrentProject,
-} from '$/app/providers/ProjectProvider'
 import Link from 'next/link'
 
 type Props<
@@ -56,7 +56,10 @@ function DocumentLogEvaluationsV2<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 >({ result, evaluation }: Props<T, M>) {
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
+  if (!typeSpecification) return null
+
   const metricSpecification = typeSpecification.metrics[evaluation.metric]
+  if (!metricSpecification) return null
 
   return (
     <>
@@ -74,20 +77,16 @@ function DocumentLogEvaluationsV2<
           <MetadataItem label='Result'>
             <ResultBadge evaluation={evaluation} result={result} />
           </MetadataItem>
-          {(evaluation.type === EvaluationType.Llm ||
-            evaluation.type === EvaluationType.Human) && (
-            <MetadataItem
-              label='Reasoning'
-              value={
-                (
-                  result as EvaluationResultV2<
-                    EvaluationType.Llm | EvaluationType.Human
-                  >
-                ).metadata!.reason || 'No reason reported'
-              }
-              stacked
-            />
-          )}
+          <MetadataItem
+            label='Reasoning'
+            value={
+              metricSpecification.resultReason(
+                result as EvaluationResultSuccessValue<T, M>,
+              ) || 'No reason reported'
+            }
+            stacked
+            collapsible
+          />
         </>
       )}
     </>

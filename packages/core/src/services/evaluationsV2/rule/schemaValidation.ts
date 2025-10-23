@@ -101,10 +101,10 @@ async function run(
   const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput.value ?? '',
-  }
+  } as RuleEvaluationSchemaValidationResultMetadata
 
   if (actualOutput.error) {
-    // TODO(ao): Save reason
+    metadata.reason = actualOutput.error.message
     return grade({ score: 0, metadata })
   }
 
@@ -134,7 +134,7 @@ async function run(
           score = 1
         } catch (error) {
           score = 0
-          // TODO(ao): Save reason
+          metadata.reason = (error as Error).message
         }
       }
       break

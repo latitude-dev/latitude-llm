@@ -130,10 +130,10 @@ async function run(
     actualOutput: actualOutput.value ?? '',
     expectedOutput: expectedOutput?.value,
     datasetLabel: datasetLabel,
-  }
+  } as RuleEvaluationLexicalOverlapResultMetadata
 
   if (actualOutput.error) {
-    // TODO(ao): Save reason
+    metadata.reason = actualOutput.error.message
     return grade({ score: 0, metadata })
   }
 

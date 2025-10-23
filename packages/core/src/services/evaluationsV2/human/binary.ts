@@ -77,7 +77,7 @@ async function annotate(
     configuration: evaluation.configuration,
     actualOutput: actualOutput.value ?? '',
     reason: resultMetadata?.reason,
-  }
+  } as HumanEvaluationBinaryResultMetadata
 
   if (actualOutput.error) {
     metadata.reason = actualOutput.error.message
