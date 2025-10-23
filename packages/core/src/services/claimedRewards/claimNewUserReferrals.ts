@@ -78,7 +78,7 @@ export async function claimNewUserReferrals(
 
     const granting = await issueGrant(
       {
-        type: QuotaType.Credits,
+        type: QuotaType.Runs,
         amount: winner.reward,
         source: GrantSource.Reward,
         referenceId: winner.claimId.toString(),
