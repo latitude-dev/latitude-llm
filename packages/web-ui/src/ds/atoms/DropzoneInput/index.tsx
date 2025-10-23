@@ -21,8 +21,9 @@ type Props = Omit<DropzoneProps, 'children'> &
     defaultFilename?: string
     placeholder: string
     icon?: IconName
-    inputSize?: 'small' | 'normal'
+    inputSize?: 'small' | 'medium' | 'large'
     maxFileSize?: number
+    withBorder?: boolean
     onFileSizeError?: (_args: OnFileSizeErrorArgs) => void
     onChange?: (files: FileList | null) => void
   }
@@ -37,10 +38,11 @@ export function DropzoneInput({
   multiple,
   defaultFilename,
   icon = 'fileUp',
-  inputSize = 'normal',
+  inputSize = 'large',
   maxFileSize,
   onFileSizeError,
   onChange,
+  withBorder = true,
   ...rest
 }: Props) {
   const [filename, setFilename] = useState<string | undefined>(defaultFilename)
@@ -98,12 +100,14 @@ export function DropzoneInput({
           {({ isDragging }) => (
             <div
               className={cn(
-                'cursor-pointer flex min-w-0 border',
-                'rounded-md gap-x-2 flex items-center justify-center',
+                'cursor-pointer flex min-w-0',
+                'gap-x-2 flex items-center justify-center',
                 {
-                  'border-input': !isDragging,
-                  'border-dashed border-current': isDragging,
-                  'p-5': inputSize === 'normal',
+                  'border rounded-md': withBorder,
+                  'border-input': !isDragging && withBorder,
+                  'border-dashed border-current': isDragging && withBorder,
+                  'p-5': inputSize === 'large',
+                  'p-3': inputSize === 'medium',
                   'px-2 py-1': inputSize === 'small',
                 },
               )}
